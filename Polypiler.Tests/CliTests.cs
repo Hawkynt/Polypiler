@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using NUnit.Framework;
 using Polypiler.Cli;
@@ -15,9 +16,11 @@ public sealed class CliTests {
     return (exitCode, output.ToString(), error.ToString());
   }
 
-  [Test]
-  public void Help_PrintsProductNameAndSucceeds() {
-    var (exitCode, output, _) = Invoke("--help");
+  [TestCase("--help")]
+  [TestCase("-h")]
+  [TestCase("help")]
+  public void Help_PrintsProductNameAndSucceeds(string option) {
+    var (exitCode, output, _) = Invoke(option);
     Assert.That(exitCode, Is.EqualTo(Program.Success));
     Assert.That(output, Does.StartWith(ProductInfo.Name + " "));
   }
@@ -40,6 +43,25 @@ public sealed class CliTests {
     Assert.That(exitCode, Is.EqualTo(Program.UsageError));
     Assert.That(output, Is.Empty);
     Assert.That(error, Does.Contain("unknown command 'translate'"));
+  }
+
+  [TestCase("--HELP", TestName = "Options are case-sensitive")]
+  [TestCase("", TestName = "An empty argument is not help")]
+  public void NearMissOptions_AreUnknownCommands(string argument)
+    => Assert.That(Invoke(argument).ExitCode, Is.EqualTo(Program.UsageError));
+
+  [Test]
+  public void Main_WritesToTheConsole() {
+    var originalOut = Console.Out;
+    using var output = new StringWriter();
+    try {
+      Console.SetOut(output);
+      Assert.That(Program.Main(["--version"]), Is.EqualTo(Program.Success));
+    } finally {
+      Console.SetOut(originalOut);
+    }
+
+    Assert.That(output.ToString().Trim(), Is.EqualTo(ProductInfo.Version));
   }
 
 }

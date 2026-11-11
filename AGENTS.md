@@ -27,6 +27,9 @@ in the commit body.
 
 ## Issues first
 
+Issues are written to the standard in [`ISSUES.md`](ISSUES.md): no work starts on an issue that is not
+`state:ready`.
+
 1. **Every proposed feature becomes a GitHub issue before any work starts**, labelled with its
    category (`enhancement`/`bug`/`documentation` plus the `area:*` labels) and the phase milestone.
 2. Starting work: label the issue `in-flight` and create a branch named after it
@@ -46,6 +49,14 @@ in the commit body.
 
 Stable releases are **manual** (`gh workflow run release.yml`) — never cut one unless explicitly
 asked.
+
+## Test design and coverage
+
+Every change is tested on four axes: the **happy path**, every **exception and error path**, the
+**boundaries** of each limit (on, just inside, just outside) and one case per **equivalence class**
+of input. Line coverage and conditional-branch coverage must each stay **at or above 95 %** across the
+whole solution; the `coverage gate` CI job enforces it. Unreachable code is refactored until a test
+can reach it, never excluded. [`ISSUES.md`](ISSUES.md) shows the test-design table every issue carries.
 
 ## Tests come in two tiers
 

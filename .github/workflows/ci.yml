@@ -24,6 +24,43 @@ jobs:
       solution: Polypiler.slnx
       dotnet-version: '10.0.x'
       os-matrix: '["ubuntu-latest","windows-latest"]'
-      # Switch on together with the pull request that makes this repo's README follow the house
-      # convention (repo-readme/README.md), and add `repo-readme-gui: true` if it ships a UI.
       repo-readme: true
+
+  # Polypiler gates coverage, which the shared workflow only reports: at least 95 % of all lines AND
+  # of all conditional branches must be executed by the tests (ISSUES.md, "Test strategy").
+  coverage-gate:
+    name: coverage gate
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      MIN_LINE: '95'
+      MIN_BRANCH: '95'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test with coverage
+        run: dotnet test Polypiler.slnx -c Debug --collect:"XPlat Code Coverage" --results-directory ./coverage
+      - name: Enforce line and branch thresholds
+        shell: python
+        run: |
+          import glob, os, sys, xml.etree.ElementTree as ET
+          totals = {"lines": [0, 0], "branches": [0, 0]}
+          reports = glob.glob("coverage/**/coverage.cobertura.xml", recursive=True)
+          if not reports:
+            sys.exit("no coverage report produced")
+          for report in reports:
+            root = ET.parse(report).getroot()
+            for kind in totals:
+              totals[kind][0] += int(root.get(f"{kind}-covered"))
+              totals[kind][1] += int(root.get(f"{kind}-valid"))
+          failed = False
+          for kind, minimum in (("lines", float(os.environ["MIN_LINE"])), ("branches", float(os.environ["MIN_BRANCH"]))):
+            covered, valid = totals[kind]
+            rate = 100.0 if valid == 0 else 100.0 * covered / valid
+            print(f"{kind}: {covered}/{valid} = {rate:.2f} % (minimum {minimum:.0f} %)")
+            if rate < minimum:
+              print(f"::error::{kind} coverage {rate:.2f} % is below {minimum:.0f} %")
+              failed = True
+          sys.exit(1 if failed else 0)

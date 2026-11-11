@@ -3,6 +3,10 @@
 Thanks for helping improve **Polypiler**. This guide covers building, testing, and the conventions
 every change is expected to follow. Coding agents must also read [`AGENTS.md`](AGENTS.md).
 
+**Every change starts as an issue written to [`ISSUES.md`](ISSUES.md)** — how work is cut into issues,
+the Definition of Ready (user stories, Gherkin acceptance criteria, test design, measured thresholds)
+and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/).
+
 ## Prerequisites
 
 - A recent [.NET SDK](https://dotnet.microsoft.com/download) matching the `TargetFramework` in
