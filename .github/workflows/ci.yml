@@ -1,0 +1,29 @@
+name: CI
+
+# The gate a pull request has to pass. Rename Polypiler.slnx below to this repo's solution.
+#
+# It does NOT run on a push to main. A pull request must be green to merge, so re-running the same
+# matrix on the merge commit proves nothing and costs a machine — the nightly builds main after the
+# merge instead. `workflow_call` stays, because release.yml runs this as its own first gate.
+#
+# Almost everything lives in the shared reusable workflow; a repo with something exotic keeps that
+# one job here and lets the shared one do the rest.
+on:
+  pull_request:
+    branches: [main]
+  workflow_call: {}
+  workflow_dispatch: {}
+
+jobs:
+  # The `if:` guard keeps this from running in RepositoryTemplate itself, which has no solution to
+  # build. It is harmless in generated repos: their name never equals the template's.
+  ci:
+    if: ${{ github.repository != 'Hawkynt/RepositoryTemplate' }}
+    uses: Hawkynt/RepositoryTemplate/.github/workflows/dotnet-ci.yml@v1
+    with:
+      solution: Polypiler.slnx
+      dotnet-version: '10.0.x'
+      os-matrix: '["ubuntu-latest","windows-latest"]'
+      # Switch on together with the pull request that makes this repo's README follow the house
+      # convention (repo-readme/README.md), and add `repo-readme-gui: true` if it ships a UI.
+      repo-readme: true

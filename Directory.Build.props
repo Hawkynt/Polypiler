@@ -1,0 +1,42 @@
+<Project>
+
+  <!-- Shared defaults for every project in the repo. Central so the TFM, nullable and packaging
+       metadata are declared once. Rename Polypiler below and adjust the TargetFramework to the
+       one this repo targets. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- Package / authorship metadata (LGPL, same as every Hawkynt repo). Deliberately NO <Version>
+       here: each shipping package declares its own MAJOR.MINOR.PATCH in its own csproj, and
+       scripts/version.pl (stamp mode) appends the commit count of THAT project's
+       folder as the BUILD field. A package whose folder did not change therefore composes the
+       identical version on the next release, so a push with the skip-duplicate flag re-uses what is
+       already published instead of republishing everything. -->
+  <PropertyGroup>
+    <Authors>Hawkynt</Authors>
+    <Company>Hawkynt</Company>
+    <Product>Polypiler</Product>
+    <Copyright>Copyright (c) Hawkynt</Copyright>
+    <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Hawkynt/Polypiler</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Hawkynt/Polypiler.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+
+  <!-- Release builds ship a single clean binary: no loose PDBs, symbols embedded nowhere, so a
+       single-file publish stays a SINGLE executable. Debug builds keep symbols, so tests are
+       unaffected. NuGet packages that ship a .snupkg override this back to portable PDBs in their
+       own csproj. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+</Project>

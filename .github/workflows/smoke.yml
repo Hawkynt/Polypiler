@@ -1,0 +1,25 @@
+name: Smoke
+
+# The fast tier, on every push to a working branch. Rename Polypiler.slnx below.
+#
+# It answers one question — "is what I just pushed broken?" — and answers it in minutes: one OS,
+# fast tests only, no coverage, no package-README check. The pull request is where the matrix, the
+# slow categories and the reporting metrics live.
+#
+# Never on main: that branch takes changes through pull requests, which already ran the full gate.
+on:
+  push:
+    branches-ignore: [main, master]
+  workflow_dispatch: {}
+
+jobs:
+  # The `if:` guard keeps this from running in RepositoryTemplate itself, which has no solution to
+  # build. It is harmless in generated repos: their name never equals the template's.
+  smoke:
+    if: ${{ github.repository != 'Hawkynt/RepositoryTemplate' }}
+    uses: Hawkynt/RepositoryTemplate/.github/workflows/dotnet-smoke.yml@v1
+    with:
+      solution: Polypiler.slnx
+      dotnet-version: '10.0.x'
+      # Keep in step with ci.yml — the README check is cheap enough for this tier.
+      repo-readme: true

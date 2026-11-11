@@ -1,0 +1,66 @@
+name: Build artifacts
+
+# Shared build/pack block. Called by release.yml (manual dispatch) and nightly.yml (auto, on CI
+# success). Single place that turns a commit into shippable artifacts so release and nightly never
+# diverge. Adjust the publish/pack step for the projects this repo actually ships.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref/SHA to build (defaults to caller ref)
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+# Force JavaScript-based actions to run on Node 24 instead of the deprecated Node 20 ahead of
+# the 2026-06-16 hard cutover, until we bump each action to a Node-24-native major version.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0                           # version.pl counts commits
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # Versioning lives in the shared action, so this repo carries no scripts of its own.
+      # Handles .NET, Node, PHP, Perl, Rust, C++ (CMake), QuickBASIC and a root VERSION file.
+      - name: Stamp per-package versions
+        uses: Hawkynt/RepositoryTemplate/stamp-version@v1
+
+      # ----- APP BINARIES (delete if this repo ships only NuGet packages) --------------------------
+      # One self-contained, trimmed, compressed single-file executable per app per RID.
+      - name: Publish single-file, self-contained (win-x64 + linux-x64)
+        shell: bash
+        run: |
+          FLAGS="-c Release --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false"
+          for rid in win-x64 linux-x64; do
+            dotnet publish Polypiler.Cli/Polypiler.Cli.csproj $FLAGS -r "$rid" -o "stage/$rid"
+          done
+          mkdir -p dist
+          (cd stage/win-x64   && zip -qr ../../dist/Polypiler-win-x64.zip .)
+          (cd stage/linux-x64 && tar czf ../../dist/Polypiler-linux-x64.tar.gz .)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-artifacts
+          path: dist/*
+          if-no-files-found: ignore                # tolerate NuGet-only repos
+
+      # ----- NUGET PACKAGES (delete if this repo ships only binaries) ------------------------------
+      # Pack here and upload as `nuget-packages`; the PUSH happens release-only in release.yml so a
+      # plain build or a nightly can never ship a package.
+      # - name: Pack NuGet packages
+      #   run: dotnet pack Polypiler.slnx -c Release -o dist-nuget --nologo
+      # - uses: actions/upload-artifact@v4
+      #   with:
+      #     name: nuget-packages
+      #     path: dist-nuget/*.nupkg
+      #     if-no-files-found: error
