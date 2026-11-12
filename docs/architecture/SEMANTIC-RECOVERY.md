@@ -1,6 +1,6 @@
 # Semantic recovery, de-optimization and permutation synthesis
 
-**Status:** design; the [BitPerm project](https://github.com/Hawkynt/Hawkynt.github.io/tree/main/BitPerm) is an existing prototype, not yet a Polypiler subsystem. See [PRD §§19–20](../PRD.md).
+**Status:** design; the [BitPerm project](https://github.com/Hawkynt/Hawkynt.github.io/tree/main/BitPerm) is an existing prototype, not yet a Polypiler subsystem. See [PRD §§19–20](../prd/05-semantics-and-recovery.md#s19).
 
 The compiler first recovers **what** an operation means and only later chooses **how** to implement it. This allows optimized legacy code to become a simple canonical operation, then to be re-optimized for a different CPU or language.
 
@@ -23,19 +23,20 @@ The recovered operation is a candidate. If a rewrite is not proven legal, retain
 
 ## BitPerm: two directions
 
-    Code / ASM / IR expression
-             │
-      symbolic bit provenance
-             │
-       BitRouting / BitPermute  ◄──── user-specified mapping
-             │
-       compose / simplify / invert
-             │
-      target candidate synthesis
-             │
-     shifts / masks / rotate / LUT / SWAR / SIMD / BMI2 / networks
-             │
-       cost + equivalence + emit
+```mermaid
+flowchart TB
+  Code["Code / ASM / IR expression"] --> Provenance["Symbolic bit provenance"]
+  Provenance --> Candidate["Candidate routing or transform"]
+  Mapping["User-specified mapping"] --> Candidate
+  Candidate --> RecoverProof{"Exact semantics<br/>established?"}
+  RecoverProof -->|no or unknown| Retain["Retain original legal form<br/>or diagnose target incompatibility"]
+  RecoverProof -->|yes| Algebra["Compose and simplify;<br/>invert only bijections"]
+  Algebra --> Synthesis["Bounded target candidate synthesis"]
+  Synthesis --> Proof{"Equivalent to the<br/>original mapping?"}
+  Proof -->|proved| Cost["Compare legal target costs"]
+  Proof -->|failed or timed out| Retain
+  Cost --> Emit["Emit shifts, masks, rotates,<br/>LUT, SWAR, SIMD or networks"]
+```
 
 A **permutation** is bijective. **Routing** may duplicate or drop bits or insert constants. A general **Boolean transform** may combine bits through XOR/AND/etc. Do not label a non-bijective transform invertible.
 

@@ -2,7 +2,8 @@
 
 This index explains the **intended** architecture and development workflow. The repository is currently in its specification/bootstrap phase; diagrams and code snippets below are designs, **not implemented-feature claims**.
 
-The [product requirements and agent execution plan](PRD.md) is the normative specification. The pages here are a readable, cross-linked engineering guide; if a description conflicts with the PRD, create a design decision and reconcile the two before implementation.
+The [product requirements index](PRD.md) links ten topical parts carrying the normative specification.
+Original chapter numbers and section links are retained. The pages here are a readable, cross-linked engineering guide; if a description conflicts with the PRD, create a design decision and reconcile the two before implementation.
 
 ## Read in order
 

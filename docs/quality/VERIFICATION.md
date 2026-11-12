@@ -1,6 +1,6 @@
 # Verification, diagnostics and release gates
 
-**Status:** required quality strategy; no CI jobs or compiler behavior are claimed to exist yet. See [PRD §§6–7, 22–24, 31–33](../PRD.md).
+**Status:** required quality strategy; no CI jobs or compiler behavior are claimed to exist yet. See [PRD §§6–7](../prd/03-behavior-and-testing.md), [§§22–24](../prd/06-recovery-acceptance-and-gates.md) and [§§31–33](../prd/09-interop-acceptance-and-execution.md).
 
 A plausible generated source file is not evidence of successful transpilation. Polypiler should verify both the **semantic transformation** and the **actual artifact under its destination toolchain**.
 
@@ -16,6 +16,24 @@ A plausible generated source file is not evidence of successful transpilation. P
 | unsupported / blocked | Unsupported or not verifiable in chosen environment | Exact diagnostic and missing capability |
 
 Do not elevate a language pair to "verified" because the parser completed, the file compiled, or a handful of sample inputs passed.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Planned
+  Planned --> Experimental: usable prototype
+  Experimental --> Compiled: real destination compiler accepts output
+  Compiled --> Executed: artifact runs on specified inputs
+  Executed --> Verified: independent oracles and required semantic tests pass
+  Experimental --> Blocked: unavailable capability or oracle
+  Compiled --> Blocked: unavailable capability or oracle
+  Executed --> Blocked: verification cannot be established
+  Blocked --> Experimental: prerequisite resolved and gates reevaluated
+  note right of Verified
+    Evidence applies only to the exact
+    source subset and target profile.
+    Proof timeout is not success.
+  end note
+```
 
 ## Test pyramid
 

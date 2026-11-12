@@ -1,6 +1,6 @@
 # Frontends, backends and target profiles
 
-**Status:** planned integrations; consult [PRD §3](../PRD.md) for phased support obligations. Both source and target support are independent capabilities.
+**Status:** planned integrations; consult [PRD §3](../prd/01-product-and-targets.md#s3) for phased support obligations. Both source and target support are independent capabilities.
 
 ## Three importer families
 
@@ -18,6 +18,24 @@
 - **Packaging:** builds or modules with provenance, test fixtures, dependency manifests and licenses.
 
 A backend cannot silently map an untranslatable instruction or library call to a placeholder. It must lower, bridge, retain a compatible dependency, or diagnose it.
+
+```mermaid
+flowchart TB
+  Source["Source frontend"] --> IR["Shared semantic IR"]
+  Portable["Bytecode / LLVM importer"] --> IR
+  Machine["Machine-code lifter"] --> IR
+  IR --> Legalize["Legalize against the exact<br/>target profile and capabilities"]
+  Profile["Language, runtime, OS, CPU,<br/>ABI and optimization policy"] --> Legalize
+  Legalize --> Supported{"Surviving operations<br/>are representable?"}
+  Supported -->|yes| SourceOut["Source backend"]
+  Supported -->|yes| LLVM["LLVM backend"]
+  Supported -->|yes| Native["Native backend<br/>including x86-16 / DOS"]
+  Supported -->|no| Diagnose["Explicit capability diagnostic"]
+  LLVM --> LLVMTools["Compatible LLVM toolchain"]
+  Native --> NativeTools["Target-specific assembler,<br/>runtime or emulator"]
+```
+
+LLVM and native/DOS emission are separate routes; support for either does not establish the other.
 
 ## Target profile is a tuple
 

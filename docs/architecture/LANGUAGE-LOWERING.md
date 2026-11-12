@@ -1,6 +1,6 @@
 # Language semantics and high-level lowering
 
-**Status:** planned semantic model. See [PRD §§25, 30–32](../PRD.md).
+**Status:** planned semantic model. See [PRD §25](../prd/07-language-and-platform-integration.md#s25), [§30](../prd/08-interop-and-language-semantics.md#s30) and [§§31–32](../prd/09-interop-acceptance-and-execution.md#s31).
 
 Polypiler represents what a construct **does**, then chooses a native construct, structural lowering, minimal runtime helper or an unsupported-capability diagnostic. No assumption that the destination language implements the same syntax.
 
@@ -32,11 +32,17 @@ C++ virtual versus nonvirtual diamond inheritance and Python's C3 MRO are likewi
 
 A C# `using` can be lowered to a `try/finally` with disposal. Reverse recovery from existing cleanup blocks is allowed only if acquisition, all exits, disposal order, null handling and exception precedence match.
 
-    Acquire resource ──► body ──► normal exit
-             │             │
-             └─────► cleanup region ◄──── exception / return / break
-                            │
-                      completion / rethrow
+```mermaid
+flowchart TB
+  Acquire["Acquire resource"] -->|success| Body["Execute body"]
+  Acquire -->|failure| AcquisitionError["Propagate acquisition error"]
+  Body -->|normal exit| Cleanup["Cleanup region"]
+  Body -->|return or break| Cleanup
+  Body -->|exception| Cleanup
+  Cleanup --> Outcome{"Cleanup outcome"}
+  Outcome -->|success| Resume["Resume the original exit<br/>or rethrow original exception"]
+  Outcome -->|failure| Precedence["Apply source-language<br/>exception precedence"]
+```
 
 Do not merge cleanup edges that change visible error behavior. When a target lacks structured exceptions, explicitly synthesize propagation/cleanup if compatible; otherwise report unsupported semantics.
 

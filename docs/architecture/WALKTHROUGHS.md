@@ -1,6 +1,6 @@
 # Worked translation walks (acceptance scenarios)
 
-**Status:** expected flows and fixtures, not currently runnable commands or test results. Refer to [PRD §§6, 11, 14, 22, 27, 31](../PRD.md).
+**Status:** expected flows and fixtures, not currently runnable commands or test results. Refer to [PRD §6](../prd/03-behavior-and-testing.md#s6), [§11](../prd/04-roadmap-and-delivery.md#s11), [§14](../prd/04-roadmap-and-delivery.md#s14), [§22](../prd/06-recovery-acceptance-and-gates.md#s22), [§27](../prd/07-language-and-platform-integration.md#s27) and [§31](../prd/09-interop-acceptance-and-execution.md#s31).
 
 Each walk describes a vertical slice: **real input → precise IR contract → target artifact → independent oracle**. Synthetic toy programs may bootstrap the compiler but must not replace the final upstream showcase.
 
@@ -8,13 +8,13 @@ Each walk describes a vertical slice: **real input → precise IR contract → t
 
 **Input:** a pinned executable Cipher algorithm and committed known-answer vectors.
 
-    JS AST + JSDoc/typed-array facts
-        → JS coercions and source effects
-        → fixed-width bit/byte operations
-        → recovery of rotations, masks, loops
-        → typed/effect-aware SSA
-        → C# source + minimal helpers
-        → dotnet build + run + compare to JS oracle
+```mermaid
+flowchart LR
+  JS["Cipher JS<br/>and type facts"] --> IR["Typed SSA with JS<br/>coercions and effects"]
+  IR --> CS["Recover operations;<br/>emit C# and helpers"]
+  CS --> Verify["Build, execute<br/>and compare"]
+  Oracle["Independent JS oracle<br/>and known-answer vectors"] --> Verify
+```
 
 Assertions: preserve 32-bit JS bitwise coercions, byte truncation and input/output shape; reject unsupported dynamic behavior rather than silently interpreting an arbitrary object as a byte array.
 
@@ -22,9 +22,20 @@ Assertions: preserve 32-bit JS bitwise coercions, byte truncation and input/outp
 
 **Input:** a pinned PB numeric/bit routine and a C# equivalent or separately selected supported function.
 
-    PB parser and dialect binder → canonical SSA → C# emitter
-    C# Roslyn binder → language-runtime closure → x86-16 legalizer
-                      → PB-Compiler machine backend → DOS executable
+```mermaid
+flowchart TB
+  PB["PowerBASIC parser and dialect binder"] --> SSA["Canonical SSA"]
+  SSA --> CS["C# emitter"]
+  CS --> Dotnet["Build and run under .NET"]
+  PBOracle["Independent PowerBASIC oracle"] --> PBCompare["Compare PB to C# behavior"]
+  Dotnet --> PBCompare
+  CSharp["C# Roslyn binder"] --> Closure["Close runtime dependencies<br/>and lower language semantics"]
+  Closure --> DOS["Segmented x86-16 legalization"]
+  DOS --> Backend["PB-Compiler machine backend"]
+  Backend --> Emulator["DOS executable in emulator"]
+  CSOracle["Independent C# oracle"] --> DOSCompare["Compare C# to DOS behavior"]
+  Emulator --> DOSCompare
+```
 
 Assertions: PB signedness, dialect-specific float/MBF behavior, address spaces, error handling and near/far pointers; generated C# runs under .NET, while DOS output runs in an emulator. These are two independent direction-specific gates.
 
@@ -32,12 +43,13 @@ Assertions: PB signedness, dialect-specific float/MBF behavior, address spaces, 
 
 **Input:** [MediaDroyd Deinterlacer.kt](https://github.com/Hawkynt/MediaDroyd/blob/main/core/player/src/main/kotlin/com/hawkynt/mediadroyd/player/Deinterlacer.kt) and its existing reference tests, including license notices.
 
-    Kotlin types, arrays, enums and helpers
-        → typed plane buffers, loops and numerical operations
-        → common iteration/alias analysis
-        → Perl module + bounded integer/buffer helpers
-        → Perl syntax check + execute
-        → compare output planes against Kotlin oracle
+```mermaid
+flowchart LR
+  Kotlin["Kotlin types,<br/>arrays and helpers"] --> IR["Typed buffer loops<br/>and alias analysis"]
+  IR --> Perl["Perl module<br/>and bounded helpers"]
+  Perl --> Verify["Syntax check, run<br/>and compare planes"]
+  Oracle["Independent Kotlin oracle"] --> Verify
+```
 
 Start with a testable selected method; do not claim the entire file is supported until all reachable behaviors, methods and dependencies are verified. Preserve notices for derivatives.
 
@@ -45,10 +57,13 @@ Start with a testable selected method; do not claim the entire file is supported
 
 **Input:** a BitPerm routing specification or a pinned shift/mask/multiplication program.
 
-    source bit expressions → bit-provenance candidate → BitRouting
-                           → compose/cancel/normalize
-                           → synthesize for target CPU
-                           → verify original function == result
+```mermaid
+flowchart LR
+  Original["Source bit expression<br/>or specified mapping"] --> Routing["Proven exact<br/>BitRouting contract"]
+  Routing --> Synthesis["Compose and synthesize<br/>for the target CPU"]
+  Synthesis --> Verify["Verify candidate equals<br/>original function"]
+  Original --> Verify
+```
 
 Assertions: identity, reverse, duplicate, constants, inverse-only-for-bijections, carry-sensitive multiply counterexamples, cost budget and target instruction availability. Verify *actual integer multiplication*, not an OR-of-shifts approximation.
 
@@ -56,10 +71,13 @@ Assertions: identity, reverse, duplicate, constants, inverse-only-for-bijections
 
 **Input:** C header, DLL identity evidence and a compiled reference DLL.
 
-    C declarations → ForeignCall + exact record layout
-                   → native PB LIB/ALIAS signatures
-                   → byte-backed UDT if packing differs
-                   → verify pointer and by-value call behavior
+```mermaid
+flowchart LR
+  C["C declarations<br/>and DLL identity"] --> Contract["ForeignCall and<br/>exact layout contract"]
+  Contract --> PB["PB Windows binding<br/>and UDT / ABI bridge"]
+  PB --> Verify["Execute and compare<br/>layout and call behavior"]
+  Oracle["Reference DLL<br/>and independent C caller"] --> Verify
+```
 
 Assertions: symbol name, convention, parameter/return widths, struct size/offset/stride, callback and buffer effects. C `dllimport` alone does not supply a DLL filename. Do not mix Windows DLL imports with the DOS OMF target.
 
@@ -67,10 +85,13 @@ Assertions: symbol name, convention, parameter/return widths, struct size/offset
 
 **Input:** machine code, CPU variant, entry address, memory map and reference emulator.
 
-    decode opcodes → flags/registers/memory SSA
-                   → recognized arithmetic/loop patterns
-                   → C# with explicit surviving effects
-                   → run and compare memory + flags + I/O trace
+```mermaid
+flowchart LR
+  Decode["Decode CPU variant;<br/>registers, flags, memory SSA"] --> Recover["Recover legal patterns<br/>and preserve effects"]
+  Recover --> CS["C# with declared<br/>device contracts"]
+  CS --> Verify["Run; compare memory,<br/>flags and I/O trace"]
+  Oracle["Reference 6502 emulator"] --> Verify
+```
 
 An arbitrary external access is preserved or emulated with a declared device contract. Unknown hardware behavior requires an explicit error, not fabricated semantics.
 
