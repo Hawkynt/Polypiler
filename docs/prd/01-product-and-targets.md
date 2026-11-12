@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Next: Core architecture](02-core-architecture.md)
 
+**Architecture guides:** [Targets and profiles](../architecture/TARGETS.md) · [Worked translations](../architecture/WALKTHROUGHS.md)
+
 <!-- PRD content begins -->
 <a id="s1"></a>
 ## 1. Executive product definition

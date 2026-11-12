@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Previous: Product and targets](01-product-and-targets.md) · [Next: Behavior and testing](03-behavior-and-testing.md)
 
+**Architecture guides:** [Compilation pipeline](../architecture/PIPELINE.md) · [IR and analysis](../architecture/IR.md)
+
 <!-- PRD content begins -->
 <a id="s4"></a>
 ## 4. SDD — specification-driven development and system design

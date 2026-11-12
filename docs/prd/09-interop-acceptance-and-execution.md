@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Previous: Interop and language semantics](08-interop-and-language-semantics.md) · [Next: References](10-references.md)
 
+**Architecture guides:** [Foreign interoperability](../architecture/INTEROP.md) · [Language lowering](../architecture/LANGUAGE-LOWERING.md) · [Worked translations](../architecture/WALKTHROUGHS.md) · [Verification gates](../quality/VERIFICATION.md)
+
 <!-- PRD content begins -->
 <a id="s31"></a>
 ## 31. BDD — foreign ABI, marshalling and language semantics

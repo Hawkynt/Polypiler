@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Previous: Roadmap and delivery](04-roadmap-and-delivery.md) · [Next: Recovery acceptance and gates](06-recovery-acceptance-and-gates.md)
 
+**Architecture guides:** [IR and effects](../architecture/IR.md) · [Semantic recovery](../architecture/SEMANTIC-RECOVERY.md) · [Machine and target profiles](../architecture/TARGETS.md)
+
 <!-- PRD content begins -->
 <a id="s17"></a>
 ## 17. Fundamental semantic-preservation contract (normative; applies to every pass)

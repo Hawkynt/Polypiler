@@ -113,4 +113,4 @@ A proof timeout, an unsatisfied target capability or a missing reference toolcha
 
 The compiler should emit a machine-readable report for every rejected or accepted transformation: source location, rule, preconditions, facts, proof outcome, target requirement and fallback. Unsupported is a **successful diagnostic outcome**, not a license to generate wrong code.
 
-Related: [pipeline](../architecture/PIPELINE.md) · [IR](../architecture/IR.md) · [walkthroughs](../architecture/WALKTHROUGHS.md).
+Related: [PRD and architecture index](../PRD.md#architecture-guides) · [pipeline](../architecture/PIPELINE.md) · [IR](../architecture/IR.md) · [walkthroughs](../architecture/WALKTHROUGHS.md).

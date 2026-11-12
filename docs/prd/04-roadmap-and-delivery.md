@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Previous: Behavior and testing](03-behavior-and-testing.md) · [Next: Semantics and recovery](05-semantics-and-recovery.md)
 
+**Architecture guides:** [Compilation pipeline](../architecture/PIPELINE.md) · [Worked translations](../architecture/WALKTHROUGHS.md) · [Verification gates](../quality/VERIFICATION.md)
+
 <!-- PRD content begins -->
 <a id="s8"></a>
 ## 8. Detailed epics / implementation phases

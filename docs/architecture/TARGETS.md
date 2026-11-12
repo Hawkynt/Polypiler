@@ -12,7 +12,7 @@
 
 ## Export families
 
-- **Source emitters:** valid native syntax, types, imports, modules and minimal required helpers.
+- **Source emitters:** valid native syntax, types, imports, modules and [minimal required helpers](LANGUAGE-LOWERING.md#runtime-closure).
 - **IR emitters:** LLVM-compatible IR/bitcode where legal; other bytecode emitters only after runtime/verification coverage.
 - **Native emitters:** x86-16/DOS via existing PB-Compiler architecture; MOS 6502 and other CPUs through target-specific machine IR, register/zero-page allocation and executable formats.
 - **Packaging:** builds or modules with provenance, test fixtures, dependency manifests and licenses.
@@ -80,4 +80,4 @@ A capability decision should say what is missing and where, for example:
 
 This is an illustrative format; the versioned diagnostic schema is defined by the PRD.
 
-Related: [pipeline](PIPELINE.md) · [interop](INTEROP.md) · [verification](../quality/VERIFICATION.md).
+Related: [PRD and architecture index](../PRD.md#architecture-guides) · [pipeline](PIPELINE.md) · [interop](INTEROP.md) · [verification](../quality/VERIFICATION.md).

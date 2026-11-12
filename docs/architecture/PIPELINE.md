@@ -29,7 +29,7 @@ flowchart TB
   Verify --> Manifest["Manifest and precise support status"]
 ```
 
-These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback.
+These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback. The [IR contracts](IR.md) define the representation boundaries; [semantic recovery](SEMANTIC-RECOVERY.md) explains recognition and proof obligations.
 
 ## Detailed phases
 
@@ -81,3 +81,5 @@ Every invocation should produce a machine-readable manifest containing at least:
 - Build/run/oracle evidence, diagnostics and precise support tier.
 
 See [verification](../quality/VERIFICATION.md) and the [normative CLI/manifest contract](../prd/04-roadmap-and-delivery.md#s10).
+
+Related: [PRD and architecture index](../PRD.md#architecture-guides) · [IR](IR.md) · [semantic recovery](SEMANTIC-RECOVERY.md) · [targets](TARGETS.md).
