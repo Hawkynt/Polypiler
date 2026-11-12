@@ -1,0 +1,65 @@
+# Frontends, backends and target profiles
+
+**Status:** planned integrations; consult [PRD §3](../PRD.md) for phased support obligations. Both source and target support are independent capabilities.
+
+## Three importer families
+
+**Source frontends** parse source syntax with native language semantics. First targets are C# (Roslyn), JavaScript (existing Cipher pipeline) and PowerBASIC (existing PB-Compiler binder). Follow-on languages include C, C++, Rust, Kotlin, Perl, Python, TypeScript, Java, Go, Delphi, FreeBASIC, PHP and Ruby.
+
+**Intermediate/bytecode frontends** lift LLVM `.ll`/`.bc`, MSIL, JVM bytecode, WebAssembly, tokenized BASIC and format-specific BASIC p-code. The importer must retain ABI, runtime linkage, versions, metadata and exceptional behavior. LLVM is an additional interchange representation, not a replacement for Polypiler's semantic IR; GCC GENERIC/GIMPLE is separate from LLVM and needs its own adapter.
+
+**Machine-code frontends** lift x86/x64, ARM/AArch64, MOS 6502 and later other processors through decoded instruction semantics, register/flag SSA, stack and call-convention recovery, memory provenance, and explicit unresolved platform effects. Function entry, CPU model, code/data mapping and environment must be supplied or discovered reliably.
+
+## Export families
+
+- **Source emitters:** valid native syntax, types, imports, modules and minimal required helpers.
+- **IR emitters:** LLVM-compatible IR/bitcode where legal; other bytecode emitters only after runtime/verification coverage.
+- **Native emitters:** x86-16/DOS via existing PB-Compiler architecture; MOS 6502 and other CPUs through target-specific machine IR, register/zero-page allocation and executable formats.
+- **Packaging:** builds or modules with provenance, test fixtures, dependency manifests and licenses.
+
+A backend cannot silently map an untranslatable instruction or library call to a placeholder. It must lower, bridge, retain a compatible dependency, or diagnose it.
+
+## Target profile is a tuple
+
+| Dimension | Examples |
+|---|---|
+| Language/dialect | C# stable; PowerBASIC pb35; Perl 5; C64 BASIC V2 |
+| Runtime | .NET 9; .NET Framework 2.0-compatible helpers; native C; Perl runtime |
+| OS/environment | Windows, Linux, DOS, C64, freestanding |
+| Processor | x86-64, ARM64, x86-16, MOS 6502 |
+| ABI | Win32 cdecl/stdcall; System V; segmented DOS conventions |
+| Capabilities | FPU/SIMD/BMI2, heap, threads, exceptions, external DLL loader |
+| Optimization policy | exact/strict, compatible-fast, size, latency, constant-time |
+
+Do not infer target portability solely from the language name. PowerBASIC for Windows DLL imports and PowerBASIC DOS OMF linking are different targets; a Win64 library is not callable directly from a 32-bit DOS executable.
+
+## Bidirectional support is tested direction by direction
+
+A C# backend and a C# frontend are distinct deliverables. Support is reported for the exact **input representation + constructs + output target profile + runtime requirements**.
+
+| Demonstration | Initial route | Main risk |
+|---|---|---|
+| Cipher JavaScript → C# | JS source frontend → canonical IR → C# | JS coercions, typed arrays |
+| PowerBASIC → C# | PB source frontend → IR → C# | dialect rounding, arrays, error behavior |
+| Kotlin CPU deinterlacer → Perl | Kotlin frontend → iteration/memory IR → Perl | indexing, integer behavior, inherited license |
+| C# → x86-16/DOS | Roslyn → object/runtime lowering → x86-16 | unavailable .NET runtime features, segments |
+| 6502 → C# | machine lifter → explicit effects → C# | flags, self-modification, MMIO |
+| C external DLL binding → PowerBASIC Windows | C declarations → ForeignCall/ABI → PB declarations | packing, pointer layout, symbol decoration |
+| LLVM → source | LLVM importer → semantic recovery → source backend | lost high-level information, intrinsics |
+
+A Rust adapter around NCNN is **not** proof that neural inference has been translated into independent Rust. Models, weights, operator semantics and third-party licensing must be treated separately.
+
+## Capability diagnostics
+
+A capability decision should say what is missing and where, for example:
+
+    POLY-CAP-UNSUPPORTED:
+      source: PowerBASIC DOS (pb35)
+      destination: Rust / Linux
+      operation: far-pointer runtime call to unresolved DOS service
+      reason: target lacks an equivalent runtime binding
+      suggestions: provide a compatible adapter or use a DOS target
+
+This is an illustrative format; the versioned diagnostic schema is defined by the PRD.
+
+Related: [pipeline](PIPELINE.md) · [interop](INTEROP.md) · [verification](../quality/VERIFICATION.md).
