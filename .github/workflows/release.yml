@@ -1,0 +1,100 @@
+name: Release
+
+# Stable release — MANUAL dispatch only. Runs CI, builds binaries and/or packs NuGet packages (each
+# at its OWN per-csproj <Version> + commit count via version.pl --stamp), publishes, then cuts a
+# dated GitHub Release. Versions never come from a git tag; the repo-level marker is the date, so the
+# Release/tag is `vYYYYMMDD`. Nightlies happen automatically (nightly.yml).
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why are you cutting this release? (optional, for the audit log)'
+        required: false
+
+permissions:
+  contents: write
+
+# Force JavaScript-based actions to run on Node 24 instead of the deprecated Node 20 ahead of
+# the 2026-06-16 hard cutover, until we bump each action to a Node-24-native major version.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: ci
+    uses: ./.github/workflows/_build.yml
+
+  # ----- NUGET PUBLISH (uncomment when this repo ships packages) ---------------------------------
+  # Requires: _build.yml uploads a `nuget-packages` artifact, and a Trusted Publishing policy on
+  # nuget.org naming this repo + release.yml (plus the NUGET_USER secret). Then add `publish-nuget`
+  # to the `release` job's `needs:` so a rejected package blocks the tag.
+  # publish-nuget:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #     id-token: write
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with: { name: nuget-packages, path: dist-nuget }
+  #     - uses: actions/setup-dotnet@v4
+  #       with: { dotnet-version: '10.0.x' }
+  #     - uses: Hawkynt/RepositoryTemplate/nuget-publish@v1
+  #       with:
+  #         packages-path: dist-nuget
+  #         user: ${{ secrets.NUGET_USER }}
+  #         nuget-token: ${{ secrets.NUGET_TOKEN }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compute release marker
+        run: echo "REL=v$(date -u +%Y%m%d)" >> "$GITHUB_ENV"
+
+      # Pull whichever artifacts _build produced (binaries, packages, or both). _build.yml uploads
+      # app-artifacts with `if-no-files-found: ignore`, so a NuGet-only repo produces no such
+      # artifact at all and download-artifact@v4 errors on the missing name.
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: app-artifacts
+          path: dist
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Update changelog + generate release notes (bucketed by + - * # !)
+        uses: Hawkynt/RepositoryTemplate/release-notes@v1
+        with:
+          mode: release
+          marker: ${{ env.REL }}
+          notes: RELEASE_NOTES.md
+
+      # The changelog commit happens BEFORE the release is cut, and the tag is placed ON that commit
+      # (target_commitish below) so the bookkeeping commit stays inside the tag.
+      - name: Commit changelog (if it changed)
+        run: |
+          if ! git diff --quiet -- CHANGELOG.md; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add CHANGELOG.md
+            git commit -m "* update changelog for $REL [skip ci]"
+            git push
+          fi
+          echo "REL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release (dated marker; tags vYYYYMMDD at the changelog commit)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.REL }}
+          name: ${{ env.REL }}
+          target_commitish: ${{ env.REL_SHA }}
+          files: dist/*
+          body_path: RELEASE_NOTES.md            # commit-message changelog, not GitHub's PR notes

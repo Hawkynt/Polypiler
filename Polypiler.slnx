@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Polypiler.Cli/Polypiler.Cli.csproj" />
+  <Project Path="Polypiler.Core/Polypiler.Core.csproj" />
+  <Project Path="Polypiler.Tests/Polypiler.Tests.csproj" />
+</Solution>

@@ -1,0 +1,94 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+dist/
+stage/
+publish/
+
+# .NET user / IDE files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+.idea/
+*.DotSettings.user
+_ReSharper*/
+
+# Test / coverage output
+[Tt]est[Rr]esults/
+**/TestResults/
+coverage/
+*.coverage
+*.coveragexml
+*.trx
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+.nuget/
+
+# Rider / MonoDevelop
+*.userprefs
+*.pidb
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Rust
+/target/
+**/*.rs.bk
+# Cargo.lock: ignored for libraries, COMMITTED for binaries — drop the next line for an app.
+Cargo.lock
+
+# C / C++
+build/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.exe
+*.out
+
+# Perl
+blib/
+pm_to_blib
+MYMETA.*
+Makefile.old
+*.bs
+!Makefile.PL
+
+# PHP
+/vendor/
+composer.phar
+.phpunit.result.cache
+
+# QuickBASIC / PowerBASIC
+*.OBJ
+*.EXE
+*.MAP
+*.PBR
+*.BAK
+
+# Local secrets — never commit
+*.env
+secrets.json
+
+# Local research transcript — kept for context, never committed
+docs/ChatGPT-*.md
