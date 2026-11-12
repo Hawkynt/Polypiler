@@ -59,7 +59,7 @@ A C# object, Rust value, C++ base subobject and dynamic Python object do not hav
 - construction/destruction order, finalization and observable identity;
 - dynamic dispatch resolution, casts, method overrides and interface tables;
 - static initialization order, thread-safety, re-entrancy and failure behavior;
-- heap/stack movement, escaping references and retained foreign pointers.
+- heap/stack movement, escaping references and [retained foreign pointers](INTEROP.md#marshalling-plans-are-optimization-ir).
 
 Optimize away an abstraction only after proving it is not observable (e.g. one reachable interface implementation, one generic instantiation, no reflective lookup).
 
@@ -67,4 +67,4 @@ Optimize away an abstraction only after proving it is not observable (e.g. one r
 
 Only include reachable helpers for supported behaviors. Importing a checksum should not pull an entire .NET or JVM runtime into DOS or Perl. Reflection, dynamic assembly loading or thread scheduling may require services the target does not have; reject with a specific capability diagnostic rather than fabricating behavior.
 
-Related: [IR](IR.md) · [pipeline](PIPELINE.md) · [targets](TARGETS.md).
+Related: [PRD and architecture index](../PRD.md#architecture-guides) · [IR](IR.md) · [pipeline](PIPELINE.md) · [targets](TARGETS.md).

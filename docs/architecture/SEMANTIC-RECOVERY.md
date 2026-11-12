@@ -19,7 +19,7 @@ The compiler first recovers **what** an operation means and only later chooses *
 | Generated state machine | Iterator/Coroutine/Async | Suspension, lifetime, scheduling and errors |
 | Cleanup in try/finally | ResourceScope | Acquisition, cleanup, all exits and error precedence |
 
-The recovered operation is a candidate. If a rewrite is not proven legal, retain the original representation or produce an explicit diagnostic when it cannot be emitted.
+The recovered operation is a candidate. If a rewrite is not proven legal, retain the original representation or produce an explicit diagnostic when it cannot be emitted. Use the [IR pass contract](IR.md#pass-contract-and-invariants) to state each candidate's preconditions and proof obligations.
 
 ## BitPerm: two directions
 
@@ -81,4 +81,4 @@ A high-level intrinsic is not always faster: it may be decomposed back into prec
 - Log each recognized candidate, its facts, its proof outcome and the chosen lowering.
 - Timeouts and uncertain proofs mean **no rewrite**, not "probably equivalent".
 
-Related: [IR](IR.md) · [walkthroughs](WALKTHROUGHS.md) · [verification](../quality/VERIFICATION.md).
+Related: [PRD and architecture index](../PRD.md#architecture-guides) · [IR](IR.md) · [walkthroughs](WALKTHROUGHS.md) · [verification](../quality/VERIFICATION.md).

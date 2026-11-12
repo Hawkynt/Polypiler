@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Previous: Recovery acceptance and gates](06-recovery-acceptance-and-gates.md) · [Next: Interop and language semantics](08-interop-and-language-semantics.md)
 
+**Architecture guides:** [Target profiles](../architecture/TARGETS.md) · [Language lowering](../architecture/LANGUAGE-LOWERING.md) · [Foreign bindings](../architecture/INTEROP.md)
+
 <!-- PRD content begins -->
 <a id="s25"></a>
 ## 25. Resource scopes, deterministic cleanup and high-level control-flow recovery (normative SDD)

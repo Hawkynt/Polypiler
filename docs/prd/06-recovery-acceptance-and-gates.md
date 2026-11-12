@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Previous: Semantics and recovery](05-semantics-and-recovery.md) · [Next: Language and platform integration](07-language-and-platform-integration.md)
 
+**Architecture guides:** [Semantic recovery](../architecture/SEMANTIC-RECOVERY.md) · [Worked translations](../architecture/WALKTHROUGHS.md) · [Verification gates](../quality/VERIFICATION.md)
+
 <!-- PRD content begins -->
 <a id="s22"></a>
 ## 22. Additional required BDD scenarios (executable specifications)

@@ -11,7 +11,7 @@ The IR is language-independent **without erasing source-language behavior**. Som
 - **Memory:** allocations, address spaces, provenance, alias classes, byte/bit offsets, alignment, lifetime and storage identity.
 - **Effects:** writes/reads, potential faults, exceptions, synchronization, device I/O, external calls, stack/register/flag state and dynamic control flow.
 - **Iteration:** induction variables, access functions, strides, reductions, dependences, mutation and evaluation order.
-- **Object/runtime:** classes, interface dispatch, generic instantiations, type identity, cleanup, continuations and error-handler regions.
+- **Object/runtime:** classes, interface dispatch, generic instantiations, type identity, [cleanup, continuations and error-handler regions](LANGUAGE-LOWERING.md).
 - **Machine:** explicit registers/flags and instruction effects for binary lifting/inline ASM; uninterpreted operations only with conservative effect summaries.
 - **Provenance:** source instruction range, import module, optimization provenance and licensing identity.
 
@@ -100,4 +100,4 @@ Every transformation needs:
 
 Unknown is **not false** and not **proven safe**. A timeout never counts as a proof.
 
-Related: [pipeline](PIPELINE.md) · [semantic recovery](SEMANTIC-RECOVERY.md) · [foreign interop](INTEROP.md).
+Related: [PRD and architecture index](../PRD.md#architecture-guides) · [pipeline](PIPELINE.md) · [semantic recovery](SEMANTIC-RECOVERY.md) · [foreign interop](INTEROP.md).

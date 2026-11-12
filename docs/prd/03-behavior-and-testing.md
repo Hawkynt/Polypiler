@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Previous: Core architecture](02-core-architecture.md) · [Next: Roadmap and delivery](04-roadmap-and-delivery.md)
 
+**Architecture guides:** [Verification gates](../quality/VERIFICATION.md) · [Worked translations](../architecture/WALKTHROUGHS.md)
+
 <!-- PRD content begins -->
 <a id="s6"></a>
 ## 6. BDD — executable behavior specifications

@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Previous: Interop acceptance and execution](09-interop-acceptance-and-execution.md)
 
+**Architecture guides:** [Worked uses of the reference corpora](../architecture/WALKTHROUGHS.md)
+
 <!-- PRD content begins -->
 <a id="s34"></a>
 ## 34. Reference links

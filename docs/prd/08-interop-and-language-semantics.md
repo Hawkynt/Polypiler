@@ -5,6 +5,8 @@ Original section numbering is retained.
 
 [PRD index](../PRD.md) · [Previous: Language and platform integration](07-language-and-platform-integration.md) · [Next: Interop acceptance and execution](09-interop-acceptance-and-execution.md)
 
+**Architecture guides:** [Foreign interoperability](../architecture/INTEROP.md) · [Language lowering](../architecture/LANGUAGE-LOWERING.md) · [Memory and effects](../architecture/IR.md)
+
 <!-- PRD content begins -->
 <a id="s29"></a>
 ## 29. PolyInterop — foreign library identity, type layout and ABI legalization (normative SDD)

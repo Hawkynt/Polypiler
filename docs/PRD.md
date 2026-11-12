@@ -33,6 +33,23 @@ intended design, while these parts retain the normative requirements.
 | 09 | §31–33 | [Interop acceptance and execution](prd/09-interop-acceptance-and-execution.md) |
 | 10 | §34 | [References](prd/10-references.md) |
 
+## Architecture guides
+
+Read these design explanations alongside the requirements. The guides describe the intended
+architecture; the PRD parts retain the normative contracts. Follow the reading order below, or
+choose the guide for the part you are working on.
+
+| Guide | Read for | Related requirements |
+| --- | --- | --- |
+| [Compilation pipeline](architecture/PIPELINE.md) | Input discovery, semantic lifting, optimization, emission and verification | [Core architecture](prd/02-core-architecture.md#s4), [semantic preservation](prd/05-semantics-and-recovery.md#s17) |
+| [IR and analysis contracts](architecture/IR.md) | Values, memory, effects, representation widths and pass invariants | [Semantic IR](prd/02-core-architecture.md#s4-2), [effect contracts](prd/05-semantics-and-recovery.md#s17-2) |
+| [Frontends, backends and targets](architecture/TARGETS.md) | Import/export families and exact language, runtime, CPU and ABI profiles | [Support matrix](prd/01-product-and-targets.md#s3), [platform integration](prd/07-language-and-platform-integration.md) |
+| [Semantic recovery and bit permutations](architecture/SEMANTIC-RECOVERY.md) | Recognize operations, prove rewrites and synthesize target implementations | [Recovery](prd/05-semantics-and-recovery.md#s19), [PolyPermutation](prd/05-semantics-and-recovery.md#s20) |
+| [Foreign interoperability](architecture/INTEROP.md) | Library identity, record layouts, calling conventions and marshalling | [PolyInterop](prd/08-interop-and-language-semantics.md#s29), [interop gates](prd/09-interop-acceptance-and-execution.md#s32) |
+| [Language semantics and lowering](architecture/LANGUAGE-LOWERING.md) | Objects, generics, cleanup, coroutines and runtime closure | [Resource scopes](prd/07-language-and-platform-integration.md#s25), [language constructs](prd/08-interop-and-language-semantics.md#s30) |
+| [Worked translation walks](architecture/WALKTHROUGHS.md) | Concrete source-to-target routes, fixtures and independent oracles | [Behavior scenarios](prd/03-behavior-and-testing.md#s6), [recovery scenarios](prd/06-recovery-acceptance-and-gates.md#s22), [interop scenarios](prd/09-interop-acceptance-and-execution.md#s31) |
+| [Verification and release gates](quality/VERIFICATION.md) | Evidence, diagnostics and the conditions for a support claim | [Testing strategy](prd/03-behavior-and-testing.md#s7), [added-capability gates](prd/06-recovery-acceptance-and-gates.md#s23), [Definition of Done](prd/06-recovery-acceptance-and-gates.md#s24-1) |
+
 ## Reading routes
 
 - Start with [product and targets](prd/01-product-and-targets.md), then

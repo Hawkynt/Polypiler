@@ -8,6 +8,8 @@ Each walk describes a vertical slice: **real input → precise IR contract → t
 
 **Input:** a pinned executable Cipher algorithm and committed known-answer vectors.
 
+**Design:** [Compilation pipeline](PIPELINE.md#javascript-cipher-to-c) · [Numeric and collection semantics](IR.md#numeric-encoded-and-collection-operations).
+
 ```mermaid
 flowchart LR
   JS["Cipher JS<br/>and type facts"] --> IR["Typed SSA with JS<br/>coercions and effects"]
@@ -21,6 +23,8 @@ Assertions: preserve 32-bit JS bitwise coercions, byte truncation and input/outp
 ## 2. PowerBASIC → C# and C# → DOS
 
 **Input:** a pinned PB numeric/bit routine and a C# equivalent or separately selected supported function.
+
+**Design:** [Target profiles](TARGETS.md#target-profile-is-a-tuple) · [Runtime closure](LANGUAGE-LOWERING.md#runtime-closure).
 
 ```mermaid
 flowchart TB
@@ -43,6 +47,8 @@ Assertions: PB signedness, dialect-specific float/MBF behavior, address spaces, 
 
 **Input:** [MediaDroyd Deinterlacer.kt](https://github.com/Hawkynt/MediaDroyd/blob/main/core/player/src/main/kotlin/com/hawkynt/mediadroyd/player/Deinterlacer.kt) and its existing reference tests, including license notices.
 
+**Design:** [IR and analysis contracts](IR.md#abstract-interpretation) · [Target profiles](TARGETS.md#target-profile-is-a-tuple).
+
 ```mermaid
 flowchart LR
   Kotlin["Kotlin types,<br/>arrays and helpers"] --> IR["Typed buffer loops<br/>and alias analysis"]
@@ -56,6 +62,8 @@ Start with a testable selected method; do not claim the entire file is supported
 ## 4. BitPerm mapping → Rust / C# / 6502 and back
 
 **Input:** a BitPerm routing specification or a pinned shift/mask/multiplication program.
+
+**Design:** [BitPerm recovery and synthesis](SEMANTIC-RECOVERY.md#bitperm-two-directions).
 
 ```mermaid
 flowchart LR
@@ -71,6 +79,8 @@ Assertions: identity, reverse, duplicate, constants, inverse-only-for-bijections
 
 **Input:** C header, DLL identity evidence and a compiled reference DLL.
 
+**Design:** [Foreign bindings](INTEROP.md#binding-pipeline) · [Layout versus call equivalence](INTEROP.md#layout-equivalence-is-distinct-from-call-equivalence).
+
 ```mermaid
 flowchart LR
   C["C declarations<br/>and DLL identity"] --> Contract["ForeignCall and<br/>exact layout contract"]
@@ -84,6 +94,8 @@ Assertions: symbol name, convention, parameter/return widths, struct size/offset
 ## 6. MOS 6502 routine → C#
 
 **Input:** machine code, CPU variant, entry address, memory map and reference emulator.
+
+**Design:** [Machine-code frontends](TARGETS.md#three-importer-families) · [Memory and effect nodes](IR.md#representative-memoryeffect-nodes).
 
 ```mermaid
 flowchart LR
@@ -100,3 +112,5 @@ An arbitrary external access is preserved or emulated with a declared device con
 Each demonstration should include a versioned input fixture, command invocation, generated artifact, build log, source/target execution traces, proof/optimization decisions, dependency/license manifest, and a machine-readable **support tier**.
 
 See [quality gates](../quality/VERIFICATION.md). Every CLI example in the repository README and PRD remains a *planned interface* until implemented.
+
+Related: [PRD and architecture index](../PRD.md#architecture-guides) · [IR](IR.md) · [semantic recovery](SEMANTIC-RECOVERY.md) · [targets](TARGETS.md).

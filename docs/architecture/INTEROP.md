@@ -64,7 +64,7 @@ An example conceptual sequence:
 
 Perl may need generated `pack`/`unpack` around the FFI buffer, but those functions do not themselves provide an FFI calling convention. If several calls consume the same layout, Polypiler may pack once and unpack only when needed **if** alias/effect/lifetime analysis proves it safe.
 
-Calls that retain pointers need stable storage and an explicit ownership contract. Calls that modify memory invalidate cached values; callback re-entry and thread state can prevent naive fusion.
+Calls that retain pointers need stable storage and an explicit [ownership contract](LANGUAGE-LOWERING.md#object-lifetime-and-initialization). Calls that modify memory invalidate cached values; callback re-entry and thread state can prevent naive fusion.
 
 ## Float80 and legacy interfaces
 
@@ -93,4 +93,4 @@ Use real foreign libraries compiled with the originating toolchain:
 - ANSI/UTF conversion, unaligned access, errors and Float80 bit patterns;
 - negative tests for incompatible architectures and layouts.
 
-Related: [IR](IR.md) · [targets](TARGETS.md) · [verification](../quality/VERIFICATION.md).
+Related: [PRD and architecture index](../PRD.md#architecture-guides) · [IR](IR.md) · [targets](TARGETS.md) · [verification](../quality/VERIFICATION.md).
