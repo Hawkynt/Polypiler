@@ -159,6 +159,8 @@ The catalogue and publishing workflows are later deliverables. A generated packa
 
 Start with the [documentation index](docs/README.md), then follow the [end-to-end compilation flow](docs/architecture/PIPELINE.md), [IR and analysis contracts](docs/architecture/IR.md), [semantic recovery](docs/architecture/SEMANTIC-RECOVERY.md), [foreign interoperability](docs/architecture/INTEROP.md), and [verification gates](docs/quality/VERIFICATION.md). The [full PRD](docs/PRD.md) remains the normative implementation plan; these pages describe the proposed design, not shipped features.
 
+Use the [Definition of Ready](docs/DEFINITION-OF-READY.md) before starting an implementation issue. The [issue template](.github/ISSUE_TEMPLATE/implementation.md) and [worked examples](docs/examples/DEFINITION-OF-READY-EXAMPLES.md) explain what an agent must know before work starts; the PRD Definition of Done applies to the resulting PR.
+
 ## Architecture
 
 The planned monorepo contains these **internal components**, all under the Polypiler product name:

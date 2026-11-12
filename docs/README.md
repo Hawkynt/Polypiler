@@ -15,6 +15,10 @@ The [product requirements and agent execution plan](PRD.md) is the normative spe
 7. [Worked translation walks](architecture/WALKTHROUGHS.md) — the first required cross-language showcases.
 8. [Verification and release gates](quality/VERIFICATION.md) — the definition of "supported", test oracles and failure behavior.
 
+## Work-item readiness
+
+Before implementation, consult the [Definition of Ready](DEFINITION-OF-READY.md), create issues with the [implementation task template](../.github/ISSUE_TEMPLATE/implementation.md), and check the [Ready and Blocked worked examples](examples/DEFINITION-OF-READY-EXAMPLES.md). Readiness is a pre-implementation gate; [PRD §24.1](PRD.md) governs completion and merging.
+
 ## What to implement first
 
 The PRD's P0/P1/P2 sequence is the executable plan. Begin with a typed/effect-aware IR and actual **JavaScript Cipher → C#** and **PowerBASIC → C#** algorithm translations, not a universal parser or an all-language compatibility runtime. Use pinned upstream fixtures and compile and run generated C# against independent source oracles before claiming a translation works.
