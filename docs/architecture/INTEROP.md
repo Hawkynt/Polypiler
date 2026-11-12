@@ -1,26 +1,24 @@
 # Foreign interoperability, ABI layouts and marshalling
 
-**Status:** architecture contract, not a deployed FFI generator. See [PRD §§17, 29, 31–32](../PRD.md).
+**Status:** architecture contract, not a deployed FFI generator. See [PRD §17](../prd/05-semantics-and-recovery.md#s17), [§29](../prd/08-interop-and-language-semantics.md#s29) and [§§31–32](../prd/09-interop-acceptance-and-execution.md#s31).
 
 Foreign calls are first-class program operations. An imported C DLL function, JVM runtime call, PB runtime entry point or opaque ASM call must never disappear merely because its implementation is unavailable to the compiler.
 
 ## Binding pipeline
 
-    Source declaration + dependency evidence
-                      │
-               Foreign symbol identity
-          (library, export, ordinal, version)
-                      │
-          Signature + calling convention + effects
-                      │
-             Foreign layout constraints
-            (size, offset, padding, alignment)
-                      │
-          Target binding / accessor / marshaler
-                      │
-     compatible native call OR verified ABI bridge
-                      │
-             Same observable external effects
+```mermaid
+flowchart TB
+  Input["Declaration and dependency evidence"] --> Identity["Library, export, ordinal and version"]
+  Identity --> Contract["Signature, calling convention<br/>and observable effects"]
+  Contract --> Layout["Size, offsets, alignment,<br/>stride and by-value classification"]
+  Layout --> Compatible{"Target can preserve<br/>the full call contract?"}
+  Compatible -->|native binding| Native["Target declaration<br/>and exact layout"]
+  Compatible -->|verified bridge available| Bridge["Accessor, marshaler<br/>or native ABI bridge"]
+  Compatible -->|no compatible route| Diagnostic["Dependency or capability diagnostic"]
+  Native --> Call["Call the original compatible library"]
+  Bridge --> Call
+  Call --> Compare["Compare results, memory effects,<br/>callbacks and errors with C oracle"]
+```
 
 The source declaration does **not always specify the library file**. For example, a C dllimport declaration may require an import library, linker metadata, binary import table or explicit manifest to recover its DLL identity.
 

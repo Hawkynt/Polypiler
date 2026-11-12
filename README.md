@@ -155,24 +155,14 @@ Recognition and instruction selection are separate. For example, the same recove
 
 The intended architecture is:
 
-```text
-Input: C# | C | C++ | JavaScript | TypeScript | Kotlin | Rust | Perl | Python | BASIC | ...
-       MSIL | JVM | WebAssembly | LLVM IR | tokenized BASIC | 6502 | x86 | ARM | ...
-                                 |
-                       Frontend + semantic lifting
-                                 |
-                   Typed/effect-aware canonical Polypiler IR
-                                 |
-              Type inference | values/ranges | pointer provenance
-              Call effects | object model | iteration | vectors/tensors
-              Algorithm recovery | de-optimization | bit permutations
-                                 |
-                   Proof-driven optimization and legalization
-                                 |
-Output: C# | C | C++ | JavaScript | Rust | Perl | Python | Kotlin | PowerBASIC | ...
-        LLVM IR | MSIL | JVM | WebAssembly | 6502 | x86-16/DOS | ...
-                                 |
-                     Actual compile/run/differential tests
+```mermaid
+flowchart TB
+  Inputs["Source, bytecode or machine code"] --> IR["Frontend and semantic lifting<br/>Typed IR with explicit effects"]
+  IR --> Transform["Analyze and recover operations<br/>Prove legal rewrites"]
+  Transform --> Target["Legalize target and ABI<br/>Emit source, IR or binary"]
+  Target --> Verify["Compile, execute and compare"]
+  Oracle["Independent source oracle"] --> Verify
+  Verify --> Evidence["Manifest and support evidence"]
 ```
 
 The IR must preserve source-language arithmetic, conversions, ownership, error handling, runtime identity and observable effects. Native operations and external code are neither discarded nor treated as permanently opaque if their semantics can be recovered.

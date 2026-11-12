@@ -1,39 +1,33 @@
 # End-to-end compilation flow
 
-**Status:** design contract, not an implemented pipeline. See [PRD §§4, 8, 17, 24](../PRD.md).
+**Status:** design contract, not an implemented pipeline. See [PRD §4](../prd/02-core-architecture.md#s4), [§8](../prd/04-roadmap-and-delivery.md#s8), [§17](../prd/05-semantics-and-recovery.md#s17) and [§24](../prd/06-recovery-acceptance-and-gates.md#s24).
 
 Polypiler translates *observable program behavior*, not syntax trees. Source language, input representation, output language, runtime and CPU are separate axes. "Translatable" means the selected subset is representable in the destination and the generated artifact passes the required verification gate.
 
 ## One pipeline, several entry points
 
-    Source text ───────────────► source frontend ────────────┐
-    Tokenized BASIC / p-code ──► dialect decoder ───────────┤
-    MSIL / JVM / WebAssembly ──► typed stack/code lifter ───┤
-    x86 / ARM / 6502 code ─────► instruction + state lifter ─┤
-    LLVM .ll / .bc ────────────► LLVM import adapter ───────┤
-                                                             ▼
-                                                   Source Semantic IR
-                                               (source behavior retained)
-                                                             ▼
-                                               Typed SSA / Effects / Memory
-                                                 / Iteration / Object IR
-                                                             ▼
-                                             Range, type, shape, alias facts
-                                                             ▼
-                                            Recover known semantic operations
-                                      (bit hacks, loops, API calls, disposal)
-                                                             ▼
-                                          Specialize, fuse, transform, prove
-                                                             ▼
-                                        Representation + target legalization
-                                                             ▼
-                                  Target IR / helpers / binding declarations
-                                                             ▼
-                                           Source, IR, ASM or binary emission
-                                                             ▼
-                                             Compile + execute + compare
-                                                             ▼
-                                             Manifest + verification status
+```mermaid
+flowchart TB
+  subgraph Inputs["Input families"]
+    Source["Source text"] --> Frontend["Language frontend"]
+    Tokens["Tokenized BASIC / p-code"] --> Decoder["Dialect decoder"]
+    Bytecode["MSIL / JVM / Wasm / LLVM"] --> CodeLifter["Bytecode or IR importer"]
+    Machine["x86 / ARM / 6502"] --> MachineLifter["Instruction and state lifter"]
+  end
+  Frontend --> Semantic["Source semantic IR"]
+  Decoder --> Semantic
+  CodeLifter --> Semantic
+  MachineLifter --> Semantic
+  Semantic --> IR["Typed SSA, memory, effects,<br/>iteration and object semantics"]
+  IR --> Facts["Range, type, shape and alias facts"]
+  Facts --> Recover["Recover semantic operations"]
+  Recover --> Transform["Specialize and optimize<br/>under proven preconditions"]
+  Transform --> Legalize["Representation, runtime<br/>and ABI legalization"]
+  Legalize --> Emit["Emit source, IR, ASM or binary<br/>with helpers and bindings"]
+  Emit --> Verify["Compile, execute and compare"]
+  Oracle["Independent source oracle"] --> Verify
+  Verify --> Manifest["Manifest and precise support status"]
+```
 
 These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback.
 
@@ -86,4 +80,4 @@ Every invocation should produce a machine-readable manifest containing at least:
 - Transformations with legality/proof status and conservative fallbacks.
 - Build/run/oracle evidence, diagnostics and precise support tier.
 
-See [verification](../quality/VERIFICATION.md) and the [normative CLI/manifest contract](../PRD.md).
+See [verification](../quality/VERIFICATION.md) and the [normative CLI/manifest contract](../prd/04-roadmap-and-delivery.md#s10).

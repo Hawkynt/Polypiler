@@ -1,6 +1,6 @@
 # Canonical IR and analysis contracts
 
-**Status:** proposed semantics, not a claim that these types or passes exist. See [PRD §§4, 17, 29–30](../PRD.md).
+**Status:** proposed semantics, not a claim that these types or passes exist. See [PRD §4](../prd/02-core-architecture.md#s4), [§17](../prd/05-semantics-and-recovery.md#s17) and [§§29–30](../prd/08-interop-and-language-semantics.md).
 
 The IR is language-independent **without erasing source-language behavior**. Some source rules must remain as explicit operations or policies until they are legally lowered. The IR verifier should run at every representation boundary.
 
@@ -27,6 +27,17 @@ Each value can have four independently tracked representations:
 | Public ABI | Externally observable width and calling convention |
 
 A semantic 96-bit value whose range is proven to fit eight bits might execute using an 8-bit register, but an exposed foreign 96-bit record still requires its original bytes and alignment at the boundary. Narrowest execution is not automatically fastest; speed, code size, conversions and register pressure all influence selection.
+
+```mermaid
+flowchart TB
+  Value["One semantic value"] --> Semantic["Semantic width<br/>domain and overflow rules"]
+  Value --> Execution["Execution width<br/>registers and temporaries"]
+  Value --> Storage["Storage width<br/>bytes, stride and alignment"]
+  Value --> ABI["Public ABI<br/>call and layout contract"]
+  Facts["Proven range and cost facts"] --> Execution
+  Foreign["Observable foreign contract"] --> Storage
+  Foreign --> ABI
+```
 
 ## Abstract interpretation
 
