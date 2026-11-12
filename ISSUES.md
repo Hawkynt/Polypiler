@@ -23,6 +23,42 @@ large work is cut into issues, and what "done" means. The skeletons to copy live
 An issue goes back to `state:draft` the moment an implementer finds an ambiguity. The fix is to
 edit the issue, not to guess in the code.
 
+## Applicability and readiness review
+
+`ISSUES.md` is the canonical readiness policy; use the existing kind-specific templates. See the
+[hypothetical Ready and Blocked examples](docs/examples/ISSUE-READINESS.md) for completed reviews.
+
+**Ready is not Done.** Ready means the inputs, scope, acceptance contract and verification plan are
+specified. No implementation or passing tests are required to be Ready. Passing tests, coverage,
+artifacts and reviewed merge are completion evidence under the Definition of Done below.
+
+**Owner:** the author supplies the evidence; the maintainer or a named delegate accepts applicability
+rationales, resolves ambiguities and records the readiness decision and date. The implementer checks
+the evidence before claiming the issue, replaces `state:ready` with `in-flight`, and creates
+`<number>-<slug>`. Labels follow the Lifecycle table, not an independent issue-body-only workflow.
+
+Write **N/A — specific reason** only for a genuinely irrelevant field. An unknown is not N/A; a bare
+N/A is incomplete. Documentation-only work may mark foreign profiles, external fixtures, runtime
+oracles and product diagnostics inapplicable, but still needs scope, positive and negative scenarios,
+all four test-design axes (or a reason an axis does not apply), sourced measurements, evidence and
+review. Its compiler target state is `N/A — documentation/process only`, never `verified`.
+
+A complete work order with **zero** unmet prerequisites can be Ready. **One** unmet prerequisite is
+enough to prevent readiness; **several** must each be recorded, never hidden behind a guessed default.
+An applicable field needs evidence; an irrelevant field needs a rationale; an unknown field needs a
+resolution. In particular, an unknown source/target dialect, bitness, calling convention, DLL, header
+or independent oracle cannot be marked irrelevant merely to start an ABI task.
+
+Changes to scope, fixture hash, source/target profile, ABI, dependency, licence or acceptance contract
+**revoke** the affected readiness evidence. Review it again **before implementation continues**.
+Missing or ambiguous requirements return to `state:draft`; an unavailable external prerequisite uses
+`state:blocked`. Record each blocker, its Owner, the resolving issue and evidence needed to unblock.
+If no resolving issue exists yet, explicitly record that fact; do not invent a number or claim Ready.
+After resolution, the maintainer or delegate reviews the work order again before `state:ready`.
+
+Keep each template's kind-specific sections. A short epic, spike or bug skeleton does not waive the
+applicable required sections below: append the missing sections before declaring an issue Ready.
+
 ## How work is cut into issues
 
 **One issue = one pull request = one reviewable concern.** When an issue cannot be done in one pull
@@ -210,6 +246,7 @@ cases.
 The highest gate state from PRD §23.6 this issue reaches (`parsed` · `lifted` · `recognized` ·
 `proved` · `legalized` · `emitted` · `compiled` · `executed` · `verified` ·
 `performance-validated`). The capability report may advertise exactly that state and nothing more.
+Documentation/process work uses `N/A — documentation/process only`; it adds no compiler capability.
 
 ### 12. Labels and milestone
 
@@ -223,14 +260,14 @@ Tick in the issue body; the implementer verifies it before claiming the issue.
 - [ ] Title follows `<scope>: <outcome>`
 - [ ] Why, user story with a listed role, in-scope and out-of-scope lists present
 - [ ] Every dependency is closed or explained; epics have their sub-issues linked
-- [ ] Every fixture pinned to a full SHA with a licence; the oracle is independent
+- [ ] Every applicable fixture pinned to a full SHA with a licence; oracle independent, or reasoned N/A
 - [ ] Toolchains named with exact versions
 - [ ] Specification names the public surface, diagnostics and files
 - [ ] ≥ 1 positive and ≥ 1 negative Gherkin scenario with concrete values
 - [ ] Test-design table covers happy path, exceptions, boundaries and equivalence classes
 - [ ] Every measurement has how, threshold and the threshold's source
 - [ ] Implementation plan is test-first and lists the forbidden shortcuts
-- [ ] Target state chosen; fits one pull request
+- [ ] Target state chosen (or documentation/process N/A); fits one pull request
 - [ ] Labels and milestone set
 
 ## Kind-specific sections

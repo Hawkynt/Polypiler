@@ -138,6 +138,9 @@ The catalogue and publishing workflows are later deliverables. A generated packa
 
 ## 📚 Documentation
 
+Before starting work, follow the [issue-writing standard](ISSUES.md) and its
+[Ready and Blocked examples](docs/examples/ISSUE-READINESS.md).
+
 Start with the [documentation index](docs/README.md), then follow the [end-to-end compilation flow](docs/architecture/PIPELINE.md), [IR and analysis contracts](docs/architecture/IR.md), [semantic recovery](docs/architecture/SEMANTIC-RECOVERY.md), [foreign interoperability](docs/architecture/INTEROP.md), and [verification gates](docs/quality/VERIFICATION.md). The [full PRD](docs/PRD.md) remains the normative implementation plan; these pages describe the proposed design, not shipped features.
 
 ## 🔬 What makes it different
