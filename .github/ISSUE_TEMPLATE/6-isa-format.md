@@ -5,6 +5,12 @@ title: "<isa|format>(<name>): <decoder|lifter|encoder|emitter|semantics|oracle> 
 labels: [enhancement, area:recovery, state:draft]
 ---
 
+> Follow the [canonical applicability and readiness review](https://github.com/Hawkynt/Polypiler/blob/main/ISSUES.md#applicability-and-readiness-review).
+> Use `N/A — specific reason` only for irrelevant fields; unknown is not N/A. Ready specifies the
+> work and its verification plan; passing tests and ≥ 95 % line and branch coverage belong to Done.
+> Name the readiness reviewer/date and blockers. Append any applicable required sections missing
+> from this skeleton; keep the kind-specific prompts. Documentation target state: `N/A — documentation/process only`.
+
 <!-- Rules: ISSUES.md. Replace every <…>; an issue containing <…> or TBD stays state:draft. -->
 
 ## Why
@@ -116,3 +122,12 @@ Feature: <name> <component>
 - [ ] Implementation plan is test-first and lists the forbidden shortcuts
 - [ ] Target state chosen; fits one pull request
 - [ ] Labels and milestone set
+
+## Readiness review
+
+- **Reviewer / date:** <maintainer or delegate; date of decision>
+- **Decision:** <state:draft | state:ready | state:blocked; rationale>
+- **Blockers:** <none, or each prerequisite, owner, resolving issue and evidence needed>
+
+Changes to scope, fixture hash, profile/ABI, dependency, licence or acceptance contract require fresh
+review before implementation continues. Claim a Ready issue with `in-flight` and `<number>-<slug>`.
