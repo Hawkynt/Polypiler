@@ -61,7 +61,7 @@ Assertions: identity, reverse, duplicate, constants, inverse-only-for-bijections
                    → byte-backed UDT if packing differs
                    → verify pointer and by-value call behavior
 
-Assertions: symbol name, convention, parameter/return widths, struct size/offset/stride, callback and buffer effects. C \`dllimport\` alone does not supply a DLL filename. Do not mix Windows DLL imports with the DOS OMF target.
+Assertions: symbol name, convention, parameter/return widths, struct size/offset/stride, callback and buffer effects. C `dllimport` alone does not supply a DLL filename. Do not mix Windows DLL imports with the DOS OMF target.
 
 ## 6. MOS 6502 routine → C#
 

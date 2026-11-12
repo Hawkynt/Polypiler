@@ -19,18 +19,18 @@ Polypiler represents what a construct **does**, then chooses a native construct,
 | Iterators/yield/coroutines | Suspend/resume value and lifetime state | Generated state machine |
 | Async/await/promises | Scheduling, errors, cancellation and completion | State machine **plus** compatible scheduler |
 | try/catch/finally | Handler selection, nonlocal flow and cleanup | Explicit result/handler regions + cleanup edges |
-| \`using\`/RAII/defer | Acquisition and deterministic cleanup | ResourceScope or explicit cleanup paths |
-| VB \`On Error Resume Next\` | Statement-level recovery and \`Err\` state | Recovery edge after each relevant source statement |
+| `using`/RAII/defer | Acquisition and deterministic cleanup | ResourceScope or explicit cleanup paths |
+| VB `On Error Resume Next` | Statement-level recovery and `Err` state | Recovery edge after each relevant source statement |
 | Static/TLS/lazy fields | Initialization ordering and storage duration | Module storage, init guards or runtime support |
 | Reflection/dynamic calls | Type identity, metadata, code loading | Minimal metadata and dispatch or diagnostic |
 
-C varargs, C# \`params\`, Java varargs, Python \`*args\`/\`**kwargs\`, JS rest and Perl \`@_\` are not one interchangeable representation. Source-specific argument promotions, evaluation and ABI must be explicit.
+C varargs, C# `params`, Java varargs, Python `*args`/`**kwargs`, JS rest and Perl `@_` are not one interchangeable representation. Source-specific argument promotions, evaluation and ABI must be explicit.
 
 C++ virtual versus nonvirtual diamond inheritance and Python's C3 MRO are likewise **different semantic contracts** even if both are called multiple inheritance.
 
 ## Recover deterministic disposal
 
-A C# \`using\` can be lowered to a \`try/finally\` with disposal. Reverse recovery from existing cleanup blocks is allowed only if acquisition, all exits, disposal order, null handling and exception precedence match.
+A C# `using` can be lowered to a `try/finally` with disposal. Reverse recovery from existing cleanup blocks is allowed only if acquisition, all exits, disposal order, null handling and exception precedence match.
 
     Acquire resource ──► body ──► normal exit
              │             │
@@ -42,7 +42,7 @@ Do not merge cleanup edges that change visible error behavior. When a target lac
 
 ## Coroutines and async are distinct
 
-A coroutine is resumable computation and may have no concurrency. An async function adds an execution/completion contract that may involve scheduler, cancellation and exception propagation. A target without \`async\` syntax can still run a state machine, but not without the relevant runtime capabilities if asynchronous operations remain.
+A coroutine is resumable computation and may have no concurrency. An async function adds an execution/completion contract that may involve scheduler, cancellation and exception propagation. A target without `async` syntax can still run a state machine, but not without the relevant runtime capabilities if asynchronous operations remain.
 
 Recovery of a compiler-generated state machine into a high-level construct requires proof about live variables, suspension points, control-flow transitions and cleanup. A recognizable state machine shape alone is not enough.
 

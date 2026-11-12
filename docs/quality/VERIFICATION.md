@@ -85,10 +85,10 @@ A proof timeout, an unsatisfied target capability or a missing reference toolcha
 ## CI and PR requirements
 
 - Documentation-only changes: link/structure review and consistency with the PRD; no fictitious build or test claims.
-- Code changes: \`dotnet build\` and \`dotnet test\`, required coverage for service/logic code, toolchain-specific jobs and negative tests.
+- Code changes: `dotnet build` and `dotnet test`, required coverage for service/logic code, toolchain-specific jobs and negative tests.
 - Performance changes: reproducible benchmark methodology and correctness baseline.
 - Every PR: summary, why, test evidence, limitations and at least one human reviewer before merge.
-- No direct push to \`main\`; keep linear history and use branch protection where available.
+- No direct push to `main`; keep linear history and use branch protection where available.
 - Publish generated packages only when authorized and their licenses/dependencies are verified.
 
 ## Operational rule

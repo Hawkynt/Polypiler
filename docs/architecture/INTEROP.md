@@ -26,7 +26,7 @@ The source declaration does **not always specify the library file**. For example
 
 ## Native bindings, not copied libraries
 
-If source C calls a compatible Win32 DLL, a PowerBASIC-for-Windows backend can emit a native \`DECLARE ... LIB ... ALIAS\` declaration with matching calling convention and types. It should **not** recompile the DLL into BASIC.
+If source C calls a compatible Win32 DLL, a PowerBASIC-for-Windows backend can emit a native `DECLARE ... LIB ... ALIAS` declaration with matching calling convention and types. It should **not** recompile the DLL into BASIC.
 
 Potential target mechanisms include C/C++ extern declarations, Rust extern blocks, C# native imports, Delphi external declarations, PowerBASIC declarations, and Perl/Python FFI adapters.
 
@@ -50,7 +50,7 @@ If the target UDT inserts unwanted padding, adding padding **cannot remove it**.
 
 ### Five-byte example
 
-A C packed record has \`type:u8\` at offset 0 and \`value:u32\` at offset 1. A naturally aligned target UDT could instead place \`value\` at offset 4 and use eight bytes.
+A C packed record has `type:u8` at offset 0 and `value:u32` at offset 1. A naturally aligned target UDT could instead place `value` at offset 4 and use eight bytes.
 
 For pointer parameters, the backend may allocate an exact five-byte buffer and perform unaligned reads/writes correctly. For **by-value** parameters, matching bytes is not sufficient: register and stack classification must match too, sometimes requiring a native stub.
 
@@ -64,15 +64,15 @@ An example conceptual sequence:
     AbiCopyBack(fields_written_by_callee)
     AbiRelease(if_owned)
 
-Perl may need generated \`pack\`/\`unpack\` around the FFI buffer, but those functions do not themselves provide an FFI calling convention. If several calls consume the same layout, Polypiler may pack once and unpack only when needed **if** alias/effect/lifetime analysis proves it safe.
+Perl may need generated `pack`/`unpack` around the FFI buffer, but those functions do not themselves provide an FFI calling convention. If several calls consume the same layout, Polypiler may pack once and unpack only when needed **if** alias/effect/lifetime analysis proves it safe.
 
 Calls that retain pointers need stable storage and an explicit ownership contract. Calls that modify memory invalidate cached values; callback re-entry and thread state can prevent naive fusion.
 
 ## Float80 and legacy interfaces
 
-The existing PB-Compiler \`Extended80\` and FrameworkExtensions numeric types can inform exact storage and conversion semantics.
+The existing PB-Compiler `Extended80` and FrameworkExtensions numeric types can inform exact storage and conversion semantics.
 
-- A Rust 10-byte struct can hold x87 bits, but may **not** be passed by value as an ABI-native \`long double\`.
+- A Rust 10-byte struct can hold x87 bits, but may **not** be passed by value as an ABI-native `long double`.
 - A native bridge may be required for register/stack conventions or mismatched compiler layouts.
 - VB6 Automation interfaces use COM/Automation types; they do not inherently expose an 80-bit float parameter.
 - Cross-bitness calls may require out-of-process adapters rather than in-process imports.

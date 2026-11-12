@@ -6,7 +6,7 @@
 
 **Source frontends** parse source syntax with native language semantics. First targets are C# (Roslyn), JavaScript (existing Cipher pipeline) and PowerBASIC (existing PB-Compiler binder). Follow-on languages include C, C++, Rust, Kotlin, Perl, Python, TypeScript, Java, Go, Delphi, FreeBASIC, PHP and Ruby.
 
-**Intermediate/bytecode frontends** lift LLVM \`.ll\`/\`.bc\`, MSIL, JVM bytecode, WebAssembly, tokenized BASIC and format-specific BASIC p-code. The importer must retain ABI, runtime linkage, versions, metadata and exceptional behavior. LLVM is an additional interchange representation, not a replacement for Polypiler's semantic IR; GCC GENERIC/GIMPLE is separate from LLVM and needs its own adapter.
+**Intermediate/bytecode frontends** lift LLVM `.ll`/`.bc`, MSIL, JVM bytecode, WebAssembly, tokenized BASIC and format-specific BASIC p-code. The importer must retain ABI, runtime linkage, versions, metadata and exceptional behavior. LLVM is an additional interchange representation, not a replacement for Polypiler's semantic IR; GCC GENERIC/GIMPLE is separate from LLVM and needs its own adapter.
 
 **Machine-code frontends** lift x86/x64, ARM/AArch64, MOS 6502 and later other processors through decoded instruction semantics, register/flag SSA, stack and call-convention recovery, memory provenance, and explicit unresolved platform effects. Function entry, CPU model, code/data mapping and environment must be supplied or discovered reliably.
 
