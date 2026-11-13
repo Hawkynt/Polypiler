@@ -100,30 +100,29 @@ public sealed class TranslateToCSharpTests {
 
   /// <summary>
   /// What the C# frontend imports beyond the first prototype - the wider types, the checked operators,
-  /// the further statements, constants and library operations - is IR this backend does not write
-  /// yet: exit code 3 with PLY1052, and nothing is written.
+  /// the further statements, constants and library operations - comes back as C# the compiler accepts
+  /// without complaint, whatever the project's overflow setting.
   /// </summary>
-  [TestCase("public static long F(long a) => a + 1;", "i64")]
-  [TestCase("public static double F(double a) => a * 0.5;", "f64")]
-  [TestCase("public static char F(char a) => a;", "u16")]
-  [TestCase("public static int F(int a) => checked(a + 1);", "AddChecked")]
-  [TestCase("public static byte F(int a) => checked((byte)a);", "IrConvert with the contract Trap")]
-  [TestCase("public static int F(int a) { do { a--; } while (a > 0); return a; }", "IrDoWhile")]
-  [TestCase("public static int F(int a) { switch (a) { case 1: return 2; } return a; }", "IrSwitch")]
-  [TestCase("public static int F(int a) { while (a > 0) { a--; if (a == 3) break; } return a; }", "IrBreak")]
-  [TestCase("public static int F(int a) { for (int i = 0; i < a; ++i) { continue; } return a; }", "IrFor")]
-  [TestCase("public static int F(int a) => a++;", "IrStep")]
-  [TestCase("static readonly int[] T = { 1 }; public static int F(int a) => T[a];", "IrModuleConst")]
-  [TestCase("public static int[] F(int a) => new[] { a };", "IrIntrinsic")]
-  [TestCase("public static int F(int a) => System.Math.Abs(a);", "IrIntrinsic")]
-  public void WidenedSource_IsRefusedByTheBackend(string methods, string what) {
+  [TestCase("public static long F(long a) => a + 1;", 41L, 42L)]
+  [TestCase("public static double F(double a) => a * 0.5;", 3.0, 1.5)]
+  [TestCase("public static int F(int a) => checked(a + 1);", 41, 42)]
+  [TestCase("public static byte F(int a) => checked((byte)a);", 255, (byte)255)]
+  [TestCase("public static int F(int a) { do { a--; } while (a > 0); return a; }", 5, 0)]
+  [TestCase("public static int F(int a) { switch (a) { case 1: return 2; } return a; }", 1, 2)]
+  [TestCase("public static int F(int a) { while (a > 0) { a--; if (a == 3) break; } return a; }", 9, 3)]
+  [TestCase("public static int F(int a) { for (int i = 0; i < a; ++i) { continue; } return a; }", 4, 4)]
+  [TestCase("public static int F(int a) => a++ + a;", 1, 3)]
+  [TestCase("static readonly int[] T = { 1, 5 }; public static int F(int a) => T[a];", 1, 5)]
+  [TestCase("public static int F(int a) => new[] { a, 7 }[1];", 0, 7)]
+  [TestCase("public static int F(int a) => System.Math.Abs(a);", -3, 3)]
+  public void WidenedSource_IsWrittenAsCSharp(string methods, object argument, object expected) {
     var source = Path.Combine(this._directory, "Snippet.cs");
     File.WriteAllText(source, PrototypeFixture.Wrap(methods));
     var (exitCode, output, error) = Invoke("translate", source, "--from", "csharp", "--to", "csharp", "--output", this._out);
-    Assert.That((exitCode, output), Is.EqualTo((TranslateCommand.UnsupportedConstruct, "")));
-    Assert.That(error, Does.Contain($"error PLY1052: '{what}' is not supported by the C# backend yet"));
-    Assert.That(error.Split('\n', System.StringSplitOptions.RemoveEmptyEntries), Has.All.StartsWith("error PLY1052: "));
-    Assert.That(Directory.Exists(this._out), Is.False);
+    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    var text = File.ReadAllText(output.Trim());
+    foreach (var checking in new[] { false, true })
+      Assert.That(GeneratedCSharp.Compile(text, checking).Method("F").Invoke(null, [argument]), Is.EqualTo(expected));
   }
 
   private sealed record Riddle : IrStmt;

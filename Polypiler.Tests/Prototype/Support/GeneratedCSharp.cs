@@ -55,7 +55,18 @@ internal sealed class GeneratedCSharp {
     => this._class.GetMethod(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
       ?? throw new MissingMethodException(this._class.Name, name);
 
-  /// <summary>What the compiled method does for a call, in the notation of <see cref="PrototypeFixture.Outcome"/>.</summary>
-  public string Outcome(PrototypeCall call) => PrototypeFixture.InvokedOutcome(this.Method(call.Method), call);
+  /// <summary>
+  /// What the compiled method does for a call, in the notation of <see cref="PrototypeFixture.Outcome"/>.
+  /// A <c>char</c> of the call is handed over as the <c>ushort</c> the IR knows it as, which is the
+  /// type the generated method declares.
+  /// </summary>
+  public string Outcome(PrototypeCall call)
+    => PrototypeFixture.InvokedOutcome(this.Method(call.Method), call with { Arguments = [.. call.Arguments.Select(CodeUnits)] });
+
+  private static object CodeUnits(object argument) => argument switch {
+    char unit => (ushort)unit,
+    char[] text => Array.ConvertAll(text, unit => (ushort)unit),
+    _ => argument
+  };
 
 }
