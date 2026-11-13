@@ -1,0 +1,7 @@
+schema: 1
+projects:
+  - { name: Polypiler.Core.Frontends.CSharp, layer: 6 }
+  - { pattern: Polypiler.Core.Frontends.*, layer: 6 }
+  - { name: Polypiler.Base, layer: 0 }
+standalone:
+  - Polypiler.Base

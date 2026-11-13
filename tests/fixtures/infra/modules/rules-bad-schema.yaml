@@ -1,0 +1,3 @@
+schema: 2
+projects:
+  - { name: Polypiler.Core, layer: 0 }

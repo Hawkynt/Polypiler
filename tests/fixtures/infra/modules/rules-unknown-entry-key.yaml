@@ -1,0 +1,4 @@
+schema: 1
+projects:
+  - { name: Polypiler.Core, layer: 0 }
+  - { name: Polypiler.Core.IR, tier: 2 }

@@ -1,0 +1,9 @@
+# Every reference of the cycle fixtures is a listed exception, so the cycle is the only violation.
+schema: 1
+projects:
+  - { pattern: Polypiler.*, layer: 0 }
+sameLayerExceptions:
+  - { from: Polypiler.A, to: Polypiler.B }
+  - { from: Polypiler.B, to: Polypiler.A }
+  - { from: Polypiler.B, to: Polypiler.C }
+  - { from: Polypiler.C, to: Polypiler.A }

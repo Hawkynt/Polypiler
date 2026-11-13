@@ -1,0 +1,2 @@
+projects:
+  - { name: Polypiler.Core, layer: 0 }
