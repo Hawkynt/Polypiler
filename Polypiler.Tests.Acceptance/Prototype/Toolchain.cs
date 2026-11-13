@@ -14,9 +14,11 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 internal static class Toolchain {
 
   /// <summary>
-  /// The script that calls a generated module. It reads the calls from a JSON file, runs each one and
-  /// prints its outcome in the notation <see cref="PrototypeFixture.Outcome"/> uses, one per line. Only
-  /// a <c>RangeError</c> is an outcome; anything else the module throws ends the script with an error.
+  /// The script that calls a module, generated or original. It reads the calls from a JSON file, runs
+  /// each one and prints its outcome in the notation <see cref="PrototypeFixture.Outcome"/> uses, one
+  /// per line. A function is taken from the exports of an ES module, or from the object a CommonJS
+  /// file such as Cipher's <c>OpCodes.js</c> exports as a whole. Only a <c>RangeError</c> is an
+  /// outcome; anything else the module throws ends the script with an error.
   /// </summary>
   private const string Driver = """
     import { readFileSync } from 'node:fs';
@@ -30,7 +32,7 @@ internal static class Toolchain {
     for (const [name, encoded] of JSON.parse(readFileSync(callsPath, 'utf8'))) {
       const values = encoded.map(value => value !== null && typeof value === 'object' ? arrays[value.t].from(value.v) : value);
       try {
-        const result = module[name](...values);
+        const result = (name in module ? module : module.default)[name](...values);
         lines.push([result, ...values.filter(ArrayBuffer.isView)].map(show).join(' | '));
       } catch (error) {
         if (!(error instanceof RangeError)) throw error;
