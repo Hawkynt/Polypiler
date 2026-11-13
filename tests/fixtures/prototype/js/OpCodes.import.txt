@@ -1,13 +1,13 @@
 RotL8	imported
 RotR8	imported
-RotL16	OpCodes.js(55,22): error PLY1101: parameter 'value' of 'RotL16' has no supported JSDoc type
-RotR16	OpCodes.js(67,22): error PLY1101: parameter 'value' of 'RotR16' has no supported JSDoc type
+RotL16	imported
+RotR16	imported
 RotL32	imported
 RotR32	imported
 Shl8	imported
 Shr8	imported
-Shl16	OpCodes.js(123,21): error PLY1101: parameter 'value' of 'Shl16' has no supported JSDoc type
-Shr16	OpCodes.js(133,21): error PLY1101: parameter 'value' of 'Shr16' has no supported JSDoc type
+Shl16	imported
+Shr16	imported
 Shl32	imported
 Shr32	imported
 Shr32Signed	imported
@@ -15,127 +15,132 @@ And8	imported
 Or8	imported
 Xor8	imported
 Not8	imported
-And16	OpCodes.js(215,21): error PLY1101: parameter 'a' of 'And16' has no supported JSDoc type
-Or16	OpCodes.js(225,20): error PLY1101: parameter 'a' of 'Or16' has no supported JSDoc type
-Xor16	OpCodes.js(235,21): error PLY1101: parameter 'a' of 'Xor16' has no supported JSDoc type
-Not16	OpCodes.js(244,21): error PLY1101: parameter 'a' of 'Not16' has no supported JSDoc type
+And16	imported
+Or16	imported
+Xor16	imported
+Not16	imported
 RotL64n	OpCodes.js(254,23): error PLY1101: parameter 'value' of 'RotL64n' has no supported JSDoc type
 RotR64n	OpCodes.js(269,23): error PLY1101: parameter 'value' of 'RotR64n' has no supported JSDoc type
 ShiftLn	OpCodes.js(284,23): error PLY1101: parameter 'value' of 'ShiftLn' has no supported JSDoc type
 ShiftRn	OpCodes.js(294,23): error PLY1101: parameter 'value' of 'ShiftRn' has no supported JSDoc type
 ToByte	imported
 UintToByte	imported
-ToSByte	OpCodes.js(323,5): error PLY1101: the result of 'ToSByte' has no supported JSDoc type
-ToWord	OpCodes.js(333,5): error PLY1101: the result of 'ToWord' has no supported JSDoc type
-ToShort	OpCodes.js(342,5): error PLY1101: the result of 'ToShort' has no supported JSDoc type
+ToSByte	imported
+ToWord	imported
+ToShort	imported
 ToDWord	imported
 ToInt	imported
 ToQWord	OpCodes.js(371,23): error PLY1101: parameter 'value' of 'ToQWord' has no supported JSDoc type
 ToLong	OpCodes.js(380,22): error PLY1101: parameter 'value' of 'ToLong' has no supported JSDoc type
-RotL64	OpCodes.js(392,5): error PLY1101: the result of 'RotL64' has no supported JSDoc type
-RotR64	OpCodes.js(420,5): error PLY1101: the result of 'RotR64' has no supported JSDoc type
+RotL64	OpCodes.js(394,35): error PLY1102: 'an object literal' is not supported yet
+RotR64	OpCodes.js(422,35): error PLY1102: 'an object literal' is not supported yet
 RotL128n	OpCodes.js(447,24): error PLY1101: parameter 'value' of 'RotL128n' has no supported JSDoc type
 RotR128n	OpCodes.js(462,24): error PLY1101: parameter 'value' of 'RotR128n' has no supported JSDoc type
 RotL128	OpCodes.js(478,58): error PLY1102: 'a call of bytes.slice' is not supported yet
+RotR128	OpCodes.js(478,58): error PLY1102: 'a call of bytes.slice' is not supported yet
 RotR128	OpCodes.js(509,58): error PLY1102: 'a call of bytes.slice' is not supported yet
-Pack16BE	OpCodes.js(522,5): error PLY1101: the result of 'Pack16BE' has no supported JSDoc type
-Unpack16BE	OpCodes.js(531,26): error PLY1101: parameter 'word' of 'Unpack16BE' has no supported JSDoc type
-Pack16LE	OpCodes.js(545,5): error PLY1101: the result of 'Pack16LE' has no supported JSDoc type
-Unpack16LE	OpCodes.js(554,26): error PLY1101: parameter 'word' of 'Unpack16LE' has no supported JSDoc type
+Pack16BE	imported
+Unpack16BE	imported
+Pack16LE	imported
+Unpack16LE	imported
 Pack32BE	imported
-Unpack32BE	OpCodes.js(581,14): error PLY1102: 'an array literal' is not supported yet
+Unpack32BE	imported
 Pack32LE	imported
-Unpack32LE	OpCodes.js(608,14): error PLY1102: 'an array literal' is not supported yet
-Pack64BE	OpCodes.js(628,5): error PLY1101: the result of 'Pack64BE' has no supported JSDoc type
-Unpack64BE	OpCodes.js(641,27): error PLY1101: parameter 'qword' of 'Unpack64BE' has no supported JSDoc type
-Pack64LE	OpCodes.js(658,5): error PLY1101: the result of 'Pack64LE' has no supported JSDoc type
-Unpack64LE	OpCodes.js(668,27): error PLY1101: parameter 'qword' of 'Unpack64LE' has no supported JSDoc type
-Words32ToBytesBE	OpCodes.js(678,21): error PLY1102: 'an array literal' is not supported yet
-BytesToWords32BE	OpCodes.js(696,21): error PLY1102: 'an array literal' is not supported yet
-GetByte	OpCodes.js(714,25): error PLY1103: the result of 'byteIndex * 8' is a JavaScript number; coerce it with | 0 or >>> 0
-SetByte	OpCodes.js(725,21): error PLY1103: the result of 'byteIndex * 8' is a JavaScript number; coerce it with | 0 or >>> 0
-Split64	OpCodes.js(736,23): error PLY1101: parameter 'value' of 'Split64' has no supported JSDoc type
-Combine64	OpCodes.js(750,5): error PLY1101: the result of 'Combine64' has no supported JSDoc type
+Unpack32LE	imported
+Pack64BE	OpCodes.js(632,14): error PLY1103: the result of '(BigInt(high) << 32n) | BigInt(low)' has no bounded type
+Unpack64BE	OpCodes.js(642,40): error PLY1102: 'BigInt of bigint that is no proven integer' is not supported yet
+Pack64LE	OpCodes.js(632,14): error PLY1103: the result of '(BigInt(high) << 32n) | BigInt(low)' has no bounded type
+Pack64LE	OpCodes.js(659,14): error PLY1103: the result of 'OpCodes.Pack64BE(b7, b6, b5, b4, b3, b2, b1, b0)' has no bounded type
+Unpack64LE	OpCodes.js(642,40): error PLY1102: 'BigInt of bigint that is no proven integer' is not supported yet
+Unpack64LE	OpCodes.js(669,14): error PLY1102: 'a call of OpCodes.Unpack64BE(qword).reverse' is not supported yet
+Words32ToBytesBE	OpCodes.js(681,9): error PLY1102: 'a call of bytes.push' is not supported yet
+BytesToWords32BE	OpCodes.js(702,9): error PLY1102: 'a call of words.push' is not supported yet
+GetByte	imported
+SetByte	imported
+Split64	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
+Combine64	imported
 AnsiToBytes	OpCodes.js(2241,27): error PLY1101: parameter 'str' of 'AnsiToBytes' has no supported JSDoc type
-BytesToAnsi	OpCodes.js(2254,5): error PLY1101: the result of 'BytesToAnsi' has no supported JSDoc type
+BytesToAnsi	OpCodes.js(2255,17): error PLY1102: '''' is not supported yet
 AsciiToBytes	OpCodes.js(2269,28): error PLY1101: parameter 'str' of 'AsciiToBytes' has no supported JSDoc type
-BytesToChars	OpCodes.js(2289,5): error PLY1101: the result of 'BytesToChars' has no supported JSDoc type
-DoubleToBytes	OpCodes.js(2308,29): error PLY1101: parameter 'value' of 'DoubleToBytes' has no supported JSDoc type
-BytesToDouble	OpCodes.js(2324,5): error PLY1101: the result of 'BytesToDouble' has no supported JSDoc type
+BytesToChars	OpCodes.js(2293,16): error PLY1102: 'a call of String.fromCharCode.apply' is not supported yet
+DoubleToBytes	imported
+BytesToDouble	OpCodes.js(2326,9): error PLY1102: 'throw' is not supported yet
 Hex4ToBytes	OpCodes.js(2342,27): error PLY1101: parameter 'hexString' of 'Hex4ToBytes' has no supported JSDoc type
 HexCharCodeToValue	imported
 Hex8ToBytes	OpCodes.js(2379,27): error PLY1101: parameter 'hexString' of 'Hex8ToBytes' has no supported JSDoc type
 Hex16ToWords	OpCodes.js(2404,28): error PLY1101: parameter 'hexString' of 'Hex16ToWords' has no supported JSDoc type
 Hex32ToDWords	OpCodes.js(2429,29): error PLY1101: parameter 'hexString' of 'Hex32ToDWords' has no supported JSDoc type
-XorArrays	OpCodes.js(2457,22): error PLY1102: 'an array literal' is not supported yet
-CopyArray	OpCodes.js(2474,24): error PLY1102: 'an array literal' is not supported yet
+XorArrays	OpCodes.js(2460,9): error PLY1102: 'a call of result.push' is not supported yet
+CopyArray	OpCodes.js(2481,14): error PLY1102: 'a call of arr.slice' is not supported yet
 ClearArray	OpCodes.js(2489,26): error PLY1101: parameter 'arr' of 'ClearArray' has no supported JSDoc type
 CopyBytes	imported
 CompareArrays	imported
 SecureCompare	imported
 SecureRandomBytes	OpCodes.js(2549,11): error PLY1102: 'typeof' is not supported yet
-AddMod	OpCodes.js(2581,15): error PLY1103: the result of '(a % m) + (b % m)' is a JavaScript number; coerce it with | 0 or >>> 0
-SubMod	OpCodes.js(2592,15): error PLY1103: the result of '(a % m) - (b % m) + m' is a JavaScript number; coerce it with | 0 or >>> 0
-MulMod	OpCodes.js(2603,15): error PLY1103: the result of '(a % m) * (b % m)' is a JavaScript number; coerce it with | 0 or >>> 0
-GF256Mul	OpCodes.js(2618,13): error PLY1102: 'int32 as a condition' is not supported yet
+AddMod	imported
+SubMod	imported
+MulMod	imported
+GF256Mul	imported
 SBoxLookup	imported
 MatrixMultiply4x4	OpCodes.js(2650,33): error PLY1101: parameter 'matrix' of 'MatrixMultiply4x4' has no supported JSDoc type
 FeistelRound	OpCodes.js(2667,51): error PLY1101: parameter 'fFunction' of 'FeistelRound' has no supported JSDoc type
-LFSRStep	OpCodes.js(2683,20): error PLY1103: the result of '(1 << width) - 1' is a JavaScript number; coerce it with | 0 or >>> 0
-PopCount	OpCodes.js(2695,14): error PLY1102: 'uint32 as a condition' is not supported yet
-GF2PolyMul	OpCodes.js(2710,14): error PLY1102: 'uint32 as a condition' is not supported yet
-GFMul	OpCodes.js(2730,20): error PLY1103: the result of '(1 << width) - 1' is a JavaScript number; coerce it with | 0 or >>> 0
+LFSRStep	OpCodes.js(2684,41): error PLY1102: 'int32 where uint32 is expected' is not supported yet
+PopCount	imported
+GF2PolyMul	imported
+GFMul	imported
 GenerateRoundConstants	OpCodes.js(2753,45): error PLY1101: parameter 'generator' of 'GenerateRoundConstants' has no supported JSDoc type
-FastXorArrays	OpCodes.js(2770,22): error PLY1102: 'new Array' is not supported yet
-FastXorInPlace	OpCodes.js(2784,16): error PLY1102: 'int32 as a condition' is not supported yet
-FastSubBytes	OpCodes.js(2797,22): error PLY1102: 'new Array' is not supported yet
-FastXorWords32	OpCodes.js(2811,22): error PLY1102: 'new Array' is not supported yet
-BatchRotL32	OpCodes.js(2825,22): error PLY1102: 'new Array' is not supported yet
-GetPooledArray	OpCodes.js(2849,22): error PLY1102: 'an array literal' is not supported yet
+FastXorArrays	imported
+FastXorInPlace	imported
+FastSubBytes	imported
+FastXorWords32	imported
+BatchRotL32	imported
+GetPooledArray	OpCodes.js(2851,9): error PLY1102: 'a call of result.push' is not supported yet
 ReturnToPool	imported
 TimingSafeAddMod	imported
 TimingSafeSelect	imported
-EncodeMsgLength64LE	OpCodes.js(2909,35): error PLY1101: parameter 'bitLength' of 'EncodeMsgLength64LE' has no supported JSDoc type
-EncodeMsgLength128BE	OpCodes.js(2926,36): error PLY1101: parameter 'bitLength' of 'EncodeMsgLength128BE' has no supported JSDoc type
-ModSafe	OpCodes.js(2951,27): error PLY1103: the result of 'result + modulus' is a JavaScript number; coerce it with | 0 or >>> 0
+EncodeMsgLength64LE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
+EncodeMsgLength64LE	OpCodes.js(2913,43): error PLY1102: 'split.low32' is not supported yet
+EncodeMsgLength128BE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
+EncodeMsgLength128BE	OpCodes.js(2934,44): error PLY1102: 'split.high32' is not supported yet
+ModSafe	imported
 CreateArray	OpCodes.js(2961,25): error PLY1102: 'undefined' is not supported yet
 ArraySlice	OpCodes.js(2977,21): error PLY1102: 'undefined' is not supported yet
 ConcatArrays	OpCodes.js(2990,28): error PLY1101: parameter 'arrays' of 'ConcatArrays' has no supported JSDoc type
-InverseSBoxLookup	OpCodes.js(3023,18): error PLY1103: the result of 'result' is a JavaScript number; coerce it with | 0 or >>> 0
-BuildInverseSBox	OpCodes.js(3035,23): error PLY1102: 'new Array' is not supported yet
-SplitNibbles	OpCodes.js(3047,5): error PLY1101: the result of 'SplitNibbles' has no supported JSDoc type
-CombineNibbles	OpCodes.js(3061,14): error PLY1103: the result of '((high & 0x0F) << 4) | (low & 0x0F)' is a JavaScript number; coerce it with | 0 or >>> 0
-SafeArrayAccess	OpCodes.js(3072,25): error PLY1102: '< on uint32 and int32' is not supported yet
+InverseSBoxLookup	imported
+BuildInverseSBox	imported
+SplitNibbles	OpCodes.js(3048,14): error PLY1102: 'an object literal' is not supported yet
+CombineNibbles	imported
+SafeArrayAccess	OpCodes.js(3075,31): error PLY1102: 'undefined' is not supported yet
 CircularArrayAccess	OpCodes.js(3085,38): error PLY1102: 'undefined' is not supported yet
-PopCountFast	OpCodes.js(3099,14): error PLY1102: 'uint32 as a condition' is not supported yet
+PopCountFast	imported
 GetBit	imported
 SetBit	imported
-ConstantTimeCompare	OpCodes.js(3135,16): error PLY1102: 'int32 as a condition' is not supported yet
-BitMask	OpCodes.js(3158,14): error PLY1103: the result of '(1 << bits) - 1' is a JavaScript number; coerce it with | 0 or >>> 0
-LFSRStepGeneric	OpCodes.js(3170,36): error PLY1103: the result of 'width' is a JavaScript number; coerce it with | 0 or >>> 0
-XorArrayWithByte	OpCodes.js(3183,22): error PLY1102: 'new Array' is not supported yet
-GFMulGeneric	OpCodes.js(3204,7): error PLY1103: the result of 'a &= mask' is a JavaScript number; coerce it with | 0 or >>> 0
+ConstantTimeCompare	imported
+BitMask	imported
+LFSRStepGeneric	OpCodes.js(3170,36): error PLY1102: 'uint32 where int32 is expected' is not supported yet
+XorArrayWithByte	imported
+GFMulGeneric	imported
 CreateUint32ArrayFromHex	OpCodes.js(3227,40): error PLY1101: parameter 'hexValues' of 'CreateUint32ArrayFromHex' has no supported JSDoc type
 CreateByteArrayFromHex	OpCodes.js(3250,38): error PLY1101: parameter 'hexValues' of 'CreateByteArrayFromHex' has no supported JSDoc type
 CreateUint64ArrayFromHex	OpCodes.js(3276,40): error PLY1101: parameter 'hexValues' of 'CreateUint64ArrayFromHex' has no supported JSDoc type
 Mul32	imported
-MulHi32	OpCodes.js(3341,19): error PLY1103: the result of 'a_lo * b_lo' is a JavaScript number; coerce it with | 0 or >>> 0
+MulHi32	imported
 Add32	imported
 Sub32	imported
-CreateBitStream	OpCodes.js(3386,5): error PLY1101: the result of 'CreateBitStream' has no supported JSDoc type
+CreateBitStream	OpCodes.js(3387,14): error PLY1102: 'new OpCodes._BitStream' is not supported yet
 _BitStream	OpCodes.js(3399,7): error PLY1102: 'this.buffer' is not supported yet
 GHashMul	OpCodes.js(3817,12): error PLY1102: 'uint8[] as a condition' is not supported yet
 GCMIncrement	OpCodes.js(3859,12): error PLY1102: 'uint8[] as a condition' is not supported yet
-Add64_HL	OpCodes.js(3885,5): error PLY1101: the result of 'Add64_HL' has no supported JSDoc type
-Add3L64	OpCodes.js(3898,5): error PLY1101: the result of 'Add3L64' has no supported JSDoc type
-Add3H64	OpCodes.js(3910,23): error PLY1101: parameter 'lowSum' of 'Add3H64' has no supported JSDoc type
-RotR64_HL	OpCodes.js(3922,5): error PLY1101: the result of 'RotR64_HL' has no supported JSDoc type
-RotL64_HL	OpCodes.js(3950,5): error PLY1101: the result of 'RotL64_HL' has no supported JSDoc type
-Swap64_HL	OpCodes.js(3977,5): error PLY1101: the result of 'Swap64_HL' has no supported JSDoc type
-Xor64_HL	OpCodes.js(3989,5): error PLY1101: the result of 'Xor64_HL' has no supported JSDoc type
-ToUint32	OpCodes.js(3998,24): error PLY1101: parameter 'value' of 'ToUint32' has no supported JSDoc type
-ToUint16	OpCodes.js(4007,24): error PLY1101: parameter 'value' of 'ToUint16' has no supported JSDoc type
-ToUint8	OpCodes.js(4016,23): error PLY1101: parameter 'value' of 'ToUint8' has no supported JSDoc type
+Add64_HL	OpCodes.js(3888,14): error PLY1102: 'an object literal' is not supported yet
+Add3L64	imported
+Add3H64	OpCodes.js(3911,14): error PLY1103: the result of '(ah + bh + ch + ((lowSum / 0x100000000) | 0)) | 0' has no bounded type
+RotR64_HL	OpCodes.js(3925,16): error PLY1102: 'an object literal' is not supported yet
+RotL64_HL	OpCodes.js(3953,16): error PLY1102: 'an object literal' is not supported yet
+Swap64_HL	OpCodes.js(3978,14): error PLY1102: 'an object literal' is not supported yet
+Xor64_HL	OpCodes.js(3990,14): error PLY1102: 'an object literal' is not supported yet
+ToUint32	OpCodes.js(3999,14): error PLY1102: '>>> on bigint and number' is not supported yet
+ToUint16	OpCodes.js(4008,15): error PLY1102: '>>> on bigint and number' is not supported yet
+ToUint8	OpCodes.js(4017,15): error PLY1102: '>>> on bigint and number' is not supported yet
 ArraysEqual	imported
 AndN	OpCodes.js(4047,20): error PLY1101: parameter 'a' of 'AndN' has no supported JSDoc type
 OrN	OpCodes.js(4057,19): error PLY1101: parameter 'a' of 'OrN' has no supported JSDoc type

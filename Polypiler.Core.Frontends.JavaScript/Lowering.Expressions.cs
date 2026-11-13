@@ -2,48 +2,44 @@ using System.Collections.Generic;
 using System.Linq;
 using Acornima;
 using Acornima.Ast;
+using Polypiler.Core.Frontends.JavaScript.Inference;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.JavaScript;
 
 internal sealed partial class Lowering {
 
-  /// <summary>
-  /// A lowered expression and what is known about its JavaScript value beyond the IR type.
-  /// </summary>
+  /// <summary>A lowered expression and what the inference proved about its values.</summary>
   /// <param name="Expr">The IR that computes the value.</param>
-  /// <param name="IsNumber">
-  /// The value is the result of <c>+</c> or <c>-</c>, which JavaScript computes exactly and which may
-  /// therefore lie outside 32 bits. <paramref name="Expr"/> is an <c>i32</c> that holds the value
-  /// modulo 2^32, which is all a coercion needs; anything that needs the value itself refuses it.
-  /// </param>
-  /// <param name="IsByte">The value lies in 0…255 whatever the operands are: a <c>uint8</c>, or masked with a constant that small.</param>
-  private readonly record struct Value(IrExpr Expr, bool IsNumber = false, bool IsByte = false) {
+  /// <param name="Type">The type of the value, which can be narrower than the type the IR computes it in.</param>
+  private readonly record struct Typed(IrExpr Expr, JsType Type);
 
-    public IrType Type => this.Expr.Type;
+  private Typed Evaluate(Node node, Coercion coercion = Coercion.None) => new(this.Expression(node, coercion), types.Of(node, coercion));
 
-  }
+  /// <summary>Lowers an expression where the given coercion is applied to its value.</summary>
+  private IrExpr Expression(Node node, Coercion coercion = Coercion.None) {
+    if (this._substitutes.TryGetValue(node, out var substitute))
+      return substitute;
 
-  private Value Expression(Node node) {
     switch (node) {
       case NumericLiteral literal:
-        return this.Number(literal, literal.Value);
+        return Number(literal.Value);
+      case BigIntLiteral literal:
+        return this.BigNumber(literal, literal.Value);
       case BooleanLiteral literal:
-        return new Value(new IrConst(IrType.Bool, literal.Value ? 1 : 0));
+        return new IrConst(IrType.Bool, literal.Value ? 1 : 0);
       case Literal literal:
         throw this.Unsupported(literal, literal.Raw);
       case Identifier identifier:
-        return this._scope.TryGetValue(identifier.Name, out var local)
-          ? new Value(new IrLocalRef(local), false, local.Type == IrType.U8)
-          : throw this.Unsupported(identifier, identifier.Name);
-      case UpdateExpression:
-        throw this.Unsupported(node, "++ or -- inside an expression");
+        return this.Name(identifier);
+      case UpdateExpression step:
+        return this.StepValue(step);
       case UnaryExpression unary:
-        return this.Unary(unary);
+        return this.Unary(unary, coercion);
       case LogicalExpression logical:
         return this.Logical(logical);
       case BinaryExpression binary:
-        return this.Binary(binary);
+        return this.Binary(binary.Operator, binary.Left, binary.Right, coercion, binary).Expr;
       case ConditionalExpression choice:
         return this.Conditional(choice);
       case MemberExpression member:
@@ -51,317 +47,469 @@ internal sealed partial class Lowering {
       case CallExpression call:
         return this.Call(call);
       case NewExpression creation:
-        return this.New(creation);
+        return this.New(creation, types.Of(creation).Ir!);
+      case ArrayExpression literal:
+        return this.ArrayLiteral(literal, types.Of(literal).Ir!.Element!);
       default:
-        throw this.Unsupported(node, Describe(node) ?? this.Text(node));
+        throw this.Unsupported(node, Describe(node) ?? types.Text(node));
+    }
+  }
+
+  /// <summary>A number as a constant: an <c>int32</c> when it is one, a <c>uint32</c> when it is one, otherwise a double.</summary>
+  private static IrConst Number(double value) {
+    var type = JsType.Literal(value).Ir!;
+    return new IrConst(type, type == IrType.F64 ? IrOperators.Bits(type, value) : (long)value);
+  }
+
+  private IrConst BigNumber(Node node, System.Numerics.BigInteger value)
+    => JsType.BigLiteral(value).Ir is { } type
+      ? new IrConst(type, value > long.MaxValue ? (long)(ulong)value : (long)value)
+      : throw this.Unbounded(node);
+
+  private IrExpr Name(Identifier identifier) {
+    switch (this._model.Bindings.GetValueOrDefault(identifier)) {
+      case Variable variable:
+        if (variable.IsUninitialized && !this._assigned.Contains(variable))
+          throw this.Refuse(identifier, JavaScriptFrontend.ReadBeforeAssignment, $"'{identifier.Name}' may be read before it is assigned");
+
+        return new IrLocalRef(variable.Local!);
+      case ModuleConstant constant:
+        // A table never comes here: one that is used as a value is no constant.
+        this.Constants.Add(constant);
+        return new IrConstRef(constant.Constant);
+      default:
+        throw this.Unsupported(identifier, identifier.Name);
     }
   }
 
   /// <summary>
-  /// An integer literal: an <c>int32</c> when it is one, otherwise a <c>uint32</c>. A literal that is
-  /// neither is no value of the subset; nothing is rounded or wrapped to make it one.
+  /// <c>++</c> and <c>--</c> inside an expression. A variable is stepped in doubles and yields the old
+  /// or the new value. An array element yields the value from before; the new value is what the
+  /// array stores, which is not what JavaScript's prefix form yields, so that form is refused.
   /// </summary>
-  private Value Number(Node node, double value) {
-    if (value != System.Math.Floor(value) || value < int.MinValue || value > uint.MaxValue || (value == 0 && double.IsNegative(value)))
-      throw this.Unsupported(node, this.Text(node));
+  private IrExpr StepValue(UpdateExpression step) {
+    if (step.Argument is not Identifier target)
+      return step.Prefix ? throw this.Unsupported(step, "a prefix ++ or -- on an array element inside an expression") : Read(this.StepElement(step));
 
-    return new Value(new IrConst(value <= int.MaxValue ? IrType.I32 : IrType.U32, (long)value));
+    var read = this.Expression(target);
+    return this._model.Bindings[target] is Variable { IsConstant: false }
+      ? new IrStep(read, step.Operator == Operator.Increment, !step.Prefix, false)
+      : throw this.Unsupported(step, $"an assignment to the constant {target.Name}");
   }
 
-  private Value Unary(UnaryExpression unary) {
+  private IrExpr Unary(UnaryExpression unary, Coercion coercion) {
+    var type = types.Of(unary, coercion);
     switch (unary.Operator) {
       case Operator.LogicalNot:
-        return new Value(new IrUnary(IrUnaryOp.LogicalNot, this.Condition(unary.Argument)));
+        return new IrUnary(IrUnaryOp.LogicalNot, this.Condition(unary.Argument));
+      case Operator.BitwiseNot when type.Kind == JsKind.BigInt:
+        return new IrUnary(IrUnaryOp.BitNot, this.Big(unary.Argument, coercion, type.Ir ?? throw this.Unbounded(unary)));
       case Operator.BitwiseNot:
-        return new Value(new IrUnary(IrUnaryOp.BitNot, this.Int32(this.Expression(unary.Argument), unary.Argument)));
+        return new IrUnary(IrUnaryOp.BitNot, this.Int32(unary.Argument));
       case Operator.UnaryNegation when unary.Argument is NumericLiteral literal:
-        return this.Number(unary, -literal.Value);
+        return Number(-literal.Value);
+      case Operator.UnaryNegation when unary.Argument is BigIntLiteral literal:
+        return this.BigNumber(unary, -literal.Value);
+      case Operator.UnaryNegation when type.Kind == JsKind.BigInt:
+        var wide = type.Ir ?? throw this.Unbounded(unary);
+        return new IrBinary(IrBinaryOp.Subtract, new IrConst(wide, 0), this.Big(unary.Argument, coercion, wide));
+      case Operator.UnaryNegation when type.IsInteger:
+        // Under a coercion the negative of a 32-bit integer is 0 - x modulo 2^32.
+        return new IrBinary(IrBinaryOp.Subtract, new IrConst(type.Ir!, 0), this.Word(unary.Argument, coercion, type.Ir!));
       case Operator.UnaryNegation:
-        return new Value(new IrBinary(IrBinaryOp.Subtract, new IrConst(IrType.I32, 0), this.Int32(this.Expression(unary.Argument), unary.Argument)), true);
+        return new IrUnary(IrUnaryOp.Negate, this.Float(unary.Argument));
+      case Operator.UnaryPlus:
+        var operand = this.Evaluate(unary.Argument);
+        return operand.Type.Kind == JsKind.Number ? operand.Expr : throw this.Unsupported(unary, $"unary + on {operand.Type.Describe()}");
       default:
         throw this.Unsupported(unary, OperatorText(unary.Operator));
     }
   }
 
-  private Value Logical(LogicalExpression logical) {
+  /// <summary>
+  /// <c>&amp;&amp;</c> and <c>||</c> as a value. Of two truth values it is the conjunction or the
+  /// disjunction. Otherwise JavaScript yields one of the operands, chosen by whether the left one
+  /// counts as true; the left operand is then computed twice, which is the same only without an effect.
+  /// </summary>
+  private IrExpr Logical(LogicalExpression logical) {
     if (logical.Operator == Operator.NullishCoalescing)
       throw this.Unsupported(logical, OperatorText(logical.Operator));
 
-    var op = logical.Operator == Operator.LogicalAnd ? IrBinaryOp.LogicalAnd : IrBinaryOp.LogicalOr;
-    return new Value(new IrBinary(op, this.Condition(logical.Left), this.Condition(logical.Right)));
+    var or = logical.Operator == Operator.LogicalOr;
+    var (left, right) = (types.Of(logical.Left), types.Of(logical.Right));
+    if (left.Kind == JsKind.Boolean && right.Kind == JsKind.Boolean)
+      return new IrBinary(or ? IrBinaryOp.LogicalOr : IrBinaryOp.LogicalAnd, this.Expression(logical.Left), this.Expression(logical.Right));
+
+    if (types.Of(logical).Ir is not { IsStorable: true } type) {
+      this.Expression(logical.Left);
+      this.Expression(logical.Right);
+      throw this.Unsupported(logical, $"{OperatorText(logical.Operator)} on {left.Describe()} and {right.Describe()}");
+    }
+
+    if (Contains(logical.Left, node => node is CallExpression or NewExpression or UpdateExpression or AssignmentExpression))
+      throw this.Unsupported(logical, $"{OperatorText(logical.Operator)} as a value whose left operand has an effect");
+
+    var condition = this.Condition(logical.Left);
+    var first = this.Value(logical.Left, type);
+    var second = this.Value(logical.Right, type);
+    return or ? new IrConditional(condition, first, second) : new IrConditional(condition, second, first);
   }
 
-  private Value Binary(BinaryExpression binary) {
-    // (a / b) | 0 and (a / b) >>> 0 are the two ways JavaScript writes a truncating division.
-    if (binary is { Operator: Operator.BitwiseOr or Operator.UnsignedRightShift, Left: BinaryExpression { Operator: Operator.Division } division, Right: NumericLiteral { Value: 0 } })
-      return new Value(Convert(this.Division(division), binary.Operator == Operator.BitwiseOr ? IrType.I32 : IrType.U32));
-
-    // Refused before its operands are looked at: a * b is the construct to name, whatever a and b are.
-    if (binary.Operator == Operator.Multiplication)
-      throw this.NotAnInteger(binary);
-
-    return this.Combine(binary.Operator, this.Expression(binary.Left), binary.Left, this.Expression(binary.Right), binary.Right, binary);
-  }
-
-  /// <summary>
-  /// A quotient of two integers of one signedness, truncated towards zero. A double holds the
-  /// quotient of two 32-bit integers closely enough that truncating it is truncating the exact one.
-  /// </summary>
-  private IrExpr Division(BinaryExpression division) {
-    var (left, right) = this.Unified(Operator.Division, division, this.Expression(division.Left), division.Left, this.Expression(division.Right), division.Right);
-    this.Divides = true;
-    return new IrBinary(IrBinaryOp.Divide, left, right);
-  }
-
-  /// <summary>Applies a binary operator to two lowered operands; a compound assignment comes here as well.</summary>
-  private Value Combine(Operator op, Value left, Node leftNode, Value right, Node rightNode, Node whole) {
-    var rightIsZero = right.Expr is IrConst { Value: 0 } && right.Type.IsInteger;
-    switch (op) {
-      // x | 0 is ToInt32(x) and x >>> 0 is ToUint32(x): the coercions themselves.
-      case Operator.BitwiseOr when rightIsZero:
-        return new Value(this.Int32(left, leftNode), false, left.IsByte);
-      case Operator.UnsignedRightShift when rightIsZero:
-        return new Value(this.Uint32(left, leftNode), false, left.IsByte);
-      case Operator.BitwiseOr:
-        return this.Bitwise(IrBinaryOp.Or, left, leftNode, right, rightNode, left.IsByte && right.IsByte);
-      case Operator.BitwiseXor:
-        return this.Bitwise(IrBinaryOp.Xor, left, leftNode, right, rightNode, left.IsByte && right.IsByte);
-      case Operator.BitwiseAnd:
-        return this.Bitwise(IrBinaryOp.And, left, leftNode, right, rightNode, left.IsByte || right.IsByte || IsByteMask(left) || IsByteMask(right));
-      case Operator.LeftShift:
-        return this.Bitwise(IrBinaryOp.ShiftLeft, left, leftNode, right, rightNode, false);
-      case Operator.RightShift:
-        return this.Bitwise(IrBinaryOp.ShiftRight, left, leftNode, right, rightNode, false);
-      case Operator.UnsignedRightShift:
-        return new Value(new IrBinary(IrBinaryOp.ShiftRightLogical, this.Uint32(left, leftNode), this.Int32(right, rightNode)));
-      case Operator.Addition:
-        return new Value(new IrBinary(IrBinaryOp.Add, this.Int32(left, leftNode), this.Int32(right, rightNode)), true);
-      case Operator.Subtraction:
-        return new Value(new IrBinary(IrBinaryOp.Subtract, this.Int32(left, leftNode), this.Int32(right, rightNode)), true);
-      // a * b loses precision above 2^53 where the IR would not, and a / b is a fraction: neither is
-      // an integer operation of JavaScript. Math.imul and (a / b) | 0 are.
-      case Operator.Multiplication or Operator.Division:
-        throw this.NotAnInteger(whole);
-      case Operator.Remainder:
-        var (dividend, divisor) = this.Unified(op, whole, left, leftNode, right, rightNode);
-        this.Divides = true;
-        return new Value(new IrBinary(IrBinaryOp.Remainder, dividend, divisor));
-      case Operator.StrictEquality or Operator.StrictInequality:
-        var (first, second) = this.Unified(op, whole, left, leftNode, right, rightNode, true);
-        return new Value(new IrBinary(op == Operator.StrictEquality ? IrBinaryOp.Equal : IrBinaryOp.NotEqual, first, second));
-      case Operator.LessThan or Operator.LessThanOrEqual or Operator.GreaterThan or Operator.GreaterThanOrEqual:
-        var (smaller, larger) = this.Unified(op, whole, left, leftNode, right, rightNode);
-        var comparison = op switch {
-          Operator.LessThan => IrBinaryOp.Less,
-          Operator.LessThanOrEqual => IrBinaryOp.LessOrEqual,
-          Operator.GreaterThan => IrBinaryOp.Greater,
-          _ => IrBinaryOp.GreaterOrEqual
-        };
-        return new Value(new IrBinary(comparison, smaller, larger));
+  /// <summary>Applies a binary operator the way <see cref="TypeInference.Decide"/> says it is computed; a compound assignment comes here as well.</summary>
+  private Typed Binary(Operator op, Node left, Node right, Coercion coercion, Node whole) {
+    var operation = types.Decide(op, left, right, coercion);
+    var operand = operation.Operand!;
+    IrExpr expression;
+    switch (operation.Plan) {
+      case Plan.Bitwise:
+        // x | 0 is ToInt32(x): the coercion itself.
+        expression = op == Operator.BitwiseOr && right is NumericLiteral { Value: 0 }
+          ? this.Int32(left)
+          : new IrBinary(Operation(op), this.Int32(left), this.Int32(right));
+        break;
+      case Plan.ShiftLogical:
+        // x >>> 0 is ToUint32(x).
+        expression = right is NumericLiteral { Value: 0 }
+          ? this.Uint32(left)
+          : new IrBinary(IrBinaryOp.ShiftRightLogical, this.Uint32(left), this.Int32(right));
+        break;
+      case Plan.WrapAdd:
+        expression = new IrBinary(Operation(op), this.Word(left, coercion, operand), this.Word(right, coercion, operand));
+        break;
+      case Plan.IntegerDivide or Plan.BigDivide or Plan.BigShiftRight:
+        this.Divides |= operation.Plan != Plan.BigShiftRight;
+        var dividend = this.To(this.Evaluate(left), operand, left);
+        var divisor = operation.Plan == Plan.BigShiftRight ? Count(right) : this.To(this.Evaluate(right), operand, right);
+        expression = Convert(new IrBinary(Operation(op), dividend, divisor), operation.Result.Ir!);
+        break;
+      case Plan.Float or Plan.CompareFloat:
+        expression = new IrBinary(Operation(op), this.Float(left), this.Float(right));
+        break;
+      case Plan.Compare:
+        expression = new IrBinary(Operation(op), this.To(this.Evaluate(left), operand, left), this.To(this.Evaluate(right), operand, right));
+        break;
+      case Plan.Big:
+        expression = new IrBinary(Operation(op), this.Big(left, coercion, operand), op == Operator.LeftShift ? Count(right) : this.Big(right, coercion, operand));
+        break;
       default:
-        throw this.Unsupported(whole, OperatorText(op));
-    }
-  }
-
-  /// <summary>A bitwise operator or a shift: <c>ToInt32</c> of both operands, an <c>int32</c> result.</summary>
-  private Value Bitwise(IrBinaryOp op, Value left, Node leftNode, Value right, Node rightNode, bool isByte)
-    => new(new IrBinary(op, this.Int32(left, leftNode), this.Int32(right, rightNode)), false, isByte);
-
-  private static bool IsByteMask(Value value) => value.Expr is IrConst { Value: >= 0 and <= byte.MaxValue };
-
-  /// <summary>
-  /// The two operands of a comparison, a division or a remainder as values of one 32-bit type. An
-  /// operand that fits either type — a <c>uint8</c>, or a constant in the range of the other operand —
-  /// takes the type of the other; an <c>int32</c> against a <c>uint32</c> is refused, because the IR
-  /// has no type that holds both.
-  /// </summary>
-  private (IrExpr Left, IrExpr Right) Unified(Operator op, Node whole, Value left, Node leftNode, Value right, Node rightNode, bool allowBoolean = false) {
-    left = this.Exact(left, leftNode);
-    right = this.Exact(right, rightNode);
-    var (first, second) = (left.Expr, right.Expr);
-    if (first.Type != second.Type) {
-      if (Lossless(second, first.Type) is { } retypedRight)
-        second = retypedRight;
-      else if (Lossless(first, second.Type) is { } retypedLeft)
-        first = retypedLeft;
+        // An operand that is refused for what it is comes first: it is the reason the operator has no type.
+        this.Expression(left);
+        this.Expression(right);
+        throw operation.Plan == Plan.Unbounded
+          ? this.Unbounded(whole)
+          : this.Unsupported(whole, $"{OperatorText(op)} on {types.Of(left).Describe()} and {types.Of(right).Describe()}");
     }
 
-    if (first.Type == IrType.U8 && second.Type == IrType.U8)
-      (first, second) = (Convert(first, IrType.I32), Convert(second, IrType.I32));
-
-    if (first.Type != second.Type || !(first.Type.IsWord || (allowBoolean && first.Type == IrType.Bool)))
-      throw this.Unsupported(whole, $"{OperatorText(op)} on {Spell(left.Type)} and {Spell(right.Type)}");
-
-    return (first, second);
+    return new Typed(expression, operation.Result);
   }
 
-  /// <summary>A value in another integer type when no value can change by it; otherwise <see langword="null"/>.</summary>
-  private static IrExpr? Lossless(IrExpr value, IrType type) {
-    if (value.Type == IrType.U8 && type.IsWord)
-      return Convert(value, type);
+  private static IrBinaryOp Operation(Operator op) => op switch {
+    Operator.BitwiseOr => IrBinaryOp.Or,
+    Operator.BitwiseXor => IrBinaryOp.Xor,
+    Operator.BitwiseAnd => IrBinaryOp.And,
+    Operator.LeftShift => IrBinaryOp.ShiftLeft,
+    Operator.RightShift => IrBinaryOp.ShiftRight,
+    Operator.Addition => IrBinaryOp.Add,
+    Operator.Subtraction => IrBinaryOp.Subtract,
+    Operator.Multiplication => IrBinaryOp.Multiply,
+    Operator.Division => IrBinaryOp.Divide,
+    Operator.Remainder => IrBinaryOp.Remainder,
+    Operator.Equality or Operator.StrictEquality => IrBinaryOp.Equal,
+    Operator.Inequality or Operator.StrictInequality => IrBinaryOp.NotEqual,
+    Operator.LessThan => IrBinaryOp.Less,
+    Operator.LessThanOrEqual => IrBinaryOp.LessOrEqual,
+    Operator.GreaterThan => IrBinaryOp.Greater,
+    _ => IrBinaryOp.GreaterOrEqual
+  };
 
-    return value is IrConst constant && value.Type.IsInteger && type.IsInteger && IrOperators.Wrap(type, constant.Value) == constant.Value
-      ? new IrConst(type, constant.Value)
-      : null;
-  }
+  /// <summary>The literal count of a <c>BigInt</c> shift, which the IR takes as an <c>i32</c>.</summary>
+  private static IrConst Count(Node count) => new(IrType.I32, (long)((BigIntLiteral)count).Value);
 
-  private Value Conditional(ConditionalExpression choice) {
+  private IrExpr Conditional(ConditionalExpression choice) {
     var condition = this.Condition(choice.Test);
-    var whenTrue = this.Exact(this.Expression(choice.Consequent), choice.Consequent);
-    var whenFalse = this.Exact(this.Expression(choice.Alternate), choice.Alternate);
-    var (first, second) = (whenTrue.Expr, whenFalse.Expr);
-    if (first.Type != second.Type) {
-      if (Lossless(second, first.Type) is { } retypedSecond)
-        second = retypedSecond;
-      else if (Lossless(first, second.Type) is { } retypedFirst)
-        first = retypedFirst;
-      else
-        throw this.Unsupported(choice, $"?: on {Spell(first.Type)} and {Spell(second.Type)}");
+    if (types.Of(choice).Ir is not { IsStorable: true } type) {
+      this.Expression(choice.Consequent);
+      this.Expression(choice.Alternate);
+      throw this.Unsupported(choice, $"?: on {types.Of(choice.Consequent).Describe()} and {types.Of(choice.Alternate).Describe()}");
     }
 
-    if (!first.Type.IsStorable)
-      throw this.Unsupported(choice, $"?: on {Spell(first.Type)}");
-
-    return new Value(new IrConditional(condition, first, second), false, (whenTrue.IsByte || IsByteMask(whenTrue)) && (whenFalse.IsByte || IsByteMask(whenFalse)));
+    return new IrConditional(condition, this.Value(choice.Consequent, type), this.Value(choice.Alternate, type));
   }
 
-  private Value Member(MemberExpression member) {
+  private IrExpr Member(MemberExpression member) {
     if (member.Computed) {
       var array = this.Array(member.Object);
       var index = this.Index(member.Property);
       this.AccessesElements = true;
-      return new Value(new IrArrayLoad(array, index), false, array.Type.Element == IrType.U8);
+      return Read(new IrArrayLoad(array, index));
     }
 
-    if (this.Text(member.Property) == "length")
-      return new Value(new IrArrayLength(this.Array(member.Object)));
-
-    throw this.Unsupported(member, this.Text(member));
+    return member.Property is Identifier { Name: "length" }
+      ? new IrArrayLength(this.Array(member.Object))
+      : throw this.Unsupported(member, types.Text(member));
   }
 
+  /// <summary>An element as JavaScript reads it: a binary32 number is the double it is.</summary>
+  private static IrExpr Read(IrExpr element) => element.Type == IrType.F32 ? new IrConvert(IrType.F64, element) : element;
+
+  /// <summary>
+  /// An array to take an element or the length of. A constant table is read here and nowhere else:
+  /// a table the file stores into or uses as a value is no constant, so its name is unknown there.
+  /// </summary>
   private IrExpr Array(Node node) {
-    var array = this.Expression(node);
-    return array.Type.IsArray ? array.Expr : throw this.Unsupported(node, $"{this.Text(node)} as an array, which is {Spell(array.Type)}");
+    if (node is Identifier identifier && this._model.Bindings.GetValueOrDefault(identifier) is ModuleConstant { Type.Kind: JsKind.Array } table) {
+      this.Constants.Add(table);
+      return new IrConstRef(table.Constant);
+    }
+
+    var array = this.Evaluate(node);
+    return array.Type.Kind == JsKind.Array ? array.Expr : throw this.Unsupported(node, $"{types.Text(node)} as an array, which is {array.Type.Describe()}");
   }
 
-  /// <summary>An index: any integer, also an uncoerced sum, which the access takes modulo 2^32.</summary>
+  /// <summary>
+  /// An index. JavaScript reads <c>undefined</c> at anything but the integer of an element; the
+  /// imported code takes a double without its fraction and traps outside the array.
+  /// </summary>
   private IrExpr Index(Node node) {
-    var index = this.Integer(this.Expression(node), node);
-    return index.Type.IsWord ? index : Convert(index, IrType.I32);
+    var index = this.Evaluate(node);
+    if (index.Type.Kind != JsKind.Number)
+      throw this.Unsupported(node, $"{index.Type.Describe()} as an index");
+
+    return index.Type.IsWord
+      ? Convert(index.Expr, index.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32)
+      : new IrConvert(IrType.I32, this.Float(index, node), IrConversion.Trap);
   }
 
-  private Value Call(CallExpression call) {
+  /// <summary>
+  /// The length of a new array: JavaScript drops the fraction and takes a NaN as 0, which is the
+  /// saturating conversion; a negative length is refused by both.
+  /// </summary>
+  private IrExpr Length(Typed length, Node node) {
+    if (length.Type.Kind != JsKind.Number)
+      throw this.Unsupported(node, $"an array of the length {length.Type.Describe()}");
+
+    return length.Type.IsWord
+      ? Convert(length.Expr, length.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32)
+      : new IrConvert(IrType.I32, this.Float(length, node), IrConversion.Saturate);
+  }
+
+  private IrExpr Call(CallExpression call) {
     if (call.Arguments.Any(argument => argument is SpreadElement))
       throw this.Unsupported(call, "a spread argument");
 
-    if (call.Callee is MemberExpression { Computed: false, Object: Identifier { Name: "Math" }, Property: Identifier { Name: "imul" } } && !this._scope.ContainsKey("Math")) {
-      if (call.Arguments.Count != 2)
-        throw this.Unsupported(call, $"Math.imul with {call.Arguments.Count} arguments");
-
-      var left = this.Exact(this.Expression(call.Arguments[0]), call.Arguments[0]);
-      var right = this.Exact(this.Expression(call.Arguments[1]), call.Arguments[1]);
-      return new Value(new IrBinary(IrBinaryOp.Multiply, this.Int32(left, call.Arguments[0]), this.Int32(right, call.Arguments[1])));
+    var arguments = call.Arguments;
+    var builtin = types.Names.Builtin(call);
+    void Takes(int count) {
+      if (arguments.Count != count)
+        throw this.Unsupported(call, $"{builtin} with {arguments.Count} arguments");
     }
 
-    if (this.Callee(call.Callee) is not { } callee)
-      throw this.Unsupported(call, $"a call of {this.Text(call.Callee)}");
+    IrExpr Constant(double value) => new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, value));
+    IrExpr Library(IrIntrinsicOp op, params IrExpr[] operands) => new IrIntrinsic(op, IrType.F64, operands);
+    switch (builtin) {
+      case null:
+        return this.CallFunction(call);
+      case "Math.imul":
+        Takes(2);
+        return new IrBinary(IrBinaryOp.Multiply, this.Int32(arguments[0]), this.Int32(arguments[1]));
+      case "Math.clz32":
+        Takes(1);
+        return new IrIntrinsic(IrIntrinsicOp.LeadingZeroCount, IrType.I32, [this.Uint32(arguments[0])]);
+      case "Math.fround":
+        Takes(1);
+        return new IrConvert(IrType.F32, this.Float(arguments[0]));
+      case "Math.trunc" or "Math.floor" or "Math.ceil" or "Math.round" or "Math.abs" or "Math.sqrt":
+        Takes(1);
+        return Library(builtin switch {
+          "Math.trunc" => IrIntrinsicOp.Truncate,
+          "Math.floor" => IrIntrinsicOp.Floor,
+          "Math.ceil" => IrIntrinsicOp.Ceiling,
+          "Math.round" => IrIntrinsicOp.RoundHalfUp,
+          "Math.abs" => IrIntrinsicOp.Abs,
+          _ => IrIntrinsicOp.Sqrt
+        }, this.Float(arguments[0]));
+      case "Math.sign":
+        // Twice times 2^1023 takes every number but a zero and a NaN beyond 1, and leaves those two as
+        // they are: clamped to -1…1 that is the sign, with the operand evaluated once.
+        Takes(1);
+        var huge = Constant(System.Math.ScaleB(1.0, 1023));
+        var scaled = new IrBinary(IrBinaryOp.Multiply, new IrBinary(IrBinaryOp.Multiply, this.Float(arguments[0]), huge), huge);
+        return Library(IrIntrinsicOp.Max, Library(IrIntrinsicOp.Min, scaled, Constant(1)), Constant(-1));
+      case "Math.min" or "Math.max":
+        var min = builtin == "Math.min";
+        return arguments.Count == 0
+          ? Constant(min ? double.PositiveInfinity : double.NegativeInfinity)
+          : arguments.Select(argument => this.Float(argument)).Aggregate((first, second) => Library(min ? IrIntrinsicOp.Min : IrIntrinsicOp.Max, first, second));
+      case "BigInt.asUintN" or "BigInt.asIntN":
+        Takes(2);
+        if (arguments[0] is not NumericLiteral { Value: 64 })
+          throw this.Unsupported(call, $"{builtin} with a width other than 64");
 
-    Signature signature;
-    try {
-      signature = this.SignatureOf(callee);
-    } catch (Refusal) {
+        return builtin == "BigInt.asUintN" ? this.Big(arguments[1], Coercion.Uint64, IrType.U64) : this.Big(arguments[1], Coercion.Int64, IrType.I64);
+      case "BigInt":
+        Takes(1);
+        var number = this.Evaluate(arguments[0]);
+        return number.Type.IsWord ? Convert(number.Expr, IrType.I64) : throw this.Unsupported(call, $"BigInt of {number.Type.Describe()} that is no proven integer");
+      default:
+        throw this.Unsupported(call, builtin);
+    }
+  }
+
+  private IrExpr CallFunction(CallExpression call) {
+    if (types.Names.Callee(call.Callee) is not { } callee)
+      throw this.Unsupported(call, $"a call of {types.Text(call.Callee)}");
+
+    var target = types.ModelOf(callee);
+    if (target.Problem is not null || target.Parameters.Exists(parameter => parameter.Entry.Kind == JsKind.Conflict || parameter.Entry.Ir is { IsStorable: false }))
       throw this.Unsupported(call, $"a call of {callee.Name}, which cannot be imported");
-    }
 
-    if (call.Arguments.Count != signature.Parameters.Count)
-      throw this.Unsupported(call, $"a call of {callee.Name} with {call.Arguments.Count} arguments for {signature.Parameters.Count} parameters");
+    if (call.Arguments.Count != target.Parameters.Count)
+      throw this.Unsupported(call, $"a call of {callee.Name} with {call.Arguments.Count} arguments for {target.Parameters.Count} parameters");
 
     var arguments = new List<IrExpr>();
     for (var index = 0; index < call.Arguments.Count; ++index)
-      arguments.Add(this.To(this.Expression(call.Arguments[index]), signature.Parameters[index].Type, call.Arguments[index]));
+      arguments.Add(this.Value(call.Arguments[index], target.Parameters[index].Parameter?.Type ?? this.Storable(target.Parameters[index].Entry, call.Arguments[index])));
 
-    this._called.Add(callee);
-    return new Value(new IrCall(callee.Name, signature.ReturnType, arguments), false, signature.ReturnType == IrType.U8);
+    return new IrCall(callee.Name, target.ReturnType, arguments);
   }
+
+  /// <summary>A new typed array of a length or of listed elements, or a new <c>Array</c> of a length.</summary>
+  private IrExpr New(NewExpression creation, IrType type) {
+    var name = creation.Callee is Identifier constructor && !this._model.Bindings.ContainsKey(constructor) ? constructor.Name : null;
+    var arguments = creation.Arguments;
+    if (name == "Array") {
+      if (arguments.Count > 1 || arguments.FirstOrDefault() is SpreadElement)
+        throw this.Unsupported(creation, "new Array with anything but one length");
+
+      if (arguments.Count == 0)
+        return new IrNewArray(type, new IrConst(IrType.I32, 0));
+
+      // new Array(1.5) throws where new Uint8Array(1.5) has one element: only a proven integer is a length here.
+      var count = this.Evaluate(arguments[0]);
+      return count.Type.IsWord ? new IrNewArray(type, this.Length(count, arguments[0])) : throw this.Unsupported(creation, $"new Array of a length that is no proven integer, which is {count.Type.Describe()}");
+    }
+
+    if (name is null || !TypeInference.TypedArrays.TryGetValue(name, out var element))
+      throw this.Unsupported(creation, $"new {types.Text(creation.Callee)}");
+
+    if (arguments is [ArrayExpression elements]) {
+      var coercion = element.IsInteger && !element.IsLong ? Coercion.Int32 : Coercion.None;
+      return new IrIntrinsic(IrIntrinsicOp.ArrayOf, type, this.Elements(elements).Select(item => this.Stored(this.Evaluate(item, coercion), element, false, item)).ToList());
+    }
+
+    if (arguments.Count != 1 || arguments[0] is SpreadElement)
+      throw this.Unsupported(creation, $"new {name} with anything but one length or a list of elements");
+
+    return new IrNewArray(type, this.Length(this.Evaluate(arguments[0]), arguments[0]));
+  }
+
+  /// <summary>An array literal as an array of the given element type.</summary>
+  private IrExpr ArrayLiteral(ArrayExpression literal, IrType element)
+    => new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(element), this.Elements(literal).Select(item => this.Value(item, element)).ToList());
+
+  private List<Node> Elements(ArrayExpression literal)
+    => literal.Elements.Select(item => item is null or SpreadElement ? throw this.Unsupported(literal, "an array literal with a hole or a spread element") : (Node)item).ToList();
 
   /// <summary>
-  /// The function a call names: a declaration by its name, a property through the variable its object
-  /// literal is assigned to. A local of the same name hides either.
+  /// A condition. A truth value is one; a number counts as true unless it is a zero or a NaN, a
+  /// <c>BigInt</c> unless it is zero. <c>&amp;&amp;</c> and <c>||</c> combine what their operands count as.
   /// </summary>
-  private Candidate? Callee(Node callee) => callee switch {
-    Identifier { Name: var name } when !this._scope.ContainsKey(name)
-      => candidates.Find(candidate => !candidate.IsProperty && candidate.Name == name),
-    MemberExpression { Computed: false, Object: Identifier { Name: var owner }, Property: Identifier { Name: var name } } when !this._scope.ContainsKey(owner)
-      => candidates.Find(candidate => candidate.IsProperty && candidate.Owner == owner && candidate.Name == name),
-    _ => null
-  };
-
-  private Value New(NewExpression creation) {
-    IrType? element = creation.Callee is Identifier { Name: var name } && !this._scope.ContainsKey(name)
-      ? name switch {
-        "Uint8Array" => IrType.U8,
-        "Int32Array" => IrType.I32,
-        "Uint32Array" => IrType.U32,
-        _ => null
-      }
-      : null;
-    if (element is null || creation.Arguments.Count != 1 || creation.Arguments[0] is SpreadElement)
-      throw this.Unsupported(creation, element is null ? $"new {this.Text(creation.Callee)}" : $"new {this.Text(creation.Callee)} with anything but one length");
-
-    var length = this.Exact(this.Expression(creation.Arguments[0]), creation.Arguments[0]);
-    if (!length.Type.IsInteger)
-      throw this.Unsupported(creation, $"new {this.Text(creation.Callee)} of {Spell(length.Type)}");
-
-    return new Value(new IrNewArray(IrType.Array(element), length.Type.IsWord ? length.Expr : Convert(length.Expr, IrType.I32)));
-  }
-
-  /// <summary>A condition: a <c>boolean</c>. A number is not one here, although JavaScript would take it.</summary>
   private IrExpr Condition(Node node) {
-    var value = this.Exact(this.Expression(node), node);
-    return value.Type == IrType.Bool ? value.Expr : throw this.Unsupported(node, $"{Spell(value.Type)} as a condition");
+    if (node is LogicalExpression { Operator: Operator.LogicalAnd or Operator.LogicalOr } logical)
+      return new IrBinary(logical.Operator == Operator.LogicalOr ? IrBinaryOp.LogicalOr : IrBinaryOp.LogicalAnd, this.Condition(logical.Left), this.Condition(logical.Right));
+
+    var value = this.Evaluate(node);
+    switch (value.Type.Kind) {
+      case JsKind.Boolean:
+        return value.Expr;
+      case JsKind.Number when value.Type.IsInteger:
+        var word = Convert(value.Expr, value.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32);
+        return new IrBinary(IrBinaryOp.NotEqual, word, new IrConst(word.Type, 0));
+      case JsKind.Number:
+        // |x| > 0 is false for both zeros and for a NaN, and evaluates x once.
+        var magnitude = new IrIntrinsic(IrIntrinsicOp.Abs, IrType.F64, [this.Float(value, node)]);
+        return new IrBinary(IrBinaryOp.Greater, magnitude, new IrConst(IrType.F64, 0));
+      case JsKind.BigInt when value.Type.Ir is { } wide:
+        return new IrBinary(IrBinaryOp.NotEqual, Convert(value.Expr, wide), new IrConst(wide, 0));
+      default:
+        throw this.Unsupported(node, $"{value.Type.Describe()} as a condition");
+    }
   }
 
-  /// <summary>Refuses a number that is not coerced.</summary>
-  private Value Exact(Value value, Node node) => value.IsNumber ? throw this.NotAnInteger(node) : value;
+  /// <summary>A number as a double: an integer of up to 32 bits and a binary32 number are doubles exactly.</summary>
+  private IrExpr Float(Typed value, Node node) {
+    if (value.Type.Kind != JsKind.Number)
+      throw this.Unsupported(node, $"{value.Type.Describe()} as a number");
 
-  /// <summary>An integer operand, coerced or not.</summary>
-  private IrExpr Integer(Value value, Node node)
-    => value.Type.IsInteger ? value.Expr : throw this.Unsupported(node, $"{Spell(value.Type)} as a number");
+    return Convert(value.Expr, IrType.F64);
+  }
 
-  /// <summary><c>ToInt32</c> of an integer operand. An uncoerced sum already is its value modulo 2^32.</summary>
-  private IrExpr Int32(Value value, Node node) => Convert(this.Integer(value, node), IrType.I32);
+  private IrExpr Float(Node node) => this.Float(this.Evaluate(node), node);
 
-  /// <summary><c>ToUint32</c> of an integer operand.</summary>
-  private IrExpr Uint32(Value value, Node node) => Convert(this.Integer(value, node), IrType.U32);
+  /// <summary><c>ToInt32</c> of a number: of a proven integer its value modulo 2^32, of a double the operation ECMA-262 defines.</summary>
+  private IrExpr Int32(Typed value, Node node)
+    => value.Type.IsInteger ? Convert(value.Expr, IrType.I32) : new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [this.Float(value, node)]);
+
+  private IrExpr Int32(Node node) => this.Int32(this.Evaluate(node, Coercion.Int32), node);
+
+  /// <summary><c>ToUint32</c> of a number.</summary>
+  private IrExpr Uint32(Node node) {
+    var value = this.Evaluate(node, Coercion.Uint32);
+    return value.Type.IsInteger ? Convert(value.Expr, IrType.U32) : new IrIntrinsic(IrIntrinsicOp.ToUint32, IrType.U32, [this.Float(value, node)]);
+  }
+
+  /// <summary>An operand of a wrapped sum: a 32-bit integer of which only the value modulo 2^32 matters.</summary>
+  private IrExpr Word(Node node, Coercion coercion, IrType type) => Convert(this.Expression(node, TypeInference.Modulo(coercion)), type);
+
+  /// <summary>An operand of a 64-bit operation under a wrapper: a <c>BigInt</c> of which only the value modulo 2^64 matters.</summary>
+  private IrExpr Big(Node node, Coercion coercion, IrType type) {
+    var value = this.Evaluate(node, coercion);
+    return value.Type.Kind == JsKind.BigInt ? Convert(value.Expr, type) : throw this.Unsupported(node, $"{value.Type.Describe()} as a bigint");
+  }
 
   /// <summary>
-  /// A value where a type is fixed: a result, an argument, an assignment to a local. Only what
-  /// cannot change the value is done silently; an integer of another type must be coerced in the source.
+  /// An expression where a type is fixed: a result, an argument, the value of a variable. An array
+  /// literal and a new <c>Array</c> take the element type of the place they go to, which is the type
+  /// the inference found for everything stored into the array.
   /// </summary>
-  private IrExpr To(Value value, IrType type, Node node) {
-    value = this.Exact(value, node);
-    if (value.Type == type)
+  private IrExpr Value(Node node, IrType type) {
+    if (type.IsArray && !this._substitutes.ContainsKey(node)) {
+      if (node is ArrayExpression literal)
+        return this.ArrayLiteral(literal, type.Element!);
+
+      if (node is NewExpression { Callee: Identifier { Name: "Array" } constructor } creation && !this._model.Bindings.ContainsKey(constructor))
+        return this.New(creation, type);
+    }
+
+    return this.To(this.Evaluate(node), type, node);
+  }
+
+  /// <summary>
+  /// A value in the type of the place it goes to, where that changes nothing: an integer in an
+  /// integer type that holds all its values, an integer of up to 32 bits or a binary32 number as the
+  /// double it is. The inference made the type of a variable hold what is assigned to it; a type
+  /// that JSDoc states does not bend, and a value it does not hold is refused, as is one of another kind.
+  /// </summary>
+  private IrExpr To(Typed value, IrType type, Node node) {
+    var from = value.Expr.Type;
+    if (from == type)
       return value.Expr;
 
-    if (Lossless(value.Expr, type) is { } lossless)
-      return lossless;
-
-    if (type == IrType.U8 && value.IsByte)
-      return Convert(value.Expr, type);
-
-    throw value.Type.IsInteger && type.IsInteger
-      ? this.NotAnInteger(node)
-      : this.Unsupported(node, $"{Spell(value.Type)} where {Spell(type)} is expected");
+    var exact = value.Type.Kind is JsKind.Number or JsKind.BigInt && type.IsNumeric && (type.IsInteger
+      ? value.Type.Float == 0 && !value.Type.IsUnbounded && value.Type.Within(type) && from.IsLong == type.IsLong
+      : type == IrType.F64 && value.Type.Kind == JsKind.Number);
+    return exact ? Convert(value.Expr, type) : throw this.Unsupported(node, $"{JsType.Spell(value.Type.Ir ?? from)} where {JsType.Spell(type)} is expected");
   }
 
-  /// <summary>Converts between integer types: the value modulo 2^width, which is what ToInt32, ToUint32 and ToUint8 are.</summary>
+  /// <summary>Converts between numeric types; a constant is converted here.</summary>
   private static IrExpr Convert(IrExpr value, IrType type) {
     if (value.Type == type)
       return value;
 
-    return value is IrConst constant
-      ? new IrConst(type, IrOperators.Wrap(type, constant.Value))
-      : new IrConvert(type, value);
+    if (value is IrConst { Type.IsInteger: true } constant)
+      return new IrConst(type, type.IsInteger ? IrOperators.Wrap(type, constant.Value) : IrOperators.Bits(type, constant.Value));
+
+    return new IrConvert(type, value);
   }
 
 }

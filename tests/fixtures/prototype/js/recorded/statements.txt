@@ -52,6 +52,7 @@ successorIsLarger(-2147483648) => true
 successorIsLarger(-1) => true
 successorIsLarger(0) => true
 successorIsLarger(2147483646) => true
+successorIsLarger(2147483647) => true
 both(false, [0]) => false | [0]
 either(false, [0]) => true | [1]
 both(true, [0]) => true | [1]

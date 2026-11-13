@@ -1,0 +1,5 @@
+hash: parameter data: u8[] from 'new Uint8Array([97])' at (14,15)
+hash: local h: u64 from '0xCBF29CE484222325n' at (5,11)
+hash: local i: f64 from 'i++' at (6,36)
+hash: result: u64 from 'h' at (9,10)
+check: result: bool from 'hash(new Uint8Array([97])) === 0xAF63DC4C8601EC8Cn' at (14,10)

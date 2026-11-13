@@ -563,6 +563,13 @@ public static class JavaScriptEmitter {
           return ($"BigInt({this.Text(arguments[0])}) * BigInt({this.Text(arguments[1])})", false);
         case IrIntrinsicOp.FloatBits:
           return (this.Helper(type == IrType.F64 ? "$bits64" : "$bits32", arguments.ToArray()), true);
+        case IrIntrinsicOp.RoundHalfUp:
+          // The result is integral, and an integral number that a binary32 operand rounds to is a binary32 number.
+          return ($"Math.round({all})", true);
+        case IrIntrinsicOp.ToInt32:
+          return ($"{this.Operand(arguments[0])} | 0", false);
+        case IrIntrinsicOp.ToUint32:
+          return ($"{this.Operand(arguments[0])} >>> 0", false);
         default:
           return (this.Helper(wide ? "$float64" : "$float32", arguments.ToArray()), true);
       }

@@ -1,0 +1,6 @@
+compute: parameter data: u8[] from 'new Uint8Array([87, 105, 107, 105, 112, 101, 100, 105, 97])' at (17,18)
+compute: local a: u32 from '((a + data[i]) % 65521) >>> 0' at (9,9)
+compute: local b: u32 from '((b + a) % 65521) >>> 0' at (10,9)
+compute: local i: f64 from 'i++' at (8,36)
+compute: result: u32 from '((b << 16) | a) >>> 0' at (12,10)
+check: result: bool from 'compute(new Uint8Array([87, 105, 107, 105, 112, 101, 100, 105, 97])) === 0x11E60398' at (17,10)

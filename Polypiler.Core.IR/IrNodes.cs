@@ -306,7 +306,24 @@ public enum IrIntrinsicOp {
   FloatBits,
 
   /// <summary>The <c>f64</c> with the bits of an <c>i64</c>, or the <c>f32</c> with the bits of an <c>i32</c>.</summary>
-  BitsFloat
+  BitsFloat,
+
+  /// <summary>
+  /// The nearest integral floating-point number; a tie goes to the larger one, towards positive
+  /// infinity. A number between -0.5 and zero, -0.5 included, becomes the negative zero. It is
+  /// ECMA-262's <c>Math.round</c>.
+  /// </summary>
+  RoundHalfUp,
+
+  /// <summary>
+  /// ECMA-262's <c>ToInt32</c> of an <c>f64</c>, as an <c>i32</c>: the number without its fraction,
+  /// modulo 2^32, read as a signed integer. A NaN and both infinities become 0. No value traps, and
+  /// a number beyond 2^53 is reduced exactly, which no conversion with a contract does.
+  /// </summary>
+  ToInt32,
+
+  /// <summary>ECMA-262's <c>ToUint32</c> of an <c>f64</c>, as a <c>u32</c>: like <see cref="ToInt32"/>, read as an unsigned integer.</summary>
+  ToUint32
 
 }
 

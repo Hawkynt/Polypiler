@@ -366,6 +366,7 @@ public static class IrInterpreter {
       IrIntrinsicOp.Truncate => MathF.Truncate(value),
       IrIntrinsicOp.RoundEven => MathF.Round(value),
       IrIntrinsicOp.RoundAway => MathF.Round(value, MidpointRounding.AwayFromZero),
+      IrIntrinsicOp.RoundHalfUp => (float)IrOperators.RoundHalfUp(value),
       _ => (long)BitConverter.SingleToInt32Bits(value)
     };
 
@@ -380,6 +381,9 @@ public static class IrInterpreter {
       IrIntrinsicOp.Truncate => Math.Truncate(value),
       IrIntrinsicOp.RoundEven => Math.Round(value),
       IrIntrinsicOp.RoundAway => Math.Round(value, MidpointRounding.AwayFromZero),
+      IrIntrinsicOp.RoundHalfUp => IrOperators.RoundHalfUp(value),
+      IrIntrinsicOp.ToInt32 => IrOperators.ToWord(IrType.I32, value),
+      IrIntrinsicOp.ToUint32 => IrOperators.ToWord(IrType.U32, value),
       _ => BitConverter.DoubleToInt64Bits(value)
     };
 

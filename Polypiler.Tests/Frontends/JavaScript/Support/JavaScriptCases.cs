@@ -40,6 +40,15 @@ internal static class JavaScriptCases {
   private static readonly byte[] _bytes = [0, 1, 0x80, 255];
   private static readonly bool[] _bools = [false, true];
 
+  /// <summary>
+  /// The boundary values of a double: both zeros, the halves that round either way, the limits of 32
+  /// bits and their neighbours, the last integers a double holds exactly, 1e21, the infinities and NaN.
+  /// </summary>
+  private static readonly double[] _doubles = [
+    0.0, -0.0, 0.5, -0.5, 1, -1, 1.5, -1.5, 2.5, -2.5, 2147483647, 2147483648, -2147483649, 4294967296, 4294967297,
+    9007199254740992, 9007199254740994, 1e21, double.PositiveInfinity, double.NegativeInfinity, double.NaN
+  ];
+
   /// <summary>The calls for a fixture whose expected outcomes are recorded in the repository.</summary>
   public static IReadOnlyList<PrototypeCall> For(string fixture) => fixture switch {
     "adler32" => [
@@ -74,6 +83,74 @@ internal static class JavaScriptCases {
     "arrays" => Arrays(),
     "statements" => Statements(),
     "operators" => Operators(false),
+    "untyped/adler32" => [
+      Call("compute", PrototypeCases.Text("Wikipedia")),
+      Call("compute", PrototypeCases.Text("")),
+      Call("compute", new byte[] { 0 }),
+      Call("compute", new byte[] { 255 }),
+      Call("compute", Enumerable.Repeat((byte)0xFF, 600).ToArray()),
+      Call("check")
+    ],
+    "untyped/crc32" or "untyped/crc32table" => [
+      Call("compute", PrototypeCases.Text("123456789")),
+      Call("compute", PrototypeCases.Text("")),
+      Call("compute", new byte[] { 0 }),
+      Call("compute", new byte[] { 255 }),
+      Call("check")
+    ],
+    "untyped/fnv1a" or "untyped/fnv1a64" => [
+      Call("hash", PrototypeCases.Text("")),
+      Call("hash", PrototypeCases.Text("a")),
+      Call("hash", PrototypeCases.Text("foobar")),
+      Call("check")
+    ],
+    "untyped/xorshift32" => [
+      .. new[] { 1, -1, 0, int.MaxValue, int.MinValue, -1831433054 }.Select(state => Call("next", state)),
+      .. new[] { 0.0, 1.0, 2.5, 100.0, -3.0, double.NaN }.Select(count => Call("skip", 1, count)),
+      Call("skip", int.MinValue, 7.0)
+    ],
+    "untyped/stats" => [
+      .. new[] { new[] { 2.0, 4, 4, 4, 5, 5, 7, 9 }, [], [0.1], [0.1, 0.2, 0.3], [1e308, 1e308], [-0.0, 0.0], [double.NaN, 1] }
+        .SelectMany(values => new[] { Call("mean", values), Call("variance", values) }),
+      Call("check")
+    ],
+    "untyped/horner" => [
+      Call("evaluate", new[] { 2.0, -6, 2, -1 }, 3.0),
+      Call("evaluate", Array.Empty<double>(), 3.0),
+      Call("evaluate", new[] { 0.1, 0.2, 0.3 }, 0.5),
+      Call("evaluate", new[] { 1.0, 1, 1 }, double.PositiveInfinity),
+      Call("evaluate", new[] { 1.0, 1, 1 }, double.NaN),
+      Call("evaluate", new[] { 1.0, 0 }, -0.0),
+      Call("check")
+    ],
+    "untyped/runlength" => [
+      .. new[] { 0.0, 1.0, 2.0, 3.0, 0.5, double.NaN }.SelectMany(kind => new[] {
+        Call("runs", new byte[] { 49, 50, 0, 0, 97, 55 }, kind),
+        Call("runs", Array.Empty<byte>(), kind),
+        Call("runs", new byte[] { 47, 48, 57, 58, 0, 48 }, kind)
+      }),
+      Call("check")
+    ],
+    "untyped/binarysearch" => [
+      .. new[] { -8.0, -7.0, -1.0, 0.0, -0.0, 3.0, 3.5, 8.0, 21.0, 22.0, double.NaN }.Select(target => Call("find", new[] { -7, -1, 0, 3, 8, 21 }, target)),
+      Call("find", Array.Empty<int>(), 1.0),
+      Call("find", new[] { 5 }, 5.0),
+      Call("check")
+    ],
+    "inference/arrays" => [
+      .. BoundaryCalls(Scalar(fixture)),
+      .. new[] { Array.Empty<sbyte>(), [-128, 127, -1] }.Select(items => Call("sumInt8", items)),
+      .. new[] { Array.Empty<ushort>(), [65535, 1] }.Select(items => Call("sumUint16", items)),
+      .. new[] { Array.Empty<short>(), [-32768, 32767, -1] }.Select(items => Call("sumInt16", items)),
+      .. new[] { Array.Empty<float>(), [0.1f, 16777216f, 1f] }.Select(items => Call("sumFloat32", items)),
+      .. new[] { Array.Empty<double>(), [0.1, -0.0, 1e308, double.NaN] }.Select(items => Call("scaleFloat64", items)),
+      .. new[] { Array.Empty<float>(), [0.1f, -0f, 3e38f, float.NaN] }.Select(items => Call("scaleFloat32", items)),
+      .. new[] { Array.Empty<ulong>(), [ulong.MaxValue, 1, 1UL << 63] }.Select(items => Call("xorBigUint64", items)),
+      .. new[] { Array.Empty<long>(), [long.MinValue, long.MaxValue, -1, 0] }.Select(items => Call("negateBigInt64", items)),
+      .. new[] { Array.Empty<double>(), [0.1, 0.2, 0.3] }.Select(items => Call("sumNumbers", items)),
+      .. new[] { 0.0, 1.0, 2.0, -0.0 }.Select(index => Call("readAt", new byte[] { 5, 6, 7 }, index))
+    ],
+    _ when JavaScriptFixture.Inference.Contains(fixture) => BoundaryCalls(Scalar(fixture)),
     _ => throw new ArgumentException($"There is no fixture '{fixture}'.", nameof(fixture))
   };
 
@@ -106,25 +183,53 @@ internal static class JavaScriptCases {
     }
 
     // js-oob-read: an index that an uncoerced sum takes beyond 32 bits is outside the array in JavaScript
-    // and, taken modulo 2^32, inside it in the imported code.
-    Add("js-oob-read", "arrays", "void | [5,6,7]", "7 | [5,6,7]", "readAtSum", new uint[] { 5, 6, 7 }, int.MinValue, int.MinValue + 2);
+    // and no index at all in the imported code.
+    Add("js-oob-read", "arrays", "void | [5,6,7]", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "readAtSum", new uint[] { 5, 6, 7 }, int.MinValue, int.MinValue + 2);
 
     // js-div-zero: no quotient, and the one quotient that does not fit.
     Add("js-div-zero", "operators", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideInt", 1, 0);
     Add("js-div-zero", "operators", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideUint", 1u, 0u);
-    Add("js-div-zero", "operators", "NaN", PrototypeFixture.Trap(IrTrap.DivideByZero), "remainderInt", 1, 0);
-    Add("js-div-zero", "operators", "NaN", PrototypeFixture.Trap(IrTrap.DivideByZero), "remainderUint", 1u, 0u);
     Add("js-div-zero", "operators", "-2147483648", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "divideInt", int.MinValue, -1);
     Add("js-div-zero", "operators", "2147483648", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "divideIntToUint", int.MinValue, -1);
-    Add("js-div-zero", "operators", "0", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "remainderInt", int.MinValue, -1);
 
-    // js-step-wrap: ++ at the largest int32.
-    Add("js-step-wrap", "statements", "true", "false", "successorIsLarger", int.MaxValue);
+    // js-div-zero: the divisions of the inference fixtures, of 32 and of 64 bits; a BigInt division by zero throws in JavaScript.
+    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideInts", 1, 0);
+    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "remainderInts", 1, 0);
+    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideUints", 1u, 0u);
+    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "remainderUints", 1u, 0u);
+    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "remainderInts", int.MinValue, -1);
+    Add("js-div-zero", "inference/conversions", "2147483648", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "divideIntsToUint", int.MinValue, -1);
+    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideIntByByte", 1, (byte)0);
+    Add("js-div-zero", "inference/bigint", "trap: Division by zero", PrototypeFixture.Trap(IrTrap.DivideByZero), "divide", 1UL, 0UL);
+    Add("js-div-zero", "inference/bigint", "trap: Division by zero", PrototypeFixture.Trap(IrTrap.DivideByZero), "remainder", 1UL, 0UL);
+    Add("js-div-zero", "inference/bigint", "-9223372036854775808", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "divideSigned", long.MinValue, -1L);
+    Add("js-div-zero", "inference/bigint", "0", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "remainderSigned", long.MinValue, -1L);
+
+    // js-oob-read: an index that is no integer reads nothing in JavaScript; the imported code drops the
+    // fraction, and traps when what is left is no index at all.
+    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", "6 | [5,6,7]", "readAt", new byte[] { 5, 6, 7 }, 1.5);
+    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", "5 | [5,6,7]", "readAt", new byte[] { 5, 6, 7 }, -0.5);
+    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", outOfRange, "readAt", new byte[] { 5, 6, 7 }, 3.0);
+    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "readAt", new byte[] { 5, 6, 7 }, double.NaN);
+    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "readAt", new byte[] { 5, 6, 7 }, 4294967296.0);
     return differences;
   }
 
   /// <summary>The random calls of the operator fixture: a thousand for every function, the same on every run.</summary>
   public static IReadOnlyList<PrototypeCall> RandomOperatorCalls() => Operators(true);
+
+  /// <summary>
+  /// The fixtures whose functions are also compared on random operands: the operators on the three
+  /// integer types, and every function of the inference fixtures that takes numbers and truth values.
+  /// </summary>
+  public static IEnumerable<string> RandomFixtures => JavaScriptFixture.Inference.Prepend("operators");
+
+  /// <summary>The random calls of a fixture: a thousand for every function without an array parameter, the same on every run.</summary>
+  public static IReadOnlyList<PrototypeCall> RandomCalls(string fixture) => RandomCalls(Scalar(fixture), RandomCallsPerOperator);
+
+  /// <summary>The functions of a fixture that node can be asked for and that take no array.</summary>
+  private static List<IrFunction> Scalar(string fixture)
+    => JavaScriptFixture.Import(fixture).Functions.Where(function => function.IsPublic && function.Parameters.All(parameter => !parameter.Type.IsArray)).ToList();
 
   private static PrototypeCall Call(string method, params object[] arguments) => new(method, arguments);
 
@@ -223,7 +328,7 @@ internal static class JavaScriptCases {
     foreach (var n in new[] { 0, 1, 7, 10 })
       calls.Add(Call("isEven", n));
 
-    foreach (var value in new[] { int.MinValue, -1, 0, int.MaxValue - 1 })
+    foreach (var value in new[] { int.MinValue, -1, 0, int.MaxValue - 1, int.MaxValue })
       calls.Add(Call("successorIsLarger", value));
 
     foreach (var first in _bools) {
@@ -278,20 +383,28 @@ internal static class JavaScriptCases {
     return calls;
   }
 
+  /// <summary>Whether a function divides integers, by its name: the division of the IR traps where JavaScript's does not.</summary>
   private static bool Divides(PrototypeCall call)
     => call.Method.StartsWith("divide", StringComparison.Ordinal) || call.Method.StartsWith("remainder", StringComparison.Ordinal);
 
-  /// <summary>Whether a division has a quotient: a divisor other than zero, and not the one signed overflow.</summary>
+  /// <summary>Whether a division has a quotient: a divisor other than zero, and not the one signed overflow of 32 or of 64 bits.</summary>
   private static bool IsDefinedDivision(PrototypeCall call) {
-    var dividend = Convert.ToInt64(call.Arguments[0], System.Globalization.CultureInfo.InvariantCulture);
-    var divisor = Convert.ToInt64(call.Arguments[1], System.Globalization.CultureInfo.InvariantCulture);
-    return divisor != 0 && !(dividend == int.MinValue && divisor == -1);
+    var dividend = Convert.ToDecimal(call.Arguments[0], System.Globalization.CultureInfo.InvariantCulture);
+    var divisor = Convert.ToDecimal(call.Arguments[1], System.Globalization.CultureInfo.InvariantCulture);
+    return divisor != 0 && !((dividend == int.MinValue || dividend == long.MinValue) && divisor == -1);
   }
 
   private static object[] Boundaries(IrType type) => type.Kind switch {
     IrTypeKind.I32 => _ints.Cast<object>().ToArray(),
     IrTypeKind.U32 => _uints.Cast<object>().ToArray(),
     IrTypeKind.U8 => _bytes.Cast<object>().ToArray(),
+    IrTypeKind.I8 => [sbyte.MinValue, (sbyte)-1, (sbyte)0, sbyte.MaxValue],
+    IrTypeKind.I16 => [short.MinValue, (short)-1, (short)0, short.MaxValue],
+    IrTypeKind.U16 => [(ushort)0, (ushort)1, (ushort)0x8000, ushort.MaxValue],
+    IrTypeKind.I64 => [long.MinValue, -1L, 0L, 1L, long.MaxValue],
+    IrTypeKind.U64 => [0UL, 1UL, (ulong)long.MaxValue, 1UL << 63, ulong.MaxValue],
+    IrTypeKind.F32 => _doubles.Select(value => (object)(float)value).Distinct().ToArray(),
+    IrTypeKind.F64 => _doubles.Cast<object>().ToArray(),
     _ => _bools.Cast<object>().ToArray()
   };
 
@@ -301,13 +414,31 @@ internal static class JavaScriptCases {
     if (random.Next(8) == 0)
       return boundaries[random.Next(boundaries.Length)];
 
-    var bits = (uint)random.NextInt64(1L << 32);
+    var bits = (ulong)random.NextInt64(long.MinValue, long.MaxValue);
     return type.Kind switch {
       IrTypeKind.I32 => (int)bits,
-      IrTypeKind.U32 => bits,
+      IrTypeKind.U32 => (uint)bits,
       IrTypeKind.U8 => (byte)bits,
+      IrTypeKind.I8 => (sbyte)bits,
+      IrTypeKind.I16 => (short)bits,
+      IrTypeKind.U16 => (ushort)bits,
+      IrTypeKind.I64 => (long)bits,
+      IrTypeKind.U64 => bits,
+      IrTypeKind.F32 => (float)RandomDouble(bits),
+      IrTypeKind.F64 => RandomDouble(bits),
       _ => (bits & 1) != 0
     };
   }
+
+  /// <summary>
+  /// A random double of one of four kinds: any bit pattern, an integer of up to 33 bits, such an
+  /// integer plus a half, and an integer around 2^53, where a double stops holding every one.
+  /// </summary>
+  private static double RandomDouble(ulong bits) => (bits & 3) switch {
+    0 => BitConverter.Int64BitsToDouble((long)bits),
+    1 => (long)(bits >> 2) >> 29,
+    2 => ((long)(bits >> 2) >> 29) + 0.5,
+    _ => ((bits & 4) == 0 ? 1.0 : -1.0) * (9007199254740992.0 + ((long)(bits >> 3) % 4096) - 2048)
+  };
 
 }

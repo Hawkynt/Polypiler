@@ -1,0 +1,5 @@
+compute: parameter data: u8[] from '@param {uint8[]}' at (8,25)
+compute: local a: f64 from '((a + data[i]) | 0) % 65521' at (12,9)
+compute: local b: f64 from '((b + a) | 0) % 65521' at (13,9)
+compute: local i: f64 from 'i++' at (11,36)
+compute: result: u32 from '((b << 16) | a) >>> 0' at (16,10)

@@ -58,6 +58,8 @@ public static class IrOperators {
       IrIntrinsicOp.BigMul => result == IrType.U64 && Are(type => type == IrType.U32, Same),
       IrIntrinsicOp.FloatBits => Are(type => type.IsFloat) && result == (first == IrType.F64 ? IrType.I64 : IrType.I32),
       IrIntrinsicOp.BitsFloat => Are(type => type == IrType.I32 || type == IrType.I64) && result == (first == IrType.I64 ? IrType.F64 : IrType.F32),
+      IrIntrinsicOp.ToInt32 => result == IrType.I32 && Are(type => type == IrType.F64),
+      IrIntrinsicOp.ToUint32 => result == IrType.U32 && Are(type => type == IrType.F64),
       _ => result == first && Are(type => type.IsFloat)
     };
   }
@@ -107,6 +109,30 @@ public static class IrOperators {
   /// <returns>The value of <see cref="IrConst.Value"/> for the number.</returns>
   public static long Bits(IrType type, double value)
     => type == IrType.F32 ? BitConverter.SingleToInt32Bits((float)value) : BitConverter.DoubleToInt64Bits(value);
+
+  /// <summary>
+  /// ECMA-262's <c>ToInt32</c> and <c>ToUint32</c>: the number without its fraction, modulo 2^32, as
+  /// a value of the given 32-bit type. The remainder of two doubles is exact, so the result is the
+  /// one the standard defines for every number, however large; a NaN and the infinities give 0.
+  /// </summary>
+  /// <param name="type"><see cref="IrType.I32"/> or <see cref="IrType.U32"/>.</param>
+  /// <param name="value">Any number.</param>
+  /// <returns>The value as the IR carries an integer of <paramref name="type"/>.</returns>
+  public static long ToWord(IrType type, double value)
+    => double.IsFinite(value) ? Wrap(type, (long)(Math.Truncate(value) % 4294967296.0)) : 0;
+
+  /// <summary>
+  /// ECMA-262's <c>Math.round</c>: the nearest integral number, a tie going towards positive
+  /// infinity, with the sign of the operand kept on a zero. Below 2^52 the distance to the next lower
+  /// integral number is exact; from there on every double is integral and is its own result.
+  /// </summary>
+  /// <param name="value">Any number.</param>
+  /// <returns>The rounded number.</returns>
+  public static double RoundHalfUp(double value) {
+    var floor = Math.Floor(value);
+    var rounded = value - floor >= 0.5 ? floor + 1 : floor;
+    return rounded == 0 ? Math.CopySign(0.0, value) : rounded;
+  }
 
   /// <summary>The floating-point number a constant carries.</summary>
   /// <param name="type"><see cref="IrType.F32"/> or <see cref="IrType.F64"/>.</param>

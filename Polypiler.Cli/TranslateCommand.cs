@@ -38,13 +38,14 @@ public static class TranslateCommand {
   private const string Export = "--export";
   private const string Profile = "--profile";
   private const string LangVersion = "--langversion";
+  private const string ExplainTypes = "--explain-types";
 
   private static readonly string[] _required = [From, To, Output];
 
   /// <summary>The source languages; another one is another entry.</summary>
   private static readonly Frontend[] _frontends = [
-    new("csharp", [], _ => null, ImportCSharp),
-    new("javascript", [Export], ExportMisuse, ImportJavaScript)
+    new("csharp", [], [], _ => null, ImportCSharp),
+    new("javascript", [Export], [ExplainTypes], ExportMisuse, ImportJavaScript)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -61,6 +62,7 @@ public static class TranslateCommand {
     $"{ProductInfo.Name} translate <file> {From} {Choice(_frontends.Select(frontend => frontend.Name))}"
     + $" {To} {Choice(_backends.Select(backend => backend.Name))} {Output} <directory>"
     + string.Concat(_frontends.SelectMany(frontend => frontend.Options).Select(option => $" [{option} <name>[,<name>...]]"))
+    + string.Concat(_frontends.SelectMany(frontend => frontend.Flags).Select(flag => $" [{flag}]"))
     + string.Concat(_backends.SelectMany(backend => backend.Options).Select(option => $" [{option} <{_values.GetValueOrDefault(option, "name")}>]"));
 
   /// <summary>Runs the command.</summary>
@@ -70,6 +72,7 @@ public static class TranslateCommand {
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error) {
     string? file = null;
+    var flags = _frontends.SelectMany(frontend => frontend.Flags).ToList();
     var known = _required
       .Concat(_frontends.SelectMany(frontend => frontend.Options))
       .Concat(_backends.SelectMany(backend => backend.Options))
@@ -82,6 +85,9 @@ public static class TranslateCommand {
           return Refuse(error, $"more than one source file: '{file}' and '{argument}'");
 
         file = argument;
+      } else if (flags.Contains(argument)) {
+        // A flag is an option without a value: it is there or it is not.
+        options[argument] = "";
       } else if (!known.Contains(argument)) {
         return Refuse(error, $"unknown option '{argument}'");
       } else if (index + 1 == arguments.Count) {
@@ -107,9 +113,9 @@ public static class TranslateCommand {
       return Refuse(error, $"unknown target language '{options[To]}'; the prototype writes {Listed(_backends.Select(candidate => candidate.Name))}");
 
     // An option that is not required belongs to a source or to a target language, and only to the chosen one.
-    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && !frontend.Options.Contains(option) && !backend.Options.Contains(option));
+    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && !frontend.Options.Contains(option) && !frontend.Flags.Contains(option) && !backend.Options.Contains(option));
     var misuse = foreign is null ? frontend.Misuse(options) ?? backend.Misuse(options)
-      : _frontends.Any(candidate => candidate.Options.Contains(foreign)) ? $"the option '{foreign}' does not apply to the source language '{frontend.Name}'"
+      : _frontends.Any(candidate => candidate.Options.Contains(foreign) || candidate.Flags.Contains(foreign)) ? $"the option '{foreign}' does not apply to the source language '{frontend.Name}'"
       : $"the option '{foreign}' does not apply to the target language '{backend.Name}'";
     if (misuse is not null)
       return Refuse(error, misuse);
@@ -121,7 +127,7 @@ public static class TranslateCommand {
       return Refuse(error, $"the source file '{file}' cannot be read: {exception.Message}");
     }
 
-    var (module, exitCode) = frontend.Import(file, source, options, error);
+    var (module, exitCode) = frontend.Import(file, source, options, output, error);
     return module is null ? exitCode : Emit(module, options, output, error);
   }
 
@@ -172,7 +178,7 @@ public static class TranslateCommand {
     return Program.Success;
   }
 
-  private static (IrModule? Module, int ExitCode) ImportCSharp(string file, string source, IReadOnlyDictionary<string, string> options, TextWriter error) {
+  private static (IrModule? Module, int ExitCode) ImportCSharp(string file, string source, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error) {
     var imported = CSharpFrontend.Import(file, source);
     foreach (var diagnostic in imported.Diagnostics)
       error.WriteLine(diagnostic);
@@ -187,10 +193,15 @@ public static class TranslateCommand {
   /// Imports JavaScript, all of the file or the functions <c>--export</c> names. What the imported
   /// code is known to do differently from the original is written as a note; it is no error.
   /// </summary>
-  private static (IrModule? Module, int ExitCode) ImportJavaScript(string file, string source, IReadOnlyDictionary<string, string> options, TextWriter error) {
+  private static (IrModule? Module, int ExitCode) ImportJavaScript(string file, string source, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error) {
     var imported = JavaScriptFrontend.Import(file, source, options.TryGetValue(Export, out var names) ? Names(names) : null);
     foreach (var diagnostic in imported.Diagnostics)
       error.WriteLine(diagnostic);
+
+    // Why every parameter, local and result has its type: the answer to "why is this a double?".
+    if (options.ContainsKey(ExplainTypes))
+      foreach (var explanation in imported.Explanations)
+        output.WriteLine($"{file}: type {explanation}");
 
     foreach (var caveat in imported.Caveats)
       error.WriteLine($"{file}: note {caveat.Id}: {caveat.Description}");
@@ -244,8 +255,9 @@ public static class TranslateCommand {
   private sealed record Frontend(
     string Name,
     string[] Options,
+    string[] Flags,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
-    Func<string, string, IReadOnlyDictionary<string, string>, TextWriter, (IrModule? Module, int ExitCode)> Import);
+    Func<string, string, IReadOnlyDictionary<string, string>, TextWriter, TextWriter, (IrModule? Module, int ExitCode)> Import);
 
   /// <summary>A target language of the command.</summary>
   /// <param name="Name">The name <c>--to</c> takes.</param>

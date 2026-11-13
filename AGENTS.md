@@ -12,7 +12,7 @@ which. Most modules are still empty shells that the [PRD](docs/PRD.md) phases fi
 is one thin path, the prototype between C# and JavaScript: `Polypiler.Core` (product identity,
 `Diagnostic`, `GeneratedFile`), `Polypiler.Core.IR` (a small typed structured IR with verifier and
 interpreter), `Polypiler.Core.Frontends.CSharp` (Roslyn import of a small C# subset),
-`Polypiler.Core.Frontends.JavaScript` (import of JSDoc-typed JavaScript functions, parsed by Acornima),
+`Polypiler.Core.Frontends.JavaScript` (import of JavaScript with inferred types, parsed by Acornima),
 `Polypiler.Core.Backends.JavaScript` (ES module emitter), `Polypiler.Core.Backends.CSharp` (C#
 emitter for nine target profiles, .NET Framework 2.0 to .NET 10, with one capability table) and `Polypiler.Cli` (the `polypiler` command with `translate`). `Polypiler.Tests` holds the
 unit tests and carries the coverage; `Polypiler.Tests.Acceptance` starts the real executable, `node`

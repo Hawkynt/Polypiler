@@ -1,0 +1,6 @@
+compute: parameter data: u8[] from 'new Uint8Array([49, 50, 51, 52, 53, 54, 55, 56, 57])' at (15,18)
+compute: local crc: u32 from '0xFFFFFFFF' at (4,13)
+compute: local i: f64 from 'i++' at (5,36)
+compute: local bit: f64 from 'bit++' at (7,32)
+compute: result: u32 from '(crc ^ 0xFFFFFFFF) >>> 0' at (10,10)
+check: result: bool from 'compute(new Uint8Array([49, 50, 51, 52, 53, 54, 55, 56, 57])) === 0xCBF43926' at (15,10)

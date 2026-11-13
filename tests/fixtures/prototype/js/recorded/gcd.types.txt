@@ -1,0 +1,6 @@
+gcd: parameter a: i32 from '@param {int32}' at (8,21)
+gcd: parameter b: i32 from '@param {int32}' at (8,24)
+gcd: local a: f64 from 'b' at (11,9)
+gcd: local b: f64 from 'remainder' at (12,9)
+gcd: local remainder: f64 from 'a % b' at (10,23)
+gcd: result: f64 from 'a' at (15,10)
