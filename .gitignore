@@ -99,3 +99,6 @@ backlog/*
 
 # Python
 __pycache__/
+
+# Local tooling worktrees
+.claude/

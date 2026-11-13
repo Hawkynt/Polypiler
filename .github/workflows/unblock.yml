@@ -32,6 +32,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # A closed issue is no longer in flight; the claim label would otherwise stay on it for good.
+          if [ "$(gh api "repos/$REPO/issues/$ISSUE" --jq .state)" = "closed" ]; then
+            gh issue edit "$ISSUE" -R "$REPO" --remove-label in-flight --remove-label state:ready --remove-label state:blocked || true
+          fi
           for dependant in $(gh api --paginate "repos/$REPO/issues/$ISSUE/dependencies/blocking" --jq '.[] | select(.state == "open") | .number'); do
             labels=$(gh api "repos/$REPO/issues/$dependant" --jq '[.labels[].name] | join(",")')
             open_blockers=$(gh api --paginate "repos/$REPO/issues/$dependant/dependencies/blocked_by" --jq '[.[] | select(.state == "open")] | length' | paste -sd+ | bc)

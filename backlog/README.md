@@ -80,8 +80,10 @@ indent ([`AGENTS.md`](../AGENTS.md)). Gherkin is bound with Reqnroll (issue `INF
 **IR notation.** Until `IR-SERIAL` fixes the debugging form, IR in issues is written one instruction
 per line as `%result = Op.type operand, operand`, types `u8 u16 u32 u64 i8 … f32 f64`, blocks as
 `label:`, intrinsics in PascalCase (`RotateLeft.u32 %x, %n`). Shifts state their amount contract:
-`Shl.u32[mask]` (amount taken modulo the width) or `Shl.u32[strict]` (amount ≥ width is a verifier
-error unless a range fact excludes it).
+`Shl.u32[mask]` (amount taken modulo the width), `Shl.u32[unbounded]` (an amount ≥ width shifts
+every bit out) or `Shl.u32[strict]` (amount ≥ width is a verifier error unless a range fact excludes
+it). The closed contract sets and the input aliases are those of
+`docs/adr/0002-numeric-contracts.md`.
 
 **Diagnostics.** Stable codes `PLY####`, registered in `spec/diagnostics.yaml` (issue
 `ADR-DIAGNOSTICS`). Each area allocates from its own block:
@@ -105,7 +107,10 @@ backend `x50–x89`, runner `x90–x99`. Format blocks: MSIL 3000, JVM 3100, Web
 **Optimization IDs.** General passes `O0001–O0059`, de-dynamicization and legalization `O0060–O0099`,
 recognition rules `O0100–O0169`, recovery/de-optimization `O0170–O0199`, bit permutations
 `O0200–O0229`, object-model lowering and recovery `O0230–O0259`, interop/layout `O0260–O0279`,
-vector/tensor/execution `O0280–O0299`. Each is switched off with `--disable-opt O####`.
+vector/tensor/execution `O0280–O0299`; borrowed from PB-Compiler (`backlog/borrowed/`): loops `O0300–O0329`, memory and
+data layout `O0330–O0354`, redundancy `O0355–O0359`, propagation `O0360–O0379`, interprocedural
+`O0380–O0399`, vectorization `O0400–O0414`, control-flow shaping and block layout `O0415–O0439`,
+profile-guided `O0440–O0449`, strings `O0450–O0464`. Each is switched off with `--disable-opt O####`.
 
 **Toolchains.** Named by key; exact versions live only in `tooling/toolchains.lock` (issue
 `INFRA-TOOLCHAINS`). Keys in use: `dotnet-sdk`, `node`, `typescript`, `rust`, `gcc`, `clang`, `llvm`,
@@ -115,15 +120,21 @@ stand-in; a genuine Delphi compiler is a separately reported oracle), `fbc`, `pb
 `dosbox-x`, `ilspy-cli`/`ilverify`, `nasm`. An issue that needs another adds the key in its scope.
 
 **Pinned upstream sources.** All LGPL-3.0-or-later unless a file says otherwise; third-party notices
-inside them apply per file. **Exception: `Cipher/` in `Hawkynt/Hawkynt.github.io` carries its own
-`Cipher/LICENSE` with the GPL-3.0 text** — until that is changed upstream, Cipher code is rung 2 of the
-sourcing ladder: run it out of process or read it as reference, derive specification and tests, copy
-nothing. Its test vectors are facts and may be used.
+inside them apply per file. **Licence policy (owner decision of 2026-11-13).** LGPL (2.0-or-later, 2.1, 3.0), GPL
+(2.0-or-later, 3.0), MIT, BSD, Apache-2.0 and comparable open-source licences are all allowed as
+sources. One consequence is not optional: whatever is derived from a GPL file is GPL — a generated
+package or catalogue entry whose closure contains GPL-derived code is labelled `GPL-3.0-or-later` in
+its manifest and notices, and GPL-derived code is never merged into the LGPL-licensed compiler
+projects (`Polypiler.*`), where it stays rung 2. `GPL-2.0-only` and AGPL stay reference-only.
+
+**Cipher is LGPL-3.0-or-later.** Its `Cipher/LICENSE` used to carry the GPL-3.0 text by mistake; the
+owner corrected it upstream, and the pin below is the commit that carries the correction. Cipher
+code is therefore rung 1 like the rest of that repository.
 
 | Repository | Pin | Local checkout for browsing |
 | --- | --- | --- |
 | `Hawkynt/PB-Compiler` | `0d73acbea185a2597357d53f7ce9acb44758ba76` | `../PB-Compiler.Hawkynt` |
-| `Hawkynt/Hawkynt.github.io` (Cipher, BitPerm, BitBench) | `045397b4c934487bc2eb385125fdbd9589502f7f` | `../Hawkynt.github.io` |
+| `Hawkynt/Hawkynt.github.io` (Cipher, BitPerm, BitBench) | `b3a8a8e92cbca83475986391c3cac56f0b185d29` | `../Hawkynt.github.io` |
 | `Hawkynt/MediaDroid` (MediaDroyd) | `7f8b6b995cbe54a6afb290a900748393bf01e272` | `../MediaDroyd.Hawkynt` |
 | `Hawkynt/CompressionWorkbench` | `21e609396e8fceb80e49185cc34cab7bce7f6483` | `../CompressionWorkbench.Hawkynt` |
 | `Hawkynt/PNGCrushCS` | `9d8117695e12457bf0c1158d1fc6ebccc53acc45` | `../PNGCrushCS.Hawkynt` (`git show <pin>:<path>`) |

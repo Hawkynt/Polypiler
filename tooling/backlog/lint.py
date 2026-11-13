@@ -37,7 +37,7 @@ STATES = ("parsed", "lifted", "recognized", "proved", "legalized", "emitted", "c
           "performance-validated")
 PINS = {
   "Hawkynt/PB-Compiler": ("0d73acbea185a2597357d53f7ce9acb44758ba76", "PB-Compiler.Hawkynt"),
-  "Hawkynt/Hawkynt.github.io": ("045397b4c934487bc2eb385125fdbd9589502f7f", "Hawkynt.github.io"),
+  "Hawkynt/Hawkynt.github.io": ("b3a8a8e92cbca83475986391c3cac56f0b185d29", "Hawkynt.github.io"),
   "Hawkynt/MediaDroid": ("7f8b6b995cbe54a6afb290a900748393bf01e272", "MediaDroyd.Hawkynt"),
   "Hawkynt/CompressionWorkbench": ("21e609396e8fceb80e49185cc34cab7bce7f6483", "CompressionWorkbench.Hawkynt"),
   "Hawkynt/PNGCrushCS": ("9d8117695e12457bf0c1158d1fc6ebccc53acc45", "PNGCrushCS.Hawkynt"),
