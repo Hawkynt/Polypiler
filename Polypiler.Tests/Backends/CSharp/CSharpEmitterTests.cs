@@ -49,7 +49,7 @@ public sealed class CSharpEmitterTests {
 
   /// <summary>The fixtures; the one with a thousand random calls per function is left to the slow tier.</summary>
   private static IEnumerable<TestCaseData> Fixtures()
-    => PrototypeFixture.Names.Select(name => name == "Operators" ? new TestCaseData(name).SetCategory("Slow") : new TestCaseData(name));
+    => PrototypeFixture.First.Select(name => name == "Operators" ? new TestCaseData(name).SetCategory("Slow") : new TestCaseData(name));
 
   private static IrFunction Function(string name, IrType returns, IrLocal[] parameters, params IrStmt[] body)
     => new(name, true, returns, parameters, body.OfType<IrDeclare>().Select(declare => declare.Local).ToList(), new IrBlock(body));
@@ -58,7 +58,7 @@ public sealed class CSharpEmitterTests {
 
   private static IrBinary Op(IrBinaryOp op, IrExpr left, IrExpr right) => new(op, left, right);
 
-  [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
+  [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.First))]
   public void Fixture_BecomesOneFileNamedAfterItsClass(string fixture) {
     var files = CSharpEmitter.Emit(PrototypeFixture.Import(fixture + ".cs", PrototypeFixture.SourceOf(fixture)));
     Assert.That(files.Select(file => file.Path), Is.EqualTo(new[] { fixture + ".cs" }));
@@ -585,6 +585,66 @@ public sealed class CSharpEmitterTests {
     yield return new TestCaseData(
       Of(new Riddle(), new IrExprStmt(new IrCall("F", IrType.I32, [mystery])), new IrStore(mystery, mystery, new IrArrayLength(new IrNewArray(IrType.Array(Unheard), mystery))), new IrAssign(a, new IrConditional(mystery, mystery, mystery))),
       new[] { "Riddle", "Mystery", "99[]" }).SetName("Unknown: several, each reported once in the order met");
+  }
+
+  /// <summary>
+  /// What the IR has gained since this backend was written: each type, node kind, operator and
+  /// contract it does not write is named in a PLY1052, never written as something else.
+  /// </summary>
+  private static IEnumerable<TestCaseData> WidenedConstructs() {
+    var a = new IrLocal("a", IrType.I32);
+    IrExpr value = new IrLocalRef(a);
+    var truth = new IrConst(IrType.Bool, 1);
+    var empty = new IrBlock([]);
+    var table = new IrModuleConst("T", IrType.Array(IrType.I32), [1]);
+    IrModule Of(params IrStmt[] body) => new("M", [Function("F", IrType.I32, [a], body)]);
+    TestCaseData Case(string name, IrModule module, params string[] names) => new TestCaseData(module, names).SetName("Widened: " + name);
+
+    foreach (var type in new[] { IrType.I8, IrType.I16, IrType.U16, IrType.I64, IrType.U64, IrType.F32, IrType.F64 }) {
+      var local = new IrLocal("wide", type);
+      yield return Case($"a local of the type {type}", Of(new IrDeclare(local, null), new IrReturn(Int(1))), type.ToString());
+      yield return Case($"an array of {type}", new IrModule("M", [new IrFunction("F", true, IrType.Void, [new IrLocal("p", IrType.Array(type))], [], empty)]), type + "[]");
+    }
+
+    yield return Case("a do loop", Of(new IrDoWhile(empty, truth), new IrReturn(Int(1))), "IrDoWhile");
+    yield return Case("a loop with a step", Of(new IrFor(truth, empty, empty), new IrReturn(Int(1))), "IrFor");
+    yield return Case("a switch", Of(new IrSwitch(value, [new IrSwitchSection([1], false, empty)]), new IrReturn(Int(1))), "IrSwitch");
+    yield return Case("a break", Of(new IrWhile(truth, new IrBlock([new IrBreak()])), new IrReturn(Int(1))), "IrBreak");
+    yield return Case("a continue", Of(new IrWhile(truth, new IrBlock([new IrContinue()])), new IrReturn(Int(1))), "IrContinue");
+    yield return Case("a step as a value", Of(new IrReturn(new IrStep(value, true, true, false))), "IrStep");
+    yield return Case("a checked sum", Of(new IrReturn(Op(IrBinaryOp.AddChecked, value, Int(1)))), "AddChecked");
+    yield return Case("a checked difference", Of(new IrReturn(Op(IrBinaryOp.SubtractChecked, value, Int(1)))), "SubtractChecked");
+    yield return Case("a checked product", Of(new IrReturn(Op(IrBinaryOp.MultiplyChecked, value, Int(1)))), "MultiplyChecked");
+    yield return Case("a checked negation", Of(new IrReturn(new IrUnary(IrUnaryOp.NegateChecked, value))), "NegateChecked");
+    yield return Case("a conversion that traps", Of(new IrReturn(new IrConvert(IrType.I32, new IrConvert(IrType.U8, value, IrConversion.Trap)))), "IrConvert with the contract Trap");
+    yield return Case("a conversion that saturates", Of(new IrReturn(new IrConvert(IrType.I32, new IrConst(IrType.F64, 0), IrConversion.Saturate))), "IrConvert with the contract Saturate", "f64");
+    yield return Case("an intrinsic", Of(new IrReturn(new IrIntrinsic(IrIntrinsicOp.Abs, IrType.I32, [value]))), "IrIntrinsic");
+    yield return Case("a constant of the module", new IrModule("M", [Function("F", IrType.I32, [a], new IrReturn(Int(1)))], [new IrModuleConst("N", IrType.I32, [1])]), "IrModuleConst");
+    yield return Case("a table that is read", new IrModule("M", [Function("F", IrType.I32, [a], new IrReturn(new IrArrayLoad(new IrConstRef(table), value)))], [table]),
+      "IrModuleConst", "IrConstRef");
+  }
+
+  /// <summary>Every construct the widened IR adds is refused by name; the module is neither emitted nor handed to the verifier first.</summary>
+  [TestCaseSource(nameof(WidenedConstructs))]
+  public void WidenedConstruct_IsRefused(IrModule module, string[] names) {
+    Assert.That(IrVerifier.Verify(module), Is.Empty, "the module is one the widened IR accepts");
+    this.UnknownConstruct_IsRefused(module, names);
+  }
+
+  private static IEnumerable<string> WideFixtures() => PrototypeFixture.Names.Except(PrototypeFixture.First);
+
+  /// <summary>
+  /// Each fixture beyond those of the first prototype uses something this backend does not write yet.
+  /// It is refused with PLY1052 and nothing else - no exception, no file.
+  /// </summary>
+  [TestCaseSource(nameof(WideFixtures))]
+  public void WideFixture_IsRefused(string fixture) {
+    var module = PrototypeFixture.Imported(fixture);
+    var problems = CSharpEmitter.Check(module);
+    Assert.That(problems, Is.Not.Empty);
+    Assert.That(problems.Select(problem => (problem.Code, problem.Severity)), Has.All.EqualTo((CSharpEmitter.Unsupported, DiagnosticSeverity.Error)));
+    Assert.That(problems.Select(problem => problem.Message), Is.Unique.And.All.EndsWith("' is not supported by the C# backend yet"));
+    Assert.That(() => CSharpEmitter.Emit(module), Throws.ArgumentException.With.Message.Contains("is not supported by the C# backend yet"));
   }
 
   /// <summary>Test design 9: what the backend does not know is refused as PLY1052 — before the verifier is asked — and nothing is emitted.</summary>

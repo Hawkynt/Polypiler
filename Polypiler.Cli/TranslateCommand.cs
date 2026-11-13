@@ -158,7 +158,7 @@ public static class TranslateCommand {
     foreach (var diagnostic in imported.Diagnostics)
       error.WriteLine(diagnostic);
 
-    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == CSharpFrontend.CompilerError)
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code is CSharpFrontend.CompilerError or CSharpFrontend.ConstantOverflow)
       ? InvalidSource
       : UnsupportedConstruct;
     return (imported.Module, failure);

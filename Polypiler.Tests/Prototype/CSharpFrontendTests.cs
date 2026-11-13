@@ -1,6 +1,7 @@
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core;
+using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
@@ -20,9 +21,9 @@ public sealed class CSharpFrontendTests {
   /// <summary>Every fixture imports into IR the verifier accepts.</summary>
   [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
   public void Fixture_ImportsIntoWellTypedIr(string fixture) {
-    var result = CSharpFrontend.Import(fixture + ".cs", PrototypeFixture.SourceOf(fixture));
+    var result = CSharpFrontend.Import(PrototypeFixture.ClassOf(fixture) + ".cs", PrototypeFixture.SourceOf(fixture));
     Assert.That(result.Diagnostics, Is.Empty);
-    Assert.That(result.Module!.Name, Is.EqualTo(fixture));
+    Assert.That(result.Module!.Name, Is.EqualTo(PrototypeFixture.ClassOf(fixture)));
     Assert.That(IrVerifier.Verify(result.Module), Is.Empty);
   }
 
@@ -63,6 +64,24 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F() => 1 << 33;", IrTypeKind.I32, 2)]
   [TestCase("public static uint F() => 7;", IrTypeKind.U32, 7)]
   [TestCase("public static bool F() => !false;", IrTypeKind.Bool, 1)]
+  [TestCase("public static long F() => 7;", IrTypeKind.I64, 7)]
+  [TestCase("public static long F() => long.MinValue;", IrTypeKind.I64, long.MinValue)]
+  [TestCase("public static ulong F() => ulong.MaxValue;", IrTypeKind.U64, -1)]
+  [TestCase("public static ulong F() => 0x8000000000000000;", IrTypeKind.U64, long.MinValue)]
+  [TestCase("public static char F() => 'a';", IrTypeKind.U16, 97)]
+  [TestCase("public static int F() => 'a' + 1;", IrTypeKind.I32, 98)]
+  [TestCase("public static sbyte F() => sbyte.MinValue;", IrTypeKind.I8, -128)]
+  [TestCase("public static short F() => unchecked((short)0x8000);", IrTypeKind.I16, -32768)]
+  [TestCase("public static double F() => 1.5;", IrTypeKind.F64, 0x3FF8000000000000)]
+  [TestCase("public static float F() => 1.5f;", IrTypeKind.F32, 0x3FC00000)]
+  [TestCase("public static float F() => 1;", IrTypeKind.F32, 0x3F800000)]
+  [TestCase("public static double F() => 0.5f;", IrTypeKind.F64, 0x3FE0000000000000)]
+  [TestCase("public static float F() => ulong.MaxValue;", IrTypeKind.F32, 0x5F800000)]
+  [TestCase("public static double F() => ulong.MaxValue;", IrTypeKind.F64, 0x43F0000000000000)]
+  [TestCase("public static double F() => long.MinValue;", IrTypeKind.F64, unchecked((long)0xC3E0000000000000))]
+  [TestCase("public static float F() => -16777217;", IrTypeKind.F32, unchecked((int)0xCB800000))]
+  [TestCase("public static double F() => double.NaN;", IrTypeKind.F64, unchecked((long)0xFFF8000000000000))]
+  [TestCase("public static int F() => (int)2.9;", IrTypeKind.I32, 2)]
   public void Import_TakesConstantsFromTheCompiler(string method, IrTypeKind kind, long value) {
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method));
     var constant = (IrConst)((IrReturn)module.Functions[0].Body.Statements[0]).Value!;
@@ -73,25 +92,29 @@ public sealed class CSharpFrontendTests {
   /// Test design 11: every construct the issue lists as out of scope is refused with PLY1002 and the
   /// position of the construct; the snippets are valid C#, so the compiler does not get there first.
   /// </summary>
-  [TestCase("public static long F(long a) => a + 1;", "long", 15, TestName = "long")]
-  [TestCase("public static ulong F() => 1;", "ulong", 15, TestName = "ulong")]
-  [TestCase("public static double F() => 1.5;", "double", 15, TestName = "double")]
-  [TestCase("public static float F(int a) => a;", "float", 15, TestName = "float")]
-  [TestCase("public static int F(int a) => checked(a + 1);", "CheckedExpression", 31, TestName = "checked expression")]
-  [TestCase("public static int F(int a) { checked { return a + 1; } }", "CheckedStatement", 30, TestName = "checked statement")]
-  [TestCase("public static int F(int a) => unchecked(a + 1);", "UncheckedExpression", 31, TestName = "unchecked expression")]
+  [TestCase("public static decimal F(decimal a) => a + 1;", "decimal", 15, TestName = "decimal")]
+  [TestCase("public static System.Half F(System.Half a) => a;", "System.Half", 15, TestName = "Half")]
+  [TestCase("public static System.Int128 F(System.Int128 a) => a;", "System.Int128", 15, TestName = "Int128")]
+  [TestCase("public static nint F(nint a) => a;", "nint", 15, TestName = "nint")]
+  [TestCase("public static int F(int[] a, long i) => a[i];", "an array index or length of the type i64", 43, TestName = "64-bit index")]
+  [TestCase("public static void F(int[] a, ulong i) { a[i] = 1; }", "an array index or length of the type u64", 44, TestName = "64-bit index of a write")]
+  [TestCase("public static int[] F(long n) => new int[n];", "an array index or length of the type i64", 42, TestName = "64-bit length")]
   [TestCase("public static string F() => \"a\";", "string", 15, TestName = "string")]
-  [TestCase("public static char F() => 'a';", "char", 15, TestName = "char")]
-  [TestCase("public static int F(int[] a) { int s = 0; foreach (int x in a) s += x; return s; }", "ForEachStatement", 43, TestName = "foreach")]
-  [TestCase("public static int F(int a) { switch (a) { default: return 1; } }", "SwitchStatement", 30, TestName = "switch statement")]
+  [TestCase("public static bool F(char c) => char.IsDigit(c);", "Char.IsDigit", 33, TestName = "char text operation")]
+  [TestCase("public static int F() { int s = 0; foreach (int x in new System.Collections.Generic.List<int>()) s += x; return s; }", "System.Collections.Generic.List<int>", 54, TestName = "foreach over a list")]
+  [TestCase("public static int F(int a) { switch (a) { case > 1: return 1; default: return 0; } }", "CasePatternSwitchLabel", 43, TestName = "switch with a pattern")]
+  [TestCase("public static int F(int a) { switch (a) { case 1: goto default; default: return 0; } }", "GotoDefaultStatement", 51, TestName = "goto default")]
+  [TestCase("public static int F(int a) { switch (a) { case 1: goto case 2; case 2: return 0; } return 1; }", "GotoCaseStatement", 51, TestName = "goto case")]
+  [TestCase("public static int F(bool a) { switch (a) { case true: return 1; default: return 0; } }", "a switch on the type bool", 39, TestName = "switch on a truth value")]
+  [TestCase("public static int F(double a) { switch (a) { case 1.5: return 1; default: return 0; } }", "a switch on the type f64", 41, TestName = "switch on a float")]
+  [TestCase("public static int F(int a) { const string s = \"x\"; return a; }", "string", 36, TestName = "local constant of a type outside the subset")]
+  [TestCase("public static int F(int a) => (a)++;", "ParenthesizedExpression", 31, TestName = "step of something that is not a variable")]
+  [TestCase("public static int F(int[] a) => a!.Length;", "SuppressNullableWarningExpression", 33, TestName = "null-forgiving operator")]
+  [TestCase("public static int F() { return G(); int G() => 1; }", "InvocationExpression", 32, TestName = "call of a local function")]
   [TestCase("public static int F(int a) => a switch { _ => 1 };", "SwitchExpression", 31, TestName = "switch expression")]
-  [TestCase("public static int F(int a) { do { a++; } while (a < 3); return a; }", "DoStatement", 30, TestName = "do")]
-  [TestCase("public static int F(int a) { while (true) { break; } return a; }", "BreakStatement", 45, TestName = "break")]
-  [TestCase("public static int F(int a) { while (a < 0) { a++; continue; } return a; }", "ContinueStatement", 51, TestName = "continue")]
   [TestCase("public static int F(int a) { goto end; end: return a; }", "GotoStatement", 30, TestName = "goto")]
   [TestCase("public static int F(int[,] a) => 1;", "int[*,*]", 21, TestName = "multi-dimensional array")]
   [TestCase("public static int F(int[][] a) => 1;", "int[][]", 21, TestName = "jagged array")]
-  [TestCase("public static int F() { int[] a = new int[2] { 1, 2 }; return a[0]; }", "ArrayCreationExpression", 35, TestName = "array initializer")]
   [TestCase("public static int F(System.Span<int> a) => 1;", "System.Span<int>", 21, TestName = "span")]
   [TestCase("public static int F<T>(T a) => 1;", "a generic method", 20, TestName = "generic method")]
   [TestCase("public static int F() { System.Func<int, int> f = x => x; return 1; }", "System.Func<int, int>", 25, TestName = "lambda")]
@@ -103,32 +126,129 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(params int[] a) => 1;", "params", 21, TestName = "params parameter")]
   [TestCase("public static int F(int a = 1) => a;", "a default parameter value", 27, TestName = "default parameter value")]
   [TestCase("public static int F(this int a) => a;", "this", 21, TestName = "extension method")]
-  [TestCase("public static int Field;", "a class member other than a static method", 1, TestName = "field")]
-  [TestCase("public static int Property => 1;", "a class member other than a static method", 1, TestName = "property")]
+  [TestCase("public static int Field;", "a field that is neither const nor static readonly", 1, TestName = "field")]
+  [TestCase("public static int Property => 1;", "a class member other than a static method or a constant", 1, TestName = "property")]
+  [TestCase("static readonly int X;", "a field without an initializer", 21, TestName = "field without an initializer")]
+  [TestCase("static volatile int X = 1;", "volatile", 1, TestName = "modifier of a field")]
+  [TestCase("static readonly string S = \"x\";", "string", 17, TestName = "field of a type outside the subset")]
+  [TestCase("const string S = \"x\";", "string", 7, TestName = "constant of a type outside the subset")]
+  [TestCase("static readonly bool[] B = { true };", "bool[]", 17, TestName = "table of truth values")]
+  [TestCase("static readonly int X = G(); public static int G() => 1;", "a field initializer that is not a constant", 25, TestName = "field with a computed initializer")]
+  [TestCase("static readonly int[] T = { G() }; public static int G() => 1;", "a field initializer that is not a constant", 27, TestName = "table with a computed element")]
+  [TestCase("static readonly int[] T = new int[4];", "an array initializer that is not a list of elements", 27, TestName = "table without elements")]
+  [TestCase("static readonly int[] U = { 1 }; static readonly int[] T = [.. U];", "SpreadElement", 61, TestName = "table from a spread")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { T[0] = 3; }", "a write to the static readonly array 'T'", 63, TestName = "write to a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { T[0] += 3; }", "a write to the static readonly array 'T'", 63, TestName = "compound assignment to a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { T[0]++; }", "a write to the static readonly array 'T'", 63, TestName = "step of a table element")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static uint F() => --T[1];", "a write to the static readonly array 'T'", 66, TestName = "step of a table element as a value")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { System.Array.Fill(T, 1u); }", "a write to the static readonly array 'T'", 81, TestName = "fill of a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { System.Array.Clear(T); }", "a write to the static readonly array 'T'", 82, TestName = "clearing of a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F(uint[] a) { System.Array.Copy(a, 0, T, 0, 1); }", "a write to the static readonly array 'T'", 95, TestName = "copy into a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static uint[] F() => T;", "the static readonly array 'T' used as a value", 66, TestName = "table returned")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void G(uint[] a) { } public static void F() { G(T); }", "the static readonly array 'T' used as a value", 100, TestName = "table passed on")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static uint F() { var t = Snippet.T; return t[0]; }", "the static readonly array 'T' used as a value", 71, TestName = "table assigned")]
+  [TestCase("static readonly int X = 1; public static int F(int X) => Snippet.X + X;", "a variable with the name of the field 'X' it is used next to", 28, TestName = "parameter hiding a constant")]
+  [TestCase("static readonly int[] T = { 1 }; public static int F() { { int T = 2; } return Snippet.T[0]; }", "a variable with the name of the field 'T' it is used next to", 34, TestName = "local hiding a table")]
+  [TestCase("public static void F(int[] a, int[] b) { System.Array.Copy(a, b, 1); }", "Array.Copy", 42, TestName = "Array.Copy without indices")]
+  [TestCase("public static void F(int[] a, int[] b) { System.Array.Copy(a, 0L, b, 0L, 1L); }", "Array.Copy", 42, TestName = "Array.Copy with 64-bit indices")]
+  [TestCase("public static void F(int[] a, long[] b) { System.Array.Copy(a, 0, b, 0, 1); }", "Array.Copy from i32[] to i64[]", 67, TestName = "Array.Copy that converts")]
+  [TestCase("public static void F(int[] a) { System.Array.Fill(a, 1, 0, 1); }", "Array.Fill", 33, TestName = "Array.Fill of a range")]
+  [TestCase("public static void F(int[] a) { System.Array.Clear(a, 0, 1); }", "Array.Clear", 33, TestName = "Array.Clear of a range")]
+  [TestCase("public static void F(int[] a) { System.Array.Reverse(a); }", "Array.Reverse", 33, TestName = "another method of Array")]
+  [TestCase("public static int[] F(int a) => [a, .. new[] { 1 }];", "SpreadElement", 37, TestName = "spread in a collection expression")]
   [TestCase("public static extern int F();", "extern", 1, TestName = "extern")]
   [TestCase("public static int F() => 1; public static int F(int a) => a;", "method overloading", 29, TestName = "overload")]
-  [TestCase("public static int F() { const int a = 1; return a; }", "const", 25, TestName = "local constant")]
+  [TestCase("public static int F() { using var m = new System.IO.MemoryStream(); return 1; }", "using", 25, TestName = "modifier of a local")]
   [TestCase("public static int F(int a) { int b = a = 1; return b; }", "SimpleAssignmentExpression", 38, TestName = "assignment as a value")]
-  [TestCase("public static int F(int a) => a++;", "PostIncrementExpression", 31, TestName = "increment as a value")]
-  [TestCase("public static int F(int a) => ++a;", "PreIncrementExpression", 31, TestName = "prefix increment as a value")]
   [TestCase("public static int F(object o) => 1;", "object", 21, TestName = "object")]
   [TestCase("public static void F() { new object(); }", "ObjectCreationExpression", 26, TestName = "object creation statement")]
-  [TestCase("public static int F(int a) => System.Math.Abs(a);", "InvocationExpression", 31, TestName = "call outside the class")]
+  [TestCase("public static int F(int a) => System.Math.Clamp(a, 0, 1);", "Math.Clamp", 31, TestName = "call outside the class")]
+  [TestCase("public static int F(int a) => System.Numerics.BitOperations.TrailingZeroCount(a);", "BitOperations.TrailingZeroCount", 31, TestName = "bit operation on a signed integer")]
+  [TestCase("public static bool F(uint a) => System.Numerics.BitOperations.IsPow2(a);", "BitOperations.IsPow2", 33, TestName = "bit operation outside the set")]
+  [TestCase("public static long F(int a) => System.Math.BigMul(a, a);", "Math.BigMul", 32, TestName = "BigMul of signed integers")]
+  [TestCase("public static double F(double a) => System.Math.Round(a, 2);", "Math.Round", 37, TestName = "Round to digits")]
+  [TestCase("public static double F(double a) => System.Math.Round(a, System.MidpointRounding.ToZero);", "Math.Round", 37, TestName = "Round with another mode")]
+  [TestCase("public static double F(double a, int m) => System.Math.Round(a, (System.MidpointRounding)m);", "Math.Round", 44, TestName = "Round with a computed mode")]
+  [TestCase("public static ulong F(double a) => System.BitConverter.DoubleToUInt64Bits(a);", "BitConverter.DoubleToUInt64Bits", 36, TestName = "bit cast outside the set")]
+  [TestCase("public static double F(double a, double b) => System.Math.FusedMultiplyAdd(a, b, a);", "Math.FusedMultiplyAdd", 47, TestName = "fused multiply-add")]
+  [TestCase("public static double F(double a, double b) => System.Math.IEEERemainder(a, b);", "Math.IEEERemainder", 47, TestName = "IEEE remainder")]
   [TestCase("public static int G(int a) => a; public static int F(int a) => G(a: a);", "InvocationExpression", 64, TestName = "named argument")]
   [TestCase("public static bool F(bool a, bool b) => a & b;", "BitwiseAndExpression on bool and bool", 41, TestName = "bitwise and of truth values")]
   [TestCase("public static bool F(bool a, bool b) { a |= b; return a; }", "OrAssignmentExpression on bool and bool", 40, TestName = "compound assignment of truth values")]
   [TestCase("public static bool F(int[] a, int[] b) => a == b;", "object", 43, TestName = "array identity")]
   [TestCase("public static int F(int[] a) => a?.Length ?? 0;", "CoalesceExpression", 33, TestName = "null-conditional")]
   [TestCase("public static int[] F() => null;", "NullLiteralExpression", 28, TestName = "null")]
+  [TestCase("public static int[] F() => default(int[]);", "DefaultExpression", 28, TestName = "default of an array")]
+  [TestCase("public static bool F(int a) => a is > 1;", "IsPatternExpression", 32, TestName = "is pattern")]
   [TestCase("public static void F(int[] a) { (a) = a; }", "ParenthesizedExpression", 33, TestName = "parenthesized target")]
   [TestCase("public static void F(int[] a) { a.Length.ToString(); }", "string", 33, TestName = "member call")]
-  [TestCase("public static int F(int a) => int.MaxValue.CompareTo(a);", "InvocationExpression", 31, TestName = "call on a value")]
+  [TestCase("public static int F(int a) => int.MaxValue.CompareTo(a);", "Int32.CompareTo", 31, TestName = "call on a value")]
   [TestCase("public static int F(int? a) { a ??= 1; return 1; }", "int?", 21, TestName = "nullable")]
   [TestCase("public static void F(int[] a) { a ??= new int[1]; }", "CoalesceAssignmentExpression", 33, TestName = "coalescing assignment")]
   public void UnsupportedConstruct_IsRefusedWithItsPosition(string method, string what, int column) {
     var diagnostic = Refusal(PrototypeFixture.Wrap(method));
     Assert.That(diagnostic, Is.EqualTo(new Diagnostic(
       "PLY1002", DiagnosticSeverity.Error, $"'{what}' is not supported yet", "Snippet.cs", 1, column + 30)));
+  }
+
+  /// <summary>
+  /// The transcendental functions of Math and MathF. Their results are not the same bits on every
+  /// runtime (ADR 0005), so none of them is an operation of the IR.
+  /// </summary>
+  public static readonly string[] Transcendentals = [
+    "Sin", "Cos", "Tan", "Asin", "Acos", "Atan", "Atan2", "Sinh", "Cosh", "Tanh", "Asinh", "Acosh", "Atanh",
+    "Exp", "Log", "Log10", "Log2", "Pow", "Cbrt"
+  ];
+
+  /// <summary>A method that calls one transcendental function of <c>Math</c> or <c>MathF</c>.</summary>
+  public static string Transcendental(string type, string name) {
+    var number = type == "Math" ? "double" : "float";
+    var arguments = name is "Atan2" or "Pow" ? "x, x" : "x";
+    return $"public static {number} F({number} x) => System.{type}.{name}({arguments});";
+  }
+
+  /// <summary>Test design 15: every transcendental function is refused by its name.</summary>
+  [Test]
+  public void TranscendentalFunction_IsRefusedByName([Values("Math", "MathF")] string type, [ValueSource(nameof(Transcendentals))] string name) {
+    var diagnostic = Refusal(PrototypeFixture.Wrap(Transcendental(type, name)));
+    Assert.That(diagnostic, Is.EqualTo(new Diagnostic(
+      "PLY1002", DiagnosticSeverity.Error, $"'{type}.{name}' is not supported yet", "Snippet.cs", 1, (type == "Math" ? 37 : 35) + 30)));
+  }
+
+  /// <summary>Every operation of the base library that has an exact meaning is one intrinsic, typed as the overload the compiler chose.</summary>
+  [TestCase("int", "int", "System.Math.Abs(a)", IrIntrinsicOp.Abs, "i32")]
+  [TestCase("sbyte", "sbyte", "System.Math.Abs(a)", IrIntrinsicOp.Abs, "i8")]
+  [TestCase("long", "uint", "System.Math.Abs(a)", IrIntrinsicOp.Abs, "i64")]
+  [TestCase("float", "float", "System.MathF.Abs(a)", IrIntrinsicOp.Abs, "f32")]
+  [TestCase("byte", "byte", "System.Math.Min(a, a)", IrIntrinsicOp.Min, "u8")]
+  [TestCase("ulong", "ulong", "System.Math.Max(a, 1)", IrIntrinsicOp.Max, "u64")]
+  [TestCase("double", "float", "System.Math.Max(a, 1.5)", IrIntrinsicOp.Max, "f64")]
+  [TestCase("int", "long", "System.Math.Sign(a)", IrIntrinsicOp.Sign, "i64")]
+  [TestCase("int", "float", "System.MathF.Sign(a)", IrIntrinsicOp.Sign, "f32")]
+  [TestCase("double", "float", "System.Math.Sqrt(a)", IrIntrinsicOp.Sqrt, "f64")]
+  [TestCase("float", "float", "System.MathF.Sqrt(a)", IrIntrinsicOp.Sqrt, "f32")]
+  [TestCase("double", "double", "System.Math.Floor(a)", IrIntrinsicOp.Floor, "f64")]
+  [TestCase("float", "float", "System.MathF.Ceiling(a)", IrIntrinsicOp.Ceiling, "f32")]
+  [TestCase("double", "double", "System.Math.Truncate(a)", IrIntrinsicOp.Truncate, "f64")]
+  [TestCase("double", "double", "System.Math.Round(a)", IrIntrinsicOp.RoundEven, "f64")]
+  [TestCase("double", "double", "System.Math.Round(a, System.MidpointRounding.ToEven)", IrIntrinsicOp.RoundEven, "f64")]
+  [TestCase("float", "float", "System.MathF.Round(a, System.MidpointRounding.AwayFromZero)", IrIntrinsicOp.RoundAway, "f32")]
+  [TestCase("uint", "uint", "System.Numerics.BitOperations.RotateLeft(a, 3)", IrIntrinsicOp.RotateLeft, "u32")]
+  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateRight(a, 3)", IrIntrinsicOp.RotateRight, "u64")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.PopCount(a)", IrIntrinsicOp.PopCount, "u32")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.LeadingZeroCount(a)", IrIntrinsicOp.LeadingZeroCount, "u64")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.TrailingZeroCount(a)", IrIntrinsicOp.TrailingZeroCount, "u32")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.Log2(a)", IrIntrinsicOp.Log2, "u64")]
+  [TestCase("ulong", "uint", "System.Math.BigMul(a, a)", IrIntrinsicOp.BigMul, "u32")]
+  [TestCase("long", "double", "System.BitConverter.DoubleToInt64Bits(a)", IrIntrinsicOp.FloatBits, "f64")]
+  [TestCase("int", "float", "System.BitConverter.SingleToInt32Bits(a)", IrIntrinsicOp.FloatBits, "f32")]
+  [TestCase("double", "long", "System.BitConverter.Int64BitsToDouble(a)", IrIntrinsicOp.BitsFloat, "i64")]
+  [TestCase("float", "int", "System.BitConverter.Int32BitsToSingle(a)", IrIntrinsicOp.BitsFloat, "i32")]
+  public void LibraryOperation_BecomesItsIntrinsic(string returns, string type, string expression, IrIntrinsicOp op, string operand) {
+    var module = Import($"public static {returns} F({type} a) => {expression};");
+    var intrinsic = (IrIntrinsic)Returned(module.Functions[0]);
+    Assert.That((intrinsic.Op, intrinsic.Type, intrinsic.Arguments[0].Type.ToString()), Is.EqualTo((op, module.Functions[0].ReturnType, operand)));
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
   }
 
   /// <summary>What a source file may consist of.</summary>
@@ -138,29 +258,294 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static class A { }\npublic static class B { }", "a file that is not exactly one static class", 2, 1)]
   [TestCase("", "a file that is not exactly one static class", 1, 1)]
   [TestCase("namespace N;\n", "a file that is not exactly one static class", 1, 1)]
-  [TestCase("public static class C {\n  public static class Inner { }\n}", "a class member other than a static method", 2, 3)]
+  [TestCase("public static class C {\n  public static class Inner { }\n}", "a class member other than a static method or a constant", 2, 3)]
   public void FileShape_IsRefusedWithItsPosition(string source, string what, int line, int column)
     => Assert.That(Refusal(source), Is.EqualTo(new Diagnostic(
       "PLY1002", DiagnosticSeverity.Error, $"'{what}' is not supported yet", "Snippet.cs", line, column)));
 
-  /// <summary>Test design 15: uint with int is not widened to 64 bits behind the user's back.</summary>
-  [TestCase("public static uint F(uint a, int b) => (uint)(a + b);", "long", 46)]
-  [TestCase("public static bool F(uint a, int b) => a < b;", "long", 40)]
-  [TestCase("public static uint F(uint a) => (uint)(-a);", "long", 39)]
-  public void UIntMixedWithInt_IsRefused(string method, string what, int column) {
+  private static IrModule Import(string methods) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
+
+  private static IrExpr Returned(IrFunction function) => ((IrReturn)function.Body.Statements[^1]).Value!;
+
+  /// <summary>Every numeric type of C#, and <c>char</c>, has its IR type, alone and as the element of an array.</summary>
+  [TestCase("sbyte", "i8")]
+  [TestCase("byte", "u8")]
+  [TestCase("short", "i16")]
+  [TestCase("ushort", "u16")]
+  [TestCase("char", "u16")]
+  [TestCase("int", "i32")]
+  [TestCase("uint", "u32")]
+  [TestCase("long", "i64")]
+  [TestCase("ulong", "u64")]
+  [TestCase("float", "f32")]
+  [TestCase("double", "f64")]
+  public void Import_MapsEveryNumericType(string keyword, string type) {
+    var function = Import($"public static {keyword} F({keyword} a, {keyword}[] b) => a;").Functions[0];
+    Assert.That(function.ReturnType.ToString(), Is.EqualTo(type));
+    Assert.That(function.Parameters.Select(parameter => parameter.Type.ToString()), Is.EqualTo(new[] { type, type + "[]" }));
+  }
+
+  /// <summary>uint with int is computed in 64 bits, as C# computes it, and so is the negation of a uint.</summary>
+  [Test]
+  public void UIntMixedWithInt_IsWidenedTo64Bits() {
+    var module = Import(
+      "public static long F(uint a, int b) => a + b; public static long G(uint a) => -a; public static bool H(uint a, int b) => a < b;");
+    IrExpr a = new IrLocalRef(new IrLocal("a", IrType.U32));
+    IrExpr b = new IrLocalRef(new IrLocal("b", IrType.I32));
+    Assert.That(Returned(module.Functions[0]), Is.EqualTo(new IrBinary(IrBinaryOp.Add, new IrConvert(IrType.I64, a), new IrConvert(IrType.I64, b))));
+    Assert.That(Returned(module.Functions[1]), Is.EqualTo(new IrUnary(IrUnaryOp.Negate, new IrConvert(IrType.I64, a))));
+    Assert.That(Returned(module.Functions[2]), Is.EqualTo(new IrBinary(IrBinaryOp.Less, new IrConvert(IrType.I64, a), new IrConvert(IrType.I64, b))));
+  }
+
+  /// <summary>The nearest enclosing checked or unchecked decides whether an operator traps; division never changes.</summary>
+  [TestCase("a + b", IrBinaryOp.Add)]
+  [TestCase("checked(a + b)", IrBinaryOp.AddChecked)]
+  [TestCase("checked(a - b)", IrBinaryOp.SubtractChecked)]
+  [TestCase("checked(a * b)", IrBinaryOp.MultiplyChecked)]
+  [TestCase("checked(a / b)", IrBinaryOp.Divide)]
+  [TestCase("checked(a << b)", IrBinaryOp.ShiftLeft)]
+  [TestCase("unchecked(a + b)", IrBinaryOp.Add)]
+  [TestCase("checked(unchecked(a + b))", IrBinaryOp.Add)]
+  [TestCase("unchecked(checked(a + b))", IrBinaryOp.AddChecked)]
+  public void CheckedContext_SelectsTheTrappingOperator(string expression, IrBinaryOp op)
+    => Assert.That(((IrBinary)Returned(Import($"public static int F(int a, int b) => {expression};").Functions[0])).Op, Is.EqualTo(op));
+
+  /// <summary>A checked block reaches negation, steps, compound assignments and casts inside it.</summary>
+  [Test]
+  public void CheckedStatement_AppliesToEverythingInside() {
+    var function = Import(
+      "public static int F(int a, byte b) { checked { a = -a; b++; b += 1; unchecked { a += 1; } return (byte)a; } }").Functions[0];
+    IrExpr a = new IrLocalRef(function.Parameters[0]);
+    IrExpr b = new IrLocalRef(function.Parameters[1]);
+    IrExpr one = new IrConst(IrType.I32, 1);
+    var stepped = new IrConvert(IrType.U8, new IrBinary(IrBinaryOp.AddChecked, new IrConvert(IrType.I32, b), one), IrConversion.Trap);
+    Assert.That(((IrBlock)function.Body.Statements[0]).Statements, Is.EqualTo(new IrStmt[] {
+      new IrAssign(function.Parameters[0], new IrUnary(IrUnaryOp.NegateChecked, a)),
+      new IrAssign(function.Parameters[1], stepped),
+      new IrAssign(function.Parameters[1], stepped),
+      new IrBlock([new IrAssign(function.Parameters[0], new IrBinary(IrBinaryOp.Add, a, one))]),
+      new IrReturn(new IrConvert(IrType.I32, new IrConvert(IrType.U8, a, IrConversion.Trap)))
+    }).Using<IrStmt>(Same));
+  }
+
+  /// <summary>A block is compared by the statements in it: the list of a record has no equality of its own.</summary>
+  private static bool Same(IrStmt left, IrStmt right)
+    => left is IrBlock first && right is IrBlock second ? first.Statements.SequenceEqual(second.Statements) : left.Equals(right);
+
+  /// <summary>
+  /// A cast from floating point saturates as the runtime does, through int for a narrow target, and
+  /// traps in a checked context; a cast to floating point has nothing to lose.
+  /// </summary>
+  [Test]
+  public void FloatingPointCast_CarriesItsContract() {
+    var module = Import(
+      "public static int A(double d) => (int)d; public static byte B(double d) => (byte)d; public static ulong C(float d) => (ulong)d; "
+      + "public static byte D(double d) => checked((byte)d); public static float E(double d) => checked((float)d); "
+      + "public static double G(long d) => d; public static float H(float f) { f++; return f; } public static double I(int a) => a + 1.5;");
+    IrExpr d = new IrLocalRef(new IrLocal("d", IrType.F64));
+    IrExpr f = new IrLocalRef(new IrLocal("f", IrType.F32));
+    Assert.That(Returned(module.Functions[0]), Is.EqualTo(new IrConvert(IrType.I32, d, IrConversion.Saturate)));
+    Assert.That(Returned(module.Functions[1]), Is.EqualTo(new IrConvert(IrType.U8, new IrConvert(IrType.I32, d, IrConversion.Saturate))));
+    Assert.That(Returned(module.Functions[2]), Is.EqualTo(new IrConvert(IrType.U64, new IrLocalRef(new IrLocal("d", IrType.F32)), IrConversion.Saturate)));
+    Assert.That(Returned(module.Functions[3]), Is.EqualTo(new IrConvert(IrType.U8, d, IrConversion.Trap)));
+    Assert.That(Returned(module.Functions[4]), Is.EqualTo(new IrConvert(IrType.F32, d)));
+    Assert.That(Returned(module.Functions[5]), Is.EqualTo(new IrConvert(IrType.F64, new IrLocalRef(new IrLocal("d", IrType.I64)))));
+    Assert.That(module.Functions[6].Body.Statements[0], Is.EqualTo(
+      new IrAssign(new IrLocal("f", IrType.F32), new IrBinary(IrBinaryOp.Add, f, new IrConst(IrType.F32, 0x3F800000)))));
+    Assert.That(Returned(module.Functions[7]), Is.EqualTo(new IrBinary(IrBinaryOp.Add,
+      new IrConvert(IrType.F64, new IrLocalRef(new IrLocal("a", IrType.I32))), new IrConst(IrType.F64, 0x3FF8000000000000))));
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>
+  /// A for without a continue is a while whose body ends with the step, as before. A continue of the
+  /// loop itself - not one of a loop nested in it - keeps body and step apart, so that the step runs.
+  /// </summary>
+  [Test]
+  public void For_KeepsItsStepApartOnlyWhenAContinueNeedsIt() {
+    var module = Import(
+      "public static void A(int n) { for (int i = 0; i < n; ++i) { } } "
+      + "public static void B(int n) { for (int i = 0; i < n; ++i) { if (i == 1) continue; } } "
+      + "public static void C(int n) { for (int i = 0; i < n; ++i) { while (i < 0) { continue; } } } "
+      + "public static void D(int n) { for (int i = 0; i < n; ++i) switch (i) { case 1: continue; } } "
+      + "public static void E(int n) { for (int i = 0; i < n; ++i) continue; }");
+    IrStmt Loop(int function) => ((IrBlock)module.Functions[function].Body.Statements[0]).Statements[^1];
+    Assert.That(Loop(0), Is.TypeOf<IrWhile>());
+    Assert.That(((IrWhile)Loop(0)).Body.Statements, Has.Count.EqualTo(1));
+    Assert.That(Loop(1), Is.TypeOf<IrFor>());
+    var loop = (IrFor)Loop(1);
+    var i = module.Functions[1].Locals[0];
+    Assert.That(loop.Condition, Is.EqualTo(new IrBinary(IrBinaryOp.Less, new IrLocalRef(i), new IrLocalRef(module.Functions[1].Parameters[0]))));
+    Assert.That(loop.Body.Statements.Select(statement => statement.GetType()), Is.EqualTo(new[] { typeof(IrIf) }));
+    Assert.That(loop.Step.Statements, Is.EqualTo(new IrStmt[] {
+      new IrAssign(i, new IrBinary(IrBinaryOp.Add, new IrLocalRef(i), new IrConst(IrType.I32, 1)))
+    }));
+    Assert.That(Loop(2), Is.TypeOf<IrWhile>());
+    Assert.That(Loop(3), Is.TypeOf<IrFor>());
+    Assert.That(Loop(4), Is.TypeOf<IrFor>());
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>A foreach reads the array once, counts in a temporary and converts each element as the source says.</summary>
+  [Test]
+  public void ForEach_BecomesACountedLoop() {
+    var module = Import(
+      "public static int[] G(int[] a) => a; "
+      + "public static int F(int[] a) { int s = 0; foreach (byte x in G(a)) { if (x == 0) continue; s += x; } return s; } "
+      + "public static int H(long[] a) { int s = 0; foreach (var x in a) s++; return s; }");
+    var f = module.Functions[1];
+    Assert.That(f.Locals.Select(local => (local.Name, local.Type.ToString())),
+      Is.EqualTo(new[] { ("s", "i32"), ("$t1", "i32[]"), ("$t2", "i32"), ("x", "u8") }));
+    var block = (IrBlock)f.Body.Statements[1];
+    Assert.That(block.Statements.Select(statement => statement.GetType()), Is.EqualTo(new[] { typeof(IrDeclare), typeof(IrDeclare), typeof(IrFor) }));
+    var loop = (IrFor)block.Statements[2];
+    IrExpr index = new IrLocalRef(f.Locals[2]);
+    IrExpr array = new IrLocalRef(f.Locals[1]);
+    Assert.That(loop.Condition, Is.EqualTo(new IrBinary(IrBinaryOp.Less, index, new IrArrayLength(array))));
+    Assert.That(loop.Body.Statements[0], Is.EqualTo(new IrDeclare(f.Locals[3], new IrConvert(IrType.U8, new IrArrayLoad(array, index)))));
+    Assert.That(loop.Step.Statements, Is.EqualTo(new IrStmt[] { new IrAssign(f.Locals[2], new IrBinary(IrBinaryOp.Add, index, new IrConst(IrType.I32, 1))) }));
+
+    var h = module.Functions[2];
+    Assert.That(h.Locals.Select(local => local.Name), Is.EqualTo(new[] { "s", "$t1", "x" }));
+    Assert.That(((IrBlock)h.Body.Statements[1]).Statements[^1], Is.TypeOf<IrWhile>());
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>
+  /// A switch keeps its labels and its default; a local declared in a section is declared in front of
+  /// the switch, because the other sections may use it.
+  /// </summary>
+  [Test]
+  public void Switch_KeepsLabelsAndMovesDeclarationsInFront() {
+    var f = Import(
+      "public static int F(char c) { switch (c) { case 'a': case 'b': int x = 1; return x; default: x = 2; int y; y = x; return y; case 'c': break; } return 0; }")
+      .Functions[0];
+    Assert.That(f.Body.Statements.Select(statement => statement.GetType()), Is.EqualTo(new[] { typeof(IrBlock), typeof(IrReturn) }));
+    var scope = ((IrBlock)f.Body.Statements[0]).Statements;
+    Assert.That(scope.Take(2), Is.EqualTo(new IrStmt[] { new IrDeclare(f.Locals[0], null), new IrDeclare(f.Locals[1], null) }));
+    Assert.That(scope, Has.Count.EqualTo(3));
+    var choice = (IrSwitch)scope[2];
+    Assert.That(choice.Value, Is.EqualTo(new IrLocalRef(f.Parameters[0])));
+    Assert.That(choice.Sections.Select(section => (string.Join(",", section.Labels), section.IsDefault)),
+      Is.EqualTo(new[] { ("97,98", false), ("", true), ("99", false) }));
+    Assert.That(choice.Sections[0].Body.Statements[0], Is.EqualTo(new IrAssign(f.Locals[0], new IrConst(IrType.I32, 1))));
+    Assert.That(choice.Sections[2].Body.Statements, Is.EqualTo(new IrStmt[] { new IrBreak() }));
+
+    // Without a declaration the switch stands alone; two switches may declare the same name, with different types.
+    var g = Import(
+      "public static long G(int a) { switch (a) { case 1: return 1; } switch (a) { case 2: int x = 2; return x; } switch (a) { default: long x = 3; return x; } }");
+    Assert.That(g.Functions[0].Body.Statements.Select(statement => statement.GetType()), Is.EqualTo(new[] { typeof(IrSwitch), typeof(IrBlock), typeof(IrBlock) }));
+    Assert.That(IrVerifier.Verify(g), Is.Empty);
+    Assert.That(JavaScriptEmitter.Emit(g).Single().Content, Does.Contain("  {\n    let x;\n    switch (a) {\n      case 2: {"));
+  }
+
+  /// <summary>A do loop, and the steps whose value is used, with the flags the source gives them.</summary>
+  [Test]
+  public void DoAndSteps_KeepTheirForm() {
+    var module = Import(
+      "public static int A(int a) { do { a--; } while (a > 0); return a; } "
+      + "public static int B(int a) => a++; public static int C(int a) => --a; "
+      + "public static int D(byte[] d, int i) => checked(d[i + 1]--); public static double E(double a) => checked(++a); "
+      + "public static int G(int a) { const int K = 5; const long L = K; return a + K; }");
+    var loop = (IrDoWhile)module.Functions[0].Body.Statements[0];
+    IrExpr a = new IrLocalRef(new IrLocal("a", IrType.I32));
+    Assert.That(loop.Condition, Is.EqualTo(new IrBinary(IrBinaryOp.Greater, a, new IrConst(IrType.I32, 0))));
+    Assert.That(loop.Body.Statements, Has.Count.EqualTo(1));
+    Assert.That(Returned(module.Functions[1]), Is.EqualTo(new IrStep(a, true, true, false)));
+    Assert.That(Returned(module.Functions[2]), Is.EqualTo(new IrStep(a, false, false, false)));
+    var d = module.Functions[3];
+    Assert.That(Returned(d), Is.EqualTo(new IrConvert(IrType.I32, new IrStep(
+      new IrArrayLoad(new IrLocalRef(d.Parameters[0]), new IrBinary(IrBinaryOp.AddChecked, new IrLocalRef(d.Parameters[1]), new IrConst(IrType.I32, 1))),
+      false, true, true))));
+    Assert.That(Returned(module.Functions[4]), Is.EqualTo(new IrStep(new IrLocalRef(new IrLocal("a", IrType.F64)), true, false, false)));
+    Assert.That(module.Functions[5].Locals, Is.Empty);
+    Assert.That(Returned(module.Functions[5]), Is.EqualTo(new IrBinary(IrBinaryOp.Add, a, new IrConst(IrType.I32, 5))));
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>
+  /// The fields of the class are the constants of the module. A use of a const is the value the
+  /// compiler folded; a static readonly field is read where it is used, a table by element.
+  /// </summary>
+  [Test]
+  public void Fields_BecomeTheConstantsOfTheModule() {
+    var module = Import(
+      "private const int K = 2; public const long L = K + 1; static readonly double H = 0.5; static readonly bool B = true; "
+      + "static readonly uint[] T = { 1, K }; static readonly ulong[] U = [ulong.MaxValue]; static readonly char[] C = new[] { 'a' }; "
+      + "static readonly float[] E = new float[] { }; static readonly sbyte X = -1, Y = 1; "
+      + "public static long F(int i) => K + L; public static double G() => B ? H : X; public static uint I(int i) => T[i] + (uint)Snippet.T.Length;");
+    Assert.That(module.Constants.Select(constant => (constant.Name, constant.Type.ToString(), string.Join(",", constant.Values))), Is.EqualTo(new[] {
+      ("K", "i32", "2"), ("L", "i64", "3"), ("H", "f64", "4602678819172646912"), ("B", "bool", "1"), ("T", "u32[]", "1,2"),
+      ("U", "u64[]", "-1"), ("C", "u16[]", "97"), ("E", "f32[]", ""), ("X", "i8", "-1"), ("Y", "i8", "1")
+    }));
+    Assert.That(Returned(module.Functions[0]), Is.EqualTo(new IrConst(IrType.I64, 5)));
+    var choice = (IrConditional)Returned(module.Functions[1]);
+    Assert.That(choice.Condition, Is.EqualTo(new IrConstRef(module.Constants[3])));
+    Assert.That(choice.WhenTrue, Is.EqualTo(new IrConstRef(module.Constants[2])));
+    Assert.That(choice.WhenFalse, Is.EqualTo(new IrConvert(IrType.F64, new IrConstRef(module.Constants[8]))));
+    var table = new IrConstRef(module.Constants[4]);
+    Assert.That(Returned(module.Functions[2]), Is.EqualTo(new IrBinary(IrBinaryOp.Add,
+      new IrArrayLoad(table, new IrLocalRef(module.Functions[2].Parameters[0])), new IrConvert(IrType.U32, new IrArrayLength(table)))));
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>An array built from its elements, in each of the four notations, and the three array operations.</summary>
+  [Test]
+  public void ArraysAndTheirOperations_BecomeIntrinsics() {
+    var module = Import(
+      "public static long[] A(int a) => new long[] { a, 1 }; public static int[] B(int a) => new[] { a }; public static byte[] C(byte a) => [a, 2]; "
+      + "public static short[] D() { short[] d = { 1, 2 }; return d; } "
+      + "public static void E(int[] a, int[] b, int n) { System.Array.Copy(a, n, b, 0, n); System.Array.Fill(a, n); System.Array.Clear(b); }");
+    IrIntrinsic Built(int function) => (IrIntrinsic)Returned(module.Functions[function]);
+    IrExpr a = new IrLocalRef(new IrLocal("a", IrType.I32));
+    Assert.That((Built(0).Op, Built(0).Type), Is.EqualTo((IrIntrinsicOp.ArrayOf, IrType.Array(IrType.I64))));
+    Assert.That(Built(0).Arguments, Is.EqualTo(new IrExpr[] { new IrConvert(IrType.I64, a), new IrConst(IrType.I64, 1) }));
+    Assert.That(Built(1).Arguments, Is.EqualTo(new[] { a }));
+    Assert.That(Built(2).Arguments, Is.EqualTo(new IrExpr[] { new IrLocalRef(new IrLocal("a", IrType.U8)), new IrConst(IrType.U8, 2) }));
+    var declared = (IrIntrinsic)((IrDeclare)module.Functions[3].Body.Statements[0]).Initializer!;
+    Assert.That(declared.Arguments, Is.EqualTo(new IrExpr[] { new IrConst(IrType.I16, 1), new IrConst(IrType.I16, 2) }));
+    var e = module.Functions[4];
+    var operations = e.Body.Statements.Select(statement => (IrIntrinsic)((IrExprStmt)statement).Expression).ToList();
+    Assert.That(operations.Select(operation => (operation.Op, operation.Type, operation.Arguments.Count)), Is.EqualTo(new[] {
+      (IrIntrinsicOp.ArrayCopy, IrType.Void, 5), (IrIntrinsicOp.ArrayFill, IrType.Void, 2), (IrIntrinsicOp.ArrayClear, IrType.Void, 1)
+    }));
+    Assert.That(operations[0].Arguments[0], Is.EqualTo(new IrLocalRef(e.Parameters[0])));
+    Assert.That(operations[0].Arguments[2], Is.EqualTo(new IrLocalRef(e.Parameters[1])));
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>The compilation default: everything outside an explicit context traps, a lossless cast still cannot.</summary>
+  [Test]
+  public void CheckedByDefault_AppliesWhereTheSourceSaysNothing() {
+    var result = CSharpFrontend.Import("Snippet.cs", PrototypeFixture.Wrap(
+      "public static int F(int a, int b) => a + b; public static int G(int a, int b) => unchecked(a + b); "
+      + "public static long H(int a) => (long)a; public static byte I(int a) => (byte)a;"), true);
+    var functions = result.Module!.Functions;
+    Assert.That(((IrBinary)Returned(functions[0])).Op, Is.EqualTo(IrBinaryOp.AddChecked));
+    Assert.That(((IrBinary)Returned(functions[1])).Op, Is.EqualTo(IrBinaryOp.Add));
+    Assert.That(((IrConvert)Returned(functions[2])).Contract, Is.EqualTo(IrConversion.Wrap));
+    Assert.That(((IrConvert)Returned(functions[3])).Contract, Is.EqualTo(IrConversion.Trap));
+    Assert.That(IrVerifier.Verify(result.Module), Is.Empty);
+  }
+
+  /// <summary>A constant expression that overflows is the compiler's error, under a code of its own.</summary>
+  [TestCase("public static int F() => int.MaxValue + 1;", "CS0220")]
+  [TestCase("public static int F() => checked(int.MaxValue * 2);", "CS0220")]
+  [TestCase("public static byte F() => (byte)300;", "CS0221")]
+  public void ConstantOverflow_IsReportedWithTheCompilersMessage(string method, string id) {
     var diagnostic = Refusal(PrototypeFixture.Wrap(method));
-    Assert.That((diagnostic.Code, diagnostic.Message, diagnostic.Line, diagnostic.Column),
-      Is.EqualTo(("PLY1002", $"'{what}' is not supported yet", 1, column + 30)));
+    Assert.That((diagnostic.Code, diagnostic.Severity, diagnostic.File, diagnostic.Line), Is.EqualTo(("PLY1003", DiagnosticSeverity.Error, "Snippet.cs", 1)));
+    Assert.That(diagnostic.Message, Does.StartWith(id + ": "));
   }
 
   /// <summary>One method that is refused does not hide the next one.</summary>
   [Test]
   public void EveryRefusedMethod_GetsItsOwnDiagnostic() {
     var result = CSharpFrontend.Import("Snippet.cs",
-      "public static class C {\n  public static long A() => 1;\n  public static int B() => 1;\n  public static char D() => 'x';\n}");
+      "public static class C {\n  public static decimal A() => 1;\n  public static int B() => 1;\n  public static string D() => \"x\";\n}");
     Assert.That(result.Module, Is.Null);
     Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Line, diagnostic.Message)),
-      Is.EqualTo(new[] { (2, "'long' is not supported yet"), (4, "'char' is not supported yet") }));
+      Is.EqualTo(new[] { (2, "'decimal' is not supported yet"), (4, "'string' is not supported yet") }));
   }
 
   /// <summary>Test design 12: invalid C# carries the compiler's own id, text and position.</summary>
@@ -168,6 +553,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F() => true;", "CS0029", TestName = "type error")]
   [TestCase("public static int F() => Missing();", "CS0103", TestName = "unknown name")]
   [TestCase("public int F() => 1;", "CS0708", TestName = "instance member of a static class")]
+  [TestCase("public static int F(int[] a) => System.Linq.Enumerable.Sum(a);", "CS0234", TestName = "LINQ, which is not referenced")]
   public void InvalidSource_IsReportedWithTheCompilersMessage(string method, string id) {
     var result = CSharpFrontend.Import("Snippet.cs", PrototypeFixture.Wrap(method));
     Assert.That(result.Module, Is.Null);

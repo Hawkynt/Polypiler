@@ -71,7 +71,9 @@ public sealed class TranslateCommandTests {
     .GetCustomAttributes(typeof(TestCaseAttribute), false)
     .Cast<TestCaseAttribute>()
     .Select(attribute => (string)attribute.Arguments[0]!)
-    .Append("public static uint F(uint a, int b) => (uint)(a + b);")
+    .Concat(CSharpFrontendTests.Transcendentals.SelectMany(name => new[] {
+      CSharpFrontendTests.Transcendental("Math", name), CSharpFrontendTests.Transcendental("MathF", name)
+    }))
     .ToArray();
 
   /// <summary>
@@ -88,7 +90,8 @@ public sealed class TranslateCommandTests {
 
   [Test]
   public void UnsupportedMethods_AreTheOnesOfTheFrontendTests()
-    => Assert.That(UnsupportedMethods(), Has.Length.GreaterThan(45).And.Contain("public static long F(long a) => a + 1;"));
+    => Assert.That(UnsupportedMethods(), Has.Length.GreaterThan(120).And.Contain("public static decimal F(decimal a) => a + 1;")
+      .And.Contain("public static double F(double x) => System.Math.Sin(x);").And.Contain("public static float F(float x) => System.MathF.Pow(x, x);"));
 
   /// <summary>Test design 12: invalid C# is exit code 4 and carries the compiler's message.</summary>
   [TestCase("public static int F( => 1;", "CS1001")]
@@ -97,6 +100,15 @@ public sealed class TranslateCommandTests {
     var (exitCode, output, error) = this.Translate(PrototypeFixture.Wrap(method));
     Assert.That((exitCode, output), Is.EqualTo((TranslateCommand.InvalidSource, "")));
     Assert.That(error, Does.Match(@"Snippet\.cs\(1,\d+\): error PLY1000: " + id + ": "));
+    Assert.That(Directory.Exists(this._out), Is.False);
+  }
+
+  /// <summary>A constant that overflows is the compiler's error too: exit code 4 under PLY1003.</summary>
+  [Test]
+  public void ConstantOverflow_IsExitCode4() {
+    var (exitCode, output, error) = this.Translate(PrototypeFixture.Wrap("public static int F() => int.MaxValue + 1;"));
+    Assert.That((exitCode, output), Is.EqualTo((TranslateCommand.InvalidSource, "")));
+    Assert.That(error, Does.Match(@"Snippet\.cs\(1,\d+\): error PLY1003: CS0220: "));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 

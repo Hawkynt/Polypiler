@@ -163,7 +163,7 @@ public sealed class CSharpRoundTripTests {
   /// kind, each cast, each array access and each trap — has one outcome in the file the executable
   /// wrote, compiled without and with overflow checking, in the original fixture and in the interpreter.
   /// </summary>
-  [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
+  [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.First))]
   public void CompiledOutput_Original_AndInterpreter_Agree(string fixture) {
     var calls = PrototypeCases.For(fixture);
     var module = PrototypeFixture.Import(fixture + ".cs", PrototypeFixture.SourceOf(fixture));

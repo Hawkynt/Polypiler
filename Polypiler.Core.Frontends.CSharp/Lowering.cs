@@ -18,6 +18,8 @@ internal sealed class Lowering(string path, SemanticModel model) {
   private readonly List<Diagnostic> _diagnostics = [];
   private readonly Dictionary<ISymbol, IrLocal> _variables = new(SymbolEqualityComparer.Default);
   private readonly List<IrLocal> _locals = [];
+  private readonly Dictionary<ISymbol, IrModuleConst> _constants = new(SymbolEqualityComparer.Default);
+  private readonly HashSet<string> _read = [];
   private INamedTypeSymbol? _class;
 
   public ImportResult Run(CompilationUnitSyntax root) {
@@ -28,10 +30,18 @@ internal sealed class Lowering(string path, SemanticModel model) {
       name = type.Identifier.Text;
       this._class = model.GetDeclaredSymbol(type);
       var seen = new HashSet<string>();
-      foreach (var member in type.Members) {
+      foreach (var field in type.Members.OfType<FieldDeclarationSyntax>()) {
+        try {
+          this.Field(field);
+        } catch (UnsupportedException unsupported) {
+          this.Report(unsupported);
+        }
+      }
+
+      foreach (var member in type.Members.Where(member => member is not FieldDeclarationSyntax)) {
         try {
           if (member is not MethodDeclarationSyntax method)
-            throw new UnsupportedException(member, "a class member other than a static method");
+            throw new UnsupportedException(member, "a class member other than a static method or a constant");
 
           if (!seen.Add(method.Identifier.Text))
             throw new UnsupportedException(method, "method overloading");
@@ -47,7 +57,55 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
     return this._diagnostics.Count > 0
       ? new(null, this._diagnostics)
-      : new(new IrModule(name, functions), this._diagnostics);
+      : new(new IrModule(name, functions, this._constants.Values.ToList()), this._diagnostics);
+  }
+
+  /// <summary>
+  /// A field is a constant of the module: a <c>const</c>, or a <c>static readonly</c> whose
+  /// initializer is a constant or, for an array, a list of constants. Anything else would be state.
+  /// </summary>
+  private void Field(FieldDeclarationSyntax field) {
+    var constant = field.Modifiers.Any(SyntaxKind.ConstKeyword);
+    foreach (var modifier in field.Modifiers)
+      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword
+          or SyntaxKind.ConstKeyword or SyntaxKind.StaticKeyword or SyntaxKind.ReadOnlyKeyword))
+        throw new UnsupportedException(field, modifier.Text);
+
+    if (!constant && !field.Modifiers.Any(SyntaxKind.ReadOnlyKeyword))
+      throw new UnsupportedException(field, "a field that is neither const nor static readonly");
+
+    foreach (var variable in field.Declaration.Variables) {
+      var symbol = (IFieldSymbol)model.GetDeclaredSymbol(variable)!;
+      var type = Map(symbol.Type, field.Declaration.Type);
+      if (variable.Initializer is null)
+        throw new UnsupportedException(variable, "a field without an initializer");
+
+      var initializer = variable.Initializer.Value;
+      var values = type.IsArray
+        ? this.ArrayOf(type, initializer).Arguments
+        : [this.Value(initializer)];
+      var mutable = values.FirstOrDefault(value => value is not IrConst);
+      if (mutable is not null)
+        throw new UnsupportedException(initializer, "a field initializer that is not a constant");
+
+      this._constants[symbol] = new IrModuleConst(symbol.Name, type, values.Select(value => ((IrConst)value).Value).ToList());
+    }
+  }
+
+  /// <summary>
+  /// The array an initializer builds: <c>new T[] { … }</c>, <c>new[] { … }</c>, <c>{ … }</c> or
+  /// <c>[ … ]</c>, with every element converted to the element type.
+  /// </summary>
+  private IrIntrinsic ArrayOf(IrType type, ExpressionSyntax initializer) {
+    IEnumerable<ExpressionSyntax> elements = initializer switch {
+      InitializerExpressionSyntax list => list.Expressions,
+      ArrayCreationExpressionSyntax { Initializer: { } list } => list.Expressions,
+      ImplicitArrayCreationExpressionSyntax creation => creation.Initializer.Expressions,
+      CollectionExpressionSyntax collection => collection.Elements.Select(element
+        => element is ExpressionElementSyntax single ? single.Expression : throw new UnsupportedException(element, element.Kind().ToString())),
+      _ => throw new UnsupportedException(initializer, "an array initializer that is not a list of elements")
+    };
+    return new IrIntrinsic(IrIntrinsicOp.ArrayOf, type, elements.Select(element => Convert(this.Value(element), type.Element!)).ToList());
   }
 
   private void Report(UnsupportedException unsupported) {
@@ -88,6 +146,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
     this._variables.Clear();
     this._locals.Clear();
+    this._read.Clear();
     var symbol = model.GetDeclaredSymbol(method)!;
     var returnType = Map(symbol.ReturnType, method.ReturnType);
     var parameters = new List<IrLocal>();
@@ -118,6 +177,12 @@ internal sealed class Lowering(string path, SemanticModel model) {
       body = new IrBlock(statements);
     }
 
+    // In the generated module a constant is a name of the module, which a variable of the same name
+    // would hide from the function that reads it.
+    var hiding = parameters.Concat(this._locals).FirstOrDefault(variable => this._read.Contains(variable.Name));
+    if (hiding is not null)
+      throw new UnsupportedException(method, $"a variable with the name of the field '{hiding.Name}' it is used next to");
+
     return new IrFunction(
       symbol.Name,
       symbol.DeclaredAccessibility == Accessibility.Public,
@@ -129,12 +194,26 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
   private static IrType Map(ITypeSymbol? type, SyntaxNode node) {
     switch (type?.SpecialType) {
+      case SpecialType.System_SByte:
+        return IrType.I8;
+      case SpecialType.System_Byte:
+        return IrType.U8;
+      case SpecialType.System_Int16:
+        return IrType.I16;
+      case SpecialType.System_UInt16 or SpecialType.System_Char:
+        return IrType.U16;
       case SpecialType.System_Int32:
         return IrType.I32;
       case SpecialType.System_UInt32:
         return IrType.U32;
-      case SpecialType.System_Byte:
-        return IrType.U8;
+      case SpecialType.System_Int64:
+        return IrType.I64;
+      case SpecialType.System_UInt64:
+        return IrType.U64;
+      case SpecialType.System_Single:
+        return IrType.F32;
+      case SpecialType.System_Double:
+        return IrType.F64;
       case SpecialType.System_Boolean:
         return IrType.Bool;
       case SpecialType.System_Void:
@@ -143,7 +222,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
     if (type is IArrayTypeSymbol { Rank: 1 } array) {
       var element = Map(array.ElementType, node);
-      if (element.IsInteger)
+      if (element.IsNumeric)
         return IrType.Array(element);
     }
 
@@ -172,12 +251,11 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case BlockSyntax block:
         into.Add(this.Block(block));
         break;
+      case CheckedStatementSyntax context:
+        into.Add(this.Block(context.Block));
+        break;
       case LocalDeclarationStatementSyntax declaration:
-        var first = declaration.GetFirstToken();
-        if (first != declaration.Declaration.GetFirstToken())
-          throw new UnsupportedException(declaration, first.Text);
-
-        this.Declaration(declaration.Declaration, into);
+        this.LocalDeclaration(declaration, into, null);
         break;
       case ExpressionStatementSyntax expression:
         this.Effect(expression.Expression, into);
@@ -191,8 +269,23 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case WhileStatementSyntax loop:
         into.Add(new IrWhile(this.Value(loop.Condition), this.Body(loop.Statement)));
         break;
+      case DoStatementSyntax loop:
+        into.Add(new IrDoWhile(this.Body(loop.Statement), this.Value(loop.Condition)));
+        break;
       case ForStatementSyntax loop:
         into.Add(this.For(loop));
+        break;
+      case ForEachStatementSyntax loop:
+        into.Add(this.ForEach(loop));
+        break;
+      case SwitchStatementSyntax choice:
+        this.Switch(choice, into);
+        break;
+      case BreakStatementSyntax:
+        into.Add(new IrBreak());
+        break;
+      case ContinueStatementSyntax:
+        into.Add(new IrContinue());
         break;
       case ReturnStatementSyntax result:
         into.Add(new IrReturn(result.Expression is null ? null : this.Value(result.Expression)));
@@ -202,34 +295,142 @@ internal sealed class Lowering(string path, SemanticModel model) {
     }
   }
 
-  /// <summary>
-  /// A <c>for</c> becomes a block holding its initializers and a <c>while</c> whose body ends with the
-  /// incrementors. That is the same loop, because the subset has no <c>continue</c>.
-  /// </summary>
+  /// <summary>A <c>for</c> becomes a block holding its initializers and the loop.</summary>
   private IrBlock For(ForStatementSyntax loop) {
     var outer = new List<IrStmt>();
     if (loop.Declaration is not null)
-      this.Declaration(loop.Declaration, outer);
+      this.Declaration(loop.Declaration, outer, null);
 
     foreach (var initializer in loop.Initializers)
       this.Effect(initializer, outer);
 
     var condition = loop.Condition is null ? new IrConst(IrType.Bool, 1) : this.Value(loop.Condition);
-    var body = new List<IrStmt>(this.Body(loop.Statement).Statements);
+    var body = this.Body(loop.Statement);
+    var step = new List<IrStmt>();
     foreach (var incrementor in loop.Incrementors)
-      this.Effect(incrementor, body);
+      this.Effect(incrementor, step);
 
-    outer.Add(new IrWhile(condition, new IrBlock(body)));
+    outer.Add(Loop(condition, body, step, loop.Statement));
     return new IrBlock(outer);
   }
 
-  private void Declaration(VariableDeclarationSyntax declaration, List<IrStmt> into) {
+  /// <summary>
+  /// A <c>foreach</c> over an array becomes a counted loop: the array is evaluated once, every pass
+  /// reads one element into the iteration variable, converted as the source says, and the counter
+  /// advances after the pass.
+  /// </summary>
+  private IrBlock ForEach(ForEachStatementSyntax loop) {
+    var outer = new List<IrStmt>();
+    // The compiler converts the collection to IEnumerable; the loop is over the array itself.
+    var array = this.Once(this.Read(loop.Expression), outer);
+    var index = this.Local($"$t{this._locals.Count}", IrType.I32);
+    outer.Add(new IrDeclare(index, new IrConst(IrType.I32, 0)));
+
+    var symbol = model.GetDeclaredSymbol(loop)!;
+    var item = this.Local(symbol.Name, Map(symbol.Type, loop.Type));
+    this._variables[symbol] = item;
+    var element = Convert(new IrArrayLoad(array, new IrLocalRef(index)), item.Type, this.IsChecked(loop));
+    var body = new IrBlock([new IrDeclare(item, element), .. this.Body(loop.Statement).Statements]);
+    var condition = new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), new IrArrayLength(array));
+    IrStmt advance = new IrAssign(index, new IrBinary(IrBinaryOp.Add, new IrLocalRef(index), new IrConst(IrType.I32, 1)));
+    outer.Add(Loop(condition, body, [advance], loop.Statement));
+    return new IrBlock(outer);
+  }
+
+  /// <summary>
+  /// The loop for a body and the step that follows every pass. Without a <c>continue</c> that is a
+  /// <c>while</c> whose body ends with the step; a <c>continue</c> must not skip the step, so a loop
+  /// that has one keeps body and step apart.
+  /// </summary>
+  private static IrStmt Loop(IrExpr condition, IrBlock body, List<IrStmt> step, StatementSyntax source) {
+    var continues = source
+      .DescendantNodesAndSelf(node => node is not (WhileStatementSyntax or DoStatementSyntax or ForStatementSyntax or CommonForEachStatementSyntax))
+      .Any(node => node is ContinueStatementSyntax);
+    return continues
+      ? new IrFor(condition, body, new IrBlock(step))
+      : new IrWhile(condition, new IrBlock([.. body.Statements, .. step]));
+  }
+
+  /// <summary>
+  /// A <c>switch</c> on an integer with constant labels. C# has one scope for all sections, the IR one
+  /// per section, so a local declared in a section is declared in front of the switch instead and the
+  /// declaration becomes an assignment. Those declarations and the switch then share a block, which
+  /// is the scope the switch had: the next switch may declare the same names.
+  /// </summary>
+  private void Switch(SwitchStatementSyntax choice, List<IrStmt> into) {
+    var value = this.Value(choice.Expression);
+    if (!value.Type.IsInteger)
+      throw new UnsupportedException(choice.Expression, $"a switch on the type {value.Type}");
+
+    var sections = new List<IrSwitchSection>();
+    var shared = new List<IrStmt>();
+    foreach (var section in choice.Sections) {
+      var labels = new List<long>();
+      var isDefault = false;
+      foreach (var label in section.Labels)
+        switch (label) {
+          case DefaultSwitchLabelSyntax:
+            isDefault = true;
+            break;
+          case CaseSwitchLabelSyntax constant:
+            labels.Add(((IrConst)this.Value(constant.Value)).Value);
+            break;
+          default:
+            throw new UnsupportedException(label, label.Kind().ToString());
+        }
+
+      var body = new List<IrStmt>();
+      foreach (var statement in section.Statements)
+        if (statement is LocalDeclarationStatementSyntax declaration)
+          this.LocalDeclaration(declaration, body, shared);
+        else
+          this.Statement(statement, body);
+
+      sections.Add(new IrSwitchSection(labels, isDefault, new IrBlock(body)));
+    }
+
+    IrStmt lowered = new IrSwitch(value, sections);
+    into.Add(shared.Count == 0 ? lowered : new IrBlock([.. shared, lowered]));
+  }
+
+  /// <summary>
+  /// A declaration statement. A <c>const</c> declares nothing: the compiler has folded every use of
+  /// it, and its type only has to be one of the subset.
+  /// </summary>
+  private void LocalDeclaration(LocalDeclarationStatementSyntax declaration, List<IrStmt> into, List<IrStmt>? scope) {
+    if (declaration.IsConst) {
+      Map(model.GetTypeInfo(declaration.Declaration.Type).Type, declaration.Declaration.Type);
+      return;
+    }
+
+    var first = declaration.GetFirstToken();
+    if (first != declaration.Declaration.GetFirstToken())
+      throw new UnsupportedException(declaration, first.Text);
+
+    this.Declaration(declaration.Declaration, into, scope);
+  }
+
+  /// <summary>
+  /// Declares locals. With a <paramref name="scope"/> the declarations go there, in front of the
+  /// statement being lowered, and the initializers stay in place as assignments.
+  /// </summary>
+  private void Declaration(VariableDeclarationSyntax declaration, List<IrStmt> into, List<IrStmt>? scope) {
     foreach (var variable in declaration.Variables) {
       var symbol = (ILocalSymbol)model.GetDeclaredSymbol(variable)!;
       var local = this.Local(symbol.Name, Map(symbol.Type, declaration.Type));
-      var initializer = variable.Initializer is null ? null : this.Value(variable.Initializer.Value);
+      var initializer = variable.Initializer?.Value switch {
+        null => null,
+        InitializerExpressionSyntax list => this.ArrayOf(local.Type, list),
+        var value => this.Value(value)
+      };
       this._variables[symbol] = local;
-      into.Add(new IrDeclare(local, initializer));
+      if (scope is null) {
+        into.Add(new IrDeclare(local, initializer));
+      } else {
+        scope.Add(new IrDeclare(local, null));
+        if (initializer is not null)
+          into.Add(new IrAssign(local, initializer));
+      }
     }
   }
 
@@ -284,19 +485,47 @@ internal sealed class Lowering(string path, SemanticModel model) {
       _ => IrBinaryOp.ShiftRightLogical
     };
 
+    var trap = this.IsChecked(assignment);
     var target = this.Target(assignment.Left, into, true);
     var current = target.Read();
     var left = Convert(current, Map(operation.Parameters[0].Type, assignment));
     var right = this.Value(assignment.Right);
-    into.Add(target.Write(Convert(Binary(op, left, right, assignment), current.Type)));
+    into.Add(target.Write(Convert(Binary(op, left, right, assignment, trap), current.Type, trap)));
   }
 
+  /// <summary>
+  /// A step as a statement: the variable or element plus or minus one, computed in the type C# promotes
+  /// it to and converted back, which in a checked context traps instead of wrapping around.
+  /// </summary>
   private void Step(ExpressionSyntax operand, bool increment, List<IrStmt> into) {
+    var trap = this.IsChecked(operand);
     var target = this.Target(operand, into, true);
     var current = target.Read();
-    var word = current.Type.IsWord ? current.Type : IrType.I32;
-    var stepped = new IrBinary(increment ? IrBinaryOp.Add : IrBinaryOp.Subtract, Convert(current, word), new IrConst(word, 1));
-    into.Add(target.Write(Convert(stepped, current.Type)));
+    var word = current.Type.IsArithmetic ? current.Type : IrType.I32;
+    var stepped = Binary(increment ? IrBinaryOp.Add : IrBinaryOp.Subtract, Convert(current, word), One(word), operand, trap);
+    into.Add(target.Write(Convert(stepped, current.Type, trap)));
+  }
+
+  /// <summary>
+  /// Whether overflow traps where a node stands: inside the nearest enclosing <c>checked</c> or
+  /// <c>unchecked</c>, and as the compilation says where there is neither.
+  /// </summary>
+  private bool IsChecked(SyntaxNode node) {
+    for (var parent = node.Parent; parent is not null; parent = parent.Parent)
+      switch (parent.Kind()) {
+        case SyntaxKind.CheckedExpression or SyntaxKind.CheckedStatement:
+          return true;
+        case SyntaxKind.UncheckedExpression or SyntaxKind.UncheckedStatement:
+          return false;
+      }
+
+    return model.Compilation.Options.CheckOverflow;
+  }
+
+  /// <summary>An array index or length: C# also takes 64-bit ones, the subset only those of 32 bits.</summary>
+  private IrExpr Index(ExpressionSyntax expression) {
+    var index = this.Value(expression);
+    return index.Type.IsWord ? index : throw new UnsupportedException(expression, $"an array index or length of the type {index.Type}");
   }
 
   /// <summary>
@@ -308,8 +537,8 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case IdentifierNameSyntax when this.Value(target) is IrLocalRef variable:
         return (() => variable, value => new IrAssign(variable.Local, value));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element:
-        var array = this.Value(element.Expression);
-        var index = this.Value(element.ArgumentList.Arguments[0].Expression);
+        var array = this.Written(element.Expression);
+        var index = this.Index(element.ArgumentList.Arguments[0].Expression);
         if (alsoRead) {
           array = this.Once(array, into);
           index = this.Once(index, into);
@@ -322,7 +551,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
   }
 
   private IrExpr Once(IrExpr expression, List<IrStmt> into) {
-    if (expression is IrLocalRef or IrConst)
+    if (expression is IrLocalRef or IrConst or IrConstRef)
       return expression;
 
     var temporary = this.Local($"$t{this._locals.Count}", expression.Type);
@@ -330,23 +559,53 @@ internal sealed class Lowering(string path, SemanticModel model) {
     return new IrLocalRef(temporary);
   }
 
-  /// <summary>Lowers an expression to a value of the type the compiler converts it to.</summary>
+  /// <summary>
+  /// Lowers an expression to a value of the type the compiler converts it to. A table of the module
+  /// is not a value: handing it on would give it a second name under which it could be written.
+  /// </summary>
   private IrExpr Value(ExpressionSyntax expression) {
     var info = model.GetTypeInfo(expression);
+    if (expression is CollectionExpressionSyntax)
+      return this.ArrayOf(Map(info.ConvertedType, expression), expression);
+
     var natural = this.Natural(expression, Map(info.Type, expression));
+    if (natural is IrConstRef { Type.IsArray: true } table)
+      throw new UnsupportedException(expression, $"the static readonly array '{table.Constant.Name}' used as a value");
+
     return Convert(natural, Map(info.ConvertedType, expression));
   }
 
+  /// <summary>
+  /// An array that is only read, measured or copied from. The array itself is meant, not what the
+  /// compiler converts it to for a parameter of the type <c>Array</c>; a table of the module may stand here.
+  /// </summary>
+  private IrExpr Read(ExpressionSyntax expression)
+    => this.Natural(expression, Map(model.GetTypeInfo(expression).Type, expression));
+
+  /// <summary>An array whose elements are written, which a table of the module never is.</summary>
+  private IrExpr Written(ExpressionSyntax expression) {
+    var array = this.Read(expression);
+    return array is IrConstRef table
+      ? throw new UnsupportedException(expression, $"a write to the static readonly array '{table.Constant.Name}'")
+      : array;
+  }
+
   private IrExpr Natural(ExpressionSyntax expression, IrType type) {
-    var constant = model.GetConstantValue(expression);
-    if (constant.HasValue)
-      return new IrConst(type, System.Convert.ToInt64(constant.Value, System.Globalization.CultureInfo.InvariantCulture));
+    // A constant null, such as default(int[]), is not a value of the subset.
+    if (model.GetConstantValue(expression) is { HasValue: true, Value: { } folded })
+      return new IrConst(type, Carried(folded));
 
     switch (expression) {
       case ParenthesizedExpressionSyntax parenthesized:
         return this.Value(parenthesized.Expression);
+      case CheckedExpressionSyntax context:
+        return this.Value(context.Expression);
       case IdentifierNameSyntax identifier when model.GetSymbolInfo(identifier).Symbol is { } symbol && this._variables.TryGetValue(symbol, out var variable):
         return new IrLocalRef(variable);
+      case PrefixUnaryExpressionSyntax unary when unary.Kind() is SyntaxKind.PreIncrementExpression or SyntaxKind.PreDecrementExpression:
+        return this.StepValue(unary, unary.Operand, unary.IsKind(SyntaxKind.PreIncrementExpression), false);
+      case PostfixUnaryExpressionSyntax unary when unary.Kind() is SyntaxKind.PostIncrementExpression or SyntaxKind.PostDecrementExpression:
+        return this.StepValue(unary, unary.Operand, unary.IsKind(SyntaxKind.PostIncrementExpression), true);
       case PrefixUnaryExpressionSyntax unary:
         return this.Unary(unary);
       case BinaryExpressionSyntax binary:
@@ -354,13 +613,19 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case ConditionalExpressionSyntax choice:
         return new IrConditional(this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse));
       case CastExpressionSyntax cast:
-        return Convert(this.Value(cast.Expression), type);
+        return Convert(this.Value(cast.Expression), type, this.IsChecked(cast));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element:
-        return new IrArrayLoad(this.Value(element.Expression), this.Value(element.ArgumentList.Arguments[0].Expression));
+        return new IrArrayLoad(this.Read(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression));
       case MemberAccessExpressionSyntax { Name.Identifier.Text: "Length" } member when model.GetTypeInfo(member.Expression).Type is IArrayTypeSymbol:
-        return new IrArrayLength(this.Value(member.Expression));
+        return new IrArrayLength(this.Read(member.Expression));
+      case IdentifierNameSyntax or MemberAccessExpressionSyntax
+        when model.GetSymbolInfo(expression).Symbol is IFieldSymbol field && this._constants.TryGetValue(field, out var global):
+        this._read.Add(global.Name);
+        return new IrConstRef(global);
       case ArrayCreationExpressionSyntax { Initializer: null } creation:
-        return new IrNewArray(type, this.Value(creation.Type.RankSpecifiers[0].Sizes[0]));
+        return new IrNewArray(type, this.Index(creation.Type.RankSpecifiers[0].Sizes[0]));
+      case ArrayCreationExpressionSyntax or ImplicitArrayCreationExpressionSyntax:
+        return this.ArrayOf(type, expression);
       case InvocationExpressionSyntax invocation:
         return this.Call(invocation, type);
       default:
@@ -368,6 +633,21 @@ internal sealed class Lowering(string path, SemanticModel model) {
     }
   }
 
+  /// <summary>A <c>++</c> or <c>--</c> whose value is used: the step of a variable or of an array element.</summary>
+  private IrExpr StepValue(ExpressionSyntax step, ExpressionSyntax operand, bool increment, bool postfix) {
+    IrExpr target = operand switch {
+      IdentifierNameSyntax when this.Value(operand) is IrLocalRef variable => variable,
+      ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element
+        => new IrArrayLoad(this.Written(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression)),
+      _ => throw new UnsupportedException(operand, operand.Kind().ToString())
+    };
+    return new IrStep(target, increment, postfix, target.Type.IsInteger && this.IsChecked(step));
+  }
+
+  /// <summary>
+  /// A prefix operator on a value. The steps were taken before, and the compiler gives no other
+  /// prefix operator a type of the subset, so what is neither plus, minus nor complement is the negation.
+  /// </summary>
   private IrExpr Unary(PrefixUnaryExpressionSyntax unary) {
     IrUnaryOp op;
     switch (unary.Kind()) {
@@ -379,14 +659,16 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case SyntaxKind.BitwiseNotExpression:
         op = IrUnaryOp.BitNot;
         break;
-      case SyntaxKind.LogicalNotExpression:
+      default:
         op = IrUnaryOp.LogicalNot;
         break;
-      default:
-        throw new UnsupportedException(unary, unary.Kind().ToString());
     }
 
-    return new IrUnary(op, this.Value(unary.Operand));
+    var operand = this.Value(unary.Operand);
+    if (op == IrUnaryOp.Negate && operand.Type.IsInteger && this.IsChecked(unary))
+      op = IrUnaryOp.NegateChecked;
+
+    return new IrUnary(op, operand);
   }
 
   private IrExpr Binary(BinaryExpressionSyntax binary) {
@@ -415,10 +697,18 @@ internal sealed class Lowering(string path, SemanticModel model) {
     if (op is null)
       throw new UnsupportedException(binary, binary.Kind().ToString());
 
-    return Binary(op.Value, this.Value(binary.Left), this.Value(binary.Right), binary);
+    return Binary(op.Value, this.Value(binary.Left), this.Value(binary.Right), binary, this.IsChecked(binary));
   }
 
-  private static IrExpr Binary(IrBinaryOp op, IrExpr left, IrExpr right, SyntaxNode node) {
+  private static IrExpr Binary(IrBinaryOp op, IrExpr left, IrExpr right, SyntaxNode node, bool trap) {
+    if (trap && left.Type.IsInteger)
+      op = op switch {
+        IrBinaryOp.Add => IrBinaryOp.AddChecked,
+        IrBinaryOp.Subtract => IrBinaryOp.SubtractChecked,
+        IrBinaryOp.Multiply => IrBinaryOp.MultiplyChecked,
+        _ => op
+      };
+
     if (!IrOperators.Accepts(op, left.Type, right.Type))
       throw new UnsupportedException(node, $"{node.Kind()} on {left.Type} and {right.Type}");
 
@@ -427,23 +717,140 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
   private IrExpr Call(InvocationExpressionSyntax invocation, IrType type) {
     var arguments = invocation.ArgumentList.Arguments;
-    if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol { MethodKind: MethodKind.Ordinary } method
-        || !SymbolEqualityComparer.Default.Equals(method.ContainingType, this._class)
-        || arguments.Any(argument => argument.NameColon is not null))
+    // An invocation the compiler accepted and gave a type of the subset is bound to a method.
+    var method = (IMethodSymbol)model.GetSymbolInfo(invocation).Symbol!;
+    if (method.MethodKind != MethodKind.Ordinary || arguments.Any(argument => argument.NameColon is not null))
       throw new UnsupportedException(invocation, invocation.Kind().ToString());
 
-    return new IrCall(method.Name, type, arguments.Select(argument => this.Value(argument.Expression)).ToList());
+    var operands = arguments.Select(argument => argument.Expression).ToList();
+    if (SymbolEqualityComparer.Default.Equals(method.ContainingType, this._class))
+      return new IrCall(method.Name, type, operands.Select(this.Value).ToList());
+
+    return this.Library(method, operands, type)
+      ?? throw new UnsupportedException(invocation, $"{method.ContainingType.Name}.{method.Name}");
   }
 
-  /// <summary>Converts between integer types; a constant is converted here, exactly.</summary>
-  private static IrExpr Convert(IrExpr value, IrType type) {
-    if (value.Type == type)
+  /// <summary>
+  /// A call into the base library, as the one operation of the IR it means exactly; <see langword="null"/>
+  /// for a method, or an overload of one, that has no such operation.
+  /// </summary>
+  private IrExpr? Library(IMethodSymbol method, List<ExpressionSyntax> operands, IrType type) {
+    var parameters = method.Parameters.Select(parameter => parameter.Type.SpecialType).ToList();
+    switch (method.ContainingType.ToDisplayString(), method.Name, operands.Count) {
+      case ("System.Array", "Copy", 5) when parameters[4] == SpecialType.System_Int32:
+        var source = this.Read(operands[0]);
+        var target = this.Written(operands[2]);
+        if (source.Type != target.Type)
+          throw new UnsupportedException(operands[2], $"Array.Copy from {source.Type} to {target.Type}");
+
+        return new IrIntrinsic(IrIntrinsicOp.ArrayCopy, type, [source, this.Value(operands[1]), target, this.Value(operands[3]), this.Value(operands[4])]);
+      case ("System.Array", "Fill", 2):
+        return new IrIntrinsic(IrIntrinsicOp.ArrayFill, type, [this.Written(operands[0]), this.Value(operands[1])]);
+      case ("System.Array", "Clear", 1):
+        return new IrIntrinsic(IrIntrinsicOp.ArrayClear, type, [this.Written(operands[0])]);
+      case ("System.Math" or "System.MathF", "Round", 2) when method.Parameters[1].Type.Name == "MidpointRounding":
+        // The mode has to be one of the two the IR has, written as a constant.
+        return model.GetConstantValue(operands[1]).Value switch {
+          (int)MidpointRounding.ToEven => this.Exact(IrIntrinsicOp.RoundEven, type, operands.Take(1)),
+          (int)MidpointRounding.AwayFromZero => this.Exact(IrIntrinsicOp.RoundAway, type, operands.Take(1)),
+          _ => null
+        };
+    }
+
+    IrIntrinsicOp? op = (method.ContainingType.ToDisplayString(), method.Name) switch {
+      ("System.Math" or "System.MathF", "Abs") => IrIntrinsicOp.Abs,
+      ("System.Math" or "System.MathF", "Min") => IrIntrinsicOp.Min,
+      ("System.Math" or "System.MathF", "Max") => IrIntrinsicOp.Max,
+      ("System.Math" or "System.MathF", "Sign") => IrIntrinsicOp.Sign,
+      ("System.Math" or "System.MathF", "Sqrt") => IrIntrinsicOp.Sqrt,
+      ("System.Math" or "System.MathF", "Floor") => IrIntrinsicOp.Floor,
+      ("System.Math" or "System.MathF", "Ceiling") => IrIntrinsicOp.Ceiling,
+      ("System.Math" or "System.MathF", "Truncate") => IrIntrinsicOp.Truncate,
+      ("System.Math" or "System.MathF", "Round") => IrIntrinsicOp.RoundEven,
+      ("System.Math", "BigMul") => IrIntrinsicOp.BigMul,
+      ("System.Numerics.BitOperations", "RotateLeft") => IrIntrinsicOp.RotateLeft,
+      ("System.Numerics.BitOperations", "RotateRight") => IrIntrinsicOp.RotateRight,
+      ("System.Numerics.BitOperations", "PopCount") => IrIntrinsicOp.PopCount,
+      ("System.Numerics.BitOperations", "LeadingZeroCount") => IrIntrinsicOp.LeadingZeroCount,
+      ("System.Numerics.BitOperations", "TrailingZeroCount") => IrIntrinsicOp.TrailingZeroCount,
+      ("System.Numerics.BitOperations", "Log2") => IrIntrinsicOp.Log2,
+      ("System.BitConverter", "DoubleToInt64Bits" or "SingleToInt32Bits") => IrIntrinsicOp.FloatBits,
+      ("System.BitConverter", "Int64BitsToDouble" or "Int32BitsToSingle") => IrIntrinsicOp.BitsFloat,
+      _ => null
+    };
+    return op is null ? null : this.Exact(op.Value, type, operands);
+  }
+
+  /// <summary>
+  /// The intrinsic for a library method, when the overload the compiler chose is one the operation is
+  /// defined on: its typing rule decides, so an overload on a type outside it is refused by name.
+  /// </summary>
+  private IrIntrinsic? Exact(IrIntrinsicOp op, IrType type, IEnumerable<ExpressionSyntax> operands) {
+    var arguments = operands.Select(this.Value).ToList();
+    return IrOperators.Accepts(op, type, arguments.Select(argument => argument.Type).ToList())
+      ? new IrIntrinsic(op, type, arguments)
+      : null;
+  }
+
+  /// <summary>
+  /// Converts between numeric types. A constant is converted here when the conversion is one the
+  /// compiler applies silently; a conversion between integers that could lose something traps when
+  /// it stands in a checked context and wraps around otherwise.
+  /// <para>
+  /// A floating-point number converted to an integer traps in a checked context. Otherwise it is
+  /// converted as the runtime converts it (ADR 0002, measured on .NET 10): saturating, with a NaN
+  /// becoming 0, and for a target narrower than <c>int</c> saturating to <c>int</c> first and then
+  /// keeping the low bits.
+  /// </para>
+  /// </summary>
+  private static IrExpr Convert(IrExpr value, IrType type, bool trap = false) {
+    var from = value.Type;
+    if (from == type)
       return value;
 
-    return value is IrConst constant
+    if (type.IsFloat)
+      return value is IrConst number
+        ? new IrConst(type, IrOperators.Bits(type, Rounded(number, type)))
+        : new IrConvert(type, value);
+
+    if (from.IsFloat) {
+      if (trap)
+        return new IrConvert(type, value, IrConversion.Trap);
+
+      return type.Bits < 32
+        ? new IrConvert(type, new IrConvert(IrType.I32, value, IrConversion.Saturate))
+        : new IrConvert(type, value, IrConversion.Saturate);
+    }
+
+    var lossy = trap && !IrOperators.Contains(type, from);
+    return value is IrConst constant && !lossy
       ? new IrConst(type, IrOperators.Wrap(type, constant.Value))
-      : new IrConvert(type, value);
+      : new IrConvert(type, value, lossy ? IrConversion.Trap : IrConversion.Wrap);
   }
+
+  /// <summary>A constant as a floating-point number of a type, rounded as the runtime rounds the conversion.</summary>
+  private static double Rounded(IrConst constant, IrType type) {
+    var from = constant.Type;
+    if (from.IsFloat)
+      return IrOperators.Float(from, constant.Value);
+
+    if (type == IrType.F32)
+      return from == IrType.U64 ? (float)(ulong)constant.Value : (float)constant.Value;
+
+    return from == IrType.U64 ? (double)(ulong)constant.Value : (double)constant.Value;
+  }
+
+  /// <summary>The constant 1 of an arithmetic type, which a step adds or subtracts.</summary>
+  private static IrConst One(IrType type) => new(type, type.IsFloat ? IrOperators.Bits(type, 1) : 1);
+
+  /// <summary>A constant of the compiler as the IR carries it.</summary>
+  private static long Carried(object value) => value switch {
+    ulong large => (long)large,
+    char unit => unit,
+    float single => IrOperators.Bits(IrType.F32, single),
+    double number => IrOperators.Bits(IrType.F64, number),
+    _ => System.Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture)
+  };
 
   private sealed class UnsupportedException(SyntaxNode node, string what) : Exception {
 

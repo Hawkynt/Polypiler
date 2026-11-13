@@ -11,10 +11,28 @@ public sealed record IrLocal(string Name, IrType Type);
 /// <param name="Type">The type of the value, which fixes width, signedness and wrap-around.</param>
 public abstract record IrExpr(IrType Type);
 
-/// <summary>A constant. Integers carry their numeric value, truth values 0 or 1.</summary>
+/// <summary>
+/// A constant. Integers carry their numeric value, a <c>u64</c> its 64 bits (so a value above the
+/// largest <c>i64</c> is negative here), truth values 0 or 1, floating-point numbers their IEEE 754
+/// bits as <see cref="IrOperators.Bits"/> gives them.
+/// </summary>
 /// <param name="Type">The type of the constant.</param>
 /// <param name="Value">The value, within the range of <paramref name="Type"/>.</param>
 public sealed record IrConst(IrType Type, long Value) : IrExpr(Type);
+
+/// <summary>
+/// A constant of a module: one value, or an array whose elements never change. An array is a table:
+/// it can be read, measured and copied from, and nothing else - it is never stored into and never
+/// passed on as a value, so that no other name can reach it.
+/// </summary>
+/// <param name="Name">The name, unique among the constants and functions of the module.</param>
+/// <param name="Type">A truth value, a number, or an array of numbers.</param>
+/// <param name="Values">The value, or the elements in order, each as an <see cref="IrConst"/> carries it.</param>
+public sealed record IrModuleConst(string Name, IrType Type, IReadOnlyList<long> Values);
+
+/// <summary>The value of a constant of the module, or the table it is.</summary>
+/// <param name="Constant">The constant read.</param>
+public sealed record IrConstRef(IrModuleConst Constant) : IrExpr(Constant.Type);
 
 /// <summary>The current value of a parameter or local.</summary>
 /// <param name="Local">The variable read.</param>
@@ -23,10 +41,16 @@ public sealed record IrLocalRef(IrLocal Local) : IrExpr(Local.Type);
 /// <summary>The operators with one operand.</summary>
 public enum IrUnaryOp {
 
-  /// <summary>Two's-complement negation of an <c>i32</c>; the smallest value negates to itself.</summary>
+  /// <summary>
+  /// Two's-complement negation of a signed integer, where the smallest value negates to itself, or
+  /// the change of sign of a floating-point number.
+  /// </summary>
   Negate,
 
-  /// <summary>Bitwise complement of a 32-bit value.</summary>
+  /// <summary>Negation of a signed integer that traps on the smallest value, which has no negative.</summary>
+  NegateChecked,
+
+  /// <summary>Bitwise complement of a 32- or 64-bit integer.</summary>
   BitNot,
 
   /// <summary>Negation of a truth value.</summary>
@@ -42,22 +66,38 @@ public sealed record IrUnary(IrUnaryOp Op, IrExpr Operand) : IrExpr(Operand.Type
 /// <summary>The operators with two operands.</summary>
 public enum IrBinaryOp {
 
-  /// <summary>Addition modulo 2^32.</summary>
+  /// <summary>Addition: modulo 2^width for integers, rounded to nearest even for floating point.</summary>
   Add,
 
-  /// <summary>Subtraction modulo 2^32.</summary>
+  /// <summary>Subtraction: modulo 2^width for integers, rounded to nearest even for floating point.</summary>
   Subtract,
 
-  /// <summary>Multiplication modulo 2^32.</summary>
+  /// <summary>
+  /// Multiplication: modulo 2^width for integers, rounded to nearest even for floating point. It is
+  /// never fused with an addition.
+  /// </summary>
   Multiply,
 
+  /// <summary>Addition of integers that traps when the sum is not a value of the type.</summary>
+  AddChecked,
+
+  /// <summary>Subtraction of integers that traps when the difference is not a value of the type.</summary>
+  SubtractChecked,
+
+  /// <summary>Multiplication of integers that traps when the product is not a value of the type.</summary>
+  MultiplyChecked,
+
   /// <summary>
-  /// Division truncating towards zero. Traps on a zero divisor, and on the one <c>i32</c> quotient
-  /// that does not fit (smallest value divided by -1).
+  /// Division. Of integers it truncates towards zero and traps on a zero divisor and on the one signed
+  /// quotient that does not fit (smallest value divided by -1). Of floating-point numbers it follows
+  /// IEEE 754 and never traps.
   /// </summary>
   Divide,
 
-  /// <summary>Remainder with the sign of the dividend; traps exactly where <see cref="Divide"/> does.</summary>
+  /// <summary>
+  /// Remainder with the sign of the dividend, the quotient truncated; of integers it traps exactly
+  /// where <see cref="Divide"/> does, of floating-point numbers never.
+  /// </summary>
   Remainder,
 
   /// <summary>Bitwise and.</summary>
@@ -69,22 +109,22 @@ public enum IrBinaryOp {
   /// <summary>Bitwise exclusive or.</summary>
   Xor,
 
-  /// <summary>Shift left by the low 5 bits of the <c>i32</c> count.</summary>
+  /// <summary>Shift left by the low 5 bits of the <c>i32</c> count, the low 6 bits for a 64-bit value.</summary>
   ShiftLeft,
 
-  /// <summary>Shift right by the low 5 bits of the count: arithmetic on <c>i32</c>, logical on <c>u32</c>.</summary>
+  /// <summary>Shift right by the masked count: arithmetic on a signed value, logical on an unsigned one.</summary>
   ShiftRight,
 
-  /// <summary>Shift right by the low 5 bits of the count, filling with zeros for either type.</summary>
+  /// <summary>Shift right by the masked count, filling with zeros whatever the signedness.</summary>
   ShiftRightLogical,
 
-  /// <summary>Equality of two 32-bit values or two truth values.</summary>
+  /// <summary>Equality of two numbers of one type or two truth values; a NaN equals nothing.</summary>
   Equal,
 
-  /// <summary>Inequality of two 32-bit values or two truth values.</summary>
+  /// <summary>Inequality of two numbers of one type or two truth values.</summary>
   NotEqual,
 
-  /// <summary>Less than, in the signedness of the operands.</summary>
+  /// <summary>Less than, in the signedness of the operands; false when an operand is a NaN, like every ordering.</summary>
   Less,
 
   /// <summary>Less than or equal, in the signedness of the operands.</summary>
@@ -114,10 +154,39 @@ public enum IrBinaryOp {
 public sealed record IrBinary(IrBinaryOp Op, IrExpr Left, IrExpr Right)
   : IrExpr(Op >= IrBinaryOp.Equal ? IrType.Bool : Left.Type);
 
-/// <summary>A conversion between integer types: the value modulo 2^width of the target type.</summary>
+/// <summary>What a conversion does with a value the target type cannot hold.</summary>
+public enum IrConversion {
+
+  /// <summary>The value modulo 2^width of the target type.</summary>
+  Wrap,
+
+  /// <summary>The conversion traps with an integer overflow; a NaN traps as well.</summary>
+  Trap,
+
+  /// <summary>
+  /// A floating-point number is truncated towards zero and becomes the smallest or largest value of
+  /// the integer type when it lies outside; a NaN becomes 0.
+  /// </summary>
+  Saturate
+
+}
+
+/// <summary>
+/// A conversion between numeric types. Between integers it wraps or traps; from floating point to
+/// an integer it saturates or traps; to floating point it rounds to nearest even, has no value it
+/// cannot convert and carries <see cref="IrConversion.Wrap"/>.
+/// </summary>
 /// <param name="Type">The target type.</param>
 /// <param name="Operand">The value converted.</param>
-public sealed record IrConvert(IrType Type, IrExpr Operand) : IrExpr(Type);
+/// <param name="Contract">What happens to a value outside the target type.</param>
+public sealed record IrConvert(IrType Type, IrExpr Operand, IrConversion Contract) : IrExpr(Type) {
+
+  /// <summary>A conversion that wraps around.</summary>
+  /// <param name="type">The target type.</param>
+  /// <param name="operand">The value converted.</param>
+  public IrConvert(IrType type, IrExpr operand) : this(type, operand, IrConversion.Wrap) { }
+
+}
 
 /// <summary>A choice that evaluates the condition and then exactly one of the two branches.</summary>
 /// <param name="Condition">The truth value deciding the branch.</param>
@@ -144,6 +213,112 @@ public sealed record IrNewArray(IrType Type, IrExpr Length) : IrExpr(Type);
 /// <param name="Type">The return type of that function.</param>
 /// <param name="Arguments">One argument per parameter.</param>
 public sealed record IrCall(string Function, IrType Type, IReadOnlyList<IrExpr> Arguments) : IrExpr(Type);
+
+/// <summary>
+/// A step by one as an expression. The target is a variable or an array element, whose array and
+/// index are evaluated once; the target is read, one is added or subtracted in the type of the target
+/// and the result is stored. A result outside an integer type wraps around or, when
+/// <paramref name="Trap"/> is set, traps before anything is stored.
+/// </summary>
+/// <param name="Target">An <see cref="IrLocalRef"/> or an <see cref="IrArrayLoad"/> of a numeric type.</param>
+/// <param name="Increment">Whether one is added; otherwise it is subtracted.</param>
+/// <param name="Postfix">Whether the expression yields the value from before the step, otherwise the new one.</param>
+/// <param name="Trap">Whether an integer result outside the type traps instead of wrapping around.</param>
+public sealed record IrStep(IrExpr Target, bool Increment, bool Postfix, bool Trap) : IrExpr(Target.Type);
+
+/// <summary>The operations an <see cref="IrIntrinsic"/> performs.</summary>
+public enum IrIntrinsicOp {
+
+  /// <summary>A new array holding the arguments in order; the type of the node is the array type.</summary>
+  ArrayOf,
+
+  /// <summary>
+  /// <c>(source, sourceIndex, target, targetIndex, length)</c>: copies a range between two arrays of
+  /// one type as if through a buffer, so that overlapping ranges of one array are safe. Traps with an
+  /// index out of range, before anything is copied, when a range is not inside its array.
+  /// </summary>
+  ArrayCopy,
+
+  /// <summary><c>(array, value)</c>: stores the value in every element.</summary>
+  ArrayFill,
+
+  /// <summary><c>(array)</c>: stores zero in every element.</summary>
+  ArrayClear,
+
+  /// <summary>
+  /// The absolute value of a signed integer or a floating-point number. The smallest value of an
+  /// integer type has none and traps with an integer overflow.
+  /// </summary>
+  Abs,
+
+  /// <summary>The smaller of two numbers of one type; of floating-point numbers a NaN if either is one, and -0 before +0.</summary>
+  Min,
+
+  /// <summary>The larger of two numbers of one type; of floating-point numbers a NaN if either is one, and +0 after -0.</summary>
+  Max,
+
+  /// <summary>
+  /// -1, 0 or 1 as an <c>i32</c> for a negative, zero or positive signed integer or floating-point
+  /// number. A NaN has no sign and traps with an invalid operation.
+  /// </summary>
+  Sign,
+
+  /// <summary>The square root of a floating-point number, correctly rounded.</summary>
+  Sqrt,
+
+  /// <summary>The largest integral floating-point number that is not larger than the operand.</summary>
+  Floor,
+
+  /// <summary>The smallest integral floating-point number that is not smaller than the operand.</summary>
+  Ceiling,
+
+  /// <summary>The operand without its fraction.</summary>
+  Truncate,
+
+  /// <summary>The nearest integral floating-point number; a tie goes to the even one.</summary>
+  RoundEven,
+
+  /// <summary>The nearest integral floating-point number; a tie goes away from zero.</summary>
+  RoundAway,
+
+  /// <summary><c>(value, count)</c>: a <c>u32</c> or <c>u64</c> rotated left by the count modulo its width.</summary>
+  RotateLeft,
+
+  /// <summary><c>(value, count)</c>: a <c>u32</c> or <c>u64</c> rotated right by the count modulo its width.</summary>
+  RotateRight,
+
+  /// <summary>The number of set bits of a <c>u32</c> or <c>u64</c>, as an <c>i32</c>.</summary>
+  PopCount,
+
+  /// <summary>The number of zero bits above the highest set bit of a <c>u32</c> or <c>u64</c>; the width for 0.</summary>
+  LeadingZeroCount,
+
+  /// <summary>The number of zero bits below the lowest set bit of a <c>u32</c> or <c>u64</c>; the width for 0.</summary>
+  TrailingZeroCount,
+
+  /// <summary>The position of the highest set bit of a <c>u32</c> or <c>u64</c>, as an <c>i32</c>; 0 for 0.</summary>
+  Log2,
+
+  /// <summary>The full product of two <c>u32</c>, as a <c>u64</c>.</summary>
+  BigMul,
+
+  /// <summary>The IEEE 754 bits of an <c>f64</c> as an <c>i64</c>, or of an <c>f32</c> as an <c>i32</c>.</summary>
+  FloatBits,
+
+  /// <summary>The <c>f64</c> with the bits of an <c>i64</c>, or the <c>f32</c> with the bits of an <c>i32</c>.</summary>
+  BitsFloat
+
+}
+
+/// <summary>
+/// An operation of the base library that has an exact meaning. Its arguments are evaluated left to
+/// right; <see cref="IrOperators.Accepts(IrIntrinsicOp, IrType, IReadOnlyList{IrType})"/> says which
+/// types it takes.
+/// </summary>
+/// <param name="Op">The operation.</param>
+/// <param name="Type">The type of the result, <see cref="IrType.Void"/> when there is none.</param>
+/// <param name="Arguments">The operands.</param>
+public sealed record IrIntrinsic(IrIntrinsicOp Op, IrType Type, IReadOnlyList<IrExpr> Arguments) : IrExpr(Type);
 
 /// <summary>A statement.</summary>
 public abstract record IrStmt;
@@ -186,6 +361,42 @@ public sealed record IrIf(IrExpr Condition, IrBlock Then, IrBlock? Else) : IrStm
 /// <param name="Body">The statements of one pass.</param>
 public sealed record IrWhile(IrExpr Condition, IrBlock Body) : IrStmt;
 
+/// <summary>A loop that runs its body once before it tests its condition for the first time.</summary>
+/// <param name="Body">The statements of one pass; a <see cref="IrContinue"/> goes on to the condition.</param>
+/// <param name="Condition">The truth value that keeps the loop running.</param>
+public sealed record IrDoWhile(IrBlock Body, IrExpr Condition) : IrStmt;
+
+/// <summary>
+/// A loop that tests its condition before every pass and runs a step after every pass - also after a
+/// pass that <see cref="IrContinue"/> ended, which is what tells it from an <see cref="IrWhile"/>
+/// whose body ends with the step.
+/// </summary>
+/// <param name="Condition">The truth value that keeps the loop running.</param>
+/// <param name="Body">The statements of one pass.</param>
+/// <param name="Step">What follows every pass: declarations, assignments, stores and expressions only.</param>
+public sealed record IrFor(IrExpr Condition, IrBlock Body, IrBlock Step) : IrStmt;
+
+/// <summary>One section of a <see cref="IrSwitch"/>.</summary>
+/// <param name="Labels">The constants that select the section, as an <see cref="IrConst"/> carries them.</param>
+/// <param name="IsDefault">Whether the section is also selected when no label of the switch matches.</param>
+/// <param name="Body">The statements of the section.</param>
+public sealed record IrSwitchSection(IReadOnlyList<long> Labels, bool IsDefault, IrBlock Body);
+
+/// <summary>
+/// A choice by the value of an integer: the one section runs that carries the value as a label, or the
+/// default section when none does, or nothing. There is no fall-through: when the body of a section
+/// ends, the switch ends, exactly as when it executes a <see cref="IrBreak"/>.
+/// </summary>
+/// <param name="Value">The integer that selects the section.</param>
+/// <param name="Sections">The sections; a label stands in at most one of them.</param>
+public sealed record IrSwitch(IrExpr Value, IReadOnlyList<IrSwitchSection> Sections) : IrStmt;
+
+/// <summary>Leaves the innermost enclosing loop or switch.</summary>
+public sealed record IrBreak : IrStmt;
+
+/// <summary>Ends the current pass of the innermost enclosing loop; the step of an <see cref="IrFor"/> still runs.</summary>
+public sealed record IrContinue : IrStmt;
+
 /// <summary>Leaves the function.</summary>
 /// <param name="Value">The value returned, or <see langword="null"/> in a function returning nothing.</param>
 public sealed record IrReturn(IrExpr? Value) : IrStmt;
@@ -205,7 +416,15 @@ public sealed record IrFunction(
   IReadOnlyList<IrLocal> Locals,
   IrBlock Body);
 
-/// <summary>A module: the functions of one source class.</summary>
+/// <summary>A module: the functions and constants of one source class.</summary>
 /// <param name="Name">The name of the module.</param>
 /// <param name="Functions">The functions, in source order.</param>
-public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions);
+/// <param name="Constants">The constants, in source order.</param>
+public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, IReadOnlyList<IrModuleConst> Constants) {
+
+  /// <summary>A module without constants.</summary>
+  /// <param name="name">The name of the module.</param>
+  /// <param name="functions">The functions, in source order.</param>
+  public IrModule(string name, IReadOnlyList<IrFunction> functions) : this(name, functions, []) { }
+
+}

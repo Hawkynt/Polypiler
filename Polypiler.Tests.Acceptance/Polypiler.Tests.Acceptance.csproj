@@ -16,7 +16,7 @@
        The helpers that describe the cases are shared with the unit tests as source, because the two
        test projects must not reference each other. -->
   <ItemGroup>
-    <Compile Include="..\tests\fixtures\prototype\*.cs" LinkBase="Prototype\Fixtures" />
+    <Compile Include="..\tests\fixtures\prototype\**\*.cs" LinkBase="Prototype\Fixtures" />
     <Compile Include="..\Polypiler.Tests\Prototype\Support\*.cs" LinkBase="Prototype\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\JavaScript\Support\*.cs" LinkBase="Frontends\JavaScript\Support" />
   </ItemGroup>

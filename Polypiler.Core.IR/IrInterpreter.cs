@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace Polypiler.Core.IR;
 
@@ -15,10 +17,14 @@ public enum IrTrap {
   IndexOutOfRange,
 
   /// <summary>
-  /// A signed quotient that does not fit 32 bits (the smallest value divided by -1, also as a
-  /// remainder), or an array created with a negative length.
+  /// A result that is not a value of its integer type: the smallest signed value divided by -1 (also
+  /// as a remainder), a checked operation or conversion that overflows, or an array created with a
+  /// negative length.
   /// </summary>
-  IntegerOverflow
+  IntegerOverflow,
+
+  /// <summary>An operation that has no result for its operand: the sign of a NaN.</summary>
+  InvalidOperation
 
 }
 
@@ -38,17 +44,26 @@ public sealed class IrTrapException : Exception {
   public static string Describe(IrTrap trap) => trap switch {
     IrTrap.DivideByZero => "divide by zero",
     IrTrap.IndexOutOfRange => "index out of range",
+    IrTrap.InvalidOperation => "invalid operation",
     _ => "integer overflow"
   };
 
 }
 
 /// <summary>
-/// Evaluates the IR directly. Values cross the boundary as <see cref="int"/>, <see cref="uint"/>,
-/// <see cref="byte"/>, <see cref="bool"/> and arrays of the three integer types; arrays are passed by
-/// reference, so a function can change the caller's array.
+/// Evaluates the IR directly. Values cross the boundary as the .NET type of the same width and
+/// signedness (a <c>u16</c> is accepted as <see cref="ushort"/> or <see cref="char"/> and returned as
+/// <see cref="ushort"/>), as <see cref="float"/>, <see cref="double"/> and <see cref="bool"/>, and as
+/// one-dimensional arrays of the numeric types;
+/// arrays are passed by reference, so a function can change the caller's array.
 /// </summary>
 public static class IrInterpreter {
+
+  /// <summary>
+  /// The functions of a module by name and its tables as arrays, kept for as long as the module lives.
+  /// A table can be shared between calls because the IR cannot write to it.
+  /// </summary>
+  private static readonly ConditionalWeakTable<IrModule, Program> _programs = new();
 
   /// <summary>Calls a function of a module that <see cref="IrVerifier"/> accepted.</summary>
   /// <param name="module">The module.</param>
@@ -58,10 +73,8 @@ public static class IrInterpreter {
   /// <exception cref="ArgumentException">The function does not exist or the arguments do not fit it.</exception>
   /// <exception cref="IrTrapException">An operation trapped.</exception>
   public static object? Call(IrModule module, string function, object[] arguments) {
-    var functions = new Dictionary<string, IrFunction>();
-    foreach (var candidate in module.Functions)
-      functions[candidate.Name] = candidate;
-
+    var program = _programs.GetValue(module, Index);
+    var functions = program.Functions;
     if (!functions.TryGetValue(function, out var target))
       throw new ArgumentException($"The module '{module.Name}' has no function '{function}'.", nameof(function));
 
@@ -69,14 +82,37 @@ public static class IrInterpreter {
       throw new ArgumentException($"'{function}' takes {target.Parameters.Count} arguments, not {arguments.Length}.", nameof(arguments));
 
     var values = arguments.Select((argument, index) => FromHost(target.Parameters[index], argument)).ToArray();
-    var result = new Machine(functions).Invoke(target, values);
-    return target.ReturnType.Kind switch {
-      IrTypeKind.Void => null,
-      IrTypeKind.I32 => (int)(long)result!,
-      IrTypeKind.U32 => (uint)(long)result!,
-      IrTypeKind.U8 => (byte)(long)result!,
-      _ => result
-    };
+    return ToHost(target.ReturnType, new Machine(program).Invoke(target, values));
+  }
+
+  private static Program Index(IrModule module) {
+    var functions = new Dictionary<string, IrFunction>();
+    foreach (var candidate in module.Functions)
+      functions[candidate.Name] = candidate;
+
+    var constants = new Dictionary<IrModuleConst, object>(ReferenceEqualityComparer.Instance);
+    foreach (var constant in module.Constants)
+      constants[constant] = constant.Type.Element is { } element
+        ? ArrayOf(element, constant.Values.Select(value => Constant(element, value)).ToList())
+        : Constant(constant.Type, constant.Values[0]);
+
+    return new Program(functions, constants);
+  }
+
+  /// <summary>A constant as the interpreter carries a value of its type.</summary>
+  private static object Constant(IrType type, long value) => type.Kind switch {
+    IrTypeKind.Bool => value != 0,
+    IrTypeKind.F32 => (float)IrOperators.Float(type, value),
+    IrTypeKind.F64 => IrOperators.Float(type, value),
+    _ => value
+  };
+
+  private static Array ArrayOf(IrType element, IReadOnlyList<object> values) {
+    var array = Array.CreateInstance(HostType(element), values.Count);
+    for (var index = 0; index < values.Count; ++index)
+      array.SetValue(External(array.GetType().GetElementType()!, values[index]), index);
+
+    return array;
   }
 
   /// <summary>
@@ -84,73 +120,160 @@ public static class IrInterpreter {
   /// <c>is int[]</c> a <c>uint[]</c> would pass as well, and its elements would be read as signed.
   /// </summary>
   private static object FromHost(IrLocal parameter, object argument) {
-    if (argument?.GetType() != HostType(parameter.Type))
+    if (argument is null || TypeOf(argument.GetType()) != parameter.Type)
       throw new ArgumentException($"The argument for '{parameter.Name}' is not a value of {parameter.Type}.", nameof(argument));
 
-    return argument is Array or bool ? argument : Convert.ToInt64(argument, CultureInfo.InvariantCulture);
+    return Internal(argument);
+  }
+
+  /// <summary>The IR type a .NET type crosses the boundary as, or <see langword="null"/> when it does not.</summary>
+  private static IrType? TypeOf(Type host) {
+    if (host.IsSZArray)
+      return TypeOf(host.GetElementType()!) is { IsNumeric: true } element ? IrType.Array(element) : null;
+
+    return Type.GetTypeCode(host) switch {
+      TypeCode.Boolean => IrType.Bool,
+      TypeCode.SByte => IrType.I8,
+      TypeCode.Byte => IrType.U8,
+      TypeCode.Int16 => IrType.I16,
+      TypeCode.UInt16 or TypeCode.Char => IrType.U16,
+      TypeCode.Int32 => IrType.I32,
+      TypeCode.UInt32 => IrType.U32,
+      TypeCode.Int64 => IrType.I64,
+      TypeCode.UInt64 => IrType.U64,
+      TypeCode.Single => IrType.F32,
+      TypeCode.Double => IrType.F64,
+      _ => null
+    };
   }
 
   private static Type HostType(IrType type) => type.Kind switch {
+    IrTypeKind.I8 => typeof(sbyte),
+    IrTypeKind.U8 => typeof(byte),
+    IrTypeKind.I16 => typeof(short),
+    IrTypeKind.U16 => typeof(ushort),
     IrTypeKind.I32 => typeof(int),
     IrTypeKind.U32 => typeof(uint),
-    IrTypeKind.U8 => typeof(byte),
-    IrTypeKind.Bool => typeof(bool),
-    _ => HostType(type.Element!).MakeArrayType()
+    IrTypeKind.I64 => typeof(long),
+    IrTypeKind.U64 => typeof(ulong),
+    IrTypeKind.F32 => typeof(float),
+    _ => typeof(double)
   };
 
-  private sealed class Machine(Dictionary<string, IrFunction> functions) {
+  /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
+  private static object Internal(object value) => value switch {
+    Array or bool or float or double => value,
+    ulong large => (long)large,
+    char unit => (long)unit,
+    _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
+  };
+
+  /// <summary>A carried number as a .NET value of the given type.</summary>
+  private static object External(Type host, object value) => Type.GetTypeCode(host) switch {
+    TypeCode.SByte => (sbyte)(long)value,
+    TypeCode.Byte => (byte)(long)value,
+    TypeCode.Int16 => (short)(long)value,
+    TypeCode.UInt16 => (ushort)(long)value,
+    TypeCode.Char => (char)(long)value,
+    TypeCode.Int32 => (int)(long)value,
+    TypeCode.UInt32 => (uint)(long)value,
+    TypeCode.UInt64 => (ulong)(long)value,
+    _ => value
+  };
+
+  private static object? ToHost(IrType type, object? value)
+    => value is null or Array or bool ? value : External(HostType(type), value);
+
+  private sealed record Program(Dictionary<string, IrFunction> Functions, Dictionary<IrModuleConst, object> Constants);
+
+  private sealed class Machine(Program program) {
 
     public object? Invoke(IrFunction function, object[] arguments) {
       var frame = new Frame();
       for (var index = 0; index < arguments.Length; ++index)
         frame.Locals[function.Parameters[index]] = arguments[index];
 
-      if (!this.Run(function.Body, frame) && function.ReturnType != IrType.Void)
+      if (this.Run(function.Body, frame) != Flow.Return && function.ReturnType != IrType.Void)
         throw new InvalidOperationException($"'{function.Name}' ended without returning a value.");
 
       return frame.Result;
     }
 
-    /// <summary>Executes a statement; true when it returned from the function.</summary>
-    private bool Run(IrStmt statement, Frame frame) {
+    /// <summary>Executes a statement and says how it ended.</summary>
+    private Flow Run(IrStmt statement, Frame frame) {
       switch (statement) {
         case IrBlock block:
-          foreach (var inner in block.Statements)
-            if (this.Run(inner, frame))
-              return true;
+          foreach (var inner in block.Statements) {
+            var ended = this.Run(inner, frame);
+            if (ended != Flow.Next)
+              return ended;
+          }
 
-          return false;
+          return Flow.Next;
         case IrDeclare declare:
           if (declare.Initializer is not null)
             frame.Locals[declare.Local] = this.Evaluate(declare.Initializer, frame);
 
-          return false;
+          return Flow.Next;
         case IrAssign assign:
           frame.Locals[assign.Local] = this.Evaluate(assign.Value, frame);
-          return false;
+          return Flow.Next;
         case IrStore store:
           var array = (Array)this.Evaluate(store.Array, frame);
           var index = (long)this.Evaluate(store.Index, frame);
-          var value = (long)this.Evaluate(store.Value, frame);
+          var value = this.Evaluate(store.Value, frame);
           Store(array, Checked(array, index), value);
-          return false;
+          return Flow.Next;
         case IrExprStmt expression:
           this.Evaluate(expression.Expression, frame);
-          return false;
+          return Flow.Next;
         case IrIf conditional:
           if ((bool)this.Evaluate(conditional.Condition, frame))
             return this.Run(conditional.Then, frame);
 
-          return conditional.Else is not null && this.Run(conditional.Else, frame);
+          return conditional.Else is null ? Flow.Next : this.Run(conditional.Else, frame);
         case IrWhile loop:
-          while ((bool)this.Evaluate(loop.Condition, frame))
-            if (this.Run(loop.Body, frame))
-              return true;
+          while ((bool)this.Evaluate(loop.Condition, frame)) {
+            var pass = this.Run(loop.Body, frame);
+            if (pass is Flow.Break or Flow.Return)
+              return pass & Flow.Return;
+          }
 
-          return false;
+          return Flow.Next;
+        case IrDoWhile loop:
+          do {
+            var pass = this.Run(loop.Body, frame);
+            if (pass is Flow.Break or Flow.Return)
+              return pass & Flow.Return;
+          } while ((bool)this.Evaluate(loop.Condition, frame));
+
+          return Flow.Next;
+        case IrFor loop:
+          while ((bool)this.Evaluate(loop.Condition, frame)) {
+            var pass = this.Run(loop.Body, frame);
+            if (pass is Flow.Break or Flow.Return)
+              return pass & Flow.Return;
+
+            this.Run(loop.Step, frame);
+          }
+
+          return Flow.Next;
+        case IrSwitch choice:
+          var selector = (long)this.Evaluate(choice.Value, frame);
+          var section = choice.Sections.FirstOrDefault(candidate => candidate.Labels.Contains(selector))
+            ?? choice.Sections.FirstOrDefault(candidate => candidate.IsDefault);
+          if (section is null)
+            return Flow.Next;
+
+          var chosen = this.Run(section.Body, frame);
+          return chosen == Flow.Break ? Flow.Next : chosen;
+        case IrBreak:
+          return Flow.Break;
+        case IrContinue:
+          return Flow.Continue;
         case IrReturn result:
           frame.Result = result.Value is null ? null : this.Evaluate(result.Value, frame);
-          return true;
+          return Flow.Return;
         default:
           throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
       }
@@ -159,20 +282,28 @@ public static class IrInterpreter {
     private object Evaluate(IrExpr expression, Frame frame) {
       switch (expression) {
         case IrConst constant:
-          return constant.Type == IrType.Bool ? constant.Value != 0 : constant.Value;
+          return Constant(constant.Type, constant.Value);
+        case IrConstRef reference:
+          return program.Constants[reference.Constant];
+        case IrIntrinsic intrinsic:
+          return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
           return frame.Locals[reference.Local];
         case IrUnary unary:
           var operand = this.Evaluate(unary.Operand, frame);
+          if (unary.Type.IsFloat)
+            return operand is float single ? -single : -(double)operand;
+
           return unary.Op switch {
             IrUnaryOp.Negate => IrOperators.Wrap(unary.Type, -(long)operand),
+            IrUnaryOp.NegateChecked => Fit(unary.Type, -IrOperators.Number(unary.Type, (long)operand)),
             IrUnaryOp.BitNot => IrOperators.Wrap(unary.Type, ~(long)operand),
             _ => !(bool)operand
           };
         case IrBinary binary:
           return this.Binary(binary, frame);
         case IrConvert conversion:
-          return IrOperators.Wrap(conversion.Type, (long)this.Evaluate(conversion.Operand, frame));
+          return Convert(conversion, this.Evaluate(conversion.Operand, frame));
         case IrConditional choice:
           return this.Evaluate((bool)this.Evaluate(choice.Condition, frame) ? choice.WhenTrue : choice.WhenFalse, frame);
         case IrArrayLoad load:
@@ -185,17 +316,156 @@ public static class IrInterpreter {
           if (count < 0)
             throw new IrTrapException(IrTrap.IntegerOverflow);
 
-          return creation.Type.Element!.Kind switch {
-            IrTypeKind.I32 => new int[count],
-            IrTypeKind.U32 => new uint[count],
-            _ => new byte[count]
-          };
+          return Array.CreateInstance(HostType(creation.Type.Element!), count);
         case IrCall call:
           var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
-          return this.Invoke(functions[call.Function], arguments)!;
+          return this.Invoke(program.Functions[call.Function], arguments)!;
+        case IrStep step:
+          return this.Step(step, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }
+    }
+
+    private object? Intrinsic(IrIntrinsic intrinsic, Frame frame) {
+      var arguments = intrinsic.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
+      switch (intrinsic.Op) {
+        case IrIntrinsicOp.ArrayOf:
+          return ArrayOf(intrinsic.Type.Element!, arguments);
+        case IrIntrinsicOp.ArrayCopy:
+          Copy((Array)arguments[0], (long)arguments[1], (Array)arguments[2], (long)arguments[3], (long)arguments[4]);
+          return null;
+        case IrIntrinsicOp.ArrayFill:
+          var filled = (Array)arguments[0];
+          for (var index = 0; index < filled.Length; ++index)
+            Store(filled, index, arguments[1]);
+
+          return null;
+        case IrIntrinsicOp.ArrayClear:
+          var cleared = (Array)arguments[0];
+          Array.Clear(cleared);
+          return null;
+        default:
+          return arguments[0] switch {
+            float single => Single(intrinsic.Op, single, arguments),
+            double number => Double(intrinsic.Op, number, arguments),
+            _ => Integer(intrinsic, (long)arguments[0], arguments)
+          };
+      }
+    }
+
+    private static object Single(IrIntrinsicOp op, float value, object[] arguments) => op switch {
+      // The arms are of different types; without the first cast the compiler would convert them all to one.
+      IrIntrinsicOp.Abs => (object)MathF.Abs(value),
+      IrIntrinsicOp.Min => MathF.Min(value, (float)arguments[1]),
+      IrIntrinsicOp.Max => MathF.Max(value, (float)arguments[1]),
+      IrIntrinsicOp.Sign => Sign(value),
+      IrIntrinsicOp.Sqrt => MathF.Sqrt(value),
+      IrIntrinsicOp.Floor => MathF.Floor(value),
+      IrIntrinsicOp.Ceiling => MathF.Ceiling(value),
+      IrIntrinsicOp.Truncate => MathF.Truncate(value),
+      IrIntrinsicOp.RoundEven => MathF.Round(value),
+      IrIntrinsicOp.RoundAway => MathF.Round(value, MidpointRounding.AwayFromZero),
+      _ => (long)BitConverter.SingleToInt32Bits(value)
+    };
+
+    private static object Double(IrIntrinsicOp op, double value, object[] arguments) => op switch {
+      IrIntrinsicOp.Abs => (object)Math.Abs(value),
+      IrIntrinsicOp.Min => Math.Min(value, (double)arguments[1]),
+      IrIntrinsicOp.Max => Math.Max(value, (double)arguments[1]),
+      IrIntrinsicOp.Sign => Sign(value),
+      IrIntrinsicOp.Sqrt => Math.Sqrt(value),
+      IrIntrinsicOp.Floor => Math.Floor(value),
+      IrIntrinsicOp.Ceiling => Math.Ceiling(value),
+      IrIntrinsicOp.Truncate => Math.Truncate(value),
+      IrIntrinsicOp.RoundEven => Math.Round(value),
+      IrIntrinsicOp.RoundAway => Math.Round(value, MidpointRounding.AwayFromZero),
+      _ => BitConverter.DoubleToInt64Bits(value)
+    };
+
+    /// <summary>The sign of a floating-point number as the IR carries an <c>i32</c>; a NaN has none.</summary>
+    private static long Sign(double value)
+      => double.IsNaN(value) ? throw new IrTrapException(IrTrap.InvalidOperation) : Math.Sign(value);
+
+    private static object Integer(IrIntrinsic intrinsic, long value, object[] arguments) {
+      var type = intrinsic.Arguments[0].Type;
+      var number = IrOperators.Number(type, value);
+      var wide = type.IsLong;
+      switch (intrinsic.Op) {
+        case IrIntrinsicOp.Abs:
+          return number == IrOperators.Minimum(type) ? throw new IrTrapException(IrTrap.IntegerOverflow) : Math.Abs(value);
+        case IrIntrinsicOp.Min:
+          return number <= IrOperators.Number(type, (long)arguments[1]) ? value : arguments[1];
+        case IrIntrinsicOp.Max:
+          return number >= IrOperators.Number(type, (long)arguments[1]) ? value : arguments[1];
+        case IrIntrinsicOp.Sign:
+          return (long)Math.Sign(value);
+        case IrIntrinsicOp.RotateLeft:
+          var left = (int)(long)arguments[1];
+          return wide ? (long)BitOperations.RotateLeft((ulong)value, left) : BitOperations.RotateLeft((uint)value, left);
+        case IrIntrinsicOp.RotateRight:
+          var right = (int)(long)arguments[1];
+          return wide ? (long)BitOperations.RotateRight((ulong)value, right) : BitOperations.RotateRight((uint)value, right);
+        case IrIntrinsicOp.PopCount:
+          return (long)BitOperations.PopCount((ulong)value);
+        case IrIntrinsicOp.LeadingZeroCount:
+          return (long)(wide ? BitOperations.LeadingZeroCount((ulong)value) : BitOperations.LeadingZeroCount((uint)value));
+        case IrIntrinsicOp.TrailingZeroCount:
+          return (long)(wide ? BitOperations.TrailingZeroCount((ulong)value) : BitOperations.TrailingZeroCount((uint)value));
+        case IrIntrinsicOp.Log2:
+          return (long)BitOperations.Log2((ulong)value);
+        case IrIntrinsicOp.BigMul:
+          return value * (long)arguments[1];
+        default:
+          return wide ? BitConverter.Int64BitsToDouble(value) : (object)BitConverter.Int32BitsToSingle((int)value);
+      }
+    }
+
+    /// <summary>
+    /// Copies element by element, from the end when the target lies behind the source in the same
+    /// array, which is the order that reads every element before it is overwritten.
+    /// </summary>
+    private static void Copy(Array source, long from, Array target, long to, long length) {
+      if (from < 0 || to < 0 || length < 0 || from + length > source.Length || to + length > target.Length)
+        throw new IrTrapException(IrTrap.IndexOutOfRange);
+
+      var backwards = ReferenceEquals(source, target) && from < to;
+      for (var step = 0L; step < length; ++step) {
+        var offset = (int)(backwards ? length - 1 - step : step);
+        Store(target, (int)to + offset, Load(source, (int)from + offset));
+      }
+    }
+
+    private object Step(IrStep step, Frame frame) {
+      object before;
+      object after;
+      if (step.Target is IrArrayLoad element) {
+        var array = (Array)this.Evaluate(element.Array, frame);
+        var index = Checked(array, (long)this.Evaluate(element.Index, frame));
+        before = Load(array, index);
+        after = Stepped(step, before);
+        Store(array, index, after);
+      } else {
+        var local = ((IrLocalRef)step.Target).Local;
+        before = frame.Locals[local];
+        after = Stepped(step, before);
+        frame.Locals[local] = after;
+      }
+
+      return step.Postfix ? before : after;
+    }
+
+    private static object Stepped(IrStep step, object before) {
+      var one = step.Increment ? 1 : -1;
+      switch (before) {
+        case float single:
+          return single + one;
+        case double number:
+          return number + one;
+      }
+
+      var result = IrOperators.Number(step.Type, (long)before) + one;
+      return step.Trap ? Fit(step.Type, result) : IrOperators.Wrap(step.Type, (long)result);
     }
 
     private object Binary(IrBinary binary, Frame frame) {
@@ -212,9 +482,17 @@ public static class IrInterpreter {
         return binary.Op == IrBinaryOp.Equal ? first.Equals(second) : !first.Equals(second);
 
       var type = binary.Left.Type;
+      if (type == IrType.F32)
+        return Binary(binary.Op, (float)first, (float)second);
+
+      if (type == IrType.F64)
+        return Binary(binary.Op, (double)first, (double)second);
+
       var left = (long)first;
       var right = (long)second;
-      var count = (int)(right & 31);
+      var a = IrOperators.Number(type, left);
+      var b = IrOperators.Number(type, right);
+      var count = (int)right & (type.Bits - 1);
       switch (binary.Op) {
         case IrBinaryOp.Add:
           return IrOperators.Wrap(type, left + right);
@@ -222,12 +500,18 @@ public static class IrInterpreter {
           return IrOperators.Wrap(type, left - right);
         case IrBinaryOp.Multiply:
           return IrOperators.Wrap(type, left * right);
+        case IrBinaryOp.AddChecked:
+          return Fit(type, a + b);
+        case IrBinaryOp.SubtractChecked:
+          return Fit(type, a - b);
+        case IrBinaryOp.MultiplyChecked:
+          return Fit(type, a * b);
         case IrBinaryOp.Divide:
-          CheckDivision(left, right);
-          return IrOperators.Wrap(type, left / right);
+          CheckDivision(type, a, b);
+          return (long)(a / b);
         case IrBinaryOp.Remainder:
-          CheckDivision(left, right);
-          return IrOperators.Wrap(type, left % right);
+          CheckDivision(type, a, b);
+          return (long)(a % b);
         case IrBinaryOp.And:
           return left & right;
         case IrBinaryOp.Or:
@@ -236,30 +520,114 @@ public static class IrInterpreter {
           return left ^ right;
         case IrBinaryOp.ShiftLeft:
           return IrOperators.Wrap(type, left << count);
-        case IrBinaryOp.ShiftRight:
+        case IrBinaryOp.ShiftRight when type.IsSigned:
           return left >> count;
-        case IrBinaryOp.ShiftRightLogical:
-          return IrOperators.Wrap(type, (long)((uint)left >> count));
+        case IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical:
+          return IrOperators.Wrap(type, (long)(((ulong)left & (ulong.MaxValue >> (64 - type.Bits))) >> count));
         case IrBinaryOp.Equal:
-          return left == right;
+          return a == b;
         case IrBinaryOp.NotEqual:
-          return left != right;
+          return a != b;
         case IrBinaryOp.Less:
-          return left < right;
+          return a < b;
         case IrBinaryOp.LessOrEqual:
-          return left <= right;
+          return a <= b;
         case IrBinaryOp.Greater:
-          return left > right;
+          return a > b;
         default:
-          return left >= right;
+          return a >= b;
       }
     }
 
-    private static void CheckDivision(long dividend, long divisor) {
+    /// <summary>
+    /// An operator on binary32 numbers. C# computes it in binary32, so every result is rounded once,
+    /// to binary32, as the IR requires.
+    /// </summary>
+    private static object Binary(IrBinaryOp op, float left, float right) => op switch {
+      IrBinaryOp.Add => left + right,
+      IrBinaryOp.Subtract => left - right,
+      IrBinaryOp.Multiply => left * right,
+      IrBinaryOp.Divide => left / right,
+      IrBinaryOp.Remainder => left % right,
+      _ => Compare(op, left, right)
+    };
+
+    private static object Binary(IrBinaryOp op, double left, double right) => op switch {
+      IrBinaryOp.Add => left + right,
+      IrBinaryOp.Subtract => left - right,
+      IrBinaryOp.Multiply => left * right,
+      IrBinaryOp.Divide => left / right,
+      IrBinaryOp.Remainder => left % right,
+      _ => Compare(op, left, right)
+    };
+
+    /// <summary>A comparison of floating-point numbers; a binary32 pair compares the same when widened.</summary>
+    private static bool Compare(IrBinaryOp op, double left, double right) => op switch {
+      IrBinaryOp.Equal => left == right,
+      IrBinaryOp.NotEqual => left != right,
+      IrBinaryOp.Less => left < right,
+      IrBinaryOp.LessOrEqual => left <= right,
+      IrBinaryOp.Greater => left > right,
+      _ => left >= right
+    };
+
+    private static object Convert(IrConvert conversion, object operand) {
+      var from = conversion.Operand.Type;
+      var to = conversion.Type;
+      if (from.IsFloat) {
+        var number = operand is float single ? single : (double)operand;
+        if (to == IrType.F32)
+          return (float)number;
+
+        if (to == IrType.F64)
+          return number;
+
+        return Whole(to, number, conversion.Contract == IrConversion.Trap);
+      }
+
+      var value = (long)operand;
+      if (to == IrType.F32)
+        return from == IrType.U64 ? (float)(ulong)value : (float)value;
+
+      if (to == IrType.F64)
+        return from == IrType.U64 ? (double)(ulong)value : (double)value;
+
+      return conversion.Contract == IrConversion.Trap
+        ? Fit(to, IrOperators.Number(from, value))
+        : IrOperators.Wrap(to, value);
+    }
+
+    /// <summary>
+    /// A floating-point number as an integer: truncated towards zero, and when the truncated number is
+    /// not a value of the type either the overflow trap or the nearest value of the type, with a NaN
+    /// becoming 0. Both bounds are powers of two, which a double holds exactly.
+    /// </summary>
+    private static long Whole(IrType type, double number, bool trap) {
+      var whole = Math.Truncate(number);
+      var low = (double)IrOperators.Minimum(type);
+      var limit = (double)(IrOperators.Maximum(type) + 1);
+      if (whole >= low && whole < limit)
+        return (long)(Int128)whole;
+
+      if (trap)
+        throw new IrTrapException(IrTrap.IntegerOverflow);
+
+      return double.IsNaN(number) ? 0 : (long)(number < 0 ? IrOperators.Minimum(type) : IrOperators.Maximum(type));
+    }
+
+    /// <summary>The number as a value of the type, or the overflow trap when it is not one.</summary>
+    private static long Fit(IrType type, Int128 value) {
+      if (value < IrOperators.Minimum(type) || value > IrOperators.Maximum(type))
+        throw new IrTrapException(IrTrap.IntegerOverflow);
+
+      return (long)value;
+    }
+
+    private static void CheckDivision(IrType type, Int128 dividend, Int128 divisor) {
       if (divisor == 0)
         throw new IrTrapException(IrTrap.DivideByZero);
 
-      if (dividend == int.MinValue && divisor == -1)
+      if (type.IsSigned && dividend == IrOperators.Minimum(type) && divisor == -1)
         throw new IrTrapException(IrTrap.IntegerOverflow);
     }
 
@@ -270,24 +638,23 @@ public static class IrInterpreter {
       return (int)index;
     }
 
-    private static object Load(Array array, int index) {
-      var element = array.GetType().GetElementType();
-      if (element == typeof(int))
-        return (long)((int[])array)[index];
+    private static object Load(Array array, int index) => Internal(array.GetValue(index)!);
 
-      return element == typeof(uint) ? (long)((uint[])array)[index] : (long)((byte[])array)[index];
-    }
+    private static void Store(Array array, int index, object value)
+      => array.SetValue(External(array.GetType().GetElementType()!, value), index);
 
-    private static void Store(Array array, int index, long value) {
-      var element = array.GetType().GetElementType();
-      if (element == typeof(int))
-        ((int[])array)[index] = (int)value;
-      else if (element == typeof(uint))
-        ((uint[])array)[index] = (uint)value;
-      else
-        ((byte[])array)[index] = (byte)value;
-    }
+  }
 
+  /// <summary>
+  /// How a statement ended. <see cref="Break"/> and <see cref="Return"/> both end a loop; masking with
+  /// <see cref="Return"/> tells the loop's own end apart: a break ends there, a return goes on.
+  /// </summary>
+  [Flags]
+  private enum Flow {
+    Next = 0,
+    Return = 1,
+    Break = 2,
+    Continue = 4
   }
 
   private sealed class Frame {

@@ -87,7 +87,7 @@ public sealed class TranslateToCSharpTests {
   }
 
   /// <summary>What the frontend refuses is refused whatever the target is.</summary>
-  [TestCase("public static long F(long a) => a + 1;", TranslateCommand.UnsupportedConstruct, "PLY1002")]
+  [TestCase("public static decimal F(decimal a) => a + 1;", TranslateCommand.UnsupportedConstruct, "PLY1002")]
   [TestCase("public static int F( => 1;", TranslateCommand.InvalidSource, "PLY1000")]
   public void RefusedSource_WritesNothing(string method, int expected, string code) {
     var source = Path.Combine(this._directory, "Snippet.cs");
@@ -95,6 +95,34 @@ public sealed class TranslateToCSharpTests {
     var (exitCode, output, error) = Invoke("translate", source, "--from", "csharp", "--to", "csharp", "--output", this._out);
     Assert.That((exitCode, output), Is.EqualTo((expected, "")));
     Assert.That(error, Does.Contain($"error {code}: "));
+    Assert.That(Directory.Exists(this._out), Is.False);
+  }
+
+  /// <summary>
+  /// What the C# frontend imports beyond the first prototype - the wider types, the checked operators,
+  /// the further statements, constants and library operations - is IR this backend does not write
+  /// yet: exit code 3 with PLY1052, and nothing is written.
+  /// </summary>
+  [TestCase("public static long F(long a) => a + 1;", "i64")]
+  [TestCase("public static double F(double a) => a * 0.5;", "f64")]
+  [TestCase("public static char F(char a) => a;", "u16")]
+  [TestCase("public static int F(int a) => checked(a + 1);", "AddChecked")]
+  [TestCase("public static byte F(int a) => checked((byte)a);", "IrConvert with the contract Trap")]
+  [TestCase("public static int F(int a) { do { a--; } while (a > 0); return a; }", "IrDoWhile")]
+  [TestCase("public static int F(int a) { switch (a) { case 1: return 2; } return a; }", "IrSwitch")]
+  [TestCase("public static int F(int a) { while (a > 0) { a--; if (a == 3) break; } return a; }", "IrBreak")]
+  [TestCase("public static int F(int a) { for (int i = 0; i < a; ++i) { continue; } return a; }", "IrFor")]
+  [TestCase("public static int F(int a) => a++;", "IrStep")]
+  [TestCase("static readonly int[] T = { 1 }; public static int F(int a) => T[a];", "IrModuleConst")]
+  [TestCase("public static int[] F(int a) => new[] { a };", "IrIntrinsic")]
+  [TestCase("public static int F(int a) => System.Math.Abs(a);", "IrIntrinsic")]
+  public void WidenedSource_IsRefusedByTheBackend(string methods, string what) {
+    var source = Path.Combine(this._directory, "Snippet.cs");
+    File.WriteAllText(source, PrototypeFixture.Wrap(methods));
+    var (exitCode, output, error) = Invoke("translate", source, "--from", "csharp", "--to", "csharp", "--output", this._out);
+    Assert.That((exitCode, output), Is.EqualTo((TranslateCommand.UnsupportedConstruct, "")));
+    Assert.That(error, Does.Contain($"error PLY1052: '{what}' is not supported by the C# backend yet"));
+    Assert.That(error.Split('\n', System.StringSplitOptions.RemoveEmptyEntries), Has.All.StartsWith("error PLY1052: "));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 

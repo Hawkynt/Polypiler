@@ -33,6 +33,18 @@ public sealed class CSharpToJavaScriptTests {
     "An unknown target language is a usage error"
   ];
 
+  private static readonly string[] _wideScenarios = [
+    "A translated algorithm matches its published value",
+    "64-bit arithmetic wraps",
+    "Mixed uint and int widens to long as in C#",
+    "Float arithmetic is rounded to binary32 after every operation",
+    "continue still runs the for increment",
+    "A switch selects by constant label without fall-through",
+    "A checked addition traps",
+    "A transcendental function is refused",
+    "Writing to a constant table is refused"
+  ];
+
   private string _directory = "";
 
   [SetUp]
@@ -44,12 +56,13 @@ public sealed class CSharpToJavaScriptTests {
   [TearDown]
   public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
 
-  /// <summary>Ensures the feature and its NUnit bindings stay in agreement.</summary>
-  [Test]
-  public void FeatureScenarios_HaveBindings() {
-    var feature = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests/features/prototype/csharp-to-javascript.feature"));
+  /// <summary>Ensures the features and their NUnit bindings stay in agreement.</summary>
+  [TestCase("csharp-to-javascript.feature", false)]
+  [TestCase("csharp-to-javascript-wide.feature", true)]
+  public void FeatureScenarios_HaveBindings(string file, bool wide) {
+    var feature = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests/features/prototype", file));
     var scenarios = Regex.Matches(feature, @"(?m)^  Scenario(?: Outline)?: (.+?)\r?$").Select(match => match.Groups[1].Value.Trim());
-    Assert.That(scenarios, Is.EqualTo(_scenarios));
+    Assert.That(scenarios, Is.EqualTo(wide ? _wideScenarios : _scenarios));
   }
 
   /// <summary>Scenario outline: A translated checksum matches its published value.</summary>
@@ -67,13 +80,109 @@ public sealed class CSharpToJavaScriptTests {
   public void TranslatedNumbers_MatchTheirValue(string method, object[] arguments, string expected)
     => this.TranslatedFixture_Returns("Numbers", new PrototypeCall(method, arguments), expected);
 
-  private void TranslatedFixture_Returns(string fixture, PrototypeCall call, string expected) {
-    File.Copy(PrototypeFixture.PathOf(fixture), Path.Combine(this._directory, fixture + ".cs"));
-    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", fixture + ".cs", "--from", "csharp", "--to", "javascript", "--output", "out");
-    Assert.That(exitCode, Is.Zero, output);
-    Assert.That(File.Exists(Path.Combine(this._directory, "out", fixture + ".mjs")), Is.True);
+  /// <summary>Scenario outline of the wide feature: A translated algorithm matches its published value.</summary>
+  [TestCase("wide/Fnv1a64", "Hash", "a", "12638187200555641996")]
+  [TestCase("wide/Fnv1a64", "Hash", "", "14695981039346656037")]
+  [TestCase("wide/Crc16", "Compute", "123456789", "10673")]
+  [TestCase("wide/Crc32Table", "Compute", "123456789", "3421780262")]
+  public void TranslatedAlgorithm_MatchesItsPublishedValue(string fixture, string method, string text, string expected) {
+    var call = new PrototypeCall(method, [PrototypeCases.Text(text)]);
+    this.TranslatedFixture_Returns(fixture, call, expected);
+    Assert.That(PrototypeFixture.InterpretedOutcome(PrototypeFixture.Imported(fixture), call), Does.StartWith(expected + " | "));
+  }
 
-    var result = Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), fixture + ".mjs", [call]).Single();
+  /// <summary>Scenario outline of the wide feature: the row of SplitMix64, whose argument is a number.</summary>
+  [Test]
+  public void TranslatedSplitMix64_MatchesItsPublishedValue() {
+    var call = new PrototypeCall("First", [0UL]);
+    this.TranslatedFixture_Returns("wide/SplitMix64", call, "16294208416658607535");
+    Assert.That(PrototypeFixture.InterpretedOutcome(PrototypeFixture.Imported("wide/SplitMix64"), call), Is.EqualTo("16294208416658607535"));
+  }
+
+  /// <summary>Scenario: 64-bit arithmetic wraps.</summary>
+  [Test]
+  public void Arithmetic64Bit_Wraps() {
+    const string method = "public static ulong F(ulong a) => a * 0x100000001B3UL + 1UL;";
+    Assert.That(this.TranslateSnippet(method, new PrototypeCall("F", [ulong.MaxValue])), Is.EqualTo("18446742974197923406"));
+    Assert.That(IrInterpreter.Call(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), "F", [ulong.MaxValue]), Is.EqualTo(18446742974197923406UL));
+  }
+
+  /// <summary>Scenario: Mixed uint and int widens to long as in C#.</summary>
+  [Test]
+  public void MixedUIntAndInt_WidensToLong() {
+    const string method = "public static long F(uint a, int b) => a + b;";
+    Assert.That(this.TranslateSnippet(method, new PrototypeCall("F", [4294967295u, -1])), Is.EqualTo("4294967294"));
+    Assert.That(IrInterpreter.Call(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), "F", [4294967295u, -1]), Is.EqualTo(4294967294L));
+    Assert.That(File.ReadAllText(Path.Combine(this._directory, "out", "Snippet.mjs")), Does.Contain("// F(a: number, b: number): bigint"));
+  }
+
+  /// <summary>Scenario: Float arithmetic is rounded to binary32 after every operation.</summary>
+  [Test]
+  public void FloatArithmetic_IsRoundedToBinary32AfterEveryOperation() {
+    const string method = "public static float F(float a, float b) => a * b + a;";
+    var call = new PrototypeCall("F", [16777217f, 3f]);
+    var compiled = PrototypeFixture.CompiledOutcome("wide/OperatorsWide", new PrototypeCall("MultiplyAdd", call.Arguments));
+    Assert.That(PrototypeFixture.SourceOf("wide/OperatorsWide"), Does.Contain("public static float MultiplyAdd(float a, float b) => a * b + a;"));
+    Assert.That(this.TranslateSnippet(method, call), Is.EqualTo(compiled));
+    Assert.That(PrototypeFixture.InterpretedOutcome(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), call), Is.EqualTo(compiled));
+    Assert.That(File.ReadAllText(Path.Combine(this._directory, "out", "Snippet.mjs")), Does.Contain("return Math.fround(Math.fround(a * b) + a);"));
+  }
+
+  /// <summary>Scenario: continue still runs the for increment.</summary>
+  [Test]
+  public void Continue_StillRunsTheForIncrement() {
+    const string method = "public static int F(int n) { int s = 0; for (int i = 0; i < n; i++) { if ((i & 1) == 0) continue; s += i; } return s; }";
+    Assert.That(this.TranslateSnippet(method, new PrototypeCall("F", [10])), Is.EqualTo("25"));
+    Assert.That(IrInterpreter.Call(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), "F", [10]), Is.EqualTo(25));
+  }
+
+  /// <summary>Scenario: A switch selects by constant label without fall-through.</summary>
+  [Test]
+  public void Switch_SelectsByConstantLabelWithoutFallThrough() {
+    Assert.That(PrototypeFixture.SourceOf("wide/RunLength"), Does.Contain("switch (state) {").And.Contain("default:"));
+    this.Node_Interpreter_AndCompiledFixture_Agree("wide/RunLength");
+    var decode = new PrototypeCall("Decode", [new byte[] { 0x02, 1, 2, 3, 0x80, 9, 0xFF, 5 }, new byte[8]]);
+    Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "RunLength.mjs", [decode], true).Single(),
+      Is.EqualTo("6 | [2,1,2,3,128,9,255,5] | [1,2,3,9,9,9,0,0]"));
+  }
+
+  /// <summary>Scenario: A transcendental function is refused.</summary>
+  [Test]
+  public void TranscendentalFunction_IsRefused() {
+    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap("public static double F(double x) => System.Math.Sin(x);"));
+    Assert.That(exitCode, Is.EqualTo(3));
+    Assert.That(output, Does.Contain("PLY1002").And.Contain("Math.Sin"));
+    Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
+    Assert.That(Directory.GetFiles(this._directory, "*", SearchOption.AllDirectories), Is.EqualTo(new[] { Path.Combine(this._directory, "Snippet.cs") }));
+  }
+
+  /// <summary>Scenario: Writing to a constant table is refused.</summary>
+  [Test]
+  public void WritingToAConstantTable_IsRefused() {
+    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap(
+      "static readonly uint[] T = { 1, 2 }; public static void F() { T[0] = 3; }"));
+    Assert.That(exitCode, Is.EqualTo(3));
+    Assert.That(output, Does.Contain("PLY1002").And.Contain("a write to the static readonly array 'T'"));
+    Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
+  }
+
+  /// <summary>Scenario: A checked addition traps.</summary>
+  [Test]
+  public void CheckedAddition_Traps() {
+    const string method = "public static int F(int a, int b) => checked(a + b);";
+    Assert.That(this.TranslateSnippet(method, new PrototypeCall("F", [2147483647, 1])), Is.EqualTo("trap: integer overflow"));
+    Assert.That(
+      () => IrInterpreter.Call(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), "F", [2147483647, 1]),
+      Throws.TypeOf<IrTrapException>().With.Property(nameof(IrTrapException.Trap)).EqualTo(IrTrap.IntegerOverflow));
+  }
+
+  private void TranslatedFixture_Returns(string fixture, PrototypeCall call, string expected) {
+    File.Copy(PrototypeFixture.PathOf(fixture), Path.Combine(this._directory, PrototypeFixture.ClassOf(fixture) + ".cs"));
+    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.ClassOf(fixture) + ".cs", "--from", "csharp", "--to", "javascript", "--output", "out");
+    Assert.That(exitCode, Is.Zero, output);
+    Assert.That(File.Exists(Path.Combine(this._directory, "out", PrototypeFixture.ClassOf(fixture) + ".mjs")), Is.True);
+
+    var result = Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), PrototypeFixture.ClassOf(fixture) + ".mjs", [call], true).Single();
     var unchanged = PrototypeFixture.Outcome(null, call.Arguments)["void".Length..];
     Assert.That(result, Is.EqualTo(expected + unchanged));
     Assert.That(PrototypeFixture.CompiledOutcome(fixture, call), Is.EqualTo(expected + unchanged));
@@ -109,7 +218,7 @@ public sealed class CSharpToJavaScriptTests {
   /// <summary>Scenario: An unsupported construct is refused and nothing is written.</summary>
   [Test]
   public void UnsupportedConstruct_IsRefusedAndNothingIsWritten() {
-    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap("public static long F(long a) => a + 1;"));
+    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap("public static decimal F(decimal a) => a + 1;"));
     Assert.That(exitCode, Is.EqualTo(3));
     Assert.That(output, Does.Contain("PLY1002").And.Contain("Snippet.cs(1,"));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
@@ -143,7 +252,7 @@ public sealed class CSharpToJavaScriptTests {
   [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
   public void Node_Interpreter_AndCompiledFixture_Agree(string fixture) {
     var calls = PrototypeCases.For(fixture);
-    var module = PrototypeFixture.Import(fixture + ".cs", PrototypeFixture.SourceOf(fixture));
+    var module = PrototypeFixture.Imported(fixture);
     var node = this.TranslateFixture(fixture, calls);
     var mismatches = new List<string>();
     for (var index = 0; index < calls.Count; ++index) {
@@ -172,13 +281,13 @@ public sealed class CSharpToJavaScriptTests {
     var (exitCode, text) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.PathOf(fixture), "--from", "csharp", "--to", "javascript", "--output", output);
     TestContext.Out.WriteLine($"{fixture}: translated in {watch.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
-    return Toolchain.NodeOutcomes(output, fixture + ".mjs", calls);
+    return Toolchain.NodeOutcomes(output, PrototypeFixture.ClassOf(fixture) + ".mjs", calls, true);
   }
 
   private string TranslateSnippet(string method, PrototypeCall call) {
     var (exitCode, text) = this.TranslateText(PrototypeFixture.Wrap(method));
     Assert.That(exitCode, Is.Zero, text);
-    return Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "Snippet.mjs", [call]).Single();
+    return Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "Snippet.mjs", [call], true).Single();
   }
 
   private (int ExitCode, string Output) TranslateText(string source) {
