@@ -1,0 +1,13 @@
+host: Linux 7.2.6-arch2-1 x86_64
+cpu: 11th Gen Intel(R) Core(TM) i9-11950H @ 2.60GHz
+glibc: ldd (GNU libc) 2.44
+gcc: gcc (GCC) 16.2.1 20260810
+rust: rustc 1.99.0 (b940084d7 2026-09-28) (Arch Linux rust 1:1.99.0-3)
+go: go version go1.27.2-X:nodwarf5 linux/amd64
+jdk: openjdk version "27" 2026-09-15
+dotnet-sdk: 10.0.112
+node: v22.23.3
+python: Python 3.13.1
+perl: v5.42.2
+mpfr: 4.2.2
+inputs.txt sha256: 1ae296eac784963a064fc7062090b4d6f88b11802df3d6b4ff25f2f5c8d8e26b
