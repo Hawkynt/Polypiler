@@ -398,12 +398,12 @@ internal sealed class Lowering(string path, SemanticModel model) {
   /// it, and its type only has to be one of the subset.
   /// </summary>
   private void LocalDeclaration(LocalDeclarationStatementSyntax declaration, List<IrStmt> into, List<IrStmt>? scope) {
-    var first = declaration.GetFirstToken();
-    if (declaration.IsConst && declaration.Modifiers.Count == 1) {
+    if (declaration.IsConst) {
       Map(model.GetTypeInfo(declaration.Declaration.Type).Type, declaration.Declaration.Type);
       return;
     }
 
+    var first = declaration.GetFirstToken();
     if (first != declaration.Declaration.GetFirstToken())
       throw new UnsupportedException(declaration, first.Text);
 

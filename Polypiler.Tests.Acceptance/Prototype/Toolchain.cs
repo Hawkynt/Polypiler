@@ -24,12 +24,14 @@ internal static class Toolchain {
   /// An argument is a JSON number or truth value, or an object: <c>{t:"n"}</c> a 64-bit integer in
   /// decimal that becomes a <c>BigInt</c>, <c>{t:"f"}</c> the 64 bits of a double in hexadecimal,
   /// <c>{t:"a"}</c> a typed array of the element kind <c>k</c>. A number that is not an integer is
-  /// printed as its bits, so that two results are equal exactly when they are the same double.
+  /// printed as its bits, so that two results are equal exactly when they are the same double. With
+  /// the argument <c>exact</c> that includes the negative zero; without it -0 is printed as the 0 it
+  /// is to code that computes in integers.
   /// </para>
   /// </summary>
   private const string Driver = """
     import { readFileSync } from 'node:fs';
-    const [modulePath, callsPath] = process.argv.slice(2);
+    const [modulePath, callsPath, zero] = process.argv.slice(2);
     const module = await import(modulePath);
     const arrays = {
       i8: Int8Array, u8: Uint8Array, i16: Int16Array, u16: Uint16Array, i32: Int32Array, u32: Uint32Array,
@@ -41,7 +43,7 @@ internal static class Toolchain {
       : value.t === 'f' ? (bits.setBigUint64(0, BigInt('0x' + value.v)), bits.getFloat64(0))
       : arrays[value.k].from(value.v.map(decode));
     const showNumber = value => {
-      if (Number.isSafeInteger(value) && !Object.is(value, -0)) return String(value);
+      if (Number.isSafeInteger(value) && !(zero === 'exact' && Object.is(value, -0))) return String(value);
       if (value !== value) return 'NaN';
       bits.setFloat64(0, value);
       return 'f:' + bits.getBigUint64(0).toString(16).padStart(16, '0');
@@ -76,12 +78,20 @@ internal static class Toolchain {
   public static string NodeVersion() => Node(Path.GetTempPath(), "--version").Output.Trim();
 
   /// <summary>Runs calls through a generated module in <c>node</c> and returns one outcome per call.</summary>
-  public static IReadOnlyList<string> NodeOutcomes(string directory, string module, IReadOnlyList<PrototypeCall> calls) {
+  /// <param name="directory">The directory the driver and the calls are written to.</param>
+  /// <param name="module">The module, relative to the directory or absolute.</param>
+  /// <param name="calls">The calls, in the order of the outcomes.</param>
+  /// <param name="negativeZero">
+  /// Whether a result of -0 is told from 0. It is for a module that computes in floating point, where
+  /// the two are different results; an integer has one zero, and JavaScript that computes one may
+  /// well hold it as -0.
+  /// </param>
+  public static IReadOnlyList<string> NodeOutcomes(string directory, string module, IReadOnlyList<PrototypeCall> calls, bool negativeZero = false) {
     var driver = Path.Combine(directory, "driver.mjs");
     var input = Path.Combine(directory, "calls.json");
     File.WriteAllText(driver, Driver);
     File.WriteAllText(input, JsonSerializer.Serialize(calls.Select(call => new object[] { call.Method, call.Arguments.Select(Encode).ToArray() })));
-    var (exitCode, output) = Node(directory, driver, new Uri(Path.Combine(directory, module)).AbsoluteUri, input);
+    var (exitCode, output) = Node(directory, driver, new Uri(Path.Combine(directory, module)).AbsoluteUri, input, negativeZero ? "exact" : "integer");
     Assert.That(exitCode, Is.Zero, $"node failed on {module}: {output}");
     var outcomes = output.Split('\n');
     Assert.That(outcomes, Has.Length.EqualTo(calls.Count), $"node printed {outcomes.Length} outcomes for {calls.Count} calls");

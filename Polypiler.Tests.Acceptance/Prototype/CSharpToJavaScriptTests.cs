@@ -142,7 +142,7 @@ public sealed class CSharpToJavaScriptTests {
     Assert.That(PrototypeFixture.SourceOf("wide/RunLength"), Does.Contain("switch (state) {").And.Contain("default:"));
     this.Node_Interpreter_AndCompiledFixture_Agree("wide/RunLength");
     var decode = new PrototypeCall("Decode", [new byte[] { 0x02, 1, 2, 3, 0x80, 9, 0xFF, 5 }, new byte[8]]);
-    Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "RunLength.mjs", [decode]).Single(),
+    Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "RunLength.mjs", [decode], true).Single(),
       Is.EqualTo("6 | [2,1,2,3,128,9,255,5] | [1,2,3,9,9,9,0,0]"));
   }
 
@@ -182,7 +182,7 @@ public sealed class CSharpToJavaScriptTests {
     Assert.That(exitCode, Is.Zero, output);
     Assert.That(File.Exists(Path.Combine(this._directory, "out", PrototypeFixture.ClassOf(fixture) + ".mjs")), Is.True);
 
-    var result = Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), PrototypeFixture.ClassOf(fixture) + ".mjs", [call]).Single();
+    var result = Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), PrototypeFixture.ClassOf(fixture) + ".mjs", [call], true).Single();
     var unchanged = PrototypeFixture.Outcome(null, call.Arguments)["void".Length..];
     Assert.That(result, Is.EqualTo(expected + unchanged));
     Assert.That(PrototypeFixture.CompiledOutcome(fixture, call), Is.EqualTo(expected + unchanged));
@@ -281,13 +281,13 @@ public sealed class CSharpToJavaScriptTests {
     var (exitCode, text) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.PathOf(fixture), "--from", "csharp", "--to", "javascript", "--output", output);
     TestContext.Out.WriteLine($"{fixture}: translated in {watch.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
-    return Toolchain.NodeOutcomes(output, PrototypeFixture.ClassOf(fixture) + ".mjs", calls);
+    return Toolchain.NodeOutcomes(output, PrototypeFixture.ClassOf(fixture) + ".mjs", calls, true);
   }
 
   private string TranslateSnippet(string method, PrototypeCall call) {
     var (exitCode, text) = this.TranslateText(PrototypeFixture.Wrap(method));
     Assert.That(exitCode, Is.Zero, text);
-    return Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "Snippet.mjs", [call]).Single();
+    return Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "Snippet.mjs", [call], true).Single();
   }
 
   private (int ExitCode, string Output) TranslateText(string source) {

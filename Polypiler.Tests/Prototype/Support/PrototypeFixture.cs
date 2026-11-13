@@ -30,9 +30,15 @@ internal sealed record PrototypeCall(string Method, object[] Arguments) {
 /// </summary>
 internal static class PrototypeFixture {
 
+  /// <summary>
+  /// The fixtures of the first prototype: <c>int</c>, <c>uint</c> and <c>byte</c> with <c>if</c>,
+  /// <c>while</c> and <c>for</c>. Every backend writes these; the wide ones need what only some do.
+  /// </summary>
+  public static readonly string[] First = ["Adler32", "Arrays", "Crc32", "Fnv1a", "Numbers", "Operators", "Statements"];
+
   /// <summary>The names of all fixtures, which are also the names of their classes.</summary>
   public static readonly string[] Names = [
-    "Adler32", "Arrays", "Crc32", "Fnv1a", "Numbers", "Operators", "Statements",
+    .. First,
     "wide/BinarySearch", "wide/BubbleSort", "wide/Conversions", "wide/Crc16", "wide/Crc32Table", "wide/DigitSum", "wide/Fir",
     "wide/Fletcher16", "wide/Fnv1a64", "wide/Horner", "wide/Library", "wide/OperatorsWide", "wide/RunLength", "wide/SplitMix64",
     "wide/StatementsWide", "wide/Tables", "wide/Xorshift64"

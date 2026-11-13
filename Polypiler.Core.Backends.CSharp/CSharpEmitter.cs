@@ -80,6 +80,9 @@ public static class CSharpEmitter {
   /// </returns>
   public static IReadOnlyList<Diagnostic> Check(IrModule module) {
     var unknown = new List<string>();
+    if (module.Constants.Count > 0)
+      unknown.Add(nameof(IrModuleConst));
+
     foreach (var function in module.Functions) {
       Known(function.ReturnType, unknown);
       foreach (var variable in function.Parameters.Concat(function.Locals))
@@ -153,6 +156,8 @@ public static class CSharpEmitter {
       unknown.Add(unary.Op.ToString());
     else if (expression is IrBinary binary && !_binary.ContainsKey(binary.Op))
       unknown.Add(binary.Op.ToString());
+    else if (expression is IrConvert { Contract: not IrConversion.Wrap } conversion)
+      unknown.Add($"{nameof(IrConvert)} with the contract {conversion.Contract}");
 
     foreach (var operand in operands ?? [])
       Known(operand, unknown);
