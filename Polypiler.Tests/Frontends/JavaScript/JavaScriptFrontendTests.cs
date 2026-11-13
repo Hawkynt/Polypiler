@@ -246,8 +246,8 @@ public sealed class JavaScriptFrontendTests {
       Is.EqualTo("snippet.js(3,3): error PLY1101: the result of 'f' has no supported JSDoc type"));
 
   /// <summary>
-  /// The body of Cipher's RotL32, node for node: the self-coercion of a <c>uint32</c> is the value
-  /// itself, the masking is an ordinary and, and each operator has the type JavaScript gives it.
+  /// The body of Cipher's RotL32, node for node: the self-coercion of a <c>uint32</c> leaves nothing
+  /// to do, the masking is an ordinary and, and each operator has the type JavaScript gives it.
   /// </summary>
   [Test]
   public void Import_TypesOperatorsTheWayJavaScriptDoes() {
@@ -256,7 +256,6 @@ public sealed class JavaScriptFrontendTests {
     var value = new IrLocal("value", IrType.U32);
     var positions = new IrLocal("positions", IrType.I32);
     Assert.That(function.Body.Statements, Is.EqualTo(new IrStmt[] {
-      new IrAssign(value, new IrLocalRef(value)),
       new IrAssign(positions, new IrBinary(IrBinaryOp.And, new IrLocalRef(positions), Int(31))),
       new IrReturn(new IrConvert(IrType.U32, new IrBinary(
         IrBinaryOp.Or,

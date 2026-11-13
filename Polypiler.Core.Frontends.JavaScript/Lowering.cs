@@ -296,7 +296,12 @@ internal sealed partial class Lowering(string path, string source, List<Candidat
         var assigned = compound
           ? this.Combine(op, new Value(new IrLocalRef(local), false, local.Type == IrType.U8), assignment.Left, this.Expression(assignment.Right), assignment.Right, assignment)
           : this.Expression(assignment.Right);
-        into.Add(new IrAssign(local, this.To(assigned, local.Type, compound ? assignment : assignment.Right)));
+        var value = this.To(assigned, local.Type, compound ? assignment : assignment.Right);
+
+        // value = value >>> 0 on a uint32 coerces to what the variable already holds: nothing is left to do.
+        if (value != new IrLocalRef(local))
+          into.Add(new IrAssign(local, value));
+
         break;
       case MemberExpression { Computed: true } element:
         var array = this.Array(element.Object);
