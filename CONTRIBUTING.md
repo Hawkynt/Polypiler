@@ -31,6 +31,18 @@ Tests are [NUnit](https://nunit.org). New behaviour is test-first: add the faili
 pass. Keep test data deterministic (fixed seeds/strings) and generate it in setup rather than
 committing large binary fixtures.
 
+### Generated C# is compiled for the framework it names
+
+The C# backend writes for a target profile, from .NET Framework 2.0 with C# 2 to .NET 10 with C# 14.
+The tests build every generated file twice: for the running runtime, to call it, and in the profile's
+language version against the **reference assemblies of the profile's framework**, with warnings as
+errors. Those come from NuGet packages that `Polypiler.Tests/Prototype/Support/ReferenceAssemblies.props`
+downloads without referencing them (`Microsoft.NETFramework.ReferenceAssemblies.net20`/`net35`/`net46`/`net48`,
+`NETStandard.Library`, `NETStandard.Library.Ref`, `Microsoft.NETCore.App.Ref`; all MIT, test-only), so
+`dotnet restore` needs them once. A profile whose package is missing fails its tests with the name of
+the package; it is never compiled against the running runtime instead. A new profile is a new line in
+that file and in `CSharpProfile`.
+
 ### The two tiers
 
 A test belongs to the **fast tier** unless it says otherwise. That direction is deliberate: marking
