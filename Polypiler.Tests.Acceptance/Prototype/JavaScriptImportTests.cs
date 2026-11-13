@@ -280,12 +280,12 @@ public sealed class JavaScriptImportTests {
 
   /// <summary>Translates a fixture with the real executable and runs the calls through node.</summary>
   private IReadOnlyList<string> TranslateFixture(string fixture, IReadOnlyList<PrototypeCall> calls) {
-    var output = Path.Combine(this._directory, "out-" + fixture);
+    var output = Path.Combine(this._directory, "out-" + Path.GetFileName(fixture));
     var watch = Stopwatch.StartNew();
     var (exitCode, text) = Toolchain.RunPolypiler(this._directory, "translate", JavaScriptFixture.PathOf(fixture), "--from", "javascript", "--to", "javascript", "--output", output);
     TestContext.Out.WriteLine($"{fixture}: translated in {watch.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
-    return Exact(output, fixture + ".mjs", calls);
+    return Exact(output, Path.GetFileName(fixture) + ".mjs", calls);
   }
 
   /// <summary>
@@ -313,7 +313,11 @@ public sealed class JavaScriptImportTests {
     return [GeneratedCSharp.Compile(generated, false), GeneratedCSharp.Compile(generated, true)];
   }
 
-  private static string ClassNameOf(string fixture) => char.ToUpperInvariant(fixture[0]) + fixture[1..];
+  /// <summary>The name of the class a fixture becomes: its file name without the folder, with a capital.</summary>
+  private static string ClassNameOf(string fixture) {
+    var name = Path.GetFileName(fixture);
+    return char.ToUpperInvariant(name[0]) + name[1..];
+  }
 
   /// <summary>What node does for a call with a source as it is, and with the module translated from it.</summary>
   private (string Original, string Translated) OriginalAndTranslated(string source, PrototypeCall call) {

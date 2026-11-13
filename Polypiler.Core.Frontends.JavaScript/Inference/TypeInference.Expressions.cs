@@ -305,8 +305,11 @@ internal sealed partial class TypeInference {
     var wide = Wide(coercion);
     var count = right is BigIntLiteral { Value: var places } && places >= 0 && places <= 63;
 
-    // A BigInt and a number do not mix: JavaScript throws, and there is nothing to compute.
-    if (this.Of(left).Kind is not (JsKind.BigInt or JsKind.Unknown) || this.Of(right).Kind is not (JsKind.BigInt or JsKind.Unknown))
+    // Under a wrapper a BigInt and a number do not mix: JavaScript throws, and there is nothing to
+    // compute. Without one the result has no bound whatever the operands are.
+    var mixed = this.Of(left).Kind is not (JsKind.BigInt or JsKind.Unknown) || this.Of(right).Kind is not (JsKind.BigInt or JsKind.Unknown);
+    if (mixed && (wide is not null || op is not (Operator.Addition or Operator.Subtraction or Operator.Multiplication or Operator.Division or Operator.Remainder
+        or Operator.BitwiseAnd or Operator.BitwiseOr or Operator.BitwiseXor or Operator.LeftShift or Operator.RightShift)))
       return new(Plan.Invalid, JsType.Unknown);
 
     switch (op) {
@@ -315,12 +318,12 @@ internal sealed partial class TypeInference {
         return Unify(this.Of(left), this.Of(right), IrType.I64, IrType.U64) is { } compared ? new(Plan.Compare, JsType.Boolean, compared) : new(Plan.Invalid, JsType.Boolean);
       case Operator.Addition or Operator.Subtraction or Operator.Multiplication or Operator.BitwiseAnd or Operator.BitwiseOr or Operator.BitwiseXor:
         return wide is null ? new(Plan.Unbounded, JsType.UnboundedBigInt) : new(Plan.Big, wide, wide.Ir);
+      case Operator.LeftShift or Operator.RightShift when wide is null:
+        return new(Plan.Unbounded, JsType.UnboundedBigInt);
       case Operator.LeftShift when count:
-        return wide is null ? new(Plan.Unbounded, JsType.UnboundedBigInt) : new(Plan.Big, wide, wide.Ir);
+        return new(Plan.Big, wide!, wide!.Ir);
       case Operator.RightShift when count:
-        return wide is null ? new(Plan.Unbounded, JsType.UnboundedBigInt)
-          : this.Of(left) is { Kind: JsKind.BigInt, Ir: { } shifted } ? new(Plan.BigShiftRight, wide, shifted)
-          : new(Plan.Invalid, wide);
+        return this.Of(left) is { Kind: JsKind.BigInt, Ir: { } shifted } ? new(Plan.BigShiftRight, wide!, shifted) : new(Plan.Invalid, wide!);
       case Operator.Division or Operator.Remainder:
         return wide is null ? new(Plan.Unbounded, JsType.UnboundedBigInt)
           : Unify(this.Of(left), this.Of(right), IrType.I64, IrType.U64) is { } divided ? new(Plan.BigDivide, wide, divided)

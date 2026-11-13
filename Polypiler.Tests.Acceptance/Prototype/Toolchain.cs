@@ -26,7 +26,8 @@ internal static class Toolchain {
   /// <c>{t:"a"}</c> a typed array of the element kind <c>k</c>. A number that is not an integer is
   /// printed as its bits, so that two results are equal exactly when they are the same double. With
   /// the argument <c>exact</c> that includes the negative zero; without it -0 is printed as the 0 it
-  /// is to code that computes in integers.
+  /// is to code that computes in integers. An <c>Array</c> is printed like a typed array, which is
+  /// what it is once imported.
   /// </para>
   /// </summary>
   private const string Driver = """
@@ -49,7 +50,7 @@ internal static class Toolchain {
       return 'f:' + bits.getBigUint64(0).toString(16).padStart(16, '0');
     };
     const show = value => value === undefined ? 'void'
-      : ArrayBuffer.isView(value) ? `[${Array.from(value, element => show(element)).join(',')}]`
+      : ArrayBuffer.isView(value) || Array.isArray(value) ? `[${Array.from(value, element => show(element)).join(',')}]`
       : typeof value === 'number' ? showNumber(value)
       : String(value);
     const lines = [];

@@ -57,7 +57,7 @@ Words32ToBytesBE	OpCodes.js(681,9): error PLY1102: 'a call of bytes.push' is not
 BytesToWords32BE	OpCodes.js(702,9): error PLY1102: 'a call of words.push' is not supported yet
 GetByte	imported
 SetByte	imported
-Split64	OpCodes.js(738,21): error PLY1102: '& on bigint and number' is not supported yet
+Split64	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
 Combine64	imported
 AnsiToBytes	OpCodes.js(2241,27): error PLY1101: parameter 'str' of 'AnsiToBytes' has no supported JSDoc type
 BytesToAnsi	OpCodes.js(2255,17): error PLY1102: '''' is not supported yet
@@ -98,9 +98,9 @@ GetPooledArray	OpCodes.js(2851,9): error PLY1102: 'a call of result.push' is not
 ReturnToPool	imported
 TimingSafeAddMod	imported
 TimingSafeSelect	imported
-EncodeMsgLength64LE	OpCodes.js(738,21): error PLY1102: '& on bigint and number' is not supported yet
+EncodeMsgLength64LE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
 EncodeMsgLength64LE	OpCodes.js(2913,43): error PLY1102: 'split.low32' is not supported yet
-EncodeMsgLength128BE	OpCodes.js(738,21): error PLY1102: '& on bigint and number' is not supported yet
+EncodeMsgLength128BE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
 EncodeMsgLength128BE	OpCodes.js(2934,44): error PLY1102: 'split.high32' is not supported yet
 ModSafe	imported
 CreateArray	OpCodes.js(2961,25): error PLY1102: 'undefined' is not supported yet
@@ -133,7 +133,7 @@ GHashMul	OpCodes.js(3817,12): error PLY1102: 'uint8[] as a condition' is not sup
 GCMIncrement	OpCodes.js(3859,12): error PLY1102: 'uint8[] as a condition' is not supported yet
 Add64_HL	OpCodes.js(3888,14): error PLY1102: 'an object literal' is not supported yet
 Add3L64	imported
-Add3H64	OpCodes.js(3911,32): error PLY1102: '/ on bigint and number' is not supported yet
+Add3H64	OpCodes.js(3911,14): error PLY1103: the result of '(ah + bh + ch + ((lowSum / 0x100000000) | 0)) | 0' has no bounded type
 RotR64_HL	OpCodes.js(3925,16): error PLY1102: 'an object literal' is not supported yet
 RotL64_HL	OpCodes.js(3953,16): error PLY1102: 'an object literal' is not supported yet
 Swap64_HL	OpCodes.js(3978,14): error PLY1102: 'an object literal' is not supported yet
