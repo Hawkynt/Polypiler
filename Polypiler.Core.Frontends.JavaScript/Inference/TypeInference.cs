@@ -45,7 +45,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
 
     var model = new FunctionModel(candidate);
     this._models[candidate] = model;
-    this._binders[model] = new Binder(model, candidates, constants);
+    this._binders[model] = new Binder(model, candidates, constants, source);
     model.Problem = this.ReadSignature(model);
     if (model.Problem is null)
       this._binders[model].Bind();
@@ -194,8 +194,10 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         if (result == model.Result)
           return false;
 
+        if (Decides(model.Result, result))
+          model.ResultEvidence = argument ?? flow.Node;
+
         model.Result = result;
-        model.ResultEvidence = argument ?? flow.Node;
         this._known.Clear();
         return true;
       default:
@@ -209,10 +211,10 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// </summary>
   private bool Pass(Variable parameter, JsType type, Node argument) {
     var entry = JsType.Join(parameter.Entry, type);
-    if (entry != parameter.Entry) {
-      parameter.Entry = entry;
+    if (Decides(parameter.Entry, entry))
       parameter.EntryEvidence = argument;
-    }
+
+    parameter.Entry = entry;
 
     return this.Reach(parameter, type, argument);
   }
@@ -230,11 +232,19 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     if (joined == variable.Type)
       return false;
 
+    if (Decides(variable.Type, joined))
+      variable.Evidence = evidence;
+
     variable.Type = joined;
-    variable.Evidence = evidence;
     this._known.Clear();
     return true;
   }
+
+  /// <summary>
+  /// Whether a value changed what a place is in the IR, so that its expression is the evidence for
+  /// the type: a second literal that the type of the first one holds as well decides nothing.
+  /// </summary>
+  private static bool Decides(JsType before, JsType after) => before.Kind == JsKind.Unknown || before.Ir != after.Ir;
 
   /// <summary>
   /// Gives a place that values reach, but none with a type, the type of a number: it is fed only by

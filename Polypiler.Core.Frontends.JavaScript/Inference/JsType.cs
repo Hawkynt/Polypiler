@@ -137,7 +137,7 @@ internal sealed record JsType {
     JsKind.Boolean => IrType.Bool,
     JsKind.Number when this.Float == 32 => IrType.F32,
     JsKind.Number when this.Float == 64 => IrType.F64,
-    JsKind.Number => (this.IsLiteral ? _words.Skip(4) : _words).FirstOrDefault(this.Within) ?? IrType.F64,
+    JsKind.Number => (this.IsLiteral ? _words.Skip(4) : _words).First(this.Within),
     JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
     JsKind.Array => IrType.Array(this.Element!.Ir is { IsNumeric: true } element ? element : IrType.F64),
     _ => null

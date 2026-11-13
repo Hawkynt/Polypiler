@@ -369,7 +369,7 @@ internal sealed partial class Lowering {
 
     var arguments = new List<IrExpr>();
     for (var index = 0; index < call.Arguments.Count; ++index)
-      arguments.Add(this.Value(call.Arguments[index], target.Parameters[index].Entry.Ir ?? IrType.F64));
+      arguments.Add(this.Value(call.Arguments[index], target.Parameters[index].Parameter?.Type ?? this.Storable(target.Parameters[index].Entry, call.Arguments[index])));
 
     return new IrCall(callee.Name, target.ReturnType, arguments);
   }

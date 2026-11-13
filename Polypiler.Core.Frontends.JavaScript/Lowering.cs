@@ -339,12 +339,6 @@ internal sealed partial class Lowering(TypeInference types) {
         throw this.Unsupported(id, refused);
 
       var variable = (Variable)this._model.Bindings[id];
-      if (declarator.Init is { } initializer && variable.Type.Kind == JsKind.Unknown) {
-        // Nothing typed reaches the variable: the initializer is refused for what it is.
-        this.Expression(initializer);
-        throw this.Unsupported(initializer, types.Text(initializer));
-      }
-
       var local = new IrLocal(name, this.Storable(variable.Type, declarator.Init ?? id));
       var value = declarator.Init is null ? null : this.Value(declarator.Init, local.Type);
       variable.Local = local;
@@ -463,7 +457,9 @@ internal sealed partial class Lowering(TypeInference types) {
 
   /// <summary>A step of an array element: the IR's step, which reads and writes the element once and yields the value from before.</summary>
   private IrExpr StepElement(UpdateExpression step) {
-    if (step.Argument is not MemberExpression { Computed: true } element)
+    // What is stepped is a variable or a member; a member that is no element is a property, which the subset does not have.
+    var element = (MemberExpression)step.Argument;
+    if (!element.Computed)
       throw this.Unsupported(step, types.Text(step));
 
     var array = this.Array(element.Object, true);
@@ -544,7 +540,6 @@ internal sealed partial class Lowering(TypeInference types) {
     Operator.LogicalOrAssignment => "||=",
     Operator.In => "in",
     Operator.InstanceOf => "instanceof",
-    Operator.UnaryPlus => "unary +",
     Operator.TypeOf => "typeof",
     Operator.Void => "void",
     _ => "delete"

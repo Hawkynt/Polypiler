@@ -171,7 +171,7 @@ public sealed class JavaScriptInferenceTests {
     TestContext.Out.WriteLine(refusal.Output);
     TestContext.Out.WriteLine(File.ReadAllText(Path.Combine(this._directory, "out", "fnv1a64.mjs")));
     Assert.That((success.ExitCode, refusal.ExitCode), Is.EqualTo((0, 3)));
-    Assert.That(success.Output, Does.Contain("fnv1a64.mjs: type hash: local h: u64 from 'BigInt.asUintN(64, (h ^ BigInt(data[i])) * 0x100000001B3n)' at (7,9)"));
+    Assert.That(success.Output, Does.Contain("fnv1a64.mjs: type hash: local h: u64 from '0xCBF29CE484222325n' at (5,11)"));
   }
 
   /// <summary>What a call does in node on the original, in the interpreter and in node on the module the executable writes.</summary>

@@ -1,4 +1,4 @@
 hash: parameter data: u8[] from '@param {uint8[]}' at (8,22)
-hash: local value: u32 from 'Math.imul(value ^ data[i], 0x01000193) >>> 0' at (11,13)
+hash: local value: u32 from '0x811C9DC5' at (9,15)
 hash: local i: f64 from 'i++' at (10,36)
 hash: result: u32 from 'value' at (13,10)

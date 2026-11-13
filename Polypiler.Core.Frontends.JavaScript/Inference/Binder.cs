@@ -15,7 +15,7 @@ namespace Polypiler.Core.Frontends.JavaScript.Inference;
 /// name declared while it is visible is a second declaration.
 /// </para>
 /// </summary>
-internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IReadOnlyDictionary<string, ModuleConstant> constants) {
+internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IReadOnlyDictionary<string, ModuleConstant> constants, string source) {
 
   private readonly Dictionary<string, Variable> _scope = [];
   private List<string> _declared = [];
@@ -204,7 +204,8 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         break;
       case MemberExpression member:
         this.Expression(member.Object);
-        if (member.Object is Identifier { } array && model.Bindings.GetValueOrDefault(array) is Variable used && (member.Computed || member.Property is Identifier { Name: "length" }))
+        // An element or the length is taken; the name of the property is read from the source, whatever kind of name it is.
+        if (member.Object is Identifier array && model.Bindings.GetValueOrDefault(array) is Variable used && (member.Computed || source[member.Property.Start..member.Property.End] == "length"))
           used.UsedAsArray ??= member;
 
         if (member.Computed)
