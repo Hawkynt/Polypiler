@@ -81,7 +81,10 @@ generated code — a row changes only in the pull request that makes it true.
 | FreeBASIC | `-lang fb`, `-lang qb` | — | — | |
 | PHP | 8.x | — | — | |
 | Ruby | 3.x | — | — | |
-| Visual Basic | VB.NET; classic VB6/VBA separately | — | — | |
+| Visual Basic .NET | VB 16 on .NET | — | — | |
+| Visual Basic 6 | classic VB6 (source, forms excluded) | — | — | No freely available compiler: needs an oracle decision first |
+| VBA | Office VBA 7 | — | — | Shares the classic VB core; host object models are external |
+| VBScript | VBScript 5.8 (Windows Script Host) | — | — | Variant-only typing: imported through the dynamic-language path |
 | Commodore BASIC | V2 (C64); VIC-20 and C128 as profiles | — | — | |
 
 ### Bytecode, intermediate and machine-code formats
@@ -94,14 +97,35 @@ For these, the frontend *lifts* (decodes and recovers semantics) and the backend
 | JVM bytecode | class files, jars | — | — | |
 | WebAssembly | core specification, binary modules | — | — | |
 | LLVM IR | `.ll` text, `.bc` bitcode | — | — | |
+| GCC GIMPLE / GENERIC | GCC's own intermediate language, per GCC version | — | — | Feasibility study first: reached through a GCC plugin or dump, never through LLVM |
 | MOS 6502 | NMOS; 65C02 and 65C816 as variants | — | — | |
 | Zilog Z80 / Intel 8080 | | — | — | |
 | 8086 / x86-16 | real mode, DOS `MZ` and `COM` | — | — | |
-| x86 (32-bit) / x64 | integer core, BMI/POPCNT/LZCNT | — | — | |
+| x86 (32-bit) / x64 | integer core; extensions in the table below | — | — | |
 | ARM32 / Thumb, AArch64 | AAPCS, AAPCS64 | — | — | |
 | Commodore BASIC tokenized | C64 PRG; VIC-20, C128 | — | — | |
 | GW-BASIC tokenized | | — | — | |
 | Microsoft BASIC p-code | per dialect, after an inventory | — | — | |
+
+### Instruction-set extensions
+
+A CPU family is not one instruction set. Each extension is lifted and emitted separately, and a target
+profile names exactly the ones it may use; an instruction of an extension that is not lifted yet is
+preserved as an opaque operation, never dropped.
+
+| Family | Extension | Lift | Emit | Notes |
+| --- | --- | :---: | :---: | --- |
+| x86 / x64 | x87 FPU | — | — | 80-bit extended precision, stack registers |
+| x86 / x64 | MMX | — | — | 64-bit integer vectors |
+| x86 / x64 | SSE, SSE2 | — | — | 128-bit float and integer vectors; scalar float arithmetic on x64 |
+| x86 / x64 | SSE3, SSSE3, SSE4.1, SSE4.2 | — | — | horizontal operations, byte shuffle, blends, string compares, CRC32 |
+| x86 / x64 | AES-NI, PCLMULQDQ, SHA | — | — | cipher rounds, carry-less multiply, hash rounds |
+| x86 / x64 | AVX, AVX2, FMA3, F16C | — | — | 256-bit vectors, fused multiply-add, half-float conversion |
+| x86 / x64 | AVX-512 (F, BW, DQ, VL, VBMI, VNNI) | — | — | 512-bit vectors, mask registers |
+| x86 / x64 | BMI1, BMI2, POPCNT, LZCNT, ADX | — | — | bit manipulation, PEXT/PDEP, multi-precision carry chains |
+| ARM32 / AArch64 | NEON (Advanced SIMD), VFP | — | — | 128-bit vectors, floating point |
+| AArch64 | Cryptography extensions (AES, SHA, PMULL), CRC32 | — | — | |
+| AArch64 | SVE, SVE2 | — | — | scalable vectors |
 
 Every language and format above is planned in **both** directions. LLVM integration broadens access to
 LLVM-based source frontends such as Clang; it **does not** automatically expose every GCC language
