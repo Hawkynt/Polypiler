@@ -46,11 +46,16 @@ public sealed class JavaScriptDifferentialTests {
     Assert.That(_modules[fixture].Functions.Where(function => function.IsPublic).Select(function => function.Name), Is.SubsetOf(called));
   }
 
-  /// <summary>Test design 1: the published check values.</summary>
+  /// <summary>Test design 1: the published check values, of the fixtures typed in JSDoc and of the ones without a type.</summary>
   [TestCase("adler32", "compute", "Wikipedia", 0x11E60398u)]
   [TestCase("crc32", "compute", "123456789", 0xCBF43926u)]
   [TestCase("fnv1a", "hash", "a", 0xE40C292Cu)]
-  public void Checksum_MatchesItsPublishedValue(string fixture, string function, string text, uint published) {
+  [TestCase("untyped/adler32", "compute", "Wikipedia", 0x11E60398u)]
+  [TestCase("untyped/crc32", "compute", "123456789", 0xCBF43926u)]
+  [TestCase("untyped/crc32table", "compute", "123456789", 0xCBF43926u)]
+  [TestCase("untyped/fnv1a", "hash", "a", 0xE40C292Cu)]
+  [TestCase("untyped/fnv1a64", "hash", "a", 0xAF63DC4C8601EC8Cul)]
+  public void Checksum_MatchesItsPublishedValue(string fixture, string function, string text, object published) {
     var call = new PrototypeCall(function, [PrototypeCases.Text(text)]);
     Assert.That(PrototypeFixture.InterpretedOutcome(_modules[fixture], call), Is.EqualTo(PrototypeFixture.Outcome(published, call.Arguments)));
     Assert.That(JavaScriptFixture.RecordedLines(fixture), Does.Contain(JavaScriptFixture.Line(call, PrototypeFixture.Outcome(published, call.Arguments))));
@@ -97,7 +102,7 @@ public sealed class JavaScriptDifferentialTests {
   /// <summary>Test design 8: the differences cover reads and writes of an empty and a one-element array at -1 and at the length.</summary>
   [Test]
   public void Differences_CoverTheEdgesOfAnArray() {
-    var edges = JavaScriptCases.Differences().Where(difference => difference.Imported == PrototypeFixture.Trap(IrTrap.IndexOutOfRange)).ToList();
+    var edges = JavaScriptCases.Differences().Where(difference => difference.Fixture == "arrays" && difference.Imported == PrototypeFixture.Trap(IrTrap.IndexOutOfRange)).ToList();
     Assert.That(edges.Select(difference => difference.Call.Method).Distinct(),
       Is.EquivalentTo(new[] { "readByte", "readInt", "readUint", "readCoerced", "writeByte", "writeInt", "writeUint" }));
     Assert.That(edges.Select(difference => (((Array)difference.Call.Arguments[0]).Length, (int)difference.Call.Arguments[1])).Distinct(),
@@ -121,12 +126,35 @@ public sealed class JavaScriptDifferentialTests {
     }
 
     if (Environment.GetEnvironmentVariable("POLYPILER_RECORD") == "1")
-      File.WriteAllText(JavaScriptFixture.OpCodesExpectationPath, string.Join('\n', lines) + "\n");
+      JavaScriptFixture.Record(JavaScriptFixture.OpCodesExpectationPath, lines);
 
     var expected = JavaScriptFixture.OpCodesExpectation();
     Assert.That(lines, Is.EqualTo(expected.Select(line => $"{line.Function}\t{line.Status}")));
-    Assert.That(expected.Where(line => line.Status == JavaScriptFixture.Imported).Select(line => line.Function), Does.Contain("RotL32").And.Contain("RotR32"));
+
+    // Nothing that imported while every type had to stand in JSDoc is lost by inferring the types.
+    Assert.That(expected.Where(line => line.Status == JavaScriptFixture.Imported).Select(line => line.Function), Is.SupersetOf(JavaScriptFixture.ImportedWithJsDocOnly));
   }
+
+  /// <summary>
+  /// Test design 1 and 2: every parameter, local and result of a fixture has the recorded type, and
+  /// the recorded expression is the one that decided it. Run with <c>POLYPILER_RECORD=1</c> to write
+  /// the expectation after a fixture or the inference changed.
+  /// </summary>
+  [TestCaseSource(typeof(JavaScriptFixture), nameof(JavaScriptFixture.Names))]
+  public void Types_AreTheRecordedOnesWithTheirEvidence(string fixture) {
+    var result = JavaScriptFrontend.Import(fixture + ".mjs", JavaScriptFixture.SourceOf(fixture));
+    var lines = result.Explanations.Select(explanation => explanation.ToString()).ToList();
+    if (Environment.GetEnvironmentVariable("POLYPILER_RECORD") == "1")
+      JavaScriptFixture.Record(JavaScriptFixture.TypesOf(fixture), lines);
+
+    Assert.That(lines, Is.EqualTo(JavaScriptFixture.ExpectedTypes(fixture)));
+    Assert.That(result.Explanations.Select(explanation => explanation.Function).Distinct(), Is.SubsetOf(result.Module!.Functions.Select(function => function.Name)));
+  }
+
+  /// <summary>A fixture of the untyped family states no type: it has no JSDoc comment at all.</summary>
+  [TestCaseSource(typeof(JavaScriptFixture), nameof(JavaScriptFixture.Untyped))]
+  public void UntypedFixture_ContainsNoJsDoc(string fixture)
+    => Assert.That(JavaScriptFixture.SourceOf(fixture), Does.Not.Contain("/**").And.Not.Contain("@param").And.Not.Contain("@returns"));
 
   /// <summary>
   /// Test design 14: the whole file without an export list fails, with one diagnostic for every
@@ -138,8 +166,9 @@ public sealed class JavaScriptDifferentialTests {
     var expected = JavaScriptFixture.OpCodesExpectation();
     Assert.That(result.Module, Is.Null);
     Assert.That(result.Caveats, Is.Empty);
+    // Beside the functions of the list, the whole file has the functions of the object literals inside the literal.
     Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.ToString()),
-      Is.EquivalentTo(expected.Select(line => line.Status).Where(status => status != JavaScriptFixture.Imported).Distinct()));
+      Is.SupersetOf(expected.Select(line => line.Status).Where(status => status != JavaScriptFixture.Imported).Distinct()));
     Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Line, diagnostic.Column)), Is.Ordered.And.Unique);
 
     // The functions that import one by one also import together, and are all there is beside the refused ones.

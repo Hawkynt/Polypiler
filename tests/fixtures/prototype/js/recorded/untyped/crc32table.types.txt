@@ -1,0 +1,5 @@
+compute: parameter data: u8[] from 'new Uint8Array([49, 50, 51, 52, 53, 54, 55, 56, 57])' at (50,18)
+compute: local crc: u32 from '(TABLE[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8)) >>> 0' at (43,11)
+compute: local i: f64 from 'i++' at (42,36)
+compute: result: u32 from '(crc ^ 0xFFFFFFFF) >>> 0' at (45,10)
+check: result: bool from 'compute(new Uint8Array([49, 50, 51, 52, 53, 54, 55, 56, 57])) === 0xCBF43926 && TABLE.length === 256' at (50,10)

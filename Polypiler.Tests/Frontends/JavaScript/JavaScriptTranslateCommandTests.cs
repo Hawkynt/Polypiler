@@ -49,10 +49,36 @@ public sealed class JavaScriptTranslateCommandTests {
     Assert.That((exitCode, output.Trim()), Is.EqualTo((Program.Success, path)));
     Assert.That(File.ReadAllText(path), Does.Contain("export function compute(data) {"));
     Assert.That(error.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => line[..line.IndexOf(':', source.Length + 1)]), Is.EqualTo(new[] {
-      source + ": note js-oob-read",
-      source + ": note js-div-zero",
-      source + ": note js-step-wrap"
+      source + ": note js-oob-read"
     }));
+
+    // Every caveat a module can have is noted the same way.
+    var all = this.Translate("function g(d, a) { return ((d[a | 0] / (a | 0)) | 0) + (a << 1); } function f() { return g(new Uint8Array(1), 1); }").Error;
+    Assert.That(System.Text.RegularExpressions.Regex.Matches(all, @"snippet\.js: note ([\w-]+): \S").Select(match => match.Groups[1].Value),
+      Is.EqualTo(new[] { "js-oob-read", "js-div-zero", "js-param-integer-inferred", "js-param-array-inferred" }));
+  }
+
+  /// <summary>
+  /// <c>--explain-types</c> prints, for every function, each parameter, local and result with its
+  /// type and the expression that decided it, before the files the command writes.
+  /// </summary>
+  [Test]
+  public void ExplainTypes_PrintsEveryTypeWithItsEvidence() {
+    var path = Path.Combine(this._directory, "snippet.js");
+    var (exitCode, output, error) = this.Translate("function f(a, b) {\n  let x = 0;\n  x = (a ^ b) >>> 0;\n  return x / 2;\n}", "--explain-types");
+    Assert.That((exitCode, error), Is.EqualTo((Program.Success, $"{path}: note js-param-integer-inferred: a parameter without a JSDoc type that its function reads only "
+      + "under ToInt32 or ToUint32 is that 32-bit integer; JavaScript coerces whatever number is passed, the imported function takes the integer: f(a, b)" + Environment.NewLine)));
+    Assert.That(output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => line.TrimEnd('\r')), Is.EqualTo(new[] {
+      $"{path}: type f: parameter a: i32 from 'a ^ b' at (3,8)",
+      $"{path}: type f: parameter b: i32 from 'a ^ b' at (3,8)",
+      $"{path}: type f: local x: u32 from '(a ^ b) >>> 0' at (3,7)",
+      $"{path}: type f: result: f64 from 'x / 2' at (4,10)",
+      Path.Combine(this._out, "snippet.mjs")
+    }));
+
+    // Without the flag nothing but the written file is printed, and a refused source explains nothing.
+    Assert.That(this.Translate("function f(a) { return a; }").Output.Trim(), Is.EqualTo(Path.Combine(this._out, "snippet.mjs")));
+    Assert.That(this.Translate("function f(a) { return this; }", "--explain-types").Output, Is.Empty);
   }
 
   /// <summary>
@@ -88,9 +114,12 @@ public sealed class JavaScriptTranslateCommandTests {
 
   /// <summary>Test design 9 to 13: what the importer refuses is exit code 4 for a syntax error and 3 otherwise, and writes nothing.</summary>
   [TestCase("function f( {", new string[0], 4, "PLY1100: Unexpected end of input")]
-  [TestCase("function f(a) { return a | 0; }", new string[0], 3, "PLY1101: parameter 'a' of 'f' has no supported JSDoc type")]
-  [TestCase("function f() { while (true) { break; } }", new string[0], 3, "PLY1102: 'break' is not supported yet")]
-  [TestCase("/** @param {int32} a @returns {int32} */ function f(a) { return a + 1; }", new string[0], 3, "PLY1103: the result of 'a + 1' is a JavaScript number; coerce it with | 0 or >>> 0")]
+  [TestCase("/** @param {string} a */ function f(a) { return a; }", new string[0], 3, "PLY1101: parameter 'a' of 'f' has no supported JSDoc type")]
+  [TestCase("function f(a) { return a[0]; }", new string[0], 3, "PLY1101: parameter 'a' of 'f' is used as an array and needs a JSDoc type")]
+  [TestCase("function f() { return this; }", new string[0], 3, "PLY1102: 'this' is not supported yet")]
+  [TestCase("function f() { return 2n * 3n; }", new string[0], 3, "PLY1103: the result of '2n * 3n' has no bounded type")]
+  [TestCase("function f(n) { let x = 0; if (n > 1) x = new Uint8Array(n); return x; }", new string[0], 3, "PLY1105: 'x' holds both number and uint8[]")]
+  [TestCase("function f(n) { let x; if (n > 1) x = 1; return x; }", new string[0], 3, "PLY1106: 'x' may be read before it is assigned")]
   [TestCase("function f() { }", new[] { "--export", "g" }, 3, "PLY1104: the file has no function 'g' to export")]
   [TestCase("const size = 4;", new string[0], 3, "PLY1102: 'a file without a function' is not supported yet")]
   public void RefusedSource_IsExitCode3Or4AndWritesNothing(string source, string[] further, int expected, string message) {
@@ -105,6 +134,8 @@ public sealed class JavaScriptTranslateCommandTests {
   [TestCase(new[] { "A.js", "--from", "javascript", "--to", "javascript", "--output", "out", "--export" }, "the option '--export' needs a value", TestName = "Misuse: --export without value")]
   [TestCase(new[] { "A.js", "--from", "javascript", "--to", "javascript", "--output", "out", "--export", " , " }, "the option '--export' names no function", TestName = "Misuse: --export without a name")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output", "out", "--export", "F" }, "the option '--export' does not apply to the source language 'csharp'", TestName = "Misuse: --export for C#")]
+  [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output", "out", "--explain-types" }, "the option '--explain-types' does not apply to the source language 'csharp'", TestName = "Misuse: --explain-types for C#")]
+  [TestCase(new[] { "A.js", "--explain-types", "B.js", "--from", "javascript", "--to", "javascript", "--output", "out" }, "more than one source file: 'A.js' and 'B.js'", TestName = "Misuse: --explain-types takes no value")]
   [TestCase(new[] { "A.js", "--from", "typescript", "--to", "javascript", "--output", "out" }, "unknown source language 'typescript'; the prototype reads 'csharp' and 'javascript'", TestName = "Misuse: unknown --from names the sources")]
   [TestCase(new[] { "A.js", "--from", "javascript", "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript' and 'csharp'", TestName = "Misuse: unknown --to names the targets")]
   [TestCase(new[] { "missing.js", "--from", "javascript", "--to", "javascript", "--output", "out" }, "the source file 'missing.js' cannot be read", TestName = "Misuse: unreadable JavaScript file")]
@@ -118,7 +149,7 @@ public sealed class JavaScriptTranslateCommandTests {
   [Test]
   public void UsageLine_NamesTheLanguagesAndTheExportOption() {
     Assert.That(TranslateCommand.UsageLine, Is.EqualTo(
-      "polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--namespace <name>] [--profile <name>] [--langversion <version>]"));
+      "polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--explain-types] [--namespace <name>] [--profile <name>] [--langversion <version>]"));
     Assert.That(Invoke("--help").Output, Does.Contain(TranslateCommand.UsageLine).And.Contain("small subsets of its languages"));
   }
 

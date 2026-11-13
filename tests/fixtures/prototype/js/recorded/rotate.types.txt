@@ -1,0 +1,6 @@
+rotateLeft: parameter value: u32 from '@param {uint32}' at (9,28)
+rotateLeft: parameter count: i32 from '@param {int32}' at (9,35)
+rotateLeft: result: u32 from '((value << count) | (value >>> (32 - count))) >>> 0' at (10,10)
+rotateRight: parameter value: u32 from '@param {uint32}' at (18,29)
+rotateRight: parameter count: i32 from '@param {int32}' at (18,36)
+rotateRight: result: u32 from '((value >>> count) | (value << (32 - count))) >>> 0' at (19,10)

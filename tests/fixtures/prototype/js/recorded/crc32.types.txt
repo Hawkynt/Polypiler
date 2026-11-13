@@ -1,0 +1,5 @@
+compute: parameter data: u8[] from '@param {uint8[]}' at (9,25)
+compute: local crc: u32 from '(crc ^ data[i]) >>> 0' at (12,11)
+compute: local i: f64 from 'i++' at (11,36)
+compute: local bit: f64 from 'bit++' at (13,32)
+compute: result: u32 from '(crc ^ 0xFFFFFFFF) >>> 0' at (17,10)

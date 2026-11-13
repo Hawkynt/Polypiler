@@ -27,27 +27,28 @@ Feature: Import JSDoc-typed JavaScript
       | crc32   | compute(bytes of "123456789")        | 3421780262 |
       | fnv1a   | hash(bytes of "a")                   | 3826002220 |
 
-  Scenario: An uncoerced sum is refused
+  Scenario: An uncoerced sum is a double
     Given the JavaScript "/** @param {int32} a @param {int32} b @returns {int32} */ function f(a, b) { return a + b; }"
-    When it is imported
-    Then the import fails with PLY1103 at line 1
-    And no IR function is produced
+    When it is imported and interpreted with 2147483647, 1
+    Then the result is 2147483648, as node returns for the original
+    And the result has the type F64, whatever "@returns" states
 
   Scenario: A coerced sum wraps
     Given the JavaScript "/** @param {int32} a @param {int32} b @returns {int32} */ function f(a, b) { return (a + b) | 0; }"
     When it is imported and interpreted with 2147483647, 1
     Then the result is -2147483648
 
-  Scenario: Plain multiplication is refused, Math.imul is accepted
+  Scenario: A coerced product is computed in doubles, Math.imul in 32 bits
     Given the JavaScript "/** @param {int32} a @param {int32} b @returns {int32} */ function f(a, b) { return (a * b) | 0; }"
-    When it is imported
-    Then the import fails with PLY1103 naming "a * b"
-    But the same function written with "Math.imul(a, b)" imports and returns 131073 for 65537, 65537, exactly as node does
+    When it is imported and interpreted with 65537, 65537
+    Then the result is 131073, as node returns for the original
+    And the same function written with "Math.imul(a, b)" returns 131073 as well
 
-  Scenario: A function without JSDoc types is refused
+  Scenario: A function without JSDoc types is typed by what it does
     Given the JavaScript "function f(a) { return a | 0; }"
     When it is imported
-    Then the import fails with PLY1101 naming parameter "a"
+    Then the parameter "a" and the result have the type I32
+    And the import notes "js-param-integer-inferred" naming "f(a)"
 
   Scenario: An unknown export name is an error
     When I import "OpCodes.js" with the export "NoSuchFunction"

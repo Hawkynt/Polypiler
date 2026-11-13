@@ -5,46 +5,52 @@ namespace Polypiler.Core.Frontends.JavaScript;
 
 /// <summary>
 /// Reads the types a JSDoc comment states: <c>@param {type} name</c> and <c>@returns {type}</c>. The
-/// spellings are the ones Cipher's <c>OpCodes</c> uses; a spelling that is not listed is no type.
+/// spellings are the ones Cipher's <c>OpCodes</c> uses, the names of the typed arrays and <c>number</c>; a
+/// spelling that is not listed is no type.
 /// </summary>
 internal static class JsDoc {
 
-  private static readonly Regex _parameter = new(@"@param\s*\{(?<type>[^{}]*)\}\s*(?<name>[^\s*]+)", RegexOptions.CultureInvariant);
+  private static readonly Regex _parameter = new(@"@param\s*\{(?<type>(?:[^{}]|\{[^{}]*\})*)\}\s*(?<name>[^\s*]+)", RegexOptions.CultureInvariant);
   private static readonly Regex _result = new(@"@returns?\s*\{(?<type>[^{}]*)\}", RegexOptions.CultureInvariant);
 
-  /// <summary>The type of a parameter, or <see langword="null"/> when the comment gives it no supported one.</summary>
-  public static IrType? ParameterType(string? comment, string name) {
-    if (comment is null)
-      return null;
-
-    foreach (Match tag in _parameter.Matches(comment))
-      if (tag.Groups["name"].Value == name)
-        return TypeOf(tag.Groups["type"].Value);
-
-    return null;
-  }
-
   /// <summary>
-  /// The type of the result: nothing when there is no <c>@returns</c> or it says <c>void</c>, and
-  /// <see langword="null"/> when it names a type that is not supported.
+  /// The type the comment states for a parameter: whether it states one at all, and the type, which
+  /// is <see langword="null"/> when the spelling is not a supported one.
   /// </summary>
-  public static IrType? ResultType(string? comment) {
-    var tag = comment is null ? Match.Empty : _result.Match(comment);
-    if (!tag.Success)
-      return IrType.Void;
+  public static (bool Stated, IrType? Type) ParameterType(string? comment, string name) {
+    foreach (Match tag in _parameter.Matches(comment ?? ""))
+      if (tag.Groups["name"].Value == name)
+        return (true, TypeOf(tag.Groups["type"].Value));
 
-    var spelling = tag.Groups["type"].Value.Trim();
-    return spelling == "void" ? IrType.Void : TypeOf(spelling);
+    return (false, null);
   }
 
-  private static IrType? TypeOf(string spelling) => spelling.Trim() switch {
+  /// <summary>The type the comment states for the result, or <see langword="null"/> when it states none or one that is not supported.</summary>
+  public static IrType? ResultType(string? comment) {
+    var tag = _result.Match(comment ?? "");
+    return tag.Success ? TypeOf(tag.Groups["type"].Value) : null;
+  }
+
+  private static IrType? TypeOf(string spelling) {
+    spelling = spelling.Trim();
+    if (spelling.EndsWith("[]", System.StringComparison.Ordinal))
+      return Scalar(spelling[..^2]) is { IsNumeric: true } element ? IrType.Array(element) : null;
+
+    return Inference.TypeInference.TypedArrays.TryGetValue(spelling, out var typed) ? IrType.Array(typed) : Scalar(spelling);
+  }
+
+  private static IrType? Scalar(string spelling) => spelling switch {
+    "int8" => IrType.I8,
+    "uint8" => IrType.U8,
+    "int16" => IrType.I16,
+    "uint16" => IrType.U16,
     "int32" => IrType.I32,
     "uint32" => IrType.U32,
-    "uint8" => IrType.U8,
+    "int64" => IrType.I64,
+    "uint64" => IrType.U64,
+    "float32" => IrType.F32,
+    "number" or "float64" => IrType.F64,
     "boolean" => IrType.Bool,
-    "uint8[]" or "Uint8Array" => IrType.Array(IrType.U8),
-    "int32[]" or "Int32Array" => IrType.Array(IrType.I32),
-    "uint32[]" or "Uint32Array" => IrType.Array(IrType.U32),
     _ => null
   };
 

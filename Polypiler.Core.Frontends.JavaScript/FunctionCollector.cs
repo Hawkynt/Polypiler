@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Acornima;
 using Acornima.Ast;
+using Polypiler.Core.Frontends.JavaScript.Inference;
+using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.JavaScript;
 
@@ -38,13 +40,22 @@ internal sealed class Candidate(string name, Node anchor, IFunction function) {
 }
 
 /// <summary>
-/// Finds the functions of a file: its function declarations, exported or not, and the
-/// function-valued properties of an object literal that stands at the top level or directly inside
-/// the one immediately invoked function that wraps the file.
+/// Finds the functions of a file - its function declarations, exported or not, the declarations
+/// directly inside the one immediately invoked function that wraps the file, and the function-valued
+/// properties of an object literal that stands in either place, also of a literal inside it - and the
+/// constants that enclose them: a <c>const</c> of a number or of a table of numbers.
 /// </summary>
 internal sealed class FunctionCollector(string source, List<Comment> comments) {
 
   private readonly List<Candidate> _candidates = [];
+  private readonly List<ModuleConstant> _constants = [];
+
+  /// <summary>
+  /// The constants of the scope that encloses the functions, in source order. A name that two
+  /// constants share, or a constant and a function, names no constant.
+  /// </summary>
+  public IReadOnlyList<ModuleConstant> Constants
+    => this._constants.Where(constant => this._constants.Count(other => other.Name == constant.Name) == 1 && !this._candidates.Exists(candidate => candidate.Name == constant.Name)).ToList();
 
   public List<Candidate> Collect(Program program) {
     // A file that exports nothing is a script, whose declarations are all visible to whoever loads it.
@@ -60,16 +71,76 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
           break;
         default:
           this.Objects(statement);
+          this.Constant(statement);
           break;
       }
     }
 
     var wrappers = program.Body.Select(Wrapped).OfType<FunctionBody>().ToList();
-    if (wrappers.Count == 1)
-      foreach (var statement in wrappers[0].Body)
+    if (wrappers.Count == 1) {
+      foreach (var statement in wrappers[0].Body) {
+        // A function of the wrapper is a helper of the file: nothing outside can call it.
+        if (statement is FunctionDeclaration helper)
+          this.Add(new Candidate(helper.Id!.Name, helper, helper) { Documentation = this.Documentation(helper) });
+
         this.Objects(statement);
+        this.Constant(statement);
+      }
+    }
 
     return this._candidates.OrderBy(candidate => candidate.Anchor.Start).ToList();
+  }
+
+  /// <summary>Takes the constants a <c>const</c> declares with a number, a list of numbers or a typed array of listed numbers.</summary>
+  private void Constant(Statement statement) {
+    var declaration = statement is ExportNamedDeclaration { Declaration: VariableDeclaration exported } ? exported : statement as VariableDeclaration;
+    if (declaration is not { Kind: VariableDeclarationKind.Const })
+      return;
+
+    foreach (var declarator in declaration.Declarations)
+      if (declarator is { Id: Identifier { Name: var name }, Init: { } value } && !name.Contains('$') && ConstantOf(name, value) is { } constant)
+        this._constants.Add(constant);
+  }
+
+  private static ModuleConstant? ConstantOf(string name, Node value) {
+    if (Literal(value) is { } scalar)
+      return scalar.Type.Ir is { } type ? new ModuleConstant(name, scalar.Type, new IrModuleConst(name, type, [Encode(scalar, type)!.Value])) : null;
+
+    // A typed array of listed numbers holds them as its elements do; a list holds them as they are.
+    var typed = value is NewExpression { Callee: Identifier { Name: var constructor }, Arguments: [ArrayExpression] } && TypeInference.TypedArrays.TryGetValue(constructor, out var stated) ? stated : null;
+    if ((value is NewExpression creation ? typed is null ? null : creation.Arguments[0] : value) is not ArrayExpression { Elements.Count: > 0 } list)
+      return null;
+
+    var items = list.Elements.Select(item => item is null ? null : Literal(item)).ToList();
+    if (items.Contains(null))
+      return null;
+
+    var element = typed ?? items.Select(item => item!.Value.Type).Aggregate(JsType.Join).Ir;
+    var values = items.Select(item => element is null ? null : Encode(item!.Value, element)).ToList();
+    return values.Contains(null) ? null : new ModuleConstant(name, JsType.ArrayOf(JsType.Of(element!), false), new IrModuleConst(name, IrType.Array(element!), values.Select(item => item!.Value).ToList()));
+  }
+
+  /// <summary>A numeric or <c>BigInt</c> literal, negated or not: its type and its value.</summary>
+  private static (JsType Type, double Number, System.Numerics.BigInteger Big)? Literal(Node node) => node switch {
+    NumericLiteral number => (JsType.Literal(number.Value), number.Value, default),
+    BigIntLiteral big => (JsType.BigLiteral(big.Value), 0, big.Value),
+    UnaryExpression { Operator: Operator.UnaryNegation, Argument: NumericLiteral number } => (JsType.Literal(-number.Value), -number.Value, default),
+    UnaryExpression { Operator: Operator.UnaryNegation, Argument: BigIntLiteral big } => (JsType.BigLiteral(-big.Value), 0, -big.Value),
+    _ => null
+  };
+
+  /// <summary>
+  /// A literal as a constant of a type carries it, converted the way a store into a typed array
+  /// converts; <see langword="null"/> when the literal is of the other kind than the type.
+  /// </summary>
+  private static long? Encode((JsType Type, double Number, System.Numerics.BigInteger Big) literal, IrType type) {
+    if (type.IsLong != (literal.Type.Kind == JsKind.BigInt))
+      return null;
+
+    if (type.IsLong)
+      return (long)(ulong)(literal.Big & ulong.MaxValue);
+
+    return type.IsFloat ? IrOperators.Bits(type, literal.Number) : IrOperators.Wrap(type, IrOperators.ToWord(IrType.I32, literal.Number));
   }
 
   /// <summary>The body of the function a statement invokes on the spot, as <c>(function () { … })()</c> does.</summary>
@@ -99,6 +170,10 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
 
   private void Properties(ObjectExpression literal, string? owner) {
     foreach (var member in literal.Properties) {
+      // The functions of a literal inside the literal are reached through the property that holds it.
+      if (member is Property { Computed: false, Key: Identifier { Name: var inner }, Value: ObjectExpression nested })
+        this.Properties(nested, owner is null ? null : $"{owner}.{inner}");
+
       if (member is not Property { Value: IFunction function } property)
         continue;
 

@@ -1,0 +1,7 @@
+next: parameter state: i32 from 'state ^= state << 13' at (5,3)
+next: result: u32 from 'state >>> 0' at (8,10)
+skip: parameter state: i32 from 'state | 0' at (12,11)
+skip: parameter count: f64 from 'no JSDoc type' at (11,29)
+skip: local x: i32 from 'state | 0' at (12,11)
+skip: local i: f64 from 'i++' at (13,30)
+skip: result: u32 from 'x >>> 0' at (16,10)
