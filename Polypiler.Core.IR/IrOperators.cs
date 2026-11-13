@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Polypiler.Core.IR;
 
@@ -29,6 +31,23 @@ public static class IrOperators {
       or IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor => left.IsWideInteger && right == left,
     _ => left.IsArithmetic && right == left
   };
+
+  /// <summary>Whether an intrinsic operation is defined on its argument types with a given result type.</summary>
+  /// <param name="op">The operation.</param>
+  /// <param name="result">The type of the node.</param>
+  /// <param name="arguments">The types of the arguments, in order.</param>
+  /// <returns><see langword="true"/> when the operation applies.</returns>
+  public static bool Accepts(IrIntrinsicOp op, IrType result, IReadOnlyList<IrType> arguments) {
+    bool Are(params Func<IrType, bool>[] rules) => arguments.Count == rules.Length && !rules.Where((rule, index) => !rule(arguments[index])).Any();
+    bool Table(IrType type) => type.IsArray && type.IsStorable;
+    var first = arguments.Count > 0 ? arguments[0] : IrType.Void;
+    return op switch {
+      IrIntrinsicOp.ArrayOf => Table(result) && arguments.All(argument => argument == result.Element),
+      IrIntrinsicOp.ArrayCopy => result == IrType.Void && Are(Table, type => type.IsWord, type => type == first, type => type.IsWord, type => type.IsWord),
+      IrIntrinsicOp.ArrayFill => result == IrType.Void && Are(Table, type => type == first.Element),
+      _ => result == IrType.Void && Are(Table)
+    };
+  }
 
   /// <summary>Whether an operator traps instead of wrapping around when its result does not fit.</summary>
   /// <param name="op">The operator.</param>

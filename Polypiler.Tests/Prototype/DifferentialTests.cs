@@ -52,6 +52,7 @@ public sealed class DifferentialTests {
   [TestCase("wide/Fnv1a64", "Hash", "", 0xCBF29CE484222325UL)]
   [TestCase("wide/Crc16", "Compute", "123456789", 0x29B1u)]
   [TestCase("wide/Fletcher16", "Compute", "abcde", 0xC8F0u)]
+  [TestCase("wide/Crc32Table", "Compute", "123456789", 0xCBF43926u)]
   public void Checksum_MatchesItsPublishedValue(string fixture, string method, string text, ulong published) {
     var call = new PrototypeCall(method, [PrototypeCases.Text(text)]);
     var expected = PrototypeFixture.Outcome(published, call.Arguments);
@@ -193,6 +194,23 @@ public sealed class DifferentialTests {
     const string expected = "6 | [2,1,2,3,128,9,255,5] | [1,2,3,9,9,9,0,0]";
     Assert.That(PrototypeFixture.CompiledOutcome("wide/RunLength", decode), Is.EqualTo(expected));
     Assert.That(PrototypeFixture.InterpretedOutcome(_modules["wide/RunLength"], decode), Is.EqualTo(expected));
+  }
+
+  /// <summary>
+  /// Test design 12: Array.Copy with overlapping ranges, an empty range, an exact fit and one element
+  /// past the end, as the compiled fixture does it.
+  /// </summary>
+  [TestCase(0, 1, 3, "void | [1,1,2,3]")]
+  [TestCase(1, 0, 3, "void | [2,3,4,4]")]
+  [TestCase(0, 0, 4, "void | [1,2,3,4]")]
+  [TestCase(4, 4, 0, "void | [1,2,3,4]")]
+  [TestCase(0, 2, 3, "trap: index out of range")]
+  [TestCase(-1, 0, 1, "trap: index out of range")]
+  [TestCase(0, 0, -1, "trap: index out of range")]
+  public void ArrayCopy_HandlesOverlapAndBounds(int from, int to, int length, string expected) {
+    var call = new PrototypeCall("Move", [new long[] { 1, 2, 3, 4 }, from, to, length]);
+    Assert.That(PrototypeFixture.CompiledOutcome("wide/Tables", call), Is.EqualTo(expected));
+    Assert.That(PrototypeFixture.InterpretedOutcome(_modules["wide/Tables"], call), Is.EqualTo(expected));
   }
 
   /// <summary>Scenario: An array is modified in place.</summary>

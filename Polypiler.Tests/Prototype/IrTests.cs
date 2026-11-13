@@ -146,6 +146,42 @@ public sealed class IrTests {
     yield return Case("trapping step of a float", Statement(new IrExprStmt(new IrStep(new IrArrayLoad(new IrNewArray(IrType.Array(IrType.F64), _one), _one), true, true, true))), "a trapping step of the type f64");
     yield return Case("step out of scope", Returning(new IrStep(Ref(_x), false, true, true)), "'x' is used outside the scope");
     yield return Case("step of an element of a number", Returning(new IrStep(new IrArrayLoad(Ref(_a), _one), true, true, false)), "an element is taken of the type i32");
+    IrExpr Operation(IrIntrinsicOp op, IrType type, params IrExpr[] arguments) => new IrIntrinsic(op, type, arguments);
+    IrModule WithConstants(IrModuleConst[] constants, params IrStmt[] body) => new("M", [Function("F", IrType.Void, [_data], [], body)], constants);
+    var number = new IrModuleConst("N", IrType.I32, [5]);
+    var table = new IrModuleConst("T", _ints, [1, 2]);
+    IrExpr tableRef = new IrConstRef(table);
+    yield return Case("constant declared twice", WithConstants([number, new IrModuleConst("N", IrType.U8, [1])]), "the module declares the name twice");
+    yield return Case("constant with the name of a function", WithConstants([new IrModuleConst("F", IrType.I32, [1])]), "the module declares the name twice");
+    yield return Case("constant of nothing", WithConstants([new IrModuleConst("V", IrType.Void, [0])]), "a constant of the type void");
+    yield return Case("table of truth values", WithConstants([new IrModuleConst("B", IrType.Array(IrType.Bool), [1])]), "a constant of the type bool[]");
+    yield return Case("number with two values", WithConstants([new IrModuleConst("N", IrType.I32, [1, 2])]), "a constant of the type i32 with 2 values");
+    yield return Case("number without a value", WithConstants([new IrModuleConst("N", IrType.I32, [])]), "a constant of the type i32 with 0 values");
+    yield return Case("constant outside its type", WithConstants([new IrModuleConst("N", IrType.U8, [256])]), "the constant 256 is not a value of u8");
+    yield return Case("table element outside its type", WithConstants([new IrModuleConst("T", IrType.Array(IrType.I8), [1, 2, -129])]), "the constant -129 is not a value of i8");
+    yield return Case("unknown constant", WithConstants([], new IrExprStmt(new IrConstRef(number))), "the constant 'N' is not among the constants of the module");
+    yield return Case("unknown table", WithConstants([], new IrExprStmt(new IrArrayLength(tableRef))), "the constant 'T' is not among the constants of the module");
+    yield return Case("table as a value", WithConstants([table], new IrExprStmt(tableRef)), "the constant table 'T' is used as a value");
+    yield return Case("table as an argument", WithConstants([table], new IrExprStmt(Operation(IrIntrinsicOp.ArrayOf, IrType.Array(_ints), tableRef))), "the constant table 'T' is used as a value");
+    yield return Case("store into a table", WithConstants([table], new IrStore(tableRef, _one, _one)), "the elements of a constant table are written");
+    yield return Case("step of a table element", WithConstants([table], new IrExprStmt(new IrStep(new IrArrayLoad(tableRef, _one), true, false, false))), "the elements of a constant table are written");
+    yield return Case("fill of a table", WithConstants([table], new IrExprStmt(Operation(IrIntrinsicOp.ArrayFill, IrType.Void, tableRef, _one))), "the constant table 'T' is used as a value");
+    yield return Case("copy into a table", WithConstants([table], new IrExprStmt(Operation(IrIntrinsicOp.ArrayCopy, IrType.Void, Ref(_data), _one, tableRef, _one, _one))), "the constant table 'T' is used as a value");
+    yield return Case("array of the wrong elements", Returning(Operation(IrIntrinsicOp.ArrayOf, _ints, _one, Ref(_u))), "ArrayOf with the type i32[] is applied to (i32, u32)");
+    yield return Case("array of that is a number", Returning(Operation(IrIntrinsicOp.ArrayOf, IrType.I32, _one)), "ArrayOf with the type i32 is applied to (i32)");
+    yield return Case("array of truth values", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayOf, IrType.Array(IrType.Bool), _true))), "ArrayOf with the type bool[] is applied to (bool)");
+    yield return Case("copy between different arrays", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayCopy, IrType.Void, Ref(_data), _one, new IrNewArray(IrType.Array(IrType.U8), _one), _one, _one))), "ArrayCopy with the type void is applied to (i32[], i32, u8[], i32, i32)");
+    yield return Case("copy at a truth value", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayCopy, IrType.Void, Ref(_data), _true, Ref(_data), _one, _one))), "ArrayCopy with the type void is applied to (i32[], bool, i32[], i32, i32)");
+    yield return Case("copy without a length", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayCopy, IrType.Void, Ref(_data), _one, Ref(_data), _one))), "ArrayCopy with the type void is applied to (i32[], i32, i32[], i32)");
+    yield return Case("copy of numbers", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayCopy, IrType.Void, _one, _one, _one, _one, _one))), "ArrayCopy with the type void is applied to (i32, i32, i32, i32, i32)");
+    yield return Case("copy with a result", Returning(Operation(IrIntrinsicOp.ArrayCopy, IrType.I32, Ref(_data), _one, Ref(_data), _one, _one)), "ArrayCopy with the type i32 is applied to");
+    yield return Case("fill with the wrong type", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayFill, IrType.Void, Ref(_data), Ref(_u)))), "ArrayFill with the type void is applied to (i32[], u32)");
+    yield return Case("fill of a number", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayFill, IrType.Void, _one, _one))), "ArrayFill with the type void is applied to (i32, i32)");
+    yield return Case("fill with a result", Returning(Operation(IrIntrinsicOp.ArrayFill, IrType.I32, Ref(_data), _one)), "ArrayFill with the type i32 is applied to (i32[], i32)");
+    yield return Case("clearing of a number", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayClear, IrType.Void, _one))), "ArrayClear with the type void is applied to (i32)");
+    yield return Case("clearing of nothing", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayClear, IrType.Void))), "ArrayClear with the type void is applied to ()");
+    yield return Case("clearing with a result", Returning(Operation(IrIntrinsicOp.ArrayClear, IrType.I32, Ref(_data))), "ArrayClear with the type i32 is applied to (i32[])");
+    yield return Case("intrinsic argument is checked", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayClear, IrType.Void, new IrNewArray(_ints, Ref(_x))))), "'x' is used outside the scope");
     yield return Case("conversion from bool", Returning(new IrConvert(IrType.I32, _true)), "a conversion from bool to i32");
     yield return Case("conversion to bool", Returning(new IrConvert(IrType.Bool, _one)), "a conversion from i32 to bool");
     yield return Case("conditional on a number", Returning(new IrConditional(_one, _one, _one)), "the condition of a conditional expression has the type i32");
@@ -232,6 +268,66 @@ public sealed class IrTests {
     Assert.That(IrInterpreter.Call(module, "F", [5]), Is.EqualTo(3114));
     Assert.That(IrInterpreter.Call(module, "F", [9]), Is.EqualTo(3114));
     Assert.That(JavaScriptEmitter.Emit(module).Single().Content, Does.Contain("for (; i < a; ($p = i, i = ($p + 1) | 0, $p)) {"));
+  }
+
+  /// <summary>
+  /// Constants of every kind on IR built by hand: a number, a truth value, a float, a table that is
+  /// read, measured and copied from, and the intrinsics that build, copy, fill and clear arrays.
+  /// </summary>
+  [Test]
+  public void ConstantsAndArrayOperations_AreAcceptedAndRun() {
+    var number = new IrModuleConst("N", IrType.I64, [-5]);
+    var truth = new IrModuleConst("B", IrType.Bool, [1]);
+    var half = new IrModuleConst("H", IrType.F32, [IrOperators.Bits(IrType.F32, 0.5)]);
+    var table = new IrModuleConst("T", _ints, [7, 8, 9]);
+    var empty = new IrModuleConst("E", IrType.Array(IrType.F64), []);
+    IrExpr Const(long value) => new IrConst(IrType.I32, value);
+    IrExpr Operation(IrIntrinsicOp op, IrType type, params IrExpr[] arguments) => new IrIntrinsic(op, type, arguments);
+    var module = new IrModule("M", [
+      Function("Number", IrType.I64, [], [], new IrReturn(new IrConstRef(number))),
+      Function("Truth", IrType.Bool, [], [], new IrReturn(new IrConstRef(truth))),
+      Function("Half", IrType.F32, [], [], new IrReturn(new IrConstRef(half))),
+      Function("Lengths", IrType.I32, [], [], new IrReturn(new IrBinary(IrBinaryOp.Add,
+        new IrArrayLength(new IrConstRef(table)), new IrArrayLength(new IrConstRef(empty))))),
+      Function("At", IrType.I32, [_a], [], new IrReturn(new IrArrayLoad(new IrConstRef(table), Ref(_a)))),
+      Function("Copy", _ints, [_a], [_data],
+        new IrDeclare(_data, Operation(IrIntrinsicOp.ArrayOf, _ints, Const(1), Ref(_a), Const(3), Const(4))),
+        new IrExprStmt(Operation(IrIntrinsicOp.ArrayCopy, IrType.Void, new IrConstRef(table), Const(1), Ref(_data), Ref(_a), Const(2))),
+        new IrReturn(Ref(_data))),
+      Function("Move", IrType.Void, [_data, _a, _x], [],
+        new IrExprStmt(Operation(IrIntrinsicOp.ArrayCopy, IrType.Void, Ref(_data), Ref(_a), Ref(_data), Ref(_x), Const(3)))),
+      Function("Fill", IrType.Void, [_data, _a], [], new IrExprStmt(Operation(IrIntrinsicOp.ArrayFill, IrType.Void, Ref(_data), Ref(_a)))),
+      Function("Clear", IrType.Void, [_data], [], new IrExprStmt(Operation(IrIntrinsicOp.ArrayClear, IrType.Void, Ref(_data))))
+    ], [number, truth, half, table, empty]);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    Assert.That(new IrModule("M", []).Constants, Is.Empty);
+    Assert.That(IrInterpreter.Call(module, "Number", []), Is.EqualTo(-5L));
+    Assert.That(IrInterpreter.Call(module, "Truth", []), Is.True);
+    Assert.That(IrInterpreter.Call(module, "Half", []), Is.EqualTo(0.5f));
+    Assert.That(IrInterpreter.Call(module, "Lengths", []), Is.EqualTo(3));
+    Assert.That(IrInterpreter.Call(module, "At", [2]), Is.EqualTo(9));
+    Assert.That(() => IrInterpreter.Call(module, "At", [3]), Throws.TypeOf<IrTrapException>().With.Property(nameof(IrTrapException.Trap)).EqualTo(IrTrap.IndexOutOfRange));
+    Assert.That(IrInterpreter.Call(module, "Copy", [2]), Is.EqualTo(new[] { 1, 2, 8, 9 }));
+    Assert.That(() => IrInterpreter.Call(module, "Copy", [3]), Throws.TypeOf<IrTrapException>().With.Property(nameof(IrTrapException.Trap)).EqualTo(IrTrap.IndexOutOfRange));
+
+    int[] Moved(int from, int to) {
+      var data = new[] { 1, 2, 3, 4, 5 };
+      IrInterpreter.Call(module, "Move", [data, from, to]);
+      return data;
+    }
+
+    Assert.That(Moved(0, 2), Is.EqualTo(new[] { 1, 2, 1, 2, 3 }));
+    Assert.That(Moved(2, 0), Is.EqualTo(new[] { 3, 4, 5, 4, 5 }));
+    Assert.That(Moved(1, 1), Is.EqualTo(new[] { 1, 2, 3, 4, 5 }));
+    foreach (var (from, to) in new[] { (-1, 0), (0, -1), (3, 0), (0, 3) })
+      Assert.That(() => Moved(from, to), Throws.TypeOf<IrTrapException>().With.Property(nameof(IrTrapException.Trap)).EqualTo(IrTrap.IndexOutOfRange));
+
+    var filled = new[] { 1, 2 };
+    IrInterpreter.Call(module, "Fill", [filled, 7]);
+    Assert.That(filled, Is.EqualTo(new[] { 7, 7 }));
+    IrInterpreter.Call(module, "Clear", [filled]);
+    Assert.That(filled, Is.EqualTo(new[] { 0, 0 }));
+    Assert.That(JavaScriptEmitter.Emit(module).Single().Content, Does.Contain("const N = -5n;\nconst B = true;\nconst H = 0.5;\nconst T = new Int32Array([7, 8, 9]);\nconst E = new Float64Array([]);\n"));
   }
 
   /// <summary>A return inside a loop, of each kind, leaves the function and not only the loop.</summary>

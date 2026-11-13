@@ -54,8 +54,11 @@ public sealed class IrTrapException : Exception {
 /// </summary>
 public static class IrInterpreter {
 
-  /// <summary>The functions of a module by name, kept for as long as the module lives.</summary>
-  private static readonly ConditionalWeakTable<IrModule, Dictionary<string, IrFunction>> _functions = new();
+  /// <summary>
+  /// The functions of a module by name and its tables as arrays, kept for as long as the module lives.
+  /// A table can be shared between calls because the IR cannot write to it.
+  /// </summary>
+  private static readonly ConditionalWeakTable<IrModule, Program> _programs = new();
 
   /// <summary>Calls a function of a module that <see cref="IrVerifier"/> accepted.</summary>
   /// <param name="module">The module.</param>
@@ -65,7 +68,8 @@ public static class IrInterpreter {
   /// <exception cref="ArgumentException">The function does not exist or the arguments do not fit it.</exception>
   /// <exception cref="IrTrapException">An operation trapped.</exception>
   public static object? Call(IrModule module, string function, object[] arguments) {
-    var functions = _functions.GetValue(module, Index);
+    var program = _programs.GetValue(module, Index);
+    var functions = program.Functions;
     if (!functions.TryGetValue(function, out var target))
       throw new ArgumentException($"The module '{module.Name}' has no function '{function}'.", nameof(function));
 
@@ -73,15 +77,37 @@ public static class IrInterpreter {
       throw new ArgumentException($"'{function}' takes {target.Parameters.Count} arguments, not {arguments.Length}.", nameof(arguments));
 
     var values = arguments.Select((argument, index) => FromHost(target.Parameters[index], argument)).ToArray();
-    return ToHost(target.ReturnType, new Machine(functions).Invoke(target, values));
+    return ToHost(target.ReturnType, new Machine(program).Invoke(target, values));
   }
 
-  private static Dictionary<string, IrFunction> Index(IrModule module) {
+  private static Program Index(IrModule module) {
     var functions = new Dictionary<string, IrFunction>();
     foreach (var candidate in module.Functions)
       functions[candidate.Name] = candidate;
 
-    return functions;
+    var constants = new Dictionary<IrModuleConst, object>(ReferenceEqualityComparer.Instance);
+    foreach (var constant in module.Constants)
+      constants[constant] = constant.Type.Element is { } element
+        ? ArrayOf(element, constant.Values.Select(value => Constant(element, value)).ToList())
+        : Constant(constant.Type, constant.Values[0]);
+
+    return new Program(functions, constants);
+  }
+
+  /// <summary>A constant as the interpreter carries a value of its type.</summary>
+  private static object Constant(IrType type, long value) => type.Kind switch {
+    IrTypeKind.Bool => value != 0,
+    IrTypeKind.F32 => (float)IrOperators.Float(type, value),
+    IrTypeKind.F64 => IrOperators.Float(type, value),
+    _ => value
+  };
+
+  private static Array ArrayOf(IrType element, IReadOnlyList<object> values) {
+    var array = Array.CreateInstance(HostType(element), values.Count);
+    for (var index = 0; index < values.Count; ++index)
+      array.SetValue(External(array.GetType().GetElementType()!, values[index]), index);
+
+    return array;
   }
 
   /// <summary>
@@ -153,7 +179,9 @@ public static class IrInterpreter {
   private static object? ToHost(IrType type, object? value)
     => value is null or Array or bool ? value : External(HostType(type), value);
 
-  private sealed class Machine(Dictionary<string, IrFunction> functions) {
+  private sealed record Program(Dictionary<string, IrFunction> Functions, Dictionary<IrModuleConst, object> Constants);
+
+  private sealed class Machine(Program program) {
 
     public object? Invoke(IrFunction function, object[] arguments) {
       var frame = new Frame();
@@ -249,12 +277,11 @@ public static class IrInterpreter {
     private object Evaluate(IrExpr expression, Frame frame) {
       switch (expression) {
         case IrConst constant:
-          return constant.Type.Kind switch {
-            IrTypeKind.Bool => constant.Value != 0,
-            IrTypeKind.F32 => (float)IrOperators.Float(constant.Type, constant.Value),
-            IrTypeKind.F64 => IrOperators.Float(constant.Type, constant.Value),
-            _ => constant.Value
-          };
+          return Constant(constant.Type, constant.Value);
+        case IrConstRef reference:
+          return program.Constants[reference.Constant];
+        case IrIntrinsic intrinsic:
+          return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
           return frame.Locals[reference.Local];
         case IrUnary unary:
@@ -287,11 +314,47 @@ public static class IrInterpreter {
           return Array.CreateInstance(HostType(creation.Type.Element!), count);
         case IrCall call:
           var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
-          return this.Invoke(functions[call.Function], arguments)!;
+          return this.Invoke(program.Functions[call.Function], arguments)!;
         case IrStep step:
           return this.Step(step, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
+      }
+    }
+
+    private object? Intrinsic(IrIntrinsic intrinsic, Frame frame) {
+      var arguments = intrinsic.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
+      switch (intrinsic.Op) {
+        case IrIntrinsicOp.ArrayOf:
+          return ArrayOf(intrinsic.Type.Element!, arguments);
+        case IrIntrinsicOp.ArrayCopy:
+          Copy((Array)arguments[0], (long)arguments[1], (Array)arguments[2], (long)arguments[3], (long)arguments[4]);
+          return null;
+        case IrIntrinsicOp.ArrayFill:
+          var filled = (Array)arguments[0];
+          for (var index = 0; index < filled.Length; ++index)
+            Store(filled, index, arguments[1]);
+
+          return null;
+        default:
+          var cleared = (Array)arguments[0];
+          Array.Clear(cleared);
+          return null;
+      }
+    }
+
+    /// <summary>
+    /// Copies element by element, from the end when the target lies behind the source in the same
+    /// array, which is the order that reads every element before it is overwritten.
+    /// </summary>
+    private static void Copy(Array source, long from, Array target, long to, long length) {
+      if (from < 0 || to < 0 || length < 0 || from + length > source.Length || to + length > target.Length)
+        throw new IrTrapException(IrTrap.IndexOutOfRange);
+
+      var backwards = ReferenceEquals(source, target) && from < to;
+      for (var step = 0L; step < length; ++step) {
+        var offset = (int)(backwards ? length - 1 - step : step);
+        Store(target, (int)to + offset, Load(source, (int)from + offset));
       }
     }
 

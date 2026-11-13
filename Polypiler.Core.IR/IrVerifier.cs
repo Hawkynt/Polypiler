@@ -19,18 +19,36 @@ public static class IrVerifier {
       if (!functions.TryAdd(function.Name, function))
         diagnostics.Add(Error(function.Name, "the module declares the function twice"));
 
+    var constants = new HashSet<IrModuleConst>(ReferenceEqualityComparer.Instance);
+    var names = new HashSet<string>(functions.Keys);
+    foreach (var constant in module.Constants) {
+      constants.Add(constant);
+      var element = constant.Type.Element ?? constant.Type;
+      void Require(bool holds, string message) {
+        if (!holds)
+          diagnostics.Add(Error(constant.Name, message));
+      }
+
+      Require(names.Add(constant.Name), "the module declares the name twice");
+      Require(constant.Type.IsStorable, $"a constant of the type {constant.Type}");
+      Require(constant.Type.IsArray || constant.Values.Count == 1, $"a constant of the type {constant.Type} with {constant.Values.Count} values");
+      foreach (var value in constant.Values.Where(value => !FunctionCheck.InRange(new IrConst(element, value))).Take(1))
+        Require(false, $"the constant {value} is not a value of {element}");
+    }
+
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, diagnostics).Run();
+      new FunctionCheck(function, functions, constants, diagnostics).Run();
 
     return diagnostics;
   }
 
-  private static Diagnostic Error(string function, string message)
-    => new(Code, DiagnosticSeverity.Error, $"ill-typed IR in '{function}': {message}");
+  private static Diagnostic Error(string member, string message)
+    => new(Code, DiagnosticSeverity.Error, $"ill-typed IR in '{member}': {message}");
 
   private sealed class FunctionCheck(
     IrFunction function,
     Dictionary<string, IrFunction> functions,
+    HashSet<IrModuleConst> constants,
     List<Diagnostic> diagnostics) {
 
     private readonly HashSet<IrLocal> _visible = [];
@@ -86,6 +104,7 @@ public static class IrVerifier {
           this.Value(assign.Value, assign.Local.Type, $"the value assigned to '{assign.Local.Name}'");
           break;
         case IrStore store:
+          this.Writable(store.Array);
           this.Element(store.Array, store.Index);
           this.Value(store.Value, store.Array.Type.Element, "the value stored in an array element");
           break;
@@ -177,8 +196,24 @@ public static class IrVerifier {
       this.Require(expression.Type == expected, $"{what} has the type {expression.Type}, expected {expected}");
     }
 
+    /// <summary>
+    /// An array that is only read: unlike everywhere else, a table of the module may stand here.
+    /// </summary>
+    private void Readable(IrExpr array) {
+      if (array is IrConstRef table)
+        this.Known(table.Constant);
+      else
+        this.Expression(array);
+    }
+
+    private void Writable(IrExpr array)
+      => this.Require(array is not IrConstRef, "the elements of a constant table are written");
+
+    private void Known(IrModuleConst constant)
+      => this.Require(constants.Contains(constant), $"the constant '{constant.Name}' is not among the constants of the module");
+
     private void Element(IrExpr array, IrExpr index) {
-      this.Expression(array);
+      this.Readable(array);
       this.Expression(index);
       this.Require(array.Type.IsArray, $"an element is taken of the type {array.Type}");
       this.Require(index.Type.IsWord, $"an array index has the type {index.Type}");
@@ -191,6 +226,10 @@ public static class IrVerifier {
           break;
         case IrLocalRef reference:
           this.InScope(reference.Local);
+          break;
+        case IrConstRef reference:
+          this.Known(reference.Constant);
+          this.Require(!reference.Type.IsArray, $"the constant table '{reference.Constant.Name}' is used as a value");
           break;
         case IrUnary unary:
           this.Expression(unary.Operand);
@@ -217,7 +256,7 @@ public static class IrVerifier {
           this.Element(load.Array, load.Index);
           break;
         case IrArrayLength length:
-          this.Expression(length.Array);
+          this.Readable(length.Array);
           this.Require(length.Array.Type.IsArray, $"the length is taken of the type {length.Array.Type}");
           break;
         case IrNewArray creation:
@@ -228,7 +267,20 @@ public static class IrVerifier {
         case IrCall call:
           this.Call(call);
           break;
+        case IrIntrinsic intrinsic:
+          for (var index = 0; index < intrinsic.Arguments.Count; ++index)
+            if (index == 0 && intrinsic.Op == IrIntrinsicOp.ArrayCopy)
+              this.Readable(intrinsic.Arguments[index]);
+            else
+              this.Expression(intrinsic.Arguments[index]);
+
+          this.Require(IrOperators.Accepts(intrinsic.Op, intrinsic.Type, intrinsic.Arguments.Select(argument => argument.Type).ToList()),
+            $"{intrinsic.Op} with the type {intrinsic.Type} is applied to ({string.Join(", ", intrinsic.Arguments.Select(argument => argument.Type))})");
+          break;
         case IrStep step:
+          if (step.Target is IrArrayLoad stepped)
+            this.Writable(stepped.Array);
+
           this.Expression(step.Target);
           this.Require(step.Target is IrLocalRef or IrArrayLoad, $"a step of a {step.Target.GetType().Name}");
           this.Require(step.Type.IsNumeric, $"a step of the type {step.Type}");
@@ -266,7 +318,7 @@ public static class IrVerifier {
       return conversion.Contract == IrConversion.Trap || conversion.Contract == (from.IsFloat ? IrConversion.Saturate : IrConversion.Wrap);
     }
 
-    private static bool InRange(IrConst constant) => constant.Type.Kind switch {
+    internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
       IrTypeKind.Void or IrTypeKind.Array => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,

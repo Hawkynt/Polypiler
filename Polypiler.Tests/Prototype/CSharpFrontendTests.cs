@@ -99,7 +99,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static void F(int[] a, ulong i) { a[i] = 1; }", "an array index or length of the type u64", 44, TestName = "64-bit index of a write")]
   [TestCase("public static int[] F(long n) => new int[n];", "an array index or length of the type i64", 42, TestName = "64-bit length")]
   [TestCase("public static string F() => \"a\";", "string", 15, TestName = "string")]
-  [TestCase("public static bool F(char c) => char.IsDigit(c);", "InvocationExpression", 33, TestName = "char text operation")]
+  [TestCase("public static bool F(char c) => char.IsDigit(c);", "Char.IsDigit", 33, TestName = "char text operation")]
   [TestCase("public static int F() { int s = 0; foreach (int x in new System.Collections.Generic.List<int>()) s += x; return s; }", "System.Collections.Generic.List<int>", 54, TestName = "foreach over a list")]
   [TestCase("public static int F(int a) { switch (a) { case > 1: return 1; default: return 0; } }", "CasePatternSwitchLabel", 43, TestName = "switch with a pattern")]
   [TestCase("public static int F(int a) { switch (a) { case 1: goto default; default: return 0; } }", "GotoDefaultStatement", 51, TestName = "goto default")]
@@ -112,7 +112,6 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(int a) { goto end; end: return a; }", "GotoStatement", 30, TestName = "goto")]
   [TestCase("public static int F(int[,] a) => 1;", "int[*,*]", 21, TestName = "multi-dimensional array")]
   [TestCase("public static int F(int[][] a) => 1;", "int[][]", 21, TestName = "jagged array")]
-  [TestCase("public static int F() { int[] a = new int[2] { 1, 2 }; return a[0]; }", "ArrayCreationExpression", 35, TestName = "array initializer")]
   [TestCase("public static int F(System.Span<int> a) => 1;", "System.Span<int>", 21, TestName = "span")]
   [TestCase("public static int F<T>(T a) => 1;", "a generic method", 20, TestName = "generic method")]
   [TestCase("public static int F() { System.Func<int, int> f = x => x; return 1; }", "System.Func<int, int>", 25, TestName = "lambda")]
@@ -124,15 +123,43 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(params int[] a) => 1;", "params", 21, TestName = "params parameter")]
   [TestCase("public static int F(int a = 1) => a;", "a default parameter value", 27, TestName = "default parameter value")]
   [TestCase("public static int F(this int a) => a;", "this", 21, TestName = "extension method")]
-  [TestCase("public static int Field;", "a class member other than a static method", 1, TestName = "field")]
-  [TestCase("public static int Property => 1;", "a class member other than a static method", 1, TestName = "property")]
+  [TestCase("public static int Field;", "a field that is neither const nor static readonly", 1, TestName = "field")]
+  [TestCase("public static int Property => 1;", "a class member other than a static method or a constant", 1, TestName = "property")]
+  [TestCase("static readonly int X;", "a field without an initializer", 21, TestName = "field without an initializer")]
+  [TestCase("static volatile int X = 1;", "volatile", 1, TestName = "modifier of a field")]
+  [TestCase("static readonly string S = \"x\";", "string", 17, TestName = "field of a type outside the subset")]
+  [TestCase("const string S = \"x\";", "string", 7, TestName = "constant of a type outside the subset")]
+  [TestCase("static readonly bool[] B = { true };", "bool[]", 17, TestName = "table of truth values")]
+  [TestCase("static readonly int X = G(); public static int G() => 1;", "a field initializer that is not a constant", 25, TestName = "field with a computed initializer")]
+  [TestCase("static readonly int[] T = { G() }; public static int G() => 1;", "a field initializer that is not a constant", 27, TestName = "table with a computed element")]
+  [TestCase("static readonly int[] T = new int[4];", "an array initializer that is not a list of elements", 27, TestName = "table without elements")]
+  [TestCase("static readonly int[] U = { 1 }; static readonly int[] T = [.. U];", "SpreadElement", 61, TestName = "table from a spread")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { T[0] = 3; }", "a write to the static readonly array 'T'", 63, TestName = "write to a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { T[0] += 3; }", "a write to the static readonly array 'T'", 63, TestName = "compound assignment to a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { T[0]++; }", "a write to the static readonly array 'T'", 63, TestName = "step of a table element")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static uint F() => --T[1];", "a write to the static readonly array 'T'", 66, TestName = "step of a table element as a value")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { System.Array.Fill(T, 1u); }", "a write to the static readonly array 'T'", 81, TestName = "fill of a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F() { System.Array.Clear(T); }", "a write to the static readonly array 'T'", 82, TestName = "clearing of a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void F(uint[] a) { System.Array.Copy(a, 0, T, 0, 1); }", "a write to the static readonly array 'T'", 95, TestName = "copy into a table")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static uint[] F() => T;", "the static readonly array 'T' used as a value", 66, TestName = "table returned")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static void G(uint[] a) { } public static void F() { G(T); }", "the static readonly array 'T' used as a value", 100, TestName = "table passed on")]
+  [TestCase("static readonly uint[] T = { 1, 2 }; public static uint F() { var t = Snippet.T; return t[0]; }", "the static readonly array 'T' used as a value", 71, TestName = "table assigned")]
+  [TestCase("static readonly int X = 1; public static int F(int X) => Snippet.X + X;", "a variable with the name of the field 'X' it is used next to", 28, TestName = "parameter hiding a constant")]
+  [TestCase("static readonly int[] T = { 1 }; public static int F() { { int T = 2; } return Snippet.T[0]; }", "a variable with the name of the field 'T' it is used next to", 34, TestName = "local hiding a table")]
+  [TestCase("public static void F(int[] a, int[] b) { System.Array.Copy(a, b, 1); }", "Array.Copy", 42, TestName = "Array.Copy without indices")]
+  [TestCase("public static void F(int[] a, int[] b) { System.Array.Copy(a, 0L, b, 0L, 1L); }", "Array.Copy", 42, TestName = "Array.Copy with 64-bit indices")]
+  [TestCase("public static void F(int[] a, long[] b) { System.Array.Copy(a, 0, b, 0, 1); }", "Array.Copy from i32[] to i64[]", 67, TestName = "Array.Copy that converts")]
+  [TestCase("public static void F(int[] a) { System.Array.Fill(a, 1, 0, 1); }", "Array.Fill", 33, TestName = "Array.Fill of a range")]
+  [TestCase("public static void F(int[] a) { System.Array.Clear(a, 0, 1); }", "Array.Clear", 33, TestName = "Array.Clear of a range")]
+  [TestCase("public static void F(int[] a) { System.Array.Reverse(a); }", "Array.Reverse", 33, TestName = "another method of Array")]
+  [TestCase("public static int[] F(int a) => [a, .. new[] { 1 }];", "SpreadElement", 37, TestName = "spread in a collection expression")]
   [TestCase("public static extern int F();", "extern", 1, TestName = "extern")]
   [TestCase("public static int F() => 1; public static int F(int a) => a;", "method overloading", 29, TestName = "overload")]
   [TestCase("public static int F() { using var m = new System.IO.MemoryStream(); return 1; }", "using", 25, TestName = "modifier of a local")]
   [TestCase("public static int F(int a) { int b = a = 1; return b; }", "SimpleAssignmentExpression", 38, TestName = "assignment as a value")]
   [TestCase("public static int F(object o) => 1;", "object", 21, TestName = "object")]
   [TestCase("public static void F() { new object(); }", "ObjectCreationExpression", 26, TestName = "object creation statement")]
-  [TestCase("public static int F(int a) => System.Math.Abs(a);", "InvocationExpression", 31, TestName = "call outside the class")]
+  [TestCase("public static int F(int a) => System.Math.Abs(a);", "Math.Abs", 31, TestName = "call outside the class")]
   [TestCase("public static int G(int a) => a; public static int F(int a) => G(a: a);", "InvocationExpression", 64, TestName = "named argument")]
   [TestCase("public static bool F(bool a, bool b) => a & b;", "BitwiseAndExpression on bool and bool", 41, TestName = "bitwise and of truth values")]
   [TestCase("public static bool F(bool a, bool b) { a |= b; return a; }", "OrAssignmentExpression on bool and bool", 40, TestName = "compound assignment of truth values")]
@@ -141,7 +168,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int[] F() => null;", "NullLiteralExpression", 28, TestName = "null")]
   [TestCase("public static void F(int[] a) { (a) = a; }", "ParenthesizedExpression", 33, TestName = "parenthesized target")]
   [TestCase("public static void F(int[] a) { a.Length.ToString(); }", "string", 33, TestName = "member call")]
-  [TestCase("public static int F(int a) => int.MaxValue.CompareTo(a);", "InvocationExpression", 31, TestName = "call on a value")]
+  [TestCase("public static int F(int a) => int.MaxValue.CompareTo(a);", "Int32.CompareTo", 31, TestName = "call on a value")]
   [TestCase("public static int F(int? a) { a ??= 1; return 1; }", "int?", 21, TestName = "nullable")]
   [TestCase("public static void F(int[] a) { a ??= new int[1]; }", "CoalesceAssignmentExpression", 33, TestName = "coalescing assignment")]
   public void UnsupportedConstruct_IsRefusedWithItsPosition(string method, string what, int column) {
@@ -157,7 +184,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static class A { }\npublic static class B { }", "a file that is not exactly one static class", 2, 1)]
   [TestCase("", "a file that is not exactly one static class", 1, 1)]
   [TestCase("namespace N;\n", "a file that is not exactly one static class", 1, 1)]
-  [TestCase("public static class C {\n  public static class Inner { }\n}", "a class member other than a static method", 2, 3)]
+  [TestCase("public static class C {\n  public static class Inner { }\n}", "a class member other than a static method or a constant", 2, 3)]
   public void FileShape_IsRefusedWithItsPosition(string source, string what, int line, int column)
     => Assert.That(Refusal(source), Is.EqualTo(new Diagnostic(
       "PLY1002", DiagnosticSeverity.Error, $"'{what}' is not supported yet", "Snippet.cs", line, column)));
@@ -351,6 +378,57 @@ public sealed class CSharpFrontendTests {
     Assert.That(Returned(module.Functions[4]), Is.EqualTo(new IrStep(new IrLocalRef(new IrLocal("a", IrType.F64)), true, false, false)));
     Assert.That(module.Functions[5].Locals, Is.Empty);
     Assert.That(Returned(module.Functions[5]), Is.EqualTo(new IrBinary(IrBinaryOp.Add, a, new IrConst(IrType.I32, 5))));
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>
+  /// The fields of the class are the constants of the module. A use of a const is the value the
+  /// compiler folded; a static readonly field is read where it is used, a table by element.
+  /// </summary>
+  [Test]
+  public void Fields_BecomeTheConstantsOfTheModule() {
+    var module = Import(
+      "private const int K = 2; public const long L = K + 1; static readonly double H = 0.5; static readonly bool B = true; "
+      + "static readonly uint[] T = { 1, K }; static readonly ulong[] U = [ulong.MaxValue]; static readonly char[] C = new[] { 'a' }; "
+      + "static readonly float[] E = new float[] { }; static readonly sbyte X = -1, Y = 1; "
+      + "public static long F(int i) => K + L; public static double G() => B ? H : X; public static uint I(int i) => T[i] + (uint)Snippet.T.Length;");
+    Assert.That(module.Constants.Select(constant => (constant.Name, constant.Type.ToString(), string.Join(",", constant.Values))), Is.EqualTo(new[] {
+      ("K", "i32", "2"), ("L", "i64", "3"), ("H", "f64", "4602678819172646912"), ("B", "bool", "1"), ("T", "u32[]", "1,2"),
+      ("U", "u64[]", "-1"), ("C", "u16[]", "97"), ("E", "f32[]", ""), ("X", "i8", "-1"), ("Y", "i8", "1")
+    }));
+    Assert.That(Returned(module.Functions[0]), Is.EqualTo(new IrConst(IrType.I64, 5)));
+    var choice = (IrConditional)Returned(module.Functions[1]);
+    Assert.That(choice.Condition, Is.EqualTo(new IrConstRef(module.Constants[3])));
+    Assert.That(choice.WhenTrue, Is.EqualTo(new IrConstRef(module.Constants[2])));
+    Assert.That(choice.WhenFalse, Is.EqualTo(new IrConvert(IrType.F64, new IrConstRef(module.Constants[8]))));
+    var table = new IrConstRef(module.Constants[4]);
+    Assert.That(Returned(module.Functions[2]), Is.EqualTo(new IrBinary(IrBinaryOp.Add,
+      new IrArrayLoad(table, new IrLocalRef(module.Functions[2].Parameters[0])), new IrConvert(IrType.U32, new IrArrayLength(table)))));
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>An array built from its elements, in each of the four notations, and the three array operations.</summary>
+  [Test]
+  public void ArraysAndTheirOperations_BecomeIntrinsics() {
+    var module = Import(
+      "public static long[] A(int a) => new long[] { a, 1 }; public static int[] B(int a) => new[] { a }; public static byte[] C(byte a) => [a, 2]; "
+      + "public static short[] D() { short[] d = { 1, 2 }; return d; } "
+      + "public static void E(int[] a, int[] b, int n) { System.Array.Copy(a, n, b, 0, n); System.Array.Fill(a, n); System.Array.Clear(b); }");
+    IrIntrinsic Built(int function) => (IrIntrinsic)Returned(module.Functions[function]);
+    IrExpr a = new IrLocalRef(new IrLocal("a", IrType.I32));
+    Assert.That((Built(0).Op, Built(0).Type), Is.EqualTo((IrIntrinsicOp.ArrayOf, IrType.Array(IrType.I64))));
+    Assert.That(Built(0).Arguments, Is.EqualTo(new IrExpr[] { new IrConvert(IrType.I64, a), new IrConst(IrType.I64, 1) }));
+    Assert.That(Built(1).Arguments, Is.EqualTo(new[] { a }));
+    Assert.That(Built(2).Arguments, Is.EqualTo(new IrExpr[] { new IrLocalRef(new IrLocal("a", IrType.U8)), new IrConst(IrType.U8, 2) }));
+    var declared = (IrIntrinsic)((IrDeclare)module.Functions[3].Body.Statements[0]).Initializer!;
+    Assert.That(declared.Arguments, Is.EqualTo(new IrExpr[] { new IrConst(IrType.I16, 1), new IrConst(IrType.I16, 2) }));
+    var e = module.Functions[4];
+    var operations = e.Body.Statements.Select(statement => (IrIntrinsic)((IrExprStmt)statement).Expression).ToList();
+    Assert.That(operations.Select(operation => (operation.Op, operation.Type, operation.Arguments.Count)), Is.EqualTo(new[] {
+      (IrIntrinsicOp.ArrayCopy, IrType.Void, 5), (IrIntrinsicOp.ArrayFill, IrType.Void, 2), (IrIntrinsicOp.ArrayClear, IrType.Void, 1)
+    }));
+    Assert.That(operations[0].Arguments[0], Is.EqualTo(new IrLocalRef(e.Parameters[0])));
+    Assert.That(operations[0].Arguments[2], Is.EqualTo(new IrLocalRef(e.Parameters[1])));
     Assert.That(IrVerifier.Verify(module), Is.Empty);
   }
 

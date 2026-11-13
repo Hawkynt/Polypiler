@@ -33,9 +33,9 @@ internal static class PrototypeFixture {
   /// <summary>The names of all fixtures, which are also the names of their classes.</summary>
   public static readonly string[] Names = [
     "Adler32", "Arrays", "Crc32", "Fnv1a", "Numbers", "Operators", "Statements",
-    "wide/BinarySearch", "wide/BubbleSort", "wide/Conversions", "wide/Crc16", "wide/DigitSum", "wide/Fir", "wide/Fletcher16",
-    "wide/Fnv1a64", "wide/Horner", "wide/OperatorsWide", "wide/RunLength", "wide/SplitMix64", "wide/StatementsWide",
-    "wide/Xorshift64"
+    "wide/BinarySearch", "wide/BubbleSort", "wide/Conversions", "wide/Crc16", "wide/Crc32Table", "wide/DigitSum", "wide/Fir",
+    "wide/Fletcher16", "wide/Fnv1a64", "wide/Horner", "wide/OperatorsWide", "wide/RunLength", "wide/SplitMix64",
+    "wide/StatementsWide", "wide/Tables", "wide/Xorshift64"
   ];
 
   /// <summary>The name of the class a fixture declares, which is the name of its file without the folder.</summary>
@@ -135,10 +135,14 @@ internal static class PrototypeFixture {
       : "f:" + BitConverter.DoubleToInt64Bits(number).ToString("x16", CultureInfo.InvariantCulture);
   }
 
-  /// <summary>The trap a .NET exception corresponds to, or <see langword="null"/> for any other exception.</summary>
+  /// <summary>
+  /// The trap a .NET exception corresponds to, or <see langword="null"/> for any other exception.
+  /// <c>Array.Copy</c> reports a range outside an array as an <see cref="ArgumentException"/>; the
+  /// fixtures have no other source of one, and in the IR it is the bounds trap.
+  /// </summary>
   private static IrTrap? TrapOf(Exception? exception) => exception switch {
     DivideByZeroException => IrTrap.DivideByZero,
-    IndexOutOfRangeException => IrTrap.IndexOutOfRange,
+    IndexOutOfRangeException or ArgumentException => IrTrap.IndexOutOfRange,
     OverflowException => IrTrap.IntegerOverflow,
     _ => null
   };

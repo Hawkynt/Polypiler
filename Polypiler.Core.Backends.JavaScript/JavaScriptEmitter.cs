@@ -15,8 +15,9 @@ namespace Polypiler.Core.Backends.JavaScript;
 /// <c>BigInt.asUintN</c>. A <c>double</c> is a number as it is; every <c>float</c> operation is
 /// rounded to binary32 with <c>Math.fround</c>, which is exact because a double holds the sum,
 /// difference, product and quotient of two binary32 numbers precisely enough to round once. Arrays
-/// are typed arrays. The operations that can trap or need more than an expression go through small
-/// helper functions, of which a module carries exactly the ones it uses.
+/// are typed arrays, and the constants of the module are <c>const</c> declarations in front of its
+/// functions. The operations that can trap or need more than an expression go through small helper
+/// functions, of which a module carries exactly the ones it uses.
 /// </summary>
 public static class JavaScriptEmitter {
 
@@ -80,6 +81,12 @@ public static class JavaScriptEmitter {
     ]),
     ("$get", ["function $get(array, index) {", OutOfRange, "  return array[index];", "}"]),
     ("$set", ["function $set(array, index, value) {", OutOfRange, "  array[index] = value;", "}"]),
+    ("$copy", [
+      "function $copy(source, from, target, to, length) {",
+      "  if (from < 0 || to < 0 || length < 0 || from + length > source.length || to + length > target.length) throw new RangeError(\"index out of range\");",
+      "  target.set(source.subarray(from, from + length), to);",
+      "}"
+    ]),
     ("$step", [
       "function $step(array, index, delta, post) {",
       OutOfRange,
@@ -184,7 +191,42 @@ public static class JavaScriptEmitter {
         if (this._used.Contains(name))
           text.Append('\n').AppendJoin('\n', lines).Append('\n');
 
+      if (module.Constants.Count > 0)
+        text.Append('\n');
+
+      foreach (var constant in module.Constants)
+        text.Append("const ").Append(Name(constant.Name)).Append(" = ").Append(Value(constant)).Append(";\n");
+
       return text.Append(this._code).ToString();
+    }
+
+    /// <summary>
+    /// The value of a constant of the module. A table is a typed array built once from its elements,
+    /// eight to a line when it has more than that.
+    /// </summary>
+    private static string Value(IrModuleConst constant) {
+      if (constant.Type.Element is not { } element)
+        return Constant(constant.Type, constant.Values[0]).Text;
+
+      var elements = constant.Values.Select(value => Constant(element, value).Text).ToList();
+      var list = elements.Count <= 8
+        ? string.Join(", ", elements)
+        : "\n  " + string.Join(",\n  ", elements.Chunk(8).Select(row => string.Join(", ", row))) + "\n";
+      return $"new {Storage(element)}([{list}])";
+    }
+
+    /// <summary>A constant as a literal of its type; it is an operand as it stands unless it is negative.</summary>
+    private static (string Text, bool Atomic) Constant(IrType type, long value) {
+      if (type == IrType.Bool)
+        return (value != 0 ? "true" : "false", true);
+
+      if (type.IsFloat) {
+        var literal = Literal(IrOperators.Float(type, value));
+        return (literal, literal[0] != '-');
+      }
+
+      var number = IrOperators.Number(type, value);
+      return (Literal(type, number), number >= 0);
     }
 
     /// <summary>
@@ -361,16 +403,11 @@ public static class JavaScriptEmitter {
     private (string Text, bool Atomic) Expression(IrExpr expression) {
       switch (expression) {
         case IrConst constant:
-          if (constant.Type == IrType.Bool)
-            return (constant.Value != 0 ? "true" : "false", true);
-
-          if (constant.Type.IsFloat) {
-            var literal = Literal(IrOperators.Float(constant.Type, constant.Value));
-            return (literal, literal[0] != '-');
-          }
-
-          var number = IrOperators.Number(constant.Type, constant.Value);
-          return (Literal(constant.Type, number), number >= 0);
+          return Constant(constant.Type, constant.Value);
+        case IrConstRef reference:
+          return (Name(reference.Constant.Name), true);
+        case IrIntrinsic intrinsic:
+          return this.Intrinsic(intrinsic);
         case IrLocalRef reference:
           return (Name(reference.Local.Name), true);
         case IrUnary unary:
@@ -393,6 +430,20 @@ public static class JavaScriptEmitter {
         default:
           var call = (IrCall)expression;
           return ($"{Name(call.Function)}({string.Join(", ", call.Arguments.Select(this.Text))})", true);
+      }
+    }
+
+    private (string Text, bool Atomic) Intrinsic(IrIntrinsic intrinsic) {
+      var arguments = intrinsic.Arguments;
+      switch (intrinsic.Op) {
+        case IrIntrinsicOp.ArrayOf:
+          return ($"new {Storage(intrinsic.Type.Element!)}([{string.Join(", ", arguments.Select(this.Text))}])", true);
+        case IrIntrinsicOp.ArrayCopy:
+          return (this.Helper("$copy", arguments.ToArray()), true);
+        case IrIntrinsicOp.ArrayFill:
+          return ($"{this.Operand(arguments[0])}.fill({this.Text(arguments[1])})", true);
+        default:
+          return ($"{this.Operand(arguments[0])}.fill({(arguments[0].Type.Element!.IsLong ? "0n" : "0")})", true);
       }
     }
 

@@ -71,6 +71,7 @@ public sealed class CSharpToJavaScriptTests {
   [TestCase("wide/Fnv1a64", "Hash", "a", "12638187200555641996")]
   [TestCase("wide/Fnv1a64", "Hash", "", "14695981039346656037")]
   [TestCase("wide/Crc16", "Compute", "123456789", "10673")]
+  [TestCase("wide/Crc32Table", "Compute", "123456789", "3421780262")]
   public void TranslatedAlgorithm_MatchesItsPublishedValue(string fixture, string method, string text, string expected) {
     var call = new PrototypeCall(method, [PrototypeCases.Text(text)]);
     this.TranslatedFixture_Returns(fixture, call, expected);
@@ -130,6 +131,16 @@ public sealed class CSharpToJavaScriptTests {
     var decode = new PrototypeCall("Decode", [new byte[] { 0x02, 1, 2, 3, 0x80, 9, 0xFF, 5 }, new byte[8]]);
     Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "RunLength.mjs", [decode]).Single(),
       Is.EqualTo("6 | [2,1,2,3,128,9,255,5] | [1,2,3,9,9,9,0,0]"));
+  }
+
+  /// <summary>Scenario: Writing to a constant table is refused.</summary>
+  [Test]
+  public void WritingToAConstantTable_IsRefused() {
+    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap(
+      "static readonly uint[] T = { 1, 2 }; public static void F() { T[0] = 3; }"));
+    Assert.That(exitCode, Is.EqualTo(3));
+    Assert.That(output, Does.Contain("PLY1002").And.Contain("a write to the static readonly array 'T'"));
+    Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 
   /// <summary>Scenario: A checked addition traps.</summary>

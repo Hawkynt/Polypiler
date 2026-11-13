@@ -18,6 +18,8 @@ internal sealed class Lowering(string path, SemanticModel model) {
   private readonly List<Diagnostic> _diagnostics = [];
   private readonly Dictionary<ISymbol, IrLocal> _variables = new(SymbolEqualityComparer.Default);
   private readonly List<IrLocal> _locals = [];
+  private readonly Dictionary<ISymbol, IrModuleConst> _constants = new(SymbolEqualityComparer.Default);
+  private readonly HashSet<string> _read = [];
   private INamedTypeSymbol? _class;
 
   public ImportResult Run(CompilationUnitSyntax root) {
@@ -28,10 +30,18 @@ internal sealed class Lowering(string path, SemanticModel model) {
       name = type.Identifier.Text;
       this._class = model.GetDeclaredSymbol(type);
       var seen = new HashSet<string>();
-      foreach (var member in type.Members) {
+      foreach (var field in type.Members.OfType<FieldDeclarationSyntax>()) {
+        try {
+          this.Field(field);
+        } catch (UnsupportedException unsupported) {
+          this.Report(unsupported);
+        }
+      }
+
+      foreach (var member in type.Members.Where(member => member is not FieldDeclarationSyntax)) {
         try {
           if (member is not MethodDeclarationSyntax method)
-            throw new UnsupportedException(member, "a class member other than a static method");
+            throw new UnsupportedException(member, "a class member other than a static method or a constant");
 
           if (!seen.Add(method.Identifier.Text))
             throw new UnsupportedException(method, "method overloading");
@@ -47,7 +57,55 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
     return this._diagnostics.Count > 0
       ? new(null, this._diagnostics)
-      : new(new IrModule(name, functions), this._diagnostics);
+      : new(new IrModule(name, functions, this._constants.Values.ToList()), this._diagnostics);
+  }
+
+  /// <summary>
+  /// A field is a constant of the module: a <c>const</c>, or a <c>static readonly</c> whose
+  /// initializer is a constant or, for an array, a list of constants. Anything else would be state.
+  /// </summary>
+  private void Field(FieldDeclarationSyntax field) {
+    var constant = field.Modifiers.Any(SyntaxKind.ConstKeyword);
+    foreach (var modifier in field.Modifiers)
+      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword
+          or SyntaxKind.ConstKeyword or SyntaxKind.StaticKeyword or SyntaxKind.ReadOnlyKeyword))
+        throw new UnsupportedException(field, modifier.Text);
+
+    if (!constant && !field.Modifiers.Any(SyntaxKind.ReadOnlyKeyword))
+      throw new UnsupportedException(field, "a field that is neither const nor static readonly");
+
+    foreach (var variable in field.Declaration.Variables) {
+      var symbol = (IFieldSymbol)model.GetDeclaredSymbol(variable)!;
+      var type = Map(symbol.Type, field.Declaration.Type);
+      if (variable.Initializer is null)
+        throw new UnsupportedException(variable, "a field without an initializer");
+
+      var initializer = variable.Initializer.Value;
+      var values = type.IsArray
+        ? this.ArrayOf(type, initializer).Arguments
+        : [this.Value(initializer)];
+      var mutable = values.FirstOrDefault(value => value is not IrConst);
+      if (mutable is not null)
+        throw new UnsupportedException(initializer, "a field initializer that is not a constant");
+
+      this._constants[symbol] = new IrModuleConst(symbol.Name, type, values.Select(value => ((IrConst)value).Value).ToList());
+    }
+  }
+
+  /// <summary>
+  /// The array an initializer builds: <c>new T[] { … }</c>, <c>new[] { … }</c>, <c>{ … }</c> or
+  /// <c>[ … ]</c>, with every element converted to the element type.
+  /// </summary>
+  private IrIntrinsic ArrayOf(IrType type, ExpressionSyntax initializer) {
+    IEnumerable<ExpressionSyntax> elements = initializer switch {
+      InitializerExpressionSyntax list => list.Expressions,
+      ArrayCreationExpressionSyntax { Initializer: { } list } => list.Expressions,
+      ImplicitArrayCreationExpressionSyntax creation => creation.Initializer.Expressions,
+      CollectionExpressionSyntax collection => collection.Elements.Select(element
+        => element is ExpressionElementSyntax single ? single.Expression : throw new UnsupportedException(element, element.Kind().ToString())),
+      _ => throw new UnsupportedException(initializer, "an array initializer that is not a list of elements")
+    };
+    return new IrIntrinsic(IrIntrinsicOp.ArrayOf, type, elements.Select(element => Convert(this.Value(element), type.Element!)).ToList());
   }
 
   private void Report(UnsupportedException unsupported) {
@@ -88,6 +146,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
     this._variables.Clear();
     this._locals.Clear();
+    this._read.Clear();
     var symbol = model.GetDeclaredSymbol(method)!;
     var returnType = Map(symbol.ReturnType, method.ReturnType);
     var parameters = new List<IrLocal>();
@@ -117,6 +176,12 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
       body = new IrBlock(statements);
     }
+
+    // In the generated module a constant is a name of the module, which a variable of the same name
+    // would hide from the function that reads it.
+    var hiding = parameters.Concat(this._locals).FirstOrDefault(variable => this._read.Contains(variable.Name));
+    if (hiding is not null)
+      throw new UnsupportedException(method, $"a variable with the name of the field '{hiding.Name}' it is used next to");
 
     return new IrFunction(
       symbol.Name,
@@ -257,7 +322,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
   private IrBlock ForEach(ForEachStatementSyntax loop) {
     var outer = new List<IrStmt>();
     // The compiler converts the collection to IEnumerable; the loop is over the array itself.
-    var array = this.Once(this.Natural(loop.Expression, Map(model.GetTypeInfo(loop.Expression).Type, loop.Expression)), outer);
+    var array = this.Once(this.Read(loop.Expression), outer);
     var index = this.Local($"$t{this._locals.Count}", IrType.I32);
     outer.Add(new IrDeclare(index, new IrConst(IrType.I32, 0)));
 
@@ -350,7 +415,11 @@ internal sealed class Lowering(string path, SemanticModel model) {
     foreach (var variable in declaration.Variables) {
       var symbol = (ILocalSymbol)model.GetDeclaredSymbol(variable)!;
       var local = this.Local(symbol.Name, Map(symbol.Type, declaration.Type));
-      var initializer = variable.Initializer is null ? null : this.Value(variable.Initializer.Value);
+      var initializer = variable.Initializer?.Value switch {
+        null => null,
+        InitializerExpressionSyntax list => this.ArrayOf(local.Type, list),
+        var value => this.Value(value)
+      };
       this._variables[symbol] = local;
       if (scope is null) {
         into.Add(new IrDeclare(local, initializer));
@@ -465,7 +534,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case IdentifierNameSyntax when this.Value(target) is IrLocalRef variable:
         return (() => variable, value => new IrAssign(variable.Local, value));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element:
-        var array = this.Value(element.Expression);
+        var array = this.Written(element.Expression);
         var index = this.Index(element.ArgumentList.Arguments[0].Expression);
         if (alsoRead) {
           array = this.Once(array, into);
@@ -479,7 +548,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
   }
 
   private IrExpr Once(IrExpr expression, List<IrStmt> into) {
-    if (expression is IrLocalRef or IrConst)
+    if (expression is IrLocalRef or IrConst or IrConstRef)
       return expression;
 
     var temporary = this.Local($"$t{this._locals.Count}", expression.Type);
@@ -487,11 +556,35 @@ internal sealed class Lowering(string path, SemanticModel model) {
     return new IrLocalRef(temporary);
   }
 
-  /// <summary>Lowers an expression to a value of the type the compiler converts it to.</summary>
+  /// <summary>
+  /// Lowers an expression to a value of the type the compiler converts it to. A table of the module
+  /// is not a value: handing it on would give it a second name under which it could be written.
+  /// </summary>
   private IrExpr Value(ExpressionSyntax expression) {
     var info = model.GetTypeInfo(expression);
+    if (expression is CollectionExpressionSyntax)
+      return this.ArrayOf(Map(info.ConvertedType, expression), expression);
+
     var natural = this.Natural(expression, Map(info.Type, expression));
+    if (natural is IrConstRef { Type.IsArray: true } table)
+      throw new UnsupportedException(expression, $"the static readonly array '{table.Constant.Name}' used as a value");
+
     return Convert(natural, Map(info.ConvertedType, expression));
+  }
+
+  /// <summary>
+  /// An array that is only read, measured or copied from. The array itself is meant, not what the
+  /// compiler converts it to for a parameter of the type <c>Array</c>; a table of the module may stand here.
+  /// </summary>
+  private IrExpr Read(ExpressionSyntax expression)
+    => this.Natural(expression, Map(model.GetTypeInfo(expression).Type, expression));
+
+  /// <summary>An array whose elements are written, which a table of the module never is.</summary>
+  private IrExpr Written(ExpressionSyntax expression) {
+    var array = this.Read(expression);
+    return array is IrConstRef table
+      ? throw new UnsupportedException(expression, $"a write to the static readonly array '{table.Constant.Name}'")
+      : array;
   }
 
   private IrExpr Natural(ExpressionSyntax expression, IrType type) {
@@ -519,11 +612,17 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case CastExpressionSyntax cast:
         return Convert(this.Value(cast.Expression), type, this.IsChecked(cast));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element:
-        return new IrArrayLoad(this.Value(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression));
+        return new IrArrayLoad(this.Read(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression));
       case MemberAccessExpressionSyntax { Name.Identifier.Text: "Length" } member when model.GetTypeInfo(member.Expression).Type is IArrayTypeSymbol:
-        return new IrArrayLength(this.Value(member.Expression));
+        return new IrArrayLength(this.Read(member.Expression));
+      case IdentifierNameSyntax or MemberAccessExpressionSyntax
+        when model.GetSymbolInfo(expression).Symbol is IFieldSymbol field && this._constants.TryGetValue(field, out var global):
+        this._read.Add(global.Name);
+        return new IrConstRef(global);
       case ArrayCreationExpressionSyntax { Initializer: null } creation:
         return new IrNewArray(type, this.Index(creation.Type.RankSpecifiers[0].Sizes[0]));
+      case ArrayCreationExpressionSyntax or ImplicitArrayCreationExpressionSyntax:
+        return this.ArrayOf(type, expression);
       case InvocationExpressionSyntax invocation:
         return this.Call(invocation, type);
       default:
@@ -536,7 +635,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
     IrExpr target = operand switch {
       IdentifierNameSyntax when this.Value(operand) is IrLocalRef variable => variable,
       ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element
-        => new IrArrayLoad(this.Value(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression)),
+        => new IrArrayLoad(this.Written(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression)),
       _ => throw new UnsupportedException(operand, operand.Kind().ToString())
     };
     return new IrStep(target, increment, postfix, target.Type.IsInteger && this.IsChecked(step));
@@ -614,11 +713,38 @@ internal sealed class Lowering(string path, SemanticModel model) {
   private IrExpr Call(InvocationExpressionSyntax invocation, IrType type) {
     var arguments = invocation.ArgumentList.Arguments;
     if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol { MethodKind: MethodKind.Ordinary } method
-        || !SymbolEqualityComparer.Default.Equals(method.ContainingType, this._class)
         || arguments.Any(argument => argument.NameColon is not null))
       throw new UnsupportedException(invocation, invocation.Kind().ToString());
 
-    return new IrCall(method.Name, type, arguments.Select(argument => this.Value(argument.Expression)).ToList());
+    var operands = arguments.Select(argument => argument.Expression).ToList();
+    if (SymbolEqualityComparer.Default.Equals(method.ContainingType, this._class))
+      return new IrCall(method.Name, type, operands.Select(this.Value).ToList());
+
+    return this.Library(method, operands, type)
+      ?? throw new UnsupportedException(invocation, $"{method.ContainingType.Name}.{method.Name}");
+  }
+
+  /// <summary>
+  /// A call into the base library, as the one operation of the IR it means exactly; <see langword="null"/>
+  /// for a method, or an overload of one, that has no such operation.
+  /// </summary>
+  private IrExpr? Library(IMethodSymbol method, List<ExpressionSyntax> operands, IrType type) {
+    var parameters = method.Parameters.Select(parameter => parameter.Type.SpecialType).ToList();
+    switch (method.ContainingType.ToDisplayString(), method.Name, operands.Count) {
+      case ("System.Array", "Copy", 5) when parameters[4] == SpecialType.System_Int32:
+        var source = this.Read(operands[0]);
+        var target = this.Written(operands[2]);
+        if (source.Type != target.Type)
+          throw new UnsupportedException(operands[2], $"Array.Copy from {source.Type} to {target.Type}");
+
+        return new IrIntrinsic(IrIntrinsicOp.ArrayCopy, type, [source, this.Value(operands[1]), target, this.Value(operands[3]), this.Value(operands[4])]);
+      case ("System.Array", "Fill", 2):
+        return new IrIntrinsic(IrIntrinsicOp.ArrayFill, type, [this.Written(operands[0]), this.Value(operands[1])]);
+      case ("System.Array", "Clear", 1):
+        return new IrIntrinsic(IrIntrinsicOp.ArrayClear, type, [this.Written(operands[0])]);
+      default:
+        return null;
+    }
   }
 
   /// <summary>

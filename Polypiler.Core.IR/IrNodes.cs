@@ -20,6 +20,20 @@ public abstract record IrExpr(IrType Type);
 /// <param name="Value">The value, within the range of <paramref name="Type"/>.</param>
 public sealed record IrConst(IrType Type, long Value) : IrExpr(Type);
 
+/// <summary>
+/// A constant of a module: one value, or an array whose elements never change. An array is a table:
+/// it can be read, measured and copied from, and nothing else - it is never stored into and never
+/// passed on as a value, so that no other name can reach it.
+/// </summary>
+/// <param name="Name">The name, unique among the constants and functions of the module.</param>
+/// <param name="Type">A truth value, a number, or an array of numbers.</param>
+/// <param name="Values">The value, or the elements in order, each as an <see cref="IrConst"/> carries it.</param>
+public sealed record IrModuleConst(string Name, IrType Type, IReadOnlyList<long> Values);
+
+/// <summary>The value of a constant of the module, or the table it is.</summary>
+/// <param name="Constant">The constant read.</param>
+public sealed record IrConstRef(IrModuleConst Constant) : IrExpr(Constant.Type);
+
 /// <summary>The current value of a parameter or local.</summary>
 /// <param name="Local">The variable read.</param>
 public sealed record IrLocalRef(IrLocal Local) : IrExpr(Local.Type);
@@ -212,6 +226,37 @@ public sealed record IrCall(string Function, IrType Type, IReadOnlyList<IrExpr> 
 /// <param name="Trap">Whether an integer result outside the type traps instead of wrapping around.</param>
 public sealed record IrStep(IrExpr Target, bool Increment, bool Postfix, bool Trap) : IrExpr(Target.Type);
 
+/// <summary>The operations an <see cref="IrIntrinsic"/> performs.</summary>
+public enum IrIntrinsicOp {
+
+  /// <summary>A new array holding the arguments in order; the type of the node is the array type.</summary>
+  ArrayOf,
+
+  /// <summary>
+  /// <c>(source, sourceIndex, target, targetIndex, length)</c>: copies a range between two arrays of
+  /// one type as if through a buffer, so that overlapping ranges of one array are safe. Traps with an
+  /// index out of range, before anything is copied, when a range is not inside its array.
+  /// </summary>
+  ArrayCopy,
+
+  /// <summary><c>(array, value)</c>: stores the value in every element.</summary>
+  ArrayFill,
+
+  /// <summary><c>(array)</c>: stores zero in every element.</summary>
+  ArrayClear
+
+}
+
+/// <summary>
+/// An operation of the base library that has an exact meaning. Its arguments are evaluated left to
+/// right; <see cref="IrOperators.Accepts(IrIntrinsicOp, IrType, IReadOnlyList{IrType})"/> says which
+/// types it takes.
+/// </summary>
+/// <param name="Op">The operation.</param>
+/// <param name="Type">The type of the result, <see cref="IrType.Void"/> when there is none.</param>
+/// <param name="Arguments">The operands.</param>
+public sealed record IrIntrinsic(IrIntrinsicOp Op, IrType Type, IReadOnlyList<IrExpr> Arguments) : IrExpr(Type);
+
 /// <summary>A statement.</summary>
 public abstract record IrStmt;
 
@@ -308,7 +353,15 @@ public sealed record IrFunction(
   IReadOnlyList<IrLocal> Locals,
   IrBlock Body);
 
-/// <summary>A module: the functions of one source class.</summary>
+/// <summary>A module: the functions and constants of one source class.</summary>
 /// <param name="Name">The name of the module.</param>
 /// <param name="Functions">The functions, in source order.</param>
-public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions);
+/// <param name="Constants">The constants, in source order.</param>
+public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, IReadOnlyList<IrModuleConst> Constants) {
+
+  /// <summary>A module without constants.</summary>
+  /// <param name="name">The name of the module.</param>
+  /// <param name="functions">The functions, in source order.</param>
+  public IrModule(string name, IReadOnlyList<IrFunction> functions) : this(name, functions, []) { }
+
+}

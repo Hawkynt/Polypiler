@@ -82,6 +82,8 @@ internal static class PrototypeCases {
     "Statements" => Statements(),
     "Operators" or "wide/OperatorsWide" or "wide/Conversions" => EveryMethod(fixture),
     "wide/RunLength" => RunLength(),
+    "wide/Crc32Table" => Crc32Table(),
+    "wide/Tables" => Tables(),
     "wide/DigitSum" => DigitSum(),
     "wide/BinarySearch" => BinarySearch(),
     "wide/BubbleSort" => BubbleSort(),
@@ -137,6 +139,75 @@ internal static class PrototypeCases {
   public static byte[] Text(string text) => Encoding.ASCII.GetBytes(text);
 
   private static PrototypeCall Call(string method, params object[] arguments) => new(method, arguments);
+
+  private static List<PrototypeCall> Crc32Table() {
+    var calls = new List<PrototypeCall> {
+      Call("Compute", Text("123456789")),
+      Call("Compute", Text("")),
+      Call("Compute", new byte[] { 0 }),
+      Call("Compute", new byte[] { 255 }),
+      Call("Compute", Enumerable.Range(0, 256).Select(value => (byte)value).ToArray()),
+      Call("Entries"),
+      Call("Update", 0u, Text("123456789"), 0, 9),
+      Call("Update", 0u, Text("123456789"), 0, 0),
+      Call("Update", 0x12345678u, Text("123456789"), 4, 5),
+      Call("Update", 0u, Text("123456789"), 5, 5),
+      Call("Update", 0u, Text("123456789"), -1, 2)
+    };
+    foreach (var index in new[] { -1, 0, 1, 128, 255, 256 })
+      calls.Add(Call("Entry", index));
+
+    return calls;
+  }
+
+  /// <summary>
+  /// The table fixture: every table at index 0, its last index and one before and after its range;
+  /// every scalar-only function on boundary and random operands; and the array operations with ranges
+  /// that are empty, fit exactly, overlap in both directions and end one past an array.
+  /// </summary>
+  private static List<PrototypeCall> Tables() {
+    var calls = EveryMethod("wide/Tables", method => method.GetParameters().All(parameter => parameter.ParameterType != typeof(int) && parameter.ParameterType != typeof(uint)));
+    (string Method, int Length)[] tables = [
+      ("ReadNothing", 0), ("ReadOne", 1), ("Square", 5), ("Power", 4), ("ReadSigned", 4), ("ReadShort", 3), ("ReadLetter", 3),
+      ("Weight", 3), ("Root", 4), ("Sign", 3)
+    ];
+    foreach (var (method, length) in tables)
+      foreach (var index in Enumerable.Range(-1, length + 2))
+        calls.Add(Call(method, index));
+
+    foreach (var index in new uint[] { 0, 1, 2, uint.MaxValue })
+      calls.Add(Call("ReadLarge", index));
+
+    foreach (var value in new[] { int.MinValue, -1, 0, 1, 7, int.MaxValue }) {
+      calls.Add(Call("Scaled", value));
+      calls.Add(Call("Masked", (uint)value));
+      calls.Add(Call("Triple", value, 3));
+    }
+
+    foreach (var (from, length) in new[] { (0, 0), (0, 1), (0, 256), (255, 1), (256, 0), (250, 6), (250, 7), (-1, 1), (0, -1), (257, 0) })
+      calls.Add(Call("RampSlice", from, length));
+
+    foreach (var (from, to, length) in new[] { (0, 0, 0), (0, 0, 4), (0, 1, 3), (1, 0, 3), (2, 2, 2), (0, 2, 3), (3, 0, 2), (4, 4, 0), (0, 4, 1), (-1, 0, 1), (0, -1, 1), (0, 0, -1), (0, 0, 5) }) {
+      calls.Add(Call("Copy", new[] { 1, 2, 3, 4 }, from, new[] { 10, 20, 30, 40 }, to, length));
+      calls.Add(Call("Move", new[] { 1L, 2, 3, 4 }, from, to, length));
+    }
+
+    calls.Add(Call("Copy", Array.Empty<int>(), 0, Array.Empty<int>(), 0, 0));
+    calls.Add(Call("Copy", new[] { 1 }, 0, Array.Empty<int>(), 0, 1));
+    calls.Add(Call("CopyDoubles", new[] { 0.5, double.NaN }, new double[3]));
+    calls.Add(Call("CopyDoubles", new[] { 0.5, -0.0 }, new double[2]));
+    calls.Add(Call("CopyDoubles", Array.Empty<double>(), new double[1]));
+    calls.Add(Call("Fill", new short[3], (short)-7));
+    calls.Add(Call("Fill", Array.Empty<short>(), (short)1));
+    calls.Add(Call("FillLarge", new ulong[2], ulong.MaxValue));
+    calls.Add(Call("FillWithConstant", new byte[3]));
+    calls.Add(Call("FillFloats", new float[2], 0.1));
+    calls.Add(Call("Clear", new[] { 0.5f, float.NaN }));
+    calls.Add(Call("Clear", Array.Empty<float>()));
+    calls.Add(Call("ClearLongs", new[] { long.MinValue, 1 }));
+    calls.Add(Call("ClearChars", "ab".ToCharArray()));
+    return calls;
+  }
 
   private static List<PrototypeCall> RunLength() {
     var calls = new List<PrototypeCall>();
