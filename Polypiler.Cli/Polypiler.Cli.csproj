@@ -8,8 +8,18 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- The C# frontend hands the core library of the running process to Roslyn as the reference to
+       compile against. A trimmed publish must therefore keep that library whole: with members such as
+       int.MaxValue trimmed away, valid C# would be reported as invalid. -->
+  <ItemGroup>
+    <TrimmerRootAssembly Include="System.Private.CoreLib" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.JavaScript\Polypiler.Core.Backends.JavaScript.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
   </ItemGroup>
 
 </Project>

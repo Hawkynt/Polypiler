@@ -25,7 +25,7 @@
 
 It is designed to do more than translate syntax. Polypiler recognizes the *computation* represented by source code, type patterns, library operations, pointer arithmetic, inline assembly and machine instructions. It can reverse source-specific optimizations, reconstruct higher-level operations, then choose a different implementation suited to the destination.
 
-**Project status: specification and initial implementation planning.** This README describes the intended product, not a finished transpiler. The commands and language combinations below are **planned interfaces and acceptance scenarios**, not claims that they already work. The detailed agent implementation contract is in [PRD.md](docs/PRD.md).
+**Project status: specification and initial implementation planning.** This README describes the intended product, not a finished transpiler. The commands and language combinations below are **planned interfaces and acceptance scenarios**, not claims that they already work. The one exception is a first prototype that translates a small subset of C# to JavaScript; [Quick start](#-quick-start) shows it and says where it ends. The detailed agent implementation contract is in [PRD.md](docs/PRD.md).
 
 A correct algorithm should not need to be manually rewritten for every programming language and processor. Polypiler aims to make algorithm implementations portable through a common, semantically precise intermediate representation (IR) and a verifier-driven compiler pipeline.
 
@@ -77,7 +77,27 @@ Nothing has been released yet. Once the first alpha lands, self-contained `polyp
 
 ## 🚀 Quick start
 
-The examples below establish the product interface. **They will not run until the corresponding features have been implemented and verified.** One public command name is planned: `polypiler`.
+One public command name is planned: `polypiler`. Today it has a single working command, the prototype below. Every other example in this section establishes the product interface and **will not run until the corresponding features have been implemented and verified.**
+
+### Run the prototype: a small C# algorithm to a JavaScript module
+
+```bash
+# Works today, from a checkout with the .NET 10 SDK
+dotnet run --project Polypiler.Cli -c Release -- translate tests/fixtures/prototype/Adler32.cs \
+  --from csharp --to javascript --output ./generated
+
+# The generated module runs as it is; this prints 300286872, the published Adler-32 of "Wikipedia"
+node --input-type=module -e "import { Compute } from './generated/Adler32.mjs'; console.log(Compute(new TextEncoder().encode('Wikipedia')))"
+```
+
+This is a walking skeleton, not the product: one thin path from source to generated code, without optimization, analysis or `--verify`.
+
+- **Input:** one C# file holding one `static class` of `static` methods over `int`, `uint`, `byte`, `bool` and one-dimensional arrays of the three integer types — arithmetic, bitwise, shift, comparison and logical operators, `?:`, casts, assignments, `++`/`--` as statements, `if`/`else`, `while`, `for`, `return` and calls within the class.
+- **Output:** `<class>.mjs`, an ES module that exports every `public` method. `int` and `uint` wrap around at 32 bits as in C#, `byte[]`/`int[]`/`uint[]` become `Uint8Array`/`Int32Array`/`Uint32Array`, and a division by zero or an index outside its array throws a `RangeError`.
+- **Everything else is refused, not approximated:** `long`, floating point, strings, `foreach`, `switch`, `break`, classes with state, generics, lambdas, exceptions and the rest are reported as `PLY1002` with their position and nothing is written. `uint` mixed with `int` is refused as well, because C# would compute it in 64 bits.
+- **Exit codes:** 0 success, 2 usage error (`PLY0001`), 3 unsupported construct (`PLY1002`), 4 invalid C# (`PLY1000`, with the compiler's own message), 70 internal error.
+
+The pair C# → JavaScript is `executed` on the fixtures in `tests/fixtures/prototype`, not `verified`.
 
 ### Translate an existing algorithm
 

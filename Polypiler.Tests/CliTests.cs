@@ -39,10 +39,10 @@ public sealed class CliTests {
 
   [Test]
   public void UnknownCommand_FailsWithUsageError() {
-    var (exitCode, output, error) = Invoke("translate");
+    var (exitCode, output, error) = Invoke("recover");
     Assert.That(exitCode, Is.EqualTo(Program.UsageError));
     Assert.That(output, Is.Empty);
-    Assert.That(error, Does.Contain("unknown command 'translate'"));
+    Assert.That(error, Does.Contain("unknown command 'recover'"));
   }
 
   [TestCase("--HELP", TestName = "Options are case-sensitive")]
