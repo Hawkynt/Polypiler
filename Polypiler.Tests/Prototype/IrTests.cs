@@ -119,6 +119,33 @@ public sealed class IrTests {
     yield return Case("float to float that saturates", Returning(new IrConvert(IrType.F32, real, IrConversion.Saturate)), "a conversion from f64 to f32 with the contract Saturate");
     yield return Case("float to bool", Returning(new IrConvert(IrType.Bool, real, IrConversion.Saturate)), "a conversion from f64 to bool");
     yield return Case("array to float", Returning(new IrConvert(IrType.F64, Ref(_data))), "a conversion from i32[] to f64");
+    IrSwitchSection Section(long[] labels, bool isDefault, params IrStmt[] statements) => new(labels, isDefault, new IrBlock(statements));
+    var wrong = new IrAssign(_a, _true);
+    var empty = new IrBlock([]);
+    yield return Case("break outside", Statement(new IrBreak()), "a break outside a loop and outside a switch");
+    yield return Case("break after its loop", Statement(new IrWhile(_true, empty), new IrBreak()), "a break outside a loop and outside a switch");
+    yield return Case("continue outside", Statement(new IrContinue()), "a continue outside a loop");
+    yield return Case("continue in a switch only", Statement(new IrSwitch(_one, [Section([], true, new IrContinue())])), "a continue outside a loop");
+    yield return Case("do on a number", Statement(new IrDoWhile(empty, _one)), "the condition of a do has the type i32");
+    yield return Case("do body is checked", Statement(new IrDoWhile(new IrBlock([wrong]), _true)), "the value assigned to 'a'");
+    yield return Case("for on a number", Statement(new IrFor(_one, empty, empty)), "the condition of a for has the type i32");
+    yield return Case("for body is checked", Statement(new IrFor(_true, new IrBlock([wrong]), empty)), "the value assigned to 'a'");
+    yield return Case("for step is checked", Statement(new IrFor(_true, empty, new IrBlock([wrong]))), "the value assigned to 'a'");
+    yield return Case("for step that branches", Statement(new IrFor(_true, empty, new IrBlock([new IrIf(_true, empty, null)]))), "the step of a for holds a IrIf");
+    yield return Case("for step that jumps", Statement(new IrFor(_true, empty, new IrBlock([new IrBreak()]))), "the step of a for holds a IrBreak");
+    yield return Case("switch on a truth value", Statement(new IrSwitch(_true, [])), "a switch on the type bool");
+    yield return Case("switch on a float", Statement(new IrSwitch(new IrConst(IrType.F64, 0), [Section([0], false)])), "a switch on the type f64");
+    yield return Case("switch value is checked", Statement(new IrSwitch(Ref(_x), [])), "'x' is used outside the scope");
+    yield return Case("label outside the type", Statement(new IrSwitch(new IrConst(IrType.U8, 1), [Section([256], false)])), "the label 256 is not a value of u8");
+    yield return Case("label twice", Statement(new IrSwitch(_one, [Section([1, 2], false), Section([2], false)])), "the label 2 stands twice in a switch");
+    yield return Case("two defaults", Statement(new IrSwitch(_one, [Section([], true), Section([1], true)])), "a switch with more than one default section");
+    yield return Case("section without a label", Statement(new IrSwitch(_one, [Section([], false)])), "a switch section without a label");
+    yield return Case("section body is checked", Statement(new IrSwitch(_one, [Section([1], false, wrong)])), "the value assigned to 'a'");
+    yield return Case("step of a constant", Returning(new IrStep(_one, true, false, false)), "a step of a IrConst");
+    yield return Case("step of a truth value", Returning(new IrStep(Ref(_flag), true, false, false)), "a step of the type bool");
+    yield return Case("trapping step of a float", Statement(new IrExprStmt(new IrStep(new IrArrayLoad(new IrNewArray(IrType.Array(IrType.F64), _one), _one), true, true, true))), "a trapping step of the type f64");
+    yield return Case("step out of scope", Returning(new IrStep(Ref(_x), false, true, true)), "'x' is used outside the scope");
+    yield return Case("step of an element of a number", Returning(new IrStep(new IrArrayLoad(Ref(_a), _one), true, true, false)), "an element is taken of the type i32");
     yield return Case("conversion from bool", Returning(new IrConvert(IrType.I32, _true)), "a conversion from bool to i32");
     yield return Case("conversion to bool", Returning(new IrConvert(IrType.Bool, _one)), "a conversion from i32 to bool");
     yield return Case("conditional on a number", Returning(new IrConditional(_one, _one, _one)), "the condition of a conditional expression has the type i32");
@@ -167,6 +194,57 @@ public sealed class IrTests {
     Assert.That(IrVerifier.Verify(Returning(new IrConvert(IrType.U8, new IrBinary(IrBinaryOp.Remainder, new IrUnary(IrUnaryOp.Negate, real), real), IrConversion.Saturate))), Is.Empty);
     Assert.That(IrVerifier.Verify(Returning(new IrConvert(IrType.I64, new IrConst(IrType.F32, int.MinValue), IrConversion.Trap))), Is.Empty);
     Assert.That(IrVerifier.Verify(Returning(new IrBinary(IrBinaryOp.NotEqual, real, real))), Is.Empty);
+  }
+
+  /// <summary>
+  /// Every control-flow form on IR built by hand, including what no frontend builds: a section that
+  /// ends without a jump, a step as a statement, a break inside a switch inside a loop.
+  /// </summary>
+  [Test]
+  public void ControlFlow_IsAcceptedAndRuns() {
+    IrSwitchSection Section(long[] labels, bool isDefault, params IrStmt[] statements) => new(labels, isDefault, new IrBlock(statements));
+    IrExpr x = Ref(_x);
+    IrExpr Const(long value) => new IrConst(IrType.I32, value);
+    IrStmt Add(long value) => new IrAssign(_x, new IrBinary(IrBinaryOp.Add, x, Const(value)));
+    var counter = new IrLocal("i", IrType.I32);
+    var module = new IrModule("M", [Function("F", IrType.I32, [_a], [_x, counter],
+      new IrDeclare(_x, Const(0)),
+      new IrDeclare(counter, Const(0)),
+      // for (i = 0; i < a; i++): 0 is skipped, 1 adds 10 and leaves the switch, 2 falls out of its section, 5 ends the loop.
+      new IrFor(new IrBinary(IrBinaryOp.Less, Ref(counter), Ref(_a)), new IrBlock([
+        new IrSwitch(Ref(counter), [
+          Section([0], false, new IrContinue()),
+          Section([1], false, Add(10), new IrBreak(), Add(1000000)),
+          Section([2], false, Add(100)),
+          Section([5], false, new IrBlock([new IrBreak()]))
+        ]),
+        new IrIf(new IrBinary(IrBinaryOp.Equal, Ref(counter), Const(5)), new IrBlock([new IrBreak()]), null),
+        Add(1)
+      ]), new IrBlock([new IrExprStmt(new IrStep(Ref(counter), true, true, false))])),
+      new IrDoWhile(new IrBlock([Add(1000), new IrIf(new IrBinary(IrBinaryOp.Greater, x, Const(5000)), new IrBlock([new IrReturn(Const(-1))]), null)]),
+        new IrBinary(IrBinaryOp.Less, x, Const(3000))),
+      new IrReturn(x))]);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    Assert.That(IrInterpreter.Call(module, "F", [0]), Is.EqualTo(3000));
+    Assert.That(IrInterpreter.Call(module, "F", [1]), Is.EqualTo(3000));
+    Assert.That(IrInterpreter.Call(module, "F", [2]), Is.EqualTo(3011));
+    Assert.That(IrInterpreter.Call(module, "F", [3]), Is.EqualTo(3112));
+    Assert.That(IrInterpreter.Call(module, "F", [5]), Is.EqualTo(3114));
+    Assert.That(IrInterpreter.Call(module, "F", [9]), Is.EqualTo(3114));
+    Assert.That(JavaScriptEmitter.Emit(module).Single().Content, Does.Contain("for (; i < a; ($p = i, i = ($p + 1) | 0, $p)) {"));
+  }
+
+  /// <summary>A return inside a loop, of each kind, leaves the function and not only the loop.</summary>
+  [Test]
+  public void Return_LeavesEveryKindOfLoop() {
+    var leave = new IrBlock([new IrReturn(_one)]);
+    var never = new IrReturn(new IrConst(IrType.I32, 2));
+    Assert.That(Run(IrType.I32, Arguments(), new IrWhile(_true, leave), never), Is.EqualTo(1));
+    Assert.That(Run(IrType.I32, Arguments(), new IrDoWhile(leave, _true), never), Is.EqualTo(1));
+    Assert.That(Run(IrType.I32, Arguments(), new IrFor(_true, leave, new IrBlock([])), never), Is.EqualTo(1));
+    Assert.That(Run(IrType.I32, Arguments(), new IrSwitch(_one, [new IrSwitchSection([1], false, leave)]), never), Is.EqualTo(1));
+    Assert.That(Run(IrType.I32, Arguments(), new IrSwitch(_one, [new IrSwitchSection([], true, leave)]), never), Is.EqualTo(1));
+    Assert.That(Run(IrType.I32, Arguments(), new IrSwitch(_one, [new IrSwitchSection([3], false, leave)]), never), Is.EqualTo(2));
   }
 
   /// <summary>A local declared in a block that ended can be declared again in the next one.</summary>

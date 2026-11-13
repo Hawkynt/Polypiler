@@ -34,6 +34,8 @@ public static class IrVerifier {
     List<Diagnostic> diagnostics) {
 
     private readonly HashSet<IrLocal> _visible = [];
+    private int _loops;
+    private int _breakable;
 
     public void Run() {
       this.Require(function.ReturnType.IsStorable || function.ReturnType == IrType.Void,
@@ -99,7 +101,28 @@ public static class IrVerifier {
           break;
         case IrWhile loop:
           this.Value(loop.Condition, IrType.Bool, "the condition of a while");
-          this.Block(loop.Body);
+          this.Loop(loop.Body);
+          break;
+        case IrDoWhile loop:
+          this.Loop(loop.Body);
+          this.Value(loop.Condition, IrType.Bool, "the condition of a do");
+          break;
+        case IrFor loop:
+          this.Value(loop.Condition, IrType.Bool, "the condition of a for");
+          this.Loop(loop.Body);
+          foreach (var step in loop.Step.Statements)
+            this.Require(step is IrDeclare or IrAssign or IrStore or IrExprStmt, $"the step of a for holds a {step.GetType().Name}");
+
+          this.Block(loop.Step);
+          break;
+        case IrSwitch choice:
+          this.Switch(choice);
+          break;
+        case IrBreak:
+          this.Require(this._breakable > 0, "a break outside a loop and outside a switch");
+          break;
+        case IrContinue:
+          this.Require(this._loops > 0, "a continue outside a loop");
           break;
         case IrReturn result:
           if (result.Value is null)
@@ -112,6 +135,38 @@ public static class IrVerifier {
           this.Require(false, $"unknown statement {statement.GetType().Name}");
           break;
       }
+    }
+
+    private void Loop(IrBlock body) {
+      ++this._loops;
+      ++this._breakable;
+      this.Block(body);
+      --this._breakable;
+      --this._loops;
+    }
+
+    private void Switch(IrSwitch choice) {
+      this.Expression(choice.Value);
+      var type = choice.Value.Type;
+      this.Require(type.IsInteger, $"a switch on the type {type}");
+      var labels = new HashSet<long>();
+      var defaults = 0;
+      foreach (var section in choice.Sections) {
+        this.Require(section.IsDefault || section.Labels.Count > 0, "a switch section without a label");
+        foreach (var label in section.Labels) {
+          this.Require(!type.IsInteger || InRange(new IrConst(type, label)), $"the label {label} is not a value of {type}");
+          this.Require(labels.Add(label), $"the label {label} stands twice in a switch");
+        }
+
+        if (section.IsDefault)
+          ++defaults;
+
+        ++this._breakable;
+        this.Block(section.Body);
+        --this._breakable;
+      }
+
+      this.Require(defaults <= 1, "a switch with more than one default section");
     }
 
     private void InScope(IrLocal local)
@@ -172,6 +227,12 @@ public static class IrVerifier {
           break;
         case IrCall call:
           this.Call(call);
+          break;
+        case IrStep step:
+          this.Expression(step.Target);
+          this.Require(step.Target is IrLocalRef or IrArrayLoad, $"a step of a {step.Target.GetType().Name}");
+          this.Require(step.Type.IsNumeric, $"a step of the type {step.Type}");
+          this.Require(!step.Trap || !step.Type.IsFloat, $"a trapping step of the type {step.Type}");
           break;
         default:
           this.Require(false, $"unknown expression {expression.GetType().Name}");

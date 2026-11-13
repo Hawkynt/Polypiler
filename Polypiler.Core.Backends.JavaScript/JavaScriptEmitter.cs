@@ -80,6 +80,24 @@ public static class JavaScriptEmitter {
     ]),
     ("$get", ["function $get(array, index) {", OutOfRange, "  return array[index];", "}"]),
     ("$set", ["function $set(array, index, value) {", OutOfRange, "  array[index] = value;", "}"]),
+    ("$step", [
+      "function $step(array, index, delta, post) {",
+      OutOfRange,
+      "  const before = array[index];",
+      "  array[index] = before + delta;",
+      "  return post ? before : array[index];",
+      "}"
+    ]),
+    ("$stepck", [
+      "function $stepck(array, index, delta, post, low, high) {",
+      OutOfRange,
+      "  const before = array[index];",
+      "  const after = before + delta;",
+      "  if (after < low || after > high) " + Overflow,
+      "  array[index] = after;",
+      "  return post ? before : after;",
+      "}"
+    ]),
     ("$len", ["function $len(length) {", "  if (length < 0) " + Overflow, "  return length;", "}"])
   ];
 
@@ -149,8 +167,12 @@ public static class JavaScriptEmitter {
 
   private sealed class Writer {
 
+    /// <summary>The variable a postfix step of a local keeps the old value in; a function that needs it declares it.</summary>
+    private const string Previous = "$p";
+
     private readonly StringBuilder _code = new();
     private readonly HashSet<string> _used = [];
+    private bool _previous;
 
     public string Module(IrModule module) {
       foreach (var function in module.Functions)
@@ -176,7 +198,12 @@ public static class JavaScriptEmitter {
         .Append(Describe(function.ReturnType)).Append('\n');
       this._code.Append(function.IsPublic ? "export function " : "function ")
         .Append(Name(function.Name)).Append('(').Append(parameters).Append(") {\n");
+      var start = this._code.Length;
+      this._previous = false;
       this.Statements(function.Body, 1);
+      if (this._previous)
+        this._code.Insert(start, $"  let {Previous};\n");
+
       this._code.Append("}\n");
     }
 
@@ -219,11 +246,84 @@ public static class JavaScriptEmitter {
           this.Statements(loop.Body, depth + 1);
           this.Line(depth).Append("}\n");
           break;
+        case IrDoWhile loop:
+          this.Line(depth).Append("do {\n");
+          this.Statements(loop.Body, depth + 1);
+          this.Line(depth).Append("} while (").Append(this.Text(loop.Condition)).Append(");\n");
+          break;
+        case IrFor loop:
+          this.For(loop, depth);
+          break;
+        case IrSwitch choice:
+          this.Switch(choice, depth);
+          break;
+        case IrBreak:
+          this.Line(depth).Append("break;\n");
+          break;
+        case IrContinue:
+          this.Line(depth).Append("continue;\n");
+          break;
         default:
           var result = (IrReturn)statement;
           this.Line(depth).Append(result.Value is null ? "return" : "return " + this.Text(result.Value)).Append(";\n");
           break;
       }
+    }
+
+    /// <summary>
+    /// A loop with a step is a JavaScript <c>for</c>, whose third part a <c>continue</c> does not skip
+    /// either. That part is an expression, so the step is written as a list of expressions and the
+    /// temporaries it declares are declared in front of the loop.
+    /// </summary>
+    private void For(IrFor loop, int depth) {
+      var parts = new List<string>();
+      foreach (var step in loop.Step.Statements)
+        switch (step) {
+          case IrDeclare declare:
+            this.Line(depth).Append("let ").Append(Name(declare.Local.Name)).Append(";\n");
+            if (declare.Initializer is not null)
+              parts.Add($"{Name(declare.Local.Name)} = {this.Text(declare.Initializer)}");
+
+            break;
+          case IrAssign assign:
+            parts.Add($"{Name(assign.Local.Name)} = {this.Text(assign.Value)}");
+            break;
+          case IrStore store:
+            parts.Add(this.Helper("$set", store.Array, store.Index, store.Value));
+            break;
+          default:
+            parts.Add(this.Text(((IrExprStmt)step).Expression));
+            break;
+        }
+
+      this.Line(depth).Append("for (; ").Append(this.Text(loop.Condition)).Append("; ").AppendJoin(", ", parts).Append(") {\n");
+      this.Statements(loop.Body, depth + 1);
+      this.Line(depth).Append("}\n");
+    }
+
+    /// <summary>
+    /// A switch. Every section is a block of its own and ends with a <c>break</c> unless its last
+    /// statement already leaves it, because the IR has no fall-through and JavaScript has.
+    /// </summary>
+    private void Switch(IrSwitch choice, int depth) {
+      var type = choice.Value.Type;
+      this.Line(depth).Append("switch (").Append(this.Text(choice.Value)).Append(") {\n");
+      foreach (var section in choice.Sections) {
+        var labels = section.Labels.Select(label => $"case {Literal(type, IrOperators.Number(type, label))}:").ToList();
+        if (section.IsDefault)
+          labels.Add("default:");
+
+        for (var index = 0; index < labels.Count; ++index)
+          this.Line(depth + 1).Append(labels[index]).Append(index + 1 < labels.Count ? "\n" : " {\n");
+
+        this.Statements(section.Body, depth + 2);
+        if (section.Body.Statements is not [.., IrBreak or IrContinue or IrReturn])
+          this.Line(depth + 2).Append("break;\n");
+
+        this.Line(depth + 1).Append("}\n");
+      }
+
+      this.Line(depth).Append("}\n");
     }
 
     private void If(IrIf conditional, int depth) {
@@ -288,11 +388,57 @@ public static class JavaScriptEmitter {
           return ($"{this.Operand(length.Array)}.length", true);
         case IrNewArray creation:
           return ($"new {Storage(creation.Type.Element!)}({this.Helper("$len", creation.Length)})", true);
+        case IrStep step:
+          return this.Step(step);
         default:
           var call = (IrCall)expression;
           return ($"{Name(call.Function)}({string.Join(", ", call.Arguments.Select(this.Text))})", true);
       }
     }
+
+    /// <summary>
+    /// A step by one as an expression. An array element goes through a helper: storing into a typed
+    /// array wraps an integer around and rounds to binary32 by itself. A variable is assigned inside
+    /// the expression; the postfix form keeps the old value in a variable of the function.
+    /// </summary>
+    private (string Text, bool Atomic) Step(IrStep step) {
+      var type = step.Type;
+      var delta = (step.Increment ? "1" : "-1") + (type.IsLong ? "n" : "");
+      var post = step.Postfix ? "true" : "false";
+      if (step.Target is IrArrayLoad element) {
+        var arguments = new List<string> { this.Text(element.Array), this.Text(element.Index), delta, post };
+        if (!step.Trap)
+          return (this.Helper("$step", arguments), true);
+
+        arguments.Add(Literal(type, IrOperators.Minimum(type)));
+        arguments.Add(Literal(type, IrOperators.Maximum(type)));
+        return (this.Helper("$stepck", arguments), true);
+      }
+
+      var name = Name(((IrLocalRef)step.Target).Local.Name);
+      var current = step.Postfix ? Previous : name;
+      var moved = $"{current} {(step.Increment ? "+" : "-")} 1{(type.IsLong ? "n" : "")}";
+      var stepped = step.Trap ? this.Check(type, moved).Text
+        : type == IrType.F64 ? moved
+        : type == IrType.F32 ? $"Math.fround({moved})"
+        : type.IsWideInteger ? Wrap(type, moved).Text
+        : Narrow(type, $"({moved})");
+      if (!step.Postfix)
+        return ($"{name} = {stepped}", false);
+
+      this._previous = true;
+      return ($"({Previous} = {name}, {name} = {stepped}, {Previous})", true);
+    }
+
+    /// <summary>A number cut to an integer type of up to 32 bits; the operand is written as an operand already.</summary>
+    private static string Narrow(IrType type, string operand) => type.Kind switch {
+      IrTypeKind.I8 => $"{operand} << 24 >> 24",
+      IrTypeKind.U8 => $"{operand} & 0xFF",
+      IrTypeKind.I16 => $"{operand} << 16 >> 16",
+      IrTypeKind.U16 => $"{operand} & 0xFFFF",
+      IrTypeKind.I32 => $"{operand} | 0",
+      _ => $"{operand} >>> 0"
+    };
 
     /// <summary>A result that may have left its type, cut back to it: modulo 2^width.</summary>
     private static (string Text, bool Atomic) Wrap(IrType type, string text) => type.Kind switch {
@@ -472,15 +618,7 @@ public static class JavaScriptEmitter {
       if (lossless)
         return this.Expression(conversion.Operand);
 
-      var operand = this.Operand(conversion.Operand);
-      return (to.Kind switch {
-        IrTypeKind.I8 => $"{operand} << 24 >> 24",
-        IrTypeKind.U8 => $"{operand} & 0xFF",
-        IrTypeKind.I16 => $"{operand} << 16 >> 16",
-        IrTypeKind.U16 => $"{operand} & 0xFFFF",
-        IrTypeKind.I32 => $"{operand} | 0",
-        _ => $"{operand} >>> 0"
-      }, false);
+      return (Narrow(to, this.Operand(conversion.Operand)), false);
     }
 
     /// <summary>

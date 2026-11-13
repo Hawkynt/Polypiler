@@ -33,8 +33,9 @@ internal static class PrototypeFixture {
   /// <summary>The names of all fixtures, which are also the names of their classes.</summary>
   public static readonly string[] Names = [
     "Adler32", "Arrays", "Crc32", "Fnv1a", "Numbers", "Operators", "Statements",
-    "wide/Conversions", "wide/Crc16", "wide/Fir", "wide/Fletcher16", "wide/Fnv1a64", "wide/Horner", "wide/OperatorsWide",
-    "wide/SplitMix64", "wide/Xorshift64"
+    "wide/BinarySearch", "wide/BubbleSort", "wide/Conversions", "wide/Crc16", "wide/DigitSum", "wide/Fir", "wide/Fletcher16",
+    "wide/Fnv1a64", "wide/Horner", "wide/OperatorsWide", "wide/RunLength", "wide/SplitMix64", "wide/StatementsWide",
+    "wide/Xorshift64"
   ];
 
   /// <summary>The name of the class a fixture declares, which is the name of its file without the folder.</summary>

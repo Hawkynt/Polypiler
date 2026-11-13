@@ -160,52 +160,87 @@ public static class IrInterpreter {
       for (var index = 0; index < arguments.Length; ++index)
         frame.Locals[function.Parameters[index]] = arguments[index];
 
-      if (!this.Run(function.Body, frame) && function.ReturnType != IrType.Void)
+      if (this.Run(function.Body, frame) != Flow.Return && function.ReturnType != IrType.Void)
         throw new InvalidOperationException($"'{function.Name}' ended without returning a value.");
 
       return frame.Result;
     }
 
-    /// <summary>Executes a statement; true when it returned from the function.</summary>
-    private bool Run(IrStmt statement, Frame frame) {
+    /// <summary>Executes a statement and says how it ended.</summary>
+    private Flow Run(IrStmt statement, Frame frame) {
       switch (statement) {
         case IrBlock block:
-          foreach (var inner in block.Statements)
-            if (this.Run(inner, frame))
-              return true;
+          foreach (var inner in block.Statements) {
+            var ended = this.Run(inner, frame);
+            if (ended != Flow.Next)
+              return ended;
+          }
 
-          return false;
+          return Flow.Next;
         case IrDeclare declare:
           if (declare.Initializer is not null)
             frame.Locals[declare.Local] = this.Evaluate(declare.Initializer, frame);
 
-          return false;
+          return Flow.Next;
         case IrAssign assign:
           frame.Locals[assign.Local] = this.Evaluate(assign.Value, frame);
-          return false;
+          return Flow.Next;
         case IrStore store:
           var array = (Array)this.Evaluate(store.Array, frame);
           var index = (long)this.Evaluate(store.Index, frame);
           var value = this.Evaluate(store.Value, frame);
           Store(array, Checked(array, index), value);
-          return false;
+          return Flow.Next;
         case IrExprStmt expression:
           this.Evaluate(expression.Expression, frame);
-          return false;
+          return Flow.Next;
         case IrIf conditional:
           if ((bool)this.Evaluate(conditional.Condition, frame))
             return this.Run(conditional.Then, frame);
 
-          return conditional.Else is not null && this.Run(conditional.Else, frame);
+          return conditional.Else is null ? Flow.Next : this.Run(conditional.Else, frame);
         case IrWhile loop:
-          while ((bool)this.Evaluate(loop.Condition, frame))
-            if (this.Run(loop.Body, frame))
-              return true;
+          while ((bool)this.Evaluate(loop.Condition, frame)) {
+            var pass = this.Run(loop.Body, frame);
+            if (pass is Flow.Break or Flow.Return)
+              return pass & Flow.Return;
+          }
 
-          return false;
+          return Flow.Next;
+        case IrDoWhile loop:
+          do {
+            var pass = this.Run(loop.Body, frame);
+            if (pass is Flow.Break or Flow.Return)
+              return pass & Flow.Return;
+          } while ((bool)this.Evaluate(loop.Condition, frame));
+
+          return Flow.Next;
+        case IrFor loop:
+          while ((bool)this.Evaluate(loop.Condition, frame)) {
+            var pass = this.Run(loop.Body, frame);
+            if (pass is Flow.Break or Flow.Return)
+              return pass & Flow.Return;
+
+            this.Run(loop.Step, frame);
+          }
+
+          return Flow.Next;
+        case IrSwitch choice:
+          var selector = (long)this.Evaluate(choice.Value, frame);
+          var section = choice.Sections.FirstOrDefault(candidate => candidate.Labels.Contains(selector))
+            ?? choice.Sections.FirstOrDefault(candidate => candidate.IsDefault);
+          if (section is null)
+            return Flow.Next;
+
+          var chosen = this.Run(section.Body, frame);
+          return chosen == Flow.Break ? Flow.Next : chosen;
+        case IrBreak:
+          return Flow.Break;
+        case IrContinue:
+          return Flow.Continue;
         case IrReturn result:
           frame.Result = result.Value is null ? null : this.Evaluate(result.Value, frame);
-          return true;
+          return Flow.Return;
         default:
           throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
       }
@@ -253,9 +288,43 @@ public static class IrInterpreter {
         case IrCall call:
           var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
           return this.Invoke(functions[call.Function], arguments)!;
+        case IrStep step:
+          return this.Step(step, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }
+    }
+
+    private object Step(IrStep step, Frame frame) {
+      object before;
+      object after;
+      if (step.Target is IrArrayLoad element) {
+        var array = (Array)this.Evaluate(element.Array, frame);
+        var index = Checked(array, (long)this.Evaluate(element.Index, frame));
+        before = Load(array, index);
+        after = Stepped(step, before);
+        Store(array, index, after);
+      } else {
+        var local = ((IrLocalRef)step.Target).Local;
+        before = frame.Locals[local];
+        after = Stepped(step, before);
+        frame.Locals[local] = after;
+      }
+
+      return step.Postfix ? before : after;
+    }
+
+    private static object Stepped(IrStep step, object before) {
+      var one = step.Increment ? 1 : -1;
+      switch (before) {
+        case float single:
+          return single + one;
+        case double number:
+          return number + one;
+      }
+
+      var result = IrOperators.Number(step.Type, (long)before) + one;
+      return step.Trap ? Fit(step.Type, result) : IrOperators.Wrap(step.Type, (long)result);
     }
 
     private object Binary(IrBinary binary, Frame frame) {
@@ -433,6 +502,18 @@ public static class IrInterpreter {
     private static void Store(Array array, int index, object value)
       => array.SetValue(External(array.GetType().GetElementType()!, value), index);
 
+  }
+
+  /// <summary>
+  /// How a statement ended. <see cref="Break"/> and <see cref="Return"/> both end a loop; masking with
+  /// <see cref="Return"/> tells the loop's own end apart: a break ends there, a return goes on.
+  /// </summary>
+  [Flags]
+  private enum Flow {
+    Next = 0,
+    Return = 1,
+    Break = 2,
+    Continue = 4
   }
 
   private sealed class Frame {

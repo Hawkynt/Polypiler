@@ -26,7 +26,7 @@ public sealed class DifferentialTests {
   /// </summary>
   private static IEnumerable<TestCaseData> Fixtures() => PrototypeFixture.Names.Select(name => {
     var data = new TestCaseData(name);
-    return name is "wide/OperatorsWide" or "wide/Conversions" ? data.SetCategory("Slow") : data;
+    return name is "wide/OperatorsWide" or "wide/Conversions" or "wide/StatementsWide" ? data.SetCategory("Slow") : data;
   });
 
   /// <summary>Test design 1 to 10 and 16: every call has the same outcome in the interpreter and in C#.</summary>
@@ -180,6 +180,19 @@ public sealed class DifferentialTests {
     var call = new PrototypeCall(method, arguments);
     Assert.That(PrototypeFixture.CompiledOutcome(fixture, call), Is.EqualTo(PrototypeFixture.Trap(trap)));
     Assert.That(PrototypeFixture.InterpretedOutcome(_modules[fixture], call), Is.EqualTo(PrototypeFixture.Trap(trap)));
+  }
+
+  /// <summary>Scenario: continue still runs the for increment; and the vector the run-length fixture documents.</summary>
+  [Test]
+  public void ControlFlow_MatchesTheFeatureFile() {
+    var odd = new PrototypeCall("SumOfOdd", [10]);
+    Assert.That(PrototypeFixture.CompiledOutcome("wide/StatementsWide", odd), Is.EqualTo("25"));
+    Assert.That(PrototypeFixture.InterpretedOutcome(_modules["wide/StatementsWide"], odd), Is.EqualTo("25"));
+
+    var decode = new PrototypeCall("Decode", [new byte[] { 0x02, 1, 2, 3, 0x80, 9, 0xFF, 5 }, new byte[8]]);
+    const string expected = "6 | [2,1,2,3,128,9,255,5] | [1,2,3,9,9,9,0,0]";
+    Assert.That(PrototypeFixture.CompiledOutcome("wide/RunLength", decode), Is.EqualTo(expected));
+    Assert.That(PrototypeFixture.InterpretedOutcome(_modules["wide/RunLength"], decode), Is.EqualTo(expected));
   }
 
   /// <summary>Scenario: An array is modified in place.</summary>

@@ -200,6 +200,18 @@ public sealed record IrNewArray(IrType Type, IrExpr Length) : IrExpr(Type);
 /// <param name="Arguments">One argument per parameter.</param>
 public sealed record IrCall(string Function, IrType Type, IReadOnlyList<IrExpr> Arguments) : IrExpr(Type);
 
+/// <summary>
+/// A step by one as an expression. The target is a variable or an array element, whose array and
+/// index are evaluated once; the target is read, one is added or subtracted in the type of the target
+/// and the result is stored. A result outside an integer type wraps around or, when
+/// <paramref name="Trap"/> is set, traps before anything is stored.
+/// </summary>
+/// <param name="Target">An <see cref="IrLocalRef"/> or an <see cref="IrArrayLoad"/> of a numeric type.</param>
+/// <param name="Increment">Whether one is added; otherwise it is subtracted.</param>
+/// <param name="Postfix">Whether the expression yields the value from before the step, otherwise the new one.</param>
+/// <param name="Trap">Whether an integer result outside the type traps instead of wrapping around.</param>
+public sealed record IrStep(IrExpr Target, bool Increment, bool Postfix, bool Trap) : IrExpr(Target.Type);
+
 /// <summary>A statement.</summary>
 public abstract record IrStmt;
 
@@ -240,6 +252,42 @@ public sealed record IrIf(IrExpr Condition, IrBlock Then, IrBlock? Else) : IrStm
 /// <param name="Condition">The truth value that keeps the loop running.</param>
 /// <param name="Body">The statements of one pass.</param>
 public sealed record IrWhile(IrExpr Condition, IrBlock Body) : IrStmt;
+
+/// <summary>A loop that runs its body once before it tests its condition for the first time.</summary>
+/// <param name="Body">The statements of one pass; a <see cref="IrContinue"/> goes on to the condition.</param>
+/// <param name="Condition">The truth value that keeps the loop running.</param>
+public sealed record IrDoWhile(IrBlock Body, IrExpr Condition) : IrStmt;
+
+/// <summary>
+/// A loop that tests its condition before every pass and runs a step after every pass - also after a
+/// pass that <see cref="IrContinue"/> ended, which is what tells it from an <see cref="IrWhile"/>
+/// whose body ends with the step.
+/// </summary>
+/// <param name="Condition">The truth value that keeps the loop running.</param>
+/// <param name="Body">The statements of one pass.</param>
+/// <param name="Step">What follows every pass: declarations, assignments, stores and expressions only.</param>
+public sealed record IrFor(IrExpr Condition, IrBlock Body, IrBlock Step) : IrStmt;
+
+/// <summary>One section of a <see cref="IrSwitch"/>.</summary>
+/// <param name="Labels">The constants that select the section, as an <see cref="IrConst"/> carries them.</param>
+/// <param name="IsDefault">Whether the section is also selected when no label of the switch matches.</param>
+/// <param name="Body">The statements of the section.</param>
+public sealed record IrSwitchSection(IReadOnlyList<long> Labels, bool IsDefault, IrBlock Body);
+
+/// <summary>
+/// A choice by the value of an integer: the one section runs that carries the value as a label, or the
+/// default section when none does, or nothing. There is no fall-through: when the body of a section
+/// ends, the switch ends, exactly as when it executes a <see cref="IrBreak"/>.
+/// </summary>
+/// <param name="Value">The integer that selects the section.</param>
+/// <param name="Sections">The sections; a label stands in at most one of them.</param>
+public sealed record IrSwitch(IrExpr Value, IReadOnlyList<IrSwitchSection> Sections) : IrStmt;
+
+/// <summary>Leaves the innermost enclosing loop or switch.</summary>
+public sealed record IrBreak : IrStmt;
+
+/// <summary>Ends the current pass of the innermost enclosing loop; the step of an <see cref="IrFor"/> still runs.</summary>
+public sealed record IrContinue : IrStmt;
 
 /// <summary>Leaves the function.</summary>
 /// <param name="Value">The value returned, or <see langword="null"/> in a function returning nothing.</param>

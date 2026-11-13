@@ -114,6 +114,24 @@ public sealed class CSharpToJavaScriptTests {
     Assert.That(File.ReadAllText(Path.Combine(this._directory, "out", "Snippet.mjs")), Does.Contain("return Math.fround(Math.fround(a * b) + a);"));
   }
 
+  /// <summary>Scenario: continue still runs the for increment.</summary>
+  [Test]
+  public void Continue_StillRunsTheForIncrement() {
+    const string method = "public static int F(int n) { int s = 0; for (int i = 0; i < n; i++) { if ((i & 1) == 0) continue; s += i; } return s; }";
+    Assert.That(this.TranslateSnippet(method, new PrototypeCall("F", [10])), Is.EqualTo("25"));
+    Assert.That(IrInterpreter.Call(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), "F", [10]), Is.EqualTo(25));
+  }
+
+  /// <summary>Scenario: A switch selects by constant label without fall-through.</summary>
+  [Test]
+  public void Switch_SelectsByConstantLabelWithoutFallThrough() {
+    Assert.That(PrototypeFixture.SourceOf("wide/RunLength"), Does.Contain("switch (state) {").And.Contain("default:"));
+    this.Node_Interpreter_AndCompiledFixture_Agree("wide/RunLength");
+    var decode = new PrototypeCall("Decode", [new byte[] { 0x02, 1, 2, 3, 0x80, 9, 0xFF, 5 }, new byte[8]]);
+    Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "RunLength.mjs", [decode]).Single(),
+      Is.EqualTo("6 | [2,1,2,3,128,9,255,5] | [1,2,3,9,9,9,0,0]"));
+  }
+
   /// <summary>Scenario: A checked addition traps.</summary>
   [Test]
   public void CheckedAddition_Traps() {

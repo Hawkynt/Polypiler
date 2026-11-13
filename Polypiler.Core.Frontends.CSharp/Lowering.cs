@@ -190,11 +190,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
         into.Add(this.Block(context.Block));
         break;
       case LocalDeclarationStatementSyntax declaration:
-        var first = declaration.GetFirstToken();
-        if (first != declaration.Declaration.GetFirstToken())
-          throw new UnsupportedException(declaration, first.Text);
-
-        this.Declaration(declaration.Declaration, into);
+        this.LocalDeclaration(declaration, into, null);
         break;
       case ExpressionStatementSyntax expression:
         this.Effect(expression.Expression, into);
@@ -208,8 +204,23 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case WhileStatementSyntax loop:
         into.Add(new IrWhile(this.Value(loop.Condition), this.Body(loop.Statement)));
         break;
+      case DoStatementSyntax loop:
+        into.Add(new IrDoWhile(this.Body(loop.Statement), this.Value(loop.Condition)));
+        break;
       case ForStatementSyntax loop:
         into.Add(this.For(loop));
+        break;
+      case ForEachStatementSyntax loop:
+        into.Add(this.ForEach(loop));
+        break;
+      case SwitchStatementSyntax choice:
+        this.Switch(choice, into);
+        break;
+      case BreakStatementSyntax:
+        into.Add(new IrBreak());
+        break;
+      case ContinueStatementSyntax:
+        into.Add(new IrContinue());
         break;
       case ReturnStatementSyntax result:
         into.Add(new IrReturn(result.Expression is null ? null : this.Value(result.Expression)));
@@ -219,34 +230,135 @@ internal sealed class Lowering(string path, SemanticModel model) {
     }
   }
 
-  /// <summary>
-  /// A <c>for</c> becomes a block holding its initializers and a <c>while</c> whose body ends with the
-  /// incrementors. That is the same loop, because the subset has no <c>continue</c>.
-  /// </summary>
+  /// <summary>A <c>for</c> becomes a block holding its initializers and the loop.</summary>
   private IrBlock For(ForStatementSyntax loop) {
     var outer = new List<IrStmt>();
     if (loop.Declaration is not null)
-      this.Declaration(loop.Declaration, outer);
+      this.Declaration(loop.Declaration, outer, null);
 
     foreach (var initializer in loop.Initializers)
       this.Effect(initializer, outer);
 
     var condition = loop.Condition is null ? new IrConst(IrType.Bool, 1) : this.Value(loop.Condition);
-    var body = new List<IrStmt>(this.Body(loop.Statement).Statements);
+    var body = this.Body(loop.Statement);
+    var step = new List<IrStmt>();
     foreach (var incrementor in loop.Incrementors)
-      this.Effect(incrementor, body);
+      this.Effect(incrementor, step);
 
-    outer.Add(new IrWhile(condition, new IrBlock(body)));
+    outer.Add(Loop(condition, body, step, loop.Statement));
     return new IrBlock(outer);
   }
 
-  private void Declaration(VariableDeclarationSyntax declaration, List<IrStmt> into) {
+  /// <summary>
+  /// A <c>foreach</c> over an array becomes a counted loop: the array is evaluated once, every pass
+  /// reads one element into the iteration variable, converted as the source says, and the counter
+  /// advances after the pass.
+  /// </summary>
+  private IrBlock ForEach(ForEachStatementSyntax loop) {
+    var outer = new List<IrStmt>();
+    // The compiler converts the collection to IEnumerable; the loop is over the array itself.
+    var array = this.Once(this.Natural(loop.Expression, Map(model.GetTypeInfo(loop.Expression).Type, loop.Expression)), outer);
+    var index = this.Local($"$t{this._locals.Count}", IrType.I32);
+    outer.Add(new IrDeclare(index, new IrConst(IrType.I32, 0)));
+
+    var symbol = model.GetDeclaredSymbol(loop)!;
+    var item = this.Local(symbol.Name, Map(symbol.Type, loop.Type));
+    this._variables[symbol] = item;
+    var element = Convert(new IrArrayLoad(array, new IrLocalRef(index)), item.Type, this.IsChecked(loop));
+    var body = new IrBlock([new IrDeclare(item, element), .. this.Body(loop.Statement).Statements]);
+    var condition = new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), new IrArrayLength(array));
+    IrStmt advance = new IrAssign(index, new IrBinary(IrBinaryOp.Add, new IrLocalRef(index), new IrConst(IrType.I32, 1)));
+    outer.Add(Loop(condition, body, [advance], loop.Statement));
+    return new IrBlock(outer);
+  }
+
+  /// <summary>
+  /// The loop for a body and the step that follows every pass. Without a <c>continue</c> that is a
+  /// <c>while</c> whose body ends with the step; a <c>continue</c> must not skip the step, so a loop
+  /// that has one keeps body and step apart.
+  /// </summary>
+  private static IrStmt Loop(IrExpr condition, IrBlock body, List<IrStmt> step, StatementSyntax source) {
+    var continues = source
+      .DescendantNodesAndSelf(node => node is not (WhileStatementSyntax or DoStatementSyntax or ForStatementSyntax or CommonForEachStatementSyntax))
+      .Any(node => node is ContinueStatementSyntax);
+    return continues
+      ? new IrFor(condition, body, new IrBlock(step))
+      : new IrWhile(condition, new IrBlock([.. body.Statements, .. step]));
+  }
+
+  /// <summary>
+  /// A <c>switch</c> on an integer with constant labels. C# has one scope for all sections, the IR one
+  /// per section, so a local declared in a section is declared in front of the switch instead and the
+  /// declaration becomes an assignment.
+  /// </summary>
+  private void Switch(SwitchStatementSyntax choice, List<IrStmt> into) {
+    var value = this.Value(choice.Expression);
+    if (!value.Type.IsInteger)
+      throw new UnsupportedException(choice.Expression, $"a switch on the type {value.Type}");
+
+    var sections = new List<IrSwitchSection>();
+    foreach (var section in choice.Sections) {
+      var labels = new List<long>();
+      var isDefault = false;
+      foreach (var label in section.Labels)
+        switch (label) {
+          case DefaultSwitchLabelSyntax:
+            isDefault = true;
+            break;
+          case CaseSwitchLabelSyntax constant:
+            labels.Add(((IrConst)this.Value(constant.Value)).Value);
+            break;
+          default:
+            throw new UnsupportedException(label, label.Kind().ToString());
+        }
+
+      var body = new List<IrStmt>();
+      foreach (var statement in section.Statements)
+        if (statement is LocalDeclarationStatementSyntax declaration)
+          this.LocalDeclaration(declaration, body, into);
+        else
+          this.Statement(statement, body);
+
+      sections.Add(new IrSwitchSection(labels, isDefault, new IrBlock(body)));
+    }
+
+    into.Add(new IrSwitch(value, sections));
+  }
+
+  /// <summary>
+  /// A declaration statement. A <c>const</c> declares nothing: the compiler has folded every use of
+  /// it, and its type only has to be one of the subset.
+  /// </summary>
+  private void LocalDeclaration(LocalDeclarationStatementSyntax declaration, List<IrStmt> into, List<IrStmt>? scope) {
+    var first = declaration.GetFirstToken();
+    if (declaration.IsConst && declaration.Modifiers.Count == 1) {
+      Map(model.GetTypeInfo(declaration.Declaration.Type).Type, declaration.Declaration.Type);
+      return;
+    }
+
+    if (first != declaration.Declaration.GetFirstToken())
+      throw new UnsupportedException(declaration, first.Text);
+
+    this.Declaration(declaration.Declaration, into, scope);
+  }
+
+  /// <summary>
+  /// Declares locals. With a <paramref name="scope"/> the declarations go there, in front of the
+  /// statement being lowered, and the initializers stay in place as assignments.
+  /// </summary>
+  private void Declaration(VariableDeclarationSyntax declaration, List<IrStmt> into, List<IrStmt>? scope) {
     foreach (var variable in declaration.Variables) {
       var symbol = (ILocalSymbol)model.GetDeclaredSymbol(variable)!;
       var local = this.Local(symbol.Name, Map(symbol.Type, declaration.Type));
       var initializer = variable.Initializer is null ? null : this.Value(variable.Initializer.Value);
       this._variables[symbol] = local;
-      into.Add(new IrDeclare(local, initializer));
+      if (scope is null) {
+        into.Add(new IrDeclare(local, initializer));
+      } else {
+        scope.Add(new IrDeclare(local, null));
+        if (initializer is not null)
+          into.Add(new IrAssign(local, initializer));
+      }
     }
   }
 
@@ -394,6 +506,10 @@ internal sealed class Lowering(string path, SemanticModel model) {
         return this.Value(context.Expression);
       case IdentifierNameSyntax identifier when model.GetSymbolInfo(identifier).Symbol is { } symbol && this._variables.TryGetValue(symbol, out var variable):
         return new IrLocalRef(variable);
+      case PrefixUnaryExpressionSyntax unary when unary.Kind() is SyntaxKind.PreIncrementExpression or SyntaxKind.PreDecrementExpression:
+        return this.StepValue(unary, unary.Operand, unary.IsKind(SyntaxKind.PreIncrementExpression), false);
+      case PostfixUnaryExpressionSyntax unary when unary.Kind() is SyntaxKind.PostIncrementExpression or SyntaxKind.PostDecrementExpression:
+        return this.StepValue(unary, unary.Operand, unary.IsKind(SyntaxKind.PostIncrementExpression), true);
       case PrefixUnaryExpressionSyntax unary:
         return this.Unary(unary);
       case BinaryExpressionSyntax binary:
@@ -413,6 +529,17 @@ internal sealed class Lowering(string path, SemanticModel model) {
       default:
         throw new UnsupportedException(expression, expression.Kind().ToString());
     }
+  }
+
+  /// <summary>A <c>++</c> or <c>--</c> whose value is used: the step of a variable or of an array element.</summary>
+  private IrExpr StepValue(ExpressionSyntax step, ExpressionSyntax operand, bool increment, bool postfix) {
+    IrExpr target = operand switch {
+      IdentifierNameSyntax when this.Value(operand) is IrLocalRef variable => variable,
+      ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element
+        => new IrArrayLoad(this.Value(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression)),
+      _ => throw new UnsupportedException(operand, operand.Kind().ToString())
+    };
+    return new IrStep(target, increment, postfix, target.Type.IsInteger && this.IsChecked(step));
   }
 
   private IrExpr Unary(PrefixUnaryExpressionSyntax unary) {

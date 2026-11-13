@@ -290,6 +290,166 @@ public sealed class JavaScriptEmitterTests {
     }));
   }
 
+  /// <summary>A loop with a continue is a JavaScript for, whose step the continue does not skip.</summary>
+  [Test]
+  public void ForWithContinue_KeepsItsStepInTheLoopHeader() {
+    var body = Body("public static int F(int n) { int s = 0; for (int i = 0; i < n; i++) { if ((i & 1) == 0) continue; s += i; } return s; }");
+    Assert.That(body, Is.EqualTo(new[] {
+      "let s = 0;",
+      "{",
+      "let i = 0;",
+      "for (; i < n; i = (i + 1) | 0) {",
+      "if ((i & 1) === 0) {",
+      "continue;",
+      "}",
+      "s = (s + i) | 0;",
+      "}",
+      "}",
+      "return s;"
+    }));
+  }
+
+  /// <summary>
+  /// Every kind of statement a step can hold is one expression of the loop header; a temporary the
+  /// step needs is declared in front of the loop.
+  /// </summary>
+  [Test]
+  public void ForStep_IsWrittenAsExpressions() {
+    var body = Body(
+      "public static void G() { } "
+      + "public static void F(int[] c, int n) { for (int i = 0; i < n; c[i + 1] += 2, c[0] = i, G(), ++i) continue; for (;;) { continue; } }");
+    Assert.That(body, Is.EqualTo(new[] {
+      "{",
+      "let i = 0;",
+      "let $t1;",
+      "for (; i < n; $t1 = (i + 1) | 0, $set(c, $t1, ($get(c, $t1) + 2) | 0), $set(c, 0, i), G(), i = (i + 1) | 0) {",
+      "continue;",
+      "}",
+      "}",
+      "{",
+      "for (; true; ) {",
+      "continue;",
+      "}",
+      "}"
+    }));
+  }
+
+  [Test]
+  public void ForEach_IsACountedLoop() {
+    var body = Body("public static int F(byte[] a) { int s = 0; foreach (var x in a) s += x; return s; }");
+    Assert.That(body, Is.EqualTo(new[] {
+      "let s = 0;",
+      "{",
+      "let $t1 = 0;",
+      "while ($t1 < a.length) {",
+      "let x = $get(a, $t1);",
+      "s = (s + x) | 0;",
+      "$t1 = ($t1 + 1) | 0;",
+      "}",
+      "}",
+      "return s;"
+    }));
+  }
+
+  [Test]
+  public void DoBreakAndSwitch_AreWritten() {
+    var body = Body(
+      "public static int F(int a, long b) { do { a--; if (a == 5) break; } while (a > 0); "
+      + "switch (a) { case 1: case -2: a = 3; break; default: return 0; case 4: { a = 5; } break; } switch (b) { case 5: return 1; } return a; }");
+    Assert.That(body, Is.EqualTo(new[] {
+      "do {",
+      "a = (a - 1) | 0;",
+      "if (a === 5) {",
+      "break;",
+      "}",
+      "} while (a > 0);",
+      "switch (a) {",
+      "case 1:",
+      "case -2: {",
+      "a = 3;",
+      "break;",
+      "}",
+      "default: {",
+      "return 0;",
+      "}",
+      "case 4: {",
+      "{",
+      "a = 5;",
+      "}",
+      "break;",
+      "}",
+      "}",
+      "switch (b) {",
+      "case 5n: {",
+      "return 1;",
+      "}",
+      "}",
+      "return a;"
+    }));
+  }
+
+  /// <summary>
+  /// A section whose body does not end with a jump gets a break: the IR has no fall-through. The
+  /// frontend never builds such a section, so the module is built by hand.
+  /// </summary>
+  [Test]
+  public void SwitchSectionWithoutAJump_EndsWithABreak() {
+    var a = new IrLocal("a", IrType.U8);
+    var assign = new IrAssign(a, new IrConst(IrType.U8, 7));
+    var choice = new IrSwitch(new IrLocalRef(a), [
+      new IrSwitchSection([1, 255], false, new IrBlock([assign])),
+      new IrSwitchSection([2], true, new IrBlock([])),
+      new IrSwitchSection([3], false, new IrBlock([new IrWhile(new IrConst(IrType.Bool, 1), new IrBlock([new IrContinue()]))]))
+    ]);
+    var module = new IrModule("M", [new IrFunction("F", true, IrType.U8, [a], [], new IrBlock([choice, new IrReturn(new IrLocalRef(a))]))]);
+    var lines = JavaScriptEmitter.Emit(module).Single().Content.Split('\n').Select(line => line.Trim()).SkipWhile(line => !line.StartsWith("switch"));
+    Assert.That(lines, Is.EqualTo(new[] {
+      "switch (a) {", "case 1:", "case 255: {", "a = 7;", "break;", "}", "case 2:", "default: {", "break;", "}",
+      "case 3: {", "while (true) {", "continue;", "}", "break;", "}", "}", "return a;", "}", ""
+    }));
+    Assert.That(IrInterpreter.Call(module, "F", [(byte)255]), Is.EqualTo((byte)7));
+    Assert.That(IrInterpreter.Call(module, "F", [(byte)9]), Is.EqualTo((byte)9));
+  }
+
+  /// <summary>A step whose value is used: assigned inside the expression, cut to the type of the variable.</summary>
+  [TestCase("int", "++a", "a = (a + 1) | 0")]
+  [TestCase("int", "--a + 1", "((a = (a - 1) | 0) + 1) | 0")]
+  [TestCase("uint", "--a", "a = (a - 1) >>> 0")]
+  [TestCase("long", "++a", "a = BigInt.asIntN(64, a + 1n)")]
+  [TestCase("ulong", "--a", "a = BigInt.asUintN(64, a - 1n)")]
+  [TestCase("byte", "++a", "a = (a + 1) & 0xFF")]
+  [TestCase("sbyte", "--a", "a = (a - 1) << 24 >> 24")]
+  [TestCase("short", "++a", "a = (a + 1) << 16 >> 16")]
+  [TestCase("char", "++a", "a = (a + 1) & 0xFFFF")]
+  [TestCase("float", "++a", "a = Math.fround(a + 1)")]
+  [TestCase("double", "--a", "a = a - 1")]
+  [TestCase("int", "checked(++a)", "a = $ck(a + 1, -2147483648, 2147483647)")]
+  [TestCase("ulong", "checked(--a)", "a = $ck(a - 1n, 0n, 18446744073709551615n)")]
+  [TestCase("double", "checked(++a)", "a = a + 1")]
+  public void PrefixStep_IsWritten(string type, string expression, string expected)
+    => Assert.That(Body($"public static {type} F({type} a) => {expression};"), Is.EqualTo(new[] { $"return {expected};" }));
+
+  /// <summary>The postfix form keeps the old value in a variable the function declares once.</summary>
+  [TestCase("int", "a++", "($p = a, a = ($p + 1) | 0, $p)")]
+  [TestCase("ulong", "a--", "($p = a, a = BigInt.asUintN(64, $p - 1n), $p)")]
+  [TestCase("byte", "checked(a--)", "($p = a, a = $ck($p - 1, 0, 255), $p)")]
+  [TestCase("double", "a++", "($p = a, a = $p + 1, $p)")]
+  [TestCase("float", "a-- - a++", "Math.fround(($p = a, a = Math.fround($p - 1), $p) - ($p = a, a = Math.fround($p + 1), $p))")]
+  public void PostfixStep_IsWritten(string type, string expression, string expected)
+    => Assert.That(Body($"public static {type} F({type} a) => {expression};"), Is.EqualTo(new[] { "let $p;", $"return {expected};" }));
+
+  /// <summary>The step of an array element goes through a helper that evaluates array and index once.</summary>
+  [TestCase("int", "x[i]++ + --x[i]", "($step(x, i, 1, true) + $step(x, i, -1, false)) | 0")]
+  [TestCase("long", "--x[i + 1]", "$step(x, (i + 1) | 0, -1n, false)")]
+  [TestCase("float", "x[0]++", "$step(x, 0, 1, true)")]
+  [TestCase("sbyte", "checked(++x[0])", "$stepck(x, 0, 1, false, -128, 127)")]
+  [TestCase("ulong", "checked(x[i]--)", "$stepck(x, i, -1n, true, 0n, 18446744073709551615n)")]
+  public void ElementStep_IsWritten(string type, string expression, string expected) {
+    var text = Emit($"public static {type} F({type}[] x, int i) => {expression};");
+    Assert.That(text, Does.Contain($"  return {expected};\n").And.Not.Contain("$p"));
+    Assert.That(text, Does.Contain("const before = array[index];"));
+  }
+
   [Test]
   public void OnlyPublicFunctions_AreExported() {
     var text = Emit("public static void A() { return; } private static void B() { } internal static void C() { }");

@@ -100,12 +100,15 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int[] F(long n) => new int[n];", "an array index or length of the type i64", 42, TestName = "64-bit length")]
   [TestCase("public static string F() => \"a\";", "string", 15, TestName = "string")]
   [TestCase("public static bool F(char c) => char.IsDigit(c);", "InvocationExpression", 33, TestName = "char text operation")]
-  [TestCase("public static int F(int[] a) { int s = 0; foreach (int x in a) s += x; return s; }", "ForEachStatement", 43, TestName = "foreach")]
-  [TestCase("public static int F(int a) { switch (a) { default: return 1; } }", "SwitchStatement", 30, TestName = "switch statement")]
+  [TestCase("public static int F() { int s = 0; foreach (int x in new System.Collections.Generic.List<int>()) s += x; return s; }", "System.Collections.Generic.List<int>", 54, TestName = "foreach over a list")]
+  [TestCase("public static int F(int a) { switch (a) { case > 1: return 1; default: return 0; } }", "CasePatternSwitchLabel", 43, TestName = "switch with a pattern")]
+  [TestCase("public static int F(int a) { switch (a) { case 1: goto default; default: return 0; } }", "GotoDefaultStatement", 51, TestName = "goto default")]
+  [TestCase("public static int F(int a) { switch (a) { case 1: goto case 2; case 2: return 0; } return 1; }", "GotoCaseStatement", 51, TestName = "goto case")]
+  [TestCase("public static int F(bool a) { switch (a) { case true: return 1; default: return 0; } }", "a switch on the type bool", 39, TestName = "switch on a truth value")]
+  [TestCase("public static int F(double a) { switch (a) { case 1.5: return 1; default: return 0; } }", "a switch on the type f64", 41, TestName = "switch on a float")]
+  [TestCase("public static int F(int a) { const string s = \"x\"; return a; }", "string", 36, TestName = "local constant of a type outside the subset")]
+  [TestCase("public static int F(int a) => (a)++;", "ParenthesizedExpression", 31, TestName = "step of something that is not a variable")]
   [TestCase("public static int F(int a) => a switch { _ => 1 };", "SwitchExpression", 31, TestName = "switch expression")]
-  [TestCase("public static int F(int a) { do { a++; } while (a < 3); return a; }", "DoStatement", 30, TestName = "do")]
-  [TestCase("public static int F(int a) { while (true) { break; } return a; }", "BreakStatement", 45, TestName = "break")]
-  [TestCase("public static int F(int a) { while (a < 0) { a++; continue; } return a; }", "ContinueStatement", 51, TestName = "continue")]
   [TestCase("public static int F(int a) { goto end; end: return a; }", "GotoStatement", 30, TestName = "goto")]
   [TestCase("public static int F(int[,] a) => 1;", "int[*,*]", 21, TestName = "multi-dimensional array")]
   [TestCase("public static int F(int[][] a) => 1;", "int[][]", 21, TestName = "jagged array")]
@@ -125,10 +128,8 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int Property => 1;", "a class member other than a static method", 1, TestName = "property")]
   [TestCase("public static extern int F();", "extern", 1, TestName = "extern")]
   [TestCase("public static int F() => 1; public static int F(int a) => a;", "method overloading", 29, TestName = "overload")]
-  [TestCase("public static int F() { const int a = 1; return a; }", "const", 25, TestName = "local constant")]
+  [TestCase("public static int F() { using var m = new System.IO.MemoryStream(); return 1; }", "using", 25, TestName = "modifier of a local")]
   [TestCase("public static int F(int a) { int b = a = 1; return b; }", "SimpleAssignmentExpression", 38, TestName = "assignment as a value")]
-  [TestCase("public static int F(int a) => a++;", "PostIncrementExpression", 31, TestName = "increment as a value")]
-  [TestCase("public static int F(int a) => ++a;", "PreIncrementExpression", 31, TestName = "prefix increment as a value")]
   [TestCase("public static int F(object o) => 1;", "object", 21, TestName = "object")]
   [TestCase("public static void F() { new object(); }", "ObjectCreationExpression", 26, TestName = "object creation statement")]
   [TestCase("public static int F(int a) => System.Math.Abs(a);", "InvocationExpression", 31, TestName = "call outside the class")]
@@ -252,6 +253,104 @@ public sealed class CSharpFrontendTests {
       new IrAssign(new IrLocal("f", IrType.F32), new IrBinary(IrBinaryOp.Add, f, new IrConst(IrType.F32, 0x3F800000)))));
     Assert.That(Returned(module.Functions[7]), Is.EqualTo(new IrBinary(IrBinaryOp.Add,
       new IrConvert(IrType.F64, new IrLocalRef(new IrLocal("a", IrType.I32))), new IrConst(IrType.F64, 0x3FF8000000000000))));
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>
+  /// A for without a continue is a while whose body ends with the step, as before. A continue of the
+  /// loop itself - not one of a loop nested in it - keeps body and step apart, so that the step runs.
+  /// </summary>
+  [Test]
+  public void For_KeepsItsStepApartOnlyWhenAContinueNeedsIt() {
+    var module = Import(
+      "public static void A(int n) { for (int i = 0; i < n; ++i) { } } "
+      + "public static void B(int n) { for (int i = 0; i < n; ++i) { if (i == 1) continue; } } "
+      + "public static void C(int n) { for (int i = 0; i < n; ++i) { while (i < 0) { continue; } } } "
+      + "public static void D(int n) { for (int i = 0; i < n; ++i) switch (i) { case 1: continue; } } "
+      + "public static void E(int n) { for (int i = 0; i < n; ++i) continue; }");
+    IrStmt Loop(int function) => ((IrBlock)module.Functions[function].Body.Statements[0]).Statements[^1];
+    Assert.That(Loop(0), Is.TypeOf<IrWhile>());
+    Assert.That(((IrWhile)Loop(0)).Body.Statements, Has.Count.EqualTo(1));
+    Assert.That(Loop(1), Is.TypeOf<IrFor>());
+    var loop = (IrFor)Loop(1);
+    var i = module.Functions[1].Locals[0];
+    Assert.That(loop.Condition, Is.EqualTo(new IrBinary(IrBinaryOp.Less, new IrLocalRef(i), new IrLocalRef(module.Functions[1].Parameters[0]))));
+    Assert.That(loop.Body.Statements.Select(statement => statement.GetType()), Is.EqualTo(new[] { typeof(IrIf) }));
+    Assert.That(loop.Step.Statements, Is.EqualTo(new IrStmt[] {
+      new IrAssign(i, new IrBinary(IrBinaryOp.Add, new IrLocalRef(i), new IrConst(IrType.I32, 1)))
+    }));
+    Assert.That(Loop(2), Is.TypeOf<IrWhile>());
+    Assert.That(Loop(3), Is.TypeOf<IrFor>());
+    Assert.That(Loop(4), Is.TypeOf<IrFor>());
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>A foreach reads the array once, counts in a temporary and converts each element as the source says.</summary>
+  [Test]
+  public void ForEach_BecomesACountedLoop() {
+    var module = Import(
+      "public static int[] G(int[] a) => a; "
+      + "public static int F(int[] a) { int s = 0; foreach (byte x in G(a)) { if (x == 0) continue; s += x; } return s; } "
+      + "public static int H(long[] a) { int s = 0; foreach (var x in a) s++; return s; }");
+    var f = module.Functions[1];
+    Assert.That(f.Locals.Select(local => (local.Name, local.Type.ToString())),
+      Is.EqualTo(new[] { ("s", "i32"), ("$t1", "i32[]"), ("$t2", "i32"), ("x", "u8") }));
+    var block = (IrBlock)f.Body.Statements[1];
+    Assert.That(block.Statements.Select(statement => statement.GetType()), Is.EqualTo(new[] { typeof(IrDeclare), typeof(IrDeclare), typeof(IrFor) }));
+    var loop = (IrFor)block.Statements[2];
+    IrExpr index = new IrLocalRef(f.Locals[2]);
+    IrExpr array = new IrLocalRef(f.Locals[1]);
+    Assert.That(loop.Condition, Is.EqualTo(new IrBinary(IrBinaryOp.Less, index, new IrArrayLength(array))));
+    Assert.That(loop.Body.Statements[0], Is.EqualTo(new IrDeclare(f.Locals[3], new IrConvert(IrType.U8, new IrArrayLoad(array, index)))));
+    Assert.That(loop.Step.Statements, Is.EqualTo(new IrStmt[] { new IrAssign(f.Locals[2], new IrBinary(IrBinaryOp.Add, index, new IrConst(IrType.I32, 1))) }));
+
+    var h = module.Functions[2];
+    Assert.That(h.Locals.Select(local => local.Name), Is.EqualTo(new[] { "s", "$t1", "x" }));
+    Assert.That(((IrBlock)h.Body.Statements[1]).Statements[^1], Is.TypeOf<IrWhile>());
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
+
+  /// <summary>
+  /// A switch keeps its labels and its default; a local declared in a section is declared in front of
+  /// the switch, because the other sections may use it.
+  /// </summary>
+  [Test]
+  public void Switch_KeepsLabelsAndMovesDeclarationsInFront() {
+    var f = Import(
+      "public static int F(char c) { switch (c) { case 'a': case 'b': int x = 1; return x; default: x = 2; int y; y = x; return y; case 'c': break; } return 0; }")
+      .Functions[0];
+    Assert.That(f.Body.Statements.Select(statement => statement.GetType()),
+      Is.EqualTo(new[] { typeof(IrDeclare), typeof(IrDeclare), typeof(IrSwitch), typeof(IrReturn) }));
+    Assert.That(f.Body.Statements.Take(2), Is.EqualTo(new IrStmt[] { new IrDeclare(f.Locals[0], null), new IrDeclare(f.Locals[1], null) }));
+    var choice = (IrSwitch)f.Body.Statements[2];
+    Assert.That(choice.Value, Is.EqualTo(new IrLocalRef(f.Parameters[0])));
+    Assert.That(choice.Sections.Select(section => (string.Join(",", section.Labels), section.IsDefault)),
+      Is.EqualTo(new[] { ("97,98", false), ("", true), ("99", false) }));
+    Assert.That(choice.Sections[0].Body.Statements[0], Is.EqualTo(new IrAssign(f.Locals[0], new IrConst(IrType.I32, 1))));
+    Assert.That(choice.Sections[2].Body.Statements, Is.EqualTo(new IrStmt[] { new IrBreak() }));
+  }
+
+  /// <summary>A do loop, and the steps whose value is used, with the flags the source gives them.</summary>
+  [Test]
+  public void DoAndSteps_KeepTheirForm() {
+    var module = Import(
+      "public static int A(int a) { do { a--; } while (a > 0); return a; } "
+      + "public static int B(int a) => a++; public static int C(int a) => --a; "
+      + "public static int D(byte[] d, int i) => checked(d[i + 1]--); public static double E(double a) => checked(++a); "
+      + "public static int G(int a) { const int K = 5; const long L = K; return a + K; }");
+    var loop = (IrDoWhile)module.Functions[0].Body.Statements[0];
+    IrExpr a = new IrLocalRef(new IrLocal("a", IrType.I32));
+    Assert.That(loop.Condition, Is.EqualTo(new IrBinary(IrBinaryOp.Greater, a, new IrConst(IrType.I32, 0))));
+    Assert.That(loop.Body.Statements, Has.Count.EqualTo(1));
+    Assert.That(Returned(module.Functions[1]), Is.EqualTo(new IrStep(a, true, true, false)));
+    Assert.That(Returned(module.Functions[2]), Is.EqualTo(new IrStep(a, false, false, false)));
+    var d = module.Functions[3];
+    Assert.That(Returned(d), Is.EqualTo(new IrConvert(IrType.I32, new IrStep(
+      new IrArrayLoad(new IrLocalRef(d.Parameters[0]), new IrBinary(IrBinaryOp.AddChecked, new IrLocalRef(d.Parameters[1]), new IrConst(IrType.I32, 1))),
+      false, true, true))));
+    Assert.That(Returned(module.Functions[4]), Is.EqualTo(new IrStep(new IrLocalRef(new IrLocal("a", IrType.F64)), true, false, false)));
+    Assert.That(module.Functions[5].Locals, Is.Empty);
+    Assert.That(Returned(module.Functions[5]), Is.EqualTo(new IrBinary(IrBinaryOp.Add, a, new IrConst(IrType.I32, 5))));
     Assert.That(IrVerifier.Verify(module), Is.Empty);
   }
 

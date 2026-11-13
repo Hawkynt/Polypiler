@@ -81,6 +81,11 @@ internal static class PrototypeCases {
     "Arrays" => Arrays(),
     "Statements" => Statements(),
     "Operators" or "wide/OperatorsWide" or "wide/Conversions" => EveryMethod(fixture),
+    "wide/RunLength" => RunLength(),
+    "wide/DigitSum" => DigitSum(),
+    "wide/BinarySearch" => BinarySearch(),
+    "wide/BubbleSort" => BubbleSort(),
+    "wide/StatementsWide" => StatementsWide(),
     "wide/Fnv1a64" => [
       Call("Hash", Text("")),
       Call("Hash", Text("a")),
@@ -132,6 +137,145 @@ internal static class PrototypeCases {
   public static byte[] Text(string text) => Encoding.ASCII.GetBytes(text);
 
   private static PrototypeCall Call(string method, params object[] arguments) => new(method, arguments);
+
+  private static List<PrototypeCall> RunLength() {
+    var calls = new List<PrototypeCall>();
+    byte[][] streams = [
+      [],
+      [0x00, 7],
+      [0x02, 1, 2, 3, 0x80, 9, 0xFF, 5],
+      [0xFE, 1],
+      [0x05, 1, 2],
+      [0x80, 4, 0x81],
+      [0xFF],
+      [0x7F]
+    ];
+    foreach (var stream in streams) {
+      calls.Add(Call("Decode", stream, new byte[200]));
+      calls.Add(Call("DecodedLength", stream));
+    }
+
+    // An output that is too short: the write outside it traps.
+    calls.Add(Call("Decode", new byte[] { 0x02, 1, 2, 3 }, new byte[2]));
+    calls.Add(Call("Decode", new byte[] { 0x80, 9 }, new byte[2]));
+    calls.Add(Call("Decode", new byte[] { 0x00, 7 }, Array.Empty<byte>()));
+    return calls;
+  }
+
+  private static List<PrototypeCall> DigitSum() {
+    var calls = new List<PrototypeCall>();
+    foreach (var number in new uint[] { 0, 9, 10, 99999, 123456, uint.MaxValue }) {
+      calls.Add(Call("Sum", number));
+      calls.Add(Call("Root", number));
+    }
+
+    foreach (var number in new ulong[] { 0, 9, 10, 99, 100, ulong.MaxValue })
+      calls.Add(Call("Count", number));
+
+    foreach (var number in new[] { 0, 2468, 13579, -2468, 1234567890123456789, long.MaxValue, long.MinValue })
+      calls.Add(Call("SumOfEven", number));
+
+    return calls;
+  }
+
+  private static List<PrototypeCall> BinarySearch() {
+    var calls = new List<PrototypeCall>();
+    int[][] arrays = [[], [1], [1, 3], [1, 3, 5, 7, 9], [int.MinValue, -1, 0, int.MaxValue]];
+    foreach (var sorted in arrays)
+      foreach (var key in new[] { int.MinValue, -1, 0, 1, 2, 3, 5, 9, 10, int.MaxValue }) {
+        calls.Add(Call("Find", sorted, key));
+        calls.Add(Call("LowerBound", sorted.Select(value => (long)value << 31).ToArray(), (long)key << 31));
+        calls.Add(Call("FindDouble", sorted.Select(value => value / 2.0).ToArray(), key / 2.0));
+      }
+
+    calls.Add(Call("FindDouble", new[] { 0.5, 1.5 }, double.NaN));
+    calls.Add(Call("FindDouble", new[] { -0.0, 1.5 }, 0.0));
+    return calls;
+  }
+
+  private static List<PrototypeCall> BubbleSort() {
+    var calls = new List<PrototypeCall>();
+    short[][] arrays = [[], [1], [2, 1], [1, 2], [3, 1, 2, -5, short.MaxValue, short.MinValue], [1, 2, 3, 4, 5], [5, 4, 3, 2, 1], [7, 7, 7]];
+    foreach (var data in arrays) {
+      calls.Add(Call("Sort", data));
+      calls.Add(Call("Swaps", data));
+      calls.Add(Call("IsSorted", data));
+    }
+
+    return calls;
+  }
+
+  /// <summary>
+  /// The statement fixture: the functions with loops get the counts that run them zero times, once
+  /// and often and that break in the first and in the last pass; the others, which take scalars and
+  /// have no loop, get boundary combinations and random operands like the operators.
+  /// </summary>
+  private static List<PrototypeCall> StatementsWide() {
+    string[] loops = ["SumOfOdd", "TwoCounters", "BreakAt", "Nested", "DoOnce", "DoContinue", "SwitchInLoop", "StepInCondition"];
+    var calls = EveryMethod("wide/StatementsWide", method => !loops.Contains(method.Name));
+    foreach (var count in new[] { -1, 0, 1, 2, 3, 4, 5, 9, 10, 20 }) {
+      calls.Add(Call("SumOfOdd", count));
+      calls.Add(Call("TwoCounters", count));
+      calls.Add(Call("DoOnce", count));
+      calls.Add(Call("DoContinue", count));
+      calls.Add(Call("SwitchInLoop", count));
+      calls.Add(Call("StepInCondition", count));
+      calls.Add(Call("StepThroughArray", new int[3], count));
+      foreach (var other in new[] { -1, 0, 1, 2, 4, 5, 9 }) {
+        calls.Add(Call("BreakAt", count, other));
+        calls.Add(Call("Nested", count, other));
+      }
+    }
+
+    calls.Add(Call("StepThroughArray", Array.Empty<int>(), 0));
+    calls.Add(Call("StepThroughArray", Array.Empty<int>(), 1));
+    foreach (var text in new[] { "", "education", "rhythm", "y", "jazz", "aeiou" })
+      calls.Add(Call("Vowels", text.ToCharArray()));
+
+    long[][] longs = [[], [1], [long.MaxValue, 1], [-5, 5, 7]];
+    foreach (var values in longs)
+      calls.Add(Call("SumEach", values));
+
+    int[][] ints = [[], [1, 2], [257, -1, 3], [255], [256]];
+    foreach (var values in ints) {
+      calls.Add(Call("SumEachNarrowed", values));
+      calls.Add(Call("SumEachChecked", values));
+      calls.Add(Call("SumOfCall", values));
+    }
+
+    calls.Add(Call("SumEachDouble", new[] { 0.1f, 0.2f, 16777216f }));
+    calls.Add(Call("SumEachDouble", Array.Empty<float>()));
+    sbyte[][] signed = [[], [1, 2], [1, -1], [sbyte.MinValue], [0, 0, 0, -3]];
+    foreach (var values in signed)
+      calls.Add(Call("FirstNegative", values));
+
+    ushort[][] units = [[], [0], [1, 2, 0, 3], [1, 2], [ushort.MaxValue]];
+    foreach (var values in units)
+      calls.Add(Call("CountUntilZero", values));
+
+    // Index 0 inside, index 1 outside, where the step traps before it changes anything.
+    foreach (var index in new[] { 0, 1, -1 }) {
+      calls.Add(Call("StepElement", new[] { 5 }, index));
+      calls.Add(Call("StepElement", new[] { int.MaxValue }, index));
+      calls.Add(Call("StepLongElement", new[] { long.MinValue }, index));
+      calls.Add(Call("StepByteElement", new byte[] { 0 }, index));
+      calls.Add(Call("StepByteElement", new byte[] { 255 }, index));
+      calls.Add(Call("StepFloatElement", new[] { 16777216f }, index));
+      calls.Add(Call("StepFloatElement", new[] { 0.5f }, index));
+      calls.Add(Call("StepCheckedElement", new sbyte[] { 5 }, index));
+      calls.Add(Call("StepCheckedElement", new sbyte[] { 126 }, index));
+      calls.Add(Call("StepCheckedElement", new sbyte[] { 127 }, index));
+      calls.Add(Call("StepCheckedULongElement", new ulong[] { 1 }, index));
+      calls.Add(Call("StepCheckedULongElement", new ulong[] { 0 }, index));
+    }
+
+    calls.Add(Call("CopyBackwards", new[] { 1, 2, 3 }, new int[3]));
+    calls.Add(Call("CopyBackwards", Array.Empty<int>(), Array.Empty<int>()));
+    calls.Add(Call("CopyBackwards", new[] { 1, 2 }, new int[1]));
+    calls.Add(Call("ChooseArray", true, new long[] { 1 }, new long[] { 2 }));
+    calls.Add(Call("ChooseArray", false, new long[] { 1 }, new long[] { 2 }));
+    return calls;
+  }
 
   private static List<PrototypeCall> Horner() {
     var calls = new List<PrototypeCall>();
@@ -275,14 +419,16 @@ internal static class PrototypeCases {
   }
 
   /// <summary>
-  /// For every public function of a fixture that takes only scalars: all combinations of the boundary
+  /// For every public function of a fixture that takes only scalars and is wanted: all combinations of the boundary
   /// values of its parameter types, then <see cref="RandomCallsPerOperator"/> calls with random operands.
   /// </summary>
-  private static List<PrototypeCall> EveryMethod(string fixture) {
+  private static List<PrototypeCall> EveryMethod(string fixture, Func<MethodInfo, bool>? wanted = null) {
     var random = new Random(Seed);
     var calls = new List<PrototypeCall>();
     var methods = PrototypeFixture.CompiledType(fixture)
       .GetMethods(BindingFlags.Public | BindingFlags.Static)
+      .Where(method => method.GetParameters().All(parameter => _operands.ContainsKey(parameter.ParameterType)))
+      .Where(method => wanted is null || wanted(method))
       .OrderBy(method => method.Name, StringComparer.Ordinal);
     foreach (var method in methods) {
       var types = method.GetParameters().Select(parameter => parameter.ParameterType).ToArray();
