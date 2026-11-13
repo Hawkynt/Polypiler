@@ -195,7 +195,7 @@ public sealed class JavaScriptImportTests {
     for (var index = 0; index < calls.Count; ++index) {
       var interpreted = PrototypeFixture.InterpretedOutcome(module, calls[index]);
       var compiled = builds.Select(build => build.Outcome(calls[index])).Distinct().ToList();
-      if (interpreted != original[index] || reEmitted[index] != original[index] || compiled.Exists(outcome => outcome != original[index]))
+      if (interpreted != original[index] || reEmitted[index] != original[index] || compiled.Count != 1 || compiled[0] != original[index])
         mismatches.Add($"{calls[index]}: node on the original {original[index]}, interpreter {interpreted}, node on the re-emitted module {reEmitted[index]}, C# {string.Join(" and ", compiled)}");
     }
 
@@ -226,7 +226,7 @@ public sealed class JavaScriptImportTests {
     for (var index = 0; index < calls.Count; ++index) {
       var interpreted = PrototypeFixture.InterpretedOutcome(module, calls[index]);
       var compiled = builds.Select(build => build.Outcome(calls[index])).Distinct().ToList();
-      if (interpreted != original[index] || reEmitted[index] != original[index] || compiled.Exists(outcome => outcome != original[index]))
+      if (interpreted != original[index] || reEmitted[index] != original[index] || compiled.Count != 1 || compiled[0] != original[index])
         mismatches.Add($"{calls[index]}: node on the original {original[index]}, interpreter {interpreted}, node on the re-emitted module {reEmitted[index]}, C# {string.Join(" and ", compiled)}");
     }
 
@@ -299,15 +299,6 @@ public sealed class JavaScriptImportTests {
     Directory.CreateDirectory(directory);
     File.Copy(source, Path.Combine(directory, className + Path.GetExtension(source)), true);
     var (exitCode, text) = Toolchain.RunPolypiler(directory, ["translate", className + Path.GetExtension(source), "--from", "javascript", "--to", "csharp", "--output", "out", .. further]);
-
-    // The C# backend does not write the whole IR yet. What it says it cannot write is not compared
-    // through it; anything else it refuses is a failure.
-    if (exitCode == 3 && text.Contains("error PLY1052:", StringComparison.Ordinal)) {
-      var missing = Regex.Matches(text, @"PLY1052: '([^']+)'").Select(match => match.Groups[1].Value).Distinct();
-      TestContext.Out.WriteLine($"{className}: not compared through C#, whose backend does not write {string.Join(", ", missing)} yet");
-      return [];
-    }
-
     Assert.That(exitCode, Is.Zero, text);
     var generated = File.ReadAllText(Path.Combine(directory, "out", className + ".cs"));
     return [GeneratedCSharp.Compile(generated, false), GeneratedCSharp.Compile(generated, true)];

@@ -34,6 +34,31 @@ internal static class CSharpHelpers {
     "return value >= 18446744073709551616.0 ? 18446744073709551615UL : value > 0.0 ? (ulong)value : 0UL;"
   ]);
 
+  /// <summary>
+  /// ECMA-262's <c>ToInt32</c>: the number without its fraction modulo 2^32, a NaN and the infinities 0.
+  /// A cast of the number itself saturates; the remainder of two doubles is exact and lies within
+  /// 2^32, where the cast to <c>long</c> changes nothing, and the last cast keeps the low 32 bits.
+  /// Only what .NET Framework 2.0 has is used, so the helper is the same in every profile.
+  /// </summary>
+  public static CSharpHelper ToInt32 { get; } = new("ToInt32", "int", "double value", [
+    "return double.IsNaN(value) || double.IsInfinity(value) ? 0 : unchecked((int)(long)(global::System.Math.Truncate(value) % 4294967296.0));"
+  ]);
+
+  /// <summary>ECMA-262's <c>ToUint32</c>: like <see cref="ToInt32"/>, read as an unsigned integer.</summary>
+  public static CSharpHelper ToUint32 { get; } = new("ToUint32", "uint", "double value", [
+    "return double.IsNaN(value) || double.IsInfinity(value) ? 0u : unchecked((uint)(long)(global::System.Math.Truncate(value) % 4294967296.0));"
+  ]);
+
+  /// <summary>
+  /// ECMA-262's <c>Math.round</c>: a tie goes towards positive infinity, and a zero keeps the sign of
+  /// the number - told by the sign of its reciprocal, since <c>Math.CopySign</c> came late.
+  /// </summary>
+  public static CSharpHelper RoundHalfUp { get; } = new("RoundHalfUp", "double", "double value", [
+    "double floor = global::System.Math.Floor(value);",
+    "double rounded = value - floor >= 0.5 ? floor + 1 : floor;",
+    "return rounded != 0 ? rounded : value < 0 || 1 / value < 0 ? -0.0 : 0.0;"
+  ]);
+
   /// <summary>Evaluates an expression for its effects where the language has no discard.</summary>
   public static CSharpHelper Ignore { get; } = new("Ignore", "void", "T value", [], "<T>");
 

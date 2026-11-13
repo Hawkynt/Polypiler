@@ -197,6 +197,12 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfOperation("Math.Round(double, MidpointRounding)", CSharpProfile.Net20, IrIntrinsicOp.RoundAway, _double,
       new CSharpForm(Base + "Math.Round", Further: Base + "MidpointRounding.AwayFromZero")),
 
+    // ECMA-262's rounding and conversions, which no profile has: a helper in every one.
+    CSharpCapability.OfOperation("Math.round of ECMA-262 on float", CSharpProfile.Net20, IrIntrinsicOp.RoundHalfUp, _single, new CSharpForm(null, "float"), helper: CSharpHelpers.RoundHalfUp),
+    CSharpCapability.OfOperation("Math.round of ECMA-262", CSharpProfile.Net20, IrIntrinsicOp.RoundHalfUp, _double, new CSharpForm(null), helper: CSharpHelpers.RoundHalfUp),
+    CSharpCapability.OfOperation("ToInt32 of ECMA-262", CSharpProfile.Net20, IrIntrinsicOp.ToInt32, _double, new CSharpForm(null), helper: CSharpHelpers.ToInt32),
+    CSharpCapability.OfOperation("ToUint32 of ECMA-262", CSharpProfile.Net20, IrIntrinsicOp.ToUint32, _double, new CSharpForm(null), helper: CSharpHelpers.ToUint32),
+
     // MathF. Each of these is exact, so the operation on the double the float is, rounded back, has the same bits.
     Single("MathF.Sqrt(float)", IrIntrinsicOp.Sqrt, "Sqrt"),
     Single("MathF.Floor(float)", IrIntrinsicOp.Floor, "Floor"),

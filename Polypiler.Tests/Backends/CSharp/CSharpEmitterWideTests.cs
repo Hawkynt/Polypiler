@@ -697,6 +697,53 @@ public sealed class CSharpEmitterWideTests {
   }
 
   /// <summary>
+  /// ECMA-262's <c>ToInt32</c>, <c>ToUint32</c> and <c>Math.round</c>, which no cast and no method of
+  /// the base library are: the class gets a helper for each one it uses, exact for a NaN, the
+  /// infinities and numbers beyond 2^32 and 2^53, and the generated code does what the interpreter does.
+  /// </summary>
+  [Test]
+  public void EcmaScriptConversions_AreHelpers() {
+    var d = new IrLocal("d", IrType.F64);
+    var f = new IrLocal("f", IrType.F32);
+    var shadow = new IrLocal("ToInt32", IrType.F64);
+    var module = new IrModule("Numbers", [
+      Function("Signed", IrType.I32, [d], new IrReturn(new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [Ref(d)]))),
+      Function("Unsigned", IrType.U32, [d], new IrReturn(new IrIntrinsic(IrIntrinsicOp.ToUint32, IrType.U32, [Ref(d)]))),
+      Function("Rounded", IrType.F64, [d], new IrReturn(new IrIntrinsic(IrIntrinsicOp.RoundHalfUp, IrType.F64, [Ref(d)]))),
+      Function("RoundedSingle", IrType.F32, [f], new IrReturn(new IrIntrinsic(IrIntrinsicOp.RoundHalfUp, IrType.F32, [Ref(f)]))),
+      Function("ToInt32", IrType.I32, [shadow], new IrReturn(Op(IrBinaryOp.Xor, new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [Ref(shadow)]), Int(1))))
+    ]);
+    var text = Emit(module);
+    Assert.That(text, Does.Contain("return ToInt32(d);")
+      .And.Contain("return ToUint32(d);")
+      .And.Contain("return RoundHalfUp(d);")
+      .And.Contain("return (float)RoundHalfUp(f);")
+      .And.Contain("public static int ToInt32_(double ToInt32__) {")
+      .And.Contain("return ToInt32(ToInt32__) ^ 1;")
+      .And.Contain("  private static int ToInt32(double value) {\n    return double.IsNaN(value) || double.IsInfinity(value) ? 0 : unchecked((int)(long)(global::System.Math.Truncate(value) % 4294967296.0));\n  }\n")
+      .And.Contain("  private static uint ToUint32(double value) {\n    return double.IsNaN(value) || double.IsInfinity(value) ? 0u : unchecked((uint)(long)(global::System.Math.Truncate(value) % 4294967296.0));\n  }\n"));
+    Assert.That(Regex.Matches(text, "private static"), Has.Count.EqualTo(3));
+
+    double[] numbers = [
+      .. _numbers, 0.5, -0.5, 1.5, -1.5, 2.5, -2.5, 0.49999999999999994, -0.2, 2147483647, -2147483648, -2147483649, 4294967295, 4294967296, 4294967297,
+      9007199254740992, 9007199254740994, -9007199254740994, 1e21, -1e21, 4503599627370495.5, double.MaxValue
+    ];
+    var calls = numbers.SelectMany(number => new[] { Call("Signed", number), Call("Unsigned", number), Call("Rounded", number), Call("RoundedSingle", (float)number) }).ToList();
+    var outcomes = Outcomes(module, calls);
+    Assert.That(outcomes, Has.Count.EqualTo(calls.Select(call => call.ToString()).Distinct().Count()));
+    Assert.That((outcomes["Signed(2147483648)"], outcomes["Signed(f:444b1ae4d6e2ef50)"], outcomes["Signed(NaN)"], outcomes["Unsigned(-1)"], outcomes["Unsigned(f:c44b1ae4d6e2ef50)"]),
+      Is.EqualTo(("-2147483648", "-559939584", "0", "4294967295", "559939584")));
+    Assert.That((outcomes["Rounded(f:3fe0000000000000)"], outcomes["Rounded(f:bfe0000000000000)"], outcomes["Rounded(f:4004000000000000)"], outcomes["Rounded(f:c004000000000000)"]),
+      Is.EqualTo(("1", "f:8000000000000000", "3", "-2")));
+
+    // The function a helper took the name of is called by the name it was given instead.
+    Assert.That(Builds(module).Select(build => build.Outcome(Call("ToInt32_", 4294967298.5))), Has.All.EqualTo("3"));
+
+    // A module that uses none of the three gets none of them.
+    Assert.That(Emit(new IrModule("Plain", [Function("F", IrType.F64, [d], new IrReturn(Ref(d)))])), Does.Not.Contain("private"));
+  }
+
+  /// <summary>
   /// Test design 3 and 9: every conversion between two numeric types under every contract the IR
   /// allows for the pair, on the edges of both types - the same bits, or the same exception.
   /// </summary>
