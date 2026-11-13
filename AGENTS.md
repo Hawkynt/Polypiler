@@ -7,10 +7,15 @@ house standard; rewrite the "What this is" section for the concrete project and 
 ## What this is
 
 Polypiler, a verified cross-language optimizing compiler, in C# (.NET 10). Solution `Polypiler.slnx`;
-project folders sit at the repo root — `Polypiler.Core` (IR, analyses, frontends/backends),
-`Polypiler.Cli` (the `polypiler` command) and `Polypiler.Tests` (NUnit). Further internal subsystems
-(`.Base`, `.Permutation`, `.Interop`, `.Catalog`, `.Adapters`) are added as the
-[PRD](docs/PRD.md) phases reach them. No global usings: `ImplicitUsings` is disabled.
+one project per module at the repo root, and `tooling/ci/module-rules.yaml` says which may reference
+which. Most modules are still empty shells that the [PRD](docs/PRD.md) phases fill. What runs today
+is one thin path, the C# → JavaScript prototype: `Polypiler.Core` (product identity, `Diagnostic`,
+`GeneratedFile`), `Polypiler.Core.IR` (a small typed structured IR with verifier and interpreter),
+`Polypiler.Core.Frontends.CSharp` (Roslyn import of a small C# subset),
+`Polypiler.Core.Backends.JavaScript` (ES module emitter) and `Polypiler.Cli` (the `polypiler` command
+with `translate`). `Polypiler.Tests` holds the unit tests and carries the coverage;
+`Polypiler.Tests.Acceptance` starts the real executable and `node`. Fixtures live in `tests/fixtures`,
+feature files in `tests/features`. No global usings: `ImplicitUsings` is disabled.
 
 **The README is a forward-looking specification** — it is authoritative. When code and spec disagree,
 the spec wins unless the spec itself is being revised in the same change; cite the relevant section
