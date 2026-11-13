@@ -11,7 +11,8 @@ Without --apply nothing is changed: the plan is printed. With --apply the script
   4. sets the label — epic, state:draft, state:blocked while a dependency is open, state:ready
      otherwise — unless the issue is closed or in flight, and adds the Readiness review section,
   5. links each issue to its parent epic as a GitHub sub-issue,
-  6. records every dependency as a native "blocked by" relation.
+  6. records every direct dependency as a native "blocked by" relation (dependencies implied by
+     another blocker are listed in the body only: GitHub lets one issue block at most 100 others).
 It is idempotent: re-run it after an interruption or after editing files and only the differences
 are sent. --hold labels everything state:draft, for publishing while files are still being edited.
 """
@@ -55,6 +56,35 @@ def gh(*arguments, stdin=None, tolerate=()):
   raise RuntimeError(f"gh {' '.join(arguments[:4])} kept being rate limited")
 
 
+DIRECT = {}
+
+
+def reduce_dependencies(issues):
+  """Direct blockers per issue: a dependency already implied by another dependency is left out.
+
+  GitHub lets one issue block at most 100 others, and the foundation issues are prerequisites of
+  several hundred; recording only the direct ones keeps every relation within that limit without
+  changing when an issue becomes workable.
+  """
+  depends = {issue.id: issue.list("depends") for issue in issues}
+  reach = {}
+
+  def closure(identifier, trail=()):
+    if identifier not in reach:
+      found = set()
+      for target in depends.get(identifier, []):
+        if target in trail:
+          continue
+        found.add(target)
+        found |= closure(target, trail + (identifier,))
+      reach[identifier] = found
+    return reach[identifier]
+
+  for identifier, targets in depends.items():
+    DIRECT[identifier] = [target for target in targets
+                          if not any(target in closure(other) for other in targets if other != target)]
+
+
 def save(numbers):
   STATE_FILE.write_text(json.dumps(numbers, indent=2, sort_keys=True) + "\n")
 
@@ -68,9 +98,16 @@ def render(issue, numbers):
   if parent:
     head.append(f"**Part of:** {number(parent)}")
   depends = issue.list("depends")
+  direct = DIRECT.get(issue.id, depends)
   if depends:
-    head.append("**Blocked by** — do not start before every one of these is closed:\n"
-                + "\n".join(f"- {number(identifier)}" for identifier in depends))
+    block = ("**Blocked by** — do not start before every one of these is closed:\n"
+             + "\n".join(f"- {number(identifier)}" for identifier in direct))
+    indirect = [identifier for identifier in depends if identifier not in direct]
+    if indirect:
+      block += ("\n\n<details><summary>Also required, but already implied by the blockers above ("
+                + str(len(indirect)) + ")</summary>\n\n"
+                + ", ".join(number(identifier) for identifier in indirect) + "\n\n</details>")
+    head.append(block)
   elif issue.meta.get("template") != "1-epic":
     head.append("**Blocked by:** nothing — can start as soon as it is `state:ready`.")
   body = REFERENCE.sub(lambda match: number(match.group(1)), issue.body)
@@ -82,7 +119,7 @@ def review(issue, numbers, number):
   """The Readiness review section the templates require, derived from the front matter."""
   date = numbers.get(issue.id, {}).get("reviewed") or datetime.date.today().isoformat()
   depends = issue.list("depends")
-  blockers = ", ".join(number(identifier) for identifier in depends) if depends else "none"
+  blockers = ", ".join(number(identifier) for identifier in DIRECT.get(issue.id, depends)) if depends else "none"
   if issue.meta.get("template") == "1-epic":
     decision = ("epic — never claimed; it closes with its last sub-issue. Acceptance criteria, test design, "
                 "measurements, evidence and implementation plan: N/A — an epic carries no implementation, "
@@ -115,6 +152,9 @@ def main(arguments):
     elif not argument.startswith("--") and index not in skip:
       paths.append(argument)
   issues, errors = load_all(paths or None)
+  everything, _ = load_all()
+  sys.setrecursionlimit(10000)
+  reduce_dependencies(everything)
   if errors:
     for path, error in errors:
       print(f"{path}: {error}")
@@ -187,10 +227,11 @@ def main(arguments):
       entry["linked"] = True
       save(numbers)
       time.sleep(WRITE_PAUSE)
-    for target in issue.list("depends"):
+    for target in DIRECT.get(issue.id, issue.list("depends")):
       if target in numbers and target not in entry.setdefault("blocked_by", []):
         gh("api", "-X", "POST", f"repos/{repo}/issues/{entry['number']}/dependencies/blocked_by", "--input", "-",
-           stdin=json.dumps({"issue_id": numbers[target]["id"]}), tolerate=("already", "duplicate"))
+           stdin=json.dumps({"issue_id": numbers[target]["id"]}),
+           tolerate=("already", "duplicate", "more than 100", "more than 50"))
         entry["blocked_by"].append(target)
         save(numbers)
         time.sleep(WRITE_PAUSE)
