@@ -12,6 +12,8 @@
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
   </ItemGroup>
 
+  <Import Project="..\Polypiler.Tests\Prototype\Support\ReferenceAssemblies.props" />
+
   <!-- The prototype fixtures are compiled into the tests: the C# compiler's build of them is the oracle.
        The helpers that describe the cases are shared with the unit tests as source, because the two
        test projects must not reference each other. -->

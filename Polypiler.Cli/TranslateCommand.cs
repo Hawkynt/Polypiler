@@ -14,6 +14,8 @@ namespace Polypiler.Cli;
 /// <summary>
 /// The <c>translate</c> command of the prototype:
 /// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript&gt; --to &lt;javascript|csharp&gt; --output &lt;directory&gt;</c>.
+/// A target language may take a profile: for C# <c>--profile</c> names the target framework and
+/// <c>--langversion</c> raises the version of the language above the one the profile brings.
 /// </summary>
 public static class TranslateCommand {
 
@@ -34,6 +36,8 @@ public static class TranslateCommand {
   private const string Output = "--output";
   private const string Namespace = "--namespace";
   private const string Export = "--export";
+  private const string Profile = "--profile";
+  private const string LangVersion = "--langversion";
 
   private static readonly string[] _required = [From, To, Output];
 
@@ -45,16 +49,19 @@ public static class TranslateCommand {
 
   /// <summary>The target languages; another one is another entry.</summary>
   private static readonly Backend[] _backends = [
-    new("javascript", [], _ => null, IrVerifier.Verify, (module, _) => JavaScriptEmitter.Emit(module)),
-    new("csharp", [Namespace], NamespaceMisuse, CSharpEmitter.Check, (module, options) => CSharpEmitter.Emit(module, options.GetValueOrDefault(Namespace)))
+    new("javascript", [], _ => null, (module, _) => IrVerifier.Verify(module), (module, _) => JavaScriptEmitter.Emit(module)),
+    CSharp(CSharpCapabilities.Default)
   ];
+
+  /// <summary>What the value of an option is called in the usage line, where it is not a name.</summary>
+  private static readonly Dictionary<string, string> _values = new() { [LangVersion] = "version" };
 
   /// <summary>How the command is called, as the help and every usage error show it.</summary>
   public static string UsageLine { get; } =
     $"{ProductInfo.Name} translate <file> {From} {Choice(_frontends.Select(frontend => frontend.Name))}"
     + $" {To} {Choice(_backends.Select(backend => backend.Name))} {Output} <directory>"
     + string.Concat(_frontends.SelectMany(frontend => frontend.Options).Select(option => $" [{option} <name>[,<name>...]]"))
-    + string.Concat(_backends.SelectMany(backend => backend.Options).Select(option => $" [{option} <name>]"));
+    + string.Concat(_backends.SelectMany(backend => backend.Options).Select(option => $" [{option} <{_values.GetValueOrDefault(option, "name")}>]"));
 
   /// <summary>Runs the command.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -128,9 +135,21 @@ public static class TranslateCommand {
   /// <param name="output">Receives the names of the files written.</param>
   /// <param name="error">Receives the diagnostics.</param>
   /// <returns>The process exit code.</returns>
-  public static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error) {
-    var backend = _backends.First(candidate => candidate.Name == options[To]);
-    var problems = backend.Check(module);
+  public static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error)
+    => Emit(module, options, output, error, _backends.First(candidate => candidate.Name == options[To]));
+
+  /// <summary>Checks a module and writes it as C# by a capability table of the caller's.</summary>
+  /// <param name="module">The module to emit.</param>
+  /// <param name="options">The options as <see cref="Emit(IrModule, IReadOnlyDictionary{string, string}, TextWriter, TextWriter)"/> takes them; <c>--to</c> is not read.</param>
+  /// <param name="output">Receives the names of the files written.</param>
+  /// <param name="error">Receives the diagnostics.</param>
+  /// <param name="capabilities">What each profile has, and what replaces what it lacks.</param>
+  /// <returns>The process exit code.</returns>
+  public static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error, CSharpCapabilities capabilities)
+    => Emit(module, options, output, error, CSharp(capabilities));
+
+  private static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error, Backend backend) {
+    var problems = backend.Check(module, options);
     if (problems.Count > 0) {
       foreach (var problem in problems)
         error.WriteLine(problem);
@@ -187,8 +206,22 @@ public static class TranslateCommand {
   private static string? ExportMisuse(IReadOnlyDictionary<string, string> options)
     => options.TryGetValue(Export, out var names) && Names(names).Length == 0 ? $"the option '{Export}' names no function" : null;
 
-  private static string? NamespaceMisuse(IReadOnlyDictionary<string, string> options)
-    => options.TryGetValue(Namespace, out var name) && !CSharpEmitter.IsNamespace(name) ? $"'{name}' is not a namespace name" : null;
+  /// <summary>The C# backend with a capability table.</summary>
+  private static Backend CSharp(CSharpCapabilities capabilities) => new("csharp", [Namespace, Profile, LangVersion], CSharpMisuse,
+    (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
+    (module, options) => CSharpEmitter.Emit(module, CSharpProfileOf(options), options.GetValueOrDefault(Namespace), capabilities));
+
+  /// <summary>What is wrong with the options of the C# backend: the namespace first, then the profile and its language version.</summary>
+  private static string? CSharpMisuse(IReadOnlyDictionary<string, string> options) {
+    if (options.TryGetValue(Namespace, out var name) && !CSharpEmitter.IsNamespace(name))
+      return $"'{name}' is not a namespace name";
+
+    return CSharpProfile.TryParse(options.GetValueOrDefault(Profile, CSharpProfile.Default.Name), options.GetValueOrDefault(LangVersion), out _, out var problem) ? null : problem;
+  }
+
+  /// <summary>The profile the options name: <c>--profile</c>, or the default one, at the language version of <c>--langversion</c>.</summary>
+  private static CSharpProfile CSharpProfileOf(IReadOnlyDictionary<string, string> options)
+    => CSharpProfile.Parse(options.GetValueOrDefault(Profile, CSharpProfile.Default.Name), options.GetValueOrDefault(LangVersion));
 
   private static string Choice(IEnumerable<string> names) => $"<{string.Join('|', names)}>";
 
@@ -218,13 +251,13 @@ public static class TranslateCommand {
   /// <param name="Name">The name <c>--to</c> takes.</param>
   /// <param name="Options">The options only this language has.</param>
   /// <param name="Misuse">What is wrong with the values of those options, or <see langword="null"/>.</param>
-  /// <param name="Check">Why a module cannot be emitted; empty when it can.</param>
+  /// <param name="Check">Why a module cannot be emitted with the options given; empty when it can.</param>
   /// <param name="Emit">Writes a module that passed the check.</param>
   private sealed record Backend(
     string Name,
     string[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
-    Func<IrModule, IReadOnlyList<Diagnostic>> Check,
+    Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<Diagnostic>> Check,
     Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<GeneratedFile>> Emit);
 
 }

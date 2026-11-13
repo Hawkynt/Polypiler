@@ -1,0 +1,32 @@
+<Project>
+
+  <!-- The reference assemblies of every C# profile. They are dependencies of the tests only (all MIT,
+       published by Microsoft): the generated C# of a profile is compiled against the framework it
+       names, at the language version it names. PackageDownload fetches a package into the NuGet
+       package folder without referencing it, so no assembly of these ends up beside the tests; the
+       tests read them from that folder, whose path and whose layout the metadata below hands them.
+       The value of an entry is the package, its version and the directory of the assemblies in it. -->
+  <ItemGroup>
+    <PackageDownload Include="Microsoft.NETFramework.ReferenceAssemblies.net20" Version="[1.0.3]" />
+    <PackageDownload Include="Microsoft.NETFramework.ReferenceAssemblies.net35" Version="[1.0.3]" />
+    <PackageDownload Include="Microsoft.NETFramework.ReferenceAssemblies.net46" Version="[1.0.3]" />
+    <PackageDownload Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="[1.0.3]" />
+    <PackageDownload Include="NETStandard.Library" Version="[2.0.3]" />
+    <PackageDownload Include="NETStandard.Library.Ref" Version="[2.1.0]" />
+    <PackageDownload Include="Microsoft.NETCore.App.Ref" Version="[3.1.0];[8.0.0];[10.0.0]" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="NuGetPackageRoot" Value="$(NuGetPackageRoot)" />
+    <AssemblyMetadata Include="ReferenceAssemblies:net2.0" Value="Microsoft.NETFramework.ReferenceAssemblies.net20|1.0.3|build/.NETFramework/v2.0" />
+    <AssemblyMetadata Include="ReferenceAssemblies:net3.5" Value="Microsoft.NETFramework.ReferenceAssemblies.net35|1.0.3|build/.NETFramework/v3.5" />
+    <AssemblyMetadata Include="ReferenceAssemblies:net4.6" Value="Microsoft.NETFramework.ReferenceAssemblies.net46|1.0.3|build/.NETFramework/v4.6" />
+    <AssemblyMetadata Include="ReferenceAssemblies:net4.8" Value="Microsoft.NETFramework.ReferenceAssemblies.net48|1.0.3|build/.NETFramework/v4.8" />
+    <AssemblyMetadata Include="ReferenceAssemblies:netstandard2.0" Value="NETStandard.Library|2.0.3|build/netstandard2.0/ref" />
+    <AssemblyMetadata Include="ReferenceAssemblies:netstandard2.1" Value="NETStandard.Library.Ref|2.1.0|ref/netstandard2.1" />
+    <AssemblyMetadata Include="ReferenceAssemblies:netcoreapp3.1" Value="Microsoft.NETCore.App.Ref|3.1.0|ref/netcoreapp3.1" />
+    <AssemblyMetadata Include="ReferenceAssemblies:net8.0" Value="Microsoft.NETCore.App.Ref|8.0.0|ref/net8.0" />
+    <AssemblyMetadata Include="ReferenceAssemblies:net10.0" Value="Microsoft.NETCore.App.Ref|10.0.0|ref/net10.0" />
+  </ItemGroup>
+
+</Project>

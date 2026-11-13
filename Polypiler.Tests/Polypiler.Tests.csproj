@@ -14,6 +14,8 @@
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
+  <Import Project="..\Polypiler.Tests\Prototype\Support\ReferenceAssemblies.props" />
+
   <!-- The prototype fixtures are compiled into the tests: the C# compiler's build of them is the oracle. -->
   <ItemGroup>
     <Compile Include="..\tests\fixtures\prototype\**\*.cs" LinkBase="Prototype\Fixtures" />

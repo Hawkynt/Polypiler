@@ -49,6 +49,8 @@ LLVM and native/DOS emission are separate routes; support for either does not es
 | Capabilities | FPU/SIMD/BMI2, heap, threads, exceptions, external DLL loader |
 | Optimization policy | exact/strict, compatible-fast, size, latency, constant-time |
 
+The first two dimensions exist today in the C# backend. A profile (`--profile net2.0` … `net10.0`) fixes the framework and the C# version of its time, and one capability table (`CSharpCapabilities`) says for every API and every language feature the emitter writes which profile has it first and what replaces it elsewhere: an older call with the same bits, or a private helper emitted only where it is called. Adding an operation is one row of that table. The generated file of each profile is compiled against that framework's reference assemblies in the tests, never only against the runtime the tests run on.
+
 Do not infer target portability solely from the language name. PowerBASIC for Windows DLL imports and PowerBASIC DOS OMF linking are different targets; a Win64 library is not callable directly from a 32-bit DOS executable.
 
 ## Bidirectional support is tested direction by direction
