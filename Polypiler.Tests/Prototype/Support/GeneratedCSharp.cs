@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -48,6 +49,36 @@ internal sealed class GeneratedCSharp {
       throw new InvalidOperationException($"The C# compiler does not accept the generated file without complaint:\n{string.Join('\n', complaints)}\n{source}");
 
     return new GeneratedCSharp(Assembly.Load(image.ToArray()).GetExportedTypes().Single());
+  }
+
+  /// <summary>
+  /// Compiles the text of one generated file as the compiler of a profile would: in the language
+  /// version of the profile, against the reference assemblies of its framework and nothing else, at
+  /// the highest warning level with every warning an error. Nothing is loaded; the assembly could
+  /// not run here.
+  /// </summary>
+  /// <param name="source">The generated C#.</param>
+  /// <param name="profile">The name of the profile, which names the reference assemblies.</param>
+  /// <param name="languageVersion">The language version, as <c>--langversion</c> takes it.</param>
+  /// <returns>What the compiler reports; empty when it accepts the file without complaint.</returns>
+  /// <exception cref="InvalidOperationException">The reference assemblies are not restored, or the language version is none.</exception>
+  public static IReadOnlyList<string> ComplaintsFor(string source, string profile, string languageVersion) {
+    if (!LanguageVersionFacts.TryParse(languageVersion, out var version))
+      throw new InvalidOperationException($"'{languageVersion}' is no language version of the C# compiler.");
+
+    var compilation = CSharpCompilation.Create(
+      "Generated" + Guid.NewGuid().ToString("N"),
+      [CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(version))],
+      ReferenceAssemblies.Of(profile),
+      new CSharpCompilationOptions(
+        OutputKind.DynamicallyLinkedLibrary,
+        optimizationLevel: OptimizationLevel.Release,
+        generalDiagnosticOption: ReportDiagnostic.Error,
+        warningLevel: 9999));
+    using var image = new MemoryStream();
+    return [.. compilation.Emit(image).Diagnostics
+      .Where(diagnostic => diagnostic.Severity >= DiagnosticSeverity.Warning)
+      .Select(diagnostic => diagnostic.ToString())];
   }
 
   /// <summary>A method of the class, public or private.</summary>
