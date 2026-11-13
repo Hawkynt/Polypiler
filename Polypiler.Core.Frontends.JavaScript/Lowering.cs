@@ -394,7 +394,7 @@ internal sealed partial class Lowering(TypeInference types) {
         throw this.Unsupported(assignment, $"an assignment to the constant {name}");
       case MemberExpression { Computed: true } element:
         var holder = types.Of(element.Object);
-        var array = this.Array(element.Object, true);
+        var array = this.Array(element.Object);
         var index = this.Index(element.Property);
         var elementType = array.Type.Element!;
         var coercion = holder.IsPlain || !elementType.IsInteger || elementType.IsLong ? Coercion.None : Coercion.Int32;
@@ -462,7 +462,7 @@ internal sealed partial class Lowering(TypeInference types) {
     if (!element.Computed)
       throw this.Unsupported(step, types.Text(step));
 
-    var array = this.Array(element.Object, true);
+    var array = this.Array(element.Object);
     var index = this.Index(element.Property);
     this.AccessesElements = true;
     return new IrStep(new IrArrayLoad(array, index), step.Operator == Operator.Increment, true, false);

@@ -73,11 +73,10 @@ internal sealed partial class Lowering {
           throw this.Refuse(identifier, JavaScriptFrontend.ReadBeforeAssignment, $"'{identifier.Name}' may be read before it is assigned");
 
         return new IrLocalRef(variable.Local!);
-      case ModuleConstant { Type.Kind: not JsKind.Array } constant:
+      case ModuleConstant constant:
+        // A table never comes here: one that is used as a value is no constant.
         this.Constants.Add(constant);
         return new IrConstRef(constant.Constant);
-      case ModuleConstant:
-        throw this.Unsupported(identifier, $"the constant table {identifier.Name} as a value");
       default:
         throw this.Unsupported(identifier, identifier.Name);
     }
@@ -239,26 +238,26 @@ internal sealed partial class Lowering {
 
   private IrExpr Member(MemberExpression member) {
     if (member.Computed) {
-      var array = this.Array(member.Object, false);
+      var array = this.Array(member.Object);
       var index = this.Index(member.Property);
       this.AccessesElements = true;
       return Read(new IrArrayLoad(array, index));
     }
 
     return member.Property is Identifier { Name: "length" }
-      ? new IrArrayLength(this.Array(member.Object, false))
+      ? new IrArrayLength(this.Array(member.Object))
       : throw this.Unsupported(member, types.Text(member));
   }
 
   /// <summary>An element as JavaScript reads it: a binary32 number is the double it is.</summary>
   private static IrExpr Read(IrExpr element) => element.Type == IrType.F32 ? new IrConvert(IrType.F64, element) : element;
 
-  /// <summary>An array to take an element or the length of; a constant table only where nothing is stored.</summary>
-  private IrExpr Array(Node node, bool written) {
+  /// <summary>
+  /// An array to take an element or the length of. A constant table is read here and nowhere else:
+  /// a table the file stores into or uses as a value is no constant, so its name is unknown there.
+  /// </summary>
+  private IrExpr Array(Node node) {
     if (node is Identifier identifier && this._model.Bindings.GetValueOrDefault(identifier) is ModuleConstant { Type.Kind: JsKind.Array } table) {
-      if (written)
-        throw this.Unsupported(node, $"a store into the constant table {identifier.Name}");
-
       this.Constants.Add(table);
       return new IrConstRef(table.Constant);
     }

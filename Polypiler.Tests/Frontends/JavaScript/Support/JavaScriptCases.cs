@@ -45,7 +45,7 @@ internal static class JavaScriptCases {
   /// bits and their neighbours, the last integers a double holds exactly, 1e21, the infinities and NaN.
   /// </summary>
   private static readonly double[] _doubles = [
-    0.0, -0.0, 0.5, -0.5, 1, -1, 1.5, -2.5, 2147483647, 2147483648, -2147483649, 4294967296, 4294967297,
+    0.0, -0.0, 0.5, -0.5, 1, -1, 1.5, -1.5, 2.5, -2.5, 2147483647, 2147483648, -2147483649, 4294967296, 4294967297,
     9007199254740992, 9007199254740994, 1e21, double.PositiveInfinity, double.NegativeInfinity, double.NaN
   ];
 

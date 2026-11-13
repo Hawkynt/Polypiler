@@ -49,15 +49,45 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
 
   private readonly List<Candidate> _candidates = [];
   private readonly List<ModuleConstant> _constants = [];
+  private readonly HashSet<string> _escaped = [];
 
   /// <summary>
   /// The constants of the scope that encloses the functions, in source order. A name that two
-  /// constants share, or a constant and a function, names no constant.
+  /// constants share, or a constant and a function, names no constant. Nor does a table that the
+  /// file does anything with but read an element or the length: handed on, given another name or
+  /// stored into, it need not be the list its declaration shows.
   /// </summary>
   public IReadOnlyList<ModuleConstant> Constants
-    => this._constants.Where(constant => this._constants.Count(other => other.Name == constant.Name) == 1 && !this._candidates.Exists(candidate => candidate.Name == constant.Name)).ToList();
+    => this._constants.Where(constant => this._constants.Count(other => other.Name == constant.Name) == 1
+      && !this._candidates.Exists(candidate => candidate.Name == constant.Name)
+      && !(constant.Type.Kind == JsKind.Array && this._escaped.Contains(constant.Name))).ToList();
+
+  /// <summary>
+  /// Notes every name the file uses as anything but the array of an element read or of a length:
+  /// <c>T[i]</c> and <c>T.length</c> leave a table what it is, <c>T[i] = …</c>, <c>T[i]++</c>,
+  /// <c>f(T)</c>, <c>U = T</c> and <c>T.fill(0)</c> do not. A local of the same name counts as
+  /// well, which errs on the safe side.
+  /// </summary>
+  private void Escapes(Node node, Node? parent, Node? grandparent) {
+    if (node is Identifier { Name: var name }) {
+      var read = parent is MemberExpression member && member.Object == node
+        && (member.Computed || source[member.Property.Start..member.Property.End] == "length")
+        && !(grandparent is AssignmentExpression assignment && assignment.Left == member)
+        && grandparent is not UpdateExpression
+        && !(grandparent is CallExpression call && call.Callee == member);
+      var named = parent is VariableDeclarator declarator && declarator.Id == node
+        || parent is MemberExpression { Computed: false } owner && owner.Property == node
+        || parent is Property { Computed: false } property && property.Key == node;
+      if (!read && !named)
+        this._escaped.Add(name);
+    }
+
+    foreach (var child in node.ChildNodes)
+      this.Escapes(child, node, parent);
+  }
 
   public List<Candidate> Collect(Program program) {
+    this.Escapes(program, null, null);
     // A file that exports nothing is a script, whose declarations are all visible to whoever loads it.
     var isScript = !program.Body.Any(statement => statement is ExportNamedDeclaration or ExportDefaultDeclaration or ExportAllDeclaration);
     foreach (var statement in program.Body) {

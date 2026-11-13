@@ -328,7 +328,7 @@ public sealed class JavaScriptInferenceTests {
   public void EnclosingConstants_AreModuleConstants() {
     const string constants = "const MASK = 0xFF; const LOW = -5; const HALF = 0.5; const BIG = 0xFFFFFFFFFFFFFFFFn; const SMALL = -7n; export const WORDS = new Uint32Array([1, 4294967297, -1]); "
       + "const LIST = [1, 2, 3]; const RATIOS = [0.5, 2]; const SINGLES = new Float32Array([0.1, -2]); const LONGS = new BigInt64Array([1n, -2n]); const UNUSED = 9; ";
-    var module = Imported(constants + "export function f(a) { return (a & MASK) + LOW + HALF + WORDS[1] + WORDS.length + LIST[a & 1] + RATIOS[0] + SINGLES[0]; }"
+    var module = Imported(constants + "const O = { LIST: 1 }; O.LIST = 2; export function f(a) { return (a & MASK) + LOW + HALF + WORDS[1] + WORDS.length + LIST[a & 1] + RATIOS[0] + SINGLES[0]; }"
       + " export function g() { return BigInt.asUintN(64, BIG + SMALL + LONGS[1]); }").Module!;
     Assert.That(module.Constants.Select(constant => $"{constant.Name}: {constant.Type} = {string.Join(",", constant.Values)}"), Is.EqualTo(new[] {
       "MASK: i32 = 255",
@@ -371,6 +371,37 @@ public sealed class JavaScriptInferenceTests {
   [TestCase("(function () { const C = 1; if (true) { } })(); const C = 2;")]
   public void WhatIsNoNumberAndNoTable_IsNoConstant(string declaration)
     => Assert.That(JavaScriptFrontend.Import("snippet.js", declaration + " function f() { return C; }", ["f"]).Diagnostics.Single().Message, Is.EqualTo("'C' is not supported yet"));
+
+  /// <summary>
+  /// A table is a constant only while the file does nothing with it but read an element or the
+  /// length: stored into, handed on or given another name, it need not be the list its declaration shows.
+  /// </summary>
+  [TestCase("C[0] = 5;")]
+  [TestCase("function g(i) { C[i]++; }")]
+  [TestCase("(function () { C[1] ^= 1; })();")]
+  [TestCase("const D = C;")]
+  [TestCase("C.fill(0);")]
+  [TestCase("C[0]();")]
+  [TestCase("C.length = 1;")]
+  [TestCase("function g(x) { x[0] = 1; } g(C);")]
+  [TestCase("export { C };")]
+  [TestCase("function g() { const C = 1; return C; }")]
+  public void TableTheFileDoesMoreWithThanRead_IsNoConstant(string use) {
+    const string table = "const C = new Uint8Array([1, 2]); ";
+    Assert.That(JavaScriptFrontend.Import("snippet.mjs", table + use + " function f() { return C[0] + C.length; }", ["f"]).Diagnostics.Single().Message, Is.EqualTo("'C' is not supported yet"));
+  }
+
+  /// <summary>Reading leaves a table what it is, wherever in the file it is read, and a property or a variable of another object is not the table.</summary>
+  [TestCase("")]
+  [TestCase("const first = C[0], size = C.length;")]
+  [TestCase("function g(i) { return C[i | 0] + C.length; } g(1);")]
+  [TestCase("const O = { C: 1 }; O.C = 2; O.C++;")]
+  [TestCase("console.log(C[0].toString(), C.length.toString());")]
+  public void TableTheFileOnlyReads_IsAConstant(string use) {
+    const string table = "const C = new Uint8Array([1, 2]); ";
+    var module = Imported(table + use + " function f() { return C[0] + C.length; }", ["f"]).Module!;
+    Assert.That((module.Constants.Single().Name, IrInterpreter.Call(module, "f", [])), Is.EqualTo(("C", 3.0)));
+  }
 
   /// <summary>A constant whose name carries a <c>$</c> is none: the IR builds its own names with it.</summary>
   [Test]
