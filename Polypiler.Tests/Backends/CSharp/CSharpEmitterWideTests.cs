@@ -714,13 +714,12 @@ public sealed class CSharpEmitterWideTests {
       Function("ToInt32", IrType.I32, [shadow], new IrReturn(Op(IrBinaryOp.Xor, new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [Ref(shadow)]), Int(1))))
     ]);
     var text = Emit(module);
-    Assert.That(text, Does.Contain("return ToInt32(d);")
-      .And.Contain("return ToUint32(d);")
-      .And.Contain("return RoundHalfUp(d);")
-      .And.Contain("return (float)RoundHalfUp(f);")
-      .And.Contain("public static int ToInt32_(double ToInt32__) {")
-      .And.Contain("return ToInt32(ToInt32__) ^ 1;")
-      .And.Contain("  private static int ToInt32(double value) {\n    return double.IsNaN(value) || double.IsInfinity(value) ? 0 : unchecked((int)(long)(global::System.Math.Truncate(value) % 4294967296.0));\n  }\n")
+    Assert.That(text, Does.Contain("public static int Signed(double d) => ToInt32_(d);")
+      .And.Contain("public static uint Unsigned(double d) => ToUint32(d);")
+      .And.Contain("public static double Rounded(double d) => RoundHalfUp(d);")
+      .And.Contain("public static float RoundedSingle(float f) => (float)RoundHalfUp(f);")
+      .And.Contain("public static int ToInt32(double ToInt32__) => ToInt32_(ToInt32__) ^ 1;")
+      .And.Contain("  private static int ToInt32_(double value) {\n    return double.IsNaN(value) || double.IsInfinity(value) ? 0 : unchecked((int)(long)(global::System.Math.Truncate(value) % 4294967296.0));\n  }\n")
       .And.Contain("  private static uint ToUint32(double value) {\n    return double.IsNaN(value) || double.IsInfinity(value) ? 0u : unchecked((uint)(long)(global::System.Math.Truncate(value) % 4294967296.0));\n  }\n"));
     Assert.That(Regex.Matches(text, "private static"), Has.Count.EqualTo(3));
 
@@ -736,8 +735,8 @@ public sealed class CSharpEmitterWideTests {
     Assert.That((outcomes["Rounded(f:3fe0000000000000)"], outcomes["Rounded(f:bfe0000000000000)"], outcomes["Rounded(f:4004000000000000)"], outcomes["Rounded(f:c004000000000000)"]),
       Is.EqualTo(("1", "f:8000000000000000", "3", "-2")));
 
-    // The function a helper took the name of is called by the name it was given instead.
-    Assert.That(Builds(module).Select(build => build.Outcome(Call("ToInt32_", 4294967298.5))), Has.All.EqualTo("3"));
+    // A function keeps its name; the helper it would clash with is given another one.
+    Assert.That(Builds(module).Select(build => build.Outcome(Call("ToInt32", 4294967298.5))), Has.All.EqualTo("3"));
 
     // A module that uses none of the three gets none of them.
     Assert.That(Emit(new IrModule("Plain", [Function("F", IrType.F64, [d], new IrReturn(Ref(d)))])), Does.Not.Contain("private"));

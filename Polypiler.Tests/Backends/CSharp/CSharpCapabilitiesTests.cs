@@ -53,6 +53,10 @@ public sealed class CSharpCapabilitiesTests {
     ("Math.Truncate(double)", "net2.0"),
     ("Math.Round(double)", "net2.0"),
     ("Math.Round(double, MidpointRounding)", "net2.0"),
+    ("Math.round of ECMA-262 on float", "never"),
+    ("Math.round of ECMA-262", "never"),
+    ("ToInt32 of ECMA-262", "never"),
+    ("ToUint32 of ECMA-262", "never"),
     ("MathF.Sqrt(float)", "netstandard2.1"),
     ("MathF.Floor(float)", "netstandard2.1"),
     ("MathF.Ceiling(float)", "netstandard2.1"),
@@ -147,6 +151,10 @@ public sealed class CSharpCapabilitiesTests {
     ("BitConverter.SingleToInt32Bits(float)", "public static int F(float a) => System.BitConverter.SingleToInt32Bits(a);"),
     ("BitConverter.Int64BitsToDouble(long)", "public static double F(long a) => System.BitConverter.Int64BitsToDouble(a);"),
     ("BitConverter.Int32BitsToSingle(int)", "public static float F(int a) => System.BitConverter.Int32BitsToSingle(a);"),
+    ("Math.round of ECMA-262 on float", "ecma RoundHalfUp f32"),
+    ("Math.round of ECMA-262", "ecma RoundHalfUp f64"),
+    ("ToInt32 of ECMA-262", "ecma ToInt32 f64"),
+    ("ToUint32 of ECMA-262", "ecma ToUint32 f64"),
     ("saturating cast to sbyte", "saturate f64"),
     ("saturating cast to sbyte", "saturate f32"),
     ("saturating cast to byte", "saturate f64"),
@@ -201,6 +209,14 @@ public sealed class CSharpCapabilitiesTests {
 
   /// <summary>The module with the one function <c>F</c> that uses a row.</summary>
   private static IrModule Using(CSharpCapability row, string method) {
+    if (method.StartsWith("ecma ", StringComparison.Ordinal)) {
+      // No C# source has these operations; the JavaScript frontend makes them, so the IR is written here.
+      var x = new IrLocal("a", method.EndsWith("f32", StringComparison.Ordinal) ? IrType.F32 : IrType.F64);
+      var op = row.Operation!.Value;
+      var type = op == IrIntrinsicOp.ToInt32 ? IrType.I32 : op == IrIntrinsicOp.ToUint32 ? IrType.U32 : x.Type;
+      return new IrModule("Snippet", [new IrFunction("F", true, type, [x], [], new IrBlock([new IrReturn(new IrIntrinsic(op, type, [new IrLocalRef(x)]))]))]);
+    }
+
     if (!method.StartsWith("saturate ", StringComparison.Ordinal))
       return PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method));
 
@@ -390,7 +406,7 @@ public sealed class CSharpCapabilitiesTests {
   public void EveryHelper_IsCSharp2ForNetFramework20() {
     var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().ToList();
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(27));
+    Assert.That(helpers, Has.Count.EqualTo(30));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);
     foreach (var checking in _overflowChecking)
       Assert.That(() => GeneratedCSharp.Compile(text, checking), Throws.Nothing);

@@ -212,9 +212,13 @@ public sealed class CSharpProfilesTests {
     if (fixture == "operators")
       calls.AddRange(JavaScriptCases.RandomOperatorCalls());
 
-    var className = char.ToUpperInvariant(fixture[0]) + fixture[1..];
+    // The class is named after the file, without the folder of the fixture.
+    var name = Path.GetFileName(fixture);
+    var className = char.ToUpperInvariant(name[0]) + name[1..];
     File.Copy(JavaScriptFixture.PathOf(fixture), Path.Combine(this._directory, className + ".mjs"));
-    var expected = Toolchain.NodeOutcomes(this._directory, JavaScriptFixture.PathOf(fixture), calls);
+
+    // A module that computes in doubles has two zeros, so -0 is told from 0.
+    var expected = Toolchain.NodeOutcomes(this._directory, JavaScriptFixture.PathOf(fixture), calls, true);
     var executed = new Dictionary<string, string>();
     var mismatches = new List<string>();
     foreach (var profile in CSharpProfile.All) {

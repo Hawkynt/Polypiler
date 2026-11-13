@@ -106,15 +106,15 @@ public sealed class CSharpCapability {
 
   /// <summary>An intrinsic operation of the IR that is a call of the base library.</summary>
   /// <param name="name">The API as the .NET API reference names it.</param>
-  /// <param name="since">The first profile whose framework has it.</param>
+  /// <param name="since">The first profile whose framework has it, or <see langword="null"/> when none has.</param>
   /// <param name="operation">The operation.</param>
   /// <param name="operands">The types of the first argument the row is for; empty for every type.</param>
-  /// <param name="native">How the API is called.</param>
+  /// <param name="native">How the API is called, or <see langword="null"/> when no framework has it.</param>
   /// <param name="replacement">What is written in an earlier profile, or <see langword="null"/> when nothing can be.</param>
   /// <param name="helper">The helper the replacement calls, when its method is <see langword="null"/>.</param>
   /// <returns>The row.</returns>
   public static CSharpCapability OfOperation(
-    string name, CSharpProfile since, IrIntrinsicOp operation, IReadOnlyList<IrTypeKind> operands, CSharpForm native,
+    string name, CSharpProfile? since, IrIntrinsicOp operation, IReadOnlyList<IrTypeKind> operands, CSharpForm? native,
     CSharpForm? replacement = null, CSharpHelper? helper = null)
     => new(name) { Since = since, Operation = operation, Operands = operands, Native = native, Replacement = replacement, Helper = helper };
 
@@ -197,11 +197,11 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfOperation("Math.Round(double, MidpointRounding)", CSharpProfile.Net20, IrIntrinsicOp.RoundAway, _double,
       new CSharpForm(Base + "Math.Round", Further: Base + "MidpointRounding.AwayFromZero")),
 
-    // ECMA-262's rounding and conversions, which no profile has: a helper in every one.
-    CSharpCapability.OfOperation("Math.round of ECMA-262 on float", CSharpProfile.Net20, IrIntrinsicOp.RoundHalfUp, _single, new CSharpForm(null, "float"), helper: CSharpHelpers.RoundHalfUp),
-    CSharpCapability.OfOperation("Math.round of ECMA-262", CSharpProfile.Net20, IrIntrinsicOp.RoundHalfUp, _double, new CSharpForm(null), helper: CSharpHelpers.RoundHalfUp),
-    CSharpCapability.OfOperation("ToInt32 of ECMA-262", CSharpProfile.Net20, IrIntrinsicOp.ToInt32, _double, new CSharpForm(null), helper: CSharpHelpers.ToInt32),
-    CSharpCapability.OfOperation("ToUint32 of ECMA-262", CSharpProfile.Net20, IrIntrinsicOp.ToUint32, _double, new CSharpForm(null), helper: CSharpHelpers.ToUint32),
+    // ECMA-262's rounding and conversions, which no framework has: a helper in every profile.
+    Ecma("Math.round of ECMA-262 on float", IrIntrinsicOp.RoundHalfUp, _single, CSharpHelpers.RoundHalfUp, "float"),
+    Ecma("Math.round of ECMA-262", IrIntrinsicOp.RoundHalfUp, _double, CSharpHelpers.RoundHalfUp),
+    Ecma("ToInt32 of ECMA-262", IrIntrinsicOp.ToInt32, _double, CSharpHelpers.ToInt32),
+    Ecma("ToUint32 of ECMA-262", IrIntrinsicOp.ToUint32, _double, CSharpHelpers.ToUint32),
 
     // MathF. Each of these is exact, so the operation on the double the float is, rounded back, has the same bits.
     Single("MathF.Sqrt(float)", IrIntrinsicOp.Sqrt, "Sqrt"),
@@ -287,6 +287,10 @@ public sealed class CSharpCapabilities {
   /// <summary>A method of <c>BitOperations</c>, replaced by a helper.</summary>
   private static CSharpCapability Bit(string name, IrIntrinsicOp operation, IrTypeKind[] operands, CSharpHelper helper)
     => CSharpCapability.OfOperation(name, CSharpProfile.NetCoreApp31, operation, operands, new CSharpForm(Bits + helper.Name), new CSharpForm(null), helper);
+
+  /// <summary>An operation of ECMA-262 that no framework has, which is its helper in every profile.</summary>
+  private static CSharpCapability Ecma(string name, IrIntrinsicOp operation, IrTypeKind[] operands, CSharpHelper helper, string? cast = null)
+    => CSharpCapability.OfOperation(name, null, operation, operands, null, new CSharpForm(null, cast), helper);
 
   /// <summary>The saturating conversion to a type narrower than <c>int</c>, which no cast is in any profile.</summary>
   private static CSharpCapability Narrow(string type, IrTypeKind target, string bounds)
