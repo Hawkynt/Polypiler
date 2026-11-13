@@ -21,7 +21,8 @@ public static class Program {
     if (args.Length == 0 || args[0] is "--help" or "-h" or "help") {
       output.WriteLine($"{ProductInfo.Name} {ProductInfo.Version}");
       output.WriteLine($"usage: {ProductInfo.Name} [--help | --version]");
-      output.WriteLine("No translation command is available yet; see the README for the planned interface.");
+      output.WriteLine($"       {ProductInfo.Name} translate <file.cs> --from csharp --to javascript --output <directory>");
+      output.WriteLine("translate is a prototype for a small subset of C#; see the README for the planned interface.");
       return Success;
     }
 
@@ -29,6 +30,9 @@ public static class Program {
       output.WriteLine(ProductInfo.Version);
       return Success;
     }
+
+    if (args[0] is "translate")
+      return TranslateCommand.Run(args[1..], output, error);
 
     error.WriteLine($"{ProductInfo.Name}: unknown command '{args[0]}'. Run '{ProductInfo.Name} --help'.");
     return UsageError;
