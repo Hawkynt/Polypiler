@@ -229,7 +229,7 @@ export function indexOf(data, wanted) {
 }
 
 /**
- * Where ++ leaves 32 bits, JavaScript counts on and the imported code wraps around.
+ * Where ++ leaves 32 bits JavaScript counts on, and so does the imported code: the step is one of doubles.
  * @param {int32} value
  * @returns {boolean}
  */
