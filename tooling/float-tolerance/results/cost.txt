@@ -1,0 +1,4 @@
+exact      1.36 ns per element
+ulp        1.41 ns per element
+relative   1.58 ns per element
+absolute   1.54 ns per element

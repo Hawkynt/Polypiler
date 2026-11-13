@@ -1,0 +1,16 @@
+1 1 max distance 3 bound 3 at 0.25
+1 2 max distance 5 bound 5 at 0.25
+1 3 max distance 7 bound 7 at 0.25
+1 4 max distance 9 bound 9 at 0.25
+2 1 max distance 5 bound 5 at 0.25
+2 2 max distance 6 bound 6 at 0.25
+2 3 max distance 8 bound 8 at 0.25
+2 4 max distance 10 bound 10 at 0.25
+3 1 max distance 7 bound 7 at 0.25
+3 2 max distance 8 bound 8 at 0.25
+3 3 max distance 9 bound 9 at 0.25
+3 4 max distance 11 bound 11 at 0.25
+4 1 max distance 9 bound 9 at 0.25
+4 2 max distance 10 bound 10 at 0.25
+4 3 max distance 11 bound 11 at 0.25
+4 4 max distance 12 bound 12 at 0.25
