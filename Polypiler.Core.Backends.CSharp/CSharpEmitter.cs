@@ -17,6 +17,13 @@ namespace Polypiler.Core.Backends.CSharp;
 /// themselves — <see cref="DivideByZeroException"/>, <see cref="OverflowException"/>,
 /// <see cref="IndexOutOfRangeException"/> (from <c>Array.Copy</c> an <see cref="ArgumentException"/>)
 /// and <see cref="ArithmeticException"/>.
+/// <para>
+/// What is written depends on the <see cref="CSharpProfile"/>: the target framework and the version
+/// of the language. Every such decision is a row of <see cref="CSharpCapabilities"/> — an API the
+/// framework has is called, one it lacks is replaced by a call of the older base library or by a
+/// private helper the class gets only when it uses it, and a feature of the language is written in
+/// the form the language version has.
+/// </para>
 /// </summary>
 public static class CSharpEmitter {
 
@@ -26,22 +33,8 @@ public static class CSharpEmitter {
   /// <summary>The base library by its full name, which no name of the module can hide.</summary>
   private const string Base = "global::System.";
 
-  /// <summary>The name of the helper that converts a floating-point number to an integer narrower than <c>int</c>.</summary>
-  private const string Saturated = "Saturated";
-
-  /// <summary>
-  /// The private methods a class gets when it uses them, in the order they are written. A cast to
-  /// <c>byte</c> or <c>short</c> saturates to <c>int</c> and then keeps the low bits (ADR 0002), which
-  /// is not the nearest value of the narrow type the IR asks for; the helper compares first, and its
-  /// one cast only ever sees a number within the range.
-  /// </summary>
-  private static readonly (string Name, string[] Lines)[] _helpers = [
-    (Saturated, [
-      "private static int Saturated(double value, int low, int high) {",
-      "  return value >= high ? high : value > low ? (int)value : value <= low ? low : 0;",
-      "}"
-    ])
-  ];
+  /// <summary>The code for an IR construct that has no form in the chosen profile.</summary>
+  public const string Inexpressible = "PLY1053";
 
   /// <summary>The reserved words of C# (ECMA-334, "Keywords"); as an identifier each needs an <c>@</c>.</summary>
   private static readonly HashSet<string> _keywords = [
@@ -106,49 +99,24 @@ public static class CSharpEmitter {
     [IrBinaryOp.LogicalOr] = "||"
   };
 
-  /// <summary>
-  /// The method that is an intrinsic operation. Overload resolution picks the one for the type of
-  /// the arguments, and each returns the type the IR gives the operation; where the method for a
-  /// 32-bit operand has a name of its own, that is the second entry. A new operation is a new line.
-  /// </summary>
-  private static readonly Dictionary<IrIntrinsicOp, Call> _intrinsics = new() {
-    [IrIntrinsicOp.ArrayCopy] = new(Base + "Array.Copy"),
-    [IrIntrinsicOp.ArrayFill] = new(Base + "Array.Fill"),
-    [IrIntrinsicOp.ArrayClear] = new(Base + "Array.Clear"),
-    [IrIntrinsicOp.Abs] = new(Base + "Math.Abs"),
-    [IrIntrinsicOp.Min] = new(Base + "Math.Min"),
-    [IrIntrinsicOp.Max] = new(Base + "Math.Max"),
-    [IrIntrinsicOp.Sign] = new(Base + "Math.Sign"),
-    [IrIntrinsicOp.Sqrt] = new(Base + "Math.Sqrt", Base + "MathF.Sqrt"),
-    [IrIntrinsicOp.Floor] = new(Base + "Math.Floor", Base + "MathF.Floor"),
-    [IrIntrinsicOp.Ceiling] = new(Base + "Math.Ceiling", Base + "MathF.Ceiling"),
-    [IrIntrinsicOp.Truncate] = new(Base + "Math.Truncate", Base + "MathF.Truncate"),
-    [IrIntrinsicOp.RoundEven] = new(Base + "Math.Round", Base + "MathF.Round"),
-    [IrIntrinsicOp.RoundAway] = new(Base + "Math.Round", Base + "MathF.Round", Base + "MidpointRounding.AwayFromZero"),
-    [IrIntrinsicOp.RotateLeft] = new(Base + "Numerics.BitOperations.RotateLeft"),
-    [IrIntrinsicOp.RotateRight] = new(Base + "Numerics.BitOperations.RotateRight"),
-    [IrIntrinsicOp.PopCount] = new(Base + "Numerics.BitOperations.PopCount"),
-    [IrIntrinsicOp.LeadingZeroCount] = new(Base + "Numerics.BitOperations.LeadingZeroCount"),
-    [IrIntrinsicOp.TrailingZeroCount] = new(Base + "Numerics.BitOperations.TrailingZeroCount"),
-    [IrIntrinsicOp.Log2] = new(Base + "Numerics.BitOperations.Log2"),
-    [IrIntrinsicOp.BigMul] = new(Base + "Math.BigMul"),
-    [IrIntrinsicOp.FloatBits] = new(Base + "BitConverter.DoubleToInt64Bits", Base + "BitConverter.SingleToInt32Bits"),
-    [IrIntrinsicOp.BitsFloat] = new(Base + "BitConverter.Int64BitsToDouble", Base + "BitConverter.Int32BitsToSingle")
-  };
-
-  /// <summary>The method an intrinsic operation is written as.</summary>
-  /// <param name="Method">The method as the generated code names it.</param>
-  /// <param name="Single">The method for a first argument of 32 bits, where that is another one.</param>
-  /// <param name="Further">An argument that follows those of the IR, or <see langword="null"/>.</param>
-  private sealed record Call(string Method, string? Single = null, string? Further = null);
-
-  /// <summary>Says why a module cannot be emitted.</summary>
+  /// <summary>Says why a module cannot be emitted for the default profile.</summary>
   /// <param name="module">The module to check.</param>
+  /// <returns>What <see cref="Check(IrModule, CSharpProfile, CSharpCapabilities?)"/> returns for <see cref="CSharpProfile.Default"/>.</returns>
+  public static IReadOnlyList<Diagnostic> Check(IrModule module) => Check(module, CSharpProfile.Default);
+
+  /// <summary>Says why a module cannot be emitted for a profile.</summary>
+  /// <param name="module">The module to check.</param>
+  /// <param name="profile">The profile the module is to be written for.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>
   /// One <see cref="Unsupported"/> diagnostic per construct this backend does not know; when it knows
-  /// them all, the diagnostics of <see cref="IrVerifier"/>; empty when the module can be emitted.
+  /// them all, the diagnostics of <see cref="IrVerifier"/>; for well-typed IR, per operation the
+  /// table has no row for on its type of operand an <see cref="Unsupported"/> diagnostic, and per
+  /// operation the profile neither has nor has a replacement for an <see cref="Inexpressible"/> one;
+  /// empty when the module can be emitted.
   /// </returns>
-  public static IReadOnlyList<Diagnostic> Check(IrModule module) {
+  public static IReadOnlyList<Diagnostic> Check(IrModule module, CSharpProfile profile, CSharpCapabilities? capabilities = null) {
+    var table = capabilities ?? CSharpCapabilities.Default;
     var unknown = new List<string>();
     foreach (var constant in module.Constants)
       Known(constant.Type, unknown);
@@ -158,16 +126,30 @@ public static class CSharpEmitter {
       foreach (var variable in function.Parameters.Concat(function.Locals))
         Known(variable.Type, unknown);
 
-      Known(function.Body, unknown);
+      Known(function.Body, table, unknown);
     }
 
-    if (unknown.Count == 0)
-      return IrVerifier.Verify(module);
+    if (unknown.Count > 0)
+      return unknown.Distinct().Select(Unknown).ToList();
 
-    return unknown.Distinct()
-      .Select(what => new Diagnostic(Unsupported, DiagnosticSeverity.Error, $"'{what}' is not supported by the C# backend yet"))
-      .ToList();
+    var illTyped = IrVerifier.Verify(module);
+    if (illTyped.Count > 0)
+      return illTyped;
+
+    // What the table decides is asked of well-typed IR only: an operation then has its operands.
+    var problems = new List<Diagnostic>();
+    foreach (var expression in module.Functions.SelectMany(function => Expressions(function.Body)).Where(IsTabled)) {
+      var row = Row(expression, table);
+      if (row is null)
+        problems.Add(Unknown(expression is IrIntrinsic intrinsic ? $"{intrinsic.Op} of {intrinsic.Arguments[0].Type}" : $"{expression.Type} with saturation"));
+      else if (!row.IsIn(profile) && row.Replacement is null)
+        problems.Add(new Diagnostic(Inexpressible, DiagnosticSeverity.Error, $"'{row.Name}' cannot be expressed in C# profile '{profile.Name}'"));
+    }
+
+    return problems.Distinct().ToList();
   }
+
+  private static Diagnostic Unknown(string what) => new(Unsupported, DiagnosticSeverity.Error, $"'{what}' is not supported by the C# backend yet");
 
   /// <summary>Whether a text is a namespace name: identifiers separated by dots.</summary>
   /// <param name="name">The text.</param>
@@ -178,19 +160,36 @@ public static class CSharpEmitter {
   /// Emits the module as <c>&lt;name&gt;.cs</c>: a static class whose public methods are the public
   /// functions. File and class carry the name of the module as C# spells it.
   /// </summary>
-  /// <param name="module">A module that <see cref="Check"/> accepts.</param>
-  /// <param name="namespace">The file-scoped namespace of the class, or <see langword="null"/> for none.</param>
+  /// <param name="module">A module that <see cref="Check(IrModule)"/> accepts.</param>
+  /// <param name="namespace">The namespace of the class, or <see langword="null"/> for none.</param>
+  /// <returns>The generated file, written for <see cref="CSharpProfile.Default"/>.</returns>
+  /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
+  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, string? @namespace = null) => Emit(module, CSharpProfile.Default, @namespace);
+
+  /// <summary>
+  /// Emits the module as <c>&lt;name&gt;.cs</c> for a profile: a static class whose public methods are
+  /// the public functions, written with what the profile's framework and language version have. The
+  /// header of the file names the profile.
+  /// </summary>
+  /// <param name="module">A module that <see cref="Check(IrModule, CSharpProfile, CSharpCapabilities?)"/> accepts for the profile.</param>
+  /// <param name="profile">The target framework and language version.</param>
+  /// <param name="namespace">The namespace of the class, or <see langword="null"/> for none.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>The generated file.</returns>
   /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
-  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, string? @namespace = null) {
+  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, CSharpProfile profile, string? @namespace = null, CSharpCapabilities? capabilities = null) {
     if (@namespace is not null && !IsNamespace(@namespace))
       throw new ArgumentException($"'{@namespace}' is not a namespace name.", nameof(@namespace));
 
-    var problems = Check(module);
+    var table = capabilities ?? CSharpCapabilities.Default;
+    var problems = Check(module, profile, table);
     if (problems.Count > 0)
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problems[0].Message}.", nameof(module));
 
-    var writer = new Writer(module);
+    // The first pass finds out which helpers the class calls; their names are settled before the second one writes it.
+    var draft = new Writer(module, profile, table, []);
+    draft.Module(@namespace);
+    var writer = new Writer(module, profile, table, draft.Helpers);
     return [new GeneratedFile(writer.ClassName + ".cs", writer.Module(@namespace))];
   }
 
@@ -203,7 +202,7 @@ public static class CSharpEmitter {
       unknown.Add(type.ToString());
   }
 
-  private static void Known(IrStmt statement, List<string> unknown) {
+  private static void Known(IrStmt statement, CSharpCapabilities table, List<string> unknown) {
     var parts = Parts(statement);
     if (parts is null) {
       unknown.Add(statement.GetType().Name);
@@ -211,13 +210,13 @@ public static class CSharpEmitter {
     }
 
     foreach (var expression in parts.Value.Expressions)
-      Known(expression, unknown);
+      Known(expression, table, unknown);
 
     foreach (var inner in parts.Value.Statements)
-      Known(inner, unknown);
+      Known(inner, table, unknown);
   }
 
-  private static void Known(IrExpr expression, List<string> unknown) {
+  private static void Known(IrExpr expression, CSharpCapabilities table, List<string> unknown) {
     Known(expression.Type, unknown);
     var operands = Operands(expression);
     if (operands is null)
@@ -226,12 +225,23 @@ public static class CSharpEmitter {
       unknown.Add(unary.Op.ToString());
     else if (expression is IrBinary binary && !_binary.ContainsKey(binary.Op))
       unknown.Add(binary.Op.ToString());
-    else if (expression is IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic && !_intrinsics.ContainsKey(intrinsic.Op))
+    else if (expression is IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic && !table.Rows.Any(row => row.Operation == intrinsic.Op))
       unknown.Add(intrinsic.Op.ToString());
 
     foreach (var operand in operands ?? [])
-      Known(operand, unknown);
+      Known(operand, table, unknown);
   }
+
+  /// <summary>
+  /// Whether the capability table says how an expression is written: an intrinsic operation that is
+  /// a call, and the conversion of a floating-point number to an integer that saturates.
+  /// </summary>
+  private static bool IsTabled(IrExpr expression)
+    => expression is IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } || (expression is IrConvert conversion && Saturates(conversion));
+
+  /// <summary>The row of the capability table an expression that <see cref="IsTabled"/> is written by, or <see langword="null"/> when the table has none.</summary>
+  private static CSharpCapability? Row(IrExpr expression, CSharpCapabilities table)
+    => expression is IrIntrinsic intrinsic ? table.Of(intrinsic.Op, intrinsic.Arguments[0].Type.Kind) : table.OfSaturation(expression.Type.Kind);
 
   /// <summary>The expressions and statements a statement consists of, or <see langword="null"/> for a kind this backend does not know.</summary>
   private static (IReadOnlyList<IrExpr> Expressions, IReadOnlyList<IrStmt> Statements)? Parts(IrStmt statement) => statement switch {
@@ -275,19 +285,6 @@ public static class CSharpEmitter {
   private static IEnumerable<IrExpr> Expressions(IrExpr expression)
     => Operands(expression)!.SelectMany(Expressions).Prepend(expression);
 
-  /// <summary>
-  /// Whether C# checks the expression for overflow in a checked context, where the IR wraps around or
-  /// saturates: the integer arithmetic that can leave its type, a step, and every cast that can lose
-  /// a bit or the sign or meet a number outside its range.
-  /// </summary>
-  private static bool Wraps(IrExpr expression) => expression switch {
-    IrUnary unary => unary.Op == IrUnaryOp.Negate && unary.Type.IsInteger,
-    IrBinary binary => (binary.Op is IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply && binary.Type.IsInteger)
-      || (binary.Op == IrBinaryOp.ShiftRightLogical && binary.Type.IsSigned),
-    IrConvert conversion => conversion.Contract != IrConversion.Trap && !Keeps(conversion) && !Clamps(conversion),
-    IrStep step => !step.Trap && step.Type.IsInteger,
-    _ => false
-  };
 
   /// <summary>Whether the IR traps where the expression overflows, which C# does in a checked context.</summary>
   private static bool Traps(IrExpr expression) => expression switch {
@@ -305,11 +302,8 @@ public static class CSharpEmitter {
   private static bool Keeps(IrConvert conversion)
     => conversion.Type.IsFloat || (conversion.Operand.Type.IsInteger && IrOperators.Contains(conversion.Type, conversion.Operand.Type));
 
-  /// <summary>Whether a conversion saturates to a type narrower than <c>int</c>, which no cast does.</summary>
-  private static bool Clamps(IrConvert conversion) => conversion.Contract == IrConversion.Saturate && conversion.Type.Bits < 32;
-
-  /// <summary>The helper an expression calls, or <see langword="null"/> when it calls none.</summary>
-  private static string? Helper(IrExpr expression) => expression is IrConvert conversion && Clamps(conversion) ? Saturated : null;
+  /// <summary>Whether a conversion takes a floating-point number to the nearest value of an integer type.</summary>
+  private static bool Saturates(IrConvert conversion) => conversion.Contract == IrConversion.Saturate && conversion.Type.IsInteger;
 
   /// <summary>
   /// The operand without the conversion to <c>int</c> that C# applies by itself to a narrower integer
@@ -398,9 +392,12 @@ public static class CSharpEmitter {
     private const int Row = 8;
 
     private readonly IrModule _module;
+    private readonly CSharpProfile _profile;
+    private readonly CSharpCapabilities _table;
     private readonly StringBuilder _code = new();
     private readonly string _class;
-    private readonly HashSet<string> _used;
+    private readonly HashSet<CSharpHelper> _used = [];
+    private readonly Dictionary<string, string> _helpers;
     private readonly HashSet<string> _taken;
     private readonly Dictionary<string, string> _members;
     private Dictionary<string, string> _locals = [];
@@ -414,40 +411,86 @@ public static class CSharpEmitter {
     /// <summary>Whether the expression being written stands in a <c>checked(...)</c>.</summary>
     private bool _checked;
 
-    public Writer(IrModule module) {
+    /// <param name="module">The module to write.</param>
+    /// <param name="profile">The profile to write it for.</param>
+    /// <param name="table">The capability table.</param>
+    /// <param name="helpers">The helpers the class is known to call, whose names no variable may take.</param>
+    public Writer(IrModule module, CSharpProfile profile, CSharpCapabilities table, IReadOnlyCollection<CSharpHelper> helpers) {
       this._module = module;
+      this._profile = profile;
+      this._table = table;
       this._class = Names([module.Name], [])[module.Name];
       // Without the '@' the compiler warns that a type name of lower-case letters only may become a keyword (CS8981).
       if (this._class.All(char.IsAsciiLetterLower))
         this._class = "@" + this._class;
 
-      this._used = [.. module.Functions.SelectMany(function => Expressions(function.Body)).Select(Helper).OfType<string>()];
+      // A member keeps its name in every profile; a helper of that name gives way, as does a variable to both.
       var members = module.Constants.Select(constant => constant.Name).Concat(module.Functions.Select(function => function.Name));
-      this._members = Names(members, this._used.Prepend(this.ClassName));
-      this._taken = [.. this._members.Values.Select(member => member.TrimStart('@')), .. this._used];
+      this._members = Names(members, [this.ClassName]);
+      var taken = this._members.Values.Select(member => member.TrimStart('@')).Append(this.ClassName).ToList();
+      this._helpers = Names(helpers.Select(helper => helper.Name), taken);
+      this._taken = [.. taken, .. this._helpers.Values];
     }
+
+    /// <summary>The helpers the class has called so far.</summary>
+    public IReadOnlyCollection<CSharpHelper> Helpers => this._used;
+
+    private bool Has(CSharpFeature feature) => this._table.Has(feature, this._profile);
+
+    /// <summary>The name of a helper in this class; calling it is what makes the class declare it.</summary>
+    private string Helper(CSharpHelper helper) {
+      this._used.Add(helper);
+      return this._helpers.GetValueOrDefault(helper.Name, helper.Name);
+    }
+
+    /// <summary>
+    /// Whether C# checks the expression for overflow in a checked context, where the IR wraps around or
+    /// saturates: the integer arithmetic that can leave its type, a step, and every cast that can lose
+    /// a bit or the sign or meet a number outside its range. A helper is no cast, and neither is the
+    /// logical shift where the language has an operator for it.
+    /// </summary>
+    private bool Wraps(IrExpr expression) => expression switch {
+      IrUnary unary => unary.Op == IrUnaryOp.Negate && unary.Type.IsInteger,
+      IrBinary binary => (binary.Op is IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply && binary.Type.IsInteger)
+        || (binary.Op == IrBinaryOp.ShiftRightLogical && binary.Type.IsSigned && !this.Has(CSharpFeature.UnsignedRightShift)),
+      IrConvert conversion => conversion.Contract != IrConversion.Trap && !Keeps(conversion) && this.Casts(conversion),
+      IrStep step => !step.Trap && step.Type.IsInteger,
+      _ => false
+    };
+
+    /// <summary>Whether a conversion is written as a cast: any but a saturating one the profile has no cast for.</summary>
+    private bool Casts(IrConvert conversion) => !Saturates(conversion) || Row(conversion, this._table)!.IsIn(this._profile);
 
     /// <summary>The name of the class as the compiler reads it, without the <c>@</c> a keyword needs.</summary>
     public string ClassName => this._class.TrimStart('@');
 
+    /// <summary>
+    /// The file: a header that names the profile, the namespace in the form the language version has
+    /// — one that holds the rest of the file, or a block around the class — and the class.
+    /// </summary>
     public string Module(string? @namespace) {
-      this._code.Append("// ").Append(this.ClassName).Append(": generated by polypiler. Change the source, not this file.\n");
-      if (@namespace is not null) {
-        var parts = @namespace.Split('.');
-        this._code.Append("\nnamespace ").AppendJoin('.', parts.Select(part => Names([part], [])[part])).Append(";\n");
-      }
-
-      this._code.Append("\npublic static class ").Append(this._class).Append(" {\n");
+      this._code.Append("public static class ").Append(this._class).Append(" {\n");
       foreach (var constant in this._module.Constants)
         this.Constant(constant);
 
       foreach (var function in this._module.Functions)
         this.Function(function);
 
-      foreach (var (_, lines) in _helpers.Where(helper => this._used.Contains(helper.Name)))
-        this._code.Append("\n  ").AppendJoin("\n  ", lines).Append('\n');
+      // The table's order is the order of the helpers, whatever order the class calls them in.
+      foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains))
+        this._code.Append("\n  ").AppendJoin("\n  ", helper.Lines(this._helpers.GetValueOrDefault(helper.Name, helper.Name))).Append('\n');
 
-      return this._code.Append("\n}\n").ToString();
+      var type = this._code.Append("\n}\n").ToString();
+      var header = $"// {this.ClassName}: generated by polypiler. Change the source, not this file.\n// Profile: {this._profile}.\n\n";
+      if (@namespace is null)
+        return header + type;
+
+      var name = string.Join('.', @namespace.Split('.').Select(part => Names([part], [])[part]));
+      if (this.Has(CSharpFeature.FileScopedNamespace))
+        return $"{header}namespace {name};\n\n{type}";
+
+      var indented = string.Join('\n', type.TrimEnd('\n').Split('\n').Select(line => line.Length == 0 ? line : "  " + line));
+      return $"{header}namespace {name} {{\n\n{indented}\n\n}}\n";
     }
 
     /// <summary>
@@ -478,8 +521,17 @@ public static class CSharpEmitter {
       var parameters = string.Join(", ", function.Parameters.Select(parameter => $"{TypeName(parameter.Type)} {this._locals[parameter.Name]}"));
       this._code.Append("\n  ").Append(function.IsPublic ? "public" : "private").Append(" static ")
         .Append(TypeName(function.ReturnType)).Append(' ').Append(this._members[function.Name])
-        .Append('(').Append(parameters).Append(") {\n");
-      if (Expressions(function.Body).Any(Wraps)) {
+        .Append('(').Append(parameters).Append(')');
+      var wraps = Expressions(function.Body).Any(this.Wraps);
+      if (function.Body.Statements is [IrReturn { Value: { } result }] && this.Has(CSharpFeature.ExpressionBody)) {
+        // A result that is itself a checked expression sets the context of everything in it.
+        var value = this.Stored(result);
+        this._code.Append(" => ").Append(wraps && !Traps(Promoted(result)) ? $"unchecked({value})" : value).Append(";\n");
+        return;
+      }
+
+      this._code.Append(" {\n");
+      if (wraps) {
         this.Line(2).Append("unchecked {\n");
         this.Statements(function.Body, 3);
         this.Line(2).Append("}\n");
@@ -507,7 +559,7 @@ public static class CSharpEmitter {
           this.Line(depth).Append("}\n");
           break;
         case IrDeclare declare:
-          this.Line(depth).Append(TypeName(declare.Local.Type)).Append(' ').Append(this._locals[declare.Local.Name]);
+          this.Line(depth).Append(this.Infers(declare) ? "var" : TypeName(declare.Local.Type)).Append(' ').Append(this._locals[declare.Local.Name]);
           if (declare.Initializer is not null)
             this._code.Append(" = ").Append(this.Stored(declare.Initializer));
 
@@ -553,8 +605,27 @@ public static class CSharpEmitter {
     }
 
     /// <summary>
+    /// Whether a declaration leaves its type to the compiler: where the language has <c>var</c> and
+    /// the initializer is written as an expression of exactly the variable's type — which a constant
+    /// is not, because it stands without its suffix, nor a narrow integer that C# makes an
+    /// <c>int</c> unasked. Inside a class named <c>var</c> the word is that class.
+    /// </summary>
+    private bool Infers(IrDeclare declare)
+      => declare.Initializer is { } initializer and not IrConst && Promoted(initializer) == initializer
+        && this.ClassName != "var" && this.Has(CSharpFeature.ImplicitlyTypedLocal);
+
+    /// <summary>
+    /// An expression evaluated for its effects only: assigned to the discard where the language has
+    /// one, handed to a helper that does nothing with it where it has not.
+    /// </summary>
+    private string Discarded(IrExpr expression) {
+      var text = this.Text(expression);
+      return this.Has(CSharpFeature.Discard) ? "_ = " + text : $"{this.Helper(this._table.Of(CSharpFeature.Discard)!.Helper!)}({text})";
+    }
+
+    /// <summary>
     /// A statement that is one expression to C#, without its semicolon: an assignment, a call or a
-    /// step as it stands, any other expression assigned to the discard so that it is evaluated.
+    /// step as it stands, any other expression discarded so that it is evaluated.
     /// </summary>
     private string Effect(IrStmt statement) {
       switch (statement) {
@@ -564,8 +635,7 @@ public static class CSharpEmitter {
           return $"{this.Element(store.Array, store.Index)} = {this.Stored(store.Value)}";
         default:
           var expression = ((IrExprStmt)statement).Expression;
-          var text = this.Text(expression);
-          return expression.Type == IrType.Void || expression is IrCall or IrStep { Trap: false } ? text : "_ = " + text;
+          return expression.Type == IrType.Void || expression is IrCall or IrStep { Trap: false } ? this.Text(expression) : this.Discarded(expression);
       }
     }
 
@@ -610,7 +680,7 @@ public static class CSharpEmitter {
     private void Switch(IrSwitch choice, int depth) {
       // C# warns about a switch without sections; its value is evaluated all the same.
       if (choice.Sections.Count == 0) {
-        this.Line(depth).Append("_ = ").Append(this.Text(choice.Value)).Append(";\n");
+        this.Line(depth).Append(this.Discarded(choice.Value)).Append(";\n");
         return;
       }
 
@@ -735,7 +805,7 @@ public static class CSharpEmitter {
     /// </summary>
     private (string Text, int Binding) Expression(IrExpr expression) {
       var traps = Traps(expression);
-      if (traps == this._checked || !(traps || Wraps(expression)))
+      if (traps == this._checked || !(traps || this.Wraps(expression)))
         return this.Plain(expression);
 
       this._checked = traps;
@@ -791,8 +861,9 @@ public static class CSharpEmitter {
         case IrBinaryOp.Divide or IrBinaryOp.Remainder when type.IsInteger:
           right = this.AtRunTime(second, second is IrConst { Value: not 0 } divisor && !(type.IsSigned && divisor.Value == -1), Unary);
           break;
+        case IrBinaryOp.ShiftRightLogical when type.IsSigned && this.Has(CSharpFeature.UnsignedRightShift):
+          return ($"{left} >>> {this.Operand(second, Unary)}", Loose);
         case IrBinaryOp.ShiftRightLogical when type.IsSigned:
-          // Written with casts rather than '>>>' so that the file also compiles as C# older than 11.
           return ($"({TypeName(type)})(({(type.IsLong ? "ulong" : "uint")}){this.Operand(first, Cast)} >> {this.Operand(second, Unary)})", Cast);
         case IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked:
           left = this.AtRunTime(first, !IsConstant(second), Unary);
@@ -810,7 +881,9 @@ public static class CSharpEmitter {
     /// <summary>
     /// A conversion as a cast. The context it stands in gives the cast its contract: checked it
     /// throws, unchecked it keeps the low bits of an integer and takes the nearest value for a
-    /// floating-point number, a NaN becoming 0 (ADR 0002, .NET 9 and later).
+    /// floating-point number, a NaN becoming 0 (ADR 0002, .NET 9 and later). Where the profile has
+    /// no cast that saturates — an older framework, or a target narrower than <c>int</c>, whose cast
+    /// saturates to <c>int</c> and then keeps the low bits — the row's helper compares first.
     /// </summary>
     private (string Text, int Binding) Convert(IrConvert conversion) {
       var from = conversion.Operand.Type;
@@ -818,11 +891,8 @@ public static class CSharpEmitter {
       if (from == to)
         return this.Expression(conversion.Operand);
 
-      if (Clamps(conversion)) {
-        var low = Number(to, (long)IrOperators.Minimum(to));
-        var high = Number(to, (long)IrOperators.Maximum(to));
-        return ($"({TypeName(to)}){Saturated}({this.Text(conversion.Operand)}, {low}, {high})", Cast);
-      }
+      if (!this.Casts(conversion))
+        return this.Call(Row(conversion, this._table)!, [conversion.Operand]);
 
       var foldable = !Keeps(conversion) && (from.IsFloat || conversion.Contract == IrConversion.Trap);
       var operand = foldable ? this.AtRunTime(conversion.Operand, false, Cast) : this.Operand(conversion.Operand, Cast);
@@ -833,10 +903,18 @@ public static class CSharpEmitter {
       if (intrinsic.Op == IrIntrinsicOp.ArrayOf)
         return ($"new {TypeName(intrinsic.Type)} {Braces(intrinsic.Arguments.Select(this.Stored).ToList())}", Unary);
 
-      var call = _intrinsics[intrinsic.Op];
-      var method = intrinsic.Arguments[0].Type.Kind is IrTypeKind.F32 or IrTypeKind.I32 ? call.Single ?? call.Method : call.Method;
-      var arguments = intrinsic.Arguments.Select(this.Text);
-      return ($"{method}({string.Join(", ", call.Further is null ? arguments : arguments.Append(call.Further))})", Primary);
+      return this.Call(Row(intrinsic, this._table)!, intrinsic.Arguments);
+    }
+
+    /// <summary>
+    /// A row of the capability table as a call: the framework's own method where the profile has it,
+    /// otherwise the replacement — a method of the older base library or the helper of the row.
+    /// </summary>
+    private (string Text, int Binding) Call(CSharpCapability row, IReadOnlyList<IrExpr> arguments) {
+      var form = row.IsIn(this._profile) ? row.Native! : row.Replacement!;
+      var all = arguments.Select(this.Text);
+      var call = $"{form.Method ?? this.Helper(row.Helper!)}({string.Join(", ", form.Further is null ? all : all.Append(form.Further))})";
+      return form.Cast is null ? (call, Primary) : ($"({form.Cast}){call}", Cast);
     }
 
   }

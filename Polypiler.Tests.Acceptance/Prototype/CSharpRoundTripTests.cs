@@ -122,7 +122,7 @@ public sealed class CSharpRoundTripTests {
       new IrReturn(new IrLocalRef(local))
     ]))]);
     var text = CSharpEmitter.Emit(module).Single().Content;
-    Assert.That(text, Does.Contain("int @class = a + 1;"));
+    Assert.That(text, Does.Contain("var @class = a + 1;"));
     foreach (var checking in _overflowChecking)
       Assert.That(GeneratedCSharp.Compile(text, checking).Method("F").Invoke(null, [41]), Is.EqualTo(42).And.EqualTo(IrInterpreter.Call(module, "F", [41])));
   }
