@@ -149,7 +149,7 @@ public sealed class JavaScriptTranslateCommandTests {
   [Test]
   public void UsageLine_NamesTheLanguagesAndTheExportOption() {
     Assert.That(TranslateCommand.UsageLine, Is.EqualTo(
-      "polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--explain-types] [--namespace <name>] [--profile <name>] [--langversion <version>]"));
+      "polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--explain-types] [--profile <name>] [--module <esm|cjs|iife>] [--global <name>] [--typed-arrays] [--namespace <name>] [--langversion <version>]"));
     Assert.That(Invoke("--help").Output, Does.Contain(TranslateCommand.UsageLine).And.Contain("small subsets of its languages"));
   }
 

@@ -15,6 +15,12 @@ namespace Polypiler.Prototype.Testing;
 /// <param name="Arguments">The arguments; arrays are copied before every run.</param>
 internal sealed record PrototypeCall(string Method, object[] Arguments) {
 
+  /// <summary>
+  /// The type the method returns, where a comparison needs it: JavaScript below ECMAScript 2020 holds
+  /// a 64-bit integer as two halves, which read as a number only when its signedness is known.
+  /// </summary>
+  public Type? Returns { get; init; }
+
   /// <summary>The arguments with every array copied, so that one run cannot change what the next one sees.</summary>
   public object[] FreshArguments()
     => this.Arguments.Select(argument => argument is Array array ? array.Clone() : argument).ToArray();
@@ -78,6 +84,17 @@ internal static class PrototypeFixture {
   /// <summary>The class of a fixture as the C# compiler built it.</summary>
   public static Type CompiledType(string fixture)
     => typeof(PrototypeFixture).Assembly.GetType("Polypiler.Fixtures.Prototype." + ClassOf(fixture), true)!;
+
+  /// <summary>The calls with the return type of the method each one calls, as the C# compiler built it.</summary>
+  public static IReadOnlyList<PrototypeCall> Typed(string fixture, IEnumerable<PrototypeCall> calls) {
+    var returns = new Dictionary<string, Type>();
+    return [.. calls.Select(call => {
+      if (!returns.TryGetValue(call.Method, out var type))
+        returns.Add(call.Method, type = Compiled(fixture, call.Method).ReturnType);
+
+      return call with { Returns = type };
+    })];
+  }
 
   /// <summary>What the method compiled by the C# compiler does for a call.</summary>
   public static string CompiledOutcome(string fixture, PrototypeCall call) => InvokedOutcome(Compiled(fixture, call.Method), call);

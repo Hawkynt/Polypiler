@@ -94,7 +94,7 @@ public sealed class TranslateToCSharpTests {
     var (exitCode, output, error) = Invoke(all);
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
     Assert.That(error, Does.StartWith("error PLY0001: " + message)
-      .And.Contain("usage: polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--explain-types] [--namespace <name>]"));
+      .And.Contain("usage: polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--explain-types] [--profile <name>] [--module <esm|cjs|iife>] [--global <name>] [--typed-arrays] [--namespace <name>] [--langversion <version>]"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -209,7 +209,7 @@ public sealed class TranslateToCSharpTests {
   /// <summary>The help names the two options that choose what the C# is written for.</summary>
   [Test]
   public void Help_NamesTheProfileOptions()
-    => Assert.That(Invoke("--help").Output, Does.Contain("[--profile <name>] [--langversion <version>]"));
+    => Assert.That(Invoke("--help").Output, Does.Contain("[--profile <name>]").And.Contain("[--langversion <version>]"));
 
   /// <summary>
   /// <c>--profile</c> and <c>--langversion</c> choose what the file is written for: it is the file
