@@ -1,0 +1,46 @@
+# Which project may reference which (PRD §5.1, §5.3, §5.4). Checked by DependencyDirectionTests
+# against every *.csproj of the repository; a violation is reported as PLY0038.
+#
+# A project may reference only projects of a strictly lower layer. On top of that:
+#   - projects of one layer do not reference each other, except the pairs under sameLayerExceptions;
+#   - a standalone project references nothing;
+#   - a project matching a restricted pattern may be referenced only from the layers listed there.
+#
+# `*` in a pattern stands for one or more characters. A project is covered by exactly one entry of
+# `projects` or `standalone`; a new project gets its entry here in the change that creates it.
+schema: 1
+
+projects:
+  - { name: Polypiler.Core, layer: 0 }
+  - { name: Polypiler.Core.Types, layer: 1 }
+  - { name: Polypiler.Core.IR, layer: 2 }
+  - { name: Polypiler.Core.Analysis, layer: 3 }
+  - { name: Polypiler.Core.Recognize, layer: 4 }
+  - { name: Polypiler.Core.Recovery, layer: 4 }
+  - { name: Polypiler.Core.MachineSemantics, layer: 4 }
+  - { name: Polypiler.Core.BinaryFormats, layer: 4 }
+  - { name: Polypiler.Permutation, layer: 4 }
+  - { name: Polypiler.Interop, layer: 4 }
+  - { name: Polypiler.Core.Optimize, layer: 5 }
+  - { name: Polypiler.Core.Legalize, layer: 5 }
+  - { pattern: Polypiler.Core.Frontends.*, layer: 6 }
+  - { pattern: Polypiler.Core.Backends.*, layer: 6 }
+  - { name: Polypiler.Core.Verification, layer: 6 }
+  - { name: Polypiler.Catalog, layer: 7 }
+  - { pattern: Polypiler.Adapters.*, layer: 7 }
+  - { name: Polypiler.Cli, layer: 8 }
+  - { name: Polypiler.Tooling, layer: 8 }
+  - { name: Polypiler.Tests, layer: 9 }
+  - { name: Polypiler.Tests.Acceptance, layer: 9 }
+
+sameLayerExceptions:
+  - { from: Polypiler.Core.Recovery, to: Polypiler.Core.Recognize }
+  - { from: Polypiler.Core.Legalize, to: Polypiler.Core.Optimize }
+
+standalone:
+  - Polypiler.Base
+
+restricted:
+  - { pattern: Polypiler.Base, allowedFromLayers: [7, 8, 9] }
+  - { pattern: Polypiler.Core.Frontends.*, allowedFromLayers: [8, 9] }
+  - { pattern: Polypiler.Core.Backends.*, allowedFromLayers: [8, 9] }

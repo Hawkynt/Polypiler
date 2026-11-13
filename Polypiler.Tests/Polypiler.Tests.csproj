@@ -11,11 +11,29 @@
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
+    <ProjectReference Include="..\Polypiler.Base\Polypiler.Base.csproj" />
+    <ProjectReference Include="..\Polypiler.Catalog\Polypiler.Catalog.csproj" />
     <ProjectReference Include="..\Polypiler.Cli\Polypiler.Cli.csproj" />
+    <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Analysis\Polypiler.Core.Analysis.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.CSharp\Polypiler.Core.Backends.CSharp.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.BinaryFormats\Polypiler.Core.BinaryFormats.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Legalize\Polypiler.Core.Legalize.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.MachineSemantics\Polypiler.Core.MachineSemantics.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Recognize\Polypiler.Core.Recognize.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Recovery\Polypiler.Core.Recovery.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Types\Polypiler.Core.Types.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
+    <ProjectReference Include="..\Polypiler.Interop\Polypiler.Interop.csproj" />
+    <ProjectReference Include="..\Polypiler.Permutation\Polypiler.Permutation.csproj" />
+    <ProjectReference Include="..\Polypiler.Tooling\Polypiler.Tooling.csproj" />
   </ItemGroup>
 
 </Project>
