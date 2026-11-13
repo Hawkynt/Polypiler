@@ -14,6 +14,11 @@
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
+  <!-- The prototype fixtures are compiled into the tests: the C# compiler's build of them is the oracle. -->
+  <ItemGroup>
+    <Compile Include="..\tests\fixtures\prototype\*.cs" LinkBase="Prototype\Fixtures" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Base\Polypiler.Base.csproj" />
     <ProjectReference Include="..\Polypiler.Catalog\Polypiler.Catalog.csproj" />
@@ -21,6 +26,7 @@
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Analysis\Polypiler.Core.Analysis.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.CSharp\Polypiler.Core.Backends.CSharp.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.JavaScript\Polypiler.Core.Backends.JavaScript.csproj" />
     <ProjectReference Include="..\Polypiler.Core.BinaryFormats\Polypiler.Core.BinaryFormats.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
