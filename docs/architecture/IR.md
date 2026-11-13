@@ -2,7 +2,7 @@
 
 **Status:** proposed semantics, not a claim that these types or passes exist. See [PRD §4](../prd/02-core-architecture.md#s4), [§17](../prd/05-semantics-and-recovery.md#s17) and [§§29–30](../prd/08-interop-and-language-semantics.md).
 
-The IR is language-independent **without erasing source-language behavior**. Some source rules must remain as explicit operations or policies until they are legally lowered. The IR verifier should run at every representation boundary.
+The IR is language-independent **without erasing source-language behavior**. Some source rules must remain as explicit operations or policies until they are legally lowered. The IR verifier should run at every representation boundary; [ADR 0001](../adr/0001-ir-stage-invariants.md) decides the stages and what the verifier enforces at each.
 
 ## Core data model
 

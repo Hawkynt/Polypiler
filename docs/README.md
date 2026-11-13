@@ -29,7 +29,7 @@ The PRD's P0/P1/P2 sequence is the executable plan. Begin with a typed/effect-aw
 
 ## How to change the architecture
 
-- Update the relevant architecture page **and** the normative PRD (or record an explicit design decision) when changing a semantic invariant.
+- Update the relevant architecture page **and** the normative PRD (or record an explicit design decision) when changing a semantic invariant. Decisions are kept as [architecture decision records](adr/README.md).
 - A frontend owns its source-language rules; the shared middle-end owns cross-language optimizations; a backend owns target representation and runtime contracts.
 - Optimizations must declare legality conditions and negative tests; target emitters must reject unsupported operations rather than silently approximate them.
 - Prefer vertical slices that import, optimize, emit, compile and independently verify one real algorithm.

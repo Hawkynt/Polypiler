@@ -29,7 +29,7 @@ flowchart TB
   Verify --> Manifest["Manifest and precise support status"]
 ```
 
-These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback. The [IR contracts](IR.md) define the representation boundaries; [semantic recovery](SEMANTIC-RECOVERY.md) explains recognition and proof obligations.
+These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback. The [IR contracts](IR.md) define the representation boundaries and [ADR 0001](../adr/0001-ir-stage-invariants.md) the invariants of each IR stage; [semantic recovery](SEMANTIC-RECOVERY.md) explains recognition and proof obligations.
 
 ## Detailed phases
 
