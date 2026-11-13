@@ -35,6 +35,15 @@ GROUPS = [
   ("permutation", "PERM-", "Bit permutations"),
   ("objects", "OBJ-", "Language-construct lowering and recovery"),
   ("interop", "IOP-", "Interop and layouts"),
+  ("borrowed", "OPT-LOOP-", "Loop transformations"),
+  ("borrowed", "OPT-MEM-", "Memory and data layout"),
+  ("borrowed", "OPT-RED-", "Redundancy"),
+  ("borrowed", "OPT-PROP-", "Value propagation and arithmetic rewrites"),
+  ("borrowed", "OPT-IPA-", "Interprocedural"),
+  ("borrowed", "OPT-VEC-", "Vectorization refinements"),
+  ("borrowed", "OPT-LAYOUT-", "Control-flow shaping and block layout"),
+  ("borrowed", "OPT-PGO-", "Profile-guided"),
+  ("borrowed", "OPT-STR-", "Strings"),
 ]
 
 
@@ -110,7 +119,9 @@ def main(arguments):
            "Every optimization, recognition rule and lowering rewrite Polypiler plans or has, one page each:",
            "what it does, an example before and after, when it applies, when it must **not** fire, and how",
            "to switch it off (`--disable-opt O####`). A ticked box means it is implemented and verified;",
-           "the page then describes what the code does rather than what is planned.", "",
+           "the page then describes what the code does rather than what is planned. The families from",
+           "\"Loop transformations\" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)",
+           "maps every one of its optimization documents to the page here that covers it.", "",
            f"**{sum(1 for entry in entries if entry[4])} of {len(entries)} implemented.**", ""]
   for directory, prefix, heading in GROUPS:
     group = [entry for entry in entries

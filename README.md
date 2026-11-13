@@ -346,9 +346,10 @@ example before and after, the conditions under which it applies, the cases in wh
 fire, and a switch to turn it off.
 
 **[The optimization checklist](docs/optimizations/README.md)** lists all of them with their state:
-0 of 146 are implemented today. Below it, 144 further language-agnostic optimizations taken from the
-[PB-Compiler optimization catalog](docs/optimizations/pb-compiler-catalog.md) are listed as
-[candidates to borrow](docs/optimizations/README.md#candidates-to-borrow); they are neither planned nor counted.
+0 of 290 are implemented today. The families from "Loop transformations" on are borrowed from
+[PB-Compiler](https://github.com/Hawkynt/PB-Compiler); the
+[catalog](docs/optimizations/pb-compiler-catalog.md) maps each of its 424 optimization documents to the
+page here that covers it.
 
 | Family | Planned |
 | --- | ---: |
@@ -359,6 +360,15 @@ fire, and a switch to turn it off.
 | [Bit permutations](docs/optimizations/README.md#bit-permutations) | 10 |
 | [Language-construct lowering and recovery](docs/optimizations/README.md#language-construct-lowering-and-recovery) — generics, classes, exceptions, coroutines | 30 |
 | [Interop and layouts](docs/optimizations/README.md#interop-and-layouts) | 2 |
+| [Loop transformations](docs/optimizations/README.md#loop-transformations) — induction variables, fusion, interchange, versioning | 29 |
+| [Memory and data layout](docs/optimizations/README.md#memory-and-data-layout) — store and load motion, structure layout, lookup tables | 23 |
+| [Redundancy](docs/optimizations/README.md#redundancy) — reassociation, reciprocal reuse | 5 |
+| [Value propagation and arithmetic rewrites](docs/optimizations/README.md#value-propagation-and-arithmetic-rewrites) — path facts, speculation with side exits | 17 |
+| [Interprocedural](docs/optimizations/README.md#interprocedural) — constants across calls, cloning, dead functions and globals | 17 |
+| [Vectorization refinements](docs/optimizations/README.md#vectorization-refinements) — alignment, tails, alias versioning | 11 |
+| [Control-flow shaping and block layout](docs/optimizations/README.md#control-flow-shaping-and-block-layout) — dispatch tables, jump threading, block placement | 20 |
+| [Profile-guided](docs/optimizations/README.md#profile-guided) | 9 |
+| [Strings](docs/optimizations/README.md#strings) | 13 |
 
 ## 🏗️ Architecture
 
