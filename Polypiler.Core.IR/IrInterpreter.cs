@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace Polypiler.Core.IR;
@@ -20,7 +21,10 @@ public enum IrTrap {
   /// as a remainder), a checked operation or conversion that overflows, or an array created with a
   /// negative length.
   /// </summary>
-  IntegerOverflow
+  IntegerOverflow,
+
+  /// <summary>An operation that has no result for its operand: the sign of a NaN.</summary>
+  InvalidOperation
 
 }
 
@@ -40,6 +44,7 @@ public sealed class IrTrapException : Exception {
   public static string Describe(IrTrap trap) => trap switch {
     IrTrap.DivideByZero => "divide by zero",
     IrTrap.IndexOutOfRange => "index out of range",
+    IrTrap.InvalidOperation => "invalid operation",
     _ => "integer overflow"
   };
 
@@ -336,10 +341,83 @@ public static class IrInterpreter {
             Store(filled, index, arguments[1]);
 
           return null;
-        default:
+        case IrIntrinsicOp.ArrayClear:
           var cleared = (Array)arguments[0];
           Array.Clear(cleared);
           return null;
+        default:
+          return arguments[0] switch {
+            float single => Single(intrinsic.Op, single, arguments),
+            double number => Double(intrinsic.Op, number, arguments),
+            _ => Integer(intrinsic, (long)arguments[0], arguments)
+          };
+      }
+    }
+
+    private static object Single(IrIntrinsicOp op, float value, object[] arguments) => op switch {
+      // The arms are of different types; without the first cast the compiler would convert them all to one.
+      IrIntrinsicOp.Abs => (object)MathF.Abs(value),
+      IrIntrinsicOp.Min => MathF.Min(value, (float)arguments[1]),
+      IrIntrinsicOp.Max => MathF.Max(value, (float)arguments[1]),
+      IrIntrinsicOp.Sign => Sign(value),
+      IrIntrinsicOp.Sqrt => MathF.Sqrt(value),
+      IrIntrinsicOp.Floor => MathF.Floor(value),
+      IrIntrinsicOp.Ceiling => MathF.Ceiling(value),
+      IrIntrinsicOp.Truncate => MathF.Truncate(value),
+      IrIntrinsicOp.RoundEven => MathF.Round(value),
+      IrIntrinsicOp.RoundAway => MathF.Round(value, MidpointRounding.AwayFromZero),
+      _ => (long)BitConverter.SingleToInt32Bits(value)
+    };
+
+    private static object Double(IrIntrinsicOp op, double value, object[] arguments) => op switch {
+      IrIntrinsicOp.Abs => (object)Math.Abs(value),
+      IrIntrinsicOp.Min => Math.Min(value, (double)arguments[1]),
+      IrIntrinsicOp.Max => Math.Max(value, (double)arguments[1]),
+      IrIntrinsicOp.Sign => Sign(value),
+      IrIntrinsicOp.Sqrt => Math.Sqrt(value),
+      IrIntrinsicOp.Floor => Math.Floor(value),
+      IrIntrinsicOp.Ceiling => Math.Ceiling(value),
+      IrIntrinsicOp.Truncate => Math.Truncate(value),
+      IrIntrinsicOp.RoundEven => Math.Round(value),
+      IrIntrinsicOp.RoundAway => Math.Round(value, MidpointRounding.AwayFromZero),
+      _ => BitConverter.DoubleToInt64Bits(value)
+    };
+
+    /// <summary>The sign of a floating-point number as the IR carries an <c>i32</c>; a NaN has none.</summary>
+    private static long Sign(double value)
+      => double.IsNaN(value) ? throw new IrTrapException(IrTrap.InvalidOperation) : Math.Sign(value);
+
+    private static object Integer(IrIntrinsic intrinsic, long value, object[] arguments) {
+      var type = intrinsic.Arguments[0].Type;
+      var number = IrOperators.Number(type, value);
+      var wide = type.IsLong;
+      switch (intrinsic.Op) {
+        case IrIntrinsicOp.Abs:
+          return number == IrOperators.Minimum(type) ? throw new IrTrapException(IrTrap.IntegerOverflow) : Math.Abs(value);
+        case IrIntrinsicOp.Min:
+          return number <= IrOperators.Number(type, (long)arguments[1]) ? value : arguments[1];
+        case IrIntrinsicOp.Max:
+          return number >= IrOperators.Number(type, (long)arguments[1]) ? value : arguments[1];
+        case IrIntrinsicOp.Sign:
+          return (long)Math.Sign(value);
+        case IrIntrinsicOp.RotateLeft:
+          var left = (int)(long)arguments[1];
+          return wide ? (long)BitOperations.RotateLeft((ulong)value, left) : BitOperations.RotateLeft((uint)value, left);
+        case IrIntrinsicOp.RotateRight:
+          var right = (int)(long)arguments[1];
+          return wide ? (long)BitOperations.RotateRight((ulong)value, right) : BitOperations.RotateRight((uint)value, right);
+        case IrIntrinsicOp.PopCount:
+          return (long)BitOperations.PopCount((ulong)value);
+        case IrIntrinsicOp.LeadingZeroCount:
+          return (long)(wide ? BitOperations.LeadingZeroCount((ulong)value) : BitOperations.LeadingZeroCount((uint)value));
+        case IrIntrinsicOp.TrailingZeroCount:
+          return (long)(wide ? BitOperations.TrailingZeroCount((ulong)value) : BitOperations.TrailingZeroCount((uint)value));
+        case IrIntrinsicOp.Log2:
+          return (long)BitOperations.Log2((ulong)value);
+        case IrIntrinsicOp.BigMul:
+          return value * (long)arguments[1];
+        default:
+          return wide ? BitConverter.Int64BitsToDouble(value) : (object)BitConverter.Int32BitsToSingle((int)value);
       }
     }
 

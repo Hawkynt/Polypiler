@@ -71,6 +71,9 @@ public sealed class TranslateCommandTests {
     .GetCustomAttributes(typeof(TestCaseAttribute), false)
     .Cast<TestCaseAttribute>()
     .Select(attribute => (string)attribute.Arguments[0]!)
+    .Concat(CSharpFrontendTests.Transcendentals.SelectMany(name => new[] {
+      CSharpFrontendTests.Transcendental("Math", name), CSharpFrontendTests.Transcendental("MathF", name)
+    }))
     .ToArray();
 
   /// <summary>
@@ -87,7 +90,8 @@ public sealed class TranslateCommandTests {
 
   [Test]
   public void UnsupportedMethods_AreTheOnesOfTheFrontendTests()
-    => Assert.That(UnsupportedMethods(), Has.Length.GreaterThan(45).And.Contain("public static decimal F(decimal a) => a + 1;"));
+    => Assert.That(UnsupportedMethods(), Has.Length.GreaterThan(120).And.Contain("public static decimal F(decimal a) => a + 1;")
+      .And.Contain("public static double F(double x) => System.Math.Sin(x);").And.Contain("public static float F(float x) => System.MathF.Pow(x, x);"));
 
   /// <summary>Test design 12: invalid C# is exit code 4 and carries the compiler's message.</summary>
   [TestCase("public static int F( => 1;", "CS1001")]

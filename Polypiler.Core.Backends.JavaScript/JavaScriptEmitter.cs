@@ -81,6 +81,63 @@ public static class JavaScriptEmitter {
     ]),
     ("$get", ["function $get(array, index) {", OutOfRange, "  return array[index];", "}"]),
     ("$set", ["function $set(array, index, value) {", OutOfRange, "  array[index] = value;", "}"]),
+    ("$abs", ["function $abs(value, low) {", "  if (value === low) " + Overflow, "  return value < 0 ? -value : value;", "}"]),
+    ("$min64", ["function $min64(a, b) {", "  return a < b ? a : b;", "}"]),
+    ("$max64", ["function $max64(a, b) {", "  return a > b ? a : b;", "}"]),
+    ("$sign64", ["function $sign64(value) {", "  return value < 0n ? -1 : value > 0n ? 1 : 0;", "}"]),
+    ("$fsign", [
+      "function $fsign(value) {",
+      "  if (value !== value) throw new RangeError(\"invalid operation\");",
+      "  return value < 0 ? -1 : value > 0 ? 1 : 0;",
+      "}"
+    ]),
+    ("$round", [
+      "function $round(value) {",
+      "  const rounded = Math.round(value);",
+      "  return rounded - value === 0.5 && rounded % 2 !== 0 ? rounded - 1 : rounded;",
+      "}"
+    ]),
+    ("$rounda", ["function $rounda(value) {", "  return value < 0 ? -Math.round(-value) : Math.round(value);", "}"]),
+    ("$rotl", ["function $rotl(value, count) {", "  return ((value << count) | (value >>> (-count & 31))) >>> 0;", "}"]),
+    ("$rotr", ["function $rotr(value, count) {", "  return ((value >>> count) | (value << (-count & 31))) >>> 0;", "}"]),
+    ("$rotl64", [
+      "function $rotl64(value, count) {",
+      "  const by = BigInt(count & 63);",
+      "  return BigInt.asUintN(64, (value << by) | (value >> (64n - by)));",
+      "}"
+    ]),
+    ("$rotr64", [
+      "function $rotr64(value, count) {",
+      "  const by = BigInt(count & 63);",
+      "  return BigInt.asUintN(64, (value >> by) | (value << (64n - by)));",
+      "}"
+    ]),
+    ("$pop", [
+      "function $pop(value) {",
+      "  value -= (value >>> 1) & 0x55555555;",
+      "  value = (value & 0x33333333) + ((value >>> 2) & 0x33333333);",
+      "  return Math.imul((value + (value >>> 4)) & 0x0F0F0F0F, 0x01010101) >>> 24;",
+      "}"
+    ]),
+    ("$pop64", ["function $pop64(value) {", "  return $pop(Number(value >> 32n)) + $pop(Number(value & 0xFFFFFFFFn));", "}"]),
+    ("$clz64", [
+      "function $clz64(value) {",
+      "  const high = Number(value >> 32n);",
+      "  return high !== 0 ? Math.clz32(high) : 32 + Math.clz32(Number(value & 0xFFFFFFFFn));",
+      "}"
+    ]),
+    ("$ctz", ["function $ctz(value) {", "  return value === 0 ? 32 : 31 - Math.clz32(value & -value);", "}"]),
+    ("$ctz64", [
+      "function $ctz64(value) {",
+      "  const low = Number(value & 0xFFFFFFFFn);",
+      "  return low !== 0 ? $ctz(low) : 32 + $ctz(Number(value >> 32n));",
+      "}"
+    ]),
+    ("$view", ["const $view = new DataView(new ArrayBuffer(8));"]),
+    ("$bits64", ["function $bits64(value) {", "  $view.setFloat64(0, value);", "  return $view.getBigInt64(0);", "}"]),
+    ("$bits32", ["function $bits32(value) {", "  $view.setFloat32(0, value);", "  return $view.getInt32(0);", "}"]),
+    ("$float64", ["function $float64(value) {", "  $view.setBigInt64(0, value);", "  return $view.getFloat64(0);", "}"]),
+    ("$float32", ["function $float32(value) {", "  $view.setInt32(0, value);", "  return $view.getFloat32(0);", "}"]),
     ("$copy", [
       "function $copy(source, from, target, to, length) {",
       "  if (from < 0 || to < 0 || length < 0 || from + length > source.length || to + length > target.length) throw new RangeError(\"index out of range\");",
@@ -108,6 +165,11 @@ public static class JavaScriptEmitter {
     ("$len", ["function $len(length) {", "  if (length < 0) " + Overflow, "  return length;", "}"])
   ];
 
+  /// <summary>The helper a helper calls, which a module then carries as well.</summary>
+  private static readonly Dictionary<string, string> _needs = new() {
+    ["$pop64"] = "$pop", ["$ctz64"] = "$ctz", ["$bits64"] = "$view", ["$bits32"] = "$view", ["$float64"] = "$view", ["$float32"] = "$view"
+  };
+
   /// <summary>
   /// Words a JavaScript module cannot use as a name, and the globals the emitted code relies on. An
   /// identifier that is one of them gets a <c>$</c> appended, which no C# identifier can contain.
@@ -119,7 +181,8 @@ public static class JavaScriptEmitter {
     "private", "protected", "public", "return", "static", "super", "switch", "this", "throw", "true",
     "try", "typeof", "var", "void", "while", "with", "yield",
     "Math", "RangeError", "BigInt", "Number", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array",
-    "Int32Array", "Uint32Array", "BigInt64Array", "BigUint64Array", "Float32Array", "Float64Array", "NaN", "Infinity"
+    "Int32Array", "Uint32Array", "BigInt64Array", "BigUint64Array", "Float32Array", "Float64Array", "NaN", "Infinity",
+    "DataView", "ArrayBuffer"
   ];
 
   /// <summary>Emits the module as <c>&lt;name&gt;.mjs</c>, exporting every public function.</summary>
@@ -315,9 +378,13 @@ public static class JavaScriptEmitter {
     /// <summary>
     /// A loop with a step is a JavaScript <c>for</c>, whose third part a <c>continue</c> does not skip
     /// either. That part is an expression, so the step is written as a list of expressions and the
-    /// temporaries it declares are declared in front of the loop.
+    /// temporaries it declares are declared in front of the loop, in a block of their own with it.
     /// </summary>
     private void For(IrFor loop, int depth) {
+      var scoped = loop.Step.Statements.Any(step => step is IrDeclare);
+      if (scoped)
+        this.Line(depth++).Append("{\n");
+
       var parts = new List<string>();
       foreach (var step in loop.Step.Statements)
         switch (step) {
@@ -341,6 +408,8 @@ public static class JavaScriptEmitter {
       this.Line(depth).Append("for (; ").Append(this.Text(loop.Condition)).Append("; ").AppendJoin(", ", parts).Append(") {\n");
       this.Statements(loop.Body, depth + 1);
       this.Line(depth).Append("}\n");
+      if (scoped)
+        this.Line(depth - 1).Append("}\n");
     }
 
     /// <summary>
@@ -388,6 +457,9 @@ public static class JavaScriptEmitter {
 
     private string Helper(string name, IEnumerable<string> arguments) {
       this._used.Add(name);
+      if (_needs.TryGetValue(name, out var needed))
+        this._used.Add(needed);
+
       return $"{name}({string.Join(", ", arguments)})";
     }
 
@@ -442,8 +514,57 @@ public static class JavaScriptEmitter {
           return (this.Helper("$copy", arguments.ToArray()), true);
         case IrIntrinsicOp.ArrayFill:
           return ($"{this.Operand(arguments[0])}.fill({this.Text(arguments[1])})", true);
-        default:
+        case IrIntrinsicOp.ArrayClear:
           return ($"{this.Operand(arguments[0])}.fill({(arguments[0].Type.Element!.IsLong ? "0n" : "0")})", true);
+      }
+
+      var type = arguments[0].Type;
+      var wide = type.IsLong;
+      var all = string.Join(", ", arguments.Select(this.Text));
+      switch (intrinsic.Op) {
+        case IrIntrinsicOp.Abs:
+          return type.IsFloat
+            ? ($"Math.abs({all})", true)
+            : (this.Helper("$abs", [all, Literal(type, IrOperators.Minimum(type))]), true);
+        case IrIntrinsicOp.Min:
+          return (wide ? this.Helper("$min64", arguments.ToArray()) : $"Math.min({all})", true);
+        case IrIntrinsicOp.Max:
+          return (wide ? this.Helper("$max64", arguments.ToArray()) : $"Math.max({all})", true);
+        case IrIntrinsicOp.Sign:
+          return (type.IsFloat ? this.Helper("$fsign", arguments.ToArray()) : wide ? this.Helper("$sign64", arguments.ToArray()) : $"Math.sign({all})", true);
+        case IrIntrinsicOp.Sqrt:
+          return (type == IrType.F32 ? $"Math.fround(Math.sqrt({all}))" : $"Math.sqrt({all})", true);
+        case IrIntrinsicOp.Floor:
+          return ($"Math.floor({all})", true);
+        case IrIntrinsicOp.Ceiling:
+          return ($"Math.ceil({all})", true);
+        case IrIntrinsicOp.Truncate:
+          return ($"Math.trunc({all})", true);
+        case IrIntrinsicOp.RoundEven:
+          return (this.Helper("$round", arguments.ToArray()), true);
+        case IrIntrinsicOp.RoundAway:
+          return (this.Helper("$rounda", arguments.ToArray()), true);
+        case IrIntrinsicOp.RotateLeft:
+          return (this.Helper(wide ? "$rotl64" : "$rotl", arguments.ToArray()), true);
+        case IrIntrinsicOp.RotateRight:
+          return (this.Helper(wide ? "$rotr64" : "$rotr", arguments.ToArray()), true);
+        case IrIntrinsicOp.PopCount:
+          return (this.Helper(wide ? "$pop64" : "$pop", arguments.ToArray()), true);
+        case IrIntrinsicOp.LeadingZeroCount:
+          return (wide ? this.Helper("$clz64", arguments.ToArray()) : $"Math.clz32({all})", true);
+        case IrIntrinsicOp.TrailingZeroCount:
+          return (this.Helper(wide ? "$ctz64" : "$ctz", arguments.ToArray()), true);
+        case IrIntrinsicOp.Log2:
+          // The lowest bit set by hand makes 0 behave like 1, whose logarithm is the 0 that is wanted.
+          return wide
+            ? ($"63 - {this.Helper("$clz64", [this.Operand(arguments[0]) + " | 1n"])}", false)
+            : ($"31 - Math.clz32({this.Operand(arguments[0])} | 1)", false);
+        case IrIntrinsicOp.BigMul:
+          return ($"BigInt({this.Text(arguments[0])}) * BigInt({this.Text(arguments[1])})", false);
+        case IrIntrinsicOp.FloatBits:
+          return (this.Helper(type == IrType.F64 ? "$bits64" : "$bits32", arguments.ToArray()), true);
+        default:
+          return (this.Helper(wide ? "$float64" : "$float32", arguments.ToArray()), true);
       }
     }
 

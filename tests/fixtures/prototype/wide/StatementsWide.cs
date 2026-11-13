@@ -230,6 +230,26 @@ public static class StatementsWide {
     }
   }
 
+  // Each switch is a scope of its own: the second may declare the name again, with another type.
+  public static long TwoScopes(int value) {
+    long result = 0;
+    switch (value & 1) {
+      case 0:
+        int local = value;
+        result = local;
+        break;
+    }
+
+    switch (value & 2) {
+      case 2:
+        long local = value * 4L;
+        result += local;
+        break;
+    }
+
+    return result;
+  }
+
   // A switch in a loop: break leaves the switch, continue goes on with the loop.
   public static int SwitchInLoop(int n) {
     int total = 0;

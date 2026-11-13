@@ -26,7 +26,7 @@ public sealed class DifferentialTests {
   /// </summary>
   private static IEnumerable<TestCaseData> Fixtures() => PrototypeFixture.Names.Select(name => {
     var data = new TestCaseData(name);
-    return name is "wide/OperatorsWide" or "wide/Conversions" or "wide/StatementsWide" ? data.SetCategory("Slow") : data;
+    return name is "wide/OperatorsWide" or "wide/Conversions" or "wide/StatementsWide" or "wide/Library" or "wide/Tables" ? data.SetCategory("Slow") : data;
   });
 
   /// <summary>Test design 1 to 10 and 16: every call has the same outcome in the interpreter and in C#.</summary>
@@ -106,6 +106,33 @@ public sealed class DifferentialTests {
   [TestCase("wide/OperatorsWide", "EqualDouble", new object[] { double.NaN, double.NaN }, "false")]
   [TestCase("wide/OperatorsWide", "NotLess", new object[] { double.NaN, 1.0 }, "true")]
   [TestCase("wide/OperatorsWide", "NegateDouble", new object[] { 0.0 }, "f:8000000000000000")]
+  [TestCase("wide/Library", "RoundDouble", new object[] { 2.5 }, "2")]
+  [TestCase("wide/Library", "RoundDouble", new object[] { 3.5 }, "4")]
+  [TestCase("wide/Library", "RoundDouble", new object[] { -0.5 }, "f:8000000000000000")]
+  [TestCase("wide/Library", "RoundDouble", new object[] { 0.49999999999999994 }, "0")]
+  [TestCase("wide/Library", "RoundAwayDouble", new object[] { 2.5 }, "3")]
+  [TestCase("wide/Library", "RoundAwayDouble", new object[] { -2.5 }, "-3")]
+  [TestCase("wide/Library", "RoundAwaySingle", new object[] { -0.4f }, "f:8000000000000000")]
+  [TestCase("wide/Library", "MinDouble", new object[] { 0.0, -0.0 }, "f:8000000000000000")]
+  [TestCase("wide/Library", "MaxDouble", new object[] { -0.0, 0.0 }, "0")]
+  [TestCase("wide/Library", "MaxDouble", new object[] { double.NaN, 1.0 }, "NaN")]
+  [TestCase("wide/Library", "SqrtDouble", new object[] { 2.0 }, "f:3ff6a09e667f3bcd")]
+  [TestCase("wide/Library", "SqrtSingle", new object[] { 2f }, "f:3ff6a09e60000000")]
+  [TestCase("wide/Library", "SqrtDouble", new object[] { -1.0 }, "NaN")]
+  [TestCase("wide/Library", "Log2UInt", new object[] { 0u }, "0")]
+  [TestCase("wide/Library", "Log2ULong", new object[] { ulong.MaxValue }, "63")]
+  [TestCase("wide/Library", "LeadingZeroCountULong", new object[] { 0UL }, "64")]
+  [TestCase("wide/Library", "TrailingZeroCountUInt", new object[] { 0u }, "32")]
+  [TestCase("wide/Library", "TrailingZeroCountULong", new object[] { 0x100000000UL }, "32")]
+  [TestCase("wide/Library", "PopCountULong", new object[] { ulong.MaxValue }, "64")]
+  [TestCase("wide/Library", "RotateLeftUInt", new object[] { 0x80000001u, 1 }, "3")]
+  [TestCase("wide/Library", "RotateLeftUInt", new object[] { 0x80000001u, 32 }, "2147483649")]
+  [TestCase("wide/Library", "RotateRightULong", new object[] { 1UL, -1 }, "2")]
+  [TestCase("wide/Library", "BigMul", new object[] { uint.MaxValue, uint.MaxValue }, "18446744065119617025")]
+  [TestCase("wide/Library", "DoubleBits", new object[] { 1.0 }, "4607182418800017408")]
+  [TestCase("wide/Library", "SingleBits", new object[] { -0f }, "-2147483648")]
+  [TestCase("wide/Library", "SingleOfBits", new object[] { 0x3FC00000 }, "f:3ff8000000000000")]
+  [TestCase("wide/Library", "AbsOfUInt", new object[] { uint.MaxValue }, "4294967295")]
   public void FloatingPoint_FollowsTheRuntime(string fixture, string method, object[] arguments, string expected) {
     var call = new PrototypeCall(method, arguments);
     Assert.That(PrototypeFixture.CompiledOutcome(fixture, call), Is.EqualTo(expected));
@@ -177,6 +204,12 @@ public sealed class DifferentialTests {
   [TestCase("wide/Conversions", "DoubleToLongChecked", new object[] { 9223372036854775808.0 }, IrTrap.IntegerOverflow)]
   [TestCase("wide/Conversions", "DoubleToULongChecked", new object[] { -1.0 }, IrTrap.IntegerOverflow)]
   [TestCase("wide/Conversions", "FloatToULongChecked", new object[] { float.PositiveInfinity }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Library", "AbsInt", new object[] { int.MinValue }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Library", "AbsSByte", new object[] { sbyte.MinValue }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Library", "AbsShort", new object[] { short.MinValue }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Library", "AbsLong", new object[] { long.MinValue }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Library", "SignDouble", new object[] { double.NaN }, IrTrap.InvalidOperation)]
+  [TestCase("wide/Library", "SignSingle", new object[] { float.NaN }, IrTrap.InvalidOperation)]
   public void WideOperation_TrapsWhereTheCompiledFixtureThrows(string fixture, string method, object[] arguments, IrTrap trap) {
     var call = new PrototypeCall(method, arguments);
     Assert.That(PrototypeFixture.CompiledOutcome(fixture, call), Is.EqualTo(PrototypeFixture.Trap(trap)));
@@ -240,14 +273,30 @@ public sealed class DifferentialTests {
   }
 
   /// <summary>Test design 16: the random part is as large as the issue asks, and reproducible.</summary>
-  [Test]
-  public void OperatorCalls_AreAThousandRandomOnesPerFunctionAndReproducible() {
-    var calls = PrototypeCases.For("Operators");
+  [TestCase("Operators", 100)]
+  [TestCase("wide/OperatorsWide", 390, Category = "Slow")]
+  [TestCase("wide/Conversions", 220, Category = "Slow")]
+  [TestCase("wide/Library", 80, Category = "Slow")]
+  public void OperatorCalls_AreAThousandRandomOnesPerFunctionAndReproducible(string fixture, int functions) {
+    var calls = PrototypeCases.For(fixture);
     var perMethod = calls.GroupBy(call => call.Method).ToList();
-    Assert.That(perMethod, Has.Count.GreaterThan(100));
+    Assert.That(perMethod, Has.Count.GreaterThanOrEqualTo(functions));
     Assert.That(perMethod.Select(group => group.Count()), Has.All.GreaterThanOrEqualTo(PrototypeCases.RandomCallsPerOperator));
-    Assert.That(PrototypeCases.For("Operators").Select(call => call.ToString()), Is.EqualTo(calls.Select(call => call.ToString())));
+    Assert.That(PrototypeCases.For(fixture).Select(call => call.ToString()), Is.EqualTo(calls.Select(call => call.ToString())));
     Assert.That(() => PrototypeCases.For("Missing"), Throws.ArgumentException);
+  }
+
+  /// <summary>
+  /// The bits of a NaN differ between runtimes, so a function that returns the bits of its operand is
+  /// never called with one; every other function is.
+  /// </summary>
+  [Test, Category("Slow")]
+  public void BitCasts_AreNotComparedOnNaN() {
+    var calls = PrototypeCases.For("wide/Library");
+    bool HasNaN(PrototypeCall call) => call.Arguments.Any(argument => argument is float.NaN or double.NaN);
+    Assert.That(calls.Where(call => call.Method is "DoubleBits" or "SingleBits").Where(HasNaN), Is.Empty);
+    Assert.That(calls.Where(call => call.Method is "SqrtDouble" or "SignSingle").Where(HasNaN), Is.Not.Empty);
+    Assert.That(calls.Count(call => call.Method == "DoubleBits"), Is.GreaterThanOrEqualTo(PrototypeCases.RandomCallsPerOperator));
   }
 
   /// <summary>The comparison cannot pass by accident: an outcome names the result and every array.</summary>

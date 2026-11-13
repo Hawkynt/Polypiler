@@ -80,7 +80,7 @@ internal static class PrototypeCases {
     "Numbers" => Numbers(),
     "Arrays" => Arrays(),
     "Statements" => Statements(),
-    "Operators" or "wide/OperatorsWide" or "wide/Conversions" => EveryMethod(fixture),
+    "Operators" or "wide/OperatorsWide" or "wide/Conversions" or "wide/Library" => EveryMethod(fixture),
     "wide/RunLength" => RunLength(),
     "wide/Crc32Table" => Crc32Table(),
     "wide/Tables" => Tables(),
@@ -507,13 +507,20 @@ internal static class PrototypeCases {
       foreach (var type in types)
         combinations = combinations.SelectMany(_ => _operands[type].Edges, (prefix, value) => prefix.Append(value).ToArray()).ToList();
 
-      calls.AddRange(combinations.Select(arguments => new PrototypeCall(method.Name, arguments)));
-      for (var index = 0; index < RandomCallsPerOperator; ++index)
-        calls.Add(new PrototypeCall(method.Name, types.Select(type => RandomOperand(type, random)).ToArray()));
+      // The bits of a NaN are not one pattern: runtimes differ in the sign and payload they produce and
+      // keep. A function that returns those bits is compared on every other number.
+      var portable = !method.Name.EndsWith("Bits", StringComparison.Ordinal);
+      calls.AddRange(combinations.Where(arguments => portable || !arguments.Any(IsNaN)).Select(arguments => new PrototypeCall(method.Name, arguments)));
+      for (var index = 0; index < RandomCallsPerOperator; ++index) {
+        var arguments = types.Select(type => RandomOperand(type, random)).ToArray();
+        calls.Add(new PrototypeCall(method.Name, portable || !arguments.Any(IsNaN) ? arguments : types.Select(type => _operands[type].Edges[0]).ToArray()));
+      }
     }
 
     return calls;
   }
+
+  private static bool IsNaN(object value) => value is float.NaN or double.NaN;
 
   /// <summary>
   /// The boundary values of an integer type: its smallest and largest value and their neighbours, the

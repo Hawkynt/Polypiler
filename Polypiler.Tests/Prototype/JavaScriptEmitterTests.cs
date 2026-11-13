@@ -321,9 +321,11 @@ public sealed class JavaScriptEmitterTests {
     Assert.That(body, Is.EqualTo(new[] {
       "{",
       "let i = 0;",
+      "{",
       "let $t1;",
       "for (; i < n; $t1 = (i + 1) | 0, $set(c, $t1, ($get(c, $t1) + 2) | 0), $set(c, 0, i), G(), i = (i + 1) | 0) {",
       "continue;",
+      "}",
       "}",
       "}",
       "{",
@@ -545,6 +547,75 @@ public sealed class JavaScriptEmitterTests {
     }));
     Assert.That(Emit("public static void F(int[] a) { System.Array.Copy(a, 0, a, 1, 2); }"),
       Does.Contain("function $copy(source, from, target, to, length) {\n  if (from < 0 || to < 0 || length < 0 || from + length > source.length || to + length > target.length) throw new RangeError(\"index out of range\");\n  target.set(source.subarray(from, from + length), to);\n}\n"));
+  }
+
+  /// <summary>Each operation of the base library: what JavaScript has for it, or the helper that computes it.</summary>
+  [TestCase("int", "int", "System.Math.Abs(a)", "$abs(a, -2147483648)")]
+  [TestCase("sbyte", "sbyte", "System.Math.Abs(a)", "$abs(a, -128)")]
+  [TestCase("long", "long", "System.Math.Abs(a)", "$abs(a, -9223372036854775808n)")]
+  [TestCase("double", "double", "System.Math.Abs(a)", "Math.abs(a)")]
+  [TestCase("float", "float", "System.MathF.Abs(a)", "Math.abs(a)")]
+  [TestCase("int", "int", "System.Math.Min(a, 3)", "Math.min(a, 3)")]
+  [TestCase("ushort", "ushort", "System.Math.Max(a, a)", "Math.max(a, a)")]
+  [TestCase("long", "long", "System.Math.Min(a, 3)", "$min64(a, 3n)")]
+  [TestCase("ulong", "ulong", "System.Math.Max(a, a)", "$max64(a, a)")]
+  [TestCase("double", "double", "System.Math.Max(a, 0.5)", "Math.max(a, 0.5)")]
+  [TestCase("float", "float", "System.MathF.Min(a, a)", "Math.min(a, a)")]
+  [TestCase("int", "int", "System.Math.Sign(a)", "Math.sign(a)")]
+  [TestCase("int", "long", "System.Math.Sign(a)", "$sign64(a)")]
+  [TestCase("int", "double", "System.Math.Sign(a)", "$fsign(a)")]
+  [TestCase("int", "float", "System.MathF.Sign(a)", "$fsign(a)")]
+  [TestCase("double", "double", "System.Math.Sqrt(a)", "Math.sqrt(a)")]
+  [TestCase("float", "float", "System.MathF.Sqrt(a)", "Math.fround(Math.sqrt(a))")]
+  [TestCase("double", "double", "System.Math.Floor(a)", "Math.floor(a)")]
+  [TestCase("float", "float", "System.MathF.Ceiling(a)", "Math.ceil(a)")]
+  [TestCase("double", "double", "System.Math.Truncate(a)", "Math.trunc(a)")]
+  [TestCase("double", "double", "System.Math.Round(a)", "$round(a)")]
+  [TestCase("float", "float", "System.MathF.Round(a)", "$round(a)")]
+  [TestCase("double", "double", "System.Math.Round(a, System.MidpointRounding.ToEven)", "$round(a)")]
+  [TestCase("double", "double", "System.Math.Round(a, System.MidpointRounding.AwayFromZero)", "$rounda(a)")]
+  [TestCase("uint", "uint", "System.Numerics.BitOperations.RotateLeft(a, 5)", "$rotl(a, 5)")]
+  [TestCase("uint", "uint", "System.Numerics.BitOperations.RotateRight(a, 5)", "$rotr(a, 5)")]
+  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateLeft(a, 5)", "$rotl64(a, 5)")]
+  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateRight(a, 5)", "$rotr64(a, 5)")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.PopCount(a)", "$pop(a)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.PopCount(a)", "$pop64(a)")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.LeadingZeroCount(a)", "Math.clz32(a)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.LeadingZeroCount(a)", "$clz64(a)")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.TrailingZeroCount(a)", "$ctz(a)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.TrailingZeroCount(a)", "$ctz64(a)")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.Log2(a)", "31 - Math.clz32(a | 1)")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.Log2(a + 1)", "31 - Math.clz32(((a + 1) >>> 0) | 1)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.Log2(a)", "63 - $clz64(a | 1n)")]
+  [TestCase("ulong", "uint", "System.Math.BigMul(a, a)", "BigInt(a) * BigInt(a)")]
+  [TestCase("long", "double", "System.BitConverter.DoubleToInt64Bits(a)", "$bits64(a)")]
+  [TestCase("int", "float", "System.BitConverter.SingleToInt32Bits(a)", "$bits32(a)")]
+  [TestCase("double", "long", "System.BitConverter.Int64BitsToDouble(a)", "$float64(a)")]
+  [TestCase("float", "int", "System.BitConverter.Int32BitsToSingle(a)", "$float32(a)")]
+  public void LibraryOperation_IsWritten(string returns, string type, string expression, string expected)
+    => Assert.That(Body($"public static {returns} F({type} a) => {expression};"), Is.EqualTo(new[] { $"return {expected};" }));
+
+  /// <summary>The helpers of the library operations, in their order; a helper brings the one it calls.</summary>
+  [Test]
+  public void LibraryHelpers_AreListedOnceWithWhatTheyNeed() {
+    var text = Emit(
+      "public static double F(int i, long l, ulong u, uint w, double d, float f) => System.Math.Abs(i) + System.Math.Min(l, l) + System.Math.Max(l, l) "
+      + "+ System.Math.Sign(l) + System.Math.Sign(d) + System.Math.Round(d) + System.Math.Round(d, System.MidpointRounding.AwayFromZero) "
+      + "+ System.Numerics.BitOperations.RotateLeft(w, i) + System.Numerics.BitOperations.RotateRight(w, i) "
+      + "+ System.Numerics.BitOperations.RotateLeft(u, i) + System.Numerics.BitOperations.RotateRight(u, i) "
+      + "+ System.Numerics.BitOperations.PopCount(u) + System.Numerics.BitOperations.LeadingZeroCount(u) + System.Numerics.BitOperations.TrailingZeroCount(u) "
+      + "+ System.BitConverter.DoubleToInt64Bits(d) + System.BitConverter.SingleToInt32Bits(f) "
+      + "+ System.BitConverter.Int64BitsToDouble(l) + System.BitConverter.Int32BitsToSingle(i);");
+    var helpers = text.Split('\n').Where(line => line.StartsWith("function $") || line.StartsWith("const $")).Select(line => line[..line.IndexOfAny(['(', ' '], 9)]);
+    Assert.That(helpers, Is.EqualTo(new[] {
+      "function $abs", "function $min64", "function $max64", "function $sign64", "function $fsign", "function $round", "function $rounda",
+      "function $rotl", "function $rotr", "function $rotl64", "function $rotr64", "function $pop", "function $pop64", "function $clz64",
+      "function $ctz", "function $ctz64", "const $view", "function $bits64", "function $bits32", "function $float64", "function $float32"
+    }));
+    Assert.That(text, Does.Contain("if (value !== value) throw new RangeError(\"invalid operation\");")
+      .And.Contain("const $view = new DataView(new ArrayBuffer(8));")
+      .And.Contain("return rounded - value === 0.5 && rounded % 2 !== 0 ? rounded - 1 : rounded;"));
+    Assert.That(Emit("public static int F(uint a) => System.Numerics.BitOperations.PopCount(a);"), Does.Not.Contain("$pop64").And.Not.Contain("$view"));
   }
 
   /// <summary>Above every function: what crosses its boundary as a number, a BigInt or a typed array.</summary>

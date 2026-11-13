@@ -354,7 +354,8 @@ internal sealed class Lowering(string path, SemanticModel model) {
   /// <summary>
   /// A <c>switch</c> on an integer with constant labels. C# has one scope for all sections, the IR one
   /// per section, so a local declared in a section is declared in front of the switch instead and the
-  /// declaration becomes an assignment.
+  /// declaration becomes an assignment. Those declarations and the switch then share a block, which
+  /// is the scope the switch had: the next switch may declare the same names.
   /// </summary>
   private void Switch(SwitchStatementSyntax choice, List<IrStmt> into) {
     var value = this.Value(choice.Expression);
@@ -362,6 +363,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
       throw new UnsupportedException(choice.Expression, $"a switch on the type {value.Type}");
 
     var sections = new List<IrSwitchSection>();
+    var shared = new List<IrStmt>();
     foreach (var section in choice.Sections) {
       var labels = new List<long>();
       var isDefault = false;
@@ -380,14 +382,15 @@ internal sealed class Lowering(string path, SemanticModel model) {
       var body = new List<IrStmt>();
       foreach (var statement in section.Statements)
         if (statement is LocalDeclarationStatementSyntax declaration)
-          this.LocalDeclaration(declaration, body, into);
+          this.LocalDeclaration(declaration, body, shared);
         else
           this.Statement(statement, body);
 
       sections.Add(new IrSwitchSection(labels, isDefault, new IrBlock(body)));
     }
 
-    into.Add(new IrSwitch(value, sections));
+    IrStmt lowered = new IrSwitch(value, sections);
+    into.Add(shared.Count == 0 ? lowered : new IrBlock([.. shared, lowered]));
   }
 
   /// <summary>
@@ -588,9 +591,9 @@ internal sealed class Lowering(string path, SemanticModel model) {
   }
 
   private IrExpr Natural(ExpressionSyntax expression, IrType type) {
-    var constant = model.GetConstantValue(expression);
-    if (constant.HasValue)
-      return new IrConst(type, Carried(constant.Value!));
+    // A constant null, such as default(int[]), is not a value of the subset.
+    if (model.GetConstantValue(expression) is { HasValue: true, Value: { } folded })
+      return new IrConst(type, Carried(folded));
 
     switch (expression) {
       case ParenthesizedExpressionSyntax parenthesized:
@@ -641,6 +644,10 @@ internal sealed class Lowering(string path, SemanticModel model) {
     return new IrStep(target, increment, postfix, target.Type.IsInteger && this.IsChecked(step));
   }
 
+  /// <summary>
+  /// A prefix operator on a value. The steps were taken before, and the compiler gives no other
+  /// prefix operator a type of the subset, so what is neither plus, minus nor complement is the negation.
+  /// </summary>
   private IrExpr Unary(PrefixUnaryExpressionSyntax unary) {
     IrUnaryOp op;
     switch (unary.Kind()) {
@@ -652,11 +659,9 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case SyntaxKind.BitwiseNotExpression:
         op = IrUnaryOp.BitNot;
         break;
-      case SyntaxKind.LogicalNotExpression:
+      default:
         op = IrUnaryOp.LogicalNot;
         break;
-      default:
-        throw new UnsupportedException(unary, unary.Kind().ToString());
     }
 
     var operand = this.Value(unary.Operand);
@@ -712,8 +717,9 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
   private IrExpr Call(InvocationExpressionSyntax invocation, IrType type) {
     var arguments = invocation.ArgumentList.Arguments;
-    if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol { MethodKind: MethodKind.Ordinary } method
-        || arguments.Any(argument => argument.NameColon is not null))
+    // An invocation the compiler accepted and gave a type of the subset is bound to a method.
+    var method = (IMethodSymbol)model.GetSymbolInfo(invocation).Symbol!;
+    if (method.MethodKind != MethodKind.Ordinary || arguments.Any(argument => argument.NameColon is not null))
       throw new UnsupportedException(invocation, invocation.Kind().ToString());
 
     var operands = arguments.Select(argument => argument.Expression).ToList();
@@ -742,9 +748,48 @@ internal sealed class Lowering(string path, SemanticModel model) {
         return new IrIntrinsic(IrIntrinsicOp.ArrayFill, type, [this.Written(operands[0]), this.Value(operands[1])]);
       case ("System.Array", "Clear", 1):
         return new IrIntrinsic(IrIntrinsicOp.ArrayClear, type, [this.Written(operands[0])]);
-      default:
-        return null;
+      case ("System.Math" or "System.MathF", "Round", 2) when method.Parameters[1].Type.Name == "MidpointRounding":
+        // The mode has to be one of the two the IR has, written as a constant.
+        return model.GetConstantValue(operands[1]).Value switch {
+          (int)MidpointRounding.ToEven => this.Exact(IrIntrinsicOp.RoundEven, type, operands.Take(1)),
+          (int)MidpointRounding.AwayFromZero => this.Exact(IrIntrinsicOp.RoundAway, type, operands.Take(1)),
+          _ => null
+        };
     }
+
+    IrIntrinsicOp? op = (method.ContainingType.ToDisplayString(), method.Name) switch {
+      ("System.Math" or "System.MathF", "Abs") => IrIntrinsicOp.Abs,
+      ("System.Math" or "System.MathF", "Min") => IrIntrinsicOp.Min,
+      ("System.Math" or "System.MathF", "Max") => IrIntrinsicOp.Max,
+      ("System.Math" or "System.MathF", "Sign") => IrIntrinsicOp.Sign,
+      ("System.Math" or "System.MathF", "Sqrt") => IrIntrinsicOp.Sqrt,
+      ("System.Math" or "System.MathF", "Floor") => IrIntrinsicOp.Floor,
+      ("System.Math" or "System.MathF", "Ceiling") => IrIntrinsicOp.Ceiling,
+      ("System.Math" or "System.MathF", "Truncate") => IrIntrinsicOp.Truncate,
+      ("System.Math" or "System.MathF", "Round") => IrIntrinsicOp.RoundEven,
+      ("System.Math", "BigMul") => IrIntrinsicOp.BigMul,
+      ("System.Numerics.BitOperations", "RotateLeft") => IrIntrinsicOp.RotateLeft,
+      ("System.Numerics.BitOperations", "RotateRight") => IrIntrinsicOp.RotateRight,
+      ("System.Numerics.BitOperations", "PopCount") => IrIntrinsicOp.PopCount,
+      ("System.Numerics.BitOperations", "LeadingZeroCount") => IrIntrinsicOp.LeadingZeroCount,
+      ("System.Numerics.BitOperations", "TrailingZeroCount") => IrIntrinsicOp.TrailingZeroCount,
+      ("System.Numerics.BitOperations", "Log2") => IrIntrinsicOp.Log2,
+      ("System.BitConverter", "DoubleToInt64Bits" or "SingleToInt32Bits") => IrIntrinsicOp.FloatBits,
+      ("System.BitConverter", "Int64BitsToDouble" or "Int32BitsToSingle") => IrIntrinsicOp.BitsFloat,
+      _ => null
+    };
+    return op is null ? null : this.Exact(op.Value, type, operands);
+  }
+
+  /// <summary>
+  /// The intrinsic for a library method, when the overload the compiler chose is one the operation is
+  /// defined on: its typing rule decides, so an overload on a type outside it is refused by name.
+  /// </summary>
+  private IrIntrinsic? Exact(IrIntrinsicOp op, IrType type, IEnumerable<ExpressionSyntax> operands) {
+    var arguments = operands.Select(this.Value).ToList();
+    return IrOperators.Accepts(op, type, arguments.Select(argument => argument.Type).ToList())
+      ? new IrIntrinsic(op, type, arguments)
+      : null;
   }
 
   /// <summary>

@@ -243,7 +243,70 @@ public enum IrIntrinsicOp {
   ArrayFill,
 
   /// <summary><c>(array)</c>: stores zero in every element.</summary>
-  ArrayClear
+  ArrayClear,
+
+  /// <summary>
+  /// The absolute value of a signed integer or a floating-point number. The smallest value of an
+  /// integer type has none and traps with an integer overflow.
+  /// </summary>
+  Abs,
+
+  /// <summary>The smaller of two numbers of one type; of floating-point numbers a NaN if either is one, and -0 before +0.</summary>
+  Min,
+
+  /// <summary>The larger of two numbers of one type; of floating-point numbers a NaN if either is one, and +0 after -0.</summary>
+  Max,
+
+  /// <summary>
+  /// -1, 0 or 1 as an <c>i32</c> for a negative, zero or positive signed integer or floating-point
+  /// number. A NaN has no sign and traps with an invalid operation.
+  /// </summary>
+  Sign,
+
+  /// <summary>The square root of a floating-point number, correctly rounded.</summary>
+  Sqrt,
+
+  /// <summary>The largest integral floating-point number that is not larger than the operand.</summary>
+  Floor,
+
+  /// <summary>The smallest integral floating-point number that is not smaller than the operand.</summary>
+  Ceiling,
+
+  /// <summary>The operand without its fraction.</summary>
+  Truncate,
+
+  /// <summary>The nearest integral floating-point number; a tie goes to the even one.</summary>
+  RoundEven,
+
+  /// <summary>The nearest integral floating-point number; a tie goes away from zero.</summary>
+  RoundAway,
+
+  /// <summary><c>(value, count)</c>: a <c>u32</c> or <c>u64</c> rotated left by the count modulo its width.</summary>
+  RotateLeft,
+
+  /// <summary><c>(value, count)</c>: a <c>u32</c> or <c>u64</c> rotated right by the count modulo its width.</summary>
+  RotateRight,
+
+  /// <summary>The number of set bits of a <c>u32</c> or <c>u64</c>, as an <c>i32</c>.</summary>
+  PopCount,
+
+  /// <summary>The number of zero bits above the highest set bit of a <c>u32</c> or <c>u64</c>; the width for 0.</summary>
+  LeadingZeroCount,
+
+  /// <summary>The number of zero bits below the lowest set bit of a <c>u32</c> or <c>u64</c>; the width for 0.</summary>
+  TrailingZeroCount,
+
+  /// <summary>The position of the highest set bit of a <c>u32</c> or <c>u64</c>, as an <c>i32</c>; 0 for 0.</summary>
+  Log2,
+
+  /// <summary>The full product of two <c>u32</c>, as a <c>u64</c>.</summary>
+  BigMul,
+
+  /// <summary>The IEEE 754 bits of an <c>f64</c> as an <c>i64</c>, or of an <c>f32</c> as an <c>i32</c>.</summary>
+  FloatBits,
+
+  /// <summary>The <c>f64</c> with the bits of an <c>i64</c>, or the <c>f32</c> with the bits of an <c>i32</c>.</summary>
+  BitsFloat
 
 }
 

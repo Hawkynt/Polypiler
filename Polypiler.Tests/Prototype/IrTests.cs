@@ -182,6 +182,36 @@ public sealed class IrTests {
     yield return Case("clearing of nothing", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayClear, IrType.Void))), "ArrayClear with the type void is applied to ()");
     yield return Case("clearing with a result", Returning(Operation(IrIntrinsicOp.ArrayClear, IrType.I32, Ref(_data))), "ArrayClear with the type i32 is applied to (i32[])");
     yield return Case("intrinsic argument is checked", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayClear, IrType.Void, new IrNewArray(_ints, Ref(_x))))), "'x' is used outside the scope");
+    IrExpr wideNumber = new IrConst(IrType.U64, 1);
+    IrExpr fraction = new IrConst(IrType.F64, 0);
+    yield return Case("absolute value of an unsigned integer", Returning(Operation(IrIntrinsicOp.Abs, IrType.U32, Ref(_u))), "Abs with the type u32 is applied to (u32)");
+    yield return Case("absolute value of another type", Returning(Operation(IrIntrinsicOp.Abs, IrType.I64, _one)), "Abs with the type i64 is applied to (i32)");
+    yield return Case("minimum of mixed types", Returning(Operation(IrIntrinsicOp.Min, IrType.I32, _one, Ref(_u))), "Min with the type i32 is applied to (i32, u32)");
+    yield return Case("maximum of truth values", Returning(Operation(IrIntrinsicOp.Max, IrType.Bool, _true, _true)), "Max with the type bool is applied to (bool, bool)");
+    yield return Case("minimum as another type", Returning(Operation(IrIntrinsicOp.Min, IrType.I64, _one, _one)), "Min with the type i64 is applied to (i32, i32)");
+    yield return Case("rotation as another type", Returning(Operation(IrIntrinsicOp.RotateLeft, IrType.U64, Ref(_u), _one)), "RotateLeft with the type u64 is applied to (u32, i32)");
+    yield return Case("f32 constant below 32 bits", Returning(new IrConst(IrType.F32, long.MinValue)), "is not a value of f32");
+    yield return Case("maximum of one number", Returning(Operation(IrIntrinsicOp.Max, IrType.I32, _one)), "Max with the type i32 is applied to (i32)");
+    yield return Case("sign of an unsigned integer", Returning(Operation(IrIntrinsicOp.Sign, IrType.I32, Ref(_u))), "Sign with the type i32 is applied to (u32)");
+    yield return Case("sign as a float", Returning(Operation(IrIntrinsicOp.Sign, IrType.F64, fraction)), "Sign with the type f64 is applied to (f64)");
+    yield return Case("square root of an integer", Returning(Operation(IrIntrinsicOp.Sqrt, IrType.I32, _one)), "Sqrt with the type i32 is applied to (i32)");
+    yield return Case("floor as an integer", Returning(Operation(IrIntrinsicOp.Floor, IrType.I32, fraction)), "Floor with the type i32 is applied to (f64)");
+    yield return Case("ceiling of two numbers", Returning(Operation(IrIntrinsicOp.Ceiling, IrType.F64, fraction, fraction)), "Ceiling with the type f64 is applied to (f64, f64)");
+    yield return Case("truncation of an integer", Returning(Operation(IrIntrinsicOp.Truncate, IrType.I32, _one)), "Truncate with the type i32 is applied to (i32)");
+    yield return Case("rounding of an integer", Returning(Operation(IrIntrinsicOp.RoundEven, IrType.I32, _one)), "RoundEven with the type i32 is applied to (i32)");
+    yield return Case("rounding away of nothing", Returning(Operation(IrIntrinsicOp.RoundAway, IrType.F64)), "RoundAway with the type f64 is applied to ()");
+    yield return Case("rotation of a signed integer", Returning(Operation(IrIntrinsicOp.RotateLeft, IrType.I32, _one, _one)), "RotateLeft with the type i32 is applied to (i32, i32)");
+    yield return Case("rotation by an unsigned count", Returning(Operation(IrIntrinsicOp.RotateRight, IrType.U32, Ref(_u), Ref(_u))), "RotateRight with the type u32 is applied to (u32, u32)");
+    yield return Case("bit count of a signed integer", Returning(Operation(IrIntrinsicOp.PopCount, IrType.I32, _one)), "PopCount with the type i32 is applied to (i32)");
+    yield return Case("leading zeros as 64 bits", Returning(Operation(IrIntrinsicOp.LeadingZeroCount, IrType.U64, wideNumber)), "LeadingZeroCount with the type u64 is applied to (u64)");
+    yield return Case("trailing zeros of a float", Returning(Operation(IrIntrinsicOp.TrailingZeroCount, IrType.I32, fraction)), "TrailingZeroCount with the type i32 is applied to (f64)");
+    yield return Case("logarithm of a byte", Returning(Operation(IrIntrinsicOp.Log2, IrType.I32, new IrConst(IrType.U8, 1))), "Log2 with the type i32 is applied to (u8)");
+    yield return Case("full product of 64 bits", Returning(Operation(IrIntrinsicOp.BigMul, IrType.U64, wideNumber, wideNumber)), "BigMul with the type u64 is applied to (u64, u64)");
+    yield return Case("full product as 32 bits", Returning(Operation(IrIntrinsicOp.BigMul, IrType.U32, Ref(_u), Ref(_u))), "BigMul with the type u32 is applied to (u32, u32)");
+    yield return Case("bits of a double as 32 bits", Returning(Operation(IrIntrinsicOp.FloatBits, IrType.I32, fraction)), "FloatBits with the type i32 is applied to (f64)");
+    yield return Case("bits of an integer", Returning(Operation(IrIntrinsicOp.FloatBits, IrType.I32, _one)), "FloatBits with the type i32 is applied to (i32)");
+    yield return Case("32 bits as a double", Returning(Operation(IrIntrinsicOp.BitsFloat, IrType.F64, _one)), "BitsFloat with the type f64 is applied to (i32)");
+    yield return Case("unsigned bits as a float", Returning(Operation(IrIntrinsicOp.BitsFloat, IrType.F32, Ref(_u))), "BitsFloat with the type f32 is applied to (u32)");
     yield return Case("conversion from bool", Returning(new IrConvert(IrType.I32, _true)), "a conversion from bool to i32");
     yield return Case("conversion to bool", Returning(new IrConvert(IrType.Bool, _one)), "a conversion from i32 to bool");
     yield return Case("conditional on a number", Returning(new IrConditional(_one, _one, _one)), "the condition of a conditional expression has the type i32");
@@ -438,6 +468,7 @@ public sealed class IrTests {
   [TestCase(IrTrap.DivideByZero, "divide by zero")]
   [TestCase(IrTrap.IndexOutOfRange, "index out of range")]
   [TestCase(IrTrap.IntegerOverflow, "integer overflow")]
+  [TestCase(IrTrap.InvalidOperation, "invalid operation")]
   public void Trap_HasItsMessage(IrTrap trap, string message) {
     var exception = new IrTrapException(trap);
     Assert.That((exception.Trap, exception.Message, IrTrapException.Describe(trap)), Is.EqualTo((trap, message, message)));

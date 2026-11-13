@@ -34,7 +34,7 @@ internal static class PrototypeFixture {
   public static readonly string[] Names = [
     "Adler32", "Arrays", "Crc32", "Fnv1a", "Numbers", "Operators", "Statements",
     "wide/BinarySearch", "wide/BubbleSort", "wide/Conversions", "wide/Crc16", "wide/Crc32Table", "wide/DigitSum", "wide/Fir",
-    "wide/Fletcher16", "wide/Fnv1a64", "wide/Horner", "wide/OperatorsWide", "wide/RunLength", "wide/SplitMix64",
+    "wide/Fletcher16", "wide/Fnv1a64", "wide/Horner", "wide/Library", "wide/OperatorsWide", "wide/RunLength", "wide/SplitMix64",
     "wide/StatementsWide", "wide/Tables", "wide/Xorshift64"
   ];
 
@@ -138,12 +138,14 @@ internal static class PrototypeFixture {
   /// <summary>
   /// The trap a .NET exception corresponds to, or <see langword="null"/> for any other exception.
   /// <c>Array.Copy</c> reports a range outside an array as an <see cref="ArgumentException"/>; the
-  /// fixtures have no other source of one, and in the IR it is the bounds trap.
+  /// fixtures have no other source of one, and in the IR it is the bounds trap. <c>Math.Sign</c> of a
+  /// NaN throws the <see cref="ArithmeticException"/> itself, not one of its two subclasses.
   /// </summary>
   private static IrTrap? TrapOf(Exception? exception) => exception switch {
     DivideByZeroException => IrTrap.DivideByZero,
     IndexOutOfRangeException or ArgumentException => IrTrap.IndexOutOfRange,
     OverflowException => IrTrap.IntegerOverflow,
+    ArithmeticException => IrTrap.InvalidOperation,
     _ => null
   };
 

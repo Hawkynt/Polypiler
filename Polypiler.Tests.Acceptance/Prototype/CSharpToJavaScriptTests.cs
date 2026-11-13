@@ -33,6 +33,18 @@ public sealed class CSharpToJavaScriptTests {
     "An unknown target language is a usage error"
   ];
 
+  private static readonly string[] _wideScenarios = [
+    "A translated algorithm matches its published value",
+    "64-bit arithmetic wraps",
+    "Mixed uint and int widens to long as in C#",
+    "Float arithmetic is rounded to binary32 after every operation",
+    "continue still runs the for increment",
+    "A switch selects by constant label without fall-through",
+    "A checked addition traps",
+    "A transcendental function is refused",
+    "Writing to a constant table is refused"
+  ];
+
   private string _directory = "";
 
   [SetUp]
@@ -44,12 +56,13 @@ public sealed class CSharpToJavaScriptTests {
   [TearDown]
   public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
 
-  /// <summary>Ensures the feature and its NUnit bindings stay in agreement.</summary>
-  [Test]
-  public void FeatureScenarios_HaveBindings() {
-    var feature = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests/features/prototype/csharp-to-javascript.feature"));
+  /// <summary>Ensures the features and their NUnit bindings stay in agreement.</summary>
+  [TestCase("csharp-to-javascript.feature", false)]
+  [TestCase("csharp-to-javascript-wide.feature", true)]
+  public void FeatureScenarios_HaveBindings(string file, bool wide) {
+    var feature = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests/features/prototype", file));
     var scenarios = Regex.Matches(feature, @"(?m)^  Scenario(?: Outline)?: (.+?)\r?$").Select(match => match.Groups[1].Value.Trim());
-    Assert.That(scenarios, Is.EqualTo(_scenarios));
+    Assert.That(scenarios, Is.EqualTo(wide ? _wideScenarios : _scenarios));
   }
 
   /// <summary>Scenario outline: A translated checksum matches its published value.</summary>
@@ -131,6 +144,16 @@ public sealed class CSharpToJavaScriptTests {
     var decode = new PrototypeCall("Decode", [new byte[] { 0x02, 1, 2, 3, 0x80, 9, 0xFF, 5 }, new byte[8]]);
     Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), "RunLength.mjs", [decode]).Single(),
       Is.EqualTo("6 | [2,1,2,3,128,9,255,5] | [1,2,3,9,9,9,0,0]"));
+  }
+
+  /// <summary>Scenario: A transcendental function is refused.</summary>
+  [Test]
+  public void TranscendentalFunction_IsRefused() {
+    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap("public static double F(double x) => System.Math.Sin(x);"));
+    Assert.That(exitCode, Is.EqualTo(3));
+    Assert.That(output, Does.Contain("PLY1002").And.Contain("Math.Sin"));
+    Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
+    Assert.That(Directory.GetFiles(this._directory, "*", SearchOption.AllDirectories), Is.EqualTo(new[] { Path.Combine(this._directory, "Snippet.cs") }));
   }
 
   /// <summary>Scenario: Writing to a constant table is refused.</summary>
