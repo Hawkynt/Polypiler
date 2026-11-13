@@ -12,10 +12,11 @@ which. Most modules are still empty shells that the [PRD](docs/PRD.md) phases fi
 is one thin path, the C# → JavaScript prototype: `Polypiler.Core` (product identity, `Diagnostic`,
 `GeneratedFile`), `Polypiler.Core.IR` (a small typed structured IR with verifier and interpreter),
 `Polypiler.Core.Frontends.CSharp` (Roslyn import of a small C# subset),
-`Polypiler.Core.Backends.JavaScript` (ES module emitter) and `Polypiler.Cli` (the `polypiler` command
-with `translate`). `Polypiler.Tests` holds the unit tests and carries the coverage;
-`Polypiler.Tests.Acceptance` starts the real executable and `node`. Fixtures live in `tests/fixtures`,
-feature files in `tests/features`. No global usings: `ImplicitUsings` is disabled.
+`Polypiler.Core.Backends.JavaScript` (ES module emitter), `Polypiler.Core.Backends.CSharp` (C#
+emitter) and `Polypiler.Cli` (the `polypiler` command with `translate`). `Polypiler.Tests` holds the
+unit tests and carries the coverage; `Polypiler.Tests.Acceptance` starts the real executable, `node`
+and the C# compiler. Fixtures live in `tests/fixtures`, feature files in `tests/features`. No global
+usings: `ImplicitUsings` is disabled.
 
 **The README is a forward-looking specification** — it is authoritative. When code and spec disagree,
 the spec wins unless the spec itself is being revised in the same change; cite the relevant section
