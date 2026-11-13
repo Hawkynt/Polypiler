@@ -34,7 +34,7 @@ labels: [enhancement, area:analysis, state:draft]
 - **Depends on:** #<n> (closed) <or why it can run in parallel>
 - **Fixtures:** `<owner/repo>@<full SHA>:<path>` — licence <SPDX>
 - **Oracle:** <independent implementation that produces expected results>
-- **Toolchains:** <name exact-version>, …
+- **Toolchains:** `<key in tooling/toolchains.lock>`, …
 - **Sourcing:** rung <1–5> of the AGENTS.md ladder — <source, licence>
 
 ## Optimization
@@ -119,7 +119,7 @@ Feature: O<####> <name>
 - [ ] Why, user story with a listed role, in-scope and out-of-scope lists present
 - [ ] Every dependency is closed or explained; epics have their sub-issues linked
 - [ ] Every fixture pinned to a full SHA with a licence; the oracle is independent
-- [ ] Toolchains named with exact versions
+- [ ] Toolchains named by their `tooling/toolchains.lock` key
 - [ ] Specification names the public surface, diagnostics and files
 - [ ] ≥ 1 positive and ≥ 1 negative Gherkin scenario with concrete values
 - [ ] Test-design table covers happy path, exceptions, boundaries and equivalence classes
