@@ -33,6 +33,12 @@ public enum IrTypeKind {
   /// <summary>An unsigned 64-bit integer that wraps around.</summary>
   U64,
 
+  /// <summary>An IEEE 754 binary32 number; every operation rounds its result to binary32.</summary>
+  F32,
+
+  /// <summary>An IEEE 754 binary64 number.</summary>
+  F64,
+
   /// <summary>A one-dimensional, zero-based array of numbers with a fixed length.</summary>
   Array
 
@@ -82,6 +88,12 @@ public sealed record IrType {
   /// <summary>An unsigned 64-bit integer.</summary>
   public static IrType U64 { get; } = new(IrTypeKind.U64, null);
 
+  /// <summary>An IEEE 754 binary32 number.</summary>
+  public static IrType F32 { get; } = new(IrTypeKind.F32, null);
+
+  /// <summary>An IEEE 754 binary64 number.</summary>
+  public static IrType F64 { get; } = new(IrTypeKind.F64, null);
+
   /// <summary>The array type with the given element type.</summary>
   /// <param name="element">The type of every element.</param>
   /// <returns>The array type.</returns>
@@ -111,11 +123,14 @@ public sealed record IrType {
     _ => 0
   };
 
+  /// <summary>Whether values of the type are floating-point numbers.</summary>
+  public bool IsFloat => this.Kind is IrTypeKind.F32 or IrTypeKind.F64;
+
   /// <summary>Whether values of the type are numbers.</summary>
-  public bool IsNumeric => this.IsInteger;
+  public bool IsNumeric => this.IsInteger || this.IsFloat;
 
   /// <summary>Whether arithmetic is defined on the type; the narrow integers are widened first.</summary>
-  public bool IsArithmetic => this.IsWideInteger;
+  public bool IsArithmetic => this.IsWideInteger || this.IsFloat;
 
   /// <summary>Whether the type is an array.</summary>
   public bool IsArray => this.Kind == IrTypeKind.Array;

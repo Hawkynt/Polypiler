@@ -10,7 +10,7 @@ public static class IrOperators {
   /// <param name="operand">The type of the operand.</param>
   /// <returns><see langword="true"/> when the operator applies.</returns>
   public static bool Accepts(IrUnaryOp op, IrType operand) => op switch {
-    IrUnaryOp.Negate => operand.IsArithmetic && operand != IrType.U32 && operand != IrType.U64,
+    IrUnaryOp.Negate => operand.IsFloat || operand == IrType.I32 || operand == IrType.I64,
     IrUnaryOp.NegateChecked => operand == IrType.I32 || operand == IrType.I64,
     IrUnaryOp.BitNot => operand.IsWideInteger,
     _ => operand == IrType.Bool
@@ -68,6 +68,20 @@ public static class IrOperators {
   /// <param name="value">The value as the IR carries it.</param>
   /// <returns>The mathematical value.</returns>
   public static Int128 Number(IrType type, long value) => type == IrType.U64 ? (ulong)value : value;
+
+  /// <summary>A floating-point number as a constant of its type carries it: its IEEE 754 bits.</summary>
+  /// <param name="type"><see cref="IrType.F32"/> or <see cref="IrType.F64"/>.</param>
+  /// <param name="value">The number; for <c>f32</c> it is rounded to binary32 first.</param>
+  /// <returns>The value of <see cref="IrConst.Value"/> for the number.</returns>
+  public static long Bits(IrType type, double value)
+    => type == IrType.F32 ? BitConverter.SingleToInt32Bits((float)value) : BitConverter.DoubleToInt64Bits(value);
+
+  /// <summary>The floating-point number a constant carries.</summary>
+  /// <param name="type"><see cref="IrType.F32"/> or <see cref="IrType.F64"/>.</param>
+  /// <param name="bits">The value of <see cref="IrConst.Value"/>.</param>
+  /// <returns>The number; a binary32 one widened exactly.</returns>
+  public static double Float(IrType type, long bits)
+    => type == IrType.F32 ? BitConverter.Int32BitsToSingle((int)bits) : BitConverter.Int64BitsToDouble(bits);
 
   /// <summary>Whether every value of one integer type is also a value of another.</summary>
   /// <param name="type">The type that is to hold the values.</param>

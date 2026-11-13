@@ -33,8 +33,8 @@ internal static class PrototypeFixture {
   /// <summary>The names of all fixtures, which are also the names of their classes.</summary>
   public static readonly string[] Names = [
     "Adler32", "Arrays", "Crc32", "Fnv1a", "Numbers", "Operators", "Statements",
-    "wide/Conversions", "wide/Crc16", "wide/Fletcher16", "wide/Fnv1a64", "wide/OperatorsWide", "wide/SplitMix64",
-    "wide/Xorshift64"
+    "wide/Conversions", "wide/Crc16", "wide/Fir", "wide/Fletcher16", "wide/Fnv1a64", "wide/Horner", "wide/OperatorsWide",
+    "wide/SplitMix64", "wide/Xorshift64"
   ];
 
   /// <summary>The name of the class a fixture declares, which is the name of its file without the folder.</summary>
@@ -113,9 +113,26 @@ internal static class PrototypeFixture {
     null => "void",
     bool truth => truth ? "true" : "false",
     char unit => ((int)unit).ToString(CultureInfo.InvariantCulture),
+    float single => Show((double)single),
+    double number => Show(number),
     Array array => $"[{string.Join(",", array.Cast<object>().Select(Show))}]",
     _ => Convert.ToString(value, CultureInfo.InvariantCulture)!
   };
+
+  /// <summary>
+  /// A floating-point number by its bits, so that two outcomes are equal exactly when the numbers are
+  /// the same: <c>NaN</c> for every NaN, the decimal digits for an integer a double holds exactly
+  /// (which is how JavaScript cannot tell it from an integer result), otherwise <c>f:</c> and the 64
+  /// bits in hexadecimal. A binary32 number is widened first, which changes nothing about it.
+  /// </summary>
+  public static string Show(double number) {
+    if (double.IsNaN(number))
+      return "NaN";
+
+    return Math.Abs(number) <= 9007199254740991 && Math.Truncate(number) == number && !(number == 0 && double.IsNegative(number))
+      ? ((long)number).ToString(CultureInfo.InvariantCulture)
+      : "f:" + BitConverter.DoubleToInt64Bits(number).ToString("x16", CultureInfo.InvariantCulture);
+  }
 
   /// <summary>The trap a .NET exception corresponds to, or <see langword="null"/> for any other exception.</summary>
   private static IrTrap? TrapOf(Exception? exception) => exception switch {

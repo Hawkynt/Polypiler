@@ -71,6 +71,16 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F() => 'a' + 1;", IrTypeKind.I32, 98)]
   [TestCase("public static sbyte F() => sbyte.MinValue;", IrTypeKind.I8, -128)]
   [TestCase("public static short F() => unchecked((short)0x8000);", IrTypeKind.I16, -32768)]
+  [TestCase("public static double F() => 1.5;", IrTypeKind.F64, 0x3FF8000000000000)]
+  [TestCase("public static float F() => 1.5f;", IrTypeKind.F32, 0x3FC00000)]
+  [TestCase("public static float F() => 1;", IrTypeKind.F32, 0x3F800000)]
+  [TestCase("public static double F() => 0.5f;", IrTypeKind.F64, 0x3FE0000000000000)]
+  [TestCase("public static float F() => ulong.MaxValue;", IrTypeKind.F32, 0x5F800000)]
+  [TestCase("public static double F() => ulong.MaxValue;", IrTypeKind.F64, 0x43F0000000000000)]
+  [TestCase("public static double F() => long.MinValue;", IrTypeKind.F64, unchecked((long)0xC3E0000000000000))]
+  [TestCase("public static float F() => -16777217;", IrTypeKind.F32, unchecked((int)0xCB800000))]
+  [TestCase("public static double F() => double.NaN;", IrTypeKind.F64, unchecked((long)0xFFF8000000000000))]
+  [TestCase("public static int F() => (int)2.9;", IrTypeKind.I32, 2)]
   public void Import_TakesConstantsFromTheCompiler(string method, IrTypeKind kind, long value) {
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method));
     var constant = (IrConst)((IrReturn)module.Functions[0].Body.Statements[0]).Value!;
@@ -88,8 +98,6 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(int[] a, long i) => a[i];", "an array index or length of the type i64", 43, TestName = "64-bit index")]
   [TestCase("public static void F(int[] a, ulong i) { a[i] = 1; }", "an array index or length of the type u64", 44, TestName = "64-bit index of a write")]
   [TestCase("public static int[] F(long n) => new int[n];", "an array index or length of the type i64", 42, TestName = "64-bit length")]
-  [TestCase("public static double F() => 1.5;", "double", 15, TestName = "double")]
-  [TestCase("public static float F(int a) => a;", "float", 15, TestName = "float")]
   [TestCase("public static string F() => \"a\";", "string", 15, TestName = "string")]
   [TestCase("public static bool F(char c) => char.IsDigit(c);", "InvocationExpression", 33, TestName = "char text operation")]
   [TestCase("public static int F(int[] a) { int s = 0; foreach (int x in a) s += x; return s; }", "ForEachStatement", 43, TestName = "foreach")]
@@ -157,7 +165,7 @@ public sealed class CSharpFrontendTests {
 
   private static IrExpr Returned(IrFunction function) => ((IrReturn)function.Body.Statements[^1]).Value!;
 
-  /// <summary>Every integer type of C#, and <c>char</c>, has its IR type, alone and as the element of an array.</summary>
+  /// <summary>Every numeric type of C#, and <c>char</c>, has its IR type, alone and as the element of an array.</summary>
   [TestCase("sbyte", "i8")]
   [TestCase("byte", "u8")]
   [TestCase("short", "i16")]
@@ -167,7 +175,9 @@ public sealed class CSharpFrontendTests {
   [TestCase("uint", "u32")]
   [TestCase("long", "i64")]
   [TestCase("ulong", "u64")]
-  public void Import_MapsEveryIntegerType(string keyword, string type) {
+  [TestCase("float", "f32")]
+  [TestCase("double", "f64")]
+  public void Import_MapsEveryNumericType(string keyword, string type) {
     var function = Import($"public static {keyword} F({keyword} a, {keyword}[] b) => a;").Functions[0];
     Assert.That(function.ReturnType.ToString(), Is.EqualTo(type));
     Assert.That(function.Parameters.Select(parameter => parameter.Type.ToString()), Is.EqualTo(new[] { type, type + "[]" }));
@@ -219,6 +229,31 @@ public sealed class CSharpFrontendTests {
   /// <summary>A block is compared by the statements in it: the list of a record has no equality of its own.</summary>
   private static bool Same(IrStmt left, IrStmt right)
     => left is IrBlock first && right is IrBlock second ? first.Statements.SequenceEqual(second.Statements) : left.Equals(right);
+
+  /// <summary>
+  /// A cast from floating point saturates as the runtime does, through int for a narrow target, and
+  /// traps in a checked context; a cast to floating point has nothing to lose.
+  /// </summary>
+  [Test]
+  public void FloatingPointCast_CarriesItsContract() {
+    var module = Import(
+      "public static int A(double d) => (int)d; public static byte B(double d) => (byte)d; public static ulong C(float d) => (ulong)d; "
+      + "public static byte D(double d) => checked((byte)d); public static float E(double d) => checked((float)d); "
+      + "public static double G(long d) => d; public static float H(float f) { f++; return f; } public static double I(int a) => a + 1.5;");
+    IrExpr d = new IrLocalRef(new IrLocal("d", IrType.F64));
+    IrExpr f = new IrLocalRef(new IrLocal("f", IrType.F32));
+    Assert.That(Returned(module.Functions[0]), Is.EqualTo(new IrConvert(IrType.I32, d, IrConversion.Saturate)));
+    Assert.That(Returned(module.Functions[1]), Is.EqualTo(new IrConvert(IrType.U8, new IrConvert(IrType.I32, d, IrConversion.Saturate))));
+    Assert.That(Returned(module.Functions[2]), Is.EqualTo(new IrConvert(IrType.U64, new IrLocalRef(new IrLocal("d", IrType.F32)), IrConversion.Saturate)));
+    Assert.That(Returned(module.Functions[3]), Is.EqualTo(new IrConvert(IrType.U8, d, IrConversion.Trap)));
+    Assert.That(Returned(module.Functions[4]), Is.EqualTo(new IrConvert(IrType.F32, d)));
+    Assert.That(Returned(module.Functions[5]), Is.EqualTo(new IrConvert(IrType.F64, new IrLocalRef(new IrLocal("d", IrType.I64)))));
+    Assert.That(module.Functions[6].Body.Statements[0], Is.EqualTo(
+      new IrAssign(new IrLocal("f", IrType.F32), new IrBinary(IrBinaryOp.Add, f, new IrConst(IrType.F32, 0x3F800000)))));
+    Assert.That(Returned(module.Functions[7]), Is.EqualTo(new IrBinary(IrBinaryOp.Add,
+      new IrConvert(IrType.F64, new IrLocalRef(new IrLocal("a", IrType.I32))), new IrConst(IrType.F64, 0x3FF8000000000000))));
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+  }
 
   /// <summary>The compilation default: everything outside an explicit context traps, a lossless cast still cannot.</summary>
   [Test]

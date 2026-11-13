@@ -125,6 +125,22 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("long", "checked(a * b)", "$ck(a * b, -9223372036854775808n, 9223372036854775807n)")]
   [TestCase("long", "checked(-a)", "$ck(-a, -9223372036854775808n, 9223372036854775807n)")]
   [TestCase("ulong", "checked(a - b)", "$ck(a - b, 0n, 18446744073709551615n)")]
+  [TestCase("double", "a + b", "a + b")]
+  [TestCase("double", "a - b", "a - b")]
+  [TestCase("double", "a * b + a", "(a * b) + a")]
+  [TestCase("double", "a / b", "a / b")]
+  [TestCase("double", "a % b", "a % b")]
+  [TestCase("double", "-a", "-a")]
+  [TestCase("double", "a - -0.0", "a - (-0)")]
+  [TestCase("double", "a * 1e-7 + 1e21", "(a * 1E-07) + 1E+21")]
+  [TestCase("double", "checked(a * b - -a)", "(a * b) - (-a)")]
+  [TestCase("float", "a + b", "Math.fround(a + b)")]
+  [TestCase("float", "a - b", "Math.fround(a - b)")]
+  [TestCase("float", "a * b + a", "Math.fround(Math.fround(a * b) + a)")]
+  [TestCase("float", "a / b", "Math.fround(a / b)")]
+  [TestCase("float", "a % b", "Math.fround(a % b)")]
+  [TestCase("float", "-a", "-a")]
+  [TestCase("float", "a * 0.1f", "Math.fround(a * 0.10000000149011612)")]
   public void Arithmetic_IsWrittenToWrap(string type, string expression, string expected)
     => Assert.That(Body($"public static {type} F({type} a, {type} b) => {expression};"), Is.EqualTo(new[] { $"return {expected};" }));
 
@@ -146,6 +162,8 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("long", "a >> (n + 1)", "a >> BigInt(((n + 1) | 0) & 63)")]
   [TestCase("ulong", "a >>> n", "a >> BigInt(n & 63)")]
   [TestCase("ulong", "a == a", "a === a")]
+  [TestCase("double", "a == a", "a === a")]
+  [TestCase("float", "a < a", "a < a")]
   [TestCase("long", "a < a", "a < a")]
   public void Wide_ShiftAndComparison_AreWritten(string type, string expression, string expected) {
     var returns = expression.Contains('=') || expression.Contains('<') && !expression.Contains("<<") ? "bool" : type;
@@ -189,6 +207,32 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("long", "int", "checked((long)a)", "BigInt(a)")]
   [TestCase("long", "bool", "long.MinValue", "-9223372036854775808n")]
   [TestCase("ulong", "bool", "ulong.MaxValue", "18446744073709551615n")]
+  [TestCase("double", "int", "a", "a")]
+  [TestCase("double", "uint", "a", "a")]
+  [TestCase("double", "float", "a", "a")]
+  [TestCase("float", "int", "a", "Math.fround(a)")]
+  [TestCase("float", "double", "(float)a", "Math.fround(a)")]
+  [TestCase("double", "long", "a", "Number(a)")]
+  [TestCase("double", "ulong", "a", "Number(a)")]
+  [TestCase("float", "long", "a", "$f32(a)")]
+  [TestCase("float", "ulong", "a", "$f32(a)")]
+  [TestCase("int", "double", "(int)a", "$f2i(a, -2147483648, 2147483647)")]
+  [TestCase("uint", "float", "(uint)a", "$f2i(a, 0, 4294967295)")]
+  [TestCase("byte", "double", "(byte)a", "$f2i(a, -2147483648, 2147483647) & 0xFF")]
+  [TestCase("short", "float", "(short)a", "$f2i(a, -2147483648, 2147483647) << 16 >> 16")]
+  [TestCase("long", "double", "(long)a", "$f2l(a, -9223372036854775808, 9223372036854775808)")]
+  [TestCase("ulong", "double", "(ulong)a", "$f2l(a, 0, 18446744073709551616)")]
+  [TestCase("int", "double", "checked((int)a)", "$f2ic(a, -2147483648, 2147483647)")]
+  [TestCase("byte", "float", "checked((byte)a)", "$f2ic(a, 0, 255)")]
+  [TestCase("long", "float", "checked((long)a)", "$f2lc(a, -9223372036854775808, 9223372036854775808)")]
+  [TestCase("ulong", "double", "checked((ulong)a)", "$f2lc(a, 0, 18446744073709551616)")]
+  [TestCase("double", "bool", "double.NaN", "NaN")]
+  [TestCase("double", "bool", "double.NegativeInfinity", "-Infinity")]
+  [TestCase("float", "bool", "float.PositiveInfinity", "Infinity")]
+  [TestCase("double", "bool", "-0.0", "-0")]
+  [TestCase("double", "bool", "double.MaxValue", "1.7976931348623157E+308")]
+  [TestCase("float", "bool", "float.Epsilon", "1.401298464324817E-45")]
+  [TestCase("double", "bool", "a ? 1.5 : -1.5", "a ? 1.5 : (-1.5)")]
   public void Conversion_IsWritten(string to, string from, string expression, string expected)
     => Assert.That(Body($"public static {to} F({from} a) => {expression};"), Is.EqualTo(new[] { $"return {expected};" }));
 
@@ -202,6 +246,8 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("char", "Uint16Array")]
   [TestCase("long", "BigInt64Array")]
   [TestCase("ulong", "BigUint64Array")]
+  [TestCase("float", "Float32Array")]
+  [TestCase("double", "Float64Array")]
   public void Array_UsesTheTypedArrayOfItsElement(string element, string storage) {
     var body = Body($"public static {element}[] F({element}[] a, int n) {{ {element}[] b = new {element}[n + a.Length]; b[0] = a[1]; return b; }}");
     Assert.That(body, Is.EqualTo(new[] {
@@ -273,11 +319,25 @@ public sealed class JavaScriptEmitterTests {
       .And.Contain("if (value < low || value > high) throw new RangeError(\"integer overflow\");"));
   }
 
+  /// <summary>The helpers of the conversions from and to floating point, in their order.</summary>
+  [Test]
+  public void FloatHelpers_AreListedOnceAndOnlyWhenUsed() {
+    var text = Emit(
+      "public static float F(double d, long n) => (int)d + (long)d + checked((int)d) + checked((long)d) + (float)n + (int)d;");
+    var helpers = text.Split('\n').Where(line => line.StartsWith("function $")).Select(line => line[..line.IndexOf('(')]);
+    Assert.That(helpers, Is.EqualTo(new[] { "function $f2i", "function $f2l", "function $f2ic", "function $f2lc", "function $f32" }));
+    Assert.That(text, Does.Contain("if (value !== value) return 0;").And.Contain("if (value !== value) return 0n;")
+      .And.Contain("if (!(whole >= low && whole <= high)) throw new RangeError(\"integer overflow\");")
+      .And.Contain("if (!(whole >= low && whole < limit)) throw new RangeError(\"integer overflow\");")
+      .And.Contain("magnitude = (magnitude >> 11n) | (magnitude & 2047n ? 1n : 0n);"));
+  }
+
   /// <summary>Above every function: what crosses its boundary as a number, a BigInt or a typed array.</summary>
   [Test]
   public void Function_StatesItsBoundaryInAComment() {
-    var text = Emit("public static ulong F(long a, bool b, char c, short[] d) => 1; private static void G() { }");
+    var text = Emit("public static ulong F(long a, bool b, char c, short[] d) => 1; public static float H(double a, float[] b) => 1; private static void G() { }");
     Assert.That(text, Does.Contain("\n// F(a: bigint, b: boolean, c: number, d: Int16Array): bigint\nexport function F(a, b, c, d) {\n  return 1n;\n}\n"));
+    Assert.That(text, Does.Contain("\n// H(a: number, b: Float32Array): number\nexport function H(a, b) {\n  return 1;\n}\n"));
     Assert.That(text, Does.EndWith("\n// G(): void\nfunction G() {\n}\n"));
   }
 

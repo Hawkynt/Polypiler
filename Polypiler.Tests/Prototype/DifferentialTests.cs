@@ -78,10 +78,44 @@ public sealed class DifferentialTests {
     Assert.That(PrototypeFixture.InterpretedOutcome(_modules[fixture], call), Is.EqualTo(expected));
   }
 
+  /// <summary>
+  /// Test design 9 and 10: what the installed runtime does with a floating-point number at the edge of
+  /// an integer type, as ADR 0002 records it for .NET 10 - saturating, a NaN to 0, a narrow target
+  /// through int - and what it does at the edge of floating point itself.
+  /// </summary>
+  [TestCase("wide/Conversions", "DoubleToByte", new object[] { 300.7 }, "44")]
+  [TestCase("wide/Conversions", "DoubleToByte", new object[] { 2147483648.0 }, "255")]
+  [TestCase("wide/Conversions", "DoubleToSByte", new object[] { -129.0 }, "127")]
+  [TestCase("wide/Conversions", "DoubleToInt", new object[] { 3e9 }, "2147483647")]
+  [TestCase("wide/Conversions", "DoubleToInt", new object[] { -3e9 }, "-2147483648")]
+  [TestCase("wide/Conversions", "DoubleToInt", new object[] { double.NaN }, "0")]
+  [TestCase("wide/Conversions", "DoubleToInt", new object[] { -0.9 }, "0")]
+  [TestCase("wide/Conversions", "DoubleToUInt", new object[] { -1.0 }, "0")]
+  [TestCase("wide/Conversions", "DoubleToULong", new object[] { 1e20 }, "18446744073709551615")]
+  [TestCase("wide/Conversions", "DoubleToLong", new object[] { double.NegativeInfinity }, "-9223372036854775808")]
+  [TestCase("wide/Conversions", "DoubleToIntChecked", new object[] { 2147483647.9 }, "2147483647")]
+  [TestCase("wide/Conversions", "ULongToFloat", new object[] { 0x8000008000000001UL }, "f:43e0000020000000")]
+  [TestCase("wide/Conversions", "LongToFloat", new object[] { 0x4000004000000001L }, "f:43d0000020000000")]
+  [TestCase("wide/Conversions", "IntToFloat", new object[] { 16777217 }, "16777216")]
+  [TestCase("wide/Conversions", "DoubleToFloat", new object[] { 1e300 }, "f:7ff0000000000000")]
+  [TestCase("wide/OperatorsWide", "MultiplyAdd", new object[] { 16777217f, 3f }, "67108864")]
+  [TestCase("wide/OperatorsWide", "MultiplyAddDouble", new object[] { 16777217.0, 3.0 }, "67108868")]
+  [TestCase("wide/OperatorsWide", "DivideDouble", new object[] { 1.0, 0.0 }, "f:7ff0000000000000")]
+  [TestCase("wide/OperatorsWide", "RemainderDouble", new object[] { -7.5, 2.0 }, "f:bff8000000000000")]
+  [TestCase("wide/OperatorsWide", "EqualDouble", new object[] { double.NaN, double.NaN }, "false")]
+  [TestCase("wide/OperatorsWide", "NotLess", new object[] { double.NaN, 1.0 }, "true")]
+  [TestCase("wide/OperatorsWide", "NegateDouble", new object[] { 0.0 }, "f:8000000000000000")]
+  public void FloatingPoint_FollowsTheRuntime(string fixture, string method, object[] arguments, string expected) {
+    var call = new PrototypeCall(method, arguments);
+    Assert.That(PrototypeFixture.CompiledOutcome(fixture, call), Is.EqualTo(expected));
+    Assert.That(PrototypeFixture.InterpretedOutcome(_modules[fixture], call), Is.EqualTo(expected));
+  }
+
   private static readonly (string Keyword, string Name, Type Type)[] _numeric = [
     ("sbyte", "SByte", typeof(sbyte)), ("byte", "Byte", typeof(byte)), ("short", "Short", typeof(short)),
     ("ushort", "UShort", typeof(ushort)), ("char", "Char", typeof(char)), ("int", "Int", typeof(int)),
-    ("uint", "UInt", typeof(uint)), ("long", "Long", typeof(long)), ("ulong", "ULong", typeof(ulong))
+    ("uint", "UInt", typeof(uint)), ("long", "Long", typeof(long)), ("ulong", "ULong", typeof(ulong)),
+    ("float", "Float", typeof(float)), ("double", "Double", typeof(double))
   ];
 
   private static IEnumerable<TestCaseData> Promotions()
@@ -136,6 +170,12 @@ public sealed class DifferentialTests {
   [TestCase("wide/Conversions", "LongToIntChecked", new object[] { 2147483648L }, IrTrap.IntegerOverflow)]
   [TestCase("wide/Conversions", "IntToULongChecked", new object[] { -1 }, IrTrap.IntegerOverflow)]
   [TestCase("wide/Conversions", "ULongToLongChecked", new object[] { ulong.MaxValue }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Conversions", "DoubleToIntChecked", new object[] { double.NaN }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Conversions", "DoubleToIntChecked", new object[] { 2147483648.0 }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Conversions", "FloatToByteChecked", new object[] { 256f }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Conversions", "DoubleToLongChecked", new object[] { 9223372036854775808.0 }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Conversions", "DoubleToULongChecked", new object[] { -1.0 }, IrTrap.IntegerOverflow)]
+  [TestCase("wide/Conversions", "FloatToULongChecked", new object[] { float.PositiveInfinity }, IrTrap.IntegerOverflow)]
   public void WideOperation_TrapsWhereTheCompiledFixtureThrows(string fixture, string method, object[] arguments, IrTrap trap) {
     var call = new PrototypeCall(method, arguments);
     Assert.That(PrototypeFixture.CompiledOutcome(fixture, call), Is.EqualTo(PrototypeFixture.Trap(trap)));
@@ -187,6 +227,8 @@ public sealed class DifferentialTests {
     Assert.That(PrototypeFixture.Outcome(uint.MaxValue, []), Is.EqualTo("4294967295"));
     Assert.That(PrototypeFixture.Outcome('A', [new[] { 'B' }, new[] { ulong.MaxValue }]), Is.EqualTo("65 | [66] | [18446744073709551615]"));
     Assert.That(PrototypeFixture.ClassOf("wide/Crc16"), Is.EqualTo("Crc16"));
+    Assert.That(new object[] { 1.0, -1f, 0.0, -0.0, 0.5f, double.NaN, float.NaN, 9007199254740991.0, 9007199254740992.0, double.NegativeInfinity }.Select(PrototypeFixture.Show),
+      Is.EqualTo(new[] { "1", "-1", "0", "f:8000000000000000", "f:3fe0000000000000", "NaN", "NaN", "9007199254740991", "f:4340000000000000", "f:fff0000000000000" }));
     Assert.That(() => PrototypeFixture.Compiled("Numbers", "Missing"), Throws.TypeOf<MissingMethodException>());
     Assert.That(() => PrototypeFixture.Import("x.cs", "class"), Throws.InvalidOperationException);
   }

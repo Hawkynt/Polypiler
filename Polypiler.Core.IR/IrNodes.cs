@@ -13,7 +13,8 @@ public abstract record IrExpr(IrType Type);
 
 /// <summary>
 /// A constant. Integers carry their numeric value, a <c>u64</c> its 64 bits (so a value above the
-/// largest <c>i64</c> is negative here), truth values 0 or 1.
+/// largest <c>i64</c> is negative here), truth values 0 or 1, floating-point numbers their IEEE 754
+/// bits as <see cref="IrOperators.Bits"/> gives them.
 /// </summary>
 /// <param name="Type">The type of the constant.</param>
 /// <param name="Value">The value, within the range of <paramref name="Type"/>.</param>
@@ -26,7 +27,10 @@ public sealed record IrLocalRef(IrLocal Local) : IrExpr(Local.Type);
 /// <summary>The operators with one operand.</summary>
 public enum IrUnaryOp {
 
-  /// <summary>Two's-complement negation of a signed integer; the smallest value negates to itself.</summary>
+  /// <summary>
+  /// Two's-complement negation of a signed integer, where the smallest value negates to itself, or
+  /// the change of sign of a floating-point number.
+  /// </summary>
   Negate,
 
   /// <summary>Negation of a signed integer that traps on the smallest value, which has no negative.</summary>
@@ -48,13 +52,16 @@ public sealed record IrUnary(IrUnaryOp Op, IrExpr Operand) : IrExpr(Operand.Type
 /// <summary>The operators with two operands.</summary>
 public enum IrBinaryOp {
 
-  /// <summary>Addition modulo 2^width.</summary>
+  /// <summary>Addition: modulo 2^width for integers, rounded to nearest even for floating point.</summary>
   Add,
 
-  /// <summary>Subtraction modulo 2^width.</summary>
+  /// <summary>Subtraction: modulo 2^width for integers, rounded to nearest even for floating point.</summary>
   Subtract,
 
-  /// <summary>Multiplication modulo 2^width.</summary>
+  /// <summary>
+  /// Multiplication: modulo 2^width for integers, rounded to nearest even for floating point. It is
+  /// never fused with an addition.
+  /// </summary>
   Multiply,
 
   /// <summary>Addition of integers that traps when the sum is not a value of the type.</summary>
@@ -67,12 +74,16 @@ public enum IrBinaryOp {
   MultiplyChecked,
 
   /// <summary>
-  /// Division truncating towards zero. Traps on a zero divisor, and on the one signed quotient
-  /// that does not fit (smallest value divided by -1).
+  /// Division. Of integers it truncates towards zero and traps on a zero divisor and on the one signed
+  /// quotient that does not fit (smallest value divided by -1). Of floating-point numbers it follows
+  /// IEEE 754 and never traps.
   /// </summary>
   Divide,
 
-  /// <summary>Remainder with the sign of the dividend; traps exactly where <see cref="Divide"/> does.</summary>
+  /// <summary>
+  /// Remainder with the sign of the dividend, the quotient truncated; of integers it traps exactly
+  /// where <see cref="Divide"/> does, of floating-point numbers never.
+  /// </summary>
   Remainder,
 
   /// <summary>Bitwise and.</summary>
@@ -93,13 +104,13 @@ public enum IrBinaryOp {
   /// <summary>Shift right by the masked count, filling with zeros whatever the signedness.</summary>
   ShiftRightLogical,
 
-  /// <summary>Equality of two numbers of one type or two truth values.</summary>
+  /// <summary>Equality of two numbers of one type or two truth values; a NaN equals nothing.</summary>
   Equal,
 
   /// <summary>Inequality of two numbers of one type or two truth values.</summary>
   NotEqual,
 
-  /// <summary>Less than, in the signedness of the operands.</summary>
+  /// <summary>Less than, in the signedness of the operands; false when an operand is a NaN, like every ordering.</summary>
   Less,
 
   /// <summary>Less than or equal, in the signedness of the operands.</summary>
@@ -135,12 +146,22 @@ public enum IrConversion {
   /// <summary>The value modulo 2^width of the target type.</summary>
   Wrap,
 
-  /// <summary>The conversion traps with an integer overflow.</summary>
-  Trap
+  /// <summary>The conversion traps with an integer overflow; a NaN traps as well.</summary>
+  Trap,
+
+  /// <summary>
+  /// A floating-point number is truncated towards zero and becomes the smallest or largest value of
+  /// the integer type when it lies outside; a NaN becomes 0.
+  /// </summary>
+  Saturate
 
 }
 
-/// <summary>A conversion between numeric types.</summary>
+/// <summary>
+/// A conversion between numeric types. Between integers it wraps or traps; from floating point to
+/// an integer it saturates or traps; to floating point it rounds to nearest even, has no value it
+/// cannot convert and carries <see cref="IrConversion.Wrap"/>.
+/// </summary>
 /// <param name="Type">The target type.</param>
 /// <param name="Operand">The value converted.</param>
 /// <param name="Contract">What happens to a value outside the target type.</param>

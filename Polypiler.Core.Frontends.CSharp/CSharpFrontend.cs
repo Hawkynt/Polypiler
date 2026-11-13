@@ -16,7 +16,8 @@ public sealed record ImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Di
 
 /// <summary>
 /// Imports the prototype subset of C#: one static class of static methods over the integer types of
-/// 8 to 64 bits, <c>char</c>, <c>bool</c> and one-dimensional arrays of the numeric types.
+/// 8 to 64 bits, <c>char</c>, <c>float</c>, <c>double</c>, <c>bool</c> and one-dimensional arrays of
+/// the numeric types.
 /// </summary>
 public static class CSharpFrontend {
 

@@ -145,6 +145,10 @@ internal sealed class Lowering(string path, SemanticModel model) {
         return IrType.I64;
       case SpecialType.System_UInt64:
         return IrType.U64;
+      case SpecialType.System_Single:
+        return IrType.F32;
+      case SpecialType.System_Double:
+        return IrType.F64;
       case SpecialType.System_Boolean:
         return IrType.Bool;
       case SpecialType.System_Void:
@@ -314,7 +318,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
     var target = this.Target(operand, into, true);
     var current = target.Read();
     var word = current.Type.IsArithmetic ? current.Type : IrType.I32;
-    var stepped = Binary(increment ? IrBinaryOp.Add : IrBinaryOp.Subtract, Convert(current, word), new IrConst(word, 1), operand, trap);
+    var stepped = Binary(increment ? IrBinaryOp.Add : IrBinaryOp.Subtract, Convert(current, word), One(word), operand, trap);
     into.Add(target.Write(Convert(stepped, current.Type, trap)));
   }
 
@@ -492,23 +496,61 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
   /// <summary>
   /// Converts between numeric types. A constant is converted here when the conversion is one the
-  /// compiler applies silently, which loses nothing; a conversion that could lose something traps
-  /// when it stands in a checked context and wraps around otherwise.
+  /// compiler applies silently; a conversion between integers that could lose something traps when
+  /// it stands in a checked context and wraps around otherwise.
+  /// <para>
+  /// A floating-point number converted to an integer traps in a checked context. Otherwise it is
+  /// converted as the runtime converts it (ADR 0002, measured on .NET 10): saturating, with a NaN
+  /// becoming 0, and for a target narrower than <c>int</c> saturating to <c>int</c> first and then
+  /// keeping the low bits.
+  /// </para>
   /// </summary>
   private static IrExpr Convert(IrExpr value, IrType type, bool trap = false) {
-    if (value.Type == type)
+    var from = value.Type;
+    if (from == type)
       return value;
 
-    var lossy = trap && !IrOperators.Contains(type, value.Type);
+    if (type.IsFloat)
+      return value is IrConst number
+        ? new IrConst(type, IrOperators.Bits(type, Rounded(number, type)))
+        : new IrConvert(type, value);
+
+    if (from.IsFloat) {
+      if (trap)
+        return new IrConvert(type, value, IrConversion.Trap);
+
+      return type.Bits < 32
+        ? new IrConvert(type, new IrConvert(IrType.I32, value, IrConversion.Saturate))
+        : new IrConvert(type, value, IrConversion.Saturate);
+    }
+
+    var lossy = trap && !IrOperators.Contains(type, from);
     return value is IrConst constant && !lossy
       ? new IrConst(type, IrOperators.Wrap(type, constant.Value))
       : new IrConvert(type, value, lossy ? IrConversion.Trap : IrConversion.Wrap);
   }
 
+  /// <summary>A constant as a floating-point number of a type, rounded as the runtime rounds the conversion.</summary>
+  private static double Rounded(IrConst constant, IrType type) {
+    var from = constant.Type;
+    if (from.IsFloat)
+      return IrOperators.Float(from, constant.Value);
+
+    if (type == IrType.F32)
+      return from == IrType.U64 ? (float)(ulong)constant.Value : (float)constant.Value;
+
+    return from == IrType.U64 ? (double)(ulong)constant.Value : (double)constant.Value;
+  }
+
+  /// <summary>The constant 1 of an arithmetic type, which a step adds or subtracts.</summary>
+  private static IrConst One(IrType type) => new(type, type.IsFloat ? IrOperators.Bits(type, 1) : 1);
+
   /// <summary>A constant of the compiler as the IR carries it.</summary>
   private static long Carried(object value) => value switch {
     ulong large => (long)large,
     char unit => unit,
+    float single => IrOperators.Bits(IrType.F32, single),
+    double number => IrOperators.Bits(IrType.F64, number),
     _ => System.Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture)
   };
 

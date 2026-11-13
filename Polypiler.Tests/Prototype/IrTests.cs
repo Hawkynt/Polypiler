@@ -103,6 +103,22 @@ public sealed class IrTests {
     yield return Case("i16 constant too small", Returning(new IrConst(IrType.I16, -32769)), "the constant -32769 is not a value of i16");
     yield return Case("u16 constant too large", Returning(new IrConst(IrType.U16, 65536)), "the constant 65536 is not a value of u16");
     yield return Case("void constant", Statement(new IrExprStmt(new IrConst(IrType.Void, 0))), "the constant 0 is not a value of void");
+    IrExpr real = new IrConst(IrType.F64, 0);
+    IrExpr single = new IrConst(IrType.F32, 0);
+    yield return Case("complement of a float", Returning(new IrUnary(IrUnaryOp.BitNot, real)), "BitNot is applied to f64");
+    yield return Case("checked negation of a float", Returning(new IrUnary(IrUnaryOp.NegateChecked, single)), "NegateChecked is applied to f32");
+    yield return Case("checked sum of floats", Returning(new IrBinary(IrBinaryOp.AddChecked, real, real)), "AddChecked is applied to f64 and f64");
+    yield return Case("and of floats", Returning(new IrBinary(IrBinaryOp.And, single, single)), "And is applied to f32 and f32");
+    yield return Case("shift of a float", Returning(new IrBinary(IrBinaryOp.ShiftLeft, real, _one)), "ShiftLeft is applied to f64 and i32");
+    yield return Case("f32 with f64", Returning(new IrBinary(IrBinaryOp.Divide, single, real)), "Divide is applied to f32 and f64");
+    yield return Case("float compared with an integer", Returning(new IrBinary(IrBinaryOp.Less, real, _one)), "Less is applied to f64 and i32");
+    yield return Case("f32 constant with 64 bits", Returning(new IrConst(IrType.F32, 1L << 32)), "the constant 4294967296 is not a value of f32");
+    yield return Case("float to integer that wraps", Returning(new IrConvert(IrType.I32, real)), "a conversion from f64 to i32 with the contract Wrap");
+    yield return Case("integer to integer that saturates", Returning(new IrConvert(IrType.U8, _one, IrConversion.Saturate)), "a conversion from i32 to u8 with the contract Saturate");
+    yield return Case("integer to float that traps", Returning(new IrConvert(IrType.F64, _one, IrConversion.Trap)), "a conversion from i32 to f64 with the contract Trap");
+    yield return Case("float to float that saturates", Returning(new IrConvert(IrType.F32, real, IrConversion.Saturate)), "a conversion from f64 to f32 with the contract Saturate");
+    yield return Case("float to bool", Returning(new IrConvert(IrType.Bool, real, IrConversion.Saturate)), "a conversion from f64 to bool");
+    yield return Case("array to float", Returning(new IrConvert(IrType.F64, Ref(_data))), "a conversion from i32[] to f64");
     yield return Case("conversion from bool", Returning(new IrConvert(IrType.I32, _true)), "a conversion from bool to i32");
     yield return Case("conversion to bool", Returning(new IrConvert(IrType.Bool, _one)), "a conversion from i32 to bool");
     yield return Case("conditional on a number", Returning(new IrConditional(_one, _one, _one)), "the condition of a conditional expression has the type i32");
@@ -147,6 +163,10 @@ public sealed class IrTests {
     Assert.That(IrVerifier.Verify(Returning(new IrConvert(IrType.I8, new IrBinary(IrBinaryOp.ShiftRightLogical,
       new IrBinary(IrBinaryOp.MultiplyChecked, new IrUnary(IrUnaryOp.NegateChecked, wide), new IrUnary(IrUnaryOp.BitNot, wide)), _one)))), Is.Empty);
     Assert.That(IrVerifier.Verify(Returning(new IrBinary(IrBinaryOp.GreaterOrEqual, large, new IrConst(IrType.U64, long.MinValue)))), Is.Empty);
+    IrExpr real = new IrConvert(IrType.F64, new IrConvert(IrType.F32, large));
+    Assert.That(IrVerifier.Verify(Returning(new IrConvert(IrType.U8, new IrBinary(IrBinaryOp.Remainder, new IrUnary(IrUnaryOp.Negate, real), real), IrConversion.Saturate))), Is.Empty);
+    Assert.That(IrVerifier.Verify(Returning(new IrConvert(IrType.I64, new IrConst(IrType.F32, int.MinValue), IrConversion.Trap))), Is.Empty);
+    Assert.That(IrVerifier.Verify(Returning(new IrBinary(IrBinaryOp.NotEqual, real, real))), Is.Empty);
   }
 
   /// <summary>A local declared in a block that ended can be declared again in the next one.</summary>
@@ -171,6 +191,11 @@ public sealed class IrTests {
     }));
     Assert.That(new[] { IrType.Void, IrType.Bool, _ints }.Select(type => (type.Bits, type.IsSigned, type.IsNumeric, type.IsArithmetic, type.IsLong)),
       Has.All.EqualTo((0, false, false, false, false)));
+    Assert.That(new[] { IrType.F32, IrType.F64 }.Select(type => type.ToString()), Is.EqualTo(new[] { "f32", "f64" }));
+    Assert.That(new[] { IrType.F32, IrType.F64 }.Select(type => (type.IsFloat, type.IsNumeric, type.IsArithmetic, type.IsStorable, IrType.Array(type).IsStorable)),
+      Has.All.EqualTo((true, true, true, true, true)));
+    Assert.That(new[] { IrType.F32, IrType.F64 }.Select(type => (type.IsInteger, type.IsWideInteger, type.IsSigned, type.Bits)), Has.All.EqualTo((false, false, false, 0)));
+    Assert.That(integers.Select(type => type.IsFloat), Has.All.False);
     Assert.That(new[] { IrType.Void, IrType.Bool, IrType.U8, IrType.I32, IrType.U32, _ints }.Select(type => (type.IsInteger, type.IsWord, type.IsArray, type.IsStorable)),
       Is.EqualTo(new[] { (false, false, false, false), (false, false, false, true), (true, false, false, true), (true, true, false, true), (true, true, false, true), (false, false, true, true) }));
     var bytes = IrType.Array(IrType.U8);
@@ -214,6 +239,18 @@ public sealed class IrTests {
     Assert.That(IrOperators.Contains(IrType.I64, type), Is.EqualTo(kind != IrTypeKind.U64));
     Assert.That(IrOperators.Contains(type, IrType.U8), Is.EqualTo(kind != IrTypeKind.I8));
     Assert.That(IrOperators.Number(type, -1).ToString(), Is.EqualTo(kind == IrTypeKind.U64 ? maximum : "-1"));
+  }
+
+  /// <summary>A floating-point constant is its bits; a binary32 one is rounded on the way in and exact on the way out.</summary>
+  [Test]
+  public void FloatConstant_IsCarriedAsItsBits() {
+    Assert.That(IrOperators.Bits(IrType.F64, 1.5), Is.EqualTo(0x3FF8000000000000));
+    Assert.That(IrOperators.Bits(IrType.F32, 1.5), Is.EqualTo(0x3FC00000));
+    Assert.That(IrOperators.Bits(IrType.F32, 0.1), Is.EqualTo(BitConverter.SingleToInt32Bits(0.1f)));
+    Assert.That(IrOperators.Bits(IrType.F32, -0.0), Is.EqualTo(int.MinValue));
+    Assert.That(IrOperators.Float(IrType.F64, IrOperators.Bits(IrType.F64, -0.1)), Is.EqualTo(-0.1));
+    Assert.That(IrOperators.Float(IrType.F32, IrOperators.Bits(IrType.F32, 0.1)), Is.EqualTo((double)0.1f));
+    Assert.That(double.IsNaN(IrOperators.Float(IrType.F32, IrOperators.Bits(IrType.F32, double.NaN))), Is.True);
   }
 
   [Test]
@@ -269,6 +306,8 @@ public sealed class IrTests {
     Assert.That(Create(IrType.U16, 1), Is.TypeOf<ushort[]>());
     Assert.That(Create(IrType.I64, 1), Is.TypeOf<long[]>());
     Assert.That(Create(IrType.U64, 3), Is.EqualTo(new ulong[3]).And.TypeOf<ulong[]>());
+    Assert.That(Create(IrType.F32, 1), Is.TypeOf<float[]>());
+    Assert.That(Create(IrType.F64, 1), Is.TypeOf<double[]>());
   }
 
   /// <summary>
@@ -296,6 +335,13 @@ public sealed class IrTests {
     Assert.That(Pass(IrType.U16, 'A'), Is.EqualTo((ushort)65).And.TypeOf<ushort>());
     Assert.That(Pass(IrType.I64, long.MinValue), Is.EqualTo(long.MinValue).And.TypeOf<long>());
     Assert.That(Pass(IrType.U64, ulong.MaxValue), Is.EqualTo(ulong.MaxValue).And.TypeOf<ulong>());
+    Assert.That(Pass(IrType.F32, 0.1f), Is.EqualTo(0.1f).And.TypeOf<float>());
+    Assert.That(Pass(IrType.F64, 0.1), Is.EqualTo(0.1).And.TypeOf<double>());
+    var singles = new[] { 0.1f, 0f };
+    Assert.That((Swap(IrType.F32, singles), singles[1]), Is.EqualTo((0.1f, 0.1f)));
+    var doubles = new[] { -0.1, 0.0 };
+    Assert.That((Swap(IrType.F64, doubles), doubles[1]), Is.EqualTo((-0.1, -0.1)));
+    Assert.That(() => Pass(IrType.F64, 0.1f), Throws.ArgumentException.With.Message.Contains("'p' is not a value of f64"));
 
     var letters = new[] { 'x', 'y' };
     Assert.That(Swap(IrType.U16, letters), Is.EqualTo((ushort)'x'));

@@ -15,6 +15,8 @@ internal static class PromotionOracle {
   public static object SByteInt(sbyte a, int b) => a + b;
   public static object SByteUInt(sbyte a, uint b) => a + b;
   public static object SByteLong(sbyte a, long b) => a + b;
+  public static object SByteFloat(sbyte a, float b) => a + b;
+  public static object SByteDouble(sbyte a, double b) => a + b;
   public static object ByteSByte(byte a, sbyte b) => a + b;
   public static object ByteByte(byte a, byte b) => a + b;
   public static object ByteShort(byte a, short b) => a + b;
@@ -24,6 +26,8 @@ internal static class PromotionOracle {
   public static object ByteUInt(byte a, uint b) => a + b;
   public static object ByteLong(byte a, long b) => a + b;
   public static object ByteULong(byte a, ulong b) => a + b;
+  public static object ByteFloat(byte a, float b) => a + b;
+  public static object ByteDouble(byte a, double b) => a + b;
   public static object ShortSByte(short a, sbyte b) => a + b;
   public static object ShortByte(short a, byte b) => a + b;
   public static object ShortShort(short a, short b) => a + b;
@@ -32,6 +36,8 @@ internal static class PromotionOracle {
   public static object ShortInt(short a, int b) => a + b;
   public static object ShortUInt(short a, uint b) => a + b;
   public static object ShortLong(short a, long b) => a + b;
+  public static object ShortFloat(short a, float b) => a + b;
+  public static object ShortDouble(short a, double b) => a + b;
   public static object UShortSByte(ushort a, sbyte b) => a + b;
   public static object UShortByte(ushort a, byte b) => a + b;
   public static object UShortShort(ushort a, short b) => a + b;
@@ -41,6 +47,8 @@ internal static class PromotionOracle {
   public static object UShortUInt(ushort a, uint b) => a + b;
   public static object UShortLong(ushort a, long b) => a + b;
   public static object UShortULong(ushort a, ulong b) => a + b;
+  public static object UShortFloat(ushort a, float b) => a + b;
+  public static object UShortDouble(ushort a, double b) => a + b;
   public static object CharSByte(char a, sbyte b) => a + b;
   public static object CharByte(char a, byte b) => a + b;
   public static object CharShort(char a, short b) => a + b;
@@ -50,6 +58,8 @@ internal static class PromotionOracle {
   public static object CharUInt(char a, uint b) => a + b;
   public static object CharLong(char a, long b) => a + b;
   public static object CharULong(char a, ulong b) => a + b;
+  public static object CharFloat(char a, float b) => a + b;
+  public static object CharDouble(char a, double b) => a + b;
   public static object IntSByte(int a, sbyte b) => a + b;
   public static object IntByte(int a, byte b) => a + b;
   public static object IntShort(int a, short b) => a + b;
@@ -58,6 +68,8 @@ internal static class PromotionOracle {
   public static object IntInt(int a, int b) => a + b;
   public static object IntUInt(int a, uint b) => a + b;
   public static object IntLong(int a, long b) => a + b;
+  public static object IntFloat(int a, float b) => a + b;
+  public static object IntDouble(int a, double b) => a + b;
   public static object UIntSByte(uint a, sbyte b) => a + b;
   public static object UIntByte(uint a, byte b) => a + b;
   public static object UIntShort(uint a, short b) => a + b;
@@ -67,6 +79,8 @@ internal static class PromotionOracle {
   public static object UIntUInt(uint a, uint b) => a + b;
   public static object UIntLong(uint a, long b) => a + b;
   public static object UIntULong(uint a, ulong b) => a + b;
+  public static object UIntFloat(uint a, float b) => a + b;
+  public static object UIntDouble(uint a, double b) => a + b;
   public static object LongSByte(long a, sbyte b) => a + b;
   public static object LongByte(long a, byte b) => a + b;
   public static object LongShort(long a, short b) => a + b;
@@ -75,10 +89,36 @@ internal static class PromotionOracle {
   public static object LongInt(long a, int b) => a + b;
   public static object LongUInt(long a, uint b) => a + b;
   public static object LongLong(long a, long b) => a + b;
+  public static object LongFloat(long a, float b) => a + b;
+  public static object LongDouble(long a, double b) => a + b;
   public static object ULongByte(ulong a, byte b) => a + b;
   public static object ULongUShort(ulong a, ushort b) => a + b;
   public static object ULongChar(ulong a, char b) => a + b;
   public static object ULongUInt(ulong a, uint b) => a + b;
   public static object ULongULong(ulong a, ulong b) => a + b;
+  public static object ULongFloat(ulong a, float b) => a + b;
+  public static object ULongDouble(ulong a, double b) => a + b;
+  public static object FloatSByte(float a, sbyte b) => a + b;
+  public static object FloatByte(float a, byte b) => a + b;
+  public static object FloatShort(float a, short b) => a + b;
+  public static object FloatUShort(float a, ushort b) => a + b;
+  public static object FloatChar(float a, char b) => a + b;
+  public static object FloatInt(float a, int b) => a + b;
+  public static object FloatUInt(float a, uint b) => a + b;
+  public static object FloatLong(float a, long b) => a + b;
+  public static object FloatULong(float a, ulong b) => a + b;
+  public static object FloatFloat(float a, float b) => a + b;
+  public static object FloatDouble(float a, double b) => a + b;
+  public static object DoubleSByte(double a, sbyte b) => a + b;
+  public static object DoubleByte(double a, byte b) => a + b;
+  public static object DoubleShort(double a, short b) => a + b;
+  public static object DoubleUShort(double a, ushort b) => a + b;
+  public static object DoubleChar(double a, char b) => a + b;
+  public static object DoubleInt(double a, int b) => a + b;
+  public static object DoubleUInt(double a, uint b) => a + b;
+  public static object DoubleLong(double a, long b) => a + b;
+  public static object DoubleULong(double a, ulong b) => a + b;
+  public static object DoubleFloat(double a, float b) => a + b;
+  public static object DoubleDouble(double a, double b) => a + b;
 
 }

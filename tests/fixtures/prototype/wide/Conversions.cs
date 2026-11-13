@@ -20,6 +20,10 @@ public static class Conversions {
   public static long SByteToLongChecked(sbyte a) => checked((long)a);
   public static ulong SByteToULong(sbyte a) => (ulong)a;
   public static ulong SByteToULongChecked(sbyte a) => checked((ulong)a);
+  public static float SByteToFloat(sbyte a) => (float)a;
+  public static float SByteToFloatChecked(sbyte a) => checked((float)a);
+  public static double SByteToDouble(sbyte a) => (double)a;
+  public static double SByteToDoubleChecked(sbyte a) => checked((double)a);
 
   public static sbyte ByteToSByte(byte a) => (sbyte)a;
   public static sbyte ByteToSByteChecked(byte a) => checked((sbyte)a);
@@ -37,6 +41,10 @@ public static class Conversions {
   public static long ByteToLongChecked(byte a) => checked((long)a);
   public static ulong ByteToULong(byte a) => (ulong)a;
   public static ulong ByteToULongChecked(byte a) => checked((ulong)a);
+  public static float ByteToFloat(byte a) => (float)a;
+  public static float ByteToFloatChecked(byte a) => checked((float)a);
+  public static double ByteToDouble(byte a) => (double)a;
+  public static double ByteToDoubleChecked(byte a) => checked((double)a);
 
   public static sbyte ShortToSByte(short a) => (sbyte)a;
   public static sbyte ShortToSByteChecked(short a) => checked((sbyte)a);
@@ -54,6 +62,10 @@ public static class Conversions {
   public static long ShortToLongChecked(short a) => checked((long)a);
   public static ulong ShortToULong(short a) => (ulong)a;
   public static ulong ShortToULongChecked(short a) => checked((ulong)a);
+  public static float ShortToFloat(short a) => (float)a;
+  public static float ShortToFloatChecked(short a) => checked((float)a);
+  public static double ShortToDouble(short a) => (double)a;
+  public static double ShortToDoubleChecked(short a) => checked((double)a);
 
   public static sbyte UShortToSByte(ushort a) => (sbyte)a;
   public static sbyte UShortToSByteChecked(ushort a) => checked((sbyte)a);
@@ -71,6 +83,10 @@ public static class Conversions {
   public static long UShortToLongChecked(ushort a) => checked((long)a);
   public static ulong UShortToULong(ushort a) => (ulong)a;
   public static ulong UShortToULongChecked(ushort a) => checked((ulong)a);
+  public static float UShortToFloat(ushort a) => (float)a;
+  public static float UShortToFloatChecked(ushort a) => checked((float)a);
+  public static double UShortToDouble(ushort a) => (double)a;
+  public static double UShortToDoubleChecked(ushort a) => checked((double)a);
 
   public static sbyte CharToSByte(char a) => (sbyte)a;
   public static sbyte CharToSByteChecked(char a) => checked((sbyte)a);
@@ -88,6 +104,10 @@ public static class Conversions {
   public static long CharToLongChecked(char a) => checked((long)a);
   public static ulong CharToULong(char a) => (ulong)a;
   public static ulong CharToULongChecked(char a) => checked((ulong)a);
+  public static float CharToFloat(char a) => (float)a;
+  public static float CharToFloatChecked(char a) => checked((float)a);
+  public static double CharToDouble(char a) => (double)a;
+  public static double CharToDoubleChecked(char a) => checked((double)a);
 
   public static sbyte IntToSByte(int a) => (sbyte)a;
   public static sbyte IntToSByteChecked(int a) => checked((sbyte)a);
@@ -105,6 +125,10 @@ public static class Conversions {
   public static long IntToLongChecked(int a) => checked((long)a);
   public static ulong IntToULong(int a) => (ulong)a;
   public static ulong IntToULongChecked(int a) => checked((ulong)a);
+  public static float IntToFloat(int a) => (float)a;
+  public static float IntToFloatChecked(int a) => checked((float)a);
+  public static double IntToDouble(int a) => (double)a;
+  public static double IntToDoubleChecked(int a) => checked((double)a);
 
   public static sbyte UIntToSByte(uint a) => (sbyte)a;
   public static sbyte UIntToSByteChecked(uint a) => checked((sbyte)a);
@@ -122,6 +146,10 @@ public static class Conversions {
   public static long UIntToLongChecked(uint a) => checked((long)a);
   public static ulong UIntToULong(uint a) => (ulong)a;
   public static ulong UIntToULongChecked(uint a) => checked((ulong)a);
+  public static float UIntToFloat(uint a) => (float)a;
+  public static float UIntToFloatChecked(uint a) => checked((float)a);
+  public static double UIntToDouble(uint a) => (double)a;
+  public static double UIntToDoubleChecked(uint a) => checked((double)a);
 
   public static sbyte LongToSByte(long a) => (sbyte)a;
   public static sbyte LongToSByteChecked(long a) => checked((sbyte)a);
@@ -139,6 +167,10 @@ public static class Conversions {
   public static uint LongToUIntChecked(long a) => checked((uint)a);
   public static ulong LongToULong(long a) => (ulong)a;
   public static ulong LongToULongChecked(long a) => checked((ulong)a);
+  public static float LongToFloat(long a) => (float)a;
+  public static float LongToFloatChecked(long a) => checked((float)a);
+  public static double LongToDouble(long a) => (double)a;
+  public static double LongToDoubleChecked(long a) => checked((double)a);
 
   public static sbyte ULongToSByte(ulong a) => (sbyte)a;
   public static sbyte ULongToSByteChecked(ulong a) => checked((sbyte)a);
@@ -156,5 +188,51 @@ public static class Conversions {
   public static uint ULongToUIntChecked(ulong a) => checked((uint)a);
   public static long ULongToLong(ulong a) => (long)a;
   public static long ULongToLongChecked(ulong a) => checked((long)a);
+  public static float ULongToFloat(ulong a) => (float)a;
+  public static float ULongToFloatChecked(ulong a) => checked((float)a);
+  public static double ULongToDouble(ulong a) => (double)a;
+  public static double ULongToDoubleChecked(ulong a) => checked((double)a);
+
+  public static sbyte FloatToSByte(float a) => (sbyte)a;
+  public static sbyte FloatToSByteChecked(float a) => checked((sbyte)a);
+  public static byte FloatToByte(float a) => (byte)a;
+  public static byte FloatToByteChecked(float a) => checked((byte)a);
+  public static short FloatToShort(float a) => (short)a;
+  public static short FloatToShortChecked(float a) => checked((short)a);
+  public static ushort FloatToUShort(float a) => (ushort)a;
+  public static ushort FloatToUShortChecked(float a) => checked((ushort)a);
+  public static char FloatToChar(float a) => (char)a;
+  public static char FloatToCharChecked(float a) => checked((char)a);
+  public static int FloatToInt(float a) => (int)a;
+  public static int FloatToIntChecked(float a) => checked((int)a);
+  public static uint FloatToUInt(float a) => (uint)a;
+  public static uint FloatToUIntChecked(float a) => checked((uint)a);
+  public static long FloatToLong(float a) => (long)a;
+  public static long FloatToLongChecked(float a) => checked((long)a);
+  public static ulong FloatToULong(float a) => (ulong)a;
+  public static ulong FloatToULongChecked(float a) => checked((ulong)a);
+  public static double FloatToDouble(float a) => (double)a;
+  public static double FloatToDoubleChecked(float a) => checked((double)a);
+
+  public static sbyte DoubleToSByte(double a) => (sbyte)a;
+  public static sbyte DoubleToSByteChecked(double a) => checked((sbyte)a);
+  public static byte DoubleToByte(double a) => (byte)a;
+  public static byte DoubleToByteChecked(double a) => checked((byte)a);
+  public static short DoubleToShort(double a) => (short)a;
+  public static short DoubleToShortChecked(double a) => checked((short)a);
+  public static ushort DoubleToUShort(double a) => (ushort)a;
+  public static ushort DoubleToUShortChecked(double a) => checked((ushort)a);
+  public static char DoubleToChar(double a) => (char)a;
+  public static char DoubleToCharChecked(double a) => checked((char)a);
+  public static int DoubleToInt(double a) => (int)a;
+  public static int DoubleToIntChecked(double a) => checked((int)a);
+  public static uint DoubleToUInt(double a) => (uint)a;
+  public static uint DoubleToUIntChecked(double a) => checked((uint)a);
+  public static long DoubleToLong(double a) => (long)a;
+  public static long DoubleToLongChecked(double a) => checked((long)a);
+  public static ulong DoubleToULong(double a) => (ulong)a;
+  public static ulong DoubleToULongChecked(double a) => checked((ulong)a);
+  public static float DoubleToFloat(double a) => (float)a;
+  public static float DoubleToFloatChecked(double a) => checked((float)a);
 
 }

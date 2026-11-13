@@ -48,7 +48,8 @@ public sealed class IrTrapException : Exception {
 /// <summary>
 /// Evaluates the IR directly. Values cross the boundary as the .NET type of the same width and
 /// signedness (a <c>u16</c> is accepted as <see cref="ushort"/> or <see cref="char"/> and returned as
-/// <see cref="ushort"/>), as <see cref="bool"/>, and as one-dimensional arrays of the numeric types;
+/// <see cref="ushort"/>), as <see cref="float"/>, <see cref="double"/> and <see cref="bool"/>, and as
+/// one-dimensional arrays of the numeric types;
 /// arrays are passed by reference, so a function can change the caller's array.
 /// </summary>
 public static class IrInterpreter {
@@ -109,6 +110,8 @@ public static class IrInterpreter {
       TypeCode.UInt32 => IrType.U32,
       TypeCode.Int64 => IrType.I64,
       TypeCode.UInt64 => IrType.U64,
+      TypeCode.Single => IrType.F32,
+      TypeCode.Double => IrType.F64,
       _ => null
     };
   }
@@ -121,12 +124,14 @@ public static class IrInterpreter {
     IrTypeKind.I32 => typeof(int),
     IrTypeKind.U32 => typeof(uint),
     IrTypeKind.I64 => typeof(long),
-    _ => typeof(ulong)
+    IrTypeKind.U64 => typeof(ulong),
+    IrTypeKind.F32 => typeof(float),
+    _ => typeof(double)
   };
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool => value,
+    Array or bool or float or double => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -141,8 +146,8 @@ public static class IrInterpreter {
     TypeCode.Char => (char)(long)value,
     TypeCode.Int32 => (int)(long)value,
     TypeCode.UInt32 => (uint)(long)value,
-    TypeCode.Int64 => value,
-    _ => (ulong)(long)value
+    TypeCode.UInt64 => (ulong)(long)value,
+    _ => value
   };
 
   private static object? ToHost(IrType type, object? value)
@@ -209,11 +214,19 @@ public static class IrInterpreter {
     private object Evaluate(IrExpr expression, Frame frame) {
       switch (expression) {
         case IrConst constant:
-          return constant.Type == IrType.Bool ? constant.Value != 0 : constant.Value;
+          return constant.Type.Kind switch {
+            IrTypeKind.Bool => constant.Value != 0,
+            IrTypeKind.F32 => (float)IrOperators.Float(constant.Type, constant.Value),
+            IrTypeKind.F64 => IrOperators.Float(constant.Type, constant.Value),
+            _ => constant.Value
+          };
         case IrLocalRef reference:
           return frame.Locals[reference.Local];
         case IrUnary unary:
           var operand = this.Evaluate(unary.Operand, frame);
+          if (unary.Type.IsFloat)
+            return operand is float single ? -single : -(double)operand;
+
           return unary.Op switch {
             IrUnaryOp.Negate => IrOperators.Wrap(unary.Type, -(long)operand),
             IrUnaryOp.NegateChecked => Fit(unary.Type, -IrOperators.Number(unary.Type, (long)operand)),
@@ -259,6 +272,12 @@ public static class IrInterpreter {
         return binary.Op == IrBinaryOp.Equal ? first.Equals(second) : !first.Equals(second);
 
       var type = binary.Left.Type;
+      if (type == IrType.F32)
+        return Binary(binary.Op, (float)first, (float)second);
+
+      if (type == IrType.F64)
+        return Binary(binary.Op, (double)first, (double)second);
+
       var left = (long)first;
       var right = (long)second;
       var a = IrOperators.Number(type, left);
@@ -310,11 +329,80 @@ public static class IrInterpreter {
       }
     }
 
+    /// <summary>
+    /// An operator on binary32 numbers. C# computes it in binary32, so every result is rounded once,
+    /// to binary32, as the IR requires.
+    /// </summary>
+    private static object Binary(IrBinaryOp op, float left, float right) => op switch {
+      IrBinaryOp.Add => left + right,
+      IrBinaryOp.Subtract => left - right,
+      IrBinaryOp.Multiply => left * right,
+      IrBinaryOp.Divide => left / right,
+      IrBinaryOp.Remainder => left % right,
+      _ => Compare(op, left, right)
+    };
+
+    private static object Binary(IrBinaryOp op, double left, double right) => op switch {
+      IrBinaryOp.Add => left + right,
+      IrBinaryOp.Subtract => left - right,
+      IrBinaryOp.Multiply => left * right,
+      IrBinaryOp.Divide => left / right,
+      IrBinaryOp.Remainder => left % right,
+      _ => Compare(op, left, right)
+    };
+
+    /// <summary>A comparison of floating-point numbers; a binary32 pair compares the same when widened.</summary>
+    private static bool Compare(IrBinaryOp op, double left, double right) => op switch {
+      IrBinaryOp.Equal => left == right,
+      IrBinaryOp.NotEqual => left != right,
+      IrBinaryOp.Less => left < right,
+      IrBinaryOp.LessOrEqual => left <= right,
+      IrBinaryOp.Greater => left > right,
+      _ => left >= right
+    };
+
     private static object Convert(IrConvert conversion, object operand) {
+      var from = conversion.Operand.Type;
+      var to = conversion.Type;
+      if (from.IsFloat) {
+        var number = operand is float single ? single : (double)operand;
+        if (to == IrType.F32)
+          return (float)number;
+
+        if (to == IrType.F64)
+          return number;
+
+        return Whole(to, number, conversion.Contract == IrConversion.Trap);
+      }
+
       var value = (long)operand;
+      if (to == IrType.F32)
+        return from == IrType.U64 ? (float)(ulong)value : (float)value;
+
+      if (to == IrType.F64)
+        return from == IrType.U64 ? (double)(ulong)value : (double)value;
+
       return conversion.Contract == IrConversion.Trap
-        ? Fit(conversion.Type, IrOperators.Number(conversion.Operand.Type, value))
-        : IrOperators.Wrap(conversion.Type, value);
+        ? Fit(to, IrOperators.Number(from, value))
+        : IrOperators.Wrap(to, value);
+    }
+
+    /// <summary>
+    /// A floating-point number as an integer: truncated towards zero, and when the truncated number is
+    /// not a value of the type either the overflow trap or the nearest value of the type, with a NaN
+    /// becoming 0. Both bounds are powers of two, which a double holds exactly.
+    /// </summary>
+    private static long Whole(IrType type, double number, bool trap) {
+      var whole = Math.Truncate(number);
+      var low = (double)IrOperators.Minimum(type);
+      var limit = (double)(IrOperators.Maximum(type) + 1);
+      if (whole >= low && whole < limit)
+        return (long)(Int128)whole;
+
+      if (trap)
+        throw new IrTrapException(IrTrap.IntegerOverflow);
+
+      return double.IsNaN(number) ? 0 : (long)(number < 0 ? IrOperators.Minimum(type) : IrOperators.Maximum(type));
     }
 
     /// <summary>The number as a value of the type, or the overflow trap when it is not one.</summary>

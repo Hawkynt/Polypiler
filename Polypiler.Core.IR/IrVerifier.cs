@@ -194,12 +194,22 @@ public static class IrVerifier {
         $"the arguments of the call of '{call.Function}' do not match its parameters");
     }
 
-    private static bool Converts(IrConvert conversion)
-      => conversion.Type.IsInteger && conversion.Operand.Type.IsInteger && conversion.Contract is IrConversion.Wrap or IrConversion.Trap;
+    private static bool Converts(IrConvert conversion) {
+      var from = conversion.Operand.Type;
+      if (!from.IsNumeric || !conversion.Type.IsNumeric)
+        return false;
+
+      if (conversion.Type.IsFloat)
+        return conversion.Contract == IrConversion.Wrap;
+
+      return conversion.Contract == IrConversion.Trap || conversion.Contract == (from.IsFloat ? IrConversion.Saturate : IrConversion.Wrap);
+    }
 
     private static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
       IrTypeKind.Void or IrTypeKind.Array => false,
+      IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
+      IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))
     };
 

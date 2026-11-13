@@ -22,6 +22,23 @@ internal static class PrototypeCases {
   private static readonly bool[] _bools = [false, true];
 
   /// <summary>
+  /// The boundary values of floating point: both zeros, both infinities, NaN, the smallest subnormal,
+  /// the largest finite number, the last integers a float and a double hold exactly and their
+  /// neighbours, halves that round either way, and the numbers just inside and outside the range of
+  /// every integer type.
+  /// </summary>
+  private static readonly double[] _doubles = [
+    0.0, -0.0, double.PositiveInfinity, double.NegativeInfinity, double.NaN, double.Epsilon, float.Epsilon,
+    double.MaxValue, -double.MaxValue, float.MaxValue,
+    16777215, 16777216, 16777217, 9007199254740991, 9007199254740992, 9007199254740993,
+    0.5, -0.5, 1.5, 2.5, -2.5, 1, -1, 3,
+    127.5, 128, -128.5, -129, 255.5, 256, 32767.5, 32768, -32769, 65535.5, 65536,
+    2147483647, 2147483647.5, 2147483648, -2147483648.5, -2147483649, 4294967295.5, 4294967296,
+    9223372036854774784.0, 9223372036854775808.0, -9223372036854775808.0, -9223372036854777856.0,
+    18446744073709549568.0, 18446744073709551616.0, 1e30, -1e30
+  ];
+
+  /// <summary>
   /// For every parameter type: its boundary values, and how 64 random bits become one of its values.
   /// An <c>int</c> is also a shift count, so it has the counts around the widths 32 and 64 as well.
   /// </summary>
@@ -35,7 +52,9 @@ internal static class PrototypeCases {
     [typeof(int)] = Integer(31, 32, 33, 63, 64, 65),
     [typeof(uint)] = Integer<uint>(),
     [typeof(long)] = Integer<long>(),
-    [typeof(ulong)] = Integer<ulong>()
+    [typeof(ulong)] = Integer<ulong>(),
+    [typeof(float)] = (_doubles.Select(value => (object)(float)value).Distinct().ToArray(), bits => (float)RandomDouble(bits, true)),
+    [typeof(double)] = (_doubles.Cast<object>().ToArray(), bits => RandomDouble(bits, false))
   };
 
   /// <summary>The calls for a fixture.</summary>
@@ -95,6 +114,8 @@ internal static class PrototypeCases {
       Call("Compute", new byte[] { 0 }),
       Call("Compute", new byte[] { 255 })
     ],
+    "wide/Horner" => Horner(),
+    "wide/Fir" => Fir(),
     "wide/Fletcher16" => [
       Call("Compute", Text("abcde")),
       Call("Compute", Text("")),
@@ -111,6 +132,38 @@ internal static class PrototypeCases {
   public static byte[] Text(string text) => Encoding.ASCII.GetBytes(text);
 
   private static PrototypeCall Call(string method, params object[] arguments) => new(method, arguments);
+
+  private static List<PrototypeCall> Horner() {
+    var calls = new List<PrototypeCall>();
+    double[][] polynomials = [[], [7], [1, 2, 3], [0.1, -0.2, 0.3, -0.4, 0.5], [1e300, 1e300], [double.NaN, 1]];
+    foreach (var coefficients in polynomials)
+      foreach (var x in new[] { 0.0, -0.0, 1, -1, 0.1, 16777217, 1e200, double.PositiveInfinity, double.NaN }) {
+        var singles = coefficients.Select(coefficient => (float)coefficient).ToArray();
+        calls.Add(Call("Evaluate", coefficients, x));
+        calls.Add(Call("EvaluateSingle", singles, (float)x));
+        calls.Add(Call("EvaluateMixed", singles, x));
+      }
+
+    return calls;
+  }
+
+  private static List<PrototypeCall> Fir() {
+    var calls = new List<PrototypeCall>();
+    double[][] signals = [[], [1], [1, 2], [1, 0, 0, 0, 0], [0.1, 0.2, 0.3, 0.4, 0.5, 0.6], [16777217, 3, -16777217, 1e30, -1e30]];
+    foreach (var signal in signals) {
+      var singles = signal.Select(sample => (float)sample).ToArray();
+      calls.Add(Call("Filter", signal, new double[signal.Length], 0.25, 0.5, 0.25));
+      calls.Add(Call("Filter", signal, new double[signal.Length], 1.0 / 3.0, -1.0 / 3.0, 1e-7));
+      calls.Add(Call("FilterSingle", singles, new float[signal.Length], 0.25f, 0.5f, 0.25f));
+      calls.Add(Call("FilterSingle", singles, new float[signal.Length], 1f / 3f, -1f / 3f, 1e-7f));
+      calls.Add(Call("MovingAverage", singles));
+      calls.Add(Call("Energy", signal));
+    }
+
+    // An output that is too short: the write outside it traps after the elements before it were written.
+    calls.Add(Call("Filter", new double[] { 1, 2, 3 }, new double[2], 1.0, 1.0, 1.0));
+    return calls;
+  }
 
   private static List<PrototypeCall> Numbers() {
     var calls = new List<PrototypeCall> {
@@ -259,6 +312,17 @@ internal static class PrototypeCases {
     var (edges, fromBits) = Integer<int>();
     return (edges.Concat(counts.Cast<object>()).ToArray(), fromBits);
   }
+
+  /// <summary>
+  /// 64 random bits as a floating-point number: a third of the time the bits themselves, which reaches
+  /// subnormals, infinities and NaNs; a third an integer of random magnitude; a third a multiple of one
+  /// half, where rounding and truncation differ. For a float the bits are 32.
+  /// </summary>
+  private static double RandomDouble(ulong bits, bool single) => (bits % 3) switch {
+    0 => single ? BitConverter.Int32BitsToSingle((int)(bits >> 8)) : BitConverter.Int64BitsToDouble((long)bits),
+    1 => (long)bits >> (int)((bits >> 8) & 63),
+    _ => ((long)bits >> 44) / 2.0
+  };
 
   /// <summary>
   /// A random operand: one time in eight a boundary value, one time in eight a value close to zero,

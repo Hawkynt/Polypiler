@@ -12,7 +12,10 @@ namespace Polypiler.Core.Backends.JavaScript;
 /// exactly. Integers of up to 32 bits are numbers: <c>| 0</c> and <c>Math.imul</c> for <c>i32</c>,
 /// <c>&gt;&gt;&gt; 0</c> for <c>u32</c>, masks and sign-extending shifts for the 8- and 16-bit types.
 /// Integers of 64 bits are <c>BigInt</c>s cut to size with <c>BigInt.asIntN</c> and
-/// <c>BigInt.asUintN</c>. Arrays are typed arrays. The operations that can trap go through small
+/// <c>BigInt.asUintN</c>. A <c>double</c> is a number as it is; every <c>float</c> operation is
+/// rounded to binary32 with <c>Math.fround</c>, which is exact because a double holds the sum,
+/// difference, product and quotient of two binary32 numbers precisely enough to round once. Arrays
+/// are typed arrays. The operations that can trap or need more than an expression go through small
 /// helper functions, of which a module carries exactly the ones it uses.
 /// </summary>
 public static class JavaScriptEmitter {
@@ -35,6 +38,46 @@ public static class JavaScriptEmitter {
     ("$udiv64", ["function $udiv64(a, b) {", ZeroDivisor64, "  return a / b;", "}"]),
     ("$urem64", ["function $urem64(a, b) {", ZeroDivisor64, "  return a % b;", "}"]),
     ("$ck", ["function $ck(value, low, high) {", "  if (value < low || value > high) " + Overflow, "  return value;", "}"]),
+    ("$f2i", [
+      "function $f2i(value, low, high) {",
+      "  if (value !== value) return 0;",
+      "  return value <= low ? low : value >= high ? high : Math.trunc(value) + 0;",
+      "}"
+    ]),
+    ("$f2l", [
+      "function $f2l(value, low, limit) {",
+      "  if (value !== value) return 0n;",
+      "  if (value >= limit) return BigInt(limit) - 1n;",
+      "  return value <= low ? BigInt(low) : BigInt(Math.trunc(value));",
+      "}"
+    ]),
+    ("$f2ic", [
+      "function $f2ic(value, low, high) {",
+      "  const whole = Math.trunc(value);",
+      "  if (!(whole >= low && whole <= high)) " + Overflow,
+      "  return whole + 0;",
+      "}"
+    ]),
+    ("$f2lc", [
+      "function $f2lc(value, low, limit) {",
+      "  const whole = Math.trunc(value);",
+      "  if (!(whole >= low && whole < limit)) " + Overflow,
+      "  return BigInt(whole);",
+      "}"
+    ]),
+    ("$f32", [
+      "function $f32(value) {",
+      "  const negative = value < 0n;",
+      "  let magnitude = negative ? -value : value;",
+      "  let scale = 1;",
+      "  if (magnitude >= 9007199254740992n) {",
+      "    magnitude = (magnitude >> 11n) | (magnitude & 2047n ? 1n : 0n);",
+      "    scale = 2048;",
+      "  }",
+      "  const result = Math.fround(Number(magnitude)) * scale;",
+      "  return negative ? -result : result;",
+      "}"
+    ]),
     ("$get", ["function $get(array, index) {", OutOfRange, "  return array[index];", "}"]),
     ("$set", ["function $set(array, index, value) {", OutOfRange, "  array[index] = value;", "}"]),
     ("$len", ["function $len(length) {", "  if (length < 0) " + Overflow, "  return length;", "}"])
@@ -51,7 +94,7 @@ public static class JavaScriptEmitter {
     "private", "protected", "public", "return", "static", "super", "switch", "this", "throw", "true",
     "try", "typeof", "var", "void", "while", "with", "yield",
     "Math", "RangeError", "BigInt", "Number", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array",
-    "Int32Array", "Uint32Array", "BigInt64Array", "BigUint64Array"
+    "Int32Array", "Uint32Array", "BigInt64Array", "BigUint64Array", "Float32Array", "Float64Array", "NaN", "Infinity"
   ];
 
   /// <summary>Emits the module as <c>&lt;name&gt;.mjs</c>, exporting every public function.</summary>
@@ -75,7 +118,9 @@ public static class JavaScriptEmitter {
     IrTypeKind.I32 => "Int32Array",
     IrTypeKind.U32 => "Uint32Array",
     IrTypeKind.I64 => "BigInt64Array",
-    _ => "BigUint64Array"
+    IrTypeKind.U64 => "BigUint64Array",
+    IrTypeKind.F32 => "Float32Array",
+    _ => "Float64Array"
   };
 
   /// <summary>What a value of an IR type is in JavaScript, as the header of a function states it.</summary>
@@ -90,6 +135,17 @@ public static class JavaScriptEmitter {
   /// <summary>An integer as a literal of its type: a number, or a <c>BigInt</c> for 64 bits.</summary>
   private static string Literal(IrType type, Int128 value)
     => value.ToString(CultureInfo.InvariantCulture) + (type.IsLong ? "n" : "");
+
+  /// <summary>
+  /// A floating-point number as a literal that reads back as exactly that number: the shortest digits
+  /// that identify the double. A binary32 number is widened first, which changes nothing about it.
+  /// </summary>
+  private static string Literal(double value) {
+    if (double.IsNaN(value))
+      return "NaN";
+
+    return double.IsInfinity(value) ? (value < 0 ? "-Infinity" : "Infinity") : value.ToString("R", CultureInfo.InvariantCulture);
+  }
 
   private sealed class Writer {
 
@@ -208,6 +264,11 @@ public static class JavaScriptEmitter {
           if (constant.Type == IrType.Bool)
             return (constant.Value != 0 ? "true" : "false", true);
 
+          if (constant.Type.IsFloat) {
+            var literal = Literal(IrOperators.Float(constant.Type, constant.Value));
+            return (literal, literal[0] != '-');
+          }
+
           var number = IrOperators.Number(constant.Type, constant.Value);
           return (Literal(constant.Type, number), number >= 0);
         case IrLocalRef reference:
@@ -215,7 +276,8 @@ public static class JavaScriptEmitter {
         case IrUnary unary:
           return this.Unary(unary);
         case IrBinary binary:
-          return binary.Left.Type.IsLong ? this.Binary64(binary) : this.Binary(binary);
+          var operands = binary.Left.Type;
+          return operands.IsFloat ? this.BinaryFloat(binary) : operands.IsLong ? this.Binary64(binary) : this.Binary(binary);
         case IrConvert conversion:
           return this.Convert(conversion);
         case IrConditional choice:
@@ -253,6 +315,8 @@ public static class JavaScriptEmitter {
       var operand = this.Operand(unary.Operand);
       var type = unary.Type;
       switch (unary.Op) {
+        case IrUnaryOp.Negate when type.IsFloat:
+          return ("-" + operand, false);
         case IrUnaryOp.Negate:
           return type.IsLong ? Wrap(type, "-" + operand) : ($"-{operand} | 0", false);
         case IrUnaryOp.NegateChecked:
@@ -340,6 +404,24 @@ public static class JavaScriptEmitter {
       }
     }
 
+    /// <summary>
+    /// An operator on floating-point numbers. JavaScript computes in binary64, which is the operation
+    /// itself for <c>f64</c>; for <c>f32</c> the result is rounded to binary32.
+    /// </summary>
+    private (string Text, bool Atomic) BinaryFloat(IrBinary binary) {
+      var left = this.Operand(binary.Left);
+      var right = this.Operand(binary.Right);
+      var sign = binary.Op switch {
+        IrBinaryOp.Add => "+",
+        IrBinaryOp.Subtract => "-",
+        IrBinaryOp.Multiply => "*",
+        IrBinaryOp.Divide => "/",
+        IrBinaryOp.Remainder => "%",
+        _ => Sign(binary.Op)
+      };
+      return binary.Type == IrType.F32 ? ($"Math.fround({left} {sign} {right})", true) : ($"{left} {sign} {right}", false);
+    }
+
     private static string CheckedSign(IrBinaryOp op) => op switch {
       IrBinaryOp.AddChecked => "+",
       IrBinaryOp.SubtractChecked => "-",
@@ -364,6 +446,12 @@ public static class JavaScriptEmitter {
     private (string Text, bool Atomic) Convert(IrConvert conversion) {
       var from = conversion.Operand.Type;
       var to = conversion.Type;
+      if (to.IsFloat)
+        return this.ToFloat(conversion);
+
+      if (from.IsFloat)
+        return (this.FromFloat(conversion), true);
+
       if (conversion.Contract == IrConversion.Trap) {
         // The bounds are those of the target as far as the source reaches, in the notation of the source.
         var low = Int128.Max(IrOperators.Minimum(to), IrOperators.Minimum(from));
@@ -393,6 +481,32 @@ public static class JavaScriptEmitter {
         IrTypeKind.I32 => $"{operand} | 0",
         _ => $"{operand} >>> 0"
       }, false);
+    }
+
+    /// <summary>
+    /// A number converted to floating point. An integer of up to 32 bits is already a double with its
+    /// value; a BigInt becomes the nearest double, and for <c>f32</c> goes through a helper that rounds
+    /// it once, because rounding to binary64 and then to binary32 can differ from that.
+    /// </summary>
+    private (string Text, bool Atomic) ToFloat(IrConvert conversion) {
+      var from = conversion.Operand.Type;
+      if (from.IsLong)
+        return (conversion.Type == IrType.F32 ? this.Helper("$f32", conversion.Operand) : $"Number({this.Text(conversion.Operand)})", true);
+
+      return conversion.Type == IrType.F64 ? this.Expression(conversion.Operand) : ($"Math.fround({this.Text(conversion.Operand)})", true);
+    }
+
+    /// <summary>
+    /// A floating-point number converted to an integer by a helper that saturates or traps. The bounds
+    /// of a 64-bit target are numbers: its smallest value and the power of two just above its largest.
+    /// </summary>
+    private string FromFloat(IrConvert conversion) {
+      var to = conversion.Type;
+      var trap = conversion.Contract == IrConversion.Trap;
+      var low = IrOperators.Minimum(to).ToString(CultureInfo.InvariantCulture);
+      return to.IsLong
+        ? this.Helper(trap ? "$f2lc" : "$f2l", [this.Text(conversion.Operand), low, (IrOperators.Maximum(to) + 1).ToString(CultureInfo.InvariantCulture)])
+        : this.Helper(trap ? "$f2ic" : "$f2i", [this.Text(conversion.Operand), low, IrOperators.Maximum(to).ToString(CultureInfo.InvariantCulture)]);
     }
 
     private static string Name(string identifier) => _reserved.Contains(identifier) ? identifier + "$" : identifier;

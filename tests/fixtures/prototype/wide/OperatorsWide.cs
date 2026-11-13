@@ -315,6 +315,70 @@ public static class OperatorsWide {
   public static ulong DecrementCheckedULong(ulong a) { checked { a--; --a; } return a; }
   public static ulong UncheckedInsideCheckedULong(ulong a, ulong b) => checked(unchecked(a + b) - b);
 
+  public static float AddFloat(float a, float b) => a + b;
+  public static float SubtractFloat(float a, float b) => a - b;
+  public static float MultiplyFloat(float a, float b) => a * b;
+  public static float DivideFloat(float a, float b) => a / b;
+  public static float RemainderFloat(float a, float b) => a % b;
+  public static bool EqualFloat(float a, float b) => a == b;
+  public static bool NotEqualFloat(float a, float b) => a != b;
+  public static bool LessFloat(float a, float b) => a < b;
+  public static bool LessOrEqualFloat(float a, float b) => a <= b;
+  public static bool GreaterFloat(float a, float b) => a > b;
+  public static bool GreaterOrEqualFloat(float a, float b) => a >= b;
+  public static float PlusFloat(float a) => +a;
+  public static float NegateFloat(float a) => -a;
+  public static float AddAssignFloat(float a, float b) { a += b; return a; }
+  public static float SubtractAssignFloat(float a, float b) { a -= b; return a; }
+  public static float MultiplyAssignFloat(float a, float b) { a *= b; return a; }
+  public static float DivideAssignFloat(float a, float b) { a /= b; return a; }
+  public static float RemainderAssignFloat(float a, float b) { a %= b; return a; }
+  public static float IncrementFloat(float a) { a++; ++a; return a; }
+  public static float DecrementFloat(float a) { a--; --a; return a; }
+  public static float ChooseFloat(bool first, float a, float b) => first ? a : b;
+  public static float AddCheckedFloat(float a, float b) => checked(a + b);
+  public static float SubtractCheckedFloat(float a, float b) => checked(a - b);
+  public static float MultiplyCheckedFloat(float a, float b) => checked(a * b);
+  public static float NegateCheckedFloat(float a) => checked(-a);
+  public static float AddAssignCheckedFloat(float a, float b) { checked { a += b; } return a; }
+  public static float SubtractAssignCheckedFloat(float a, float b) { checked { a -= b; } return a; }
+  public static float MultiplyAssignCheckedFloat(float a, float b) { checked { a *= b; } return a; }
+  public static float IncrementCheckedFloat(float a) { checked { a++; ++a; } return a; }
+  public static float DecrementCheckedFloat(float a) { checked { a--; --a; } return a; }
+  public static float UncheckedInsideCheckedFloat(float a, float b) => checked(unchecked(a + b) - b);
+
+  public static double AddDouble(double a, double b) => a + b;
+  public static double SubtractDouble(double a, double b) => a - b;
+  public static double MultiplyDouble(double a, double b) => a * b;
+  public static double DivideDouble(double a, double b) => a / b;
+  public static double RemainderDouble(double a, double b) => a % b;
+  public static bool EqualDouble(double a, double b) => a == b;
+  public static bool NotEqualDouble(double a, double b) => a != b;
+  public static bool LessDouble(double a, double b) => a < b;
+  public static bool LessOrEqualDouble(double a, double b) => a <= b;
+  public static bool GreaterDouble(double a, double b) => a > b;
+  public static bool GreaterOrEqualDouble(double a, double b) => a >= b;
+  public static double PlusDouble(double a) => +a;
+  public static double NegateDouble(double a) => -a;
+  public static double AddAssignDouble(double a, double b) { a += b; return a; }
+  public static double SubtractAssignDouble(double a, double b) { a -= b; return a; }
+  public static double MultiplyAssignDouble(double a, double b) { a *= b; return a; }
+  public static double DivideAssignDouble(double a, double b) { a /= b; return a; }
+  public static double RemainderAssignDouble(double a, double b) { a %= b; return a; }
+  public static double IncrementDouble(double a) { a++; ++a; return a; }
+  public static double DecrementDouble(double a) { a--; --a; return a; }
+  public static double ChooseDouble(bool first, double a, double b) => first ? a : b;
+  public static double AddCheckedDouble(double a, double b) => checked(a + b);
+  public static double SubtractCheckedDouble(double a, double b) => checked(a - b);
+  public static double MultiplyCheckedDouble(double a, double b) => checked(a * b);
+  public static double NegateCheckedDouble(double a) => checked(-a);
+  public static double AddAssignCheckedDouble(double a, double b) { checked { a += b; } return a; }
+  public static double SubtractAssignCheckedDouble(double a, double b) { checked { a -= b; } return a; }
+  public static double MultiplyAssignCheckedDouble(double a, double b) { checked { a *= b; } return a; }
+  public static double IncrementCheckedDouble(double a) { checked { a++; ++a; } return a; }
+  public static double DecrementCheckedDouble(double a) { checked { a--; --a; } return a; }
+  public static double UncheckedInsideCheckedDouble(double a, double b) => checked(unchecked(a + b) - b);
+
   // uint with int is computed in 64 bits, and so is the negation of a uint.
   public static long AddUIntInt(uint a, int b) => a + b;
   public static long MultiplyIntUInt(int a, uint b) => a * b;
@@ -336,5 +400,24 @@ public static class OperatorsWide {
   public static char Letter() => 'A';
   public static bool IsDigit(char c) => c >= '0' && c <= '9';
   public static int DigitValue(char c) => c - '0';
+
+  // Floating point: mixed operands, comparisons with NaN, constants the compiler folds.
+  public static double AddFloatDouble(float a, double b) => a + b;
+  public static float AddIntFloat(int a, float b) => a + b;
+  public static double AddLongDouble(long a, double b) => a + b;
+  public static float MultiplyAdd(float a, float b) => a * b + a;
+  public static double MultiplyAddDouble(double a, double b) => a * b + a;
+  public static bool IsNaN(double a) { double b = a; return a != b; }
+  public static bool NotLess(double a, double b) => !(a < b);
+  public static double Third() => 1.0 / 3.0;
+  public static float ThirdFloat() => 1f / 3f;
+  public static double NotANumber() => double.NaN;
+  public static double Infinite() => double.NegativeInfinity;
+  public static float InfiniteFloat() => float.PositiveInfinity;
+  public static double NegativeZero() => -0.0;
+  public static double Largest() => double.MaxValue;
+  public static float SmallestFloat() => float.Epsilon;
+  public static double Scale(double a) => a * 1e-7 + 1e21;
+  public static float Tenth(float a) => a * 0.1f;
 
 }

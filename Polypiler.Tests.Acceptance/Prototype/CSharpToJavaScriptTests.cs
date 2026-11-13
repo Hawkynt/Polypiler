@@ -102,6 +102,18 @@ public sealed class CSharpToJavaScriptTests {
     Assert.That(File.ReadAllText(Path.Combine(this._directory, "out", "Snippet.mjs")), Does.Contain("// F(a: number, b: number): bigint"));
   }
 
+  /// <summary>Scenario: Float arithmetic is rounded to binary32 after every operation.</summary>
+  [Test]
+  public void FloatArithmetic_IsRoundedToBinary32AfterEveryOperation() {
+    const string method = "public static float F(float a, float b) => a * b + a;";
+    var call = new PrototypeCall("F", [16777217f, 3f]);
+    var compiled = PrototypeFixture.CompiledOutcome("wide/OperatorsWide", new PrototypeCall("MultiplyAdd", call.Arguments));
+    Assert.That(PrototypeFixture.SourceOf("wide/OperatorsWide"), Does.Contain("public static float MultiplyAdd(float a, float b) => a * b + a;"));
+    Assert.That(this.TranslateSnippet(method, call), Is.EqualTo(compiled));
+    Assert.That(PrototypeFixture.InterpretedOutcome(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), call), Is.EqualTo(compiled));
+    Assert.That(File.ReadAllText(Path.Combine(this._directory, "out", "Snippet.mjs")), Does.Contain("return Math.fround(Math.fround(a * b) + a);"));
+  }
+
   /// <summary>Scenario: A checked addition traps.</summary>
   [Test]
   public void CheckedAddition_Traps() {
