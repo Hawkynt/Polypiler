@@ -25,7 +25,7 @@
 
 It is designed to do more than translate syntax. Polypiler recognizes the *computation* represented by source code, type patterns, library operations, pointer arithmetic, inline assembly and machine instructions. It can reverse source-specific optimizations, reconstruct higher-level operations, then choose a different implementation suited to the destination.
 
-**Project status: specification and initial implementation planning.** This README describes the intended product, not a finished transpiler. The commands and language combinations below are **planned interfaces and acceptance scenarios**, not claims that they already work. The one exception is a first prototype that translates a small subset of C# to JavaScript or back to C#; [Quick start](#-quick-start) shows it and says where it ends. The detailed agent implementation contract is in [PRD.md](docs/PRD.md).
+**Project status: specification and initial implementation planning.** This README describes the intended product, not a finished transpiler. The commands and language combinations below are **planned interfaces and acceptance scenarios**, not claims that they already work. The one exception is a first prototype that translates a small subset of C# and of JSDoc-typed JavaScript to JavaScript or C#; [Quick start](#-quick-start) shows it and says where it ends. The detailed agent implementation contract is in [PRD.md](docs/PRD.md).
 
 A correct algorithm should not need to be manually rewritten for every programming language and processor. Polypiler aims to make algorithm implementations portable through a common, semantically precise intermediate representation (IR) and a verifier-driven compiler pipeline.
 
@@ -66,7 +66,7 @@ generated code — a row changes only in the pull request that makes it true.
 | Language | Dialect / version | Frontend | Backend | Notes |
 | --- | --- | :---: | :---: | --- |
 | C# | C# 14, .NET 10 | ⚠️ | ⚠️ | Prototype subset: static methods over `int`, `uint`, `byte`, `bool` and one-dimensional arrays; `if`, `while`, `for`; no classes with state, strings or exceptions. The backend writes that same subset as one static class, with wrap-around arithmetic in `unchecked` blocks and the loops as `while` |
-| JavaScript | ES2022 modules, Node | — | ⚠️ | Prototype subset: the constructs the C# frontend imports, with explicit 32-bit wrap-around and typed arrays |
+| JavaScript | ES2022 scripts and modules, Node | ⚠️ | ⚠️ | Prototype subset. The frontend imports functions typed in JSDoc (`int32`, `uint32`, `uint8`, `boolean`, `Uint8Array`/`Int32Array`/`Uint32Array`) — declarations and the function-valued properties of one object literal — whose arithmetic is coerced where it stands (`\| 0`, `>>> 0`, a bitwise operand, an index, a typed-array store) or written as `Math.imul`; typed arrays with element access and `length`; `if`, `while`, `for`; no closures, objects, strings, `BigInt`, 64-bit or floating-point values. The backend writes the constructs the C# frontend imports, with explicit 32-bit wrap-around and typed arrays |
 | PowerBASIC | DOS 3.5 (`pb35`), `pb36` | — | — | |
 | C | C11 / C17 / C23 | — | — | |
 | C++ | C++17 / 20 / 23 | — | — | |
@@ -162,6 +162,30 @@ This is a walking skeleton, not the product: one thin path from source to genera
 - **Exit codes:** 0 success, 2 usage error (`PLY0001`), 3 unsupported construct (`PLY1002` in the source, `PLY1052` for IR the C# backend cannot write), 4 invalid C# (`PLY1000`, with the compiler's own message), 70 internal error.
 
 The pairs C# → JavaScript and C# → C# are `executed` on the fixtures in `tests/fixtures/prototype`, not `verified`.
+
+### Run the prototype: JSDoc-typed JavaScript to C# or JavaScript
+
+```bash
+# Works today: two functions of Cipher's OpCodes.js, pinned in this repository, become ./generated/OpCodes.cs
+dotnet run --project Polypiler.Cli -c Release -- translate tests/fixtures/prototype/js/OpCodes.js \
+  --from javascript --to csharp --export RotL32,RotR32 --namespace Cipher --output ./generated
+
+# A JavaScript module goes through the same IR and comes out as a module again; this prints 300286872
+dotnet run --project Polypiler.Cli -c Release -- translate tests/fixtures/prototype/js/adler32.mjs \
+  --from javascript --to javascript --output ./generated
+node --input-type=module -e "import { compute } from './generated/adler32.mjs'; console.log(compute(new TextEncoder().encode('Wikipedia')))"
+```
+
+JavaScript has no static types, so this importer takes them from where the source states them and insists that the source says what it means.
+
+- **Which functions:** `function` declarations, `export function`, and the function-valued properties of an object literal that stands at the top level or directly inside the one immediately invoked function that wraps the file. `--export <name>[,<name>...]` imports the named functions and what they call; without it every function of the file must import. Only the functions are read — what a file does while it loads is not.
+- **Types come from JSDoc:** `@param {type} name` and `@returns {type}` with `int32`, `uint32`, `uint8`, `boolean`, `uint8[]`/`Uint8Array`, `int32[]`/`Int32Array`, `uint32[]`/`Uint32Array`; without `@returns` a function returns nothing. A type is a contract: JavaScript does not check an argument, and neither does the imported code.
+- **Expressions are typed by JavaScript's own rules:** `| & ^ ~ << >>` yield an `int32`, `>>>` a `uint32`, `Math.imul` multiplies in 32 bits. The result of `+` and `-` is a number and is accepted only where it is coerced at once — `(a + b) | 0`, `>>> 0`, as a bitwise operand, as an index, or stored into a typed array. `a * b` is refused wherever it stands, because above 2^53 it loses digits that a 32-bit multiplication keeps; division is `(a / b) | 0` or `(a / b) >>> 0`. A local has the type of its initializer.
+- **Everything else is refused, not approximated:** an uncoerced number is `PLY1103`, a missing or unsupported JSDoc type (`number`, `string`, `BigInt`, `uint16`, the 64-bit types) is `PLY1101`, and closures, objects, classes, `this`, strings, regular arrays, exceptions, `==`, `switch`, `break`, `continue`, `do` and a `var` used outside its block are `PLY1102` — each with its position, one diagnostic per refused function, and nothing is written. An integer of one type used as another must be coerced too: nothing is inferred from how a value is used.
+- **Known differences are announced:** where the imported code cannot behave like the original, the command says so in a note. `js-oob-read`: outside its typed array JavaScript reads `undefined` and ignores a write; the imported code traps. `js-div-zero`: JavaScript divides by zero to `Infinity` or `NaN`; the imported code traps. `js-step-wrap`: `i++` counts on beyond 32 bits in JavaScript; the imported code wraps around, as `(i + 1) | 0` does.
+- **Exit codes:** as above, with 3 for `PLY1101` to `PLY1104` (`PLY1104`: `--export` names a function the file does not have) and 4 for a syntax error (`PLY1100`, with the parser's own message).
+
+Of the 155 functions that stand directly in the `OpCodes` object, 37 import today; `tests/fixtures/prototype/js/OpCodes.import.txt` lists every one with the reason it is refused. The pairs JavaScript → JavaScript and JavaScript → C# are `executed` on the fixtures in `tests/fixtures/prototype/js` — `node` running the original is the oracle — not `verified`.
 
 ### Translate an existing algorithm
 
