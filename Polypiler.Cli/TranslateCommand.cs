@@ -14,8 +14,11 @@ namespace Polypiler.Cli;
 /// <summary>
 /// The <c>translate</c> command of the prototype:
 /// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript&gt; --to &lt;javascript|csharp&gt; --output &lt;directory&gt;</c>.
-/// A target language may take a profile: for C# <c>--profile</c> names the target framework and
-/// <c>--langversion</c> raises the version of the language above the one the profile brings.
+/// A target language may take a profile. <c>--profile</c> is one option that every target reads its
+/// own way: for C# it names the target framework, and <c>--langversion</c> raises the version of the
+/// language above the one the profile brings; for JavaScript it names the language level, and
+/// <c>--module</c>, <c>--global</c> and <c>--typed-arrays</c> say how the file is packaged and what
+/// an ECMAScript 5 engine has.
 /// </summary>
 public static class TranslateCommand {
 
@@ -36,47 +39,61 @@ public static class TranslateCommand {
   private const string Output = "--output";
   private const string Namespace = "--namespace";
   private const string Export = "--export";
+  private const string ExplainTypes = "--explain-types";
   private const string Profile = "--profile";
   private const string LangVersion = "--langversion";
-  private const string ExplainTypes = "--explain-types";
+  private const string Module = "--module";
+  private const string Global = "--global";
+  private const string TypedArrays = "--typed-arrays";
 
   private static readonly string[] _required = [From, To, Output];
 
   /// <summary>The source languages; another one is another entry.</summary>
   private static readonly Frontend[] _frontends = [
-    new("csharp", [], [], _ => null, ImportCSharp),
-    new("javascript", [Export], [ExplainTypes], ExportMisuse, ImportJavaScript)
+    new("csharp", [], _ => null, ImportCSharp),
+    new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
   private static readonly Backend[] _backends = [
-    new("javascript", [], _ => null, (module, _) => IrVerifier.Verify(module), (module, _) => JavaScriptEmitter.Emit(module)),
+    JavaScript(JavaScriptCapabilities.Standard),
     CSharp(CSharpCapabilities.Default)
   ];
 
-  /// <summary>What the value of an option is called in the usage line, where it is not a name.</summary>
-  private static readonly Dictionary<string, string> _values = new() { [LangVersion] = "version" };
-
-  /// <summary>How the command is called, as the help and every usage error show it.</summary>
+  /// <summary>
+  /// How the command is called, as the help and every usage error show it. An option that several
+  /// targets read, such as <c>--profile</c>, is listed once.
+  /// </summary>
   public static string UsageLine { get; } =
     $"{ProductInfo.Name} translate <file> {From} {Choice(_frontends.Select(frontend => frontend.Name))}"
     + $" {To} {Choice(_backends.Select(backend => backend.Name))} {Output} <directory>"
-    + string.Concat(_frontends.SelectMany(frontend => frontend.Options).Select(option => $" [{option} <name>[,<name>...]]"))
-    + string.Concat(_frontends.SelectMany(frontend => frontend.Flags).Select(flag => $" [{flag}]"))
-    + string.Concat(_backends.SelectMany(backend => backend.Options).Select(option => $" [{option} <{_values.GetValueOrDefault(option, "name")}>]"));
+    + string.Concat(_frontends.SelectMany(frontend => frontend.Options).Concat(_backends.SelectMany(backend => backend.Options))
+      .DistinctBy(option => option.Name)
+      .Select(option => option.Value is null ? $" [{option.Name}]" : $" [{option.Name} {option.Value}]"));
 
   /// <summary>Runs the command.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
   /// <param name="output">Receives the names of the files written.</param>
   /// <param name="error">Receives the diagnostics and the caveats of an import.</param>
   /// <returns>The process exit code.</returns>
-  public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error) {
+  public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error)
+    => Run(arguments, output, error, _backends);
+
+  /// <summary>Runs the command with a table of its own for what each JavaScript profile has.</summary>
+  /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
+  /// <param name="output">Receives the names of the files written.</param>
+  /// <param name="error">Receives the diagnostics and the caveats of an import.</param>
+  /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
+  /// <returns>The process exit code.</returns>
+  public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
+    => Run(arguments, output, error, [JavaScript(capabilities), CSharp(CSharpCapabilities.Default)]);
+
+  private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
     string? file = null;
-    var flags = _frontends.SelectMany(frontend => frontend.Flags).ToList();
-    var known = _required
-      .Concat(_frontends.SelectMany(frontend => frontend.Options))
-      .Concat(_backends.SelectMany(backend => backend.Options))
-      .ToList();
+    var known = new Dictionary<string, bool>();
+    foreach (var option in _required.Select(name => new Option(name, "")).Concat(_frontends.SelectMany(frontend => frontend.Options)).Concat(backends.SelectMany(backend => backend.Options)))
+      known.TryAdd(option.Name, option.Value is not null);
+
     var options = new Dictionary<string, string>();
     for (var index = 0; index < arguments.Count; ++index) {
       var argument = arguments[index];
@@ -85,11 +102,10 @@ public static class TranslateCommand {
           return Refuse(error, $"more than one source file: '{file}' and '{argument}'");
 
         file = argument;
-      } else if (flags.Contains(argument)) {
-        // A flag is an option without a value: it is there or it is not.
-        options[argument] = "";
-      } else if (!known.Contains(argument)) {
+      } else if (!known.TryGetValue(argument, out var valued)) {
         return Refuse(error, $"unknown option '{argument}'");
+      } else if (!valued) {
+        options[argument] = "";
       } else if (index + 1 == arguments.Count) {
         return Refuse(error, $"the option '{argument}' needs a value");
       } else {
@@ -108,14 +124,14 @@ public static class TranslateCommand {
     if (frontend is null)
       return Refuse(error, $"unknown source language '{options[From]}'; the prototype reads {Listed(_frontends.Select(candidate => candidate.Name))}");
 
-    var backend = _backends.FirstOrDefault(candidate => candidate.Name == options[To]);
+    var backend = backends.FirstOrDefault(candidate => candidate.Name == options[To]);
     if (backend is null)
-      return Refuse(error, $"unknown target language '{options[To]}'; the prototype writes {Listed(_backends.Select(candidate => candidate.Name))}");
+      return Refuse(error, $"unknown target language '{options[To]}'; the prototype writes {Listed(backends.Select(candidate => candidate.Name))}");
 
     // An option that is not required belongs to a source or to a target language, and only to the chosen one.
-    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && !frontend.Options.Contains(option) && !frontend.Flags.Contains(option) && !backend.Options.Contains(option));
+    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && !frontend.Has(option) && !backend.Has(option));
     var misuse = foreign is null ? frontend.Misuse(options) ?? backend.Misuse(options)
-      : _frontends.Any(candidate => candidate.Options.Contains(foreign) || candidate.Flags.Contains(foreign)) ? $"the option '{foreign}' does not apply to the source language '{frontend.Name}'"
+      : _frontends.Any(candidate => candidate.Has(foreign)) ? $"the option '{foreign}' does not apply to the source language '{frontend.Name}'"
       : $"the option '{foreign}' does not apply to the target language '{backend.Name}'";
     if (misuse is not null)
       return Refuse(error, misuse);
@@ -128,7 +144,7 @@ public static class TranslateCommand {
     }
 
     var (module, exitCode) = frontend.Import(file, source, options, output, error);
-    return module is null ? exitCode : Emit(module, options, output, error);
+    return module is null ? exitCode : Emit(module, options, output, error, backend);
   }
 
   /// <summary>Checks a module and writes it in the target language into the output directory.</summary>
@@ -217,8 +233,24 @@ public static class TranslateCommand {
   private static string? ExportMisuse(IReadOnlyDictionary<string, string> options)
     => options.TryGetValue(Export, out var names) && Names(names).Length == 0 ? $"the option '{Export}' names no function" : null;
 
+  /// <summary>The JavaScript backend with a capability table; <c>--profile</c> names the language level.</summary>
+  private static Backend JavaScript(JavaScriptCapabilities capabilities) => new(
+    "javascript",
+    [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null)],
+    options => JavaScriptProfileOf(options).Error,
+    (module, options) => JavaScriptEmitter.Check(module, JavaScriptProfileOf(options).Profile!, capabilities),
+    (module, options) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, capabilities));
+
+  /// <summary>The JavaScript profile the options of a command line name, or what is wrong with them.</summary>
+  private static (JavaScriptProfile? Profile, string? Error) JavaScriptProfileOf(IReadOnlyDictionary<string, string> options) {
+    JavaScriptProfile.TryParse(
+      options.GetValueOrDefault(Profile), options.GetValueOrDefault(Module), options.GetValueOrDefault(Global), options.ContainsKey(TypedArrays),
+      out var profile, out var error);
+    return (profile, error);
+  }
+
   /// <summary>The C# backend with a capability table.</summary>
-  private static Backend CSharp(CSharpCapabilities capabilities) => new("csharp", [Namespace, Profile, LangVersion], CSharpMisuse,
+  private static Backend CSharp(CSharpCapabilities capabilities) => new("csharp", [new(Namespace, "<name>"), new(Profile, "<name>"), new(LangVersion, "<version>")], CSharpMisuse,
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
     (module, options) => CSharpEmitter.Emit(module, CSharpProfileOf(options), options.GetValueOrDefault(Namespace), capabilities));
 
@@ -244,9 +276,14 @@ public static class TranslateCommand {
     return Program.UsageError;
   }
 
+  /// <summary>An option of the command.</summary>
+  /// <param name="Name">The option as the command line writes it.</param>
+  /// <param name="Value">What the usage shows as its value, or <see langword="null"/> for an option that takes none.</param>
+  private sealed record Option(string Name, string? Value);
+
   /// <summary>A source language of the command.</summary>
   /// <param name="Name">The name <c>--from</c> takes.</param>
-  /// <param name="Options">The options only this language has; each takes a list of names.</param>
+  /// <param name="Options">The options only this language has.</param>
   /// <param name="Misuse">What is wrong with the values of those options, or <see langword="null"/>.</param>
   /// <param name="Import">
   /// Turns a file name, its text and the options into a module. When there is none it has written
@@ -254,22 +291,31 @@ public static class TranslateCommand {
   /// </param>
   private sealed record Frontend(
     string Name,
-    string[] Options,
-    string[] Flags,
+    Option[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
-    Func<string, string, IReadOnlyDictionary<string, string>, TextWriter, TextWriter, (IrModule? Module, int ExitCode)> Import);
+    Func<string, string, IReadOnlyDictionary<string, string>, TextWriter, TextWriter, (IrModule? Module, int ExitCode)> Import) {
+
+    /// <summary>Whether an option belongs to this language.</summary>
+    public bool Has(string option) => this.Options.Any(candidate => candidate.Name == option);
+
+  }
 
   /// <summary>A target language of the command.</summary>
   /// <param name="Name">The name <c>--to</c> takes.</param>
-  /// <param name="Options">The options only this language has.</param>
+  /// <param name="Options">The options this language reads; another target may read one of them its own way.</param>
   /// <param name="Misuse">What is wrong with the values of those options, or <see langword="null"/>.</param>
   /// <param name="Check">Why a module cannot be emitted with the options given; empty when it can.</param>
   /// <param name="Emit">Writes a module that passed the check.</param>
   private sealed record Backend(
     string Name,
-    string[] Options,
+    Option[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
     Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<Diagnostic>> Check,
-    Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<GeneratedFile>> Emit);
+    Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<GeneratedFile>> Emit) {
+
+    /// <summary>Whether an option belongs to this language.</summary>
+    public bool Has(string option) => this.Options.Any(candidate => candidate.Name == option);
+
+  }
 
 }
