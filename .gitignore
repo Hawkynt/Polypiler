@@ -92,3 +92,10 @@ secrets.json
 
 # Local research transcript — kept for context, never committed
 docs/ChatGPT-*.md
+
+# Planned issues are published to GitHub, not versioned; only the format description is kept
+backlog/*
+!backlog/README.md
+
+# Python
+__pycache__/

@@ -1,0 +1,49 @@
+name: Unblock
+
+# When an issue closes, every issue it was blocking is checked: if all of its blockers are now
+# closed and it was waiting only for them, `state:blocked` becomes `state:ready`. An issue that was
+# reopened sends the ones it blocks back to `state:blocked`, unless somebody is already working on
+# them. Dependencies are GitHub's native "blocked by" relation (see ISSUES.md, "Lifecycle").
+on:
+  issues:
+    types: [closed, reopened]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: 'Issue number to re-evaluate the dependants of'
+        required: true
+
+permissions:
+  issues: write
+
+concurrency:
+  group: unblock-${{ github.event.issue.number || inputs.issue }}
+  cancel-in-progress: false
+
+jobs:
+  unblock:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      ISSUE: ${{ github.event.issue.number || inputs.issue }}
+    steps:
+      - name: Re-evaluate the issues this one blocks
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dependant in $(gh api --paginate "repos/$REPO/issues/$ISSUE/dependencies/blocking" --jq '.[] | select(.state == "open") | .number'); do
+            labels=$(gh api "repos/$REPO/issues/$dependant" --jq '[.labels[].name] | join(",")')
+            open_blockers=$(gh api --paginate "repos/$REPO/issues/$dependant/dependencies/blocked_by" --jq '[.[] | select(.state == "open")] | length' | paste -sd+ | bc)
+            if [ "$open_blockers" -eq 0 ]; then
+              # Only an issue that waited for nothing but its dependencies becomes ready by itself.
+              if [[ ",$labels," == *",state:blocked,"* ]]; then
+                gh issue edit "$dependant" -R "$REPO" --remove-label state:blocked --add-label state:ready
+                echo "#$dependant is ready"
+              fi
+            elif [[ ",$labels," == *",state:ready,"* ]]; then
+              gh issue edit "$dependant" -R "$REPO" --remove-label state:ready --add-label state:blocked
+              gh issue comment "$dependant" -R "$REPO" --body "Blocked again: #$ISSUE was reopened."
+              echo "#$dependant is blocked again"
+            fi
+          done

@@ -7,7 +7,8 @@ finished.
 
 This file defines what an issue must contain before work may start (the **Definition of Ready**), how
 large work is cut into issues, and what "done" means. The skeletons to copy live in
-[`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/). The product contract they reference is
+[`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/). The planned backlog is kept as files under
+[`backlog/`](backlog/README.md) and published to GitHub by script. The product contract they reference is
 [`docs/PRD.md`](docs/PRD.md).
 
 ## Lifecycle
@@ -22,6 +23,16 @@ large work is cut into issues, and what "done" means. The skeletons to copy live
 
 An issue goes back to `state:draft` the moment an implementer finds an ambiguity. The fix is to
 edit the issue, not to guess in the code.
+
+**Dependencies are blockers.** An issue that depends on an open issue is `state:blocked`, however
+complete its text is: it carries a **Blocked by** list at the top of its body and the same issues as
+GitHub's native *blocked by* relation. When the last blocker closes, the `unblock` workflow replaces
+`state:blocked` with `state:ready` — provided the issue was blocked only by its dependencies, which
+its *Readiness review* records. Claim only `state:ready` issues; never start one whose blockers are
+open, even if the code you need "is nearly there".
+
+**Epics are never claimed.** An epic carries the `epic` label instead of a state. It closes when its
+last sub-issue closes; the work is in the sub-issues.
 
 ## Applicability and readiness review
 
@@ -84,7 +95,10 @@ bounded context** (PRD §5.1), or depends on something not yet closed that it do
 
 ## Titles
 
-`<scope>: <outcome, imperative, specific>` — the scope is one of the prefixes from the table above.
+`<scope>: <outcome, imperative, specific>`. The scope is one of `lang(x)`, `frontend(x)`, `backend(x)`,
+`isa(x)`, `format(x)`, `optimization`, `analysis`, `ir`, `types`, `intrinsics`, `legalize`, `interop`,
+`objects`, `permutation`, `runtime`, `verify`, `catalog`, `package`, `adapter`, `upstream`, `e2e(a→b)`,
+`cli`, `infra`, `spec`, `spike`, `bug`.
 
 - `lang(kotlin): Kotlin as source and target`
 - `frontend(kotlin): import IntArray/LongArray, for-loops and integer arithmetic`
@@ -132,7 +146,10 @@ an implementer would be tempted to do, and the issue (or "not planned") where th
 - **Oracle:** the *independent* implementation that produces expected results — the real source
   compiler/interpreter, an emulator, published vectors. Polypiler's own output is never an oracle
   (PRD §23.1).
-- **Toolchains:** name and exact version of every compiler, runtime or emulator the tests invoke.
+- **Toolchains:** every compiler, runtime or emulator the tests invoke, named by its key in
+  `tooling/toolchains.lock`. That file is the single place an exact version is pinned; an issue that
+  needs a toolchain not yet in it adds the entry as part of its scope. Versions are not copied into
+  issues, where they would go stale.
 - **Sourcing:** the rung of the implementation-sourcing ladder in [`AGENTS.md`](AGENTS.md) that
   applies, with the source and its licence.
 
@@ -261,7 +278,7 @@ Tick in the issue body; the implementer verifies it before claiming the issue.
 - [ ] Why, user story with a listed role, in-scope and out-of-scope lists present
 - [ ] Every dependency is closed or explained; epics have their sub-issues linked
 - [ ] Every applicable fixture pinned to a full SHA with a licence; oracle independent, or reasoned N/A
-- [ ] Toolchains named with exact versions
+- [ ] Toolchains named by their `tooling/toolchains.lock` key
 - [ ] Specification names the public surface, diagnostics and files
 - [ ] ≥ 1 positive and ≥ 1 negative Gherkin scenario with concrete values
 - [ ] Test-design table covers happy path, exceptions, boundaries and equivalence classes
