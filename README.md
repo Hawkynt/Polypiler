@@ -55,21 +55,57 @@ All of the following is **planned** — nothing is advertised as working before 
 
 ## 🧩 Support matrix
 
-**Every language listed here is intended to become both a frontend and backend**, but the implementations and verification maturity will advance separately. Supporting a backend is not evidence that its frontend works, and vice versa.
+What works **today**, per direction. A frontend reads the language, a backend writes it; the two advance
+separately, and supporting one is no evidence for the other. Every cell is backed by tests that run the
+generated code — a row changes only in the pull request that makes it true.
 
-| Source/target family | Initial emphasis | Planned maturity |
-|---|---|---|
-| C# | Roslyn, numeric algorithms, arrays, classes; native source emission | First usable alpha |
-| JavaScript | Existing Cipher AST/type-aware transpiler, bitwise and typed-array algorithms | First usable alpha |
-| PowerBASIC DOS 3.5 / experimental PB36 | Existing PB-Compiler frontend, native x86-16 and BASIC output | First usable alpha; DOS output separately gated |
-| C, Rust | Numeric, memory and collection algorithms | Early alpha/beta |
-| C++, Kotlin, Perl, Python | C++ numeric and native kernels; Kotlin image processing; Perl/Python typed algorithm subsets | Requested workflow beta |
-| TypeScript, Java, Go, Delphi, FreeBASIC, PHP, Ruby | Semantic source importer and native target emitter per language | Later beta |
-| Commodore BASIC and other vintage dialects | Tokenized BASIC, source recovery, constrained target generation | Extended support |
+`✅` full for the declared subset · `⚠️` partial, explained in the row · `—` not yet (planned).
 
-Additional input/output representations are planned independently: **LLVM IR, MSIL, JVM bytecode, WebAssembly, C64 PRG/tokenized BASIC, Microsoft BASIC p-code variants, MOS 6502/65C02, 8086/x86/x64, ARM32 and AArch64**. Broader CPU families such as Z80, 65C816 and 68000 are candidates for later adapters.
+### Languages
 
-LLVM integration broadens access to LLVM-based source frontends such as Clang; it **does not** automatically expose every GCC language frontend. GCC GENERIC/GIMPLE requires a separate verified adapter.
+| Language | Dialect / version | Frontend | Backend | Notes |
+| --- | --- | :---: | :---: | --- |
+| C# | C# 14, .NET 10 | ⚠️ | — | Prototype subset: static methods over `int`, `uint`, `byte`, `bool` and one-dimensional arrays; `if`, `while`, `for`; no classes with state, strings or exceptions |
+| JavaScript | ES2022 modules, Node | — | ⚠️ | Prototype subset: the constructs the C# frontend imports, with explicit 32-bit wrap-around and typed arrays |
+| PowerBASIC | DOS 3.5 (`pb35`), `pb36` | — | — | |
+| C | C11 / C17 / C23 | — | — | |
+| C++ | C++17 / 20 / 23 | — | — | |
+| Rust | 2024 edition | — | — | |
+| Kotlin | JVM | — | — | |
+| Perl | Perl 5 | — | — | |
+| Python | 3.x | — | — | |
+| TypeScript | current | — | — | |
+| Java | JDK 17 / 21 | — | — | |
+| Go | current | — | — | |
+| Delphi / Object Pascal | Free Pascal in Delphi mode | — | — | |
+| FreeBASIC | `-lang fb`, `-lang qb` | — | — | |
+| PHP | 8.x | — | — | |
+| Ruby | 3.x | — | — | |
+| Visual Basic | VB.NET; classic VB6/VBA separately | — | — | |
+| Commodore BASIC | V2 (C64); VIC-20 and C128 as profiles | — | — | |
+
+### Bytecode, intermediate and machine-code formats
+
+For these, the frontend *lifts* (decodes and recovers semantics) and the backend *emits* (encodes).
+
+| Format / instruction set | Dialect / variant | Lift | Emit | Notes |
+| --- | --- | :---: | :---: | --- |
+| .NET MSIL | ECMA-335 assemblies | — | — | |
+| JVM bytecode | class files, jars | — | — | |
+| WebAssembly | core specification, binary modules | — | — | |
+| LLVM IR | `.ll` text, `.bc` bitcode | — | — | |
+| MOS 6502 | NMOS; 65C02 and 65C816 as variants | — | — | |
+| Zilog Z80 / Intel 8080 | | — | — | |
+| 8086 / x86-16 | real mode, DOS `MZ` and `COM` | — | — | |
+| x86 (32-bit) / x64 | integer core, BMI/POPCNT/LZCNT | — | — | |
+| ARM32 / Thumb, AArch64 | AAPCS, AAPCS64 | — | — | |
+| Commodore BASIC tokenized | C64 PRG; VIC-20, C128 | — | — | |
+| GW-BASIC tokenized | | — | — | |
+| Microsoft BASIC p-code | per dialect, after an inventory | — | — | |
+
+Every language and format above is planned in **both** directions. LLVM integration broadens access to
+LLVM-based source frontends such as Clang; it **does not** automatically expose every GCC language
+frontend. GCC GENERIC/GIMPLE requires a separate verified adapter.
 
 ## 📦 Installation
 
@@ -239,6 +275,26 @@ At project bootstrap, the agent should:
 4. Merge only via reviewed, green PRs with linear history. Never push directly to `main`, `master` or `trunk`.
 
 For regular compiler projects, target .NET 10 and current stable C# features; keep framework compatibility backports separate, with .NET Framework 2.0 as their compatibility baseline where applicable. The repository's C# style and testing conventions are specified in the PRD and `AGENTS.md`.
+
+## 📈 Optimizations
+
+Recognizing what code computes and choosing a better form for the target is the middle of the product.
+Every optimization, recognition rule and lowering rewrite has an identifier (`O####`), a page with an
+example before and after, the conditions under which it applies, the cases in which it must **not**
+fire, and a switch to turn it off.
+
+**[The optimization checklist](docs/optimizations/README.md)** lists all of them with their state:
+0 of 146 are implemented today.
+
+| Family | Planned |
+| --- | ---: |
+| [General passes](docs/optimizations/README.md#general-passes) — folding, propagation, dead code, loops, vectors | 30 |
+| [De-dynamicization](docs/optimizations/README.md#de-dynamicization) — typing JavaScript, Python and Perl | 7 |
+| [Legalization](docs/optimizations/README.md#legalization) — expressing what a target lacks | 10 |
+| [Recognition and recovery](docs/optimizations/README.md#recognition-and-recovery) — rotates, popcounts, CRCs, de-unrolling | 57 |
+| [Bit permutations](docs/optimizations/README.md#bit-permutations) | 10 |
+| [Language-construct lowering and recovery](docs/optimizations/README.md#language-construct-lowering-and-recovery) — generics, classes, exceptions, coroutines | 30 |
+| [Interop and layouts](docs/optimizations/README.md#interop-and-layouts) | 2 |
 
 ## 🏗️ Architecture
 
