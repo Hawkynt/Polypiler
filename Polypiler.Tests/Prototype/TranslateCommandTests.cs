@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -13,7 +14,7 @@ namespace Polypiler.Tests.Prototype;
 [TestFixture]
 public sealed class TranslateCommandTests {
 
-  private const string Usage = "usage: polypiler translate <file.cs> --from csharp --to javascript --output <directory>";
+  private const string Usage = "usage: polypiler translate <file.cs> --from csharp --to <javascript|csharp> --output <directory> [--namespace <name>]";
 
   private string _directory = "";
   private string _out = "";
@@ -143,7 +144,7 @@ public sealed class TranslateCommandTests {
     ]))]);
     using var output = new StringWriter();
     using var error = new StringWriter();
-    Assert.That(TranslateCommand.Emit(module, this._out, output, error), Is.EqualTo(TranslateCommand.InternalError));
+    Assert.That(TranslateCommand.Emit(module, new Dictionary<string, string> { ["--to"] = "javascript", ["--output"] = this._out }, output, error), Is.EqualTo(TranslateCommand.InternalError));
     Assert.That((TranslateCommand.InternalError, output.ToString()), Is.EqualTo((70, "")));
     Assert.That(error.ToString(), Does.StartWith("error PLY0100: ill-typed IR in 'F': Add is applied to i32 and bool"));
     Assert.That(Directory.Exists(this._out), Is.False);

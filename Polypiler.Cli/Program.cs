@@ -21,7 +21,7 @@ public static class Program {
     if (args.Length == 0 || args[0] is "--help" or "-h" or "help") {
       output.WriteLine($"{ProductInfo.Name} {ProductInfo.Version}");
       output.WriteLine($"usage: {ProductInfo.Name} [--help | --version]");
-      output.WriteLine($"       {ProductInfo.Name} translate <file.cs> --from csharp --to javascript --output <directory>");
+      output.WriteLine("       " + TranslateCommand.UsageLine);
       output.WriteLine("translate is a prototype for a small subset of C#; see the README for the planned interface.");
       return Success;
     }
