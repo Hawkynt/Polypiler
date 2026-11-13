@@ -59,10 +59,13 @@ internal static class PrototypeFixture {
   }
 
   /// <summary>What the method compiled by the C# compiler does for a call.</summary>
-  public static string CompiledOutcome(string fixture, PrototypeCall call) {
+  public static string CompiledOutcome(string fixture, PrototypeCall call) => InvokedOutcome(Compiled(fixture, call.Method), call);
+
+  /// <summary>What a static method does for a call, whichever compiler run produced the method.</summary>
+  public static string InvokedOutcome(MethodInfo method, PrototypeCall call) {
     var arguments = call.FreshArguments();
     try {
-      return Outcome(Compiled(fixture, call.Method).Invoke(null, arguments), arguments);
+      return Outcome(method.Invoke(null, arguments), arguments);
     } catch (TargetInvocationException exception) when (TrapOf(exception.InnerException) is { } trap) {
       return Trap(trap);
     }
