@@ -1,0 +1,692 @@
+### dotnet-sdk 10.0.112, Linux x86_64, 11th Gen Intel(R) Core(TM) i9-11950H @ 2.60GHz
+### check suite - hand-written
+== existing seam tests (Polypiler.Tests/CliTests.cs) ==
+pass  Help_PrintsProductNameAndSucceeds(--help)
+pass  Help_PrintsProductNameAndSucceeds(-h)
+pass  Help_PrintsProductNameAndSucceeds(help)
+pass  NoArguments_BehavesLikeHelp
+pass  Version_PrintsTheCoreVersion
+pass  UnknownCommand_FailsWithUsageError
+pass  NearMiss(--HELP)
+pass  NearMiss(empty)
+pass  Main_WritesToTheConsole
+== PRD section 10 invocations ==
+pass  translate Cipher/algorithms/checksum/<algorithm>.js --from javascript --source-profile node-es2022 --to csharp --target-profile net9 --export <algorithm> --opt speed --verify --output generated/cipher-csharp
+      = translate "Cipher/algorithms/checksum/<algorithm>.js" --export "<algorithm>" --from javascript --source-profile node-es2022 --target-profile net9 --to csharp --verify --opt speed
+pass  translate path/to/algorithm.bas --from powerbasic --source-profile pb35 --to csharp --target-profile net9 --verify --output generated/pb-csharp
+      = translate path/to/algorithm.bas --from powerbasic --source-profile pb35 --target-profile net9 --to csharp --verify --opt balanced
+pass  translate path/to/Deinterlace.kt --from kotlin --to perl --target-profile perl5 --export <entry> --verify --output generated/deinterlace-perl
+      = translate path/to/Deinterlace.kt --export "<entry>" --from kotlin --target-profile perl5 --to perl --verify --opt balanced
+pass  translate path/to/native/ncnn_kernel.cpp --from cpp --to rust --strategy native-adapter --native-provider ncnn --verify --output generated/ncnn-rust
+      = translate path/to/native/ncnn_kernel.cpp --from cpp --to rust --verify --opt balanced --native-provider ncnn --strategy native-adapter
+pass  translate BitPerm/mapping.json --from bitmapping --to rust --target-profile x86_64-v3 --verify --output generated/bitperm-rust
+      = translate BitPerm/mapping.json --from bitmapping --target-profile x86_64-v3 --to rust --verify --opt balanced
+pass  recover source/to/algorithm.asm --from mos6502 --cpu mos6502 --entry 0x8000 --memory-map profiles/c64.json --to csharp --verify --output generated/6502-csharp
+      = recover source/to/algorithm.asm --from mos6502 --to csharp --verify --opt balanced --cpu mos6502 --entry 0x8000 --memory-map profiles/c64.json
+pass  translate algorithm.rs --from rust --to mos6502 --cpu mos6502 --target-profile c64 --verify-emulator vice --output generated/6502-prg
+      = translate algorithm.rs --from rust --target-profile c64 --to mos6502 --opt balanced --cpu mos6502 --verify-emulator vice
+pass  translate PROGRAM.PRG --from c64-basic-v2 --to csharp --verify --output generated/c64-csharp
+      = translate PROGRAM.PRG --from c64-basic-v2 --to csharp --verify --opt balanced
+pass  translate source.dll --from msil --export Namespace.Checksum --to php --target-profile php8 --verify --output generated/msil-php
+      = translate source.dll --export Namespace.Checksum --from msil --target-profile php8 --to php --verify --opt balanced
+pass  translate Example.class --from jvm --to delphi --verify --output generated/jvm-delphi
+      = translate Example.class --from jvm --to delphi --verify --opt balanced
+pass  translate input.bc --from llvm --llvm-version pinned --to csharp --target-profile net9 --verify --output generated/llvm-csharp
+      = translate input.bc --from llvm --target-profile net9 --to csharp --verify --opt balanced --llvm-version pinned
+pass  translate algorithm.cs --from csharp --to llvm --target-triple x86_64-unknown-linux-gnu --verify --output generated/algorithm.ll
+      = translate algorithm.cs --from csharp --to llvm --verify --opt balanced --target-triple x86_64-unknown-linux-gnu
+pass  translate algorithm.cs --from csharp --to x86-16 --target-profile dos-real-mode --verify-emulator dosbox-x --output generated/algorithm.exe
+      = translate algorithm.cs --from csharp --target-profile dos-real-mode --to x86-16 --opt balanced --verify-emulator dosbox-x
+pass  inspect path/to/source --from javascript --show types,ranges,effects,patterns,ir,proofs
+      = inspect path/to/source --format text --from javascript --show effects,ir,patterns,proofs,ranges,types --opt balanced
+pass  capabilities --from kotlin --to perl --source-profile jvm --target-profile perl5
+      = capabilities --format text --from kotlin --source-profile jvm --target-profile perl5 --to perl
+pass  verify generated/cipher-csharp --against corpus/cipher/<algorithm>.json
+      = verify generated/cipher-csharp --against "corpus/cipher/<algorithm>.json"
+pass  search "Floyd-Steinberg" --language rust
+      = search Floyd-Steinberg --format text --language rust --limit 20
+pass  generate color.dithering.floyd-steinberg --to rust --verify --output generated/dithering
+      = generate color.dithering.floyd-steinberg --to rust --verify --opt balanced
+== equivalent invocations give one canonical line ==
+pass  5 spellings -> translate a.cs --export A,B --from csharp --to javascript --opt speed --disable-opt O0001,O0100
+pass  2 spellings -> translate a.cs --from csharp --to javascript --opt balanced
+pass  2 spellings -> inspect a.cs --format text --from csharp --show ir,types --opt balanced --assume "Add.a in [0, 15]" --assume "Add.b in [0, 15]"
+pass  2 spellings -> inspect a.cs --format text --from csharp --show ir --opt balanced
+== accepted edge cases ==
+pass  translate a.cs --from csharp --to javascript --output out --assume=
+pass  translate a.cs --from csharp --to javascript --output out --assume ''
+pass  translate a.cs --from csharp --to javascript --output out --assume=Sum.n:foo --vectors=C:/v.json
+pass  translate 'a $b `c` "d".cs' --from csharp --to javascript --output out
+pass  translate - --from csharp --to javascript --output out
+pass  search -- -.-
+pass  search adler --limit=-1
+pass  translate --from csharp --to javascript --output out -- --weird
+pass  translate dir\a.cs --from csharp --to javascript --output out
+pass  translate 'my file.cs' --from csharp --to javascript --output out
+== refused command lines ==
+pass  frobnicate  [PLY0002]
+pass  translate a.cs --from csharp --to javascript --output out --nope  [unknown option '--nope']
+pass  translate a.cs --from csharp --to javascript --output  [requires a value]
+pass  translate a.cs --from csharp --to javascript --output out --opt fastest  [is not a valid value for '--opt']
+pass  translate a.cs --from csharp --to javascript --output out --opt speed --opt size  [given more than once]
+pass  translate a.cs --From csharp --to javascript --output out  [unknown option '--From']
+pass  translate a.cs --to javascript --output out  ['--from' is required]
+pass  translate --from csharp --to javascript --output out  [missing argument <input>]
+pass  translate a.cs b.cs --from csharp --to javascript --output out  [unexpected argument 'b.cs']
+pass  translate a.cs --from csharp --to javascript --output out --force=true  [does not take a value]
+pass  translate a.cs --from csharp --to javascript --output out --force true  [unexpected argument 'true']
+pass  translate a.cs --from csharp --to javascript --output out --export A,,B  [empty list element]
+pass  translate a.cs --from csharp --to javascript --output --force  [requires a value]
+pass  translate a.cs --from csharp --to javascript --out out  [unknown option '--out']
+pass  translate a.cs --from csharp --to javascript --output out -f  [unknown option '-f']
+pass  translate a.cs --from csharp --to javascript --output:out  [unknown option]
+pass  translate a.cs --from csharp --to javascript --output out @args.rsp  [unexpected argument '@args.rsp']
+pass  --opt speed translate a.cs --from csharp --to javascript --output out  [unknown option '--opt']
+pass  search adler --opt speed  [unknown option '--opt']
+pass  --diagnostics xml search adler  [is not a valid value for '--diagnostics']
+pass  translate a.cs --from csharp --to javascript --output out /?  [unexpected argument '/?']
+pass  -?  [unknown option '-?']
+pass  --version extra  [unknown option '--version']
+pass  --quiet  [no command given]
+pass  translate a.cs --from csharp --to javascript --output out --quiet --quiet  [given more than once]
+pass  translate a.cs --from csharp --to javascript --output out --export=  [empty list element]
+pass  translate a.cs --from csharp --to javascript --output out --export ''  [empty list element]
+== help ==
+pass  translate --help
+pass  help translate == translate --help
+pass  translate --nope --help == translate --help
+pass  --nope translate -h == translate --help
+pass  --diagnostics json translate a.cs --help == translate --help
+pass  translate --from --help == translate --help
+pass  --nope --help == --help
+pass  --quiet -h == --help
+pass  frobnicate --help  [PLY0002]
+pass  search -- --help searches for '--help'
+pass  help frobnicate  [PLY0002]
+ALL PASS
+### check suite - system-commandline
+== existing seam tests (Polypiler.Tests/CliTests.cs) ==
+pass  Help_PrintsProductNameAndSucceeds(--help)
+pass  Help_PrintsProductNameAndSucceeds(-h)
+pass  Help_PrintsProductNameAndSucceeds(help)
+pass  NoArguments_BehavesLikeHelp
+pass  Version_PrintsTheCoreVersion
+pass  UnknownCommand_FailsWithUsageError
+pass  NearMiss(--HELP)
+pass  NearMiss(empty)
+pass  Main_WritesToTheConsole
+== PRD section 10 invocations ==
+pass  translate Cipher/algorithms/checksum/<algorithm>.js --from javascript --source-profile node-es2022 --to csharp --target-profile net9 --export <algorithm> --opt speed --verify --output generated/cipher-csharp
+      = translate "Cipher/algorithms/checksum/<algorithm>.js" --export "<algorithm>" --from javascript --source-profile node-es2022 --target-profile net9 --to csharp --verify --opt speed
+pass  translate path/to/algorithm.bas --from powerbasic --source-profile pb35 --to csharp --target-profile net9 --verify --output generated/pb-csharp
+      = translate path/to/algorithm.bas --from powerbasic --source-profile pb35 --target-profile net9 --to csharp --verify --opt balanced
+pass  translate path/to/Deinterlace.kt --from kotlin --to perl --target-profile perl5 --export <entry> --verify --output generated/deinterlace-perl
+      = translate path/to/Deinterlace.kt --export "<entry>" --from kotlin --target-profile perl5 --to perl --verify --opt balanced
+pass  translate path/to/native/ncnn_kernel.cpp --from cpp --to rust --strategy native-adapter --native-provider ncnn --verify --output generated/ncnn-rust
+      = translate path/to/native/ncnn_kernel.cpp --from cpp --to rust --verify --opt balanced --native-provider ncnn --strategy native-adapter
+pass  translate BitPerm/mapping.json --from bitmapping --to rust --target-profile x86_64-v3 --verify --output generated/bitperm-rust
+      = translate BitPerm/mapping.json --from bitmapping --target-profile x86_64-v3 --to rust --verify --opt balanced
+pass  recover source/to/algorithm.asm --from mos6502 --cpu mos6502 --entry 0x8000 --memory-map profiles/c64.json --to csharp --verify --output generated/6502-csharp
+      = recover source/to/algorithm.asm --from mos6502 --to csharp --verify --opt balanced --cpu mos6502 --entry 0x8000 --memory-map profiles/c64.json
+pass  translate algorithm.rs --from rust --to mos6502 --cpu mos6502 --target-profile c64 --verify-emulator vice --output generated/6502-prg
+      = translate algorithm.rs --from rust --target-profile c64 --to mos6502 --opt balanced --cpu mos6502 --verify-emulator vice
+pass  translate PROGRAM.PRG --from c64-basic-v2 --to csharp --verify --output generated/c64-csharp
+      = translate PROGRAM.PRG --from c64-basic-v2 --to csharp --verify --opt balanced
+pass  translate source.dll --from msil --export Namespace.Checksum --to php --target-profile php8 --verify --output generated/msil-php
+      = translate source.dll --export Namespace.Checksum --from msil --target-profile php8 --to php --verify --opt balanced
+pass  translate Example.class --from jvm --to delphi --verify --output generated/jvm-delphi
+      = translate Example.class --from jvm --to delphi --verify --opt balanced
+pass  translate input.bc --from llvm --llvm-version pinned --to csharp --target-profile net9 --verify --output generated/llvm-csharp
+      = translate input.bc --from llvm --target-profile net9 --to csharp --verify --opt balanced --llvm-version pinned
+pass  translate algorithm.cs --from csharp --to llvm --target-triple x86_64-unknown-linux-gnu --verify --output generated/algorithm.ll
+      = translate algorithm.cs --from csharp --to llvm --verify --opt balanced --target-triple x86_64-unknown-linux-gnu
+pass  translate algorithm.cs --from csharp --to x86-16 --target-profile dos-real-mode --verify-emulator dosbox-x --output generated/algorithm.exe
+      = translate algorithm.cs --from csharp --target-profile dos-real-mode --to x86-16 --opt balanced --verify-emulator dosbox-x
+pass  inspect path/to/source --from javascript --show types,ranges,effects,patterns,ir,proofs
+      = inspect path/to/source --format text --from javascript --show effects,ir,patterns,proofs,ranges,types --opt balanced
+pass  capabilities --from kotlin --to perl --source-profile jvm --target-profile perl5
+      = capabilities --format text --from kotlin --source-profile jvm --target-profile perl5 --to perl
+pass  verify generated/cipher-csharp --against corpus/cipher/<algorithm>.json
+      = verify generated/cipher-csharp --against "corpus/cipher/<algorithm>.json"
+pass  search "Floyd-Steinberg" --language rust
+      = search Floyd-Steinberg --format text --language rust --limit 20
+pass  generate color.dithering.floyd-steinberg --to rust --verify --output generated/dithering
+      = generate color.dithering.floyd-steinberg --to rust --verify --opt balanced
+== equivalent invocations give one canonical line ==
+pass  5 spellings -> translate a.cs --export A,B --from csharp --to javascript --opt speed --disable-opt O0001,O0100
+pass  2 spellings -> translate a.cs --from csharp --to javascript --opt balanced
+pass  2 spellings -> inspect a.cs --format text --from csharp --show ir,types --opt balanced --assume "Add.a in [0, 15]" --assume "Add.b in [0, 15]"
+pass  2 spellings -> inspect a.cs --format text --from csharp --show ir --opt balanced
+== accepted edge cases ==
+pass  translate a.cs --from csharp --to javascript --output out --assume=
+pass  translate a.cs --from csharp --to javascript --output out --assume ''
+pass  translate a.cs --from csharp --to javascript --output out --assume=Sum.n:foo --vectors=C:/v.json
+pass  translate 'a $b `c` "d".cs' --from csharp --to javascript --output out
+pass  translate - --from csharp --to javascript --output out
+pass  search -- -.-
+pass  search adler --limit=-1
+pass  translate --from csharp --to javascript --output out -- --weird
+pass  translate dir\a.cs --from csharp --to javascript --output out
+pass  translate 'my file.cs' --from csharp --to javascript --output out
+== refused command lines ==
+pass  frobnicate  [PLY0002]
+pass  translate a.cs --from csharp --to javascript --output out --nope  [unknown option '--nope']
+pass  translate a.cs --from csharp --to javascript --output  [requires a value]
+pass  translate a.cs --from csharp --to javascript --output out --opt fastest  [is not a valid value for '--opt']
+pass  translate a.cs --from csharp --to javascript --output out --opt speed --opt size  [given more than once]
+pass  translate a.cs --From csharp --to javascript --output out  [unknown option '--From']
+pass  translate a.cs --to javascript --output out  ['--from' is required]
+pass  translate --from csharp --to javascript --output out  [missing argument <input>]
+pass  translate a.cs b.cs --from csharp --to javascript --output out  [unexpected argument 'b.cs']
+pass  translate a.cs --from csharp --to javascript --output out --force=true  [does not take a value]
+pass  translate a.cs --from csharp --to javascript --output out --force true  [unexpected argument 'true']
+pass  translate a.cs --from csharp --to javascript --output out --export A,,B  [empty list element]
+pass  translate a.cs --from csharp --to javascript --output --force  [requires a value]
+pass  translate a.cs --from csharp --to javascript --out out  [unknown option '--out']
+pass  translate a.cs --from csharp --to javascript --output out -f  [unknown option '-f']
+pass  translate a.cs --from csharp --to javascript --output:out  [unknown option]
+pass  translate a.cs --from csharp --to javascript --output out @args.rsp  [unexpected argument '@args.rsp']
+pass  --opt speed translate a.cs --from csharp --to javascript --output out  [unknown option '--opt']
+pass  search adler --opt speed  [unknown option '--opt']
+pass  --diagnostics xml search adler  [is not a valid value for '--diagnostics']
+pass  translate a.cs --from csharp --to javascript --output out /?  [unexpected argument '/?']
+pass  -?  [unknown option '-?']
+pass  --version extra  [unknown option '--version']
+pass  --quiet  [no command given]
+pass  translate a.cs --from csharp --to javascript --output out --quiet --quiet  [given more than once]
+pass  translate a.cs --from csharp --to javascript --output out --export=  [empty list element]
+pass  translate a.cs --from csharp --to javascript --output out --export ''  [empty list element]
+== help ==
+pass  translate --help
+pass  help translate == translate --help
+pass  translate --nope --help == translate --help
+pass  --nope translate -h == translate --help
+pass  --diagnostics json translate a.cs --help == translate --help
+pass  translate --from --help == translate --help
+pass  --nope --help == --help
+pass  --quiet -h == --help
+pass  frobnicate --help  [PLY0002]
+pass  search -- --help searches for '--help'
+pass  help frobnicate  [PLY0002]
+ALL PASS
+### System.CommandLine 2.0.15 with the settings of the ADR and without the foundation's corrections
+> translate a.cs --from csharp --output out
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --from csharp --output out --nope
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument '--nope'.
+  unmatched: --nope
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=394 chars, err: Unrecognized command or argument '--nope'.
+> translate a.cs --from csharp --output
+  command=translate action=ParseErrorAction
+  error[OptionResult]: Required argument missing for option: '--output'.
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=326 chars, err: Required argument missing for option: '--output'.
+> translate a.cs --from csharp --output --force
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[--force]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --from csharp --output out --opt speed --opt none
+  command=translate action=ParseErrorAction
+  error[OptionResult]: Option '--opt' expects a single argument but 2 were provided.
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=2 implicit=False tokens=[speed | none]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=326 chars, err: Option '--opt' expects a single argument but 2 were provided.
+> translate a.cs --from csharp --output out --opt fastest
+  command=translate action=ParseErrorAction
+  error[OptionResult]: Argument 'fastest' not recognized. Must be one of:
+	'none'
+	'balanced'
+	'speed'
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=1 implicit=False tokens=[fastest]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=326 chars, err: Argument 'fastest' not recognized. Must be one of:
+> translate a.cs --from csharp --output out --force=true
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument 'true'.
+  unmatched: true
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=1 implicit=False tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=327 chars, err: Unrecognized command or argument 'true'.
+> translate a.cs --from csharp --output out --force true
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument 'true'.
+  unmatched: true
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=1 implicit=False tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=327 chars, err: Unrecognized command or argument 'true'.
+> translate a.cs --from csharp --output:out
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --from csharp --output out @args.rsp
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument '@args.rsp'.
+  unmatched: @args.rsp
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=327 chars, err: Unrecognized command or argument '@args.rsp'.
+> --opt speed translate a.cs --from csharp --output out
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument '--opt'.
+  error[CommandResult]: Unrecognized command or argument 'speed'.
+  unmatched: --opt | speed
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=393 chars, err: Unrecognized command or argument '--opt'.
+> --quiet translate a.cs --from csharp --output out
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=1 implicit=False tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --from csharp --output out --quiet
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=1 implicit=False tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --From csharp --output out
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument '--From'.
+  error[CommandResult]: Unrecognized command or argument 'csharp'.
+  error[OptionResult]: Option '--from' is required.
+  unmatched: --From | csharp
+  --from: identifiers=0 implicit=True tokens=[]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=395 chars, err: Unrecognized command or argument '--From'.
+> translate a.cs --from csharp --out out
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument '--out'.
+  error[CommandResult]: Unrecognized command or argument 'out'.
+  error[OptionResult]: Option '--output' is required.
+  unmatched: --out | out
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=0 implicit=True tokens=[]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=457 chars, err: Unrecognized command or argument '--out'.
+> translate a.cs --from csharp --output out --limit -1
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --limit: identifiers=1 implicit=False tokens=[-1]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --from csharp --output out --limit=-1
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --limit: identifiers=1 implicit=False tokens=[-1]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --from csharp --output out --limit x
+  command=translate action=ParseErrorAction
+  error[OptionResult]: Cannot parse argument 'x' for option '--limit' as expected type 'System.Int32'.
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --limit: identifiers=1 implicit=False tokens=[x]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=326 chars, err: Cannot parse argument 'x' for option '--limit' as expected type 'System.Int32'.
+> translate --from csharp --output out -- --weird
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [--weird]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate --from csharp --output out
+  command=translate action=ParseErrorAction
+  error[ArgumentResult]: Required argument missing for command: 'translate'.
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: []
+  invoke exit=1 out=326 chars, err: Required argument missing for command: 'translate'.
+> translate a.cs b.cs --from csharp --output out
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument 'b.cs'.
+  unmatched: b.cs
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=327 chars, err: Unrecognized command or argument 'b.cs'.
+> translate a.cs --output out
+  command=translate action=ParseErrorAction
+  error[OptionResult]: Option '--from' is required.
+  --from: identifiers=0 implicit=True tokens=[]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=326 chars, err: Option '--from' is required.
+> translate a.cs --from csharp --output out --export A,B --export C
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --export: identifiers=2 implicit=False tokens=[A,B | C]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --from csharp --output out --export A B
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument 'B'.
+  unmatched: B
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --export: identifiers=1 implicit=False tokens=[A]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=327 chars, err: Unrecognized command or argument 'B'.
+> translate --nope --help
+  command=translate action=HelpAction
+  --from: identifiers=0 implicit=True tokens=[]
+  --output: identifiers=0 implicit=True tokens=[]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [--nope]
+  invoke exit=0 out=326 chars, err:
+> translate --help
+  command=translate action=HelpAction
+  --from: identifiers=0 implicit=True tokens=[]
+  --output: identifiers=0 implicit=True tokens=[]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: []
+  invoke exit=0 out=326 chars, err:
+> translate -h
+  command=translate action=HelpAction
+  --from: identifiers=0 implicit=True tokens=[]
+  --output: identifiers=0 implicit=True tokens=[]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: []
+  invoke exit=0 out=326 chars, err:
+> translate -?
+  command=translate action=ParseErrorAction
+  error[OptionResult]: Option '--from' is required.
+  error[OptionResult]: Option '--output' is required.
+  --from: identifiers=0 implicit=True tokens=[]
+  --output: identifiers=0 implicit=True tokens=[]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [-?]
+  invoke exit=1 out=326 chars, err: Option '--from' is required.
+> translate /?
+  command=translate action=ParseErrorAction
+  error[OptionResult]: Option '--from' is required.
+  error[OptionResult]: Option '--output' is required.
+  --from: identifiers=0 implicit=True tokens=[]
+  --output: identifiers=0 implicit=True tokens=[]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [/?]
+  invoke exit=1 out=326 chars, err: Option '--from' is required.
+> -?
+  command=polypiler action=ParseErrorAction
+  error[CommandResult]: Required command was not provided.
+  error[CommandResult]: Unrecognized command or argument '-?'.
+  unmatched: -?
+  --quiet: identifiers=0 implicit=True tokens=[]
+  invoke exit=1 out=212 chars, err: Required command was not provided.
+> --help
+  command=polypiler action=HelpAction
+  --quiet: identifiers=0 implicit=True tokens=[]
+  invoke exit=0 out=151 chars, err:
+> [diagram] translate a.cs --from csharp --output out
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> [suggest:3] tr
+  command=polypiler action=ParseErrorAction
+  error[CommandResult]: Required command was not provided.
+  error[CommandResult]: Unrecognized command or argument 'tr'.
+  unmatched: tr
+  --quiet: identifiers=0 implicit=True tokens=[]
+  invoke exit=1 out=212 chars, err: Required command was not provided.
+> frobnicate
+  command=polypiler action=ParseErrorAction
+  error[CommandResult]: Required command was not provided.
+  error[CommandResult]: Unrecognized command or argument 'frobnicate'.
+  unmatched: frobnicate
+  --quiet: identifiers=0 implicit=True tokens=[]
+  invoke exit=1 out=152 chars, err: Required command was not provided.
+> translate a.cs --from csharp --output out -f
+  command=translate action=ParseErrorAction
+  error[CommandResult]: Unrecognized command or argument '-f'.
+  unmatched: -f
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=327 chars, err: Unrecognized command or argument '-f'.
+> translate a.cs --from csharp --output -x
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[-x]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> --version
+  command=polypiler action=ParseErrorAction
+  error[CommandResult]: Required command was not provided.
+  error[CommandResult]: Unrecognized command or argument '--version'.
+  unmatched: --version
+  --quiet: identifiers=0 implicit=True tokens=[]
+  invoke exit=1 out=152 chars, err: Required command was not provided.
+> translate a.cs --from=a:b --output=C:\x
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[a:b]
+  --output: identifiers=1 implicit=False tokens=[C:\x]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --from:a=b --output out
+  command=translate action=AnonymousSynchronousCommandLineAction
+  --from: identifiers=1 implicit=False tokens=[a=b]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  ACTION RAN
+  invoke exit=0 out=0 chars, err:
+> translate a.cs --from csharp --output --
+  command=translate action=ParseErrorAction
+  error[OptionResult]: Required argument missing for option: '--output'.
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=326 chars, err: Required argument missing for option: '--output'.
+> translate a.cs --from csharp --output out --export=
+  command=translate action=ParseErrorAction
+  error[OptionResult]: Required argument missing for option: '--export'.
+  --from: identifiers=1 implicit=False tokens=[csharp]
+  --output: identifiers=1 implicit=False tokens=[out]
+  --force: identifiers=0 implicit=True tokens=[]
+  --opt: identifiers=0 implicit=True tokens=[]
+  --export: identifiers=1 implicit=False tokens=[]
+  --quiet: identifiers=0 implicit=True tokens=[]
+  <input>: [a.cs]
+  invoke exit=1 out=326 chars, err: Required argument missing for option: '--export'.
+RootCommand option: --help aliases=[-h, /h, -?, /?] HelpOption
+RootCommand option: --version aliases=[] VersionOption
+RootCommand directive: suggest SuggestDirective
+plain Command options: 0
+default response-file handling: Response file not found 'nofile.rsp'.
+HelpBuilder: internal
+ParserConfiguration settings: EnablePosixBundling, ResponseFileTokenReplacer
+ParseError members: Message, SymbolResult
+### Spectre.Console.Cli 0.57.2 - stdout, stderr and exit code of each line
+> --version
+  stdout: 0.1.0
+  exit 0
+> translate a.cs --from csharp --to javascript --output out
+  stdout: translate a.cs --from csharp --to javascript --export  --output out --opt balanced verify=False force=False
+  exit 0
+> translate a.cs --nope
+  stdout: translate a.cs --from  --to  --export  --output  --opt balanced verify=False force=False
+  exit 0
+> translate a.cs --opt speed --opt size
+  stdout: translate a.cs --from  --to  --export  --output  --opt size verify=False force=False
+  exit 0
+> translate a.cs --force=true
+  stdout: translate a.cs --from  --to  --export  --output  --opt balanced verify=False force=True
+  exit 0
+> translate a.cs --from csharp --output:out
+  stdout: translate a.cs --from csharp --to  --export  --output out --opt balanced verify=False force=False
+  exit 0
+> translate a.cs --from csharp --output --force
+  stdout: Error: Option 'output' is defined but no value has been provided.
+  stdout:        translate a.cs --from csharp --output --force
+  stdout:                                     ^^^^^^^^ No value provided
+  exit 255
+> frobnicate
+  stdout: Error: Unknown command 'frobnicate'.
+  stdout:        frobnicate
+  stdout:        ^^^^^^^^^^ No such command
+  exit 255
+### published size in bytes - dotnet publish -c Release --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -r linux-x64
+spectre: warning IL2104
+current              13008536
+hand-written         13041881
+system-commandline   13277084
+spectre              15070043
+### lines of parser code
+   98 HandWritten.cs
+  153 SystemCommandLine.cs
+### start-up time
+--version: 60 interleaved runs each after 5 warm-up runs, milliseconds
+  current, single file                     median   48.2  min   45.9  p90   51.0
+  current, framework-dependent             median   17.2  min   16.6  p90   18.0
+  hand-written, single file                median   43.8  min   42.1  p90   46.3
+  hand-written, framework-dependent        median   17.8  min   16.6  p90   18.8
+  system-commandline, single file          median   45.9  min   43.8  p90   48.7
+  system-commandline, framework-dependent  median   19.2  min   18.1  p90   20.7
+  spectre, single file                     median  204.5  min  197.2  p90  216.2
+  spectre, framework-dependent             median   95.4  min   92.2  p90  107.9
+translate: 60 interleaved runs each after 5 warm-up runs, milliseconds
+  current, single file                     median   44.4  min   42.5  p90   63.2
+  current, framework-dependent             median   16.8  min   15.9  p90   25.4
+  hand-written, single file                median   69.2  min   66.2  p90   86.5
+  hand-written, framework-dependent        median   26.3  min   25.0  p90   35.5
+  system-commandline, single file          median  109.9  min  105.5  p90  160.2
+  system-commandline, framework-dependent  median   45.6  min   43.6  p90   76.5
+  spectre, single file                     median  191.3  min  181.4  p90  321.7
+  spectre, framework-dependent             median   85.1  min   82.0  p90  112.4

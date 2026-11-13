@@ -14,6 +14,7 @@ Probe programs and recorded output a record measured live under `docs/adr/eviden
 | --- | --- | --- | --- |
 | [0001](0001-ir-stage-invariants.md) | IR stage invariants | accepted | [#19](https://github.com/Hawkynt/Polypiler/issues/19) |
 | [0002](0002-numeric-contracts.md) | Numeric contracts: integer overflow, shift, division and rounding | accepted | [#21](https://github.com/Hawkynt/Polypiler/issues/21) |
+| [0004](0004-cli-design.md) | Command-line grammar, option naming and output conventions | accepted | [#16](https://github.com/Hawkynt/Polypiler/issues/16) |
 | [0005](0005-floating-point-tolerance.md) | Floating-point tolerance policy | accepted | [#18](https://github.com/Hawkynt/Polypiler/issues/18) |
 
 Related: [documentation index](../README.md) · [IR and analysis contracts](../architecture/IR.md) · [compilation pipeline](../architecture/PIPELINE.md).

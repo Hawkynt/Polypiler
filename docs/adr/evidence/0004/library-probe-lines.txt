@@ -1,0 +1,41 @@
+translate a.cs --from csharp --output out
+translate a.cs --from csharp --output out --nope
+translate a.cs --from csharp --output
+translate a.cs --from csharp --output --force
+translate a.cs --from csharp --output out --opt speed --opt none
+translate a.cs --from csharp --output out --opt fastest
+translate a.cs --from csharp --output out --force=true
+translate a.cs --from csharp --output out --force true
+translate a.cs --from csharp --output:out
+translate a.cs --from csharp --output out @args.rsp
+--opt speed translate a.cs --from csharp --output out
+--quiet translate a.cs --from csharp --output out
+translate a.cs --from csharp --output out --quiet
+translate a.cs --From csharp --output out
+translate a.cs --from csharp --out out
+translate a.cs --from csharp --output out --limit -1
+translate a.cs --from csharp --output out --limit=-1
+translate a.cs --from csharp --output out --limit x
+translate --from csharp --output out -- --weird
+translate --from csharp --output out
+translate a.cs b.cs --from csharp --output out
+translate a.cs --output out
+translate a.cs --from csharp --output out --export A,B --export C
+translate a.cs --from csharp --output out --export A B
+translate --nope --help
+translate --help
+translate -h
+translate -?
+translate /?
+-?
+--help
+[diagram] translate a.cs --from csharp --output out
+[suggest:3] tr
+frobnicate
+translate a.cs --from csharp --output out -f
+translate a.cs --from csharp --output -x
+--version
+translate a.cs --from=a:b --output=C:\x
+translate a.cs --from:a=b --output out
+translate a.cs --from csharp --output --
+translate a.cs --from csharp --output out --export=
