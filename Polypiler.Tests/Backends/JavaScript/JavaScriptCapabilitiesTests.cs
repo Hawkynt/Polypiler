@@ -25,6 +25,8 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("=>", 2015, "function")]
   [TestCase("**", 2016, "Math.pow")]
   [TestCase("numeric separators", 2021, "digits")]
+  [TestCase("| 0", 5, null)]
+  [TestCase(">>> 0", 5, null)]
   [TestCase("NaN", 5, null)]
   [TestCase("Infinity", 5, null)]
   [TestCase("RangeError", 5, null)]
