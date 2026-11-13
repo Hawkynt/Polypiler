@@ -150,6 +150,15 @@ cannot, commit the captured expected output with a note saying what produced it.
 
 ## README & repo conventions
 
+- **Documentation moves with the code.** A pull request that adds or widens a frontend, a backend, a
+  lifter or an emitter updates the row of the README support matrix (`## 🧩 Support matrix`: language
+  or format, dialect, frontend/lift, backend/emit, the supported subset in the notes) in the same
+  change — the matrix states what works today, never what is planned. A pull request that implements
+  an optimization rewrites its page under `docs/optimizations/` (drop the `status: planned` marker,
+  describe what the code does, keep a before/after example and the cases where it must not fire),
+  ticks its box in `docs/optimizations/README.md` and updates the counts there and in the README.
+  Guides under `docs/` that describe what changed are updated too.
+
 - Standard frame: title → grouped shields.io badges → one-line `>` blockquote → for a GUI repo one
   hero image → body → `## ❤️ Support` (Sponsors + PayPal, mirrors `.github/FUNDING.yml`) →
   `## 📜 License`. The body is a funnel: Vision and Features say what the thing is, Installation and
