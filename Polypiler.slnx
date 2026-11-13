@@ -1,5 +1,23 @@
 <Solution>
+  <Project Path="Polypiler.Base/Polypiler.Base.csproj" />
+  <Project Path="Polypiler.Catalog/Polypiler.Catalog.csproj" />
   <Project Path="Polypiler.Cli/Polypiler.Cli.csproj" />
   <Project Path="Polypiler.Core/Polypiler.Core.csproj" />
+  <Project Path="Polypiler.Core.Analysis/Polypiler.Core.Analysis.csproj" />
+  <Project Path="Polypiler.Core.Backends.CSharp/Polypiler.Core.Backends.CSharp.csproj" />
+  <Project Path="Polypiler.Core.BinaryFormats/Polypiler.Core.BinaryFormats.csproj" />
+  <Project Path="Polypiler.Core.Frontends.CSharp/Polypiler.Core.Frontends.CSharp.csproj" />
+  <Project Path="Polypiler.Core.IR/Polypiler.Core.IR.csproj" />
+  <Project Path="Polypiler.Core.Legalize/Polypiler.Core.Legalize.csproj" />
+  <Project Path="Polypiler.Core.MachineSemantics/Polypiler.Core.MachineSemantics.csproj" />
+  <Project Path="Polypiler.Core.Optimize/Polypiler.Core.Optimize.csproj" />
+  <Project Path="Polypiler.Core.Recognize/Polypiler.Core.Recognize.csproj" />
+  <Project Path="Polypiler.Core.Recovery/Polypiler.Core.Recovery.csproj" />
+  <Project Path="Polypiler.Core.Types/Polypiler.Core.Types.csproj" />
+  <Project Path="Polypiler.Core.Verification/Polypiler.Core.Verification.csproj" />
+  <Project Path="Polypiler.Interop/Polypiler.Interop.csproj" />
+  <Project Path="Polypiler.Permutation/Polypiler.Permutation.csproj" />
   <Project Path="Polypiler.Tests/Polypiler.Tests.csproj" />
+  <Project Path="Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj" />
+  <Project Path="Polypiler.Tooling/Polypiler.Tooling.csproj" />
 </Solution>
