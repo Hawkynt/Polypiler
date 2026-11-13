@@ -14,7 +14,7 @@ namespace Polypiler.Tests.Prototype;
 [TestFixture]
 public sealed class TranslateCommandTests {
 
-  private const string Usage = "usage: polypiler translate <file.cs> --from csharp --to <javascript|csharp> --output <directory> [--namespace <name>]";
+  private const string Usage = "usage: polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--namespace <name>]";
 
   private string _directory = "";
   private string _out = "";

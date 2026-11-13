@@ -1,0 +1,21 @@
+OpCodes.js
+
+  What:     Cipher's "Universal Cryptographic Operations Library", one file, unchanged.
+  From:     https://github.com/Hawkynt/Hawkynt.github.io
+  Path:     Cipher/OpCodes.js
+  Commit:   b3a8a8e92cbca83475986391c3cac56f0b185d29
+  SHA-256:  d92b569cc08f4cd1ac785faddc7ecb034abe71fa396baffa64338910a1a95861
+  Author:   (c)2006-2025 Hawkynt
+  Licence:  LGPL-3.0-or-later, the licence of that repository and of this one.
+
+The file is a test fixture: the JavaScript importer is held to it, and node runs it as the oracle
+for the functions that import. It is kept byte for byte as the commit has it - do not reformat it,
+and replace it only as a whole with the file of a newer commit, updating commit and hash here.
+
+OpCodes.import.txt beside it is not part of Cipher. It records which functions of this file the
+importer accepts and which diagnostic refuses each of the others; the tests regenerate and compare
+it (POLYPILER_RECORD=1 writes it anew).
+
+The other *.mjs files in this directory were written for this repository. The files in recorded/
+hold what node did when it ran them, one call per line; the acceptance tests run node again and
+compare (POLYPILER_RECORD=1 writes them anew).

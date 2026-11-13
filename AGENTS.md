@@ -9,9 +9,10 @@ house standard; rewrite the "What this is" section for the concrete project and 
 Polypiler, a verified cross-language optimizing compiler, in C# (.NET 10). Solution `Polypiler.slnx`;
 one project per module at the repo root, and `tooling/ci/module-rules.yaml` says which may reference
 which. Most modules are still empty shells that the [PRD](docs/PRD.md) phases fill. What runs today
-is one thin path, the C# → JavaScript prototype: `Polypiler.Core` (product identity, `Diagnostic`,
-`GeneratedFile`), `Polypiler.Core.IR` (a small typed structured IR with verifier and interpreter),
-`Polypiler.Core.Frontends.CSharp` (Roslyn import of a small C# subset),
+is one thin path, the prototype between C# and JavaScript: `Polypiler.Core` (product identity,
+`Diagnostic`, `GeneratedFile`), `Polypiler.Core.IR` (a small typed structured IR with verifier and
+interpreter), `Polypiler.Core.Frontends.CSharp` (Roslyn import of a small C# subset),
+`Polypiler.Core.Frontends.JavaScript` (import of JSDoc-typed JavaScript functions, parsed by Acornima),
 `Polypiler.Core.Backends.JavaScript` (ES module emitter), `Polypiler.Core.Backends.CSharp` (C#
 emitter) and `Polypiler.Cli` (the `polypiler` command with `translate`). `Polypiler.Tests` holds the
 unit tests and carries the coverage; `Polypiler.Tests.Acceptance` starts the real executable, `node`

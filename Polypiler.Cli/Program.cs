@@ -22,7 +22,7 @@ public static class Program {
       output.WriteLine($"{ProductInfo.Name} {ProductInfo.Version}");
       output.WriteLine($"usage: {ProductInfo.Name} [--help | --version]");
       output.WriteLine("       " + TranslateCommand.UsageLine);
-      output.WriteLine("translate is a prototype for a small subset of C#; see the README for the planned interface.");
+      output.WriteLine("translate is a prototype for small subsets of its languages; see the README for the planned interface.");
       return Success;
     }
 

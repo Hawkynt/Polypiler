@@ -82,7 +82,7 @@ public sealed class TranslateToCSharpTests {
     var (exitCode, output, error) = Invoke(all);
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
     Assert.That(error, Does.StartWith("error PLY0001: " + message)
-      .And.Contain("usage: polypiler translate <file.cs> --from csharp --to <javascript|csharp> --output <directory> [--namespace <name>]"));
+      .And.Contain("usage: polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--namespace <name>]"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
