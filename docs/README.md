@@ -16,11 +16,6 @@ Original chapter numbers and section links are retained. The pages here are a re
 7. [Worked translation walks](architecture/WALKTHROUGHS.md) — the first required cross-language showcases.
 8. [Verification and release gates](quality/VERIFICATION.md) — the definition of "supported", test oracles and failure behavior.
 
-## Decisions
-
-The [architecture decision records](adr/README.md) settle what the PRD leaves open, one numbered
-document per decision.
-
 ## Work-item readiness
 
 Use the [canonical issue-writing standard](../ISSUES.md), its

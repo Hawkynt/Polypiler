@@ -1,10 +1,11 @@
-# ADR 0005: Floating-point tolerance policy
+# ADR 0005 — Floating-point tolerance policy
 
-Area: infrastructure
+Area: foundation
 
 | | |
 | --- | --- |
 | Status | accepted |
+| Index | [decision records](README.md) |
 | Date | 2026-11-13 |
 | Issue | [#18](https://github.com/Hawkynt/Polypiler/issues/18) |
 | Requirements | [PRD §1.4](../prd/01-product-and-targets.md#s1-4), [§7.2](../prd/03-behavior-and-testing.md#s7-2), §11.2 and §15 in [part 4](../prd/04-roadmap-and-delivery.md) |
@@ -76,7 +77,7 @@ d(a, b) ≤ m + n + max(m, n)
 Inside a binade the two values are at most `m + n` steps apart. The third term covers a result at a
 power of two: a value `m` units below `2^k` is `2m` steps below it, because the spacing halves
 there. `1 − 2^−52` and `1 + 2^−52` are both within 1 ULP of the exact result 1 and are 3 steps
-apart. The bound is sound and attained: `tooling/float-tolerance/lemma.py` checks it exhaustively in
+apart. The bound is sound and attained: `docs/adr/evidence/0005/lemma.py` checks it exhaustively in
 a 4-bit format for `m, n ≤ 4`. A comparison under it never fails for two implementations that keep
 their contracts.
 
@@ -162,8 +163,8 @@ A translation runs under one profile; the manifest records it.
 - `strict` is adopted. It needs a correctly rounded implementation per function; until one is
   registered, and for an explicit `ulp(n)`, the operation fails with the existing "accuracy contract
   not available" diagnostic (`PLY0262`). The implementation is a follow-up.
-- `fast` is a reserved name. The IR evaluates operations as written and PRD §4.1 forbids unproven
-  reassociation, so no licence exists and the profile cannot be selected yet. A later decision that
+- `fast` is a reserved name. The IR evaluates operations as written, [ADR 0002](0002-numeric-contracts.md)
+  keeps it free of fast-math flags and PRD §4.1 forbids unproven reassociation, so no licence exists and the profile cannot be selected yet. A later decision that
   introduces a licence must keep two rules fixed here: every bound under `fast` is declared by the
   user per output, and a `fast` result is never reported as exact.
 
@@ -299,7 +300,7 @@ element that was not identical (PRD §11.2).
 Measured on one development host, not on the CI hosts; see [Limits](#limits-of-the-evidence).
 
 ```
-bash tooling/float-tolerance/measure.sh <work directory>
+bash docs/adr/evidence/0005/measure.sh <work directory>
 ```
 
 builds one runner per runtime, evaluates one input file on each and prints the tables. Inputs: for
@@ -323,7 +324,7 @@ from GNU MPFR at 400 bits (4 400 bits for arithmetic, where the result is then e
 | x87 | `gcc -DX87`, inline `FSIN`, `FCOS`, `FPTAN`, `FPATAN`, `FYL2X`, `FSQRT`, extended-precision arithmetic | — |
 
 Host: Linux 7.2.6 x86-64, Intel Core i9-11950H, MPFR 4.2.2. Full tables, versions and the SHA-256 of
-every output file are in [`tooling/float-tolerance/results/`](../../tooling/float-tolerance/results/report.md).
+every output file are in [`evidence/0005/results/`](evidence/0005/results/report.md).
 
 ### Reference error, maximum in ULP
 
@@ -407,7 +408,7 @@ NaN encodings for one operation each:
 ### False passes on wrong kernels
 
 Two kernels without any tolerance operation, 10 000 vectors each
-(`tooling/float-tolerance/falsepass.py`). A: 64 `f32` values summed in an `f32` accumulator; the wrong
+(`evidence/0005/falsepass.py`). A: 64 `f32` values summed in an `f32` accumulator; the wrong
 translation accumulates in `f64`. B: `(a + b) + −a` in `f64`, including `a = 1e16, b = 1`; the wrong
 translation reassociates to `(a + −a) + b`. The last column is the chance that a fixture of 8 vectors
 passes the wrong kernel.

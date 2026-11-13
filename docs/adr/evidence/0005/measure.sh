@@ -14,7 +14,19 @@ gcc -O2 -o reference "$here/reference.c" -lmpfr -lgmp -lm
 rustc -O -o run_rs "$here/run.rs"
 mkdir -p go && cp "$here/run.go" go/ && (cd go && { [ -f go.mod ] || go mod init measure >/dev/null 2>&1; } && go build -o ../run_go .)
 javac -d java "$here/Run.java"
-mkdir -p dotnet && cp "$here/dotnet/Run.cs" "$here/dotnet/Run.csproj" dotnet/
+# the project file is written here: a committed one would count as a module of the solution
+mkdir -p dotnet && cp "$here/run.cs" dotnet/Run.cs
+cat > dotnet/Run.csproj <<'PROJECT'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+</Project>
+PROJECT
 dotnet build dotnet/Run.csproj -c Release -o dotnet-out --nologo -v quiet >/dev/null
 
 ./reference < inputs.txt > out.reference.txt
