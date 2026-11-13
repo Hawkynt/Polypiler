@@ -149,8 +149,8 @@ public static class IrVerifier {
           break;
         case IrConvert conversion:
           this.Expression(conversion.Operand);
-          this.Require(conversion.Type.IsInteger && conversion.Operand.Type.IsInteger,
-            $"a conversion from {conversion.Operand.Type} to {conversion.Type}");
+          this.Require(Converts(conversion),
+            $"a conversion from {conversion.Operand.Type} to {conversion.Type} with the contract {conversion.Contract}");
           break;
         case IrConditional choice:
           this.Value(choice.Condition, IrType.Bool, "the condition of a conditional expression");
@@ -194,12 +194,13 @@ public static class IrVerifier {
         $"the arguments of the call of '{call.Function}' do not match its parameters");
     }
 
+    private static bool Converts(IrConvert conversion)
+      => conversion.Type.IsInteger && conversion.Operand.Type.IsInteger && conversion.Contract is IrConversion.Wrap or IrConversion.Trap;
+
     private static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.U8 => constant.Value is >= byte.MinValue and <= byte.MaxValue,
-      IrTypeKind.I32 => constant.Value is >= int.MinValue and <= int.MaxValue,
-      IrTypeKind.U32 => constant.Value is >= uint.MinValue and <= uint.MaxValue,
-      _ => false
+      IrTypeKind.Void or IrTypeKind.Array => false,
+      _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))
     };
 
   }

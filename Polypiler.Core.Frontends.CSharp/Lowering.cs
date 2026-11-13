@@ -129,12 +129,22 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
   private static IrType Map(ITypeSymbol? type, SyntaxNode node) {
     switch (type?.SpecialType) {
+      case SpecialType.System_SByte:
+        return IrType.I8;
+      case SpecialType.System_Byte:
+        return IrType.U8;
+      case SpecialType.System_Int16:
+        return IrType.I16;
+      case SpecialType.System_UInt16 or SpecialType.System_Char:
+        return IrType.U16;
       case SpecialType.System_Int32:
         return IrType.I32;
       case SpecialType.System_UInt32:
         return IrType.U32;
-      case SpecialType.System_Byte:
-        return IrType.U8;
+      case SpecialType.System_Int64:
+        return IrType.I64;
+      case SpecialType.System_UInt64:
+        return IrType.U64;
       case SpecialType.System_Boolean:
         return IrType.Bool;
       case SpecialType.System_Void:
@@ -143,7 +153,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
 
     if (type is IArrayTypeSymbol { Rank: 1 } array) {
       var element = Map(array.ElementType, node);
-      if (element.IsInteger)
+      if (element.IsNumeric)
         return IrType.Array(element);
     }
 
@@ -171,6 +181,9 @@ internal sealed class Lowering(string path, SemanticModel model) {
     switch (statement) {
       case BlockSyntax block:
         into.Add(this.Block(block));
+        break;
+      case CheckedStatementSyntax context:
+        into.Add(this.Block(context.Block));
         break;
       case LocalDeclarationStatementSyntax declaration:
         var first = declaration.GetFirstToken();
@@ -284,19 +297,47 @@ internal sealed class Lowering(string path, SemanticModel model) {
       _ => IrBinaryOp.ShiftRightLogical
     };
 
+    var trap = this.IsChecked(assignment);
     var target = this.Target(assignment.Left, into, true);
     var current = target.Read();
     var left = Convert(current, Map(operation.Parameters[0].Type, assignment));
     var right = this.Value(assignment.Right);
-    into.Add(target.Write(Convert(Binary(op, left, right, assignment), current.Type)));
+    into.Add(target.Write(Convert(Binary(op, left, right, assignment, trap), current.Type, trap)));
   }
 
+  /// <summary>
+  /// A step as a statement: the variable or element plus or minus one, computed in the type C# promotes
+  /// it to and converted back, which in a checked context traps instead of wrapping around.
+  /// </summary>
   private void Step(ExpressionSyntax operand, bool increment, List<IrStmt> into) {
+    var trap = this.IsChecked(operand);
     var target = this.Target(operand, into, true);
     var current = target.Read();
-    var word = current.Type.IsWord ? current.Type : IrType.I32;
-    var stepped = new IrBinary(increment ? IrBinaryOp.Add : IrBinaryOp.Subtract, Convert(current, word), new IrConst(word, 1));
-    into.Add(target.Write(Convert(stepped, current.Type)));
+    var word = current.Type.IsArithmetic ? current.Type : IrType.I32;
+    var stepped = Binary(increment ? IrBinaryOp.Add : IrBinaryOp.Subtract, Convert(current, word), new IrConst(word, 1), operand, trap);
+    into.Add(target.Write(Convert(stepped, current.Type, trap)));
+  }
+
+  /// <summary>
+  /// Whether overflow traps where a node stands: inside the nearest enclosing <c>checked</c> or
+  /// <c>unchecked</c>, and as the compilation says where there is neither.
+  /// </summary>
+  private bool IsChecked(SyntaxNode node) {
+    for (var parent = node.Parent; parent is not null; parent = parent.Parent)
+      switch (parent.Kind()) {
+        case SyntaxKind.CheckedExpression or SyntaxKind.CheckedStatement:
+          return true;
+        case SyntaxKind.UncheckedExpression or SyntaxKind.UncheckedStatement:
+          return false;
+      }
+
+    return model.Compilation.Options.CheckOverflow;
+  }
+
+  /// <summary>An array index or length: C# also takes 64-bit ones, the subset only those of 32 bits.</summary>
+  private IrExpr Index(ExpressionSyntax expression) {
+    var index = this.Value(expression);
+    return index.Type.IsWord ? index : throw new UnsupportedException(expression, $"an array index or length of the type {index.Type}");
   }
 
   /// <summary>
@@ -309,7 +350,7 @@ internal sealed class Lowering(string path, SemanticModel model) {
         return (() => variable, value => new IrAssign(variable.Local, value));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element:
         var array = this.Value(element.Expression);
-        var index = this.Value(element.ArgumentList.Arguments[0].Expression);
+        var index = this.Index(element.ArgumentList.Arguments[0].Expression);
         if (alsoRead) {
           array = this.Once(array, into);
           index = this.Once(index, into);
@@ -340,11 +381,13 @@ internal sealed class Lowering(string path, SemanticModel model) {
   private IrExpr Natural(ExpressionSyntax expression, IrType type) {
     var constant = model.GetConstantValue(expression);
     if (constant.HasValue)
-      return new IrConst(type, System.Convert.ToInt64(constant.Value, System.Globalization.CultureInfo.InvariantCulture));
+      return new IrConst(type, Carried(constant.Value!));
 
     switch (expression) {
       case ParenthesizedExpressionSyntax parenthesized:
         return this.Value(parenthesized.Expression);
+      case CheckedExpressionSyntax context:
+        return this.Value(context.Expression);
       case IdentifierNameSyntax identifier when model.GetSymbolInfo(identifier).Symbol is { } symbol && this._variables.TryGetValue(symbol, out var variable):
         return new IrLocalRef(variable);
       case PrefixUnaryExpressionSyntax unary:
@@ -354,13 +397,13 @@ internal sealed class Lowering(string path, SemanticModel model) {
       case ConditionalExpressionSyntax choice:
         return new IrConditional(this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse));
       case CastExpressionSyntax cast:
-        return Convert(this.Value(cast.Expression), type);
+        return Convert(this.Value(cast.Expression), type, this.IsChecked(cast));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element:
-        return new IrArrayLoad(this.Value(element.Expression), this.Value(element.ArgumentList.Arguments[0].Expression));
+        return new IrArrayLoad(this.Value(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression));
       case MemberAccessExpressionSyntax { Name.Identifier.Text: "Length" } member when model.GetTypeInfo(member.Expression).Type is IArrayTypeSymbol:
         return new IrArrayLength(this.Value(member.Expression));
       case ArrayCreationExpressionSyntax { Initializer: null } creation:
-        return new IrNewArray(type, this.Value(creation.Type.RankSpecifiers[0].Sizes[0]));
+        return new IrNewArray(type, this.Index(creation.Type.RankSpecifiers[0].Sizes[0]));
       case InvocationExpressionSyntax invocation:
         return this.Call(invocation, type);
       default:
@@ -386,7 +429,11 @@ internal sealed class Lowering(string path, SemanticModel model) {
         throw new UnsupportedException(unary, unary.Kind().ToString());
     }
 
-    return new IrUnary(op, this.Value(unary.Operand));
+    var operand = this.Value(unary.Operand);
+    if (op == IrUnaryOp.Negate && operand.Type.IsInteger && this.IsChecked(unary))
+      op = IrUnaryOp.NegateChecked;
+
+    return new IrUnary(op, operand);
   }
 
   private IrExpr Binary(BinaryExpressionSyntax binary) {
@@ -415,10 +462,18 @@ internal sealed class Lowering(string path, SemanticModel model) {
     if (op is null)
       throw new UnsupportedException(binary, binary.Kind().ToString());
 
-    return Binary(op.Value, this.Value(binary.Left), this.Value(binary.Right), binary);
+    return Binary(op.Value, this.Value(binary.Left), this.Value(binary.Right), binary, this.IsChecked(binary));
   }
 
-  private static IrExpr Binary(IrBinaryOp op, IrExpr left, IrExpr right, SyntaxNode node) {
+  private static IrExpr Binary(IrBinaryOp op, IrExpr left, IrExpr right, SyntaxNode node, bool trap) {
+    if (trap && left.Type.IsInteger)
+      op = op switch {
+        IrBinaryOp.Add => IrBinaryOp.AddChecked,
+        IrBinaryOp.Subtract => IrBinaryOp.SubtractChecked,
+        IrBinaryOp.Multiply => IrBinaryOp.MultiplyChecked,
+        _ => op
+      };
+
     if (!IrOperators.Accepts(op, left.Type, right.Type))
       throw new UnsupportedException(node, $"{node.Kind()} on {left.Type} and {right.Type}");
 
@@ -435,15 +490,27 @@ internal sealed class Lowering(string path, SemanticModel model) {
     return new IrCall(method.Name, type, arguments.Select(argument => this.Value(argument.Expression)).ToList());
   }
 
-  /// <summary>Converts between integer types; a constant is converted here, exactly.</summary>
-  private static IrExpr Convert(IrExpr value, IrType type) {
+  /// <summary>
+  /// Converts between numeric types. A constant is converted here when the conversion is one the
+  /// compiler applies silently, which loses nothing; a conversion that could lose something traps
+  /// when it stands in a checked context and wraps around otherwise.
+  /// </summary>
+  private static IrExpr Convert(IrExpr value, IrType type, bool trap = false) {
     if (value.Type == type)
       return value;
 
-    return value is IrConst constant
+    var lossy = trap && !IrOperators.Contains(type, value.Type);
+    return value is IrConst constant && !lossy
       ? new IrConst(type, IrOperators.Wrap(type, constant.Value))
-      : new IrConvert(type, value);
+      : new IrConvert(type, value, lossy ? IrConversion.Trap : IrConversion.Wrap);
   }
+
+  /// <summary>A constant of the compiler as the IR carries it.</summary>
+  private static long Carried(object value) => value switch {
+    ulong large => (long)large,
+    char unit => unit,
+    _ => System.Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture)
+  };
 
   private sealed class UnsupportedException(SyntaxNode node, string what) : Exception {
 

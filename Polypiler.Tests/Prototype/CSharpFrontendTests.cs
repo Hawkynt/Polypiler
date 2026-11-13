@@ -20,9 +20,9 @@ public sealed class CSharpFrontendTests {
   /// <summary>Every fixture imports into IR the verifier accepts.</summary>
   [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
   public void Fixture_ImportsIntoWellTypedIr(string fixture) {
-    var result = CSharpFrontend.Import(fixture + ".cs", PrototypeFixture.SourceOf(fixture));
+    var result = CSharpFrontend.Import(PrototypeFixture.ClassOf(fixture) + ".cs", PrototypeFixture.SourceOf(fixture));
     Assert.That(result.Diagnostics, Is.Empty);
-    Assert.That(result.Module!.Name, Is.EqualTo(fixture));
+    Assert.That(result.Module!.Name, Is.EqualTo(PrototypeFixture.ClassOf(fixture)));
     Assert.That(IrVerifier.Verify(result.Module), Is.Empty);
   }
 
@@ -63,6 +63,14 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F() => 1 << 33;", IrTypeKind.I32, 2)]
   [TestCase("public static uint F() => 7;", IrTypeKind.U32, 7)]
   [TestCase("public static bool F() => !false;", IrTypeKind.Bool, 1)]
+  [TestCase("public static long F() => 7;", IrTypeKind.I64, 7)]
+  [TestCase("public static long F() => long.MinValue;", IrTypeKind.I64, long.MinValue)]
+  [TestCase("public static ulong F() => ulong.MaxValue;", IrTypeKind.U64, -1)]
+  [TestCase("public static ulong F() => 0x8000000000000000;", IrTypeKind.U64, long.MinValue)]
+  [TestCase("public static char F() => 'a';", IrTypeKind.U16, 97)]
+  [TestCase("public static int F() => 'a' + 1;", IrTypeKind.I32, 98)]
+  [TestCase("public static sbyte F() => sbyte.MinValue;", IrTypeKind.I8, -128)]
+  [TestCase("public static short F() => unchecked((short)0x8000);", IrTypeKind.I16, -32768)]
   public void Import_TakesConstantsFromTheCompiler(string method, IrTypeKind kind, long value) {
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method));
     var constant = (IrConst)((IrReturn)module.Functions[0].Body.Statements[0]).Value!;
@@ -73,15 +81,17 @@ public sealed class CSharpFrontendTests {
   /// Test design 11: every construct the issue lists as out of scope is refused with PLY1002 and the
   /// position of the construct; the snippets are valid C#, so the compiler does not get there first.
   /// </summary>
-  [TestCase("public static long F(long a) => a + 1;", "long", 15, TestName = "long")]
-  [TestCase("public static ulong F() => 1;", "ulong", 15, TestName = "ulong")]
+  [TestCase("public static decimal F(decimal a) => a + 1;", "decimal", 15, TestName = "decimal")]
+  [TestCase("public static System.Half F(System.Half a) => a;", "System.Half", 15, TestName = "Half")]
+  [TestCase("public static System.Int128 F(System.Int128 a) => a;", "System.Int128", 15, TestName = "Int128")]
+  [TestCase("public static nint F(nint a) => a;", "nint", 15, TestName = "nint")]
+  [TestCase("public static int F(int[] a, long i) => a[i];", "an array index or length of the type i64", 43, TestName = "64-bit index")]
+  [TestCase("public static void F(int[] a, ulong i) { a[i] = 1; }", "an array index or length of the type u64", 44, TestName = "64-bit index of a write")]
+  [TestCase("public static int[] F(long n) => new int[n];", "an array index or length of the type i64", 42, TestName = "64-bit length")]
   [TestCase("public static double F() => 1.5;", "double", 15, TestName = "double")]
   [TestCase("public static float F(int a) => a;", "float", 15, TestName = "float")]
-  [TestCase("public static int F(int a) => checked(a + 1);", "CheckedExpression", 31, TestName = "checked expression")]
-  [TestCase("public static int F(int a) { checked { return a + 1; } }", "CheckedStatement", 30, TestName = "checked statement")]
-  [TestCase("public static int F(int a) => unchecked(a + 1);", "UncheckedExpression", 31, TestName = "unchecked expression")]
   [TestCase("public static string F() => \"a\";", "string", 15, TestName = "string")]
-  [TestCase("public static char F() => 'a';", "char", 15, TestName = "char")]
+  [TestCase("public static bool F(char c) => char.IsDigit(c);", "InvocationExpression", 33, TestName = "char text operation")]
   [TestCase("public static int F(int[] a) { int s = 0; foreach (int x in a) s += x; return s; }", "ForEachStatement", 43, TestName = "foreach")]
   [TestCase("public static int F(int a) { switch (a) { default: return 1; } }", "SwitchStatement", 30, TestName = "switch statement")]
   [TestCase("public static int F(int a) => a switch { _ => 1 };", "SwitchExpression", 31, TestName = "switch expression")]
@@ -143,24 +153,105 @@ public sealed class CSharpFrontendTests {
     => Assert.That(Refusal(source), Is.EqualTo(new Diagnostic(
       "PLY1002", DiagnosticSeverity.Error, $"'{what}' is not supported yet", "Snippet.cs", line, column)));
 
-  /// <summary>Test design 15: uint with int is not widened to 64 bits behind the user's back.</summary>
-  [TestCase("public static uint F(uint a, int b) => (uint)(a + b);", "long", 46)]
-  [TestCase("public static bool F(uint a, int b) => a < b;", "long", 40)]
-  [TestCase("public static uint F(uint a) => (uint)(-a);", "long", 39)]
-  public void UIntMixedWithInt_IsRefused(string method, string what, int column) {
+  private static IrModule Import(string methods) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
+
+  private static IrExpr Returned(IrFunction function) => ((IrReturn)function.Body.Statements[^1]).Value!;
+
+  /// <summary>Every integer type of C#, and <c>char</c>, has its IR type, alone and as the element of an array.</summary>
+  [TestCase("sbyte", "i8")]
+  [TestCase("byte", "u8")]
+  [TestCase("short", "i16")]
+  [TestCase("ushort", "u16")]
+  [TestCase("char", "u16")]
+  [TestCase("int", "i32")]
+  [TestCase("uint", "u32")]
+  [TestCase("long", "i64")]
+  [TestCase("ulong", "u64")]
+  public void Import_MapsEveryIntegerType(string keyword, string type) {
+    var function = Import($"public static {keyword} F({keyword} a, {keyword}[] b) => a;").Functions[0];
+    Assert.That(function.ReturnType.ToString(), Is.EqualTo(type));
+    Assert.That(function.Parameters.Select(parameter => parameter.Type.ToString()), Is.EqualTo(new[] { type, type + "[]" }));
+  }
+
+  /// <summary>uint with int is computed in 64 bits, as C# computes it, and so is the negation of a uint.</summary>
+  [Test]
+  public void UIntMixedWithInt_IsWidenedTo64Bits() {
+    var module = Import(
+      "public static long F(uint a, int b) => a + b; public static long G(uint a) => -a; public static bool H(uint a, int b) => a < b;");
+    IrExpr a = new IrLocalRef(new IrLocal("a", IrType.U32));
+    IrExpr b = new IrLocalRef(new IrLocal("b", IrType.I32));
+    Assert.That(Returned(module.Functions[0]), Is.EqualTo(new IrBinary(IrBinaryOp.Add, new IrConvert(IrType.I64, a), new IrConvert(IrType.I64, b))));
+    Assert.That(Returned(module.Functions[1]), Is.EqualTo(new IrUnary(IrUnaryOp.Negate, new IrConvert(IrType.I64, a))));
+    Assert.That(Returned(module.Functions[2]), Is.EqualTo(new IrBinary(IrBinaryOp.Less, new IrConvert(IrType.I64, a), new IrConvert(IrType.I64, b))));
+  }
+
+  /// <summary>The nearest enclosing checked or unchecked decides whether an operator traps; division never changes.</summary>
+  [TestCase("a + b", IrBinaryOp.Add)]
+  [TestCase("checked(a + b)", IrBinaryOp.AddChecked)]
+  [TestCase("checked(a - b)", IrBinaryOp.SubtractChecked)]
+  [TestCase("checked(a * b)", IrBinaryOp.MultiplyChecked)]
+  [TestCase("checked(a / b)", IrBinaryOp.Divide)]
+  [TestCase("checked(a << b)", IrBinaryOp.ShiftLeft)]
+  [TestCase("unchecked(a + b)", IrBinaryOp.Add)]
+  [TestCase("checked(unchecked(a + b))", IrBinaryOp.Add)]
+  [TestCase("unchecked(checked(a + b))", IrBinaryOp.AddChecked)]
+  public void CheckedContext_SelectsTheTrappingOperator(string expression, IrBinaryOp op)
+    => Assert.That(((IrBinary)Returned(Import($"public static int F(int a, int b) => {expression};").Functions[0])).Op, Is.EqualTo(op));
+
+  /// <summary>A checked block reaches negation, steps, compound assignments and casts inside it.</summary>
+  [Test]
+  public void CheckedStatement_AppliesToEverythingInside() {
+    var function = Import(
+      "public static int F(int a, byte b) { checked { a = -a; b++; b += 1; unchecked { a += 1; } return (byte)a; } }").Functions[0];
+    IrExpr a = new IrLocalRef(function.Parameters[0]);
+    IrExpr b = new IrLocalRef(function.Parameters[1]);
+    IrExpr one = new IrConst(IrType.I32, 1);
+    var stepped = new IrConvert(IrType.U8, new IrBinary(IrBinaryOp.AddChecked, new IrConvert(IrType.I32, b), one), IrConversion.Trap);
+    Assert.That(((IrBlock)function.Body.Statements[0]).Statements, Is.EqualTo(new IrStmt[] {
+      new IrAssign(function.Parameters[0], new IrUnary(IrUnaryOp.NegateChecked, a)),
+      new IrAssign(function.Parameters[1], stepped),
+      new IrAssign(function.Parameters[1], stepped),
+      new IrBlock([new IrAssign(function.Parameters[0], new IrBinary(IrBinaryOp.Add, a, one))]),
+      new IrReturn(new IrConvert(IrType.I32, new IrConvert(IrType.U8, a, IrConversion.Trap)))
+    }).Using<IrStmt>(Same));
+  }
+
+  /// <summary>A block is compared by the statements in it: the list of a record has no equality of its own.</summary>
+  private static bool Same(IrStmt left, IrStmt right)
+    => left is IrBlock first && right is IrBlock second ? first.Statements.SequenceEqual(second.Statements) : left.Equals(right);
+
+  /// <summary>The compilation default: everything outside an explicit context traps, a lossless cast still cannot.</summary>
+  [Test]
+  public void CheckedByDefault_AppliesWhereTheSourceSaysNothing() {
+    var result = CSharpFrontend.Import("Snippet.cs", PrototypeFixture.Wrap(
+      "public static int F(int a, int b) => a + b; public static int G(int a, int b) => unchecked(a + b); "
+      + "public static long H(int a) => (long)a; public static byte I(int a) => (byte)a;"), true);
+    var functions = result.Module!.Functions;
+    Assert.That(((IrBinary)Returned(functions[0])).Op, Is.EqualTo(IrBinaryOp.AddChecked));
+    Assert.That(((IrBinary)Returned(functions[1])).Op, Is.EqualTo(IrBinaryOp.Add));
+    Assert.That(((IrConvert)Returned(functions[2])).Contract, Is.EqualTo(IrConversion.Wrap));
+    Assert.That(((IrConvert)Returned(functions[3])).Contract, Is.EqualTo(IrConversion.Trap));
+    Assert.That(IrVerifier.Verify(result.Module), Is.Empty);
+  }
+
+  /// <summary>A constant expression that overflows is the compiler's error, under a code of its own.</summary>
+  [TestCase("public static int F() => int.MaxValue + 1;", "CS0220")]
+  [TestCase("public static int F() => checked(int.MaxValue * 2);", "CS0220")]
+  [TestCase("public static byte F() => (byte)300;", "CS0221")]
+  public void ConstantOverflow_IsReportedWithTheCompilersMessage(string method, string id) {
     var diagnostic = Refusal(PrototypeFixture.Wrap(method));
-    Assert.That((diagnostic.Code, diagnostic.Message, diagnostic.Line, diagnostic.Column),
-      Is.EqualTo(("PLY1002", $"'{what}' is not supported yet", 1, column + 30)));
+    Assert.That((diagnostic.Code, diagnostic.Severity, diagnostic.File, diagnostic.Line), Is.EqualTo(("PLY1003", DiagnosticSeverity.Error, "Snippet.cs", 1)));
+    Assert.That(diagnostic.Message, Does.StartWith(id + ": "));
   }
 
   /// <summary>One method that is refused does not hide the next one.</summary>
   [Test]
   public void EveryRefusedMethod_GetsItsOwnDiagnostic() {
     var result = CSharpFrontend.Import("Snippet.cs",
-      "public static class C {\n  public static long A() => 1;\n  public static int B() => 1;\n  public static char D() => 'x';\n}");
+      "public static class C {\n  public static decimal A() => 1;\n  public static int B() => 1;\n  public static string D() => \"x\";\n}");
     Assert.That(result.Module, Is.Null);
     Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Line, diagnostic.Message)),
-      Is.EqualTo(new[] { (2, "'long' is not supported yet"), (4, "'char' is not supported yet") }));
+      Is.EqualTo(new[] { (2, "'decimal' is not supported yet"), (4, "'string' is not supported yet") }));
   }
 
   /// <summary>Test design 12: invalid C# carries the compiler's own id, text and position.</summary>

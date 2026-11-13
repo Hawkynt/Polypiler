@@ -67,13 +67,58 @@ public sealed class CSharpToJavaScriptTests {
   public void TranslatedNumbers_MatchTheirValue(string method, object[] arguments, string expected)
     => this.TranslatedFixture_Returns("Numbers", new PrototypeCall(method, arguments), expected);
 
-  private void TranslatedFixture_Returns(string fixture, PrototypeCall call, string expected) {
-    File.Copy(PrototypeFixture.PathOf(fixture), Path.Combine(this._directory, fixture + ".cs"));
-    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", fixture + ".cs", "--from", "csharp", "--to", "javascript", "--output", "out");
-    Assert.That(exitCode, Is.Zero, output);
-    Assert.That(File.Exists(Path.Combine(this._directory, "out", fixture + ".mjs")), Is.True);
+  /// <summary>Scenario outline of the wide feature: A translated algorithm matches its published value.</summary>
+  [TestCase("wide/Fnv1a64", "Hash", "a", "12638187200555641996")]
+  [TestCase("wide/Fnv1a64", "Hash", "", "14695981039346656037")]
+  [TestCase("wide/Crc16", "Compute", "123456789", "10673")]
+  public void TranslatedAlgorithm_MatchesItsPublishedValue(string fixture, string method, string text, string expected) {
+    var call = new PrototypeCall(method, [PrototypeCases.Text(text)]);
+    this.TranslatedFixture_Returns(fixture, call, expected);
+    Assert.That(PrototypeFixture.InterpretedOutcome(PrototypeFixture.Imported(fixture), call), Does.StartWith(expected + " | "));
+  }
 
-    var result = Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), fixture + ".mjs", [call]).Single();
+  /// <summary>Scenario outline of the wide feature: the row of SplitMix64, whose argument is a number.</summary>
+  [Test]
+  public void TranslatedSplitMix64_MatchesItsPublishedValue() {
+    var call = new PrototypeCall("First", [0UL]);
+    this.TranslatedFixture_Returns("wide/SplitMix64", call, "16294208416658607535");
+    Assert.That(PrototypeFixture.InterpretedOutcome(PrototypeFixture.Imported("wide/SplitMix64"), call), Is.EqualTo("16294208416658607535"));
+  }
+
+  /// <summary>Scenario: 64-bit arithmetic wraps.</summary>
+  [Test]
+  public void Arithmetic64Bit_Wraps() {
+    const string method = "public static ulong F(ulong a) => a * 0x100000001B3UL + 1UL;";
+    Assert.That(this.TranslateSnippet(method, new PrototypeCall("F", [ulong.MaxValue])), Is.EqualTo("18446742974197923406"));
+    Assert.That(IrInterpreter.Call(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), "F", [ulong.MaxValue]), Is.EqualTo(18446742974197923406UL));
+  }
+
+  /// <summary>Scenario: Mixed uint and int widens to long as in C#.</summary>
+  [Test]
+  public void MixedUIntAndInt_WidensToLong() {
+    const string method = "public static long F(uint a, int b) => a + b;";
+    Assert.That(this.TranslateSnippet(method, new PrototypeCall("F", [4294967295u, -1])), Is.EqualTo("4294967294"));
+    Assert.That(IrInterpreter.Call(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), "F", [4294967295u, -1]), Is.EqualTo(4294967294L));
+    Assert.That(File.ReadAllText(Path.Combine(this._directory, "out", "Snippet.mjs")), Does.Contain("// F(a: number, b: number): bigint"));
+  }
+
+  /// <summary>Scenario: A checked addition traps.</summary>
+  [Test]
+  public void CheckedAddition_Traps() {
+    const string method = "public static int F(int a, int b) => checked(a + b);";
+    Assert.That(this.TranslateSnippet(method, new PrototypeCall("F", [2147483647, 1])), Is.EqualTo("trap: integer overflow"));
+    Assert.That(
+      () => IrInterpreter.Call(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), "F", [2147483647, 1]),
+      Throws.TypeOf<IrTrapException>().With.Property(nameof(IrTrapException.Trap)).EqualTo(IrTrap.IntegerOverflow));
+  }
+
+  private void TranslatedFixture_Returns(string fixture, PrototypeCall call, string expected) {
+    File.Copy(PrototypeFixture.PathOf(fixture), Path.Combine(this._directory, PrototypeFixture.ClassOf(fixture) + ".cs"));
+    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.ClassOf(fixture) + ".cs", "--from", "csharp", "--to", "javascript", "--output", "out");
+    Assert.That(exitCode, Is.Zero, output);
+    Assert.That(File.Exists(Path.Combine(this._directory, "out", PrototypeFixture.ClassOf(fixture) + ".mjs")), Is.True);
+
+    var result = Toolchain.NodeOutcomes(Path.Combine(this._directory, "out"), PrototypeFixture.ClassOf(fixture) + ".mjs", [call]).Single();
     var unchanged = PrototypeFixture.Outcome(null, call.Arguments)["void".Length..];
     Assert.That(result, Is.EqualTo(expected + unchanged));
     Assert.That(PrototypeFixture.CompiledOutcome(fixture, call), Is.EqualTo(expected + unchanged));
@@ -109,7 +154,7 @@ public sealed class CSharpToJavaScriptTests {
   /// <summary>Scenario: An unsupported construct is refused and nothing is written.</summary>
   [Test]
   public void UnsupportedConstruct_IsRefusedAndNothingIsWritten() {
-    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap("public static long F(long a) => a + 1;"));
+    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap("public static decimal F(decimal a) => a + 1;"));
     Assert.That(exitCode, Is.EqualTo(3));
     Assert.That(output, Does.Contain("PLY1002").And.Contain("Snippet.cs(1,"));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
@@ -143,7 +188,7 @@ public sealed class CSharpToJavaScriptTests {
   [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
   public void Node_Interpreter_AndCompiledFixture_Agree(string fixture) {
     var calls = PrototypeCases.For(fixture);
-    var module = PrototypeFixture.Import(fixture + ".cs", PrototypeFixture.SourceOf(fixture));
+    var module = PrototypeFixture.Imported(fixture);
     var node = this.TranslateFixture(fixture, calls);
     var mismatches = new List<string>();
     for (var index = 0; index < calls.Count; ++index) {
@@ -172,7 +217,7 @@ public sealed class CSharpToJavaScriptTests {
     var (exitCode, text) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.PathOf(fixture), "--from", "csharp", "--to", "javascript", "--output", output);
     TestContext.Out.WriteLine($"{fixture}: translated in {watch.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
-    return Toolchain.NodeOutcomes(output, fixture + ".mjs", calls);
+    return Toolchain.NodeOutcomes(output, PrototypeFixture.ClassOf(fixture) + ".mjs", calls);
   }
 
   private string TranslateSnippet(string method, PrototypeCall call) {

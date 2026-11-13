@@ -87,6 +87,22 @@ public sealed class IrTests {
     yield return Case("or with a number", Returning(new IrBinary(IrBinaryOp.LogicalOr, _true, _one)), "LogicalOr is applied to bool and i32");
     yield return Case("order of truth values", Returning(new IrBinary(IrBinaryOp.Less, _true, _true)), "Less is applied to bool and bool");
     yield return Case("i32 with u32", Returning(new IrBinary(IrBinaryOp.Multiply, _one, Ref(_u))), "Multiply is applied to i32 and u32");
+    IrExpr big = new IrConst(IrType.I64, 1);
+    IrExpr small = new IrConst(IrType.U8, 1);
+    yield return Case("checked negation of u32", Returning(new IrUnary(IrUnaryOp.NegateChecked, Ref(_u))), "NegateChecked is applied to u32");
+    yield return Case("negated u64", Returning(new IrUnary(IrUnaryOp.Negate, new IrConst(IrType.U64, 1))), "Negate is applied to u64");
+    yield return Case("complement of a byte", Returning(new IrUnary(IrUnaryOp.BitNot, small)), "BitNot is applied to u8");
+    yield return Case("checked sum of truth values", Returning(new IrBinary(IrBinaryOp.AddChecked, _true, _true)), "AddChecked is applied to bool and bool");
+    yield return Case("checked product of mixed widths", Returning(new IrBinary(IrBinaryOp.MultiplyChecked, _one, big)), "MultiplyChecked is applied to i32 and i64");
+    yield return Case("checked difference of bytes", Returning(new IrBinary(IrBinaryOp.SubtractChecked, small, small)), "SubtractChecked is applied to u8 and u8");
+    yield return Case("sum of bytes", Returning(new IrBinary(IrBinaryOp.Add, small, small)), "Add is applied to u8 and u8");
+    yield return Case("i64 with i32", Returning(new IrBinary(IrBinaryOp.Subtract, big, _one)), "Subtract is applied to i64 and i32");
+    yield return Case("shift by 64 bits", Returning(new IrBinary(IrBinaryOp.ShiftLeft, big, big)), "ShiftLeft is applied to i64 and i64");
+    yield return Case("comparison of narrow integers", Returning(new IrBinary(IrBinaryOp.Less, small, small)), "Less is applied to u8 and u8");
+    yield return Case("i8 constant too large", Returning(new IrConst(IrType.I8, 128)), "the constant 128 is not a value of i8");
+    yield return Case("i16 constant too small", Returning(new IrConst(IrType.I16, -32769)), "the constant -32769 is not a value of i16");
+    yield return Case("u16 constant too large", Returning(new IrConst(IrType.U16, 65536)), "the constant 65536 is not a value of u16");
+    yield return Case("void constant", Statement(new IrExprStmt(new IrConst(IrType.Void, 0))), "the constant 0 is not a value of void");
     yield return Case("conversion from bool", Returning(new IrConvert(IrType.I32, _true)), "a conversion from bool to i32");
     yield return Case("conversion to bool", Returning(new IrConvert(IrType.Bool, _one)), "a conversion from i32 to bool");
     yield return Case("conditional on a number", Returning(new IrConditional(_one, _one, _one)), "the condition of a conditional expression has the type i32");
@@ -126,6 +142,11 @@ public sealed class IrTests {
       new IrIf(Ref(_flag), new IrBlock([new IrReturn(new IrArrayLength(new IrNewArray(_ints, Ref(_u))))]), new IrBlock([])),
       new IrReturn(new IrConditional(new IrBinary(IrBinaryOp.Equal, Ref(_flag), _true), Ref(_x), new IrUnary(IrUnaryOp.Negate, _one))));
     Assert.That(IrVerifier.Verify(module), Is.Empty);
+    IrExpr large = new IrConst(IrType.U64, -1);
+    IrExpr wide = new IrConvert(IrType.I64, large, IrConversion.Trap);
+    Assert.That(IrVerifier.Verify(Returning(new IrConvert(IrType.I8, new IrBinary(IrBinaryOp.ShiftRightLogical,
+      new IrBinary(IrBinaryOp.MultiplyChecked, new IrUnary(IrUnaryOp.NegateChecked, wide), new IrUnary(IrUnaryOp.BitNot, wide)), _one)))), Is.Empty);
+    Assert.That(IrVerifier.Verify(Returning(new IrBinary(IrBinaryOp.GreaterOrEqual, large, new IrConst(IrType.U64, long.MinValue)))), Is.Empty);
   }
 
   /// <summary>A local declared in a block that ended can be declared again in the next one.</summary>
@@ -139,6 +160,17 @@ public sealed class IrTests {
   public void Types_HaveTheirNamesAndClasses() {
     Assert.That(new[] { IrType.Void, IrType.Bool, IrType.U8, IrType.I32, IrType.U32, _ints }.Select(type => type.ToString()),
       Is.EqualTo(new[] { "void", "bool", "u8", "i32", "u32", "i32[]" }));
+    var integers = new[] { IrType.I8, IrType.U8, IrType.I16, IrType.U16, IrType.I32, IrType.U32, IrType.I64, IrType.U64 };
+    Assert.That(integers.Select(type => type.ToString()), Is.EqualTo(new[] { "i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64" }));
+    Assert.That(integers.Select(type => (type.Bits, type.IsSigned)),
+      Is.EqualTo(new[] { (8, true), (8, false), (16, true), (16, false), (32, true), (32, false), (64, true), (64, false) }));
+    Assert.That(integers.Select(type => (type.IsInteger, type.IsNumeric, type.IsStorable, IrType.Array(type).IsStorable)), Has.All.EqualTo((true, true, true, true)));
+    Assert.That(integers.Select(type => (type.IsWord, type.IsLong, type.IsWideInteger, type.IsArithmetic)), Is.EqualTo(new[] {
+      (false, false, false, false), (false, false, false, false), (false, false, false, false), (false, false, false, false),
+      (true, false, true, true), (true, false, true, true), (false, true, true, true), (false, true, true, true)
+    }));
+    Assert.That(new[] { IrType.Void, IrType.Bool, _ints }.Select(type => (type.Bits, type.IsSigned, type.IsNumeric, type.IsArithmetic, type.IsLong)),
+      Has.All.EqualTo((0, false, false, false, false)));
     Assert.That(new[] { IrType.Void, IrType.Bool, IrType.U8, IrType.I32, IrType.U32, _ints }.Select(type => (type.IsInteger, type.IsWord, type.IsArray, type.IsStorable)),
       Is.EqualTo(new[] { (false, false, false, false), (false, false, false, true), (true, false, false, true), (true, true, false, true), (true, true, false, true), (false, false, true, true) }));
     var bytes = IrType.Array(IrType.U8);
@@ -154,9 +186,42 @@ public sealed class IrTests {
   [TestCase(IrTypeKind.U32, -1, 4294967295)]
   [TestCase(IrTypeKind.I32, 4294967295, -1)]
   [TestCase(IrTypeKind.I32, 0x80000000, -2147483648)]
-  public void Wrap_KeepsTheLowBits(IrTypeKind kind, long value, long expected) {
-    var type = kind switch { IrTypeKind.U8 => IrType.U8, IrTypeKind.U32 => IrType.U32, _ => IrType.I32 };
-    Assert.That(IrOperators.Wrap(type, value), Is.EqualTo(expected));
+  [TestCase(IrTypeKind.I8, 0x80, -128)]
+  [TestCase(IrTypeKind.I8, 0x17F, 127)]
+  [TestCase(IrTypeKind.I16, 0x18000, -32768)]
+  [TestCase(IrTypeKind.U16, -1, 65535)]
+  [TestCase(IrTypeKind.I64, long.MinValue, long.MinValue)]
+  [TestCase(IrTypeKind.U64, -1, -1)]
+  public void Wrap_KeepsTheLowBits(IrTypeKind kind, long value, long expected)
+    => Assert.That(IrOperators.Wrap(Scalar(kind), value), Is.EqualTo(expected));
+
+  private static IrType Scalar(IrTypeKind kind)
+    => new[] { IrType.I8, IrType.U8, IrType.I16, IrType.U16, IrType.I32, IrType.U32, IrType.I64, IrType.U64 }.Single(type => type.Kind == kind);
+
+  /// <summary>The range of every integer type, and which type holds every value of which.</summary>
+  [TestCase(IrTypeKind.I8, "-128", "127")]
+  [TestCase(IrTypeKind.U8, "0", "255")]
+  [TestCase(IrTypeKind.I16, "-32768", "32767")]
+  [TestCase(IrTypeKind.U16, "0", "65535")]
+  [TestCase(IrTypeKind.I32, "-2147483648", "2147483647")]
+  [TestCase(IrTypeKind.U32, "0", "4294967295")]
+  [TestCase(IrTypeKind.I64, "-9223372036854775808", "9223372036854775807")]
+  [TestCase(IrTypeKind.U64, "0", "18446744073709551615")]
+  public void IntegerType_HasItsRange(IrTypeKind kind, string minimum, string maximum) {
+    var type = Scalar(kind);
+    Assert.That((IrOperators.Minimum(type).ToString(), IrOperators.Maximum(type).ToString()), Is.EqualTo((minimum, maximum)));
+    Assert.That(IrOperators.Contains(type, type), Is.True);
+    Assert.That(IrOperators.Contains(IrType.I64, type), Is.EqualTo(kind != IrTypeKind.U64));
+    Assert.That(IrOperators.Contains(type, IrType.U8), Is.EqualTo(kind != IrTypeKind.I8));
+    Assert.That(IrOperators.Number(type, -1).ToString(), Is.EqualTo(kind == IrTypeKind.U64 ? maximum : "-1"));
+  }
+
+  [Test]
+  public void CheckedOperators_AreTheOnesThatTrap() {
+    Assert.That(new[] { IrBinaryOp.AddChecked, IrBinaryOp.SubtractChecked, IrBinaryOp.MultiplyChecked }.Select(IrOperators.Traps), Has.All.True);
+    Assert.That(new[] { IrBinaryOp.Add, IrBinaryOp.Divide, IrBinaryOp.LogicalOr }.Select(IrOperators.Traps), Has.All.False);
+    Assert.That(new IrBinary(IrBinaryOp.MultiplyChecked, _one, _one).Type, Is.EqualTo(IrType.I32));
+    Assert.That(new IrConvert(IrType.U8, _one), Is.EqualTo(new IrConvert(IrType.U8, _one, IrConversion.Wrap)).And.Not.EqualTo(new IrConvert(IrType.U8, _one, IrConversion.Trap)));
   }
 
   [TestCase(IrTrap.DivideByZero, "divide by zero")]
@@ -182,6 +247,11 @@ public sealed class IrTests {
     Assert.That(Run(_ints, Arguments(data: data), new IrReturn(Ref(_data))), Is.SameAs(data));
     Assert.That(Run(IrType.Void, Arguments(), new IrReturn(null)), Is.Null);
     Assert.That(Run(IrType.Void, Arguments()), Is.Null);
+    Assert.That(Run(IrType.I8, Arguments(a: -3), new IrReturn(new IrConvert(IrType.I8, Ref(_a)))), Is.EqualTo((sbyte)-3).And.TypeOf<sbyte>());
+    Assert.That(Run(IrType.I16, Arguments(a: -3), new IrReturn(new IrConvert(IrType.I16, Ref(_a)))), Is.EqualTo((short)-3).And.TypeOf<short>());
+    Assert.That(Run(IrType.U16, Arguments(a: -3), new IrReturn(new IrConvert(IrType.U16, Ref(_a)))), Is.EqualTo((ushort)65533).And.TypeOf<ushort>());
+    Assert.That(Run(IrType.I64, Arguments(a: -3), new IrReturn(new IrConvert(IrType.I64, Ref(_a)))), Is.EqualTo(-3L).And.TypeOf<long>());
+    Assert.That(Run(IrType.U64, Arguments(a: -3), new IrReturn(new IrConvert(IrType.U64, Ref(_a)))), Is.EqualTo(ulong.MaxValue - 2).And.TypeOf<ulong>());
     Assert.That(Run(IrType.I32, Arguments(), new IrDeclare(_x, null), new IrAssign(_x, _one), new IrReturn(Ref(_x))), Is.EqualTo(1));
   }
 
@@ -194,6 +264,58 @@ public sealed class IrTests {
     Assert.That(Create(IrType.U32, 1), Is.EqualTo(new uint[1]).And.TypeOf<uint[]>());
     Assert.That(Create(IrType.U8, 0), Is.Empty.And.TypeOf<byte[]>());
     Assert.That(() => Create(IrType.U8, -1), Throws.TypeOf<IrTrapException>().With.Property(nameof(IrTrapException.Trap)).EqualTo(IrTrap.IntegerOverflow));
+    Assert.That(Create(IrType.I8, 1), Is.TypeOf<sbyte[]>());
+    Assert.That(Create(IrType.I16, 1), Is.TypeOf<short[]>());
+    Assert.That(Create(IrType.U16, 1), Is.TypeOf<ushort[]>());
+    Assert.That(Create(IrType.I64, 1), Is.TypeOf<long[]>());
+    Assert.That(Create(IrType.U64, 3), Is.EqualTo(new ulong[3]).And.TypeOf<ulong[]>());
+  }
+
+  /// <summary>
+  /// Every numeric type crosses the boundary as itself and inside an array; a <c>u16</c> is also a
+  /// <see cref="char"/>, and a <c>char[]</c> stays one when it is written.
+  /// </summary>
+  [Test]
+  public void Interpreter_TakesEveryNumericTypeAcrossTheBoundary() {
+    object? Pass(IrType type, object value) {
+      var p = new IrLocal("p", type);
+      return IrInterpreter.Call(new IrModule("M", [Function("Same", type, [p], [], new IrReturn(Ref(p)))]), "Same", [value]);
+    }
+
+    object? Swap(IrType element, Array data) {
+      var d = new IrLocal("d", IrType.Array(element));
+      var first = new IrArrayLoad(Ref(d), new IrConst(IrType.I32, 0));
+      var module = new IrModule("M", [Function("Swap", element, [d], [],
+        new IrStore(Ref(d), new IrConst(IrType.I32, 1), first), new IrReturn(first))]);
+      return IrInterpreter.Call(module, "Swap", [data]);
+    }
+
+    Assert.That(Pass(IrType.I8, sbyte.MinValue), Is.EqualTo(sbyte.MinValue).And.TypeOf<sbyte>());
+    Assert.That(Pass(IrType.I16, short.MinValue), Is.EqualTo(short.MinValue).And.TypeOf<short>());
+    Assert.That(Pass(IrType.U16, ushort.MaxValue), Is.EqualTo(ushort.MaxValue).And.TypeOf<ushort>());
+    Assert.That(Pass(IrType.U16, 'A'), Is.EqualTo((ushort)65).And.TypeOf<ushort>());
+    Assert.That(Pass(IrType.I64, long.MinValue), Is.EqualTo(long.MinValue).And.TypeOf<long>());
+    Assert.That(Pass(IrType.U64, ulong.MaxValue), Is.EqualTo(ulong.MaxValue).And.TypeOf<ulong>());
+
+    var letters = new[] { 'x', 'y' };
+    Assert.That(Swap(IrType.U16, letters), Is.EqualTo((ushort)'x'));
+    Assert.That(letters, Is.EqualTo(new[] { 'x', 'x' }));
+    var signed = new sbyte[] { -1, 0 };
+    Assert.That((Swap(IrType.I8, signed), signed[1]), Is.EqualTo(((sbyte)-1, (sbyte)-1)));
+    var shorts = new short[] { -2, 0 };
+    Assert.That((Swap(IrType.I16, shorts), shorts[1]), Is.EqualTo(((short)-2, (short)-2)));
+    var units = new ushort[] { 65535, 0 };
+    Assert.That((Swap(IrType.U16, units), units[1]), Is.EqualTo((ushort.MaxValue, ushort.MaxValue)));
+    var longs = new[] { long.MinValue, 0 };
+    Assert.That((Swap(IrType.I64, longs), longs[1]), Is.EqualTo((long.MinValue, long.MinValue)));
+    var large = new[] { ulong.MaxValue, 0UL };
+    Assert.That((Swap(IrType.U64, large), large[1]), Is.EqualTo((ulong.MaxValue, ulong.MaxValue)));
+
+    Assert.That(() => Pass(IrType.I64, 1), Throws.ArgumentException.With.Message.Contains("'p' is not a value of i64"));
+    Assert.That(() => Pass(IrType.Array(IrType.I32), new[] { new[] { 1 } }), Throws.ArgumentException);
+    Assert.That(() => Pass(IrType.Array(IrType.I32), new int[1, 1]), Throws.ArgumentException);
+    Assert.That(() => Pass(IrType.Array(IrType.I32), new[] { true }), Throws.ArgumentException);
+    Assert.That(() => Pass(IrType.I32, 1.5m), Throws.ArgumentException);
   }
 
   /// <summary>What the caller hands in has to fit the function.</summary>

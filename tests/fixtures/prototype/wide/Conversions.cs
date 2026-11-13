@@ -1,0 +1,160 @@
+// One function per explicit cast between two numeric types, unchecked and checked, so that each can be
+// compared with what the C# compiler and the installed runtime make of it. Written for this repository.
+namespace Polypiler.Fixtures.Prototype;
+
+public static class Conversions {
+
+  public static byte SByteToByte(sbyte a) => (byte)a;
+  public static byte SByteToByteChecked(sbyte a) => checked((byte)a);
+  public static short SByteToShort(sbyte a) => (short)a;
+  public static short SByteToShortChecked(sbyte a) => checked((short)a);
+  public static ushort SByteToUShort(sbyte a) => (ushort)a;
+  public static ushort SByteToUShortChecked(sbyte a) => checked((ushort)a);
+  public static char SByteToChar(sbyte a) => (char)a;
+  public static char SByteToCharChecked(sbyte a) => checked((char)a);
+  public static int SByteToInt(sbyte a) => (int)a;
+  public static int SByteToIntChecked(sbyte a) => checked((int)a);
+  public static uint SByteToUInt(sbyte a) => (uint)a;
+  public static uint SByteToUIntChecked(sbyte a) => checked((uint)a);
+  public static long SByteToLong(sbyte a) => (long)a;
+  public static long SByteToLongChecked(sbyte a) => checked((long)a);
+  public static ulong SByteToULong(sbyte a) => (ulong)a;
+  public static ulong SByteToULongChecked(sbyte a) => checked((ulong)a);
+
+  public static sbyte ByteToSByte(byte a) => (sbyte)a;
+  public static sbyte ByteToSByteChecked(byte a) => checked((sbyte)a);
+  public static short ByteToShort(byte a) => (short)a;
+  public static short ByteToShortChecked(byte a) => checked((short)a);
+  public static ushort ByteToUShort(byte a) => (ushort)a;
+  public static ushort ByteToUShortChecked(byte a) => checked((ushort)a);
+  public static char ByteToChar(byte a) => (char)a;
+  public static char ByteToCharChecked(byte a) => checked((char)a);
+  public static int ByteToInt(byte a) => (int)a;
+  public static int ByteToIntChecked(byte a) => checked((int)a);
+  public static uint ByteToUInt(byte a) => (uint)a;
+  public static uint ByteToUIntChecked(byte a) => checked((uint)a);
+  public static long ByteToLong(byte a) => (long)a;
+  public static long ByteToLongChecked(byte a) => checked((long)a);
+  public static ulong ByteToULong(byte a) => (ulong)a;
+  public static ulong ByteToULongChecked(byte a) => checked((ulong)a);
+
+  public static sbyte ShortToSByte(short a) => (sbyte)a;
+  public static sbyte ShortToSByteChecked(short a) => checked((sbyte)a);
+  public static byte ShortToByte(short a) => (byte)a;
+  public static byte ShortToByteChecked(short a) => checked((byte)a);
+  public static ushort ShortToUShort(short a) => (ushort)a;
+  public static ushort ShortToUShortChecked(short a) => checked((ushort)a);
+  public static char ShortToChar(short a) => (char)a;
+  public static char ShortToCharChecked(short a) => checked((char)a);
+  public static int ShortToInt(short a) => (int)a;
+  public static int ShortToIntChecked(short a) => checked((int)a);
+  public static uint ShortToUInt(short a) => (uint)a;
+  public static uint ShortToUIntChecked(short a) => checked((uint)a);
+  public static long ShortToLong(short a) => (long)a;
+  public static long ShortToLongChecked(short a) => checked((long)a);
+  public static ulong ShortToULong(short a) => (ulong)a;
+  public static ulong ShortToULongChecked(short a) => checked((ulong)a);
+
+  public static sbyte UShortToSByte(ushort a) => (sbyte)a;
+  public static sbyte UShortToSByteChecked(ushort a) => checked((sbyte)a);
+  public static byte UShortToByte(ushort a) => (byte)a;
+  public static byte UShortToByteChecked(ushort a) => checked((byte)a);
+  public static short UShortToShort(ushort a) => (short)a;
+  public static short UShortToShortChecked(ushort a) => checked((short)a);
+  public static char UShortToChar(ushort a) => (char)a;
+  public static char UShortToCharChecked(ushort a) => checked((char)a);
+  public static int UShortToInt(ushort a) => (int)a;
+  public static int UShortToIntChecked(ushort a) => checked((int)a);
+  public static uint UShortToUInt(ushort a) => (uint)a;
+  public static uint UShortToUIntChecked(ushort a) => checked((uint)a);
+  public static long UShortToLong(ushort a) => (long)a;
+  public static long UShortToLongChecked(ushort a) => checked((long)a);
+  public static ulong UShortToULong(ushort a) => (ulong)a;
+  public static ulong UShortToULongChecked(ushort a) => checked((ulong)a);
+
+  public static sbyte CharToSByte(char a) => (sbyte)a;
+  public static sbyte CharToSByteChecked(char a) => checked((sbyte)a);
+  public static byte CharToByte(char a) => (byte)a;
+  public static byte CharToByteChecked(char a) => checked((byte)a);
+  public static short CharToShort(char a) => (short)a;
+  public static short CharToShortChecked(char a) => checked((short)a);
+  public static ushort CharToUShort(char a) => (ushort)a;
+  public static ushort CharToUShortChecked(char a) => checked((ushort)a);
+  public static int CharToInt(char a) => (int)a;
+  public static int CharToIntChecked(char a) => checked((int)a);
+  public static uint CharToUInt(char a) => (uint)a;
+  public static uint CharToUIntChecked(char a) => checked((uint)a);
+  public static long CharToLong(char a) => (long)a;
+  public static long CharToLongChecked(char a) => checked((long)a);
+  public static ulong CharToULong(char a) => (ulong)a;
+  public static ulong CharToULongChecked(char a) => checked((ulong)a);
+
+  public static sbyte IntToSByte(int a) => (sbyte)a;
+  public static sbyte IntToSByteChecked(int a) => checked((sbyte)a);
+  public static byte IntToByte(int a) => (byte)a;
+  public static byte IntToByteChecked(int a) => checked((byte)a);
+  public static short IntToShort(int a) => (short)a;
+  public static short IntToShortChecked(int a) => checked((short)a);
+  public static ushort IntToUShort(int a) => (ushort)a;
+  public static ushort IntToUShortChecked(int a) => checked((ushort)a);
+  public static char IntToChar(int a) => (char)a;
+  public static char IntToCharChecked(int a) => checked((char)a);
+  public static uint IntToUInt(int a) => (uint)a;
+  public static uint IntToUIntChecked(int a) => checked((uint)a);
+  public static long IntToLong(int a) => (long)a;
+  public static long IntToLongChecked(int a) => checked((long)a);
+  public static ulong IntToULong(int a) => (ulong)a;
+  public static ulong IntToULongChecked(int a) => checked((ulong)a);
+
+  public static sbyte UIntToSByte(uint a) => (sbyte)a;
+  public static sbyte UIntToSByteChecked(uint a) => checked((sbyte)a);
+  public static byte UIntToByte(uint a) => (byte)a;
+  public static byte UIntToByteChecked(uint a) => checked((byte)a);
+  public static short UIntToShort(uint a) => (short)a;
+  public static short UIntToShortChecked(uint a) => checked((short)a);
+  public static ushort UIntToUShort(uint a) => (ushort)a;
+  public static ushort UIntToUShortChecked(uint a) => checked((ushort)a);
+  public static char UIntToChar(uint a) => (char)a;
+  public static char UIntToCharChecked(uint a) => checked((char)a);
+  public static int UIntToInt(uint a) => (int)a;
+  public static int UIntToIntChecked(uint a) => checked((int)a);
+  public static long UIntToLong(uint a) => (long)a;
+  public static long UIntToLongChecked(uint a) => checked((long)a);
+  public static ulong UIntToULong(uint a) => (ulong)a;
+  public static ulong UIntToULongChecked(uint a) => checked((ulong)a);
+
+  public static sbyte LongToSByte(long a) => (sbyte)a;
+  public static sbyte LongToSByteChecked(long a) => checked((sbyte)a);
+  public static byte LongToByte(long a) => (byte)a;
+  public static byte LongToByteChecked(long a) => checked((byte)a);
+  public static short LongToShort(long a) => (short)a;
+  public static short LongToShortChecked(long a) => checked((short)a);
+  public static ushort LongToUShort(long a) => (ushort)a;
+  public static ushort LongToUShortChecked(long a) => checked((ushort)a);
+  public static char LongToChar(long a) => (char)a;
+  public static char LongToCharChecked(long a) => checked((char)a);
+  public static int LongToInt(long a) => (int)a;
+  public static int LongToIntChecked(long a) => checked((int)a);
+  public static uint LongToUInt(long a) => (uint)a;
+  public static uint LongToUIntChecked(long a) => checked((uint)a);
+  public static ulong LongToULong(long a) => (ulong)a;
+  public static ulong LongToULongChecked(long a) => checked((ulong)a);
+
+  public static sbyte ULongToSByte(ulong a) => (sbyte)a;
+  public static sbyte ULongToSByteChecked(ulong a) => checked((sbyte)a);
+  public static byte ULongToByte(ulong a) => (byte)a;
+  public static byte ULongToByteChecked(ulong a) => checked((byte)a);
+  public static short ULongToShort(ulong a) => (short)a;
+  public static short ULongToShortChecked(ulong a) => checked((short)a);
+  public static ushort ULongToUShort(ulong a) => (ushort)a;
+  public static ushort ULongToUShortChecked(ulong a) => checked((ushort)a);
+  public static char ULongToChar(ulong a) => (char)a;
+  public static char ULongToCharChecked(ulong a) => checked((char)a);
+  public static int ULongToInt(ulong a) => (int)a;
+  public static int ULongToIntChecked(ulong a) => checked((int)a);
+  public static uint ULongToUInt(ulong a) => (uint)a;
+  public static uint ULongToUIntChecked(ulong a) => checked((uint)a);
+  public static long ULongToLong(ulong a) => (long)a;
+  public static long ULongToLongChecked(ulong a) => checked((long)a);
+
+}

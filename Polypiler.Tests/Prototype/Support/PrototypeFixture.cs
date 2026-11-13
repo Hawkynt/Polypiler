@@ -31,16 +31,27 @@ internal sealed record PrototypeCall(string Method, object[] Arguments) {
 internal static class PrototypeFixture {
 
   /// <summary>The names of all fixtures, which are also the names of their classes.</summary>
-  public static readonly string[] Names = ["Adler32", "Arrays", "Crc32", "Fnv1a", "Numbers", "Operators", "Statements"];
+  public static readonly string[] Names = [
+    "Adler32", "Arrays", "Crc32", "Fnv1a", "Numbers", "Operators", "Statements",
+    "wide/Conversions", "wide/Crc16", "wide/Fletcher16", "wide/Fnv1a64", "wide/OperatorsWide", "wide/SplitMix64",
+    "wide/Xorshift64"
+  ];
+
+  /// <summary>The name of the class a fixture declares, which is the name of its file without the folder.</summary>
+  public static string ClassOf(string fixture) => fixture[(fixture.LastIndexOf('/') + 1)..];
 
   /// <summary>The root of the repository.</summary>
   public static string RepositoryRoot { get; } = Root();
 
   /// <summary>The path of a fixture's source file.</summary>
-  public static string PathOf(string fixture) => Path.Combine(RepositoryRoot, "tests", "fixtures", "prototype", fixture + ".cs");
+  public static string PathOf(string fixture)
+    => Path.Combine(RepositoryRoot, "tests", "fixtures", "prototype", fixture.Replace('/', Path.DirectorySeparatorChar) + ".cs");
 
   /// <summary>The text of a fixture's source file.</summary>
   public static string SourceOf(string fixture) => File.ReadAllText(PathOf(fixture));
+
+  /// <summary>A fixture imported into IR; fails with its diagnostics when it is refused.</summary>
+  public static IrModule Imported(string fixture) => Import(ClassOf(fixture) + ".cs", SourceOf(fixture));
 
   /// <summary>Wraps method declarations into the one static class a source file consists of, on one line.</summary>
   public static string Wrap(string methods) => $"public static class Snippet {{ {methods} }}";
@@ -53,10 +64,13 @@ internal static class PrototypeFixture {
 
   /// <summary>The method of a fixture as the C# compiler built it.</summary>
   public static MethodInfo Compiled(string fixture, string method) {
-    var type = typeof(PrototypeFixture).Assembly.GetType("Polypiler.Fixtures.Prototype." + fixture, true)!;
-    return type.GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+    return CompiledType(fixture).GetMethod(method, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
       ?? throw new MissingMethodException(fixture, method);
   }
+
+  /// <summary>The class of a fixture as the C# compiler built it.</summary>
+  public static Type CompiledType(string fixture)
+    => typeof(PrototypeFixture).Assembly.GetType("Polypiler.Fixtures.Prototype." + ClassOf(fixture), true)!;
 
   /// <summary>What the method compiled by the C# compiler does for a call.</summary>
   public static string CompiledOutcome(string fixture, PrototypeCall call) => InvokedOutcome(Compiled(fixture, call.Method), call);
@@ -91,10 +105,14 @@ internal static class PrototypeFixture {
   public static string Outcome(object? result, IEnumerable<object> arguments)
     => string.Join(" | ", arguments.Where(argument => argument is Array).Prepend(result).Select(Show));
 
-  /// <summary>A value as an outcome writes it; JavaScript's <c>String()</c> writes numbers the same way.</summary>
+  /// <summary>
+  /// A value as an outcome writes it; JavaScript's <c>String()</c> writes integers the same way. A
+  /// <c>char</c> is the number of its code unit, which is what it is in the IR and in JavaScript.
+  /// </summary>
   public static string Show(object? value) => value switch {
     null => "void",
     bool truth => truth ? "true" : "false",
+    char unit => ((int)unit).ToString(CultureInfo.InvariantCulture),
     Array array => $"[{string.Join(",", array.Cast<object>().Select(Show))}]",
     _ => Convert.ToString(value, CultureInfo.InvariantCulture)!
   };

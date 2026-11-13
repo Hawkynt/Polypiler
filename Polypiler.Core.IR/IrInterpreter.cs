@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Polypiler.Core.IR;
 
@@ -15,8 +16,9 @@ public enum IrTrap {
   IndexOutOfRange,
 
   /// <summary>
-  /// A signed quotient that does not fit 32 bits (the smallest value divided by -1, also as a
-  /// remainder), or an array created with a negative length.
+  /// A result that is not a value of its integer type: the smallest signed value divided by -1 (also
+  /// as a remainder), a checked operation or conversion that overflows, or an array created with a
+  /// negative length.
   /// </summary>
   IntegerOverflow
 
@@ -44,11 +46,15 @@ public sealed class IrTrapException : Exception {
 }
 
 /// <summary>
-/// Evaluates the IR directly. Values cross the boundary as <see cref="int"/>, <see cref="uint"/>,
-/// <see cref="byte"/>, <see cref="bool"/> and arrays of the three integer types; arrays are passed by
-/// reference, so a function can change the caller's array.
+/// Evaluates the IR directly. Values cross the boundary as the .NET type of the same width and
+/// signedness (a <c>u16</c> is accepted as <see cref="ushort"/> or <see cref="char"/> and returned as
+/// <see cref="ushort"/>), as <see cref="bool"/>, and as one-dimensional arrays of the numeric types;
+/// arrays are passed by reference, so a function can change the caller's array.
 /// </summary>
 public static class IrInterpreter {
+
+  /// <summary>The functions of a module by name, kept for as long as the module lives.</summary>
+  private static readonly ConditionalWeakTable<IrModule, Dictionary<string, IrFunction>> _functions = new();
 
   /// <summary>Calls a function of a module that <see cref="IrVerifier"/> accepted.</summary>
   /// <param name="module">The module.</param>
@@ -58,10 +64,7 @@ public static class IrInterpreter {
   /// <exception cref="ArgumentException">The function does not exist or the arguments do not fit it.</exception>
   /// <exception cref="IrTrapException">An operation trapped.</exception>
   public static object? Call(IrModule module, string function, object[] arguments) {
-    var functions = new Dictionary<string, IrFunction>();
-    foreach (var candidate in module.Functions)
-      functions[candidate.Name] = candidate;
-
+    var functions = _functions.GetValue(module, Index);
     if (!functions.TryGetValue(function, out var target))
       throw new ArgumentException($"The module '{module.Name}' has no function '{function}'.", nameof(function));
 
@@ -69,14 +72,15 @@ public static class IrInterpreter {
       throw new ArgumentException($"'{function}' takes {target.Parameters.Count} arguments, not {arguments.Length}.", nameof(arguments));
 
     var values = arguments.Select((argument, index) => FromHost(target.Parameters[index], argument)).ToArray();
-    var result = new Machine(functions).Invoke(target, values);
-    return target.ReturnType.Kind switch {
-      IrTypeKind.Void => null,
-      IrTypeKind.I32 => (int)(long)result!,
-      IrTypeKind.U32 => (uint)(long)result!,
-      IrTypeKind.U8 => (byte)(long)result!,
-      _ => result
-    };
+    return ToHost(target.ReturnType, new Machine(functions).Invoke(target, values));
+  }
+
+  private static Dictionary<string, IrFunction> Index(IrModule module) {
+    var functions = new Dictionary<string, IrFunction>();
+    foreach (var candidate in module.Functions)
+      functions[candidate.Name] = candidate;
+
+    return functions;
   }
 
   /// <summary>
@@ -84,19 +88,65 @@ public static class IrInterpreter {
   /// <c>is int[]</c> a <c>uint[]</c> would pass as well, and its elements would be read as signed.
   /// </summary>
   private static object FromHost(IrLocal parameter, object argument) {
-    if (argument?.GetType() != HostType(parameter.Type))
+    if (argument is null || TypeOf(argument.GetType()) != parameter.Type)
       throw new ArgumentException($"The argument for '{parameter.Name}' is not a value of {parameter.Type}.", nameof(argument));
 
-    return argument is Array or bool ? argument : Convert.ToInt64(argument, CultureInfo.InvariantCulture);
+    return Internal(argument);
+  }
+
+  /// <summary>The IR type a .NET type crosses the boundary as, or <see langword="null"/> when it does not.</summary>
+  private static IrType? TypeOf(Type host) {
+    if (host.IsSZArray)
+      return TypeOf(host.GetElementType()!) is { IsNumeric: true } element ? IrType.Array(element) : null;
+
+    return Type.GetTypeCode(host) switch {
+      TypeCode.Boolean => IrType.Bool,
+      TypeCode.SByte => IrType.I8,
+      TypeCode.Byte => IrType.U8,
+      TypeCode.Int16 => IrType.I16,
+      TypeCode.UInt16 or TypeCode.Char => IrType.U16,
+      TypeCode.Int32 => IrType.I32,
+      TypeCode.UInt32 => IrType.U32,
+      TypeCode.Int64 => IrType.I64,
+      TypeCode.UInt64 => IrType.U64,
+      _ => null
+    };
   }
 
   private static Type HostType(IrType type) => type.Kind switch {
+    IrTypeKind.I8 => typeof(sbyte),
+    IrTypeKind.U8 => typeof(byte),
+    IrTypeKind.I16 => typeof(short),
+    IrTypeKind.U16 => typeof(ushort),
     IrTypeKind.I32 => typeof(int),
     IrTypeKind.U32 => typeof(uint),
-    IrTypeKind.U8 => typeof(byte),
-    IrTypeKind.Bool => typeof(bool),
-    _ => HostType(type.Element!).MakeArrayType()
+    IrTypeKind.I64 => typeof(long),
+    _ => typeof(ulong)
   };
+
+  /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
+  private static object Internal(object value) => value switch {
+    Array or bool => value,
+    ulong large => (long)large,
+    char unit => (long)unit,
+    _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
+  };
+
+  /// <summary>A carried number as a .NET value of the given type.</summary>
+  private static object External(Type host, object value) => Type.GetTypeCode(host) switch {
+    TypeCode.SByte => (sbyte)(long)value,
+    TypeCode.Byte => (byte)(long)value,
+    TypeCode.Int16 => (short)(long)value,
+    TypeCode.UInt16 => (ushort)(long)value,
+    TypeCode.Char => (char)(long)value,
+    TypeCode.Int32 => (int)(long)value,
+    TypeCode.UInt32 => (uint)(long)value,
+    TypeCode.Int64 => value,
+    _ => (ulong)(long)value
+  };
+
+  private static object? ToHost(IrType type, object? value)
+    => value is null or Array or bool ? value : External(HostType(type), value);
 
   private sealed class Machine(Dictionary<string, IrFunction> functions) {
 
@@ -131,7 +181,7 @@ public static class IrInterpreter {
         case IrStore store:
           var array = (Array)this.Evaluate(store.Array, frame);
           var index = (long)this.Evaluate(store.Index, frame);
-          var value = (long)this.Evaluate(store.Value, frame);
+          var value = this.Evaluate(store.Value, frame);
           Store(array, Checked(array, index), value);
           return false;
         case IrExprStmt expression:
@@ -166,13 +216,14 @@ public static class IrInterpreter {
           var operand = this.Evaluate(unary.Operand, frame);
           return unary.Op switch {
             IrUnaryOp.Negate => IrOperators.Wrap(unary.Type, -(long)operand),
+            IrUnaryOp.NegateChecked => Fit(unary.Type, -IrOperators.Number(unary.Type, (long)operand)),
             IrUnaryOp.BitNot => IrOperators.Wrap(unary.Type, ~(long)operand),
             _ => !(bool)operand
           };
         case IrBinary binary:
           return this.Binary(binary, frame);
         case IrConvert conversion:
-          return IrOperators.Wrap(conversion.Type, (long)this.Evaluate(conversion.Operand, frame));
+          return Convert(conversion, this.Evaluate(conversion.Operand, frame));
         case IrConditional choice:
           return this.Evaluate((bool)this.Evaluate(choice.Condition, frame) ? choice.WhenTrue : choice.WhenFalse, frame);
         case IrArrayLoad load:
@@ -185,11 +236,7 @@ public static class IrInterpreter {
           if (count < 0)
             throw new IrTrapException(IrTrap.IntegerOverflow);
 
-          return creation.Type.Element!.Kind switch {
-            IrTypeKind.I32 => new int[count],
-            IrTypeKind.U32 => new uint[count],
-            _ => new byte[count]
-          };
+          return Array.CreateInstance(HostType(creation.Type.Element!), count);
         case IrCall call:
           var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
           return this.Invoke(functions[call.Function], arguments)!;
@@ -214,7 +261,9 @@ public static class IrInterpreter {
       var type = binary.Left.Type;
       var left = (long)first;
       var right = (long)second;
-      var count = (int)(right & 31);
+      var a = IrOperators.Number(type, left);
+      var b = IrOperators.Number(type, right);
+      var count = (int)right & (type.Bits - 1);
       switch (binary.Op) {
         case IrBinaryOp.Add:
           return IrOperators.Wrap(type, left + right);
@@ -222,12 +271,18 @@ public static class IrInterpreter {
           return IrOperators.Wrap(type, left - right);
         case IrBinaryOp.Multiply:
           return IrOperators.Wrap(type, left * right);
+        case IrBinaryOp.AddChecked:
+          return Fit(type, a + b);
+        case IrBinaryOp.SubtractChecked:
+          return Fit(type, a - b);
+        case IrBinaryOp.MultiplyChecked:
+          return Fit(type, a * b);
         case IrBinaryOp.Divide:
-          CheckDivision(left, right);
-          return IrOperators.Wrap(type, left / right);
+          CheckDivision(type, a, b);
+          return (long)(a / b);
         case IrBinaryOp.Remainder:
-          CheckDivision(left, right);
-          return IrOperators.Wrap(type, left % right);
+          CheckDivision(type, a, b);
+          return (long)(a % b);
         case IrBinaryOp.And:
           return left & right;
         case IrBinaryOp.Or:
@@ -236,30 +291,45 @@ public static class IrInterpreter {
           return left ^ right;
         case IrBinaryOp.ShiftLeft:
           return IrOperators.Wrap(type, left << count);
-        case IrBinaryOp.ShiftRight:
+        case IrBinaryOp.ShiftRight when type.IsSigned:
           return left >> count;
-        case IrBinaryOp.ShiftRightLogical:
-          return IrOperators.Wrap(type, (long)((uint)left >> count));
+        case IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical:
+          return IrOperators.Wrap(type, (long)(((ulong)left & (ulong.MaxValue >> (64 - type.Bits))) >> count));
         case IrBinaryOp.Equal:
-          return left == right;
+          return a == b;
         case IrBinaryOp.NotEqual:
-          return left != right;
+          return a != b;
         case IrBinaryOp.Less:
-          return left < right;
+          return a < b;
         case IrBinaryOp.LessOrEqual:
-          return left <= right;
+          return a <= b;
         case IrBinaryOp.Greater:
-          return left > right;
+          return a > b;
         default:
-          return left >= right;
+          return a >= b;
       }
     }
 
-    private static void CheckDivision(long dividend, long divisor) {
+    private static object Convert(IrConvert conversion, object operand) {
+      var value = (long)operand;
+      return conversion.Contract == IrConversion.Trap
+        ? Fit(conversion.Type, IrOperators.Number(conversion.Operand.Type, value))
+        : IrOperators.Wrap(conversion.Type, value);
+    }
+
+    /// <summary>The number as a value of the type, or the overflow trap when it is not one.</summary>
+    private static long Fit(IrType type, Int128 value) {
+      if (value < IrOperators.Minimum(type) || value > IrOperators.Maximum(type))
+        throw new IrTrapException(IrTrap.IntegerOverflow);
+
+      return (long)value;
+    }
+
+    private static void CheckDivision(IrType type, Int128 dividend, Int128 divisor) {
       if (divisor == 0)
         throw new IrTrapException(IrTrap.DivideByZero);
 
-      if (dividend == int.MinValue && divisor == -1)
+      if (type.IsSigned && dividend == IrOperators.Minimum(type) && divisor == -1)
         throw new IrTrapException(IrTrap.IntegerOverflow);
     }
 
@@ -270,23 +340,10 @@ public static class IrInterpreter {
       return (int)index;
     }
 
-    private static object Load(Array array, int index) {
-      var element = array.GetType().GetElementType();
-      if (element == typeof(int))
-        return (long)((int[])array)[index];
+    private static object Load(Array array, int index) => Internal(array.GetValue(index)!);
 
-      return element == typeof(uint) ? (long)((uint[])array)[index] : (long)((byte[])array)[index];
-    }
-
-    private static void Store(Array array, int index, long value) {
-      var element = array.GetType().GetElementType();
-      if (element == typeof(int))
-        ((int[])array)[index] = (int)value;
-      else if (element == typeof(uint))
-        ((uint[])array)[index] = (uint)value;
-      else
-        ((byte[])array)[index] = (byte)value;
-    }
+    private static void Store(Array array, int index, object value)
+      => array.SetValue(External(array.GetType().GetElementType()!, value), index);
 
   }
 

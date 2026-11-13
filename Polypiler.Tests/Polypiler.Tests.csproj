@@ -16,7 +16,7 @@
 
   <!-- The prototype fixtures are compiled into the tests: the C# compiler's build of them is the oracle. -->
   <ItemGroup>
-    <Compile Include="..\tests\fixtures\prototype\*.cs" LinkBase="Prototype\Fixtures" />
+    <Compile Include="..\tests\fixtures\prototype\**\*.cs" LinkBase="Prototype\Fixtures" />
   </ItemGroup>
 
   <ItemGroup>

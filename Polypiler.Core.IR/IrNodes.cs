@@ -11,7 +11,10 @@ public sealed record IrLocal(string Name, IrType Type);
 /// <param name="Type">The type of the value, which fixes width, signedness and wrap-around.</param>
 public abstract record IrExpr(IrType Type);
 
-/// <summary>A constant. Integers carry their numeric value, truth values 0 or 1.</summary>
+/// <summary>
+/// A constant. Integers carry their numeric value, a <c>u64</c> its 64 bits (so a value above the
+/// largest <c>i64</c> is negative here), truth values 0 or 1.
+/// </summary>
 /// <param name="Type">The type of the constant.</param>
 /// <param name="Value">The value, within the range of <paramref name="Type"/>.</param>
 public sealed record IrConst(IrType Type, long Value) : IrExpr(Type);
@@ -23,10 +26,13 @@ public sealed record IrLocalRef(IrLocal Local) : IrExpr(Local.Type);
 /// <summary>The operators with one operand.</summary>
 public enum IrUnaryOp {
 
-  /// <summary>Two's-complement negation of an <c>i32</c>; the smallest value negates to itself.</summary>
+  /// <summary>Two's-complement negation of a signed integer; the smallest value negates to itself.</summary>
   Negate,
 
-  /// <summary>Bitwise complement of a 32-bit value.</summary>
+  /// <summary>Negation of a signed integer that traps on the smallest value, which has no negative.</summary>
+  NegateChecked,
+
+  /// <summary>Bitwise complement of a 32- or 64-bit integer.</summary>
   BitNot,
 
   /// <summary>Negation of a truth value.</summary>
@@ -42,17 +48,26 @@ public sealed record IrUnary(IrUnaryOp Op, IrExpr Operand) : IrExpr(Operand.Type
 /// <summary>The operators with two operands.</summary>
 public enum IrBinaryOp {
 
-  /// <summary>Addition modulo 2^32.</summary>
+  /// <summary>Addition modulo 2^width.</summary>
   Add,
 
-  /// <summary>Subtraction modulo 2^32.</summary>
+  /// <summary>Subtraction modulo 2^width.</summary>
   Subtract,
 
-  /// <summary>Multiplication modulo 2^32.</summary>
+  /// <summary>Multiplication modulo 2^width.</summary>
   Multiply,
 
+  /// <summary>Addition of integers that traps when the sum is not a value of the type.</summary>
+  AddChecked,
+
+  /// <summary>Subtraction of integers that traps when the difference is not a value of the type.</summary>
+  SubtractChecked,
+
+  /// <summary>Multiplication of integers that traps when the product is not a value of the type.</summary>
+  MultiplyChecked,
+
   /// <summary>
-  /// Division truncating towards zero. Traps on a zero divisor, and on the one <c>i32</c> quotient
+  /// Division truncating towards zero. Traps on a zero divisor, and on the one signed quotient
   /// that does not fit (smallest value divided by -1).
   /// </summary>
   Divide,
@@ -69,19 +84,19 @@ public enum IrBinaryOp {
   /// <summary>Bitwise exclusive or.</summary>
   Xor,
 
-  /// <summary>Shift left by the low 5 bits of the <c>i32</c> count.</summary>
+  /// <summary>Shift left by the low 5 bits of the <c>i32</c> count, the low 6 bits for a 64-bit value.</summary>
   ShiftLeft,
 
-  /// <summary>Shift right by the low 5 bits of the count: arithmetic on <c>i32</c>, logical on <c>u32</c>.</summary>
+  /// <summary>Shift right by the masked count: arithmetic on a signed value, logical on an unsigned one.</summary>
   ShiftRight,
 
-  /// <summary>Shift right by the low 5 bits of the count, filling with zeros for either type.</summary>
+  /// <summary>Shift right by the masked count, filling with zeros whatever the signedness.</summary>
   ShiftRightLogical,
 
-  /// <summary>Equality of two 32-bit values or two truth values.</summary>
+  /// <summary>Equality of two numbers of one type or two truth values.</summary>
   Equal,
 
-  /// <summary>Inequality of two 32-bit values or two truth values.</summary>
+  /// <summary>Inequality of two numbers of one type or two truth values.</summary>
   NotEqual,
 
   /// <summary>Less than, in the signedness of the operands.</summary>
@@ -114,10 +129,29 @@ public enum IrBinaryOp {
 public sealed record IrBinary(IrBinaryOp Op, IrExpr Left, IrExpr Right)
   : IrExpr(Op >= IrBinaryOp.Equal ? IrType.Bool : Left.Type);
 
-/// <summary>A conversion between integer types: the value modulo 2^width of the target type.</summary>
+/// <summary>What a conversion does with a value the target type cannot hold.</summary>
+public enum IrConversion {
+
+  /// <summary>The value modulo 2^width of the target type.</summary>
+  Wrap,
+
+  /// <summary>The conversion traps with an integer overflow.</summary>
+  Trap
+
+}
+
+/// <summary>A conversion between numeric types.</summary>
 /// <param name="Type">The target type.</param>
 /// <param name="Operand">The value converted.</param>
-public sealed record IrConvert(IrType Type, IrExpr Operand) : IrExpr(Type);
+/// <param name="Contract">What happens to a value outside the target type.</param>
+public sealed record IrConvert(IrType Type, IrExpr Operand, IrConversion Contract) : IrExpr(Type) {
+
+  /// <summary>A conversion that wraps around.</summary>
+  /// <param name="type">The target type.</param>
+  /// <param name="operand">The value converted.</param>
+  public IrConvert(IrType type, IrExpr operand) : this(type, operand, IrConversion.Wrap) { }
+
+}
 
 /// <summary>A choice that evaluates the condition and then exactly one of the two branches.</summary>
 /// <param name="Condition">The truth value deciding the branch.</param>
