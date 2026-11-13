@@ -1,0 +1,191 @@
+### C# - dotnet-sdk 10.0.112 - dotnet run probe.cs
+add unchecked: -2147483648  checked: OverflowException
+sub unchecked: 2147483647  checked: OverflowException
+mul unchecked: 0  checked: OverflowException
+neg unchecked: -2147483648  checked: OverflowException
+1 << 32: 1  1 << 33: 2  1 << -1: -2147483648
+-8 >> 33: -4  -8 >>> 33: 2147483644  1L << 64: 1  1L << 65: 2
+7 / 0: DivideByZeroException  7 % 0: DivideByZeroException
+MIN / -1: OverflowException  MIN % -1: OverflowException
+long MIN / -1: OverflowException  long MIN % -1: OverflowException
+-7 / 3: -2  -7 % 3: -1  7 % -3: 1
+(int)3e9: 2147483647  (int)-3e9: -2147483648  (int)NaN: 0  (int)Inf: 2147483647
+checked (int)3e9: OverflowException  checked (int)NaN: OverflowException
+(uint)-1.0: 0  (byte)300.0: 44  (int)2.7: 2  (int)-2.7: -2
+1.0 / 0: Infinity  -7.5 % 2: -1.5
+(byte)300: 44  checked (byte)300: OverflowException
+Math.Round(2.5): 2  Math.Round(2.5, AwayFromZero): 3  Convert.ToInt32(2.5): 2  Convert.ToInt32(3e9): OverflowException
+### JavaScript - node v22.23.3 - node probe.js
+add number: 2147483648  add |0: -2147483648  sub |0: 2147483647
+mul |0: 0  Math.imul: 0  0x7fffffff*0x7fffffff |0 (inexact double): 0  Math.imul: 1
+1 << 32: 1  1 << 33: 2  1 << -1: -2147483648
+-8 >> 33: -4  -8 >>> 33: 2147483644  -8 >>> -1: 1
+7 / 0: Infinity  7 % 0: NaN  (7/0)|0: 0  (7%0)|0: 0
+MIN / -1: 2147483648  (MIN / -1)|0: -2147483648  MIN % -1: -0 (negative zero)
+-7 / 3: -2.3333333333333335  (-7/3)|0: -2  -7 % 3: -1  7 % -3: 1
+3e9|0: -1294967296  -3e9|0: 1294967296  NaN|0: 0  Infinity|0: 0  -1>>>0: 4294967295  4294967301|0: 5  2.7|0: 2  -2.7|0: -2
+BigInt: 7n / 0n: RangeError  1n << 64n: 18446744073709551616n  1n << -1n: 0n  -7n % 3n: -1n  -7n / 3n: -2n  asIntN(32, 2n**31n): -2147483648n
+Math.round(2.5): 3  Math.round(-2.5): -2  Math.round(3.5): 4
+### C - gcc (GCC) 16.2.1 20260810 - gcc -O0 probe.c -lm; ./a.out <case>
+unsigned add: 0  unsigned mul: 0  unsigned sub: 4294967295
+-7 / 3: -2  -7 % 3: -1  7 % -3: 1
+-8 >> 1: -4  (int)2.7: 2  (int)-2.7: -2  (unsigned char)300: 44
+1.0 / 0: inf  lrint(2.5): 2  lround(2.5): 3
+signed add: -2147483648
+signed sub: 2147483647
+signed mul: 0
+-MIN: -2147483648
+1 << 32: 1
+1 << 33: 2
+1 << -1: -2147483648
+-1 << 1: -2
+case 6: killed by signal 8
+case 7: killed by signal 8
+case 8: killed by signal 8
+case 9: killed by signal 8
+(int)3e9: -2147483648
+(int)-3e9: -2147483648
+(int)NaN: -2147483648
+(int)Inf: -2147483648
+### C - gcc -O0 -fsanitize=undefined,float-cast-overflow probe.c -lm; ./a.out <case>
+case 1: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'
+case 14: runtime error: signed integer overflow: -2147483648 - 1 cannot be represented in type 'int'
+case 2: runtime error: signed integer overflow: 65536 * 65536 cannot be represented in type 'int'
+case 16: runtime error: negation of -2147483648 cannot be represented in type 'int'; cast to an unsigned type to negate this value to itself
+case 3: runtime error: shift exponent 32 is too large for 32-bit type 'int'
+case 4: runtime error: shift exponent 33 is too large for 32-bit type 'int'
+case 5: runtime error: shift exponent -1 is negative
+case 15: runtime error: left shift of negative value -1
+case 6: runtime error: division by zero
+case 7: runtime error: division by zero
+case 8: runtime error: division of -2147483648 by -1 cannot be represented in type 'int'
+case 9: runtime error: division of -2147483648 by -1 cannot be represented in type 'int'
+case 10: runtime error: 3e+09 is outside the range of representable values of type 'int'
+case 11: runtime error: -3e+09 is outside the range of representable values of type 'int'
+case 12: runtime error: nan is outside the range of representable values of type 'int'
+case 13: runtime error: inf is outside the range of representable values of type 'int'
+### C - clang version 23.1.3 - clang -O0 probe.c -lm; ./a.out <case>
+unsigned add: 0  unsigned mul: 0  unsigned sub: 4294967295
+-7 / 3: -2  -7 % 3: -1  7 % -3: 1
+-8 >> 1: -4  (int)2.7: 2  (int)-2.7: -2  (unsigned char)300: 44
+1.0 / 0: inf  lrint(2.5): 2  lround(2.5): 3
+signed add: -2147483648
+signed sub: 2147483647
+signed mul: 0
+-MIN: -2147483648
+1 << 32: 1
+1 << 33: 2
+1 << -1: -2147483648
+-1 << 1: -2
+case 6: killed by signal 8
+case 7: killed by signal 8
+case 8: killed by signal 8
+case 9: killed by signal 8
+(int)3e9: -2147483648
+(int)-3e9: -2147483648
+(int)NaN: -2147483648
+(int)Inf: -2147483648
+### C - clang -O0 -fsanitize=undefined,float-cast-overflow probe.c -lm; ./a.out <case>
+case 1: runtime error: signed integer overflow: 2147483647 + 1 cannot be represented in type 'int'
+case 14: runtime error: signed integer overflow: -2147483648 - 1 cannot be represented in type 'int'
+case 2: runtime error: signed integer overflow: 65536 * 65536 cannot be represented in type 'int'
+case 16: runtime error: negation of -2147483648 cannot be represented in type 'int'; cast to an unsigned type to negate this value to itself
+case 3: runtime error: shift exponent 32 is too large for 32-bit type 'int'
+case 4: runtime error: shift exponent 33 is too large for 32-bit type 'int'
+case 5: runtime error: shift exponent -1 is negative
+case 15: runtime error: left shift of negative value -1
+case 6: runtime error: division by zero
+case 7: runtime error: division by zero
+case 8: runtime error: division of -2147483648 by -1 cannot be represented in type 'int'
+case 9: runtime error: division of -2147483648 by -1 cannot be represented in type 'int'
+case 10: runtime error: 3e+09 is outside the range of representable values of type 'int'
+case 11: runtime error: -3e+09 is outside the range of representable values of type 'int'
+case 12: runtime error: nan is outside the range of representable values of type 'int'
+case 13: runtime error: inf is outside the range of representable values of type 'int'
+### Rust - rustc 1.99.0 - rustc --edition 2021 probe.rs (debug)
+add: panic(attempt to add with overflow)  sub: panic(attempt to subtract with overflow)  mul: panic(attempt to multiply with overflow)  neg: panic(attempt to negate with overflow)
+wrapping_add: -2147483648  checked_add: None  saturating_add: 2147483647  overflowing_add: (-2147483648, true)
+1 << 32: panic(attempt to shift left with overflow)  1 << 33: panic(attempt to shift left with overflow)  -8 >> 33: panic(attempt to shift right with overflow)
+1 << -1i32: panic(attempt to shift left with overflow)
+wrapping_shl(33): 2  checked_shl(32): None  unbounded_shl(32): 0  unbounded_shr(-8, 33): -1
+7 / 0: panic(attempt to divide by zero)  7 % 0: panic(attempt to calculate the remainder with a divisor of zero)
+MIN / -1: panic(attempt to divide with overflow)  MIN % -1: panic(attempt to calculate the remainder with overflow)
+wrapping_div(MIN,-1): -2147483648  wrapping_rem(MIN,-1): 0  checked_div(7,0): None
+-7 / 3: -2  -7 % 3: -1  7 % -3: 1  rem_euclid(-7,3): 2  div_euclid(-7,3): -3  rem_euclid(7,-3): 1
+3e9 as i32: 2147483647  -3e9 as i32: -2147483648  NaN as i32: 0  inf as i32: 2147483647  -1.0 as u32: 0  300.0 as u8: 255  2.7 as i32: 2  -2.7 as i32: -2
+300i32 as u8: 44  u8::try_from(300) is_err: true  1.0 / 0.0: inf
+### Rust - rustc --edition 2021 -O probe.rs (release)
+add: -2147483648  sub: 2147483647  mul: 0  neg: -2147483648
+wrapping_add: -2147483648  checked_add: None  saturating_add: 2147483647  overflowing_add: (-2147483648, true)
+1 << 32: 1  1 << 33: 2  -8 >> 33: -4
+1 << -1i32: -2147483648
+wrapping_shl(33): 2  checked_shl(32): None  unbounded_shl(32): 0  unbounded_shr(-8, 33): -1
+7 / 0: panic(attempt to divide by zero)  7 % 0: panic(attempt to calculate the remainder with a divisor of zero)
+MIN / -1: panic(attempt to divide with overflow)  MIN % -1: panic(attempt to calculate the remainder with overflow)
+wrapping_div(MIN,-1): -2147483648  wrapping_rem(MIN,-1): 0  checked_div(7,0): None
+-7 / 3: -2  -7 % 3: -1  7 % -3: 1  rem_euclid(-7,3): 2  div_euclid(-7,3): -3  rem_euclid(7,-3): 1
+3e9 as i32: 2147483647  -3e9 as i32: -2147483648  NaN as i32: 0  inf as i32: 2147483647  -1.0 as u32: 0  300.0 as u8: 255  2.7 as i32: 2  -2.7 as i32: -2
+300i32 as u8: 44  u8::try_from(300) is_err: true  1.0 / 0.0: inf
+### Kotlin - kotlinc-jvm 2.2.20 (JRE 27) - kotlinc probe.kt -include-runtime -d probe.jar; java -jar probe.jar
+add: -2147483648  sub: 2147483647  mul: 0  neg: -2147483648
+1 shl 32: 1  1 shl 33: 2  1 shl -1: -2147483648  -8 shr 33: -4  -8 ushr 33: 2147483644
+7 / 0: ArithmeticException  7 % 0: ArithmeticException
+MIN / -1: -2147483648  MIN % -1: 0
+-7 / 3: -2  -7 % 3: -1  7 % -3: 1  (-7).mod(3): 2  (-7).floorDiv(3): -3
+3e9.toInt(): 2147483647  (-3e9).toInt(): -2147483648  NaN.toInt(): 0  Inf.toInt(): 2147483647  300.toByte(): 44  2.7.toInt(): 2  (-2.7).toInt(): -2
+UInt.MAX + 1u: 0  (-1.0).toUInt(): 0  3e10.toUInt(): 4294967295  1.0 / 0: Infinity
+### Java - openjdk version "27" 2026-09-15 - javac Probe.java; java Probe
+add: -2147483648  sub: 2147483647  mul: 0  addExact: ArithmeticException
+1 << 32: 1  1 << 33: 2  1 << -1: -2147483648  -8 >> 33: -4  -8 >>> 33: 2147483644
+7 / 0: ArithmeticException  7 % 0: ArithmeticException
+MIN / -1: -2147483648  MIN % -1: 0
+-7 / 3: -2  -7 % 3: -1  7 % -3: 1  floorMod(-7,3): 2
+(int)3e9: 2147483647  (int)-3e9: -2147483648  (int)NaN: 0  (int)Inf: 2147483647  (byte)300: 44
+### Go - go1.27.2-X:nodwarf5 - go run probe.go
+add: -2147483648  sub: 2147483647  mul: 0  neg: -2147483648
+1 << 32: 0  1 << 33: 0  -8 >> 33: -1  uint32(8) >> 33: 0
+1 << -1: panic(runtime error: negative shift amount)
+7 / 0: panic(runtime error: integer divide by zero)  7 % 0: panic(runtime error: integer divide by zero)
+MIN / -1: -2147483648  MIN % -1: 0
+-7 / 3: -2  -7 % 3: -1  7 % -3: 1
+int32(3e9): -2147483648  int32(NaN): -2147483648  int32(Inf): -2147483648 (implementation-specific)
+### Python - Python 3.13.1 - python3 probe.py
+add: 2147483648  mul: 4294967296  2**64 + 1: 18446744073709551617
+1 << 32: 4294967296  1 << 33: 8589934592  1 << -1: ValueError  -8 >> 33: -1  8 >> 33: 0  1 >> -1: ValueError
+7 // 0: ZeroDivisionError  7 % 0: ZeroDivisionError  7 / 0: ZeroDivisionError  7.0 / 0.0: ZeroDivisionError  7.0 % 0.0: ZeroDivisionError
+MIN // -1: 2147483648  MIN % -1: 0
+-7 // 3: -3  -7 % 3: 2  7 % -3: -2  7 // -3: -3  divmod(-7, 3): (-3, 2)  math.fmod(-7, 3): -1.0  -7.5 % 2: 0.5
+int(3e9): 3000000000  int(-3e9): -3000000000  int(nan): ValueError  int(inf): OverflowError  int(2.7): 2  int(-2.7): -2
+round(2.5): 2  round(3.5): 4  round(-2.5): -2
+### Perl - v5.42.2 - perl probe.pl
+IV_MAX + 1: 9223372036854775808  IV_MAX * 2: 18446744073709551614  -IV_MAX - 2: -9.22337203685478e+18  2147483647 + 1: 2147483648
+UV_MAX + 1: 1.84467440737096e+19
+use integer: IV_MAX + 1: -9223372036854775808  IV_MAX * 2: -2
+1 << 32: 4294967296  1 << 63: 9223372036854775808  1 << 64: 0  1 << 65: 0  8 >> 64: 0  1 << -1: 0  8 >> -1: 16  -8 >> 1: 9223372036854775804
+use integer: -8 >> 1: -4  -8 >> 64: -1  1 << 64: 0
+7 / 0: Illegal division by zero  7 % 0: Illegal modulus zero
+MIN / -1: 9223372036854775808  MIN % -1: 0
+-7 / 3: -2.33333333333333  int(-7 / 3): -2  -7 % 3: 2  7 % -3: -2
+use integer: -7 / 3: -2  -7 % 3: -1  7 % -3: 1
+int(3e9): 3000000000  int(-3e9): -3000000000  int(1e30): 1e+30  int(NaN): NaN  int(Inf): Inf  int(2.7): 2  int(-2.7): -2
+1e30 | 0: 18446744073709551615  -1 | 0: 18446744073709551615  -1.5 | 0: 18446744073709551615  NaN | 0: 0
+sprintf('%.0f', 2.5): 2  sprintf('%.0f', 3.5): 4
+### PowerBASIC - pb-compiler (Hawkynt/PB-Compiler), x64 back end - pbc [--dialect pb36] --platform x64 -O P.out P.BAS; ./P.out
+INTEGER 32767 + 1 => -32768  [exit 0]
+LONG 2147483647 + 1 => -2147483648  [exit 0]
+LONG -2147483647 - 2 =>  2147483647  [exit 0]
+LONG 65536 * 65536 =>  0  [exit 0]
+SHIFT LEFT 1, 32 =>  0  [exit 0]
+SHIFT LEFT 1, 33 =>  0  [exit 0]
+SHIFT RIGHT -8, 33 =>  0  [exit 0]
+SHIFT LEFT 1, -1 =>  1  [exit 0]
+pb36: 1 << 33; 1 << 32; -8 >> 33; -8 >>> 33 =>  0  0 -1  0  [exit 0]
+pb36: fixture 08-shift-rotate-bitwise.bas =>  8  5  -2048  2048   2 -32768  [exit 0]
+7 \ 0 => Error 11  [exit 3]
+7 MOD 0 => Error 11  [exit 3]
+MIN \ -1 => -2147483648  [exit 0]
+MIN MOD -1 =>  0  [exit 0]
+-7 \ 3; -7 MOD 3; 7 MOD -3 => -2 -1  1  [exit 0]
+LONG = 2.5; 3.5; -2.5; FIX(-2.7); INT(-2.7) =>  2  4 -2 -2 -3  [exit 0]
+LONG = 3E9 => -1294967296  [exit 0]
+INTEGER = 40000 => -25536  [exit 0]

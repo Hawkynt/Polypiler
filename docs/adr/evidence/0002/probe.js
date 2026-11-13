@@ -1,0 +1,12 @@
+const t = f => { try { return String(f()); } catch (e) { return e.constructor.name; } };
+const max = 2147483647, min = -2147483648;
+console.log("add number:", max + 1, " add |0:", (max + 1) | 0, " sub |0:", (min - 1) | 0);
+console.log("mul |0:", (65536 * 65536) | 0, " Math.imul:", Math.imul(65536, 65536), " 0x7fffffff*0x7fffffff |0 (inexact double):", (0x7fffffff * 0x7fffffff) | 0, " Math.imul:", Math.imul(0x7fffffff, 0x7fffffff));
+console.log("1 << 32:", 1 << 32, " 1 << 33:", 1 << 33, " 1 << -1:", 1 << -1);
+console.log("-8 >> 33:", -8 >> 33, " -8 >>> 33:", -8 >>> 33, " -8 >>> -1:", -8 >>> -1);
+console.log("7 / 0:", 7 / 0, " 7 % 0:", 7 % 0, " (7/0)|0:", (7 / 0) | 0, " (7%0)|0:", (7 % 0) | 0);
+console.log("MIN / -1:", min / -1, " (MIN / -1)|0:", (min / -1) | 0, " MIN % -1:", min % -1, Object.is(min % -1, -0) ? "(negative zero)" : "");
+console.log("-7 / 3:", -7 / 3, " (-7/3)|0:", (-7 / 3) | 0, " -7 % 3:", -7 % 3, " 7 % -3:", 7 % -3);
+console.log("3e9|0:", 3e9 | 0, " -3e9|0:", -3e9 | 0, " NaN|0:", NaN | 0, " Infinity|0:", Infinity | 0, " -1>>>0:", -1 >>> 0, " 4294967301|0:", 4294967301 | 0, " 2.7|0:", 2.7 | 0, " -2.7|0:", -2.7 | 0);
+console.log("BigInt: 7n / 0n:", t(() => 7n / 0n), " 1n << 64n:", 1n << 64n, " 1n << -1n:", 1n << -1n, " -7n % 3n:", -7n % 3n, " -7n / 3n:", -7n / 3n, " asIntN(32, 2n**31n):", BigInt.asIntN(32, 2n ** 31n));
+console.log("Math.round(2.5):", Math.round(2.5), " Math.round(-2.5):", Math.round(-2.5), " Math.round(3.5):", Math.round(3.5));
