@@ -603,6 +603,8 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("return new Uint8Array([1n]).length;", "bigint as a number")]
   [TestCase("return new BigInt64Array([1]).length;", "number as an element of a int64 array")]
   [TestCase("return new Array(1, 2).length;", "new Array with anything but one length")]
+  [TestCase("return new Array(a / 2).length;", "new Array of a length that is no proven integer, which is number")]
+  [TestCase("return new Array(t).length;", "new Array of a length that is no proven integer, which is boolean")]
   [TestCase("return new Array(...d).length;", "new Array with anything but one length")]
   [TestCase("return new Map().size;", "new Map().size")]
   [TestCase("const m = new Map(); return a;", "new Map")]

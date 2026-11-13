@@ -382,7 +382,12 @@ internal sealed partial class Lowering {
       if (arguments.Count > 1 || arguments.FirstOrDefault() is SpreadElement)
         throw this.Unsupported(creation, "new Array with anything but one length");
 
-      return new IrNewArray(type, arguments.Count == 0 ? new IrConst(IrType.I32, 0) : this.Length(this.Evaluate(arguments[0]), arguments[0]));
+      if (arguments.Count == 0)
+        return new IrNewArray(type, new IrConst(IrType.I32, 0));
+
+      // new Array(1.5) throws where new Uint8Array(1.5) has one element: only a proven integer is a length here.
+      var count = this.Evaluate(arguments[0]);
+      return count.Type.IsWord ? new IrNewArray(type, this.Length(count, arguments[0])) : throw this.Unsupported(creation, $"new Array of a length that is no proven integer, which is {count.Type.Describe()}");
     }
 
     if (name is null || !TypeInference.TypedArrays.TryGetValue(name, out var element))
