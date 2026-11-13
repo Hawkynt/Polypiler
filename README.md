@@ -284,7 +284,9 @@ example before and after, the conditions under which it applies, the cases in wh
 fire, and a switch to turn it off.
 
 **[The optimization checklist](docs/optimizations/README.md)** lists all of them with their state:
-0 of 146 are implemented today.
+0 of 146 are implemented today. Below it, 144 further language-agnostic optimizations taken from the
+[PB-Compiler optimization catalog](docs/optimizations/pb-compiler-catalog.md) are listed as
+[candidates to borrow](docs/optimizations/README.md#candidates-to-borrow); they are neither planned nor counted.
 
 | Family | Planned |
 | --- | ---: |

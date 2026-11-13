@@ -173,3 +173,182 @@ the page then describes what the code does rather than what is planned.
 
 - [ ] [O0260](O0260-marshalling-fusion.md) — Fuse marshalling across adjacent foreign calls into one packed buffer (P3)
 - [ ] [O0261](O0261-demanded-field-unpack.md) — Unpack only the fields that are demanded after a foreign call (P3)
+
+## Candidates to borrow
+
+These 144 entries are **not planned** and are not counted above. They are the language-agnostic
+optimizations of [PB-Compiler](https://github.com/Hawkynt/PB-Compiler) that no page in this directory covers,
+taken from the [PB-Compiler optimization catalog](pb-compiler-catalog.md), which classifies all 424 upstream
+documents. A candidate gets an `O####` number, a page and an issue when it is scheduled; until then the link
+leads to its catalog row and the identifier shown is PB-Compiler's.
+
+### Loops
+
+- *candidate* — [PB O0020](pb-compiler-catalog.md#pb-o0020) Algorithmic idiom replacement: Delete a counted loop with a known finite trip count whose body has no observable effect.
+- *candidate* — [PB O0030](pb-compiler-catalog.md#pb-o0030) Induction-variable strength reduction: Carry an element address as its own induction variable advanced by scale times step.
+- *candidate* — [PB O0037](pb-compiler-catalog.md#pb-o0037) Fixed-point FOR counters: Run a float loop counter whose bounds and step share a power-of-two grid as a scaled integer, materializing the float only where the body reads it.
+- *candidate* — [PB O0062](pb-compiler-catalog.md#pb-o0062) Loop rotation, IV simplification and fusion: Rotate pre-test loops into guarded post-test form, rewrite derived induction variables, and fuse adjacent loops with equal bounds.
+- *candidate* — [PB O0073](pb-compiler-catalog.md#pb-o0073) Wider algorithmic idiom catalog: Recognize sort and linear-search loops as the corresponding library operation.
+- *candidate* — [PB O0110](pb-compiler-catalog.md#pb-o0110) General induction-variable strength reduction: Replace every affine function of an induction variable by an incrementally updated value, not only named access shapes.
+- *candidate* — [PB O0111](pb-compiler-catalog.md#pb-o0111) Redundant induction-variable elimination: Express one of two induction variables advancing in lockstep as an affine function of the other and drop it.
+- *candidate* — [PB O0112](pb-compiler-catalog.md#pb-o0112) Countdown loop with `DEC`/`JNZ`: Count a fixed-trip loop down to zero when the body never reads the counter, so the exit test is a zero test.
+- *candidate* — [PB O0115](pb-compiler-catalog.md#pb-o0115) Loop peeling: Peel the first iteration so a first-iteration-only branch is decided in both the peeled copy and the remaining loop.
+- *candidate* — [PB O0116](pb-compiler-catalog.md#pb-o0116) Loop guard hoisting: Test the zero-trip case once in a guard and run the loop bottom-tested.
+- *candidate* — [PB O0118](pb-compiler-catalog.md#pb-o0118) Loop dead-store elimination: Sink a store that the next iteration overwrites unread out of the loop, so it runs once with the final value.
+- *candidate* — [PB O0120](pb-compiler-catalog.md#pb-o0120) Multiple accumulators break the dependency chain: Split a reduction with a proven associative operation into several independent accumulators combined after the loop.
+- *candidate* — [PB O0122](pb-compiler-catalog.md#pb-o0122) Loop interchange: Swap the nesting order of two loops when dependences allow and the traversal becomes contiguous.
+- *candidate* — [PB O0123](pb-compiler-catalog.md#pb-o0123) Loop distribution and fission: Split a loop into several over the same range so that a vectorizable part is separated from the rest.
+- *candidate* — [PB O0124](pb-compiler-catalog.md#pb-o0124) Loop tiling (blocking): Iterate a loop nest in blocks sized to the cache so loaded values are reused before eviction.
+- *candidate* — [PB O0125](pb-compiler-catalog.md#pb-o0125) Loop skewing: Skew the iteration space so a diagonal dependence becomes rectangular and the inner loop dependence-free.
+- *candidate* — [PB O0126](pb-compiler-catalog.md#pb-o0126) Unroll and jam: Unroll the outer loop and fuse the copies of the inner loop into one body.
+- *candidate* — [PB O0130](pb-compiler-catalog.md#pb-o0130) Runtime trip-count versioning: Emit several versions of a loop (scalar, unrolled, vectorized) and select one by a run-time test of the trip count.
+- *candidate* — [PB O0133](pb-compiler-catalog.md#pb-o0133) Loop prefix evaluation: Evaluate the first N iterations of a loop at compile time and start the run-time loop from iteration N.
+- *candidate* — [PB O0134](pb-compiler-catalog.md#pb-o0134) Loop-carried dependency shortening and closed forms: Replace a recurrence by its closed form where one exists (for example an arithmetic series) and shorten the remaining carried dependence.
+- *candidate* — [PB O0228](pb-compiler-catalog.md#pb-o0228) Arithmetic-series folding: Replace a loop that sums its own counter by the closed-form total.
+- *candidate* — [PB O0306](pb-compiler-catalog.md#pb-o0306) Loop versioning: Keep the general loop and add a clone without its per-iteration checks, selected by one preheader guard.
+- *candidate* — [PB O0313](pb-compiler-catalog.md#pb-o0313) Parallel prefix scan: Parallelize a prefix scan in two passes: per-slice reduction, then per-slice scan with the slice offset.
+- *candidate* — [PB O0315](pb-compiler-catalog.md#pb-o0315) Pipeline parallelization: Run the stages of a loop concurrently with buffers between them.
+- *candidate* — [PB O0316](pb-compiler-catalog.md#pb-o0316) Parallel loop collapse: Flatten a loop nest into one iteration space so it can be divided among workers.
+- *candidate* — [PB O0334](pb-compiler-catalog.md#pb-o0334) Binary-search recognition: Replace a linear scan over data the compiler knows to be sorted by a binary search.
+- *candidate* — [PB O0335](pb-compiler-catalog.md#pb-o0335) Perfect-hash generation for static key sets: Canonicalize a search loop over a fixed unique key set into a multi-way dispatch.
+- *candidate* — [PB O0407](pb-compiler-catalog.md#pb-o0407) Dead loop elimination: Delete a loop that has no remaining observable effect once its carried values are replaced by closed forms.
+
+### Redundancy
+
+- *candidate* — [PB O0061](pb-compiler-catalog.md#pb-o0061) Reassociation: Reorder integer add/multiply chains into a canonical shape so equal subtrees meet in value numbering.
+- *candidate* — [PB O0121](pb-compiler-catalog.md#pb-o0121) Reduction tree balancing: Rebalance a chain of an associative operation into a tree of logarithmic depth.
+- *candidate* — [PB O0338](pb-compiler-catalog.md#pb-o0338) Reciprocal reuse across repeated divisions: Compute one reciprocal of an invariant divisor and multiply, where the operation's numeric contract permits it.
+- *candidate* — [PB O0344](pb-compiler-catalog.md#pb-o0344) Floating-point reassociation: Rebalance float add and multiply trees, only under an explicit source permission to reassociate.
+- *candidate* — [PB O0345](pb-compiler-catalog.md#pb-o0345) Common-denominator factoring: Divide once and multiply several times by the reciprocal of a shared divisor, where the numeric contract permits it.
+
+### Propagation
+
+- *candidate* — [PB O0075](pb-compiler-catalog.md#pb-o0075) Silent fixed-point arithmetic: Run float computations with a proven constant power-of-two scale in scaled integers, converting only where the value is observed.
+- *candidate* — [PB O0077](pb-compiler-catalog.md#pb-o0077) Negation idioms: Canonicalize `0 - x` and `x * -1` to negation and cancel double negation.
+- *candidate* — [PB O0078](pb-compiler-catalog.md#pb-o0078) General multiply decomposition: Decompose a multiplication by any small constant into shifts and adds chosen by the target cost model.
+- *candidate* — [PB O0107](pb-compiler-catalog.md#pb-o0107) Branch folding through phi: Specialize a join that branches on a phi per incoming edge, so each predecessor jumps straight to the decided successor.
+- *candidate* — [PB O0132](pb-compiler-catalog.md#pb-o0132) Whole-loop compile-time evaluation: Execute a loop whose every input is known and whose effects stay in known variables at compile time and emit its final state as data.
+- *candidate* — [PB O0156](pb-compiler-catalog.md#pb-o0156) Path-sensitive value propagation: Keep value facts per incoming path up to a budget and decide later tests per path.
+- *candidate* — [PB O0189](pb-compiler-catalog.md#pb-o0189) Multiply by `2^a ± 2^b`: Multiply by a constant with few set bits, or a run of them, as a sum or difference of shifts.
+- *candidate* — [PB O0192](pb-compiler-catalog.md#pb-o0192) Parity / zero-test modulo mask: Test `(x rem 2^n) = 0` as `(x and (2^n - 1)) = 0` for either signedness.
+- *candidate* — [PB O0305](pb-compiler-catalog.md#pb-o0305) Basic-block versioning: Duplicate a CFG region per fact set and route execution into the copy where the fact holds.
+- *candidate* — [PB O0308](pb-compiler-catalog.md#pb-o0308) Speculative overflow elimination: Establish by one guard on the inputs that a region cannot overflow and run it unchecked, keeping the checked version as fallback.
+- *candidate* — [PB O0309](pb-compiler-catalog.md#pb-o0309) Speculative integer narrowing: Guard loop-invariant inputs by a range test and run the loop's wide arithmetic at a narrower width under it.
+- *candidate* — [PB O0310](pb-compiler-catalog.md#pb-o0310) Side exits and deoptimization: Leave specialized code through a side exit that reconstructs the general state at the failing point.
+- *candidate* — [PB O0337](pb-compiler-catalog.md#pb-o0337) Horner / Estrin polynomial evaluation: Evaluate an integer polynomial in Horner or Estrin form.
+- *candidate* — [PB O0343](pb-compiler-catalog.md#pb-o0343) Transcendental function specialization: Specialize a transcendental call by its proven argument domain, down to a table for a finite discrete domain.
+- *candidate* — [PB O0346](pb-compiler-catalog.md#pb-o0346) Floating-point classification simplification: Decide ordered float comparisons from proven sign, finiteness and NaN-freedom facts.
+- *candidate* — [PB O0347](pb-compiler-catalog.md#pb-o0347) Mixed-precision computation: Execute `fptrunc(op(fpext a, fpext b))` for add, subtract, multiply and divide directly in the narrow format.
+- *candidate* — [PB O0350](pb-compiler-catalog.md#pb-o0350) Overflow-check coalescing: Replace the overflow checks of a chain of operations by one range guard on its inputs.
+
+### Memory and data layout
+
+- *candidate* — [PB O0011](pb-compiler-catalog.md#pb-o0011) Literal overlap pooling: Give a literal whose bytes occur inside an already placed literal no storage of its own (needs length-addressed literals).
+- *candidate* — [PB O0015](pb-compiler-catalog.md#pb-o0015) UDT zero-cost copy and compare: Expand a small constant-size block copy into scalar load/store pairs within the target's store budget.
+- *candidate* — [PB O0023](pb-compiler-catalog.md#pb-o0023) Dead global / data tree-shaking: Remove globals that are never read, together with the pure stores into them.
+- *candidate* — [PB O0138](pb-compiler-catalog.md#pb-o0138) Overlapping load combining: Serve loads from overlapping addresses (a sliding window) by one wider load plus shift or mask.
+- *candidate* — [PB O0163](pb-compiler-catalog.md#pb-o0163) Dead field and component elimination: Remove a record field that no reachable code reads, together with its stores, from every instance.
+- *candidate* — [PB O0173](pb-compiler-catalog.md#pb-o0173) Speculative load hoisting: Hoist a load above a store or out of a conditional under a run-time alias test or a proof that it cannot fault.
+- *candidate* — [PB O0215](pb-compiler-catalog.md#pb-o0215) UDT self-copy elision: Drop a block copy whose source and destination are the same location.
+- *candidate* — [PB O0216](pb-compiler-catalog.md#pb-o0216) UDT self-compare folding: Fold an equality comparison of a memory block with itself to its constant result.
+- *candidate* — [PB O0253](pb-compiler-catalog.md#pb-o0253) Store sinking: Sink a store out of a conditional (merging the arms' stores at the join) or out of a loop.
+- *candidate* — [PB O0285](pb-compiler-catalog.md#pb-o0285) Program-wide constant data merging: Share identical read-only data blocks and place a block contained in another inside it.
+- *candidate* — [PB O0287](pb-compiler-catalog.md#pb-o0287) Stack promotion: Place a non-escaping allocation of bounded size in the frame instead of the heap.
+- *candidate* — [PB O0288](pb-compiler-catalog.md#pb-o0288) Allocation sinking: Move an allocation that is used only on a rare path onto that path.
+- *candidate* — [PB O0290](pb-compiler-catalog.md#pb-o0290) Temporary reuse across loop iterations: Allocate a loop-body temporary of stable size once before the loop and reuse it.
+- *candidate* — [PB O0320](pb-compiler-catalog.md#pb-o0320) Array of structs → struct of arrays: Store an array of records as one array per field when loops touch single fields.
+- *candidate* — [PB O0321](pb-compiler-catalog.md#pb-o0321) Field reordering: Order record fields so frequently accessed ones are adjacent and padding is minimal.
+- *candidate* — [PB O0322](pb-compiler-catalog.md#pb-o0322) Hot/cold field splitting: Split rarely used fields of a record into a separate cold record.
+- *candidate* — [PB O0324](pb-compiler-catalog.md#pb-o0324) Pointer compression: Store a pointer whose targets lie in one bounded region as a narrower offset or index.
+- *candidate* — [PB O0325](pb-compiler-catalog.md#pb-o0325) Array padding for alignment: Align an array's base to the vector width and round its length up to whole vectors, so no peel or tail is needed.
+- *candidate* — [PB O0327](pb-compiler-catalog.md#pb-o0327) Data transposition: Store multidimensional data in the order the fixed loop nest traverses it.
+- *candidate* — [PB O0329](pb-compiler-catalog.md#pb-o0329) Array contraction: Contract an array of which later iterations read only the last few elements to that many scalars.
+- *candidate* — [PB O0332](pb-compiler-catalog.md#pb-o0332) Lookup-table generation: Evaluate a pure function over its whole small domain at compile time and replace calls by an indexed load.
+- *candidate* — [PB O0333](pb-compiler-catalog.md#pb-o0333) Lookup-table elimination: Replace a table whose contents are a simple function of the index by that computation.
+- *candidate* — [PB O0339](pb-compiler-catalog.md#pb-o0339) Memory routine specialization by size: Choose straight-line accesses, a block move or the runtime routine for a copy by its known size.
+
+### Vectorization
+
+- *candidate* — [PB O0137](pb-compiler-catalog.md#pb-o0137) Load widening across unrolled iterations: Load a wide word once and consume its lanes across unrolled iterations when the lanes can stay packed.
+- *candidate* — [PB O0139](pb-compiler-catalog.md#pb-o0139) Alignment peeling and access versioning: Peel scalar iterations until the access is aligned, or version the loop on a run-time alignment test.
+- *candidate* — [PB O0144](pb-compiler-catalog.md#pb-o0144) Interleaved-access vectorization: Vectorize strided channel loops by de-interleaving loaded vectors, operating per channel and re-interleaving.
+- *candidate* — [PB O0148](pb-compiler-catalog.md#pb-o0148) Packed narrow vs widening vector arithmetic: Keep vector lanes at the element width when value ranges prove no lane overflows, widening only otherwise.
+- *candidate* — [PB O0150](pb-compiler-catalog.md#pb-o0150) Vector compare, select, min/max and absolute value: Vectorize a loop body with a per-element conditional as a lane mask and select.
+- *candidate* — [PB O0152](pb-compiler-catalog.md#pb-o0152) Runtime dependence-check versioning: Guard a vector loop by a run-time overlap test of the accessed ranges, with the scalar loop as fallback.
+- *candidate* — [PB O0154](pb-compiler-catalog.md#pb-o0154) SWAR search idioms: Search for a byte several positions at a time with the zero-byte and broadcast-compare word tricks.
+- *candidate* — [PB O0251](pb-compiler-catalog.md#pb-o0251) Misaligned access versioning: Emit an aligned fast path and an unaligned fallback selected by a run-time test of the address.
+- *candidate* — [PB O0252](pb-compiler-catalog.md#pb-o0252) Safe over-read versioning: Permit a widened load past the last element only where accessible padding is proven, and run a scalar tail otherwise.
+- *candidate* — [PB O0254](pb-compiler-catalog.md#pb-o0254) Masked vector tail: Run the remainder of a vector loop in the vector unit with out-of-range lanes masked off.
+- *candidate* — [PB O0255](pb-compiler-catalog.md#pb-o0255) Overlapping final vector: Cover the remainder of a vector loop by one final vector that overlaps elements already processed, where recomputation is idempotent.
+
+### Interprocedural
+
+- *candidate* — [PB O0018](pb-compiler-catalog.md#pb-o0018) Interprocedural constant propagation: Replace a parameter that receives the same constant at every call site by that literal in the callee.
+- *candidate* — [PB O0022](pb-compiler-catalog.md#pb-o0022) Dead procedure elimination: Remove functions that are neither called nor address-taken after the middle end has run.
+- *candidate* — [PB O0040](pb-compiler-catalog.md#pb-o0040) Identical-code folding (link-time tail merge): Merge functions whose optimized bodies are identical, rebinding the duplicates' entry points to one copy.
+- *candidate* — [PB O0054](pb-compiler-catalog.md#pb-o0054) IR: global dead-code elimination: Remove unreferenced functions and globals of a module, repeating until nothing more becomes unreferenced.
+- *candidate* — [PB O0069](pb-compiler-catalog.md#pb-o0069) Dead parameters and call-shape cloning: Remove parameters no path in the callee reads from the signature and every call site, and clone a callee per constant argument shape.
+- *candidate* — [PB O0159](pb-compiler-catalog.md#pb-o0159) Return-value propagation: Replace a call to a function that returns the same constant on every path by that constant, and carry the result's range to call sites.
+- *candidate* — [PB O0160](pb-compiler-catalog.md#pb-o0160) Call-site cloning by range, alignment and aliasing: Clone a procedure per materially different call shape so each clone keeps sharp facts.
+- *candidate* — [PB O0165](pb-compiler-catalog.md#pb-o0165) Read-only global propagation: Fold every read of a never-written global with a constant initializer to the literal.
+- *candidate* — [PB O0201](pb-compiler-catalog.md#pb-o0201) Fully-inlined procedure purge: Remove a function once inlining has left it without callers or taken address.
+- *candidate* — [PB O0278](pb-compiler-catalog.md#pb-o0278) Global variable localization: Turn a global that only one function touches into a local of that function.
+- *candidate* — [PB O0279](pb-compiler-catalog.md#pb-o0279) Whole-program devirtualization: Resolve an indirect call whose complete target set has exactly one member to a direct call.
+- *candidate* — [PB O0280](pb-compiler-catalog.md#pb-o0280) Argument structure reduction: Pass only the fields a callee reads instead of the whole record, at every call site.
+- *candidate* — [PB O0281](pb-compiler-catalog.md#pb-o0281) Return structure reduction: Return only the fields callers read and drop the stores and computations for the rest.
+- *candidate* — [PB O0283](pb-compiler-catalog.md#pb-o0283) Context-sensitive cloning: Clone a procedure for an important caller so that caller's facts are not joined with the others'.
+- *candidate* — [PB O0284](pb-compiler-catalog.md#pb-o0284) Semantic function merging: Merge functions that differ in one constant, field offset or call target into one body with an extra parameter.
+- *candidate* — [PB O0307](pb-compiler-catalog.md#pb-o0307) Speculative devirtualization: Version an indirect call into a guarded direct call to a statically likely target plus the indirect fallback.
+- *candidate* — [PB O0314](pb-compiler-catalog.md#pb-o0314) Task-graph extraction: Run calls proven independent by their effect summaries concurrently.
+
+### Code layout
+
+- *candidate* — [PB O0029](pb-compiler-catalog.md#pb-o0029) `SELECT CASE` → jump table: Dispatch a dense integer multi-way branch through an index table under case-count and span thresholds.
+- *candidate* — [PB O0032](pb-compiler-catalog.md#pb-o0032) Short-circuit `AND` / `OR` / `NOT` conditions: Lower a branch on an AND/OR/NOT tree of pure comparisons to a chain of conditional branches instead of materialized truth values.
+- *candidate* — [PB O0051](pb-compiler-catalog.md#pb-o0051) IR: if-conversion: Turn a diamond with empty arms into `select` values at the merge.
+- *candidate* — [PB O0052](pb-compiler-catalog.md#pb-o0052) IR: CFG simplification: Canonicalize the CFG: remove trivial phis and forwarding blocks, merge straight-line block chains.
+- *candidate* — [PB O0067](pb-compiler-catalog.md#pb-o0067) `IF`-chain → jump table: Recognize a chain of mutually exclusive equality tests on one value as a multi-way branch, so it can take the table dispatch.
+- *candidate* — [PB O0093](pb-compiler-catalog.md#pb-o0093) Jump threading: Retarget a branch whose destination is an unconditional branch to the final destination, transitively.
+- *candidate* — [PB O0094](pb-compiler-catalog.md#pb-o0094) Conditional branch inversion: Invert a condition and swap the arms where that removes the jump over the else arm on the common path.
+- *candidate* — [PB O0095](pb-compiler-catalog.md#pb-o0095) Common branch-tail merging: Keep one copy of an instruction suffix shared by sibling arms and branch into it.
+- *candidate* — [PB O0096](pb-compiler-catalog.md#pb-o0096) Adjacent and nested condition combining: Merge directly nested conditionals into one branch chain.
+- *candidate* — [PB O0098](pb-compiler-catalog.md#pb-o0098) Sparse `SELECT` → balanced decision tree: Dispatch a sparse multi-way branch through a balanced binary decision tree over the sorted case values.
+- *candidate* — [PB O0099](pb-compiler-catalog.md#pb-o0099) Bit-test dispatch for small constant sets: Test membership in a small constant set with one shift-and-mask against a compile-time bit mask.
+- *candidate* — [PB O0100](pb-compiler-catalog.md#pb-o0100) Perfect-hash dispatch: Index a compact table through a collision-free arithmetic hash of the case value.
+- *candidate* — [PB O0101](pb-compiler-catalog.md#pb-o0101) Jump-table sharing and compression: Drop the range guard of a dispatch dominated by another dispatch on the same subject, and store table entries at the narrowest width that reaches every target.
+- *candidate* — [PB O0104](pb-compiler-catalog.md#pb-o0104) Branch probability inference and block placement: Infer likely edges (back edges, early exits, error arms) and place the common path as one fall-through trace.
+- *candidate* — [PB O0105](pb-compiler-catalog.md#pb-o0105) Hot/cold block splitting: Move error and rarely taken arms out of the hot block sequence to the end of the function or a cold region.
+- *candidate* — [PB O0106](pb-compiler-catalog.md#pb-o0106) Trace formation and superblock tail duplication: Form traces along likely paths and duplicate small join blocks into their predecessors to obtain single-entry superblocks.
+- *candidate* — [PB O0230](pb-compiler-catalog.md#pb-o0230) Jump-to-next removal: Remove a jump whose target is the immediately following block.
+- *candidate* — [PB O0247](pb-compiler-catalog.md#pb-o0247) Jump-table entry compression: Store dispatch-table entries as byte offsets from a base, or as indices into a smaller address table when cases share targets.
+- *candidate* — [PB O0275](pb-compiler-catalog.md#pb-o0275) Cold-code outlining: Extract rare paths of a hot function into a separate cold function so the hot body shrinks.
+- *candidate* — [PB O0336](pb-compiler-catalog.md#pb-o0336) Finite-state-machine compilation: Classify a byte through a 256-entry class table followed by a compact dispatch over class ids.
+- *candidate* — [PB O0390](pb-compiler-catalog.md#pb-o0390) Superblock formation by side-entry duplication: Duplicate the blocks a trace is entered through from outside, giving the trace a single entry.
+
+### Profile-guided
+
+- *candidate* — [PB O0269](pb-compiler-catalog.md#pb-o0269) Profile-guided inlining: Raise the inlining budget for hot call sites and withhold it from cold ones using call counts.
+- *candidate* — [PB O0270](pb-compiler-catalog.md#pb-o0270) Value-profile specialization: Clone a procedure for an argument value that dominates at run time and guard the clone by a test.
+- *candidate* — [PB O0271](pb-compiler-catalog.md#pb-o0271) Indirect call promotion: Split an indirect call into a guarded direct call to the hottest target plus the indirect fallback.
+- *candidate* — [PB O0272](pb-compiler-catalog.md#pb-o0272) Profile-guided loop optimization: Choose unroll factors, peeling and versioning from the observed trip-count distribution.
+- *candidate* — [PB O0364](pb-compiler-catalog.md#pb-o0364) Hot-path block chaining: Order blocks by chaining along the highest-frequency edge so the common path falls through.
+- *candidate* — [PB O0365](pb-compiler-catalog.md#pb-o0365) Maximum weighted fall-through: Choose the block order that maximizes the execution-weighted number of fall-through edges.
+- *candidate* — [PB O0391](pb-compiler-catalog.md#pb-o0391) Cold-code deduplication: Merge identical sequences aggressively where they are cold.
+- *candidate* — [PB O0392](pb-compiler-catalog.md#pb-o0392) Hot-code duplication: Duplicate a small shared hot block into its predecessors to remove the jump.
+- *candidate* — [PB O0399](pb-compiler-catalog.md#pb-o0399) Profile-weighted tail merging: Merge tails where they are cold and keep or duplicate them where they are hot.
+
+### Strings
+
+- *candidate* — [PB O0009](pb-compiler-catalog.md#pb-o0009) String-temp economy: Fold a concatenation of string literals into one pooled literal at compile time.
+- *candidate* — [PB O0024](pb-compiler-catalog.md#pb-o0024) Multi-concat single-allocation builder: Build a concatenation tree of three or more operands with one allocation sized by the summed lengths.
+- *candidate* — [PB O0178](pb-compiler-catalog.md#pb-o0178) Empty-string operation simplification: Fold string operations with an empty operand or zero length to the other operand or the empty string.
+- *candidate* — [PB O0181](pb-compiler-catalog.md#pb-o0181) Empty-string comparison via length: Compare a string with the empty string by testing its length instead of calling a string comparison.
+- *candidate* — [PB O0266](pb-compiler-catalog.md#pb-o0266) Zero-length string intrinsic folding: Fold a substring or fill operation whose length is proven zero to the empty string.
+- *candidate* — [PB O0294](pb-compiler-catalog.md#pb-o0294) String-builder recognition: Recognize a loop that appends to one string accumulator and grow that accumulator in place.
+- *candidate* — [PB O0295](pb-compiler-catalog.md#pb-o0295) String result-buffer forwarding: Let the caller pass the destination so a string-returning function writes its result in place.
+- *candidate* — [PB O0296](pb-compiler-catalog.md#pb-o0296) String move instead of copy: Transfer the buffer instead of copying it when the source is not read after the assignment.
+- *candidate* — [PB O0298](pb-compiler-catalog.md#pb-o0298) String comparison length guard: Decide string inequality from the lengths before comparing bytes.
+- *candidate* — [PB O0299](pb-compiler-catalog.md#pb-o0299) Interned literal identity comparison: Compare two values known to refer to pooled literals by address and length.
+- *candidate* — [PB O0300](pb-compiler-catalog.md#pb-o0300) ASCII string specialization: Fold case conversion and case-insensitive comparison of a literal whose bytes are all 7-bit ASCII.
+- *candidate* — [PB O0301](pb-compiler-catalog.md#pb-o0301) Encoding-conversion elimination: Cancel a number-to-text-to-number round trip whose intermediate text is unobservable.
+- *candidate* — [PB O0302](pb-compiler-catalog.md#pb-o0302) Search algorithm selection by pattern: Select the substring search by what is known about the needle: byte scan, short candidate scan, or a compile-time skip table.
