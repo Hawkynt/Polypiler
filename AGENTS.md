@@ -13,7 +13,7 @@ is one thin path, the prototype between C# and JavaScript: `Polypiler.Core` (pro
 `Diagnostic`, `GeneratedFile`), `Polypiler.Core.IR` (a small typed structured IR with verifier and
 interpreter), `Polypiler.Core.Frontends.CSharp` (Roslyn import of a small C# subset),
 `Polypiler.Core.Frontends.JavaScript` (import of JavaScript with inferred types, parsed by Acornima),
-`Polypiler.Core.Backends.JavaScript` (ES module emitter), `Polypiler.Core.Backends.CSharp` (C#
+`Polypiler.Core.Backends.JavaScript` (JavaScript emitter for the profiles ES5 to ES2022), `Polypiler.Core.Backends.CSharp` (C#
 emitter for nine target profiles, .NET Framework 2.0 to .NET 10, with one capability table) and `Polypiler.Cli` (the `polypiler` command with `translate`). `Polypiler.Tests` holds the
 unit tests and carries the coverage; `Polypiler.Tests.Acceptance` starts the real executable, `node`
 and the C# compiler. Fixtures live in `tests/fixtures`, feature files in `tests/features`. No global
