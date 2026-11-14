@@ -1,0 +1,15 @@
+{
+  "name": "test-37-swap-non-equidistant-bits-needs-2-ops",
+  "source": {"line": 1292},
+  "width": 8,
+  "mapping": [
+    {"type": "src", "val": 3, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"}
+  ]
+}

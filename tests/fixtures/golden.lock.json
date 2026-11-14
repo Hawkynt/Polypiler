@@ -1,0 +1,480 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "tests/fixtures/prototype/js/recorded/adler32.txt",
+      "sha256": "0b06b7203ec0c3e339e9e5698376add358f77ab70ef3ede33446a744c30e1717",
+      "bytes": 5010
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/arrays.txt",
+      "sha256": "2d5e28370111358b02b5aae5a8d6fd03e1a0cc0f562c1e2c7a2d28a5df786ad3",
+      "bytes": 6698
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/crc32.txt",
+      "sha256": "8efe3ea9683467f545a6c471dfc3694028d388eb4e7a47ea419af9b5d23747e5",
+      "bytes": 175
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/fnv1a.txt",
+      "sha256": "63b597c26aa0928a250f70d642f3542234f097fdbccb442a106845c9edf39ff4",
+      "bytes": 130
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/gcd.txt",
+      "sha256": "b043642eaff27cb99051d7d15731e92953ebd3de350ec654074b1a9817e1463a",
+      "bytes": 162
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/golden.provenance.json",
+      "sha256": "acf5cf0fedd6f842a0af1ba8d9a779540df297d51fd376728c71307f4cd492e4",
+      "bytes": 383
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/inference/arrays.txt",
+      "sha256": "8f46741b4efd2e087300cefcc5c4de4d09a18694f03208b38928988385de874b",
+      "bytes": 12753
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/inference/bigint.txt",
+      "sha256": "6352dbb2ae2997aa5eb45d578b3e8272137cd3ba940ccffb3582a98f048854a7",
+      "bytes": 21166
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/inference/conversions.txt",
+      "sha256": "9bb7aebda36e3d49ca9785e6a1a602c4b3e795021bf5b489533458cd21bc3981",
+      "bytes": 82936
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/inference/math.txt",
+      "sha256": "0cc4552fd2499921130e27b536f8f5b42b90dc8700a158e7c45981be982f434c",
+      "bytes": 79079
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/inference/operators.txt",
+      "sha256": "eaa1012877ecc9fedfb1a24266235e34d70f6b84c554261a4820d6ce6f1dffc5",
+      "bytes": 606240
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/inference/parameters.txt",
+      "sha256": "5a50b13f022c53ff26584dce1098657a301ba65655328968898a5caf6a08d47a",
+      "bytes": 20865
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/inference/rules.txt",
+      "sha256": "ee6fba841fd8ac15c173563083d9d84da86a5b8c26a0d57e9f8c78c1d9e3db1d",
+      "bytes": 127602
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/inference/statements.txt",
+      "sha256": "a9af4c34e72d5a3c36d5fa1075f46b22dde591ca9009eda4fb1da46cb9c038bb",
+      "bytes": 29129
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/operators.txt",
+      "sha256": "8d714d94d0281b6ef9890d35546475c909282ac7c10d715bf6e2510b2d9fdf1b",
+      "bytes": 77608
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/rotate.txt",
+      "sha256": "6f6989820a8de6fc3c7e9f02e3229ee0b8d89c7152f5ef39a031ba9df045dece",
+      "bytes": 2344
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/statements.txt",
+      "sha256": "1b7aaa4239fb8db322f2e8cd030a036cf1a4a9c879cf4e019766f8e084ff2dde",
+      "bytes": 1533
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/adler32.txt",
+      "sha256": "5d99d3e519d0984cc47b5835e148fe21efe842b9fba44efd3e43d6b759312cf4",
+      "bytes": 5026
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/binarysearch.txt",
+      "sha256": "40c14f0b40f507c0c5fdc78c17312b0c69b3d642522e95a9098aaff0aade285d",
+      "bytes": 658
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/crc32.txt",
+      "sha256": "2c79e4957e6f5183beeaf522532d91b1c64ff9d90a7d9b290ba7a577aaee9f5d",
+      "bytes": 191
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/crc32table.txt",
+      "sha256": "2c79e4957e6f5183beeaf522532d91b1c64ff9d90a7d9b290ba7a577aaee9f5d",
+      "bytes": 191
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/fnv1a.txt",
+      "sha256": "6a8a7f3b169468e067c72869829732ba6e834ebdee78f22d001fecc0a42c1a78",
+      "bytes": 146
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/fnv1a64.txt",
+      "sha256": "31e7cc3205d5b567f09118b1da31dc2abd77aea94df4b142956535df47f8947c",
+      "bytes": 175
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/horner.txt",
+      "sha256": "6fd5968c1881e3b9b120f228d4d8aefec83d4211c04366ab015e5521738cddce",
+      "bytes": 402
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/runlength.txt",
+      "sha256": "2003e0223c0db314994257f9d0d5f77f3a96b50814aeaf73fd544eaf9c3f81f8",
+      "bytes": 841
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/stats.txt",
+      "sha256": "f71449c62a0b921f82e269e4bff693fa51344eec0e61d878906add6b2ff52c3d",
+      "bytes": 1007
+    },
+    {
+      "path": "tests/fixtures/prototype/js/recorded/untyped/xorshift32.txt",
+      "sha256": "3ec311ed954b7fda3a3fb1a6ee6249f504cdbdabbdbdb89ac124f26e14b39532",
+      "bytes": 319
+    },
+    {
+      "path": "tests/fixtures/verify/adler32.vectors.json",
+      "sha256": "f0bb9ef0d19281add39928d0953daf2b93bb9496957ee5b97d7e59af07548640",
+      "bytes": 625
+    },
+    {
+      "path": "tests/fixtures/verify/oracle/adler32.vectors.json",
+      "sha256": "a76050b29addf6a2a363181235a05d5d1c161e31cfb71d7f05bb291210293420",
+      "bytes": 1416
+    },
+    {
+      "path": "tests/vectors/float/THIRD-PARTY-NOTICE.CORE-MATH.txt",
+      "sha256": "9b9eac96d0980bf1c20316e289818725eb9c2911286b026fdd388153e62b6a9e",
+      "bytes": 1627
+    },
+    {
+      "path": "tests/vectors/float/acos.f32.txt",
+      "sha256": "0d40b0ac8f53ab763514b8edef5ae2255a85f0e2156f58947cbd5de4dc1d2a66",
+      "bytes": 129866
+    },
+    {
+      "path": "tests/vectors/float/acos.f64.txt",
+      "sha256": "0a57749e130c85e92060c59298a7069cf286047419dd7cbbaa0b8e2cd3c31f06",
+      "bytes": 213770
+    },
+    {
+      "path": "tests/vectors/float/acosh.f32.txt",
+      "sha256": "e8a9343e7e20cdca4c8cc4fbfb2c54199592c50aae8f01ab3ec67a80c16fd0a0",
+      "bytes": 129302
+    },
+    {
+      "path": "tests/vectors/float/acosh.f64.txt",
+      "sha256": "f29c827e073f7eef31844c01f7f0ce97e19e293cdd395d1cabd97745eb9b7c00",
+      "bytes": 212988
+    },
+    {
+      "path": "tests/vectors/float/asin.f32.txt",
+      "sha256": "444870c7a503f9436fb94aedca9f3c3b693104e73d2d42afc86af0c06ae5fb69",
+      "bytes": 129866
+    },
+    {
+      "path": "tests/vectors/float/asin.f64.txt",
+      "sha256": "8b334cbc403fd2f1f2d395f4ac10bc14b8054d9069711f01ee7dd6f90c259155",
+      "bytes": 213770
+    },
+    {
+      "path": "tests/vectors/float/asinh.f32.txt",
+      "sha256": "3dd72d714bd52c1a1c8e260f0a72bb325a8bd347e423d4ad4db786b803dfd020",
+      "bytes": 129673
+    },
+    {
+      "path": "tests/vectors/float/asinh.f64.txt",
+      "sha256": "757d9489ef2d1874c7ed3c9a8ef8e3e2a795b6d01c6d0984994b7f11fcd3c912",
+      "bytes": 213433
+    },
+    {
+      "path": "tests/vectors/float/atan.f32.txt",
+      "sha256": "248eff79aef8779c721a32a468c62908c9f96fb23b538d1d981a6d7898b7d49e",
+      "bytes": 129740
+    },
+    {
+      "path": "tests/vectors/float/atan.f64.txt",
+      "sha256": "66f2e1bb1f72f7517ba2e466bb92f086a39f8d043415fc68f1b0039ad436eb4c",
+      "bytes": 213516
+    },
+    {
+      "path": "tests/vectors/float/atan2.f32.txt",
+      "sha256": "a2ccdc18969ab89359de0da6604b9b5d5c9596db3136f09138b32fc2b62c5326",
+      "bytes": 199874
+    },
+    {
+      "path": "tests/vectors/float/atan2.f64.txt",
+      "sha256": "08d601a8ad70f05b3a1000a0a3054fb2a613c634e8f26594ee759c82d52fdc82",
+      "bytes": 287806
+    },
+    {
+      "path": "tests/vectors/float/atanh.f32.txt",
+      "sha256": "0af9eef6e8feb8930a4f5d6f65a27c27a92d8203406bab4856b5c57fca503846",
+      "bytes": 129731
+    },
+    {
+      "path": "tests/vectors/float/atanh.f64.txt",
+      "sha256": "7ba906962512dcdc399561197b9f82ac41693a6dbf76f784b08bd9ccd947011e",
+      "bytes": 213603
+    },
+    {
+      "path": "tests/vectors/float/cbrt.f32.txt",
+      "sha256": "eb321951cd350573d7c8834cd645308447e4f2ef0d5761a6df2d8017de9b5b56",
+      "bytes": 129778
+    },
+    {
+      "path": "tests/vectors/float/cbrt.f64.txt",
+      "sha256": "7f4107a2dc9d837adba2341b4b0bf9e1965254dfc259589c8b00991e6914ebf5",
+      "bytes": 197196
+    },
+    {
+      "path": "tests/vectors/float/cos.f32.txt",
+      "sha256": "1d862657b890295132a1cae3bf3c5a41354440c46b0de6b3e2f4266a025a8b04",
+      "bytes": 135647
+    },
+    {
+      "path": "tests/vectors/float/cos.f64.txt",
+      "sha256": "c29c896186424f906934a705d0669e3c89ae0ca460a3135c6723873d05e8ae4f",
+      "bytes": 221527
+    },
+    {
+      "path": "tests/vectors/float/cosh.f32.txt",
+      "sha256": "67bdd1ef65837fa0603c34bac175eac778d12aa5c90862a945c1ca13a568ab60",
+      "bytes": 112894
+    },
+    {
+      "path": "tests/vectors/float/cosh.f64.txt",
+      "sha256": "2e458617261f8738eb9928c33d880bb38054fc375640863c723b92a06919a669",
+      "bytes": 193386
+    },
+    {
+      "path": "tests/vectors/float/exp.f32.txt",
+      "sha256": "cd08bb23eac08ecfde5d9cbd660095497546152e8061819bf6c3b2939fa8ea7d",
+      "bytes": 116676
+    },
+    {
+      "path": "tests/vectors/float/exp.f64.txt",
+      "sha256": "1be839a38627028984d6d9f91afff1c686b92f08056958de8d0f04e9a52eea9d",
+      "bytes": 194408
+    },
+    {
+      "path": "tests/vectors/float/exp10.f32.txt",
+      "sha256": "b425708f0bebcc0fd711dff02641a53eaf95ae113b0f6e968ba742f0dccd5400",
+      "bytes": 116567
+    },
+    {
+      "path": "tests/vectors/float/exp10.f64.txt",
+      "sha256": "44fb46319498a9d37c6bc1c5150b0919a7a9b68551ea53261722a2db0346b418",
+      "bytes": 194269
+    },
+    {
+      "path": "tests/vectors/float/exp2.f32.txt",
+      "sha256": "ff78bffd350a46f84748438971bd5f05c65361bc199322fb7b41a93f51c12e06",
+      "bytes": 116541
+    },
+    {
+      "path": "tests/vectors/float/exp2.f64.txt",
+      "sha256": "b63ceb7bbc02c6f61e3523098ee293bd4e7d5a99009ce06bf135b3a4cf7dd166",
+      "bytes": 193695
+    },
+    {
+      "path": "tests/vectors/float/expm1.f32.txt",
+      "sha256": "03ae014576f0bd727724e2f50d06f85ba7bc6c62d6584123d9874ae992f99be1",
+      "bytes": 123546
+    },
+    {
+      "path": "tests/vectors/float/expm1.f64.txt",
+      "sha256": "08dc7a336adc32e3f68b90938a15b783ef8037ba95da3fd49e7a30676c00759c",
+      "bytes": 203566
+    },
+    {
+      "path": "tests/vectors/float/fma.f32.txt",
+      "sha256": "ff7cf72971dda7905d9f4c6d53ddfd80eb15161d1250856c021d5ea01d4a97e7",
+      "bytes": 184855
+    },
+    {
+      "path": "tests/vectors/float/fma.f64.txt",
+      "sha256": "bdc5e28fcd9e6fd03126afa3530fa8980580d61db10982cef666443e03611d10",
+      "bytes": 283153
+    },
+    {
+      "path": "tests/vectors/float/generate/regenerate.sh",
+      "sha256": "1ce7f4133037b67bdc9e8a864418e02f0c8afb9222e344b60e449bf94bd022f5",
+      "bytes": 732
+    },
+    {
+      "path": "tests/vectors/float/generate/vectors.c",
+      "sha256": "eaf86ea30aaa2b11063cb19be480b4c5158868c69e751f256cd5d4a94735e4ea",
+      "bytes": 27105
+    },
+    {
+      "path": "tests/vectors/float/generate/vectors.sha256",
+      "sha256": "90141423b5b9e50982a7907c2dbb2b4622864dcbd59930a987bc92ec59fdca42",
+      "bytes": 4985
+    },
+    {
+      "path": "tests/vectors/float/generate/versions.txt",
+      "sha256": "e5cdcdff2673827bdfc52a20358fa61ac99f0f9364c656281a0cbeaa296c42b1",
+      "bytes": 330
+    },
+    {
+      "path": "tests/vectors/float/golden.provenance.json",
+      "sha256": "9f0cc05a2c12107bc708c31a58f15560503363f4275862c646c7ac0ec576acdb",
+      "bytes": 286
+    },
+    {
+      "path": "tests/vectors/float/hypot.f32.txt",
+      "sha256": "4a5419f3002efd3757a4b3bdcad16d388eb3a90589f1545a6ae57e3fa99ec21d",
+      "bytes": 195291
+    },
+    {
+      "path": "tests/vectors/float/hypot.f64.txt",
+      "sha256": "df25ab63573336a313235edcc62a65633393f579580e617051e2b524c08ccc80",
+      "bytes": 283152
+    },
+    {
+      "path": "tests/vectors/float/log.f32.txt",
+      "sha256": "2627dedb2a2f8c5dd5204f1b38cd390c9ba343bc8a1a97d5bdc8005d5fbcefc4",
+      "bytes": 129641
+    },
+    {
+      "path": "tests/vectors/float/log.f64.txt",
+      "sha256": "494dfd2e0f5b7ad5d13d3e148d9c43f2588b625bd2eb08831afac5da540bbde2",
+      "bytes": 213473
+    },
+    {
+      "path": "tests/vectors/float/log10.f32.txt",
+      "sha256": "3bee5b9c30b33a4747ef6654d4ea8b48333e80ceb6f8ac615a75535e14104bf8",
+      "bytes": 129643
+    },
+    {
+      "path": "tests/vectors/float/log10.f64.txt",
+      "sha256": "6c0f2a87f30fcde1b17e10384cfba4d11cbf70bc1f62267039992181e7bfc545",
+      "bytes": 213475
+    },
+    {
+      "path": "tests/vectors/float/log1p.f32.txt",
+      "sha256": "27f05ded3baf5d166166089a558df0c28737de0a768e35af2f3888e38ab2ec4e",
+      "bytes": 129760
+    },
+    {
+      "path": "tests/vectors/float/log1p.f64.txt",
+      "sha256": "f1393653b74e675b3524f5c7c947eddee7bb7f392b1e5457140206916f1b4bdb",
+      "bytes": 213608
+    },
+    {
+      "path": "tests/vectors/float/log2.f32.txt",
+      "sha256": "5cc4d0523391ae1eaa6350c585916861df1dd105d41ede5d61fc5404327368f7",
+      "bytes": 129370
+    },
+    {
+      "path": "tests/vectors/float/log2.f64.txt",
+      "sha256": "03e494385f9daefc8275328baa06e2af99087c965539157249b95b27a945c097",
+      "bytes": 213012
+    },
+    {
+      "path": "tests/vectors/float/logbase.f32.txt",
+      "sha256": "ee92844a4fce620b97c4174e38af41de721e3a90cb3c50938c05c7f541d24e9a",
+      "bytes": 161408
+    },
+    {
+      "path": "tests/vectors/float/logbase.f64.txt",
+      "sha256": "30d5f5755bd82d11acaf406a1f16a7f30fc637559609287ed6c1ddce3e571298",
+      "bytes": 234296
+    },
+    {
+      "path": "tests/vectors/float/pow.f32.txt",
+      "sha256": "98331599144d38567e44d2438dc37531c4c8f7ce65bfe73f1f74343990e36d61",
+      "bytes": 177310
+    },
+    {
+      "path": "tests/vectors/float/pow.f64.txt",
+      "sha256": "e09a184eb928dc2c92a14dca23d8235e108dfee18d3259efd2d8ce2d0962ddc4",
+      "bytes": 258838
+    },
+    {
+      "path": "tests/vectors/float/remainder.f32.txt",
+      "sha256": "25fa71933da5d1e0c03a99ed32ceacdcfc20705d77183cb90c6c295e78c5f9a2",
+      "bytes": 92790
+    },
+    {
+      "path": "tests/vectors/float/remainder.f64.txt",
+      "sha256": "4b52eac9669a131a7c294c08a05a9eb15219a7f2419c25a23620d551be34d9fb",
+      "bytes": 149454
+    },
+    {
+      "path": "tests/vectors/float/rootn.f32.txt",
+      "sha256": "8bb79d1ff6bc1e84abbcbbde2d48c8fa6e37f22a0e2020e83c3ad0783ac2aac2",
+      "bytes": 162497
+    },
+    {
+      "path": "tests/vectors/float/rootn.f64.txt",
+      "sha256": "e53286c97e7eb30a9f1cdd52672fff757fe45e82e8cd01eaa0f1c8ac395575f6",
+      "bytes": 224753
+    },
+    {
+      "path": "tests/vectors/float/rsqrt.f32.txt",
+      "sha256": "e4eecdda93aa10539d50ba30d48a7928a377f257e3b22d7ba949a93089eed227",
+      "bytes": 129415
+    },
+    {
+      "path": "tests/vectors/float/rsqrt.f64.txt",
+      "sha256": "d427b1fe91f2c1d851ea3fa097d470fdd79f88034356cc18bf9756a81428ccdb",
+      "bytes": 213259
+    },
+    {
+      "path": "tests/vectors/float/sin.f32.txt",
+      "sha256": "7e654710c55d70e6d2b423795e9e91129daadd23f57520f1dc9086366cdc9be0",
+      "bytes": 135647
+    },
+    {
+      "path": "tests/vectors/float/sin.f64.txt",
+      "sha256": "7b5b63c1db6a376401e0ee7dfd6dd99f30761edbae9d805b1851988d1e0e4d2e",
+      "bytes": 221527
+    },
+    {
+      "path": "tests/vectors/float/sinh.f32.txt",
+      "sha256": "5bb68818ed74e417c369edcbbeab6e40a7bca716251b2a66c953137de9e992b0",
+      "bytes": 112962
+    },
+    {
+      "path": "tests/vectors/float/sinh.f64.txt",
+      "sha256": "7c4cea2610f740d67985fdb79e45aa2e8d8cd67cec34c5dd7e34083cf1a49ce0",
+      "bytes": 193260
+    },
+    {
+      "path": "tests/vectors/float/sqrt.f32.txt",
+      "sha256": "b876e9352629e5d2299f6a67f034243541304b360006c25449c0bda6754545a7",
+      "bytes": 129448
+    },
+    {
+      "path": "tests/vectors/float/sqrt.f64.txt",
+      "sha256": "115b5eef4a01d7afbdecb7f245053ccdd0c76d8726e880903c49364c2d2d620d",
+      "bytes": 178058
+    },
+    {
+      "path": "tests/vectors/float/tan.f32.txt",
+      "sha256": "a98bcee467d898b2aded62d410761e14e924c47e9135cd1c20de59c5f23382d3",
+      "bytes": 135647
+    },
+    {
+      "path": "tests/vectors/float/tan.f64.txt",
+      "sha256": "6eaa4e34cbdafb2aaab8c853da6c6b03dd3f6f14ce5c8ee714d5f268331d995c",
+      "bytes": 221527
+    },
+    {
+      "path": "tests/vectors/float/tanh.f32.txt",
+      "sha256": "0d35053d77c357fc7b4260331bac79019187842ca5a3167018bdb0fca34313cf",
+      "bytes": 129672
+    },
+    {
+      "path": "tests/vectors/float/tanh.f64.txt",
+      "sha256": "0a4fa57e8a8c3504f45fd29dc97940c37d3a979c5c69fdb8527552f651cbfe1e",
+      "bytes": 213432
+    }
+  ]
+}

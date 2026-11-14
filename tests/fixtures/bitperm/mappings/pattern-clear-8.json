@@ -1,0 +1,15 @@
+{
+  "name": "pattern-clear-8",
+  "source": {"line": 2348},
+  "width": 8,
+  "mapping": [
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false}
+  ]
+}
