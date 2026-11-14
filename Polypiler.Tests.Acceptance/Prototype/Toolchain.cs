@@ -143,8 +143,17 @@ internal static class Toolchain {
   public static (int ExitCode, string Output) RunPolypiler(string workingDirectory, params string[] arguments) {
     var executable = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "polypiler.exe" : "polypiler");
     Assert.That(File.Exists(executable), Is.True, $"the polypiler executable was not built next to the tests: {executable}");
-    return Run(executable, workingDirectory, arguments);
+    return Run(executable, workingDirectory, arguments, _polypilerEnvironment);
   }
+
+  /// <summary>
+  /// The runtime settings of the executable under test. A translation is a process of a few seconds,
+  /// most of them in methods the JIT compiles at the first tier; instrumenting those for profile-guided
+  /// optimization costs a quarter of the time (3.5 s against 2.6 s for a strict float translation) and
+  /// pays off only in a process that runs long enough to use the profile. It changes how fast the
+  /// executable runs, not what it does.
+  /// </summary>
+  private static readonly Dictionary<string, string> _polypilerEnvironment = new() { ["DOTNET_TieredPGO"] = "0" };
 
   /// <summary>
   /// Does what <see cref="RunPolypiler"/> does for a <c>translate</c> command line with a source file
@@ -333,7 +342,7 @@ internal static class Toolchain {
     _ => "f64"
   };
 
-  private static (int ExitCode, string Output) Run(string executable, string workingDirectory, string[] arguments) {
+  private static (int ExitCode, string Output) Run(string executable, string workingDirectory, string[] arguments, IReadOnlyDictionary<string, string>? environment = null) {
     var start = new ProcessStartInfo(executable) {
       WorkingDirectory = workingDirectory,
       RedirectStandardOutput = true,
@@ -342,6 +351,9 @@ internal static class Toolchain {
     };
     foreach (var argument in arguments)
       start.ArgumentList.Add(argument);
+
+    foreach (var (name, value) in environment ?? new Dictionary<string, string>())
+      start.Environment[name] = value;
 
     using var process = Process.Start(start)!;
     var error = process.StandardError.ReadToEndAsync();
