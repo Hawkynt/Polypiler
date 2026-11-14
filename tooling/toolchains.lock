@@ -27,6 +27,13 @@
 #   bubblewrap  the sandbox of the cross-language runner on Linux (tooling/ci/runner.yaml); the
 #               version installed on the development host. Where it is missing or the kernel forbids
 #               it to unshare namespaces, the runner is Limited and refuses untrusted plans.
+#   pb-compiler, dosbox-x, vice
+#               the BASIC/PB layer (tooling/ci/basic/install.sh, CI run of layer-basic on ubuntu-26.04).
+#               pb-compiler is built from the pinned commit; pbc prints no version of its own, so the
+#               installed command is a wrapper that answers --version with that commit. dosbox-x is
+#               the ubuntu-26.04 package (2026.01.02): upstream ships no Linux binaries, and the
+#               Flathub build (2026.10.01) cannot start inside the runner's bubblewrap sandbox. vice
+#               is the Flathub build 3.10, which carries the ROM images.
 #   others      no test runs them yet. Installed on the development host: read from the tool
 #               (clang, llvm, jdk, perl, python, ruby, rust, go, vice). Not installed: the latest
 #               stable upstream release (aflplusplus, dosbox-x, fbc, fpc, ilspy-cli, ilverify,
@@ -65,7 +72,7 @@ toolchains:
     licence: Apache-2.0 WITH LLVM-exception
     source: https://github.com/llvm/llvm-project/releases
   dosbox-x:
-    version: "2026.10.01"
+    version: "2026.01.02"
     probe: [dosbox-x, --version]
     versionPattern: 'version (?<version>\d{4}\.\d{2}\.\d{2})'
     platforms: [linux, windows, macos]

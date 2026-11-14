@@ -3,7 +3,7 @@
 schema: 1
 toolchains:
   dosbox-x:
-    version: "2026.10.01"
+    version: "2026.01.02"
     probe: [no-such-dosbox-x-polypiler, --version]
     versionPattern: 'version (?<version>\d{4}\.\d{2}\.\d{2})'
     platforms: [linux, windows, macos]

@@ -9,8 +9,8 @@
 #                pbc has no version option of its own (`pbc --version` says "no source file",
 #                docs/llvm/pb-emitter-audit.md, finding F11), so the command `pbc` is a wrapper that
 #                answers --version with the commit it was built from and passes everything else on.
-#   dosbox-x     from Flathub (com.dosbox_x.DOSBox-X): upstream publishes no Linux binaries, and the
-#                distribution's package is years behind the pin.
+#   dosbox-x     the runner distribution's package: upstream publishes no Linux binaries, and the
+#                Flathub build cannot start inside the runner's bubblewrap sandbox.
 #   vice         from Flathub (net.sf.VICE), which ships the ROM images; the distribution's package
 #                does not. Commands: x64sc, x128, xvic, petcat, c1541.
 #
@@ -47,25 +47,22 @@ EOF
 chmod +x "$prefix/pb-compiler/pbc.sh"
 ln -sfn "$prefix/pb-compiler/pbc.sh" "$prefix/bin/pbc"
 
-# dosbox-x and vice
+# dosbox-x: the distribution's package, a native binary. The runner's bubblewrap sandbox cannot start
+# a Flatpak application: Flatpak's own bubblewrap is refused a nested user namespace there.
 sudo apt-get update -qq
-sudo apt-get install -y -qq flatpak > /dev/null
+sudo apt-get install -y -qq dosbox-x flatpak > /dev/null
+ln -sfn "$(command -v dosbox-x)" "$prefix/bin/dosbox-x"
+dpkg-query -W -f='dosbox-x ${Version}\n' dosbox-x
+
+# vice: Flathub, which ships the ROM images. The probe runs outside the sandbox; running VICE inside
+# it needs a native build, for the same reason as DOSBox-X (FMT-CBMBASIC-ORACLE).
 sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-sudo flatpak install --system -y --noninteractive flathub com.dosbox_x.DOSBox-X net.sf.VICE
-
-# The runner starts every step in a fresh directory below /tmp with HOME pointing there; the host's
-# /tmp is shared so that the emulator sees the directory it is started in.
-wrap() { # $1 = command, $2 = Flatpak application, $3 = command inside it
-  cat > "$prefix/bin/$1" <<EOF
-#!/bin/sh
-exec flatpak run --system --filesystem=host --filesystem=/tmp --command=$3 $2 "\$@"
-EOF
-  chmod +x "$prefix/bin/$1"
-}
-wrap dosbox-x com.dosbox_x.DOSBox-X dosbox-x
+sudo flatpak install --system -y --noninteractive flathub net.sf.VICE
 for command in x64sc x128 xvic petcat c1541; do
-  wrap "$command" net.sf.VICE "$command"
+  cat > "$prefix/bin/$command" <<EOF
+#!/bin/sh
+exec flatpak run --system --filesystem=host --filesystem=/tmp --command=$command net.sf.VICE "\$@"
+EOF
+  chmod +x "$prefix/bin/$command"
 done
-
-flatpak info --system com.dosbox_x.DOSBox-X | sed -n 's/^ *\(Version\|Commit\):/dosbox-x \1:/p'
 flatpak info --system net.sf.VICE | sed -n 's/^ *\(Version\|Commit\):/vice \1:/p'
