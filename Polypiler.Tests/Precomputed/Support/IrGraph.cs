@@ -60,12 +60,23 @@ internal static class IrGraph {
         if (declaration.Name != other.Name || declaration.IsDefined != other.IsDefined || (declaration as IrStructType)?.IsEquatable != (other as IrStructType)?.IsEquatable)
           return $"{path}: the declarations of '{declaration.Name}' and '{other.Name}' differ";
 
+        if (declaration is IrEnumType named)
+          return this.Compare(named.Underlying, ((IrEnumType)other).Underlying, $"{path}.Underlying")
+            ?? (named.Members.SequenceEqual(((IrEnumType)other).Members) && named.IsFlags == ((IrEnumType)other).IsFlags && named.IsPublic == ((IrEnumType)other).IsPublic
+              ? null : $"{path}: the members of '{named.Name}' differ");
+
         return declaration.IsDefined ? this.Compare(declaration.Fields, other.Fields, $"{path}.Fields") : null;
       }
 
-      foreach (var property in _properties.GetOrAdd(left.GetType(), type => [.. type.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(property => property.GetIndexParameters().Length == 0)]))
-        if (this.Compare(property.GetValue(left), property.GetValue(right), $"{path}.{property.Name}") is { } difference)
+      foreach (var property in _properties.GetOrAdd(left.GetType(), type => [.. type.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(property => property.GetIndexParameters().Length == 0)])) {
+        // A property that gives the object itself, as the underlying type of a type that is no enum does, says nothing more.
+        var value = property.GetValue(left);
+        if (ReferenceEquals(value, left))
+          continue;
+
+        if (this.Compare(value, property.GetValue(right), $"{path}.{property.Name}") is { } difference)
           return difference;
+      }
 
       return null;
     }

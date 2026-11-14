@@ -855,7 +855,27 @@ public enum IrIntrinsicOp {
   ParseIntEcma,
 
   /// <summary><c>str → integer | f64 | f32</c>: .NET's <c>Parse(s, CultureInfo.InvariantCulture)</c>; traps <see cref="IrTrap.InvalidFormat"/> on a malformed text and <see cref="IrTrap.IntegerOverflow"/> on an integer outside its type.</summary>
-  ParseDotNet
+  ParseDotNet,
+
+  // The enums of #1318: docs/reference/enums.md.
+
+  /// <summary><c>E → str</c>: .NET's <c>Enum.ToString()</c>, the name of the value, for <c>[Flags]</c> the names of the flags it consists of, else its decimal digits.</summary>
+  EnumToString,
+
+  /// <summary><c>E → bool</c>: .NET's <c>Enum.IsDefined</c>, whether a member has exactly the value.</summary>
+  EnumIsDefined,
+
+  /// <summary><c>(str, bool ignoreCase) → E</c>: .NET's <c>Enum.Parse</c>; traps <see cref="IrTrap.InvalidFormat"/> for a text of no member and <see cref="IrTrap.IntegerOverflow"/> for a number outside the underlying type.</summary>
+  EnumParse,
+
+  /// <summary><c>(E, E) → bool</c>: .NET's <c>Enum.HasFlag</c>, <c>(x &amp; f) == f</c>.</summary>
+  EnumHasFlag,
+
+  /// <summary><c>E → str[]</c>: .NET's <c>Enum.GetNames</c> of the enum of the argument, whose value is not read.</summary>
+  EnumNames,
+
+  /// <summary><c>E → E[]</c>: .NET's <c>Enum.GetValues</c> of the enum of the argument, whose value is not read.</summary>
+  EnumValues
 
 }
 

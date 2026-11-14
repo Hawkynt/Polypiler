@@ -37,6 +37,7 @@ public static partial class IrVerifier {
       Require(names.Add(constant.Name), "the module declares the name twice");
       Require(!OnHeap(constant.Type), Stored);
       Require(constant.Type.IsStorable && !element.IsStruct && !constant.Type.IsView, $"a constant of the type {constant.Type}");
+      Require(element.EnumType is not { } named || types.Declares(named), $"the type {element} is not among the types of the module");
       var count = element.IsString ? constant.Strings.Count : constant.Values.Count;
       Require(constant.Type.IsArray || count == 1, $"a constant of the type {constant.Type} with {count} values");
       Require(element.IsString ? constant.Values.Count == 0 : constant.Strings.Count == 0, $"a constant of the type {constant.Type} with values of another type");
@@ -99,9 +100,9 @@ public static partial class IrVerifier {
         diagnostics.Add(Error(function.Name, message));
     }
 
-    /// <summary>A struct type, or an array of one, is one the module declares.</summary>
+    /// <summary>A declared type - a struct or an enum - or an array of one, is one the module declares.</summary>
     private void Declared(IrType type) {
-      var named = (type.Element ?? type).StructType;
+      var named = (type.Element ?? type).Declaration;
       this.Require(named is null || types.Declares(named), $"the type {named} is not among the types of the module");
     }
 
@@ -272,6 +273,7 @@ public static partial class IrVerifier {
       switch (expression) {
         case IrConst constant:
           this.Require(InRange(constant), $"the constant {constant.Value} is not a value of {constant.Type}");
+          this.Declared(constant.Type);
           break;
         case IrLocalRef reference:
           this.InScope(reference.Local);
@@ -297,6 +299,7 @@ public static partial class IrVerifier {
           break;
         case IrConvert conversion:
           this.Expression(conversion.Operand);
+          this.Declared(conversion.Type);
           this.Require(Converts(conversion),
             $"a conversion from {conversion.Operand.Type} to {conversion.Type} with the contract {conversion.Contract}");
           break;
@@ -364,6 +367,10 @@ public static partial class IrVerifier {
             this.Require(false, malformed);
           if (NumberTextOperations.Problem(intrinsic) is { } unformatted)
             this.Require(false, unformatted);
+          if (EnumOperations.Problem(intrinsic) is { } unnamed)
+            this.Require(false, unnamed);
+
+          this.Declared(intrinsic.Type);
 
           break;
         case IrStep step:
@@ -423,10 +430,14 @@ public static partial class IrVerifier {
         $"the arguments of the call of '{call.Function}' do not match its parameters");
     }
 
+    /// <remarks>An enum converts to its underlying type and back, which changes no bit and so wraps.</remarks>
     private static bool Converts(IrConvert conversion) {
       var from = conversion.Operand.Type;
       if (!from.IsNumeric || !conversion.Type.IsNumeric)
         return false;
+
+      if (from.IsEnum || conversion.Type.IsEnum)
+        return from.Underlying == conversion.Type.Underlying && from != conversion.Type && (from.IsEnum != conversion.Type.IsEnum) && conversion.Contract == IrConversion.Wrap;
 
       if (conversion.Type.IsFloat)
         return conversion.Contract == IrConversion.Wrap;

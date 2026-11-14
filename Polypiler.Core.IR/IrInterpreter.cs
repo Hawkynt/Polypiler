@@ -149,7 +149,7 @@ public static partial class IrInterpreter {
     if (type.StructType is { } declared)
       return value is object?[] fields && fields.Length == declared.Fields.Count && Fields(declared, fields) is { } accepted ? new Record(accepted) : null;
 
-    return value is not null && TypeOf(value.GetType()) == type ? Internal(value) : null;
+    return value is not null && TypeOf(value.GetType()) == Plain(type) ? Internal(value) : null;
   }
 
   /// <summary>The fields of a struct taken across the boundary, or <see langword="null"/> when one is not a value of its field.</summary>
@@ -163,6 +163,9 @@ public static partial class IrInterpreter {
 
     return fields;
   }
+
+  /// <summary>A type with every enum in it replaced by its underlying type: the value of an enum crosses the boundary as that of its underlying type.</summary>
+  private static IrType Plain(IrType type) => type.IsArray ? IrType.Array(Plain(type.Element!)) : type.Underlying;
 
   /// <summary>The IR type a .NET type crosses the boundary as, or <see langword="null"/> when it does not.</summary>
   private static IrType? TypeOf(Type host) {
@@ -423,6 +426,10 @@ public static partial class IrInterpreter {
             return StringOperations.Evaluate(intrinsic, arguments);
           if (NumberTextOperations.IsNumberText(intrinsic.Op))
             return NumberTextOperations.Evaluate(intrinsic, arguments);
+          if (intrinsic.Op == IrIntrinsicOp.EnumValues)
+            return ArrayOf(intrinsic.Type.Element!, [.. EnumOperations.Values(EnumOperations.Of(intrinsic)).Select(value => (object)value)]);
+          if (EnumOperations.IsEnum(intrinsic.Op))
+            return EnumOperations.Evaluate(intrinsic, arguments);
           if (IntegerOperations.Evaluates(intrinsic))
             return IntegerOperations.Evaluate(intrinsic, arguments);
           if (FloatOperationTable.TryEvaluate(intrinsic.Op, arguments, out var computed))
