@@ -47,6 +47,8 @@ public static class Program {
       output.WriteLine($"       {Name} {FuzzCommand.Verb} run --target <id> [--seed <n>] [--iterations <n>] [--engine inprocess|afl] [--duration <seconds>] [--assembly <path>]...");
       output.WriteLine($"       {Name} {FuzzCommand.Verb} minimize --target <id> --input <file> [--assembly <path>]...");
       output.WriteLine($"       {Name} {FuzzCommand.Verb} replay [--target <id>] [--assembly <path>]...");
+      output.WriteLine($"       {Name} {IntegrityCommand.Verb} check [--base <git ref>]");
+      output.WriteLine($"       {Name} {IntegrityCommand.Verb} seal <path>...");
       return Success;
     }
 
@@ -68,6 +70,8 @@ public static class Program {
       return new CorpusCommand().Run(args[1..], output, error);
     if (args[0] == FuzzCommand.Verb)
       return new FuzzCommand().Run(args[1..], output, error);
+    if (args[0] == IntegrityCommand.Verb)
+      return new IntegrityCommand().Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;

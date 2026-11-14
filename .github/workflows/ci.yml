@@ -69,3 +69,29 @@ jobs:
               print(f"::error::{kind} coverage {rate:.2f} % is below {minimum:.0f} %")
               failed = True
           sys.exit(1 if failed else 0)
+
+  # Golden files (PRD 11.2): every one matches tests/fixtures/golden.lock.json and names an independent
+  # source, and on a pull request no commit changes one together with code or without its line in
+  # tests/fixtures/golden.changes.md.
+  golden-integrity:
+    name: golden integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Check golden files
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            dotnet run --project Polypiler.Tooling -c Release -- integrity check --base "origin/$BASE_REF"
+          else
+            dotnet run --project Polypiler.Tooling -c Release -- integrity check
+          fi
