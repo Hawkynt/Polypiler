@@ -28,7 +28,7 @@ public sealed class LockToolchainResolver(ToolchainLocator locator) : IToolchain
     }
 
     if (probe.Status is ToolchainStatus.Ok or ToolchainStatus.Mismatch && probe.Path is { } path && locator.Lock[key].Kind is ToolchainKind.Tool or ToolchainKind.External)
-      return ToolchainResolution.Found(path);
+      return ToolchainResolution.Found(path, locator.ReadOnlyRoots(key));
 
     var message = (probe with { Status = ToolchainStatus.Missing, Cause = probe.Cause ?? "it has no executable of its own" }).Problem!.Value.Message;
     return ToolchainResolution.Failed(Diagnostic.Create(ToolchainDiagnostic.NotInstalledDescriptor, null, message));

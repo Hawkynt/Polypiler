@@ -95,9 +95,23 @@ public static class StepLauncher {
   /// <returns>What the step produced.</returns>
   /// <exception cref="OperationCanceledException">The token was cancelled; the tree has been killed.</exception>
   /// <exception cref="System.ComponentModel.Win32Exception">The process cannot be started.</exception>
-  public static async Task<StepResult> RunAsync(ISandbox sandbox, string executable, ProcessSpec step, string workingDirectory, RunLimits limits, CancellationToken cancellationToken) {
+  public static Task<StepResult> RunAsync(ISandbox sandbox, string executable, ProcessSpec step, string workingDirectory, RunLimits limits, CancellationToken cancellationToken)
+    => RunAsync(sandbox, ToolchainResolution.Found(executable), step, workingDirectory, limits, cancellationToken);
+
+  /// <summary>Runs one step with a toolchain that reads folders besides its install root.</summary>
+  /// <param name="sandbox">The sandbox to run it in.</param>
+  /// <param name="toolchain">The toolchain: its executable and the extra folders it reads, which the sandbox shows read-only.</param>
+  /// <param name="step">The step.</param>
+  /// <param name="workingDirectory">The run's directory.</param>
+  /// <param name="limits">The limits.</param>
+  /// <param name="cancellationToken">Ends the step, its process tree killed.</param>
+  /// <returns>What the step produced.</returns>
+  /// <exception cref="OperationCanceledException">The token was cancelled; the tree has been killed.</exception>
+  /// <exception cref="System.ComponentModel.Win32Exception">The process cannot be started.</exception>
+  public static async Task<StepResult> RunAsync(ISandbox sandbox, ToolchainResolution toolchain, ProcessSpec step, string workingDirectory, RunLimits limits, CancellationToken cancellationToken) {
     cancellationToken.ThrowIfCancellationRequested();
-    var line = sandbox.CommandLine(new(executable, step.Arguments, workingDirectory));
+    var executable = toolchain.Executable ?? throw new ArgumentException("the toolchain was not found", nameof(toolchain));
+    var line = sandbox.CommandLine(new(executable, step.Arguments, workingDirectory) { ReadOnlyRoots = toolchain.Roots });
     var info = new ProcessStartInfo(line[0]) {
       RedirectStandardInput = true,
       RedirectStandardOutput = true,

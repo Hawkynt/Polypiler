@@ -96,6 +96,20 @@ public sealed class ToolchainLocator {
     return found with { Status = actual == entry.Version ? ToolchainStatus.Ok : ToolchainStatus.Mismatch, ActualVersion = actual };
   }
 
+  /// <summary>
+  /// The folders a toolchain reads besides its install root: the value of each variable of its
+  /// <c>roots</c> that is set to the full path of an existing folder. A variable that is unset or
+  /// names nothing adds no folder.
+  /// </summary>
+  /// <param name="key">The toolchain's key.</param>
+  /// <exception cref="ToolchainLockException">The lock has no such key (<c>PLY0020</c>).</exception>
+  public IReadOnlyList<string> ReadOnlyRoots(string key)
+    => [.. this.Lock[key].Roots
+      .Select(this._environment)
+      .OfType<string>()
+      .Where(folder => Path.IsPathFullyQualified(folder) && Directory.Exists(folder))
+      .Select(Path.GetFullPath)];
+
   /// <summary>The version the pattern captures from the first line it matches, standard output first.</summary>
   private static string? Recognise(string pattern, string output, string error) {
     var regex = new Regex(pattern, RegexOptions.CultureInvariant);

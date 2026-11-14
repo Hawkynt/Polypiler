@@ -79,7 +79,24 @@ public sealed class LockToolchainResolverTests {
   [Test]
   public void AResolution_IsEitherAnExecutableOrAProblem() {
     Assert.That(() => ToolchainResolution.Found(null!), Throws.ArgumentNullException);
+    Assert.That(() => ToolchainResolution.Found(null!, []), Throws.ArgumentNullException);
+    Assert.That(() => ToolchainResolution.Found("/x", null!), Throws.ArgumentNullException);
     Assert.That(() => ToolchainResolution.Failed(null!), Throws.ArgumentNullException);
+  }
+
+  /// <summary>The extra roots of a lock entry: the folders its variables name, where they are set to the full path of a folder that exists.</summary>
+  [Test]
+  public void TheRootsOfTheLock_AreTheFoldersTheirVariablesName() {
+    var executable = this._folder.File(Path.Combine("path", "fake"));
+    var miri = this._folder.Folder("miri");
+    this._environment["RUST_MIRI_HOME"] = miri + Path.DirectorySeparatorChar;
+    this._environment["RELATIVE"] = "miri";
+    this._environment["ABSENT"] = Path.Combine(this._folder.Path, "absent");
+    this._environment["EMPTY"] = "";
+    var resolution = this.Resolver(Parse(Entry("fake", extra: "roots: [UNSET, EMPTY, RELATIVE, ABSENT, RUST_MIRI_HOME]")), new ScriptedRunner("fake 1.2.3")).Resolve("fake");
+    Assert.That(resolution.Executable, Is.EqualTo(executable));
+    Assert.That(resolution.Roots, Is.EqualTo(new[] { miri + Path.DirectorySeparatorChar }));
+    Assert.That(this.Resolver(Parse(Entry("fake")), new ScriptedRunner("fake 1.2.3")).Resolve("fake").Roots, Is.Empty);
   }
 
 }

@@ -163,6 +163,10 @@ public sealed class ToolchainLockTests {
   [TestCase("oracleOnly: \"true\"", "property 'oracleOnly' of 'fake' must be true or false", TestName = "A quoted truth value is a string")]
   [TestCase("kind: banana", "unknown kind 'banana' in 'fake'", TestName = "An unknown kind is refused")]
   [TestCase("home: [A]", "property 'home' of 'fake' must be a string", TestName = "home must be a string")]
+  [TestCase("roots: RUSTUP_HOME", "property 'roots' of 'fake' must be a list of at least one string", TestName = "roots must be a list")]
+  [TestCase("roots: []", "property 'roots' of 'fake' must be a list of at least one string", TestName = "roots must not be empty")]
+  [TestCase("roots: [RUSTUP_HOME, /opt/miri]", "root '/opt/miri' of 'fake' is not the name of an environment variable", TestName = "A root is a variable, not a path")]
+  [TestCase("roots: [1MIRI]", "root '1MIRI' of 'fake' is not the name of an environment variable", TestName = "A variable does not start with a digit")]
   [TestCase("versionPattern: '(?<version>'", "versionPattern of 'fake' is not a regular expression: ", TestName = "A pattern that does not compile is refused")]
   [TestCase("licence: *anchor", "property 'licence' of 'fake' must be a string", TestName = "An alias is not a string")]
   public void Property_IsRefusedWithItsReason(string line, string reason) {
@@ -183,6 +187,13 @@ public sealed class ToolchainLockTests {
   [TestCase("source")]
   public void RequiredProperty_IsMissing(string name)
     => Assert.That(Problems(Regex.Replace(Lock(Entry("fake")), $"(?m)^    {name}:.*\n", "")), Is.EqualTo(new[] { (3, 3, $"missing property '{name}' in 'fake'") }));
+
+  [Test]
+  public void Roots_AreTheVariablesOfTheEntry_AndNoneUnlessGiven() {
+    var toolchains = Parse(Entry("a", extra: "roots: [RUSTUP_HOME, RUST_MIRI_HOME, _x9]"), Entry("b"));
+    Assert.That(toolchains["a"].Roots, Is.EqualTo(new[] { "RUSTUP_HOME", "RUST_MIRI_HOME", "_x9" }));
+    Assert.That(toolchains["b"].Roots, Is.Empty);
+  }
 
   [Test]
   public void PropertyGivenTwice_IsRefused()

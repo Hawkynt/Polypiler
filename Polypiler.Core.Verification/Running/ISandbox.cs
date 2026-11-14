@@ -30,7 +30,12 @@ public interface ISandbox {
 /// <param name="Executable">The full path of the executable.</param>
 /// <param name="Arguments">The arguments, each passed as it is.</param>
 /// <param name="WorkingDirectory">The run's directory, the only one the command may write to.</param>
-public sealed record SandboxCommand(string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory);
+public sealed record SandboxCommand(string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory) {
+
+  /// <summary>Folders the toolchain reads besides its own install root (<see cref="ToolchainResolution.Roots"/>), shown read-only where a sandbox hides them.</summary>
+  public IReadOnlyList<string> ReadOnlyRoots { get; init; } = [];
+
+}
 
 /// <summary>Watches the process tree of one step.</summary>
 public interface IProcessTreeMonitor : IDisposable {

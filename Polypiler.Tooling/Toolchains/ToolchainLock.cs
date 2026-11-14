@@ -38,7 +38,9 @@ public sealed class ToolchainLock {
 
   private static readonly string[] _required = ["version", "probe", "versionPattern", "platforms", "licence", "source"];
 
-  private static readonly string[] _optional = ["home", "oracleOnly", "kind", "requires"];
+  private static readonly string[] _optional = ["home", "oracleOnly", "kind", "requires", "roots"];
+
+  private static readonly Regex _variable = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant);
 
   private static readonly Dictionary<string, ToolchainKind> _kinds = new(StringComparer.Ordinal) {
     ["tool"] = ToolchainKind.Tool,
@@ -258,6 +260,9 @@ public sealed class ToolchainLock {
       var source = this.String(properties, "source", key);
       var home = this.String(properties, "home", key);
       var requires = this.String(properties, "requires", key);
+      var roots = this.Strings(properties, "roots", key);
+      foreach (var variable in roots?.Where(variable => !_variable.IsMatch(variable)) ?? [])
+        this.Report(properties["roots"].Value, $"root '{variable}' of '{key}' is not the name of an environment variable");
       var oracleOnly = false;
       var kind = ToolchainKind.Tool;
 
@@ -285,6 +290,7 @@ public sealed class ToolchainLock {
         OracleOnly = oracleOnly,
         Kind = kind,
         Requires = requires,
+        Roots = (IReadOnlyList<string>?)roots ?? [],
         Line = keyNode.Line,
         Column = keyNode.Column
       };

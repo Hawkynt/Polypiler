@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Polypiler.Core.Verification.Running;
 
@@ -30,9 +31,21 @@ public sealed record ToolchainResolution {
   /// <summary>Why the toolchain cannot be used, for example <c>PLY0021</c>; <see langword="null"/> when it can.</summary>
   public Diagnostic? Problem { get; }
 
+  /// <summary>
+  /// The folders the toolchain reads besides its own install root, which its lock entry names by
+  /// environment variable (<c>roots</c>), for example a Miri sysroot; empty unless set.
+  /// </summary>
+  public IReadOnlyList<string> Roots { get; private init; } = [];
+
   /// <summary>The toolchain was found.</summary>
   /// <param name="executable">The full path of its executable.</param>
   public static ToolchainResolution Found(string executable) => new(executable ?? throw new ArgumentNullException(nameof(executable)), null);
+
+  /// <summary>The toolchain was found, and reads folders besides its install root.</summary>
+  /// <param name="executable">The full path of its executable.</param>
+  /// <param name="roots">The full paths of those folders.</param>
+  public static ToolchainResolution Found(string executable, IReadOnlyList<string> roots)
+    => (roots ?? throw new ArgumentNullException(nameof(roots))).Count == 0 ? Found(executable) : Found(executable) with { Roots = roots };
 
   /// <summary>The toolchain cannot be used.</summary>
   /// <param name="problem">Why.</param>

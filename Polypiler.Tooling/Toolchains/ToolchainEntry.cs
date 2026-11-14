@@ -52,6 +52,13 @@ public sealed record ToolchainEntry(
   /// <summary>The key of the host toolchain a package is installed into.</summary>
   public string? Requires { get; init; }
 
+  /// <summary>
+  /// The environment variables naming folders the toolchain reads besides its install root, for
+  /// example <c>JAVA_HOME</c> for kotlinc: the sandbox shows each that is set read-only. Empty unless
+  /// the lock says otherwise.
+  /// </summary>
+  public IReadOnlyList<string> Roots { get; init; } = [];
+
   /// <summary>The line of the entry's key in the lock, counted from 1.</summary>
   public int Line { get; init; }
 
