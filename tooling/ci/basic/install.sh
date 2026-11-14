@@ -27,21 +27,25 @@ mkdir -p "$prefix/bin"
 pin=$(version pb-compiler)
 checkout="corpus/upstream/Hawkynt/PB-Compiler@$pin"
 commit=$(git -C "$checkout" rev-parse --verify "$pin^{commit}")
-sources="$prefix/pb-compiler/src"
+sources="$prefix/pb-compiler-src"
 rm -rf "$sources" && mkdir -p "$sources"
 git -C "$checkout" archive "$commit" | tar -x -C "$sources"
-dotnet build "$sources/pbc/pbc.csproj" -c Release -o "$prefix/pb-compiler/lib" -nologo -v q -clp:ErrorsOnly
+dotnet build "$sources/pbc/pbc.csproj" -c Release -o "$prefix/pb-compiler" -nologo -v q -clp:ErrorsOnly
 dotnet=$(command -v dotnet)
-cat > "$prefix/bin/pbc" <<EOF
+# The wrapper lives beside pbc.dll and <prefix>/bin/pbc links to it: the bubblewrap sandbox hides the
+# home directory, the runner's work folder with it, and shows only the folders of the command and of
+# its link target.
+cat > "$prefix/pb-compiler/pbc.sh" <<EOF
 #!/bin/sh
 # pbc of Hawkynt/PB-Compiler, built from commit $commit by tooling/ci/basic/install.sh.
 if [ "\$#" -eq 1 ] && [ "\$1" = --version ]; then
   echo "pbc (Hawkynt/PB-Compiler $commit)"
   exit 0
 fi
-exec "$dotnet" "$prefix/pb-compiler/lib/pbc.dll" "\$@"
+exec "$dotnet" "$prefix/pb-compiler/pbc.dll" "\$@"
 EOF
-chmod +x "$prefix/bin/pbc"
+chmod +x "$prefix/pb-compiler/pbc.sh"
+ln -sfn "$prefix/pb-compiler/pbc.sh" "$prefix/bin/pbc"
 
 # dosbox-x and vice
 sudo apt-get update -qq
