@@ -18,9 +18,40 @@ public sealed record ProcessSpec(string Toolchain, IReadOnlyList<string> Argumen
   /// <param name="arguments">The arguments, each passed as it is.</param>
   public ProcessSpec(string toolchain, params IReadOnlyList<string> arguments) : this(toolchain, arguments, ReadOnlyMemory<byte>.Empty) { }
 
-  /// <summary>The toolchain's key in the lock.</summary>
-  /// <exception cref="ArgumentException">The key is empty.</exception>
-  public string Toolchain { get; } = string.IsNullOrEmpty(Toolchain) ? throw new ArgumentException("a process needs a toolchain", nameof(Toolchain)) : Toolchain;
+  /// <summary>
+  /// The prefix of a <see cref="Toolchain"/> that names no toolchain but a program the build steps
+  /// wrote into the run's directory, by its name relative to that directory: a native compiler's
+  /// output, which only exists once the build has run.
+  /// </summary>
+  public const string BuiltPrefix = "built:";
+
+  /// <summary>The toolchain's key in the lock, or <see cref="BuiltPrefix"/> and the name of a program the build wrote.</summary>
+  /// <exception cref="ArgumentException">The key is empty, or names a built program outside the run's directory.</exception>
+  public string Toolchain { get; } = CheckToolchain(Toolchain);
+
+  /// <summary>
+  /// The program, relative to the run's directory, a build step wrote and this step starts;
+  /// <see langword="null"/> for a step that starts a toolchain.
+  /// </summary>
+  public string? BuiltProgram => this.Toolchain.StartsWith(BuiltPrefix, StringComparison.Ordinal) ? this.Toolchain[BuiltPrefix.Length..] : null;
+
+  /// <summary>
+  /// A step that starts a program the build steps wrote into the run's directory. A program the build
+  /// did not write cannot be started: the run then throws as for any executable that cannot be.
+  /// </summary>
+  /// <param name="program">The program's name relative to the run's directory, with its extension where the system needs one (<c>.exe</c> on Windows).</param>
+  /// <param name="arguments">The arguments, each passed as it is.</param>
+  /// <exception cref="ArgumentException">The name is empty, absolute, or contains a <c>..</c> segment.</exception>
+  public static ProcessSpec Built(string program, params IReadOnlyList<string> arguments) => new(BuiltPrefix + program, arguments);
+
+  private static string CheckToolchain(string toolchain) {
+    if (string.IsNullOrEmpty(toolchain))
+      throw new ArgumentException("a process needs a toolchain", nameof(Toolchain));
+    if (toolchain.StartsWith(BuiltPrefix, StringComparison.Ordinal) && !RunPlan.IsRelativeName(toolchain[BuiltPrefix.Length..]))
+      throw new ArgumentException($"the built program '{toolchain[BuiltPrefix.Length..]}' leaves the working directory: only relative names without '..' are allowed", nameof(Toolchain));
+
+    return toolchain;
+  }
 
   /// <summary>The arguments, each passed as it is.</summary>
   public IReadOnlyList<string> Arguments { get; } = Arguments?.ToArray() ?? throw new ArgumentNullException(nameof(Arguments));
