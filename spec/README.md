@@ -93,3 +93,27 @@ standard output is `<n> documents, <m> errors`; the exit code is 0 without error
 | `PLY0044` | `deprecatedIn` earlier than `introducedIn`; `reviewedRevision` above `version` |
 | `PLY0046` | a family rule, `<reason> (rule: <rule>)` |
 | `PLY0047` | a file that is not valid YAML, an unknown family, an unreadable schema, a missing root |
+
+## Family `ir`
+
+The IR operations, stages and version (PRD §4.1–§4.3, [ADR 0001](../docs/adr/0001-ir-stage-invariants.md)),
+checked by [`schemas/ir.schema.json`](schemas/ir.schema.json) and `IrSpecFamily`. The body's `kind`
+selects the shape, and the path follows from it:
+
+| `kind` | Path and ID | Body |
+| --- | --- | --- |
+| `operation` | `ir/operations/<mnemonic in lower case>.yaml`, `IR.<mnemonic in lower case>` | `mnemonic` (PascalCase), `category`, `typeParameters` `{name, constraint}`, `operands` `{name, type}` (0–8), `result` `{type}` or `null`, `flags`, `effects` (`[pure]` or `EFFECTS.` IDs), `traps` `{when, kind}`, `stages` `{from, to}`, `examples` (≥ 1, each `{flag?, operands, result}` or `{flag?, operands, trap}`; a literal is `"0x…"` or a decimal integer) |
+| `stage` | `ir/stages/<name>.yaml`, `IR.stage.<name>` | `order` (1–999, the order of the ADR's stage list), `invariants` `{id, text}` (≥ 1) |
+| `version` | `ir/version.yaml`, `IR.version` | `irVersion`, `serializationVersion` (≥ 1) |
+
+An operand or result `type` is a type parameter of the operation or a `TYPES.` ID. Quote the trap kind
+`"null"`: plain `null` is no value in YAML. The rules, each `PLY0046 … (rule: <name>)`: `layout`,
+`stage-range` (`stages.from` not after `stages.to`, both stages), `example-arity`, `flag-declared` (an
+operation with flags needs one in every example, one without flags in none), `trap-declared`,
+`type-declared`, `unique-mnemonic`, `unique-stage-order`. Stage, effect and type IDs resolve or fail
+with `PLY0043`.
+
+The documents describe the typed SSA IR the `IR-` issues build. Where the prototype's structured IR
+(`Polypiler.Core.IR`) already implements an operation, the `normative` text says how far:
+`ir/operations/shl.yaml`, for instance, notes that `IrBinaryOp.ShiftLeft` is the `mask` variant with an
+`i32` amount.

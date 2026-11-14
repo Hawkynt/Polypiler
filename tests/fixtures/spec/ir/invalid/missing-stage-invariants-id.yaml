@@ -1,0 +1,29 @@
+# at: ir/stages/source-semantic.yaml
+# expect: PLY0040: /spec/invariants/0: Required properties
+id: IR.stage.source-semantic
+title: "Source Semantic IR"
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-STAGES
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: stage
+  order: 10
+  invariants:
+    - {text: "Every block ends in exactly one terminator; branch targets exist; the entry block has no predecessor."}
+    - {id: types, text: "Operand and result types satisfy the opcode's type rule; dynamic and flexible types are admitted."}
+    - {id: dominance, text: "Every use of an SSA value is dominated by its definition; unreachable blocks are exempt."}
+    - {id: phi-structure, text: "Phis lead their block, with one incoming value per predecessor, none from a non-predecessor and none twice."}
+    - {id: memory-bounds, text: "Every memory access states one access contract (bounds, inbounds #id or unchecked)."}
+    - {id: effect-order, text: "Every effectful instruction is on the token chain of each channel it touches; no instruction touches a machine channel except a preserved operation."}
+    - {id: machine-residue, text: "No machine opcode; preserved opaque and external operations stay."}
+    - {id: source-call-residue, text: "SourceCall is admitted."}
+    - {id: dynamic-residue, text: "Dyn.* operations, dynamic values and unresolved flexible integer types are admitted."}
+    - {id: high-level-vocabulary, text: "Sequence value forms are admitted."}
+    - {id: physical-layout, text: "Layout is abstract; no target-dependent layout, offset or byte order."}
+    - {id: source-mapping, text: "Every instruction has an origin."}

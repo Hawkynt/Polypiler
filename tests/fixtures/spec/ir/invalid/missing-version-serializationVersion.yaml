@@ -1,0 +1,16 @@
+# at: ir/version.yaml
+# expect: PLY0040: /spec: Required properties
+id: IR.version
+title: "IR version"
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-IR
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: version
+  irVersion: 1
