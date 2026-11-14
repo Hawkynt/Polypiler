@@ -785,7 +785,7 @@ public sealed record IrFunction(
   IReadOnlyList<IrLocal> Locals,
   IrBlock Body);
 
-/// <summary>A module: the functions and constants of one source class, and the types they use.</summary>
+/// <summary>A module: the functions, constants and globals of one source class, and the types they use.</summary>
 /// <param name="Name">The name of the module.</param>
 /// <param name="Functions">The functions, in source order.</param>
 /// <param name="Constants">The constants, in source order.</param>
@@ -801,5 +801,11 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// or a node of the module names is one of them.
   /// </summary>
   public IReadOnlyList<IrTypeDeclaration> Types { get; init; } = [];
+
+  /// <summary>
+  /// The globals of the module, in source order, which is the order they are initialised in. Every
+  /// global a function or an initializer names is one of them.
+  /// </summary>
+  public IReadOnlyList<IrGlobal> Globals { get; init; } = [];
 
 }

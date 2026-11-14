@@ -66,15 +66,21 @@ public static partial class IrInterpreter {
   /// </summary>
   private static readonly ConditionalWeakTable<IrModule, Program> _programs = new();
 
-  /// <summary>Calls a function of a module that <see cref="IrVerifier"/> accepted.</summary>
+  /// <summary>
+  /// Calls a function of a module that <see cref="IrVerifier"/> accepted, in an instance of the module
+  /// of its own: the globals are initialised for this call and forgotten after it.
+  /// </summary>
   /// <param name="module">The module.</param>
   /// <param name="function">The name of the function to call.</param>
   /// <param name="arguments">One value per parameter, of the parameter's type.</param>
   /// <returns>The value returned, or <see langword="null"/> for a function that returns nothing.</returns>
   /// <exception cref="ArgumentException">The function does not exist or the arguments do not fit it.</exception>
-  /// <exception cref="IrTrapException">An operation trapped.</exception>
-  public static object? Call(IrModule module, string function, object[] arguments) {
-    var program = _programs.GetValue(module, Index);
+  /// <exception cref="IrTrapException">An operation trapped, also one of an initializer.</exception>
+  public static object? Call(IrModule module, string function, object[] arguments) => Instantiate(module).Call(function, arguments);
+
+
+  /// <summary>A function of the module called with values taken across the boundary, in the globals of an instance.</summary>
+  private static object? Call(Program program, Dictionary<IrGlobal, object> globals, IrModule module, string function, object[] arguments) {
     var functions = program.Functions;
     if (!functions.TryGetValue(function, out var target))
       throw new ArgumentException($"The module '{module.Name}' has no function '{function}'.", nameof(function));
@@ -83,7 +89,7 @@ public static partial class IrInterpreter {
       throw new ArgumentException($"'{function}' takes {target.Parameters.Count} arguments, not {arguments.Length}.", nameof(arguments));
 
     var values = arguments.Select((argument, index) => FromHost(target.Parameters[index], argument)).ToArray();
-    return ToHost(target.ReturnType, new Machine(program).Invoke(target, values));
+    return ToHost(target.ReturnType, new Machine(program, globals).Invoke(target, values));
   }
 
   private static Program Index(IrModule module) {
@@ -207,7 +213,7 @@ public static partial class IrInterpreter {
 
   private sealed record Program(Dictionary<string, IrFunction> Functions, Dictionary<IrModuleConst, object> Constants);
 
-  private sealed partial class Machine(Program program) {
+  private sealed partial class Machine(Program program, Dictionary<IrGlobal, object> globals) {
 
     public object? Invoke(IrFunction function, object[] arguments) {
       var frame = new Frame();
@@ -238,6 +244,9 @@ public static partial class IrInterpreter {
           return Flow.Next;
         case IrAssign assign:
           frame.Locals[assign.Local] = this.Evaluate(assign.Value, frame);
+          return Flow.Next;
+        case IrGlobalAssign assign:
+          globals[assign.Global] = this.Evaluate(assign.Value, frame);
           return Flow.Next;
         case IrStore store:
           var array = (Array)this.Evaluate(store.Array, frame);
@@ -314,6 +323,8 @@ public static partial class IrInterpreter {
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
           return Copied(frame.Locals[reference.Local]);
+        case IrGlobalRef reference:
+          return Copied(globals[reference.Global]);
         case IrUnary unary:
           var operand = this.Evaluate(unary.Operand, frame);
           if (unary.Type.IsFloat)
@@ -464,6 +475,10 @@ public static partial class IrInterpreter {
         before = Load(array, index);
         after = Stepped(step, before);
         Store(array, index, after);
+      } else if (step.Target is IrGlobalRef reference) {
+        before = globals[reference.Global];
+        after = Stepped(step, before);
+        globals[reference.Global] = after;
       } else {
         var local = ((IrLocalRef)step.Target).Local;
         before = frame.Locals[local];

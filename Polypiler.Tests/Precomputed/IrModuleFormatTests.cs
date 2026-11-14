@@ -205,13 +205,14 @@ public sealed class IrModuleFormatTests {
   }
 
   // The numbers of the layout, as IrModuleFormat writes them.
-  private const byte Null = 0, Shared = 1, Const = 2, LocalRef = 4, Unary = 5, Block = 19, ExprStmt = 24, Return = 32;
+  private const byte Null = 0, Shared = 1, Const = 2, LocalRef = 4, Unary = 5, GlobalRef = 19, Block = 20, ExprStmt = 25, GlobalAssign = 35;
 
   private const byte I32 = (byte)IrTypeKind.I32;
 
-  /// <summary>A module of one function <c>void F()</c> with no constants or types, whose body the action writes.</summary>
+  /// <summary>A module of one function <c>void F()</c> with no constants, globals or types, whose body the action writes.</summary>
   private static byte[] Function(Action<BinaryWriter> body, Action<BinaryWriter>? locals = null) => Sealed(writer => {
     writer.Write("M");
+    writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(1);
@@ -247,7 +248,8 @@ public sealed class IrModuleFormatTests {
   }
 
   private static object[] Malformed() => [
-    new TestCaseData(Expression(writer => writer.Write((byte)(Return + 1))), "is no kind of node").SetName("A node of no kind"),
+    new TestCaseData(Expression(writer => writer.Write((byte)(GlobalAssign + 1))), "is no kind of node").SetName("A node of no kind"),
+    new TestCaseData(Expression(writer => { writer.Write(GlobalRef); writer.Write(I32); writer.Write7BitEncodedInt(0); }), "global 0 does not exist").SetName("A global that does not exist"),
     new TestCaseData(Expression(writer => { writer.Write(Const); writer.Write((byte)99); }), "is no kind of type").SetName("A type of no kind"),
     new TestCaseData(Expression(writer => { writer.Write(Const); writer.Write((byte)IrTypeKind.Struct); writer.Write7BitEncodedInt(0); }), "struct 0 does not exist").SetName("A struct that does not exist"),
     new TestCaseData(Expression(writer => { writer.Write(Unary); writer.Write(I32); writer.Write7BitEncodedInt(99); Constant(writer); }), "99 is no IrUnaryOp").SetName("An operator that does not exist"),
@@ -267,6 +269,7 @@ public sealed class IrModuleFormatTests {
       writer.Write("Opaque");
       writer.Write(false);
       writer.Write(false);
+      writer.Write7BitEncodedInt(0);
       writer.Write7BitEncodedInt(0);
       writer.Write7BitEncodedInt(1);
       writer.Write("F");

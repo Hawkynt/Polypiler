@@ -41,8 +41,9 @@ public static partial class IrVerifier {
         Require(false, $"the constant {value} is not a value of {element}");
     }
 
+    var globals = Globals(module, names, functions, constants, types, diagnostics);
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, types, diagnostics).Run();
+      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals }.Run();
 
     return diagnostics;
   }
@@ -50,7 +51,7 @@ public static partial class IrVerifier {
   private static Diagnostic Error(string member, string message)
     => Descriptor.At($"ill-typed IR in '{member}': {message}");
 
-  private sealed class FunctionCheck(
+  private sealed partial class FunctionCheck(
     IrFunction function,
     Dictionary<string, IrFunction> functions,
     HashSet<IrModuleConst> constants,
@@ -59,6 +60,9 @@ public static partial class IrVerifier {
 
     private readonly HashSet<IrLocal> _visible = [];
     private int _loops;
+
+    /// <summary>The globals the code checked may name: every one of the module in a function, the earlier ones in an initializer.</summary>
+    public IReadOnlySet<IrGlobal> Globals { get; init; } = new HashSet<IrGlobal>();
     private int _breakable;
 
     public void Run() {
@@ -119,6 +123,11 @@ public static partial class IrVerifier {
           this.InScope(assign.Local);
           this.Value(assign.Value, assign.Local.Type, $"the value assigned to '{assign.Local.Name}'");
           break;
+        case IrGlobalAssign assign:
+          this.Global(assign.Global);
+          this.Require(!assign.Global.Type.IsArray, $"the array global '{assign.Global.Name}' is assigned");
+          this.Value(assign.Value, assign.Global.Type, $"the value assigned to '{assign.Global.Name}'");
+          break;
         case IrStore store:
           this.Writable(store.Array);
           this.Element(store.Array, store.Index);
@@ -153,7 +162,7 @@ public static partial class IrVerifier {
           this.Value(loop.Condition, IrType.Bool, "the condition of a for");
           this.Loop(loop.Body);
           foreach (var step in loop.Step.Statements)
-            this.Require(step is IrDeclare or IrAssign or IrStore or IrFieldStore or IrExprStmt, $"the step of a for holds a {step.GetType().Name}");
+            this.Require(step is IrDeclare or IrAssign or IrGlobalAssign or IrStore or IrFieldStore or IrExprStmt, $"the step of a for holds a {step.GetType().Name}");
 
           this.Block(loop.Step);
           break;
@@ -235,6 +244,10 @@ public static partial class IrVerifier {
     private void Known(IrModuleConst constant)
       => this.Require(constants.Contains(constant), $"the constant '{constant.Name}' is not among the constants of the module");
 
+    /// <summary>A global is one the code may name: of the module, and in an initializer one declared before.</summary>
+    private void Global(IrGlobal global)
+      => this.Require(this.Globals.Contains(global), $"the global '{global.Name}' is not among the globals it may read");
+
     private void Element(IrExpr array, IrExpr index) {
       this.Readable(array);
       this.Expression(index);
@@ -249,6 +262,9 @@ public static partial class IrVerifier {
           break;
         case IrLocalRef reference:
           this.InScope(reference.Local);
+          break;
+        case IrGlobalRef reference:
+          this.Global(reference.Global);
           break;
         case IrConstRef reference:
           this.Known(reference.Constant);
@@ -335,7 +351,7 @@ public static partial class IrVerifier {
             this.Writable(stepped.Array);
 
           this.Expression(step.Target);
-          this.Require(step.Target is IrLocalRef or IrArrayLoad, $"a step of a {step.Target.GetType().Name}");
+          this.Require(step.Target is IrLocalRef or IrGlobalRef or IrArrayLoad, $"a step of a {step.Target.GetType().Name}");
           this.Require(step.Type.IsNumeric, $"a step of the type {step.Type}");
           this.Require(!step.Trap || !step.Type.IsFloat, $"a trapping step of the type {step.Type}");
           break;
