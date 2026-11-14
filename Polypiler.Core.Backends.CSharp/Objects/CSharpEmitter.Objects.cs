@@ -246,7 +246,7 @@ public static partial class CSharpEmitter {
       this._receiver = null;
       // : base() is what C# calls without being asked.
       return new CsConstructor([Visibility(constructor.Visibility)], this._typeNames[type.Name], parameters, body!) {
-        Chained = toBase && chained is [] ? null : chained, ChainsToBase = toBase
+        Chained = toBase && chained is [] ? null : chained, ChainsToBase = toBase && chained is not []
       };
     }
 
