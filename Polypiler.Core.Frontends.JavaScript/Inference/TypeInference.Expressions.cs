@@ -43,7 +43,10 @@ internal enum Plan {
   BigShiftRight,
 
   /// <summary><c>/</c> or <c>%</c> of two bounded <c>BigInt</c>s of one type, under a wrapper.</summary>
-  BigDivide
+  BigDivide,
+
+  /// <summary><c>**</c> of two numbers: ECMA-262's exponentiation of doubles, which is <c>Math.pow</c>.</summary>
+  Power
 
 }
 
@@ -121,6 +124,9 @@ internal sealed partial class TypeInference {
       case ConditionalExpression choice:
         var either = JsType.Join(this.Of(choice.Consequent), this.Of(choice.Alternate));
         return either.Kind == JsKind.Conflict ? JsType.Unknown : either;
+      case MemberExpression member when this.Names.Library(member) is { } library:
+        // A constant of the library is typed as the literal of its value would be.
+        return JavaScriptFloatApi.FindConstant(library) is { } value ? JsType.Literal(value.Value) : JsType.Unknown;
       case MemberExpression member:
         var array = this.Of(member.Object);
         if (array.Kind != JsKind.Array)
@@ -188,6 +194,8 @@ internal sealed partial class TypeInference {
         return _u64;
       case "BigInt.asIntN" or "BigInt":
         return _i64;
+      case { } library when JavaScriptFloatApi.Find(library) is { } member:
+        return JsType.Of(member.Result);
       case null when this.Names.Callee(call.Callee) is { } callee:
         var model = this.ModelOf(callee);
         return model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Conflict || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType);
@@ -260,6 +268,8 @@ internal sealed partial class TypeInference {
     switch (op) {
       case Operator.Addition or Operator.Subtraction or Operator.Multiplication or Operator.Division or Operator.Remainder:
         return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Float, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
+      case Operator.Exponentiation:
+        return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Power, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
       case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality when a.Kind == JsKind.Boolean && b.Kind == JsKind.Boolean:
         return new(Plan.Compare, JsType.Boolean, IrType.Bool);
       case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality

@@ -287,6 +287,7 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
     Operator.LeftShiftAssignment => Operator.LeftShift,
     Operator.RightShiftAssignment => Operator.RightShift,
     Operator.UnsignedRightShiftAssignment => Operator.UnsignedRightShift,
+    Operator.ExponentiationAssignment => Operator.Exponentiation,
     _ => null
   };
 
@@ -318,12 +319,24 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
 
   /// <summary>
   /// The operation of JavaScript's own library a call names - <c>Math.imul</c>, <c>BigInt.asUintN</c>,
-  /// <c>BigInt</c> - or <see langword="null"/>. A local or a constant of the same name hides the library.
+  /// <c>Number.isInteger</c>, <c>BigInt</c>, <c>isNaN</c> - or <see langword="null"/>. A local or a
+  /// constant of the same name hides the library, and a function of the file hides a global function.
   /// </summary>
   public string? Builtin(CallExpression call) => call.Callee switch {
     Identifier { Name: "BigInt" } global when !model.Bindings.ContainsKey(global) => "BigInt",
-    MemberExpression { Computed: false, Object: Identifier { Name: "Math" or "BigInt" } library, Property: Identifier member } when !model.Bindings.ContainsKey(library)
-      => $"{library.Name}.{member.Name}",
+    Identifier { Name: "isNaN" or "isFinite" } global when !model.Bindings.ContainsKey(global) && !candidates.Exists(candidate => !candidate.IsProperty && candidate.Name == global.Name)
+      => global.Name,
+    MemberExpression member => this.Library(member),
+    _ => null
+  };
+
+  /// <summary>
+  /// The property of a library object a member expression names - <c>Math.PI</c>, <c>Number.isNaN</c>,
+  /// <c>BigInt.asIntN</c> - or <see langword="null"/>. A local or a constant of the same name hides the library.
+  /// </summary>
+  public string? Library(MemberExpression member) => member switch {
+    { Computed: false, Object: Identifier { Name: "Math" or "Number" or "BigInt" } library, Property: Identifier property } when !model.Bindings.ContainsKey(library)
+      => $"{library.Name}.{property.Name}",
     _ => null
   };
 
