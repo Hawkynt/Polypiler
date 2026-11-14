@@ -109,7 +109,6 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(double a) { switch (a) { case 1.5: return 1; default: return 0; } }", "a switch on the type f64", 41, TestName = "switch on a float")]
   [TestCase("public static int F(int a) { const decimal s = 1m; return a; }", "decimal", 36, TestName = "local constant of a type outside the subset")]
   [TestCase("public static int F(int a) => (a)++;", "ParenthesizedExpression", 31, TestName = "step of something that is not a variable")]
-  [TestCase("public static int F(int[] a) => a!.Length;", "SuppressNullableWarningExpression", 33, TestName = "null-forgiving operator")]
   [TestCase("public static int F() { return G(); int G() => 1; }", "InvocationExpression", 32, TestName = "call of a local function")]
   [TestCase("public static int F(int a) => a switch { _ => 1 };", "SwitchExpression", 31, TestName = "switch expression")]
   [TestCase("public static int F(int a) { goto end; end: return a; }", "GotoStatement", 30, TestName = "goto")]
@@ -165,15 +164,10 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static bool F(bool a, bool b) => a & b;", "BitwiseAndExpression on bool and bool", 41, TestName = "bitwise and of truth values")]
   [TestCase("public static bool F(bool a, bool b) { a |= b; return a; }", "OrAssignmentExpression on bool and bool", 40, TestName = "compound assignment of truth values")]
   [TestCase("public static bool F(int[] a, int[] b) => a == b;", "object", 43, TestName = "array identity")]
-  [TestCase("public static int F(int[] a) => a?.Length ?? 0;", "CoalesceExpression", 33, TestName = "null-conditional")]
-  [TestCase("public static int[] F() => null;", "NullLiteralExpression", 28, TestName = "null")]
-  [TestCase("public static int[] F() => default(int[]);", "DefaultExpression", 28, TestName = "default of an array")]
   [TestCase("public static bool F(int a) => a is > 1;", "IsPatternExpression", 32, TestName = "is pattern")]
   [TestCase("public static void F(int[] a) { (a) = a; }", "ParenthesizedExpression", 33, TestName = "parenthesized target")]
   [TestCase("public static void F(int[] a) { a.Length.ToString(); }", "Int32.ToString", 33, TestName = "member call")]
   [TestCase("public static int F(int a) => int.MaxValue.CompareTo(a);", "Int32.CompareTo", 31, TestName = "call on a value")]
-  [TestCase("public static int F(int? a) { a ??= 1; return 1; }", "int?", 21, TestName = "nullable")]
-  [TestCase("public static void F(int[] a) { a ??= new int[1]; }", "CoalesceAssignmentExpression", 33, TestName = "coalescing assignment")]
   public void UnsupportedConstruct_IsRefusedWithItsPosition(string method, string what, int column) {
     var diagnostic = Refusal(PrototypeFixture.Wrap(method));
     Assert.That(diagnostic, Is.EqualTo(CSharpFrontend.UnsupportedDescriptor.At(

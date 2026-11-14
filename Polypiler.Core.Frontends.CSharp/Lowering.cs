@@ -231,6 +231,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     this._locals.Clear();
     this._read.Clear();
     this._receiver = receiver;
+    this._bound.Clear();
     var returnType = symbol.MethodKind == MethodKind.Constructor ? IrType.Void : this.Map(symbol.ReturnType, node is MethodDeclarationSyntax method ? method.ReturnType : node);
     var parameters = receiver is null ? new List<IrLocal>() : [receiver];
     var syntax = declared.ToList();
@@ -267,10 +268,14 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       throw new UnsupportedException(node, $"a variable with the name of the field '{hiding.Name}' it is used next to");
 
     this._receiver = null;
+    this.DeclareBound(statements);
     return new IrFunction(name, isPublic, returnType, parameters, this._locals.ToList(), new IrBlock(statements));
   }
 
   private IrType Map(ITypeSymbol? type, SyntaxNode node) {
+    if (this.OptionalType(type, node) is { } optional)
+      return optional;
+
     switch (type?.SpecialType) {
       case SpecialType.System_SByte:
         return IrType.I8;
@@ -578,6 +583,11 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   }
 
   private void Assignment(AssignmentExpressionSyntax assignment, List<IrStmt> into) {
+    if (assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression)) {
+      this.CoalesceAssignment(assignment, into);
+      return;
+    }
+
     if (assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)) {
       var simple = this.Target(assignment.Left, into, false);
       // An object initializer is stored into a temporary first, where nothing but a variable is evaluated before it.
@@ -628,6 +638,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     var trap = this.IsChecked(operand);
     var target = this.Target(operand, into, true);
     var current = target.Read();
+    if (current.Type.IsOptional)
+      throw new UnsupportedException(operand, $"a step of {current.Type}");
+
     var word = current.Type.IsArithmetic ? current.Type : IrType.I32;
     var stepped = Binary(increment ? IrBinaryOp.Add : IrBinaryOp.Subtract, Convert(current, word), One(word), operand, trap);
     into.Add(target.Write(Convert(stepped, current.Type, trap)));
@@ -715,6 +728,12 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (this.ClassOf(info.ConvertedType) is { } nulled && expression is LiteralExpressionSyntax or DefaultExpressionSyntax && model.GetConstantValue(expression) is { HasValue: true, Value: null })
       return new IrNull(IrType.Object(nulled));
 
+    if (expression is LiteralExpressionSyntax or DefaultExpressionSyntax && model.GetConstantValue(expression) is { HasValue: true, Value: null }
+        && (IsNullableValue(info.ConvertedType) || info.ConvertedType is IArrayTypeSymbol)) {
+      var absent = this.Map(info.ConvertedType, expression);
+      return absent.IsOptional ? new IrNone(absent) : new IrNull(absent);
+    }
+
     if (expression is StackAllocArrayCreationExpressionSyntax stack)
       return this.StackAlloc(stack, info.ConvertedType);
     if (info.ConvertedType?.SpecialType == SpecialType.System_String && model.GetConstantValue(expression) is { HasValue: true, Value: null })
@@ -723,12 +742,13 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (expression is CollectionExpressionSyntax)
       return this.ArrayOf(this.Map(info.ConvertedType, expression), expression);
 
-    var natural = this.Natural(expression, this.Map(info.Type, expression));
+    // A target-typed expression, such as c ? 4 : null for an int?, has no type of its own: it has the one it is converted to.
+    var natural = this.Natural(expression, this.Map(info.Type ?? info.ConvertedType, expression));
     if (natural is IrConstRef { Type.IsArray: true } table)
       throw new UnsupportedException(expression, $"the static readonly array '{table.Constant.Name}' used as a value");
 
     var converted = this.Map(info.ConvertedType, expression);
-    return converted.IsView ? ToView(natural, converted) : Convert(natural, converted);
+    return converted.IsView ? ToView(natural, converted) : this.Converted(natural, converted);
   }
 
   /// <summary>
@@ -754,6 +774,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (model.GetConstantValue(expression) is { HasValue: true, Value: { } folded })
       return new IrConst(type, Carried(folded));
 
+    if (this.OptionalNatural(expression, type) is { } optionalNode)
+      return optionalNode;
+
     if (this.ObjectNatural(expression, type) is { } objectNode)
       return objectNode;
 
@@ -777,7 +800,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       case ConditionalExpressionSyntax choice:
         return new IrConditional(this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse));
       case CastExpressionSyntax cast:
-        return Convert(this.Value(cast.Expression), type, this.IsChecked(cast));
+        return this.Converted(this.Value(cast.Expression), type, this.IsChecked(cast));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments: [{ Expression: RangeExpressionSyntax or PrefixUnaryExpressionSyntax { RawKind: (int)SyntaxKind.IndexExpression } }] } element when model.GetTypeInfo(element.Expression).Type?.SpecialType == SpecialType.System_String:
         throw new UnsupportedException(element, "a range or an index from the end of a string");
       case ElementAccessExpressionSyntax { ArgumentList.Arguments: [{ Expression: RangeExpressionSyntax range }] } element:
@@ -844,6 +867,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         => new IrArrayLoad(this.Written(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression)),
       _ => throw new UnsupportedException(operand, operand.Kind().ToString())
     };
+    if (target.Type.IsOptional)
+      throw new UnsupportedException(operand, $"a step of {target.Type}");
+
     return new IrStep(target, increment, postfix, target.Type.IsInteger && this.IsChecked(step));
   }
 
