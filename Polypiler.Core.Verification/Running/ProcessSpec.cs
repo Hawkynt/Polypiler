@@ -25,6 +25,25 @@ public sealed record ProcessSpec(string Toolchain, IReadOnlyList<string> Argumen
   /// <summary>The arguments, each passed as it is.</summary>
   public IReadOnlyList<string> Arguments { get; } = Arguments?.ToArray() ?? throw new ArgumentNullException(nameof(Arguments));
 
+  /// <summary>
+  /// Variables added to the scrubbed environment every step gets (<see cref="StepLauncher.Environment"/>);
+  /// a name the launcher sets already is overridden. Empty unless given.
+  /// </summary>
+  /// <exception cref="ArgumentException">A name is empty or contains <c>=</c>.</exception>
+  public IReadOnlyDictionary<string, string> Environment {
+    get;
+    init => field = CheckEnvironment(value);
+  } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+  private static Dictionary<string, string> CheckEnvironment(IReadOnlyDictionary<string, string> environment) {
+    ArgumentNullException.ThrowIfNull(environment);
+    foreach (var name in environment.Keys)
+      if (name.Length == 0 || name.Contains('=', StringComparison.Ordinal))
+        throw new ArgumentException($"'{name}' is not an environment variable name", nameof(environment));
+
+    return new(environment, StringComparer.Ordinal);
+  }
+
   /// <summary>The command as a message names it: the toolchain's key and the arguments, separated by spaces.</summary>
   public override string ToString() => string.Join(' ', this.Arguments.Prepend(this.Toolchain));
 

@@ -30,8 +30,8 @@ public sealed class ModulesSteps {
     "Polypiler.Core.Types", "Polypiler.Core.Verification", "Polypiler.Interop", "Polypiler.Permutation", "Polypiler.Tooling"
   ];
 
-  /// <summary>The test projects, which the issue does not count among its modules.</summary>
-  private static readonly string[] _tests = ["Polypiler.Tests", "Polypiler.Tests.Acceptance", "Polypiler.Tests.Probe"];
+  /// <summary>The test and benchmark projects, which the issue does not count among its modules; <c>Polypiler.Benchmarks</c> came with the benchmark harness (#27).</summary>
+  private static readonly string[] _tests = ["Polypiler.Benchmarks", "Polypiler.Tests", "Polypiler.Tests.Acceptance", "Polypiler.Tests.Probe"];
 
   private static readonly string _root = PrototypeFixture.RepositoryRoot;
 

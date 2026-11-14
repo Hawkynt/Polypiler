@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "provenance": {
+    "kind": "reference-run",
+    "source": "node",
+    "detail": "POLYPILER_RECORD=1 dotnet test Polypiler.Tests.Acceptance --filter Name~Recording_IsWhatNodeDoesWithTheOriginal: node runs every fixture of tests/fixtures/prototype/js on its calls and the outcomes are written here",
+    "generatedBy": "node"
+  },
+  "exclude": ["**/*.types.txt"]
+}

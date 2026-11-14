@@ -1,0 +1,60 @@
+# What `pbc --emit-llvm` of Hawkynt/PB-Compiler@0d73acbea185a2597357d53f7ce9acb44758ba76 does with each
+# fixture, and what LLVM 23.1.3 (`llvm-as`, `opt -passes=verify`) says about the module it prints.
+# Checked by Polypiler.Tests.Acceptance/Formats/Llvm/PbEmitterCharacterizationTests.cs; the audit is
+# docs/llvm/pb-emitter-audit.md.
+#
+#   source           `Hawkynt/PB-Compiler@<commit>:<path>`, a corpus fixture of tooling/corpus/corpus.yaml
+#                    (imported by `polypiler-tooling corpus import`), or a file beside this one.
+#                    pbc runs in the source's folder on the bare file name, so the module's
+#                    `; ModuleID` line names the file alone and the hash does not depend on the machine.
+#   outcome          emitted: exit code 0 and a module on standard output;
+#                    declined: exit code 1 and nothing on standard output.
+#   declinedBecause  declined only: text pbc's standard error contains.
+#   llvmAs, verify   emitted only: pass or fail, the exit code of `llvm-as` and of
+#                    `opt -passes=verify -disable-output` on the module.
+#   sha256           emitted only: SHA-256 of the module as printed.
+#   finding          the entry of table 6 of the audit that explains a `fail`.
+schema: 1
+pin: 0d73acbea185a2597357d53f7ce9acb44758ba76
+llvm: 23.1.3
+fixtures:
+  - source: Hawkynt/PB-Compiler@0d73acbea185a2597357d53f7ce9acb44758ba76:tests/MINI.BAS
+    outcome: emitted
+    llvmAs: pass
+    verify: pass
+    sha256: 616448c3b4f72b661550e8408bbf02d576316ba0ec7a9711062f71436156b0b3
+  - source: Hawkynt/PB-Compiler@0d73acbea185a2597357d53f7ce9acb44758ba76:tests/ARITH.BAS
+    outcome: emitted
+    llvmAs: pass
+    verify: pass
+    sha256: 4edf46ba5def8e42d02eaa5e03706a605cadeaf57f73079ad09570e9ef153c6d
+  - source: Hawkynt/PB-Compiler@0d73acbea185a2597357d53f7ce9acb44758ba76:tests/CTRL.BAS
+    outcome: emitted
+    llvmAs: pass
+    verify: pass
+    sha256: 208da46dfe4b05fd9b36004eb9ddae783d3bf03dc707e219c682f60baa01fc65
+  - source: Hawkynt/PB-Compiler@0d73acbea185a2597357d53f7ce9acb44758ba76:tests/ARRAY.BAS
+    outcome: emitted
+    llvmAs: pass
+    verify: pass
+    sha256: f07685fadb1a0c26dc545e9d0b1abf3978914bd4e8121847cf5ada88670c85d2
+  - source: Hawkynt/PB-Compiler@0d73acbea185a2597357d53f7ce9acb44758ba76:tests/diff/NARROW.BAS
+    outcome: emitted
+    llvmAs: fail
+    verify: fail
+    sha256: 61442bf272b1fd3791f69e52044b0a9d98aa7c71b3b47ff5156dd4a037e28fe8
+    finding: F2
+  - source: Hawkynt/PB-Compiler@0d73acbea185a2597357d53f7ce9acb44758ba76:tests/diff/DIFF36.BAS
+    outcome: emitted
+    llvmAs: fail
+    verify: fail
+    sha256: c05f51d626e96b4b812ee897e935201e47aedc542162fcd42b3b3b7e104aaa52
+    finding: F1
+  - source: EMPTY.BAS
+    outcome: emitted
+    llvmAs: pass
+    verify: pass
+    sha256: 898480f23e24f8d9061799e86610f0d2a3a625eb799942e2b069989f1122a4ee
+  - source: GOTODW.BAS
+    outcome: declined
+    declinedBecause: "pbc: --emit-llvm: LLVM emission: the far entry thunk of 'S6'"

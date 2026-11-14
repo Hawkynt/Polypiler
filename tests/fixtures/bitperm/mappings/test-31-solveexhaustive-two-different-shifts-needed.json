@@ -1,0 +1,15 @@
+{
+  "name": "test-31-solveexhaustive-two-different-shifts-needed",
+  "source": {"line": 1200},
+  "width": 8,
+  "mapping": [
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "src", "val": 4, "inv": false}
+  ]
+}
