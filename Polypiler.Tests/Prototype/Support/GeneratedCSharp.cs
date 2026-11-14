@@ -13,7 +13,8 @@ namespace Polypiler.Prototype.Testing;
 /// <summary>
 /// Generated C# as the real C# compiler builds it: Roslyn compiles the text into an assembly in
 /// memory, which is loaded and called. The compiler, not the emitter, decides what the text means.
-/// A text is compiled once per run with the same options, however many tests ask for it.
+/// A text is compiled once per run with the same options, however many tests ask for it, and loaded
+/// for each of them.
 /// </summary>
 internal sealed class GeneratedCSharp {
 
@@ -38,16 +39,22 @@ internal sealed class GeneratedCSharp {
   /// otherwise the first calls run the code of the first tier.
   /// </param>
   /// <exception cref="InvalidOperationException">The compiler reported an error or a warning.</exception>
-  public static GeneratedCSharp Compile(string source, bool checkOverflow, bool fullyOptimized = false)
-    => _builds.GetOrAdd((source, checkOverflow, fullyOptimized), key => new(() => Build(key.Source, key.CheckOverflow, key.FullyOptimized))).Value;
+  public static GeneratedCSharp Compile(string source, bool checkOverflow, bool fullyOptimized = false) {
+    var image = _builds.GetOrAdd((source, checkOverflow, fullyOptimized), key => new(() => Build(key.Source, key.CheckOverflow, key.FullyOptimized))).Value;
+    // The structs of the module stand beside the class; the class is the one static, so abstract and sealed, type.
+    return new GeneratedCSharp(Assembly.Load(image).GetExportedTypes().Single(type => type is { IsAbstract: true, IsSealed: true }));
+  }
 
-  /// <summary>Every build of this run, by its text and options: the same text is compiled once and loaded once.</summary>
-  private static readonly ConcurrentDictionary<(string Source, bool CheckOverflow, bool FullyOptimized), Lazy<GeneratedCSharp>> _builds = new();
+  /// <summary>
+  /// Every build of this run, by its text and options: the same text is compiled once. Each caller loads
+  /// the image afresh, so that its methods start in the first tier, as they would after a compilation.
+  /// </summary>
+  private static readonly ConcurrentDictionary<(string Source, bool CheckOverflow, bool FullyOptimized), Lazy<byte[]>> _builds = new();
 
   /// <summary>What the compiler of a profile said about a text, by the text, the profile and the language version, during this run.</summary>
   private static readonly ConcurrentDictionary<(string Source, string Profile, string LanguageVersion), Lazy<IReadOnlyList<string>>> _complaints = new();
 
-  private static GeneratedCSharp Build(string source, bool checkOverflow, bool fullyOptimized) {
+  private static byte[] Build(string source, bool checkOverflow, bool fullyOptimized) {
     var tree = CSharpSyntaxTree.ParseText(source);
     if (fullyOptimized) {
       var root = tree.GetRoot();
@@ -76,8 +83,7 @@ internal sealed class GeneratedCSharp {
     if (complaints.Count > 0)
       throw new InvalidOperationException($"The C# compiler does not accept the generated file without complaint:\n{string.Join('\n', complaints)}\n{source}");
 
-    // The structs of the module stand beside the class; the class is the one static, so abstract and sealed, type.
-    return new GeneratedCSharp(Assembly.Load(image.ToArray()).GetExportedTypes().Single(type => type is { IsAbstract: true, IsSealed: true }));
+    return image.ToArray();
   }
 
   /// <summary>
