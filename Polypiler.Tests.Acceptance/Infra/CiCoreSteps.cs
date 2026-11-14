@@ -41,7 +41,7 @@ public sealed class CiCoreSteps(ScenarioWorkspace workspace, CommandLog log) {
   [Then("^the output ends with " + StepText.Quoted + " preceded by one line per layer file$")]
   public void EndsWithAfterLayers(string last) {
     var lines = CommandSteps.WithoutTrailingNewline(log.Last.Stdout).Split('\n').Select(line => line.TrimEnd('\r')).ToArray();
-    var layers = Directory.GetFiles(Path.Combine(_root, CiLayer.Folder), "*.yaml").Select(Path.GetFileNameWithoutExtension).Order(StringComparer.Ordinal).ToArray();
+    var layers = Directory.GetFiles(Path.Combine(_root, CiLayer.Folder), "*.yaml").Where(CiLayer.IsLayerFile).Select(Path.GetFileNameWithoutExtension).Order(StringComparer.Ordinal).ToArray();
     Assert.That(lines[^1], Is.EqualTo(StepText.Unescape(last)), log.Last.Output);
     Assert.That(lines[..^1].Select(line => line.Split(':')[0]), Is.EqualTo(layers.Select(layer => $"layer {layer}")), log.Last.Output);
   }
