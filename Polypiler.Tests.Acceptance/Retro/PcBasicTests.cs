@@ -114,4 +114,18 @@ public sealed class PcBasicTests {
     Assert.That(ToolchainLock.Load(Path.Combine(PrototypeFixture.RepositoryRoot, ToolchainLock.RepositoryPath))[PcBasic.Toolchain].OracleOnly, Is.True);
   }
 
+  [TestCase("vice")]
+  [TestCase("vice-x128")]
+  [TestCase("vice-xvic")]
+  [TestCase("petcat")]
+  public void TheAvailabilityTable_NamesTheCommodoreOracles(string oracle) {
+    var yaml = new YamlStream();
+    yaml.Load(new StringReader(File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tooling", "ci", "layers", "basic.oracles.yaml"))));
+    var row = ((YamlSequenceNode)((YamlMappingNode)yaml.Documents[0].RootNode)["oracles"]).Cast<YamlMappingNode>()
+      .Single(candidate => candidate["oracle"].ToString() == oracle);
+    Assert.That(row["toolchain"].ToString(), Is.EqualTo(oracle));
+    Assert.That(row["availability"].ToString(), Is.EqualTo("ci"));
+    Assert.That(ToolchainLock.Load(Path.Combine(PrototypeFixture.RepositoryRoot, ToolchainLock.RepositoryPath))[oracle].OracleOnly, Is.True);
+  }
+
 }

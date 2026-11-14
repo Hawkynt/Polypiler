@@ -13,3 +13,8 @@ oracles:
   - { oracle: gwbasic-genuine, availability: external }
   # PC-BASIC, the independent GW-BASIC token codec and interpreter (FMT-GWBASIC-ORACLE).
   - { oracle: pcbasic, toolchain: pcbasic, availability: ci }
+  # VICE's emulators and petcat, the Commodore BASIC oracles (FMT-CBMBASIC-ORACLE).
+  - { oracle: vice, toolchain: vice, availability: ci }
+  - { oracle: vice-x128, toolchain: vice-x128, availability: ci }
+  - { oracle: vice-xvic, toolchain: vice-xvic, availability: ci }
+  - { oracle: petcat, toolchain: petcat, availability: ci }
