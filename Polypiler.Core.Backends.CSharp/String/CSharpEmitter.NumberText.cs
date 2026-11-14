@@ -18,7 +18,7 @@ public static partial class CSharpEmitter {
     private IReadOnlyList<string> Notices() {
       var lines = new List<string>();
       if (this._used.Contains(CSharpNumberTextHelpers.NumberText))
-        lines.Add("NumberText finds the shortest digits with Ryu, Copyright 2018 Ulf Adams, under the Boost Software License 1.0 (https://www.boost.org/LICENSE_1_0.txt).");
+        lines.Add("NumberText finds the shortest digits with Ryu, Copyright 2018 Ulf Adams, under the Apache License 2.0 (https://www.apache.org/licenses/LICENSE-2.0).");
 
       if (this._used.Contains(CSharpNumberTextHelpers.ParseText))
         lines.Add("ParseText reads parseInt of the radices other than 2, 4, 8, 10, 16 and 32 as V8 does, Copyright 2011 the V8 project authors, under the BSD-3-Clause licence of V8.");

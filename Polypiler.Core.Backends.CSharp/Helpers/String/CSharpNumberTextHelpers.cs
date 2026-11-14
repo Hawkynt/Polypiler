@@ -5,7 +5,7 @@ namespace Polypiler.Core.Backends.CSharp;
 /// lack of .NET Core 3.0's rules, and the rules of ECMA-262, which no framework has. They are C# 2
 /// for .NET Framework 2.0 like every helper and compute the same whatever overflow checking the
 /// consuming project sets. <see cref="NumberText"/> finds the shortest digits with Ryu (Ulf Adams,
-/// Apache-2.0 or Boost-1.0, THIRD-PARTY-NOTICE.Ryu.txt), converted from <c>d2s.c</c> with the tables
+/// Apache-2.0, THIRD-PARTY-NOTICE.Ryu.txt), converted from <c>d2s.c</c> with the tables
 /// of <c>d2s_small_table.h</c>, copied exactly; its fixed notation and <see cref="ParseText"/> work on
 /// the exact value with integers of many digits, and the radices other than 2, 4, 8, 10, 16 and 32 of
 /// <c>parseInt</c> follow V8's approximation (BSD-3-Clause, THIRD-PARTY-NOTICE.V8.txt).
