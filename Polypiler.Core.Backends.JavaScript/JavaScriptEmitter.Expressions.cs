@@ -35,6 +35,8 @@ public static partial class JavaScriptEmitter {
           return (new JsString(text.Value), true);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
+        case IrLocalRef reference when reference.Local == this._receiver:
+          return (new JsThis(), true);
         case IrLocalRef reference:
           return (this.Variable(reference.Local), true);
         case IrGlobalRef reference:
@@ -71,8 +73,12 @@ public static partial class JavaScriptEmitter {
           return (this.Native(Storage(element)) ? new JsNew(Id(Storage(element)), [count]) : this.Helper("$new", [count, this.Zero(element)]), true);
         case IrStep step:
           return this.Step(step);
+        case IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrFieldLoad { Target.Type.IsObject: true } or IrStructEquals { Left.Type.IsObject: true }:
+          return this.Object(expression);
         case IrStructNew or IrStructDefault or IrFieldLoad or IrStructEquals:
           return this.Struct(expression);
+        case IrCall chained when this._owners.ContainsKey(chained.Function):
+          return (this.Chained(chained), true);
         default:
           var call = (IrCall)expression;
           return (new JsCall(Id(this.Name(call.Function)), [.. call.Arguments.Select(this.Value)]), true);
@@ -194,21 +200,21 @@ public static partial class JavaScriptEmitter {
         return (this.Helper("$stepi", arguments), true);
       }
 
-      var name = step.Target is IrGlobalRef global ? this.GlobalName(global.Global).Name : this.Local(((IrLocalRef)step.Target).Local);
+      var name = step.Target is IrGlobalRef global ? this._globals[global.Global] : this.Local(((IrLocalRef)step.Target).Local);
       var current = step.Postfix ? Previous : name;
       JsExpression One() => type.IsLong ? new JsBigInt(1) : Number("1");
-      JsExpression Moved() => Infix(Id(current), step.Increment ? "+" : "-", One());
-      var stepped = halves ? this.Helper(HalvesStep(step), [Id(current), One64])
+      JsExpression Moved() => Infix(Dotted(current), step.Increment ? "+" : "-", One());
+      var stepped = halves ? this.Helper(HalvesStep(step), [Dotted(current), One64])
         : step.Trap ? this.Check(type, Moved()).Node
         : type == IrType.F64 ? Moved()
         : type == IrType.F32 ? this.Fround(Moved())
         : type.IsWideInteger ? Wrap(type, Moved()).Node
         : Narrow(type, Parenthesized(Moved()));
       if (!step.Postfix)
-        return (new JsAssignment(Id(name), "=", stepped), false);
+        return (new JsAssignment(Dotted(name), "=", stepped), false);
 
       this._previous = true;
-      return (Parenthesized(new JsSequence([new JsAssignment(Id(Previous), "=", Id(name)), new JsAssignment(Id(name), "=", stepped), Id(Previous)])), true);
+      return (Parenthesized(new JsSequence([new JsAssignment(Id(Previous), "=", Dotted(name)), new JsAssignment(Dotted(name), "=", stepped), Id(Previous)])), true);
     }
 
     /// <summary>The helper that adds one to a pair of halves or subtracts it, wrapping around or trapping.</summary>

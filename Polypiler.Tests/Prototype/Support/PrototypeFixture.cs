@@ -207,6 +207,7 @@ internal static class PrototypeFixture {
   /// </summary>
   private static IrTrap? TrapOf(Exception? exception) => exception switch {
     DivideByZeroException => IrTrap.DivideByZero,
+    NullReferenceException => IrTrap.NullReference,
     IndexOutOfRangeException or ArgumentException => IrTrap.IndexOutOfRange,
     OverflowException => IrTrap.IntegerOverflow,
     ArithmeticException => IrTrap.InvalidOperation,

@@ -239,7 +239,7 @@ public sealed class PrinterTests {
     Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Member("int X { get; }"));
     Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Member("void M( {"));
     Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.CompilationUnit("", "no version", out _));
-    Assert.Throws<System.ArgumentException>(() => JavaScriptSyntaxReader.Statements("class A {}"));
+    Assert.Throws<System.ArgumentException>(() => JavaScriptSyntaxReader.Statements("class A extends B {}"));
     Assert.Throws<System.ArgumentException>(() => JavaScriptSyntaxReader.Statements("let = ;"));
     Assert.Throws<System.ArgumentException>(() => JavaScriptSyntaxReader.Statements("x = { get y() { return 1; } };"));
   }

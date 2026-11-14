@@ -63,6 +63,13 @@ public sealed class JavaScriptCapabilities {
     new(">>> 0", 5),
     new("object literal", 5),
     new("shorthand property", 2015, "key: key"),
+    new("class", 2015, "function"),
+    new("class accessor", 2015, "Object.defineProperty"),
+    new("class fields", 2022, "constructor assignments"),
+    new("#private", 2022, "_name"),
+    new("static fields", 2022, "assignment after the class"),
+    new("Object", 5),
+    new("Object.defineProperty", 5),
 
     // Globals and the functions of Math.
     new("NaN", 5),

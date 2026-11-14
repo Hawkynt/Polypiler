@@ -263,6 +263,9 @@ internal sealed partial class Lowering {
   /// otherwise into a temporary declared in front of the statement.
   /// </summary>
   private (IrExpr Value, List<IrStmt> After) Initialized(ExpressionSyntax value, List<IrStmt> into, IrLocal? declared = null) {
+    if (value is BaseObjectCreationExpressionSyntax { Initializer: { } entries } made && this.ClassOf(model.GetTypeInfo(made).Type) is { } owner)
+      return this.ObjectInitialized(made, entries, IrType.Object(owner), into, declared);
+
     if (value is not BaseObjectCreationExpressionSyntax { Initializer: { } initializer } creation
         || creation.ArgumentList is { Arguments.Count: > 0 }
         || this.Map(model.GetTypeInfo(creation).Type, creation) is not { IsStruct: true } type)
@@ -292,7 +295,7 @@ internal sealed partial class Lowering {
   /// <summary>Whether an expression can be evaluated in another order without a difference: a constant, a variable or a field of one.</summary>
   private static bool Simple(IrExpr expression) => expression switch {
     IrConst or IrConstRef or IrLocalRef or IrStructDefault => true,
-    IrFieldLoad load => Simple(load.Target),
+    IrFieldLoad load => !load.Target.Type.IsObject && Simple(load.Target),
     IrConvert conversion => conversion.Contract == IrConversion.Wrap && Simple(conversion.Operand),
     _ => false
   };
@@ -303,6 +306,10 @@ internal sealed partial class Lowering {
   /// evaluated once.
   /// </summary>
   private IrExpr Place(ExpressionSyntax expression, List<IrStmt> into, bool alsoRead) {
+    // A struct field of an object is a place in the object, which the reference reaches.
+    if (this.ClassOf(model.GetTypeInfo(expression).Type) is not null)
+      return alsoRead ? this.Once(this.Value(expression), into) : this.Value(expression);
+
     switch (expression) {
       case ParenthesizedExpressionSyntax parenthesized:
         return this.Place(parenthesized.Expression, into, alsoRead);

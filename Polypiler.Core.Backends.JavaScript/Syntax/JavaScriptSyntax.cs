@@ -157,6 +157,12 @@ public sealed record JsObject(IReadOnlyList<JsProperty> Properties) : JsExpressi
 
 }
 
+/// <summary><c>this</c>.</summary>
+public sealed record JsThis : JsExpression;
+
+/// <summary><c>null</c>.</summary>
+public sealed record JsNull : JsExpression;
+
 /// <summary><c>function name(parameters) { body }</c> as an expression.</summary>
 /// <param name="Name">The name, or <see langword="null"/>.</param>
 /// <param name="Parameters">The names of the parameters.</param>
@@ -265,6 +271,45 @@ public sealed record JsFunctionDeclaration(string Name, IReadOnlyList<string> Pa
   public bool IsHelper { get; init; }
 
 }
+
+/// <summary>What a member of a class is.</summary>
+public enum JsClassMemberKind {
+
+  /// <summary><c>constructor(parameters) { body }</c>.</summary>
+  Constructor,
+
+  /// <summary><c>name(parameters) { body }</c>.</summary>
+  Method,
+
+  /// <summary><c>get name() { body }</c>.</summary>
+  Getter,
+
+  /// <summary><c>set name(value) { body }</c>.</summary>
+  Setter,
+
+  /// <summary><c>name = value;</c>, a field of ECMAScript 2022.</summary>
+  Field
+
+}
+
+/// <summary>A member of a class; its name starts with <c>#</c> when it is private.</summary>
+/// <param name="Kind">What the member is.</param>
+/// <param name="Name">The name; <c>constructor</c> for the constructor.</param>
+/// <param name="IsStatic">Whether the member belongs to the class rather than to its objects.</param>
+/// <param name="Parameters">The names of the parameters of a constructor, a method or an accessor.</param>
+/// <param name="Body">The body of a constructor, a method or an accessor; <see langword="null"/> for a field.</param>
+/// <param name="Value">The initial value of a field, or <see langword="null"/>.</param>
+public sealed record JsClassMember(JsClassMemberKind Kind, string Name, bool IsStatic, IReadOnlyList<string> Parameters, JsBlock? Body, JsExpression? Value) : JsNode {
+
+  /// <summary>Layout: what stands in front of the member.</summary>
+  public JsTrivia Leading { get; init; } = JsTrivia.None;
+
+}
+
+/// <summary><c>class Name { members }</c>.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Members">The members, in order.</param>
+public sealed record JsClass(string Name, IReadOnlyList<JsClassMember> Members) : JsStatement;
 
 /// <summary><c>export</c> in front of a declaration.</summary>
 /// <param name="Declaration">The declaration.</param>

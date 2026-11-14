@@ -45,8 +45,9 @@ public static partial class IrVerifier {
     }
 
     var globals = Globals(module, names, functions, constants, types, diagnostics);
+    var members = Members(module, types, functions, diagnostics);
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals }.Run();
+      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members }.Run();
 
     return diagnostics;
   }
@@ -92,6 +93,7 @@ public static partial class IrVerifier {
       }
 
       this.Block(function.Body);
+      this.Constructed();
     }
 
     private void Require(bool holds, string message) {
@@ -99,9 +101,9 @@ public static partial class IrVerifier {
         diagnostics.Add(Error(function.Name, message));
     }
 
-    /// <summary>A struct type, or an array of one, is one the module declares.</summary>
+    /// <summary>A declared type - a struct, a class, or an array of a struct - is one the module declares.</summary>
     private void Declared(IrType type) {
-      var named = (type.Element ?? type).StructType;
+      var named = (type.Element ?? type).Declaration;
       this.Require(named is null || types.Declares(named), $"the type {named} is not among the types of the module");
     }
 
@@ -131,6 +133,7 @@ public static partial class IrVerifier {
 
           break;
         case IrAssign assign:
+          this.Require(assign.Local != this.Receiver, "the receiver of a method is assigned");
           this.InScope(assign.Local);
           this.Value(assign.Value, assign.Local.Type, $"the value assigned to '{assign.Local.Name}'");
           break;
@@ -149,9 +152,9 @@ public static partial class IrVerifier {
           break;
         case IrFieldStore store:
           this.Expression(store.Target);
-          this.Require(IsPlace(store.Target), $"a field is written of a {store.Target.GetType().Name}, which is no place");
+          this.Require(store.Target.Type.IsObject || IsPlace(store.Target), $"a field is written of a {store.Target.GetType().Name}, which is no place");
           this.Member(store.Target, store.Field);
-          this.Require(!store.Field.IsReadOnly, $"the read-only field '{store.Field.Name}' is written");
+          this.Require(this.MayWrite(store.Target, store.Field), $"the read-only field '{store.Field.Name}' is written");
           this.Value(store.Value, store.Field.Type, $"the value stored in the field '{store.Field.Name}'");
           break;
         case IrIf conditional:
@@ -343,11 +346,19 @@ public static partial class IrVerifier {
         case IrStructEquals equality:
           this.Expression(equality.Left);
           this.Expression(equality.Right);
-          this.Struct(equality.Left.Type);
+          if (equality.Left.Type.IsObject)
+            this.Require(this.Class(equality.Left.Type) is not { IsRecord: false }, $"the objects of {equality.Left.Type}, which is no record, are compared field by field");
+          else
+            this.Struct(equality.Left.Type);
+
           this.Require(equality.Right.Type == equality.Left.Type, $"a struct of the type {equality.Left.Type} is compared with one of the type {equality.Right.Type}");
           break;
         case IrCall call:
           this.Call(call);
+          this.CallOfMember(call, function.Body.Statements is [IrExprStmt { Expression: var first }, ..] && ReferenceEquals(first, call));
+          break;
+        case IrNew or IrNull or IrMethodCall or IrReferenceEquals:
+          this.Object(expression);
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
@@ -394,7 +405,8 @@ public static partial class IrVerifier {
 
     /// <summary>A field is one of the target type's own.</summary>
     private void Member(IrExpr target, IrField field) {
-      if (this.Struct(target.Type) is { } owner)
+      IrTypeDeclaration? owner = target.Type.IsObject ? this.Class(target.Type) : this.Struct(target.Type);
+      if (owner is not null)
         this.Require(owner.Owns(field), $"the field '{field.Name}' is not a field of {owner.Name}");
     }
 
@@ -434,7 +446,7 @@ public static partial class IrVerifier {
 
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan => false,
+      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

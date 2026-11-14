@@ -26,7 +26,10 @@ public enum IrTrap {
   InvalidOperation,
 
   /// <summary>A range outside its source: a view or a slice that does not lie in it, or a copy into a view too short.</summary>
-  ArgumentOutOfRange
+  ArgumentOutOfRange,
+
+  /// <summary>A field, a method or an array field reached through a reference that names no object.</summary>
+  NullReference
 
 }
 
@@ -48,6 +51,7 @@ public sealed class IrTrapException : Exception {
     IrTrap.IndexOutOfRange => "index out of range",
     IrTrap.InvalidOperation => "invalid operation",
     IrTrap.ArgumentOutOfRange => "argument out of range",
+    IrTrap.NullReference => "null reference",
     _ => "integer overflow"
   };
 
@@ -142,6 +146,9 @@ public static partial class IrInterpreter {
     if (type.IsView)
       return AcceptedView(type, value);
 
+    if (type.IsObject)
+      return value is null ? NullReference.Value : value is Instance instance && ReferenceEquals(instance.Type, type.ClassType) ? instance : null;
+
     if (type.StructType is { } declared)
       return value is object?[] fields && fields.Length == declared.Fields.Count && Fields(declared, fields) is { } accepted ? new Record(accepted) : null;
 
@@ -199,7 +206,7 @@ public static partial class IrInterpreter {
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool or float or double or Record or string => value,
+    Array or bool or float or double or Record or string or Instance => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -221,7 +228,8 @@ public static partial class IrInterpreter {
   private static object? ToHost(IrType type, object? value) => value switch {
     View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
-    null or Array or bool => value,
+    NullReference => null,
+    null or Array or bool or Instance => value,
     _ => External(HostType(type), value)
   };
 
@@ -270,6 +278,9 @@ public static partial class IrInterpreter {
           return Flow.Next;
         case IrExprStmt expression:
           this.Evaluate(expression.Expression, frame);
+          return Flow.Next;
+        case IrFieldStore store when store.Target.Type.IsObject:
+          this.StoreObjectField(store, frame);
           return Flow.Next;
         case IrFieldStore store:
           var place = (Record)this.Place(store.Target, frame);
@@ -362,7 +373,7 @@ public static partial class IrInterpreter {
           var array = this.Evaluate(load.Array, frame);
           return Copied(LoadElement(array, (long)this.Evaluate(load.Index, frame)));
         case IrArrayLength length:
-          return (long)((Array)this.Evaluate(length.Array, frame)).Length;
+          return (long)((Array)NotNull(this.Evaluate(length.Array, frame))).Length;
         case IrNewArray creation:
           var count = (long)this.Evaluate(creation.Length, frame);
           if (count < 0)
@@ -378,11 +389,23 @@ public static partial class IrInterpreter {
           return new Record([.. creation.Arguments.Select(argument => this.Evaluate(argument, frame))]);
         case IrStructDefault value:
           return Default(value.Type.StructType!);
+        case IrFieldLoad load when load.Target.Type.IsObject:
+          return this.ObjectField(load, frame);
         case IrFieldLoad load:
           return Copied(((Record)this.Place(load.Target, frame)).Fields[Position(load.Field, load.Target.Type)]);
         case IrStructEquals equality:
           var left = this.Evaluate(equality.Left, frame);
-          return Same(left, this.Evaluate(equality.Right, frame));
+          var right = this.Evaluate(equality.Right, frame);
+          return equality.Left.Type.IsObject ? SameObject(left, right) : Same(left, right);
+        case IrNew creation:
+          return this.New(creation, frame);
+        case IrNull:
+          return NullReference.Value;
+        case IrMethodCall call:
+          return this.MethodCall(call, frame);
+        case IrReferenceEquals identity:
+          var first = this.Evaluate(identity.Left, frame);
+          return ReferenceEquals(first, this.Evaluate(identity.Right, frame));
         case IrCall call:
           var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
           return this.Invoke(program.Functions[call.Function], arguments)!;
@@ -395,6 +418,8 @@ public static partial class IrInterpreter {
 
     private object? Intrinsic(IrIntrinsic intrinsic, Frame frame) {
       var arguments = intrinsic.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
+      // Only an array field of an object that holds no array yet is null here.
+      Array.ForEach(arguments, argument => NotNull(argument));
       if (IsView(intrinsic))
         return Views(intrinsic, arguments);
 

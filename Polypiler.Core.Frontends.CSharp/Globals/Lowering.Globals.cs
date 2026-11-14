@@ -98,9 +98,9 @@ internal sealed partial class Lowering {
   /// module cannot assign what it exports, and the field made private would no longer be what the
   /// class shows. A struct is not state yet.
   /// </summary>
-  private void State(FieldDeclarationSyntax field, VariableDeclaratorSyntax variable, IFieldSymbol symbol, IrType type) {
+  private void State(FieldDeclarationSyntax field, VariableDeclaratorSyntax variable, IFieldSymbol symbol, IrType type, bool owned = false) {
     var readOnly = field.Modifiers.Any(SyntaxKind.ReadOnlyKeyword);
-    if (symbol.DeclaredAccessibility is Accessibility.Public or Accessibility.Protected or Accessibility.ProtectedOrInternal && (!readOnly || type.IsArray))
+    if (!owned && symbol.DeclaredAccessibility is Accessibility.Public or Accessibility.Protected or Accessibility.ProtectedOrInternal && (!readOnly || type.IsArray))
       throw new UnsupportedException(variable, $"a public mutable static field {symbol.Name}");
 
     if ((type.Element ?? type).IsStruct)
@@ -128,7 +128,8 @@ internal sealed partial class Lowering {
           InitializerExpressionSyntax list => this.ArrayOf(type, list),
           { } value => this.Value(value)
         };
-        var global = new IrGlobal(symbol.Name, type, initializer);
+        // A static field of a class is named after its class, so that two classes may each have one of a name.
+        var global = new IrGlobal(this._staticOwners.TryGetValue(symbol, out var owner) ? $"{owner.Name}.{symbol.Name}" : symbol.Name, type, initializer);
         this._globals[symbol] = global;
         this._initialized.Add((global, file, variable));
       } catch (UnsupportedException unsupported) {

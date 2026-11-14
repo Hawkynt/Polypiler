@@ -20,24 +20,27 @@ public static partial class IrVerifier {
       }
 
       Require(names.Add(declaration.Name), "the module declares the type twice");
+      if (declaration is IrClassType { IsDefined: true, HasMembers: true } declared) {
+        table.Add(declared);
+        Fields(declared, true, Require);
+        continue;
+      }
+
       if (declaration is not IrStructType { IsDefined: true } type) {
         Require(false, declaration.IsDefined ? $"a declaration of the kind {declaration.GetType().Name}" : "a type without its fields");
         continue;
       }
 
       table.Add(type);
-      var fields = new HashSet<string>();
-      foreach (var field in type.Fields) {
-        Require(fields.Add(field.Name), $"the field '{field.Name}' is declared twice");
-        var element = field.Type.Element;
-        Require(!field.Type.IsView && !OnHeap(field.Type), Stored);
-        Require(!field.Type.IsView && field.Type.IsStruct || field.Type == IrType.Bool || field.Type.IsNumeric || element is { IsNumeric: true },
-          $"the field '{field.Name}' has the type {field.Type}");
-      }
+      Fields(type, false, Require);
     }
 
+    foreach (var type in table.Classes)
+      foreach (var field in type.Fields.Where(field => field.Type.Declaration is { } nested && !table.Declares(nested)))
+        diagnostics.Add(Error(type.Name, $"the field '{field.Name}' has the type {field.Type}, which is not among the types of the module"));
+
     foreach (var type in table.Structs) {
-      foreach (var field in type.Fields.Where(field => field.Type.StructType is { } nested && !table.Declares(nested)))
+      foreach (var field in type.Fields.Where(field => field.Type.Declaration is { } nested && !table.Declares(nested)))
         diagnostics.Add(Error(type.Name, $"the field '{field.Name}' has the type {field.Type}, which is not among the types of the module"));
 
       if (table.Contains(type, type))
@@ -47,8 +50,23 @@ public static partial class IrVerifier {
     return table;
   }
 
+  /// <summary>
+  /// The fields of a declaration, each named once and of a type a field can have: a truth value, a
+  /// number, a struct, an array of numbers, and in a class also a reference to an object.
+  /// </summary>
+  private static void Fields(IrTypeDeclaration type, bool references, System.Action<bool, string> require) {
+    var fields = new HashSet<string>();
+    foreach (var field in type.Fields) {
+      require(fields.Add(field.Name), $"the field '{field.Name}' is declared twice");
+      var element = field.Type.Element;
+      require(!field.Type.IsView && !OnHeap(field.Type), Stored);
+      require(field.Type.IsStruct || (references && field.Type.IsObject) || field.Type == IrType.Bool || field.Type.IsNumeric || element is { IsNumeric: true },
+        $"the field '{field.Name}' has the type {field.Type}");
+    }
+  }
+
   /// <summary>The structs of a module and what the verifier asks about them.</summary>
-  private sealed class TypeTable {
+  private sealed partial class TypeTable {
 
     private readonly HashSet<IrStructType> _structs = new(ReferenceEqualityComparer.Instance);
 
@@ -57,6 +75,8 @@ public static partial class IrVerifier {
     public void Add(IrStructType type) => this._structs.Add(type);
 
     public bool Declares(IrStructType type) => this._structs.Contains(type);
+
+    public bool Declares(IrTypeDeclaration type) => type is IrStructType structure ? this.Declares(structure) : this.Declares((IrClassType)type);
 
     /// <summary>Whether a value of a struct holds one of another through its fields; a type outside the module holds nothing.</summary>
     public bool Contains(IrStructType outer, IrStructType inner) {

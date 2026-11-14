@@ -44,6 +44,8 @@ public static class JavaScriptSyntaxRewriter {
     JsThrow exception => [exception.Value],
     JsFunctionDeclaration function => [function.Body],
     JsExport export => [export.Declaration],
+    JsClassMember member => [.. Optional(member.Body), .. Optional(member.Value)],
+    JsClass type => type.Members,
     JsProgram program => program.Body,
     _ => []
   };
@@ -118,6 +120,8 @@ public static class JavaScriptSyntaxRewriter {
       JsThrow exception => exception with { Value = Next<JsExpression>() },
       JsFunctionDeclaration function => function with { Body = Next<JsBlock>() },
       JsExport export => export with { Declaration = Next<JsStatement>() },
+      JsClassMember member => member with { Body = Maybe(member.Body), Value = Maybe(member.Value) },
+      JsClass type => type with { Members = Many<JsClassMember>(type.Members.Count) },
       _ => ((JsProgram)node) with { Body = Many<JsStatement>(((JsProgram)node).Body.Count) }
     };
   }

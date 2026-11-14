@@ -120,6 +120,7 @@ public static class FloatManifest {
       IrStructNew creation => creation.Arguments,
       IrFieldLoad load => [load.Target],
       IrStructEquals equality => [equality.Left, equality.Right],
+      IrNew or IrMethodCall or IrReferenceEquals => IrTree.Operands(expression),
       _ => []
     };
     if (expression is IrIntrinsic intrinsic1)

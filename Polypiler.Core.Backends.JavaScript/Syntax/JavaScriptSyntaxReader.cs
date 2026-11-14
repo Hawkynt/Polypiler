@@ -133,6 +133,8 @@ public static class JavaScriptSyntaxReader {
           return new JsThrow(this.Expression(exception.Argument));
         case FunctionDeclaration function:
           return new JsFunctionDeclaration(function.Id!.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body));
+        case ClassDeclaration { SuperClass: null } type:
+          return new JsClass(type.Id!.Name, [.. type.Body.Body.Select(this.ClassMember)]);
         case ExportNamedDeclaration { Declaration: Statement declared }:
           return new JsExport(this.Statement(declared));
         default:
@@ -154,8 +156,14 @@ public static class JavaScriptSyntaxReader {
           return new JsBoolean(truth.Value);
         case Identifier identifier:
           return new JsIdentifier(identifier.Name);
+        case ThisExpression:
+          return new JsThis();
+        case NullLiteral:
+          return new JsNull();
         case MemberExpression { Computed: true } member:
           return new JsIndex(this.Expression(member.Object), this.Expression(member.Property));
+        case MemberExpression { Property: PrivateIdentifier hidden } member:
+          return new JsMember(this.Expression(member.Object), "#" + hidden.Name);
         case MemberExpression member:
           return new JsMember(this.Expression(member.Object), ((Identifier)member.Property).Name);
         case CallExpression { Optional: false } call:
@@ -189,6 +197,26 @@ public static class JavaScriptSyntaxReader {
           return new JsFunctionExpression(function.Id?.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body));
         default:
           throw Unknown(expression);
+      }
+    }
+
+    /// <summary>A member of a class: a method, an accessor, the constructor or a field, its name with <c>#</c> when it is private.</summary>
+    private JsClassMember ClassMember(Node node) {
+      static string Name(Expression key) => key is PrivateIdentifier hidden ? "#" + hidden.Name : ((Identifier)key).Name;
+      switch (node) {
+        case MethodDefinition { Computed: false } method:
+          var kind = method.Kind switch {
+            PropertyKind.Constructor => JsClassMemberKind.Constructor,
+            PropertyKind.Get => JsClassMemberKind.Getter,
+            PropertyKind.Set => JsClassMemberKind.Setter,
+            _ => JsClassMemberKind.Method
+          };
+          var function = (FunctionExpression)method.Value;
+          return new JsClassMember(kind, Name(method.Key), method.Static, this.Parameters(function), this.Block(function.Body, function.Body.Body), null);
+        case PropertyDefinition { Computed: false } field:
+          return new JsClassMember(JsClassMemberKind.Field, Name(field.Key), field.Static, [], null, field.Value is null ? null : this.Expression(field.Value));
+        default:
+          throw Unknown(node);
       }
     }
 

@@ -252,11 +252,46 @@ public static class JavaScriptPrinter {
         case JsFunctionDeclaration function:
           this.Function(function.Name, function.Parameters, function.Body, depth);
           break;
+        case JsClass type:
+          this.Class(type, depth);
+          break;
         default:
           this._text.Append("export ");
           this.Bare(((JsExport)statement).Declaration, depth);
           break;
       }
+    }
+
+    /// <summary>A class, each member on a line of its own.</summary>
+    private void Class(JsClass type, int depth) {
+      this._text.Append("class ").Append(type.Name).Append(" {\n");
+      foreach (var member in type.Members) {
+        this._text.Append('\n', member.Leading.BlankLines);
+        foreach (var comment in member.Leading.Comments)
+          this.Comment(comment, depth + 1);
+
+        this.Line(depth + 1);
+        if (member.IsStatic)
+          this._text.Append("static ");
+
+        if (member.Kind == JsClassMemberKind.Field) {
+          this._text.Append(member.Name);
+          if (member.Value is not null) {
+            this._text.Append(" = ");
+            this.Operand(member.Value, Precedence(member.Value) > Sequence, depth + 1);
+          }
+
+          this._text.Append(";\n");
+          continue;
+        }
+
+        this._text.Append(member.Kind switch { JsClassMemberKind.Getter => "get ", JsClassMemberKind.Setter => "set ", _ => "" })
+          .Append(member.Name).Append('(').AppendJoin(", ", member.Parameters).Append(") ");
+        this.Braces(member.Body!, depth + 1);
+        this._text.Append('\n');
+      }
+
+      this.Line(depth).Append('}');
     }
 
     private void Function(string? name, IReadOnlyList<string> parameters, JsBlock body, int depth) {
@@ -341,6 +376,12 @@ public static class JavaScriptPrinter {
           break;
         case JsBoolean truth:
           this._text.Append(truth.Value ? "true" : "false");
+          break;
+        case JsThis:
+          this._text.Append("this");
+          break;
+        case JsNull:
+          this._text.Append("null");
           break;
         case JsIdentifier identifier:
           this._text.Append(identifier.Name);

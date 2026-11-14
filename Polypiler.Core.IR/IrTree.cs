@@ -23,6 +23,10 @@ public static class IrTree {
     IrStructNew creation => creation.Arguments,
     IrFieldLoad load => [load.Target],
     IrStructEquals equality => [equality.Left, equality.Right],
+    IrNew creation => creation.Arguments,
+    IrMethodCall { Target: { } target } call => [target, .. call.Arguments],
+    IrMethodCall call => call.Arguments,
+    IrReferenceEquals equality => [equality.Left, equality.Right],
     _ => []
   };
 
