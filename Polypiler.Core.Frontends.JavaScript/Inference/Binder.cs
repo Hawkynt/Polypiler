@@ -364,6 +364,11 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         && StringMethods.Contains(name) && this._scope.TryGetValue(receiver.Name, out var text))
       text.UsedAsString ??= access;
 
+    // Number(s), parseFloat(s) and parseInt(s) parse their first argument, which is text (#1315).
+    if (call.Callee is Identifier { Name: "Number" or "parseFloat" or "parseInt" } parser && !this._scope.ContainsKey(parser.Name) && this.Callee(parser) is null
+        && call.Arguments is [Identifier argument, ..] && this._scope.TryGetValue(argument.Name, out var parsed))
+      parsed.UsedAsString ??= call;
+
     this.Expression(call.Callee);
     var builtin = this.Builtin(call);
     for (var index = 0; index < call.Arguments.Count; ++index) {

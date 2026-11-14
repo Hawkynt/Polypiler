@@ -23,6 +23,8 @@ internal sealed partial class Lowering {
 
     if (this.StringExpression(node) is { } text)
       return text;
+    if (this.NumberTextExpression(node) is { } converted)
+      return converted;
 
     switch (node) {
       case NumericLiteral literal:

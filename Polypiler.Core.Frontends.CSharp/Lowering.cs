@@ -97,7 +97,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
     return this._diagnostics.Count > 0
       ? new(null, this._diagnostics)
-      : new(new IrModule(name, functions, this._constants.Values.ToList()) { Types = [.. this._types], Globals = [.. this._initialized.Select(entry => entry.Global)] }, this._diagnostics);
+      : new(new IrModule(name, functions, this._constants.Values.ToList()) {
+        Types = [.. this._types], Globals = [.. this._initialized.Select(entry => entry.Global)], Caveats = this._cultureImplied ? [CSharpFrontend.InvariantCulture] : []
+      }, this._diagnostics);
   }
 
   /// <summary>
@@ -914,6 +916,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       throw new UnsupportedException(invocation, invocation.Kind().ToString());
 
     var operands = arguments.Select(argument => argument.Expression).ToList();
+    if (this.NumberTextCall(invocation, method, operands) is { } number)
+      return number;
     if (this.StringCall(invocation, method, operands) is { } text)
       return text;
 

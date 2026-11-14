@@ -102,6 +102,8 @@ internal sealed partial class TypeInference {
   private JsType Compute(Node node, Coercion coercion) {
     if (this.StringType(node) is { } text)
       return text;
+    if (this.NumberTextType(node) is { } converted)
+      return converted;
 
     switch (node) {
       case NumericLiteral literal:

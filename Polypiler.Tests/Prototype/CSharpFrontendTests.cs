@@ -170,7 +170,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int[] F() => default(int[]);", "DefaultExpression", 28, TestName = "default of an array")]
   [TestCase("public static bool F(int a) => a is > 1;", "IsPatternExpression", 32, TestName = "is pattern")]
   [TestCase("public static void F(int[] a) { (a) = a; }", "ParenthesizedExpression", 33, TestName = "parenthesized target")]
-  [TestCase("public static void F(int[] a) { a.Length.ToString(); }", "Int32.ToString", 33, TestName = "member call")]
+  [TestCase("public static void F(int[] a) { a.Length.ToString(\"N2\"); }", "Int32.ToString(String) with the format \"N2\"", 33, TestName = "member call")]
   [TestCase("public static int F(int a) => int.MaxValue.CompareTo(a);", "Int32.CompareTo", 31, TestName = "call on a value")]
   [TestCase("public static int F(int? a) { a ??= 1; return 1; }", "int?", 21, TestName = "nullable")]
   [TestCase("public static void F(int[] a) { a ??= new int[1]; }", "CoalesceAssignmentExpression", 33, TestName = "coalescing assignment")]

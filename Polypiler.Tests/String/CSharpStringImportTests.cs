@@ -140,9 +140,9 @@ public sealed class CSharpStringImportTests {
   [TestCase("public static string F(string a) => new System.Text.StringBuilder(a).ToString();", "StringBuilder.ToString")]
   [TestCase("public static string F() => null;", "null of the type string")]
   [TestCase("public static string[] F(int n) => new string[n];", "new string[n], an array of strings without its elements, which .NET fills with null")]
-  [TestCase("public static string F(string a) => a + 1;", "string + int, which converts a number to text, not supported until number-to-text conversion")]
-  [TestCase("public static string F(int n) => $\"{n}\";", "string + int, which converts a number to text, not supported until number-to-text conversion")]
-  [TestCase("public static string F(string a) => $\"{a,5}\";", "an interpolation with an alignment or a format")]
+  [TestCase("public static string F(string a) => a + 1m;", "string + decimal")]
+  [TestCase("public static string F(int n) => $\"{n:N2}\";", "string + int with the format \"N2\"")]
+  [TestCase("public static string F(string a) => $\"{a,5}\";", "an interpolation with an alignment")]
   [TestCase("public static string[] F(string a, string b) => a.Split(b);", "string.Split(string, System.StringSplitOptions)")]
   [TestCase("public static bool F(char c) => char.IsLetter(c);", "Char.IsLetter")]
   public void Construct_IsRefusedByName(string method, string what) {
