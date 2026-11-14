@@ -671,8 +671,10 @@ public sealed class JavaScriptProfileEmissionTests {
   /// <summary>
   /// A <c>var</c> belongs to its function. A local that is declared while another one of its name
   /// is visible gets a name of its own, also against a name that only looks like such a one; where
-  /// the other one is no longer visible the name is free again. A <c>let</c> keeps its name: its
-  /// block is its scope. The frontend never shadows, so the module is built by hand.
+  /// the other one is no longer visible the name is free again. A <c>let</c> declared while one of its
+  /// name is visible would hide that one from its block, so it is renamed as well, to
+  /// <c>&lt;name&gt;_&lt;k&gt;</c> with a <c>k</c> no other local of the function has (#1343). The
+  /// frontend never shadows, so the module is built by hand.
   /// </summary>
   [Test]
   public void Var_GetsAHoistingSafeName() {
@@ -706,8 +708,8 @@ public sealed class JavaScriptProfileEmissionTests {
       "{", "var x$2 = 3;", "x$2 = x$2;", "}", "return (x + x$1) | 0;", "}", ""
     }));
     Assert.That(Lines(JavaScriptProfile.Parse("es2015", "cjs")), Is.EqualTo(new[] {
-      "let x$1 = 7;", "{", "let x = 1;", "{", "let x;", "x = 2;", "}", "x = (x + 1) >>> 0;", "x = x | 0;", "}",
-      "{", "let x = 3;", "x = x;", "}", "return (x + x$1) | 0;", "}", ""
+      "let x$1 = 7;", "{", "let x_1 = 1;", "{", "let x_2;", "x_2 = 2;", "}", "x_1 = (x_1 + 1) >>> 0;", "x = x_1 | 0;", "}",
+      "{", "let x_3 = 3;", "x_3 = x_3;", "}", "return (x + x$1) | 0;", "}", ""
     }));
     Assert.That(IrInterpreter.Call(module, "F", [5]), Is.EqualTo(9));
   }
