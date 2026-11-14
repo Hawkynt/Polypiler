@@ -14,3 +14,6 @@ categories:
   # The full target sweep of the backends, run once, on Linux and without the coverage collector; the
   # layer jobs and the coverage gate run its representative slice (#1352).
   - { name: Sweep, job: target-sweep, step: test }
+  # Exhaustive checks that run the same code paths up to millions of times: the layer jobs run them on
+  # every OS, the coverage gate leaves them out (#1352).
+  - { name: Exhaustive, job: layer-core, step: test }

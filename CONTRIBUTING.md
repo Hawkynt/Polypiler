@@ -211,6 +211,13 @@ leaves it out of the layer jobs and the coverage gate, which run a representativ
 instead (`GoldenOutputs.Slice`: every fixture in one variant, every variant at least once). A test
 gets `Sweep` only when such a slice stands for it everywhere else.
 
+`Exhaustive` is the same kind of place for the coverage gate alone: a `Slow` test that sends up to
+millions of inputs through the same code paths, such as the equivalence check of the recognition
+fixtures. The layer jobs run it on every OS; the coverage gate leaves it out, because the collector
+makes it the larger part of the gate's time and the first inputs already reach every line it
+reaches. Leaving a category out of the coverage gate must not lower the coverage by more than 0.2
+points.
+
 **Write `TestCategory!=`, never `Category!=`.** They select the same tests and report the same
 results, and only one of them actually skips anything: with `Category!=` the adapter filters the
 REPORTING and still executes the excluded fixtures. Measured on a 5,489-test suite, same assembly,

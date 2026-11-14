@@ -53,11 +53,13 @@ jobs:
   # Polypiler gates coverage, which the shared workflow only reports: at least 95 % of all lines AND
   # of all conditional branches must be executed by the tests (ISSUES.md, "Test strategy"). The full
   # target sweep (category Sweep) runs in target-sweep, not under the collector: its representative
-  # slice, which stays here, reaches the same code.
+  # slice, which stays here, reaches the same code. The category Exhaustive (the same paths up to
+  # millions of times, run by the layer jobs on every OS) stays out too: under the collector it was
+  # more than half of this job and added no line.
   coverage-gate:
     name: coverage gate
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       MIN_LINE: '95'
@@ -69,7 +71,7 @@ jobs:
           dotnet-version: '10.0.x'
       # The unit tests carry the coverage (AGENTS.md); the acceptance tests run in the test matrix.
       - name: Test with coverage
-        run: dotnet test Polypiler.Tests/Polypiler.Tests.csproj -c Debug --filter "TestCategory!=Sweep" --collect:"XPlat Code Coverage" --results-directory ./coverage
+        run: dotnet test Polypiler.Tests/Polypiler.Tests.csproj -c Debug --filter "TestCategory!=Sweep&TestCategory!=Exhaustive" --collect:"XPlat Code Coverage" --results-directory ./coverage
       - name: Enforce line and branch thresholds
         shell: python
         run: |

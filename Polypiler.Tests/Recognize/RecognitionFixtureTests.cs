@@ -56,7 +56,13 @@ public sealed class RecognitionFixtureTests {
     Assert.That(differences, Is.Empty);
   }
 
-  [TestCaseSource(nameof(Functions)), Category("Slow")]
+  /// <summary>
+  /// Test design 2. Up to 2^19 calls per case through the same interpreter paths: under the coverage
+  /// collector it took more than half of the gate's time and adds no line the first calls do not
+  /// reach, so it is <c>Exhaustive</c>, which the layer jobs run on every OS and the coverage gate
+  /// leaves out.
+  /// </summary>
+  [TestCaseSource(nameof(Functions)), Category("Slow"), Category("Exhaustive")]
   public void OptimizedFunction_ComputesWhatTheOriginalComputes(string file, string function, int part, int parts) {
     var (original, optimized) = _optimized.GetOrAdd(file, key => new(() => {
       var imported = RecognitionFixtures.Imported(key);
