@@ -580,10 +580,9 @@ internal sealed partial class Lowering {
     if (value.Type.IsEnum)
       return Convert(new IrConvert(value.Type.Underlying, value), type);
 
-    if (type.IsEnum) {
-      var plain = Convert(value, type.Underlying);
-      return plain is IrConst number ? new IrConst(type, number.Value) : new IrConvert(type, plain);
-    }
+    // Only members of the enum, and literals equal to one, reach a place of an enum: constants.
+    if (type.IsEnum)
+      return new IrConst(type, ((IrConst)Convert(value, type.Underlying)).Value);
 
     if (value is IrConst { Type.IsInteger: true } constant)
       return new IrConst(type, type.IsInteger ? IrOperators.Wrap(type, constant.Value) : IrOperators.Bits(type, constant.Value));

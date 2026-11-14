@@ -119,6 +119,14 @@ public sealed class JavaScriptEnumImportTests {
     Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Code, diagnostic.Message)), Has.Some.EqualTo((JavaScriptFrontend.Unsupported, $"'{what}' is not supported yet")));
   }
 
+  /// <summary>An enum object inside the function that wraps the file is one of the file, private to it.</summary>
+  [Test]
+  public void EnumObject_InTheWrappingFunction_IsPrivate() {
+    var module = Import("(function () { const Mode = Object.freeze({ On: 1, Off: 0 }); function f() { return Mode.On; } })();");
+    Assert.That(EnumOf(module).IsPublic, Is.False);
+    Assert.That(IrInterpreter.Call(module, "f", []), Is.EqualTo(1));
+  }
+
   [Test]
   public void ObjectOfNumbers_ThatNoFunctionUses_IsNoProblem() {
     var module = Import("const C = { A: 0 }; const D = Object.freeze({ A: \"a\" }); export function f() { return 1; }");

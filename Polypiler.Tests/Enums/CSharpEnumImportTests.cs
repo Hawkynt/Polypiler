@@ -50,8 +50,8 @@ public sealed class CSharpEnumImportTests {
     ("&, |, ^, ~ of E; e + n, e - n, e - e; ==, !=, <, <=, >, >=; compound assignments, ++ and --",
       "public static string F(int a, int b, byte n) { var p = (Perm)a; var q = (Perm)b; var c = (Color)n; var s = (S)a; "
       + "var r = (p & q) | (p ^ Perm.Exec); r |= Perm.Read; r &= ~Perm.Write; c += n; c -= 1; c++; --c; var d = c - Color.Green; s++; "
-      + "Color x = (Color)a, y = (Color)b; var e = x | y; e ^= Color.Blue; var f = ~x; "
-      + "return (int)r + \",\" + (int)(~p) + \",\" + (int)c + \",\" + d + \",\" + (int)s + \",\" + (p == q) + (p != q) + (p < q) + (p <= q) + (p > q) + (p >= q) + (x == y) + \",\" + (int)e + \",\" + (int)f + \",\" + (int)(Color.Blue + n) + (int)(n + Color.Red); }",
+      + "Color x = (Color)a, y = (Color)b; var e = x | y; e ^= Color.Blue; var f = ~x; var g = (Color)a | (Color)b; var h = (Color)(byte)x; "
+      + "return (int)r + \",\" + (int)(~p) + \",\" + (int)c + \",\" + d + \",\" + (int)s + \",\" + (p == q) + (p != q) + (p < q) + (p <= q) + (p > q) + (p >= q) + (x == y) + \",\" + (int)e + \",\" + (int)f + \",\" + (int)(Color.Blue + n) + (int)(n + Color.Red) + \",\" + (int)g + (int)h; }",
       [[1, 2, (byte)250], [7, 7, (byte)3], [-1, 0, (byte)0]]),
     ("switch on E",
       "public static int F(int v) { switch ((Color)v) { case Color.Red: return 10; case Color.Green: case Color.Blue: return 20; default: return 30; } }",
