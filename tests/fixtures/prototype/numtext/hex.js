@@ -4,7 +4,7 @@
  * @param {int32} value
  * @returns {string}
  */
-export function hex(value) {
+export function hexadecimal(value) {
   return value.toString(16);
 }
 

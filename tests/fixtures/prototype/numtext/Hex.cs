@@ -1,6 +1,7 @@
 // Integers in hexadecimal, binary and with padded decimal digits: .NET writes the bits of the type,
 // two's complement. Written for this repository.
 using System;
+using System.Globalization;
 
 namespace Polypiler.Fixtures.Prototype;
 
@@ -20,6 +21,6 @@ public static class HexText {
 
   public static string Octal(long value) => Convert.ToString(value, 8);
 
-  public static string Padded(int value) => value.ToString("D5");
+  public static string Padded(int value) => value.ToString("D5", CultureInfo.InvariantCulture);
 
 }
