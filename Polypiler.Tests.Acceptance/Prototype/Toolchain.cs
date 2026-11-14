@@ -387,6 +387,10 @@ internal static class Toolchain {
       WorkingDirectory = workingDirectory,
       RedirectStandardOutput = true,
       RedirectStandardError = true,
+      // node writes UTF-8 whatever the console's code page is; without this, Windows reads a string
+      // result outside ASCII (U+FEFF, say) in the OEM code page.
+      StandardOutputEncoding = Encoding.UTF8,
+      StandardErrorEncoding = Encoding.UTF8,
       UseShellExecute = false
     };
     foreach (var argument in arguments)
