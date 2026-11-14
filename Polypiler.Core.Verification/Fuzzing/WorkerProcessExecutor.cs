@@ -1,0 +1,158 @@
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Polypiler.Core.Verification.Fuzzing;
+
+/// <summary>
+/// Runs a target in a worker process that speaks the <see cref="FuzzWorker"/> protocol, so that an
+/// input which never returns or brings the process down is a finding and not the end of the run. An
+/// input without a response within <see cref="FuzzBudget.PerInput"/> is a <see cref="FindingKind.Hang"/>:
+/// the worker is killed. A worker that dies is a <see cref="FindingKind.Crash"/> with the signature
+/// <c>process-exit:&lt;code&gt;</c>. Either way the next input starts a new worker.
+/// </summary>
+/// <param name="startInfo">Creates the command line of a worker; called for every start.</param>
+public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IFuzzExecutor {
+
+  /// <summary>How long a worker may take to load its target and announce itself.</summary>
+  public static readonly TimeSpan StartTimeout = TimeSpan.FromSeconds(60);
+
+  private const int KeptErrorLength = 4096;
+
+  private Process? _process;
+  private readonly StringBuilder _error = new();
+  private int _starts;
+
+  /// <inheritdoc />
+  public int Starts => this._starts;
+
+  /// <inheritdoc />
+  /// <exception cref="FuzzWorkerException">The worker cannot be started or does not announce itself.</exception>
+  public FuzzOutcome Execute(byte[] input, FuzzBudget budget) {
+    ArgumentNullException.ThrowIfNull(input);
+    ArgumentNullException.ThrowIfNull(budget);
+    var process = this._process ?? this.Start();
+    var started = Stopwatch.GetTimestamp();
+    Task<FuzzOutcome> response;
+    try {
+      FuzzWorker.WriteRequest(process.StandardInput.BaseStream, input);
+      response = FuzzWorker.ReadResponseAsync(process.StandardOutput.BaseStream, CancellationToken.None);
+    } catch (IOException) {
+      return this.Died(process, Stopwatch.GetElapsedTime(started));
+    }
+
+    bool finished;
+    try {
+      finished = response.Wait(budget.PerInput);
+    } catch (AggregateException) {
+      return this.Died(process, Stopwatch.GetElapsedTime(started));
+    }
+
+    if (!finished) {
+      this.Stop(process);
+      return new(FindingKind.Hang, FuzzOutcome.HangSignature, 0, Stopwatch.GetElapsedTime(started));
+    }
+
+    return response.Result.Judge(budget);
+  }
+
+  /// <summary>Ends the worker: asks it to stop, and kills it when it does not.</summary>
+  public void Dispose() {
+    if (this._process is not { } process)
+      return;
+
+    try {
+      FuzzWorker.WriteEnd(process.StandardInput.BaseStream);
+      process.StandardInput.Close();
+    } catch (IOException) {
+      // The worker is already gone; there is nothing left to ask.
+    }
+
+    if (!process.WaitForExit(TimeSpan.FromSeconds(5)))
+      this.Stop(process);
+    else
+      this.Forget(process);
+  }
+
+  private Process Start() {
+    var info = startInfo();
+    info.RedirectStandardInput = true;
+    info.RedirectStandardOutput = true;
+    info.RedirectStandardError = true;
+    info.UseShellExecute = false;
+    info.CreateNoWindow = true;
+    Process process;
+    try {
+      process = Process.Start(info) ?? throw new FuzzWorkerException($"the worker '{info.FileName}' was not started");
+    } catch (Win32Exception exception) {
+      throw new FuzzWorkerException($"the worker '{info.FileName}' cannot be started: {exception.Message}");
+    }
+
+    lock (this._error)
+      this._error.Clear();
+    process.ErrorDataReceived += (_, line) => {
+      if (line.Data is null)
+        return;
+
+      lock (this._error)
+        if (this._error.Length < KeptErrorLength)
+          this._error.AppendLine(line.Data);
+    };
+    process.BeginErrorReadLine();
+    ++this._starts;
+
+    var ready = process.StandardOutput.BaseStream.ReadAsync(new byte[1]).AsTask();
+    if (!ready.Wait(StartTimeout) || ready.Result != 1) {
+      this.Stop(process);
+      throw new FuzzWorkerException($"the worker '{info.FileName}' did not start: {this.ErrorText()}");
+    }
+
+    this._process = process;
+    return process;
+  }
+
+  private FuzzOutcome Died(Process process, TimeSpan elapsed) {
+    // A worker whose output has ended is on its way out; one that lingers is helped along.
+    if (!process.WaitForExit(TimeSpan.FromSeconds(10)))
+      process.Kill(true);
+    process.WaitForExit();
+    var code = process.ExitCode;
+    this.Forget(process);
+    return new(FindingKind.Crash, $"process-exit:{code}", 0, elapsed);
+  }
+
+  private void Stop(Process process) {
+    try {
+      process.Kill(true);
+    } catch (InvalidOperationException) {
+      // It ended on its own between the timeout and the kill.
+    }
+
+    process.WaitForExit();
+    this.Forget(process);
+  }
+
+  private void Forget(Process process) {
+    process.Dispose();
+    if (ReferenceEquals(this._process, process))
+      this._process = null;
+  }
+
+  private string ErrorText() {
+    lock (this._error)
+      return this._error.ToString().Trim();
+  }
+
+}
+
+/// <summary>Thrown when a fuzz worker process cannot be started or does not announce itself.</summary>
+public sealed class FuzzWorkerException : Exception {
+
+  /// <summary>Creates the exception with the reason.</summary>
+  public FuzzWorkerException(string message) : base(message) { }
+
+}

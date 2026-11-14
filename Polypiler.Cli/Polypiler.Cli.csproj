@@ -32,6 +32,7 @@
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Recognize\Polypiler.Core.Recognize.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
   </ItemGroup>
 
   <!-- The portable floating-point implementations depend only on the build: polypiler-tooling imports
