@@ -52,7 +52,10 @@ public sealed class DiagnosticRendererTests {
   [Test]
   public void Json_RoundTrip_EveryField() {
     var diagnostic = Diagnostic.Create(_option, new SourceRange("dir/ä.cs", 2, 3, 4, 1), "quote \" backslash \\ tab \t bell \u0007 newline \n form \f back \b return \r é €") with {
-      Cause = "c", Workaround = "w", RequiredCapability = "cap", Command = "polypiler x"
+      Cause = "c",
+      Workaround = "w",
+      RequiredCapability = "cap",
+      Command = "polypiler x"
     };
     var line = DiagnosticRenderer.ToJson(diagnostic);
     Assert.That(line, Does.Not.Contain("\n").And.Contain("ä.cs").And.Contain("é €").And.Contain("\\u0007"));

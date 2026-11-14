@@ -790,9 +790,10 @@ public sealed class JavaScriptFrontendTests {
       ]))
     ]);
     AssertSame(Lowered("for (let i = 0; i < a; i++) d[i] = 1; return a;"), new IrStmt[] { loop, new IrReturn(A) });
-    AssertSame(Lowered("for (let i = 0; i < a; --i) d[i] = 1; return a;")[0], loop with { Statements = [loop.Statements[0], ((IrWhile)loop.Statements[1]) with {
+    var decrementing = ((IrWhile)loop.Statements[1]) with {
       Body = new IrBlock([((IrWhile)loop.Statements[1]).Body.Statements[0], new IrAssign(i, new IrBinary(IrBinaryOp.Subtract, new IrLocalRef(i), Double(1)))])
-    }] });
+    };
+    AssertSame(Lowered("for (let i = 0; i < a; --i) d[i] = 1; return a;")[0], loop with { Statements = [loop.Statements[0], decrementing] });
   }
 
   /// <summary>Test design 6: the loops and jumps the IR has of its own.</summary>

@@ -43,13 +43,8 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   /// <c>x = x | 0</c> or <c>x = x &gt;&gt;&gt; 0</c>: from there on the parameter is that integer.
   /// </summary>
   private bool IsPrologue(Statement statement) {
-    if (statement is not ExpressionStatement {
-          Expression: AssignmentExpression {
-            Operator: Operator.Assignment,
-            Left: Identifier { Name: var name },
-            Right: BinaryExpression { Operator: Operator.BitwiseOr or Operator.UnsignedRightShift, Left: Identifier { Name: var read }, Right: NumericLiteral { Value: 0 } } coercion
-          }
-        }
+    if (statement is not ExpressionStatement { Expression: AssignmentExpression { Operator: Operator.Assignment, Left: Identifier { Name: var name }, Right: var right } }
+        || right is not BinaryExpression { Operator: Operator.BitwiseOr or Operator.UnsignedRightShift, Left: Identifier { Name: var read }, Right: NumericLiteral { Value: 0 } } coercion
         || name != read
         || !this._scope.TryGetValue(name, out var parameter)
         || parameter.Prologue is not null)
