@@ -93,3 +93,15 @@ standard output is `<n> documents, <m> errors`; the exit code is 0 without error
 | `PLY0044` | `deprecatedIn` earlier than `introducedIn`; `reviewedRevision` above `version` |
 | `PLY0046` | a family rule, `<reason> (rule: <rule>)` |
 | `PLY0047` | a file that is not valid YAML, an unknown family, an unreadable schema, a missing root |
+
+## Family `recovery`
+
+`spec/recovery/O<4 digits>.yaml`, ID `RECOVERY.O<4 digits>`: one recovery rule of the block
+`O0170`–`O0199` (de-unrolling, expression slicing, compiler idioms, loop and structure reconstruction).
+[`schemas/recovery.schema.json`](schemas/recovery.schema.json) states the body. Every rule is `proven`,
+with at least one proof obligation, or `speculative-guarded`, with a `speculation` guard and fallback;
+there is no mode for an unguarded guess. `RecoverySpecFamily` adds the rules `layout`, `id-in-block`
+(a number of the bit-permutation or object-model recovery block is told which family it belongs to),
+`speculation-matches-mode`, `proven-needs-obligation`, `deunroll-needs-repetitions`,
+`effects-preserved` (a rule whose forms hold a `Store` or a `Call` preserves `memory-effects` and
+`effect-order`) and `switch-matches`. Its fixtures are in `tests/fixtures/spec/recovery/`.
