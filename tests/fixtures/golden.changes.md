@@ -10,3 +10,4 @@ file's provenance source.
 - tests/fixtures/verify/adler32.vectors.json: the first vectors, Adler-32 of "", "a" and "abc" from zlib (source: python)
 - tests/vectors/float/golden.provenance.json: the MPFR reference vectors become golden files (source: mpfr)
 - tests/fixtures/prototype/js/recorded/golden.provenance.json: the outcomes recorded from node become golden files (source: node)
+- tests/fixtures/verify/oracle/adler32.vectors.json: the Adler-32 vectors of the oracle framework, the 300 x ff case among them (source: RFC 1950)

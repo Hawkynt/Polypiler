@@ -142,6 +142,11 @@
       "bytes": 625
     },
     {
+      "path": "tests/fixtures/verify/oracle/adler32.vectors.json",
+      "sha256": "a76050b29addf6a2a363181235a05d5d1c161e31cfb71d7f05bb291210293420",
+      "bytes": 1416
+    },
+    {
       "path": "tests/vectors/float/THIRD-PARTY-NOTICE.CORE-MATH.txt",
       "sha256": "9b9eac96d0980bf1c20316e289818725eb9c2911286b026fdd388153e62b6a9e",
       "bytes": 1627
