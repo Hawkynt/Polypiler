@@ -39,6 +39,10 @@ internal sealed partial class Lowering {
       if ((type.Element ?? type).IsStruct)
         throw this.Unsupported(global.Declaration, $"an object in the variable {global.Name} of the module");
 
+      // A string declared without a value would start as undefined, which no string of the IR is.
+      if (type.IsString && global.Initializer is null)
+        throw this.Unsupported(global.Declaration, $"a string in the variable {global.Name} of the module without an initializer");
+
       var initializer = global.Initializer is null ? null : this.Value(global.Initializer, type);
       global.Global = new IrGlobal(global.Name, type, initializer);
     } catch (Refusal refusal) {

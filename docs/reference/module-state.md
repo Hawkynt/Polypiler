@@ -14,13 +14,14 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
   any function of the instance runs. Every function sees and changes the same values. There is one
   thread.
 - **Static initializers.** An initializer is a constant, operators on constants and on globals
-  declared before it, a new array of such a length, an array of listed values, or a call of a
+  declared before it, a new array of such a length, an array of listed values, an operation of
+  strings, or a call of a
   function of the module that is *pure*: it reads and writes no global, directly or through the
   functions it calls. So an initializer never observes a global that is not initialised yet, and the
   order in which a language runs the initializers of its module - .NET's `beforefieldinit` class
   initialisation, ECMA-262 §16.2's evaluation of a module - cannot be told apart.
-- **Default.** A global without an initializer starts as zero or false; an array global has an
-  initializer.
+- **Default.** A global without an initializer starts as zero or false; an array global and a
+  string global have an initializer, since neither null nor undefined is a value of the IR.
 - **Arrays.** An array global holds one array for the whole life of the instance: its elements
   change, the array is never replaced. Passed to a function, it is passed by reference, as every
   array is.
@@ -31,7 +32,7 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
 
 | Node | Meaning | Verifier |
 | --- | --- | --- |
-| `IrGlobal(Name, Type, Initializer)` in `IrModule.Globals` | a variable of the module, in source order | name unique among functions, constants and globals; a truth value, a number or an array of numbers; an array has an initializer; the initializer is static and of the global's type |
+| `IrGlobal(Name, Type, Initializer)` in `IrModule.Globals` | a variable of the module, in source order | name unique among functions, constants and globals; a truth value, a number, a [string](string-operations.md) or an array of them, never a [view](views.md); an array or a string has an initializer; the initializer is static and of the global's type |
 | `IrGlobalRef(Global)` | the value of a global, of an array global its array | a global of the module; in an initializer one declared before |
 | `IrGlobalAssign(Global, Value)` | a statement: a new value | a global of the module that is no array; the value has its type |
 | `IrStep` on an `IrGlobalRef` | `++`/`--` of a global | as for a local |
@@ -51,7 +52,7 @@ and the code they rewrite computes with and without them alike.
 | `public` mutable static field (a `public static readonly` array whose elements are written as well) | — | `PLY1002`: JavaScript code that imports a module cannot assign its exports, and the field made private would no longer be what the class shows |
 | initializer that reads a later field or its own, or calls a method that reads or writes a static field | — | `PLY1002` |
 | static constructor, static property, an attribute on a field (`[ThreadStatic]`), `volatile`, `Interlocked`, `lock` | — | `PLY1002` |
-| array field that is assigned, or has no initializer; a static field of a struct type | — | `PLY1002` |
+| array field that is assigned, or has no initializer; a string field without an initializer (null); a static field of a struct type | — | `PLY1002` |
 
 ## JavaScript frontend
 
@@ -66,7 +67,7 @@ function and in its initializer.
 | `export let`, `export var`, `export { x }`, `export default x` | — | `PLY1102` ("the exported variable x") |
 | a statement other than a declaration at the top level of a module whose functions use its variables | — | `PLY1102` ("a statement at the top level of the module"); a module without such variables ignores its top level, as before |
 | initializer that reads a later variable (temporal dead zone) or calls a function that reads or writes one | — | `PLY1102` |
-| a variable holding an object literal | — | `PLY1102` |
+| a variable holding an object literal; a string variable declared without an initializer | — | `PLY1102` |
 
 A function an initializer calls is imported with the module.
 
@@ -107,8 +108,9 @@ hide is written with `$g` appended.
 ## Fixtures and checks
 
 `tests/fixtures/prototype/state` holds Marsaglia's xorshift32 (shifts 13, 17, 5; seed 2463534242)
-with a call counter, xorshift64 (13, 7, 17; seed 88172645463325252), a histogram in an array global
-and a CRC-32 whose table the first call fills, each in C# and in JavaScript. `ModuleStateTests` calls
+with a call counter, xorshift64 (13, 7, 17; seed 88172645463325252), a histogram in an array global,
+a CRC-32 whose table the first call fills and a journal that keeps a string and a ring of the last
+four strings it held, each in C# and in JavaScript. `ModuleStateTests` calls
 every one in sequence in one fresh load - a node import in every level and module format, a build of
 the C# against every profile's reference assemblies - and compares with the published values: the
 first three numbers 723471715, 2497366906, 2064144800 and 8748534153485358512, 3040900993826735515,

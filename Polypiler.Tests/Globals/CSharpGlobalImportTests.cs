@@ -120,6 +120,7 @@ public sealed class CSharpGlobalImportTests {
   [TestCase("static int x = x + 1; public static int F() => x;", "an initializer that reads the field x, which is not initialised before it")]
   [TestCase("static int[] t = new int[2]; public static void F() { t = new int[3]; }", "an assignment to the array field t")]
   [TestCase("static int[] t; public static int F() => t.Length;", "an array field without an initializer, t")]
+  [TestCase("static string s; public static int F() { s = s + \"c\"; return s.Length; }", "a string field without an initializer, s")]
   [TestCase("static readonly int[] t = { 1, 2 }; public static int F() => System.Array.IndexOf(t, 2);", "Array.IndexOf")]
   public void Construct_IsRefusedByName(string methods, string what) {
     var result = CSharpFrontend.Import("Snippet.cs", PrototypeFixture.Wrap(methods));

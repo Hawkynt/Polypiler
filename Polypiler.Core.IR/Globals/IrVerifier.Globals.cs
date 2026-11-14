@@ -6,10 +6,11 @@ namespace Polypiler.Core.IR;
 public static partial class IrVerifier {
 
   /// <summary>
-  /// Checks the globals of a module: each under a name of its own, of a truth value, a number or an
-  /// array of numbers, an array with an initializer, and every initializer static - well-typed, of the
-  /// global's type, naming only globals declared before it, and built of nothing but constants,
-  /// operators, new arrays, listed arrays and calls of pure functions.
+  /// Checks the globals of a module: each under a name of its own, of a truth value, a number, a string
+  /// or an array of them (never a view, which lives on the stack), an array with an initializer, and
+  /// every initializer static - well-typed, of the global's type, naming only globals declared before
+  /// it, and built of nothing but constants, operators, new arrays, listed arrays, operations of
+  /// strings and calls of pure functions.
   /// </summary>
   /// <returns>The globals the functions may name.</returns>
   private static HashSet<IrGlobal> Globals(
@@ -29,9 +30,9 @@ public static partial class IrVerifier {
 
       Require(names.Add(global.Name), "the module declares the name twice");
       var element = global.Type.Element ?? global.Type;
-      Require(global.Type.IsStorable && !element.IsStruct, $"a global of the type {global.Type}");
+      Require(global.Type.IsStorable && !element.IsStruct && !global.Type.IsView, $"a global of the type {global.Type}");
       if (global.Initializer is not { } initializer) {
-        Require(!global.Type.IsArray, "an array global without an initializer");
+        Require(!global.Type.IsArray && !global.Type.IsString, $"{(global.Type.IsArray ? "an array" : "a string")} global without an initializer");
       } else {
         var check = new FunctionCheck(new IrFunction(global.Name, false, global.Type, [], [], new IrBlock([])), functions, constants, types, diagnostics) {
           Globals = new HashSet<IrGlobal>(earlier, ReferenceEqualityComparer.Instance)
@@ -51,8 +52,8 @@ public static partial class IrVerifier {
 
   /// <summary>Whether a node may stand in the initializer of a global.</summary>
   private static bool IsStatic(IrExpr node, HashSet<string> impure) => node switch {
-    IrConst or IrConstRef or IrGlobalRef or IrUnary or IrBinary or IrConvert or IrConditional or IrNewArray => true,
-    IrIntrinsic intrinsic => intrinsic.Op == IrIntrinsicOp.ArrayOf,
+    IrConst or IrStrConst or IrConstRef or IrGlobalRef or IrUnary or IrBinary or IrConvert or IrConditional or IrNewArray => true,
+    IrIntrinsic intrinsic => intrinsic.Op == IrIntrinsicOp.ArrayOf || StringOperations.IsString(intrinsic.Op),
     IrCall call => !impure.Contains(call.Function),
     _ => false
   };

@@ -23,7 +23,8 @@ internal static class StateFixtures {
     ("Xorshift32", "Xorshift32", "xorshift32"),
     ("Xorshift64", "Xorshift64State", "xorshift64"),
     ("Histogram", "Histogram", "histogram"),
-    ("Lazy", "Lazy", "lazy")
+    ("Lazy", "Lazy", "lazy"),
+    ("Journal", "Journal", "journal")
   ];
 
   /// <summary>The bytes of "123456789", whose CRC-32 is the published check value 0xCBF43926.</summary>
@@ -50,12 +51,17 @@ internal static class StateFixtures {
   /// <summary>
   /// The sequence of calls of a fixture, by the names its C# class has; a JavaScript module has the
   /// same functions named in camel case (<see cref="Script"/>). Lazy is called before and after its
-  /// table is filled, twice with the check value.
+  /// table is filled, twice with the check value; Journal reads its ring of texts back between and after
+  /// the letters it adds.
   /// </summary>
   public static IReadOnlyList<PrototypeCall> Sequence(string file) => file switch {
     "Xorshift32" => [new("Next", []), new("Next", []), new("Next", []), new("Calls", [])],
     "Xorshift64" => [new("Next", []) { Returns = typeof(ulong) }, new("Next", []) { Returns = typeof(ulong) }, new("Next", []) { Returns = typeof(ulong) }],
     "Histogram" => [new("Add", [1]), new("Add", [5]), new("Add", [2]), new("Add", [-3]), new("Add", [int.MaxValue])],
+    "Journal" => [
+      new("Add", [104]), new("Add", [105]), new("Back", [1]), new("Back", [2]),
+      new("Add", [33]), new("Add", [63]), new("Add", [46]), new("Back", [1]), new("Back", [2]), new("Back", [4])
+    ],
     _ => [new("Filled", []), new("Compute", [Check]), new("Filled", []), new("Compute", [Check]), new("Compute", [Array.Empty<byte>()])]
   };
 
@@ -64,6 +70,7 @@ internal static class StateFixtures {
     "Xorshift32" => ["723471715", "2497366906", "2064144800", "3"],
     "Xorshift64" => ["8748534153485358512", "3040900993826735515", "3453997556048239312"],
     "Histogram" => ["1", "2", "1", "3", "1"],
+    "Journal" => ["1", "2", "hi", "h", "3", "4", "5", "hi!?.", "hi!?", "hi"],
     _ => ["false", "3421780262 | [49,50,51,52,53,54,55,56,57]", "true", "3421780262 | [49,50,51,52,53,54,55,56,57]", "0 | []"]
   };
 

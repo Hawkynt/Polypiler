@@ -108,6 +108,7 @@ public sealed class JavaScriptGlobalImportTests {
   [TestCase("let p = { x: 1 }; export function f() { return p.x; }", JavaScriptFrontend.Unsupported, "'an object in the variable p of the module' is not supported yet")]
   [TestCase("const t = new Uint8Array(2); export function f() { t = new Uint8Array(3); }", JavaScriptFrontend.Unsupported, "'an assignment to the constant t' is not supported yet")]
   [TestCase("const t = new Uint8Array(2); export function f() { t++; }", JavaScriptFrontend.MixedKinds, "'t' holds both number and uint8[]")]
+  [TestCase("let s; export function f() { s = 'a'; return s.length; }", JavaScriptFrontend.Unsupported, "'a string in the variable s of the module without an initializer' is not supported yet")]
   [TestCase("let x; export function f() { return x; }", JavaScriptFrontend.ReadBeforeAssignment, "'x' may be read before it is assigned")]
   [TestCase("let x; let y = x; export function f() { return y; }", JavaScriptFrontend.ReadBeforeAssignment, "'x' may be read before it is assigned")]
   [TestCase("let x = 1; export function f() { x = 1n; return 0; }", JavaScriptFrontend.MixedKinds, "'x' holds both bigint and number")]

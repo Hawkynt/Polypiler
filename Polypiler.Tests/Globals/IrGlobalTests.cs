@@ -42,6 +42,8 @@ public sealed class IrGlobalTests {
     yield return Case("two globals of one name", Module([new IrGlobal("g", IrType.I32, null), new IrGlobal("g", IrType.U8, null)]), "ill-typed IR in 'g': the module declares the name twice");
     yield return Case("global of void", Module([new IrGlobal("g", IrType.Void, null)]), "a global of the type void");
     yield return Case("global of a struct", new IrModule("M", []) { Types = [vec], Globals = [new IrGlobal("g", IrType.Struct(vec), null)] }, "a global of the type Vec");
+    yield return Case("string global without initializer", Module([new IrGlobal("g", IrType.String, null)]), "a string global without an initializer");
+    yield return Case("global of a view", Module([new IrGlobal("g", IrType.Span(IrType.U8), null)]), "a global of the type span<u8>");
     yield return Case("array global without initializer", Module([new IrGlobal("g", IrType.Array(IrType.I32), null)]), "an array global without an initializer");
     yield return Case("initializer of another type", Module([new IrGlobal("g", IrType.U32, I(1))]), "the initializer has the type i32, expected u32");
     yield return Case("initializer reading itself", Module([new IrGlobal("g", IrType.I32, Ref(counter))]), "the global 'counter' is not among the globals it may read");
@@ -82,6 +84,21 @@ public sealed class IrGlobalTests {
     var instance = IrInterpreter.Instantiate(module);
     Assert.That(instance.Call("F"), Is.EqualTo(-6));
     Assert.That(IrVerifier.Impure(module), Is.EquivalentTo(new[] { "F" }));
+  }
+
+  /// <summary>A string and an array of strings are globals too, initialized by literals and by operations of strings.</summary>
+  [Test]
+  public void StringGlobals_AreStatic_AndShared() {
+    var text = new IrGlobal("text", IrType.String, new IrStrConst("a"));
+    var joined = new IrGlobal("joined", IrType.String, new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [Ref(text), new IrStrConst("b")]));
+    var ring = new IrGlobal("ring", IrType.Array(IrType.String), new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(IrType.String), [Ref(joined), new IrStrConst("")]));
+    var append = Function("Append", IrType.I32,
+      new IrGlobalAssign(text, new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [Ref(text), new IrArrayLoad(Ref(ring), I(0))])),
+      new IrReturn(new IrIntrinsic(IrIntrinsicOp.StrLength, IrType.I32, [Ref(text)])));
+    var module = Module([text, joined, ring], append);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    var instance = IrInterpreter.Instantiate(module);
+    Assert.That(new[] { instance.Call("Append"), instance.Call("Append") }, Is.EqualTo(new object[] { 3, 5 }));
   }
 
   /// <summary>Test design 2 and 6: the calls of one instance share the globals; every instance and every call of the module alone starts afresh.</summary>

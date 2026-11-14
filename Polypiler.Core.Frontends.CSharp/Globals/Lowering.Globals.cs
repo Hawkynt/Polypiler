@@ -109,6 +109,10 @@ internal sealed partial class Lowering {
     if (type.IsArray && variable.Initializer is null)
       throw new UnsupportedException(variable, $"an array field without an initializer, {symbol.Name}");
 
+    // A string field without an initializer holds null, which no string of the IR is.
+    if (type.IsString && variable.Initializer is null)
+      throw new UnsupportedException(variable, $"a string field without an initializer, {symbol.Name}");
+
     this._stateFields.Add(symbol);
     this._state.Add((path, model, variable, symbol, type));
   }
