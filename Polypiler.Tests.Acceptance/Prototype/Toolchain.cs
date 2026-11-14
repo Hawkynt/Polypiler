@@ -90,7 +90,8 @@ internal static class Toolchain {
           values.forEach((value, index) => { if (isArray(value)) shown.push(show(value, encoded[index].k)); });
           lines.push(shown.join(' | '));
         } catch (error) {
-          if (!(error instanceof RangeError)) throw error;
+          // The traps of the generated code are RangeErrors, and the TypeError of the cast helper.
+          if (!(error instanceof RangeError) && !(error instanceof TypeError && error.message === 'invalid cast')) throw error;
           lines.push('trap: ' + error.message);
         }
       }
