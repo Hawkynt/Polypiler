@@ -1,0 +1,15 @@
+id: VERIFICATION.generator.no-kind
+title: A document without kind
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  type: TYPES.u32
+  strategy: boundary
+  values: ["0x00000000", "0xFFFFFFFF"]

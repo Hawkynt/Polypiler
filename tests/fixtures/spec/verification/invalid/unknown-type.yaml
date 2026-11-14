@@ -1,0 +1,16 @@
+id: VERIFICATION.generator.u33-boundary
+title: A generator of a type that does not exist
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: generator
+  type: TYPES.u33
+  strategy: boundary
+  values: ["0x0"]

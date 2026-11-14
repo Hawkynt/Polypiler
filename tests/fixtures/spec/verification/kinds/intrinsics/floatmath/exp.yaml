@@ -1,0 +1,13 @@
+id: INTRINSICS.Exp
+title: Exp, standing in for the document of the intrinsics family
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-INTRINSICS
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  {}
