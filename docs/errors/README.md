@@ -90,6 +90,14 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0100](PLY0100.md) | error | 70 (InternalError) | `ill-typed IR in '<member>': <reason>` | PROTOTYPE |
 | [PLY0101](PLY0101.md) | error | 70 (InternalError) | `<reason>` | PROTOTYPE |
 
+## PLY0800–PLY0899 · permutation
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY0800](PLY0800.md) | error | 3 (UnsupportedConstruct) | `mapping width <width> is outside 1..4096` | PERM-MODEL |
+| [PLY0801](PLY0801.md) | error | 3 (UnsupportedConstruct) | `output bit <output> reads input bit <input>, input width is <width>` | PERM-MODEL |
+| [PLY0802](PLY0802.md) | error | 3 (UnsupportedConstruct) | `mapping <text\|document> '<input>': <reason>` | PERM-MODEL |
+
 ## PLY1000–PLY1099 · csharp
 
 | Code | Severity | Exit code | Message | Owner |

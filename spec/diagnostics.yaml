@@ -28,6 +28,9 @@ blocks:
   - { first: PLY0500, last: PLY0599, area: legalization }
   - { first: PLY0600, last: PLY0699, area: interop }
   - { first: PLY0700, last: PLY0799, area: objects }
+  # permutation is divided by concern (PERM-MODEL): model and hierarchy 0800-0809, networks and
+  # primitives 0810-0819, search and equivalence 0820-0829, recovery 0830-0839, target profiles
+  # 0840-0849, API and command line 0850-0859; 0860-0899 are unassigned.
   - { first: PLY0800, last: PLY0899, area: permutation }
   - { first: PLY0900, last: PLY0999, area: catalog }
   - { first: PLY1000, last: PLY2999, area: languages }
@@ -724,6 +727,33 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0800
+    severity: error
+    exit: UnsupportedConstruct
+    title: mapping width out of range
+    message: "mapping width <width> is outside 1..4096"
+    rule: permutation.model.width
+    area: permutation
+    owner: PERM-MODEL
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for an input width or an output count of a bit mapping below 1 or above 4096, from BitMapping.Create, its factories, the text notation and both JSON forms"
+  - code: PLY0801
+    severity: error
+    exit: UnsupportedConstruct
+    title: mapping reads outside its input
+    message: "output bit <output> reads input bit <input>, input width is <width>"
+    rule: permutation.model.source-index
+    area: permutation
+    owner: PERM-MODEL
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for a plain or inverted source whose index is negative or not below the input width"
+  - code: PLY0802
+    severity: error
+    exit: UnsupportedConstruct
+    title: malformed mapping text or document
+    message: "mapping <text|document> '<input>': <reason>"
+    rule: permutation.model.syntax
+    area: permutation
+    owner: PERM-MODEL
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for a mapping text that is not '<inputWidth>:[<entry>,...]' (missing width, empty or unknown entry, constant other than =0 or =1) and for a BitPerm state or spec mapping document that is not JSON or lacks its width, its entries, an entry's type or value, or has an unknown type"
   - code: PLY1000
     severity: error
     exit: InvalidSource
