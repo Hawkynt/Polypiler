@@ -1,0 +1,11 @@
+# The native layer (PRD §7.3): C and C++ compiled with gcc and clang and executed under the address
+# and undefined-behaviour sanitizers where native.sanitizers.yaml says they exist, run by the job
+# layer-native of .github/workflows/ci.yml. Format: spec/schemas/ci-layer.schema.json. On
+# ubuntu-latest the job runs in an Arch Linux container on the archive snapshot that carries the
+# pinned gcc, clang and bubblewrap; bubblewrap isolates the runner there.
+schema: 1
+layer: native
+toolchains: [dotnet-sdk, gcc, clang, bubblewrap]
+os: [ubuntu-latest, macos-latest, windows-latest]
+paths: ["Polypiler.Core.Frontends.C/**", "Polypiler.Core.Frontends.Cpp/**", "Polypiler.Core.Backends.C/**", "Polypiler.Core.Backends.Cpp/**", "Polypiler.Interop/**", "tests/fixtures/**/*.c", "tests/fixtures/**/*.cpp", "tests/fixtures/**/*.h", "tooling/ci/layers/native.*"]
+always: false

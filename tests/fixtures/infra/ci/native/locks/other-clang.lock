@@ -1,0 +1,9 @@
+schema: 1
+toolchains:
+  clang:
+    version: "0.0.1"
+    probe: [clang, --version]
+    versionPattern: 'clang version (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: Apache-2.0 WITH LLVM-exception
+    source: https://github.com/llvm/llvm-project/releases

@@ -206,3 +206,121 @@ jobs:
           start=$(date +%s%N)
           node tooling/bitperm/export.mjs --page "$PAGE" --out tests/fixtures/bitperm --check --expect-blocks 16 --expect-presets 25 --expect-tests 51
           echo "export wall time: $(( ($(date +%s%N) - start) / 1000000 )) ms"
+
+  # The native layer of PRD §7.3 (tooling/ci/layers/native.yaml): C and C++ compiled by the pinned gcc
+  # and clang and executed under the sanitizers tooling/ci/layers/native.sanitizers.yaml names; a
+  # heap overflow and a signed overflow must be caught wherever there are sanitizers. No hosted
+  # runner image carries gcc 16.2.1, so the Linux leg runs in the Arch Linux image of 2026-10-25 with
+  # pacman on the archive snapshot of that day, which holds gcc 16.2.1, clang 23.1.3 and bubblewrap
+  # 0.13.1. The container is privileged so that bubblewrap can unshare its namespaces: the runner is
+  # isolated there, and the sanitizers' leak check can stop the program's threads. macOS and Windows
+  # take clang from the LLVM release of the pinned version.
+  layer-native:
+    name: layer-native ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            container: { image: 'archlinux:base-20261025.0.616225', options: --privileged }
+          - os: macos-latest
+          - os: windows-latest
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+      ARCHIVE: https://archive.archlinux.org/repos/2026/10/25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: archive snapshot
+        if: runner.os == 'Linux'
+        run: |
+          echo "Server = $ARCHIVE/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
+          pacman -Syyuu --noconfirm
+          pacman -S --noconfirm --needed git icu gcc clang compiler-rt bubblewrap
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer native > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          sdk=$(sed -n 's/^dotnet-sdk=//p' "$RUNNER_TEMP/toolchains.env")
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: clang
+        if: runner.os != 'Linux'
+        env:
+          VERSION: ${{ steps.env.outputs.clang }}
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            name="LLVM-$VERSION-macOS-ARM64"
+            members=("$name/bin/clang" "$name/bin/clang-${VERSION%%.*}" "$name/lib/clang")
+          else
+            name="clang+llvm-$VERSION-x86_64-pc-windows-msvc"
+            members=("$name/bin/clang.exe" "$name/lib/clang")
+          fi
+          temp=$(cd "$RUNNER_TEMP" && pwd)
+          command -v zstd || brew install zstd
+          curl -fsSL --retry 3 -o "$temp/llvm.tar.zst" "https://github.com/llvm/llvm-project/releases/download/llvmorg-$VERSION/$name.tar.zst"
+          mkdir -p "$temp/llvm"
+          zstd -dc --long=31 "$temp/llvm.tar.zst" | (cd "$temp/llvm" && tar -xf - --strip-components 1 "${members[@]}")
+          rm "$temp/llvm.tar.zst"
+          if [ "$RUNNER_OS" = macOS ]; then
+            echo "$temp/llvm/bin" >> "$GITHUB_PATH"
+            echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
+          else
+            cygpath -w "$temp/llvm/bin" >> "$GITHUB_PATH"
+          fi
+      - name: toolchains
+        run: |
+          mkdir -p artifacts/layer-native
+          $TOOLING toolchains probe --only dotnet-sdk,gcc,clang,bubblewrap | tee artifacts/layer-native/probe.txt
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: >-
+          dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build
+          --filter "TestCategory=Layer.native"
+          --logger "trx;LogFileName=native.trx" --logger "console;verbosity=normal"
+          --results-directory artifacts/layer-native
+      - name: summary
+        if: always()
+        run: |
+          case "$RUNNER_OS" in Linux) platform=linux ;; macOS) platform=macos ;; *) platform=windows ;; esac
+          {
+            echo "### layer-native $platform"
+            for compiler in gcc clang; do
+              groups=$(sed -n "s|^  $platform/$compiler: ||p" tooling/ci/layers/native.sanitizers.yaml)
+              if [ -z "$groups" ]; then
+                echo "- $platform/$compiler: not used on this platform"
+              elif [ "$groups" = none ]; then
+                echo "- $platform/$compiler: sanitizers: unavailable; the positive fixtures ran without them, the sanitizer negatives were not run"
+              else
+                echo "- $platform/$compiler: sanitizers: $groups"
+              fi
+            done
+            echo
+            echo '```'
+            cat artifacts/layer-native/probe.txt 2>/dev/null || echo "no probe output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-native-${{ matrix.os }}
+          path: artifacts/layer-native
+          if-no-files-found: warn
