@@ -12,14 +12,16 @@
     <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
+    <ProjectReference Include="..\Polypiler.Permutation\Polypiler.Permutation.csproj" />
     <PackageReference Include="SharpFuzz" Version="2.3.0" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
     <PackageReference Include="JsonSchema.Net" Version="8.0.5" />
   </ItemGroup>
 
-  <!-- The metadata schema every spec document is checked against travels with the tool. -->
+  <!-- The metadata schema every spec document is checked against, and the adapter audit schema, travel with the tool. -->
   <ItemGroup>
     <EmbeddedResource Include="..\spec\schemas\meta.schema.json" LogicalName="meta.schema.json" Link="Spec\meta.schema.json" />
+    <EmbeddedResource Include="..\spec\schemas\adapter-audit.schema.json" LogicalName="adapter-audit.schema.json" Link="Catalog\AdapterAudit\adapter-audit.schema.json" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,18 @@
+# A record whose digest no longer matches the pinned bytes of networks.h.
+schema: 1
+repository: Hawkynt/MediaDroid
+commit: 7f8b6b995cbe54a6afb290a900748393bf01e272
+clearance: { status: pending, adr: null, date: null }
+records:
+  - path: native/src/networks.h
+    kind: code
+    sha256: '0000000000000000000000000000000000000000000000000000000000000000'
+    bytes: 6848
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: usable
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+external: []

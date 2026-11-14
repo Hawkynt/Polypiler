@@ -153,3 +153,6 @@ jobs:
           start=$(date +%s%N)
           node tooling/bitperm/export.mjs --page "$PAGE" --out tests/fixtures/bitperm --check --expect-blocks 16 --expect-presets 25 --expect-tests 51
           echo "export wall time: $(( ($(date +%s%N) - start) / 1000000 )) ms"
+      # spec/permutations/{mappings,grammars,costs}/bitperm-*.yaml are generated from those fixtures.
+      - name: Check spec/permutations against the fixtures
+        run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- permutations import-bitperm --fixtures tests/fixtures/bitperm --out spec/permutations --check

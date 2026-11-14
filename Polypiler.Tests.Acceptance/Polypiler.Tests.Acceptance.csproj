@@ -61,6 +61,7 @@
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
+    <ProjectReference Include="..\Polypiler.Permutation\Polypiler.Permutation.csproj" />
     <ProjectReference Include="..\Polypiler.Tooling\Polypiler.Tooling.csproj" />
     <ProjectReference Include="..\Polypiler.Tests.Probe\Polypiler.Tests.Probe.csproj" />
   </ItemGroup>

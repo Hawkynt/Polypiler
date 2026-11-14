@@ -21,4 +21,9 @@
     <EmbeddedResource Include="..\spec\schemas\manifest*.schema.json" LogicalName="Polypiler.Core.Verification.Manifests.%(Filename)%(Extension)" Link="Manifests\%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- petcat's named escapes, recorded from petcat itself; the normalisation of its listings reads them. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Emulators\Resources\petcat-escapes.tsv" LogicalName="Polypiler.Core.Verification.Emulators.petcat-escapes.tsv" />
+  </ItemGroup>
+
 </Project>

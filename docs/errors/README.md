@@ -90,6 +90,25 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0100](PLY0100.md) | error | 70 (InternalError) | `ill-typed IR in '<member>': <reason>` | PROTOTYPE |
 | [PLY0101](PLY0101.md) | error | 70 (InternalError) | `<reason>` | PROTOTYPE |
 
+## PLY0800–PLY0899 · permutation
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY0800](PLY0800.md) | error | 3 (UnsupportedConstruct) | `mapping width <width> is outside 1..4096` | PERM-MODEL |
+| [PLY0801](PLY0801.md) | error | 3 (UnsupportedConstruct) | `output bit <output> reads input bit <input>, input width is <width>` | PERM-MODEL |
+| [PLY0802](PLY0802.md) | error | 3 (UnsupportedConstruct) | `mapping <text\|document> '<input>': <reason>` | PERM-MODEL |
+| [PLY0803](PLY0803.md) | error | 3 (UnsupportedConstruct) | `mapping is not a bijection (<reason>); it has no inverse` | PERM-ALGEBRA |
+| [PLY0804](PLY0804.md) | error | 3 (UnsupportedConstruct) | `cannot compose: the inner mapping has <inner> output bits, the outer mapping reads <outer> input bits` | PERM-ALGEBRA |
+| [PLY0805](PLY0805.md) | error | 3 (UnsupportedConstruct) | `<reason>` | PERM-HIERARCHY |
+| [PLY0806](PLY0806.md) | error | 3 (UnsupportedConstruct) | `input <hex> is outside the declared input domain` | PERM-HIERARCHY |
+| [PLY0807](PLY0807.md) | error | 3 (UnsupportedConstruct) | `truth table of <inputs> inputs exceeds the limit of 16` | PERM-HIERARCHY |
+
+## PLY0900–PLY0999 · catalog
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY0950](PLY0950.md) | error | 8 (LicenseBlocker) | `'<path>' has no licence audit record` | ADP-NCNN-LICENCE |
+
 ## PLY1000–PLY1099 · csharp
 
 | Code | Severity | Exit code | Message | Owner |
@@ -112,3 +131,11 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1105](PLY1105.md) | error | 3 (UnsupportedConstruct) | `<reason>` | PROTOTYPE |
 | [PLY1106](PLY1106.md) | error | 3 (UnsupportedConstruct) | `<reason>` | PROTOTYPE |
 | [PLY1152](PLY1152.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in JavaScript profile '<profile>'` | PROTOTYPE |
+
+## PLY3900–PLY3999 · tokenized-basic
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY3935](PLY3935.md) | error | 7 (OracleFailure) | `VICE run of '<program>' failed: <cause>` | FMT-CBMBASIC-ORACLE |
+| [PLY3936](PLY3936.md) | error | 7 (OracleFailure) | `petcat <operation> failed for dialect '<dialect>': <cause>` | FMT-CBMBASIC-ORACLE |
+| [PLY3960](PLY3960.md) | error | 7 (OracleFailure) | `PC-BASIC <operation> failed: <cause>` | FMT-GWBASIC-ORACLE |

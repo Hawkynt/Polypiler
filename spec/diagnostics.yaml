@@ -28,6 +28,9 @@ blocks:
   - { first: PLY0500, last: PLY0599, area: legalization }
   - { first: PLY0600, last: PLY0699, area: interop }
   - { first: PLY0700, last: PLY0799, area: objects }
+  # permutation is divided by concern (PERM-MODEL): model and hierarchy 0800-0809, networks and
+  # primitives 0810-0819, search and equivalence 0820-0829, recovery 0830-0839, target profiles
+  # 0840-0849, API and command line 0850-0859; 0860-0899 are unassigned.
   - { first: PLY0800, last: PLY0899, area: permutation }
   - { first: PLY0900, last: PLY0999, area: catalog }
   - { first: PLY1000, last: PLY2999, area: languages }
@@ -726,6 +729,87 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0800
+    severity: error
+    exit: UnsupportedConstruct
+    title: mapping width out of range
+    message: "mapping width <width> is outside 1..4096"
+    rule: permutation.model.width
+    area: permutation
+    owner: PERM-MODEL
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for an input width or an output count of a bit mapping below 1 or above 4096, from BitMapping.Create, its factories, the text notation and both JSON forms"
+  - code: PLY0801
+    severity: error
+    exit: UnsupportedConstruct
+    title: mapping reads outside its input
+    message: "output bit <output> reads input bit <input>, input width is <width>"
+    rule: permutation.model.source-index
+    area: permutation
+    owner: PERM-MODEL
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for a plain or inverted source whose index is negative or not below the input width"
+  - code: PLY0802
+    severity: error
+    exit: UnsupportedConstruct
+    title: malformed mapping text or document
+    message: "mapping <text|document> '<input>': <reason>"
+    rule: permutation.model.syntax
+    area: permutation
+    owner: PERM-MODEL
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for a mapping text that is not '<inputWidth>:[<entry>,...]' (missing width, empty or unknown entry, constant other than =0 or =1) and for a BitPerm state or spec mapping document that is not JSON or lacks its width, its entries, an entry's type or value, or has an unknown type"
+  - code: PLY0803
+    severity: error
+    exit: UnsupportedConstruct
+    title: mapping has no inverse
+    message: "mapping is not a bijection (<reason>); it has no inverse"
+    rule: permutation.algebra.inverse
+    area: permutation
+    owner: PERM-ALGEBRA
+    surfaces: "the refusal of BitPermutationAlgebra.TryInverse in Polypiler.Permutation.Algebra, the only entry point that inverts an untyped bit mapping, when the mapping is not a bijection; the reason is that of rule H1, such as 'input bit 0 is used 2 times', 'output bit 1 is inverted', 'output bit 0 is a constant', 'output bit 4 is a don't-care' or 'widths differ (8 in, 4 out)'"
+  - code: PLY0804
+    severity: error
+    exit: UnsupportedConstruct
+    title: composed mappings do not meet
+    message: "cannot compose: the inner mapping has <inner> output bits, the outer mapping reads <outer> input bits"
+    rule: permutation.algebra.compose
+    area: permutation
+    owner: PERM-ALGEBRA
+    surfaces: "PermutationModelException from BitPermutationAlgebra.Compose and BitRoutingAlgebra.Compose in Polypiler.Permutation.Algebra when the output width of the inner operand, applied first, is not the input width of the outer one"
+  - code: PLY0805
+    severity: error
+    exit: UnsupportedConstruct
+    title: claimed bit-transform class does not hold
+    message: "<reason>"
+    rule: permutation.hierarchy.class
+    area: permutation
+    owner: PERM-HIERARCHY
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Semantics, from BitPermutation.From and TryFrom when the mapping is not a bijection (H1), and from BitSemanticsVerifier.Check for a contradictory or oversized condition (H2), a condition that disagrees with the mapping's don't-cares (H3), a Boolean transform that reads past its input (H4) and a lane size that does not divide a width (H5); the reasons read 'mapping is declared BitPermutation but input bit 0 is used 3 times', 'output bit 1 is don't-care in the mapping but required by the condition' and the like"
+  - code: PLY0806
+    severity: error
+    exit: UnsupportedConstruct
+    title: input outside the declared input domain
+    message: "input <hex> is outside the declared input domain"
+    rule: permutation.hierarchy.domain
+    area: permutation
+    owner: PERM-HIERARCHY
+    surfaces: "the DiagnosticBag given to BitCondition.Admits, which evaluators of a conditioned routing or Boolean transform call for each input, when the input has a 1 where the condition knows a 0 or a 0 where it knows a 1; PermutationModelException from MappingEvaluator.EvaluateChecked for such an input"
+  - code: PLY0807
+    severity: error
+    exit: UnsupportedConstruct
+    title: truth table too large
+    message: "truth table of <inputs> inputs exceeds the limit of 16"
+    rule: permutation.hierarchy.truth-table
+    area: permutation
+    owner: PERM-HIERARCHY
+    surfaces: "the DiagnosticBag given to BitBooleanTransform.TryGetTruthTable when the transform has more than 16 inputs, and PermutationModelException from MappingEvaluator.TruthTable for a mapping of more than 16 input bits; the structural cross-check of TryAsRouting is skipped silently above that limit instead"
+  - code: PLY0950
+    severity: error
+    exit: LicenseBlocker
+    title: adapter licence audit violated
+    message: "'<path>' has no licence audit record"
+    rule: catalog.adapter-audit
+    area: catalog
+    owner: ADP-NCNN-LICENCE
+    surfaces: "standard error of polypiler-tooling catalog audit-adapter; also ''<path>' is <decision> in the licence audit: <reason>', ''<path>' is a restricted asset and its licence clearance is pending', 'licence audit record '<path>' is stale: SHA-256 <actual>, recorded <recorded>[ (<n> bytes, recorded <m> bytes)]', 'licence clearance was refused (<adr>)' and 'licence audit: <schema or rule detail>' for an audit file that cannot be read, is not YAML, breaks spec/schemas/adapter-audit.schema.json or a rule of the validator; a path or notice missing from the corpus stays PLY0025"
   - code: PLY1000
     severity: error
     exit: InvalidSource
@@ -843,3 +927,30 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY3935
+    severity: error
+    exit: OracleFailure
+    title: VICE run failed
+    message: "VICE run of '<program>' failed: <cause>"
+    rule: tokenized-basic.oracle.vice
+    area: tokenized-basic
+    owner: FMT-CBMBASIC-ORACLE
+    surfaces: "the diagnostics of a VICE run or of the vice oracle: a PRG without a BASIC line chain, an emulator that did not start or exited with an error, or no READY. before the cycle limit where the return to BASIC was required"
+  - code: PLY3936
+    severity: error
+    exit: OracleFailure
+    title: petcat failed
+    message: "petcat <operation> failed for dialect '<dialect>': <cause>"
+    rule: tokenized-basic.oracle.petcat
+    area: tokenized-basic
+    owner: FMT-CBMBASIC-ORACLE
+    surfaces: "the diagnostics of a petcat listing or tokenization or of the petcat oracle: a dialect petcat is not run for, or petcat reporting an error"
+  - code: PLY3960
+    severity: error
+    exit: OracleFailure
+    title: PC-BASIC failed
+    message: "PC-BASIC <operation> failed: <cause>"
+    rule: gwbasic.oracle.pcbasic
+    area: tokenized-basic
+    owner: FMT-GWBASIC-ORACLE
+    surfaces: "the PcBasicException of a conversion to ASCII or to a token file, and the diagnostics of a PcBasicRun, when PC-BASIC exited non-zero, hit a runner limit (the cause names the runner's PLY0031, PLY0032 or PLY0033), wrote no conversion, or wrote an empty one for an input that is not empty"

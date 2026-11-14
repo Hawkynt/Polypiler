@@ -65,6 +65,209 @@
       "bytes": 7652
     },
     {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/THIRD-PARTY-NOTICE.CAIN.txt",
+      "sha256": "03c81ece3c90c9149a4f625a4547168e727fe99e9ddde4e4ba3508c94f7a0680",
+      "bytes": 2781
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/THIRD-PARTY-NOTICE.DAIN.txt",
+      "sha256": "e3393ada07178b8c84ca12625a6a4b43b3b17af3bbc6811cd73ad50a5664d309",
+      "bytes": 2974
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/THIRD-PARTY-NOTICE.FLAVR.txt",
+      "sha256": "17b0b232ae2b09ef60e4e69498387e0e831b6e2f04a23c160eaad8fa838a056f",
+      "bytes": 12368
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/THIRD-PARTY-NOTICE.IFRNet.txt",
+      "sha256": "74d597daab24d16f456d729bfa122d321334b760580c7dab6af5fbd85377855d",
+      "bytes": 2743
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/THIRD-PARTY-NOTICE.RIFE.txt",
+      "sha256": "8fc8e5a45e0593efdb44229bdbc6ef0b64e227418efa65c4cae0d94bc0f0a73e",
+      "bytes": 3000
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/THIRD-PARTY-NOTICE.XVFI.txt",
+      "sha256": "c49f68532151b8a779a54f860e7a2704881e204f8977612cad2e228b709cc686",
+      "bytes": 1043
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/THIRD-PARTY-NOTICE.ncnn.txt",
+      "sha256": "b41cb02043dca2f24159afff8615ac8a2962ed1f0025756ebb0715c954641ae4",
+      "bytes": 6870
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/src/main/assets/models/ifrnet-s/ifrnet.bin",
+      "sha256": "7c3fe0a5eb7e544bc8c615ee47d4bafcbc077f98d75eda217c9657979adb1e14",
+      "bytes": 5921992
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/src/main/assets/models/ifrnet-s/ifrnet.param",
+      "sha256": "fc684bb14ca0135adb7016125d5ecfcdd18f30922fd9937a64346804c909d6ae",
+      "bytes": 13490
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/src/main/assets/models/rife-4.25-lite/flownet.bin",
+      "sha256": "350a15e464bea5ad378e06c0fb43996e90a0d35653d5a6ef6bc980d832538fb7",
+      "bytes": 11276252
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "app/src/main/assets/models/rife-4.25-lite/flownet.param",
+      "sha256": "e55b76f197b89637dc824ce89e64878df419214d3cf6a10aea0283c61b93a908",
+      "bytes": 35830
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "core/player/THIRD_PARTY_NOTICES.md",
+      "sha256": "342a6ab4d5b0c01bbf58a1126606fe5dabcbdc2f613e9d76e6b993ace96552ca",
+      "bytes": 22158
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/CMakeLists.txt",
+      "sha256": "b820bfe9366bbc7272f179e8088eb09d94d28d2b0aa8d218a28b92843a9d5fe9",
+      "bytes": 4719
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/build.gradle.kts",
+      "sha256": "5dca71ad75acd116036cc1b738259d01f3d786ca64241081d2769d02d2ab2858",
+      "bytes": 14459
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/jni/interpolator.cpp",
+      "sha256": "f1611e09262e9e3fbe6283d2446be2982d98d101e6f68f02a18b74cce218ecf5",
+      "bytes": 7976
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/colorizer.cpp",
+      "sha256": "844fa734d1e8abf1132ed8fbd4ed038a199bf34aacee89d4551f4f1ea8db5755",
+      "bytes": 1344
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/dain_layers.cpp",
+      "sha256": "dc3241ad50b8b9f685a4a78a067ef8760049a22959275402f97ea4908fd9224d",
+      "bytes": 17978
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/dain_layers.h",
+      "sha256": "48404b3c5ad58b9615496762299946cc51fe90e8d16c2c886d74a2768cdbeac8",
+      "bytes": 3664
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/enlarger.cpp",
+      "sha256": "a91d36f7789e7eead8451661833958fd1153d5105b7a8ad428ddd2930d41b3ba",
+      "bytes": 10260
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/flavr.cpp",
+      "sha256": "3c5120de8f190310faf1b8bedfbce95a1ba63e6383f0adffbdb0bd04b8a33802",
+      "bytes": 3912
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/networks.cpp",
+      "sha256": "e5bbf07df3f61ad92a8bf60eba74b5bac1e71c2d86b3b47976b60b18b1d7872a",
+      "bytes": 13599
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/networks.h",
+      "sha256": "77e5e7c54ade6ae08a09c012553f293691d2dc33fbce6b8c500c1a79b4d4fdae",
+      "bytes": 6848
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/pair_networks.cpp",
+      "sha256": "53d895317682fc7528b55b7b9fb5b63c869ab5df8437f31af86ef7462c3b3714",
+      "bytes": 7167
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/shaders.cpp",
+      "sha256": "b3daebba8f349e59aae4cb602c4c400c2bcf1b91f3724c00b8a86b7f76897f9a",
+      "bytes": 720
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/shaders.h",
+      "sha256": "d9f70fc5afed3f1dde51192d49a4ec61d66f6bf1fe38c862bfd033677fdb4e0f",
+      "bytes": 624
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/warp_layer.cpp",
+      "sha256": "cb27ba46e319023e6391e2db699ffd0238880c123cf299d99d91fa6d07e74dd0",
+      "bytes": 3352
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/warp_layer.h",
+      "sha256": "8a1119b1a0547b34bf57e20fbc293f3a6293904285159641aedae7cbd70adbc9",
+      "bytes": 1273
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "native/src/xvfi.cpp",
+      "sha256": "7d8f2ab84972d596d95cfeb1e0dc6bee1b7f024421e1fc61c1c6a41bb97980d1",
+      "bytes": 13658
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "stage/src/main/glsl/ncnn/warp.comp",
+      "sha256": "bfd2fdb67f91c48d15db4c94e635d23fcd751db2a5f1f905e04c8dc2bee0f4a6",
+      "bytes": 2221
+    },
+    {
       "repository": "Hawkynt/PB-Compiler",
       "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
       "path": "LICENSE",

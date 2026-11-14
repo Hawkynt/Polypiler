@@ -1,0 +1,25 @@
+id: TYPES.i8
+title: Signed 8-bit integer
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-INT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: integer
+  parameters: []
+  bits: 8
+  signedness: signed
+  overflow: wrap
+  layout: {sizeBytes: 1, alignment: 1, byteOrder: target}
+  distinctFrom: []
+  values:
+    - {bits: "0x00", value: "0"}
+    - {bits: "0x01", value: "1"}
+    - {bits: "0x7F", value: "127"}
+    - {bits: "0x80", value: "-128"}
+    - {bits: "0xFF", value: "-1"}

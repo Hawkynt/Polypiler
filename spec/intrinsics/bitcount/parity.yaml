@@ -1,0 +1,30 @@
+id: INTRINSICS.Parity
+title: Parity
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITCOUNT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Parity
+  group: BitCount
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: parity, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "PopCount(value) mod 2: 1 when the bit pattern of value has an odd number of 1 bits, else 0"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 5-2"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: [0]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000007"], outputs: [1]}
+    - {types: {T: TYPES.u8}, inputs: ["0xFF"], outputs: [0]}
+    - {types: {T: TYPES.i64}, inputs: [-1], outputs: [0]}
+  facts: {resultRange: [0, 1]}

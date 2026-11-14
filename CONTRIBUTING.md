@@ -59,6 +59,14 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   Every entry of a `THIRD_PARTY_NOTICES.md` (one per `## ` section) or `THIRD-PARTY-NOTICE.<Name>.txt`
   (one per file) there carries the lines `Origin: <owner/repo@sha:path or URL>` and
   `Licence: <SPDX expression>`, one pair per work it records.
+- An adapter compiles, links or loads an upstream file only when its licence audit
+  (`spec/adapters/<adapter>/licence-audit.yaml`, format
+  [`spec/schemas/adapter-audit.schema.json`](spec/schemas/adapter-audit.schema.json)) records it as
+  `usable`: one record per file with its digest at the pin, licence, origin and the notice that says
+  so, and one entry per provider or set of weights fetched from elsewhere.
+  `polypiler-tooling catalog audit-adapter --audit <file> [--touch <path>]...` holds the audit against
+  the imported corpus and refuses a touched path without a usable record (`PLY0950`); a model, a
+  restricted asset of the policy, needs the audit's clearance granted as well.
 - Generated and foreign code is built and run only through the cross-language runner
   (`Polypiler.Core.Verification/Running`), under the limits of
   [`tooling/ci/runner.yaml`](tooling/ci/runner.yaml). On Linux with a working `bwrap` (bubblewrap) the

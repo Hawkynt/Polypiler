@@ -1,0 +1,30 @@
+id: INTRINSICS.Log2
+title: Integer base-2 logarithm
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITCOUNT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Log2
+  group: BitCount
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: position, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the position of the highest 1 bit of the bit pattern of value, width - 1 - LeadingZeroCount(value); 0 when value is 0"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 5-3"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: [0]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000001"], outputs: [0]}
+    - {types: {T: TYPES.u32}, inputs: ["0x80000000"], outputs: [31]}
+    - {types: {T: TYPES.i32}, inputs: [-1], outputs: [31]}
+    - {types: {T: TYPES.u64}, inputs: ["0x00000000000003E8"], outputs: [9]}

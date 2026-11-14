@@ -1,0 +1,59 @@
+id: RECOGNITION.O0125
+title: Recognize multiplication by a constant from shift-add and shift-subtract chains
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#572"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeMultiply.cs
+  - tests/fixtures/prototype/recognize/multiply.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A sum or difference of shifted copies of one value MUST become a wrapping multiplication by the
+  constant they add up to, only with wrapping arithmetic and a factor that is not 0, 1, -1 or a power
+  of two. The prototype rule O0125ShiftAddMultiply in Polypiler.Core.Recognize matches the structured
+  IR of Polypiler.Core.IR, not the typed SSA IR: pattern.before and replacement.after are written in
+  that structured form, and matching typed SSA graphs belongs to REC-ENGINE (#276).
+  RecognitionFixtureTests is the evidence the prototype has: it checks that the rule fires exactly on
+  the marked functions of its fixtures, that --disable-opt O0125 keeps it from firing, and that the IR
+  interpreter computes the same before and after the rule - result, kind of trap and the arrays a trap
+  leaves behind - for every value of each 8- and 16-bit parameter and for the edges and 10 000 random
+  tuples of the wider ones. The proof obligations below are planned and not discharged yet: exhaustive
+  checks with VER-EXHAUSTIVE (#70), bit-vector proofs with VER-SMT (#71). The prototype knows only the
+  levels default, where the rule is on, and none; the optLevels name the levels of the target state.
+  The document stays a draft until its obligations are discharged.
+spec:
+  optimization: O0125
+  level: typed-ssa
+  pattern:
+    before: "%r = Add.i32 Shl.i32(%x, 3), Shl.i32(%x, 1)"
+    bindings:
+      - {name: x, role: "multiplied value"}
+  replacement:
+    after: "%r = Mul.i32[wrap] %x, 10"
+    introduces: [IR.mul]
+  preconditions:
+    - {id: one-value, text: "every term is a shift of the same value", fact: none}
+    - {id: wrapping, text: "only wrapping arithmetic takes part; an operation that traps is a value of its own", fact: effect}
+    - {id: factor, text: "the factor is not 0, 1, -1 or a power of two, which stay a shift or a negation", fact: range}
+    - {id: has-sum, text: "the expression holds an addition or a subtraction", fact: none}
+    - {id: trap-free, text: "the multiplied value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: shift-add-8, class: exhaustive-8bit, widths: [8]}
+    - {id: shift-add-16, class: exhaustive-16bit, widths: [16]}
+    - {id: shift-add-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "trapping arithmetic"
+      input: "x = 0x0CCCCCCD, i32, checked((x << 3) + (x << 1))"
+      naive: "trap overflow"
+      correct: "0x80000002"
+    - description: "two different values"
+      input: "x = 1, y = 0, i32, (x << 3) + (y << 1)"
+      naive: "0x00000008"
+      correct: "0x0000000A"
+  switch: "--disable-opt O0125"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0125-shift-add-multiply-recognition.md

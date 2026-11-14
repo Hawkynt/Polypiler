@@ -46,6 +46,14 @@ public sealed class BenchmarkRunner(ICrossLanguageRunner runner, BenchmarkHost h
   /// <summary>The placeholder of the repository root in the build and run arguments.</summary>
   public const string RootPlaceholder = "{root}";
 
+  /// <summary>
+  /// The least wall time the one step of a <c>dotnet</c> benchmark gets. That step is a whole
+  /// BenchmarkDotNet run, pilot, warm-up and every iteration, not one program run, and on a Windows
+  /// runner even the short in-process job of <c>cli-startup</c> takes about the 60 s of
+  /// <see cref="RunLimits.Default"/>. A host that allows more keeps its own limits.
+  /// </summary>
+  public static readonly TimeSpan DotNetWallTime = TimeSpan.FromMinutes(10);
+
   /// <summary>Measures a variant.</summary>
   /// <param name="definition">The benchmark.</param>
   /// <param name="variant">The variant's name.</param>
@@ -69,7 +77,11 @@ public sealed class BenchmarkRunner(ICrossLanguageRunner runner, BenchmarkHost h
     var build = definition.Build is { } arguments ? new[] { new ProcessSpec(definition.Toolchain, this.Expand(arguments)) { Environment = variant.Environment } } : [];
     var execute = new ProcessSpec(definition.Toolchain, this.Expand([.. definition.Run, .. variant.Arguments]), stdin) { Environment = variant.Environment };
     var collect = definition.Kind == BenchmarkKind.DotNet ? [.. definition.Sizes.Binary, BenchmarkDotNetExport.ResultsFolder] : definition.Sizes.Binary;
-    var plan = new RunPlan(files, build, execute, host.Limits, TrustLevel.Trusted) { Collect = collect };
+    var limits = host.Limits;
+    if (definition.Kind == BenchmarkKind.DotNet && limits.WallTime < DotNetWallTime)
+      limits = new RunLimits(DotNetWallTime, limits.MemoryBytes, limits.OutputBytes, limits.Processes);
+
+    var plan = new RunPlan(files, build, execute, limits, TrustLevel.Trusted) { Collect = collect };
     var count = definition.Kind == BenchmarkKind.DotNet ? 1 : definition.Warmup + definition.Runs;
     var warmup = definition.Kind == BenchmarkKind.DotNet ? 0 : definition.Warmup;
 

@@ -1,0 +1,31 @@
+id: INTRINSICS.ILogB
+title: Binary exponent
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ILogB
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}]
+  returns: [{name: exponent, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the unbiased binary exponent of x, floor(log2(|x|)); the smallest TYPES.i32 for a zero, the largest for an infinity or a NaN"
+    source: "IEEE Std 754-2019, section 5.3.3 (logB); .NET API reference, System.Math.ILogB"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x4020000000000000"], outputs: [3]}
+    - {types: {F: TYPES.f64}, inputs: ["0x3FE8000000000000"], outputs: [-1]}
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000000"], outputs: [-2147483648]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF0000000000000"], outputs: [2147483647]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF8000000000000"], outputs: [2147483647]}
+    - {types: {F: TYPES.f32}, inputs: ["0x00000001"], outputs: [-149]}
