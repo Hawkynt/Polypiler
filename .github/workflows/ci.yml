@@ -206,3 +206,64 @@ jobs:
           start=$(date +%s%N)
           node tooling/bitperm/export.mjs --page "$PAGE" --out tests/fixtures/bitperm --check --expect-blocks 16 --expect-presets 25 --expect-tests 51
           echo "export wall time: $(( ($(date +%s%N) - start) / 1000000 )) ms"
+
+  # The Kotlin/Java layer of PRD §7.3 (tooling/ci/layers/jvm.yaml): the JDK and the Kotlin compiler at
+  # the versions tooling/toolchains.lock pins, as `ci env` prints them, and the acceptance tests that
+  # compile Java and Kotlin with warnings as errors, run them on that JDK and compare their outputs.
+  # The JDK is Temurin's: a lock version without a dot is the GA release, which setup-java names x.0.0.
+  # kotlinc goes to /opt, outside the home and /tmp that the runner's sandbox hides from its steps.
+  layer-jvm:
+    name: layer-jvm ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer jvm > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          jdk=$(sed -n 's/^jdk=//p' "$RUNNER_TEMP/toolchains.env")
+          [[ "$jdk" == *.* ]] || jdk="$jdk.0.0"
+          echo "temurin=$jdk" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.env.outputs.temurin }}
+      - name: install kotlinc
+        env:
+          KOTLINC: ${{ steps.env.outputs.kotlinc }}
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/kotlinc.zip" "https://github.com/JetBrains/kotlin/releases/download/v$KOTLINC/kotlin-compiler-$KOTLINC.zip"
+          sudo unzip -q "$RUNNER_TEMP/kotlinc.zip" -d /opt
+          echo /opt/kotlinc/bin >> "$GITHUB_PATH"
+      - name: toolchains
+        run: $TOOLING toolchains probe --only jdk,kotlinc
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance -c Release --no-build --filter "TestCategory=Layer.jvm" --logger "console;verbosity=normal" --logger trx --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-jvm-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn

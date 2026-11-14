@@ -455,6 +455,11 @@ the tests read), runs every test that belongs to no other layer
 (`--filter "TestCategory!~Layer.|TestCategory=Layer.core"`) and the `IrVerifier` category, and runs
 `polypiler-tooling spec validate` and `ci audit`. The `ci` job keeps the build, the README checks and
 the coverage report of the shared workflow, without running the tests a second time.
+`layer-jvm` installs the pinned JDK (Temurin) and `kotlinc`, and runs `TestCategory=Layer.jvm`: Java
+compiled with `javac -Xlint:all -Werror`, Kotlin with `kotlinc -Werror -include-runtime`, both run
+on the pinned JDK's `java` and their outputs compared byte for byte (`Infra/Ci/JvmCommands.cs`).
+Locally, a toolchain under your home or `/tmp` is hidden by the bubblewrap sandbox except for its
+`bin` folder; install `kotlinc` elsewhere for these tests.
 
 - **Every test of `Polypiler.Tests.Acceptance` names its layer**: `[Layer("core")]` on its class, or
   the tag `@Layer.core` on its feature file, exactly one.
