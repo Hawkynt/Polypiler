@@ -222,6 +222,12 @@ public static partial class JavaScriptEmitter {
     private readonly List<Diagnostic> _problems = [];
     private readonly Dictionary<string, IrLocal> _taken = [];
     private readonly Dictionary<IrLocal, string> _renamed = [];
+
+    /// <summary>The names of the functions and constants of the module, which no renamed local may take.</summary>
+    private readonly HashSet<string> _members = [];
+
+    /// <summary>Every name a <c>let</c> of the function being written may not take when it is renamed.</summary>
+    private readonly HashSet<string> _names = [];
     private object _construct = "the module";
     private bool _previous;
     private bool _halves;
@@ -276,6 +282,7 @@ public static partial class JavaScriptEmitter {
     /// </summary>
     public JsProgram Module(IrModule module) {
       var functions = new List<JsStatement>();
+      this._members.UnionWith(module.Functions.Select(function => this.Name(function.Name)).Concat(module.Constants.Select(constant => this.Name(constant.Name))));
       foreach (var function in module.Functions)
         functions.Add(this.Function(function));
 
@@ -399,6 +406,9 @@ public static partial class JavaScriptEmitter {
       this._construct = $"the function '{function.Name}'";
       this._taken.Clear();
       this._renamed.Clear();
+      this._names.Clear();
+      this._names.UnionWith(this._members);
+      this._names.UnionWith(function.Parameters.Concat(function.Locals).Select(variable => this.Name(variable.Name)));
       foreach (var parameter in function.Parameters)
         this._taken[this.Name(parameter.Name)] = parameter;
 
@@ -446,18 +456,25 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>
-    /// The name a declared local is written with. A <c>let</c> belongs to its block and keeps its
-    /// name. A <c>var</c> belongs to its function, so a local that is declared while another one of
-    /// its name is visible gets a name of its own: the two would otherwise be one variable.
+    /// The name a declared local is written with. A <c>var</c> belongs to its function, so a local
+    /// that is declared while another one of its name is visible gets a name of its own: the two would
+    /// otherwise be one variable. A <c>let</c> belongs to its block, where it would hide the other one
+    /// from every read in the block, its own initializer included; it becomes <c>&lt;name&gt;_&lt;k&gt;</c>
+    /// with the smallest <c>k</c> that no other name of the function or the module has, the rule of
+    /// the C# backend. A local nothing of its name is visible to keeps its name.
     /// </summary>
     private string Declare(IrLocal local) {
       var name = this.Name(local.Name);
-      if (this.Native("let"))
-        return name;
-
       var chosen = name;
-      for (var number = 1; this._taken.ContainsKey(chosen); ++number)
-        chosen = $"{name}${number}";
+      if (!this.Native("let"))
+        for (var number = 1; this._taken.ContainsKey(chosen); ++number)
+          chosen = $"{name}${number}";
+      else if (this._taken.ContainsKey(name)) {
+        var number = 0;
+        do
+          chosen = $"{name}_{++number}";
+        while (!this._names.Add(chosen));
+      }
 
       this._taken[chosen] = local;
       this._renamed[local] = chosen;
