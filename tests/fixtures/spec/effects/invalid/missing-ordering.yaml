@@ -1,0 +1,21 @@
+id: EFFECTS.missing-ordering
+title: Effect without ordering
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-EFFECTS
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: missing-ordering
+  class: private-memory
+  duplication: forbidden
+  elimination: forbidden
+  reads: []
+  writes: []
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

@@ -1,0 +1,21 @@
+id: EFFECTS.missing-elimination
+title: Effect without elimination
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-EFFECTS
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: missing-elimination
+  class: private-memory
+  ordering: strict
+  duplication: forbidden
+  reads: []
+  writes: []
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

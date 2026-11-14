@@ -1,0 +1,22 @@
+id: EFFECTS.mmio
+title: Access to a memory-mapped device register
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-EFFECTS
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: mmio
+  class: mmio
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: [io]
+  writes: [io]
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}
