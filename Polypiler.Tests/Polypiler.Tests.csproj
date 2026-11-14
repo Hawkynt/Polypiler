@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FsCheck" Version="3.6.0" />
     <PackageReference Include="Gherkin" Version="35.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />
@@ -35,6 +36,11 @@
     <Compile Include="..\Polypiler.Tests.Acceptance\Support\CommandLine.cs" LinkBase="Support\Acceptance" />
     <Compile Include="..\Polypiler.Tests.Acceptance\Support\FeatureFiles.cs" LinkBase="Support\Acceptance" />
     <Compile Include="..\Polypiler.Tests.Acceptance\Support\Slug.cs" LinkBase="Support\Acceptance" />
+  </ItemGroup>
+
+  <!-- The property harness is shared with the acceptance tests as source. -->
+  <ItemGroup>
+    <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
   </ItemGroup>
 
   <ItemGroup>
