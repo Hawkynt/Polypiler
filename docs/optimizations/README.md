@@ -7,7 +7,7 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**17 of 290 implemented** - as prototypes in the pass pipeline of `translate` (#1307), proven by exhaustive and random testing; their full target states stay open.
+**19 of 292 implemented** - as prototypes in the pass pipeline of `translate` (#1307) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
 
 ## General passes
 
@@ -346,3 +346,11 @@ maps every one of its optimization documents to the page here that covers it.
 - [ ] [O0460](O0460-ascii-case-folding.md) — Fold case conversion of a constant whose code units are all 7-bit ASCII (P4)
 - [ ] [O0461](O0461-number-text-round-trip.md) — Cancel an integer-to-text-to-number round trip whose intermediate text is unobservable (P4)
 - [ ] [O0462](O0462-search-algorithm-selection.md) — Select the substring search by what is known about the needle (P4)
+
+## Target emission
+
+Passes over the syntax tree a backend builds of its target language, between building it and printing
+it ([backends](../architecture/BACKENDS.md)); their numbers share the namespace of the IR rules.
+
+- [x] [O0500](O0500-target-helper-inlining.md) — Inline single-expression helpers into their call sites in the target syntax tree (P2)
+- [x] [O0501](O0501-target-unused-declaration-removal.md) — Remove helpers and private constants that nothing in the target syntax tree references (P2)

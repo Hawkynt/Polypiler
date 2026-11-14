@@ -24,6 +24,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Exit codes](cli/exit-codes.md) — the exit code of every failure category of `polypiler`, generated from the code; `polypiler help exit-codes` prints the same table.
 - [Value records](reference/records.md) — structs, record structs and fixed-shape object literals: their value semantics, what each frontend imports and how each profile writes them.
 - [Error catalogue](errors/README.md) — every diagnostic code with its severity, exit code, cause and what to do, generated from `spec/diagnostics.yaml` by `polypiler-tooling report errors`.
+- [Backends: tree, passes, printer](architecture/BACKENDS.md) — the syntax tree each backend builds of its language, the target passes over it and the printer that writes it; how to add a capability row or a pass.
 
 ## Work-item readiness
 
