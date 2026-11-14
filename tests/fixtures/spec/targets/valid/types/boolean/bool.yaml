@@ -1,0 +1,21 @@
+id: TYPES.bool
+title: Truth value
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#61"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: boolean
+  parameters: []
+  bits: 1
+  signedness: none
+  layout: {sizeBytes: 1, alignment: 1, byteOrder: target}
+  distinctFrom: []
+  values:
+    - {bits: "0x0", value: "0"}
+    - {bits: "0x1", value: "1"}

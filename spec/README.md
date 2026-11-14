@@ -234,3 +234,32 @@ rules `layout` (the folder is `spec.family`, the ID follows from the file name),
 and mbf; `nan` for float, posit and mbf; `subnormals` for float and mbf; `lanes` exactly for vector;
 `encoding` exactly for encoded-integer; signedness `none` only for boolean, text and custom). The seed
 documents are the scalar types of the IR: `bool`, `i8` … `u64`, `f32` and `f64`.
+
+## Family `targets`
+
+`spec/targets/<language identifier>/<profile>/target.yaml`, ID `TARGETS.<language identifier>.<profile>`:
+one target profile, the one `--target-profile` selects, with its `abi` (`name`, `byteOrder`,
+`pointerBits`), `pointers`, `unions`, `physicalTypes` (each `TYPES.` ID with its native spelling and
+whether generated code needs a helper for it), `alignment`, `simd` features, `limits`, runtime
+`dependencies` (SPDX licence) and `packaging` (PRD §4.1, §4.7). The document states facts about the
+target; choosing native or helper for a program stays with the legalizer.
+[`schemas/targets.schema.json`](schemas/targets.schema.json) is the body. Rules (`PLY0046`):
+
+| Rule | What it requires |
+| --- | --- |
+| `layout` | the path has the form above and the ID follows from it (nothing else is checked otherwise); `language` is `LANGUAGES.<first folder>` and `profile` the second folder |
+| `pointer-consistency` | `pointers: native` has `abi.pointerBits` above 0; `none` and `fat` have 0 |
+| `limit-order` | `limits.exactIntegerBits` does not exceed `limits.maxIntegerBits` |
+| `toolchain-known` | `toolchain` is a key of `tooling/toolchains.lock` |
+| `type-fits-target` | an `integer` type mapped with `helper: false` is not wider than `limits.maxIntegerBits` |
+| `unique-type` | each type is listed once in `physicalTypes` |
+| `unique-target` | no earlier document in path order has the same `language` and `profile` |
+
+`language` and every physical `type` resolve or fail with `PLY0043`. `maxIntegerBits` is the widest
+fixed-width integer the target computes with natively, `exactIntegerBits` the widest integer its
+default number type holds exactly. The seed is one target per profile the backends write, with the
+toolchain of the language profile of the same name: C# `net2.0` … `net10.0` (verifiable code, so no
+pointers; explicit struct layout gives native unions; every scalar type native) and JavaScript `es5` …
+`es2022` (from ECMA-262: a Number holds integers exactly up to 2^53; `BigInt` makes 64-bit integers
+native from ES2020, below that they are a `{ hi, lo }` pair behind a helper; `Math.fround` makes `f32`
+native from ES2015). The fixtures are in `tests/fixtures/spec/targets/`.
