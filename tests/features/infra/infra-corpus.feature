@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Corpus importer with locked manifest and fixture discovery
 
   Scenario: A pinned fixture is imported byte for byte

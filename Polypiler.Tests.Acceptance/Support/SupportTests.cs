@@ -17,6 +17,7 @@ namespace Polypiler.Tests.Acceptance.Support;
 /// lines, the escapes of file content, the workspace and the observer port.
 /// </summary>
 [TestFixture]
+[Layer("core")]
 public sealed class SupportTests {
 
   private static readonly string _root = PrototypeFixture.RepositoryRoot;
@@ -39,7 +40,7 @@ public sealed class SupportTests {
     Assert.That(generated, Is.EquivalentTo(expected));
   }
 
-  /// <summary>Test design 5 and 6: a slow-tier tag is the NUnit category of the same name; every generated test is also in <c>Acceptance</c>.</summary>
+  /// <summary>Test design 5 and 6: a slow-tier tag and a layer tag are the NUnit category of the same name; every generated test is also in <c>Acceptance</c>.</summary>
   [Test]
   public void Tags_BecomeCategories() {
     string[] tiers = ["Slow", "EndToEnd", "OsIntegration", "ExternalInterop", "PolyglotInterop", "Performance"];
@@ -49,7 +50,7 @@ public sealed class SupportTests {
       var path = FeatureFiles.Under(_root, "tests/features").Single(candidate => FeatureFiles.TitleOf(FeatureFiles.Parse(Path.Combine(_root, candidate))) == title);
       var tags = FeatureFiles.Parse(Path.Combine(_root, path)).Feature.Tags.Select(tag => tag.Name.TrimStart('@')).ToList();
       var categories = feature.GetCustomAttributes<CategoryAttribute>().Select(category => category.Name).ToList();
-      Assert.That(categories, Is.EquivalentTo(tags.Where(tiers.Contains)), title);
+      Assert.That(categories, Is.EquivalentTo(tags.Where(tag => tiers.Contains(tag) || tag.StartsWith("Layer.", StringComparison.Ordinal))), title);
     }
   }
 

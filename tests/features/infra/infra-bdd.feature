@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Feature files are bound to NUnit
 
   Scenario: A command line runs in-process and its result is observable

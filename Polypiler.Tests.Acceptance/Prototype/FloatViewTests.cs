@@ -17,6 +17,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// translated to every profile of both backends, against .NET. A stored NaN is compared by class (ADR 0005).
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
 public sealed class FloatViewTests {
 
   private static readonly bool[] _overflowChecking = [false, true];

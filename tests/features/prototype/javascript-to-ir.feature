@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Import JSDoc-typed JavaScript
 
   Scenario Outline: Cipher's rotates import and behave like the original

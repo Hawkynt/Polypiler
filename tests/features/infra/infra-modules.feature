@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Module projects and dependency direction
 
   Scenario: The repository satisfies its own module rules

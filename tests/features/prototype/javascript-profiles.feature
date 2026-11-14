@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: JavaScript output for a concrete target
 
   Scenario Outline: The same algorithm runs at every language level

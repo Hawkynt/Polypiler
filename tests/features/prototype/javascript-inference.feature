@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Identify data types of untyped JavaScript
 
   Scenario Outline: An unannotated checksum is imported with integer types

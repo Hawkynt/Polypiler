@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: The complete floating-point operation set
 
   Scenario Outline: In strict mode every target returns the same bits

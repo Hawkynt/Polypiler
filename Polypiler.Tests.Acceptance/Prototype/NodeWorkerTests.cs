@@ -13,6 +13,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// request - the worker is replaced and the next request passes.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
 public sealed class NodeWorkerTests {
 
   private static readonly PrototypeCall[] _calls = [new("f", [20]), new("f", [-3])];

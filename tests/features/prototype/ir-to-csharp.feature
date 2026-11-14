@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Emit the prototype IR as C#
 
   Scenario Outline: A fixture survives the round trip C# to IR to C#

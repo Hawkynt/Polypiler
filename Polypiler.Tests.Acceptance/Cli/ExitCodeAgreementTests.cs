@@ -16,6 +16,7 @@ namespace Polypiler.Tests.Acceptance.Cli;
 /// with the code of each category its own commands reach, as it does in process.
 /// </summary>
 [TestFixture, Category("EndToEnd")]
+[Layer("core")]
 public sealed class ExitCodeAgreementTests {
 
   private static readonly Dictionary<string, string> _noVariables = [];

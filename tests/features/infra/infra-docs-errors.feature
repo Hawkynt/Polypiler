@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Error catalogue generated from the diagnostics registry
 
   @EndToEnd

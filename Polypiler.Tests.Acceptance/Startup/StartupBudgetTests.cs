@@ -17,6 +17,7 @@ namespace Polypiler.Tests.Acceptance.Startup;
 /// line writes in process.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("Performance"), NonParallelizable]
+[Layer("core")]
 public sealed class StartupBudgetTests {
 
   private const int Runs = 5;

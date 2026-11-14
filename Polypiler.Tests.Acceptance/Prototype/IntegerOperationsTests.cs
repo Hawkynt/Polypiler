@@ -17,6 +17,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// by node, and the interpreter runs the imported IR.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
 public sealed class IntegerOperationsTests {
 
   private static readonly bool[] _overflowChecking = [false, true];

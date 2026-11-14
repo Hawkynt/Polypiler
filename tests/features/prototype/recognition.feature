@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Spelled-out bit idioms become the target's own operations
   The pass pipeline runs between the frontend and the backend: recognition rules turn rotates,
   counts, byte swaps, bit tests, min/max/abs/sign/clamp and endian loads and stores written out by

@@ -11,6 +11,7 @@ namespace Polypiler.Tests.Acceptance.Cli;
 /// executable does not have, so the lines here use only what both have.
 /// </summary>
 [TestFixture, Category("EndToEnd")]
+[Layer("core")]
 public sealed class FoundationAgreementTests {
 
   [TestCase]

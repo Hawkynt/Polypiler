@@ -24,6 +24,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </para>
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
 public sealed class JavaScriptProfileTests {
 
   /// <summary>What the compiled fixture does for every call of a fixture, computed once for all profiles.</summary>

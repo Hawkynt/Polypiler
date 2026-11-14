@@ -16,6 +16,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// that differ in nothing but the output directory.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
 public sealed class InProcessTranslationTests {
 
   private string _directory = "";

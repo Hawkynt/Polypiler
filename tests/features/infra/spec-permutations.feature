@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Schema and validator for spec/permutations/
 
   Scenario: The valid document passes
