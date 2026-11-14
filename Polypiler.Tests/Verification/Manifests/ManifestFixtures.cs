@@ -26,8 +26,8 @@ internal static class ManifestFixtures {
   /// <summary>The full path of a fixture.</summary>
   public static string PathOf(string name) => Path.Combine(PrototypeFixture.RepositoryRoot, Folder, name);
 
-  /// <summary>The text of a fixture.</summary>
-  public static string Text(string name) => File.ReadAllText(PathOf(name));
+  /// <summary>The text of a fixture, with LF line ends whatever the checkout made of them.</summary>
+  public static string Text(string name) => File.ReadAllText(PathOf(name)).ReplaceLineEndings("\n");
 
   /// <summary>A fixture as a tree to change.</summary>
   public static JsonObject Tree(string name) => JsonNode.Parse(Text(name))!.AsObject();
