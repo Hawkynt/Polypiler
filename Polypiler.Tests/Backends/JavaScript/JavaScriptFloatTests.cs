@@ -108,7 +108,7 @@ public sealed class JavaScriptFloatTests {
   [Test]
   public void TheOperationsThatTrap_AreHelpers() {
     var clamp = JavaScriptEmitter.Emit(FloatIntrinsics.Module(FloatOperationTable.Of(IrIntrinsicOp.Clamp)!, IrType.F64), JavaScriptProfile.Default).Single().Content;
-    Assert.That(clamp, Does.Contain("function $clamp(value, min, max)").And.Contain("return $clamp(p0, p1, p2);"));
+    Assert.That(clamp, Does.Contain("function $clamp(value, low, high)").And.Contain("return $clamp(p0, p1, p2);"));
     var round = JavaScriptEmitter.Emit(FloatIntrinsics.Module(FloatOperationTable.Of(IrIntrinsicOp.RoundDigits)!, IrType.F32, 3), JavaScriptProfile.Parse("es5")).Single().Content;
     Assert.That(round, Does.Contain("function $roundd32(value, digits, mode)").And.Contain("$roundd32(p0, p1, 3)").And.Contain("$fround("));
   }

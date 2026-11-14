@@ -36,7 +36,7 @@ internal static partial class JavaScriptHelpers {
     "$sx64", "$ul2d", "$l2d", "$d2l",
     "$f2i", "$f2l", "$f2ic", "$f2lc", "$f32", "$ul2f", "$l2f",
     "$get", "$set", "$new", "$fill", "$abs", "$abs64", "$min64", "$max64", "$smin64", "$umin64", "$smax64", "$umax64",
-    "$sign64", "$fsign", "$round", "$rounda", "$clamp", "$roundd", "$roundd32", "$rotl", "$rotr", "$rotl64", "$rotr64",
+    "$sign64", "$fsign", "$round", "$rounda", "$roundd", "$roundd32", "$rotl", "$rotr", "$rotl64", "$rotr64",
     "$pop", "$pop64", "$clz64", "$ctz", "$ctz64", "$view", "$bits64", "$bits32", "$float64", "$float32", "$key64",
     "$copy", "$copya", "$step", "$stepi", "$stepf", "$step64", "$stepck", "$stepck64s", "$stepck64u", "$len",
     .. IntegerOrder
@@ -502,12 +502,6 @@ internal static partial class JavaScriptHelpers {
     "$sign64" => native("BigInt")
       ? Lines("function $sign64(value) {", "  return value < 0n ? -1 : value > 0n ? 1 : 0;", "}")
       : Lines("function $sign64(value) {", "  return value.hi >= 2147483648 ? -1 : (value.hi | value.lo) !== 0 ? 1 : 0;", "}"),
-    "$clamp" => """
-      function $clamp(value, min, max) {
-        if (min > max) throw new RangeError("invalid operation");
-        return value < min ? min : value > max ? max : value;
-      }
-      """,
     "$roundd" => """
       function $roundd(value, digits, mode) {
         if (digits < 0 || digits > 15) throw new RangeError("invalid operation");

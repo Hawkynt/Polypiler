@@ -63,7 +63,8 @@ public sealed class IntegerOperationsTests {
     Assert.That(IrOperators.Accepts(IrIntrinsicOp.Min, IrType.F32, [IrType.F32, IrType.F32]), Is.True);
     Assert.That(IrOperators.Accepts(IrIntrinsicOp.Sign, IrType.I32, [IrType.F32]), Is.True);
     Assert.That(IrOperators.Accepts(IrIntrinsicOp.Abs, IrType.Bool, [IrType.Bool]), Is.False);
-    Assert.That(IrOperators.Accepts(IrIntrinsicOp.Clamp, IrType.F64, [IrType.F64, IrType.F64, IrType.F64]), Is.False);
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.Clamp, IrType.F64, [IrType.F64, IrType.F64, IrType.F64]), Is.True, "the floating-point operations have the clamp too");
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.Clamp, IrType.F64, [IrType.F64, IrType.F64, IrType.F32]), Is.False);
     Assert.That(IrOperators.Accepts(IrIntrinsicOp.PopCount, IrType.I32, [IrType.F64]), Is.False);
     Assert.That(IrOperators.Accepts(IrIntrinsicOp.Min, IrType.I32, [IrType.I32, IrType.U32]), Is.False);
     Assert.That(IrOperators.Accepts(IrIntrinsicOp.Abs, IrType.I32, []), Is.False);
