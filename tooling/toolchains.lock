@@ -16,7 +16,11 @@
 #               two probe as Mismatch.
 #   gcc, mpfr, gmp
 #               the versions tests/vectors/float/generate/versions.txt records for the reference
-#               vectors (gcc 16.2.1, MPFR 4.2.2, GMP 6.3.0).
+#               vectors (gcc 16.2.1, MPFR 4.2.2, GMP 6.3.0). gcc is used on Linux only: the `gcc`
+#               of a macOS runner is Apple's clang and the one of a Windows runner MinGW's, so the
+#               native layer (tooling/ci/layers/native.yaml) builds with clang there. The layer's
+#               Linux job takes gcc, clang and bubblewrap at these versions from the Arch Linux
+#               archive snapshot of 2026-10-25, the only hosted source of gcc 16.2.1.
 #   git         the development host's git (2.56.0), which imported the corpus lock
 #               (polypiler-tooling corpus import); no CI step probes it yet.
 #   NuGet       acornima, roslyn and the ref-* reference assemblies are the versions the project
@@ -98,7 +102,7 @@ toolchains:
     version: "16.2.1"
     probe: [gcc, -dumpfullversion]
     versionPattern: '^(?<version>\d+\.\d+\.\d+)$'
-    platforms: [linux, windows, macos]
+    platforms: [linux]
     licence: GPL-3.0-or-later WITH GCC-exception-3.1
     source: https://gcc.gnu.org/releases.html
   git:
