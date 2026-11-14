@@ -728,7 +728,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       throw new UnsupportedException(expression, $"the static readonly array '{table.Constant.Name}' used as a value");
 
     var converted = this.Map(info.ConvertedType, expression);
-    return converted.IsView ? ToView(natural, converted) : Convert(natural, converted);
+    return converted.IsView || converted.IsMemory ? ToView(natural, converted) : Convert(natural, converted);
   }
 
   /// <summary>
@@ -798,8 +798,10 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         return this.Interpolated(interpolated);
       case MemberAccessExpressionSyntax member when this.FieldOf(member) is { } field:
         return new IrFieldLoad(this.Value(member.Expression), field);
-      case BaseObjectCreationExpressionSyntax creation when type.IsView:
+      case BaseObjectCreationExpressionSyntax creation when type.IsView || type.IsMemory:
         return this.ViewCreation(creation, type);
+      case MemberAccessExpressionSyntax { Name.Identifier.Text: "Span" } member when this.ViewType(model.GetTypeInfo(member.Expression).Type, member) is { IsMemory: true } memory:
+        return new IrIntrinsic(IrIntrinsicOp.ViewOf, memory.Kind == IrTypeKind.Memory ? IrType.Span(memory.Element!) : IrType.ReadOnlySpan(memory.Element!), [this.Value(member.Expression)]);
       case MemberAccessExpressionSyntax { Name.Identifier.Text: "Length" or "IsEmpty" } member when this.ViewType(model.GetTypeInfo(member.Expression).Type, member) is not null:
         var length = new IrIntrinsic(IrIntrinsicOp.ViewLength, IrType.I32, [this.Read(member.Expression)]);
         return member.Name.Identifier.Text == "Length" ? length : new IrBinary(IrBinaryOp.Equal, length, new IrConst(IrType.I32, 0));

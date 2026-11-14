@@ -7,7 +7,8 @@ internal sealed partial class TypeInference {
 
   /// <summary>
   /// The type of an expression on strings, or <see langword="null"/> for one that is not: a string
-  /// literal or template, the code point a <c>for…of</c> over a string yields, an element and the
+  /// literal or template, the code point a <c>for…of</c> over a string yields - or the element one over a
+  /// typed array yields -, an element and the
   /// length of a string, and the result of a method of a string or of <c>String.fromCharCode</c>.
   /// </summary>
   private JsType? StringType(Node node) {
@@ -15,7 +16,11 @@ internal sealed partial class TypeInference {
       case StringLiteral or TemplateLiteral:
         return JsType.String;
       case ForOfStatement loop:
-        return this.Of(loop.Right).Kind == JsKind.String ? JsType.String : JsType.Unknown;
+        // A for...of over a typed array or a view yields its elements (#1325).
+        var iterated = this.Of(loop.Right);
+        return iterated.Kind == JsKind.String ? JsType.String
+          : iterated is { Kind: JsKind.Array, IsPlain: false } ? (iterated.Element!.Float == 32 ? JsType.F64 : iterated.Element!)
+          : JsType.Unknown;
       case MemberExpression member when this.Of(member.Object).Kind == JsKind.String:
         return member.Computed ? JsType.String : member.Property is Identifier { Name: "length" } ? JsType.I32 : JsType.Unknown;
       case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } callee }:

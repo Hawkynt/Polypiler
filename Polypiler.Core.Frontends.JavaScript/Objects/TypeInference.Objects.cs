@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Acornima.Ast;
 
@@ -8,9 +9,10 @@ internal sealed partial class TypeInference {
   /// <summary>
   /// Lets a value reach a member of an object, which the class of the object decides: a field takes
   /// what is stored or stepped into it, a setter's parameter what is assigned to the property, a
-  /// method's parameters what is passed. Says whether a type changed.
+  /// method's parameters what is passed. A view stored into a field escapes, and so does the view in the
+  /// variable it is read or cut from: both are memories. Says whether a type changed.
   /// </summary>
-  private bool ApplyMember(Flow flow) {
+  private bool ApplyMember(FunctionModel model, Flow flow) {
     switch (flow.Kind) {
       case FlowKind.FieldStore:
         var store = (AssignmentExpression)flow.Node;
@@ -19,8 +21,11 @@ internal sealed partial class TypeInference {
           return false;
 
         var value = Binder.Compound(store.Operator) is null ? this.Of(store.Right) : this.Combined(store);
-        if (owner.Field(key) is { } field)
-          return this.Reach(field.Variable, value, store.Right);
+        if (owner.Field(key) is { } field) {
+          var origin = value.IsView && Origin(store.Right) is Identifier read && model.Bindings.GetValueOrDefault(read) is Variable { Type.IsView: true } source
+            && this.Reach(source, value.Stored(), store.Right);
+          return this.Reach(field.Variable, value.Stored(), store.Right) | origin;
+        }
 
         return owner.Member(MemberKind.Setter, key) is { } setter && this.ModelOf(setter).Parameters.ElementAtOrDefault(0) is { Declared: null } parameter
           && this.Pass(parameter, value, store.Right);
@@ -35,6 +40,10 @@ internal sealed partial class TypeInference {
           && this.ModelOf(method).Parameters.ElementAtOrDefault(flow.Index) is { Declared: null } argument && this.Pass(argument, this.Of(flow.Node), flow.Node);
     }
   }
+
+  /// <summary>What a view is made of: the receiver of <c>subarray</c>, as often as it is called, and the expression itself otherwise.</summary>
+  private static Expression Origin(Expression view)
+    => view is CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: "subarray" } } part } ? Origin(part.Object) : view;
 
   /// <summary>The type of a property read of an object: a field, or the result of a getter; nothing for anything else.</summary>
   private JsType MemberType(ClassModel owner, MemberExpression member) {
