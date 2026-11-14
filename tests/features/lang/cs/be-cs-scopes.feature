@@ -1,3 +1,4 @@
+@EndToEnd
 Feature: Locals of one name in nested C# scopes
   C# forbids a local whose name a local of an enclosing block or a parameter already has, whichever
   of the two comes first in the text (CS0136); JavaScript and the IR allow it. The C# backend renames
