@@ -65,4 +65,14 @@ public sealed record RunResult(
   /// <summary>The directory the run worked in, which no longer exists; <see langword="null"/> when the run was refused before one was made.</summary>
   public string? WorkingDirectory { get; init; }
 
+  /// <summary>How long the build steps that ran took together; zero for a plan without build steps.</summary>
+  public TimeSpan BuildTime { get; init; }
+
+  /// <summary>
+  /// The files of <see cref="RunPlan.Collect"/> that existed when the run ended, by name relative to
+  /// the working directory with <c>/</c> between segments; a collected directory contributes every file
+  /// below it. Empty when nothing was collected.
+  /// </summary>
+  public IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Collected { get; init; } = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
+
 }

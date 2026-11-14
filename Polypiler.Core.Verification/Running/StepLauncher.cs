@@ -111,6 +111,8 @@ public static class StepLauncher {
     info.Environment.Clear();
     foreach (var (name, value) in Environment(executable, workingDirectory))
       info.Environment[name] = value;
+    foreach (var (name, value) in step.Environment)
+      info.Environment[name] = value;
 
     var capture = new OutputCapture(limits.OutputBytes);
     var clock = Stopwatch.StartNew();
