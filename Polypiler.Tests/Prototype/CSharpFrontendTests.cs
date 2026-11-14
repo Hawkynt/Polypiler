@@ -187,8 +187,8 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static void F(int[] a) { a ??= new int[1]; }", "CoalesceAssignmentExpression", 33, TestName = "coalescing assignment")]
   public void UnsupportedConstruct_IsRefusedWithItsPosition(string method, string what, int column) {
     var diagnostic = Refusal(PrototypeFixture.Wrap(method));
-    Assert.That(diagnostic, Is.EqualTo(new Diagnostic(
-      "PLY1002", DiagnosticSeverity.Error, $"'{what}' is not supported yet", "Snippet.cs", 1, column + 30)));
+    Assert.That(diagnostic, Is.EqualTo(CSharpFrontend.UnsupportedDescriptor.At(
+      $"'{what}' is not supported yet", "Snippet.cs", 1, column + 30)));
   }
 
   /// <summary>Every operation of the base library that has an exact meaning is one intrinsic, typed as the overload the compiler chose.</summary>
@@ -236,8 +236,8 @@ public sealed class CSharpFrontendTests {
   [TestCase("namespace N;\n", "a file that is not exactly one static class", 1, 1)]
   [TestCase("public static class C {\n  public static class Inner { }\n}", "a class member other than a static method or a constant", 2, 3)]
   public void FileShape_IsRefusedWithItsPosition(string source, string what, int line, int column)
-    => Assert.That(Refusal(source), Is.EqualTo(new Diagnostic(
-      "PLY1002", DiagnosticSeverity.Error, $"'{what}' is not supported yet", "Snippet.cs", line, column)));
+    => Assert.That(Refusal(source), Is.EqualTo(CSharpFrontend.UnsupportedDescriptor.At(
+      $"'{what}' is not supported yet", "Snippet.cs", line, column)));
 
   private static IrModule Import(string methods) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
 

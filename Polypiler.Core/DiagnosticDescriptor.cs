@@ -54,6 +54,22 @@ public sealed partial record DiagnosticDescriptor {
   /// <summary>The ID of the rule or specification the diagnostic enforces.</summary>
   public string Rule { get; }
 
+  /// <summary>
+  /// A diagnostic of this descriptor whose message the emitter has written itself, at a position
+  /// given as line and column: it carries the code, severity, exit code and rule of the descriptor,
+  /// as one made by <see cref="Diagnostic.Create"/> does.
+  /// </summary>
+  /// <param name="message">The message, without code and position.</param>
+  /// <param name="file">The file the message is about, or <see langword="null"/>.</param>
+  /// <param name="line">The 1-based line, or 0 for none.</param>
+  /// <param name="column">The 1-based column, or 0 for none.</param>
+  /// <returns>The diagnostic.</returns>
+  /// <exception cref="ArgumentNullException"><paramref name="message"/> is <see langword="null"/>.</exception>
+  public Diagnostic At(string message, string? file = null, int line = 0, int column = 0) {
+    ArgumentNullException.ThrowIfNull(message);
+    return new(this.Code, this.Severity, message, file, line, column) { ExitCode = this.ExitCode, Rule = this.Rule };
+  }
+
   /// <summary>Whether a text is a diagnostic code: <c>PLY</c> and exactly four ASCII digits.</summary>
   public static bool IsCode(string? text) => text is not null && CodePattern().IsMatch(text);
 

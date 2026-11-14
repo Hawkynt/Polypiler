@@ -77,7 +77,7 @@ internal sealed partial class Lowering {
         throw this.Unsupported(identifier, $"the DataView '{identifier.Name}' used other than by its methods get… and set…");
       case Variable variable:
         if (variable.IsUninitialized && !this._assigned.Contains(variable))
-          throw this.Refuse(identifier, JavaScriptFrontend.ReadBeforeAssignment, $"'{identifier.Name}' may be read before it is assigned");
+          throw this.Refuse(identifier, JavaScriptFrontend.ReadBeforeAssignmentDescriptor, $"'{identifier.Name}' may be read before it is assigned");
 
         return new IrLocalRef(variable.Local!);
       case ModuleConstant constant:

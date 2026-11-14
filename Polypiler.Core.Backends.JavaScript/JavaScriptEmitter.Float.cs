@@ -75,7 +75,7 @@ public static partial class JavaScriptEmitter {
       // An operation without a function of Math is the portable implementation, which legalization puts in.
       if (!_natives.TryGetValue(intrinsic.Op, out var name)) {
         if (this._refused.Add(intrinsic.Op.ToString()))
-          this._problems.Add(new Diagnostic(Inexpressible, DiagnosticSeverity.Error,
+          this._problems.Add(InexpressibleDescriptor.At(
             $"'{intrinsic.Op}' cannot be expressed in JavaScript profile '{this._profile.LevelName}' without its portable implementation"));
 
         return ("NaN", true);

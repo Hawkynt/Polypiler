@@ -183,7 +183,7 @@ public static partial class JavaScriptEmitter {
         _ => this._construct.GetType().Name[2..]
       };
       if (this._refused.Add(what))
-        this._problems.Add(new Diagnostic(Inexpressible, DiagnosticSeverity.Error, $"'{what}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
+        this._problems.Add(InexpressibleDescriptor.At($"'{what}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
 
       return false;
     }

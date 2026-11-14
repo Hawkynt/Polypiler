@@ -36,9 +36,9 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   public string Text(Node node) => _whiteSpace.Replace(source[node.Start..node.End], " ");
 
   /// <summary>A diagnostic at the start of a node.</summary>
-  public Diagnostic Diagnose(Node node, string code, string message) {
+  public Diagnostic Diagnose(Node node, DiagnosticDescriptor descriptor, string message) {
     var start = node.Location.Start;
-    return new Diagnostic(code, DiagnosticSeverity.Error, message, path, start.Line, start.Column + 1);
+    return descriptor.At(message, path, start.Line, start.Column + 1);
   }
 
   /// <summary>What is known about a function; its signature is read and its body bound the first time it is asked for.</summary>
@@ -64,7 +64,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   private Diagnostic? ReadSignature(FunctionModel model) {
     var candidate = model.Candidate;
     var function = candidate.Function;
-    Diagnostic Unsupported(Node node, string what) => this.Diagnose(node, JavaScriptFrontend.Unsupported, $"'{what}' is not supported yet");
+    Diagnostic Unsupported(Node node, string what) => this.Diagnose(node, JavaScriptFrontend.UnsupportedDescriptor, $"'{what}' is not supported yet");
     if (candidate.Problem is not null)
       return Unsupported(candidate.Anchor, candidate.Problem);
 
@@ -86,7 +86,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
 
       var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name);
       if (stated && type is null)
-        return this.Diagnose(parameter, JavaScriptFrontend.MissingType, $"parameter '{name}' of '{candidate.Name}' has no supported JSDoc type");
+        return this.Diagnose(parameter, JavaScriptFrontend.MissingTypeDescriptor, $"parameter '{name}' of '{candidate.Name}' has no supported JSDoc type");
 
       var variable = new Variable(name, parameter, true) { Declared = type is null ? null : JsType.Of(type) };
       model.Parameters.Add(variable);
@@ -137,7 +137,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     // Nothing in the file says what array a parameter is that no call passes one to.
     foreach (var model in models)
       foreach (var parameter in model.Parameters.Where(parameter => parameter.IsArrayByCall && parameter.Entry.Kind != JsKind.Array))
-        model.Problem ??= this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingType,
+        model.Problem ??= this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingTypeDescriptor,
           $"parameter '{parameter.Name}' of '{model.Candidate.Name}' is used as an array and needs a JSDoc type");
 
     return models;

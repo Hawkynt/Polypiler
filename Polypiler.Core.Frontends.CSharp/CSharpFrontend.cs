@@ -87,9 +87,7 @@ public static class CSharpFrontend {
       .Where(diagnostic => diagnostic.Severity == RoslynSeverity.Error)
       .Select(diagnostic => {
         var position = diagnostic.Location.GetLineSpan().StartLinePosition;
-        return new Diagnostic(
-          diagnostic.Id is "CS0220" or "CS0221" ? ConstantOverflow : CompilerError,
-          DiagnosticSeverity.Error,
+        return (diagnostic.Id is "CS0220" or "CS0221" ? ConstantOverflowDescriptor : CompilerErrorDescriptor).At(
           $"{diagnostic.Id}: {diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture)}",
           diagnostic.Location.SourceTree?.FilePath ?? files[0].Path,
           position.Line + 1,
