@@ -12,6 +12,7 @@ public static class SpecFamilies {
     new BinarySpecFamily(),
     new EffectsSpecFamily(),
     new IrSpecFamily(),
+    new LanguagesSpecFamily(),
   ];
 
 }

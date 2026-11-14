@@ -1,0 +1,26 @@
+id: LANGUAGES.csharp.net3.5
+title: "C# 3 on .NET Framework 3.5"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#54"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.csharp
+  languageVersion: "C# 3"
+  toolchain: ref-net3-5
+  evaluationOrder: left-to-right
+  integerOverflow: {signed: wrap, unsigned: wrap}
+  divisionRounding: truncate
+  remainderSign: dividend
+  shiftAmount: masked
+  stringEncoding: utf-16
+  exceptions: structured
+  memoryModel: managed
+  defaultRuntime: dotnet
+  constructs: []

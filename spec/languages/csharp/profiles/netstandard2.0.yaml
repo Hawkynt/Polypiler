@@ -1,0 +1,26 @@
+id: LANGUAGES.csharp.netstandard2.0
+title: "C# 7.3 on .NET Standard 2.0"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#54"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.csharp
+  languageVersion: "C# 7.3"
+  toolchain: ref-netstandard2-0
+  evaluationOrder: left-to-right
+  integerOverflow: {signed: wrap, unsigned: wrap}
+  divisionRounding: truncate
+  remainderSign: dividend
+  shiftAmount: masked
+  stringEncoding: utf-16
+  exceptions: structured
+  memoryModel: managed
+  defaultRuntime: dotnet
+  constructs: []

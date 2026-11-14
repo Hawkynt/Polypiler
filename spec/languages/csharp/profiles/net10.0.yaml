@@ -1,0 +1,41 @@
+id: LANGUAGES.csharp.net10.0
+title: "C# 14 on .NET 10"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#54"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.csharp
+  languageVersion: "C# 14"
+  toolchain: ref-net10-0
+  evaluationOrder: left-to-right
+  integerOverflow: {signed: wrap, unsigned: wrap}
+  divisionRounding: truncate
+  remainderSign: dividend
+  shiftAmount: masked
+  stringEncoding: utf-16
+  exceptions: structured
+  memoryModel: managed
+  defaultRuntime: dotnet
+  constructs:
+    - {construct: "integer types from sbyte to ulong with the promotions of C#", family: scalars, state: supported}
+    - {construct: "checked and unchecked arithmetic and conversions", family: scalars, state: supported}
+    - {construct: "decimal", family: scalars, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "string", family: scalars, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "if, while, do, for and foreach over an array", family: control, state: supported}
+    - {construct: "switch with constant labels", family: control, state: supported}
+    - {construct: "goto statement", family: control, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "throw and try", family: control, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "one-dimensional arrays of the numeric types", family: memory, state: supported}
+    - {construct: "multi-dimensional and jagged arrays", family: memory, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "static methods of one static class", family: functions, state: supported}
+    - {construct: "lambda", family: functions, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "generic method", family: functions, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "ref and out parameters", family: functions, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "value records: struct, readonly struct, record struct", family: types, state: supported}

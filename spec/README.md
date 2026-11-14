@@ -147,3 +147,22 @@ The documents describe the typed SSA IR the `IR-` issues build. Where the protot
 (`Polypiler.Core.IR`) already implements an operation, the `normative` text says how far:
 `ir/operations/shl.yaml`, for instance, notes that `IrBinaryOp.ShiftLeft` is the `mask` variant with an
 `i32` amount.
+
+## Family `languages`
+
+`spec/languages/<identifier>/language.yaml` (ID `LANGUAGES.<identifier>`) declares a source language:
+the `--from` identifier, which is also the folder name, its display name, the language code of
+`backlog/README.md` and the first code of its diagnostic block. Each
+`spec/languages/<identifier>/profiles/<profile>.yaml` (ID `LANGUAGES.<identifier>.<profile>`) is one
+version of it: the toolchain key of `tooling/toolchains.lock`, evaluation order, integer overflow,
+division and remainder, shift counts, string encoding, exceptions, memory model, the runtime that
+executes it, and the construct table of the frontend — each construct `supported` or `diagnosed` with
+a code of the language's frontend range (block to block + 49). A profile records what the language
+defines; it claims no capability. [`schemas/languages.schema.json`](schemas/languages.schema.json) is
+the body; the rules (`PLY0046`) are `layout`, `unique-identifier` (backlog code, diagnostic block),
+`profile-has-language`, `toolchain-known`, `unique-construct`, `diagnosed-needs-code` and
+`diagnostic-in-block`; a profile's `language` that names no document is `PLY0043`.
+
+The seed holds C# with one profile per target framework the C# backend writes (`net2.0` … `net10.0`)
+and JavaScript with one per level the JavaScript backend writes (`es5` … `es2022`). Only the profiles
+the frontends read today, `csharp/net10.0` and `javascript/es2022`, carry constructs.

@@ -1,0 +1,26 @@
+id: LANGUAGES.javascript.es2017
+title: JavaScript, ECMAScript 2017 on Node
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#54"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.javascript
+  languageVersion: ES2017
+  toolchain: node
+  evaluationOrder: left-to-right
+  integerOverflow: {signed: float-promote, unsigned: not-applicable}
+  divisionRounding: float
+  remainderSign: dividend
+  shiftAmount: masked
+  stringEncoding: utf-16
+  exceptions: structured
+  memoryModel: managed
+  defaultRuntime: node
+  constructs: []
