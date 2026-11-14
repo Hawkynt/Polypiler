@@ -71,7 +71,7 @@ public sealed class ToolchainsSteps(ScenarioWorkspace workspace, CommandLog log)
     => Assert.That(log.Last.Stdout.TrimEnd(), Is.EqualTo($"{text} path={this._tool}"), log.Last.Stderr);
 
   /// <summary>Keeps the value the test would see in the environment, without changing the process's.</summary>
-  [Given("^the environment variable " + ToolchainLocator.RequireVariable + " is " + StepText.Quoted + "$")]
+  [Given("^the environment variable POLYPILER_REQUIRE_TOOLCHAINS is " + StepText.Quoted + "$")]
   public void RequireVariable(string value) => this._require = value;
 
   /// <summary>Takes the attribute of a test that needs a toolchain, probed against the fixture lock of that key.</summary>
