@@ -107,6 +107,12 @@ public static class CSharpSyntaxReader {
         type.ParameterList is null ? null : Read(type.ParameterList),
         type.BaseList is null ? [] : [.. type.BaseList.Types.Select(baseType => new CsType(baseType.Type.ToString()))],
         type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]),
+      EnumDeclarationSyntax declared => new CsEnumDeclaration(
+        [.. declared.AttributeLists.SelectMany(list => list.Attributes).Select(attribute => attribute.ToString())],
+        Modifiers(declared.Modifiers),
+        declared.Identifier.Text,
+        new CsType(declared.BaseList!.Types[0].Type.ToString()),
+        [.. declared.Members.Select(member => new CsEnumMember(member.Identifier.Text, Read(member.EqualsValue!.Value)))]),
       FileScopedNamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), true, [.. scope.Members.Select(Read)]),
       NamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), false, [.. scope.Members.Select(Read)]),
       _ => throw Unknown(member)
@@ -179,6 +185,7 @@ public static class CSharpSyntaxReader {
       => new CsArrayCreation(new CsType(array.ElementType.ToString()), Read(size), null) { OnStack = true },
     InitializerExpressionSyntax { RawKind: (int)SyntaxKind.ArrayInitializerExpression } initializer => Initializer(initializer),
     DefaultExpressionSyntax value => new CsDefaultExpression(new CsType(value.Type.ToString())),
+    TypeOfExpressionSyntax typeOf => new CsTypeOf(new CsType(typeOf.Type.ToString())),
     DeclarationExpressionSyntax { Designation: DiscardDesignationSyntax } => new CsName("_"),
     _ => throw Unknown(expression)
   };
