@@ -210,6 +210,7 @@ internal static class PrototypeFixture {
     IndexOutOfRangeException or ArgumentException => IrTrap.IndexOutOfRange,
     OverflowException => IrTrap.IntegerOverflow,
     ArithmeticException => IrTrap.InvalidOperation,
+    FormatException => IrTrap.InvalidFormat,
     _ => null
   };
 

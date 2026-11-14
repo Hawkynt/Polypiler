@@ -51,6 +51,8 @@ public static class IrOperators {
       return floating;
     if (StringOperations.Accepts(op, result, arguments) is { } text)
       return text;
+    if (NumberTextOperations.Accepts(op, result, arguments) is { } number)
+      return number;
 
     bool Are(params Func<IrType, bool>[] rules) => arguments.Count == rules.Length && !rules.Where((rule, index) => !rule(arguments[index])).Any();
     bool Table(IrType type) => type.IsArray && type.IsStorable;

@@ -26,7 +26,10 @@ public enum IrTrap {
   InvalidOperation,
 
   /// <summary>A range outside its source: a view or a slice that does not lie in it, or a copy into a view too short.</summary>
-  ArgumentOutOfRange
+  ArgumentOutOfRange,
+
+  /// <summary>A text that is not a number of the grammar it is parsed by.</summary>
+  InvalidFormat
 
 }
 
@@ -48,6 +51,7 @@ public sealed class IrTrapException : Exception {
     IrTrap.IndexOutOfRange => "index out of range",
     IrTrap.InvalidOperation => "invalid operation",
     IrTrap.ArgumentOutOfRange => "argument out of range",
+    IrTrap.InvalidFormat => "invalid format",
     _ => "integer overflow"
   };
 
@@ -417,6 +421,8 @@ public static partial class IrInterpreter {
         default:
           if (StringOperations.IsString(intrinsic.Op))
             return StringOperations.Evaluate(intrinsic, arguments);
+          if (NumberTextOperations.IsNumberText(intrinsic.Op))
+            return NumberTextOperations.Evaluate(intrinsic, arguments);
           if (IntegerOperations.Evaluates(intrinsic))
             return IntegerOperations.Evaluate(intrinsic, arguments);
           if (FloatOperationTable.TryEvaluate(intrinsic.Op, arguments, out var computed))
