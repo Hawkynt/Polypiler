@@ -92,7 +92,7 @@ internal sealed partial class Lowering {
 
   /// <summary>A local declared by the statement, which the result initializes.</summary>
   private Func<IrExpr, IrStmt> Declared(ISymbol symbol, SyntaxNode node) {
-    var local = this.Local(symbol.Name, Map(((ILocalSymbol)symbol).Type, node));
+    var local = this.Local(symbol.Name, this.Map(((ILocalSymbol)symbol).Type, node));
     this._variables[symbol] = local;
     return value => new IrDeclare(local, value);
   }
