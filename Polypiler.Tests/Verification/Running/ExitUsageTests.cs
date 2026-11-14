@@ -44,4 +44,12 @@ public sealed class ExitUsageTests {
       Assert.That(accounted.PeakMemoryBytes, Is.Positive);
   }
 
+  /// <summary>Up to the launcher's peak the kernel's figure may be inherited at exec and is ignored; above it, the larger of both counts.</summary>
+  [TestCase(100L, 150L, 200L, 100L)]
+  [TestCase(100L, 200L, 200L, 100L)]
+  [TestCase(100L, 201L, 200L, 201L)]
+  [TestCase(500L, 300L, 200L, 500L)]
+  public void Peak_IgnoresTheKernelFigureUpToTheLauncherPeak(long sampled, long accounted, long launcherPeak, long expected)
+    => Assert.That(new ExitUsage(TimeSpan.Zero, accounted).Peak(sampled, launcherPeak), Is.EqualTo(expected));
+
 }

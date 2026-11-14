@@ -8,7 +8,12 @@ namespace Polypiler.Core.Verification.Running;
 /// every descendant it waited for, and the largest resident set of any of them.
 /// </summary>
 /// <param name="CpuTime">User and system time of the process and its waited-for descendants.</param>
-/// <param name="PeakMemoryBytes">The largest resident set size of the process or one of those descendants.</param>
+/// <param name="PeakMemoryBytes">
+/// The largest resident set size of the process or one of those descendants, as <c>ru_maxrss</c>
+/// gives it. That figure includes the high-water mark of the address space the process replaced at
+/// <c>execve</c>: a child the runtime starts with <c>vfork</c> reports at least the launcher's own peak
+/// (Linux, <c>exec_mmap</c>). <see cref="Peak"/> takes that into account.
+/// </param>
 public readonly record struct ExitUsage(TimeSpan CpuTime, long PeakMemoryBytes) {
 
   private const int PidType = 1;
@@ -39,6 +44,15 @@ public readonly record struct ExitUsage(TimeSpan CpuTime, long PeakMemoryBytes) 
     var usage = new byte[RusageBytes];
     return syscall(number, PidType, pid, info, Exited | NoWait, usage) == 0 ? Read(usage) : null;
   }
+
+  /// <summary>
+  /// The peak memory of a step: the sampled peak, or the kernel's figure where it is larger and also
+  /// above the launcher's own peak when the step started. Up to that peak the kernel's figure may be
+  /// the launcher's inherited high-water mark and says nothing about the step.
+  /// </summary>
+  /// <param name="sampled">The largest resident memory of the step's tree that was sampled.</param>
+  /// <param name="launcherPeak">The launcher's own peak resident set when it started the step.</param>
+  public long Peak(long sampled, long launcherPeak) => this.PeakMemoryBytes > launcherPeak ? Math.Max(sampled, this.PeakMemoryBytes) : sampled;
 
   /// <summary>The number of the <c>waitid</c> system call of an architecture; <see langword="null"/> for one this class does not know.</summary>
   public static long? WaitIdNumber(Architecture architecture) => architecture switch {
