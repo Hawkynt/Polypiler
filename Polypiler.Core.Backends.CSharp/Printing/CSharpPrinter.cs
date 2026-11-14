@@ -72,7 +72,7 @@ public static class CSharpPrinter {
   /// <returns>The precedence: 15 for a primary expression down to 1 for an assignment.</returns>
   public static int Precedence(CsExpression expression) => expression switch {
     CsIntegerLiteral { Value.Sign: < 0 } or CsRealLiteral { Value: < 0 } => Unary,
-    CsRealLiteral real when double.IsNegative(real.Value) => Unary,
+    CsRealLiteral real when !double.IsNaN(real.Value) && double.IsNegative(real.Value) => Unary,
     CsPrefixUnary or CsCast => Unary,
     CsBinary binary => Of(binary.Operator),
     CsIsType => Relational,
