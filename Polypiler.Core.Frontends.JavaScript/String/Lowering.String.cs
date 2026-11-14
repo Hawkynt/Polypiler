@@ -123,7 +123,7 @@ internal sealed partial class Lowering {
   /// A position a method clamps to the string: ToIntegerOrInfinity of the number - a NaN is 0, a
   /// fraction is cut off - as an <c>i32</c> that saturates; the method clamps it to the length.
   /// </summary>
-  private IrExpr Position(Node node) {
+  private IrExpr StringPosition(Node node) {
     var value = this.Evaluate(node);
     if (value.Type.Kind != JsKind.Number)
       throw this.Unsupported(node, $"{value.Type.Describe()} as a position");
@@ -174,19 +174,19 @@ internal sealed partial class Lowering {
       case "substring":
         Takes(1, 2);
         text = this.Twice(text, call, method);
-        var start = Clamped(this.Position(arguments[0]), Length());
+        var start = Clamped(this.StringPosition(arguments[0]), Length());
         if (arguments.Count == 1)
           return Str(IrIntrinsicOp.StrSubstring, _str, text, start);
 
         // substring takes the smaller of its two positions as the start: the two are swapped when they come in the other order.
         start = this.Twice(start, call, method);
-        var end = this.Twice(Clamped(this.Position(arguments[1]), Length()), call, method);
+        var end = this.Twice(Clamped(this.StringPosition(arguments[1]), Length()), call, method);
         return Str(IrIntrinsicOp.StrSubstring, _str, text, Min(start, end), new IrBinary(IrBinaryOp.Subtract, Max(start, end), Min(start, end)));
       case "slice":
         Takes(1, 2);
         text = this.Twice(text, call, method);
         IrExpr Relative(Node position) {
-          var value = this.Twice(this.Position(position), call, method);
+          var value = this.Twice(this.StringPosition(position), call, method);
           return new IrConditional(new IrBinary(IrBinaryOp.Less, value, I32(0)), Max(new IrBinary(IrBinaryOp.Add, Length(), value), I32(0)), Min(value, Length()));
         }
 
@@ -198,7 +198,7 @@ internal sealed partial class Lowering {
         var needle = Needle(0);
         return arguments.Count == 1
           ? Str(IrIntrinsicOp.StrIndexOf, IrType.I32, text, needle)
-          : Str(IrIntrinsicOp.StrIndexOf, IrType.I32, this.Twice(text, call, method), needle, Clamped(this.Position(arguments[1]), Length()));
+          : Str(IrIntrinsicOp.StrIndexOf, IrType.I32, this.Twice(text, call, method), needle, Clamped(this.StringPosition(arguments[1]), Length()));
       case "lastIndexOf":
         Takes(1, 2);
         var sought = Needle(0);
@@ -231,12 +231,12 @@ internal sealed partial class Lowering {
         return Str(trim, _str, text, StringOperations.Set(WhitespaceSet.Ecma));
       case "padStart" or "padEnd":
         Takes(1, 2);
-        var length = this.Position(arguments[0]);
+        var length = this.StringPosition(arguments[0]);
         var filler = arguments.Count == 1 ? new IrStrConst(" ") : Needle(1);
         return Str(method == "padStart" ? IrIntrinsicOp.StrPadStart : IrIntrinsicOp.StrPadEnd, _str, text, length, filler);
       case "repeat":
         Takes(1, 1);
-        return Str(IrIntrinsicOp.StrRepeat, _str, text, this.Position(arguments[0]));
+        return Str(IrIntrinsicOp.StrRepeat, _str, text, this.StringPosition(arguments[0]));
       case "localeCompare" or "toLocaleUpperCase" or "toLocaleLowerCase":
         throw this.Unsupported(call, $"{method}, which depends on the locale");
       case "toUpperCase" or "toLowerCase":

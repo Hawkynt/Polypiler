@@ -13,7 +13,6 @@ namespace Polypiler.Core.Backends.JavaScript;
 /// </summary>
 internal static partial class JavaScriptHelpers {
 
-  private const string IndexOutOfRange = "throw new RangeError(\"index out of range\");";
   private const string Position = "  if (from < 0 || from > s.length) " + IndexOutOfRange;
   private const string At = "  if (i < 0 || i >= s.length) " + IndexOutOfRange;
 
