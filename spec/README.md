@@ -132,7 +132,7 @@ default: the effect of every operation nothing else describes. Rules (`PLY0046`)
 of one intrinsic (PRD §4.1, §4.3), which a backend lowers from and a recognizer rewrites to.
 [`schemas/intrinsics.schema.json`](schemas/intrinsics.schema.json) states the body: `name` (PascalCase),
 `group` (`IntMath`, `FloatMath`, `Boolean`, `Bitfield`, `BitCount`, `Shuffle`, `Saturation`, `Carry`,
-`Endian`, `Trig`, `Sequence`, `Matrix`, `Tensor`, `CopyFill`, `String`), `typeParameters` `{name, constraint}`
+`Endian`, `Trig`, `Sequence`, `Matrix`, `Tensor`, `CopyFill`, `String`, `Enum`), `typeParameters` `{name, constraint}`
 (`integer`, `unsigned`, `signed`, `float`, `any`), `parameters` (0–8) and `returns` (1–4) `{name, type}`,
 `legality` `{id, text, fact}`, `effects` (`[pure]` or `EFFECTS.` IDs), `exactness` (`{mode: exact}`, or
 `{mode: tolerance, policy: VERIFICATION.tolerance.<name>}`), `reference` `{algorithm, source}`,

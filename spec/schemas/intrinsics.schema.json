@@ -9,7 +9,7 @@
   "properties": {
     "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$", "description": "PascalCase; the last segment of the id; its lower case is the file name; unique across the family, ignoring case." },
     "group": {
-      "enum": ["IntMath", "FloatMath", "Boolean", "Bitfield", "BitCount", "Shuffle", "Saturation", "Carry", "Endian", "Trig", "Sequence", "Matrix", "Tensor", "CopyFill", "String"],
+      "enum": ["IntMath", "FloatMath", "Boolean", "Bitfield", "BitCount", "Shuffle", "Saturation", "Carry", "Endian", "Trig", "Sequence", "Matrix", "Tensor", "CopyFill", "String", "Enum"],
       "description": "The group; its lower case is the folder under spec/intrinsics/. Groups other than FloatMath, Trig, Matrix and Tensor are exact."
     },
     "typeParameters": {
