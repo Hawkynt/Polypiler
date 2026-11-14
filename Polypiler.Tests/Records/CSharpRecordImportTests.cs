@@ -135,7 +135,7 @@ public sealed class CSharpRecordImportTests {
   [TestCase("public static double F(in Vec v) => v.X;", "in", "Vec")]
   [TestCase("public static double F(Vec v) => v.X++;", "SimpleMemberAccessExpression", "Vec")]
   [TestCase("public static Vec F() => new Vec { X = 1, Y = { } };", "a nested object initializer", "Vec")]
-  [TestCase("private static readonly Vec Origin = new Vec(); public static double F() => Origin.X;", "a constant of the type Vec", "Vec")]
+  [TestCase("private static readonly Vec Origin = new Vec(); public static double F() => Origin.X;", "a static field of the type Vec", "Vec")]
   [TestCase("public static double F() => new B().D.Length;", "the default value of B, which has a field of an array type", "B")]
   [TestCase("public static int F() => new B[1].Length;", "the default value of B, which has a field of an array type", "B")]
   [TestCase("public static int F() => new B { }.D.Length;", "an object initializer that leaves an array field without a value", "B")]

@@ -55,6 +55,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     }
 
     this.DeclareStructs(structs);
+    this.FindWrittenArrays(classes);
     foreach (var (file, semantics, type) in classes) {
       path = file;
       model = semantics;
@@ -67,6 +68,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       }
     }
 
+    this.Globals();
     var seen = new HashSet<string>();
     foreach (var (file, semantics, type) in classes) {
       path = file;
@@ -74,7 +76,11 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       foreach (var member in type.Members.Where(member => member is not FieldDeclarationSyntax && !IsStruct(member))) {
         try {
           if (member is not MethodDeclarationSyntax method)
-            throw new UnsupportedException(member, "a class member other than a static method or a constant");
+            throw new UnsupportedException(member, member switch {
+              ConstructorDeclarationSyntax => "a static constructor",
+              PropertyDeclarationSyntax => "a static property",
+              _ => "a class member other than a static method or a constant"
+            });
 
           if (!seen.Add(method.Identifier.Text))
             throw new UnsupportedException(method, "method overloading");
@@ -86,14 +92,19 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       }
     }
 
+    if (this._diagnostics.Count == 0)
+      this.CheckInitializers(name, functions);
+
     return this._diagnostics.Count > 0
       ? new(null, this._diagnostics)
-      : new(new IrModule(name, functions, this._constants.Values.ToList()) { Types = [.. this._types] }, this._diagnostics);
+      : new(new IrModule(name, functions, this._constants.Values.ToList()) { Types = [.. this._types], Globals = [.. this._initialized.Select(entry => entry.Global)] }, this._diagnostics);
   }
 
   /// <summary>
-  /// A field is a constant of the module: a <c>const</c>, or a <c>static readonly</c> whose
-  /// initializer is a constant or, for an array, a list of constants. Anything else would be state.
+  /// A field is a constant of the module - a <c>const</c>, or a <c>static readonly</c> whose
+  /// initializer is a constant or, for an array that is only read, a list of constants - or state,
+  /// which <see cref="State"/> takes note of. An attribute such as <c>[ThreadStatic]</c> and a
+  /// modifier such as <c>volatile</c> say something about threads, which the module does not have.
   /// </summary>
   private void Field(FieldDeclarationSyntax field) {
     var constant = field.Modifiers.Any(SyntaxKind.ConstKeyword);
@@ -102,12 +113,17 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
           or SyntaxKind.ConstKeyword or SyntaxKind.StaticKeyword or SyntaxKind.ReadOnlyKeyword))
         throw new UnsupportedException(field, modifier.Text);
 
-    if (!constant && !field.Modifiers.Any(SyntaxKind.ReadOnlyKeyword))
-      throw new UnsupportedException(field, "a field that is neither const nor static readonly");
+    if (field.AttributeLists.SelectMany(list => list.Attributes).FirstOrDefault() is { } attribute)
+      throw new UnsupportedException(attribute, $"the attribute [{attribute.Name}] on a field");
 
     foreach (var variable in field.Declaration.Variables) {
       var symbol = (IFieldSymbol)model.GetDeclaredSymbol(variable)!;
       var type = this.Map(symbol.Type, field.Declaration.Type);
+      if (!constant && this.IsState(field, variable, symbol)) {
+        this.State(field, variable, symbol, type);
+        continue;
+      }
+
       if ((type.Element ?? type).IsStruct)
         throw new UnsupportedException(variable, $"a constant of the type {type}");
 
@@ -589,6 +605,12 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   /// </summary>
   private (Func<IrExpr> Read, Func<IrExpr, IrStmt> Write) Target(ExpressionSyntax target, List<IrStmt> into, bool alsoRead) {
     switch (target) {
+      case IdentifierNameSyntax or MemberAccessExpressionSyntax when this.GlobalOf(target) is { } global:
+        if (global.Type.IsArray)
+          throw new UnsupportedException(target, $"an assignment to the array field {global.Name}");
+
+        var reference = new IrGlobalRef(global);
+        return (() => reference, value => new IrGlobalAssign(global, value));
       case IdentifierNameSyntax when this.Value(target) is IrLocalRef variable:
         return (() => variable, value => new IrAssign(variable.Local, value));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element:
@@ -609,7 +631,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   }
 
   private IrExpr Once(IrExpr expression, List<IrStmt> into) {
-    if (expression is IrLocalRef or IrConst or IrConstRef)
+    // An array global holds one array for good; any other global may change while the rest is evaluated.
+    if (expression is IrLocalRef or IrConst or IrConstRef or IrGlobalRef { Type.IsArray: true })
       return expression;
 
     var temporary = this.Local($"$t{this._locals.Count}", expression.Type);
@@ -663,6 +686,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         return this.Value(context.Expression);
       case IdentifierNameSyntax identifier when model.GetSymbolInfo(identifier).Symbol is { } symbol && this._variables.TryGetValue(symbol, out var variable):
         return new IrLocalRef(variable);
+      case IdentifierNameSyntax or MemberAccessExpressionSyntax when this.GlobalOf(expression) is { } global:
+        return new IrGlobalRef(global);
       case PrefixUnaryExpressionSyntax unary when unary.Kind() is SyntaxKind.PreIncrementExpression or SyntaxKind.PreDecrementExpression:
         return this.StepValue(unary, unary.Operand, unary.IsKind(SyntaxKind.PreIncrementExpression), false);
       case PostfixUnaryExpressionSyntax unary when unary.Kind() is SyntaxKind.PostIncrementExpression or SyntaxKind.PostDecrementExpression:
@@ -712,6 +737,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   /// <summary>A <c>++</c> or <c>--</c> whose value is used: the step of a variable or of an array element.</summary>
   private IrExpr StepValue(ExpressionSyntax step, ExpressionSyntax operand, bool increment, bool postfix) {
     IrExpr target = operand switch {
+      IdentifierNameSyntax or MemberAccessExpressionSyntax when this.GlobalOf(operand) is { } global => new IrGlobalRef(global),
       IdentifierNameSyntax when this.Value(operand) is IrLocalRef variable => variable,
       ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element
         => new IrArrayLoad(this.Written(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression)),
