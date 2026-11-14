@@ -10,7 +10,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
 
-namespace Polypiler.Tests.Backends.Golden;
+namespace Polypiler.Backends.Testing;
 
 /// <summary>One way of translating a source: the target language and every option that changes the text.</summary>
 /// <param name="Target">The value of <c>--to</c>.</param>
