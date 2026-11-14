@@ -17,6 +17,7 @@ Probe programs and recorded output a record measured live under `docs/adr/eviden
 | [0003](0003-diagnostics-and-exit-codes.md) | Diagnostics registry, renderings and exit codes | accepted | [#17](https://github.com/Hawkynt/Polypiler/issues/17) |
 | [0004](0004-cli-design.md) | Command-line grammar, option naming and output conventions | accepted | [#16](https://github.com/Hawkynt/Polypiler/issues/16) |
 | [0005](0005-floating-point-tolerance.md) | Floating-point tolerance policy | accepted | [#18](https://github.com/Hawkynt/Polypiler/issues/18) |
+| [0006](0006-performance-budgets.md) | Performance budgets | accepted | [#22](https://github.com/Hawkynt/Polypiler/issues/22) |
 | [0030](0030-cipher-source-licence.md) | Cipher source licence and its lowest pin | accepted | [#588](https://github.com/Hawkynt/Polypiler/issues/588) |
 
 Related: [documentation index](../README.md) · [IR and analysis contracts](../architecture/IR.md) · [compilation pipeline](../architecture/PIPELINE.md).
