@@ -771,7 +771,7 @@ codes:
     rule: permutation.hierarchy.domain
     area: permutation
     owner: PERM-HIERARCHY
-    surfaces: "the DiagnosticBag given to BitCondition.Admits, which evaluators of a conditioned routing or Boolean transform call for each input, when the input has a 1 where the condition knows a 0 or a 0 where it knows a 1"
+    surfaces: "the DiagnosticBag given to BitCondition.Admits, which evaluators of a conditioned routing or Boolean transform call for each input, when the input has a 1 where the condition knows a 0 or a 0 where it knows a 1; PermutationModelException from MappingEvaluator.EvaluateChecked for such an input"
   - code: PLY0807
     severity: error
     exit: UnsupportedConstruct
@@ -780,7 +780,7 @@ codes:
     rule: permutation.hierarchy.truth-table
     area: permutation
     owner: PERM-HIERARCHY
-    surfaces: "the DiagnosticBag given to BitBooleanTransform.TryGetTruthTable when the transform has more than 16 inputs; the structural cross-check of TryAsRouting is skipped silently above that limit instead"
+    surfaces: "the DiagnosticBag given to BitBooleanTransform.TryGetTruthTable when the transform has more than 16 inputs, and PermutationModelException from MappingEvaluator.TruthTable for a mapping of more than 16 input bits; the structural cross-check of TryAsRouting is skipped silently above that limit instead"
   - code: PLY1000
     severity: error
     exit: InvalidSource
