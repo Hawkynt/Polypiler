@@ -1,0 +1,9 @@
+[package]
+name = "registry-dep"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# A dependency only crates.io has: offline, cargo cannot resolve it.
+[dependencies]
+itoa = "1.0.15"
