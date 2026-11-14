@@ -329,6 +329,11 @@ internal sealed partial class Lowering(TypeInference types) {
   /// </summary>
   private void Declaration(VariableDeclaration declaration, List<IrStmt> into) {
     foreach (var declarator in declaration.Declarations) {
+      if (declarator is { Id: ObjectPattern pattern, Init: not null }) {
+        this.Destructure(declarator, pattern, into);
+        continue;
+      }
+
       if (declarator.Id is not Identifier { Name: var name } id)
         throw this.Unsupported(declarator.Id, "a destructuring declaration");
 
@@ -398,6 +403,8 @@ internal sealed partial class Lowering(TypeInference types) {
         break;
       case Identifier { Name: var name } target when this._model.Bindings.ContainsKey(target):
         throw this.Unsupported(assignment, $"an assignment to the constant {name}");
+      case MemberExpression { Computed: false } member when types.Of(member.Object).Shape is { } shape:
+        throw this.Written(member, shape, assignment);
       case MemberExpression { Computed: true } element:
         var holder = types.Of(element.Object);
         var array = this.Array(element.Object);
@@ -465,6 +472,9 @@ internal sealed partial class Lowering(TypeInference types) {
   private IrExpr StepElement(UpdateExpression step) {
     // What is stepped is a variable or a member; a member that is no element is a property, which the subset does not have.
     var element = (MemberExpression)step.Argument;
+    if (!element.Computed && types.Of(element.Object).Shape is { } shape)
+      throw this.Written(element, shape, step);
+
     if (!element.Computed)
       throw this.Unsupported(step, types.Text(step));
 

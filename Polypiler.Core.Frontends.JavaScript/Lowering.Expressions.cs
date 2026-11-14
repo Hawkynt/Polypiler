@@ -50,6 +50,11 @@ internal sealed partial class Lowering {
         return this.New(creation, types.Of(creation).Ir!);
       case ArrayExpression literal:
         return this.ArrayLiteral(literal, types.Of(literal).Ir!.Element!);
+      case ObjectExpression literal when types.Of(literal).Kind == JsKind.Record:
+        return this.ObjectLiteral(literal, types.Of(literal).Ir!);
+      case ObjectExpression literal:
+        // A literal the inference gave no type has a property the subset does not take, or a key twice.
+        return this.ObjectLiteral(literal, IrType.Void);
       default:
         throw this.Unsupported(node, Describe(node) ?? types.Text(node));
     }
@@ -200,6 +205,10 @@ internal sealed partial class Lowering {
         // An operand that is refused for what it is comes first: it is the reason the operator has no type.
         this.Expression(left);
         this.Expression(right);
+        if (op is Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality
+            && (types.Of(left).Kind == JsKind.Record || types.Of(right).Kind == JsKind.Record))
+          throw this.Unsupported(whole, $"an object literal compared by identity ({OperatorText(op)})");
+
         throw operation.Plan == Plan.Unbounded
           ? this.Unbounded(whole)
           : this.Unsupported(whole, $"{OperatorText(op)} on {types.Of(left).Describe()} and {types.Of(right).Describe()}");
@@ -242,6 +251,9 @@ internal sealed partial class Lowering {
   }
 
   private IrExpr Member(MemberExpression member) {
+    if (!member.Computed && types.Of(member.Object).Shape is { } shape)
+      return this.FieldOf(member, shape);
+
     if (member.Computed) {
       var array = this.Array(member.Object);
       var index = this.Index(member.Property);
@@ -498,6 +510,9 @@ internal sealed partial class Lowering {
   /// the inference found for everything stored into the array.
   /// </summary>
   private IrExpr Value(Node node, IrType type) {
+    if (type.IsStruct && node is ObjectExpression record && types.Of(record).Kind == JsKind.Record)
+      return this.ObjectLiteral(record, type);
+
     if (type.IsArray && !this._substitutes.ContainsKey(node)) {
       if (node is ArrayExpression literal)
         return this.ArrayLiteral(literal, type.Element!);
@@ -519,6 +534,9 @@ internal sealed partial class Lowering {
     var from = value.Expr.Type;
     if (from == type)
       return value.Expr;
+
+    if (type.IsStruct && this.Reshaped(value, type, node) is { } reshaped)
+      return reshaped;
 
     var exact = value.Type.Kind is JsKind.Number or JsKind.BigInt && type.IsNumeric && (type.IsInteger
       ? value.Type.Float == 0 && !value.Type.IsUnbounded && value.Type.Within(type) && from.IsLong == type.IsLong

@@ -127,6 +127,8 @@ internal sealed partial class TypeInference {
       case MemberExpression member when this.Names.Library(member) is { } library:
         // A constant of the library is typed as the literal of its value would be.
         return JavaScriptFloatApi.FindConstant(library) is { } value ? JsType.Literal(value.Value) : JsType.Unknown;
+      case MemberExpression { Computed: false, Property: Identifier { Name: var key } } member when this.Of(member.Object).Shape is { } shape:
+        return shape.TypeOf(key) ?? JsType.Unknown;
       case MemberExpression member:
         var array = this.Of(member.Object);
         if (array.Kind != JsKind.Array)
@@ -147,6 +149,8 @@ internal sealed partial class TypeInference {
           : JsType.Unknown;
       case ArrayExpression literal:
         return JsType.ArrayOf(literal.Elements.Aggregate(JsType.Unknown, (type, element) => element is null or SpreadElement ? type : JsType.Join(type, this.Of(element))), true);
+      case ObjectExpression literal:
+        return this.Record(literal);
       default:
         return JsType.Unknown;
     }
@@ -198,7 +202,7 @@ internal sealed partial class TypeInference {
         return JsType.Of(member.Result);
       case null when this.Names.Callee(call.Callee) is { } callee:
         var model = this.ModelOf(callee);
-        return model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Conflict || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType);
+        return model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType);
       default:
         return JsType.Unknown;
     }

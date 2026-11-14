@@ -148,6 +148,15 @@ public static class JavaScriptFrontend {
 
     // With an export list the functions the named ones call are imported too; the types are found for all of them together.
     var models = inference.Solve(chosen, candidate => exports is null ? candidate.IsPublic : exports.Contains(candidate.Name));
+
+    // A struct is named after the first variable, in source order, that holds a value of it, and
+    // only where none does after the first array of it.
+    var variables = models.SelectMany(model => model.Parameters.Concat(model.Locals)).OrderBy(variable => variable.Declaration.Start).ToList();
+    foreach (var elements in new[] { false, true })
+      foreach (var variable in variables)
+        inference.Shapes.Prefer(variable.Type, variable.Name, elements);
+
+    inference.Shapes.Seal();
     var lowering = new Lowering(inference);
     var functions = new Dictionary<Candidate, IrFunction>();
     foreach (var model in models)
@@ -157,10 +166,11 @@ public static class JavaScriptFrontend {
     if (diagnostics.Count > 0)
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
+    var lowered = candidates.Where(functions.ContainsKey).Select(candidate => functions[candidate]).ToList();
     var module = new IrModule(
       Path.GetFileNameWithoutExtension(path),
-      candidates.Where(functions.ContainsKey).Select(candidate => functions[candidate]).ToList(),
-      constants.Where(lowering.Constants.Contains).Select(constant => constant.Constant).ToList());
+      lowered,
+      constants.Where(lowering.Constants.Contains).Select(constant => constant.Constant).ToList()) { Types = lowering.Structs(lowered, inference.Shapes) };
     var caveats = new List<ImportCaveat>();
     if (lowering.AccessesElements)
       caveats.Add(_outOfRangeAccess);
