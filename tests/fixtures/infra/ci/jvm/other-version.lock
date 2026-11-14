@@ -1,0 +1,12 @@
+# The JDK of the repository lock pinned at a version no JDK has: wherever javac is installed it probes
+# as another version. JvmLayerTests checks what a test that requires it reports there.
+schema: 1
+toolchains:
+  jdk:
+    version: "0.0.0-polypiler"
+    probe: [javac, -version]
+    versionPattern: '^javac (?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-only WITH Classpath-exception-2.0
+    source: https://jdk.java.net/
+    home: JAVA_HOME
