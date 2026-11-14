@@ -1,0 +1,27 @@
+# at: ir/operations/shl.yaml
+# expect: PLY0040: /spec: Required properties
+id: IR.shl
+title: "Shift left"
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-INT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: operation
+  mnemonic: Shl
+  category: shift
+  operands: [{name: value, type: T}, {name: amount, type: T}]
+  result: {type: T}
+  flags: [mask, strict]
+  effects: [pure]
+  traps: [{when: "flag strict and amount >= width", kind: invalid-shift}]
+  stages: {from: IR.stage.source-semantic, to: IR.stage.legalized-target}
+  examples:
+    - {flag: mask, operands: ["0x80000001", 33], result: "0x00000002"}
+    - {flag: strict, operands: ["0x00000001", 31], result: "0x80000000"}
+    - {flag: strict, operands: ["0x00000001", 32], trap: invalid-shift}

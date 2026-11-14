@@ -1,0 +1,25 @@
+# at: ir/operations/unreachable.yaml
+id: IR.unreachable
+title: Unreachable
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-INT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: operation
+  mnemonic: Unreachable
+  category: control
+  typeParameters: []
+  operands: []
+  result: null
+  flags: []
+  effects: [pure]
+  traps: [{when: "always", kind: unreachable}]
+  stages: {from: IR.stage.source-semantic, to: IR.stage.legalized-target}
+  examples:
+    - {operands: [], trap: unreachable}

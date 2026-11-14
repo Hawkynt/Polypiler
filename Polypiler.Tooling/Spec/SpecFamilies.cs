@@ -11,6 +11,7 @@ public static class SpecFamilies {
     new DemoSpecFamily(),
     new BinarySpecFamily(),
     new EffectsSpecFamily(),
+    new IrSpecFamily(),
   ];
 
 }
