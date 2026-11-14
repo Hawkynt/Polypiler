@@ -61,6 +61,9 @@ notices:
     components:
       # A public-domain dedication followed by the permission and disclaimer of 0BSD, word for word.
       - { name: 'splitmix64.c (Sebastiano Vigna, 2015)', licence: 0BSD }
+  - path: tests/fixtures/bench/cipher/THIRD-PARTY-NOTICE.Cipher.txt
+    components:
+      - { name: 'Cipher checksums (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
   - path: tests/fixtures/bitperm/THIRD-PARTY-NOTICE.BitPerm.txt
     components:
       - { name: 'BitPerm (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }

@@ -1,0 +1,21 @@
+Cipher checksums
+
+  What:     Cipher's algorithm framework, its operations library and three checksum algorithms,
+            five files, unchanged; LICENSE.txt is Cipher/LICENSE of the same commit.
+  From:     https://github.com/Hawkynt/Hawkynt.github.io
+  Commit:   b3a8a8e92cbca83475986391c3cac56f0b185d29
+  Author:   (c)2006-2025 Hawkynt
+  Licence:  LGPL-3.0-or-later, the licence of that repository and of this one (ADR 0030).
+
+  File                                  Upstream path                                  SHA-256
+  AlgorithmFramework.js                 Cipher/AlgorithmFramework.js                   5b369db41d7e5cbf8d9ac25eba7148bf0a2fe3e160a21f11b78d16c7279fc953
+  OpCodes.js                            Cipher/OpCodes.js                              d92b569cc08f4cd1ac785faddc7ecb034abe71fa396baffa64338910a1a95861
+  algorithms/checksum/adler.js          Cipher/algorithms/checksum/adler.js            4218b3ff959e32ad852855aeebe9f56f2319eb6c9dc495cc8526bcbde6797bbc
+  algorithms/checksum/crc.js            Cipher/algorithms/checksum/crc.js              f261e112bcd9ddf3e676d66a62373faf760d3e86643287fec1cb325188045b97
+  algorithms/checksum/fletcher.js       Cipher/algorithms/checksum/fletcher.js         f533ca873025133e2c7aef4bf04bf3e604808d39d68dffa28fe1077469404736
+  LICENSE.txt                           Cipher/LICENSE                                 e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118
+
+The files are the source-language baselines of ADR 0006 (performance budgets): node runs them through
+../cipher-checksum.js, which was written for this repository. They are kept byte for byte as the
+commit has them - do not reformat them, and replace them only as a whole with the files of a newer
+commit, updating commit and hashes here.

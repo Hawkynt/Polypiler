@@ -1,0 +1,3 @@
+    1024 adler32 6a9af6e9 fletcher32 13753d94 crc32 aebc9398
+   65536 adler32 a1080e49 fletcher32 0f90242b crc32 c3ff93ee
+ 1048576 adler32 1b1f5ddc fletcher32 b45ea07c crc32 5e9af322
