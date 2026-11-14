@@ -15,6 +15,7 @@ public static class SpecFamilies {
     new LanguagesSpecFamily(),
     new PermutationsSpecFamily(),
     new RecoverySpecFamily(),
+    new RewritesSpecFamily(),
   ];
 
 }

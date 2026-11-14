@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/rewrites.schema.json",
+  "title": "Polypiler spec family 'rewrites'",
+  "description": "The body under 'spec' of a document in spec/rewrites/: one semantics-preserving transformation with its proof predicates, proof class, floating-point claims, negative fixtures and disabling switch (PRD §4.1, §4.8, §7.2). Rules the schema cannot state (PLY0046): layout, id-in-block, no-unproven-reassociation, float-flags-consistent, interaction-acyclic, switch-matches, negative-fixture-exists; every optimization named under 'interactions' has a document (PLY0043).",
+  "type": "object",
+  "required": ["optimization", "kind", "before", "after", "predicates", "proof", "floatingPoint", "negativeFixtures", "switch", "optLevels", "interactions", "document"],
+  "additionalProperties": false,
+  "properties": {
+    "optimization": { "$ref": "#/$defs/optimization", "description": "The optimization number; equals the file name." },
+    "kind": { "enum": ["fold", "canonicalize", "strength-reduce", "eliminate", "narrow", "fuse", "vectorize", "legalize", "lower", "recover"] },
+    "before": { "type": "string", "minLength": 1, "description": "IR text of the canonical case." },
+    "after": { "type": "string", "minLength": 1, "description": "IR text of what replaces it." },
+    "predicates": {
+      "type": "array",
+      "description": "The conditions under which the rewrite holds; empty only for an identity the proof covers on every input at the listed widths.",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "fact"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "text": { "type": "string", "minLength": 1 },
+          "fact": { "enum": ["none", "range", "known-bits", "alias", "effect", "float-exactness"] }
+        }
+      }
+    },
+    "proof": {
+      "type": "object",
+      "required": ["class"],
+      "additionalProperties": false,
+      "properties": {
+        "class": { "enum": ["exhaustive-8bit", "exhaustive-16bit", "smt-bitvector", "range-facts", "alias-facts", "float-exactness"] },
+        "widths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 1024 } },
+        "budgetSeconds": { "type": "integer", "minimum": 1, "maximum": 600 }
+      }
+    },
+    "floatingPoint": {
+      "type": "object",
+      "required": ["touchesFloat", "reassociates", "contracts"],
+      "additionalProperties": false,
+      "properties": {
+        "touchesFloat": { "type": "boolean" },
+        "reassociates": { "type": "boolean" },
+        "contracts": { "type": "boolean" }
+      }
+    },
+    "negativeFixtures": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Inputs the rewrite must leave alone; for a normative document every path exists.",
+      "items": { "type": "string", "pattern": "^tests/fixtures/[^\\\\]+$" }
+    },
+    "switch": { "type": "string", "pattern": "^--disable-opt O[0-9]{4}$", "description": "Exactly '--disable-opt <optimization>'." },
+    "optLevels": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["balanced", "speed", "size", "memory"] }
+    },
+    "interactions": {
+      "type": "object",
+      "required": ["after", "enables"],
+      "additionalProperties": false,
+      "properties": {
+        "after": { "$ref": "#/$defs/optimizations", "description": "Optimizations this one runs after; the relation has no cycle." },
+        "enables": { "$ref": "#/$defs/optimizations", "description": "Optimizations this one makes possible." }
+      }
+    },
+    "document": { "type": "string", "pattern": "^docs/optimizations/O[0-9]{4}-[a-z0-9]+(-[a-z0-9]+)*\\.md$", "description": "docs/optimizations/<optimization>-<slug>.md." }
+  },
+  "$defs": {
+    "optimization": { "type": "string", "pattern": "^O[0-9]{4}$" },
+    "optimizations": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/optimization" } }
+  }
+}

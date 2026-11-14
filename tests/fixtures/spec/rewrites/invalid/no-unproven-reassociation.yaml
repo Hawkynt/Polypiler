@@ -1,0 +1,32 @@
+id: REWRITES.O0002
+title: Cancel a term added and subtracted again
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-REWRITES
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  optimization: O0002
+  kind: canonicalize
+  before: "%t = Add.f64 %a, %b; %r = Sub.f64 %t, %a"
+  after: "%r = Copy.f64 %b"
+  predicates: []
+  proof:
+    class: smt-bitvector
+    widths: [8, 16, 32, 64]
+    budgetSeconds: 5
+  floatingPoint:
+    touchesFloat: true
+    reassociates: true
+    contracts: false
+  negativeFixtures: [tests/fixtures/optimize/o0002/cancellation.pir]
+  switch: "--disable-opt O0002"
+  optLevels: [balanced, speed, size]
+  interactions:
+    after: []
+    enables: []
+  document: docs/optimizations/O0002-cancel-added-term.md
