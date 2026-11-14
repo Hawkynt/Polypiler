@@ -30,8 +30,11 @@ namespace Polypiler.Cli;
 /// option that does not apply to the chosen languages or has a value they do not take. Beside the
 /// files it writes <c>polypiler.manifest.json</c> (PRD §10.2), in the state <c>generated</c>: the
 /// input with its hash, the profiles, the exported functions, the intrinsics, the floating-point
-/// record the header of each file carries, the optimizations applied, the caveats and warnings, and
-/// the command line that writes the output again, with its paths relative to the output directory.
+/// record the header of each file carries, the helpers the backend emitted with their origin and
+/// licence, the licence of the output (<see cref="OutputLicence"/>: the input's
+/// <c>SPDX-License-Identifier</c> header with the helpers' licences, <c>NOASSERTION</c> without a
+/// header), the optimizations applied, the caveats and warnings, and the command line that writes the
+/// output again, with its paths relative to the output directory.
 /// </summary>
 public sealed class TranslateCommand : ICliCommand {
 
@@ -316,7 +319,9 @@ public sealed class TranslateCommand : ICliCommand {
       var full = context.Resolve(directory);
       Directory.CreateDirectory(full);
       var outputs = new List<ManifestOutput>();
+      var helpers = new List<EmittedHelper>();
       foreach (var generated in backend.Emit(module, options)) {
+        helpers.AddRange(generated.Helpers);
         var bytes = _utf8.GetBytes(generated.Content);
         File.WriteAllBytes(Path.Combine(full, generated.Path), bytes);
         outputs.Add(new(ManifestWriter.PortablePath(generated.Path), ManifestWriter.Sha256(bytes), ManifestOutputRole.Source));
@@ -324,7 +329,7 @@ public sealed class TranslateCommand : ICliCommand {
       }
 
       if (record is not null)
-        ManifestWriter.Write(TranslationManifest(module, options, context, backend, record, full, outputs), full);
+        ManifestWriter.Write(TranslationManifest(module, options, context, backend, record, full, outputs, helpers), full);
     } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException) {
       CliPaths.NotCreatable(directory, exception.Message, context);
       return (int)ExitCode.EnvironmentError;
@@ -454,11 +459,16 @@ public sealed class TranslateCommand : ICliCommand {
 
   private static readonly UTF8Encoding _utf8 = new(false);
 
+  /// <summary>What carrying the helpers obliges to: for each licence identifier of theirs, keeping its notice.</summary>
+  private static List<string> Obligations(IReadOnlyList<EmittedHelper> helpers)
+    => [.. helpers.SelectMany(helper => helper.Licence.Split(" AND ", StringSplitOptions.TrimEntries)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
+      .Select(licence => $"{licence}: keep the copyright and licence notice of the helpers under it ({EmittedHelper.GrantUrl} and the notices of their origins)")];
+
   /// <summary>
   /// The manifest of a translation, in the state <c>generated</c>. Every path in it is relative to the
   /// output directory, so the command line it records writes the same output again when run there.
   /// </summary>
-  private static Manifest TranslationManifest(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend, Record record, string output, IReadOnlyList<ManifestOutput> outputs) {
+  private static Manifest TranslationManifest(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend, Record record, string output, IReadOnlyList<ManifestOutput> outputs, IReadOnlyList<EmittedHelper> helpers) {
     var input = InputPath(output, context.Resolve(record.File));
     List<string> command = ["translate", input, From, options[From], To, options[To], Output, "."];
     foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key)))
@@ -479,9 +489,9 @@ public sealed class TranslateCommand : ICliCommand {
         ? new(mode == FloatMode.Strict ? "strict" : "accurate", [.. FloatManifest.Natives(module, mode, backend.Runtime).Select(native => new ManifestNativeFunction(
           $"INTRINSICS.{native.Op}", native.Format.ToString(), native.Contract.ToString(), native.Runtime, native.Slack, native.Bound))])
         : null,
-      Helpers = [],
+      Helpers = [.. helpers.Select(helper => new ManifestHelper(helper.Symbol, helper.Licence, helper.Origin, helper.CallSites, helper.Size, helper.DependsOn))],
       NativeDependencies = [],
-      Licensing = new("NOASSERTION", [], []),
+      Licensing = new(OutputLicence.Of(OutputLicence.Header(_utf8.GetString(record.Bytes)), helpers.Select(helper => helper.Licence)), Obligations(helpers), []),
       Caveats = record.Caveats,
       Optimization = new(options.GetValueOrDefault(Opt, "default"), options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',') : [],
         [.. record.Applications.Select(application => application.Id).Distinct().Select(id => new ManifestPass(id, "unproven"))]),

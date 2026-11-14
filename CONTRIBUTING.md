@@ -59,6 +59,14 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   Every entry of a `THIRD_PARTY_NOTICES.md` (one per `## ` section) or `THIRD-PARTY-NOTICE.<Name>.txt`
   (one per file) there carries the lines `Origin: <owner/repo@sha:path or URL>` and
   `Licence: <SPDX expression>`, one pair per work it records.
+- Code a translation copies into its output is MIT ([`LICENSE-OUTPUT.md`](LICENSE-OUTPUT.md)): the
+  helpers of `Polypiler.Core.Backends.CSharp/Helpers` and `Polypiler.Core.Backends.JavaScript/Helpers`
+  and the portable implementations of `Polypiler.Core.IR/Float/Operations`. Unlike every other `.cs`
+  file of the repository, each of these starts with `// SPDX-License-Identifier: MIT`, or with the
+  expression of what it is converted from (`MIT AND BSD-2-Clause` for FreeBSD's `fmaf`), and
+  `HelperLicenceTests` fails on one without it. A new helper goes into one of these folders; a
+  backend reports what it emitted with its origin and licence (`GeneratedFile.Helpers`), and
+  `translate` states the output's licence from the input's own header and the helpers' licences.
 - An adapter compiles, links or loads an upstream file only when its licence audit
   (`spec/adapters/<adapter>/licence-audit.yaml`, format
   [`spec/schemas/adapter-audit.schema.json`](spec/schemas/adapter-audit.schema.json)) records it as

@@ -15,7 +15,7 @@
 - **Source emitters:** valid native syntax, types, imports, modules and [minimal required helpers](LANGUAGE-LOWERING.md#runtime-closure).
 - **IR emitters:** LLVM-compatible IR/bitcode where legal; other bytecode emitters only after runtime/verification coverage.
 - **Native emitters:** x86-16/DOS via existing PB-Compiler architecture; MOS 6502 and other CPUs through target-specific machine IR, register/zero-page allocation and executable formats.
-- **Packaging:** builds or modules with provenance, test fixtures, dependency manifests and licenses.
+- **Packaging:** builds or modules with provenance, test fixtures, dependency manifests and licenses. The helpers and portable implementations a backend copies into an output are MIT ([LICENSE-OUTPUT.md](../../LICENSE-OUTPUT.md)), each source file of them states its licence in an `SPDX-License-Identifier` header, and a backend reports every helper it emitted with its origin and licence, which the header of the generated file and its manifest record.
 
 A backend cannot silently map an untranslatable instruction or library call to a placeholder. It must lower, bridge, retain a compatible dependency, or diagnose it.
 

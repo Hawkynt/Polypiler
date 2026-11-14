@@ -50,4 +50,17 @@ public sealed class CSharpHelper {
     "}"
   ];
 
+  /// <summary>The folder of the repository every helper's source lies in, all of it released for outputs under <see cref="EmittedHelper.OwnLicence"/>.</summary>
+  public const string Folder = "Polypiler.Core.Backends.CSharp/Helpers";
+
+  /// <summary>The licence of the helper in an output.</summary>
+  public string Licence => EmittedHelper.OwnLicence;
+
+  /// <summary>The source the helper is copied from.</summary>
+  public string Origin => EmittedHelper.OriginOf(Folder);
+
+  /// <summary>How the output manifest names the method under a name: the name, the type parameters and the parameter list, which tell overloads apart.</summary>
+  /// <param name="name">The name the class gives the method.</param>
+  public string Symbol(string name) => $"{name}{this.TypeParameters}({this.Parameters})";
+
 }
