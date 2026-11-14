@@ -13,6 +13,9 @@
 schema: 1
 
 notices:
+  - path: Polypiler.Cli/THIRD_PARTY_NOTICES.md
+    components:
+      - { name: 'System.CommandLine 2.0.15', licence: MIT }
   - path: Polypiler.Core.Frontends.CSharp/THIRD_PARTY_NOTICES.md
     components:
       - { name: 'Roslyn (Microsoft.CodeAnalysis.CSharp 5.3.0)', licence: MIT }
@@ -58,6 +61,9 @@ notices:
     components:
       # A public-domain dedication followed by the permission and disclaimer of 0BSD, word for word.
       - { name: 'splitmix64.c (Sebastiano Vigna, 2015)', licence: 0BSD }
+  - path: tests/fixtures/bitperm/THIRD-PARTY-NOTICE.BitPerm.txt
+    components:
+      - { name: 'BitPerm (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
   - path: tests/fixtures/prototype/js/THIRD-PARTY-NOTICE.OpCodes.txt
     components:
       - { name: 'Cipher OpCodes.js (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
@@ -79,4 +85,5 @@ packages:
   - { id: NUnit3TestAdapter, version: 5.0.0, licence: MIT }
   - { id: Reqnroll.NUnit, version: 3.3.4, licence: BSD-3-Clause }
   - { id: SharpFuzz, version: 2.3.0, licence: MIT }
+  - { id: System.CommandLine, version: 2.0.15, licence: MIT }
   - { id: YamlDotNet, version: 18.1.0, licence: MIT }
