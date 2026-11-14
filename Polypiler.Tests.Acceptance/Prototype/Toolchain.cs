@@ -154,6 +154,19 @@ internal static class Toolchain {
   }
 
   /// <summary>
+  /// Runs <c>polypiler-tooling</c> with the given arguments in a working directory, with that directory
+  /// first on <c>PATH</c>: its verbs look for files above the working directory and for tools on
+  /// <c>PATH</c>, both of which a process has of its own.
+  /// </summary>
+  public static CommandResult Tooling(string workingDirectory, params string[] arguments) {
+    var executable = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "polypiler-tooling.exe" : "polypiler-tooling");
+    Assert.That(File.Exists(executable), Is.True, $"the polypiler-tooling executable was not built next to the tests: {executable}");
+    return Run(executable, workingDirectory, arguments, new Dictionary<string, string> {
+      ["PATH"] = workingDirectory + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH")
+    });
+  }
+
+  /// <summary>
   /// The runtime settings of the executable under test. A translation is a process of a few seconds,
   /// most of them in methods the JIT compiles at the first tier; instrumenting those for profile-guided
   /// optimization costs a quarter of the time (3.5 s against 2.6 s for a strict float translation) and

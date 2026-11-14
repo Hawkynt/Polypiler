@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Verification.Generators;
@@ -62,5 +63,15 @@ public sealed class ShrinkTests {
   [Test]
   public void Buffer_RefusesNull()
     => Assert.That(() => Shrink.Buffer(null!), Throws.TypeOf<ArgumentNullException>());
+
+  /// <summary>The worked values of the issue: the shrink path from 0x7F, candidate by candidate.</summary>
+  [Test]
+  public void WorkedExample_ShrinksAlongThePublishedPath() {
+    ulong[] path = [127, 112, 105, 102, 101, 100];
+    for (var step = 0; step + 1 < path.Length; ++step)
+      Assert.That(Shrink.Integer(path[step]).First(candidate => candidate >= 100), Is.EqualTo(path[step + 1]), path[step].ToString(CultureInfo.InvariantCulture));
+
+    Assert.That(Shrink.Integer(100), Is.EqualTo(new ulong[] { 0, 50, 75, 88, 94, 97, 99 }));
+  }
 
 }

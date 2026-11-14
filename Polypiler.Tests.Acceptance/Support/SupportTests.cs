@@ -57,22 +57,24 @@ public sealed class SupportTests {
   [TestCase("polypiler translate a.cs", CommandTarget.Polypiler, new[] { "translate", "a.cs" })]
   [TestCase("toolchains list", CommandTarget.Tooling, new[] { "toolchains", "list" })]
   [TestCase("sbom", CommandTarget.Tooling, new[] { "sbom" })]
+  [TestCase("polypiler-tooling toolchains validate", CommandTarget.Tooling, new[] { "toolchains", "validate" })]
+  [TestCase("polypiler-tooling", CommandTarget.Tooling, new string[0])]
   [TestCase("--version", CommandTarget.Polypiler, new[] { "--version" })]
   [TestCase("polypiler", CommandTarget.Polypiler, new string[0])]
   [TestCase("", CommandTarget.Polypiler, new string[0])]
   public void CommandLine_IsRouted(string line, CommandTarget target, string[] arguments)
     => Assert.That(CommandSteps.Route([.. CommandLine.Split(line)]), Is.EqualTo((target, arguments)));
 
-  /// <summary>Test design 2: a tooling verb runs <c>Polypiler.Tooling.Program.Run</c> in process; a <c>polypiler</c> line runs the compiler.</summary>
+  /// <summary>Test design 2: a tooling verb starts the <c>polypiler-tooling</c> executable in the workspace; a <c>polypiler</c> line runs the compiler.</summary>
   [Test]
   public void ToolingVerb_RunsTheTooling() {
     var workspace = ScenarioWorkspace.Create();
     try {
       var log = new CommandLog();
       var identity = new ScenarioIdentity("../tests/features/infra", "Feature files are bound to NUnit", "A refused command line reports its exit code and message", []);
-      var steps = new CommandSteps(new PolypilerRunner(workspace, identity, log), log);
+      var steps = new CommandSteps(new PolypilerRunner(workspace, identity, log), workspace, log);
       steps.Run("toolchains list");
-      Assert.That(log.Last, Is.EqualTo(new CommandResult(2, "", "polypiler-tooling: unknown verb 'toolchains'." + Environment.NewLine)));
+      Assert.That(log.Last, Is.EqualTo(new CommandResult(2, "", "polypiler-tooling: error PLY0003: unknown toolchains command 'list'" + Environment.NewLine)));
       steps.Run("polypiler 'frob nicate'");
       Assert.That(log.Last.Stderr, Does.Contain("unknown command 'frob nicate'"));
       Assert.That(log.Commands, Has.Count.EqualTo(2));

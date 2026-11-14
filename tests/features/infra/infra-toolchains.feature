@@ -1,8 +1,10 @@
+@EndToEnd
 Feature: Pinned toolchains
 
   Scenario: The repository lock is valid and complete
     When I run "polypiler-tooling toolchains validate"
     Then the exit code is 0
+    And stderr is empty
     And the lock contains every one of the 26 toolchain keys named in "backlog/README.md"
     And the keys include "dotnet-sdk", "node", "rust", "pb-compiler", "z3" and "vice"
 
@@ -22,6 +24,7 @@ Feature: Pinned toolchains
     Given a lock entry "ghost" with probe "no-such-binary-polypiler --version"
     When I run "polypiler-tooling toolchains probe --only ghost"
     Then stderr contains "error PLY0021: toolchain 'ghost' is not installed"
+    And stdout contains "ghost Missing "
     And the exit code is 1
 
   Scenario Outline: A malformed lock is refused with its reason

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Tests.Acceptance.Prototype;
 using Polypiler.Tests.Acceptance.Support;
 using Reqnroll;
 
@@ -11,11 +11,12 @@ namespace Polypiler.Tests.Acceptance.Steps;
 /// <summary>
 /// The shared steps that run a command line in the scenario's workspace and check what it did. A line
 /// whose first word is <c>polypiler</c> goes, without that word, to <see cref="PolypilerRunner"/>; one
-/// whose first word is a verb of <c>polypiler-tooling</c> goes to <c>Polypiler.Tooling.Program.Run</c>;
-/// any other line goes to <see cref="PolypilerRunner"/> as it is.
+/// whose first word is <c>polypiler-tooling</c>, without that word, or a verb of
+/// <c>polypiler-tooling</c> starts the <c>polypiler-tooling</c> executable in the workspace through
+/// <see cref="Toolchain.Tooling"/>; any other line goes to <see cref="PolypilerRunner"/> as it is.
 /// </summary>
 [Binding]
-public sealed class CommandSteps(PolypilerRunner polypiler, CommandLog log) {
+public sealed class CommandSteps(PolypilerRunner polypiler, ScenarioWorkspace workspace, CommandLog log) {
 
   /// <summary>The verbs of <c>polypiler-tooling</c>.</summary>
   public static IReadOnlySet<string> ToolingVerbs { get; } = new HashSet<string>(StringComparer.Ordinal) {
@@ -25,6 +26,7 @@ public sealed class CommandSteps(PolypilerRunner polypiler, CommandLog log) {
   /// <summary>Which program a command line goes to, and the arguments it gets.</summary>
   public static (CommandTarget Target, string[] Arguments) Route(string[] words) => words switch {
     ["polypiler", .. var rest] => (CommandTarget.Polypiler, [.. rest]),
+    ["polypiler-tooling", .. var rest] => (CommandTarget.Tooling, [.. rest]),
     [var verb, ..] when ToolingVerbs.Contains(verb) => (CommandTarget.Tooling, [.. words]),
     _ => (CommandTarget.Polypiler, [.. words])
   };
@@ -38,10 +40,7 @@ public sealed class CommandSteps(PolypilerRunner polypiler, CommandLog log) {
       return;
     }
 
-    using var output = new StringWriter();
-    using var error = new StringWriter();
-    var exitCode = global::Polypiler.Tooling.Program.Run(arguments, output, error);
-    log.Add(new CommandResult(exitCode, output.ToString(), error.ToString()));
+    log.Add(Toolchain.Tooling(workspace.Path, arguments));
   }
 
   /// <summary>Checks the exit code of the last command line.</summary>
