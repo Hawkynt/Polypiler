@@ -1,0 +1,178 @@
+[
+  {
+    "id": "shl",
+    "name": "Shift Left",
+    "category": "shift",
+    "description": "Logical shift left - bits move to higher positions, low bits become 0",
+    "costKey": "shift",
+    "enableKey": "shift",
+    "platforms": null,
+    "hasCanRoute": true,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "shr",
+    "name": "Shift Right",
+    "category": "shift",
+    "description": "Logical shift right - bits move to lower positions, high bits become 0",
+    "costKey": "shift",
+    "enableKey": "shift",
+    "platforms": null,
+    "hasCanRoute": true,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "rol",
+    "name": "Rotate Left",
+    "category": "rotate",
+    "description": "Circular rotate left - bits wrap around from high to low",
+    "costKey": "rotate",
+    "enableKey": "rotate",
+    "platforms": null,
+    "hasCanRoute": true,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "ror",
+    "name": "Rotate Right",
+    "category": "rotate",
+    "description": "Circular rotate right - bits wrap around from low to high",
+    "costKey": "rotate",
+    "enableKey": "rotate",
+    "platforms": null,
+    "hasCanRoute": true,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "mul",
+    "name": "Multiply",
+    "category": "arithmetic",
+    "description": "Integer multiply - each set bit in multiplier copies input shifted by that amount",
+    "costKey": "mul",
+    "enableKey": "mul",
+    "platforms": null,
+    "hasCanRoute": true,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "bmi2",
+    "name": "PEXT/PDEP",
+    "category": "bmi2",
+    "description": "BMI2 parallel bit extract + deposit - gather then scatter bits in 2 instructions",
+    "costKey": "bmi",
+    "enableKey": "bmi",
+    "platforms": ["modern", "zen1_2", "zen3"],
+    "hasCanRoute": false,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "pext",
+    "name": "PEXT",
+    "category": "bmi2",
+    "description": "Parallel bit extract - gather bits at mask positions to contiguous low bits",
+    "costKey": "bmi",
+    "enableKey": "bmi",
+    "platforms": ["modern", "zen1_2", "zen3"],
+    "hasCanRoute": false,
+    "hasFindRoutings": false
+  },
+  {
+    "id": "pdep",
+    "name": "PDEP",
+    "category": "bmi2",
+    "description": "Parallel bit deposit - scatter contiguous low bits to mask positions",
+    "costKey": "bmi",
+    "enableKey": "bmi",
+    "platforms": ["modern", "zen1_2", "zen3"],
+    "hasCanRoute": false,
+    "hasFindRoutings": false
+  },
+  {
+    "id": "pshufb",
+    "name": "PSHUFB",
+    "category": "simd",
+    "description": "Shuffle bytes - each output byte selected from input by index (SSSE3/NEON TBL)",
+    "costKey": "pshufb",
+    "enableKey": "pshufb",
+    "platforms": ["modern", "zen1_2", "zen3", "core2", "atom", "arm_a64", "apple_m1", "xbox360", "ps3"],
+    "hasCanRoute": false,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "rlwinm",
+    "name": "RLWINM",
+    "category": "powerpc",
+    "description": "Rotate left then AND mask - single instruction combines rotate + mask (PowerPC)",
+    "costKey": "shift",
+    "enableKey": "rotate",
+    "platforms": ["gamecube", "xbox360", "ps3"],
+    "hasCanRoute": false,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "andc",
+    "name": "ANDC",
+    "category": "powerpc",
+    "description": "AND with complement - computes a & ~b in single instruction (PowerPC/RISC)",
+    "costKey": "basic",
+    "enableKey": null,
+    "platforms": ["gamecube", "xbox360", "ps3"],
+    "hasCanRoute": false,
+    "hasFindRoutings": false
+  },
+  {
+    "id": "bfi",
+    "name": "BFI",
+    "category": "arm",
+    "description": "Bit field insert - copy width bits from src[0..width-1] to dst[lsb..lsb+width-1]",
+    "costKey": "basic",
+    "enableKey": null,
+    "platforms": ["arm_a64", "arm_m4", "apple_m1"],
+    "hasCanRoute": false,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "ubfx",
+    "name": "UBFX",
+    "category": "arm",
+    "description": "Unsigned bit field extract - copy bits from src[lsb..lsb+width-1] to dst[0..width-1]",
+    "costKey": "basic",
+    "enableKey": null,
+    "platforms": ["arm_a64", "arm_m4", "apple_m1"],
+    "hasCanRoute": false,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "rev",
+    "name": "REV/BSWAP",
+    "category": "byteswap",
+    "description": "Reverse byte order - byte 0↔last, 1↔second-to-last, etc. (ARM REV, x86 BSWAP)",
+    "costKey": "basic",
+    "enableKey": null,
+    "platforms": ["modern", "zen1_2", "zen3", "core2", "arm_a64", "arm_m4", "apple_m1"],
+    "hasCanRoute": false,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "rbit",
+    "name": "RBIT",
+    "category": "arm",
+    "description": "Reverse all bits - bit 0↔bit (w-1), bit 1↔bit (w-2), etc. (ARM only)",
+    "costKey": "basic",
+    "enableKey": null,
+    "platforms": ["arm_a64", "arm_m4", "apple_m1"],
+    "hasCanRoute": false,
+    "hasFindRoutings": true
+  },
+  {
+    "id": "lut",
+    "name": "LUT",
+    "category": "memory",
+    "description": "Lookup table - precomputed permutation array, useful for small bit widths",
+    "costKey": "lut",
+    "enableKey": null,
+    "platforms": null,
+    "hasCanRoute": false,
+    "hasFindRoutings": false
+  }
+]

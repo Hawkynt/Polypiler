@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "id": "sum-loop",
+  "variant": "default",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "environment": {
+    "os": "linux",
+    "osVersion": "6.8.0",
+    "architecture": "x64",
+    "cpuModel": "Test CPU @ 3.00GHz",
+    "logicalCores": 4,
+    "toolchains": {
+      "node": "24.22.2"
+    },
+    "fingerprint": "110a6057c2161e97022e57c128e8405bf931eb6d313c83dcf0fb55e93677f4d6"
+  },
+  "samples": [
+    {
+      "wallNs": 99000000,
+      "cpuNs": 89100000,
+      "peakRssBytes": 50000000
+    },
+    {
+      "wallNs": 100000000,
+      "cpuNs": 90000000,
+      "peakRssBytes": 50000000
+    },
+    {
+      "wallNs": 101000000,
+      "cpuNs": 90900000,
+      "peakRssBytes": 50000000
+    }
+  ],
+  "stats": {
+    "wallNs": {
+      "median": 100000000,
+      "mad": 1000000,
+      "min": 99000000,
+      "max": 101000000
+    },
+    "cpuNs": {
+      "median": 90000000,
+      "mad": 900000,
+      "min": 89100000,
+      "max": 90900000
+    },
+    "peakRssBytes": {
+      "median": 50000000,
+      "mad": 0,
+      "min": 50000000,
+      "max": 50000000
+    }
+  },
+  "buildNs": null,
+  "sourceBytes": 171,
+  "binaryBytes": null,
+  "allocatedBytes": null,
+  "allocations": null,
+  "extra": {}
+}

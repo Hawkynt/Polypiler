@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.IR;
+using Polypiler.Tooling.Bench;
 using Polypiler.Tooling.Commands;
 using Polypiler.Tooling.Fuzz;
 using Polypiler.Tooling.Report;
@@ -53,6 +54,12 @@ public static class Program {
       output.WriteLine($"       {Name} {CiCommand.Verb} audit [--root <dir>]");
       output.WriteLine($"       {Name} {CiCommand.Verb} matrix (--changed <file> | --all) [--root <dir>]");
       output.WriteLine($"       {Name} {CiCommand.Verb} env --layer <name> [--root <dir>]");
+      output.WriteLine($"       {Name} {IntegrityCommand.Verb} check [--base <git ref>]");
+      output.WriteLine($"       {Name} {IntegrityCommand.Verb} seal <path>...");
+      output.WriteLine($"       {Name} {LicensesCommand.Verb} scan --mode corpus|distribution [--root <dir>] [--report <file>] [--policy <file>]");
+      output.WriteLine($"       {Name} {LicensesCommand.Verb} inventory [--policy <file>]");
+      output.WriteLine($"       {Name} {BenchCommand.Verb} run (--id <id> | --all) [--out <dir>]");
+      output.WriteLine($"       {Name} {BenchCommand.Verb} compare --baseline <dir> --current <dir> [--budgets <file>] [--out <file.md>]");
       return Success;
     }
 
@@ -80,6 +87,12 @@ public static class Program {
       return new CorpusCommand().Run(args[1..], output, error);
     if (args[0] == FuzzCommand.Verb)
       return new FuzzCommand().Run(args[1..], output, error);
+    if (args[0] == IntegrityCommand.Verb)
+      return new IntegrityCommand().Run(args[1..], output, error);
+    if (args[0] == LicensesCommand.Verb)
+      return new LicensesCommand().Run(args[1..], output, error);
+    if (args[0] == BenchCommand.Verb)
+      return new BenchCommand().Run(args[1..], output, error);
 
     if (args[0] == CiCommand.Verb)
       return CiCommand.Run(args[1..], output, error);
