@@ -18,6 +18,14 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   prints one object per line); `polypiler-tooling toolchains validate` checks the file itself. A test
   marked `[RequiresToolchain("<key>")]` is inconclusive when its toolchain is absent or at another
   version, and fails instead when `POLYPILER_REQUIRE_TOOLCHAINS=1`.
+- Upstream files the tests read are pinned in [`tooling/corpus/corpus.yaml`](tooling/corpus/corpus.yaml)
+  by repository and commit, never copied into this repository. `polypiler-tooling corpus import`
+  (with `--source <checkout>` for each local clone that holds a pin, otherwise it fetches the commit
+  with `git`) writes them to the git-ignored `corpus/upstream/` and checks them against
+  [`tooling/corpus/corpus.lock.json`](tooling/corpus/corpus.lock.json); `corpus verify` re-hashes
+  them offline. A test reads one with `CorpusFixture.Open("<fixture id>")`. A new fixture entry is
+  added with `corpus import --update-lock`, and `corpus discover --repository <owner/repo> --glob
+  <pattern>` prints stubs for it.
 
 ## Build
 
