@@ -76,7 +76,9 @@ public static partial class IrInterpreter {
   /// <returns>The value returned, or <see langword="null"/> for a function that returns nothing.</returns>
   /// <exception cref="ArgumentException">The function does not exist or the arguments do not fit it.</exception>
   /// <exception cref="IrTrapException">An operation trapped, also one of an initializer.</exception>
-  public static object? Call(IrModule module, string function, object[] arguments) => Instantiate(module).Call(function, arguments);
+  public static object? Call(IrModule module, string function, object[] arguments)
+    // A module without globals has no state to keep apart, and the many calls of the equivalence tests need no instance each.
+    => module.Globals.Count == 0 ? Call(_programs.GetValue(module, Index), [], module, function, arguments) : Instantiate(module).Call(function, arguments);
 
 
   /// <summary>A function of the module called with values taken across the boundary, in the globals of an instance.</summary>
