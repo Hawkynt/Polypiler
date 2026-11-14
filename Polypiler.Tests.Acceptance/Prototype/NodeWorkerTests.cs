@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using NUnit.Framework;
 using Polypiler.Prototype.Testing;
 
@@ -82,6 +83,27 @@ public sealed class NodeWorkerTests {
     Assert.That(() => Run(worker, endless), Throws.TypeOf<NodeFailure>().With.Message.Contains("did not answer within 2 s"));
     Assert.That(worker.IsAlive, Is.False);
     Assert.That(() => Run(worker, this.Good()), Throws.TypeOf<NodeFailure>().With.Message.Contains("stopped"));
+  }
+
+  /// <summary>
+  /// The answer reaches the caller while every thread of the pool is taken and more work waits for one,
+  /// as in a sweep of many targets beside other tests: the worker's pipes are served by threads of
+  /// their own, so the answer does not queue for a thread the pool adds only slowly.
+  /// </summary>
+  [Test, NonParallelizable]
+  public void AnAnswer_DoesNotWaitForTheThreadPool() {
+    using var worker = NodeWorker.Start(TimeSpan.FromSeconds(5));
+    Assert.That(Run(worker, this.Good()), Is.EqualTo(new[] { "41", "-5" }));
+    // Not disposed: blockers the pool has not started yet still wait on it after the test.
+    var release = new ManualResetEventSlim();
+    ThreadPool.GetMinThreads(out var minimum, out _);
+    for (var blocker = Math.Max(minimum, ThreadPool.ThreadCount) + 4 * Environment.ProcessorCount + 64; blocker > 0; --blocker)
+      ThreadPool.UnsafeQueueUserWorkItem(_ => release.Wait(), null);
+    try {
+      Assert.That(Run(worker, this.Good()), Is.EqualTo(new[] { "41", "-5" }));
+    } finally {
+      release.Set();
+    }
   }
 
   /// <summary>Just inside the timeout a slow module still answers.</summary>
