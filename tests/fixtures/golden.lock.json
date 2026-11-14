@@ -1112,6 +1112,16 @@
       "bytes": 40316
     },
     {
+      "path": "tests/fixtures/backend/golden/spans/MemoryHolder.cs.csharp.golden",
+      "sha256": "cff4f9c8495e591f7d0e1d90ec50ef5731e57396666081341aeb9cdbd41c1b5b",
+      "bytes": 152038
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/MemoryHolder.cs.javascript.golden",
+      "sha256": "86911e2d3841db1164038df35b4ced36fb69f8112b10b91f1a38eeaa01a1961e",
+      "bytes": 129848
+    },
+    {
       "path": "tests/fixtures/backend/golden/spans/Spans.cs.csharp.golden",
       "sha256": "a2ef82adbc14396ebf7d89f9d76c00871dfe4335318b0446cac88ba729146634",
       "bytes": 448030
@@ -1140,6 +1150,16 @@
       "path": "tests/fixtures/backend/golden/spans/views.mjs.javascript.golden",
       "sha256": "86d5334423b9b3a6387a535a8584bd0128d83a4f60601ba4b74ecc0cdb7e0b18",
       "bytes": 136064
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/window.mjs.csharp.golden",
+      "sha256": "226ea49e623568b3a831fd69d2b51c02931caaa592e84d3dad355c52f276821c",
+      "bytes": 188134
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/window.mjs.javascript.golden",
+      "sha256": "6125a7d76912e98a46538ccd14a053f65e8945f6e86fbfe2815ff14b2f531c10",
+      "bytes": 124836
     },
     {
       "path": "tests/fixtures/backend/golden/state/Histogram.cs.csharp.golden",
