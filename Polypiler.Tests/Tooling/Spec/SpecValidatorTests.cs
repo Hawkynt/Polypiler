@@ -371,7 +371,7 @@ public sealed class SpecValidatorTests {
       "properties": {
         "size": { "oneOf": [
           { "type": "integer", "minimum": 0 },
-          { "type": "object", "required": ["width", "height"], "properties": { "width": { "type": "integer" } }, "additionalProperties": false },
+          { "type": "object", "required": ["width", "height"], "properties": { "width": { "type": "integer" }, "height": { "type": "integer" } }, "additionalProperties": false },
           { "type": "string", "pattern": "^[a-z]+$" }
         ] },
         "flag": { "anyOf": [{ "type": "integer" }, { "type": "boolean" }] },
@@ -390,6 +390,7 @@ public sealed class SpecValidatorTests {
     "/spec/size: Required properties [\"height\"] are not present",
     "/spec/size/width: Value is \"string\" but should be \"integer\"",
     "/spec/size/depth: property 'depth' is not allowed")]
+  [TestCase("{size: {width: x, height: 1}}", "/spec/size/width: Value is \"string\" but should be \"integer\"")]
   [TestCase("{size: -1}", "/spec/size: -1 should be at least 0")]
   [TestCase("{size: Big}", "/spec/size: The string value is not a match for the indicated regular expression")]
   [TestCase("{flag: s}", "/spec/flag: Value is \"string\" but should be \"integer\"")]
