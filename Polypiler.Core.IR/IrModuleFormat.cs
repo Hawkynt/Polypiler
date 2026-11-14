@@ -22,7 +22,7 @@ namespace Polypiler.Core.IR;
 public static class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 2;
+  public const int Version = 3;
 
   private static readonly byte[] _magic = "PLYIRMOD"u8.ToArray();
 
@@ -31,7 +31,7 @@ public static class IrModuleFormat {
   private enum Tag : byte {
     Null, Shared,
     Const, ConstRef, LocalRef, Unary, Binary, Convert, Conditional, ArrayLoad, ArrayLength, NewArray, Call, Step,
-    StructNew, StructDefault, FieldLoad, StructEquals, Intrinsic, GlobalRef,
+    StructNew, StructDefault, FieldLoad, StructEquals, Intrinsic, GlobalRef, StrConst,
     Block, Declare, Assign, Store, FieldStore, ExprStmt, If, While, DoWhile, For, Switch, Break, Continue, Return, GlobalAssign
   }
 
@@ -128,6 +128,9 @@ public static class IrModuleFormat {
         writer.Write(constant.Name);
         this.Type(constant.Type);
         this.Longs(constant.Values);
+        this.Count(constant.Strings.Count);
+        foreach (var text in constant.Strings)
+          this.Text(text);
       }
 
       // A global is numbered before its initializer is written: no initializer names a later one.
@@ -156,6 +159,13 @@ public static class IrModuleFormat {
       this.Count(values.Count);
       foreach (var value in values)
         writer.Write(value);
+    }
+
+    // A string as its UTF-16 code units, so that an unpaired surrogate is kept as it is.
+    private void Text(string text) {
+      this.Count(text.Length);
+      foreach (var unit in text)
+        writer.Write((ushort)unit);
     }
 
     private void Type(IrType type) {
@@ -248,6 +258,7 @@ public static class IrModuleFormat {
       IrStructEquals => Tag.StructEquals,
       IrIntrinsic => Tag.Intrinsic,
       IrGlobalRef => Tag.GlobalRef,
+      IrStrConst => Tag.StrConst,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -283,6 +294,9 @@ public static class IrModuleFormat {
           break;
         case IrGlobalRef reference:
           this.Global(reference.Global);
+          break;
+        case IrStrConst text:
+          this.Text(text.Value);
           break;
         case IrUnary unary:
           this.Count((int)unary.Op);
@@ -436,7 +450,7 @@ public static class IrModuleFormat {
         structure.Define(this.List(() => new IrField(reader.ReadString(), this.Type(), reader.ReadBoolean())));
 
       var constants = this.List(() => {
-        var constant = new IrModuleConst(reader.ReadString(), this.Type(), this.Longs());
+        var constant = new IrModuleConst(reader.ReadString(), this.Type(), this.Longs()) { Strings = this.List(this.Text) };
         this._constants.Add(constant);
         return constant;
       });
@@ -464,6 +478,14 @@ public static class IrModuleFormat {
 
     private IReadOnlyList<long> Longs() => this.List(reader.ReadInt64);
 
+    private string Text() {
+      var units = new char[this.Count()];
+      for (var index = 0; index < units.Length; ++index)
+        units[index] = (char)reader.ReadUInt16();
+
+      return new string(units);
+    }
+
     private static T Of<T>(IReadOnlyList<T> table, int index, string what)
       => index < table.Count ? table[index] : throw new InvalidDataException($"The {what} {index} does not exist.");
 
@@ -480,6 +502,7 @@ public static class IrModuleFormat {
         IrTypeKind.Struct => IrType.Struct(Of(this._declarations, this.Count(), "struct")),
         IrTypeKind.Span => IrType.Span(this.Type()),
         IrTypeKind.ReadOnlySpan => IrType.ReadOnlySpan(this.Type()),
+        IrTypeKind.String => IrType.String,
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };
@@ -544,6 +567,7 @@ public static class IrModuleFormat {
         Tag.FieldLoad => this.FieldLoad(),
         Tag.StructEquals => new IrStructEquals(this.Node<IrExpr>(), this.Node<IrExpr>()),
         Tag.GlobalRef => new IrGlobalRef(Of(this._globals, this.Count(), "global")),
+        Tag.StrConst => new IrStrConst(this.Text()),
         _ => new IrIntrinsic(this.Enum<IrIntrinsicOp>(), type, this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };

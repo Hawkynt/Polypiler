@@ -1,5 +1,6 @@
 using System;
 using System.Buffers.Binary;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -84,6 +85,40 @@ public sealed class IrModuleFormatTests {
   public void AChangedType_IsKept() {
     var read = IrModuleFormat.Read(IrModuleFormat.Write(KitchenSink()));
     Assert.That(((IrExprStmt)read.Functions[0].Body.Statements[8]).Expression.Type, Is.EqualTo(IrType.I64));
+  }
+
+  /// <summary>
+  /// Strings in every place they stand - a constant, a table of them, a literal, the operands and the
+  /// type of an operation - read back code unit for code unit, an unpaired surrogate and the empty string among them.
+  /// </summary>
+  [Test]
+  public void Strings_ReadBackCodeUnitForCodeUnit() {
+    var words = IrModuleConst.OfStrings("Words", IrType.Array(IrType.String), ["a", "\uD800", "", "\uDBFF\uDFFF z"]);
+    var name = IrModuleConst.OfStrings("Name", IrType.String, ["\u00E9t\u00E9"]);
+    var text = new IrLocal("s", IrType.String);
+    var body = new IrBlock([
+      new IrDeclare(text, new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [new IrConstRef(name), new IrStrConst("\uDC00"), new IrStrConst("")])),
+      new IrReturn(new IrIntrinsic(IrIntrinsicOp.StrLength, _i32, [new IrLocalRef(text)]))
+    ]);
+    var module = new IrModule("Text", [new IrFunction("F", true, _i32, [], [text], body)], [words, name]);
+    var read = IrModuleFormat.Read(IrModuleFormat.Write(module));
+    Assert.That(IrGraph.Difference(module, read), Is.Null);
+    Assert.That(read.Constants[0].Strings, Is.EqualTo(new[] { "a", "\uD800", "", "\uDBFF\uDFFF z" }));
+    Assert.That((read.Constants[1].Type, read.Constants[1].Values), Is.EqualTo((IrType.String, (IReadOnlyList<long>)[])));
+    Assert.That(((IrIntrinsic)((IrDeclare)read.Functions[0].Body.Statements[0]).Initializer!).Arguments[1], Is.EqualTo(new IrStrConst("\uDC00")));
+    Assert.That(IrModuleFormat.Write(read), Is.EqualTo(IrModuleFormat.Write(module)));
+  }
+
+  [Test]
+  public void AHandWrittenString_Reads() {
+    var module = IrModuleFormat.Read(Expression(writer => {
+      writer.Write(StrConst);
+      writer.Write((byte)IrTypeKind.String);
+      writer.Write7BitEncodedInt(2);
+      writer.Write((ushort)0xD800);
+      writer.Write((ushort)'a');
+    }));
+    Assert.That(((IrExprStmt)module.Functions[0].Body.Statements[0]).Expression, Is.EqualTo(new IrStrConst("\uD800a")));
   }
 
   [Test]
@@ -205,7 +240,7 @@ public sealed class IrModuleFormatTests {
   }
 
   // The numbers of the layout, as IrModuleFormat writes them.
-  private const byte Null = 0, Shared = 1, Const = 2, LocalRef = 4, Unary = 5, GlobalRef = 19, Block = 20, ExprStmt = 25, GlobalAssign = 35;
+  private const byte Null = 0, Shared = 1, Const = 2, LocalRef = 4, Unary = 5, GlobalRef = 19, StrConst = 20, Block = 21, ExprStmt = 26, GlobalAssign = 36;
 
   private const byte I32 = (byte)IrTypeKind.I32;
 
