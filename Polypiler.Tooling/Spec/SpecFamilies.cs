@@ -10,6 +10,7 @@ public static class SpecFamilies {
   public static IReadOnlyList<ISpecFamily> All { get; } = [
     new DemoSpecFamily(),
     new BinarySpecFamily(),
+    new EffectsSpecFamily(),
   ];
 
 }

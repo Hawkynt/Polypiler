@@ -1,0 +1,21 @@
+id: EFFECTS.missing-name
+title: Effect without name
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-EFFECTS
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  class: private-memory
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: []
+  writes: []
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

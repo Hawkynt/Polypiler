@@ -1,0 +1,22 @@
+id: EFFECTS.default-is-conservative
+title: Default effect that may be reordered
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-EFFECTS
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: default-is-conservative
+  class: private-memory
+  ordering: free
+  duplication: forbidden
+  elimination: forbidden
+  reads: [unknown]
+  writes: [unknown]
+  mayTrap: true
+  defaultForUnknown: true
+  targets: {unsupported: PLY0100}

@@ -105,3 +105,21 @@ vendor's manual, never filled in from memory; `documented: false` marks an opcod
 The rules (`PLY0046`): `layout`, `register-unique`, `opcode-unique`, `mode-declared`, `flags-declared`,
 `length-matches-mode` (opcode bytes plus the mode's `operandBytes`), `token-unique`, `token-in-range`
 and `fields-ordered`. `cpu.parent` names the instruction document a variant extends (`PLY0043`).
+
+## Family `effects`
+
+`spec/effects/<name>.yaml`, ID `EFFECTS.<name>`, body [`schemas/effects.schema.json`](schemas/effects.schema.json):
+one effect class and whether an operation with it may be reordered (`ordering`), duplicated
+(`duplication`) or eliminated (`elimination`), the region kinds it `reads` and `writes`, `mayTrap`,
+`defaultForUnknown`, and `targets.unsupported`, the diagnostic a target that cannot honour it raises
+instead of dropping the operation. [`effects/unknown-call.yaml`](effects/unknown-call.yaml) is the
+default: the effect of every operation nothing else describes. Rules (`PLY0046`):
+
+| Rule | What it requires |
+| --- | --- |
+| `layout` | the file lies directly in `effects/`; its ID is `EFFECTS.<file name>` and `name` is the file name |
+| `single-default` | exactly one document has `defaultForUnknown: true`; when several do, the one of class `unknown-call` is the default and the others are reported |
+| `default-is-conservative` | the default is `strict`, duplication and elimination `forbidden`, and reads and writes `unknown` |
+| `volatile-is-strict` | classes `volatile`, `mmio`, `device-io`, `code-write` and `unknown-call` are `strict`, duplication and elimination `forbidden` |
+| `write-implies-order` | an effect that writes anything is not `free` |
+| `unique-name` | no two documents share a `name` |
