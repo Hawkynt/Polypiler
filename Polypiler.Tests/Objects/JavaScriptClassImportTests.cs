@@ -91,7 +91,7 @@ public sealed class JavaScriptClassImportTests {
 
   /// <summary>Test design 11: what the construct table refuses, by name.</summary>
   [TestCase("export class P { constructor() { this.a = 1; } } export function f() { const p = new P(); p.b = 2; return p.a; }", "a property added outside the constructor")]
-  [TestCase("class B {} export class P extends B { } export function f() { return 1; }", "extends")]
+  [TestCase("export class P extends Array { } export function f() { return 1; }", "extends Array, which is no class of the file")]
   [TestCase("export class P { ['x']() { return 1; } } export function f() { return 1; }", "a computed member name")]
   [TestCase("function P() { this.a = 1; } P.prototype = {}; export function f() { return new P().a; }", "prototype mutation")]
   [TestCase("export class P { m() { return 1; } } export function f() { const p = new P(); const g = p.m; return 1; }", "a method taken from its object")]

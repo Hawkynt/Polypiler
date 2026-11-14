@@ -68,7 +68,7 @@ public sealed class CSharpClassImportTests {
     Assert.That(counter.Properties.Select(property => (property.Name, property.BackingField?.Name, property.HasSetter)),
       Is.EqualTo(new[] { ("Step", (string?)"Step", true), ("Count", null, false) }));
     Assert.That(counter.StaticFields.Select(global => global.Name), Is.EqualTo(new[] { "Counter.Created" }));
-    Assert.That((counter.IsSealed, counter.IsAbstract, counter.Base, counter.Interfaces, counter.IsRecord), Is.EqualTo((true, false, (IrClassType?)null, Enumerable.Empty<IrClassType>(), false)));
+    Assert.That((counter.IsSealed, counter.IsAbstract, counter.Base, counter.Interfaces, counter.IsRecord), Is.EqualTo((true, false, (IrClassType?)null, Enumerable.Empty<IrInterfaceType>(), false)));
 
     var box = ClassOf(module, "Box");
     Assert.That(box.Fields.Select(field => (field.Name, field.IsReadOnly)), Is.EqualTo(new[] { ("_cells", true), ("Fixed", true), ("Wide", false) }));
@@ -163,16 +163,16 @@ public sealed class CSharpClassImportTests {
   }
 
   /// <summary>Test design 10: what the construct table refuses, by name, with nothing written.</summary>
-  [TestCase("public class B { } public sealed class D : B { }", "inheritance")]
-  [TestCase("public sealed class D : System.IDisposable { public void Dispose() { } }", "an interface")]
+  [TestCase("public sealed class D : System.Exception { }", "inheritance from Exception, which the file does not declare")]
+  [TestCase("public sealed class D : System.IDisposable { public void Dispose() { } }", "the interface IDisposable, which the file does not declare")]
   [TestCase("public sealed class G<T> { }", "a generic class")]
   [TestCase("public sealed class D { public event System.Action E; }", "an event")]
   [TestCase("public sealed class D { public int this[int i] => i; }", "an indexer")]
   [TestCase("public sealed class D { public static D operator +(D a, D b) => a; }", "an operator")]
   [TestCase("public sealed class D { ~D() { } }", "a finalizer")]
   [TestCase("public sealed class D { static D() { } }", "a static constructor")]
-  [TestCase("public abstract class D { }", "a abstract class")]
-  [TestCase("public class D { public virtual int M() => 1; }", "a virtual method")]
+  [TestCase("public partial class D { }", "a partial class")]
+  [TestCase("public class D { public extern int M(); }", "a extern method")]
   [TestCase("public sealed class D { public static int P { get; set; } }", "a static property")]
   [TestCase("public sealed class D { public int P { get => 1; private set { } } }", "an accessor with an accessibility of its own")]
   [TestCase("public sealed class D { public string S = \"\"; }", "a field of the type str")]
