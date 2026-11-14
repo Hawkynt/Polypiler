@@ -1,0 +1,22 @@
+id: BINARY.mos6502.instructions
+title: MOS 6502 instruction table
+version: 1
+status: draft
+owner: Hawkynt
+issue: ISA-6502
+tests: []
+introducedIn: P3
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: instructions
+  cpu: {name: mos6502, variant: nmos, byteOrder: little}
+  registers: [{name: A, bits: 8}, {name: X, bits: 8}, {name: Y, bits: 8}, {name: SP, bits: 8}, {name: PC, bits: 16}, {name: P, bits: 8}]
+  flags: [N, V, B, D, I, Z, C]
+  modes: [{name: implied}, {name: immediate, operandBytes: 1}, {name: absolute, operandBytes: 2}]
+  instructions:
+    - {opcode: "0xA9", mnemonic: LDA, mode: immediate, length: 2, cycles: 2, flags: [N, Z], documented: true}
+    - {opcode: "0x69", mnemonic: ADC, mode: immediate, length: 2, cycles: 2, flags: [N, V, Z, C], documented: true}
+    - {opcode: "0x4C", mnemonic: JMP, mode: absolute, length: 3, cycles: 3, flags: [], documented: true}
+    - {opcode: "0xEA", mnemonic: NOP, mode: implied, length: 1, cycles: 2, flags: [], documented: true}
