@@ -45,6 +45,25 @@ jobs:
       - name: report errors --check
         run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- report errors --check
 
+  # The fence around the LGPL compiler: no GPL-derived, reference-only or denied code in a Polypiler.*
+  # folder, and every provenance-notice entry there names its origin and licence (PLY0024, PLY0029).
+  # The wall time of the scan is printed for the record, not gated.
+  licence-fence:
+    name: licence fence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build the tooling
+        run: dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release
+      - name: licenses scan --mode project
+        run: time dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- licenses scan --mode project
+
   # Polypiler gates coverage, which the shared workflow only reports: at least 95 % of all lines AND
   # of all conditional branches must be executed by the tests (ISSUES.md, "Test strategy").
   coverage-gate:

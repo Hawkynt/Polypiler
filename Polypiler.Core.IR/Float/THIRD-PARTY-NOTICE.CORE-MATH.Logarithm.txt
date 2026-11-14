@@ -1,3 +1,8 @@
+Origin: https://gitlab.inria.fr/core-math/core-math/-/tree/018fa97cbdacf59924b899a9dfa422d532cb2bb7
+Licence: MIT
+Origin: dotnet/runtime@56d5bb652aced6bb4fed74ab43fbdd4c39b6b7ed:src/libraries/System.Private.CoreLib/src/System
+Licence: MIT
+
 Parts of Polypiler.Core.IR/Float/Operations are converted to C# from the CORE-MATH project
 (https://gitlab.inria.fr/core-math/core-math, commit 018fa97cbdacf59924b899a9dfa422d532cb2bb7):
 

@@ -1,3 +1,6 @@
+Origin: dotnet/runtime@56d5bb652aced6bb4fed74ab43fbdd4c39b6b7ed:src/libraries/System.Private.CoreLib/src/System
+Licence: MIT
+
 The semantics of these parts of Polypiler.Core.IR/Float/Operations follow the .NET runtime
 (https://github.com/dotnet/runtime, branch release/10.0, commit 56d5bb652aced6bb4fed74ab43fbdd4c39b6b7ed,
 src/libraries/System.Private.CoreLib/src/System/Math.cs, MathF.cs, Double.cs, Single.cs):

@@ -49,6 +49,16 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   so converting code or adding a package adds its row there. Only the repository owner moves a
   licence between the policy's lists, with a row in
   [`tooling/licensing/DECISIONS.md`](tooling/licensing/DECISIONS.md).
+- Whatever is derived from a GPL file is GPL. A distribution scan of a generated package (a root
+  holding `polypiler.manifest.json`) computes the package's effective licence from the licences of
+  its inputs and helpers - any GPL member makes it `GPL-3.0-or-later`, else any LGPL member
+  `LGPL-3.0-or-later`, else the permissive identifiers joined by `AND` - fails when the manifest's
+  `licensing.outputLicence` states less, and writes `artifacts/licenses/effective.json`.
+  `licenses scan --mode project` is the fence around the LGPL compiler: no file of a `Polypiler.*`
+  folder may carry a GPL, reference-only or denied licence, by header, licence file or notice entry.
+  Every entry of a `THIRD_PARTY_NOTICES.md` (one per `## ` section) or `THIRD-PARTY-NOTICE.<Name>.txt`
+  (one per file) there carries the lines `Origin: <owner/repo@sha:path or URL>` and
+  `Licence: <SPDX expression>`, one pair per work it records.
 - Generated and foreign code is built and run only through the cross-language runner
   (`Polypiler.Core.Verification/Running`), under the limits of
   [`tooling/ci/runner.yaml`](tooling/ci/runner.yaml). On Linux with a working `bwrap` (bubblewrap) the

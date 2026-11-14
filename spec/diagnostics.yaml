@@ -265,7 +265,7 @@ codes:
     rule: licences.policy
     area: infrastructure
     owner: INFRA-LICENSES
-    surfaces: "standard error of polypiler-tooling licenses scan and licenses inventory; also ''<path>': declared licence '<declared>' disagrees with detected '<family>'' and ''<path>' is a restricted asset and may not be redistributed'"
+    surfaces: "standard error of polypiler-tooling licenses scan and licenses inventory; also ''<path>': declared licence '<declared>' disagrees with detected '<family>'' and ''<path>' is a restricted asset and may not be redistributed'; for a generated package ''<dir>': output licence '<stated>' understates the effective licence '<effective>' (because of <origin>)'' and ''<origin>': licence '<expression>' is reference-only|denied and cannot be part of an output''; in project mode ''<path>': GPL-derived code may not be merged into the LGPL-licensed compiler projects; keep '<origin>' as a rung 2 reference''"
   - code: PLY0025
     severity: error
     exit: EnvironmentError
@@ -310,7 +310,7 @@ codes:
     rule: licences.detection
     area: infrastructure
     owner: INFRA-LICENSES
-    surfaces: "standard error of polypiler-tooling licenses scan, for a file no rule yields a licence for, a header expression that does not parse, an unknown licence text, a shared text no declaration selects a variant of, and a Vendored/<library>/ folder without a licence file; of licenses inventory for a notice file or package reference tooling/licensing/third-party.yaml does not list"
+    surfaces: "standard error of polypiler-tooling licenses scan, for a file no rule yields a licence for, a header expression that does not parse, an unknown licence text, a shared text no declaration selects a variant of, and a Vendored/<library>/ folder without a licence file; of licenses inventory for a notice file or package reference tooling/licensing/third-party.yaml does not list; of a distribution scan for a manifest input or helper whose licence cannot be determined, or a manifest that lists neither; of a project scan for a provenance entry that lacks 'Origin:' or 'Licence:'"
   - code: PLY0030
     severity: error
     exit: TargetBuildFailure

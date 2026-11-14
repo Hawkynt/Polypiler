@@ -9,7 +9,8 @@ not modified; the `polypiler` executable ships the assemblies as the packages pr
 - **Source:** <https://github.com/dotnet/roslyn>
 - **Used for:** parsing and binding C# source — syntax trees, the semantic model, constant values and
   the compiler's own diagnostics
-- **Licence:** MIT
+- Origin: https://www.nuget.org/packages/Microsoft.CodeAnalysis.CSharp/5.3.0
+- Licence: MIT
 
 ```
 The MIT License (MIT)

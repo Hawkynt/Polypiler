@@ -9,7 +9,8 @@ not modified; the `polypiler` executable ships the assembly as the package provi
 - **Source:** <https://github.com/adams85/acornima> (commit `6261d94091f18d6ab31eebc149916b6ba070d427`)
 - **Used for:** parsing JavaScript source, script or module — the syntax tree in ESTree form, the
   comments that carry JSDoc, source positions and the parser's own syntax errors
-- **Licence:** BSD-3-Clause
+- Origin: https://github.com/adams85/acornima/tree/6261d94091f18d6ab31eebc149916b6ba070d427
+- Licence: BSD-3-Clause
 
 ```
 Copyright (c) Adam Simon. All rights reserved.
