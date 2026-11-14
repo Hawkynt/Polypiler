@@ -17,8 +17,8 @@ public sealed class VectorFileOracle(VectorFile file) : IVerificationOracle {
   /// <summary>The kind its provenance names.</summary>
   public OracleKind Kind => this._file.Provenance.OracleKind;
 
-  /// <summary>The producer its provenance names.</summary>
-  public string Producer => this._file.Provenance.Producer;
+  /// <summary>What its provenance says wrote the values.</summary>
+  public string Producer => this._file.Provenance.GeneratedBy;
 
   /// <summary>The vector file.</summary>
   public string? ReferenceFile => this._file.Path;

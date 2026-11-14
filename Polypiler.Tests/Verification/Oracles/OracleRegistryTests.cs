@@ -100,7 +100,7 @@ public sealed class OracleRegistryTests {
   public async Task TheVectorFileOracle_AnswersWithThePublishedValues() {
     var file = VectorFile.Load(AdlerVectors);
     var oracle = new VectorFileOracle(file);
-    Assert.That((oracle.Id, oracle.Kind, oracle.Producer, oracle.ReferenceFile), Is.EqualTo(("adler32.vectors.json", OracleKind.PublishedVectors, "rfc1950", AdlerVectors)));
+    Assert.That((oracle.Id, oracle.Kind, oracle.Producer, oracle.ReferenceFile), Is.EqualTo(("adler32.vectors.json", OracleKind.PublishedVectors, "hand", AdlerVectors)));
     var result = await oracle.EvaluateAsync(new OracleRequest(file.Fixture, file.Vectors));
     Assert.That(result.Outputs.Select(output => Hex.Format(output)), Is.EqualTo(new[] { "00000001", "00620062", "024d0127", "b90f2ae4" }));
     var missing = await oracle.EvaluateAsync(new OracleRequest("f", [Abc()]));

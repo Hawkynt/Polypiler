@@ -121,7 +121,7 @@ public sealed class VectorFile {
   /// <summary>The ending of every vector file's name.</summary>
   public const string Extension = ".vectors.json";
 
-  private static readonly string[] _fields = ["schema", "fixture", "provenance", "vectors"];
+  private static readonly string[] _fields = ["schema", "fixture", "provenance", "exactness", "vectors"];
   private static readonly string[] _vectorFields = ["expected", "input", "name"];
 
   private VectorFile(string name, string fixture, Provenance provenance, ImmutableArray<Vector> vectors) {
@@ -188,6 +188,9 @@ public sealed class VectorFile {
       var fixture = root.TryGetProperty("fixture", out var id) && id.ValueKind == JsonValueKind.String && id.GetString()!.Length > 0 ? id.GetString()! : null;
       if (fixture is null)
         problems.Add("'fixture' must name a corpus fixture");
+
+      if (root.TryGetProperty("exactness", out var exactness) && exactness.ValueKind != JsonValueKind.Object)
+        problems.Add("'exactness' must be an object");
 
       var provenance = Provenance.Read(root.TryGetProperty("provenance", out var block) ? block : null, problems);
       var vectors = ReadVectors(root, problems);

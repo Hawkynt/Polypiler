@@ -62,6 +62,11 @@ public sealed class VectorFileTests {
     Assert.That(file.Vectors[0].Input.Bytes, Is.Empty);
   }
 
+  /// <summary>The exactness block belongs to the verification framework, which checks its content; the gate only accepts it.</summary>
+  [Test]
+  public void AnExactnessObject_IsAccepted()
+    => Assert.That(VectorFile.Parse(Kinds.Replace("\"schema\": 1", "\"schema\": 1, \"exactness\": { \"mode\": \"exact\" }", StringComparison.Ordinal), "k").Vectors, Is.Not.Empty);
+
   [Test]
   public void EmptyVectorList_IsRefused() => Assert.That(Problems(Kinds[..Kinds.IndexOf("\"vectors\"", StringComparison.Ordinal)] + "\"vectors\": []\n}"), Does.EndWith("no vectors"));
 
@@ -74,6 +79,7 @@ public sealed class VectorFileTests {
   [TestCase("\"source\": \"python\"", "\"source\": \"python\", \"by\": 1", "provenance has the unknown property 'by'")]
   [TestCase("\"schema\": 1", "\"schema\": 2", "'schema' must be 1")]
   [TestCase("\"schema\": 1", "\"schema\": 1, \"extra\": 0", "unknown property 'extra'")]
+  [TestCase("\"schema\": 1", "\"schema\": 1, \"exactness\": \"exact\"", "'exactness' must be an object")]
   [TestCase("\"fixture\": \"cipher.checksum.adler32\"", "\"fixture\": \"\"", "'fixture' must name a corpus fixture")]
   [TestCase("\"fixture\": \"cipher.checksum.adler32\"", "\"fixture\": 7", "'fixture' must name a corpus fixture")]
   [TestCase("{ \"name\": \"text\"", "{ \"name\": \"hex\"", "vector 'hex' is listed twice")]

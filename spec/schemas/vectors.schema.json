@@ -10,6 +10,20 @@
     "schema": { "const": 1 },
     "fixture": { "type": "string", "minLength": 1, "description": "The corpus fixture ID the vectors belong to." },
     "provenance": { "$ref": "#/$defs/provenance" },
+    "exactness": {
+      "type": "object",
+      "description": "How outputs are compared (docs/adr/0005-floating-point-tolerance.md); exact when absent. The verification framework (Polypiler.Core.Verification/Oracles) reads and checks it.",
+      "required": ["mode"],
+      "properties": {
+        "mode": { "enum": ["exact", "ulp", "relative", "absolute"] },
+        "bound": { "type": "number", "exclusiveMinimum": 0 },
+        "format": { "enum": ["f32", "f64"] },
+        "specialValues": { "enum": ["bitwise", "signed-zero", "class"] },
+        "policy": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "vectors": {
       "type": "array",
       "minItems": 1,

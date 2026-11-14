@@ -35,7 +35,7 @@ public interface IVerificationOracle {
   /// <summary>What kind of reference it is.</summary>
   OracleKind Kind { get; }
 
-  /// <summary>What computed the reference: <c>rfc1950</c>, <c>node</c>, <c>vice</c>, …; never <c>polypiler</c>.</summary>
+  /// <summary>What computed the reference: <c>hand</c> for published values, <c>node</c>, <c>vice</c>, …; never <c>polypiler</c>.</summary>
   string Producer { get; }
 
   /// <summary>The file the reference comes from, a vector file or a program; <see langword="null"/> when it has none.</summary>
