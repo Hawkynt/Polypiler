@@ -29,6 +29,15 @@ public interface IProcessTable {
   /// <summary>Every live process; processes that have ended but not been reaped are left out.</summary>
   IReadOnlyList<ProcessEntry> Snapshot();
 
+  /// <summary>
+  /// The live processes of the trees under the given processes: each of them and every descendant.
+  /// Reading a tree costs what the tree holds, not what the machine runs, so a monitor can sample as
+  /// often as it means to on a busy machine. A table that cannot follow a tree answers with every
+  /// process, which holds the trees too.
+  /// </summary>
+  /// <param name="roots">The process IDs the trees start at; one that has ended is left out.</param>
+  IReadOnlyList<ProcessEntry> SnapshotTree(IReadOnlyCollection<int> roots) => this.Snapshot();
+
   /// <summary>Kills a process at once; a process that has already ended is no error.</summary>
   /// <param name="pid">The process ID.</param>
   void Kill(int pid);
@@ -57,18 +66,75 @@ public sealed class ProcFileSystemTable : IProcessTable {
       if (!int.TryParse(Path.GetFileName(directory), NumberStyles.None, CultureInfo.InvariantCulture, out _))
         continue;
 
-      string line;
-      try {
-        line = File.ReadAllText(Path.Combine(directory, "stat"));
-      } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
-        continue;
-      }
-
-      if (ParseStat(line, Environment.SystemPageSize) is { } entry)
+      if (Read(directory) is { } entry)
         entries.Add(entry);
     }
 
     return entries;
+  }
+
+  /// <inheritdoc />
+  /// <remarks>
+  /// Follows <c>/proc/&lt;pid&gt;/task/&lt;tid&gt;/children</c> (proc(5)) of every thread. A kernel
+  /// built without those files (<c>CONFIG_PROC_CHILDREN</c>) gets the whole table.
+  /// </remarks>
+  public IReadOnlyList<ProcessEntry> SnapshotTree(IReadOnlyCollection<int> roots) {
+    var entries = new List<ProcessEntry>();
+    var seen = new HashSet<int>();
+    var pending = new Queue<int>(roots);
+    while (pending.TryDequeue(out var pid)) {
+      var directory = Path.Combine(this._root, pid.ToString(CultureInfo.InvariantCulture));
+      if (!seen.Add(pid) || Read(directory) is not { } entry)
+        continue;
+
+      entries.Add(entry);
+      if (Children(directory) is not { } children)
+        return this.Snapshot();
+
+      foreach (var child in children)
+        pending.Enqueue(child);
+    }
+
+    return entries;
+  }
+
+  /// <summary>Reads the stat line of one process directory.</summary>
+  /// <returns>The process; <see langword="null"/> when it has ended, is a zombie or cannot be read.</returns>
+  private static ProcessEntry? Read(string directory) {
+    try {
+      return ParseStat(File.ReadAllText(Path.Combine(directory, "stat")), Environment.SystemPageSize);
+    } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
+      return null;
+    }
+  }
+
+  /// <summary>The children of every thread of one process.</summary>
+  /// <returns>
+  /// The children's IDs, none for a process that ended meanwhile; <see langword="null"/> when a
+  /// thread's children file cannot be read, because the kernel has none or because the thread ended
+  /// between the listing and the read: the whole table then stands in for the tree.
+  /// </returns>
+  private static List<int>? Children(string directory) {
+    var children = new List<int>();
+    string[] tasks;
+    try {
+      tasks = Directory.GetDirectories(Path.Combine(directory, "task"));
+    } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
+      return children;
+    }
+
+    foreach (var task in tasks) {
+      string text;
+      try {
+        text = File.ReadAllText(Path.Combine(task, "children"));
+      } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
+        return null;
+      }
+
+      children.AddRange(text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(field => int.Parse(field, NumberStyles.None, CultureInfo.InvariantCulture)));
+    }
+
+    return children;
   }
 
   /// <inheritdoc />

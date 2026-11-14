@@ -21,9 +21,24 @@ public sealed class PollingMonitorTests {
 
     public int Snapshots { get; private set; }
 
+    public int TreeSnapshots { get; private set; }
+
     public IReadOnlyList<ProcessEntry> Snapshot() {
       ++this.Snapshots;
       return [.. this.Processes];
+    }
+
+    /// <summary>The roots and their descendants by the parent IDs the table holds now, as the children files of /proc show them.</summary>
+    public IReadOnlyList<ProcessEntry> SnapshotTree(IReadOnlyCollection<int> roots) {
+      ++this.TreeSnapshots;
+      var tree = this.Processes.Where(entry => roots.Contains(entry.Pid)).ToList();
+      for (var grown = true; grown;) {
+        var children = this.Processes.Where(entry => !tree.Contains(entry) && tree.Any(member => member.Pid == entry.ParentPid)).ToList();
+        tree.AddRange(children);
+        grown = children.Count > 0;
+      }
+
+      return tree;
     }
 
     public void Kill(int pid) {
@@ -71,16 +86,37 @@ public sealed class PollingMonitorTests {
     Assert.That(monitor.Members, Is.Empty);
   }
 
+  /// <summary>
+  /// A sample reads the tree from the root and the members, not the whole table; with a root that leads
+  /// its group every eighth sample reads the whole table, which finds an orphan the tree never saw:
+  /// not in the seventh sample, in the eighth.
+  /// </summary>
   [Test]
-  public void ARootLeadingItsOwnGroup_FindsAnOrphanTheTreeNeverSaw() {
+  public void ARootLeadingItsOwnGroup_FindsAnOrphanTheTreeNeverSaw_EveryEighthSample() {
     var table = new ScriptedTable();
     var monitor = new PollingMonitor(table, 10, 64, null, true);
     monitor.Sample();
     table.Processes.Add(Entry(12, 1, group: 10));
     table.Processes.Add(Entry(13, 12, group: 13));
     table.Processes.Add(Entry(14, 1, group: 1));
+    for (var sample = 2; sample < PollingMonitor.FullSampleInterval; ++sample)
+      monitor.Sample();
+    Assert.That(monitor.Members, Is.Empty);
+    Assert.That((table.Snapshots, table.TreeSnapshots), Is.EqualTo((0, PollingMonitor.FullSampleInterval - 1)));
     monitor.Sample();
     Assert.That(monitor.Members.Select(member => member.Pid).Order(), Is.EqualTo(new[] { 12, 13 }));
+    Assert.That((table.Snapshots, table.TreeSnapshots), Is.EqualTo((1, PollingMonitor.FullSampleInterval - 1)));
+  }
+
+  /// <summary>Without a group of its own the tree is all there is to find: no sample reads the whole table.</summary>
+  [Test]
+  public void ARootThatLeadsNoGroup_IsSampledAsATreeOnly() {
+    var table = new ScriptedTable { Processes = { Entry(10, 1), Entry(11, 10), Entry(20, 1) } };
+    var monitor = new PollingMonitor(table, 10, 64, null);
+    for (var sample = 0; sample < 2 * PollingMonitor.FullSampleInterval; ++sample)
+      monitor.Sample();
+    Assert.That((table.Snapshots, table.TreeSnapshots), Is.EqualTo((0, 2 * PollingMonitor.FullSampleInterval)));
+    Assert.That(monitor.Members.Select(member => member.Pid).Order(), Is.EqualTo(new[] { 10, 11 }));
   }
 
   [Test]
@@ -147,7 +183,7 @@ public sealed class PollingMonitorTests {
     monitor.KillAll();
     Assert.That(table.Killed.Order(), Is.EqualTo(new[] { 10, 11 }));
     Assert.That(table.Processes.Select(entry => entry.Pid), Is.EqualTo(new[] { 1 }));
-    Assert.That(table.Snapshots, Is.EqualTo(3));
+    Assert.That((table.TreeSnapshots, table.Snapshots), Is.EqualTo((1, 2)));
   }
 
   [Test]

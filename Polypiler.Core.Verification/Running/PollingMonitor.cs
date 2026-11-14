@@ -6,16 +6,23 @@ using System.Threading;
 namespace Polypiler.Core.Verification.Running;
 
 /// <summary>
-/// Watches a process tree by reading the process table on every sample. A process belongs to the tree
+/// Watches a process tree by reading it from the process table on every sample: the root, the members
+/// and their descendants (<see cref="IProcessTable.SnapshotTree"/>), which costs what the tree holds and
+/// not what the machine runs, so that a sample stays quick on a busy machine and a short program is
+/// still seen. A process belongs to the tree
 /// when it is the root, when its parent was a member when it was first seen, or, when the sandbox
 /// started the root as the leader of a process group of its own, when it is in that group. It stays a
 /// member when its parent ends and it is handed to another, so a child that outlives the program it
 /// came from is still killed with the run; the group finds such a child even when the program ended
-/// before a sample saw either of them. The resident memory and the processor time are the sums over the
+/// before a sample saw either of them. Finding the group needs the whole table, which every
+/// <see cref="FullSampleInterval"/>th sample and every round of <see cref="KillAll"/> read. The resident memory and the processor time are the sums over the
 /// members alive at the sample. A process beyond the process limit is killed, the newest first, so
 /// that to the program it looks like a process that could not be started.
 /// </summary>
 public sealed class PollingMonitor : IProcessTreeMonitor {
+
+  /// <summary>With a root that leads its group, every this many samples read the whole table rather than the tree.</summary>
+  public const int FullSampleInterval = 8;
 
   private const int KillRounds = 50;
   private static readonly TimeSpan _killPause = TimeSpan.FromMilliseconds(10);
@@ -27,6 +34,7 @@ public sealed class PollingMonitor : IProcessTreeMonitor {
   private readonly Dictionary<int, ProcessEntry> _members = [];
   private readonly bool _rootLeadsGroup;
   private bool _rootSeen;
+  private int _samples;
 
   /// <summary>Starts watching a tree.</summary>
   /// <param name="table">The process table.</param>
@@ -47,7 +55,8 @@ public sealed class PollingMonitor : IProcessTreeMonitor {
 
   /// <inheritdoc />
   public ResourceSample Sample() {
-    this.Update(this._table.Snapshot());
+    var whole = this._rootLeadsGroup && ++this._samples % FullSampleInterval == 0;
+    this.Update(whole ? this._table.Snapshot() : this._table.SnapshotTree([this._rootPid, .. this._members.Keys]));
     var counted = this._members.Values.Where(member => member.Name != this._uncounted).ToList();
     foreach (var excess in counted.OrderByDescending(member => member.StartTime).ThenByDescending(member => member.Pid).Take(counted.Count - this._processLimit))
       this._table.Kill(excess.Pid);

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -64,6 +66,106 @@ public sealed class ProcessTableTests {
       Assert.That(entries.Select(entry => (entry.Pid, entry.ParentPid, entry.Name)).Order(), Is.EqualTo(new[] { (10, 1, "root"), (11, 10, "child") }));
     } finally {
       Directory.Delete(root, true);
+    }
+  }
+
+  /// <summary>Lays out processes like <c>/proc</c>: each with its stat line and, where given, one children file per thread.</summary>
+  private static string Proc(params (int Pid, string Stat, string[]? Children)[] processes) {
+    var root = Directory.CreateTempSubdirectory("polypiler-proc-").FullName;
+    foreach (var (pid, stat, children) in processes) {
+      var directory = Directory.CreateDirectory(Path.Combine(root, pid.ToString(CultureInfo.InvariantCulture))).FullName;
+      File.WriteAllText(Path.Combine(directory, "stat"), stat);
+      if (children is null)
+        continue;
+      for (var thread = 0; thread < children.Length; ++thread) {
+        var task = Directory.CreateDirectory(Path.Combine(directory, "task", (pid * 100 + thread).ToString(CultureInfo.InvariantCulture))).FullName;
+        File.WriteAllText(Path.Combine(task, "children"), children[thread]);
+      }
+    }
+
+    return root;
+  }
+
+  /// <summary>A tree is read from its roots down, through the children of every thread, and nothing beside it is read.</summary>
+  [Test]
+  public void ATree_IsReadFromTheChildrenOfEveryThread() {
+    var root = Proc(
+      (1, Stat(1, "init", parent: 0), ["10 20 "]),
+      (10, Stat(10, "root"), ["11 ", "12 "]),
+      (11, Stat(11, "child", parent: 10), [""]),
+      (12, Stat(12, "threaded", parent: 10), ["13 "]),
+      (13, Stat(13, "grandchild", parent: 12), [""]),
+      (20, Stat(20, "beside"), [""]),
+      (30, Stat(30, "orphan"), [""]));
+    try {
+      var entries = new ProcFileSystemTable(root).SnapshotTree([10, 30, 10]);
+      Assert.That(entries.Select(entry => entry.Pid).Order(), Is.EqualTo(new[] { 10, 11, 12, 13, 30 }));
+    } finally {
+      Directory.Delete(root, true);
+    }
+  }
+
+  /// <summary>A root that has ended, or that is a zombie, is left out with its children; a child that ended between two reads is no error.</summary>
+  [Test]
+  public void AGoneOrZombieProcess_IsLeftOutOfTheTree() {
+    var root = Proc(
+      (10, Stat(10, "root"), ["11 12 99 "]),
+      (11, Stat(11, "zombie", 'Z', parent: 10), ["13 "]),
+      (12, Stat(12, "child", parent: 10), null),
+      (13, Stat(13, "under-zombie", parent: 11), [""]));
+    try {
+      Assert.That(new ProcFileSystemTable(root).SnapshotTree([10, 77]).Select(entry => entry.Pid).Order(), Is.EqualTo(new[] { 10, 12 }));
+    } finally {
+      Directory.Delete(root, true);
+    }
+  }
+
+  /// <summary>A kernel without the children files (<c>CONFIG_PROC_CHILDREN</c>) gets the whole table, which holds the tree too.</summary>
+  [Test]
+  public void WithoutChildrenFiles_TheWholeTableIsRead() {
+    var root = Proc((10, Stat(10, "root"), null), (11, Stat(11, "child", parent: 10), null), (20, Stat(20, "beside"), null));
+    try {
+      Directory.CreateDirectory(Path.Combine(root, "10", "task", "1000"));
+      Assert.That(new ProcFileSystemTable(root).SnapshotTree([10]).Select(entry => entry.Pid).Order(), Is.EqualTo(new[] { 10, 11, 20 }));
+    } finally {
+      Directory.Delete(root, true);
+    }
+  }
+
+  /// <summary>A table that cannot follow a tree answers with all of its processes.</summary>
+  [Test]
+  public void ATableWithoutTrees_AnswersWithTheWholeTable() {
+    IProcessTable table = new FixedTable([new(1, 0, 1, "init", 1, 0, TimeSpan.Zero), new(2, 1, 1, "other", 1, 0, TimeSpan.Zero)]);
+    Assert.That(table.SnapshotTree([2]).Select(entry => entry.Pid), Is.EqualTo(new[] { 1, 2 }));
+  }
+
+  private sealed class FixedTable(IReadOnlyList<ProcessEntry> entries) : IProcessTable {
+
+    public IReadOnlyList<ProcessEntry> Snapshot() => entries;
+
+    public void Kill(int pid) { }
+
+  }
+
+  /// <summary>On Linux the tree of this process holds a child it started, and none of the processes beside it.</summary>
+  [Test]
+  [Category("OsIntegration")]
+  public void TheMachinesProc_ShowsTheTreeOfThisProcess() {
+    if (!OperatingSystem.IsLinux()) {
+      Assert.Pass("only Linux has the process table in /proc");
+      return;
+    }
+
+    var info = new ProcessStartInfo(RunnerTesting.Toolchains.Resolve(RunnerTesting.DotNet).Executable!) { UseShellExecute = false };
+    foreach (var argument in new[] { Path.Combine(AppContext.BaseDirectory, RunnerTesting.ProbeAssembly), "sleep", "60000" })
+      info.ArgumentList.Add(argument);
+    using var sleeper = Process.Start(info)!;
+    try {
+      var tree = new ProcFileSystemTable().SnapshotTree([Environment.ProcessId]);
+      Assert.That(tree.Select(entry => entry.Pid), Does.Contain(Environment.ProcessId).And.Contain(sleeper.Id).And.Not.Contain(1));
+    } finally {
+      sleeper.Kill(true);
+      sleeper.WaitForExit();
     }
   }
 
