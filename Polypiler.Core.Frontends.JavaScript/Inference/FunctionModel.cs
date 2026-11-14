@@ -121,7 +121,10 @@ internal enum FlowKind {
   Return,
 
   /// <summary>The node is an argument of a call of a function of the file.</summary>
-  Argument
+  Argument,
+
+  /// <summary>The node is a property of a destructuring declaration: the variable gets the value of that key of the record the source holds.</summary>
+  Field
 
 }
 
@@ -131,7 +134,8 @@ internal enum FlowKind {
 /// <param name="Target">The variable, or <see langword="null"/> for a result and an argument.</param>
 /// <param name="Callee">The function called, for an argument.</param>
 /// <param name="Index">The position of an argument.</param>
-internal sealed record Flow(FlowKind Kind, Node Node, Variable? Target = null, Candidate? Callee = null, int Index = 0);
+/// <param name="Source">The record a destructuring declaration takes the value of a key of.</param>
+internal sealed record Flow(FlowKind Kind, Node Node, Variable? Target = null, Candidate? Callee = null, int Index = 0, Node? Source = null);
 
 /// <summary>A constant of the scope that encloses the functions: a number, or a table of numbers.</summary>
 /// <param name="Name">The name.</param>

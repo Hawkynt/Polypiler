@@ -16,6 +16,9 @@ namespace Polypiler.Core.Frontends.JavaScript.Inference;
 /// </summary>
 internal sealed partial class TypeInference(string path, string source, List<Candidate> candidates, IReadOnlyDictionary<string, ModuleConstant> constants) {
 
+  /// <summary>The shapes of the object literals of the file, which become its structs.</summary>
+  public Shapes Shapes { get; } = new();
+
   private static readonly Regex _whiteSpace = new(@"\s+", RegexOptions.CultureInvariant);
 
   private readonly Dictionary<Candidate, FunctionModel> _models = [];
@@ -200,6 +203,9 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         model.Result = result;
         this._known.Clear();
         return true;
+      case FlowKind.Field:
+        var key = ((Identifier)((Property)flow.Node).Key).Name;
+        return this.Of(flow.Source!).Shape?.TypeOf(key) is { } value && this.Reach(flow.Target!, value, flow.Node);
       default:
         return this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Declared: null } parameter && this.Pass(parameter, this.Of(flow.Node), flow.Node);
     }
@@ -244,7 +250,9 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// Whether a value changed what a place is in the IR, so that its expression is the evidence for
   /// the type: a second literal that the type of the first one holds as well decides nothing.
   /// </summary>
-  private static bool Decides(JsType before, JsType after) => before.Kind == JsKind.Unknown || before.Ir != after.Ir;
+  private static bool Decides(JsType before, JsType after)
+    // A record is compared by its shape: its struct is made only once the shapes are named.
+    => before.Kind == JsKind.Unknown || (after.HasRecord || before.HasRecord ? before != after : before.Ir != after.Ir);
 
   /// <summary>
   /// Gives a place that values reach, but none with a type, the type of a number: it is fed only by

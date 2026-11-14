@@ -45,7 +45,7 @@ public static class FloatLegalization {
       return module;
 
     var helpers = run.Helpers();
-    return new IrModule(module.Name, [.. functions, .. helpers.Functions], [.. module.Constants, .. helpers.Constants]);
+    return module with { Functions = [.. functions, .. helpers.Functions], Constants = [.. module.Constants, .. helpers.Constants] };
   }
 
   /// <summary>Whether an intrinsic is one the legalization replaces where the target lacks it.</summary>
@@ -125,6 +125,7 @@ public static class FloatLegalization {
       IrDeclare declare => declare with { Initializer = declare.Initializer is null ? null : this.Expression(declare.Initializer) },
       IrAssign assign => assign with { Value = this.Expression(assign.Value) },
       IrStore store => new IrStore(this.Expression(store.Array), this.Expression(store.Index), this.Expression(store.Value)),
+      IrFieldStore store => store with { Target = this.Expression(store.Target), Value = this.Expression(store.Value) },
       IrExprStmt expression => new IrExprStmt(this.Expression(expression.Expression)),
       IrIf conditional => new IrIf(this.Expression(conditional.Condition), this.Block(conditional.Then), conditional.Else is null ? null : this.Block(conditional.Else)),
       IrWhile loop => new IrWhile(this.Expression(loop.Condition), this.Block(loop.Body)),
@@ -155,6 +156,12 @@ public static class FloatLegalization {
           return new IrNewArray(creation.Type, this.Expression(creation.Length));
         case IrStep step:
           return step with { Target = this.Expression(step.Target) };
+        case IrStructNew creation:
+          return creation with { Arguments = [.. creation.Arguments.Select(this.Expression)] };
+        case IrFieldLoad load:
+          return load with { Target = this.Expression(load.Target) };
+        case IrStructEquals equality:
+          return new IrStructEquals(this.Expression(equality.Left), this.Expression(equality.Right));
         case IrCall call:
           var arguments = call.Arguments.Select(this.Expression).ToList();
           return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);

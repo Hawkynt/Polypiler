@@ -131,7 +131,8 @@ internal static class PrototypeFixture {
 
   /// <summary>
   /// A value as an outcome writes it; JavaScript's <c>String()</c> writes integers the same way. A
-  /// <c>char</c> is the number of its code unit, which is what it is in the IR and in JavaScript.
+  /// <c>char</c> is the number of its code unit, which is what it is in the IR and in JavaScript; a
+  /// struct is the values of its fields between braces.
   /// </summary>
   public static string Show(object? value) => value switch {
     null => "void",
@@ -139,7 +140,11 @@ internal static class PrototypeFixture {
     char unit => ((int)unit).ToString(CultureInfo.InvariantCulture),
     float single => Show((double)single),
     double number => Show(number),
+    // A struct: the interpreter hands one over as the array of its fields, .NET as a value of a struct type.
+    object?[] fields => $"{{{string.Join(",", fields.Select(Show))}}}",
     Array array => $"[{string.Join(",", array.Cast<object>().Select(Show))}]",
+    _ when value.GetType() is { IsValueType: true, IsPrimitive: false } type && type != typeof(decimal)
+      => $"{{{string.Join(",", type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(field => field.MetadataToken).Select(field => Show(field.GetValue(value))))}}}",
     _ => Convert.ToString(value, CultureInfo.InvariantCulture)!
   };
 

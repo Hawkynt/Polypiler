@@ -32,8 +32,8 @@ ToDWord	imported
 ToInt	imported
 ToQWord	OpCodes.js(371,23): error PLY1101: parameter 'value' of 'ToQWord' has no supported JSDoc type
 ToLong	OpCodes.js(380,22): error PLY1101: parameter 'value' of 'ToLong' has no supported JSDoc type
-RotL64	OpCodes.js(394,35): error PLY1102: 'an object literal' is not supported yet
-RotR64	OpCodes.js(422,35): error PLY1102: 'an object literal' is not supported yet
+RotL64	imported
+RotR64	imported
 RotL128n	OpCodes.js(447,24): error PLY1101: parameter 'value' of 'RotL128n' has no supported JSDoc type
 RotR128n	OpCodes.js(462,24): error PLY1101: parameter 'value' of 'RotR128n' has no supported JSDoc type
 RotL128	OpCodes.js(478,58): error PLY1102: 'a call of bytes.slice' is not supported yet
@@ -99,16 +99,16 @@ ReturnToPool	imported
 TimingSafeAddMod	imported
 TimingSafeSelect	imported
 EncodeMsgLength64LE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
-EncodeMsgLength64LE	OpCodes.js(2913,43): error PLY1102: 'split.low32' is not supported yet
+EncodeMsgLength64LE	OpCodes.js(2913,43): error PLY1102: 'float64 where uint32 is expected' is not supported yet
 EncodeMsgLength128BE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
-EncodeMsgLength128BE	OpCodes.js(2934,44): error PLY1102: 'split.high32' is not supported yet
+EncodeMsgLength128BE	OpCodes.js(2934,44): error PLY1102: 'float64 where uint32 is expected' is not supported yet
 ModSafe	imported
 CreateArray	OpCodes.js(2961,25): error PLY1102: 'undefined' is not supported yet
 ArraySlice	OpCodes.js(2977,21): error PLY1102: 'undefined' is not supported yet
 ConcatArrays	OpCodes.js(2990,28): error PLY1101: parameter 'arrays' of 'ConcatArrays' has no supported JSDoc type
 InverseSBoxLookup	imported
 BuildInverseSBox	imported
-SplitNibbles	OpCodes.js(3048,14): error PLY1102: 'an object literal' is not supported yet
+SplitNibbles	imported
 CombineNibbles	imported
 SafeArrayAccess	OpCodes.js(3075,31): error PLY1102: 'undefined' is not supported yet
 CircularArrayAccess	OpCodes.js(3085,38): error PLY1102: 'undefined' is not supported yet
@@ -131,13 +131,13 @@ CreateBitStream	OpCodes.js(3387,14): error PLY1102: 'new OpCodes._BitStream' is 
 _BitStream	OpCodes.js(3399,7): error PLY1102: 'this.buffer' is not supported yet
 GHashMul	OpCodes.js(3817,12): error PLY1102: 'uint8[] as a condition' is not supported yet
 GCMIncrement	OpCodes.js(3859,12): error PLY1102: 'uint8[] as a condition' is not supported yet
-Add64_HL	OpCodes.js(3888,14): error PLY1102: 'an object literal' is not supported yet
+Add64_HL	imported
 Add3L64	imported
 Add3H64	OpCodes.js(3911,14): error PLY1103: the result of '(ah + bh + ch + ((lowSum / 0x100000000) | 0)) | 0' has no bounded type
-RotR64_HL	OpCodes.js(3925,16): error PLY1102: 'an object literal' is not supported yet
-RotL64_HL	OpCodes.js(3953,16): error PLY1102: 'an object literal' is not supported yet
-Swap64_HL	OpCodes.js(3978,14): error PLY1102: 'an object literal' is not supported yet
-Xor64_HL	OpCodes.js(3990,14): error PLY1102: 'an object literal' is not supported yet
+RotR64_HL	imported
+RotL64_HL	imported
+Swap64_HL	imported
+Xor64_HL	imported
 ToUint32	OpCodes.js(3999,14): error PLY1102: '>>> on bigint and number' is not supported yet
 ToUint16	OpCodes.js(4008,15): error PLY1102: '>>> on bigint and number' is not supported yet
 ToUint8	OpCodes.js(4017,15): error PLY1102: '>>> on bigint and number' is not supported yet

@@ -102,6 +102,12 @@ internal static class GeneratedJavaScript {
       case NumericLiteral literal when literal.Raw.Contains('_'):
         report("numeric separators");
         break;
+      case ObjectExpression:
+        report("object literal");
+        break;
+      case Property { Shorthand: true } when parent is ObjectExpression:
+        report("shorthand property");
+        break;
     }
 
     foreach (var child in node.ChildNodes)

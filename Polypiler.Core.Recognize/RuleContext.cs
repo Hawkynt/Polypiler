@@ -53,6 +53,10 @@ public sealed class RuleContext {
         case IrAssign assign:
           this.Count(assign.Local);
           break;
+        case IrFieldStore store when IrStatements.Root(store.Target) is { } changed:
+          // A struct whose field is written holds another value afterwards.
+          this.Count(changed);
+          break;
         case IrDeclare declare:
           this.Count(declare.Local);
           if (declare.Initializer is null)

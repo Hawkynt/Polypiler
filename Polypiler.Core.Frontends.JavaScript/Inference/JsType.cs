@@ -25,6 +25,9 @@ internal enum JsKind {
   /// <summary>An array.</summary>
   Array,
 
+  /// <summary>An object literal of fixed shape that is never written, compared or extended: a value record.</summary>
+  Record,
+
   /// <summary>Values of two kinds reach the place, which no type of the IR holds.</summary>
   Conflict
 
@@ -66,6 +69,9 @@ internal sealed record JsType {
 
   /// <summary>Whether an array is a JavaScript <c>Array</c>, which stores a value as it is, rather than a typed array, which converts it.</summary>
   public bool IsPlain { get; private init; }
+
+  /// <summary>The keys and value types of a record.</summary>
+  public RecordShape? Shape { get; private init; }
 
   /// <summary>The two kinds of a conflict, as a diagnostic names them.</summary>
   public (string First, string Second) Kinds { get; private init; }
@@ -119,6 +125,12 @@ internal sealed record JsType {
   /// <summary>An array type.</summary>
   public static JsType ArrayOf(JsType element, bool plain) => new(JsKind.Array) { Element = element, IsPlain = plain };
 
+  /// <summary>The type of a record of a shape.</summary>
+  public static JsType Record(RecordShape shape) => new(JsKind.Record) { Shape = shape };
+
+  /// <summary>Whether the type is a record or holds one, as an element or a value: such a type has its struct only once the shapes are named.</summary>
+  public bool HasRecord => this.Kind == JsKind.Record || this.Element is { HasRecord: true };
+
   /// <summary>Whether the values are proven integers.</summary>
   public bool IsInteger => this.Kind == JsKind.Number && this.Float == 0;
 
@@ -139,7 +151,8 @@ internal sealed record JsType {
     JsKind.Number when this.Float == 64 => IrType.F64,
     JsKind.Number => (this.IsLiteral ? _words.Skip(4) : _words).First(this.Within),
     JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
-    JsKind.Array => IrType.Array(this.Element!.Ir is { IsNumeric: true } element ? element : IrType.F64),
+    JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct) ? element : IrType.F64),
+    JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
     _ => null
   };
 
@@ -149,7 +162,8 @@ internal sealed record JsType {
     JsKind.Boolean => "boolean",
     JsKind.Number => "number",
     JsKind.BigInt => "bigint",
-    JsKind.Array => Spell(this.Ir!),
+    JsKind.Array => this.Element!.HasRecord ? $"{this.Element.Describe()}[]" : Spell(this.Ir!),
+    JsKind.Record => this.Shape!.ToString(),
     _ => "nothing"
   };
 
@@ -167,6 +181,7 @@ internal sealed record JsType {
     IrTypeKind.U64 => "uint64",
     IrTypeKind.F32 => "float32",
     IrTypeKind.F64 => "float64",
+    IrTypeKind.Struct => type.Declaration!.Name,
     _ => Spell(type.Element!) + "[]"
   };
 
@@ -198,6 +213,14 @@ internal sealed record JsType {
           return ArrayOf(Join(first.Element!, second.Element!), true);
 
         return first.IsPlain == second.IsPlain && first.Ir == second.Ir ? first : Conflict(first, second);
+      case JsKind.Record:
+        // Two shapes are one record only with the same keys in the same order, each value of one kind.
+        var (a, b) = (first.Shape!, second.Shape!);
+        if (!a.Keys.SequenceEqual(b.Keys))
+          return Conflict(first, second);
+
+        var joined = a.Types.Zip(b.Types, Join).ToList();
+        return joined.Exists(type => type.Kind == JsKind.Conflict) ? Conflict(first, second) : Record(new RecordShape(a.Registry, a.Keys, joined));
       default:
         return first;
     }

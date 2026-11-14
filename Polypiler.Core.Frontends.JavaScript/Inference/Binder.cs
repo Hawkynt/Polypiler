@@ -145,25 +145,37 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       if (declarator.Init is not null)
         this.Expression(declarator.Init);
 
-      if (declarator.Id is not Identifier { Name: var name } id)
-        continue;
+      switch (declarator.Id) {
+        case Identifier id when this.Declare(id, declaration, declarator.Init) is { } variable && declarator.Init is not null:
+          model.Flows.Add(new Flow(FlowKind.Assign, declarator.Init, variable));
+          break;
+        case ObjectPattern pattern when declarator.Init is not null:
+          // const { x, y } = p declares x and y, each with the value of its key; anything else in the pattern the lowering refuses.
+          foreach (var property in pattern.Properties)
+            if (TypeInference.Plain(property) is { Value: Identifier id } && this.Declare(id, declaration, declarator.Init) is { } part)
+              model.Flows.Add(new Flow(FlowKind.Field, property, part, Source: declarator.Init));
 
-      if (this._scope.ContainsKey(name)) {
-        model.Refused[id] = $"a second declaration of {name}";
-        continue;
+          break;
       }
-
-      var variable = new Variable(name, id, false) {
-        IsConstant = declaration.Kind == VariableDeclarationKind.Const,
-        IsUninitialized = declarator.Init is null
-      };
-      model.Locals.Add(variable);
-      model.Bindings[id] = variable;
-      this._scope[name] = variable;
-      this._declared.Add(name);
-      if (declarator.Init is not null)
-        model.Flows.Add(new Flow(FlowKind.Assign, declarator.Init, variable));
     }
+  }
+
+  /// <summary>Declares a local, or records that the scoping rules refuse a second declaration of its name.</summary>
+  private Variable? Declare(Identifier id, VariableDeclaration declaration, Node? initializer) {
+    if (this._scope.ContainsKey(id.Name)) {
+      model.Refused[id] = $"a second declaration of {id.Name}";
+      return null;
+    }
+
+    var variable = new Variable(id.Name, id, false) {
+      IsConstant = declaration.Kind == VariableDeclarationKind.Const,
+      IsUninitialized = initializer is null
+    };
+    model.Locals.Add(variable);
+    model.Bindings[id] = variable;
+    this._scope[id.Name] = variable;
+    this._declared.Add(id.Name);
+    return variable;
   }
 
   /// <summary>Reads an expression. <paramref name="coercion"/> is what the place it stands in applies to its value.</summary>
@@ -172,8 +184,15 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       case Identifier identifier:
         this.Read(identifier, coercion, parent ?? identifier);
         break;
-      case IFunction or ClassExpression or ObjectExpression:
+      case IFunction or ClassExpression:
         // Nothing of the subset; what stands inside belongs to another scope.
+        break;
+      case ObjectExpression literal:
+        // The values of an object literal are read where the literal stands; what else it holds the lowering refuses.
+        foreach (var property in literal.Properties)
+          if (TypeInference.Plain(property) is { } entry)
+            this.Expression(entry.Value);
+
         break;
       case AssignmentExpression assignment:
         this.Assignment(assignment);

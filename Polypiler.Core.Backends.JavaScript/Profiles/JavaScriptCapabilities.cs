@@ -61,6 +61,8 @@ public sealed class JavaScriptCapabilities {
     new("numeric separators", 2021, "digits", Emitted: false),
     new("| 0", 5),
     new(">>> 0", 5),
+    new("object literal", 5),
+    new("shorthand property", 2015, "key: key"),
 
     // Globals and the functions of Math.
     new("NaN", 5),
