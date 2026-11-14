@@ -1,0 +1,28 @@
+id: INTRINSICS.Cos
+title: Cosine
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Cos
+  group: Trig
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}]
+  returns: [{name: cosine, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the cosine of x in radians"
+    source: "IEEE Std 754-2019, section 9.2 (cos)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000000"], outputs: ["0x3FF0000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x8000000000000000"], outputs: ["0x3FF0000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF0000000000000"], outputs: ["0x7FF8000000000000"]}

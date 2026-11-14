@@ -1,0 +1,31 @@
+id: INTRINSICS.LoadLittle
+title: Little-endian load
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-ENDIAN
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: LoadLittle
+  group: Endian
+  typeParameters: [{name: T, constraint: any}]
+  parameters: [{name: bytes, type: "TYPES.u8[]"}, {name: index, type: TYPES.i32}]
+  returns: [{name: value, type: T}]
+  legality:
+    - {id: multibyte, text: "T is TYPES.i16, TYPES.u16, TYPES.i32, TYPES.u32, TYPES.i64, TYPES.u64, TYPES.f32 or TYPES.f64", fact: none}
+    - {id: in-bounds, text: "index is at least 0 and index + the size of T in bytes is at most the length of bytes; otherwise the operation traps with an index out of range before any byte is read or written", fact: range}
+  effects: [EFFECTS.unknown-call]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the value of T, an integer or the IEEE 754 encoding of a float, whose bytes stand in bytes from index on, the lowest byte first"
+    source: ".NET API reference, System.Buffers.Binary.BinaryPrimitives.Read*LittleEndian; IEEE Std 754-2019, section 3.4 (binary interchange encoding)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: [["0x01", "0x02", "0x03", "0x04", "0x05", "0x06", "0x07", "0x08", "0x09"], 0], outputs: ["0x04030201"]}
+    - {types: {T: TYPES.i16}, inputs: [["0xFF", "0x7F", "0x80"], 1], outputs: [-32641]}
+    - {types: {T: TYPES.u64}, inputs: [["0x01", "0x02", "0x03", "0x04", "0x05", "0x06", "0x07", "0x08", "0x09"], 1], outputs: ["0x0908070605040302"]}
+    - {types: {T: TYPES.f32}, inputs: [["0x00", "0x00", "0x80", "0x3F"], 0], outputs: ["0x3F800000"]}

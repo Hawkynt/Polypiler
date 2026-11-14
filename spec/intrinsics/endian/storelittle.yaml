@@ -1,0 +1,30 @@
+id: INTRINSICS.StoreLittle
+title: Little-endian store
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-ENDIAN
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StoreLittle
+  group: Endian
+  typeParameters: [{name: T, constraint: any}]
+  parameters: [{name: bytes, type: "TYPES.u8[]"}, {name: index, type: TYPES.i32}, {name: value, type: T}]
+  returns: [{name: stored, type: "TYPES.u8[]"}]
+  legality:
+    - {id: multibyte, text: "T is TYPES.i16, TYPES.u16, TYPES.i32, TYPES.u32, TYPES.i64, TYPES.u64, TYPES.f32 or TYPES.f64", fact: none}
+    - {id: in-bounds, text: "index is at least 0 and index + the size of T in bytes is at most the length of bytes; otherwise the operation traps with an index out of range before any byte is read or written", fact: range}
+  effects: [EFFECTS.unknown-call]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "writes the bytes of value, an integer or the IEEE 754 encoding of a float, into bytes from index on, the lowest byte first; the output is the content of bytes afterwards"
+    source: ".NET API reference, System.Buffers.Binary.BinaryPrimitives.Write*LittleEndian; IEEE Std 754-2019, section 3.4 (binary interchange encoding)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: [["0x00", "0x00", "0x00", "0x00", "0x00"], 1, "0x11223344"], outputs: [["0x00", "0x44", "0x33", "0x22", "0x11"]]}
+    - {types: {T: TYPES.i16}, inputs: [["0xAA", "0xAA"], 0, -2], outputs: [["0xFE", "0xFF"]]}
+    - {types: {T: TYPES.f64}, inputs: [["0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"], 0, "0x3FF0000000000000"], outputs: [["0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0xF0", "0x3F"]]}

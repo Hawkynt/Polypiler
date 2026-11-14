@@ -1,0 +1,29 @@
+id: INTRINSICS.ToUint32
+title: ECMAScript ToUint32
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ToUint32
+  group: FloatMath
+  typeParameters: []
+  parameters: [{name: x, type: TYPES.f64}]
+  returns: [{name: result, type: TYPES.u32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "x without its fraction, modulo 2^32; a NaN and the infinities give 0"
+    source: "ECMA-262, 15th ed. (2024), section 7.1.7 (ToUint32)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: ["0xBFF0000000000000"], outputs: ["0xFFFFFFFF"]}
+    - {types: {}, inputs: ["0x41F0000000500000"], outputs: ["0x00000005"]}
+    - {types: {}, inputs: ["0x7FF0000000000000"], outputs: ["0x00000000"]}
+    - {types: {}, inputs: ["0x400F333333333333"], outputs: ["0x00000003"]}

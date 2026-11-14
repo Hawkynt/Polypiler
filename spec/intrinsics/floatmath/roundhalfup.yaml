@@ -1,0 +1,29 @@
+id: INTRINSICS.RoundHalfUp
+title: Round half up
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: RoundHalfUp
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}]
+  returns: [{name: result, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the nearest integral value, a tie towards positive infinity; a value from -0.5 to -0 becomes -0"
+    source: "ECMA-262, 15th ed. (2024), section 21.3.2.28 (Math.round)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x4004000000000000"], outputs: ["0x4008000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0xC004000000000000"], outputs: ["0xC000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0xBFE0000000000000"], outputs: ["0x8000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x3FDFFFFFFFFFFFFF"], outputs: ["0x0000000000000000"]}

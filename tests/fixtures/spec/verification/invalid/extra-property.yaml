@@ -1,0 +1,18 @@
+id: VERIFICATION.generator.extra
+title: A generator with a property the schema does not know
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: generator
+  type: TYPES.u32
+  strategy: uniform
+  seed: 1
+  count: 1
+  distribution: normal

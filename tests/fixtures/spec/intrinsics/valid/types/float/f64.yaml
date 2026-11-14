@@ -1,0 +1,30 @@
+id: TYPES.f64
+title: IEEE 754 binary64 floating-point number
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-FLOAT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: float
+  parameters: []
+  bits: 64
+  signedness: signed
+  rounding: [nearest-even]
+  nan: quiet-and-signaling
+  subnormals: true
+  layout: {sizeBytes: 8, alignment: 8, byteOrder: target}
+  distinctFrom: []
+  values:
+    - {bits: "0x0000000000000000", value: "0"}
+    - {bits: "0x8000000000000000", value: "-0"}
+    - {bits: "0x3FF0000000000000", value: "1"}
+    - {bits: "0xBFF0000000000000", value: "-1"}
+    - {bits: "0x4000000000000000", value: "2"}
+    - {bits: "0x7FF0000000000000", value: "+Infinity"}
+    - {bits: "0xFFF0000000000000", value: "-Infinity"}
+    - {bits: "0x7FF8000000000000", value: "NaN"}

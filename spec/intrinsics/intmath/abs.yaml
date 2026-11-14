@@ -1,0 +1,31 @@
+id: INTRINSICS.Abs
+title: Absolute value
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-MINMAX
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Abs
+  group: IntMath
+  typeParameters: [{name: T, constraint: any}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: result, type: T}]
+  legality:
+    - {id: not-minimum, text: "for a signed integer T, value is not the smallest value of T; otherwise the operation traps with an integer overflow", fact: range}
+    - {id: number, text: "T is an integer type or TYPES.f32 or TYPES.f64", fact: none}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the absolute value: -value when value is negative, else value; an unsigned value is itself; of a float the value with the sign bit cleared"
+    source: ".NET API reference, System.Math.Abs; IEEE Std 754-2019, section 5.5.1 (abs)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.i32}, inputs: [-5], outputs: [5]}
+    - {types: {T: TYPES.u8}, inputs: ["0xFF"], outputs: ["0xFF"]}
+    - {types: {T: TYPES.f64}, inputs: ["0x8000000000000000"], outputs: ["0x0000000000000000"]}
+    - {types: {T: TYPES.f64}, inputs: ["0xC004000000000000"], outputs: ["0x4004000000000000"]}

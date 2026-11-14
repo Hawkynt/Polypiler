@@ -1,0 +1,22 @@
+id: EFFECTS.unknown-call
+title: Call to code whose effects are not known
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-EFFECTS
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: unknown-call
+  class: unknown-call
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: [unknown]
+  writes: [unknown]
+  mayTrap: true
+  defaultForUnknown: true
+  targets: {unsupported: PLY0100}

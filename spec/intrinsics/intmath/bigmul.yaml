@@ -1,0 +1,30 @@
+id: INTRINSICS.BigMul
+title: Widening multiplication
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-WIDEMUL
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: BigMul
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}, {name: W, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}]
+  returns: [{name: product, type: W}]
+  legality:
+    - {id: widths, text: "T is TYPES.i32 with W TYPES.i64, or T is TYPES.u32 with W TYPES.u64", fact: none}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the exact product a * b, which fits W"
+    source: ".NET API reference, System.Math.BigMul"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32, W: TYPES.u64}, inputs: ["0xFFFFFFFF", "0xFFFFFFFF"], outputs: ["0xFFFFFFFE00000001"]}
+    - {types: {T: TYPES.i32, W: TYPES.i64}, inputs: [-2147483648, -2147483648], outputs: [4611686018427387904]}
+    - {types: {T: TYPES.i32, W: TYPES.i64}, inputs: [-3, 7], outputs: [-21]}
+  algebra: [commutative]

@@ -1,0 +1,33 @@
+id: RECOGNITION.O0100
+title: Recognize rotate-left and rotate-right from shift pairs
+version: 1
+status: draft
+owner: Hawkynt
+issue: REC-ENGINE
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  optimization: O0100
+  level: typed-ssa
+  pattern:
+    before: "%a = Shl.u32[strict] %x, 8; %b = LShr.u32[strict] %x, 24; %r = Or.u32 %a, %b"
+  replacement:
+    after: "%r = RotateLeft.u32 %x, 8"
+    introduces: [INTRINSICS.RotateLeft]
+  preconditions:
+    - {id: same-value, text: "both shifts take the same SSA value", fact: none}
+    - {id: complementary, text: "the amounts sum to the width", fact: range}
+  proofObligations:
+    - {id: rotl-8, class: exhaustive-8bit, widths: [8]}
+    - {id: rotl-wide, class: smt-bitvector, widths: [16, 32, 64], budgetSeconds: 5}
+  counterexamples:
+    - description: "arithmetic right shift is not a rotation"
+      input: "x = 0x80000000, i32, amounts 8 and 24"
+      naive: "0xFFFFFF80"
+      correct: "0x00000080"
+  switch: "--disable-opt O0100"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0100-rotate-recognition.md

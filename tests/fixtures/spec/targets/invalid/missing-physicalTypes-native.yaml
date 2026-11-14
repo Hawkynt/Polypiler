@@ -1,0 +1,25 @@
+id: TARGETS.javascript.es2022
+title: "JavaScript target, ECMAScript 2022 on Node"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#60"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  language: LANGUAGES.javascript
+  profile: es2022
+  toolchain: node
+  abi: {name: ecmascript, byteOrder: host, pointerBits: 0}
+  pointers: none
+  unions: accessor
+  physicalTypes:
+    - {type: TYPES.f64, helper: false}
+  alignment: {max: 8, packing: not-observable}
+  simd: []
+  limits: {maxIntegerBits: 64, exactIntegerBits: 53, maxArrayLength: 4294967295}
+  dependencies: []
+  packaging: {ecosystem: npm, layout: "one module file per translated module, in the format --module names"}

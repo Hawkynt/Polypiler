@@ -1,0 +1,29 @@
+id: INTRINSICS.DegreesToRadians
+title: Degrees to radians
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: DegreesToRadians
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: degrees, type: F}]
+  returns: [{name: radians, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "(degrees * pi) / 180 with pi the value of F nearest to it, two operations each rounded once, in this order"
+    source: ".NET API reference, System.Double.DegreesToRadians"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x4066800000000000"], outputs: ["0x400921FB54442D18"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x4056800000000000"], outputs: ["0x3FF921FB54442D18"]}
+    - {types: {F: TYPES.f64}, inputs: ["0xC046800000000000"], outputs: ["0xBFE921FB54442D18"]}
+    - {types: {F: TYPES.f32}, inputs: ["0x43340000"], outputs: ["0x40490FDB"]}

@@ -1,0 +1,29 @@
+id: INTRINSICS.IsPow2
+title: Power-of-two test
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-POW2
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: IsPow2
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: isPow2, type: TYPES.bool}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "value > 0 and value & (value - 1) = 0: never true for 0 or a negative value"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-1"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: [0]}
+    - {types: {T: TYPES.u32}, inputs: ["0x80000000"], outputs: [1]}
+    - {types: {T: TYPES.i32}, inputs: [-2147483648], outputs: [0]}
+    - {types: {T: TYPES.u8}, inputs: ["0x06"], outputs: [0]}

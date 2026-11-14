@@ -1,0 +1,30 @@
+id: INTRINSICS.MulHigh
+title: High half of a product
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-WIDEMUL
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: MulHigh
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}]
+  returns: [{name: high, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the upper half of the exact product a * b in twice the width of T, signed or unsigned as T is"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 8-2 and 8-3"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF", "0xFFFFFFFF"], outputs: ["0xFFFFFFFE"]}
+    - {types: {T: TYPES.i32}, inputs: [-1, 1], outputs: [-1]}
+    - {types: {T: TYPES.i32}, inputs: [-2147483648, -2147483648], outputs: [1073741824]}
+    - {types: {T: TYPES.u64}, inputs: ["0xFFFFFFFFFFFFFFFF", "0x0000000000000002"], outputs: ["0x0000000000000001"]}
+  algebra: [commutative]
