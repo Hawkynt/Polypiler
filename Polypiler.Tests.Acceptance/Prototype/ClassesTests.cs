@@ -59,11 +59,13 @@ public sealed class ClassesTests {
        select new TestCaseData(profile, fixture.File, fixture.Class).SetName($"{fixture.File} in {profile}");
 
   /// <summary>Test design 1: every JavaScript fixture in every C# profile computes what node computes of the original.</summary>
-  [TestCase("counter.js"), TestCase("accumulator.js")]
+  [TestCase("counter.js"), TestCase("accumulator.js"), TestCase("adler32.js")]
   public void JavaScriptFixture_RunsInEveryCSharpProfileLikeNode(string file) {
-    List<PrototypeCall> calls = file == "counter.js"
-      ? [new("run", [10.0, 3.0]), new("run", [-2.5, 0.5]), new("aliased", []), new("sameObject", []), new("made", [])]
-      : [new("sum", [1.0, 2.0, 4.0]), new("sum", [0.25, -1.0, 1e300]), new("mean", [1.0, 4.0]), new("mean", [0.0, 0.0])];
+    List<PrototypeCall> calls = file switch {
+      "counter.js" => [new("run", [10.0, 3.0]), new("run", [-2.5, 0.5]), new("aliased", []), new("sameObject", []), new("made", [])],
+      "accumulator.js" => [new("sum", [1.0, 2.0, 4.0]), new("sum", [0.25, -1.0, 1e300]), new("mean", [1.0, 4.0]), new("mean", [0.0, 0.0])],
+      _ => [new("ofWikipedia", []), new("of", [ClassFixtures.Wikipedia]), new("of", [System.Array.Empty<byte>()]), new("of", [Enumerable.Range(0, 5000).Select(index => (byte)(index * 7)).ToArray()])]
+    };
     var copy = Path.Combine(this._directory, Path.GetFileNameWithoutExtension(file) + ".mjs");
     var source = File.ReadAllText(ClassFixtures.PathOf(file));
     File.WriteAllText(copy, source.Contains("export ", StringComparison.Ordinal) ? source : source + "\nexport { sum, mean };\n");

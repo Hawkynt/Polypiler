@@ -36,6 +36,10 @@ Feature: Sealed classes and instances
     Then in .NET, the interpreter, every C# profile and node at es5 and es2022: after b = a and b.Next() on new Counter(0), a.Count is 1, a and b are the same object, and two new Counter(0) are not
     And new Range(2, 9) equals new Range(2, 9) by value but not by reference, and its Length is 7
 
+  Scenario: Adler-32 as an object
+    Given the fixtures "classes/Adler32.cs" and "classes/adler32.js"
+    Then Update with the bytes of "Wikipedia" followed by Value returns 300286872 in .NET, node, the interpreter and every profile of both backends in both directions
+
   Scenario: A method called on null traps in every target
     Given the C# method "public static int F() { Counter c = null; return c.Next(); }" next to the class Counter
     Then .NET throws NullReferenceException, the interpreter traps with NullReference, every C# profile throws NullReferenceException and node at es5 and es2022 throws a TypeError

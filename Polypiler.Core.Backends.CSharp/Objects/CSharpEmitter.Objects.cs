@@ -27,6 +27,18 @@ public static partial class CSharpEmitter {
     /// <summary>The parameter of the setter being written, which is <c>value</c>.</summary>
     private IrLocal? _value;
 
+    /// <summary>A member of the static class by its name: through the static class where a class of the module names it.</summary>
+    private CsExpression Qualified(string member) => this._inClass ? new CsMemberAccess(new CsName(this._class), member) : new CsName(member);
+
+    /// <summary>A member of the static class that the classes of the module may reach: internal where it was private.</summary>
+    private static CsMember Exposed(CsMember member) => member switch {
+      CsField field => field with { Modifiers = [.. field.Modifiers.Select(Internal)] },
+      CsMethod method => method with { Modifiers = [.. method.Modifiers.Select(Internal)] },
+      _ => member
+    };
+
+    private static string Internal(string modifier) => modifier == "private" ? "internal" : modifier;
+
     /// <summary>The class of every function of the module that is the body of a member.</summary>
     private Dictionary<string, IrClassType> Owners
       => this._owners ??= this._module.Types.OfType<IrClassType>().SelectMany(type => type.Functions.Select(function => (function, type))).ToDictionary(pair => pair.function, pair => pair.type);

@@ -35,7 +35,7 @@ public static partial class CSharpEmitter {
       if (this._module.Types.OfType<IrClassType>().FirstOrDefault(type => type.StaticFields.Contains(global)) is { } owner)
         return new CsMemberAccess(new CsName(this._typeNames[owner.Name]), this.MemberNames(owner)[global]) { Type = global.Type };
 
-      return new CsName(this._members[global.Name]) { Type = global.Type };
+      return this.Qualified(this._members[global.Name]) with { Type = global.Type };
     }
 
   }

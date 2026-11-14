@@ -19,7 +19,10 @@ internal static class ClassFixtures {
   public const string Namespace = "Polypiler.Fixtures.Prototype.Classes";
 
   /// <summary>The C# fixtures by file name, each with the name of its static class.</summary>
-  public static readonly (string File, string Class)[] CSharp = [("Counter", "CounterDemo"), ("Range", "RangeDemo"), ("null", "NullDemo")];
+  public static readonly (string File, string Class)[] CSharp = [("Counter", "CounterDemo"), ("Range", "RangeDemo"), ("null", "NullDemo"), ("Adler32", "Adler32Demo")];
+
+  /// <summary>The bytes of the text "Wikipedia", whose Adler-32 is the published 0x11E60398.</summary>
+  public static byte[] Wikipedia => [87, 105, 107, 105, 112, 101, 100, 105, 97];
 
   /// <summary>The path of a fixture file of the folder, its extension included.</summary>
   public static string PathOf(string file) => Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "prototype", "classes", file);
@@ -68,6 +71,11 @@ internal static class ClassFixtures {
     yield return Call("Range", "RangeDemo", "Length", int.MinValue, int.MaxValue);
     yield return Call("Range", "RangeDemo", "NullEqual", 3);
     yield return Call("null", "NullDemo", "NotNull", 4);
+    yield return Call("Adler32", "Adler32Demo", "OfWikipedia");
+    yield return Call("Adler32", "Adler32Demo", "Of", Wikipedia);
+    yield return Call("Adler32", "Adler32Demo", "Of", System.Array.Empty<byte>());
+    foreach (var split in new[] { 0, 1, 8, 9 })
+      yield return Call("Adler32", "Adler32Demo", "InTwoParts", Wikipedia, split);
 
     var random = new Random(2026);
     for (var draw = 0; draw < 6; ++draw) {
@@ -76,6 +84,10 @@ internal static class ClassFixtures {
       yield return Call("Counter", "CounterDemo", "CountAfter", b, a);
       yield return Call("Range", "RangeDemo", "Length", a, b);
       yield return Call("null", "NullDemo", "NotNull", a);
+      var bytes = new byte[random.Next(0, 6000)];
+      random.NextBytes(bytes);
+      yield return Call("Adler32", "Adler32Demo", "Of", bytes);
+      yield return Call("Adler32", "Adler32Demo", "InTwoParts", bytes, random.Next(0, bytes.Length + 1));
     }
   }
 

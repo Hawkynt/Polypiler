@@ -167,6 +167,42 @@ public sealed class ClassesSteps(PrototypeScenario scenario) {
     => this.Everywhere(this._fixtures.Single(path => path.EndsWith("Range.cs", StringComparison.Ordinal)), "RangeDemo",
       [new("ValueEqual", [lo, hi]), new("SameReference", [lo, hi]), new("Length", [lo, hi])], ["true", "false", length]);
 
+  /// <summary>
+  /// Adler-32 of "Wikipedia" from the C# and the JavaScript fixture alike: in .NET and node, in the
+  /// interpreter, and translated into every profile of both backends from both.
+  /// </summary>
+  [Then(@"^Update with the bytes of ""Wikipedia"" followed by Value returns (\d+) in \.NET, node, the interpreter and every profile of both backends in both directions$")]
+  public void AdlerEverywhere(string expected) {
+    foreach (var path in this._fixtures) {
+      var csharp = path.EndsWith(".cs", StringComparison.Ordinal);
+      var from = csharp ? "csharp" : "javascript";
+      var call = new PrototypeCall(csharp ? "OfWikipedia" : "ofWikipedia", []);
+      if (csharp) {
+        Assert.That(PrototypeFixture.InvokedOutcome(ClassFixtures.Compiled("Adler32Demo", call.Method), call), Is.EqualTo(expected), ".NET");
+        Assert.That(PrototypeFixture.InterpretedOutcome(ClassFixtures.Imported("Adler32"), call), Is.EqualTo(expected), "the interpreter of the C#");
+      } else {
+        var copy = Path.Combine(Path.GetDirectoryName(scenario.Workspace.Resolve(path))!, "original.mjs");
+        File.Copy(scenario.Workspace.Resolve(path), copy);
+        Assert.That(Toolchain.NodeOutcomes(Path.GetDirectoryName(copy)!, "original.mjs", [call]).Single(), Is.EqualTo(expected), "node");
+        var imported = Polypiler.Core.Frontends.JavaScript.JavaScriptFrontend.Import(path, File.ReadAllText(scenario.Workspace.Resolve(path))).Module!;
+        Assert.That(PrototypeFixture.InterpretedOutcome(imported, call), Is.EqualTo(expected), "the interpreter of the JavaScript");
+      }
+
+      foreach (var profile in CSharpProfile.All) {
+        var generated = scenario.Translate(path, from, "csharp", "--profile", profile.Name);
+        Assert.That(GeneratedCSharp.ComplaintsFor(generated.Text, profile.Name, profile.LanguageVersionName), Is.Empty, generated.Text);
+        Assert.That(GeneratedCSharp.Compile(generated.Text, false).Outcome(call), Is.EqualTo(expected), $"{path} for {profile.Name}");
+      }
+
+      foreach (var profile in ProfileCase.All) {
+        var generated = scenario.Translate(path, from, "javascript", profile.Arguments);
+        Assert.That(GeneratedJavaScript.Problems(generated.Text, profile.Parsed), Is.Empty, generated.Text);
+        Assert.That(Toolchain.NodeOutcomes(Path.GetDirectoryName(generated.Path)!, Path.GetFileName(generated.Path), [call], false, profile.Mode, profile.Global).Single(),
+          Is.EqualTo(expected), $"{path} in {profile}");
+      }
+    }
+  }
+
   /// <summary>Writes the method into a static class next to the class Counter of the fixture.</summary>
   [Given("^the C# method " + StepText.Quoted + " next to the class Counter$")]
   public void NextToCounter(string method) {

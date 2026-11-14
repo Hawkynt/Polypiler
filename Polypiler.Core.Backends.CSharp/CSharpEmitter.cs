@@ -664,10 +664,11 @@ public static partial class CSharpEmitter {
 
       // The table's order is the order of the helpers, whatever order the class calls them in.
       foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains))
-        members.Add(HelperDeclaration(helper) is var declaration && classes.Count > 0
-          // A helper the classes of the module call is no private member of the static class.
-          ? declaration with { Name = this._helpers.GetValueOrDefault(helper.Name, helper.Name), Leading = CsTrivia.Blank, IsHelper = true, Modifiers = [.. declaration.Modifiers.Select(modifier => modifier == "private" ? "internal" : modifier)] }
-          : declaration with { Name = this._helpers.GetValueOrDefault(helper.Name, helper.Name), Leading = CsTrivia.Blank, IsHelper = true });
+        members.Add(HelperDeclaration(helper) with { Name = this._helpers.GetValueOrDefault(helper.Name, helper.Name), Leading = CsTrivia.Blank, IsHelper = true });
+
+      // The classes of the module reach its constants, globals, functions and helpers, which are then no private members of the static class.
+      if (classes.Count > 0)
+        members = [.. members.Select(Exposed)];
 
       var types = this.Structs();
       types.AddRange(classes);
@@ -1058,7 +1059,7 @@ public static partial class CSharpEmitter {
         case IrConst constant:
           return Literal(constant.Type, constant.Value);
         case IrConstRef reference:
-          return (new CsName(this._members[reference.Constant.Name]), Primary);
+          return (this.Qualified(this._members[reference.Constant.Name]), Primary);
         case IrStrConst text:
           return (new CsStringLiteral(text.Value), Primary);
         case IrLocalRef reference when reference.Local == this._receiver:
@@ -1118,7 +1119,7 @@ public static partial class CSharpEmitter {
           return (new CsBinary(left, "==", this.Operand(equality.Right, Unary)), Loose);
         default:
           var call = (IrCall)expression;
-          return (new CsInvocation(new CsName(this._members[call.Function]), [.. call.Arguments.Select(this.Stored)]), Primary);
+          return (new CsInvocation(this.Qualified(this._members[call.Function]), [.. call.Arguments.Select(this.Stored)]), Primary);
       }
     }
 
