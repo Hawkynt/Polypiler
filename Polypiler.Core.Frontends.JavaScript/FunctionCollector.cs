@@ -51,6 +51,14 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
   private readonly List<ModuleConstant> _constants = [];
   private readonly HashSet<string> _escaped = [];
   private readonly List<Variable> _globals = [];
+  private readonly List<EnumObject> _enums = [];
+
+  /// <summary>
+  /// The enum objects of the scope that encloses the functions, in source order, and the objects of
+  /// numbers that are not ones. A name that two of them share, or one of them and a function, names none.
+  /// </summary>
+  public IReadOnlyList<EnumObject> EnumObjects
+    => this._enums.Where(named => this._enums.Count(other => other.Name == named.Name) == 1 && !this._candidates.Exists(candidate => candidate.Name == named.Name)).ToList();
 
   /// <summary>
   /// The variables of the module, in source order: every <c>let</c> and <c>var</c> at the top level of
@@ -119,6 +127,7 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
           this.Objects(statement);
           this.Constant(statement);
           this.Global(statement);
+          this.Enum(statement, isScript);
           break;
       }
     }
@@ -131,6 +140,10 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
     foreach (var global in this._globals.Where(global => exported.Contains(global.Name)))
       global.Problem = $"the exported variable {global.Name}";
 
+    for (var index = 0; index < this._enums.Count; ++index)
+      if (exported.Contains(this._enums[index].Name) && this._enums[index].Declaration is VariableDeclarator { Init: { } value })
+        this._enums[index] = EnumObject.Of(this._enums[index].Name, this._enums[index].Declaration, value, true)!;
+
     var wrappers = program.Body.Select(Wrapped).OfType<FunctionBody>().ToList();
     if (wrappers.Count == 1) {
       foreach (var statement in wrappers[0].Body) {
@@ -140,10 +153,23 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
 
         this.Objects(statement);
         this.Constant(statement);
+        this.Enum(statement, false);
       }
     }
 
     return this._candidates.OrderBy(candidate => candidate.Anchor.Start).ToList();
+  }
+
+  /// <summary>Takes the enum objects a <c>const</c> declares, exported where the file exports the declaration or is a script.</summary>
+  private void Enum(Statement statement, bool isScript) {
+    var exported = statement is ExportNamedDeclaration;
+    var declaration = statement is ExportNamedDeclaration { Declaration: VariableDeclaration inner } ? inner : statement as VariableDeclaration;
+    if (declaration is not { Kind: VariableDeclarationKind.Const })
+      return;
+
+    foreach (var declarator in declaration.Declarations)
+      if (declarator is { Id: Identifier { Name: var name }, Init: { } value } && !name.Contains('$') && EnumObject.Of(name, declarator, value, exported || isScript) is { } named)
+        this._enums.Add(named);
   }
 
   /// <summary>Takes the constants a <c>const</c> declares with a number, a list of numbers or a typed array of listed numbers.</summary>

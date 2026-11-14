@@ -157,7 +157,8 @@ public static class JavaScriptFrontend {
     var collector = new FunctionCollector(source, comments);
     var candidates = collector.Collect(program);
     var constants = collector.Constants;
-    var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name));
+    var enums = collector.EnumObjects;
+    var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name)) { Enums = enums.ToDictionary(named => named.Name) };
     var globals = collector.Globals;
     inference.DeclareGlobals(globals, program);
     var diagnostics = new List<Diagnostic>();
@@ -209,7 +210,7 @@ public static class JavaScriptFrontend {
       Path.GetFileNameWithoutExtension(path),
       lowered,
       constants.Where(lowering.Constants.Contains).Select(constant => constant.Constant).ToList()) {
-      Types = lowering.Structs(lowered, inference.Shapes),
+      Types = [.. enums.Select(named => named.Type).OfType<IrEnumType>(), .. lowering.Structs(lowered, inference.Shapes)],
       Globals = [.. state.Select(global => global.Global!)]
     };
     var caveats = new List<ImportCaveat>();

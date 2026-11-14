@@ -89,6 +89,9 @@ internal sealed partial class Lowering {
         // A table never comes here: one that is used as a value is no constant.
         this.Constants.Add(constant);
         return new IrConstRef(constant.Constant);
+      case EnumObject named:
+        // Only X.A reads an enum object; that is not this.
+        throw this.Unsupported(identifier, named.Problem ?? $"the enum object {named.Name} used other than by its members, as X.A");
       default:
         throw this.Unsupported(identifier, types.IsGlobal(identifier.Name) ? $"reading the variable {identifier.Name} before its declaration" : identifier.Name);
     }
@@ -262,6 +265,9 @@ internal sealed partial class Lowering {
   }
 
   private IrExpr Member(MemberExpression member) {
+    if (member.Object is Identifier enumerated && this._model.Bindings.GetValueOrDefault(enumerated) is EnumObject named)
+      return this.EnumMember(member, named);
+
     if (!member.Computed && types.Of(member.Object).Shape is { } shape)
       return this.FieldOf(member, shape);
 
@@ -329,6 +335,10 @@ internal sealed partial class Lowering {
   private IrExpr Call(CallExpression call) {
     if (call.Arguments.Any(argument => argument is SpreadElement))
       throw this.Unsupported(call, "a spread argument");
+
+    // An enum object handed to anything - Object.keys, a function - is used as a value, which it is not.
+    if (call.Arguments.FirstOrDefault(argument => argument is Identifier && this._model.Bindings.GetValueOrDefault(argument) is EnumObject) is Identifier handed)
+      return this.Name(handed);
 
     var arguments = call.Arguments;
     var builtin = types.Names.Builtin(call);
@@ -559,10 +569,21 @@ internal sealed partial class Lowering {
     return exact ? Convert(value.Expr, type) : throw this.Unsupported(node, $"{JsType.Spell(value.Type.Ir ?? from)} where {JsType.Spell(type)} is expected");
   }
 
-  /// <summary>Converts between numeric types; a constant is converted here.</summary>
+  /// <summary>
+  /// Converts between numeric types; a constant is converted here. An enum converts through its
+  /// underlying type, and a member of one stays the member, read as its number: <c>(int)X.A</c>.
+  /// </summary>
   private static IrExpr Convert(IrExpr value, IrType type) {
     if (value.Type == type)
       return value;
+
+    if (value.Type.IsEnum)
+      return Convert(new IrConvert(value.Type.Underlying, value), type);
+
+    if (type.IsEnum) {
+      var plain = Convert(value, type.Underlying);
+      return plain is IrConst number ? new IrConst(type, number.Value) : new IrConvert(type, plain);
+    }
 
     if (value is IrConst { Type.IsInteger: true } constant)
       return new IrConst(type, type.IsInteger ? IrOperators.Wrap(type, constant.Value) : IrOperators.Bits(type, constant.Value));

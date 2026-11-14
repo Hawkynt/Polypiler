@@ -21,7 +21,7 @@ internal sealed partial class TypeInference {
   public void DeclareGlobals(IReadOnlyList<Variable> globals, Node root) {
     this._globals = globals.ToDictionary(global => global.Name);
     var model = new FunctionModel(new Candidate("", root, null!));
-    var binder = new Binder(model, candidates, constants, source);
+    var binder = new Binder(model, candidates, constants, source) { Enums = this.Enums };
     this._binders[model] = binder;
     binder.BindInitializers(globals);
     this.Initializers = model;
@@ -31,7 +31,7 @@ internal sealed partial class TypeInference {
   public bool IsGlobal(string name) => this._globals.ContainsKey(name);
 
   /// <summary>The binder of a function, which sees the variables of the module wherever no local hides them.</summary>
-  private Binder BinderOf(FunctionModel model) => new(model, candidates, constants, source) { Globals = this._globals };
+  private Binder BinderOf(FunctionModel model) => new(model, candidates, constants, source) { Globals = this._globals, Enums = this.Enums };
 
   /// <summary>The functions whose flows the fixed point runs over: those imported and the initializers.</summary>
   private IEnumerable<FunctionModel> Flowing(List<FunctionModel> models) => models.Append(this.Initializers);

@@ -23,6 +23,9 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   /// <summary>The variables of the module, which every name of a function that no local or parameter hides names.</summary>
   public IReadOnlyDictionary<string, Variable> Globals { get; init; } = new Dictionary<string, Variable>();
 
+  /// <summary>The enum objects of the file, which a name names that nothing else of its name hides.</summary>
+  public IReadOnlyDictionary<string, EnumObject> Enums { get; init; } = new Dictionary<string, EnumObject>();
+
   /// <summary>
   /// Binds the initializers of the variables of the module, in source order. Each sees the variables
   /// declared before it and the constants; a later variable it names is in its temporal dead zone.
@@ -280,6 +283,8 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       variable.Uses.Add((coercion, use));
     } else if (constants.TryGetValue(identifier.Name, out var constant)) {
       model.Bindings[identifier] = constant;
+    } else if (this.Enums.TryGetValue(identifier.Name, out var named)) {
+      model.Bindings[identifier] = named;
     }
   }
 
