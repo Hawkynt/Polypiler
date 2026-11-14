@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/corpus.schema.json",
+  "title": "Polypiler corpus manifest",
+  "description": "tooling/corpus/corpus.yaml, written in YAML: the pinned upstream repositories and the fixtures taken from them (PRD §11). The loader also requires every fixture to name a declared repository, every repository name and fixture ID once, and every 'run' to name '{file}'.",
+  "type": "object",
+  "required": ["schema", "repositories", "fixtures"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "repositories": { "type": "array", "items": { "$ref": "#/$defs/repository" } },
+    "fixtures": { "type": "array", "items": { "$ref": "#/$defs/fixture" } }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1 },
+    "path": {
+      "type": "string",
+      "description": "A path relative to the repository root, '/'-separated: not absolute, no backslash, no empty, '.' or '..' segment.",
+      "pattern": "^(?![A-Za-z]:)(?!.*\\\\)(?!/)(?!.*//)(?!(.*/)?\\.\\.?(/|$))[^/].*$"
+    },
+    "repository": {
+      "type": "object",
+      "required": ["name", "url", "commit", "licence", "licenceFiles"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", "description": "owner/repo" },
+        "url": { "$ref": "#/$defs/text", "description": "Where the commit is fetched from when no local checkout holds it." },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$", "description": "The pin: a full commit hash, never a branch or tag." },
+        "licence": { "$ref": "#/$defs/text", "description": "SPDX expression." },
+        "licenceFiles": { "type": "array", "items": { "$ref": "#/$defs/path" }, "description": "Imported with every fixture of the repository." }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "required": ["id", "repository", "path", "export", "dependencies", "run", "vectors", "licence", "determinism", "tolerance", "profiles"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(\\.[a-z0-9-]+)+$" },
+        "repository": { "$ref": "#/$defs/text", "description": "The name of a declared repository." },
+        "path": { "$ref": "#/$defs/path" },
+        "export": { "$ref": "#/$defs/text" },
+        "dependencies": { "type": "array", "items": { "$ref": "#/$defs/path" } },
+        "run": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" }, "description": "argv template; '{file}' stands for the fixture's local path." },
+        "vectors": {
+          "type": "object",
+          "required": ["kind", "source"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "enum": ["embedded", "file", "published"] },
+            "source": { "$ref": "#/$defs/text" }
+          },
+          "if": { "properties": { "kind": { "const": "file" } } },
+          "then": { "properties": { "source": { "$ref": "#/$defs/path" } } }
+        },
+        "licence": { "$ref": "#/$defs/text" },
+        "determinism": { "enum": ["deterministic", "seeded"] },
+        "tolerance": { "type": "string", "pattern": "^(exact|declared|VERIFICATION\\.tolerance\\.[A-Za-z0-9_-]+)$" },
+        "profiles": { "type": "array", "items": { "$ref": "#/$defs/text" } }
+      }
+    }
+  }
+}

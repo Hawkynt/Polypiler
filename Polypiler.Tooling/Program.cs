@@ -40,6 +40,9 @@ public static class Program {
       output.WriteLine($"       {Name} {ToolchainsCommand.Verb} validate [--lock <path>]");
       output.WriteLine($"       {Name} {ToolchainsCommand.Verb} probe [--lock <path>] [--only <key>[,<key>...]] [--format text|json]");
       output.WriteLine($"       {Name} {DiagnosticsCommand.Verb} validate [--registry <path>]");
+      output.WriteLine($"       {Name} {CorpusCommand.Verb} import [--source <dir>]... [--update-lock] [--fixture <id>]...");
+      output.WriteLine($"       {Name} {CorpusCommand.Verb} verify");
+      output.WriteLine($"       {Name} {CorpusCommand.Verb} discover --repository <owner/repo> --glob <pattern> [--source <dir>]...");
       return Success;
     }
 
@@ -56,6 +59,9 @@ public static class Program {
 
     if (args[0] == DiagnosticsCommand.Verb)
       return DiagnosticsCommand.Run(args[1..], output, error);
+
+    if (args[0] == CorpusCommand.Verb)
+      return new CorpusCommand().Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;

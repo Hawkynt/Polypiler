@@ -251,10 +251,11 @@ codes:
     severity: error
     exit: EnvironmentError
     title: corpus hash mismatch
-    message: "corpus file '<path>' does not match its pinned hash"
+    message: "corpus file '<repository>:<path>' has SHA-256 <actual>, the lock records <expected>[ (<n> bytes, the lock records <m> bytes)]"
+    rule: corpus.lock
     area: infrastructure
     owner: INFRA-CORPUS
-    reserved: true
+    surfaces: "standard error of polypiler-tooling corpus import (before anything is written) and corpus verify; also 'corpus file '<repository>:<path>' cannot be read, the lock records <expected>: <reason>' for a locked file that is missing; the failure of a test that opens a stale fixture with CorpusFixture.Open"
   - code: PLY0024
     severity: error
     exit: LicenseBlocker
@@ -267,18 +268,20 @@ codes:
     severity: error
     exit: EnvironmentError
     title: corpus path invalid
-    message: "corpus path '<path>' <reason>"
+    message: "'<path>' does not exist in <repository> at <commit>[: <cause>]"
+    rule: corpus.path
     area: infrastructure
     owner: INFRA-CORPUS
-    reserved: true
+    surfaces: "standard error of polypiler-tooling corpus import and discover, git's stderr as the cause; also '<repository> at <commit> cannot be fetched from <url>: <cause>', 'the files of <repository> at <commit> cannot be listed: <cause>' and 'corpus path '<path>' cannot be written: <cause>'"
   - code: PLY0026
     severity: error
     exit: EnvironmentError
     title: corpus manifest invalid
-    message: "<reason>"
+    message: "corpus manifest invalid: <reason>"
+    rule: corpus.manifest
     area: infrastructure
     owner: INFRA-CORPUS
-    reserved: true
+    surfaces: "standard error of polypiler-tooling corpus import, verify and discover; reasons include a schema violation of corpus.yaml or corpus.lock.json, a fixture naming an undeclared repository, a duplicated fixture ID, an absolute path or one containing '..', a file under corpus/upstream that is not in the lock, a file not yet in the lock and an unknown fixture or repository asked for"
   - code: PLY0027
     severity: error
     exit: EnvironmentError

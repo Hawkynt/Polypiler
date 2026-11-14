@@ -102,3 +102,6 @@ __pycache__/
 
 # Local tooling worktrees
 .claude/
+
+# Upstream corpus files: imported at their pins by `polypiler-tooling corpus import`, never committed
+corpus/upstream/
