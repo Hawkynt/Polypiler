@@ -13,7 +13,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The steps of <c>tests/features/prototype/number-text.feature</c>. Every value a step states is
+/// The steps of <c>tests/features/ir/ir-number-text.feature</c>. Every value a step states is
 /// checked twice: against .NET running the original C#, compiled by the C# compiler, or node running
 /// the original JavaScript, and against every translation of it the scenario made.
 /// </summary>

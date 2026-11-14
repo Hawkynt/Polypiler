@@ -107,7 +107,7 @@ public sealed class JavaScriptStringImportTests {
   [TestCase("/** @param {string} s */ export function f(s) { return s.replaceAll(\"\", \"x\"); }", "replaceAll with a needle that may be empty")]
   [TestCase("/** @param {int32} c */ export function f(c) { return String.fromCodePoint(c); }", "String.fromCodePoint")]
   [TestCase("export function f() { return new String(\"x\"); }", "new String")]
-  [TestCase("/** @param {string} s */ export function f(s) { return s + [1]; }", "+ on string and number[]")]
+  [TestCase("/** @param {string} s */ export function f(s) { return s + [1]; }", "+ on string and int32[]")]
   [TestCase("/** @param {number} n */ export function f(n) { return n.toPrecision(3); }", "toPrecision, which is a format of its own")]
   [TestCase("/** @param {string} s */ export function f(s) { return s.match(\"a\"); }", "match")]
   [TestCase("/** @param {string} s */ export function f(s) { return s.lastIndexOf(\"a\", 0.5); }", "lastIndexOf from number, which is no proven integer")]

@@ -98,7 +98,7 @@ digits and does not round `Parse` correctly; a .NET Standard library may run on 
 | `ParseDotNet` of `f64`, `f32` | helper `ParseText` (the grammar and the exact value) | `double.Parse(s, NumberStyles.Float \| NumberStyles.AllowThousands, CultureInfo.InvariantCulture)` |
 | `ParseNumberEcma`, `ParseFloatEcma`, `ParseIntEcma` | helper `ParseText` | same |
 
-`NumberText` finds the shortest digits with Ryu (Ulf Adams, Boost Software License 1.0), converted to
+`NumberText` finds the shortest digits with Ryu (Ulf Adams, Apache License 2.0), converted to
 C# 2 with its small tables copied exactly; a float goes through the same computation with its own
 mantissa. Its fixed notation and `ParseText` compute with the exact decimal value in integers of many
 digits. `parseInt` of the radices other than 2, 4, 8, 10, 16 and 32, which ECMA-262 lets an
@@ -129,7 +129,7 @@ code it was derived from, with its licence, in its header.
 - Every operation is written and run in every profile against the interpreter
   (`CSharpNumberTextEmissionTests`); the fixtures of `tests/fixtures/prototype/numtext` run in every
   profile of the other language against .NET and node (`NumberTextTests`), and the scenarios of
-  `tests/features/prototype/number-text.feature` check the values the issue states.
+  `tests/features/ir/ir-number-text.feature` check the values the issue states.
 
 ## Interpretations
 

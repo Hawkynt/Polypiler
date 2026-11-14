@@ -1,0 +1,28 @@
+id: INTRINSICS.ParseFloatEcma
+title: Text as parseFloat reads it
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1315"
+tests: [Polypiler.Tests/String/IrNumberTextTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ParseFloatEcma
+  group: String
+  typeParameters: []
+  parameters: [{name: text, type: TYPES.str}]
+  returns: [{name: number, type: TYPES.f64}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "without the white space of ECMA-262 at the start, the longest prefix that is a sign and Infinity or a decimal literal, correctly rounded; NaN without one"
+    source: "ECMA-262 2022 §19.2.4 (parseFloat)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[49, 50, 112, 120]], outputs: ["0x4028000000000000"]}
+    - {types: {}, inputs: [[48, 120, 49, 48]], outputs: ["0x0000000000000000"]}
+    - {types: {}, inputs: [[45, 46, 53, 101, 49, 120]], outputs: ["0xC014000000000000"]}
