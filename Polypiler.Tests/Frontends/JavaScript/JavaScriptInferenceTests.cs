@@ -353,16 +353,7 @@ public sealed class JavaScriptInferenceTests {
 
   /// <summary>What is no number and no table of numbers is no constant: its name is unknown to the functions.</summary>
   [TestCase("const C = 1 + 1;")]
-  [TestCase("let C = 1;")]
-  [TestCase("var C = 1;")]
   [TestCase("const C = 'text';")]
-  [TestCase("const C = [];")]
-  [TestCase("const C = [1, , 2];")]
-  [TestCase("const C = [1, x];")]
-  [TestCase("const C = [1, 2n];")]
-  [TestCase("const C = new Uint8Array(4);")]
-  [TestCase("const C = new Uint8Array([1n]);")]
-  [TestCase("const C = new BigInt64Array([1]);")]
   [TestCase("const C = new Map([1]);")]
   [TestCase("const C = 36893488147419103232n;")]
   [TestCase("(function () { const C = 1; })(); function C() { }")]
@@ -374,21 +365,26 @@ public sealed class JavaScriptInferenceTests {
 
   /// <summary>
   /// A table is a constant only while the file does nothing with it but read an element or the
-  /// length: stored into, handed on or given another name, it need not be the list its declaration shows.
+  /// length: stored into, handed on or given another name, it need not be the list its declaration
+  /// shows. It is then an array variable of the module (#1316): a function that reads it is imported,
+  /// unless the module also does something with it when it is loaded, or exports it.
   /// </summary>
-  [TestCase("C[0] = 5;")]
-  [TestCase("function g(i) { C[i]++; }")]
-  [TestCase("(function () { C[1] ^= 1; })();")]
-  [TestCase("const D = C;")]
-  [TestCase("C.fill(0);")]
-  [TestCase("C[0]();")]
-  [TestCase("C.length = 1;")]
-  [TestCase("function g(x) { x[0] = 1; } g(C);")]
-  [TestCase("export { C };")]
-  [TestCase("function g() { const C = 1; return C; }")]
-  public void TableTheFileDoesMoreWithThanRead_IsNoConstant(string use) {
+  [TestCase("C[0] = 5;", "a statement at the top level of the module")]
+  [TestCase("function g(i) { C[i]++; }", "")]
+  [TestCase("(function () { C[1] ^= 1; })();", "a statement at the top level of the module")]
+  [TestCase("const D = C;", "")]
+  [TestCase("C.fill(0);", "a statement at the top level of the module")]
+  [TestCase("C[0]();", "a statement at the top level of the module")]
+  [TestCase("C.length = 1;", "a statement at the top level of the module")]
+  [TestCase("function g(x) { x[0] = 1; } g(C);", "a statement at the top level of the module")]
+  [TestCase("export { C };", "the exported variable C")]
+  [TestCase("function g() { const C = 1; return C; }", "")]
+  public void TableTheFileDoesMoreWithThanRead_IsNoConstant(string use, string refused) {
     const string table = "const C = new Uint8Array([1, 2]); ";
-    Assert.That(JavaScriptFrontend.Import("snippet.mjs", table + use + " function f() { return C[0] + C.length; }", ["f"]).Diagnostics.Single().Message, Is.EqualTo("'C' is not supported yet"));
+    var result = JavaScriptFrontend.Import("snippet.mjs", table + use + " function f() { return C[0] + C.length; }", ["f"]);
+    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Message), refused.Length == 0 ? Is.Empty : Has.Some.EqualTo($"'{refused}' is not supported yet"));
+    if (refused.Length == 0)
+      Assert.That((result.Module!.Constants, result.Module.Globals.Single().Name), Is.EqualTo((Array.Empty<IrModuleConst>(), "C")));
   }
 
   /// <summary>Reading leaves a table what it is, wherever in the file it is read, and a property or a variable of another object is not the table.</summary>

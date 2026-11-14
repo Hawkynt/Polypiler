@@ -66,6 +66,9 @@ public static partial class JavaScriptEmitter {
         case IrAssign assign:
           this.Expression(assign.Value);
           break;
+        case IrGlobalAssign assign:
+          this.Expression(assign.Value);
+          break;
         case IrStore store:
           this.Expression(store.Array);
           this.Expression(store.Index);

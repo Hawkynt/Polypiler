@@ -35,6 +35,8 @@ public static partial class JavaScriptEmitter {
           return this.Intrinsic(intrinsic);
         case IrLocalRef reference:
           return (this.Variable(reference.Local), true);
+        case IrGlobalRef reference:
+          return (this.GlobalName(reference.Global), true);
         case IrUnary unary:
           return this.Unary(unary);
         case IrBinary binary:
@@ -178,7 +180,7 @@ public static partial class JavaScriptEmitter {
         return (this.Helper("$stepi", arguments), true);
       }
 
-      var name = this.Local(((IrLocalRef)step.Target).Local);
+      var name = step.Target is IrGlobalRef global ? this.GlobalName(global.Global).Name : this.Local(((IrLocalRef)step.Target).Local);
       var current = step.Postfix ? Previous : name;
       JsExpression One() => type.IsLong ? new JsBigInt(1) : Number("1");
       JsExpression Moved() => Infix(Id(current), step.Increment ? "+" : "-", One());
