@@ -1,0 +1,26 @@
+id: TYPES.extra-property
+title: Invalid type extra-property
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-TYPES
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: integer
+  parameters: []
+  bits: 32
+  endianness: little
+  signedness: unsigned
+  overflow: wrap
+  layout:
+    sizeBytes: 4
+    alignment: 4
+    byteOrder: target
+  distinctFrom: []
+  values:
+    - bits: "0x00000000"
+      value: "0"

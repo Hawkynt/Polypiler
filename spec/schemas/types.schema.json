@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/types.schema.json",
+  "title": "Polypiler spec family 'types'",
+  "description": "The body under 'spec' of a document in spec/types/<family>/<name>.yaml: one type descriptor. Semantic width (bits), storage (layout) and signedness are separate properties (PRD §4.4), and nothing here declares two types equal (PRD §5.2). Rules the schema cannot state (PLY0046): layout, bits-fit-layout, example-width, distinct-symmetric, alignment-power-of-two, family-requirements; encoding.of and distinctFrom name existing documents (PLY0043).",
+  "type": "object",
+  "required": ["family", "parameters", "bits", "signedness", "layout", "distinctFrom", "values"],
+  "additionalProperties": false,
+  "properties": {
+    "family": {
+      "description": "The kind of type; also the folder under spec/types/.",
+      "enum": ["integer", "float", "fixed", "decimal", "posit", "mbf", "encoded-integer", "text", "boolean", "vector", "custom"]
+    },
+    "parameters": {
+      "description": "The parameters of a parameterized type; empty for a concrete type.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
+          "kind": { "enum": ["integer", "enum", "type"] },
+          "min": { "type": "integer" },
+          "max": { "type": "integer" }
+        }
+      }
+    },
+    "bits": { "description": "The logical width.", "type": "integer", "minimum": 1, "maximum": 65536 },
+    "signedness": { "description": "'none' only for boolean, text and custom.", "enum": ["signed", "unsigned", "none"] },
+    "lanes": { "description": "Present exactly when family is 'vector'.", "type": "integer", "minimum": 2 },
+    "overflow": { "description": "Required for integer and fixed.", "enum": ["wrap", "trap", "saturate", "source-defined"] },
+    "rounding": {
+      "description": "The rounding modes, the default first; at least one, and required, for float, fixed, decimal, posit and mbf.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["nearest-even", "nearest-away", "toward-zero", "toward-positive", "toward-negative"] }
+    },
+    "nan": { "description": "Required for float, posit and mbf.", "enum": ["none", "quiet-only", "quiet-and-signaling"] },
+    "subnormals": { "description": "Required for float and mbf.", "type": "boolean" },
+    "encoding": {
+      "description": "Present exactly when family is 'encoded-integer': the type that is encoded and the scheme.",
+      "type": "object",
+      "required": ["of", "scheme"],
+      "additionalProperties": false,
+      "properties": {
+        "of": { "type": "string", "pattern": "^TYPES\\." },
+        "scheme": { "enum": ["zigzag", "gray", "bcd", "leb128", "ones-complement", "sign-magnitude"] }
+      }
+    },
+    "layout": {
+      "description": "The storage of one value.",
+      "type": "object",
+      "required": ["sizeBytes", "alignment", "byteOrder"],
+      "additionalProperties": false,
+      "properties": {
+        "sizeBytes": { "type": "integer", "minimum": 1, "maximum": 65536 },
+        "alignment": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "byteOrder": { "enum": ["little", "big", "target"] }
+      }
+    },
+    "distinctFrom": {
+      "description": "Types of the same size that must never be merged with this one; each of them lists this one back.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^TYPES\\." }
+    },
+    "values": {
+      "description": "Example encodings: a bit pattern in hexadecimal and the value it means.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["bits", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "bits": { "type": "string", "pattern": "^0x[0-9A-Fa-f]+$" },
+          "value": { "type": "string", "pattern": "^(-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][-+]?[0-9]+)?|NaN|\\+Infinity|-Infinity)$" }
+        }
+      }
+    }
+  }
+}

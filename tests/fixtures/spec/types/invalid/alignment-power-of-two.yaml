@@ -1,0 +1,25 @@
+id: TYPES.alignment-power-of-two
+title: Invalid type alignment-power-of-two
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-TYPES
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: integer
+  parameters: []
+  bits: 32
+  signedness: unsigned
+  overflow: wrap
+  layout:
+    sizeBytes: 4
+    alignment: 3
+    byteOrder: target
+  distinctFrom: []
+  values:
+    - bits: "0x00000000"
+      value: "0"

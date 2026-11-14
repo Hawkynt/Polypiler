@@ -1,0 +1,21 @@
+id: TYPES.missing-layout
+title: Invalid type missing-layout
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-TYPES
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: integer
+  parameters: []
+  bits: 32
+  signedness: unsigned
+  overflow: wrap
+  distinctFrom: []
+  values:
+    - bits: "0x00000000"
+      value: "0"

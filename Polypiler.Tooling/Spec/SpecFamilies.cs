@@ -9,6 +9,7 @@ public static class SpecFamilies {
   /// <summary>Every family, one per folder under <c>spec/</c>.</summary>
   public static IReadOnlyList<ISpecFamily> All { get; } = [
     new DemoSpecFamily(),
+    new TypesSpecFamily(),
   ];
 
 }
