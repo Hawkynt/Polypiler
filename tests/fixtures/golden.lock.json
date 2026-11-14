@@ -1082,6 +1082,16 @@
       "bytes": 27216
     },
     {
+      "path": "tests/fixtures/backend/golden/state/Journal.cs.csharp.golden",
+      "sha256": "b5333eeb3f2be56b69e78391e584a0715fb99ca32b1152b67619800d896a49e6",
+      "bytes": 23718
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/Journal.cs.javascript.golden",
+      "sha256": "dc3ad5389c0991be98cb2169bacb3e3c36b8a88e782e40442620138e0e612d34",
+      "bytes": 28444
+    },
+    {
       "path": "tests/fixtures/backend/golden/state/Lazy.cs.csharp.golden",
       "sha256": "16524fa8fba0d229e3b5ce878bc14cd19d5892dfd66852166c1528cdd362fcef",
       "bytes": 39874
@@ -1120,6 +1130,16 @@
       "path": "tests/fixtures/backend/golden/state/histogram.js.javascript.golden",
       "sha256": "e3d179323f12bde079417daaa40fb707221607c2ae2004d5ba7f7abf5bd5d0d0",
       "bytes": 27378
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/journal.js.csharp.golden",
+      "sha256": "73063f617d3fdd05adf602fcdb13b5b58b348c7b0d519564d9f49aa7d10ad607",
+      "bytes": 23502
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/journal.js.javascript.golden",
+      "sha256": "2ee9238623aeb441b197dabd0e5d499cf416a444f15568ec3c47972c3fcc4748",
+      "bytes": 28284
     },
     {
       "path": "tests/fixtures/backend/golden/state/lazy.js.csharp.golden",
