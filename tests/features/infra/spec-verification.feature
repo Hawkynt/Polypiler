@@ -2,9 +2,9 @@ Feature: Schema and validator for spec/verification/
 
   Scenario: The valid document passes
     Given the spec tree "tests/fixtures/spec/verification/valid"
-    When I run "polypiler-tooling spec validate --root tests/fixtures/spec/verification/valid --family verification"
+    When I run "polypiler-tooling spec validate --root tests/fixtures/spec/verification/valid"
     Then the exit code is 0
-    And the last output line is "3 documents, 0 errors"
+    And the last output line is "8 documents, 0 errors"
 
   Scenario: A random generator without a seed is refused
     Given the spec document "generators/u32-uniform.yaml" with type "TYPES.u32", strategy "uniform", count 10000 and no seed

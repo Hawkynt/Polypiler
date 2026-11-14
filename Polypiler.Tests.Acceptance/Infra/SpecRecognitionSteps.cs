@@ -11,9 +11,9 @@ namespace Polypiler.Tests.Acceptance.Infra;
 
 /// <summary>
 /// The steps of <c>tests/features/infra/spec-recognition.feature</c>. The scenario's workspace stands in
-/// for the repository: it holds the recognition family's schema, and either the valid fixture tree of
+/// for the repository: it holds the schemas of the families of the valid tree, and either the valid fixture tree of
 /// <c>tests/fixtures/spec/recognition/</c> under the same relative path or a <c>spec/</c> tree of one
-/// recognition document and the intrinsic it introduces, which the real <c>polypiler-tooling</c>
+/// recognition document and the valid documents outside <c>recognition/</c>, which the real <c>polypiler-tooling</c>
 /// executable then validates.
 /// </summary>
 [Binding, Scope(Feature = "Schema and validator for spec/recognition/")]
@@ -21,15 +21,16 @@ public sealed class SpecRecognitionSteps(ScenarioWorkspace workspace, CommandLog
 
   private const string Fixtures = "tests/fixtures/spec/recognition";
 
-  private const string RotateLeft = "intrinsics/shuffle/rotateleft.yaml";
-
   private static readonly string _root = PrototypeFixture.RepositoryRoot;
 
   private string _fixture = "";
 
-  /// <summary>Puts the family's schema where the tool looks for it from the workspace.</summary>
+  /// <summary>Puts the schemas of the families of the valid tree where the tool looks for them from the workspace.</summary>
   [BeforeScenario]
-  public void CopySchema() => workspace.Copy(Path.Combine(_root, "spec/schemas/recognition.schema.json"), "spec/schemas/recognition.schema.json");
+  public void CopySchemas() {
+    foreach (var family in new[] { "recognition", "intrinsics", "types", "ir" })
+      workspace.Copy(Path.Combine(_root, $"spec/schemas/{family}.schema.json"), $"spec/schemas/{family}.schema.json");
+  }
 
   /// <summary>Copies a fixture tree into the workspace under its repository path.</summary>
   [Given("^the spec tree " + StepText.Quoted + "$")]
@@ -81,9 +82,15 @@ public sealed class SpecRecognitionSteps(ScenarioWorkspace workspace, CommandLog
   public void LastOutputLine(string text)
     => Assert.That(CommandSteps.WithoutTrailingNewline(log.Last.Stdout).Split('\n').Last().TrimEnd('\r'), Is.EqualTo(StepText.Unescape(text)), log.Last.Output);
 
-  /// <summary>Writes a recognition document and the intrinsic the valid document introduces.</summary>
+  /// <summary>Writes a recognition document beside the intrinsic the valid document introduces and the documents that intrinsic names.</summary>
   private void WriteTree(string path, string text) {
-    workspace.Copy(Path.Combine(_root, Fixtures, "valid", RotateLeft), "spec/" + RotateLeft);
+    var valid = Path.Combine(_root, Fixtures, "valid");
+    foreach (var file in Directory.EnumerateFiles(valid, "*.yaml", SearchOption.AllDirectories)) {
+      var relative = Path.GetRelativePath(valid, file).Replace(Path.DirectorySeparatorChar, '/');
+      if (!relative.StartsWith("recognition/", System.StringComparison.Ordinal))
+        workspace.Copy(file, "spec/" + relative);
+    }
+
     workspace.Write(path, text);
   }
 

@@ -2,9 +2,9 @@ Feature: Schema and validator for spec/intrinsics/
 
   Scenario: The valid document passes
     Given the spec tree "tests/fixtures/spec/intrinsics/valid"
-    When I run "polypiler-tooling spec validate --root tests/fixtures/spec/intrinsics/valid --family intrinsics"
+    When I run "polypiler-tooling spec validate --root tests/fixtures/spec/intrinsics/valid"
     Then the exit code is 0
-    And the last output line is "1 documents, 0 errors"
+    And the last output line is "9 documents, 0 errors"
 
   Scenario: An inexact intrinsic must name its tolerance policy
     Given the spec document "trig/sin.yaml" with group "Trig" and exactness {mode: tolerance} without "policy"

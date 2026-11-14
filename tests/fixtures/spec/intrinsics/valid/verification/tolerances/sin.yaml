@@ -1,9 +1,9 @@
 id: VERIFICATION.tolerance.sin
-title: Tolerance of the sine
+title: Tolerance of Sin on f64
 version: 1
 status: draft
 owner: Hawkynt
-issue: SPEC-VERIFICATION
+issue: VER-ORACLE
 tests: []
 introducedIn: P0
 compatibility: none
@@ -13,4 +13,4 @@ spec:
   kind: tolerance
   operation: INTRINSICS.Sin
   mode: ulp
-  bound: 1
+  bound: 3

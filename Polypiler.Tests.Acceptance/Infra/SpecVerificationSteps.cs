@@ -13,7 +13,7 @@ namespace Polypiler.Tests.Acceptance.Infra;
 
 /// <summary>
 /// The steps of <c>tests/features/infra/spec-verification.feature</c>. The scenario's workspace stands in
-/// for the repository: it holds the family's schema, and the real <c>polypiler-tooling</c> executable
+/// for the repository: it holds the schemas of the families of the valid tree, and the real <c>polypiler-tooling</c> executable
 /// validates the documents copied into it. A fixture of <c>tests/fixtures/spec/verification/invalid/</c>
 /// is placed where its ID <c>VERIFICATION.&lt;kind&gt;.&lt;name&gt;</c> says it lives,
 /// <c>spec/verification/&lt;kind&gt;s/&lt;name&gt;.yaml</c>, beside the documents of
@@ -31,9 +31,12 @@ public sealed class SpecVerificationSteps(ScenarioWorkspace workspace, CommandLo
 
   private string? _fixture;
 
-  /// <summary>Puts the family's schema where the tool looks for it from the workspace.</summary>
+  /// <summary>Puts the schemas of the families of the valid tree where the tool looks for them from the workspace.</summary>
   [BeforeScenario]
-  public void CopySchema() => workspace.Copy(Path.Combine(_root, "spec", "schemas", "verification.schema.json"), "spec/schemas/verification.schema.json");
+  public void CopySchemas() {
+    foreach (var family in new[] { "verification", "intrinsics", "types", "ir" })
+      workspace.Copy(Path.Combine(_root, "spec", "schemas", $"{family}.schema.json"), $"spec/schemas/{family}.schema.json");
+  }
 
   /// <summary>The place under the spec root that a fixture's ID gives it.</summary>
   public static string PlaceOf(string text) {

@@ -2,9 +2,9 @@ Feature: Schema and validator for spec/recognition/
 
   Scenario: The valid document passes
     Given the spec tree "tests/fixtures/spec/recognition/valid"
-    When I run "polypiler-tooling spec validate --root tests/fixtures/spec/recognition/valid --family recognition"
+    When I run "polypiler-tooling spec validate --root tests/fixtures/spec/recognition/valid"
     Then the exit code is 0
-    And the last output line is "1 documents, 0 errors"
+    And the last output line is "6 documents, 0 errors"
 
   Scenario: A rule without a counterexample is refused
     Given the valid document "O0100.yaml" with its "counterexamples" list emptied

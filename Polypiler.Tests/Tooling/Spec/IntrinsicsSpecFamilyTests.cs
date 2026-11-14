@@ -181,12 +181,21 @@ public sealed class IntrinsicsSpecFamilyTests {
   public void ValidTree_IsACopyOfTheSeedDocuments(string path)
     => Assert.That(ValidText(path), Is.EqualTo(File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "spec", path))));
 
-  /// <summary>Test design 1: the exact integer intrinsic with four vectors.</summary>
+  /// <summary>The valid tree's <c>Sin</c> and its tolerance are the documents of the verification family's valid tree.</summary>
+  [TestCase("intrinsics/trig/sin.yaml")]
+  [TestCase("verification/tolerances/sin.yaml")]
+  public void ValidTree_SharesSinWithTheVerificationFixtures(string path)
+    => Assert.That(ValidText(path), Is.EqualTo(File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "spec", "verification", "valid", path))));
+
+  /// <summary>
+  /// Test design 1: the exact integer intrinsic with four vectors, and <c>Sin</c>, an inexact one whose
+  /// policy is the tolerance document of the verification family.
+  /// </summary>
   [Test]
-  public void ValidTree_HasOneDocumentAndNoError() {
+  public void ValidTree_HasTwoDocumentsAndNoError() {
     using var repository = Repository(null);
     var validation = repository.Validate("intrinsics");
-    Assert.That((validation.Documents, validation.Diagnostics.Count), Is.EqualTo((1, 0)));
+    Assert.That((validation.Documents, validation.Diagnostics.Count), Is.EqualTo((2, 0)));
   }
 
   /// <summary>

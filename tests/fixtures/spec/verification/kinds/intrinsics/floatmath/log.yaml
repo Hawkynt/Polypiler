@@ -1,13 +1,28 @@
 id: INTRINSICS.Log
-title: Log, standing in for the document of the intrinsics family
+title: Natural logarithm
 version: 1
 status: draft
 owner: Hawkynt
-issue: SPEC-INTRINSICS
+issue: INT-FLOATREF
 tests: []
-introducedIn: P0
+introducedIn: P1
 compatibility: none
 reviewedRevision: 0
 normative: ""
 spec:
-  {}
+  name: Log
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}]
+  returns: [{name: logarithm, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: tolerance, policy: VERIFICATION.tolerance.log}
+  reference:
+    algorithm: "the natural logarithm of x; -infinity for a zero, a NaN below -0"
+    source: "IEEE Std 754-2019, section 9.2 (log)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x3FF0000000000000"], outputs: ["0x0000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000000"], outputs: ["0xFFF0000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF0000000000000"], outputs: ["0x7FF0000000000000"]}

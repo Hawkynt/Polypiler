@@ -32,7 +32,7 @@ public sealed class SpecIntrinsicsSteps(ScenarioWorkspace workspace, CommandLog 
   /// <summary>Puts the schemas of the families of the valid tree where the tool looks for them from the workspace.</summary>
   [BeforeScenario]
   public void CopySchemas() {
-    foreach (var family in new[] { "intrinsics", "types", "ir", "effects" })
+    foreach (var family in new[] { "intrinsics", "types", "ir", "effects", "verification" })
       workspace.Copy(Path.Combine(_root, $"spec/schemas/{family}.schema.json"), $"spec/schemas/{family}.schema.json");
   }
 
