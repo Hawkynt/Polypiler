@@ -50,7 +50,9 @@ public static class StepLauncher {
   /// system's default), <c>HOME</c> and the temporary directory set to the working directory,
   /// <c>LANG=C.UTF-8</c>, <c>TZ=UTC</c>, and the switches that keep the .NET SDK from phoning home
   /// and printing its banner. On Windows <c>SystemRoot</c>, without which a process cannot load the
-  /// system libraries, and <c>USERPROFILE</c>, Windows' <c>HOME</c>, come with it.
+  /// system libraries, <c>USERPROFILE</c>, Windows' <c>HOME</c>, and <c>APPDATA</c> and
+  /// <c>LOCALAPPDATA</c> set to the working directory too, and <c>ProgramData</c>, <c>ProgramFiles</c> and
+  /// <c>ProgramFiles(x86)</c>, which NuGet reads from the environment and cannot restore without.
   /// </summary>
   /// <param name="executable">The toolchain's executable.</param>
   /// <param name="workingDirectory">The run's directory.</param>
@@ -68,6 +70,11 @@ public static class StepLauncher {
       environment["PATH"] = string.Join(';', toolchain, Path.Combine(system, "System32"), system);
       environment["SystemRoot"] = system;
       environment["USERPROFILE"] = workingDirectory;
+      environment["APPDATA"] = workingDirectory;
+      environment["LOCALAPPDATA"] = workingDirectory;
+      environment["ProgramData"] = System.Environment.GetFolderPath(System.Environment.SpecialFolder.CommonApplicationData);
+      environment["ProgramFiles"] = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ProgramFiles);
+      environment["ProgramFiles(x86)"] = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ProgramFilesX86);
       environment["TEMP"] = workingDirectory;
       environment["TMP"] = workingDirectory;
     } else {

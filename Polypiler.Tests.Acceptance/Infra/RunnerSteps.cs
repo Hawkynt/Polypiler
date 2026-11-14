@@ -187,8 +187,8 @@ public sealed class RunnerSteps {
           using var client = await listener.AcceptTcpClientAsync();
           Interlocked.Increment(ref this._accepted);
         }
-      } catch (Exception exception) when (exception is SocketException or ObjectDisposedException) {
-        // The listener was stopped.
+      } catch (Exception exception) when (exception is SocketException or ObjectDisposedException or InvalidOperationException) {
+        // The listener was stopped, possibly before the first accept: two refused runs end at once.
       }
     });
   }

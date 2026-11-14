@@ -39,6 +39,11 @@ public sealed class SandboxTests {
 
   [Test]
   public void Bubblewrap_BindsAToolchainInTheHiddenHomeBackIn() {
+    if (OperatingSystem.IsWindows()) {
+      Assert.Pass("bubblewrap is Linux only, and Windows reads these paths with its own separator");
+      return;
+    }
+
     var line = new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user").CommandLine(_command with { Executable = "/home/user/.dotnet/dotnet" });
     Assert.That(string.Join(' ', line), Does.Contain("--tmpfs /home/user --ro-bind /home/user/.dotnet /home/user/.dotnet --bind "));
     Assert.That(string.Join(' ', new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user").CommandLine(_command with { Executable = "/home/user/dotnet" })),
@@ -46,9 +51,15 @@ public sealed class SandboxTests {
   }
 
   [Test]
-  public void Bubblewrap_BindsAToolchainUnderTmpBackIn()
-    => Assert.That(string.Join(' ', new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), null).CommandLine(_command with { Executable = "/tmp/tools/node" })),
+  public void Bubblewrap_BindsAToolchainUnderTmpBackIn() {
+    if (OperatingSystem.IsWindows()) {
+      Assert.Pass("bubblewrap is Linux only, and Windows reads these paths with its own separator");
+      return;
+    }
+
+    Assert.That(string.Join(' ', new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), null).CommandLine(_command with { Executable = "/tmp/tools/node" })),
       Does.Contain("--tmpfs /tmp --ro-bind /tmp/tools /tmp/tools --bind "));
+  }
 
   [Test]
   public void Bubblewrap_DoesNotBindAToolchainBesideTheHome()
@@ -122,6 +133,11 @@ public sealed class SandboxTests {
       expected["PATH"] = $@"{Path.GetDirectoryName(executable)};{system}\System32;{system}";
       expected["SystemRoot"] = system;
       expected["USERPROFILE"] = directory;
+      expected["APPDATA"] = directory;
+      expected["LOCALAPPDATA"] = directory;
+      expected["ProgramData"] = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+      expected["ProgramFiles"] = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+      expected["ProgramFiles(x86)"] = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
       expected["TEMP"] = directory;
       expected["TMP"] = directory;
     } else {
