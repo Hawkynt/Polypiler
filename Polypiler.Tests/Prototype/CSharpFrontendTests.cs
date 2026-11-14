@@ -99,7 +99,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(int[] a, long i) => a[i];", "an array index or length of the type i64", 43, TestName = "64-bit index")]
   [TestCase("public static void F(int[] a, ulong i) { a[i] = 1; }", "an array index or length of the type u64", 44, TestName = "64-bit index of a write")]
   [TestCase("public static int[] F(long n) => new int[n];", "an array index or length of the type i64", 42, TestName = "64-bit length")]
-  [TestCase("public static string F() => \"a\";", "string", 15, TestName = "string")]
+  [TestCase("public static object F() => \"a\";", "object", 15, TestName = "object")]
   [TestCase("public static bool F(char c) => char.IsDigit(c);", "Char.IsDigit", 33, TestName = "char text operation")]
   [TestCase("public static int F() { int s = 0; foreach (int x in new System.Collections.Generic.List<int>()) s += x; return s; }", "System.Collections.Generic.List<int>", 54, TestName = "foreach over a list")]
   [TestCase("public static int F(int a) { switch (a) { case > 1: return 1; default: return 0; } }", "CasePatternSwitchLabel", 43, TestName = "switch with a pattern")]
@@ -107,7 +107,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(int a) { switch (a) { case 1: goto case 2; case 2: return 0; } return 1; }", "GotoCaseStatement", 51, TestName = "goto case")]
   [TestCase("public static int F(bool a) { switch (a) { case true: return 1; default: return 0; } }", "a switch on the type bool", 39, TestName = "switch on a truth value")]
   [TestCase("public static int F(double a) { switch (a) { case 1.5: return 1; default: return 0; } }", "a switch on the type f64", 41, TestName = "switch on a float")]
-  [TestCase("public static int F(int a) { const string s = \"x\"; return a; }", "string", 36, TestName = "local constant of a type outside the subset")]
+  [TestCase("public static int F(int a) { const decimal s = 1m; return a; }", "decimal", 36, TestName = "local constant of a type outside the subset")]
   [TestCase("public static int F(int a) => (a)++;", "ParenthesizedExpression", 31, TestName = "step of something that is not a variable")]
   [TestCase("public static int F(int[] a) => a!.Length;", "SuppressNullableWarningExpression", 33, TestName = "null-forgiving operator")]
   [TestCase("public static int F() { return G(); int G() => 1; }", "InvocationExpression", 32, TestName = "call of a local function")]
@@ -130,8 +130,8 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int Property => 1;", "a class member other than a static method or a constant", 1, TestName = "property")]
   [TestCase("static readonly int X;", "a field without an initializer", 21, TestName = "field without an initializer")]
   [TestCase("static volatile int X = 1;", "volatile", 1, TestName = "modifier of a field")]
-  [TestCase("static readonly string S = \"x\";", "string", 17, TestName = "field of a type outside the subset")]
-  [TestCase("const string S = \"x\";", "string", 7, TestName = "constant of a type outside the subset")]
+  [TestCase("static readonly decimal S = 1m;", "decimal", 17, TestName = "field of a type outside the subset")]
+  [TestCase("const decimal S = 1m;", "decimal", 7, TestName = "constant of a type outside the subset")]
   [TestCase("static readonly bool[] B = { true };", "bool[]", 17, TestName = "table of truth values")]
   [TestCase("static readonly int X = G(); public static int G() => 1;", "a field initializer that is not a constant", 25, TestName = "field with a computed initializer")]
   [TestCase("static readonly int[] T = { G() }; public static int G() => 1;", "a field initializer that is not a constant", 27, TestName = "table with a computed element")]
@@ -181,7 +181,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int[] F() => default(int[]);", "DefaultExpression", 28, TestName = "default of an array")]
   [TestCase("public static bool F(int a) => a is > 1;", "IsPatternExpression", 32, TestName = "is pattern")]
   [TestCase("public static void F(int[] a) { (a) = a; }", "ParenthesizedExpression", 33, TestName = "parenthesized target")]
-  [TestCase("public static void F(int[] a) { a.Length.ToString(); }", "string", 33, TestName = "member call")]
+  [TestCase("public static void F(int[] a) { a.Length.ToString(); }", "Int32.ToString", 33, TestName = "member call")]
   [TestCase("public static int F(int a) => int.MaxValue.CompareTo(a);", "Int32.CompareTo", 31, TestName = "call on a value")]
   [TestCase("public static int F(int? a) { a ??= 1; return 1; }", "int?", 21, TestName = "nullable")]
   [TestCase("public static void F(int[] a) { a ??= new int[1]; }", "CoalesceAssignmentExpression", 33, TestName = "coalescing assignment")]
@@ -518,10 +518,10 @@ public sealed class CSharpFrontendTests {
   [Test]
   public void EveryRefusedMethod_GetsItsOwnDiagnostic() {
     var result = CSharpFrontend.Import("Snippet.cs",
-      "public static class C {\n  public static decimal A() => 1;\n  public static int B() => 1;\n  public static string D() => \"x\";\n}");
+      "public static class C {\n  public static decimal A() => 1;\n  public static int B() => 1;\n  public static object D() => \"x\";\n}");
     Assert.That(result.Module, Is.Null);
     Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Line, diagnostic.Message)),
-      Is.EqualTo(new[] { (2, "'decimal' is not supported yet"), (4, "'string' is not supported yet") }));
+      Is.EqualTo(new[] { (2, "'decimal' is not supported yet"), (4, "'object' is not supported yet") }));
   }
 
   /// <summary>Test design 12: invalid C# carries the compiler's own id, text and position.</summary>

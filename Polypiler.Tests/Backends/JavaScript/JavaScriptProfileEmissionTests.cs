@@ -640,7 +640,9 @@ public sealed class JavaScriptProfileEmissionTests {
       [".getBigInt64"] = (bits, "return $view.getBigInt64(0);", "hi: $view.getUint32(0)"),
       [".setBigInt64"] = (bits, "$view.setBigInt64(0, value);", "$view.setUint32(0, value.hi);")
     };
-    var replaceable = JavaScriptCapabilities.Standard.Entries.Where(entry => entry is { Emitted: true, Replacement: not null }).ToList();
+    // The methods of strings begin at levels this test does not compare; JavaScriptStringEmissionTests checks each at its first level and the one before.
+    var replaceable = JavaScriptCapabilities.Standard.Entries
+      .Where(entry => entry is { Emitted: true, Replacement: not null } && !Polypiler.Tests.String.JavaScriptStringEmissionTests.Methods.Contains(entry.Name)).ToList();
     Assert.That(cases.Keys, Is.EquivalentTo(replaceable.Select(entry => entry.Name)));
     foreach (var entry in replaceable) {
       var (source, native, replacement) = cases[entry.Name];

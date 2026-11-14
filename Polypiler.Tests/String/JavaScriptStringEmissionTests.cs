@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
@@ -67,6 +68,38 @@ public sealed class JavaScriptStringEmissionTests {
   [TestCase("es2022", "return Greeting + $get(Names, i);")]
   public void Operation_HasTheFormOfTheLevel(string level, string form)
     => Assert.That(Emit(JavaScriptProfile.Parse(level)), Does.Contain(form));
+
+  /// <summary>The methods of strings a level may lack, each with the function of <see cref="StringModules.Operations"/> that uses it.</summary>
+  internal static readonly IReadOnlyDictionary<string, (string Function, string Native, string Replacement)> NativeMethods = new Dictionary<string, (string, string, string)> {
+    [".startsWith"] = ("StartsWith", "return a.startsWith(b);", "return $startsWith(a, b);"),
+    [".endsWith"] = ("EndsWith", "return a.endsWith(b);", "return $endsWith(a, b);"),
+    [".includes"] = ("Contains", "return a.includes(b);", "return a.indexOf(b) !== -1;"),
+    [".repeat"] = ("Repeat", "return s.repeat(n);", "r += s;"),
+    [".codePointAt"] = ("CodePointAt", "return s.codePointAt(i);", "(high - 0xD800) * 0x400"),
+    [".padStart"] = ("PadStart", "return a.padStart(i, b);", "return $pad(a, i, b, true);"),
+    [".padEnd"] = ("PadEnd", "return a.padEnd(i, b);", "return $pad(a, i, b, false);"),
+    [".trimStart"] = ("TrimStartEcma", "return a.trimStart();", "return $trimEcma(a, true, false);"),
+    [".trimEnd"] = ("TrimEndEcma", "return a.trimEnd();", "return $trimEcma(a, false, true);"),
+    [".replaceAll"] = ("ReplaceAll", "", "")
+  };
+
+  /// <summary>The names of <see cref="NativeMethods"/>.</summary>
+  internal static IReadOnlySet<string> Methods { get; } = NativeMethods.Keys.ToHashSet();
+
+  /// <summary>Test design 13: each method of a string a level may lack is native from its first level and replaced in the one before.</summary>
+  [Test]
+  public void NativeMethod_BeginsAtItsLevel() {
+    var levels = JavaScriptProfile.LevelNames.Select(name => JavaScriptProfile.Parse(name)).ToList();
+    var replaceable = JavaScriptCapabilities.Standard.Entries.Where(entry => entry.Replacement is not null && Methods.Contains(entry.Name)).Select(entry => entry.Name);
+    Assert.That(replaceable, Is.EquivalentTo(Methods));
+    foreach (var (name, (_, native, replacement)) in NativeMethods.Where(entry => entry.Value.Native.Length > 0)) {
+      var since = JavaScriptCapabilities.Standard[name].Since;
+      var first = levels.First(profile => (int)profile.Level >= since);
+      var before = levels[levels.IndexOf(first) - 1];
+      Assert.That(Emit(first), Does.Contain(native), $"{name} in {first}");
+      Assert.That(Emit(before), Does.Not.Contain(native).And.Contain(replacement), $"{name} in {before}");
+    }
+  }
 
   [Test]
   public void ConstantReplacement_EscapesItsPatterns() {

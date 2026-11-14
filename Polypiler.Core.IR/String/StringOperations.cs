@@ -152,7 +152,8 @@ public static class StringOperations {
       case IrIntrinsicOp.StrFromCodeUnit:
         return ((char)(long)arguments[0]).ToString();
       case IrIntrinsicOp.StrFromCodeUnits:
-        var units = (ushort[])arguments[0];
+        // An array of u16 the caller handed over as a char[] stays one.
+        var units = arguments[0] as ushort[] ?? Array.ConvertAll((char[])arguments[0], unit => (ushort)unit);
         return arguments.Length == 1 ? FromCodeUnits(units, 0, units.Length) : FromCodeUnits(units, Int(1), Int(2));
       case IrIntrinsicOp.StrToCodeUnits:
         return Text(0).Select(unit => (ushort)unit).ToArray();
