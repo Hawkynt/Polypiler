@@ -42,6 +42,7 @@
     <Compile Include="..\Polypiler.Tests\Architecture\ModuleRules.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Support\DocumentationChecks.cs" LinkBase="Infrastructure\Support" />
     <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
+    <Compile Include="..\Polypiler.Tests\Tooling\Corpus\MiniUpstream.cs" LinkBase="Infra\Support" />
   </ItemGroup>
 
   <ItemGroup>
