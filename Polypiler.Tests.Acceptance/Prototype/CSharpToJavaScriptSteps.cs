@@ -161,7 +161,7 @@ public sealed class CSharpToJavaScriptSteps(PrototypeScenario scenario) {
     Assert.That(result.Output, Does.Contain(code));
 
     if (this._table.Length > 0)
-      Assert.That(result.Output, Does.Contain($"a write to the static readonly array '{this._table}'"));
+      Assert.That(result.Output, Does.Contain($"a public mutable static field {this._table}"));
 
     Assert.That(Directory.Exists(this.Output), Is.False);
   }
@@ -205,10 +205,10 @@ public sealed class CSharpToJavaScriptSteps(PrototypeScenario scenario) {
   }
 
   /// <summary>Takes a class with a constant table and a method that writes to it.</summary>
-  [Given(@"^a class with ""static readonly uint\[\] (\w+) = \{ 1, 2 \};"" and a method assigning \1\[0\]$")]
+  [Given(@"^a class with ""public static readonly uint\[\] (\w+) = \{ 1, 2 \};"" and a method assigning \1\[0\]$")]
   public void ClassWritingATable(string table) {
     this._table = table;
-    scenario.Snippet($"static readonly uint[] {table} = {{ 1, 2 }}; public static void F() {{ {table}[0] = 3; }}");
+    scenario.Snippet($"public static readonly uint[] {table} = {{ 1, 2 }}; public static void F() {{ {table}[0] = 3; }}");
   }
 
 }
