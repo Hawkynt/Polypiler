@@ -145,7 +145,7 @@ public sealed partial class ExitPolicyTests {
   public void Quiet_LeavesOnlyTheError() {
     var run = Invoke("--quiet", "raise", "PLY0009", "PLY0030");
     Assert.That(run.ExitCode, Is.EqualTo(6));
-    Assert.That(run.ErrorLines, Is.EqualTo(new[] { "polypiler: error PLY0030: building '<target>' failed: <reason>" }));
+    Assert.That(run.ErrorLines, Is.EqualTo(new[] { "polypiler: error PLY0030: target build failed: '<toolchain> <arguments>' exited with <code>" }));
   }
 
   /// <summary>Test design 16: a command line the grammar refuses has its one diagnostic and no tally line.</summary>

@@ -52,7 +52,7 @@ Feature: Stable exit codes
   Scenario: With --quiet only the error is written
     When I run "polypiler --quiet raise PLY0009 PLY0030"
     Then the exit code is 6
-    And stderr is "polypiler: error PLY0030: building '<target>' failed: <reason>"
+    And stderr is "polypiler: error PLY0030: target build failed: '<toolchain> <arguments>' exited with <code>"
 
   Scenario: A refused command line has no tally line
     When I run "polypiler frobnicate"
