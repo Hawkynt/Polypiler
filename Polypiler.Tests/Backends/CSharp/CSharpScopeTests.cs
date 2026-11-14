@@ -72,7 +72,7 @@ public sealed class CSharpScopeTests {
     using var printed = new StringWriter();
     using var error = new StringWriter();
     var exitCode = Program.Run(["translate", source, "--from", from, "--to", "csharp", "--profile", profile, "--output", output], printed, error);
-    Assert.That((exitCode, error.ToString()), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error.ToString()), Is.EqualTo(((int)Polypiler.Core.ExitCode.Success, "")));
     return File.ReadAllText(Directory.GetFiles(output).Single());
   }
 
