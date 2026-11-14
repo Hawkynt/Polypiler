@@ -234,3 +234,34 @@ rules `layout` (the folder is `spec.family`, the ID follows from the file name),
 and mbf; `nan` for float, posit and mbf; `subnormals` for float and mbf; `lanes` exactly for vector;
 `encoding` exactly for encoded-integer; signedness `none` only for boolean, text and custom). The seed
 documents are the scalar types of the IR: `bool`, `i8` … `u64`, `f32` and `f64`.
+
+## Family `verification`
+
+What a comparison of generated code with its oracle runs under (PRD §4.1, §7.2, §23), body schema
+[`schemas/verification.schema.json`](schemas/verification.schema.json). A document of kind `generator`,
+`tolerance` or `oracle` lives in `verification/<kind>s/<name>.yaml` with the ID
+`VERIFICATION.<kind>.<name>`.
+
+| Kind | Body |
+| --- | --- |
+| `generator` | `type` (a `TYPES.` ID) and `strategy`: `boundary` with the explicit `values` (quoted bit patterns `"0x…"` or decimal integers, unique), `uniform` and `bit-pattern` with `seed` (0 … 4294967295) and `count` (1 … 1000000), `corpus` with neither |
+| `tolerance` | `operation` (an `INTRINSICS.` or `IR.` ID), `mode` (`exact`, `ulp`, `relative`, `absolute`), `bound` (> 0, a whole number in `ulp` mode), `specialValues` (`bitwise`, `signed-zero` when absent, `class`): the modes and rules of [ADR 0005](../docs/adr/0005-floating-point-tolerance.md). The ID is the policy name vector files and manifests refer to |
+| `oracle` | `implementation` (what produces the reference result: `node`, `published-vectors`, …), `toolchain` (a key of `tooling/toolchains.lock`, optional), `observes` (≥ 1 of `return-value`, `buffers`, `flags`, `registers`, `memory-writes`, `io`, `external-calls`, `traps`, `cycles`) |
+
+An operation without a tolerance document is compared `exact`; a tolerance document's bound is the one
+ADR 0005's formula gives, never a number that makes a fixture pass. Changing a seed, a value or a bound
+raises `version`. The rules, each `PLY0046`:
+
+| Rule | What it refuses |
+| --- | --- |
+| `layout` | a folder other than the kind's, or an ID that does not follow from the path |
+| `strategy-requirements` | a generator without a property its strategy requires, or with one it does not take |
+| `value-fits-type` | a value wider than the type's `bits`; a decimal outside an integer type's range |
+| `boundary-covers-extremes` | a `boundary` generator of an integer type without the type's minimum and maximum |
+| `bound-for-mode` | `exact` with a `bound`, any other mode without one |
+| `one-tolerance-per-operation` | a second tolerance document for an operation, reported on the later path |
+| `oracle-not-self` | an oracle whose `implementation` is `polypiler` |
+
+A generator's `type` and a tolerance's `operation` resolve or fail with `PLY0043`. The seed document is
+`verification/generators/u32-boundary.yaml`; tolerance documents arrive with the intrinsics they belong
+to. The fixtures live in `tests/fixtures/spec/verification/`.

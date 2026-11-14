@@ -1,0 +1,17 @@
+id: VERIFICATION.tolerance.log
+title: Absolute tolerance of Log
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: tolerance
+  operation: INTRINSICS.Log
+  mode: absolute
+  bound: 1e-300
+  specialValues: signed-zero

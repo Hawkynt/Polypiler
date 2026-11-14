@@ -1,0 +1,16 @@
+id: VERIFICATION.oracle.node
+title: Node.js as the reference of JavaScript sources
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: oracle
+  implementation: node
+  toolchain: node
+  observes: [return-value, buffers]
