@@ -291,7 +291,7 @@ public static class IrInterpreter {
         case IrUnary unary:
           var operand = this.Evaluate(unary.Operand, frame);
           if (unary.Type.IsFloat)
-            return operand is float single ? -single : -(double)operand;
+            return operand is float single ? (object)-single : -(double)operand;
 
           return unary.Op switch {
             IrUnaryOp.Negate => IrOperators.Wrap(unary.Type, -(long)operand),
@@ -347,6 +347,8 @@ public static class IrInterpreter {
         default:
           if (IntegerOperations.Evaluates(intrinsic))
             return IntegerOperations.Evaluate(intrinsic, arguments);
+          if (FloatOperationTable.TryEvaluate(intrinsic.Op, arguments, out var computed))
+            return computed;
 
           return arguments[0] switch {
             float single => Single(intrinsic.Op, single, arguments),

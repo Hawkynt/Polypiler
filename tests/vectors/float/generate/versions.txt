@@ -1,0 +1,6 @@
+generator: tests/vectors/float/generate/vectors.c, SplitMix64 seeded with 2026 plus the index of the function and format
+mpfr: 4.2.2
+gmp: 6.3.0
+gcc: 16.2.1 20260810
+host: Linux 7.2.6-arch2-1 x86_64
+core-math: https://gitlab.inria.fr/core-math/core-math commit 018fa97cbdacf59924b899a9dfa422d532cb2bb7 (worst-case files *.wc, MIT)

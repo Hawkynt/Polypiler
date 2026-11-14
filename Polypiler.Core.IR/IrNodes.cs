@@ -357,7 +357,11 @@ public enum IrIntrinsicOp {
   /// <summary><c>(a, b)</c>: the remainder of the Euclidean division, never negative; it traps where <see cref="IrBinaryOp.Divide"/> does.</summary>
   ModEuclid,
 
-  /// <summary><c>(value, low, high)</c>: the value within two bounds; a low bound above the high one traps with an invalid operation.</summary>
+  /// <summary>
+  /// <c>(value, low, high)</c>: the value within two bounds; a low bound above the high one traps with an
+  /// invalid operation. Of floating-point numbers as <c>Math.Clamp</c> computes it: a NaN value is
+  /// returned, a NaN bound ignored.
+  /// </summary>
   Clamp,
 
   /// <summary>The absolute value of an integer modulo 2^width: the smallest value of a signed type is its own.</summary>
@@ -456,7 +460,167 @@ public enum IrIntrinsicOp {
   StoreLittle,
 
   /// <summary><c>(array, index, value)</c>: like <see cref="StoreLittle"/>, the highest byte first.</summary>
-  StoreBig
+  StoreBig,
+
+  /// <summary><c>(x, y, z)</c>: <c>x * y + z</c> of floating-point numbers, rounded once.</summary>
+  FusedMultiplyAdd,
+
+  /// <summary><c>(x, y)</c>: the remainder of IEEE 754 §5.3.1, <c>x - n * y</c> with <c>n</c> the integer nearest to <c>x / y</c>; exact.</summary>
+  IeeeRemainder,
+
+  /// <summary>The reciprocal <c>1 / x</c> of a floating-point number, rounded once.</summary>
+  Reciprocal,
+
+  /// <summary>
+  /// <c>(x, digits, mode)</c>: a floating-point number rounded to decimal digits as .NET's
+  /// <c>Math.Round</c> does; the mode is a constant of <c>MidpointRounding</c>, and digits outside
+  /// 0 to 15 (0 to 6 for <c>f32</c>) trap with an invalid operation.
+  /// </summary>
+  RoundDigits,
+
+  /// <summary><c>(x, y)</c>: the magnitude of <c>x</c> with the sign bit of <c>y</c>.</summary>
+  CopySign,
+
+  /// <summary><c>(x, y)</c>: the operand of the smaller magnitude, a NaN if either is one, the negative one of equal magnitudes.</summary>
+  MinMagnitude,
+
+  /// <summary><c>(x, y)</c>: the operand of the larger magnitude, a NaN if either is one, the positive one of equal magnitudes.</summary>
+  MaxMagnitude,
+
+  /// <summary><c>(x, y)</c>: the smaller operand, a NaN operand ignored, -0 before +0.</summary>
+  MinNumber,
+
+  /// <summary><c>(x, y)</c>: the larger operand, a NaN operand ignored, +0 after -0.</summary>
+  MaxNumber,
+
+  /// <summary><c>(x, n)</c>: <c>x * 2^n</c> with an <c>i32</c> exponent, rounded once.</summary>
+  ScaleB,
+
+  /// <summary>The binary exponent of a floating-point number as an <c>i32</c>; the smallest <c>i32</c> for zero, the largest for an infinity or a NaN.</summary>
+  ILogB,
+
+  /// <summary>The next floating-point number towards positive infinity, as <c>Math.BitIncrement</c>.</summary>
+  BitIncrement,
+
+  /// <summary>The next floating-point number towards negative infinity, as <c>Math.BitDecrement</c>.</summary>
+  BitDecrement,
+
+  /// <summary>The fraction of C's <c>frexp</c>: the number scaled by a power of two into [0.5, 1) in magnitude.</summary>
+  Fraction,
+
+  /// <summary>The exponent of C's <c>frexp</c>, as an <c>i32</c>; 0 for a zero, an infinity and a NaN.</summary>
+  Exponent,
+
+  /// <summary>Whether a floating-point number is a NaN.</summary>
+  IsNaN,
+
+  /// <summary>Whether a floating-point number is an infinity.</summary>
+  IsInfinity,
+
+  /// <summary>Whether a floating-point number is finite.</summary>
+  IsFinite,
+
+  /// <summary>Whether the sign bit of a floating-point number is set, of -0 and of a NaN as well.</summary>
+  IsNegative,
+
+  /// <summary>Whether a floating-point number is normal.</summary>
+  IsNormal,
+
+  /// <summary>Whether a floating-point number is subnormal.</summary>
+  IsSubnormal,
+
+  /// <summary>Whether a floating-point number is finite and integral.</summary>
+  IsInteger,
+
+  /// <summary>An angle in degrees in radians: <c>(x * pi) / 180</c>, two operations as .NET computes it.</summary>
+  DegreesToRadians,
+
+  /// <summary>An angle in radians in degrees: <c>(x * 180) / pi</c>, two operations as .NET computes it.</summary>
+  RadiansToDegrees,
+
+  /// <summary><c>(a, b, t)</c>: <c>a + (b - a) * t</c>, the three operations in that order.</summary>
+  Lerp,
+
+  /// <summary>The cube root; contract <c>ulp(1)</c>.</summary>
+  Cbrt,
+
+  /// <summary><c>(x, y)</c>: <c>sqrt(x^2 + y^2)</c> without overflow; an infinity wins over a NaN; contract <c>ulp(1)</c>.</summary>
+  Hypot,
+
+  /// <summary>The reciprocal square root <c>1 / sqrt(x)</c>, rounded once; contract <c>ulp(1)</c>.</summary>
+  ReciprocalSqrt,
+
+  /// <summary>The sine of a floating-point number in radians; contract <c>ulp(1)</c>.</summary>
+  Sin,
+
+  /// <summary>The cosine of a floating-point number in radians; contract <c>ulp(1)</c>.</summary>
+  Cos,
+
+  /// <summary>The hyperbolic sine; contract <c>ulp(2)</c>.</summary>
+  Sinh,
+
+  /// <summary>The hyperbolic cosine; contract <c>ulp(2)</c>.</summary>
+  Cosh,
+
+  /// <summary>The hyperbolic tangent; contract <c>ulp(2)</c>.</summary>
+  Tanh,
+
+  /// <summary>e raised to a floating-point number; contract <c>ulp(1)</c>.</summary>
+  Exp,
+
+  /// <summary>2 raised to a floating-point number; contract <c>ulp(1)</c>.</summary>
+  Exp2,
+
+  /// <summary>10 raised to a floating-point number; contract <c>ulp(1)</c>.</summary>
+  Exp10,
+
+  /// <summary><c>e^x - 1</c> without the cancellation near zero; contract <c>ulp(1)</c>.</summary>
+  ExpM1,
+
+  /// <summary>The tangent of a floating-point number in radians; contract <c>ulp(1)</c>.</summary>
+  Tan,
+
+  /// <summary>The arcsine, in [-pi/2, pi/2]; a NaN outside [-1, 1]; contract <c>ulp(1)</c>.</summary>
+  Asin,
+
+  /// <summary>The arccosine, in [0, pi]; a NaN outside [-1, 1]; contract <c>ulp(1)</c>.</summary>
+  Acos,
+
+  /// <summary>The arctangent, in [-pi/2, pi/2]; contract <c>ulp(1)</c>.</summary>
+  Atan,
+
+  /// <summary><c>(y, x)</c>: the angle of the point (x, y), in [-pi, pi], with the signs of IEEE 754 §9.2.1; contract <c>ulp(1)</c>.</summary>
+  Atan2,
+
+  /// <summary>The inverse hyperbolic sine; contract <c>ulp(1)</c>.</summary>
+  Asinh,
+
+  /// <summary>The inverse hyperbolic cosine; a NaN below 1; contract <c>ulp(1)</c>.</summary>
+  Acosh,
+
+  /// <summary>The inverse hyperbolic tangent; infinite at -1 and 1, a NaN outside; contract <c>ulp(1)</c>.</summary>
+  Atanh,
+
+  /// <summary>The natural logarithm; -infinity at zero, a NaN below; contract <c>ulp(1)</c>.</summary>
+  Log,
+
+  /// <summary>The logarithm to base 10; contract <c>ulp(1)</c>.</summary>
+  Log10,
+
+  /// <summary><c>ln(1 + x)</c> without the cancellation near zero; contract <c>ulp(1)</c>.</summary>
+  Log1P,
+
+  /// <summary><c>(a, b)</c>: the logarithm of <c>a</c> to base <c>b</c> as .NET defines it, <c>Log(a) / Log(b)</c> after its special cases; contract <c>ulp(2)</c>.</summary>
+  LogBase,
+
+  /// <summary><c>(x, y)</c>: <c>x</c> raised to <c>y</c> with the special cases of IEEE 754 §9.2.1; contract <c>ulp(1)</c>.</summary>
+  Pow,
+
+  /// <summary><c>(x, y)</c>: ECMA-262's exponentiation: <see cref="Pow"/>, except that a NaN exponent and <c>(±1, ±infinity)</c> give a NaN; contract <c>ulp(1)</c>.</summary>
+  PowEcma,
+
+  /// <summary><c>(x, n)</c>: the <c>n</c>-th root of IEEE 754 §9.2 for an <c>i32</c> <c>n</c>; contract <c>ulp(1)</c>.</summary>
+  RootN
 
 }
 

@@ -19,6 +19,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 ## Reference
 
 - [Integer and bit operations](reference/integer-operations.md) — every operation of the IR on every width, its edge cases and its form in each target profile.
+- [Floating-point operations](reference/floating-point-operations.md) — every floating-point operation of the IR with its contract, special values and portable implementation.
 
 ## Work-item readiness
 

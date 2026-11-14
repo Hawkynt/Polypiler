@@ -1,0 +1,85 @@
+Parts of Polypiler.Core.IR/Float/Operations are converted to C# from the CORE-MATH project
+(https://gitlab.inria.fr/core-math/core-math, commit 018fa97cbdacf59924b899a9dfa422d532cb2bb7):
+
+  Logarithm.cs           Log      src/binary64/log/log.c
+                                  Copyright (c) 2022-2026 INRIA and CERN.
+                                  Authors: Paul Zimmermann and Tom Hubrecht.
+  Logarithm.Accurate.cs  (shared) src/binary64/log/dint.h, src/binary64/log10/dint.h
+                                  Copyright (c) 2022 CERN.
+                                  Author: Tom Hubrecht
+  Logarithm.cs           LogF     src/binary32/log/logf.c
+                                  Copyright (c) 2023-2026 Alexei Sibidanov and Paul Zimmermann.
+  Logarithm.Binary.cs    Log2     src/binary64/log2/log2.c
+                                  Copyright (c) 2023-2026 Alexei Sibidanov <sibid@uvic.ca>.
+  Logarithm.Binary.cs    Log2F    src/binary32/log2/log2f.c
+                                  Copyright (c) 2022-2026 Alexei Sibidanov <sibid@uvic.ca>
+  Logarithm.Decimal.cs   Log10    src/binary64/log10/log10.c
+                                  Copyright (c) 2022-2025 INRIA and CERN.
+                                  Authors: Paul Zimmermann and Tom Hubrecht.
+  Logarithm.Decimal.cs   Log10F   src/binary32/log10/log10f.c
+                                  Copyright (c) 2022-2026 Alexei Sibidanov <sibid@uvic.ca>.
+  Logarithm.OnePlus.cs   Log1P    src/binary64/log1p/log1p.c
+                                  Copyright (c) 2024-2026 Alexei Sibidanov <sibid@uvic.ca>.
+  Logarithm.OnePlus.cs   Log1PF   src/binary32/log1p/log1pf.c
+                                  Copyright (c) 2023-2026 Alexei Sibidanov <sibid@uvic.ca>.
+
+Every table and constant is copied exactly; the hexadecimal floating-point literals of C are written
+as the decimal literals that round-trip to the same double. Errno, floating-point exceptions and
+rounding modes other than to nearest are left out. The table of reciprocals that logf.c, log2f.c
+and log10f.c share is kept once, and so is the polynomial P that log.c and log10.c share. The
+128-bit numbers of dint.h are held as four ulong and the carries of their additions are computed
+without branches; log1p.c's refinement leaves out the branch for |x| < 2^-53, which its only
+caller has answered already.
+
+The CORE-MATH files carry this licence (MIT, https://spdx.org/licenses/MIT):
+
+----------------------------------------------------------------------
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+----------------------------------------------------------------------
+
+LogBase and LogBaseF in Logarithm.cs follow the .NET runtime (https://github.com/dotnet/runtime,
+branch release/10.0, src/libraries/System.Private.CoreLib/src/System/Math.cs and MathF.cs):
+Math.Log(double, double) and MathF.Log(float, float), with their special cases, on top of the
+correctly rounded Log and LogF above. The .NET runtime is licensed under the MIT license:
+
+----------------------------------------------------------------------
+The MIT License (MIT)
+
+Copyright (c) .NET Foundation and Contributors
+
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+----------------------------------------------------------------------

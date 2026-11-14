@@ -36,7 +36,7 @@ internal static partial class JavaScriptHelpers {
     "$sx64", "$ul2d", "$l2d", "$d2l",
     "$f2i", "$f2l", "$f2ic", "$f2lc", "$f32", "$ul2f", "$l2f",
     "$get", "$set", "$new", "$fill", "$abs", "$abs64", "$min64", "$max64", "$smin64", "$umin64", "$smax64", "$umax64",
-    "$sign64", "$fsign", "$round", "$rounda", "$rotl", "$rotr", "$rotl64", "$rotr64",
+    "$sign64", "$fsign", "$round", "$rounda", "$roundd", "$roundd32", "$rotl", "$rotr", "$rotl64", "$rotr64",
     "$pop", "$pop64", "$clz64", "$ctz", "$ctz64", "$view", "$bits64", "$bits32", "$float64", "$float32", "$key64",
     "$copy", "$copya", "$step", "$stepi", "$stepf", "$step64", "$stepck", "$stepck64s", "$stepck64u", "$len",
     .. IntegerOrder
@@ -502,6 +502,30 @@ internal static partial class JavaScriptHelpers {
     "$sign64" => native("BigInt")
       ? Lines("function $sign64(value) {", "  return value < 0n ? -1 : value > 0n ? 1 : 0;", "}")
       : Lines("function $sign64(value) {", "  return value.hi >= 2147483648 ? -1 : (value.hi | value.lo) !== 0 ? 1 : 0;", "}"),
+    "$roundd" => """
+      function $roundd(value, digits, mode) {
+        if (digits < 0 || digits > 15) throw new RangeError("invalid operation");
+        if (Math.abs(value) < 1e16) {
+          @let power10 = 1;
+          for (@let index = 0; index < digits; ++index) power10 *= 10;
+          @const scaled = value * power10;
+          value = (mode === 1 ? $rounda(scaled) : mode === 2 ? @trunc(scaled) : mode === 3 ? Math.floor(scaled) : mode === 4 ? Math.ceil(scaled) : $round(scaled)) / power10;
+        }
+        return value;
+      }
+      """,
+    "$roundd32" => """
+      function $roundd32(value, digits, mode) {
+        if (digits < 0 || digits > 6) throw new RangeError("invalid operation");
+        if (Math.abs(value) < 1e8) {
+          @let power10 = 1;
+          for (@let index = 0; index < digits; ++index) power10 *= 10;
+          @const scaled = @fround(value * power10);
+          value = @fround((mode === 1 ? $rounda(scaled) : mode === 2 ? @trunc(scaled) : mode === 3 ? Math.floor(scaled) : mode === 4 ? Math.ceil(scaled) : $round(scaled)) / power10);
+        }
+        return value;
+      }
+      """,
     "$fsign" => """
       function $fsign(value) {
         if (value !== value) throw new RangeError("invalid operation");

@@ -1,0 +1,26 @@
+The inputs of class "worst" in these vector files are taken from the worst-case files (*.wc) of
+the CORE-MATH project (https://gitlab.inria.fr/core-math/core-math, commit
+018fa97cbdacf59924b899a9dfa422d532cb2bb7): at most 400 lines of each, evenly spaced, from
+src/binary64/<function>/<function>.wc and, for atan2, hypot and pow, src/binary32/<function>/<function>f.wc.
+Those files collect hard-to-round cases from several sources, among them Vincent Lefèvre's
+testlibm data (https://www.vinc17.net/research/testlibm/). The results are computed here with MPFR.
+
+The CORE-MATH files carry this licence:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

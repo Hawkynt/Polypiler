@@ -999,9 +999,9 @@ public sealed class CSharpEmitterWideTests {
   [Test]
   public void UnknownIntrinsic_IsRefused() {
     var a = new IrLocal("a", IrType.I32);
-    var module = new IrModule("M", [Function("F", IrType.I32, [a], new IrReturn(new IrIntrinsic((IrIntrinsicOp)99, IrType.I32, [Ref(a)])))]);
-    Assert.That(CSharpEmitter.Check(module).Select(problem => problem.ToString()), Is.EqualTo(new[] { "error PLY1052: '99' is not supported by the C# backend yet" }));
-    Assert.That(() => CSharpEmitter.Emit(module), Throws.ArgumentException.With.Message.Contains("'99' is not supported by the C# backend yet"));
+    var module = new IrModule("M", [Function("F", IrType.I32, [a], new IrReturn(new IrIntrinsic((IrIntrinsicOp)9999, IrType.I32, [Ref(a)])))]);
+    Assert.That(CSharpEmitter.Check(module).Select(problem => problem.ToString()), Is.EqualTo(new[] { "error PLY1052: '9999' is not supported by the C# backend yet" }));
+    Assert.That(() => CSharpEmitter.Emit(module), Throws.ArgumentException.With.Message.Contains("'9999' is not supported by the C# backend yet"));
   }
 
   /// <summary>A constant of a type the backend does not know is refused like a local of that type.</summary>

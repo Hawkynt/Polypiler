@@ -540,7 +540,6 @@ internal sealed partial class Lowering(TypeInference types) {
     Operator.LogicalAnd => "&&",
     Operator.LogicalOr => "||",
     Operator.NullishCoalescing => "??",
-    Operator.ExponentiationAssignment => "**=",
     Operator.NullishCoalescingAssignment => "??=",
     Operator.LogicalAndAssignment => "&&=",
     Operator.LogicalOrAssignment => "||=",

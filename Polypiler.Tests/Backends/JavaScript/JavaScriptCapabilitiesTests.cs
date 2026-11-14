@@ -43,8 +43,28 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("Math.fround", 2015, "$fround")]
   [TestCase("Math.trunc", 2015, "$trunc")]
   [TestCase("Math.sign", 2015, "$sign")]
-  [TestCase("Math.cbrt", 2015, "Math.pow")]
-  [TestCase("Math.hypot", 2015, "Math.sqrt")]
+  [TestCase("Math.sin", 5, null)]
+  [TestCase("Math.cos", 5, null)]
+  [TestCase("Math.tan", 5, null)]
+  [TestCase("Math.asin", 5, null)]
+  [TestCase("Math.acos", 5, null)]
+  [TestCase("Math.atan", 5, null)]
+  [TestCase("Math.atan2", 5, null)]
+  [TestCase("Math.exp", 5, null)]
+  [TestCase("Math.log", 5, null)]
+  [TestCase("Math.pow", 5, null)]
+  [TestCase("Math.log2", 2015, "the portable implementation")]
+  [TestCase("Math.log10", 2015, "the portable implementation")]
+  [TestCase("Math.sinh", 2015, "the portable implementation")]
+  [TestCase("Math.cosh", 2015, "the portable implementation")]
+  [TestCase("Math.tanh", 2015, "the portable implementation")]
+  [TestCase("Math.asinh", 2015, "the portable implementation")]
+  [TestCase("Math.acosh", 2015, "the portable implementation")]
+  [TestCase("Math.atanh", 2015, "the portable implementation")]
+  [TestCase("Math.expm1", 2015, "the portable implementation")]
+  [TestCase("Math.log1p", 2015, "the portable implementation")]
+  [TestCase("Math.cbrt", 2015, "the portable implementation")]
+  [TestCase("Math.hypot", 2015, "the portable implementation")]
   [TestCase("Number", 5, null)]
   [TestCase("Number.isNaN", 2015, "!==")]
   [TestCase("globalThis", 2020, "this")]
@@ -106,7 +126,7 @@ public sealed class JavaScriptCapabilitiesTests {
   [Test]
   public void Standard_NamesWhatIsNeverEmitted()
     => Assert.That(_table.Entries.Where(entry => !entry.Emitted).Select(entry => entry.Name),
-      Is.EqualTo(new[] { "=>", "**", "numeric separators", "Math.cbrt", "Math.hypot", "Number.isNaN", "globalThis" }));
+      Is.EquivalentTo(new[] { "=>", "**", "numeric separators", "Number.isNaN", "globalThis", "Math.asin", "Math.acos", "Math.atan", "Math.asinh", "Math.acosh", "Math.atanh", "Math.expm1", "Math.log1p" }));
 
   /// <summary>Everything above ECMAScript 5 that the emitter writes has a replacement, so no module is refused today.</summary>
   [Test]
@@ -150,8 +170,8 @@ public sealed class JavaScriptCapabilitiesTests {
 
   [Test]
   public void UnknownName_IsAnError() {
-    Assert.That(() => _table["Math.sin"], Throws.ArgumentException.With.Message.StartsWith("The capability table has no entry 'Math.sin'."));
-    Assert.That(() => _table.Has("Math.sin", JavaScriptProfile.Default), Throws.ArgumentException);
+    Assert.That(() => _table["Math.random"], Throws.ArgumentException.With.Message.StartsWith("The capability table has no entry 'Math.random'."));
+    Assert.That(() => _table.Has("Math.random", JavaScriptProfile.Default), Throws.ArgumentException);
   }
 
   [Test]
@@ -162,11 +182,10 @@ public sealed class JavaScriptCapabilitiesTests {
   /// <summary>A later issue adds an operation as one more entry, or states an existing one differently.</summary>
   [Test]
   public void With_AddsOrReplacesOneEntry() {
-    var added = _table.With(new("Math.log2", 2015, "$log2"));
+    var added = _table.With(new("Math.f16round", 2025, "$f16round"));
     Assert.That(added.Entries, Has.Count.EqualTo(_table.Entries.Count + 1));
-    Assert.That(added.Entries[^1], Is.EqualTo(new JavaScriptCapability("Math.log2", 2015, "$log2")));
-    Assert.That(added.Has("Math.log2", Profile("es5")), Is.False);
-    Assert.That(added.Has("Math.log2", Profile("es2015")), Is.True);
+    Assert.That(added.Entries[^1], Is.EqualTo(new JavaScriptCapability("Math.f16round", 2025, "$f16round")));
+    Assert.That(added.Has("Math.f16round", Profile("es2022")), Is.False);
 
     var replaced = _table.With(new("Math.imul", 5));
     Assert.That(replaced.Entries.Select(entry => entry.Name), Is.EqualTo(_table.Entries.Select(entry => entry.Name)));

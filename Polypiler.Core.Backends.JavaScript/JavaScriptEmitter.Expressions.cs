@@ -85,6 +85,9 @@ public static partial class JavaScriptEmitter {
 
       var type = arguments[0].Type;
       var all = string.Join(", ", arguments.Select(this.Text));
+      if (this.Floating(intrinsic, all) is { } floating)
+        return floating;
+
       switch (intrinsic.Op) {
         case IrIntrinsicOp.Abs:
           return ($"Math.abs({all})", true);

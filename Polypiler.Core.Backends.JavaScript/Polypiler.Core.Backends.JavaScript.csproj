@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Legalize\Polypiler.Core.Legalize.csproj" />
   </ItemGroup>
 
 </Project>

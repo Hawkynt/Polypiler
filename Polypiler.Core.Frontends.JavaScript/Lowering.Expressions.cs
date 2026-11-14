@@ -187,6 +187,9 @@ internal sealed partial class Lowering {
       case Plan.Float or Plan.CompareFloat:
         expression = new IrBinary(Operation(op), this.Float(left), this.Float(right));
         break;
+      case Plan.Power:
+        expression = new IrIntrinsic(IrIntrinsicOp.PowEcma, IrType.F64, [this.Float(left), this.Float(right)]);
+        break;
       case Plan.Compare:
         expression = new IrBinary(Operation(op), this.To(this.Evaluate(left), operand, left), this.To(this.Evaluate(right), operand, right));
         break;
@@ -245,6 +248,9 @@ internal sealed partial class Lowering {
       this.AccessesElements = true;
       return Read(new IrArrayLoad(array, index));
     }
+
+    if (types.Names.Library(member) is { } library)
+      return JavaScriptFloatApi.FindConstant(library) is { } constant ? Number(constant.Value) : throw this.Unsupported(member, library);
 
     return member.Property is Identifier { Name: "length" }
       ? new IrArrayLength(this.Array(member.Object))
@@ -350,8 +356,28 @@ internal sealed partial class Lowering {
         var number = this.Evaluate(arguments[0]);
         return number.Type.IsWord ? Convert(number.Expr, IrType.I64) : throw this.Unsupported(call, $"BigInt of {number.Type.Describe()} that is no proven integer");
       default:
-        throw this.Unsupported(call, builtin);
+        return JavaScriptFloatApi.Find(builtin) is { } member ? this.Library(call, member) : throw this.Unsupported(call, builtin);
     }
+  }
+
+  /// <summary>
+  /// A call of a function of the floating-point table: every argument as a double. The global
+  /// <c>isNaN</c> and <c>isFinite</c> apply <c>ToNumber</c>, which the subset has only for a number.
+  /// </summary>
+  private IrExpr Library(CallExpression call, JavaScriptFloatMember member) {
+    if (member.Arity is { } arity && call.Arguments.Count != arity)
+      throw this.Unsupported(call, $"{member.Name} with {call.Arguments.Count} arguments");
+
+    var arguments = new List<IrExpr>();
+    foreach (var argument in call.Arguments) {
+      var value = this.Evaluate(argument);
+      if (member.Coerces && value.Type.Kind != JsKind.Number)
+        throw this.Unsupported(call, $"{member.Name} of {value.Type.Describe()}");
+
+      arguments.Add(this.Float(value, argument));
+    }
+
+    return member.Lower(arguments) ?? throw this.Unsupported(call, $"{member.Name} of anything but a variable or a constant");
   }
 
   private IrExpr CallFunction(CallExpression call) {

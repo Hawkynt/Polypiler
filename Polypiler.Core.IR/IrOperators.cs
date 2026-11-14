@@ -41,6 +41,8 @@ public static class IrOperators {
     // The integer and bit operations, also those on integers that are defined on floating point as well.
     if (IntegerOperations.Accepts(op, result, arguments) is { } integer)
       return integer;
+    if (FloatOperationTable.Accepts(op, result, arguments) is { } floating)
+      return floating;
 
     bool Are(params Func<IrType, bool>[] rules) => arguments.Count == rules.Length && !rules.Where((rule, index) => !rule(arguments[index])).Any();
     bool Table(IrType type) => type.IsArray && type.IsStorable;

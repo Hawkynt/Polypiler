@@ -162,16 +162,16 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(int a) { int b = a = 1; return b; }", "SimpleAssignmentExpression", 38, TestName = "assignment as a value")]
   [TestCase("public static int F(object o) => 1;", "object", 21, TestName = "object")]
   [TestCase("public static void F() { new object(); }", "ObjectCreationExpression", 26, TestName = "object creation statement")]
-  [TestCase("public static double F(double a) => System.Math.Clamp(a, 0.0, 1.0);", "Math.Clamp", 37, TestName = "call outside the class")]
+  [TestCase("public static double F(double a) => System.Double.SinPi(a);", "Double.SinPi", 37, TestName = "call outside the class")]
   [TestCase("public static uint F(uint a) => System.Numerics.BitOperations.Crc32C(a, a);", "BitOperations.Crc32C", 33, TestName = "checksum of BitOperations")]
   [TestCase("public static bool F(int a) => int.IsNegative(a);", "Int32.IsNegative", 32, TestName = "member of an integer type outside the set")]
   [TestCase("public static long F(long a) => System.Math.BigMul(a, a, out a);", "Math.BigMul", 33, TestName = "BigMul with the low half as out")]
-  [TestCase("public static double F(double a) => System.Math.Round(a, 2);", "Math.Round", 37, TestName = "Round to digits")]
-  [TestCase("public static double F(double a) => System.Math.Round(a, System.MidpointRounding.ToZero);", "Math.Round", 37, TestName = "Round with another mode")]
+  [TestCase("public static double F(double a) => System.Math.ReciprocalSqrtEstimate(a);", "Math.ReciprocalSqrtEstimate", 37, TestName = "estimate of a reciprocal square root")]
+  [TestCase("public static double F(double a, int d, int m) => System.Math.Round(a, d, (System.MidpointRounding)m);", "Math.Round", 51, TestName = "Round to digits with a computed mode")]
   [TestCase("public static double F(double a, int m) => System.Math.Round(a, (System.MidpointRounding)m);", "Math.Round", 44, TestName = "Round with a computed mode")]
   [TestCase("public static ulong F(double a) => System.BitConverter.DoubleToUInt64Bits(a);", "BitConverter.DoubleToUInt64Bits", 36, TestName = "bit cast outside the set")]
-  [TestCase("public static double F(double a, double b) => System.Math.FusedMultiplyAdd(a, b, a);", "Math.FusedMultiplyAdd", 47, TestName = "fused multiply-add")]
-  [TestCase("public static double F(double a, double b) => System.Math.IEEERemainder(a, b);", "Math.IEEERemainder", 47, TestName = "IEEE remainder")]
+  [TestCase("public static double F(double a) => System.Math.ReciprocalEstimate(a);", "Math.ReciprocalEstimate", 37, TestName = "estimate of a reciprocal")]
+  [TestCase("public static double F(double a) => System.Double.CosPi(a);", "Double.CosPi", 37, TestName = "a member of double outside the table")]
   [TestCase("public static int G(int a) => a; public static int F(int a) => G(a: a);", "InvocationExpression", 64, TestName = "named argument")]
   [TestCase("public static bool F(bool a, bool b) => a & b;", "BitwiseAndExpression on bool and bool", 41, TestName = "bitwise and of truth values")]
   [TestCase("public static bool F(bool a, bool b) { a |= b; return a; }", "OrAssignmentExpression on bool and bool", 40, TestName = "compound assignment of truth values")]
@@ -189,30 +189,6 @@ public sealed class CSharpFrontendTests {
     var diagnostic = Refusal(PrototypeFixture.Wrap(method));
     Assert.That(diagnostic, Is.EqualTo(new Diagnostic(
       "PLY1002", DiagnosticSeverity.Error, $"'{what}' is not supported yet", "Snippet.cs", 1, column + 30)));
-  }
-
-  /// <summary>
-  /// The transcendental functions of Math and MathF. Their results are not the same bits on every
-  /// runtime (ADR 0005), so none of them is an operation of the IR.
-  /// </summary>
-  public static readonly string[] Transcendentals = [
-    "Sin", "Cos", "Tan", "Asin", "Acos", "Atan", "Atan2", "Sinh", "Cosh", "Tanh", "Asinh", "Acosh", "Atanh",
-    "Exp", "Log", "Log10", "Log2", "Pow", "Cbrt"
-  ];
-
-  /// <summary>A method that calls one transcendental function of <c>Math</c> or <c>MathF</c>.</summary>
-  public static string Transcendental(string type, string name) {
-    var number = type == "Math" ? "double" : "float";
-    var arguments = name is "Atan2" or "Pow" ? "x, x" : "x";
-    return $"public static {number} F({number} x) => System.{type}.{name}({arguments});";
-  }
-
-  /// <summary>Test design 15: every transcendental function is refused by its name.</summary>
-  [Test]
-  public void TranscendentalFunction_IsRefusedByName([Values("Math", "MathF")] string type, [ValueSource(nameof(Transcendentals))] string name) {
-    var diagnostic = Refusal(PrototypeFixture.Wrap(Transcendental(type, name)));
-    Assert.That(diagnostic, Is.EqualTo(new Diagnostic(
-      "PLY1002", DiagnosticSeverity.Error, $"'{type}.{name}' is not supported yet", "Snippet.cs", 1, (type == "Math" ? 37 : 35) + 30)));
   }
 
   /// <summary>Every operation of the base library that has an exact meaning is one intrinsic, typed as the overload the compiler chose.</summary>

@@ -45,10 +45,10 @@ Feature: Translate wider C# to JavaScript
     Then the call throws a RangeError with the message "integer overflow"
     And the interpreter reports an integer-overflow trap
 
-  Scenario: A transcendental function is refused
-    Given the C# method "public static double F(double x) => System.Math.Sin(x);"
+  Scenario: A library member outside the mapping table is refused
+    Given the C# method "public static double F(double x) => System.Math.ReciprocalSqrtEstimate(x);"
     When it is translated
-    Then the exit code is 3 and the output contains "PLY1002" and "Math.Sin"
+    Then the exit code is 3 and the output contains "PLY1002" and "Math.ReciprocalSqrtEstimate"
     And nothing is written
 
   Scenario: Writing to a constant table is refused

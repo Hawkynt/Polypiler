@@ -10,12 +10,13 @@ public static partial class IntegerOperations {
     Count(IrIntrinsicOp.PopCount, PopCount),
     Count(IrIntrinsicOp.LeadingZeroCount, LeadingZeroCount),
     Count(IrIntrinsicOp.TrailingZeroCount, TrailingZeroCount),
-    Count(IrIntrinsicOp.Log2, Log2),
+    // The base-2 logarithm of a floating-point number is the same operation, which is not this class's concern.
+    Count(IrIntrinsicOp.Log2, Log2, true),
     Count(IrIntrinsicOp.Parity, Parity)
   ];
 
-  private static IntegerOperation Count(IrIntrinsicOp op, System.Func<IrType, long, int> count)
-    => Fixed(op, IrType.I32, _integers, type => [type], (_, types, arguments) => (long)count(types[0], Long(arguments, 0)));
+  private static IntegerOperation Count(IrIntrinsicOp op, System.Func<IrType, long, int> count, bool shared = false)
+    => Fixed(op, IrType.I32, _integers, type => [type], (_, types, arguments) => (long)count(types[0], Long(arguments, 0)), shared);
 
   /// <summary>The number of set bits of a value; of a signed value those of its bit pattern.</summary>
   /// <param name="type">An integer type.</param>

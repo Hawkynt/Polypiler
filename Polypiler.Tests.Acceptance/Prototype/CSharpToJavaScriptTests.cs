@@ -41,7 +41,7 @@ public sealed class CSharpToJavaScriptTests {
     "continue still runs the for increment",
     "A switch selects by constant label without fall-through",
     "A checked addition traps",
-    "A transcendental function is refused",
+    "A library member outside the mapping table is refused",
     "Writing to a constant table is refused"
   ];
 
@@ -146,12 +146,12 @@ public sealed class CSharpToJavaScriptTests {
       Is.EqualTo("6 | [2,1,2,3,128,9,255,5] | [1,2,3,9,9,9,0,0]"));
   }
 
-  /// <summary>Scenario: A transcendental function is refused.</summary>
+  /// <summary>Scenario: A library member outside the mapping table is refused.</summary>
   [Test]
-  public void TranscendentalFunction_IsRefused() {
-    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap("public static double F(double x) => System.Math.Sin(x);"));
+  public void LibraryMemberOutsideTheTable_IsRefused() {
+    var (exitCode, output) = this.TranslateText(PrototypeFixture.Wrap("public static double F(double x) => System.Math.ReciprocalSqrtEstimate(x);"));
     Assert.That(exitCode, Is.EqualTo(3));
-    Assert.That(output, Does.Contain("PLY1002").And.Contain("Math.Sin"));
+    Assert.That(output, Does.Contain("PLY1002").And.Contain("Math.ReciprocalSqrtEstimate"));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
     Assert.That(Directory.GetFiles(this._directory, "*", SearchOption.AllDirectories), Is.EqualTo(new[] { Path.Combine(this._directory, "Snippet.cs") }));
   }
