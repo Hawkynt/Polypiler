@@ -1,0 +1,16 @@
+schema: 1
+toolchains:
+  gcc:
+    version: "13.2.0"
+    probe: [gcc, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/gcc
+  node:
+    version: "22.1.0"
+    probe: [node, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/node

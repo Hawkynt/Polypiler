@@ -12,6 +12,12 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
 - A recent [.NET SDK](https://dotnet.microsoft.com/download) matching the `TargetFramework` in
   `Directory.Build.props`.
 - `perl` and `node` are only needed to run the release/versioning scripts locally; CI provides them.
+- Every external toolchain a test runs, and the version it expects, is pinned in
+  [`tooling/toolchains.lock`](tooling/toolchains.lock). `polypiler-tooling toolchains probe` lists the
+  core toolchains and how this machine compares (`--only node,dotnet-sdk` narrows it, `--format json`
+  prints one object per line); `polypiler-tooling toolchains validate` checks the file itself. A test
+  marked `[RequiresToolchain("<key>")]` is inconclusive when its toolchain is absent or at another
+  version, and fails instead when `POLYPILER_REQUIRE_TOOLCHAINS=1`.
 
 ## Build
 

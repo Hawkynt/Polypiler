@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/toolchains.schema.json",
+  "title": "Polypiler toolchain lock",
+  "description": "tooling/toolchains.lock, written in YAML: the one place an exact toolchain version is pinned. The loader also requires the keys in ordinal order, each at most once, a group 'version' in every versionPattern, the 26 core keys (for 'toolchains validate') and a host that is not itself a package for every package.",
+  "type": "object",
+  "required": ["schema", "toolchains"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "toolchains": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/toolchain" }
+    }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1 },
+    "toolchain": {
+      "type": "object",
+      "required": ["version", "probe", "versionPattern", "platforms", "licence", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "version": { "$ref": "#/$defs/text", "description": "The exact version: compared by ordinal equality, never as a range or a prefix." },
+        "probe": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/text" },
+          "description": "The command line that prints the version; the first element is resolved on PATH or from 'home'. For kind 'nuget' the one element is the package id."
+        },
+        "versionPattern": {
+          "$ref": "#/$defs/text",
+          "pattern": "\\(\\?<version>",
+          "description": "A .NET regular expression with a named group 'version', matched against each line the probe prints, standard output first."
+        },
+        "platforms": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["linux", "windows", "macos"] }
+        },
+        "licence": { "$ref": "#/$defs/text", "description": "The SPDX identifier or expression of the toolchain's licence." },
+        "source": { "$ref": "#/$defs/text", "description": "Where CI obtains the toolchain." },
+        "home": { "$ref": "#/$defs/text", "description": "An environment variable naming an install folder, searched (and its bin folder) instead of PATH when set." },
+        "oracleOnly": { "type": "boolean", "description": "Used only as a reference, never to build outputs." },
+        "kind": {
+          "enum": ["tool", "package", "nuget", "external"],
+          "description": "tool (default): an executable with a version command; package: a library inside the host named by 'requires', probed by a command; nuget: a NuGet package found in the global packages folder; external: not installable on a hosted runner."
+        },
+        "requires": { "$ref": "#/$defs/text", "description": "The key of the host toolchain of a package." }
+      },
+      "if": { "properties": { "kind": { "enum": ["package", "nuget"] } }, "required": ["kind"] },
+      "then": { "required": ["requires"] }
+    }
+  }
+}

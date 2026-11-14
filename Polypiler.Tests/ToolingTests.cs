@@ -53,6 +53,7 @@ public sealed class ToolingTests {
     }
 
     Assert.That(output.ToString(), Does.Contain(Program.FloatImplementations));
+    Assert.That(output.ToString(), Does.Contain("toolchains validate"));
   }
 
   [TestCase(TestName = "float-implementations without a file")]

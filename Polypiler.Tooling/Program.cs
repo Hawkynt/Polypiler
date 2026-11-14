@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.IR;
+using Polypiler.Tooling.Commands;
 
 namespace Polypiler.Tooling;
 
@@ -36,6 +37,8 @@ public static class Program {
     if (args.Length == 0) {
       output.WriteLine($"usage: {Name} <verb> [options]");
       output.WriteLine($"       {Name} {FloatImplementations} <file>");
+      output.WriteLine($"       {Name} {ToolchainsCommand.Verb} validate [--lock <path>]");
+      output.WriteLine($"       {Name} {ToolchainsCommand.Verb} probe [--lock <path>] [--only <key>[,<key>...]] [--format text|json]");
       return Success;
     }
 
@@ -46,6 +49,9 @@ public static class Program {
       error.WriteLine($"{Name}: '{FloatImplementations}' takes one argument, the file to write.");
       return UsageError;
     }
+
+    if (args[0] == ToolchainsCommand.Verb)
+      return new ToolchainsCommand().Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;
