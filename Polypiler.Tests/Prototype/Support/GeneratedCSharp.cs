@@ -65,7 +65,8 @@ internal sealed class GeneratedCSharp {
     if (complaints.Count > 0)
       throw new InvalidOperationException($"The C# compiler does not accept the generated file without complaint:\n{string.Join('\n', complaints)}\n{source}");
 
-    return new GeneratedCSharp(Assembly.Load(image.ToArray()).GetExportedTypes().Single());
+    // The structs of the module stand beside the class; the class is the one static, so abstract and sealed, type.
+    return new GeneratedCSharp(Assembly.Load(image.ToArray()).GetExportedTypes().Single(type => type is { IsAbstract: true, IsSealed: true }));
   }
 
   /// <summary>

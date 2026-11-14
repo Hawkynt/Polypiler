@@ -39,7 +39,19 @@ public enum CSharpFeature {
   FileScopedNamespace,
 
   /// <summary>The logical shift <c>&gt;&gt;&gt;</c> of a signed integer (C# 11).</summary>
-  UnsignedRightShift
+  UnsignedRightShift,
+
+  /// <summary>
+  /// An object initializer <c>new T { F = v }</c> (C# 3). Recorded for the table; the emitter builds a
+  /// struct with its constructor, which every version has.
+  /// </summary>
+  ObjectInitializer,
+
+  /// <summary>A <c>readonly struct</c>, whose fields are all read-only (C# 7.2).</summary>
+  ReadOnlyStruct,
+
+  /// <summary>A <c>record struct</c> with its positional parameters and the equality the compiler gives it (C# 10).</summary>
+  RecordStruct
 
 }
 
@@ -247,6 +259,16 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfLanguage("native-sized integer (nint)", CSharpFeature.NativeInteger, new Version(9, 0)),
     CSharpCapability.OfLanguage("file-scoped namespace", CSharpFeature.FileScopedNamespace, new Version(10, 0)),
     CSharpCapability.OfLanguage("unsigned right shift (>>>)", CSharpFeature.UnsignedRightShift, new Version(11, 0)),
+    CSharpCapability.OfLanguage("object initializer", CSharpFeature.ObjectInitializer, new Version(3, 0)),
+    CSharpCapability.OfLanguage("readonly struct", CSharpFeature.ReadOnlyStruct, new Version(7, 2)),
+    CSharpCapability.OfLanguage("record struct", CSharpFeature.RecordStruct, new Version(10, 0)),
+
+    // The equality members of a struct written out where the language has no record struct.
+    CSharpCapability.OfApi("IEquatable<T>", CSharpProfile.Net20),
+    CSharpCapability.OfApi("EqualityComparer<T>.Default", CSharpProfile.Net20),
+    CSharpCapability.OfApi("HashCode.Combine", CSharpProfile.NetStandard21),
+    // The init accessors of a readonly record struct need the type IsExternalInit, which the framework has from .NET 5 on.
+    CSharpCapability.OfApi("IsExternalInit", CSharpProfile.Net80),
 
     // The defects of the runtime. RyuJIT's shift-xor rotation was measured on .NET 8.0.31 and 10.0.12, x64, in
     // every tier; the runtimes of the older profiles were not, and the form written around it costs what the
@@ -356,6 +378,12 @@ public sealed class CSharpCapabilities {
   /// <param name="profile">The profile.</param>
   /// <returns><see langword="true"/> when the table has a row for the defect and the profile is at or after its first profile.</returns>
   public bool Suffers(CSharpRuntimeDefect defect, CSharpProfile profile) => this.Rows.FirstOrDefault(row => row.Defect == defect) is { } row && row.IsIn(profile);
+
+  /// <summary>Whether a profile's framework has an API the table records by name.</summary>
+  /// <param name="api">The name of the row, as <see cref="CSharpCapability.Name"/> has it.</param>
+  /// <param name="profile">The profile.</param>
+  /// <returns><see langword="true"/> when the table has the row and the profile's framework reaches it.</returns>
+  public bool HasApi(string api, CSharpProfile profile) => this.Rows.FirstOrDefault(row => row.Name == api && row.Feature is null && row.Operation is null) is { } row && row.IsIn(profile);
 
   /// <summary>The row of a feature of the language.</summary>
   /// <param name="feature">The feature.</param>
