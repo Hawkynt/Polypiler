@@ -11,3 +11,4 @@ file's provenance source.
 - tests/vectors/float/golden.provenance.json: the MPFR reference vectors become golden files (source: mpfr)
 - tests/fixtures/prototype/js/recorded/golden.provenance.json: the outcomes recorded from node become golden files (source: node)
 - tests/fixtures/verify/oracle/adler32.vectors.json: the Adler-32 vectors of the oracle framework, the 300 x ff case among them (source: RFC 1950)
+- tests/fixtures/backend/golden/spans/*.golden: the outputs of the views fixtures of #1325 in every variant of both backends, new sources whose output nothing recorded before (source: GoldenOutputRecorder)

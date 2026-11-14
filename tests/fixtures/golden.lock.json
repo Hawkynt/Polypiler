@@ -2,6 +2,46 @@
   "schema": 1,
   "files": [
     {
+      "path": "tests/fixtures/backend/golden/spans/Adler32Span.cs.csharp.golden",
+      "sha256": "807ad2ec4eadc9ca5d07605d845a55756b20451a33142e4d2e86e0f731020d93",
+      "bytes": 37398
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/Adler32Span.cs.javascript.golden",
+      "sha256": "e092fe6ea214bf735b1b12a306960d101e524ef659d20900ced01cb0bcd619ee",
+      "bytes": 40316
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/Spans.cs.csharp.golden",
+      "sha256": "a2ef82adbc14396ebf7d89f9d76c00871dfe4335318b0446cac88ba729146634",
+      "bytes": 448030
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/Spans.cs.javascript.golden",
+      "sha256": "a6e6fb2c1f0517a25d97fcba628650695e101ade19830c1f8c0e86a477cd14e7",
+      "bytes": 354964
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/adler32-view.mjs.csharp.golden",
+      "sha256": "79a8e062b4a3bd811b6dc366e3133a2b23b2dd3fbf0423d218e270bbd3ea36c4",
+      "bytes": 83450
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/adler32-view.mjs.javascript.golden",
+      "sha256": "6e1d998b6c034c5641330a6d207fcb49e5cb37ecf1ee5ca3878a6088afa0da68",
+      "bytes": 59700
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/views.mjs.csharp.golden",
+      "sha256": "95faf6fcd8340a3c78c822524853e7bc1e27b10a90c849eed1f6afedb71974e3",
+      "bytes": 189210
+    },
+    {
+      "path": "tests/fixtures/backend/golden/spans/views.mjs.javascript.golden",
+      "sha256": "86d5334423b9b3a6387a535a8584bd0128d83a4f60601ba4b74ecc0cdb7e0b18",
+      "bytes": 136064
+    },
+    {
       "path": "tests/fixtures/prototype/js/recorded/adler32.txt",
       "sha256": "0b06b7203ec0c3e339e9e5698376add358f77ab70ef3ede33446a744c30e1717",
       "bytes": 5010
