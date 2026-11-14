@@ -98,7 +98,7 @@ codes:
     rule: io.read
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: "standard error of polypiler-tooling toolchains validate and probe; standard error of polypiler as \"input '<path>' does not exist or is not readable\" for an input of the command line"
+    surfaces: "standard error of polypiler-tooling toolchains validate and probe; standard error of polypiler as \"input '<path>' does not exist or is not readable\" for an input of the command line; standard error of polypiler-tooling ci as \"'<path>' cannot be read: <reason>\" for a workflow, category file, test listing, lock, changed-file list or test build it needs and cannot read"
   - code: PLY0005
     severity: error
     exit: EnvironmentError
@@ -603,6 +603,24 @@ codes:
     area: infrastructure
     owner: INFRA-BDD
     surfaces: "the assertion message of the feature-binding tests, for a step without a binding or with several, a feature without a scenario, a file that does not parse and a feature path that does not follow tests/features/<area>/<id>.feature"
+  - code: PLY0075
+    severity: error
+    exit: EnvironmentError
+    title: CI layer inconsistent
+    message: "<reason>"
+    rule: ci.layer
+    area: infrastructure
+    owner: INFRA-CI-CORE
+    surfaces: "standard error of polypiler-tooling ci audit, matrix and env, for a layer file of tooling/ci/layers that is not valid ('<file>: <reason>'), no layer file at all, a layer without its job layer-<name> in .github/workflows/ci.yml or a job layer-<name> without its layer file, a toolchain the lock does not hold, an entry of tooling/ci/categories.yaml that is not valid, an unknown layer of ci env, and a decision record of docs/adr that breaks the numbering rule: a number used twice, a number outside the block of its area, a record missing from docs/adr/README.md or a row of it without a file"
+  - code: PLY0076
+    severity: error
+    exit: EnvironmentError
+    title: test not run by any layer
+    message: "<reason>"
+    rule: ci.unrun
+    area: infrastructure
+    owner: INFRA-CI-CORE
+    surfaces: "standard error of polypiler-tooling ci audit, for a category of tooling/ci/categories.yaml whose step does not run it ('category '<name>' is not run by any step: <reason>') or that has no tests and is not pending, and for a test of the acceptance project without exactly one Layer category, in a layer without a layer file, or requiring a toolchain its layer does not provide"
   - code: PLY0077
     severity: error
     exit: EnvironmentError

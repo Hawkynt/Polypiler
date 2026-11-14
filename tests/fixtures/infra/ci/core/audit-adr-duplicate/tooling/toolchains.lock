@@ -1,0 +1,24 @@
+# A lock of three toolchains for the audit trees of tests/features/infra/infra-ci-core.feature.
+schema: 1
+toolchains:
+  dotnet-sdk:
+    version: "10.0.404"
+    probe: [dotnet, --version]
+    versionPattern: '^(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://dotnet.microsoft.com/download/dotnet/10.0
+  node:
+    version: "24.22.2"
+    probe: [node, --version]
+    versionPattern: '^v(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://nodejs.org/dist/
+  rust:
+    version: "1.99.0"
+    probe: [rustc, --version]
+    versionPattern: '^rustc (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: MIT OR Apache-2.0
+    source: https://forge.rust-lang.org/infra/other-installation-methods.html

@@ -15,11 +15,13 @@
     <PackageReference Include="SharpFuzz" Version="2.3.0" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
     <PackageReference Include="JsonSchema.Net" Version="8.0.5" />
+    <PackageReference Include="System.Reflection.MetadataLoadContext" Version="10.0.0" />
   </ItemGroup>
 
   <!-- The metadata schema every spec document is checked against travels with the tool. -->
   <ItemGroup>
     <EmbeddedResource Include="..\spec\schemas\meta.schema.json" LogicalName="meta.schema.json" Link="Spec\meta.schema.json" />
+    <EmbeddedResource Include="..\spec\schemas\ci-layer.schema.json" LogicalName="ci-layer.schema.json" Link="Ci\ci-layer.schema.json" />
   </ItemGroup>
 
 </Project>

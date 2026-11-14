@@ -1,0 +1,7 @@
+# The tests of the tree, as polypiler-tooling ci audit would read them from built assemblies.
+tests:
+  - { name: Demo.Tests.Translates, categories: [Acceptance, Layer.core] }
+  - { name: Demo.Tests.TranslatesSlowly, categories: [Acceptance, Layer.core, Slow] }
+  - { name: Demo.Tests.Measures, categories: [Performance] }
+  - { name: Demo.Tests.RunsRust, categories: [Acceptance, Layer.rust], toolchains: [rust] }
+  - { name: Demo.Tests.RunsNowhere, categories: [Acceptance] }

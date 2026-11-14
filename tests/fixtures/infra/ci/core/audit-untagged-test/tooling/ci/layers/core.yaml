@@ -1,0 +1,6 @@
+schema: 1
+layer: core
+toolchains: [dotnet-sdk]
+os: [ubuntu-latest]
+paths: ["**"]
+always: true

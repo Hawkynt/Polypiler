@@ -1,0 +1,12 @@
+name: CI
+on:
+  pull_request: {}
+jobs:
+  layer-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        run: dotnet test Demo.slnx -c Release --filter "TestCategory!~Layer.|TestCategory=Layer.core"
+      - name: ir-verifier
+        run: dotnet test Demo.slnx -c Release --filter "TestCategory=IrVerifier"

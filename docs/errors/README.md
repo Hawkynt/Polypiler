@@ -71,6 +71,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0072](PLY0072.md) (reserved) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': environment differs from the baseline (<field>: <baseline> -> <current>)` | INFRA-BENCH |
 | [PLY0073](PLY0073.md) (reserved) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': <metric> <value> exceeds its budget <budget>` | INFRA-BENCH |
 | [PLY0074](PLY0074.md) | error | 1 (EnvironmentError) | `<file>(<line>): step '<step>' has no binding` | INFRA-BDD |
+| [PLY0075](PLY0075.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-CI-CORE |
+| [PLY0076](PLY0076.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-CI-CORE |
 | [PLY0077](PLY0077.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-FUZZ |
 | [PLY0080](PLY0080.md) (reserved) | error | 2 (UsageError) | `<reason>` | CLI-PACKAGE |
 | [PLY0081](PLY0081.md) | error | 9 (MissingDependency) | `native dependency '<name>' required by '<component>' is missing` | CLI-EXITCODES |

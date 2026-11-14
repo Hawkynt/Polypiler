@@ -50,6 +50,9 @@ public static class Program {
       output.WriteLine($"       {Name} {FuzzCommand.Verb} run --target <id> [--seed <n>] [--iterations <n>] [--engine inprocess|afl] [--duration <seconds>] [--assembly <path>]...");
       output.WriteLine($"       {Name} {FuzzCommand.Verb} minimize --target <id> --input <file> [--assembly <path>]...");
       output.WriteLine($"       {Name} {FuzzCommand.Verb} replay [--target <id>] [--assembly <path>]...");
+      output.WriteLine($"       {Name} {CiCommand.Verb} audit [--root <dir>]");
+      output.WriteLine($"       {Name} {CiCommand.Verb} matrix (--changed <file> | --all) [--root <dir>]");
+      output.WriteLine($"       {Name} {CiCommand.Verb} env --layer <name> [--root <dir>]");
       return Success;
     }
 
@@ -77,6 +80,9 @@ public static class Program {
       return new CorpusCommand().Run(args[1..], output, error);
     if (args[0] == FuzzCommand.Verb)
       return new FuzzCommand().Run(args[1..], output, error);
+
+    if (args[0] == CiCommand.Verb)
+      return CiCommand.Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;
