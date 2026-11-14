@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Verification.Benchmarks;
 using Polypiler.Prototype.Testing;
@@ -6,7 +7,7 @@ using static Polypiler.Tests.Verification.Benchmarks.BenchTesting;
 
 namespace Polypiler.Tests.Verification.Benchmarks;
 
-/// <summary>The budget file format; the product file with numbers is ADR-PERF-BUDGETS' to write.</summary>
+/// <summary>The budget file format, and the product budgets of ADR 0006.</summary>
 [TestFixture]
 public sealed class BudgetFileTests {
 
@@ -21,9 +22,22 @@ public sealed class BudgetFileTests {
     Assert.That(budgets.Find("other", "default", "wallNs"), Is.Null);
   }
 
+  /// <summary>
+  /// ADR 0006: the product budgets name a benchmark and a variant that exist, and gate only a metric
+  /// that repeats exactly between runs, at no increase; time and memory stay record only.
+  /// </summary>
   [Test]
-  public void NoProductBudget_IsCommittedWithNumbers()
-    => Assert.That(File.Exists(Path.Combine(PrototypeFixture.RepositoryRoot, "tooling", "bench", "budgets.yaml")), Is.False, "budgets come from ADR-PERF-BUDGETS after a baseline");
+  public void TheProductBudgets_GateOnlyReproducibleMetricsOfExistingVariants_AtNoIncrease() {
+    var budgets = BudgetFile.Load(Path.Combine(PrototypeFixture.RepositoryRoot, "tooling", "bench", "budgets.yaml"));
+    Assert.That(budgets.MaxRelativeMad, Is.Null);
+    Assert.That(budgets.Budgets, Is.Not.Empty);
+    foreach (var budget in budgets.Budgets) {
+      var definition = BenchmarkDefinition.Load(Path.Combine(PrototypeFixture.RepositoryRoot, BenchmarkDefinition.RepositoryFolder, budget.Id + BenchmarkDefinition.Extension));
+      Assert.That(definition.Variants.Select(variant => variant.Name), Does.Contain(budget.Variant), budget.ToString());
+      Assert.That(budget.Metric, Is.AnyOf("sourceBytes", "binaryBytes", "allocatedBytes"), budget.ToString());
+      Assert.That(budget.MaxRegressionPercent, Is.Zero, budget.ToString());
+    }
+  }
 
   [Test]
   public void BudgetsDifferingInOneKeyField_AreDistinct()

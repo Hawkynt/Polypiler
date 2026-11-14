@@ -1,0 +1,21 @@
+# The performance budgets of ADR 0006 (docs/adr/0006-performance-budgets.md), read by
+#   polypiler-tooling bench compare --baseline <dir> --current <dir> --budgets tooling/bench/budgets.yaml
+# A metric of a benchmark variant listed here regresses (PLY0073) when its current value exceeds the
+# baseline's by more than maxRegressionPercent; every metric not listed is recorded, never gated.
+#
+# Only metrics that repeated exactly in every run of the baseline series are gated, and at 0: they may
+# not grow without a re-baseline that says why (ADR 0006, "Re-baselining"). Wall time, processor time
+# and peak memory varied with the host's load by far more than any regression worth catching, so they
+# are record only, and so is maxRelativeMad, which only matters to a wall-time budget.
+schemaVersion: 1
+budgets:
+  - { id: cipher-adler32, variant: 1kib, metric: sourceBytes, maxRegressionPercent: 0 }
+  - { id: cipher-adler32, variant: 64kib, metric: sourceBytes, maxRegressionPercent: 0 }
+  - { id: cipher-adler32, variant: 1mib, metric: sourceBytes, maxRegressionPercent: 0 }
+  - { id: cipher-fletcher32, variant: 1kib, metric: sourceBytes, maxRegressionPercent: 0 }
+  - { id: cipher-fletcher32, variant: 64kib, metric: sourceBytes, maxRegressionPercent: 0 }
+  - { id: cipher-fletcher32, variant: 1mib, metric: sourceBytes, maxRegressionPercent: 0 }
+  - { id: cipher-crc32, variant: 1kib, metric: sourceBytes, maxRegressionPercent: 0 }
+  - { id: cipher-crc32, variant: 64kib, metric: sourceBytes, maxRegressionPercent: 0 }
+  - { id: cipher-crc32, variant: 1mib, metric: sourceBytes, maxRegressionPercent: 0 }
+  - { id: cli-startup, variant: default, metric: allocatedBytes, maxRegressionPercent: 0 }
