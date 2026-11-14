@@ -1,0 +1,29 @@
+id: INTRINSICS.StrCompareOrdinal
+title: Ordinal order of two strings
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrCompareOrdinal
+  group: String
+  typeParameters: []
+  parameters: [{name: left, type: TYPES.str}, {name: right, type: TYPES.str}]
+  returns: [{name: sign, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "-1, 0 or 1 by the first code unit in which the strings differ, a proper prefix ordered first"
+    source: "ECMA-262 2022 §7.2.13 (IsLessThan of strings); the .NET API reference of String.CompareOrdinal"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[97], [66]], outputs: [1]}
+    - {types: {}, inputs: [[97, 98], [97]], outputs: [1]}
+    - {types: {}, inputs: [[120], [120]], outputs: [0]}
+    - {types: {}, inputs: [[65535], [55357, 56832]], outputs: [1]}

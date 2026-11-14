@@ -170,13 +170,33 @@ public sealed class CSharpCapability {
   /// </summary>
   public Func<IrIntrinsic, IrExpr>? Rewrite { get; private init; }
 
+  /// <summary>
+  /// Which nodes of the operation the row is for, beyond the type of their operand, or
+  /// <see langword="null"/> for every node: a constant argument that selects a form, such as the
+  /// white-space set of a trim.
+  /// </summary>
+  public Func<IrIntrinsic, bool>? Condition { get; private init; }
+
+  /// <summary>Whether the row is for a node of its operation: <see cref="Condition"/> holds for it, or the row has none.</summary>
+  /// <param name="intrinsic">The node.</param>
+  /// <returns><see langword="true"/> when the row writes the node.</returns>
+  public bool IsFor(IrIntrinsic intrinsic) => this.Condition?.Invoke(intrinsic) ?? true;
+
+  /// <summary>The row for the nodes of its operation a condition accepts.</summary>
+  /// <param name="condition">The condition; see <see cref="Condition"/>.</param>
+  /// <returns>The row extended.</returns>
+  public CSharpCapability When(Func<IrIntrinsic, bool> condition) => new(this.Name) {
+    Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = this.Rewrite, Condition = condition
+  };
+
   /// <summary>The row with a form for arguments with which the operation cannot trap.</summary>
   /// <param name="form">The form, a template.</param>
   /// <param name="holds">Whether given arguments are such.</param>
   /// <returns>The row extended.</returns>
   public CSharpCapability WithTotal(CSharpForm form, Func<IReadOnlyList<IrExpr>, bool> holds) => new(this.Name) {
     Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
-    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds, Rewrite = this.Rewrite
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds, Rewrite = this.Rewrite, Condition = this.Condition
   };
 
   /// <summary>The row written as other operations of the IR where the profile lacks it.</summary>
@@ -184,7 +204,7 @@ public sealed class CSharpCapability {
   /// <returns>The row extended.</returns>
   public CSharpCapability WithRewrite(Func<IrIntrinsic, IrExpr> rewrite) => new(this.Name) {
     Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
-    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = rewrite
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = rewrite, Condition = this.Condition
   };
 
   /// <summary>Whether a profile writes the operation of the row as the others of <see cref="Rewrite"/>.</summary>
@@ -379,7 +399,10 @@ public sealed class CSharpCapabilities {
 
     // The views of #1325.
     .. CSharpViewRows.All,
-    .. CSharpViewRows.Helpers
+    .. CSharpViewRows.Helpers,
+
+    // The string operations of #1314.
+    .. CSharpStringRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>
@@ -429,15 +452,30 @@ public sealed class CSharpCapabilities {
       ?? this.Rows.FirstOrDefault(row => row.Operation == operation && row.Operands.Count == 0);
 
   /// <summary>
+  /// The row of a node of an intrinsic operation: the one for the type its row is chosen by
+  /// (<see cref="OperandOf"/>) whose condition holds for it, or else the one for every type.
+  /// </summary>
+  /// <param name="intrinsic">The node.</param>
+  /// <returns>The row, or <see langword="null"/> when the table has none.</returns>
+  public CSharpCapability? Of(IrIntrinsic intrinsic) {
+    var operand = OperandOf(intrinsic);
+    return this.Rows.FirstOrDefault(row => row.Operation == intrinsic.Op && row.Operands.Contains(operand) && row.IsFor(intrinsic))
+      ?? this.Rows.FirstOrDefault(row => row.Operation == intrinsic.Op && row.Operands.Count == 0 && row.IsFor(intrinsic));
+  }
+
+  /// <summary>
   /// The type an intrinsic's row is chosen by: that of its first argument, but the type of the node
-  /// for a mask and a load, whose first argument is the same for every width, and the type of the
-  /// value for a store.
+  /// for a mask and a load, whose first argument is the same for every width, the type of the
+  /// value for a store, and the type of the needle or separator for a string operation that takes a
+  /// string or a code unit there.
   /// </summary>
   /// <param name="intrinsic">The intrinsic.</param>
   /// <returns>The type of operand to look the row up with.</returns>
   public static IrTypeKind OperandOf(IrIntrinsic intrinsic) => intrinsic.Op switch {
     IrIntrinsicOp.LowMask or IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig => intrinsic.Type.Kind,
     IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => intrinsic.Arguments[2].Type.Kind,
+    IrIntrinsicOp.StrIndexOf or IrIntrinsicOp.StrLastIndexOf or IrIntrinsicOp.StrStartsWith or IrIntrinsicOp.StrEndsWith or IrIntrinsicOp.StrContains
+      or IrIntrinsicOp.StrReplaceAll or IrIntrinsicOp.StrSplit => intrinsic.Arguments[1].Type.Kind,
     _ => intrinsic.Arguments[0].Type.Kind
   };
 

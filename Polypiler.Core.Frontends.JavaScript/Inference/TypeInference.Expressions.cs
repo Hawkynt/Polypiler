@@ -46,7 +46,13 @@ internal enum Plan {
   BigDivide,
 
   /// <summary><c>**</c> of two numbers: ECMA-262's exponentiation of doubles, which is <c>Math.pow</c>.</summary>
-  Power
+  Power,
+
+  /// <summary>Two strings joined.</summary>
+  Concat,
+
+  /// <summary>Two strings compared by code unit.</summary>
+  CompareString
 
 }
 
@@ -94,6 +100,9 @@ internal sealed partial class TypeInference {
   }
 
   private JsType Compute(Node node, Coercion coercion) {
+    if (this.StringType(node) is { } text)
+      return text;
+
     switch (node) {
       case NumericLiteral literal:
         return JsType.Literal(literal.Value);
@@ -250,6 +259,9 @@ internal sealed partial class TypeInference {
 
   /// <summary>Decides how a binary operator is computed on two operands where a coercion is applied to its value.</summary>
   public Operation Decide(Operator op, Node left, Node right, Coercion coercion) {
+    if (this.DecideString(op, left, right) is { } text)
+      return text;
+
     if (this.IsBig(left, coercion) || this.Of(right).Kind == JsKind.BigInt)
       return this.DecideBig(op, left, right, coercion);
 

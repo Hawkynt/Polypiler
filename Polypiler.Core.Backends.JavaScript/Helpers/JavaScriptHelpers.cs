@@ -41,7 +41,8 @@ internal static partial class JavaScriptHelpers {
     "$pop", "$pop64", "$clz64", "$ctz", "$ctz64", "$view", "$bits64", "$bits32", "$float64", "$float32", "$key64",
     "$copy", "$copya", "$step", "$stepi", "$stepf", "$step64", "$stepck", "$stepck64s", "$stepck64u", "$len",
     .. IntegerOrder,
-    .. ViewOrder
+    .. ViewOrder,
+    .. StringOrder
   ];
 
   private static readonly HashSet<string> _names = [.. Order];
@@ -738,6 +739,7 @@ internal static partial class JavaScriptHelpers {
     "$stepck64u" => CheckedStep("u"),
     _ when IntegerSource(name, native) is { } integer => integer,
     _ when ViewSource(name, native) is { } view => view,
+    _ when StringSource(name, native) is { } text => text,
     _ => Lines("function $len(length) {", "  if (length < 0) " + Overflow, "  return length;", "}")
   };
 

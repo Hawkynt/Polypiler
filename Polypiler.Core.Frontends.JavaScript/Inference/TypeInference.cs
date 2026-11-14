@@ -158,6 +158,13 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       return;
     }
 
+    // A parameter only a string can be is one: it calls a method only strings have, or a for...of goes over it.
+    if (external && parameter.UsedAsString is { } text) {
+      parameter.Type = parameter.Entry = JsType.String;
+      parameter.Evidence = parameter.EntryEvidence = text;
+      return;
+    }
+
     // An array has no type of its own to start with: it takes the type of the arrays the file passes.
     parameter.IsArrayByCall = external && parameter.UsedAsArray is not null;
     if (!external || parameter.IsArrayByCall)

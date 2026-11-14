@@ -28,6 +28,9 @@ internal enum JsKind {
   /// <summary>An object literal of fixed shape that is never written, compared or extended: a value record.</summary>
   Record,
 
+  /// <summary>A string: a sequence of UTF-16 code units.</summary>
+  String,
+
   /// <summary>Values of two kinds reach the place, which no type of the IR holds.</summary>
   Conflict
 
@@ -97,6 +100,9 @@ internal sealed record JsType {
   /// <summary>An unsigned 32-bit integer.</summary>
   public static JsType U32 { get; } = Of(IrType.U32);
 
+  /// <summary>A string.</summary>
+  public static JsType String { get; } = new(JsKind.String);
+
   /// <summary>A <c>BigInt</c> without a bound.</summary>
   public static JsType UnboundedBigInt { get; } = new(JsKind.BigInt) { IsUnbounded = true };
 
@@ -106,7 +112,9 @@ internal sealed record JsType {
     IrTypeKind.Bool => Boolean,
     IrTypeKind.F32 => F32,
     IrTypeKind.F64 => F64,
-    IrTypeKind.Array => ArrayOf(Of(type.Element!), false),
+    IrTypeKind.String => String,
+    // An array of strings is a JavaScript Array: no typed array holds a string.
+    IrTypeKind.Array => ArrayOf(Of(type.Element!), type.Element!.IsString),
     IrTypeKind.Span or IrTypeKind.ReadOnlySpan => ViewOf(Of(type.Element!)),
     _ => new(type.IsLong ? JsKind.BigInt : JsKind.Number) { Low = IrOperators.Minimum(type), High = IrOperators.Maximum(type) }
   };
@@ -160,8 +168,9 @@ internal sealed record JsType {
     JsKind.Number when this.Float == 64 => IrType.F64,
     JsKind.Number => (this.IsLiteral ? _words.Skip(4) : _words).First(this.Within),
     JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
+    JsKind.String => IrType.String,
     JsKind.Array when this.IsView => IrType.Span(this.Element!.Ir is { IsNumeric: true } viewed ? viewed : IrType.F64),
-    JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct) ? element : IrType.F64),
+    JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString) ? element : IrType.F64),
     JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
     _ => null
   };
@@ -172,6 +181,7 @@ internal sealed record JsType {
     JsKind.Boolean => "boolean",
     JsKind.Number => "number",
     JsKind.BigInt => "bigint",
+    JsKind.String => "string",
     JsKind.Array => this.Element!.HasRecord ? $"{this.Element.Describe()}[]" : Spell(this.Ir!),
     JsKind.Record => this.Shape!.ToString(),
     _ => "nothing"
@@ -193,6 +203,7 @@ internal sealed record JsType {
     IrTypeKind.F64 => "float64",
     IrTypeKind.Struct => type.Declaration!.Name,
     IrTypeKind.Span or IrTypeKind.ReadOnlySpan => Spell(type.Element!) + " view",
+    IrTypeKind.String => "string",
     _ => Spell(type.Element!) + "[]"
   };
 

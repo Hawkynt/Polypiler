@@ -303,12 +303,15 @@ public sealed class CSharpCapabilitiesTests {
   internal static bool IsFloating(CSharpCapability row)
     => row.Operation is { } op && FloatOperationTable.Of(op) is { DoubleName: not null } && row.Operands.All(kind => kind is IrTypeKind.F32 or IrTypeKind.F64);
 
+  /// <summary>Whether a row writes a string operation, which CSharpStringEmissionTests test.</summary>
+  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && StringOperations.IsString(op);
+
   /// <summary>The table names every API and every feature of the language the issue lists, each with the first profile or version that has it.</summary>
   [Test]
   public void Table_IsWhatTheBackendKnows() {
     // The rows of the integer and bit operations, one per operation and width, have tests of their own
     // (IntegerCSharpTests), and so do the rows of the floating-point operations (CSharpFloatCapabilitiesTests).
-    var rows = CSharpCapabilities.Default.Rows.Where(row => !IsIntegerRow(row) && !IsFloating(row)).ToList();
+    var rows = CSharpCapabilities.Default.Rows.Where(row => !IsIntegerRow(row) && !IsFloating(row) && !IsStringRow(row)).ToList();
     Assert.That(rows.Select(row => (row.Name, First(row))), Is.EqualTo(_table));
     Assert.That(rows.Select(row => row.Name), Is.Unique);
     Assert.That(rows.Select(row => row.ToString()), Is.EqualTo(rows.Select(row => row.Name)));
@@ -398,7 +401,7 @@ public sealed class CSharpCapabilitiesTests {
   [Test]
   public void EveryWrittenRow_HasAUse() {
     // The rows of the views have tests of their own (CSharpViewTests).
-    var written = CSharpCapabilities.Default.Rows.Where(row => (row.Operation is not null || row.Saturates is not null) && !IsIntegerRow(row) && !IsFloating(row)
+    var written = CSharpCapabilities.Default.Rows.Where(row => (row.Operation is not null || row.Saturates is not null) && !IsIntegerRow(row) && !IsFloating(row) && !IsStringRow(row)
       && !(row.Operation is { } op && IrViews.IsViewOperation(op))).Select(row => row.Name);
     Assert.That(_uses.Select(use => use.Row).Distinct(), Is.EquivalentTo(written));
   }
@@ -456,7 +459,7 @@ public sealed class CSharpCapabilitiesTests {
     // The store on a span is the one helper only a profile with spans calls; it is C# 8 for .NET Standard 2.1.
     var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(helper => helper != CSharpViewHelpers.StoreSpan).ToList();
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(97));
+    Assert.That(helpers, Has.Count.EqualTo(112));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);

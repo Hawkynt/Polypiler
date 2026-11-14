@@ -80,7 +80,7 @@ public static partial class IrVerifier {
       var pending = new Stack<IrStructType>([type]);
       while (pending.TryPop(out var current))
         foreach (var field in current.Fields) {
-          if (field.Type.IsArray)
+          if (field.Type.IsArray || field.Type.IsString)
             return false;
 
           if (field.Type.StructType is { } nested && this.Declares(nested) && seen.Add(nested))

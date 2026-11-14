@@ -85,7 +85,7 @@ public sealed class TypesSpecFamilyTests {
     var ids = SpecTree.Load(Path.Combine(PrototypeFixture.RepositoryRoot, "spec"), PrototypeFixture.RepositoryRoot).Documents
       .Where(document => document.Family == "types").Select(document => document.Id).Order(StringComparer.Ordinal);
     Assert.That(ids, Is.EqualTo(new[] {
-      "TYPES.bool", "TYPES.f32", "TYPES.f64", "TYPES.i16", "TYPES.i32", "TYPES.i64", "TYPES.i8", "TYPES.u16", "TYPES.u32", "TYPES.u64", "TYPES.u8"
+      "TYPES.bool", "TYPES.f32", "TYPES.f64", "TYPES.i16", "TYPES.i32", "TYPES.i64", "TYPES.i8", "TYPES.str", "TYPES.u16", "TYPES.u32", "TYPES.u64", "TYPES.u8"
     }));
   }
 

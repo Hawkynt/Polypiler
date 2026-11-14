@@ -59,17 +59,17 @@ GetByte	imported
 SetByte	imported
 Split64	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
 Combine64	imported
-AnsiToBytes	OpCodes.js(2241,27): error PLY1101: parameter 'str' of 'AnsiToBytes' has no supported JSDoc type
-BytesToAnsi	OpCodes.js(2255,17): error PLY1102: '''' is not supported yet
-AsciiToBytes	OpCodes.js(2269,28): error PLY1101: parameter 'str' of 'AsciiToBytes' has no supported JSDoc type
+AnsiToBytes	OpCodes.js(2244,9): error PLY1102: 'a call of bytes.push' is not supported yet
+BytesToAnsi	imported
+AsciiToBytes	OpCodes.js(2272,9): error PLY1102: 'a call of bytes.push' is not supported yet
 BytesToChars	OpCodes.js(2293,16): error PLY1102: 'a call of String.fromCharCode.apply' is not supported yet
 DoubleToBytes	imported
 BytesToDouble	OpCodes.js(2326,9): error PLY1102: 'throw' is not supported yet
-Hex4ToBytes	OpCodes.js(2342,27): error PLY1101: parameter 'hexString' of 'Hex4ToBytes' has no supported JSDoc type
+Hex4ToBytes	OpCodes.js(2343,11): error PLY1102: 'typeof' is not supported yet
 HexCharCodeToValue	imported
-Hex8ToBytes	OpCodes.js(2379,27): error PLY1101: parameter 'hexString' of 'Hex8ToBytes' has no supported JSDoc type
-Hex16ToWords	OpCodes.js(2404,28): error PLY1101: parameter 'hexString' of 'Hex16ToWords' has no supported JSDoc type
-Hex32ToDWords	OpCodes.js(2429,29): error PLY1101: parameter 'hexString' of 'Hex32ToDWords' has no supported JSDoc type
+Hex8ToBytes	OpCodes.js(2380,11): error PLY1102: 'typeof' is not supported yet
+Hex16ToWords	OpCodes.js(2405,11): error PLY1102: 'typeof' is not supported yet
+Hex32ToDWords	OpCodes.js(2430,11): error PLY1102: 'typeof' is not supported yet
 XorArrays	OpCodes.js(2460,9): error PLY1102: 'a call of result.push' is not supported yet
 CopyArray	OpCodes.js(2481,14): error PLY1105: 'CopyArray' holds both uint8[] and uint8[]
 ClearArray	OpCodes.js(2489,26): error PLY1101: parameter 'arr' of 'ClearArray' has no supported JSDoc type
@@ -120,9 +120,10 @@ BitMask	imported
 LFSRStepGeneric	OpCodes.js(3170,36): error PLY1102: 'uint32 where int32 is expected' is not supported yet
 XorArrayWithByte	imported
 GFMulGeneric	imported
-CreateUint32ArrayFromHex	OpCodes.js(3227,40): error PLY1101: parameter 'hexValues' of 'CreateUint32ArrayFromHex' has no supported JSDoc type
-CreateByteArrayFromHex	OpCodes.js(3250,38): error PLY1101: parameter 'hexValues' of 'CreateByteArrayFromHex' has no supported JSDoc type
-CreateUint64ArrayFromHex	OpCodes.js(3276,40): error PLY1101: parameter 'hexValues' of 'CreateUint64ArrayFromHex' has no supported JSDoc type
+CreateUint32ArrayFromHex	OpCodes.js(3236,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
+CreateByteArrayFromHex	OpCodes.js(2380,11): error PLY1102: 'typeof' is not supported yet
+CreateByteArrayFromHex	OpCodes.js(3259,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
+CreateUint64ArrayFromHex	OpCodes.js(3286,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
 Mul32	imported
 MulHi32	imported
 Add32	imported

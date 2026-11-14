@@ -1,0 +1,29 @@
+id: INTRINSICS.StrFromCodeUnits
+title: String of a range of code units
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrFromCodeUnits
+  group: String
+  typeParameters: []
+  parameters: [{name: units, type: "TYPES.u16[]"}, {name: start, type: TYPES.i32}, {name: length, type: TYPES.i32}]
+  returns: [{name: text, type: TYPES.str}]
+  legality:
+    - {id: range-in-array, text: "start and length are not negative and start + length is at most the length of units; otherwise it traps IndexOutOfRange", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the string of the code units units[start] to units[start + length - 1]; without start and length, of every element"
+    source: "the .NET API reference of System.String(Char[], Int32, Int32)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[97, 98, 99], 1, 2], outputs: [[98, 99]]}
+    - {types: {}, inputs: [[97, 98, 99], 3, 0], outputs: [[]]}
+    - {types: {}, inputs: [[55357, 56832], 0, 2], outputs: [[55357, 56832]]}

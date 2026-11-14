@@ -191,6 +191,13 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
     => value is ArrayExpression || value is NewExpression { Callee: Identifier { Name: var constructor } } && TypeInference.TypedArrays.ContainsKey(constructor);
 
   private static ModuleConstant? ConstantOf(string name, Node value) {
+    // A string, and a list of strings, which is a table of strings.
+    if (value is StringLiteral text)
+      return new ModuleConstant(name, JsType.String, IrModuleConst.OfStrings(name, IrType.String, [text.Value]));
+
+    if (value is ArrayExpression { Elements.Count: > 0 } texts && texts.Elements.All(item => item is StringLiteral))
+      return new ModuleConstant(name, JsType.ArrayOf(JsType.String, true), IrModuleConst.OfStrings(name, IrType.Array(IrType.String), [.. texts.Elements.Select(item => ((StringLiteral)item!).Value)]));
+
     if (Literal(value) is { } scalar)
       return scalar.Type.Ir is { } type ? new ModuleConstant(name, scalar.Type, new IrModuleConst(name, type, [Encode(scalar, type)!.Value])) : null;
 

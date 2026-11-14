@@ -353,7 +353,7 @@ public sealed class JavaScriptInferenceTests {
 
   /// <summary>What is no number and no table of numbers is no constant: its name is unknown to the functions.</summary>
   [TestCase("const C = 1 + 1;")]
-  [TestCase("const C = 'text';")]
+  [TestCase("const C = null;")]
   [TestCase("const C = new Map([1]);")]
   [TestCase("const C = 36893488147419103232n;")]
   [TestCase("(function () { const C = 1; })(); function C() { }")]

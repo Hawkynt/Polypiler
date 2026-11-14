@@ -152,6 +152,9 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         }
 
         break;
+      case ForOfStatement loop:
+        this.ForOf(loop);
+        break;
       case ReturnStatement result:
         model.Flows.Add(new Flow(FlowKind.Return, result));
         if (result.Argument is not null)
@@ -332,7 +335,35 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
     _ => null
   };
 
+  /// <summary>
+  /// A <c>for…of</c>: the iterable is read, then the variable declared, whose values are the code
+  /// points of a string; a variable iterated over is used as a string.
+  /// </summary>
+  private void ForOf(ForOfStatement loop) {
+    this.Expression(loop.Right);
+    if (loop.Right is Identifier iterated && model.Bindings.GetValueOrDefault(iterated) is Variable used)
+      used.UsedAsString ??= loop;
+
+    var outer = this._declared;
+    this._declared = [];
+    if (loop.Left is VariableDeclaration { Declarations: [{ Id: Identifier id }] } declaration && this.Declare(id, declaration, loop) is { } variable)
+      model.Flows.Add(new Flow(FlowKind.Assign, loop, variable));
+
+    this.Body(loop.Body);
+    this.Leave(outer);
+  }
+
+  /// <summary>The methods only a string has among the values of the subset; calling one on a variable uses it as a string.</summary>
+  public static readonly IReadOnlySet<string> StringMethods = new HashSet<string>(System.StringComparer.Ordinal) {
+    "charCodeAt", "charAt", "codePointAt", "substring", "startsWith", "endsWith", "trim", "trimStart", "trimEnd",
+    "padStart", "padEnd", "repeat", "replace", "replaceAll", "split", "localeCompare", "toUpperCase", "toLowerCase", "normalize"
+  };
+
   private void Call(CallExpression call) {
+    if (call.Callee is MemberExpression { Computed: false, Object: Identifier receiver, Property: Identifier { Name: var name } } access
+        && StringMethods.Contains(name) && this._scope.TryGetValue(receiver.Name, out var text))
+      text.UsedAsString ??= access;
+
     this.Expression(call.Callee);
     var builtin = this.Builtin(call);
     for (var index = 0; index < call.Arguments.Count; ++index) {
@@ -376,7 +407,7 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   /// <c>BigInt.asIntN</c> - or <see langword="null"/>. A local or a constant of the same name hides the library.
   /// </summary>
   public string? Library(MemberExpression member) => member switch {
-    { Computed: false, Object: Identifier { Name: "Math" or "Number" or "BigInt" } library, Property: Identifier property } when !model.Bindings.ContainsKey(library)
+    { Computed: false, Object: Identifier { Name: "Math" or "Number" or "BigInt" or "String" } library, Property: Identifier property } when !model.Bindings.ContainsKey(library)
       => $"{library.Name}.{property.Name}",
     _ => null
   };

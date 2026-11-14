@@ -337,7 +337,7 @@ public static class JavaScriptPrinter {
           this._text.Append(Spelled(big));
           break;
         case JsString text:
-          this._text.Append('"').Append(text.Value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal).Replace("\n", "\\n", StringComparison.Ordinal)).Append('"');
+          this._text.Append('"').Append(JavaScriptLiterals.Escape(text.Value)).Append('"');
           break;
         case JsBoolean truth:
           this._text.Append(truth.Value ? "true" : "false");
@@ -537,6 +537,28 @@ public static class JavaScriptPrinter {
 
 /// <summary>Reads the spelling of a JavaScript numeric literal (ECMA-262 §12.9.3), so that a spelling can be checked against a value.</summary>
 public static class JavaScriptLiterals {
+
+  /// <summary>
+  /// The text of a string literal without its quotes: a backslash and a quote escaped, a line feed as
+  /// <c>\n</c>, and every other code unit outside printable ASCII as <c>\uXXXX</c>, so that a file
+  /// holds every string - an unpaired surrogate too - in ASCII.
+  /// </summary>
+  /// <param name="value">The code units.</param>
+  /// <returns>The escaped text.</returns>
+  public static string Escape(string value) {
+    var text = new System.Text.StringBuilder(value.Length);
+    foreach (var unit in value)
+      if (unit is '\\' or '"')
+        text.Append('\\').Append(unit);
+      else if (unit == '\n')
+        text.Append("\\n");
+      else if (unit is < ' ' or > '~')
+        text.Append("\\u").Append(((int)unit).ToString("X4", System.Globalization.CultureInfo.InvariantCulture));
+      else
+        text.Append(unit);
+
+    return text.ToString();
+  }
 
   /// <summary>The value of a numeric literal, with an optional minus sign in front; <c>NaN</c> and <c>Infinity</c> count as literals.</summary>
   /// <param name="text">The spelling.</param>

@@ -1,0 +1,22 @@
+id: TYPES.str
+title: String of UTF-16 code units
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: "A value of str is an immutable, never null sequence of UTF-16 code units of any length; bits and layout describe one code unit. An unpaired surrogate is a code unit like any other. Two strings are equal when they have the same code units in the same order, and every comparison, search and split is by code unit. A literal of str in a spec document is the list of its code units."
+spec:
+  family: text
+  parameters: []
+  bits: 16
+  signedness: none
+  layout: {sizeBytes: 2, alignment: 2, byteOrder: target}
+  distinctFrom: []
+  values:
+    - {bits: "0x0041", value: "65"}
+    - {bits: "0xD83D", value: "55357"}
+    - {bits: "0xFEFF", value: "65279"}
