@@ -6,8 +6,8 @@ open and is cited by the issues that implement it.
 
 A record is `docs/adr/<nnnn>-<slug>.md`: a four-digit number and a lower-case hyphenated slug. The
 line after its title is `Area: <area>`. Numbers are allocated in blocks per area — 0001–0029 is the
-foundation block — and are never reused; a superseded record keeps its number and names its
-successor. The pull request that adds a record adds its row here, which is how a number is claimed.
+foundation block, the catalog block starts at 0030 — and are never reused; a superseded record keeps
+its number and names its successor. The pull request that adds a record adds its row here, which is how a number is claimed.
 Probe programs and recorded output a record measured live under `docs/adr/evidence/<nnnn>/`.
 
 | Number | Title | Status | Issue |
@@ -17,5 +17,6 @@ Probe programs and recorded output a record measured live under `docs/adr/eviden
 | [0003](0003-diagnostics-and-exit-codes.md) | Diagnostics registry, renderings and exit codes | accepted | [#17](https://github.com/Hawkynt/Polypiler/issues/17) |
 | [0004](0004-cli-design.md) | Command-line grammar, option naming and output conventions | accepted | [#16](https://github.com/Hawkynt/Polypiler/issues/16) |
 | [0005](0005-floating-point-tolerance.md) | Floating-point tolerance policy | accepted | [#18](https://github.com/Hawkynt/Polypiler/issues/18) |
+| [0030](0030-cipher-source-licence.md) | Cipher source licence and its lowest pin | accepted | [#588](https://github.com/Hawkynt/Polypiler/issues/588) |
 
 Related: [documentation index](../README.md) · [IR and analysis contracts](../architecture/IR.md) · [compilation pipeline](../architecture/PIPELINE.md).
