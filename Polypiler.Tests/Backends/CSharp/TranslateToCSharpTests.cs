@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Cli;
+using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
@@ -50,7 +51,7 @@ public sealed class TranslateToCSharpTests {
   public void Translate_WritesTheClassAndNamesIt() {
     var path = Path.Combine(this._out, "Adler32.cs");
     var (exitCode, output, error) = Invoke("translate", PrototypeFixture.PathOf("Adler32"), "--from", "csharp", "--to", "csharp", "--output", this._out);
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     Assert.That(output.Trim(), Is.EqualTo(path));
     Assert.That(Directory.GetFiles(this._out), Is.EqualTo(new[] { path }));
     var text = File.ReadAllText(path);
@@ -62,7 +63,7 @@ public sealed class TranslateToCSharpTests {
   [Test]
   public void Namespace_IsWrittenIntoTheFile() {
     var (exitCode, _, error) = Invoke("translate", "--namespace", "Demo.Checksums", PrototypeFixture.PathOf("Crc32"), "--to", "csharp", "--output", this._out, "--from", "csharp");
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     var text = File.ReadAllText(Path.Combine(this._out, "Crc32.cs"));
     Assert.That(text.Split('\n').First(line => line.Length > 0 && !line.StartsWith("//", StringComparison.Ordinal)), Is.EqualTo("namespace Demo.Checksums;"));
     Assert.That(GeneratedCSharp.Compile(text, false).ClassName, Is.EqualTo("Demo.Checksums.Crc32"));
@@ -71,8 +72,8 @@ public sealed class TranslateToCSharpTests {
   /// <summary>Test design 10: a command line that cannot be carried out is PLY0003, exit code 2, and writes nothing.</summary>
   [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript' and 'csharp'", TestName = "Misuse: unknown target")]
   [TestCase(new[] { "--to", "CSharp", "--output", "out" }, "unknown target language 'CSharp'", TestName = "Misuse: the target is case-sensitive")]
-  [TestCase(new[] { "--to", "csharp" }, "the option '--output' is missing", TestName = "Misuse: missing output")]
-  [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace" }, "the option '--namespace' needs a value", TestName = "Misuse: namespace without a value")]
+  [TestCase(new[] { "--to", "csharp" }, "option '--output' is required", TestName = "Misuse: missing output")]
+  [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace" }, "option '--namespace' requires a value", TestName = "Misuse: namespace without a value")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "" }, "'' is not a namespace name", TestName = "Misuse: empty namespace")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "2fast" }, "'2fast' is not a namespace name", TestName = "Misuse: namespace starting with a digit")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "Demo..Checksums" }, "'Demo..Checksums' is not a namespace name", TestName = "Misuse: namespace with an empty part")]
@@ -80,21 +81,20 @@ public sealed class TranslateToCSharpTests {
   [TestCase(new[] { "--to", "javascript", "--output", "out", "--namespace", "Demo" }, "the option '--namespace' does not apply to the target language 'javascript'", TestName = "Misuse: namespace for another target")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile", "net1.1" }, "unknown C# profile 'net1.1'; the profiles are 'net2.0', 'net3.5', 'net4.6', 'net4.8', 'netstandard2.0', 'netstandard2.1', 'netcoreapp3.1', 'net8.0', 'net10.0'", TestName = "Misuse: unknown profile")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile", "Net8.0" }, "unknown C# profile 'Net8.0'", TestName = "Misuse: the profile is case-sensitive")]
-  [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile" }, "the option '--profile' needs a value", TestName = "Misuse: profile without a value")]
+  [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile" }, "option '--profile' requires a value", TestName = "Misuse: profile without a value")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile", "net10.0", "--langversion", "7.3" }, "the C# profile 'net10.0' is written in C# 14 or later, not in C# 7.3", TestName = "Misuse: language version below the profile's")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile", "net4.8", "--langversion", "7.2" }, "the C# profile 'net4.8' is written in C# 7.3 or later, not in C# 7.2", TestName = "Misuse: language version just below the profile's")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--langversion", "13" }, "the C# profile 'net10.0' is written in C# 14 or later, not in C# 13", TestName = "Misuse: language version below the default profile's")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--langversion", "latest" }, "'latest' is not a C# language version; the versions are 1, 2, 3, 4, 5, 6, 7, 7.1, 7.2, 7.3, 8, 9, 10, 11, 12, 13, 14", TestName = "Misuse: language version that is none")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--langversion", "15" }, "'15' is not a C# language version", TestName = "Misuse: language version that does not exist yet")]
-  [TestCase(new[] { "--to", "csharp", "--output", "out", "--langversion" }, "the option '--langversion' needs a value", TestName = "Misuse: language version without a value")]
+  [TestCase(new[] { "--to", "csharp", "--output", "out", "--langversion" }, "option '--langversion' requires a value", TestName = "Misuse: language version without a value")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "2fast", "--profile", "net1.1" }, "'2fast' is not a namespace name", TestName = "Misuse: the namespace is judged before the profile")]
   [TestCase(new[] { "--to", "javascript", "--output", "out", "--langversion", "8" }, "the option '--langversion' does not apply to the target language 'javascript'", TestName = "Misuse: language version for another target")]
   public void Misuse_IsAUsageError(string[] arguments, string message) {
     string[] all = ["translate", PrototypeFixture.PathOf("Adler32"), "--from", "csharp", .. arguments.Select(argument => argument == "out" ? this._out : argument)];
     var (exitCode, output, error) = Invoke(all);
-    Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0003: " + message)
-      .And.Contain("usage: polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--opt <none|default>] [--disable-opt <O####>[,<O####>...]] [--explain-opt] [--export <name>[,<name>...]] [--explain-types] [--profile <name>] [--module <esm|cjs|iife>] [--global <name>] [--typed-arrays] [--float <strict|accurate>] [--namespace <name>] [--langversion <version>]"));
+    Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.UsageError, "")));
+    Assert.That(error, Does.StartWith("polypiler: error PLY0003: " + message).And.Not.Contain("usage:"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -131,7 +131,7 @@ public sealed class TranslateToCSharpTests {
     var source = Path.Combine(this._directory, "Snippet.cs");
     File.WriteAllText(source, PrototypeFixture.Wrap(methods));
     var (exitCode, output, error) = Invoke("translate", source, "--from", "csharp", "--to", "csharp", "--output", this._out);
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     var text = File.ReadAllText(output.Trim());
     foreach (var checking in new[] { false, true })
       Assert.That(GeneratedCSharp.Compile(text, checking).Method("F").Invoke(null, [argument]), Is.EqualTo(expected));
@@ -145,7 +145,7 @@ public sealed class TranslateToCSharpTests {
     var module = new IrModule("M", [new IrFunction("F", true, IrType.Void, [], [], new IrBlock([new Riddle()]))]);
     var (exitCode, output, error) = this.Emit(module);
     Assert.That((exitCode, TranslateCommand.UnsupportedConstruct, output), Is.EqualTo((3, 3, "")));
-    Assert.That(error.TrimEnd(), Is.EqualTo("error PLY1052: 'Riddle' is not supported by the C# backend yet"));
+    Assert.That(error.TrimEnd(), Is.EqualTo("polypiler: error PLY1052: 'Riddle' is not supported by the C# backend yet"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -164,11 +164,11 @@ public sealed class TranslateToCSharpTests {
     using var error = new StringWriter();
     var options = new Dictionary<string, string> { ["--output"] = this._out, ["--profile"] = "net4.8" };
     Assert.That(TranslateCommand.Emit(module, options, output, error, table), Is.EqualTo(TranslateCommand.UnsupportedConstruct).And.EqualTo(3));
-    Assert.That((output.ToString(), error.ToString().TrimEnd()), Is.EqualTo(("", "error PLY1053: 'BitOperations.RotateLeft(uint, int)' cannot be expressed in C# profile 'net4.8'")));
+    Assert.That((output.ToString(), error.ToString().TrimEnd()), Is.EqualTo(("", "polypiler: error PLY1053: 'BitOperations.RotateLeft(uint, int)' cannot be expressed in C# profile 'net4.8'")));
     Assert.That(Directory.Exists(this._out), Is.False);
 
     options["--profile"] = "netcoreapp3.1";
-    Assert.That(TranslateCommand.Emit(module, options, output, error, table), Is.EqualTo(Program.Success));
+    Assert.That(TranslateCommand.Emit(module, options, output, error, table), Is.EqualTo((int)ExitCode.Success));
     Assert.That(File.ReadAllText(output.ToString().Trim()), Does.Contain("global::System.Numerics.BitOperations.RotateLeft(a, 3)").And.Not.Contain("private"));
   }
 
@@ -180,7 +180,7 @@ public sealed class TranslateToCSharpTests {
     ]))]);
     var (exitCode, output, error) = this.Emit(module);
     Assert.That((exitCode, output), Is.EqualTo((TranslateCommand.InternalError, "")));
-    Assert.That(error, Does.StartWith("error PLY0100: ill-typed IR in 'F': Add is applied to i32 and bool"));
+    Assert.That(error, Does.StartWith("polypiler: error PLY0100: ill-typed IR in 'F': Add is applied to i32 and bool"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -188,28 +188,28 @@ public sealed class TranslateToCSharpTests {
   public void Emit_TakesTheNamespaceFromTheOptions() {
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap("public static int F() => 1;"));
     var (exitCode, output, error) = this.Emit(module, ("--namespace", "Demo"));
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     Assert.That(File.ReadAllText(output.Trim()), Does.Contain("\nnamespace Demo;\n"));
   }
 
-  /// <summary>An output directory that cannot exist, because a file has its name.</summary>
+  /// <summary>An output directory that cannot exist, because a file has its name: PLY0005, exit code 1.</summary>
   [Test]
-  public void OutputThatIsAFile_IsAUsageError() {
+  public void OutputThatIsAFile_IsAnEnvironmentError() {
     var blocked = Path.Combine(this._directory, "Snippet.cs");
     File.WriteAllText(blocked, PrototypeFixture.Wrap("public static int F() => 1;"));
     var (exitCode, output, error) = Invoke("translate", blocked, "--from", "csharp", "--to", "csharp", "--output", blocked);
-    Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0003: the output directory '").And.Contain("cannot be written"));
+    Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.EnvironmentError, "")));
+    Assert.That(error, Does.StartWith($"polypiler: error PLY0005: output path '{blocked}' cannot be created: "));
   }
 
   [Test]
   public void Help_NamesBothTargetsAndTheNamespaceOption()
-    => Assert.That(Invoke("--help").Output, Does.Contain(TranslateCommand.UsageLine).And.Contain("--to <javascript|csharp>").And.Contain("[--namespace <name>]"));
+    => Assert.That(Invoke("translate", "--help").Output, Does.Contain("usage: polypiler translate <file> [options]").And.Contain("  --to <javascript|csharp> ").And.Contain("  --namespace <name> "));
 
   /// <summary>The help names the two options that choose what the C# is written for.</summary>
   [Test]
   public void Help_NamesTheProfileOptions()
-    => Assert.That(Invoke("--help").Output, Does.Contain("[--profile <name>]").And.Contain("[--langversion <version>]"));
+    => Assert.That(Invoke("translate", "--help").Output, Does.Contain("  --profile <name> ").And.Contain("  --langversion <version> "));
 
   /// <summary>
   /// <c>--profile</c> and <c>--langversion</c> choose what the file is written for: it is the file
@@ -227,7 +227,7 @@ public sealed class TranslateToCSharpTests {
   public void Profile_IsTakenFromTheCommandLine(string? profile, string? languageVersion, string header) {
     string[] options = [.. profile is null ? [] : new[] { "--profile", profile }, .. languageVersion is null ? [] : new[] { "--langversion", languageVersion }];
     var (exitCode, output, error) = Invoke(["translate", PrototypeFixture.PathOf("wide/Library"), "--from", "csharp", "--to", "csharp", "--output", this._out, "--namespace", "Demo", .. options]);
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     var text = File.ReadAllText(output.Trim());
     var parsed = CSharpProfile.Parse(profile ?? "net10.0", languageVersion);
     Assert.That(text, Does.Contain($"\n// Profile: {header}.\n"));
@@ -239,7 +239,7 @@ public sealed class TranslateToCSharpTests {
   [Test]
   public void JavaScript_IsWrittenForAProfile() {
     var (exitCode, output, error) = Invoke("translate", JavaScriptFixture.OpCodesPath, "--from", "javascript", "--to", "csharp", "--output", this._out, "--export", "RotL32", "--profile", "net2.0");
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     var text = File.ReadAllText(output.Trim());
     Assert.That(text, Does.Contain("\n// Profile: net2.0, C# 2.\n").And.Not.Contain("=>").And.Not.Contain("var "));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty);
@@ -252,7 +252,7 @@ public sealed class TranslateToCSharpTests {
   public void Emit_TakesTheProfileFromTheOptions() {
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap("public static uint F(uint a) => System.Numerics.BitOperations.RotateLeft(a, 3);"));
     var (exitCode, output, error) = this.Emit(module, ("--profile", "net4.6"), ("--langversion", "7.3"));
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     Assert.That(File.ReadAllText(output.Trim()), Does.Contain("\n// Profile: net4.6, C# 7.3.\n").And.Contain("private static uint RotateLeft(uint value, int count) {"));
   }
 

@@ -3,7 +3,9 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Cli;
+using Polypiler.Core;
 using Polypiler.Prototype.Testing;
+using Polypiler.Tests.Prototype;
 
 namespace Polypiler.Tests.Frontends.JavaScript;
 
@@ -46,7 +48,7 @@ public sealed class JavaScriptTranslateCommandTests {
     var source = JavaScriptFixture.PathOf("adler32");
     var path = Path.Combine(this._out, "adler32.mjs");
     var (exitCode, output, error) = Invoke("translate", source, "--from", "javascript", "--to", "javascript", "--output", this._out);
-    Assert.That((exitCode, output.Trim()), Is.EqualTo((Program.Success, path)));
+    Assert.That((exitCode, output.Trim()), Is.EqualTo(((int)ExitCode.Success, path)));
     Assert.That(File.ReadAllText(path), Does.Contain("export function compute(data) {"));
     Assert.That(error.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => line[..line.IndexOf(':', source.Length + 1)]), Is.EqualTo(new[] {
       source + ": note js-oob-read"
@@ -66,7 +68,7 @@ public sealed class JavaScriptTranslateCommandTests {
   public void ExplainTypes_PrintsEveryTypeWithItsEvidence() {
     var path = Path.Combine(this._directory, "snippet.js");
     var (exitCode, output, error) = this.Translate("function f(a, b) {\n  let x = 0;\n  x = (a ^ b) >>> 0;\n  return x / 2;\n}", "--explain-types");
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, $"{path}: note js-param-integer-inferred: a parameter without a JSDoc type that its function reads only "
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, $"{path}: note js-param-integer-inferred: a parameter without a JSDoc type that its function reads only "
       + "under ToInt32 or ToUint32 is that 32-bit integer; JavaScript coerces whatever number is passed, the imported function takes the integer: f(a, b)" + Environment.NewLine)));
     Assert.That(output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => line.TrimEnd('\r')), Is.EqualTo(new[] {
       $"{path}: type f: parameter a: i32 from 'a ^ b' at (3,8)",
@@ -83,13 +85,14 @@ public sealed class JavaScriptTranslateCommandTests {
 
   /// <summary>
   /// <c>--export</c> picks functions out of a file that does not import as a whole; the names are
-  /// separated by commas, and what the functions do not use is not noted.
+  /// separated by commas or given by repeating the option, and what the functions do not use is not noted.
   /// </summary>
   [TestCase("RotL32,RotR32")]
-  [TestCase(" RotR32 , RotL32,")]
-  public void Translate_ExportsTheNamedFunctions(string names) {
-    var (exitCode, _, error) = Invoke("translate", "--export", names, JavaScriptFixture.OpCodesPath, "--from", "javascript", "--to", "javascript", "--output", this._out);
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+  [TestCase(" RotR32 , RotL32")]
+  [TestCase("RotL32", "--export", "RotR32")]
+  public void Translate_ExportsTheNamedFunctions(params string[] names) {
+    var (exitCode, _, error) = Invoke(["translate", "--export", .. names, JavaScriptFixture.OpCodesPath, "--from", "javascript", "--to", "javascript", "--output", this._out]);
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     var module = File.ReadAllText(Path.Combine(this._out, "OpCodes.mjs"));
     Assert.That(module.Split('\n').Where(line => line.StartsWith("export function ", StringComparison.Ordinal)),
       Is.EqualTo(new[] { "export function RotL32(value, positions) {", "export function RotR32(value, positions) {" }));
@@ -102,7 +105,7 @@ public sealed class JavaScriptTranslateCommandTests {
   [Test]
   public void Translate_WritesCSharpFromJavaScript() {
     var (exitCode, _, error) = Invoke("translate", JavaScriptFixture.OpCodesPath, "--from", "javascript", "--to", "csharp", "--output", this._out, "--export", "RotL32", "--namespace", "Cipher");
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     var text = File.ReadAllText(Path.Combine(this._out, "OpCodes.cs"));
     Assert.That(text, Does.Contain("namespace Cipher;").And.Contain("public static uint RotL32(uint value, int positions) {"));
     foreach (var checking in new[] { false, true }) {
@@ -125,32 +128,43 @@ public sealed class JavaScriptTranslateCommandTests {
   public void RefusedSource_IsExitCode3Or4AndWritesNothing(string source, string[] further, int expected, string message) {
     var (exitCode, output, error) = this.Translate(source, further);
     Assert.That((exitCode, output), Is.EqualTo((expected, "")));
-    Assert.That(error, Does.Match(@"^.*snippet\.js\(1,\d+\): error " + System.Text.RegularExpressions.Regex.Escape(message) + @"\r?\n$"));
+    Assert.That(error, Does.Match(@"^.*snippet\.js\(1,\d+\): error " + System.Text.RegularExpressions.Regex.Escape(message) + @"\r?\npolypiler: 1 error\(s\), 0 warning\(s\)\r?\n$"));
     Assert.That(Directory.Exists(this._out), Is.False);
     Assert.That((TranslateCommand.InvalidSource, TranslateCommand.UnsupportedConstruct), Is.EqualTo((4, 3)));
   }
 
   /// <summary>A command line that cannot be carried out is PLY0003, exit code 2, and names what exists.</summary>
-  [TestCase(new[] { "A.js", "--from", "javascript", "--to", "javascript", "--output", "out", "--export" }, "the option '--export' needs a value", TestName = "Misuse: --export without value")]
+  [TestCase(new[] { "A.js", "--from", "javascript", "--to", "javascript", "--output", "out", "--export" }, "option '--export' requires a value", TestName = "Misuse: --export without value")]
   [TestCase(new[] { "A.js", "--from", "javascript", "--to", "javascript", "--output", "out", "--export", " , " }, "the option '--export' names no function", TestName = "Misuse: --export without a name")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output", "out", "--export", "F" }, "the option '--export' does not apply to the source language 'csharp'", TestName = "Misuse: --export for C#")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output", "out", "--explain-types" }, "the option '--explain-types' does not apply to the source language 'csharp'", TestName = "Misuse: --explain-types for C#")]
-  [TestCase(new[] { "A.js", "--explain-types", "B.js", "--from", "javascript", "--to", "javascript", "--output", "out" }, "more than one source file: 'A.js' and 'B.js'", TestName = "Misuse: --explain-types takes no value")]
+  [TestCase(new[] { "A.js", "--explain-types", "B.js", "--from", "javascript", "--to", "javascript", "--output", "out" }, "unexpected argument 'B.js'", TestName = "Misuse: --explain-types takes no value")]
   [TestCase(new[] { "A.js", "--from", "typescript", "--to", "javascript", "--output", "out" }, "unknown source language 'typescript'; the prototype reads 'csharp' and 'javascript'", TestName = "Misuse: unknown --from names the sources")]
   [TestCase(new[] { "A.js", "--from", "javascript", "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript' and 'csharp'", TestName = "Misuse: unknown --to names the targets")]
-  [TestCase(new[] { "missing.js", "--from", "javascript", "--to", "javascript", "--output", "out" }, "the source file 'missing.js' cannot be read", TestName = "Misuse: unreadable JavaScript file")]
   public void Misuse_IsAUsageError(string[] arguments, string message) {
     var (exitCode, output, error) = Invoke(arguments.Prepend("translate").ToArray());
-    Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0003: " + message).And.Contain("usage: " + TranslateCommand.UsageLine));
+    Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.UsageError, "")));
+    // A refusal of the grammar is the one line; a command that ran and refused ends with the tally line (issue #23).
+    var tally = TranslateCommandTests.OfTheGrammar(message) ? "" : "polypiler: 1 error(s), 0 warning(s)" + Environment.NewLine;
+    Assert.That(error, Is.EqualTo("polypiler: error PLY0003: " + message + Environment.NewLine + tally));
   }
 
-  /// <summary>The help and the usage line name every language the command takes, and <c>--export</c>.</summary>
+  /// <summary>A source file that cannot be read is PLY0004, exit code 1.</summary>
   [Test]
-  public void UsageLine_NamesTheLanguagesAndTheExportOption() {
-    Assert.That(TranslateCommand.UsageLine, Is.EqualTo(
-      "polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--opt <none|default>] [--disable-opt <O####>[,<O####>...]] [--explain-opt] [--export <name>[,<name>...]] [--explain-types] [--profile <name>] [--module <esm|cjs|iife>] [--global <name>] [--typed-arrays] [--float <strict|accurate>] [--namespace <name>] [--langversion <version>]"));
-    Assert.That(Invoke("--help").Output, Does.Contain(TranslateCommand.UsageLine).And.Contain("small subsets of its languages"));
+  public void UnreadableFile_IsPly0004() {
+    var (exitCode, output, error) = Invoke("translate", "missing.js", "--from", "javascript", "--to", "javascript", "--output", "out");
+    Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.EnvironmentError, "")));
+    Assert.That(error, Is.EqualTo("polypiler: error PLY0004: input 'missing.js' does not exist or is not readable" + Environment.NewLine + "polypiler: 1 error(s), 0 warning(s)" + Environment.NewLine));
+  }
+
+  /// <summary>The help names every language the command takes, and <c>--export</c>.</summary>
+  [Test]
+  public void Help_NamesTheLanguagesAndTheExportOption() {
+    var help = Invoke("translate", "--help").Output;
+    Assert.That(help, Does.Contain("usage: polypiler translate <file> [options]").And.Contain("small subsets of its languages"));
+    Assert.That(help, Does.Contain("  --from <csharp|javascript> ").And.Contain("  --to <javascript|csharp> ").And.Contain("  --output <directory> ")
+      .And.Contain("  --export <name>[,<name>...] ").And.Contain("  --disable-opt <O####>[,<O####>...] ").And.Contain("  --explain-types "));
+    Assert.That(Invoke("--help").Output, Does.Contain("  translate  translate a source file").And.Contain("small subsets of its languages"));
   }
 
 }

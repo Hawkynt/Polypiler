@@ -1,0 +1,17 @@
+id: LANGUAGES.typescript
+title: TypeScript
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#54"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: language
+  identifier: typescript
+  displayName: TypeScript
+  backlogCode: TS
+  diagnosticBlock: 1100

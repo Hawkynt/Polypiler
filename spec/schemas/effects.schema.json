@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/effects.schema.json",
+  "title": "Polypiler spec family 'effects'",
+  "description": "The body under 'spec' of a document in spec/effects/: one effect class and what an optimizer may do with an operation that has it. Every permission is stated, each defaulting to its restrictive value, and no value means 'no effect'. Rules the schema cannot state (PLY0046): layout, single-default, default-is-conservative, volatile-is-strict, write-implies-order, unique-name.",
+  "type": "object",
+  "required": ["name", "class", "ordering", "duplication", "elimination", "reads", "writes", "mayTrap", "defaultForUnknown", "targets"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "The effect's name; equals the file name without '.yaml' (layout)."
+    },
+    "class": {
+      "enum": ["unknown-call", "volatile", "mmio", "device-io", "external-memory", "code-write", "mixed-asm", "trap", "allocation", "private-memory"],
+      "description": "The effect class. unknown-call, volatile, mmio, device-io and code-write are always strict, never duplicated and never eliminated (volatile-is-strict)."
+    },
+    "ordering": {
+      "enum": ["strict", "within-region", "free"],
+      "default": "strict",
+      "description": "strict: program order is kept; within-region: reorderable against operations on other regions; free: reorderable at will."
+    },
+    "duplication": {
+      "enum": ["forbidden", "allowed"],
+      "default": "forbidden",
+      "description": "Whether an operation with this effect may run more often than the program says."
+    },
+    "elimination": {
+      "enum": ["forbidden", "if-unobserved", "allowed"],
+      "default": "forbidden",
+      "description": "Whether an operation with this effect may be removed: never, only while nothing observes it, or whenever its result is unused."
+    },
+    "reads": {
+      "$ref": "#/$defs/regions",
+      "description": "The region kinds an operation with this effect reads."
+    },
+    "writes": {
+      "$ref": "#/$defs/regions",
+      "description": "The region kinds an operation with this effect writes; an effect that writes anything is not free (write-implies-order)."
+    },
+    "mayTrap": {
+      "type": "boolean",
+      "description": "Whether an operation with this effect can trap."
+    },
+    "defaultForUnknown": {
+      "type": "boolean",
+      "description": "True for exactly one document (single-default): the effect of every operation without a described effect."
+    },
+    "targets": {
+      "type": "object",
+      "required": ["unsupported"],
+      "additionalProperties": false,
+      "properties": {
+        "unsupported": {
+          "type": "string",
+          "pattern": "^PLY[0-9]{4}$",
+          "description": "The diagnostic a target that cannot honour this effect raises instead of dropping the operation."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "regions": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["registers", "flags", "stack", "heap", "globals", "io", "code", "unknown"]
+      }
+    }
+  }
+}

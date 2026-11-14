@@ -1,0 +1,31 @@
+id: TYPES.f32
+title: IEEE 754 binary32 floating-point number
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-FLOAT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: float
+  parameters: []
+  bits: 32
+  signedness: signed
+  rounding: [nearest-even]
+  nan: quiet-and-signaling
+  subnormals: true
+  layout: {sizeBytes: 4, alignment: 4, byteOrder: target}
+  distinctFrom: [TYPES.mbf32]
+  values:
+    - {bits: "0x00000000", value: "0"}
+    - {bits: "0x80000000", value: "-0"}
+    - {bits: "0x3F800000", value: "1"}
+    - {bits: "0xBF800000", value: "-1"}
+    - {bits: "0x00000001", value: "0.00000000000000000000000000000000000000000000140129846432481707092372958328991613128026194187651577175706828388979108268586060148663818836212158203125"}
+    - {bits: "0x7F7FFFFF", value: "340282346638528859811704183484516925440"}
+    - {bits: "0x7F800000", value: "+Infinity"}
+    - {bits: "0xFF800000", value: "-Infinity"}
+    - {bits: "0x7FC00000", value: "NaN"}

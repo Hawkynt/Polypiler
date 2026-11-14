@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/permutations.schema.json",
+  "title": "Polypiler spec family 'permutations'",
+  "description": "The body under 'spec' of a document in spec/permutations/ (PRD §4.1, §23): a bit mapping, a synthesis grammar or a CPU cost table. Rules the schema cannot state (PLY0046): layout, index-in-range, bijective-consistent, vector-consistent, vector-width, cost-evidence, unique-primitive; a grammar's 'target' names an existing TARGETS document (PLY0043).",
+  "type": "object",
+  "required": ["kind"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "enum": ["mapping", "grammar", "cost"] },
+    "inputWidth": { "type": "integer", "minimum": 1, "maximum": 4096, "description": "The number of input bits." },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4096,
+      "items": { "$ref": "#/$defs/output" },
+      "description": "One entry per output bit, least significant first."
+    },
+    "bijective": { "type": "boolean", "description": "The document's claim that the mapping is a permutation of the input bits." },
+    "vectors": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["input", "output"],
+        "additionalProperties": false,
+        "properties": {
+          "input": { "$ref": "#/$defs/hex" },
+          "output": { "$ref": "#/$defs/hex" },
+          "mask": { "$ref": "#/$defs/hex", "description": "The output bits that are compared; all of them when absent." }
+        }
+      }
+    },
+    "target": { "type": "string", "pattern": "^TARGETS\\.", "description": "The TARGETS document the grammar is for; absent means target-neutral." },
+    "primitives": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/primitive" }
+    },
+    "maxDepth": { "type": "integer", "minimum": 1, "maximum": 64, "description": "The longest candidate network." },
+    "cpu": { "type": "string", "minLength": 1, "description": "The CPU preset name." },
+    "costs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["primitive", "cycles"],
+        "additionalProperties": false,
+        "properties": {
+          "primitive": { "$ref": "#/$defs/primitive" },
+          "cycles": { "type": "integer", "minimum": 0 },
+          "bytes": { "type": "integer", "minimum": 1, "description": "Absent means not known; never 0." }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["kind", "reference"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["measured", "documented"] },
+        "reference": { "type": "string", "description": "A file under docs/benchmarks/ when measured, the manual citation when documented." }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "mapping" } } },
+      "then": {
+        "required": ["inputWidth", "outputs", "bijective", "vectors"],
+        "properties": { "target": false, "primitives": false, "maxDepth": false, "cpu": false, "costs": false, "evidence": false },
+        "allOf": [
+          {
+            "if": { "required": ["outputs"], "properties": { "outputs": { "contains": { "type": "object", "required": ["dontCare"] } } } },
+            "then": { "properties": { "vectors": { "items": { "required": ["mask"] } } } }
+          }
+        ]
+      }
+    },
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "grammar" } } },
+      "then": {
+        "required": ["primitives", "maxDepth"],
+        "properties": { "inputWidth": false, "outputs": false, "bijective": false, "vectors": false, "cpu": false, "costs": false, "evidence": false }
+      }
+    },
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "cost" } } },
+      "then": {
+        "required": ["cpu", "costs", "evidence"],
+        "properties": { "inputWidth": false, "outputs": false, "bijective": false, "vectors": false, "target": false, "primitives": false, "maxDepth": false }
+      }
+    }
+  ],
+  "$defs": {
+    "hex": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{1,1024}$" },
+    "output": {
+      "description": "An input bit index (the input bit that lands on this output bit) or an object with exactly one key: 'not' (that input bit, inverted), 'const' (a constant bit) or 'dontCare' (an unconstrained bit, excluded from every comparison). One schema rather than a oneOf, so a wrong entry gets one message.",
+      "type": ["integer", "object"],
+      "minimum": 0,
+      "maximum": 4095,
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "not": { "type": "integer", "minimum": 0, "maximum": 4095 },
+        "const": { "enum": [0, 1] },
+        "dontCare": { "const": true }
+      }
+    },
+    "primitive": {
+      "enum": ["shift", "rotate", "and", "or", "xor", "not", "multiply", "pext", "pdep", "byte-swap", "byte-shuffle", "lookup-table", "bit-test", "bit-reverse", "rotate-mask", "bit-field-insert", "bit-field-extract"]
+    }
+  }
+}

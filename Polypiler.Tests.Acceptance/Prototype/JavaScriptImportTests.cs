@@ -66,9 +66,11 @@ public sealed class JavaScriptImportTests {
       .Where(status => status != JavaScriptFixture.Imported)
       .Distinct();
     var reported = output.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+      .Where(line => line.Contains("OpCodes.js(", StringComparison.Ordinal))
       .Select(line => line[line.IndexOf("OpCodes.js(", StringComparison.Ordinal)..].TrimEnd('\r'));
     Assert.That(exitCode, Is.EqualTo(3));
     Assert.That(reported, Is.SupersetOf(expected));
+    Assert.That(output.TrimEnd().Split('\n')[^1].TrimEnd('\r'), Does.Match(@"^polypiler: \d+ error\(s\), \d+ warning\(s\)$"));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 

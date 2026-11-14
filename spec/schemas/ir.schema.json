@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/ir.schema.json",
+  "title": "Polypiler spec family 'ir'",
+  "description": "The body under 'spec' of a document in spec/ir/ (PRD §4.1-§4.3, ADR 0001): an IR operation (spec/ir/operations/<mnemonic in lower case>.yaml), an IR stage (spec/ir/stages/<name>.yaml) or the IR version (spec/ir/version.yaml); 'kind' selects which. Rules the schema cannot state (PLY0046): layout, stage-range, example-arity, flag-declared, trap-declared, type-declared, unique-mnemonic, unique-stage-order; every stage, effect and TYPES. id names an existing spec document (PLY0043).",
+  "type": "object",
+  "required": ["kind"],
+  "properties": {
+    "kind": { "enum": ["operation", "stage", "version"] }
+  },
+  "allOf": [
+    { "if": { "required": ["kind"], "properties": { "kind": { "const": "operation" } } }, "then": { "$ref": "#/$defs/operation" } },
+    { "if": { "required": ["kind"], "properties": { "kind": { "const": "stage" } } }, "then": { "$ref": "#/$defs/stage" } },
+    { "if": { "required": ["kind"], "properties": { "kind": { "const": "version" } } }, "then": { "$ref": "#/$defs/version" } }
+  ],
+  "$defs": {
+    "operation": {
+      "type": "object",
+      "required": ["kind", "mnemonic", "category", "typeParameters", "operands", "result", "flags", "effects", "traps", "stages", "examples"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "operation" },
+        "mnemonic": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$", "description": "PascalCase; unique across the family; the file name is its lower case." },
+        "category": { "enum": ["arithmetic", "bitwise", "shift", "comparison", "conversion", "memory", "control", "call", "exception", "effect", "sequence", "vector"] },
+        "typeParameters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "constraint"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "$ref": "#/$defs/typeParameterName" },
+              "constraint": { "enum": ["integer", "float", "boolean", "pointer", "any"] }
+            }
+          }
+        },
+        "operands": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "required": ["name", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+              "type": { "$ref": "#/$defs/type" }
+            }
+          }
+        },
+        "result": {
+          "description": "null for an operation that produces no value.",
+          "type": ["object", "null"],
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": { "type": { "$ref": "#/$defs/type" } }
+        },
+        "flags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "description": "The bracketed variants, Shl.u32[mask]; every example names one when the list is not empty."
+        },
+        "effects": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "if": { "const": "pure" },
+            "else": { "type": "string", "pattern": "^EFFECTS\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$" }
+          },
+          "if": { "contains": { "const": "pure" } },
+          "then": { "maxItems": 1 },
+          "description": "pure, or one or more EFFECTS. ids; pure excludes every other entry."
+        },
+        "traps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["when", "kind"],
+            "additionalProperties": false,
+            "properties": {
+              "when": { "type": "string", "minLength": 1 },
+              "kind": { "$ref": "#/$defs/trapKind" }
+            }
+          }
+        },
+        "stages": {
+          "type": "object",
+          "required": ["from", "to"],
+          "additionalProperties": false,
+          "properties": {
+            "from": { "$ref": "#/$defs/stageId" },
+            "to": { "$ref": "#/$defs/stageId" }
+          },
+          "description": "The operation is legal from 'from' to 'to', both inclusive."
+        },
+        "examples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["operands"],
+            "additionalProperties": false,
+            "properties": {
+              "flag": { "type": "string" },
+              "operands": { "type": "array", "items": { "$ref": "#/$defs/literal" } },
+              "result": { "$ref": "#/$defs/literal" },
+              "trap": { "$ref": "#/$defs/trapKind" }
+            },
+            "if": { "required": ["result"] },
+            "then": { "properties": { "trap": false } },
+            "else": { "required": ["trap"] },
+            "description": "Ends in exactly one of 'result' and 'trap'."
+          }
+        }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "required": ["kind", "order", "invariants"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "stage" },
+        "order": { "type": "integer", "minimum": 1, "maximum": 999, "description": "The sort key of the stage sequence; unique; ADR 0001 fixes each stage's value." },
+        "invariants": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "description": "Unique within the stage." },
+              "text": { "type": "string", "pattern": "\\S" }
+            }
+          }
+        }
+      }
+    },
+    "version": {
+      "type": "object",
+      "required": ["kind", "irVersion", "serializationVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "version" },
+        "irVersion": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "serializationVersion": { "type": "integer", "minimum": 1, "maximum": 2147483647 }
+      }
+    },
+    "typeParameterName": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
+    "type": {
+      "type": "string",
+      "pattern": "^([A-Z][A-Za-z0-9]*|TYPES\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*)$",
+      "description": "A type parameter of the operation, or the id of a TYPES. document."
+    },
+    "stageId": { "type": "string", "pattern": "^IR\\.stage\\.[a-z0-9][a-z0-9-]*$" },
+    "trapKind": { "enum": ["overflow", "divide-by-zero", "bounds", "null", "invalid-shift", "unreachable"] },
+    "literal": {
+      "description": "A hexadecimal string, 0x followed by hex digits, or a decimal integer.",
+      "if": { "type": "string" },
+      "then": { "pattern": "^0x[0-9A-Fa-f]+$" },
+      "else": { "type": "integer" }
+    }
+  }
+}

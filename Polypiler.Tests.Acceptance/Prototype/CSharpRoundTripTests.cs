@@ -40,7 +40,7 @@ public sealed class CSharpRoundTripTests {
 
   /// <summary>Test design 10, with the real executable: a usage error is exit code 2 and writes nothing.</summary>
   [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'")]
-  [TestCase(new[] { "--to", "csharp" }, "the option '--output' is missing")]
+  [TestCase(new[] { "--to", "csharp" }, "option '--output' is required")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "2fast" }, "'2fast' is not a namespace name")]
   public void Misuse_IsAUsageError(string[] arguments, string message) {
     File.Copy(PrototypeFixture.PathOf("Adler32"), Path.Combine(this._directory, "Adler32.cs"));

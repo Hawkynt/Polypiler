@@ -1,0 +1,15 @@
+id: BINARY.c64-prg.format
+title: Commodore 64 program file header
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-BINARY
+tests: []
+introducedIn: P3
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: format
+  fields:
+    - {name: loadAddress, offset: 0, size: 2, meaning: the address the bytes after the header are loaded to}

@@ -159,7 +159,7 @@ public static partial class CSharpEmitter {
         foreach (var part in Expressions(row.Rewrite!((IrIntrinsic)expression)).Where(IsTabled))
           Ask(part);
       else if (!row.IsIn(profile) && row.Replacement is null)
-        problems.Add(new Diagnostic(Inexpressible, DiagnosticSeverity.Error, $"'{row.Name}' cannot be expressed in C# profile '{profile.Name}'"));
+        problems.Add(InexpressibleDescriptor.At($"'{row.Name}' cannot be expressed in C# profile '{profile.Name}'"));
     }
 
     foreach (var expression in module.Functions.SelectMany(function => Expressions(function.Body)).Where(IsTabled))
@@ -168,7 +168,7 @@ public static partial class CSharpEmitter {
     return problems.Distinct().ToList();
   }
 
-  private static Diagnostic Unknown(string what) => new(Unsupported, DiagnosticSeverity.Error, $"'{what}' is not supported by the C# backend yet");
+  private static Diagnostic Unknown(string what) => UnsupportedDescriptor.At($"'{what}' is not supported by the C# backend yet");
 
   /// <summary>Whether a text is a namespace name: identifiers separated by dots.</summary>
   /// <param name="name">The text.</param>

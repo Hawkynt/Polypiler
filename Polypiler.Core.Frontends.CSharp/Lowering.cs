@@ -144,9 +144,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
   private void Report(UnsupportedException unsupported) {
     var position = unsupported.Node.GetLocation().GetLineSpan().StartLinePosition;
-    this._diagnostics.Add(new Diagnostic(
-      CSharpFrontend.Unsupported,
-      DiagnosticSeverity.Error,
+    this._diagnostics.Add(CSharpFrontend.UnsupportedDescriptor.At(
       $"'{unsupported.What}' is not supported yet",
       path,
       position.Line + 1,

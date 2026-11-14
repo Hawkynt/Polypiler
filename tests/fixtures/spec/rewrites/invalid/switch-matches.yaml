@@ -1,0 +1,32 @@
+id: REWRITES.O0001
+title: Multiply by a power of two becomes a left shift
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-REWRITES
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  optimization: O0001
+  kind: strength-reduce
+  before: "%r = Mul.u32[wrap] %x, 8"
+  after: "%r = Shl.u32[strict] %x, 3"
+  predicates: []
+  proof:
+    class: smt-bitvector
+    widths: [8, 16, 32, 64]
+    budgetSeconds: 5
+  floatingPoint:
+    touchesFloat: false
+    reassociates: false
+    contracts: false
+  negativeFixtures: [tests/fixtures/optimize/o0001/checked-multiply.pir]
+  switch: "--disable-opt O0002"
+  optLevels: [balanced, speed, size]
+  interactions:
+    after: []
+    enables: []
+  document: docs/optimizations/O0001-multiply-to-shift.md

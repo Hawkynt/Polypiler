@@ -1,0 +1,26 @@
+id: LANGUAGES.csharp.netcoreapp3.1
+title: "C# 8 on .NET Core 3.1"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#54"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.csharp
+  languageVersion: "C# 8"
+  toolchain: ref-netcoreapp3-1
+  evaluationOrder: left-to-right
+  integerOverflow: {signed: wrap, unsigned: wrap}
+  divisionRounding: truncate
+  remainderSign: dividend
+  shiftAmount: masked
+  stringEncoding: utf-16
+  exceptions: structured
+  memoryModel: managed
+  defaultRuntime: dotnet
+  constructs: []

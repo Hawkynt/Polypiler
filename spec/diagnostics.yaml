@@ -71,7 +71,7 @@ codes:
     rule: adr-0003.internal-error
     area: infrastructure
     owner: ADR-DIAGNOSTICS
-    surfaces: "any command, for an exception nothing anticipated; its presence makes the exit code 70 whatever else was reported"
+    surfaces: "any command, for an exception nothing anticipated, and as \"command '<name>' returned <n> without a diagnostic\" for a command that fails without reporting an error; its presence makes the exit code 70 whatever else was reported"
   - code: PLY0002
     severity: error
     exit: UsageError
@@ -80,7 +80,7 @@ codes:
     rule: adr-0004.grammar
     area: infrastructure
     owner: CLI-FOUNDATION
-    reserved: true
+    surfaces: "standard error of polypiler, alone, for a command name no command is registered under, also as the word of 'help <word>' or before --help"
   - code: PLY0003
     severity: error
     exit: UsageError
@@ -89,7 +89,7 @@ codes:
     rule: adr-0004.grammar
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: "standard error of polypiler translate, followed by the usage line, for an unknown option or language, an option without its value, a missing operand or option, a value outside its set, a source file that cannot be read or an output directory that cannot be written; standard error of polypiler-tooling toolchains, diagnostics and fuzz as '<command>: error PLY0003: <reason>', for fuzz also an unknown target and a corpus directory that is missing or empty"
+    surfaces: "standard error of polypiler, alone, for a command line the grammar of ADR 0004 refuses (unknown option, option without its value, flag given a value, option given more than once, value outside its set, empty list element, missing required option, missing or surplus operand, no command), and of polypiler translate for a language it does not know or an option that does not apply to the languages chosen; standard error of polypiler-tooling toolchains, diagnostics and fuzz as '<command>: error PLY0003: <reason>', for fuzz also an unknown target and a corpus directory that is missing or empty"
   - code: PLY0004
     severity: error
     exit: EnvironmentError
@@ -98,16 +98,16 @@ codes:
     rule: io.read
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: standard error of polypiler-tooling toolchains validate and probe
+    surfaces: "standard error of polypiler-tooling toolchains validate and probe; standard error of polypiler as \"input '<path>' does not exist or is not readable\" for an input of the command line"
   - code: PLY0005
     severity: error
     exit: EnvironmentError
     title: output not writable
-    message: "the output directory '<path>' cannot be written: <reason>"
+    message: "output directory '<path>' is not empty; pass --force to write into it"
     rule: io.write
     area: infrastructure
     owner: CLI-FOUNDATION
-    surfaces: "standard error of polypiler-tooling fuzz run and fuzz minimize, after the PLY0070 of a finding whose record under artifacts/fuzz/<target>/ cannot be written"
+    surfaces: "standard error of polypiler for an output directory that is not empty without --force, and as \"output path '<path>' cannot be created: <reason>\" for one that is a file or cannot be created or written; standard error of polypiler-tooling report errors as \"the output directory '<path>' cannot be written: <reason>\" when the output directory cannot be created or a page cannot be written or deleted; standard error of polypiler-tooling fuzz run and fuzz minimize, in that form too, after the PLY0070 of a finding whose record under artifacts/fuzz/<target>/ cannot be written"
   - code: PLY0006
     severity: error
     exit: UsageError
@@ -152,11 +152,11 @@ codes:
     severity: error
     exit: UsageError
     title: exclusive options
-    message: "the options '<first>' and '<second>' exclude each other"
+    message: "options '<first>' and '<second>' cannot be combined"
     rule: adr-0004.grammar
     area: infrastructure
     owner: CLI-FOUNDATION
-    reserved: true
+    surfaces: "standard error of polypiler, alone, for two options a command declares exclusive"
   - code: PLY0012
     severity: error
     exit: UsageError
@@ -382,41 +382,46 @@ codes:
     exit: EnvironmentError
     title: spec schema violation
     message: "<json pointer>: <schema keyword message>"
+    rule: spec.schema
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0040: <message>', or one JSON line with --diagnostics json"
   - code: PLY0041
     severity: error
     exit: EnvironmentError
     title: spec metadata rule violated
     message: "<reason>"
+    rule: spec.metadata
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0041: <message>', or one JSON line with --diagnostics json"
   - code: PLY0042
     severity: error
     exit: EnvironmentError
     title: duplicate spec id
     message: "duplicate spec id '<id>', first defined in <path>"
+    rule: spec.unique-id
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0042: <message>', or one JSON line with --diagnostics json"
   - code: PLY0043
     severity: error
     exit: EnvironmentError
     title: spec reference broken
-    message: "unknown spec id '<id>'"
+    message: "<reason>"
+    rule: spec.reference
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0043: <message>', or one JSON line with --diagnostics json"
   - code: PLY0044
     severity: error
     exit: EnvironmentError
     title: spec lifecycle invalid
     message: "<reason>"
+    rule: spec.lifecycle
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0044: <message>', or one JSON line with --diagnostics json"
   - code: PLY0045
     severity: error
     exit: EnvironmentError
@@ -429,19 +434,21 @@ codes:
   - code: PLY0046
     severity: error
     exit: EnvironmentError
-    title: spec layout violated
-    message: "id '<id>' does not match file name '<file>' (rule: layout)"
+    title: spec family rule violated
+    message: "<reason> (rule: <rule>)"
+    rule: spec.family
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0046: <message>', or one JSON line with --diagnostics json"
   - code: PLY0047
     severity: error
     exit: EnvironmentError
     title: spec file unreadable
-    message: "not valid YAML: <parser message>"
+    message: "<reason>"
+    rule: spec.readable
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0047: <message>', or one JSON line with --diagnostics json"
   - code: PLY0050
     severity: error
     exit: OracleFailure
@@ -618,9 +625,10 @@ codes:
     exit: MissingDependency
     title: dependency missing
     message: "native dependency '<name>' required by '<component>' is missing"
+    rule: adr-0003.missing-dependency
     area: infrastructure
     owner: CLI-EXITCODES
-    reserved: true
+    surfaces: "standard error of a command whose component needs a native library or a model that is not available; declared before the adapters that raise it, so that every category of PRD §10.1 has a code"
   - code: PLY0082
     severity: error
     exit: LicenseBlocker
@@ -665,10 +673,11 @@ codes:
     severity: error
     exit: EnvironmentError
     title: generated document out of date
-    message: "generated document out of date: '<path>' <differs|is missing>"
+    message: "<reason>"
+    rule: docs.generated
     area: infrastructure
     owner: INFRA-DEVDOCS
-    reserved: true
+    surfaces: "standard error of polypiler-tooling report errors: 'generated document out of date: '<path>' <differs|is missing|has no registered code>' under --check, and for a note of docs/errors/notes 'note '<path>' belongs to no registered code', 'note '<path>' has an unknown section '<heading>'', 'note '<path>' has the section '<heading>' twice' and 'note '<path>' has text before its first section'"
   - code: PLY0100
     severity: error
     exit: InternalError

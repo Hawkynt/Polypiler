@@ -1,0 +1,21 @@
+id: EFFECTS.missing-maytrap
+title: Effect without mayTrap
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-EFFECTS
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: missing-maytrap
+  class: private-memory
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: []
+  writes: []
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

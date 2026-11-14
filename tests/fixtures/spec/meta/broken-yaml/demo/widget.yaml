@@ -1,0 +1,15 @@
+id: DEMO.widget
+title: Widget
+version: 2
+status: normative
+owner: "Hawkynt
+issue: SPEC-META
+tests: [tests/features/infra/spec-meta.feature]
+introducedIn: P0
+compatibility: additive
+reviewedRevision: 2
+normative: A widget MUST name each of its parts once.
+spec:
+  parts:
+    - name: gear
+    - name: spring

@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/recovery.schema.json",
+  "title": "Polypiler spec family 'recovery'",
+  "description": "The body under 'spec' of a document in spec/recovery/: one recovery rule of the block O0170-O0199 that turns lifted machine code back into readable structure (PRD §4.1, §23.2). Rules the schema cannot state: layout, id-in-block, speculation-matches-mode, proven-needs-obligation, deunroll-needs-repetitions, effects-preserved, switch-matches (PLY0046).",
+  "type": "object",
+  "required": ["optimization", "technique", "before", "after", "proofMode", "preserves", "negativeCases", "switch", "document"],
+  "additionalProperties": false,
+  "properties": {
+    "optimization": {
+      "type": "string",
+      "pattern": "^O[0-9]{4}$",
+      "description": "The optimization ID; equals the file name."
+    },
+    "technique": {
+      "enum": ["de-unroll", "expression-slice", "compiler-idiom", "loop-reconstruct", "structure-reconstruct"]
+    },
+    "before": { "type": "string", "minLength": 1, "description": "IR text of the canonical input." },
+    "after": { "type": "string", "minLength": 1, "description": "IR text of the recovered form." },
+    "proofMode": {
+      "enum": ["proven", "speculative-guarded"],
+      "description": "proven: fires only with every obligation discharged; speculative-guarded: fires behind a run-time guard and keeps the original form as fallback. There is no value for an unguarded guess."
+    },
+    "proofObligations": {
+      "type": "array",
+      "description": "The obligations to discharge before the rule fires, shaped as in spec/recognition/; at least one when proofMode is proven.",
+      "items": {
+        "type": "object",
+        "required": ["id", "class"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "class": { "enum": ["exhaustive-8bit", "exhaustive-16bit", "smt-bitvector", "range-facts", "alias-facts"] },
+          "widths": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "integer", "minimum": 1 }
+          },
+          "budgetSeconds": { "type": "integer", "minimum": 1, "maximum": 600 }
+        }
+      }
+    },
+    "speculation": {
+      "type": "object",
+      "description": "Present exactly when proofMode is speculative-guarded.",
+      "required": ["guard", "fallback"],
+      "additionalProperties": false,
+      "properties": {
+        "guard": { "type": "string", "minLength": 1, "description": "The condition checked at run time." },
+        "fallback": { "type": "string", "minLength": 1, "description": "The original form, kept for when the guard fails." }
+      }
+    },
+    "preserves": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["final-buffers", "memory-effects", "effect-order", "traps", "flags", "timing"] }
+    },
+    "negativeCases": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Inputs the rule must leave alone, and why.",
+      "items": {
+        "type": "object",
+        "required": ["description", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "description": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "minRepetitions": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 65536,
+      "description": "The fewest repetitions the rule folds; stated exactly for technique de-unroll."
+    },
+    "switch": { "type": "string", "pattern": "^--disable-opt O[0-9]{4}$" },
+    "document": { "type": "string", "pattern": "^docs/optimizations/O[0-9]{4}-[a-z0-9]+(-[a-z0-9]+)*\\.md$" }
+  }
+}
