@@ -53,9 +53,12 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     if (model.Problem is null)
       this._binders[model].Bind();
 
-    // A function without a return returns nothing, which is known before any type is.
+    // A function without a return returns nothing, which is known before any type is; one that
+    // returns a value and can also end without one returns undefined there.
     if (!model.Flows.Exists(flow => flow.Kind == FlowKind.Return))
       model.Result = JsType.Undefined;
+    else if (model.Problem is null && Completes.MayComplete(((FunctionBody)candidate.Function.Body).Body))
+      model.Result = JsType.UndefinedValue;
 
     return model;
   }
@@ -183,6 +186,13 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       parameter.Type = parameter.Entry = JsType.F64;
       parameter.Reason = "no JSDoc type";
     }
+
+    // A parameter the function compares with null or undefined is one a caller may pass them as (#1322).
+    if (parameter.ComparedWithNull)
+      parameter.Type = parameter.Entry = JsType.Join(parameter.Type, JsType.Null);
+
+    if (parameter.ComparedWithUndefined)
+      parameter.Type = parameter.Entry = JsType.Join(parameter.Type, JsType.UndefinedValue);
   }
 
   /// <summary>Lets the value of one flow reach its place; says whether the type of the place changed.</summary>
@@ -203,7 +213,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
           && this.Reach(flow.Target, JsType.ArrayOf(Stepped(stepped.Element!), true), flow.Node);
       case FlowKind.Return:
         var argument = ((ReturnStatement)flow.Node).Argument;
-        var result = JsType.Join(model.Result, argument is null ? JsType.Undefined : this.Of(argument));
+        var result = JsType.Join(model.Result, argument is null ? JsType.UndefinedValue : this.Of(argument));
         if (result == model.Result)
           return false;
 
@@ -219,7 +229,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       case FlowKind.FieldStore or FlowKind.FieldStep or FlowKind.MethodArgument:
         return this.ApplyMember(flow);
       default:
-        return this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Declared: null } parameter && this.Pass(parameter, this.Of(flow.Node), flow.Node);
+        return this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Declared: null } parameter
+          && this.Pass(parameter, flow.Missing ? JsType.UndefinedValue : this.Of(flow.Node), flow.Node);
     }
   }
 

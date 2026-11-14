@@ -289,12 +289,30 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       case UnaryExpression { Operator: Operator.BitwiseNot } complement:
         this.Expression(complement.Argument, Coercion.Int32, complement);
         break;
+      case LogicalExpression { Operator: Operator.NullishCoalescing, Left: Identifier coalesced } logical:
+        this.Expression(coalesced);
+        if (model.Bindings.GetValueOrDefault(coalesced) is Variable read)
+          read.ComparedWithNull = true;
+
+        this.Expression(logical.Right);
+        break;
       case LogicalExpression logical:
         this.Expression(logical.Left);
         this.Expression(logical.Right);
         break;
       case BinaryExpression { Operator: Operator.InstanceOf } test when this.ClassNamed(test.Right) is not null:
         this.Expression(test.Left);
+        break;
+      case BinaryExpression { Operator: Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality } compared
+          when IsAbsentLiteral(compared.Left) || IsAbsentLiteral(compared.Right):
+        this.Expression(compared.Left, Coercion.None, compared);
+        this.Expression(compared.Right, Coercion.None, compared);
+        if ((IsAbsentLiteral(compared.Left) ? compared.Right : compared.Left) is Identifier tested && model.Bindings.GetValueOrDefault(tested) is Variable testedVariable) {
+          var absent = IsAbsentLiteral(compared.Left) ? compared.Left : compared.Right;
+          var loose = compared.Operator is Operator.Equality or Operator.Inequality;
+          testedVariable.ComparedWithNull |= loose || absent is NullLiteral;
+          testedVariable.ComparedWithUndefined |= loose || absent is not NullLiteral;
+        }
         break;
       case BinaryExpression binary:
         var (left, right) = Operands(binary.Operator);
@@ -334,6 +352,14 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         break;
     }
   }
+
+  /// <summary>Whether an expression is an absent value as the source spells it: <c>null</c>, <c>undefined</c> - unless a variable of that name hides it - or <c>void 0</c>.</summary>
+  public bool IsAbsentLiteral(Node node) => node switch {
+    NullLiteral => true,
+    Identifier { Name: "undefined" } identifier => !this.Lookup("undefined", out _) && !constants.ContainsKey(identifier.Name),
+    UnaryExpression { Operator: Operator.Void, Argument: Literal } => true,
+    _ => false
+  };
 
   /// <summary>The coercions a binary operator applies to its two operands.</summary>
   public static (Coercion Left, Coercion Right) Operands(Operator op) => op switch {
@@ -477,6 +503,10 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
 
     for (var index = 0; index < call.Arguments.Count; ++index)
       model.Flows.Add(new Flow(FlowKind.Argument, call.Arguments[index], null, callee, index));
+
+    // A parameter no argument is given for is undefined.
+    for (var index = call.Arguments.Count; index < callee.Function.Params.Count; ++index)
+      model.Flows.Add(new Flow(FlowKind.Argument, call, null, callee, index) { Missing = true });
   }
 
   /// <summary>

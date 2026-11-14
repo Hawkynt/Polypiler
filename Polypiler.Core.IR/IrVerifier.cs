@@ -36,7 +36,7 @@ public static partial class IrVerifier {
 
       Require(names.Add(constant.Name), "the module declares the name twice");
       Require(!OnHeap(constant.Type), Stored);
-      Require(constant.Type.IsStorable && !element.IsStruct && !constant.Type.IsView, $"a constant of the type {constant.Type}");
+      Require(constant.Type.IsStorable && !element.IsStruct && !constant.Type.IsView && !constant.Type.IsOptional, $"a constant of the type {constant.Type}");
       var count = element.IsString ? constant.Strings.Count : constant.Values.Count;
       Require(constant.Type.IsArray || count == 1, $"a constant of the type {constant.Type} with {count} values");
       Require(element.IsString ? constant.Values.Count == 0 : constant.Strings.Count == 0, $"a constant of the type {constant.Type} with values of another type");
@@ -108,7 +108,7 @@ public static partial class IrVerifier {
 
     /// <summary>A declared type - a struct, a class, or an array of a struct - is one the module declares.</summary>
     private void Declared(IrType type) {
-      var named = (type.Element ?? type).Declaration;
+      var named = (type.Underlying ?? type.Element ?? type).Declaration;
       this.Require(named is null || types.Declares(named), $"the type {named} is not among the types of the module");
     }
 
@@ -362,11 +362,17 @@ public static partial class IrVerifier {
           this.Call(call);
           this.CallOfMember(call, function.Body.Statements is [IrExprStmt { Expression: var first }, ..] && ReferenceEquals(first, call));
           break;
+        case IrNull { Type.IsArray: true } value:
+          this.Require(value.Type.IsStorable, $"null of the type {value.Type}");
+          break;
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals:
           this.Object(expression);
           break;
         case IrTypeTest or IrCast or IrAsCast:
           this.Conversion(expression);
+          break;
+        case IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind:
+          this.Optional(expression);
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
@@ -460,7 +466,7 @@ public static partial class IrVerifier {
 
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object => false,
+      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

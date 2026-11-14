@@ -385,6 +385,8 @@ public static partial class JavaScriptEmitter {
           return "string";
         case IrTypeKind.Struct or IrTypeKind.Object:
           return type.Declaration!.Name;
+        case IrTypeKind.Optional:
+          return this.Describe(type.Underlying!) + " | null";
         case IrTypeKind.Span or IrTypeKind.ReadOnlySpan:
           return this.DescribeView(type);
         case IrTypeKind.I64 or IrTypeKind.U64:
@@ -458,9 +460,14 @@ public static partial class JavaScriptEmitter {
 
       var start = statements.Count;
       this._previous = false;
+      this._coalesced = false;
+      this._undefined = function.IsPublic && function.Absent == IrAbsent.Undefined && function.ReturnType.IsOptional;
       this.Statements(function.Body, statements);
       if (this._previous)
         statements.Insert(start, new JsVariableDeclaration(this.Let, [new JsDeclarator(Previous, null)]));
+
+      if (this._coalesced)
+        statements.Insert(start, new JsVariableDeclaration(this.Let, [new JsDeclarator(Coalesced, null)]));
 
       return (parameters, new JsBlock(statements));
     }
@@ -545,6 +552,9 @@ public static partial class JavaScriptEmitter {
           // An object literal at the start of a statement would be read as a block; the printer puts it in parentheses.
           statements.Add(new JsExpressionStatement(this.Text(expression.Expression)));
           break;
+        case IrIf conditional when this.CoalescingAssignment(conditional) is { } assigned:
+          statements.Add(new JsExpressionStatement(assigned));
+          break;
         case IrIf conditional:
           statements.Add(this.If(conditional));
           break;
@@ -567,6 +577,9 @@ public static partial class JavaScriptEmitter {
           break;
         case IrContinue:
           statements.Add(new JsContinue());
+          break;
+        case IrReturn { Value: { } value } when this._undefined:
+          statements.Add(new JsReturn(this.Undefined(value)));
           break;
         default:
           var result = (IrReturn)statement;

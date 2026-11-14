@@ -67,6 +67,12 @@ public static class CSharpPrinter {
     return printer.Text;
   }
 
+  /// <summary>
+  /// Whether an expression is a null-conditional access, which a member access, an element access or
+  /// a call behind it would join: <c>a?.Length.Value</c> reads <c>Value</c> of <c>Length</c>, not of the result.
+  /// </summary>
+  private static bool IsConditional(CsExpression expression) => expression is CsMemberAccess { Conditional: true } or CsElementAccess { Conditional: true };
+
   /// <summary>How tightly an expression binds, by the precedence of its operator; higher binds tighter.</summary>
   /// <param name="expression">The expression.</param>
   /// <returns>The precedence: 15 for a primary expression down to 1 for an assignment.</returns>
@@ -523,11 +529,11 @@ public static class CSharpPrinter {
           this._text.Append(name.Identifier);
           break;
         case CsMemberAccess access:
-          this.Operand(access.Target, Precedence(access.Target) == Primary, depth);
-          this._text.Append('.').Append(access.Member);
+          this.Operand(access.Target, Precedence(access.Target) == Primary && !IsConditional(access.Target), depth);
+          this._text.Append(access.Conditional ? "?." : ".").Append(access.Member);
           break;
         case CsInvocation call:
-          this.Operand(call.Target, Precedence(call.Target) == Primary, depth);
+          this.Operand(call.Target, Precedence(call.Target) == Primary && !IsConditional(call.Target), depth);
           this.Arguments(call.Arguments, depth);
           break;
         case CsOutArgument argument:
@@ -535,8 +541,8 @@ public static class CSharpPrinter {
           this.Expression(argument.Value, depth);
           break;
         case CsElementAccess element:
-          this.Operand(element.Target, Precedence(element.Target) == Primary, depth);
-          this._text.Append('[');
+          this.Operand(element.Target, Precedence(element.Target) == Primary && !IsConditional(element.Target), depth);
+          this._text.Append(element.Conditional ? "?[" : "[");
           this.Expression(element.Index, depth);
           this._text.Append(']');
           break;

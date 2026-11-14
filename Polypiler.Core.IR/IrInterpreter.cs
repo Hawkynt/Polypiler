@@ -32,7 +32,10 @@ public enum IrTrap {
   NullReference,
 
   /// <summary>A reference converted to a class or an interface it names no object of.</summary>
-  InvalidCast
+  InvalidCast,
+
+  /// <summary>The value of an optional value that holds none (<see cref="IrUnwrap"/>).</summary>
+  MissingValue
 
 }
 
@@ -56,6 +59,7 @@ public sealed class IrTrapException : Exception {
     IrTrap.ArgumentOutOfRange => "argument out of range",
     IrTrap.NullReference => "null reference",
     IrTrap.InvalidCast => "invalid cast",
+    IrTrap.MissingValue => "missing value",
     _ => "integer overflow"
   };
 
@@ -124,6 +128,8 @@ public static partial class IrInterpreter {
 
   /// <summary>A constant as the interpreter carries a value of its type.</summary>
   private static object Constant(IrType type, long value) => type.Kind switch {
+    // The default of an optional field: none.
+    IrTypeKind.Optional => Absent.Value,
     IrTypeKind.Bool => value != 0,
     IrTypeKind.F32 => (float)IrOperators.Float(type, value),
     IrTypeKind.F64 => IrOperators.Float(type, value),
@@ -149,6 +155,12 @@ public static partial class IrInterpreter {
   private static object? Accepted(IrType type, object? value) {
     if (type.IsView)
       return AcceptedView(type, value);
+
+    if (type.IsOptional)
+      return AcceptedOptional(type, value);
+
+    if (type.IsArray && value is null)
+      return NullReference.Value;
 
     if (type.IsObject)
       return value is null ? NullReference.Value : value is Instance instance && ReferenceEquals(instance.Type, type.ClassType) ? instance : null;
@@ -230,6 +242,7 @@ public static partial class IrInterpreter {
   };
 
   private static object? ToHost(IrType type, object? value) => value switch {
+    not null when type.IsOptional => OptionalToHost(type, value),
     View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
     NullReference => null,
@@ -417,6 +430,8 @@ public static partial class IrInterpreter {
           return this.Invoke(program.Functions[call.Function], arguments)!;
         case IrStep step:
           return this.Step(step, frame);
+        case IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind:
+          return this.Optional(expression, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }

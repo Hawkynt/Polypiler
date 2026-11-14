@@ -97,6 +97,12 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// </summary>
   public bool IsArrayByCall { get; set; }
 
+  /// <summary>Whether the function compares the variable with <c>null</c>, or reads it through <c>??</c>: a parameter is then one null may reach.</summary>
+  public bool ComparedWithNull { get; set; }
+
+  /// <summary>Whether the function compares the variable with <c>undefined</c>: a parameter is then one undefined may reach.</summary>
+  public bool ComparedWithUndefined { get; set; }
+
   /// <summary>The variable in the IR, once the function is lowered.</summary>
   public IrLocal? Local { get; set; }
 
@@ -159,7 +165,12 @@ internal enum FlowKind {
 /// <param name="Callee">The function called, for an argument.</param>
 /// <param name="Index">The position of an argument.</param>
 /// <param name="Source">The record a destructuring declaration takes the value of a key of.</param>
-internal sealed record Flow(FlowKind Kind, Node Node, Variable? Target = null, Candidate? Callee = null, int Index = 0, Node? Source = null);
+internal sealed record Flow(FlowKind Kind, Node Node, Variable? Target = null, Candidate? Callee = null, int Index = 0, Node? Source = null) {
+
+  /// <summary>Whether an argument is missing from the call, so that the parameter is <c>undefined</c> (#1322).</summary>
+  public bool Missing { get; init; }
+
+}
 
 /// <summary>A constant of the scope that encloses the functions: a number, or a table of numbers.</summary>
 /// <param name="Name">The name.</param>

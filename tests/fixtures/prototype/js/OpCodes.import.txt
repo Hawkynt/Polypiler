@@ -103,15 +103,15 @@ EncodeMsgLength64LE	OpCodes.js(2913,43): error PLY1102: 'float64 where uint32 is
 EncodeMsgLength128BE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
 EncodeMsgLength128BE	OpCodes.js(2934,44): error PLY1102: 'float64 where uint32 is expected' is not supported yet
 ModSafe	imported
-CreateArray	OpCodes.js(2961,25): error PLY1102: 'undefined' is not supported yet
-ArraySlice	OpCodes.js(2977,21): error PLY1102: 'undefined' is not supported yet
+CreateArray	imported
+ArraySlice	OpCodes.js(2980,9): error PLY1102: 'a call of result.push' is not supported yet
 ConcatArrays	OpCodes.js(2990,28): error PLY1101: parameter 'arrays' of 'ConcatArrays' has no supported JSDoc type
 InverseSBoxLookup	imported
 BuildInverseSBox	imported
 SplitNibbles	imported
 CombineNibbles	imported
-SafeArrayAccess	OpCodes.js(3075,31): error PLY1102: 'undefined' is not supported yet
-CircularArrayAccess	OpCodes.js(3085,38): error PLY1102: 'undefined' is not supported yet
+SafeArrayAccess	imported
+CircularArrayAccess	imported
 PopCountFast	imported
 GetBit	imported
 SetBit	imported
