@@ -93,3 +93,24 @@ standard output is `<n> documents, <m> errors`; the exit code is 0 without error
 | `PLY0044` | `deprecatedIn` earlier than `introducedIn`; `reviewedRevision` above `version` |
 | `PLY0046` | a family rule, `<reason> (rule: <rule>)` |
 | `PLY0047` | a file that is not valid YAML, an unknown family, an unreadable schema, a missing root |
+
+## Family `rewrites`
+
+`spec/rewrites/O####.yaml`, ID `REWRITES.O####`: one semantics-preserving transformation of the blocks
+`O0001`–`O0099` and `O0230`–`O0299` — its `before` and `after` IR text, `predicates`, `proof` class,
+`floatingPoint` claims, `negativeFixtures`, `switch`, `optLevels`, `interactions` and optimization page
+([`schemas/rewrites.schema.json`](schemas/rewrites.schema.json)). Recognition rules (`O0100`–`O0169`)
+are not rewrites of this family. Its rules, each `PLY0046`:
+
+| Rule | What it refuses |
+| --- | --- |
+| `layout` | a path other than `rewrites/O####.yaml`, or an ID, `optimization` or `document` that does not follow from the file name; stops the other rules |
+| `id-in-block` | a number outside `O0001`–`O0099` and `O0230`–`O0299` |
+| `no-unproven-reassociation` | `reassociates` or `contracts` without proof class `float-exactness` and a predicate with fact `float-exactness`; there is no waiver |
+| `float-flags-consistent` | `reassociates` or `contracts` while `touchesFloat` is false |
+| `interaction-acyclic` | a cycle of `interactions.after` over all documents, reported once at its smallest optimization |
+| `switch-matches` | a `switch` that disables another optimization |
+| `negative-fixture-exists` | a normative document whose negative fixture is not a file in the repository |
+
+Every optimization under `interactions` must have a document (`PLY0043`). The valid example and one
+fixture per rule and per required property live in `tests/fixtures/spec/rewrites/`.
