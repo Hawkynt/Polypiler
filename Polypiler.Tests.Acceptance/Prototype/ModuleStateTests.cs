@@ -17,6 +17,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
 public sealed class ModuleStateTests {
 
   private string _directory = "";

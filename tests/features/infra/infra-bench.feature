@@ -1,4 +1,4 @@
-@Performance
+@Performance @Layer.core
 Feature: Benchmark harness for speed, memory and code size
 
   Scenario: A program is measured and its numbers are recorded, not judged

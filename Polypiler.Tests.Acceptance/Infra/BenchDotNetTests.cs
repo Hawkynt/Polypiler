@@ -15,6 +15,7 @@ namespace Polypiler.Tests.Acceptance.Infra;
 /// </summary>
 [TestFixture]
 [Category("Performance")]
+[Layer("core")]
 public sealed class BenchDotNetTests {
 
   [Test]

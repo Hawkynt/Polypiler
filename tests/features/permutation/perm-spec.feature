@@ -1,3 +1,4 @@
+@Layer.core
 Feature: spec/permutations holds BitPerm's mappings, grammars and cost presets
 
   Scenario: The generated tree validates

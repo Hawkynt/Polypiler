@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Strings of UTF-16 code units
 
   Scenario Outline: A hash over the code units of a string agrees in every profile

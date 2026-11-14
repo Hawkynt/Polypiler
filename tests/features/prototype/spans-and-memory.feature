@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Views of arrays in both languages and every profile
 
   Byte-oriented code works on views: a Span<T> of C#, a subarray of JavaScript. Both import as one view

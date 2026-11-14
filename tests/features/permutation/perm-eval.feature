@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Canonical mapping evaluator
 
   Scenario Outline: Evaluating a mapping bit by bit

@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Canonical algebra of bit mappings
 
   Scenario: Composition applies the inner permutation first

@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Schema and validator for spec/verification/
 
   Scenario: The valid document passes

@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Mutable module state
 
   Scenario Outline: A generator keeps its state between calls in every target

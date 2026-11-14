@@ -15,6 +15,7 @@ namespace Polypiler.Tests.Acceptance.Retro;
 /// the screen text and of the cycle limit, and petcat's escapes and dialects.
 /// </summary>
 [TestFixture, Category("ExternalInterop")]
+[Layer("core")]
 public sealed class ViceRunnerTests {
 
   /// <summary>A BASIC program at a load address: each line numbered 10, 20, … from its tokenized bytes, linked, and ended.</summary>

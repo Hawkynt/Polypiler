@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Backends build a target syntax tree, optimize it and print it last
 
   Both backends build a syntax tree of their target language, run the target passes over it and print
