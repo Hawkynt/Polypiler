@@ -11,3 +11,6 @@ categories:
   - { name: PolyglotInterop, job: layer-core, step: test, pending: CAT-TESTS }
   - { name: Performance, job: layer-core, step: test }
   - { name: IrVerifier, job: layer-core, step: ir-verifier, pending: IR-VERIFIER }
+  # The full target sweep of the backends, run once, on Linux and without the coverage collector; the
+  # layer jobs and the coverage gate run its representative slice (#1352).
+  - { name: Sweep, job: target-sweep, step: test }

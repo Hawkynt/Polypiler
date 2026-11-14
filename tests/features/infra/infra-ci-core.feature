@@ -5,7 +5,7 @@ Feature: Core CI layer
   Scenario: The repository passes its own audit
     When I run "polypiler-tooling ci audit" in the repository
     Then the exit code is 0
-    And the output ends with "7 categories, 0 problems" preceded by one line per layer file
+    And the output ends with "8 categories, 0 problems" preceded by one line per layer file
 
   @Slow
   Scenario: A warning fails the build

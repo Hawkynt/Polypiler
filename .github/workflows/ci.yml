@@ -24,15 +24,15 @@ jobs:
       solution: Polypiler.slnx
       dotnet-version: '10.0.x'
       # The tests run in the layer jobs below, on the runners of their layer files (layer-core: ubuntu
-      # and windows); this job keeps the build, the package and repository README checks and the
-      # coverage report of the shared workflow. Its test step is pointed at a project without tests,
-      # so that the suite does not run a second time.
+      # and windows), and the full target sweep in target-sweep; this job keeps the build and the
+      # package and repository README checks of the shared workflow. Its test step is pointed at a
+      # project without tests, so that the suite does not run a second time.
       os-matrix: '["ubuntu-latest"]'
       test-target: Polypiler.Core/Polypiler.Core.csproj
       repo-readme: true
-      # Only Polypiler.Tests references the coverage collector; the acceptance tests add nothing to the
-      # report, so the coverage leg does not run them a second time on Linux.
-      coverage-target: Polypiler.Tests/Polypiler.Tests.csproj
+      # The coverage gate below measures the unit tests once and publishes the report; a second run
+      # under the collector here would only repeat it.
+      coverage: false
 
   # The documents generated from the specifications must match them: the error catalogue docs/errors
   # is what spec/diagnostics.yaml and the notes of docs/errors/notes give (PLY0091 otherwise).
@@ -51,7 +51,9 @@ jobs:
         run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- report errors --check
 
   # Polypiler gates coverage, which the shared workflow only reports: at least 95 % of all lines AND
-  # of all conditional branches must be executed by the tests (ISSUES.md, "Test strategy").
+  # of all conditional branches must be executed by the tests (ISSUES.md, "Test strategy"). The full
+  # target sweep (category Sweep) runs in target-sweep, not under the collector: its representative
+  # slice, which stays here, reaches the same code.
   coverage-gate:
     name: coverage gate
     runs-on: ubuntu-latest
@@ -67,7 +69,7 @@ jobs:
           dotnet-version: '10.0.x'
       # The unit tests carry the coverage (AGENTS.md); the acceptance tests run in the test matrix.
       - name: Test with coverage
-        run: dotnet test Polypiler.Tests/Polypiler.Tests.csproj -c Debug --collect:"XPlat Code Coverage" --results-directory ./coverage
+        run: dotnet test Polypiler.Tests/Polypiler.Tests.csproj -c Debug --filter "TestCategory!=Sweep" --collect:"XPlat Code Coverage" --results-directory ./coverage
       - name: Enforce line and branch thresholds
         shell: python
         run: |
@@ -90,20 +92,40 @@ jobs:
               print(f"::error::{kind} coverage {rate:.2f} % is below {minimum:.0f} %")
               failed = True
           sys.exit(1 if failed else 0)
+      - name: Coverage report
+        if: ${{ !cancelled() }}
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator -reports:./coverage/**/coverage.cobertura.xml -targetdir:./coverage/report -reporttypes:HtmlInline_AzurePipelines
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-report
+          path: coverage/report
+          if-no-files-found: ignore
 
   # The core layer of PRD §7.3 (tooling/ci/layers/core.yaml): warnings as errors, format, every test
   # that belongs to no other layer, the IR verifier, spec validation and the audit that holds layer
   # files, this workflow, the test categories and the tests to each other (tooling/ci/categories.yaml).
   # The toolchains come at the versions tooling/toolchains.lock pins, as `ci env` prints them; format,
-  # spec validation and the audit read nothing that differs per runner and run on Linux only.
+  # spec validation and the audit read nothing that differs per runner and run on Linux only, in the
+  # unit part. Each OS runs the two test projects as two parts side by side: run together on one
+  # runner they compete for its cores and take twice as long. The full target sweep (category Sweep)
+  # runs once, in target-sweep; its representative slice runs here.
   layer-core:
-    name: layer-core ${{ matrix.os }}
+    name: layer-core ${{ matrix.os }} ${{ matrix.part }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        part: [unit, acceptance]
+        include:
+          - part: unit
+            project: Polypiler.Tests/Polypiler.Tests.csproj
+          - part: acceptance
+            project: Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 20
     permissions:
       contents: read
     env:
@@ -143,20 +165,65 @@ jobs:
       - name: build
         run: dotnet build Polypiler.slnx -c Release -warnaserror
       - name: format
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.part == 'unit'
         # The fixtures are inputs whose exact text the tests read; tests/fixtures/infra/ci/core holds
         # an unformatted file on purpose.
         run: dotnet format Polypiler.slnx --verify-no-changes --no-restore --exclude tests/fixtures
       - name: test
-        run: dotnet test Polypiler.slnx -c Release --no-build --filter "TestCategory!~Layer.|TestCategory=Layer.core"
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "(TestCategory!~Layer.|TestCategory=Layer.core)&TestCategory!=Sweep" --logger "trx;LogFileName=tests.trx"
       - name: ir-verifier
-        run: dotnet test Polypiler.slnx -c Release --no-build --filter "TestCategory=IrVerifier"
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "TestCategory=IrVerifier"
       - name: spec validate
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.part == 'unit'
         run: $TOOLING spec validate
       - name: ci audit
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.part == 'unit'
         run: $TOOLING ci audit
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.part }}
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
+
+  # The full target sweep (category Sweep): every fixture in every profile, module format and float
+  # mode of both backends, compared byte for byte with its golden output and parsed back by Roslyn and
+  # Acornima. What differs per OS shows in its representative slice, which the layer jobs run on each
+  # OS and the coverage gate under the collector, so the full matrix runs once, on Linux and without
+  # the collector. The unit and the acceptance sweep are two parts side by side, for the reason
+  # layer-core gives.
+  target-sweep:
+    name: target sweep ${{ matrix.part }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: unit
+            project: Polypiler.Tests/Polypiler.Tests.csproj
+          - part: acceptance
+            project: Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      DOTNET_NOLOGO: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: build
+        run: dotnet build ${{ matrix.project }} -c Release -warnaserror
+      - name: test
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "TestCategory=Sweep" --logger "trx;LogFileName=tests.trx"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results-sweep-${{ matrix.part }}
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
 
   # Golden files (PRD 11.2): every one matches tests/fixtures/golden.lock.json and names an independent
   # source, and on a pull request no commit changes one together with code or without its line in

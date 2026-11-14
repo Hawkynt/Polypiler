@@ -3,15 +3,16 @@ Feature: Backends build a target syntax tree, optimize it and print it last
 
   Both backends build a syntax tree of their target language, run the target passes over it and print
   it last (#1336). The passes share the optimization numbers of the IR rules: O0500 inlines a helper
-  whose body is one expression, O0501 removes what nothing names any more.
+  whose body is one expression, O0501 removes what nothing names any more. The scenarios with the
+  tag Sweep go through every fixture in every variant; CI runs them once, in the job target-sweep.
 
-  @Slow
+  @Slow @Sweep
   Scenario: The tree changes no output byte
     Given the recorded golden outputs of every fixture, profile, module format and float mode
     When each is translated again with "--opt none"
     Then every generated file is byte-identical to its golden output
 
-  @Slow
+  @Slow @Sweep
   Scenario: Every printed file parses back to the tree it was printed from
     When every fixture is translated for every profile of both backends
     Then Roslyn at the profile's language version and Acornima at the profile's level parse each file without diagnostics
@@ -24,7 +25,7 @@ Feature: Backends build a target syntax tree, optimize it and print it last
     When it is translated with "--to javascript --profile es5 --disable-opt O0500"
     Then the output declares "$rotl" and calls it
 
-  @Slow
+  @Slow @Sweep
   Scenario: A helper made unused by inlining is removed
     When every fixture is translated for every profile of both backends
     Then no generated file of any fixture declares a private helper that nothing references
