@@ -16,7 +16,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// The scenarios of <c>tests/features/prototype/recognition.feature</c> with the real <c>polypiler</c>
 /// executable, every C# output built for its framework and for this runtime, every JavaScript output
 /// parsed at its level and run by node; and the spelled-out SipHash and xxHash in every profile of
-/// both backends with optimization on and off (test design 3).
+/// both backends with optimization on and off (test design 3), translated in process.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class RecognitionTests {
@@ -52,10 +52,14 @@ public sealed class RecognitionTests {
   }
 
   /// <summary>Translates a file of the working directory with the real executable: the file written, its text, everything the command printed and how long it took.</summary>
-  private (string Path, string Text, string Printed, TimeSpan Took) Translate(string source, string from, string to, params string[] further) {
+  private (string Path, string Text, string Printed, TimeSpan Took) Translate(string source, string from, string to, params string[] further)
+    => this.Translate(false, source, from, to, further);
+
+  /// <summary>Translates a file of the working directory in process or with the real executable: the file written, its text, everything the command printed and how long it took.</summary>
+  private (string Path, string Text, string Printed, TimeSpan Took) Translate(bool inProcess, string source, string from, string to, params string[] further) {
     var output = Path.Combine(this._directory, "out-" + Guid.NewGuid().ToString("N"));
     var watch = Stopwatch.StartNew();
-    var (exitCode, printed) = Toolchain.RunPolypiler(this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
+    var (exitCode, printed) = Toolchain.Polypiler(inProcess, this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
     Assert.That(exitCode, Is.Zero, printed);
     var file = Directory.GetFiles(output).Single();
     return (file, File.ReadAllText(file), printed, watch.Elapsed);
@@ -71,26 +75,25 @@ public sealed class RecognitionTests {
     return fixture;
   }
 
-  /// <summary>What every C# profile and every JavaScript profile make of a source for the calls, by profile.</summary>
-  private Dictionary<string, IReadOnlyList<string>> EveryProfile(string source, IReadOnlyList<PrototypeCall> calls, params string[] further) {
+  /// <summary>What one C# or JavaScript profile makes of a source for the calls, by build.</summary>
+  private Dictionary<string, IReadOnlyList<string>> OneProfile(bool inProcess, string source, TargetCase target, IReadOnlyList<PrototypeCall> calls, params string[] further) {
     var outcomes = new Dictionary<string, IReadOnlyList<string>>();
-    var took = new List<TimeSpan>();
-    foreach (var profile in CSharpProfile.All) {
-      var (_, text, _, time) = this.Translate(source, "csharp", "csharp", ["--profile", profile.Name, .. further]);
-      took.Add(time);
+    TimeSpan took;
+    if (target.CSharp is { } profile) {
+      var (_, text, _, time) = this.Translate(inProcess, source, "csharp", "csharp", ["--profile", profile.Name, .. further]);
+      took = time;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
       foreach (var checking in _overflowChecking)
         outcomes[$"{profile.Name}, CheckOverflow {checking}"] = [.. calls.Select(GeneratedCSharp.Compile(text, checking).Outcome)];
+    } else {
+      var script = target.JavaScript!;
+      var (file, text, _, time) = this.Translate(inProcess, source, "csharp", "javascript", [.. script.Arguments, .. further]);
+      took = time;
+      Assert.That(GeneratedJavaScript.Problems(text, script.Parsed), Is.Empty, script.ToString());
+      outcomes[script.ToString()] = Toolchain.NodeOutcomes(Path.GetDirectoryName(file)!, Path.GetFileName(file), calls, false, script.Mode, script.Global);
     }
 
-    foreach (var profile in ProfileCase.All) {
-      var (file, text, _, time) = this.Translate(source, "csharp", "javascript", [.. profile.Arguments, .. further]);
-      took.Add(time);
-      Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, profile.ToString());
-      outcomes[profile.ToString()] = Toolchain.NodeOutcomes(Path.GetDirectoryName(file)!, Path.GetFileName(file), calls, false, profile.Mode, profile.Global);
-    }
-
-    TestContext.Out.WriteLine($"{source} {string.Join(" ", further)}: {outcomes.Count} runs, translated in {took.Min().TotalMilliseconds:0} to {took.Max().TotalMilliseconds:0} ms");
+    TestContext.Out.WriteLine($"{source} {target} {string.Join(" ", further)}: {outcomes.Count} runs, translated in {took.TotalMilliseconds:0} ms");
     return outcomes;
   }
 
@@ -133,14 +136,14 @@ public sealed class RecognitionTests {
     }
   }
 
-  /// <summary>Scenario: a branchless absolute value does not become a trapping one.</summary>
-  [Test]
-  public void BranchlessAbs_DoesNotTrap() {
+  /// <summary>Scenario: a branchless absolute value does not become a trapping one, in any profile.</summary>
+  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.All))]
+  public void BranchlessAbs_DoesNotTrap(TargetCase target) {
     const string method = "public static int F(int x) { int m = x >> 31; return (x ^ m) - m; }";
     var source = this.Snippet(method);
     var ir = IrText.Of(Optimizer.Run(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), new OptimizerOptions()).Module);
     Assert.That(ir, Does.Contain("AbsWrap").And.Not.Contain("Abs("));
-    var outcomes = this.EveryProfile(source, [new PrototypeCall("F", [int.MinValue])]);
+    var outcomes = this.OneProfile(false, source, target, [new PrototypeCall("F", [int.MinValue])]);
     Assert.That(outcomes.Where(run => run.Value.Single() != "-2147483648").Select(run => $"{run.Key}: {run.Value.Single()}"), Is.Empty);
   }
 
@@ -168,9 +171,8 @@ public sealed class RecognitionTests {
   /// them - the published vectors among the calls - and the rules apply at least as often as the
   /// library-call versions call the library.
   /// </summary>
-  [TestCase("SipHash24Spelled.cs", "SipHash24", 18, 3)]
-  [TestCase("XxHash32Spelled.cs", "XxHash32", 10, 5)]
-  public void SpelledAlgorithm_ComputesItsVectorsInEveryProfile(string fixture, string library, int rotates, int loads) {
+  [TestCaseSource(nameof(SpelledAlgorithms))]
+  public void SpelledAlgorithm_ComputesItsVectorsInEveryProfile(string fixture, string library, int rotates, int loads, string level, TargetCase target) {
     var source = this.Copy(fixture);
     var calls = library == "SipHash24"
       ? new PrototypeCall[] {
@@ -186,13 +188,18 @@ public sealed class RecognitionTests {
         new("Hash", [BitsFixtures.Counting(37), 2654435761u])
       ];
     var expected = calls.Select(call => BitsFixtures.CompiledOutcome(library, call)).ToList();
-    var printed = this.Translate(source, "csharp", "javascript", "--explain-opt").Printed;
+    var printed = this.Translate(true, source, "csharp", "javascript", "--explain-opt").Printed;
     Assert.That(Regex.Matches(printed, " O0100 ").Count, Is.GreaterThanOrEqualTo(rotates));
     Assert.That(Regex.Matches(printed, " O0140 ").Count, Is.GreaterThanOrEqualTo(loads));
-    foreach (var level in new[] { "default", "none" }) {
-      var outcomes = this.EveryProfile(source, calls, "--opt", level);
-      Assert.That(outcomes.Where(run => !run.Value.SequenceEqual(expected)).Select(run => $"{level}, {run.Key}: {string.Join("; ", run.Value)}"), Is.Empty);
-    }
+    var outcomes = this.OneProfile(true, source, target, calls, "--opt", level);
+    Assert.That(outcomes.Where(run => !run.Value.SequenceEqual(expected)).Select(run => $"{level}, {run.Key}: {string.Join("; ", run.Value)}"), Is.Empty);
   }
+
+  /// <summary>Both spelled-out algorithms, with optimization on and off, in every profile of both backends.</summary>
+  private static IEnumerable<TestCaseData> SpelledAlgorithms()
+    => from algorithm in new[] { ("SipHash24Spelled.cs", "SipHash24", 18, 3), ("XxHash32Spelled.cs", "XxHash32", 10, 5) }
+       from level in new[] { "default", "none" }
+       from target in TargetCase.All
+       select new TestCaseData(algorithm.Item1, algorithm.Item2, algorithm.Item3, algorithm.Item4, level, target);
 
 }

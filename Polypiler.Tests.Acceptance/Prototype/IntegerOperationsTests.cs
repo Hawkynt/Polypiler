@@ -13,9 +13,10 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
 /// The scenarios of <c>tests/features/prototype/integer-operations.feature</c>, with the real
-/// <c>polypiler</c> executable: every output is translated by it, every C# output is built by the C#
-/// compiler for its profile's framework and for this runtime, every JavaScript output is parsed at its
-/// level and run by node, and the interpreter runs the imported IR.
+/// <c>polypiler</c> executable: every output of a scenario is translated by it - that of the fixtures
+/// through the command's own entry point, in process - every C# output is built by the C# compiler for
+/// its profile's framework and for this runtime, every JavaScript output is parsed at its level and run
+/// by node, and the interpreter runs the imported IR.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class IntegerOperationsTests {
@@ -51,10 +52,14 @@ public sealed class IntegerOperationsTests {
   }
 
   /// <summary>Translates a file of the working directory with the real executable; the one file it writes, with its name.</summary>
-  private (string Path, string Text, TimeSpan Took) Translate(string source, string from, string to, params string[] further) {
+  private (string Path, string Text, TimeSpan Took) Translate(string source, string from, string to, params string[] further)
+    => this.Translate(false, source, from, to, further);
+
+  /// <summary>Translates a file of the working directory in process or with the real executable; the one file it writes, with its name.</summary>
+  private (string Path, string Text, TimeSpan Took) Translate(bool inProcess, string source, string from, string to, params string[] further) {
     var output = Path.Combine(this._directory, "out-" + Guid.NewGuid().ToString("N"));
     var watch = Stopwatch.StartNew();
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
+    var (exitCode, text) = Toolchain.Polypiler(inProcess, this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
     Assert.That(exitCode, Is.Zero, text);
     var file = Directory.GetFiles(output).Single();
     return (file, File.ReadAllText(file), watch.Elapsed);
@@ -64,22 +69,21 @@ public sealed class IntegerOperationsTests {
   private IReadOnlyList<string> Node(string file, ProfileCase profile, IReadOnlyList<PrototypeCall> calls)
     => Toolchain.NodeOutcomes(Path.GetDirectoryName(file)!, Path.GetFileName(file), calls, false, profile.Mode, profile.Global);
 
-  /// <summary>What every C# profile and every JavaScript profile make of a source for the calls: the outcomes by profile.</summary>
-  private Dictionary<string, IReadOnlyList<string>> EveryProfile(string source, string from, IReadOnlyList<PrototypeCall> calls) {
+  /// <summary>What one C# or JavaScript profile makes of a source for the calls, with the real executable: the outcomes by build.</summary>
+  private Dictionary<string, IReadOnlyList<string>> OneProfile(string source, string from, TargetCase target, IReadOnlyList<PrototypeCall> calls) {
     var outcomes = new Dictionary<string, IReadOnlyList<string>>();
-    foreach (var profile in CSharpProfile.All) {
+    if (target.CSharp is { } profile) {
       var (_, text, _) = this.Translate(source, from, "csharp", "--profile", profile.Name);
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
       foreach (var checking in _overflowChecking) {
         var build = GeneratedCSharp.Compile(text, checking);
         outcomes[$"{profile.Name}, CheckOverflow {checking}"] = [.. calls.Select(build.Outcome)];
       }
-    }
-
-    foreach (var profile in ProfileCase.All) {
-      var (file, text, _) = this.Translate(source, from, "javascript", profile.Arguments);
-      Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, profile.ToString());
-      outcomes[profile.ToString()] = this.Node(file, profile, calls);
+    } else {
+      var script = target.JavaScript!;
+      var (file, text, _) = this.Translate(source, from, "javascript", script.Arguments);
+      Assert.That(GeneratedJavaScript.Problems(text, script.Parsed), Is.Empty, script.ToString());
+      outcomes[script.ToString()] = this.Node(file, script, calls);
     }
 
     return outcomes;
@@ -96,12 +100,20 @@ public sealed class IntegerOperationsTests {
     return name;
   }
 
+  /// <summary>The examples of the scenario outline, one case per profile of the target language.</summary>
+  private static IEnumerable<TestCaseData> WholeAlgorithms() =>
+    from example in new[] {
+      (Fixture: "SipHash24.cs", From: "csharp", To: "javascript", Result: "11613035633349379557"),
+      (Fixture: "XxHash32.cs", From: "csharp", To: "javascript", Result: "46947589"),
+      (Fixture: "crc16.js", From: "javascript", To: "csharp", Result: "47933"),
+      (Fixture: "SipHash24.cs", From: "csharp", To: "csharp", Result: "11613035633349379557")
+    }
+    from target in example.To == "csharp" ? TargetCase.CSharpProfiles : TargetCase.JavaScriptProfiles
+    select new TestCaseData(example.Fixture, example.From, example.To, example.Result, target);
+
   /// <summary>Scenario outline: a whole algorithm built on the new operations translates in both directions and every profile.</summary>
-  [TestCase("SipHash24.cs", "csharp", "javascript", "11613035633349379557")]
-  [TestCase("XxHash32.cs", "csharp", "javascript", "46947589")]
-  [TestCase("crc16.js", "javascript", "csharp", "47933")]
-  [TestCase("SipHash24.cs", "csharp", "csharp", "11613035633349379557")]
-  public void WholeAlgorithm_TranslatesToEveryProfile(string fixture, string from, string to, string result) {
+  [TestCaseSource(nameof(WholeAlgorithms))]
+  public void WholeAlgorithm_TranslatesToEveryProfile(string fixture, string from, string to, string result, TargetCase target) {
     var source = this.Copy(fixture);
     PrototypeCall call = fixture switch {
       "SipHash24.cs" => new("Hash", [BitsFixtures.Counting(16), BitsFixtures.Counting(15)]) { Returns = typeof(ulong) },
@@ -109,19 +121,17 @@ public sealed class IntegerOperationsTests {
       _ => new("compute", [Encoding.ASCII.GetBytes("123456789")])
     };
     var outcomes = new List<(string Profile, string Outcome, TimeSpan Took)>();
-    if (to == "csharp") {
-      foreach (var profile in CSharpProfile.All) {
-        var (_, text, took) = this.Translate(source, from, to, "--profile", profile.Name);
-        Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
-        foreach (var checking in _overflowChecking)
-          outcomes.Add(($"{profile.Name}, CheckOverflow {checking}", GeneratedCSharp.Compile(text, checking).Outcome(call), took));
-      }
+    Assert.That(target.Language, Is.EqualTo(to));
+    if (target.CSharp is { } profile) {
+      var (_, text, took) = this.Translate(source, from, to, "--profile", profile.Name);
+      Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
+      foreach (var checking in _overflowChecking)
+        outcomes.Add(($"{profile.Name}, CheckOverflow {checking}", GeneratedCSharp.Compile(text, checking).Outcome(call), took));
     } else {
-      foreach (var profile in ProfileCase.All) {
-        var (file, text, took) = this.Translate(source, from, to, profile.Arguments);
-        Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, profile.ToString());
-        outcomes.Add((profile.ToString(), this.Node(file, profile, [call]).Single(), took));
-      }
+      var script = target.JavaScript!;
+      var (file, text, took) = this.Translate(source, from, to, script.Arguments);
+      Assert.That(GeneratedJavaScript.Problems(text, script.Parsed), Is.Empty, script.ToString());
+      outcomes.Add((script.ToString(), this.Node(file, script, [call]).Single(), took));
     }
 
     TestContext.Out.WriteLine($"{fixture} to {to}: {outcomes.Count} runs, translated in {outcomes.Min(run => run.Took.TotalMilliseconds):0} to {outcomes.Max(run => run.Took.TotalMilliseconds):0} ms");
@@ -135,23 +145,29 @@ public sealed class IntegerOperationsTests {
     Assert.That(this.Translate(source, "csharp", "csharp", "--profile", "net10.0").Text, Does.Contain("BinaryPrimitives.ReverseEndianness"));
     Assert.That(this.Translate(source, "csharp", "csharp", "--profile", "net2.0").Text, Does.Contain("private static ulong ByteSwapBits(").And.Not.Contain("BinaryPrimitives"));
     Assert.That(this.Translate(source, "csharp", "javascript", "--profile", "es5").Text, Does.Contain("function $bswap("));
-    var outcomes = this.EveryProfile(source, "csharp", [new PrototypeCall("F", [0x12345678u])]);
+  }
+
+  /// <summary>Scenario: a byte swap is a library call where the library has it - and computes the same in every profile.</summary>
+  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.All))]
+  public void ByteSwap_IsALibraryCallWhereTheLibraryHasIt_InEveryProfile(TargetCase target) {
+    var source = this.Snippet("public static uint F(uint x) => System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(x);");
+    var outcomes = this.OneProfile(source, "csharp", target, [new PrototypeCall("F", [0x12345678u])]);
     Assert.That(outcomes.Where(run => run.Value.Single() != "2018915346").Select(run => $"{run.Key}: {run.Value.Single()}"), Is.Empty);
   }
 
   /// <summary>Scenario: rotating a 16-bit value by more than its width wraps the count.</summary>
-  [Test]
-  public void Rotate16_WrapsTheCount() {
+  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.All))]
+  public void Rotate16_WrapsTheCount(TargetCase target) {
     var source = this.Snippet("public static ushort F(ushort x, int n) => ushort.RotateLeft(x, n);");
     var call = new PrototypeCall("F", [(ushort)0x8001, 17]);
     Assert.That(PrototypeFixture.InterpretedOutcome(PrototypeFixture.Import("Snippet.cs", File.ReadAllText(Path.Combine(this._directory, source))), call), Is.EqualTo("3"));
-    var outcomes = this.EveryProfile(source, "csharp", [call]);
+    var outcomes = this.OneProfile(source, "csharp", target, [call]);
     Assert.That(outcomes.Where(run => run.Value.Single() != "3").Select(run => $"{run.Key}: {run.Value.Single()}"), Is.Empty);
   }
 
   /// <summary>Scenario: counting zeros of zero gives the width.</summary>
-  [Test]
-  public void ZerosOfZero_AreTheWidth() {
+  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.All))]
+  public void ZerosOfZero_AreTheWidth(TargetCase target) {
     var source = this.Snippet(string.Join(" ",
       "public static byte L8(byte x) => byte.LeadingZeroCount(x); public static ushort L16(ushort x) => ushort.LeadingZeroCount(x);",
       "public static int L32(uint x) => System.Numerics.BitOperations.LeadingZeroCount(x); public static int L64(ulong x) => System.Numerics.BitOperations.LeadingZeroCount(x);",
@@ -162,18 +178,18 @@ public sealed class IntegerOperationsTests {
       new("T8", [(byte)0]), new("T16", [(ushort)0]), new("T32", [0u]), new("T64", [0UL])
     ];
     string[] widths = ["8", "16", "32", "64", "8", "16", "32", "64"];
-    var outcomes = this.EveryProfile(source, "csharp", calls);
+    var outcomes = this.OneProfile(source, "csharp", target, calls);
     Assert.That(outcomes.Where(run => !run.Value.SequenceEqual(widths)).Select(run => $"{run.Key}: {string.Join(", ", run.Value)}"), Is.Empty);
   }
 
   /// <summary>Scenario: a load outside the array traps before anything happens.</summary>
-  [Test]
-  public void LoadOutsideTheArray_Traps() {
+  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.All))]
+  public void LoadOutsideTheArray_Traps(TargetCase target) {
     var source = this.Snippet("public static uint F(byte[] b, int i) => System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(b.AsSpan(i));", true);
     var call = new PrototypeCall("F", [new byte[6], 3]);
     var trap = "trap: index out of range";
     Assert.That(PrototypeFixture.InterpretedOutcome(PrototypeFixture.Import("Snippet.cs", File.ReadAllText(Path.Combine(this._directory, source))), call), Is.EqualTo(trap));
-    var outcomes = this.EveryProfile(source, "csharp", [call]);
+    var outcomes = this.OneProfile(source, "csharp", target, [call]);
     Assert.That(outcomes.Where(run => run.Value.Single() != trap).Select(run => $"{run.Key}: {run.Value.Single()}"), Is.Empty);
   }
 
@@ -197,22 +213,29 @@ public sealed class IntegerOperationsTests {
   /// JavaScript fixture as node runs the original, as the interpreter runs the import and as every
   /// JavaScript profile runs it again: the outcomes of the original.
   /// </summary>
-  [TestCaseSource(typeof(BitsFixtures), nameof(BitsFixtures.CSharp))]
-  public void CSharpFixture_RunsInNodeAtEveryLevel(string fixture) {
+  [TestCaseSource(nameof(CSharpFixturesAndLevels))]
+  public void CSharpFixture_RunsInNodeAtEveryLevel(string fixture, ProfileCase profile) {
     var source = this.Copy(fixture + ".cs");
     var calls = BitsFixtures.Calls(fixture);
     var expected = calls.Select(call => BitsFixtures.CompiledOutcome(fixture, call)).ToList();
-    foreach (var profile in ProfileCase.All.Where(profile => profile.Module != "iife" || profile.Level == "es5")) {
-      var (file, text, _) = this.Translate(source, "csharp", "javascript", profile.Arguments);
-      Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty);
-      var node = this.Node(file, profile, calls);
-      var mismatches = Enumerable.Range(0, calls.Count).Where(index => node[index] != expected[index]).Select(index => $"{calls[index]}: node {node[index]}, C# {expected[index]}").ToList();
-      Assert.That(mismatches.Take(10), Is.Empty, $"{profile}: {mismatches.Count} of {calls.Count} calls differ");
-    }
+    var (file, text, _) = this.Translate(true, source, "csharp", "javascript", profile.Arguments);
+    Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty);
+    var node = this.Node(file, profile, calls);
+    var mismatches = Enumerable.Range(0, calls.Count).Where(index => node[index] != expected[index]).Select(index => $"{calls[index]}: node {node[index]}, C# {expected[index]}").ToList();
+    Assert.That(mismatches.Take(10), Is.Empty, $"{profile}: {mismatches.Count} of {calls.Count} calls differ");
   }
 
-  [TestCaseSource(typeof(BitsFixtures), nameof(BitsFixtures.Scripts))]
-  public void JavaScriptFixture_RunsLikeTheOriginal(string fixture) {
+  /// <summary>The levels the fixtures run at: every profile but a script with a global object above ECMAScript 5.</summary>
+  private static IEnumerable<ProfileCase> Levels() => ProfileCase.All.Where(profile => profile.Module != "iife" || profile.Level == "es5");
+
+  private static IEnumerable<TestCaseData> CSharpFixturesAndLevels()
+    => from fixture in BitsFixtures.CSharp from profile in Levels() select new TestCaseData(fixture, profile);
+
+  private static IEnumerable<TestCaseData> ScriptsAndLevels()
+    => from fixture in BitsFixtures.Scripts from profile in Levels() select new TestCaseData(fixture, profile);
+
+  [TestCaseSource(nameof(ScriptsAndLevels))]
+  public void JavaScriptFixture_RunsLikeTheOriginal(string fixture, ProfileCase profile) {
     var original = Path.Combine(this._directory, fixture + ".mjs");
     File.Copy(BitsFixtures.ScriptOf(fixture), original);
     var calls = BitsFixtures.ScriptCalls(fixture);
@@ -222,12 +245,10 @@ public sealed class IntegerOperationsTests {
     var module = JavaScriptFixture.Import(fixture + ".mjs", File.ReadAllText(original));
     var interpreted = calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call)).ToList();
     Assert.That(Enumerable.Range(0, calls.Count).Where(index => interpreted[index] != expected[index]).Select(index => $"{calls[index]}: interpreter {interpreted[index]}, node {expected[index]}").Take(10), Is.Empty);
-    foreach (var profile in ProfileCase.All.Where(profile => profile.Module != "iife" || profile.Level == "es5")) {
-      var (file, text, _) = this.Translate(fixture + ".mjs", "javascript", "javascript", profile.Arguments);
-      Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty);
-      var node = this.Node(file, profile, calls);
-      Assert.That(Enumerable.Range(0, calls.Count).Where(index => node[index] != expected[index]).Select(index => $"{profile}: {calls[index]}: re-emitted {node[index]}, original {expected[index]}").Take(10), Is.Empty);
-    }
+    var (file, text, _) = this.Translate(true, fixture + ".mjs", "javascript", "javascript", profile.Arguments);
+    Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty);
+    var node = this.Node(file, profile, calls);
+    Assert.That(Enumerable.Range(0, calls.Count).Where(index => node[index] != expected[index]).Select(index => $"{profile}: {calls[index]}: re-emitted {node[index]}, original {expected[index]}").Take(10), Is.Empty);
   }
 
 }

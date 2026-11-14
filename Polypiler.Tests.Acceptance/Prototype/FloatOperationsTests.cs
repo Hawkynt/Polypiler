@@ -57,10 +57,14 @@ public sealed class FloatOperationsTests {
 
   // ---------------------------------------------------------------- translating
 
-  /// <summary>Translates a file of the working directory and returns the path of the generated file and its text.</summary>
-  private (string Path, string Text) Translate(string source, string from, string to, params string[] further) {
+  /// <summary>Translates a file of the working directory with the real executable and returns the path of the generated file and its text.</summary>
+  private (string Path, string Text) Translate(string source, string from, string to, params string[] further)
+    => this.Translate(false, source, from, to, further);
+
+  /// <summary>Translates a file of the working directory in process or with the real executable and returns the path of the generated file and its text.</summary>
+  private (string Path, string Text) Translate(bool inProcess, string source, string from, string to, params string[] further) {
     var output = Path.Combine(this._directory, "out-" + Guid.NewGuid().ToString("N"));
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
+    var (exitCode, text) = Toolchain.Polypiler(inProcess, this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
     Assert.That(exitCode, Is.Zero, text);
     var file = Directory.GetFiles(output).Single();
     return (file, File.ReadAllText(file));
@@ -95,8 +99,19 @@ public sealed class FloatOperationsTests {
   private static IReadOnlyList<string> Interpreted(IrModule module, IReadOnlyList<PrototypeCall> calls)
     => [.. calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call))];
 
-  private (string Path, string Text) TranslateTo(string source, string to, string profile, string mode)
-    => this.Translate(source, "csharp", to, "--profile", profile, "--float", mode);
+  private (string Path, string Text) TranslateTo(string source, string to, string profile, string mode, bool inProcess = false)
+    => this.Translate(inProcess, source, "csharp", to, "--profile", profile, "--float", mode);
+
+  /// <summary>Every C# profile and every JavaScript level, by the value of <c>--to</c> and of <c>--profile</c>.</summary>
+  private static IEnumerable<(string To, string Profile)> Targets()
+    => CSharpProfile.All.Select(profile => ("csharp", profile.Name)).Concat(_levels.Select(level => ("javascript", level)));
+
+  private static IEnumerable<TestCaseData> TargetCases() => Targets().Select(target => new TestCaseData(target.To, target.Profile));
+
+  private static IEnumerable<TestCaseData> ModesAndTargets()
+    => from mode in _modes from target in Targets() select new TestCaseData(mode, target.To, target.Profile);
+
+  private static IEnumerable<TestCaseData> CSharpProfileNames() => CSharpProfile.All.Select(profile => new TestCaseData(profile.Name));
 
   private IReadOnlyList<string> Run(string to, string profile, (string Path, string Text) generated, IReadOnlyList<PrototypeCall> calls)
     => to == "csharp" ? CSharpOutcomes(generated.Text, calls) : this.JavaScriptOutcomes(generated.Path, profile, calls);
@@ -131,9 +146,9 @@ public sealed class FloatOperationsTests {
     TestContext.Out.WriteLine($"Math.sin of node against sin.f64: {report}");
   }
 
-  /// <summary>Scenario: Special values are exact everywhere.</summary>
-  [Test]
-  public void SpecialValues_AreExactEverywhere() {
+  /// <summary>Scenario: Special values are exact everywhere - in every mode and every profile of both backends.</summary>
+  [TestCaseSource(nameof(ModesAndTargets))]
+  public void SpecialValues_AreExactEverywhere(string mode, string to, string profile) {
     var source = this.Snippet(
       "public static double A(double y, double x) => System.Math.Atan2(y, x); "
       + "public static double H(double x, double y) => System.Math.Pow(x, y) + System.Double.Hypot(x, y); "
@@ -147,13 +162,7 @@ public sealed class FloatOperationsTests {
     ];
     var expected = new[] { PrototypeFixture.Show(-Math.PI), PrototypeFixture.Show(-0.0), PrototypeFixture.Show(double.PositiveInfinity), "1", "NaN", PrototypeFixture.Show(-0.0) };
     Assert.That(Interpreted(PrototypeFixture.Import("Snippet.cs", File.ReadAllText(Path.Combine(this._directory, source))), calls), Is.EqualTo(expected));
-    foreach (var mode in _modes) {
-      foreach (var profile in CSharpProfile.All)
-        Assert.That(this.Run("csharp", profile.Name, this.TranslateTo(source, "csharp", profile.Name, mode), calls), Is.EqualTo(expected), $"{profile} {mode}");
-
-      foreach (var level in _levels)
-        Assert.That(this.Run("javascript", level, this.TranslateTo(source, "javascript", level, mode), calls), Is.EqualTo(expected), $"{level} {mode}");
-    }
+    Assert.That(this.Run(to, profile, this.TranslateTo(source, to, profile, mode), calls), Is.EqualTo(expected), $"{profile} {mode}");
   }
 
   /// <summary>Scenario: JavaScript's power keeps its own special cases through C#.</summary>
@@ -174,29 +183,23 @@ public sealed class FloatOperationsTests {
   /// Scenario: Single precision is not double precision rounded - the strict binary32 exponential of
   /// every profile of both backends is the correctly rounded one on every vector.
   /// </summary>
-  [Test]
-  public void SinglePrecision_IsTheCorrectlyRoundedBinary32Result() {
+  [TestCaseSource(nameof(TargetCases))]
+  public void SinglePrecision_IsTheCorrectlyRoundedBinary32Result(string to, string profile) {
     var source = this.Snippet("public static float F(float x) => System.MathF.Exp(x);");
     var vectors = FloatVectors.Of("exp", IrType.F32);
     var calls = vectors.Select(vector => new PrototypeCall("F", [(float)FloatVectors.Value(IrType.F32, vector.Operands[0])])).ToList();
     var expected = vectors.Select(vector => PrototypeFixture.Show(FloatVectors.Value(IrType.F32, vector.Result))).ToList();
-    foreach (var profile in CSharpProfile.All)
-      Assert.That(this.Run("csharp", profile.Name, this.TranslateTo(source, "csharp", profile.Name, "strict"), calls), Is.EqualTo(expected), profile.Name);
-
-    foreach (var level in _levels)
-      Assert.That(this.Run("javascript", level, this.TranslateTo(source, "javascript", level, "strict"), calls), Is.EqualTo(expected), level);
+    Assert.That(this.Run(to, profile, this.TranslateTo(source, to, profile, "strict"), calls), Is.EqualTo(expected), profile);
   }
 
-  /// <summary>Scenario: JavaScript rounding of a tie goes up.</summary>
-  [Test]
-  public void JavaScriptRounding_OfATieGoesUp() {
+  /// <summary>Scenario: JavaScript rounding of a tie goes up - in node and in every C# profile.</summary>
+  [TestCaseSource(nameof(CSharpProfileNames))]
+  public void JavaScriptRounding_OfATieGoesUp(string profile) {
     var source = this.Script("round.mjs", "export function f(x) { return Math.round(x); }\n");
     PrototypeCall[] calls = [new("f", [-2.5]), new("f", [2.5])];
     Assert.That(Toolchain.NodeOutcomes(this._directory, source, calls, true), Is.EqualTo(new[] { "-2", "3" }));
-    foreach (var profile in CSharpProfile.All) {
-      var generated = this.Translate(source, "javascript", "csharp", "--profile", profile.Name);
-      Assert.That(CSharpOutcomes(generated.Text, calls), Is.EqualTo(new[] { "-2", "3" }), profile.Name);
-    }
+    var generated = this.Translate(source, "javascript", "csharp", "--profile", profile);
+    Assert.That(CSharpOutcomes(generated.Text, calls), Is.EqualTo(new[] { "-2", "3" }), profile);
   }
 
   /// <summary>Scenario: Random numbers are refused.</summary>
@@ -218,35 +221,31 @@ public sealed class FloatOperationsTests {
   /// relative 1e-12 for double and 1e-5 for float, because the results are sums and products of
   /// native results whose error grows with the number of terms (ADR 0005, "declared").
   /// </summary>
-  [TestCase("float/Dct8")]
-  [TestCase("float/BoxMuller")]
-  [TestCase("float/Haversine")]
-  public void Algorithm_InEveryProfileAndMode(string fixture) {
+  [TestCaseSource(nameof(Algorithms))]
+  public void Algorithm_InEveryProfileAndMode(string fixture, string mode, string to, string profile) {
     var calls = AlgorithmCalls(fixture);
     var module = PrototypeFixture.Imported(fixture);
     var expected = Interpreted(module, calls);
     var source = this.Fixture(fixture);
     var timer = Stopwatch.StartNew();
-    var translations = 0;
-    foreach (var mode in _modes) {
-      var targets = CSharpProfile.All.Select(profile => ("csharp", profile.Name)).Concat(_levels.Select(level => ("javascript", level)));
-      foreach (var (to, profile) in targets) {
-        timer.Start();
-        var generated = this.TranslateTo(source, to, profile, mode);
-        timer.Stop();
-        ++translations;
-        var actual = this.Run(to, profile, generated, calls);
-        for (var index = 0; index < calls.Count; ++index)
-          if (mode == "strict")
-            Assert.That(actual[index], Is.EqualTo(expected[index]), $"{to} {profile} {mode} {calls[index]}");
-          else
-            Assert.That(Within(actual[index], expected[index], calls[index].Method.EndsWith("Single", StringComparison.Ordinal) ? 1e-5 : 1e-12), Is.True,
-              $"{to} {profile} {mode} {calls[index]}: {actual[index]} against {expected[index]}");
-      }
-    }
+    var generated = this.TranslateTo(source, to, profile, mode, true);
+    timer.Stop();
+    var actual = this.Run(to, profile, generated, calls);
+    for (var index = 0; index < calls.Count; ++index)
+      if (mode == "strict")
+        Assert.That(actual[index], Is.EqualTo(expected[index]), $"{to} {profile} {mode} {calls[index]}");
+      else
+        Assert.That(Within(actual[index], expected[index], calls[index].Method.EndsWith("Single", StringComparison.Ordinal) ? 1e-5 : 1e-12), Is.True,
+          $"{to} {profile} {mode} {calls[index]}: {actual[index]} against {expected[index]}");
 
-    TestContext.Out.WriteLine($"{fixture}: {translations} translations, {timer.Elapsed.TotalMilliseconds / translations:F0} ms each");
+    TestContext.Out.WriteLine($"{fixture} {mode} {to} {profile}: translated in {timer.Elapsed.TotalMilliseconds:F0} ms");
   }
+
+  private static IEnumerable<TestCaseData> Algorithms()
+    => from fixture in new[] { "float/Dct8", "float/BoxMuller", "float/Haversine" }
+       from mode in _modes
+       from target in Targets()
+       select new TestCaseData(fixture, mode, target.To, target.Profile);
 
   /// <summary>
   /// Test design 3: every native function a backend admits, on every reference vector of its
@@ -254,47 +253,52 @@ public sealed class FloatOperationsTests {
   /// their sign, an infinity and a NaN match exactly. The count of results that are not the correctly
   /// rounded one is recorded.
   /// </summary>
-  [TestCase("csharp", "net10.0")]
-  [TestCase("javascript", "es2022")]
-  public void NativeFunctions_AreWithinTheirBound(string to, string profile) {
+  [TestCaseSource(nameof(NativeFunctions))]
+  public void NativeFunctions_AreWithinTheirBound(string to, string profile, string name, string vectors) {
     var runtime = to == "csharp" ? NativeAccuracy.DotNet : NativeAccuracy.Node;
+    foreach (var format in new[] { IrType.F64, IrType.F32 }) {
+      var op = Enum.Parse<IrIntrinsicOp>(name);
+      var operation = FloatOperationTable.Of(op)!;
+      var intrinsic = new IrIntrinsic(op, format, [.. Enumerable.Repeat<IrExpr>(new IrConst(format, 0), operation.Shape == FloatShape.Binary ? 2 : 1)]);
+      var native = to == "csharp"
+        ? CSharpEmitter.Writes(intrinsic, CSharpProfile.Parse(profile, null), FloatMode.Accurate)
+        : JavaScriptEmitter.Writes(intrinsic, JavaScriptProfile.Parse(profile), FloatMode.Accurate);
+      if (!native)
+        continue;
+
+      var bound = NativeAccuracy.Bound(op, NativeAccuracy.Slack(runtime, op, format)!.Value);
+      var type = format == IrType.F32 ? "float" : "double";
+      var arguments = operation.Shape == FloatShape.Binary ? $"{type} x, {type} y" : $"{type} x";
+      var call = name == "PowEcma" ? null : $"System.{(format == IrType.F32 ? "MathF" : "Math")}.{name}({(operation.Shape == FloatShape.Binary ? "x, y" : "x")})";
+      if (name == "Hypot")
+        call = $"System.{(format == IrType.F32 ? "Single" : "Double")}.Hypot(x, y)";
+
+      (string Path, string Text) generated;
+      if (call is null) {
+        if (format == IrType.F32)
+          continue;
+
+        generated = this.Translate(true, this.Script("powecma.mjs", "/** @param {number} x @param {number} y @returns {number} */\nexport function F(x, y) { return x ** y; }\n"),
+          "javascript", to, "--profile", profile);
+      } else {
+        generated = this.Translate(true, this.Snippet($"public static {type} F({arguments}) => {call};"), "csharp", to, "--profile", profile);
+      }
+
+      var report = this.NativeAgainstVectors(vectors, format, bound,
+        calls => to == "csharp" ? CSharpOutcomes(generated.Text, calls) : this.JavaScriptOutcomes(generated.Path, profile, calls), name == "PowEcma");
+      TestContext.Out.WriteLine($"{to} {profile} {name} {format}: bound {bound}, {report}");
+    }
+  }
+
+  /// <summary>The two runtimes of test design 3, each with every native function by its name and the name of its vectors.</summary>
+  private static IEnumerable<TestCaseData> NativeFunctions() {
     var functions = new Dictionary<string, string> {
       ["Sin"] = "sin", ["Cos"] = "cos", ["Tan"] = "tan", ["Exp"] = "exp", ["Log"] = "log", ["Log2"] = "log2", ["Log10"] = "log10",
       ["Pow"] = "pow", ["PowEcma"] = "pow", ["Atan2"] = "atan2", ["Sinh"] = "sinh", ["Cosh"] = "cosh", ["Tanh"] = "tanh", ["Cbrt"] = "cbrt", ["Hypot"] = "hypot"
     };
-    foreach (var (name, vectors) in functions)
-      foreach (var format in new[] { IrType.F64, IrType.F32 }) {
-        var op = Enum.Parse<IrIntrinsicOp>(name);
-        var operation = FloatOperationTable.Of(op)!;
-        var intrinsic = new IrIntrinsic(op, format, [.. Enumerable.Repeat<IrExpr>(new IrConst(format, 0), operation.Shape == FloatShape.Binary ? 2 : 1)]);
-        var native = to == "csharp"
-          ? CSharpEmitter.Writes(intrinsic, CSharpProfile.Parse(profile, null), FloatMode.Accurate)
-          : JavaScriptEmitter.Writes(intrinsic, JavaScriptProfile.Parse(profile), FloatMode.Accurate);
-        if (!native)
-          continue;
-
-        var bound = NativeAccuracy.Bound(op, NativeAccuracy.Slack(runtime, op, format)!.Value);
-        var type = format == IrType.F32 ? "float" : "double";
-        var arguments = operation.Shape == FloatShape.Binary ? $"{type} x, {type} y" : $"{type} x";
-        var call = name == "PowEcma" ? null : $"System.{(format == IrType.F32 ? "MathF" : "Math")}.{name}({(operation.Shape == FloatShape.Binary ? "x, y" : "x")})";
-        if (name == "Hypot")
-          call = $"System.{(format == IrType.F32 ? "Single" : "Double")}.Hypot(x, y)";
-
-        (string Path, string Text) generated;
-        if (call is null) {
-          if (format == IrType.F32)
-            continue;
-
-          generated = this.Translate(this.Script("powecma.mjs", "/** @param {number} x @param {number} y @returns {number} */\nexport function F(x, y) { return x ** y; }\n"),
-            "javascript", to, "--profile", profile);
-        } else {
-          generated = this.Translate(this.Snippet($"public static {type} F({arguments}) => {call};"), "csharp", to, "--profile", profile);
-        }
-
-        var report = this.NativeAgainstVectors(vectors, format, bound,
-          calls => to == "csharp" ? CSharpOutcomes(generated.Text, calls) : this.JavaScriptOutcomes(generated.Path, profile, calls), name == "PowEcma");
-        TestContext.Out.WriteLine($"{to} {profile} {name} {format}: bound {bound}, {report}");
-      }
+    return from runtime in new[] { ("csharp", "net10.0"), ("javascript", "es2022") }
+           from function in functions
+           select new TestCaseData(runtime.Item1, runtime.Item2, function.Key, function.Value);
   }
 
   /// <summary>

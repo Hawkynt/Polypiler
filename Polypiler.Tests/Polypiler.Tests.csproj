@@ -3,6 +3,10 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- The tests run in parallel, one worker per logical processor, and most of them allocate hard
+         (Roslyn, the interpreter): one GC heap per processor keeps the workers from waiting on each
+         other's collections. -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>

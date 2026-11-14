@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.IR;
 
@@ -142,11 +143,46 @@ internal static class PrototypeFixture {
     double number => Show(number),
     // A struct: the interpreter hands one over as the array of its fields, .NET as a value of a struct type.
     object?[] fields => $"{{{string.Join(",", fields.Select(Show))}}}",
+    Array array when Elements(array) is { } shown => shown,
     Array array => $"[{string.Join(",", array.Cast<object>().Select(Show))}]",
     _ when value.GetType() is { IsValueType: true, IsPrimitive: false } type && type != typeof(decimal)
       => $"{{{string.Join(",", type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).OrderBy(field => field.MetadataToken).Select(field => Show(field.GetValue(value))))}}}",
     _ => Convert.ToString(value, CultureInfo.InvariantCulture)!
   };
+
+  /// <summary>
+  /// An array of a primitive type as <see cref="Show(object)"/> writes it, element by element, without
+  /// boxing every element: the equivalence tests write millions of them. The type is asked exactly,
+  /// because a <c>uint[]</c> also passes for an <c>int[]</c>. <see langword="null"/> for any other array.
+  /// </summary>
+  private static string? Elements(Array array) {
+    var type = array.GetType();
+    return type == typeof(byte[]) ? Joined((byte[])array, value => value.ToString(CultureInfo.InvariantCulture))
+      : type == typeof(sbyte[]) ? Joined((sbyte[])array, value => value.ToString(CultureInfo.InvariantCulture))
+      : type == typeof(short[]) ? Joined((short[])array, value => value.ToString(CultureInfo.InvariantCulture))
+      : type == typeof(ushort[]) ? Joined((ushort[])array, value => value.ToString(CultureInfo.InvariantCulture))
+      : type == typeof(int[]) ? Joined((int[])array, value => value.ToString(CultureInfo.InvariantCulture))
+      : type == typeof(uint[]) ? Joined((uint[])array, value => value.ToString(CultureInfo.InvariantCulture))
+      : type == typeof(long[]) ? Joined((long[])array, value => value.ToString(CultureInfo.InvariantCulture))
+      : type == typeof(ulong[]) ? Joined((ulong[])array, value => value.ToString(CultureInfo.InvariantCulture))
+      : type == typeof(char[]) ? Joined((char[])array, value => ((int)value).ToString(CultureInfo.InvariantCulture))
+      : type == typeof(bool[]) ? Joined((bool[])array, value => value ? "true" : "false")
+      : type == typeof(float[]) ? Joined((float[])array, value => Show((double)value))
+      : type == typeof(double[]) ? Joined((double[])array, Show)
+      : null;
+  }
+
+  private static string Joined<T>(T[] values, Func<T, string> show) {
+    var text = new StringBuilder("[");
+    for (var index = 0; index < values.Length; ++index) {
+      if (index > 0)
+        text.Append(',');
+
+      text.Append(show(values[index]));
+    }
+
+    return text.Append(']').ToString();
+  }
 
   /// <summary>
   /// A floating-point number by its bits, so that two outcomes are equal exactly when the numbers are

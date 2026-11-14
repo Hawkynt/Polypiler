@@ -50,7 +50,9 @@ public sealed class CliTests {
   public void NearMissOptions_AreUnknownCommands(string argument)
     => Assert.That(Invoke(argument).ExitCode, Is.EqualTo(Program.UsageError));
 
-  [Test]
+  // Console.Out belongs to the whole process: a parallel test that swapped it as well would take this
+  // test's output, or restore the original under it.
+  [Test, NonParallelizable]
   public void Main_WritesToTheConsole() {
     var originalOut = Console.Out;
     using var output = new StringWriter();

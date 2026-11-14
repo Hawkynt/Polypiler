@@ -38,6 +38,9 @@ public sealed class JavaScriptImportTests {
 
   private string _directory = "";
 
+  /// <summary>Whether this case translates in process: the test design does, the scenarios start the executable.</summary>
+  private bool _inProcess;
+
   /// <summary>
   /// What node does for the calls. A module that computes in doubles has two zeros, so the outcome
   /// of every call here tells -0 from 0.
@@ -183,6 +186,7 @@ public sealed class JavaScriptImportTests {
   /// </summary>
   [TestCaseSource(typeof(JavaScriptFixture), nameof(JavaScriptFixture.Names))]
   public void NodeOnTheOriginal_Interpreter_AndTheEmittedJavaScriptAndCSharp_Agree(string fixture) {
+    this._inProcess = true;
     var calls = JavaScriptCases.For(fixture).ToList();
     if (JavaScriptCases.RandomFixtures.Contains(fixture))
       calls.AddRange(JavaScriptCases.RandomCalls(fixture));
@@ -211,13 +215,14 @@ public sealed class JavaScriptImportTests {
   /// </summary>
   [Test]
   public void CiphersImportedFunctions_BehaveLikeTheOriginal() {
+    this._inProcess = true;
     var imported = JavaScriptFixture.OpCodesExpectation().Where(line => line.Status == JavaScriptFixture.Imported).Select(line => line.Function).ToList();
     var module = JavaScriptFixture.Import("OpCodes.js", File.ReadAllText(JavaScriptFixture.OpCodesPath), imported);
     var scalar = module.Functions.Where(function => function.Parameters.Count > 0 && function.Parameters.All(parameter => !parameter.Type.IsArray)).ToList();
     var calls = JavaScriptCases.BoundaryCalls(scalar).Concat(JavaScriptCases.RandomCalls(scalar, 200)).ToList();
 
     var output = Path.Combine(this._directory, "out");
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, "translate", JavaScriptFixture.OpCodesPath, "--from", "javascript", "--to", "javascript", "--output", output, "--export", string.Join(',', imported));
+    var (exitCode, text) = Toolchain.Polypiler(this._inProcess, this._directory, "translate", JavaScriptFixture.OpCodesPath, "--from", "javascript", "--to", "javascript", "--output", output, "--export", string.Join(',', imported));
     Assert.That(exitCode, Is.Zero, text);
     var original = Exact(this._directory, JavaScriptFixture.OpCodesPath, calls);
     var reEmitted = Exact(output, "OpCodes.mjs", calls);
@@ -257,6 +262,7 @@ public sealed class JavaScriptImportTests {
   /// </summary>
   [Test]
   public void Differences_AreWhatNodeAndTheImportedCodeDo() {
+    this._inProcess = true;
     foreach (var fixture in JavaScriptCases.Differences().GroupBy(difference => difference.Fixture)) {
       var calls = fixture.Select(difference => difference.Call).ToList();
       var original = Exact(this._directory, JavaScriptFixture.PathOf(fixture.Key), calls);
@@ -278,18 +284,19 @@ public sealed class JavaScriptImportTests {
     Assert.That(JavaScriptCases.RandomOperatorCalls().Select(call => call.ToString()), Is.EqualTo(calls.Select(call => call.ToString())));
   }
 
-  /// <summary>Translates a fixture with the real executable and runs the calls through node.</summary>
+  /// <summary>Translates a fixture with the real executable, or in process where the test is about the generated file, and runs the calls through node.</summary>
   private IReadOnlyList<string> TranslateFixture(string fixture, IReadOnlyList<PrototypeCall> calls) {
     var output = Path.Combine(this._directory, "out-" + Path.GetFileName(fixture));
     var watch = Stopwatch.StartNew();
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, "translate", JavaScriptFixture.PathOf(fixture), "--from", "javascript", "--to", "javascript", "--output", output);
+    var (exitCode, text) = Toolchain.Polypiler(this._inProcess, this._directory, "translate", JavaScriptFixture.PathOf(fixture), "--from", "javascript", "--to", "javascript", "--output", output);
     TestContext.Out.WriteLine($"{fixture}: translated in {watch.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
     return Exact(output, Path.GetFileName(fixture) + ".mjs", calls);
   }
 
   /// <summary>
-  /// Translates a JavaScript file to C# with the real executable and has the C# compiler build the
+  /// Translates a JavaScript file to C# with the real executable, or in process where the test is
+  /// about the generated file, and has the C# compiler build the
   /// result, once with overflow checking off and once with it on. The file is given the name the
   /// class is to have: a module is named after its file, and the C# compiler warns about a type
   /// name that is all lower case.
@@ -298,7 +305,7 @@ public sealed class JavaScriptImportTests {
     var directory = Path.Combine(this._directory, "csharp-" + className);
     Directory.CreateDirectory(directory);
     File.Copy(source, Path.Combine(directory, className + Path.GetExtension(source)), true);
-    var (exitCode, text) = Toolchain.RunPolypiler(directory, ["translate", className + Path.GetExtension(source), "--from", "javascript", "--to", "csharp", "--output", "out", .. further]);
+    var (exitCode, text) = Toolchain.Polypiler(this._inProcess, directory, ["translate", className + Path.GetExtension(source), "--from", "javascript", "--to", "csharp", "--output", "out", .. further]);
     Assert.That(exitCode, Is.Zero, text);
     var generated = File.ReadAllText(Path.Combine(directory, "out", className + ".cs"));
     return [GeneratedCSharp.Compile(generated, false), GeneratedCSharp.Compile(generated, true)];

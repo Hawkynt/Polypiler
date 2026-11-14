@@ -131,33 +131,46 @@ public sealed class IntegerCSharpTests {
   /// Test design 2, 4, 5, 6, 9 and 12 for C#: the module of every operation and width, in every
   /// profile, compiles against that profile's reference assemblies at its language version and, built
   /// for the running runtime without and with overflow checking, has the outcome of the bit-by-bit
-  /// reference for every boundary combination and 1000 random tuples per signature (seed 2026).
+  /// reference for every boundary combination and 1000 random tuples per signature (seed 2026). A
+  /// profile whose code is that of an earlier profile is compiled for its framework, and not run again.
   /// </summary>
-  [Test, Category("Slow")]
-  public void EveryProfile_ComputesTheReference() {
-    var module = IntegerCases.Module(IntegerCases.All);
-    var random = new Random(IntegerCases.Seed);
-    var calls = IntegerCases.All.SelectMany(@case => IntegerCases.Calls(@case, random).Select(call => (Case: @case, Call: call))).ToList();
-    var expected = calls.Select(entry => IntegerCases.Expected(entry.Case, entry.Call)).ToList();
-    var executed = new Dictionary<string, string>();
-    var mismatches = new List<string>();
-    foreach (var profile in CSharpProfile.All) {
-      var text = CSharpEmitter.Emit(module, profile).Single().Content;
-      Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, profile.Name);
-      if (!executed.TryAdd(Code(text), profile.Name))
-        continue;
-
-      foreach (var checking in _overflowChecking) {
-        var build = GeneratedCSharp.Compile(text, checking);
-        for (var index = 0; index < calls.Count; ++index)
-          if (build.Outcome(calls[index].Call) is var outcome && outcome != expected[index])
-            mismatches.Add($"{profile.Name}, CheckOverflow {checking}: {calls[index].Call} is {outcome}, the reference {expected[index]}");
-      }
+  [TestCaseSource(nameof(Profiles)), Category("Slow")]
+  public void EveryProfile_ComputesTheReference(string name) {
+    var module = _referenceModule.Value;
+    var (calls, expected) = _referenceCalls.Value;
+    var profile = CSharpProfile.All.Single(candidate => candidate.Name == name);
+    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, profile.Name);
+    var earlier = CSharpProfile.All.TakeWhile(candidate => candidate != profile)
+      .FirstOrDefault(candidate => Code(CSharpEmitter.Emit(module, candidate).Single().Content) == Code(text));
+    if (earlier is not null) {
+      TestContext.Out.WriteLine($"{profile.Name}: the code of {earlier.Name}, which runs it");
+      return;
     }
 
-    TestContext.Out.WriteLine($"{IntegerCases.All.Count} operations and widths, {calls.Count} calls x {executed.Count} distinct texts ({string.Join(", ", executed.Values)}) x 2 builds, {mismatches.Count} mismatches");
+    var mismatches = new List<string>();
+    foreach (var checking in _overflowChecking) {
+      var build = GeneratedCSharp.Compile(text, checking);
+      for (var index = 0; index < calls.Count; ++index)
+        if (build.Outcome(calls[index].Call) is var outcome && outcome != expected[index])
+          mismatches.Add($"{profile.Name}, CheckOverflow {checking}: {calls[index].Call} is {outcome}, the reference {expected[index]}");
+    }
+
+    TestContext.Out.WriteLine($"{profile.Name}: {IntegerCases.All.Count} operations and widths, {calls.Count} calls x 2 builds, {mismatches.Count} mismatches");
     Assert.That(mismatches.Take(20), Is.Empty, $"{mismatches.Count} outcomes differ");
   }
+
+  private static IEnumerable<TestCaseData> Profiles() => CSharpProfile.All.Select(profile => new TestCaseData(profile.Name).SetArgDisplayNames(profile.Name));
+
+  /// <summary>The module of every operation and width, built once for all profiles.</summary>
+  private static readonly Lazy<IrModule> _referenceModule = new(() => IntegerCases.Module(IntegerCases.All));
+
+  /// <summary>The calls of every operation and width with the outcome of the bit-by-bit reference for each, computed once for all profiles.</summary>
+  private static readonly Lazy<(List<(IntegerCase Case, PrototypeCall Call)> Calls, List<string> Expected)> _referenceCalls = new(() => {
+    var random = new Random(IntegerCases.Seed);
+    var calls = IntegerCases.All.SelectMany(@case => IntegerCases.Calls(@case, random).Select(call => (Case: @case, Call: call))).ToList();
+    return (calls, [.. calls.Select(entry => IntegerCases.Expected(entry.Case, entry.Call))]);
+  });
 
   /// <summary>The byte swap of the issue: a library call in .NET 10, a helper and no BinaryPrimitives in .NET Framework 2.0.</summary>
   [Test]

@@ -175,7 +175,7 @@ public sealed class JavaScriptProfileTests {
   public void Node_AgreesWithTheCompiledFixture(string fixture, ProfileCase profile) {
     var (calls, compiled) = Expected(fixture);
     var watch = Stopwatch.StartNew();
-    var text = this.TranslateFixture(fixture, profile);
+    var text = this.TranslateFixture(fixture, profile, true);
     var translated = watch.ElapsedMilliseconds;
     Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty);
 
@@ -221,7 +221,7 @@ public sealed class JavaScriptProfileTests {
     foreach (var group in calls.GroupBy(call => call.Method[..call.Method.IndexOf(':')])) {
       var fixture = group.Key;
       var named = PrototypeFixture.Typed(fixture, group.Select(call => call with { Method = call.Method[(fixture.Length + 1)..] }));
-      this.TranslateFixture(fixture, profile);
+      this.TranslateFixture(fixture, profile, true);
       var node = this.Node(profile, PrototypeFixture.ClassOf(fixture), named);
       var mismatches = Enumerable.Range(0, named.Count)
         .Select(index => (Call: named[index], Compiled: PrototypeFixture.CompiledOutcome(fixture, named[index]), Node: node[index]))
@@ -256,7 +256,7 @@ public sealed class JavaScriptProfileTests {
       new PrototypeCall("RemainderLong", [unchecked((long)pair.Dividend), unchecked((long)pair.Divisor)])
     });
     var typed = PrototypeFixture.Typed("wide/OperatorsWide", calls);
-    this.TranslateFixture("wide/OperatorsWide", profile);
+    this.TranslateFixture("wide/OperatorsWide", profile, true);
     var node = this.Node(profile, "OperatorsWide", typed);
     Assert.That(node, Is.EqualTo(typed.Select(call => PrototypeFixture.CompiledOutcome("wide/OperatorsWide", call))));
     Assert.That(node[0], Is.EqualTo("65535"));
@@ -284,10 +284,10 @@ public sealed class JavaScriptProfileTests {
                       from a in floats
                       from b in floats
                       select new PrototypeCall(method, [a, b])).ToList();
-    this.TranslateFixture("wide/Conversions", profile);
+    this.TranslateFixture("wide/Conversions", profile, true);
     Assert.That(this.Node(profile, "Conversions", conversions),
       Is.EqualTo(conversions.Select(call => PrototypeFixture.CompiledOutcome("wide/Conversions", call))));
-    this.TranslateFixture("wide/OperatorsWide", profile);
+    this.TranslateFixture("wide/OperatorsWide", profile, true);
     Assert.That(this.Node(profile, "OperatorsWide", arithmetic),
       Is.EqualTo(arithmetic.Select(call => PrototypeFixture.CompiledOutcome("wide/OperatorsWide", call))));
   }
@@ -316,7 +316,7 @@ public sealed class JavaScriptProfileTests {
     var expected = PrototypeFixture.InterpretedOutcome(module, call);
     ProfileCase[] profiles = [ProfileCase.Default, .. Replacing()];
     foreach (var profile in profiles) {
-      Assert.That(this.Snippet(source, profile, [call]).Single(), Is.EqualTo(expected), profile.ToString());
+      Assert.That(this.Snippet(source, profile, [call], true).Single(), Is.EqualTo(expected), profile.ToString());
       Directory.Delete(Path.Combine(this._directory, "out"), true);
     }
   }
@@ -347,11 +347,11 @@ public sealed class JavaScriptProfileTests {
     var call = new PrototypeCall("F", arguments);
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(source));
     var typed = call with { Returns = module.Functions.Single(function => function.Name == "F").ReturnType.IsLong ? typeof(long) : typeof(int) };
-    var expected = this.Snippet(source, ProfileCase.Default, [typed]).Single();
+    var expected = this.Snippet(source, ProfileCase.Default, [typed], true).Single();
     Assert.That(expected, Is.EqualTo(PrototypeFixture.InterpretedOutcome(module, call)), capability);
     foreach (var profile in Levels()) {
       Directory.Delete(Path.Combine(this._directory, "out"), true);
-      Assert.That(this.Snippet(source, profile, [typed]).Single(), Is.EqualTo(expected), $"{capability} as {profile}");
+      Assert.That(this.Snippet(source, profile, [typed], true).Single(), Is.EqualTo(expected), $"{capability} as {profile}");
     }
   }
 
@@ -368,7 +368,7 @@ public sealed class JavaScriptProfileTests {
     var calls = values.Select(value => new PrototypeCall("F", [value]) { Returns = typeof(double) }).ToList();
     var original = Toolchain.NodeOutcomes(this._directory, "f.mjs", calls, true);
     string[] arguments = ["translate", "f.mjs", "--from", "javascript", "--to", "javascript", .. profile.Arguments, "--output", "out"];
-    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, arguments);
+    var (exitCode, output) = Toolchain.Translate(this._directory, arguments);
     Assert.That(exitCode, Is.Zero, output);
     var text = File.ReadAllText(Path.Combine(this._directory, "out", "f" + profile.Parsed.Extension));
     Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty);
@@ -411,7 +411,7 @@ public sealed class JavaScriptProfileTests {
     ];
     foreach (var group in cases.GroupBy(test => test.Fixture)) {
       var calls = PrototypeFixture.Typed(group.Key, group.Select(test => test.Call));
-      this.TranslateFixture(group.Key, profile);
+      this.TranslateFixture(group.Key, profile, true);
       Assert.That(this.Node(profile, PrototypeFixture.ClassOf(group.Key), calls), Is.EqualTo(group.Select(test => test.Trap)), group.Key);
       Assert.That(calls.Select(call => PrototypeFixture.CompiledOutcome(group.Key, call)), Is.EqualTo(group.Select(test => test.Trap)), group.Key);
     }
@@ -424,20 +424,23 @@ public sealed class JavaScriptProfileTests {
       return (calls, calls.Select(call => PrototypeFixture.CompiledOutcome(name, call)).ToArray());
     })).Value;
 
-  /// <summary>Translates a fixture for a profile with the real executable and returns the text of the generated file.</summary>
-  private string TranslateFixture(string fixture, ProfileCase profile) {
+  /// <summary>
+  /// Translates a fixture for a profile with the real executable, or in process where the test is
+  /// about the generated file, and returns the text of the generated file.
+  /// </summary>
+  private string TranslateFixture(string fixture, ProfileCase profile, bool inProcess = false) {
     var output = Path.Combine(this._directory, "out");
     string[] arguments = ["translate", PrototypeFixture.PathOf(fixture), "--from", "csharp", "--to", "javascript", .. profile.Arguments, "--output", output];
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, arguments);
+    var (exitCode, text) = Toolchain.Polypiler(inProcess, this._directory, arguments);
     Assert.That(exitCode, Is.Zero, text);
     return File.ReadAllText(Path.Combine(output, PrototypeFixture.ClassOf(fixture) + profile.Parsed.Extension));
   }
 
-  /// <summary>Translates one method for a profile, checks the level of the file and runs the calls through node.</summary>
-  private IReadOnlyList<string> Snippet(string method, ProfileCase profile, IReadOnlyList<PrototypeCall> calls) {
+  /// <summary>Translates one method for a profile, in process or with the executable, checks the level of the file and runs the calls through node.</summary>
+  private IReadOnlyList<string> Snippet(string method, ProfileCase profile, IReadOnlyList<PrototypeCall> calls, bool inProcess = false) {
     File.WriteAllText(Path.Combine(this._directory, "Snippet.cs"), PrototypeFixture.Wrap(method));
     string[] arguments = ["translate", "Snippet.cs", "--from", "csharp", "--to", "javascript", .. profile.Arguments, "--output", "out"];
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, arguments);
+    var (exitCode, text) = Toolchain.Polypiler(inProcess, this._directory, arguments);
     Assert.That(exitCode, Is.Zero, text);
     Assert.That(GeneratedJavaScript.Problems(File.ReadAllText(Path.Combine(this._directory, "out", "Snippet" + profile.Parsed.Extension)), profile.Parsed), Is.Empty, profile.ToString());
     return this.Node(profile, "Snippet", calls);

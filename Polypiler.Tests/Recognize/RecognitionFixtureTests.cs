@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
@@ -22,9 +23,22 @@ public sealed class RecognitionFixtureTests {
 
   private static IEnumerable<TestCaseData> Files() => RecognitionFixtures.Files.Select(file => new TestCaseData(file).SetArgDisplayNames(file));
 
+  /// <summary>The most calls one case of the equivalence test makes; a function with more is split into parts that run side by side.</summary>
+  private const long CallsPerCase = 1 << 19;
+
   private static IEnumerable<TestCaseData> Functions() => RecognitionFixtures.Files.SelectMany(file
     => RecognitionFixtures.Imported(file).Functions.Where(function => function.IsPublic)
-      .Select(function => new TestCaseData(file, function.Name).SetArgDisplayNames(file, function.Name)));
+      .SelectMany(function => Parts(file, function)));
+
+  /// <summary>Each fixture file imported and optimized once for all the cases of its functions, during one run.</summary>
+  private static readonly ConcurrentDictionary<string, Lazy<(IrModule Original, IrModule Optimized)>> _optimized = new(StringComparer.Ordinal);
+
+  private static IEnumerable<TestCaseData> Parts(string file, IrFunction function) {
+    var parts = (int)((RecognitionFixtures.CallCount(function) + CallsPerCase - 1) / CallsPerCase);
+    return parts == 1
+      ? [new TestCaseData(file, function.Name, 0, 1).SetArgDisplayNames(file, function.Name)]
+      : Enumerable.Range(0, parts).Select(part => new TestCaseData(file, function.Name, part, parts).SetArgDisplayNames(file, function.Name, $"part {part + 1} of {parts}"));
+  }
 
   private static Dictionary<string, string[]> Applied(OptimizationResult result)
     => result.Applications.GroupBy(application => application.Function)
@@ -43,12 +57,14 @@ public sealed class RecognitionFixtureTests {
   }
 
   [TestCaseSource(nameof(Functions)), Category("Slow")]
-  public void OptimizedFunction_ComputesWhatTheOriginalComputes(string file, string function) {
-    var original = RecognitionFixtures.Imported(file);
-    var optimized = Optimizer.Run(original, RecognitionFixtures.Options).Module;
+  public void OptimizedFunction_ComputesWhatTheOriginalComputes(string file, string function, int part, int parts) {
+    var (original, optimized) = _optimized.GetOrAdd(file, key => new(() => {
+      var imported = RecognitionFixtures.Imported(key);
+      return (imported, Optimizer.Run(imported, RecognitionFixtures.Options).Module);
+    })).Value;
     var cases = 0;
     var mismatches = new List<string>();
-    foreach (var call in RecognitionFixtures.Calls(original.Functions.Single(candidate => candidate.Name == function))) {
+    foreach (var call in RecognitionFixtures.Calls(original.Functions.Single(candidate => candidate.Name == function), part, parts)) {
       ++cases;
       var expected = RecognitionFixtures.Outcome(original, call);
       var actual = RecognitionFixtures.Outcome(optimized, call);
@@ -56,7 +72,7 @@ public sealed class RecognitionFixtureTests {
         mismatches.Add($"{call}: {actual}, not {expected}");
     }
 
-    TestContext.Out.WriteLine($"{file} {function}: {cases} cases, {mismatches.Count} mismatches");
+    TestContext.Out.WriteLine($"{file} {function}, part {part + 1} of {parts}: {cases} cases, {mismatches.Count} mismatches");
     Assert.That(mismatches, Is.Empty);
   }
 
