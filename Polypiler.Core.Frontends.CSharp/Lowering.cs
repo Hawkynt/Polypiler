@@ -13,7 +13,7 @@ namespace Polypiler.Core.Frontends.CSharp;
 /// compiler chose, the conversions it inserted and the constants it folded. A construct outside the
 /// subset ends the method it stands in with one diagnostic; nothing is guessed.
 /// </summary>
-internal sealed class Lowering(string path, SemanticModel model) {
+internal sealed partial class Lowering(string path, SemanticModel model) {
 
   private readonly List<Diagnostic> _diagnostics = [];
   private readonly Dictionary<ISymbol, IrLocal> _variables = new(SymbolEqualityComparer.Default);
@@ -407,6 +407,9 @@ internal sealed class Lowering(string path, SemanticModel model) {
     if (first != declaration.Declaration.GetFirstToken())
       throw new UnsupportedException(declaration, first.Text);
 
+    if (scope is null && this.Paired(declaration.Declaration, into))
+      return;
+
     this.Declaration(declaration.Declaration, into, scope);
   }
 
@@ -443,6 +446,8 @@ internal sealed class Lowering(string path, SemanticModel model) {
   /// <summary>Lowers an expression that stands as a statement: an assignment, a step or a call.</summary>
   private void Effect(ExpressionSyntax expression, List<IrStmt> into) {
     switch (expression) {
+      case AssignmentExpressionSyntax when this.Paired(expression, into):
+        break;
       case AssignmentExpressionSyntax assignment:
         this.Assignment(assignment, into);
         break;
@@ -452,6 +457,8 @@ internal sealed class Lowering(string path, SemanticModel model) {
         break;
       case PostfixUnaryExpressionSyntax step:
         this.Step(step.Operand, step.IsKind(SyntaxKind.PostIncrementExpression), into);
+        break;
+      case InvocationExpressionSyntax when this.Paired(expression, into):
         break;
       case InvocationExpressionSyntax:
         into.Add(new IrExprStmt(this.Value(expression)));
@@ -735,6 +742,10 @@ internal sealed class Lowering(string path, SemanticModel model) {
   /// for a method, or an overload of one, that has no such operation.
   /// </summary>
   private IrExpr? Library(IMethodSymbol method, List<ExpressionSyntax> operands, IrType type) {
+    // The integer and bit operations of the base library, which CSharpIntegerApi lists.
+    if (this.Integer(method, operands, type) is { } integer)
+      return integer;
+
     var parameters = method.Parameters.Select(parameter => parameter.Type.SpecialType).ToList();
     switch (method.ContainingType.ToDisplayString(), method.Name, operands.Count) {
       case ("System.Array", "Copy", 5) when parameters[4] == SpecialType.System_Int32:
@@ -767,13 +778,6 @@ internal sealed class Lowering(string path, SemanticModel model) {
       ("System.Math" or "System.MathF", "Ceiling") => IrIntrinsicOp.Ceiling,
       ("System.Math" or "System.MathF", "Truncate") => IrIntrinsicOp.Truncate,
       ("System.Math" or "System.MathF", "Round") => IrIntrinsicOp.RoundEven,
-      ("System.Math", "BigMul") => IrIntrinsicOp.BigMul,
-      ("System.Numerics.BitOperations", "RotateLeft") => IrIntrinsicOp.RotateLeft,
-      ("System.Numerics.BitOperations", "RotateRight") => IrIntrinsicOp.RotateRight,
-      ("System.Numerics.BitOperations", "PopCount") => IrIntrinsicOp.PopCount,
-      ("System.Numerics.BitOperations", "LeadingZeroCount") => IrIntrinsicOp.LeadingZeroCount,
-      ("System.Numerics.BitOperations", "TrailingZeroCount") => IrIntrinsicOp.TrailingZeroCount,
-      ("System.Numerics.BitOperations", "Log2") => IrIntrinsicOp.Log2,
       ("System.BitConverter", "DoubleToInt64Bits" or "SingleToInt32Bits") => IrIntrinsicOp.FloatBits,
       ("System.BitConverter", "Int64BitsToDouble" or "Int32BitsToSingle") => IrIntrinsicOp.BitsFloat,
       _ => null
