@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/manifest.schema.json",
+  "title": "Polypiler output manifest",
+  "description": "polypiler.manifest.json in the root of an output directory (PRD §10.2): what produced the output, from what, with which helpers, and how far it has been checked. Written canonically by ManifestWriter: UTF-8 without BOM, LF, two-space indent, properties in the order below, inputs/outputs/intrinsics/helpers/toolchains sorted ordinally, no timestamps, host names or absolute paths. The state rule (PLY0054) is checked by ManifestValidator, not by this schema. The sections after 'state' belong to other areas; each is absent, never null or empty, when its owner did not run, and is checked against spec/schemas/manifest.<section>.schema.json once that file exists.",
+  "type": "object",
+  "required": ["schemaVersion", "compiler", "command", "inputs", "frontend", "target", "outputs", "api", "intrinsics", "helpers", "nativeDependencies", "licensing", "caveats", "optimization", "warnings", "toolchains", "commands", "state"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "compiler": {
+      "type": "object",
+      "required": ["name", "version", "irVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/text" },
+        "version": { "$ref": "#/$defs/text" },
+        "irVersion": { "type": "integer", "minimum": 1, "maximum": 2147483647 }
+      }
+    },
+    "command": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "The argument vector without the executable; paths in it are relative to the output directory." },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "$ref": "#/$defs/relativePath" },
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "provenance": {
+            "type": ["object", "null"],
+            "required": ["repository", "commit", "path"],
+            "additionalProperties": false,
+            "properties": {
+              "repository": { "$ref": "#/$defs/text" },
+              "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+              "path": { "$ref": "#/$defs/relativePath" }
+            }
+          }
+        }
+      }
+    },
+    "frontend": {
+      "type": "object",
+      "required": ["language", "profile"],
+      "additionalProperties": false,
+      "properties": {
+        "language": { "$ref": "#/$defs/text" },
+        "profile": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": ["language", "profile", "runtime", "platform"],
+      "additionalProperties": false,
+      "properties": {
+        "language": { "$ref": "#/$defs/text" },
+        "profile": { "$ref": "#/$defs/text" },
+        "runtime": { "$ref": "#/$defs/text" },
+        "platform": { "$ref": "#/$defs/text" }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "$ref": "#/$defs/relativePath" },
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "role": { "enum": ["source", "test", "helper", "build", "notice"] }
+        }
+      }
+    },
+    "api": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "signature"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "$ref": "#/$defs/text" },
+          "signature": { "$ref": "#/$defs/text" },
+          "shape": { "$ref": "#/$defs/present", "description": "Written by the API-shape profile of the objects area." },
+          "adapterOf": { "$ref": "#/$defs/present", "description": "Written by the API-shape profile of the objects area." },
+          "representation": { "$ref": "#/$defs/present", "description": "Written by the API-shape profile of the objects area." }
+        }
+      }
+    },
+    "intrinsics": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/text" } },
+    "floatingPoint": {
+      "type": "object",
+      "description": "The floating-point record of ADR 0005 that the header of every generated file carries: the mode, and every native function with an ulp(n) contract the code calls. Absent when the output has no floating-point numbers.",
+      "required": ["mode", "natives"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["strict", "accurate", "fast"] },
+        "natives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["operation", "format", "accuracy", "runtime", "slack", "bound"],
+            "additionalProperties": false,
+            "properties": {
+              "operation": { "$ref": "#/$defs/text" },
+              "format": { "enum": ["f32", "f64"] },
+              "accuracy": { "$ref": "#/$defs/accuracy" },
+              "runtime": { "$ref": "#/$defs/text" },
+              "slack": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+              "bound": { "type": "integer", "minimum": 0, "maximum": 2147483647 }
+            }
+          }
+        }
+      }
+    },
+    "helpers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "license", "origin", "callSites", "size", "dependsOn"],
+        "additionalProperties": false,
+        "properties": {
+          "symbol": { "$ref": "#/$defs/text" },
+          "license": { "$ref": "#/$defs/text" },
+          "origin": { "$ref": "#/$defs/text" },
+          "callSites": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+          "size": { "type": "integer", "minimum": 0, "maximum": 2147483647 },
+          "dependsOn": { "type": "array", "items": { "$ref": "#/$defs/text" } }
+        }
+      }
+    },
+    "nativeDependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "version", "licence"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "$ref": "#/$defs/text" },
+          "version": { "$ref": "#/$defs/text" },
+          "licence": { "$ref": "#/$defs/text" }
+        }
+      }
+    },
+    "licensing": {
+      "type": "object",
+      "required": ["outputLicence", "obligations", "modelRestrictions"],
+      "additionalProperties": false,
+      "properties": {
+        "outputLicence": { "$ref": "#/$defs/text" },
+        "obligations": { "type": "array", "items": { "$ref": "#/$defs/text" } },
+        "modelRestrictions": { "type": "array", "items": { "$ref": "#/$defs/text" } }
+      }
+    },
+    "caveats": { "type": "array", "items": { "$ref": "#/$defs/message" } },
+    "optimization": {
+      "type": "object",
+      "required": ["level", "disabled", "passes"],
+      "additionalProperties": false,
+      "properties": {
+        "level": { "$ref": "#/$defs/text" },
+        "disabled": { "type": "array", "items": { "$ref": "#/$defs/text" } },
+        "passes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "proofClass"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/$defs/text" },
+              "proofClass": { "$ref": "#/$defs/text" }
+            }
+          }
+        }
+      }
+    },
+    "warnings": { "type": "array", "items": { "$ref": "#/$defs/message" } },
+    "toolchains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "version"],
+        "additionalProperties": false,
+        "properties": {
+          "key": { "$ref": "#/$defs/text" },
+          "version": { "$ref": "#/$defs/text" }
+        }
+      }
+    },
+    "build": {
+      "type": "object",
+      "required": ["toolchain", "command", "exitCode"],
+      "additionalProperties": false,
+      "properties": {
+        "toolchain": { "$ref": "#/$defs/text" },
+        "command": { "$ref": "#/$defs/text" },
+        "exitCode": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "required": ["command", "exitCode"],
+      "additionalProperties": false,
+      "properties": {
+        "command": { "$ref": "#/$defs/text" },
+        "exitCode": { "type": "integer", "minimum": -2147483648, "maximum": 2147483647 }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["oracle", "producer", "exactness", "total", "passed", "failed"],
+      "additionalProperties": false,
+      "properties": {
+        "oracle": { "$ref": "#/$defs/text" },
+        "producer": { "$ref": "#/$defs/text" },
+        "exactness": { "$ref": "#/$defs/exactness" },
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "benchmarks": { "$ref": "#/$defs/section.benchmarks" },
+    "commands": {
+      "type": "object",
+      "required": ["build", "run"],
+      "additionalProperties": false,
+      "properties": {
+        "build": { "$ref": "#/$defs/text" },
+        "run": { "type": ["string", "null"], "minLength": 1 }
+      }
+    },
+    "state": { "enum": ["generated", "built", "executed", "verified"] },
+    "assumptions": { "$ref": "#/$defs/section.assumptions" },
+    "resources": { "$ref": "#/$defs/section.resources" },
+    "objectModel": { "$ref": "#/$defs/section.objectModel" },
+    "profile": { "$ref": "#/$defs/section.profile" },
+    "budget": { "$ref": "#/$defs/section.budget" }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1 },
+    "present": { "type": ["object", "array", "string", "number", "boolean"], "description": "Any JSON value but null: a member that has nothing to say is absent." },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "64 lower-case hexadecimal digits." },
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(?![/\\\\])(?![A-Za-z]:)(?!~)[^\\\\]+$",
+      "description": "A path relative to the output directory with '/' separators: no leading '/' or '~', no drive letter, no backslash."
+    },
+    "message": {
+      "type": "object",
+      "required": ["code", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "$ref": "#/$defs/text" },
+        "message": { "$ref": "#/$defs/text" }
+      }
+    },
+    "accuracy": { "type": "string", "pattern": "^(exact|cr|ulp\\([1-9][0-9]*\\)|library\\(.+\\))$", "description": "An accuracy contract as ADR 0005 spells it." },
+    "comparisonMode": { "enum": ["ulp", "relative", "absolute"] },
+    "exactness": {
+      "type": "object",
+      "description": "verification.exactness of docs/adr/0005-floating-point-tolerance.md.",
+      "required": ["profile", "mode", "specialValues", "operations", "declared", "observed"],
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "enum": ["strict", "accurate", "fast"] },
+        "mode": { "enum": ["exact", "tolerance"] },
+        "specialValues": { "enum": ["bitwise", "signed-zero", "class"] },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["operation", "accuracy", "policy", "mode", "bound"],
+            "additionalProperties": false,
+            "properties": {
+              "operation": { "$ref": "#/$defs/text" },
+              "accuracy": { "$ref": "#/$defs/accuracy" },
+              "policy": { "$ref": "#/$defs/text" },
+              "mode": { "$ref": "#/$defs/comparisonMode" },
+              "bound": { "type": "number", "minimum": 0 }
+            }
+          }
+        },
+        "declared": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["output", "mode", "bound", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "output": { "$ref": "#/$defs/text" },
+              "mode": { "$ref": "#/$defs/comparisonMode" },
+              "bound": { "type": "number", "minimum": 0 },
+              "reason": { "$ref": "#/$defs/text" }
+            }
+          }
+        },
+        "observed": {
+          "type": "object",
+          "required": ["identical", "withinTolerance", "maxDistance"],
+          "additionalProperties": false,
+          "properties": {
+            "identical": { "type": "integer", "minimum": 0 },
+            "withinTolerance": { "type": "integer", "minimum": 0 },
+            "maxDistance": { "type": "number", "minimum": 0 },
+            "worstVector": { "$ref": "#/$defs/text" }
+          },
+          "if": { "properties": { "maxDistance": { "const": 0 } } },
+          "then": { "properties": { "worstVector": false } },
+          "else": { "required": ["worstVector"] }
+        }
+      },
+      "if": { "properties": { "mode": { "const": "exact" } } },
+      "then": {
+        "properties": {
+          "operations": { "maxItems": 0 },
+          "declared": { "maxItems": 0 },
+          "observed": { "properties": { "withinTolerance": { "const": 0 } } }
+        }
+      }
+    },
+    "section.benchmarks": { "type": "array", "minItems": 1, "description": "Owned by INFRA-BENCH." },
+    "section.assumptions": { "type": "array", "minItems": 1, "description": "Caller contracts, owned by DYN-ASSUME." },
+    "section.resources": { "type": "object", "minProperties": 1, "description": "The resource report of constrained targets, owned by LEG-FRAMEWORK." },
+    "section.objectModel": { "type": "object", "minProperties": 1, "description": "Object-model features and their rules, owned by OBJ-CONTRACTS." },
+    "section.profile": { "type": "object", "minProperties": 1, "description": "The language-profile section, owned by PROF-FRAMEWORK." },
+    "section.budget": { "type": "object", "minProperties": 1, "description": "Measured sizes against profile ceilings, owned by PROF-FRAMEWORK." }
+  }
+}

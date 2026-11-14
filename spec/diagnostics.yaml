@@ -477,18 +477,20 @@ codes:
     severity: error
     exit: EnvironmentError
     title: manifest invalid
-    message: "'<path>' is not a valid manifest: <reason>"
+    message: "manifest '<path>' is invalid: <JSON pointer>: <reason>"
+    rule: manifest.schema
     area: infrastructure
     owner: VER-MANIFEST
-    reserved: true
+    surfaces: "the diagnostics of ManifestReader and ManifestValidator for a polypiler.manifest.json that is not JSON, fails spec/schemas/manifest.schema.json, has an unsupported schemaVersion or a state lower than its evidence supports; one per schema error, at its JSON pointer"
   - code: PLY0054
     severity: error
     exit: EnvironmentError
-    title: manifest file missing or changed
-    message: "'<path>' listed in the manifest is <missing|changed>"
+    title: manifest state unsupported
+    message: "manifest '<path>' claims '<state>' but the evidence supports only '<derived>': <missing>"
+    rule: manifest.state
     area: infrastructure
     owner: VER-MANIFEST
-    reserved: true
+    surfaces: "the diagnostics of ManifestReader and ManifestValidator for a polypiler.manifest.json whose state is higher than its build, execution and verification records support"
   - code: PLY0055
     severity: warning
     title: proof budget exhausted
