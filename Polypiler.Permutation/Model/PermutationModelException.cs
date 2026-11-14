@@ -7,7 +7,7 @@ namespace Polypiler.Permutation.Model;
 public sealed class PermutationModelException : Exception {
 
   /// <summary>Creates the exception for a diagnostic.</summary>
-  /// <param name="diagnostic">The reason, one of <c>PLY0800</c>–<c>PLY0802</c>.</param>
+  /// <param name="diagnostic">The reason, a code of the permutation block such as <c>PLY0800</c>–<c>PLY0802</c> or <c>PLY0805</c>.</param>
   /// <exception cref="ArgumentNullException"><paramref name="diagnostic"/> is <see langword="null"/>.</exception>
   public PermutationModelException(Diagnostic diagnostic) : base((diagnostic ?? throw new ArgumentNullException(nameof(diagnostic))).Code + ": " + diagnostic.Message)
     => this.Diagnostic = diagnostic;

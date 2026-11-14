@@ -754,6 +754,33 @@ codes:
     area: permutation
     owner: PERM-MODEL
     surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for a mapping text that is not '<inputWidth>:[<entry>,...]' (missing width, empty or unknown entry, constant other than =0 or =1) and for a BitPerm state or spec mapping document that is not JSON or lacks its width, its entries, an entry's type or value, or has an unknown type"
+  - code: PLY0805
+    severity: error
+    exit: UnsupportedConstruct
+    title: claimed bit-transform class does not hold
+    message: "<reason>"
+    rule: permutation.hierarchy.class
+    area: permutation
+    owner: PERM-HIERARCHY
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Semantics, from BitPermutation.From and TryFrom when the mapping is not a bijection (H1), and from BitSemanticsVerifier.Check for a contradictory or oversized condition (H2), a condition that disagrees with the mapping's don't-cares (H3), a Boolean transform that reads past its input (H4) and a lane size that does not divide a width (H5); the reasons read 'mapping is declared BitPermutation but input bit 0 is used 3 times', 'output bit 1 is don't-care in the mapping but required by the condition' and the like"
+  - code: PLY0806
+    severity: error
+    exit: UnsupportedConstruct
+    title: input outside the declared input domain
+    message: "input <hex> is outside the declared input domain"
+    rule: permutation.hierarchy.domain
+    area: permutation
+    owner: PERM-HIERARCHY
+    surfaces: "the DiagnosticBag given to BitCondition.Admits, which evaluators of a conditioned routing or Boolean transform call for each input, when the input has a 1 where the condition knows a 0 or a 0 where it knows a 1"
+  - code: PLY0807
+    severity: error
+    exit: UnsupportedConstruct
+    title: truth table too large
+    message: "truth table of <inputs> inputs exceeds the limit of 16"
+    rule: permutation.hierarchy.truth-table
+    area: permutation
+    owner: PERM-HIERARCHY
+    surfaces: "the DiagnosticBag given to BitBooleanTransform.TryGetTruthTable when the transform has more than 16 inputs; the structural cross-check of TryAsRouting is skipped silently above that limit instead"
   - code: PLY0950
     severity: error
     exit: LicenseBlocker
