@@ -206,3 +206,69 @@ jobs:
           start=$(date +%s%N)
           node tooling/bitperm/export.mjs --page "$PAGE" --out tests/fixtures/bitperm --check --expect-blocks 16 --expect-presets 25 --expect-tests 51
           echo "export wall time: $(( ($(date +%s%N) - start) / 1000000 )) ms"
+
+  # The JS/TS layer of PRD §7.3 (tooling/ci/layers/js.yaml): the tests tagged Layer.js run the smoke
+  # fixtures of tests/fixtures/infra/ci/js under the pinned Node, its built-in test runner and the
+  # TypeScript checker, through the sandboxed cross-language runner. Node comes at the version the lock
+  # pins, not the runner image's; TypeScript is installed outside the repository with its install
+  # scripts disabled, and the native checker of its platform package goes on PATH as `tsc`.
+  layer-js:
+    name: layer-js ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # global.json holds every later dotnet to the SDK the lock pins, as in layer-core.
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer js > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          sdk=$($TOOLING ci env --layer core | sed -n 's/^dotnet-sdk=//p')
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.env.outputs.node }}
+      - name: install typescript
+        env:
+          TYPESCRIPT: ${{ steps.env.outputs.typescript }}
+        run: |
+          prefix="$RUNNER_TEMP/typescript"
+          npm install --prefix "$prefix" --ignore-scripts --no-audit --no-fund "typescript@$TYPESCRIPT"
+          platform=$(node -p 'process.platform + "-" + process.arch')
+          echo "$prefix/node_modules/@typescript/typescript-$platform/lib" >> "$GITHUB_PATH"
+      - name: toolchains
+        run: |
+          mkdir -p artifacts
+          $TOOLING toolchains probe --only node,typescript | tee artifacts/probe.txt
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.js" --logger "trx;LogFileName=layer-js.trx" --logger "console;verbosity=detailed" --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-js-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn

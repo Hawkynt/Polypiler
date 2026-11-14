@@ -1,0 +1,11 @@
+# The JS/TS layer (PRD §7.3): the pinned Node with its built-in test runner, and the TypeScript checker,
+# run by the job layer-js of .github/workflows/ci.yml on the tests tagged Layer.js. The generated
+# JavaScript of the prototype's acceptance tests stays in the core layer. Besides the paths of the
+# specification (#31), the layer's own fixtures, feature, tests and this file select it.
+# Format: spec/schemas/ci-layer.schema.json.
+schema: 1
+layer: js
+toolchains: [node, typescript]
+os: [ubuntu-latest, windows-latest]
+paths: ["Polypiler.Core.Frontends.JavaScript/**", "Polypiler.Core.Frontends.TypeScript/**", "Polypiler.Core.Backends.JavaScript/**", "Polypiler.Core.Backends.TypeScript/**", "tests/fixtures/**/*.js", "tests/fixtures/**/*.mjs", "tests/fixtures/**/*.ts", "tests/fixtures/infra/ci/js/**", "tests/features/infra/infra-ci-js.feature", "Polypiler.Tests.Acceptance/Infra/Ci/Js*.cs", "tooling/ci/layers/js.yaml"]
+always: false
