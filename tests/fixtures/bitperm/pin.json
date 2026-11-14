@@ -1,0 +1,8 @@
+{
+  "repository": "Hawkynt/Hawkynt.github.io",
+  "commit": "b3a8a8e92cbca83475986391c3cac56f0b185d29",
+  "files": [
+    {"path": "BitPerm/index.html", "sha256": "a263fee7d3562c119c301d5236337ab04fa60499df40b1665249184ff695609a"},
+    {"path": "BitPerm/README.md", "sha256": "82de29b0dbe780e65ad40fcd9d08fb9f7da3f06280239c57bdd18e7e261476cf"}
+  ]
+}

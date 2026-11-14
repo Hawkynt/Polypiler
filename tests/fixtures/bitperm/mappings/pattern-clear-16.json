@@ -1,0 +1,23 @@
+{
+  "name": "pattern-clear-16",
+  "source": {"line": 2348},
+  "width": 16,
+  "mapping": [
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false},
+    {"type": "empty", "val": 0, "inv": false}
+  ]
+}
