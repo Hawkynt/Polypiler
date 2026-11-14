@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ namespace Polypiler.Prototype.Testing;
 /// <summary>
 /// Generated C# as the real C# compiler builds it: Roslyn compiles the text into an assembly in
 /// memory, which is loaded and called. The compiler, not the emitter, decides what the text means.
+/// A text is compiled once per run with the same options, however many tests ask for it.
 /// </summary>
 internal sealed class GeneratedCSharp {
 
@@ -36,7 +38,16 @@ internal sealed class GeneratedCSharp {
   /// otherwise the first calls run the code of the first tier.
   /// </param>
   /// <exception cref="InvalidOperationException">The compiler reported an error or a warning.</exception>
-  public static GeneratedCSharp Compile(string source, bool checkOverflow, bool fullyOptimized = false) {
+  public static GeneratedCSharp Compile(string source, bool checkOverflow, bool fullyOptimized = false)
+    => _builds.GetOrAdd((source, checkOverflow, fullyOptimized), key => new(() => Build(key.Source, key.CheckOverflow, key.FullyOptimized))).Value;
+
+  /// <summary>Every build of this run, by its text and options: the same text is compiled once and loaded once.</summary>
+  private static readonly ConcurrentDictionary<(string Source, bool CheckOverflow, bool FullyOptimized), Lazy<GeneratedCSharp>> _builds = new();
+
+  /// <summary>What the compiler of a profile said about a text, by the text, the profile and the language version, during this run.</summary>
+  private static readonly ConcurrentDictionary<(string Source, string Profile, string LanguageVersion), Lazy<IReadOnlyList<string>>> _complaints = new();
+
+  private static GeneratedCSharp Build(string source, bool checkOverflow, bool fullyOptimized) {
     var tree = CSharpSyntaxTree.ParseText(source);
     if (fullyOptimized) {
       var root = tree.GetRoot();
@@ -80,7 +91,10 @@ internal sealed class GeneratedCSharp {
   /// <param name="languageVersion">The language version, as <c>--langversion</c> takes it.</param>
   /// <returns>What the compiler reports; empty when it accepts the file without complaint.</returns>
   /// <exception cref="InvalidOperationException">The reference assemblies are not restored, or the language version is none.</exception>
-  public static IReadOnlyList<string> ComplaintsFor(string source, string profile, string languageVersion) {
+  public static IReadOnlyList<string> ComplaintsFor(string source, string profile, string languageVersion)
+    => _complaints.GetOrAdd((source, profile, languageVersion), key => new(() => Complaints(key.Source, key.Profile, key.LanguageVersion))).Value;
+
+  private static IReadOnlyList<string> Complaints(string source, string profile, string languageVersion) {
     if (!LanguageVersionFacts.TryParse(languageVersion, out var version))
       throw new InvalidOperationException($"'{languageVersion}' is no language version of the C# compiler.");
 
