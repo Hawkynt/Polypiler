@@ -48,7 +48,7 @@ public static partial class IrVerifier {
   }
 
   private static Diagnostic Error(string member, string message)
-    => new(Code, DiagnosticSeverity.Error, $"ill-typed IR in '{member}': {message}");
+    => Descriptor.At($"ill-typed IR in '{member}': {message}");
 
   private sealed class FunctionCheck(
     IrFunction function,

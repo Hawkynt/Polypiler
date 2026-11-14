@@ -149,7 +149,7 @@ public static class JavaScriptFrontend {
   public static ImportResult Import(string path, string source, IReadOnlyCollection<string>? exports = null) {
     var comments = new List<Comment>();
     if (Parse(source, comments, out var failure) is not { } program)
-      return Refused([new Diagnostic(SyntaxError, DiagnosticSeverity.Error, failure!.Description, path, failure.LineNumber, failure.Column + 1)]);
+      return Refused([SyntaxErrorDescriptor.At(failure!.Description, path, failure.LineNumber, failure.Column + 1)]);
 
     if (exports is { Count: 0 })
       exports = null;
@@ -163,14 +163,14 @@ public static class JavaScriptFrontend {
     if (exports is null) {
       chosen = candidates;
       if (candidates.Count == 0)
-        diagnostics.Add(new Diagnostic(Unsupported, DiagnosticSeverity.Error, "'a file without a function' is not supported yet", path, 1, 1));
+        diagnostics.Add(UnsupportedDescriptor.At("'a file without a function' is not supported yet", path, 1, 1));
     } else {
       chosen = [];
       foreach (var name in exports) {
         if (candidates.Find(candidate => candidate.Name == name) is { } candidate)
           chosen.Add(candidate);
         else
-          diagnostics.Add(new Diagnostic(UnknownExport, DiagnosticSeverity.Error, $"the file has no function '{name}' to export", path, 1, 1));
+          diagnostics.Add(UnknownExportDescriptor.At($"the file has no function '{name}' to export", path, 1, 1));
       }
     }
 

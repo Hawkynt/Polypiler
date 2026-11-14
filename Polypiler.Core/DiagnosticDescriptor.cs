@@ -15,6 +15,10 @@ public sealed partial record DiagnosticDescriptor {
   [Diagnostic]
   public static readonly DiagnosticDescriptor InternalError = new("PLY0001", DiagnosticSeverity.Error, Core.ExitCode.InternalError, "internal compiler error: {0}", "adr-0003.internal-error");
 
+  /// <summary>A native library or a model a component needs is not available: exit code <see cref="Core.ExitCode.MissingDependency"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor MissingDependency = new("PLY0081", DiagnosticSeverity.Error, Core.ExitCode.MissingDependency, "native dependency '{0}' required by '{1}' is missing", "adr-0003.missing-dependency");
+
   /// <summary>Creates a descriptor.</summary>
   /// <param name="code">The code, <c>PLY</c> and four digits.</param>
   /// <param name="severity">How serious the diagnostic is.</param>
@@ -53,6 +57,22 @@ public sealed partial record DiagnosticDescriptor {
 
   /// <summary>The ID of the rule or specification the diagnostic enforces.</summary>
   public string Rule { get; }
+
+  /// <summary>
+  /// A diagnostic of this descriptor whose message the emitter has written itself, at a position
+  /// given as line and column: it carries the code, severity, exit code and rule of the descriptor,
+  /// as one made by <see cref="Diagnostic.Create"/> does.
+  /// </summary>
+  /// <param name="message">The message, without code and position.</param>
+  /// <param name="file">The file the message is about, or <see langword="null"/>.</param>
+  /// <param name="line">The 1-based line, or 0 for none.</param>
+  /// <param name="column">The 1-based column, or 0 for none.</param>
+  /// <returns>The diagnostic.</returns>
+  /// <exception cref="ArgumentNullException"><paramref name="message"/> is <see langword="null"/>.</exception>
+  public Diagnostic At(string message, string? file = null, int line = 0, int column = 0) {
+    ArgumentNullException.ThrowIfNull(message);
+    return new(this.Code, this.Severity, message, file, line, column) { ExitCode = this.ExitCode, Rule = this.Rule };
+  }
 
   /// <summary>Whether a text is a diagnostic code: <c>PLY</c> and exactly four ASCII digits.</summary>
   public static bool IsCode(string? text) => text is not null && CodePattern().IsMatch(text);

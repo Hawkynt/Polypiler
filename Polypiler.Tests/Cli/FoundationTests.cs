@@ -21,6 +21,9 @@ public sealed class FoundationTests {
   private const string Input = "tests/fixtures/cli/foundation/input.txt";
   private const string NonEmpty = "tests/fixtures/cli/foundation/nonempty";
 
+  /// <summary>The tally line after a command that reported one error and nothing else (issue #23).</summary>
+  private static readonly string OneError = "polypiler: 1 error(s), 0 warning(s)" + Environment.NewLine;
+
   private sealed record Run(int ExitCode, string Output, string Error, EchoCommand Echo) {
 
     public string[] ErrorLines => this.Error.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
@@ -143,7 +146,7 @@ public sealed class FoundationTests {
   public void AfterTheTerminator_AnOptionIsAnOperand(string operand) {
     var run = Invoke("echo", "--", operand);
     Assert.That(run.ExitCode, Is.EqualTo((int)ExitCode.EnvironmentError));
-    Assert.That(run.Error, Is.EqualTo($"polypiler: error PLY0004: input '{operand}' does not exist or is not readable{Environment.NewLine}"));
+    Assert.That(run.Error, Is.EqualTo($"polypiler: error PLY0004: input '{operand}' does not exist or is not readable{Environment.NewLine}" + OneError));
     Assert.That(run.Echo.Executions, Is.EqualTo(1));
   }
 
@@ -162,7 +165,7 @@ public sealed class FoundationTests {
       var refused = Invoke("echo", Input, "--output", absent);
       Assert.That(refused.ExitCode, Is.EqualTo((int)ExitCode.EnvironmentError));
       Assert.That(refused.Output, Is.Empty);
-      Assert.That(refused.Error, Is.EqualTo($"polypiler: error PLY0005: output directory '{absent}' is not empty; pass --force to write into it{Environment.NewLine}"));
+      Assert.That(refused.Error, Is.EqualTo($"polypiler: error PLY0005: output directory '{absent}' is not empty; pass --force to write into it{Environment.NewLine}" + OneError));
 
       var forced = Invoke("echo", Input, "--output", absent, "--force");
       Assert.That((forced.ExitCode, forced.Error), Is.EqualTo((0, "")));
@@ -273,7 +276,7 @@ public sealed class FoundationTests {
     var run = Invoke("echo", input);
     Assert.That(run.ExitCode, Is.EqualTo((int)ExitCode.EnvironmentError));
     Assert.That(run.Output, Is.Empty);
-    Assert.That(run.Error, Is.EqualTo($"polypiler: error PLY0004: input '{input}' does not exist or is not readable{Environment.NewLine}"));
+    Assert.That(run.Error, Is.EqualTo($"polypiler: error PLY0004: input '{input}' does not exist or is not readable{Environment.NewLine}" + OneError));
   }
 
   /// <summary>Test design 22 and 46.</summary>
@@ -282,7 +285,9 @@ public sealed class FoundationTests {
     DiagnosticDescriptor[] reports = [TestCommands.TestInfo, TestCommands.TestWarning, TestCommands.TestError];
     var loud = InvokeWith(reports, "echo", Input);
     var quiet = InvokeWith(reports, "echo", Input, "--quiet");
-    Assert.That(loud.ErrorLines, Is.EqualTo(new[] { "polypiler: info PLY0098: test info", "polypiler: warning PLY0098: test warning", "polypiler: error PLY0098: test error" }));
+    Assert.That(loud.ErrorLines, Is.EqualTo(new[] {
+      "polypiler: info PLY0098: test info", "polypiler: warning PLY0098: test warning", "polypiler: error PLY0098: test error", "polypiler: 1 error(s), 1 warning(s)"
+    }));
     Assert.That(quiet.ErrorLines, Is.EqualTo(new[] { "polypiler: error PLY0098: test error" }));
     Assert.That((quiet.Output, quiet.ExitCode), Is.EqualTo((loud.Output, loud.ExitCode)));
     Assert.That(quiet.ExitCode, Is.EqualTo((int)ExitCode.EnvironmentError));
@@ -423,19 +428,25 @@ public sealed class FoundationTests {
     Assert.That(error.ToString(), Is.EqualTo("polypiler: error PLY0001: internal compiler error: System.CommandLine refused a command line the grammar accepts" + Environment.NewLine));
   }
 
+  /// <summary>ADR 0003 decision 6 (issue #23): a number of the command's own that no error stands for is an internal error.</summary>
   [Test]
-  public void ACommandsOwnExitCode_WinsOverItsDiagnostics() {
+  public void ACommandsOwnExitCode_WithoutADiagnostic_IsAnInternalError() {
     var registry = new CommandRegistry();
     registry.Add(new CountCommand());
-    Assert.That(Program.Run(["count", "--count", "7"], TextWriter.Null, TextWriter.Null, registry, "."), Is.EqualTo(7));
+    using var error = new StringWriter();
+    Assert.That(Program.Run(["count", "--count", "7"], TextWriter.Null, error, registry, "."), Is.EqualTo((int)ExitCode.InternalError));
+    Assert.That(error.ToString(), Does.StartWith("polypiler: error PLY0001: command 'count' returned 7 without a diagnostic"));
   }
 
+  /// <summary>An exception outside a command, here from the declaration of its options, is an internal error too (issue #23).</summary>
   [Test]
   public void AnOptionDeclaredTwice_IsADefectOfTheCommand() {
     var registry = new CommandRegistry();
     registry.Add(new CountCommand { Twice = true });
-    Assert.That(() => Program.Run(["count"], TextWriter.Null, TextWriter.Null, registry, "."),
-      Throws.InvalidOperationException.With.Message.EqualTo("the command 'count' declares the option '--quiet' twice or as a global option"));
+    using var error = new StringWriter();
+    Assert.That(Program.Run(["count"], TextWriter.Null, error, registry, "."), Is.EqualTo((int)ExitCode.InternalError));
+    Assert.That(error.ToString(), Does.StartWith(
+      "polypiler: error PLY0001: internal compiler error: InvalidOperationException: the command 'count' declares the option '--quiet' twice or as a global option"));
   }
 
   [Test]

@@ -21,6 +21,16 @@ public static class Program {
     return registry;
   }
 
+  /// <summary>
+  /// The help topics: what <c>polypiler help &lt;topic&gt;</c> runs besides the help of a command. A
+  /// topic is no command; it runs only as the word after <c>help</c>.
+  /// </summary>
+  public static CommandRegistry CreateHelpTopics() {
+    var topics = new CommandRegistry();
+    topics.Add(new HelpExitCodesCommand());
+    return topics;
+  }
+
   /// <summary>Runs the command line against the given writers, in the current directory.</summary>
   public static int Run(string[] args, TextWriter output, TextWriter error)
     => Run(args, output, error, CreateRegistry(), Directory.GetCurrentDirectory());
@@ -29,7 +39,10 @@ public static class Program {
   /// Runs a command line against the given writers with the commands of a registry, relative paths
   /// resolved against a directory. Help and <c>--version</c> are answered first; a command line that
   /// breaks the grammar is refused with exactly one diagnostic, exit code 2, an empty standard output
-  /// and nothing executed; any other runs its command.
+  /// and nothing executed; any other runs its command, which leaves through <see cref="ExitPolicy"/>:
+  /// what it returns through <see cref="ExitPolicy.Complete"/>, what it throws through
+  /// <see cref="ExitPolicy.Fail(CliContext, Exception)"/>. An exception outside a command is an
+  /// internal compiler error too.
   /// </summary>
   /// <param name="args">The arguments, without the program name.</param>
   /// <param name="output">Standard output.</param>
@@ -37,8 +50,8 @@ public static class Program {
   /// <param name="registry">The commands.</param>
   /// <param name="workingDirectory">The directory relative paths are resolved against.</param>
   /// <returns>
-  /// The exit code: the one the command returns when it is not 0, otherwise the one its diagnostics
-  /// give (ADR 0003).
+  /// The exit code: the one the diagnostics give (ADR 0003); 70 for an exception or for a command that
+  /// failed without reporting an error, 130 for a cancellation.
   /// </returns>
   /// <exception cref="ArgumentNullException">An argument is <see langword="null"/>.</exception>
   public static int Run(IReadOnlyList<string> args, TextWriter output, TextWriter error, CommandRegistry registry, string workingDirectory) {
@@ -48,15 +61,26 @@ public static class Program {
     ArgumentNullException.ThrowIfNull(registry);
     ArgumentNullException.ThrowIfNull(workingDirectory);
 
+    var commandLine = CliContext.Invocation(args);
+    var format = CommandLineParser.RequestedFormat(args);
+    try {
+      return Dispatch(args, output, error, registry, workingDirectory, commandLine, format);
+    } catch (Exception exception) {
+      return ExitPolicy.Fail(new CliContext(output, error, commandLine, format, false, workingDirectory), exception);
+    }
+  }
+
+  private static int Dispatch(IReadOnlyList<string> args, TextWriter output, TextWriter error, CommandRegistry registry, string workingDirectory, string commandLine, DiagnosticsFormat format) {
     if (args is ["--version"]) {
       output.WriteLine(ProductInfo.Version);
       return (int)ExitCode.Success;
     }
 
-    var commandLine = CliContext.Invocation(args);
-    var format = CommandLineParser.RequestedFormat(args);
     if (args is ["help", _, var surplus, ..])
       return Refuse(CommandLineParser.Grammar(CliDiagnostics.UnexpectedArgument, surplus));
+
+    if (args is ["help", var topic] && CreateHelpTopics() is var topics && topics.Find(topic) is not null)
+      return Execute(new CommandLineParser(topics).Parse([topic], out _)!);
 
     IReadOnlyList<string> line = args is ["help", var word] ? [word, "--help"] : args;
     if (line.Count == 0 || line is ["help"]) {
@@ -79,12 +103,16 @@ public static class Program {
     }
 
     var parsed = new CommandLineParser(registry).Parse(args, out var refusal);
-    if (parsed is null)
-      return Refuse(refusal!);
+    return parsed is null ? Refuse(refusal!) : Execute(parsed);
 
-    var context = new CliContext(output, error, commandLine, parsed.Format, parsed.Quiet, workingDirectory);
-    var exitCode = parsed.Command.Execute(parsed.Parse, context);
-    return exitCode != 0 ? exitCode : (int)context.Diagnostics.ExitCode;
+    int Execute(ParsedCommandLine parsed) {
+      var context = new CliContext(output, error, commandLine, parsed.Format, parsed.Quiet, workingDirectory);
+      try {
+        return ExitPolicy.Complete(context, parsed.Command.Name, parsed.Command.Execute(parsed.Parse, context));
+      } catch (Exception exception) {
+        return ExitPolicy.Fail(context, exception);
+      }
+    }
 
     int Refuse(Diagnostic diagnostic) {
       var refused = new CliContext(output, error, commandLine, format, false, workingDirectory);

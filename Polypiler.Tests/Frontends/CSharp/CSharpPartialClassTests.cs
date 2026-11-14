@@ -39,7 +39,7 @@ public sealed class CSharpPartialClassTests {
       ("B.cs", "public static partial class D { public static int G() => 2; }"));
     Assert.That(result.Module, Is.Null);
     Assert.That(result.Diagnostics, Is.EqualTo(new[] {
-      new Diagnostic("PLY1002", DiagnosticSeverity.Error, "'files that declare different classes' is not supported yet", "B.cs", 1, 1)
+      CSharpFrontend.UnsupportedDescriptor.At("'files that declare different classes' is not supported yet", "B.cs", 1, 1)
     }));
   }
 

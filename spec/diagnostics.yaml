@@ -71,7 +71,7 @@ codes:
     rule: adr-0003.internal-error
     area: infrastructure
     owner: ADR-DIAGNOSTICS
-    surfaces: "any command, for an exception nothing anticipated; its presence makes the exit code 70 whatever else was reported"
+    surfaces: "any command, for an exception nothing anticipated, and as \"command '<name>' returned <n> without a diagnostic\" for a command that fails without reporting an error; its presence makes the exit code 70 whatever else was reported"
   - code: PLY0002
     severity: error
     exit: UsageError
@@ -600,9 +600,10 @@ codes:
     exit: MissingDependency
     title: dependency missing
     message: "native dependency '<name>' required by '<component>' is missing"
+    rule: adr-0003.missing-dependency
     area: infrastructure
     owner: CLI-EXITCODES
-    reserved: true
+    surfaces: "standard error of a command whose component needs a native library or a model that is not available; declared before the adapters that raise it, so that every category of PRD §10.1 has a code"
   - code: PLY0082
     severity: error
     exit: LicenseBlocker

@@ -8,6 +8,9 @@
     <!-- Reqnroll names the culture of a feature file ("en"); with invariant globalization, which the
          repository keeps, that culture can only be created when it need not be a predefined one. -->
     <PredefinedCulturesOnly>false</PredefinedCulturesOnly>
+    <!-- The assembly's entry point is Cli/RaiseHost.cs, which runs the test-only commands as a child
+         process for the exit-code tests, instead of the empty one the test SDK would generate. -->
+    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 
   <ItemGroup>
