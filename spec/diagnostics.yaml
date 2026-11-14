@@ -89,7 +89,7 @@ codes:
     rule: adr-0004.grammar
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: "standard error of polypiler translate, followed by the usage line, for an unknown option or language, an option without its value, a missing operand or option, a value outside its set, a source file that cannot be read or an output directory that cannot be written; standard error of polypiler-tooling toolchains and diagnostics as '<command>: error PLY0003: <reason>'"
+    surfaces: "standard error of polypiler translate, followed by the usage line, for an unknown option or language, an option without its value, a missing operand or option, a value outside its set, a source file that cannot be read or an output directory that cannot be written; standard error of polypiler-tooling toolchains, diagnostics and fuzz as '<command>: error PLY0003: <reason>', for fuzz also an unknown target and a corpus directory that is missing or empty"
   - code: PLY0004
     severity: error
     exit: EnvironmentError
@@ -104,9 +104,10 @@ codes:
     exit: EnvironmentError
     title: output not writable
     message: "the output directory '<path>' cannot be written: <reason>"
+    rule: io.write
     area: infrastructure
     owner: CLI-FOUNDATION
-    reserved: true
+    surfaces: "standard error of polypiler-tooling fuzz run and fuzz minimize, after the PLY0070 of a finding whose record under artifacts/fuzz/<target>/ cannot be written"
   - code: PLY0006
     severity: error
     exit: UsageError
@@ -237,7 +238,7 @@ codes:
     rule: toolchains.installed
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: standard error of polypiler-tooling toolchains probe; the failure, or the inconclusive outcome outside CI, of a test marked RequiresToolchain
+    surfaces: standard error of polypiler-tooling toolchains probe and of fuzz run --engine afl without aflplusplus; the failure, or the inconclusive outcome outside CI, of a test marked RequiresToolchain
   - code: PLY0022
     severity: error
     exit: EnvironmentError
@@ -548,10 +549,11 @@ codes:
     severity: error
     exit: EnvironmentError
     title: fuzz finding
-    message: "fuzz target '<target>': <kind> '<signature>' at iteration <i>"
+    message: "fuzz target '<target>': <kind> '<signature>' at iteration <i> (seed <seed>); minimized to <n> bytes: artifacts/fuzz/<target>/<id>.bin"
+    rule: fuzz.finding
     area: infrastructure
     owner: INFRA-FUZZ
-    reserved: true
+    surfaces: "standard error of polypiler-tooling fuzz run and fuzz minimize, one line per de-duplicated finding, with the record artifacts/fuzz/<target>/<id>.json; of fuzz replay as 'regression <file>: <kind> '<signature>'' for an input of tests/fixtures/fuzz/<target>/regressions/ that fails again"
   - code: PLY0071
     severity: error
     exit: EnvironmentError
@@ -586,6 +588,15 @@ codes:
     area: infrastructure
     owner: INFRA-BDD
     surfaces: "the assertion message of the feature-binding tests, for a step without a binding or with several, a feature without a scenario, a file that does not parse and a feature path that does not follow tests/features/<area>/<id>.feature"
+  - code: PLY0077
+    severity: error
+    exit: EnvironmentError
+    title: fuzz engine failed
+    message: "<reason>"
+    rule: fuzz.engine
+    area: infrastructure
+    owner: INFRA-FUZZ
+    surfaces: "standard error of polypiler-tooling fuzz, for a worker process that cannot be started or does not announce itself, and for afl-fuzz ending with an error"
   - code: PLY0080
     severity: error
     exit: UsageError
