@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using Polypiler.Cli;
+using Polypiler.Core;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Float.Support;
@@ -62,7 +63,7 @@ public sealed class PrecomputedImplementationsTests {
           output, error);
         outcomes.Add((exitCode, string.Concat(Directory.GetFiles(directory).Order(StringComparer.Ordinal).Select(File.ReadAllText))));
       });
-      Assert.That(outcomes.Select(outcome => outcome.ExitCode), Is.All.EqualTo(Program.Success));
+      Assert.That(outcomes.Select(outcome => outcome.ExitCode), Is.All.EqualTo((int)ExitCode.Success));
       Assert.That(outcomes.Select(outcome => outcome.Text).Distinct().Count(), Is.EqualTo(2), "one text per target");
     } finally {
       Directory.Delete(root, true);
@@ -109,7 +110,7 @@ public sealed class PrecomputedImplementationsTests {
       var exitCode = TranslateCommand.Run(
         [PrototypeFixture.PathOf("Crc32"), "--from", "csharp", "--to", "javascript", "--output", directory],
         output, error, () => throw new InvalidDataException("asked"));
-      Assert.That((exitCode, error.ToString()), Is.EqualTo((Program.Success, "")));
+      Assert.That((exitCode, error.ToString()), Is.EqualTo(((int)ExitCode.Success, "")));
     } finally {
       Directory.Delete(directory, true);
     }
