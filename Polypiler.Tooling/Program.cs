@@ -40,6 +40,7 @@ public static class Program {
       output.WriteLine($"       {Name} {ToolchainsCommand.Verb} validate [--lock <path>]");
       output.WriteLine($"       {Name} {ToolchainsCommand.Verb} probe [--lock <path>] [--only <key>[,<key>...]] [--format text|json]");
       output.WriteLine($"       {Name} {DiagnosticsCommand.Verb} validate [--registry <path>]");
+      output.WriteLine($"       {Name} {SpecCommand.Verb} validate [--root <dir>] [--family <folder>] [--diagnostics text|json]");
       return Success;
     }
 
@@ -56,6 +57,9 @@ public static class Program {
 
     if (args[0] == DiagnosticsCommand.Verb)
       return DiagnosticsCommand.Run(args[1..], output, error);
+
+    if (args[0] == SpecCommand.Verb)
+      return SpecCommand.Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;
