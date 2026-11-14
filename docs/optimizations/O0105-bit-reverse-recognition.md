@@ -1,73 +1,87 @@
 # O0105 — Recognize bit reversal from swap cascades and shift loops
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#557](https://github.com/Hawkynt/Polypiler/issues/557). Once implemented it is switched off with `--disable-opt O0105`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0105BitReverse` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#557](https://github.com/Hawkynt/Polypiler/issues/557). Switched off with `--disable-opt O0105`.
 
 ## What it does
 
-Deflate and other LSB-first codecs reverse Huffman codes, and CRC code reflects registers; both write
-the reversal as a cascade of masked swaps (bits, pairs, nibbles, bytes, halves) or as a loop that shifts
-one bit out and one bit in. ARM has `RBIT`, Rust `reverse_bits`, and a table is best on an 8-bit CPU —
-none of which a backend can choose while the reversal is fifteen operations. PRD §4.5, §19.2, §24 S2
-("bit reversal").
+Bit reversal is written as the swap cascade of Hacker's Delight 7-1 or as a loop that moves one bit
+per pass. The rule replaces both by `BitReverse` of the IR. Sourced from Warren, *Hacker's Delight*,
+2nd ed., §7-1.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static uint F(uint x) { uint r = 0; for (int i = 0; i < 32; i++) { r = (r << 1) | (x & 1); x >>= 1; } return r; }
+```
+
 ### Before
 
-```
-%a1 = LShr.u32[strict] %x, 1
-%a2 = And.u32 %a1, 0x55555555
-%a3 = And.u32 %x, 0x55555555
-%a4 = Shl.u32[strict] %a3, 1
-%a  = Or.u32 %a2, %a4            ; swap adjacent bits
-...                              ; the same step with shift 2 / mask 0x33333333 giving %b,
-...                              ; shift 4 / mask 0x0F0F0F0F giving %c, shift 8 / mask 0x00FF00FF giving %d
-%e1 = LShr.u32[strict] %d, 16
-%e2 = Shl.u32[strict] %d, 16
-%r  = Or.u32 %e1, %e2            ; swap halves
+With `--opt none`:
+
+```csharp
+public static uint F(uint x) {
+  unchecked {
+    uint r = 0;
+    {
+      int i = 0;
+      while (i < 32) {
+        r = (r << 1) | (x & 1u);
+        x = x >> 1;
+        i = i + 1;
+      }
+    }
+    return r;
+  }
+}
 ```
 
 ### After
 
-```
-%r = ReverseBits.u32 %x
+By default; `--explain-opt` prints `O0105 bit reversal from a swap cascade or a bit loop: 'F' statement 2.1`:
+
+```csharp
+public static uint F(uint x) {
+  unchecked {
+    uint r = 0;
+    {
+      r = (uint)BitReverseBits((ulong)x, 32);
+      x = 0;
+    }
+    return r;
+  }
+}
 ```
 
 ## When it applies
 
-cascade: `%r` is the root of a pure DAG of at most `8·log2 w` instructions
-over exactly one non-constant leaf `x` of type `u<w>` or `i<w>`, built from `And`, `Or`, `Xor`, `Add`,
-`Shl`, `LShr`, `AShr`, `RotateLeft`, `RotateRight` and constants, containing the constant `0x55…` of
-width `w`; the obligation `root(x) = ReverseBits.u<w>(x)` holds for all `x`. Loop: natural loop, one
-exit, exactly `w` iterations, pure body, `r` starts at a constant (any start value is shifted out
-after `w` iterations), no loop value escapes except the exit value of `r`; the shift of `v` may be
-logical or arithmetic (only bit 0 is read and `w` iterations consume exactly the original bits) — the
-proof decides.
+- The cascade - five steps on 32 bits, six on 64, three on a byte - in one expression, in locals,
+  or as a run of assignments to one variable (`Windows`): its weighted bits (`WeightEvaluator`) must be
+  exactly the bits of one value, bit `j` on bit `w - 1 - j`. The low bits of a wider value reversed into
+  the low bits, the rest zero, are the reversal of that value cut to their width.
+- A counted loop (`CounterLoop`) of `w` passes such as `r = (r << 1) | (x & 1); x >>= 1;`: unrolled
+  symbolically, the result variable must end as the reversal of a value from before the loop - its own
+  old bits shifted out, or its known start 0 - and every other variable it writes as a constant or one
+  shift of its old value. The loop becomes those final assignments: `r = BitReverse(x); x = 0;`.
 
 ## How it is proven
 
-`exhaustive-8bit` for both forms at width 8 plus `smt-bitvector` at 16, 32 and 64 bit
-(the loop unrolled `w` times). A failed, unknown or timed-out obligation (budget 5 s each) leaves the
-IR unchanged and reports `not applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeBitReverse.cs` and `bitreverse.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Cascade without the halves swap: `x = 0x00000001` gives `0x00008000`; `ReverseBits.u32` gives
-  `0x80000000`.
-- Loop with 16 iterations over `u32`: `x = 0x00010000` gives 0; the reversal gives `0x00008000`.
-- Loop that shifts the accumulator right (`r = (r >> 1) | ((v & 1) << 31)`) while also shifting `v`
-  right: it rebuilds `x` unchanged — `x = 0x00000001` gives `0x00000001`.
-- A step with mismatched mask and shift (`shift 2`, mask `0x55555555`): not a permutation at all — `x
-  = 0x00000003` loses a bit.
+- A cascade with a missing step, which swaps but does not reverse.
+- A loop of fewer passes than the width, or one that keeps bits of its old result (`r` a parameter
+  shifted only 16 times).
 
 ## Switching it off
 
-`--disable-opt O0105`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0105`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after [#279](https://github.com/Hawkynt/Polypiler/issues/279) (O0100), which may already have
-turned the last step into a rotation; the gate accepts both spellings. Enables the bit-permutation
-recovery of the `permutation` area and native `RBIT` selection.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run. Understands rotates and byte swaps that O0100 and O0106 produced inside a cascade.

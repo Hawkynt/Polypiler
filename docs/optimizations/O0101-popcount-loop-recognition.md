@@ -1,77 +1,90 @@
 # O0101 — Recognize population count from bit-counting loops
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#278](https://github.com/Hawkynt/Polypiler/issues/278). Once implemented it is switched off with `--disable-opt O0101`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0101PopCountLoop` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#278](https://github.com/Hawkynt/Polypiler/issues/278). Switched off with `--disable-opt O0101`.
 
 ## What it does
 
-Counting set bits is written as a loop in every language without a popcount operator: Cipher's
-`PopCount` shifts and adds the low bit, `PopCountFast` clears the lowest set bit per iteration
-(Kernighan), and C-style code tests each of the `w` bit positions. As a loop it costs up to `w`
-iterations where C# has `BitOperations.PopCount`, Rust `count_ones` and x86 `POPCNT`. PRD §4.3
-(`PopCount` may be recovered from scalar loops), §4.5, §8 P2 ("popcount").
+Code without a population-count function counts set bits in a loop. The rule replaces two loop
+forms by `PopCount` of the IR, which the C# backend writes as `BitOperations.PopCount` from .NET Core 3.0
+on and as the SWAR helper before, and the JavaScript backend as the `$pop` helper.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static int F(uint x) { int c = 0; while (x != 0) { c++; x &= x - 1; } return c; }
+```
+
 ### Before
 
-```
-entry:
-  Br loop
-loop:
-  %v = Phi.u32 [%x, entry], [%v2, body]
-  %c = Phi.u32 [0, entry], [%c2, body]
-  %z = ICmp.eq.u32 %v, 0
-  CondBr %z, exit, body
-body:
-  %m = Sub.u32 %v, 1
-  %v2 = And.u32 %v, %m
-  %c2 = Add.u32 %c, 1
-  Br loop
-exit:
-  Ret %c
+With `--opt none`:
+
+```csharp
+public static int F(uint x) {
+  unchecked {
+    int c = 0;
+    while (x != 0u) {
+      c = c + 1;
+      x = x & (x - 1u);
+    }
+    return c;
+  }
+}
 ```
 
 ### After
 
-```
-%c = PopCount.u32 %x
-Ret %c
+By default; `--explain-opt` prints `O0101 population count from a counting loop: 'F' statement 2`:
+
+```csharp
+public static int F(uint x) {
+  unchecked {
+    int c = 0;
+    c = c + global::System.Numerics.BitOperations.PopCount(x);
+    x = 0;
+    return c;
+  }
+}
 ```
 
 ## When it applies
 
-the loop is a natural loop with one exit and two loop-carried values `v`
-and `c`; `v` starts at `x` of type `u<w>` (or `i<w>` when every right shift is logical); the body is
-one of the three forms and contains no load, store, call or trap; neither `v` nor any body value is
-used outside the loop except the exit value of `c`; the fixed-trip form runs exactly `w` iterations
-with shift amounts `0..w-1`; the counter has at least 8 bits, so `c0 + w` wraps exactly as the loop's
-own additions do. The result is `Add(c0, ZExt-or-Trunc(PopCount.u<w> x))` in the counter's type; the
-`Add` is omitted when `c0` is the constant 0.
+- Kernighan's loop `while (x != 0) { c++; x &= x - 1; }`, the two statements in either order, `x` a
+  32- or 64-bit variable, the condition `x != 0` (or `x > 0` for an unsigned `x`), `x - 1` in any spelling
+  that has the same bits (JavaScript's `(x & (x - 1)) >>> 0`). Each pass clears the lowest set bit, so the
+  loop runs exactly as often as `x` has set bits, for every value: it becomes `c = c + PopCount(x); x = 0;`.
+- A counted loop over the width: `for (i = 0; i < w; i++) c += (x >> i) & 1;`, also as
+  `if (((x >> i) & 1) != 0) c++;` or shifting `x` by one per pass, a JavaScript loop counting in doubles
+  included. The counter loop (`CounterLoop`) starts at a constant, compares with a constant bound and adds
+  one at the end of the body, whose statements only assign. The body is unrolled symbolically; the
+  counted variable must end as its old value - or the constant it is known to start from - plus every
+  bit of one value from before the loop, once each, and every other variable as a constant or as one
+  shift of its old value. The loop becomes the assignments of those final values; the loop counter gets
+  its final value, or disappears with its initialization when nothing reads it afterwards.
+
+The counter is incremented with wrapping arithmetic; a count of at most 64 added at once wraps the same
+way.
 
 ## How it is proven
 
-`exhaustive-8bit` (all 256 values × three forms, loop interpreted to termination)
-plus `smt-bitvector` at 16, 32 and 64 bit on the loop unrolled `w` times — each form terminates within
-`w` iterations, which is itself an obligation (Kernighan clears one set bit per iteration; the shift
-form shifts in a zero). A failed, unknown or timed-out obligation (budget 5 s each) leaves the IR
-unchanged and reports `not applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizePopCountLoop.cs` and `popcountloop.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Arithmetic shift in the shift form: with `i32` and `x = 0x80000000`, `AShr` keeps `v` negative, `v`
-  reaches `0xFFFFFFFF` and the loop never ends — `PopCount` would return 1.
-- Fixed-trip form with 16 iterations over `u32`: `x = 0x00010000` gives 0, `PopCount.u32` gives 1.
-- A body that also stores (`Store.u8 %p, %c2`): the per-iteration writes are observable.
-- `v` read after the loop: its exit value 0 must stay available, so the loop-carried value escapes.
+- A loop over fewer passes than the width (`i < 31`), which counts only some bits.
+- A test of two bits per pass (`(x >> i) & 3`), which counts some bits twice.
+- A step other than `x & (x - 1)` (`x &= x - 2`).
+- A counter that traps on overflow (`checked { c++; }`): the trap would move.
 
 ## Switching it off
 
-`--disable-opt O0101`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0101`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after loop canonicalization and constant folding of
-[#157](https://github.com/Hawkynt/Polypiler/issues/157); enables [#573](https://github.com/Hawkynt/Polypiler/issues/573) (`PopCount & 1`) and native population-count selection in
-the backends.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run. Runs before the expression rules inside the loop, which would otherwise turn the bit test into
+`TestBit` (O0108) first.

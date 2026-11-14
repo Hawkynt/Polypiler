@@ -1,68 +1,64 @@
 # O0123 — Recognize clamp from nested minimum/maximum and compare-select chains
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#272](https://github.com/Hawkynt/Polypiler/issues/272). Once implemented it is switched off with `--disable-opt O0123`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0123Clamp` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#272](https://github.com/Hawkynt/Polypiler/issues/272). Switched off with `--disable-opt O0123`.
 
 ## What it does
 
-Limiting a value to a range is written `Math.min(Math.max(x, lo), hi)`, the same with the calls swapped,
-or as a conditional chain — CompressionWorkbench's `VectorIcon.Clamp` is `v < 0 ? 0 : v > 255 ? 255 :
-v`. Pixel code clamps on every channel. `Clamp` as one operation gives C# `Math.Clamp`, Rust `clamp`,
-saturating packs in SIMD, and a result range that removes later bounds checks. `SClamp`/`UClamp` are
-defined as the min-of-max nesting; the other nesting and the conditional chains differ from it when the
-bounds are crossed, so recognizing those needs `lo ≤ hi`. PRD §4.5, §8 P2 ("clamp").
+A value kept between two bounds is written as nested minimum and maximum or as a chain of
+comparisons. With constant bounds in order the rule replaces both by `Clamp` of the IR. The C# backend
+writes a clamp between constant ordered bounds as `Math.Min(Math.Max(x, lo), hi)`, which cannot cross;
+the helper that traps on crossed bounds stays for every other clamp.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static int F(int x) => x < 0 ? 0 : x > 255 ? 255 : x;
+```
+
 ### Before
 
-```
-%a = SMax.i32 %x, 0
-%r = SMin.i32 %a, 255
+With `--opt none`:
+
+```csharp
+public static int F(int x) => (x < 0) ? 0 : ((x > 255) ? 255 : x);
 ```
 
 ### After
 
-```
-%r = SClamp.i32 %x, 0, 255
+By default; `--explain-opt` prints `O0123 clamp from nested minimum and maximum: 'F' statement 1`:
+
+```csharp
+public static int F(int x) => unchecked(global::System.Math.Min(global::System.Math.Max(x, 0), 255));
 ```
 
 ## When it applies
 
-one value `x` is limited from below by `lo` and from above by `hi`; both
-limits use the same signedness; for the min-of-max nesting nothing more is needed — it is the
-definition of the operation, total also for crossed bounds — except that a *constant* pair with `lo >
-hi` is rejected by [#101](https://github.com/Hawkynt/Polypiler/issues/101) (`PLY0261`) and is therefore left alone; for the max-of-min
-nesting and the select chains `lo ≤ hi` in that signedness is proven — by comparing constants, or by a
-relational range fact for variable bounds; in the select form the selected values are exactly `lo`,
-`hi` and `x` and the two comparisons test `x` against those same bounds (strict or non-strict
-comparisons are equivalent because the selected value equals the bound). The inner `Min`/`Max` may
-have other users and then stays.
+- `Min(Max(x, lo), hi)` and `Max(Min(x, hi), lo)` with the constants on either side;
+- `x < lo ? lo : x > hi ? hi : x` and `x > hi ? hi : x < lo ? lo : x` in every spelling O0120 accepts,
+  also once O0120 has turned the inner selection into `Min` or `Max`, on every integer type.
+
+`lo <= hi` in the signedness of the type: then `Clamp` never traps and both nestings agree with it. In
+the chain `x` is evaluated more than once and must have no effect and not trap.
 
 ## How it is proven
 
-`exhaustive-8bit` over all `(x, lo, hi)` for the min-of-max nesting and over all
-triples with `lo ≤ hi` for the max-of-min nesting and the select form (signed and unsigned) plus
-`smt-bitvector` at 16, 32 and 64 bit under the assumption `lo ≤ hi`; that assumption is a `RangeFact`
-obligation. A failed, unknown or timed-out obligation (budget 5 s each) leaves the IR unchanged and
-reports `not applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeClamp.cs` and `clamp.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Crossed bounds: `lo = 10`, `hi = 5`, `x = 7`: `Min(Max(7, 10), 5)` is 5 but `Max(Min(7, 5), 10)` is
-  10 — the nestings disagree. `SClamp(7, 10, 5)` is 5 by definition, so only the min-of-max nesting
-  may be rewritten without `lo ≤ hi`.
-- Mixed signedness: `UMin(SMax(x, 0), 255)` equals a clamp here only because the lower bound is 0;
-  `UMin(SMax(x, -1), 255)` with `x = -1` gives 255.
-- Different values: `Min(Max(x, lo), hi)` where the inner call takes `y`.
-- Select chain testing another value (`y > hi ? hi : x`).
+- Bounds out of order: `Min(Max(x, 255), 0)` is always 0, `Clamp` would trap.
+- A bound that is not a constant.
+- Two minimums.
 
 ## Switching it off
 
-`--disable-opt O0123`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0123`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after range propagation and after [#157](https://github.com/Hawkynt/Polypiler/issues/157)'s
-if-conversion; the result range `[lo, hi]` feeds bounds-check removal and storage narrowing.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run. Follows O0120, which turns the inner selection of a chain into `Min` or `Max`.

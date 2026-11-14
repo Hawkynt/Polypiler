@@ -1,69 +1,60 @@
 # O0106 — Recognize byte swap from shift-and-mask expressions and byte loops
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#559](https://github.com/Hawkynt/Polypiler/issues/559). Once implemented it is switched off with `--disable-opt O0106`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0106ByteSwap` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#559](https://github.com/Hawkynt/Polypiler/issues/559). Switched off with `--disable-opt O0106`.
 
 ## What it does
 
-Endianness conversion is written as four shifted and masked copies of a word OR-ed together, or as a
-loop moving one byte per iteration — CityHash's `bswap64` in Cipher does the latter. x86 has `BSWAP`, C#
-`BinaryPrimitives.ReverseEndianness`, Rust `swap_bytes`; PRD §17.4 names `ReverseBytes32` as the
-recovery target for the assembly spelling, and the source spelling must reach the same operation. PRD
-§4.5, §19.2, §22 (bit swap scenario).
+Byte order is reversed with shifts and masks. The rule replaces such an expression by `ByteSwap` of
+the IR, which the C# backend writes as `BinaryPrimitives.ReverseEndianness` from .NET Standard 2.1 on and
+as a helper of three swap steps before, and the JavaScript backend as the `$bswap` helper.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static uint F(uint x) => (x >> 24) | ((x >> 8) & 0xFF00u) | ((x << 8) & 0xFF0000u) | (x << 24);
+```
+
 ### Before
 
-```
-%a = LShr.u32[strict] %x, 24
-%b1 = LShr.u32[strict] %x, 8
-%b = And.u32 %b1, 0x0000FF00
-%c1 = Shl.u32[strict] %x, 8
-%c = And.u32 %c1, 0x00FF0000
-%d = Shl.u32[strict] %x, 24
-%t = Or.u32 %a, %b
-%u = Or.u32 %c, %d
-%r = Or.u32 %t, %u
+With `--opt none`:
+
+```csharp
+public static uint F(uint x) => (((x >> 24) | ((x >> 8) & 65280u)) | ((x << 8) & 16711680u)) | (x << 24);
 ```
 
 ### After
 
-```
-%r = ReverseBytes.u32 %x
+By default; `--explain-opt` prints `O0106 byte swap from shifts and masks: 'F' statement 1`:
+
+```csharp
+public static uint F(uint x) => unchecked(global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(x));
 ```
 
 ## When it applies
 
-expression form: by symbolic byte provenance each of the `w/8` output
-bytes of the root is exactly one input byte of the single leaf `x`, output byte `i` coming from input
-byte `w/8 - 1 - i`, with no bit set from anywhere else (sign fill, overlapping terms); the combiner
-may be `Or`, `Xor` or `Add` because the terms are disjoint. Loop form: natural loop, one exit, exactly
-`w/8` iterations, pure body, accumulator starting at the constant 0, no escape. Both are confirmed by
-the obligation `root(x) = ReverseBytes.u<w>(x)`.
+The weighted bits (`WeightEvaluator`) of the expression must be exactly the bits of one value of 16,
+32 or 64 bits, bit `8k + j` on bit `8(n - 1 - k) + j`: the shift-and-mask forms in any order and with
+the masks before or after the shifts, a swap built from rotates, an `int` swapped through `uint`, and
+the two-step swap of halves and of bytes as a run of assignments (`Windows`).
 
 ## How it is proven
 
-`smt-bitvector` at 32 and 64 bit (the loop unrolled `w/8` times), preceded by the
-structural byte-provenance check; an 8-bit exhaustive proof does not exist for a byte permutation and
-is not claimed. A failed, unknown or timed-out obligation (budget 5 s each) leaves the IR unchanged
-and reports `not applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeByteSwap.cs` and `byteswap.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Arithmetic shift without mask: `Or(AShr.i32 x, 24, …)` with `x = 0x80000000` gives `0xFFFFFF80`; the
-  byte swap gives `0x00000080`.
-- Word swap: terms `(x >> 16) | (x << 16)` — every byte moves, but to the wrong place: `0x12345678`
-  becomes `0x56781234`, not `0x78563412`. That is a rotation and belongs to O0100.
-- A missing mask on a middle term (`x >> 8` without `& 0xFF00`): bytes overlap and OR together.
-- Loop with 4 iterations over `u64`: only the low four bytes are reversed into the low half.
+- A byte in the wrong place or a byte missing.
+- Arithmetic right shifts, which drag in copies of the sign.
 
 ## Switching it off
 
-`--disable-opt O0106`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0106`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after [#279](https://github.com/Hawkynt/Polypiler/issues/279) (O0100); enables [#275](https://github.com/Hawkynt/Polypiler/issues/275)
-to fold `ReverseBytes(LoadLE …)` into `LoadBE`, and native byte-swap selection.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run. A 16-bit rotation by 8 is left to this rule by O0100.

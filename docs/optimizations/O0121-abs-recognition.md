@@ -1,62 +1,74 @@
 # O0121 — Recognize absolute value from sign-mask idioms and compare-select
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#555](https://github.com/Hawkynt/Polypiler/issues/555). Once implemented it is switched off with `--disable-opt O0121`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0121AbsWrap` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#555](https://github.com/Hawkynt/Polypiler/issues/555). Switched off with `--disable-opt O0121`.
 
 ## What it does
 
-The branch-free absolute value `(x ^ m) - m` with `m = x >> (w-1)` appears in audio codecs, motion
-estimation (the deinterlacer takes `abs` of every pixel difference) and compiler output. Vector units
-have `PABSD`, every library has `abs`, and range analysis can only bound the result when it knows what
-the three operations compute. The one input where the definition matters — the most negative value —
-must come out exactly as the source produced it. PRD §4.5, §19.2, §24 S2.
+The absolute value of a signed integer is written as a selection or with the sign mask. Every one of
+these idioms wraps on the smallest value, whose negation is itself, so the rule produces `AbsWrap` of
+the IR - never `Abs`, which traps there. Sourced from Warren, *Hacker's Delight*, 2nd ed., §2-4.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static int F(int x) { int m = x >> 31; return (x ^ m) - m; }
+```
+
 ### Before
 
-```
-%m = AShr.i32[strict] %x, 31
-%t = Xor.i32 %x, %m
-%r = Sub.i32 %t, %m
+With `--opt none`:
+
+```csharp
+public static int F(int x) {
+  unchecked {
+    var m = x >> 31;
+    return (x ^ m) - m;
+  }
+}
 ```
 
 ### After
 
-```
-%r = Abs.i32[wrap] %x
+By default; `--explain-opt` prints `O0121 wrapping absolute value from a sign mask or a selection: 'F' statement 2`:
+
+```csharp
+public static int F(int x) {
+  unchecked {
+    var m = x >> 31;
+    return (int)AbsWrap(x);
+  }
+}
 ```
 
 ## When it applies
 
-the mask is the arithmetic shift of the *same* value `x` by exactly `w-1`;
-both uses of the mask are that one value; the arithmetic is wrapping (a checked `Sub`/`Neg` is
-refused, because it would trap at the most negative value where the intrinsic wraps); in the
-compare-select form the comparison is signed, against the constant 0, and the negated arm is `Neg(x)`
-or `Sub(0, x)`.
+- `x < 0 ? -x : x` and its mirrored forms (`<=`, `>`, `>=`, `0 > x`), the negation written `-x` or
+  `0 - x`, on a signed 32- or 64-bit value;
+- `(x ^ m) - m` and `(x + m) ^ m` with the sign mask `m = x >> (w - 1)`, an arithmetic shift, also when
+  `m` is a local assigned once.
+
+`x` has no effect and cannot trap.
 
 ## How it is proven
 
-`exhaustive-8bit` (all 256 values × all forms) plus `smt-bitvector` at 16, 32 and 64
-bit. A failed, unknown or timed-out obligation (budget 5 s each) leaves the IR unchanged and reports
-`not applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeAbs.cs` and `abs.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Logical shift for the mask: `m = LShr(x, 31)` is 1 for negative `x`; with `x = 0xFFFFFFFE` (−2) the
-  result is `(x ^ 1) - 1 = 0xFFFFFFFE`, not 2.
-- Shift by `w-2`: with `x = 0x40000001` the mask `AShr(x, 30)` is 1 and the result is `(x ^ 1) - 1 =
-  0x3FFFFFFF`, not `0x40000001`.
-- Unsigned comparison in the select form: `ICmp.ult(x, 0)` is never true; the expression is the
-  identity.
-- Checked negation: at `x = 0x80000000` the source traps; `Abs[wrap]` would return `0x80000000`.
+- A negation that traps (`checked(-x)`): `AbsWrap` would drop the trap.
+- A mask that is not the sign (`x >> 30`), or a logical shift.
+- The swapped selection `x < 0 ? x : -x`, which is the negative absolute value.
+- `Math.Abs`, which already is `Abs` and traps on the smallest value.
 
 ## Switching it off
 
-`--disable-opt O0121`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0121`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after constant folding; enables range refinement (`Abs` is
-non-negative except at the most negative input) and `PABS` selection.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run.

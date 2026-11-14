@@ -1,62 +1,65 @@
 # O0122 — Recognize signum from comparison-difference, shift-or and select idioms
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#579](https://github.com/Hawkynt/Polypiler/issues/579). Once implemented it is switched off with `--disable-opt O0122`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0122Sign` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#579](https://github.com/Hawkynt/Polypiler/issues/579). Switched off with `--disable-opt O0122`.
 
 ## What it does
 
-The three-way sign of an integer — −1, 0 or 1 — is the comparator result of every sort and the direction
-term of every line-drawing loop. It is written as `(x > 0) - (x < 0)`, as `(x >> 31) | (-x >>> 31)`, or
-as a nested conditional. C# has `Math.Sign`, Rust `signum`, PowerBASIC `SGN`; a backend can only use
-them when the IR says `Sign`. The near-miss `(x >> 31) | 1`, which never returns 0, is the idiom a
-careless matcher would take with it. PRD §4.5, §19.2.
+The sign of an integer is computed from two comparisons or from two shifts. The rule replaces both by
+`Sign` of the IR, which the backends write as `Math.Sign`. Sourced from Warren, *Hacker's Delight*,
+2nd ed., §2-7.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static int F(int x) => (x >> 31) | (int)((uint)-x >> 31);
+```
+
 ### Before
 
-```
-%p = ICmp.sgt.i32 %x, 0
-%n = ICmp.slt.i32 %x, 0
-%pz = ZExt.i32 %p
-%nz = ZExt.i32 %n
-%r = Sub.i32 %pz, %nz
+With `--opt none`:
+
+```csharp
+public static int F(int x) => unchecked((x >> 31) | (int)((uint)(-x) >> 31));
 ```
 
 ### After
 
-```
-%r = Sign.i32 %x
+By default; `--explain-opt` prints `O0122 sign from comparisons or shifts: 'F' statement 1`:
+
+```csharp
+public static int F(int x) => global::System.Math.Sign(x);
 ```
 
 ## When it applies
 
-both comparisons are signed, against the constant 0, of the same value
-`x`; in the shift-or form the first shift is arithmetic and the second logical, both by exactly `w-1`,
-the second applied to the wrapping negation of the same `x`; in the select form the three results are
-exactly 1, −1 and 0 for the three sign classes. The proof obligation `root(x) = Sign(x)` covers all
-spellings.
+- `(x > 0 ? 1 : 0) - (x < 0 ? 1 : 0)`, which is how C# writes `(x > 0) - (x < 0)`, with the comparisons
+  in either spelling (`0 < x`);
+- `(x >> (w - 1)) | (-x >>> (w - 1))` on a signed 32- or 64-bit `x`: the first shift arithmetic, the
+  second logical and of the negation. Whether the operand of the second shift is the negation is decided
+  on its weighted bits, so `0u - (uint)x` counts. The form is exact for the smallest value too: its
+  negation is itself, the logical shift gives 1, the arithmetic one -1, and `-1 | 1` is -1.
+
+The result, an `i32`, is converted to the type of the expression. `x` has no effect and cannot trap.
 
 ## How it is proven
 
-`exhaustive-8bit` (all 256 values × all forms) plus `smt-bitvector` at 16, 32 and 64
-bit. A failed, unknown or timed-out obligation (budget 5 s each) leaves the IR unchanged and reports
-`not applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeSign.cs` and `sign.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- `(x >> 31) | 1`: `x = 0` gives 1; `Sign(0)` is 0.
-- Arithmetic shift on the negated operand: `(x >> 31) | (-x >> 31)` with `x = 5` gives `0 | 0xFFFFFFFF
-  = −1`; `Sign(5)` is 1.
-- Unsigned comparisons: `ICmp.ult(x, 0)` is never true, so the expression is `x != 0` (0 or 1).
-- `AShr(x, w-1)` alone: −1 or 0, never 1.
+- The swapped difference `(x < 0) - (x > 0)`, which is the negative sign.
+- Comparisons of two different values.
+- A logical shift of `x` instead of `-x`, or an arithmetic shift of `-x`.
 
 ## Switching it off
 
-`--disable-opt O0122`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0122`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after constant folding and if-conversion; enables
-comparator simplification and `SGN`/`Math.Sign` emission.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run.
