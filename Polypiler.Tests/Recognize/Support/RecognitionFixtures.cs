@@ -90,35 +90,68 @@ internal static partial class RecognitionFixtures {
   }
 
   /// <summary>The calls of a function: exhaustive where it is small, else the edges and the random tuples.</summary>
-  public static IEnumerable<PrototypeCall> Calls(IrFunction function) {
+  public static IEnumerable<PrototypeCall> Calls(IrFunction function) => Calls(function, 0, 1);
+
+  /// <summary>
+  /// One of <paramref name="parts"/> consecutive, equally long slices of <see cref="Calls(IrFunction)"/>;
+  /// the slices of all parts together are the calls, in their order.
+  /// </summary>
+  /// <param name="function">The function.</param>
+  /// <param name="part">The slice, from 0.</param>
+  /// <param name="parts">The number of slices.</param>
+  public static IEnumerable<PrototypeCall> Calls(IrFunction function, int part, int parts) {
+    var (values, exhaustive) = Plan(function);
+    var count = CallCount(values, exhaustive);
+    var (first, end) = (count * part / parts, count * (part + 1) / parts);
+    if (exhaustive)
+      return Product(function.Name, values, first, end);
+
     var parameters = function.Parameters.Select(parameter => parameter.Type).ToArray();
     var indices = Indices(function);
-    var narrow = parameters.Any(type => type.IsInteger && type.Bits <= 16);
-    var all = parameters.Select((type, index) => Values(parameters, indices, index, narrow)).ToArray();
-    if (all.All(values => values is not null) && all.Aggregate(1L, (product, values) => product * values!.Length) <= Exhaustive)
-      return Product(function.Name, all!);
-
-    var edges = parameters.Select((type, index) => Edges(parameters, indices, index)).ToArray();
     var random = new Random(Seed);
-    return Product(function.Name, edges).Concat(Enumerable.Range(0, RandomTuples)
-      .Select(_ => new PrototypeCall(function.Name, [.. parameters.Select((type, index) => RandomOf(parameters, indices, index, random))])));
+    return Product(function.Name, values, 0, CallCount(values, true)).Concat(Enumerable.Range(0, RandomTuples)
+      .Select(_ => new PrototypeCall(function.Name, [.. parameters.Select((type, index) => RandomOf(parameters, indices, index, random))])))
+      .Skip((int)first).Take((int)(end - first));
+  }
+
+  /// <summary>The number of calls <see cref="Calls(IrFunction)"/> makes.</summary>
+  public static long CallCount(IrFunction function) {
+    var (values, exhaustive) = Plan(function);
+    return CallCount(values, exhaustive);
   }
 
   /// <summary>Whether a function is tried exhaustively.</summary>
-  public static bool IsExhaustive(IrFunction function) {
+  public static bool IsExhaustive(IrFunction function) => Plan(function).Exhaustive;
+
+  /// <summary>The values of each parameter: every value where the function is tried exhaustively, else the edges.</summary>
+  private static (object[][] Values, bool Exhaustive) Plan(IrFunction function) {
     var parameters = function.Parameters.Select(parameter => parameter.Type).ToArray();
     var indices = Indices(function);
     var narrow = parameters.Any(type => type.IsInteger && type.Bits <= 16);
     var all = parameters.Select((type, index) => Values(parameters, indices, index, narrow)).ToArray();
-    return all.All(values => values is not null) && all.Aggregate(1L, (product, values) => product * values!.Length) <= Exhaustive;
+    return all.All(values => values is not null) && all.Aggregate(1L, (product, values) => product * values!.Length) <= Exhaustive
+      ? ([.. all.Select(values => values!)], true)
+      : (parameters.Select((type, index) => Edges(parameters, indices, index)).ToArray(), false);
   }
 
-  private static IEnumerable<PrototypeCall> Product(string method, object[][] values) {
-    IEnumerable<object[]> tuples = [[]];
-    foreach (var choices in values)
-      tuples = tuples.SelectMany(tuple => choices.Select(value => (object[])[.. tuple, value]));
+  private static long CallCount(object[][] values, bool exhaustive)
+    => values.Aggregate(1L, (product, choices) => product * choices.Length) + (exhaustive ? 0 : RandomTuples);
 
-    return tuples.Select(tuple => new PrototypeCall(method, tuple));
+  /// <summary>
+  /// The tuples from <paramref name="first"/> to before <paramref name="end"/> of the cartesian product,
+  /// the first parameter varying slowest.
+  /// </summary>
+  private static IEnumerable<PrototypeCall> Product(string method, object[][] values, long first, long end) {
+    for (var number = first; number < end; ++number) {
+      var tuple = new object[values.Length];
+      var rest = number;
+      for (var index = values.Length - 1; index >= 0; --index) {
+        tuple[index] = values[index][rest % values[index].Length];
+        rest /= values[index].Length;
+      }
+
+      yield return new PrototypeCall(method, tuple);
+    }
   }
 
   /// <summary>The bytes the array parameters are tried with.</summary>

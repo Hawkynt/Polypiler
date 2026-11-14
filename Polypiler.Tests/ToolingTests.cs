@@ -34,7 +34,9 @@ public sealed class ToolingTests {
     Assert.That(error.Trim(), Is.EqualTo($"polypiler-tooling: unknown verb '{verb}'."));
   }
 
-  [Test]
+  // Console.Out belongs to the whole process: a parallel test that swapped it as well would take this
+  // test's output, or restore the original under it.
+  [Test, NonParallelizable]
   public void Main_WritesToTheConsole() {
     var originalOut = Console.Out;
     using var output = new StringWriter();
