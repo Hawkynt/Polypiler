@@ -49,7 +49,8 @@ Issues are written to the standard in [`ISSUES.md`](ISSUES.md): no work starts o
 1. **Before committing**: `dotnet build Polypiler.slnx -c Release` and
    `dotnet test Polypiler.slnx -c Release` until green (CI runs the same on ubuntu + windows). New
    behaviour is test-first (TDD): add the failing test, then make it pass. While iterating,
-   `--filter "TestCategory!=Slow"` is the fast tier (`TestCategory`, not `Category` - see CONTRIBUTING.md); run the whole suite before you push.
+   the fast tier is the filter of CONTRIBUTING.md, which leaves out `Slow` and every tier that is slow by nature, the
+   process-starting `EndToEnd` among them (`TestCategory`, not `Category`); run the whole suite before you push.
 2. **Commit** (rules above) and **push**.
 3. **Wait for CI**; on `main` a green CI triggers the nightly (dated prerelease + GFS prune). Fix and
    loop until everything is green.

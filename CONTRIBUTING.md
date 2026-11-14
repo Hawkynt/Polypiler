@@ -23,13 +23,51 @@ dotnet build Polypiler.slnx -c Release --no-restore
 ## Test
 
 ```bash
-dotnet test Polypiler.slnx -c Release                                   # everything
-dotnet test Polypiler.slnx -c Release --filter "TestCategory!=Slow"     # the fast tier
+dotnet test Polypiler.slnx -c Release                         # everything
+dotnet test Polypiler.Tests -c Release                        # the unit tests, which carry the coverage
+dotnet test Polypiler.Tests.Acceptance -c Release             # the executable, node and the C# compiler
+dotnet test Polypiler.slnx -c Release --filter "TestCategory!=Slow&TestCategory!=EndToEnd&TestCategory!=OsIntegration&TestCategory!=ExternalInterop&TestCategory!=PolyglotInterop&TestCategory!=Performance"   # the fast tier
 ```
 
 Tests are [NUnit](https://nunit.org). New behaviour is test-first: add the failing test, then make it
 pass. Keep test data deterministic (fixed seeds/strings) and generate it in setup rather than
 committing large binary fixtures.
+
+### Every test runs in parallel
+
+Both test projects declare `[assembly: Parallelizable(ParallelScope.All)]` with
+`FixtureLifeCycle(LifeCycle.InstancePerTestCase)`: every case gets its own fixture instance and runs
+beside the others, one NUnit worker per logical processor. `Polypiler.Tests` runs with the server
+garbage collector, because most of its tests allocate hard. What that asks of a test:
+
+- **Share nothing mutable.** A working directory comes from the `[SetUp]` of the case. A cache is a
+  `ConcurrentDictionary` of `Lazy` values, filled during the run and never written to disk — the
+  compiled fixtures, the builds of `GeneratedCSharp`, the translations of the acceptance tests.
+- **Process-wide state is the exception.** A test that swaps `Console.Out` is `[NonParallelizable]`,
+  with a comment saying why; nothing else is.
+- **One case per fixture and profile.** A test that loops over fixtures, profiles or millions of
+  calls inside one method keeps the scheduler from spreading it and ends up as the last test of the
+  run. It takes the fixture, the profile or a slice of the calls as an argument instead.
+
+The acceptance tests start processes where a process is what they are about. A scenario of a
+feature file runs the real `polypiler`, and so does every test of a command-line behaviour. A test
+that only needs the generated file translates with `Toolchain.Translate`, which calls
+`Program.Run` — what the executable's `Main` calls — in process; `InProcessTranslationTests` holds it
+to the executable's exit code, text and files for every kind of command line the tests use. Generated
+JavaScript runs in a `NodeWorker`: one long-lived `node` per test thread that loads a module afresh
+for each request. A crash, a hang past 60 seconds or an answer outside its protocol fails that one
+test and replaces the worker. A script that declares a global object, and a test about `node`
+itself, still gets a `node` of its own.
+
+Measured on a laptop with 16 logical processors that was busy with other work at the same time
+(load average about 30), Release, `--no-build`:
+
+| Project | Before | After |
+|---|---|---|
+| `Polypiler.Tests` | 8,265 tests, one at a time, 203 s | 8,306 cases, 78 s |
+| `Polypiler.Tests.Acceptance` | 955 tests, 385 s | 2,319 cases, 142 s |
+
+The same checks run as before; the cases are more because loops became cases.
 
 ### Generated C# is compiled for the framework it names
 

@@ -451,8 +451,8 @@ For optimizations, a successful pattern match is not a correctness proof. Polypi
 
 ```bash
 dotnet build Polypiler.slnx -c Release
-dotnet test Polypiler.slnx -c Release                                 # everything
-dotnet test Polypiler.slnx -c Release --filter "TestCategory!=Slow"   # the fast tier
+dotnet test Polypiler.slnx -c Release   # everything
+dotnet test Polypiler.slnx -c Release --filter "TestCategory!=Slow&TestCategory!=EndToEnd&TestCategory!=OsIntegration&TestCategory!=ExternalInterop&TestCategory!=PolyglotInterop&TestCategory!=Performance"   # the fast tier
 ```
 
 Requires the .NET 10 SDK. [CONTRIBUTING.md](CONTRIBUTING.md) covers the test tiers, CI and releases.
