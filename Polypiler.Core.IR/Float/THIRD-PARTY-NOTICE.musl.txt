@@ -6,13 +6,13 @@ Licence: BSD-2-Clause
 Parts of Polypiler.Core.IR/Float/Operations are converted to C# from musl libc 1.2.5
 (https://git.musl-libc.org/cgit/musl/tag/?h=v1.2.5, release tarball musl-1.2.5.tar.gz):
 
-  Arithmetic.cs      FusedMultiplyAdd   src/math/fma.c (musl, MIT)
-  Arithmetic.cs      FusedMultiplyAddF  src/math/fmaf.c (origin: FreeBSD lib/msun/src/s_fmaf.c, BSD-2-Clause)
-  Arithmetic.cs      IeeeRemainder      src/math/remquo.c (musl, MIT)
-  Arithmetic.cs      IeeeRemainderF     src/math/remquof.c (musl, MIT)
-  Arithmetic.cs      MultiplyHigh       the mul() of src/math/fma.c (musl, MIT), with the carry of the middle sum
-  Representation.cs  ScaleB, ScaleBF    src/math/scalbn.c, src/math/scalbnf.c (musl, MIT), as .NET carries them
-  Representation.cs  Fraction, Exponent src/math/frexp.c, src/math/frexpf.c (musl, MIT)
+  Arithmetic.cs         FusedMultiplyAdd   src/math/fma.c (musl, MIT)
+  Arithmetic.Single.cs  FusedMultiplyAddF  src/math/fmaf.c (origin: FreeBSD lib/msun/src/s_fmaf.c, BSD-2-Clause)
+  Arithmetic.cs         IeeeRemainder      src/math/remquo.c (musl, MIT)
+  Arithmetic.cs         IeeeRemainderF     src/math/remquof.c (musl, MIT)
+  Arithmetic.cs         MultiplyHigh       the mul() of src/math/fma.c (musl, MIT), with the carry of the middle sum
+  Representation.cs     ScaleB, ScaleBF    src/math/scalbn.c, src/math/scalbnf.c (musl, MIT), as .NET carries them
+  Representation.cs     Fraction, Exponent src/math/frexp.c, src/math/frexpf.c (musl, MIT)
 
 FusedMultiplyAddF also generalizes the halfway test of s_fmaf.c to results that are subnormal as
 a float, where the double keeps more than 29 bits below the float's last one.

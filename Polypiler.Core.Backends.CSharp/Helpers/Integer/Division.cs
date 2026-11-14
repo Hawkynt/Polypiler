@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 using System.Linq;
 
 namespace Polypiler.Core.Backends.CSharp;

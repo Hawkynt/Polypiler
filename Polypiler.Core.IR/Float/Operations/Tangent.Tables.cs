@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 namespace Polypiler.Core.IR;
 
 /// <summary>The tables of the tangent of <c>double</c>; see <see cref="FloatOperations.Tan"/>.</summary>
