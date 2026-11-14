@@ -226,6 +226,37 @@ don't-care, every vector needs a `mask` of the compared bits. The rules (`PLY004
 A grammar's `target` names an existing `TARGETS.` document (`PLY0043`). The seed document is
 `permutations/mappings/reverse8.yaml`.
 
+## Family `recognition`
+
+`spec/recognition/O<4 digits>.yaml`, ID `RECOGNITION.O<4 digits>`: one recognition rule of the block
+`O0100`–`O0169`, or of the bit-permutation recovery block `O0200`–`O0229` (PRD §4.1, §4.5).
+[`schemas/recognition.schema.json`](schemas/recognition.schema.json) states the body: the `level` it
+matches at (`source-ast`, `typed-ssa`), the `pattern` (`before`, `bindings`), the `replacement`
+(`after`, and the `INTRINSICS.` or `IR.` documents it `introduces`), at least one each of
+`preconditions` `{id, text, fact}`, `proofObligations` `{id, class, widths, budgetSeconds?}` and
+`counterexamples` `{description, input, naive, correct}` — `naive` what the near-miss source computes,
+`correct` what the replacement would give instead — the `switch`, the `optLevels` it runs at and its
+optimization page. The rules (`PLY0046`):
+
+| Rule | What it requires |
+| --- | --- |
+| `layout` | the path is `recognition/O####.yaml`, and the ID, `optimization` and `document` follow from it; when it fails, nothing else is checked |
+| `id-in-block` | the number lies in `O0100`–`O0169` or `O0200`–`O0229` |
+| `switch-matches` | `switch` is `--disable-opt` of the document's own optimization |
+| `counterexample-differs` | in every counterexample `naive` and `correct` differ, ignoring case and surrounding blanks |
+| `smt-needs-budget` | an obligation of class `smt-bitvector` states `budgetSeconds` (1–600) |
+| `exhaustive-width` | `exhaustive-8bit` lists only width 8, `exhaustive-16bit` only widths up to 16 |
+| `document-exists` | a `normative` document's optimization page exists |
+
+Every ID under `replacement.introduces` resolves or fails with `PLY0043`. The seed is one draft document
+per rule the prototype runs (`Polypiler.Core.Recognize`, `RuleTable.Default`), 17 in all, each stating
+what its rule matches and refuses as its optimization page does, with counterexamples worked out by hand.
+The prototype matches the structured IR rather than typed SSA and is held by `RecognitionFixtureTests`,
+not yet by the listed proof obligations; each document's `normative` text says so, and it stays a draft
+until the obligations are discharged. `ir/operations/mul.yaml` and `ir/operations/sub.yaml` describe
+the IR operations O0125 and O0127 introduce. The valid fixture and one fixture per rule and per required
+property live in `tests/fixtures/spec/recognition/`.
+
 ## Family `recovery`
 
 `spec/recovery/O<4 digits>.yaml`, ID `RECOVERY.O<4 digits>`: one recovery rule of the block

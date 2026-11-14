@@ -1,0 +1,57 @@
+id: RECOGNITION.O0123
+title: Recognize clamp from nested minimum and maximum and compare-select chains
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#272"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeClamp.cs
+  - tests/fixtures/prototype/recognize/clamp.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  Nested Min and Max, or a compare-select chain, MUST become Clamp only with constant bounds in order,
+  where Clamp cannot trap. The prototype rule O0123Clamp in Polypiler.Core.Recognize matches the
+  structured IR of Polypiler.Core.IR, not the typed SSA IR: pattern.before and replacement.after are
+  written in that structured form, and matching typed SSA graphs belongs to REC-ENGINE (#276).
+  RecognitionFixtureTests is the evidence the prototype has: it checks that the rule fires exactly on
+  the marked functions of its fixtures, that --disable-opt O0123 keeps it from firing, and that the IR
+  interpreter computes the same before and after the rule - result, kind of trap and the arrays a trap
+  leaves behind - for every value of each 8- and 16-bit parameter and for the edges and 10 000 random
+  tuples of the wider ones. The proof obligations below are planned and not discharged yet: exhaustive
+  checks with VER-EXHAUSTIVE (#70), bit-vector proofs with VER-SMT (#71). The prototype knows only the
+  levels default, where the rule is on, and none; the optLevels name the levels of the target state.
+  The document stays a draft until its obligations are discharged.
+spec:
+  optimization: O0123
+  level: typed-ssa
+  pattern:
+    before: "%r = Min.i32 Max.i32(%x, 0), 255"
+    bindings:
+      - {name: x, role: "clamped value"}
+  replacement:
+    after: "%r = Clamp.i32 %x, 0, 255"
+    introduces: [INTRINSICS.Clamp]
+  preconditions:
+    - {id: constant-bounds, text: "both bounds are constants", fact: range}
+    - {id: ordered-bounds, text: "the low bound is not above the high one", fact: range}
+    - {id: min-and-max, text: "one Min and one Max, or the matching chain of selections", fact: none}
+    - {id: trap-free, text: "the clamped value of a chain, which reads it more than once, has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: clamp-8, class: exhaustive-8bit, widths: [8]}
+    - {id: clamp-16, class: exhaustive-16bit, widths: [16]}
+    - {id: clamp-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "bounds out of order"
+      input: "x = 7, i32, Min(Max(x, 255), 0)"
+      naive: "0"
+      correct: "trap invalid operation"
+    - description: "two minimums"
+      input: "x = 100, i32, Min(Min(x, 0), 255)"
+      naive: "0"
+      correct: "100"
+  switch: "--disable-opt O0123"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0123-clamp-recognition.md

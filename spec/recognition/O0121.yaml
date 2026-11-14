@@ -1,0 +1,63 @@
+id: RECOGNITION.O0121
+title: Recognize wrapping absolute value from sign-mask idioms and compare-select
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#555"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeAbs.cs
+  - tests/fixtures/prototype/recognize/abs.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  The sign-mask and compare-select idioms MUST become AbsWrap, never the trapping Abs, and only when
+  they wrap on the smallest value and the mask is the sign. The prototype rule O0121AbsWrap in
+  Polypiler.Core.Recognize matches the structured IR of Polypiler.Core.IR, not the typed SSA IR:
+  pattern.before and replacement.after are written in that structured form, and matching typed SSA
+  graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it
+  checks that the rule fires exactly on the marked functions of its fixtures, that --disable-opt O0121
+  keeps it from firing, and that the IR interpreter computes the same before and after the rule -
+  result, kind of trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit
+  parameter and for the edges and 10 000 random tuples of the wider ones. The proof obligations below
+  are planned and not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs
+  with VER-SMT (#71). The prototype knows only the levels default, where the rule is on, and none; the
+  optLevels name the levels of the target state. The document stays a draft until its obligations are
+  discharged.
+spec:
+  optimization: O0121
+  level: typed-ssa
+  pattern:
+    before: "%m = AShr.i32 %x, 31; %r = Sub.i32 Xor.i32(%x, %m), %m"
+    bindings:
+      - {name: x, role: "value"}
+  replacement:
+    after: "%r = AbsWrap.i32 %x"
+    introduces: [INTRINSICS.AbsWrap]
+  preconditions:
+    - {id: sign-mask, text: "the mask is x >> (w - 1) with an arithmetic shift", fact: known-bits}
+    - {id: wrapping-negation, text: "the negation wraps; a negation that traps is not matched", fact: effect}
+    - {id: selects-magnitude, text: "the selection picks -x for a negative x and x otherwise", fact: none}
+    - {id: wide-signed, text: "x is a signed 32- or 64-bit integer", fact: type}
+    - {id: trap-free, text: "the value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: abs-8, class: exhaustive-8bit, widths: [8]}
+    - {id: abs-16, class: exhaustive-16bit, widths: [16]}
+    - {id: abs-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "a mask that is not the sign"
+      input: "x = 0x7FFFFFFF, i32, m = x >> 30, (x ^ m) - m"
+      naive: "0x7FFFFFFD"
+      correct: "0x7FFFFFFF"
+    - description: "a negation that traps"
+      input: "x = 0x80000000, i32, x < 0 ? checked(-x) : x"
+      naive: "trap overflow"
+      correct: "0x80000000"
+    - description: "the swapped selection"
+      input: "x = 5, i32, x < 0 ? x : -x"
+      naive: "0xFFFFFFFB"
+      correct: "0x00000005"
+  switch: "--disable-opt O0121"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0121-abs-recognition.md

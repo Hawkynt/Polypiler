@@ -18,6 +18,7 @@ public static class SpecFamilies {
     new RewritesSpecFamily(),
     new TypesSpecFamily(),
     new IntrinsicsSpecFamily(),
+    new RecognitionSpecFamily(),
   ];
 
 }

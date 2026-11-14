@@ -1,0 +1,59 @@
+id: RECOGNITION.O0109
+title: Recognize sign extension from shift pairs and xor-subtract
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#580"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeSignExtend.cs
+  - tests/fixtures/prototype/recognize/signextend.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A shift pair or an xor-subtract MUST become SignExtend only when the right shift is arithmetic, or
+  the bits of the value above the field are known to be zero. The prototype rule O0109SignExtend in
+  Polypiler.Core.Recognize matches the structured IR of Polypiler.Core.IR, not the typed SSA IR:
+  pattern.before and replacement.after are written in that structured form, and matching typed SSA
+  graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it
+  checks that the rule fires exactly on the marked functions of its fixtures, that --disable-opt O0109
+  keeps it from firing, and that the IR interpreter computes the same before and after the rule -
+  result, kind of trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit
+  parameter and for the edges and 10 000 random tuples of the wider ones. The proof obligations below
+  are planned and not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs
+  with VER-SMT (#71). The prototype knows only the levels default, where the rule is on, and none; the
+  optLevels name the levels of the target state. The document stays a draft until its obligations are
+  discharged.
+spec:
+  optimization: O0109
+  level: typed-ssa
+  pattern:
+    before: "%r = AShr.i32 Shl.i32(%x, 20), 20"
+    bindings:
+      - {name: x, role: "extended value"}
+  replacement:
+    after: "%r = SignExtend.i32 %x, 12"
+    introduces: [INTRINSICS.SignExtend]
+  preconditions:
+    - {id: arithmetic, text: "the right shift of (x << k) >> k is arithmetic", fact: type}
+    - {id: same-amount, text: "both shifts are by one constant k, 0 < k < w", fact: range}
+    - {id: power-of-two, text: "in (x ^ m) - m the constant m is 1 << (b - 1)", fact: none}
+    - {id: high-bits-zero, text: "in (x ^ m) - m the bits of x from b on are known to be zero", fact: known-bits}
+    - {id: trap-free, text: "the extended value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: sign-extend-8, class: exhaustive-8bit, widths: [8]}
+    - {id: sign-extend-16, class: exhaustive-16bit, widths: [16]}
+    - {id: sign-extend-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "a logical right shift"
+      input: "x = 0x00000800, u32, (x << 20) >> 20"
+      naive: "0x00000800"
+      correct: "0xFFFFF800"
+    - description: "an unmasked xor-subtract"
+      input: "x = 0x00000100, i32, (x ^ 0x80) - 0x80"
+      naive: "0x00000100"
+      correct: "0x00000000"
+  switch: "--disable-opt O0109"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0109-sign-extension-recognition.md
