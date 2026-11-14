@@ -79,19 +79,25 @@ public static class NativeFlags {
   /// The build step that compiles one source of the run's directory into a program there. C++ is
   /// compiled and linked as C++: clang by its C++ driver mode, gcc with its C++ library named, since
   /// the toolchain lock carries the C drivers. On macOS the step gets the SDK the CI exports as
-  /// <c>SDKROOT</c>, which a compiler from outside Xcode needs to find the system headers.
+  /// <c>SDKROOT</c>, which a compiler from outside Xcode needs to find the system headers. On Windows
+  /// clang links with <c>lld-link</c> of its own release: the MSVC linker it finds cannot be started
+  /// from the runner's scrubbed environment, while the headers and libraries it finds are the same.
   /// </summary>
   /// <param name="compiler">The toolchain key of the compiler.</param>
   /// <param name="language">The language.</param>
   /// <param name="source">The source, relative to the run's directory.</param>
   /// <param name="program">The program, relative to the run's directory.</param>
   /// <param name="defines">Further switches, before the source.</param>
-  public static ProcessSpec Compile(string compiler, NativeLanguage language, string source, string program, params IReadOnlyList<string> defines) {
+  /// <param name="platform">The platform as the toolchain lock names it; this one unless given.</param>
+  public static ProcessSpec Compile(string compiler, NativeLanguage language, string source, string program, IReadOnlyList<string> defines, string? platform = null) {
     var cpp = language == NativeLanguage.Cpp;
+    platform ??= ToolchainLocator.CurrentPlatform;
     var arguments = new List<string>();
     if (cpp && compiler == "clang")
       arguments.Add("--driver-mode=g++");
-    arguments.AddRange(Sanitized(language, compiler));
+    arguments.AddRange(Sanitized(language, compiler, platform));
+    if (platform == "windows" && compiler == "clang")
+      arguments.Add("-fuse-ld=lld");
     arguments.AddRange(defines);
     arguments.AddRange([source, "-o", program]);
     if (cpp && compiler == "gcc")

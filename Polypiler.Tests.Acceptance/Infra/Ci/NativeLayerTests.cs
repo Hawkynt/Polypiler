@@ -43,12 +43,13 @@ public sealed class NativeLayerTests {
 
   [Test]
   public void TheCompileStep_DrivesCPlusPlusAsCPlusPlus() {
-    var clang = NativeFlags.Compile("clang", NativeLanguage.Cpp, "a.cpp", "program", "-DEMPTY");
-    var gcc = NativeFlags.Compile("gcc", NativeLanguage.Cpp, "a.cpp", "program");
-    var c = NativeFlags.Compile("gcc", NativeLanguage.C, "a.c", "program");
+    var clang = NativeFlags.Compile("clang", NativeLanguage.Cpp, "a.cpp", "program", ["-DEMPTY"], "linux");
+    var gcc = NativeFlags.Compile("gcc", NativeLanguage.Cpp, "a.cpp", "program", [], "linux");
+    var c = NativeFlags.Compile("gcc", NativeLanguage.C, "a.c", "program", [], "linux");
     Assert.That((clang.Toolchain, clang.Arguments[0], clang.Arguments.TakeLast(4)), Is.EqualTo(("clang", "--driver-mode=g++", new[] { "-DEMPTY", "a.cpp", "-o", "program" })));
     Assert.That((gcc.Toolchain, gcc.Arguments[0], gcc.Arguments[^1]), Is.EqualTo(("gcc", "-std=c++20", "-lstdc++")));
-    Assert.That(c.Arguments.TakeLast(3), Is.EqualTo(new[] { "a.c", "-o", "program" }));
+    Assert.That(c.Arguments.TakeLast(3), Is.EqualTo(new[] { "a.c", "-o", "program" }));    Assert.That(NativeFlags.Compile("clang", NativeLanguage.C, "a.c", "program.exe", [], "windows").Arguments, Does.Contain("-fuse-ld=lld"));
+    Assert.That(c.Arguments, Does.Not.Contain("-fuse-ld=lld"));
   }
 
   [Test]
