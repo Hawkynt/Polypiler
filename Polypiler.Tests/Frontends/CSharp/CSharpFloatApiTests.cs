@@ -103,7 +103,6 @@ public sealed class CSharpFloatApiTests {
   [TestCase("public static double F(double x) => System.Math.SinCos(x).Sin + System.Double.SinCosPi(x).SinPi;", "Double.SinCosPi")]
   [TestCase("public static double F(double a, double b, double t) => System.Double.Lerp(a + 1, b, t);", "Double.Lerp")]
   [TestCase("public static double F(double x, int n) => System.Double.RootN(x * 2, n);", "Double.RootN")]
-  [TestCase("public static int F(int a) => System.Math.Clamp(a, 0, 1);", "Math.Clamp")]
   [TestCase("public static double F(double x, int m) => System.Math.Round(x, (System.MidpointRounding)m);", "Math.Round")]
   public void WhatTheTableCannotExpress_IsRefusedByName(string method, string name) {
     var result = CSharpFrontend.Import("Snippet.cs", PrototypeFixture.Wrap(method));

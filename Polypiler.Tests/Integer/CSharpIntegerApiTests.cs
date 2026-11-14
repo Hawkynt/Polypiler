@@ -214,7 +214,7 @@ public sealed class CSharpIntegerApiTests {
   [TestCase("public static int F(int a, int b) => System.Math.DivRem(a, b).Quotient;", "SimpleMemberAccessExpression")]
   [TestCase("public static int F(int a, int b) => System.Math.DivRem(a, b, out a);", "Math.DivRem")]
   [TestCase("public static int F(int a, int b, int[] c) { int q = System.Math.DivRem(a, b, out c[0]); return q; }", "a result stored in ElementAccessExpression")]
-  [TestCase("public static double F(double a) => System.Math.Clamp(a, 0.0, 1.0);", "Math.Clamp")]
+  [TestCase("public static double F(double a) => System.Math.ReciprocalEstimate(a);", "Math.ReciprocalEstimate")]
   [TestCase("public static int F(double a) => int.CreateTruncating(a);", "Int32.CreateTruncating")]
   public void Unmapped_IsRefusedByName(string method, string named) {
     var result = CSharpFrontend.Import("Snippet.cs", Wrap(method));

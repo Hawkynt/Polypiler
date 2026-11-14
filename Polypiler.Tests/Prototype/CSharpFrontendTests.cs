@@ -162,7 +162,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(int a) { int b = a = 1; return b; }", "SimpleAssignmentExpression", 38, TestName = "assignment as a value")]
   [TestCase("public static int F(object o) => 1;", "object", 21, TestName = "object")]
   [TestCase("public static void F() { new object(); }", "ObjectCreationExpression", 26, TestName = "object creation statement")]
-  [TestCase("public static double F(double a) => System.Math.Clamp(a, 0.0, 1.0);", "Math.Clamp", 37, TestName = "call outside the class")]
+  [TestCase("public static double F(double a) => System.Double.SinPi(a);", "Double.SinPi", 37, TestName = "call outside the class")]
   [TestCase("public static uint F(uint a) => System.Numerics.BitOperations.Crc32C(a, a);", "BitOperations.Crc32C", 33, TestName = "checksum of BitOperations")]
   [TestCase("public static bool F(int a) => int.IsNegative(a);", "Int32.IsNegative", 32, TestName = "member of an integer type outside the set")]
   [TestCase("public static long F(long a) => System.Math.BigMul(a, a, out a);", "Math.BigMul", 33, TestName = "BigMul with the low half as out")]
