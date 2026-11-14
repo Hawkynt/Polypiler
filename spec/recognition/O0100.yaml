@@ -1,0 +1,64 @@
+id: RECOGNITION.O0100
+title: Recognize rotate-left and rotate-right from shift pairs
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#279"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeRotate.cs
+  - tests/fixtures/prototype/recognize/rotate.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A shift pair joined by |, ^ or + MUST become RotateLeft or RotateRight only when its value is the
+  bits of one value, each moved by the same amount modulo the width. The prototype rule O0100Rotate in
+  Polypiler.Core.Recognize matches the structured IR of Polypiler.Core.IR, not the typed SSA IR:
+  pattern.before and replacement.after are written in that structured form, and matching typed SSA
+  graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it
+  checks that the rule fires exactly on the marked functions of its fixtures, that --disable-opt O0100
+  keeps it from firing, and that the IR interpreter computes the same before and after the rule -
+  result, kind of trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit
+  parameter and for the edges and 10 000 random tuples of the wider ones. The proof obligations below
+  are planned and not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs
+  with VER-SMT (#71). The prototype knows only the levels default, where the rule is on, and none; the
+  optLevels name the levels of the target state. The document stays a draft until its obligations are
+  discharged.
+spec:
+  optimization: O0100
+  level: typed-ssa
+  pattern:
+    before: "%a = Shl.u32[mask] %x, 8; %b = LShr.u32[mask] %x, 24; %r = Or.u32 %a, %b"
+    bindings:
+      - {name: x, role: "rotated value"}
+  replacement:
+    after: "%r = RotateLeft.u32 %x, 8"
+    introduces: [INTRINSICS.RotateLeft, INTRINSICS.RotateRight]
+  preconditions:
+    - {id: same-value, text: "both shifts take the same value", fact: none}
+    - {id: complementary, text: "constant amounts add up to the width, 0 < k < w; a variable count gives the rotation by each of its 64 residues", fact: range}
+    - {id: zero-fill, text: "the right shift brings in zeros wherever its bits are kept: logical, or arithmetic only on bits a mask removes", fact: known-bits}
+    - {id: join-at-zero, text: "with a variable count the shifts are joined by |; ^ and + are no rotation at count 0", fact: range}
+    - {id: not-byte-swap, text: "a 16-bit rotation by 8 is a byte swap and left to O0106", fact: none}
+    - {id: trap-free, text: "the rotated value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: rotl-8, class: exhaustive-8bit, widths: [8]}
+    - {id: rotl-16, class: exhaustive-16bit, widths: [16]}
+    - {id: rotl-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 5}
+  counterexamples:
+    - description: "arithmetic right shift is not a rotation"
+      input: "x = 0x80000000, i32, (x << 8) | (x >> 24)"
+      naive: "0xFFFFFF80"
+      correct: "0x00000080"
+    - description: "amounts that do not add up to the width"
+      input: "x = 0x80000000, u32, (x << 8) | (x >> 23)"
+      naive: "0x00000100"
+      correct: "0x00000080"
+    - description: "^ with a variable count at count 0"
+      input: "x = 0x00000001, n = 0, u32, (x << n) ^ (x >> (32 - n))"
+      naive: "0x00000000"
+      correct: "0x00000001"
+  switch: "--disable-opt O0100"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0100-rotate-recognition.md

@@ -1,0 +1,59 @@
+id: RECOGNITION.O0122
+title: Recognize signum from comparison difference and shift-or
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#579"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeSign.cs
+  - tests/fixtures/prototype/recognize/sign.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  The comparison difference and the shift-or idiom MUST become Sign only when they give -1, 0 and 1
+  for negative, zero and positive values. The prototype rule O0122Sign in Polypiler.Core.Recognize
+  matches the structured IR of Polypiler.Core.IR, not the typed SSA IR: pattern.before and
+  replacement.after are written in that structured form, and matching typed SSA graphs belongs to REC-
+  ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it checks that the rule
+  fires exactly on the marked functions of its fixtures, that --disable-opt O0122 keeps it from
+  firing, and that the IR interpreter computes the same before and after the rule - result, kind of
+  trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit parameter and for
+  the edges and 10 000 random tuples of the wider ones. The proof obligations below are planned and
+  not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs with VER-SMT
+  (#71). The prototype knows only the levels default, where the rule is on, and none; the optLevels
+  name the levels of the target state. The document stays a draft until its obligations are
+  discharged.
+spec:
+  optimization: O0122
+  level: typed-ssa
+  pattern:
+    before: "%r = Or.i32 AShr.i32(%x, 31), LShr.u32(Neg.i32(%x), 31)"
+    bindings:
+      - {name: x, role: "value"}
+  replacement:
+    after: "%r = Sign.i32 %x"
+    introduces: [INTRINSICS.Sign]
+  preconditions:
+    - {id: difference-order, text: "the difference is (x > 0) - (x < 0), not the swapped one", fact: none}
+    - {id: same-value, text: "both comparisons, or both shifts, read the same value", fact: none}
+    - {id: shift-kinds, text: "the first shift is arithmetic, the second logical and of -x", fact: known-bits}
+    - {id: wide-signed, text: "the shift-or form takes a signed 32- or 64-bit x", fact: type}
+    - {id: trap-free, text: "the value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: sign-8, class: exhaustive-8bit, widths: [8]}
+    - {id: sign-16, class: exhaustive-16bit, widths: [16]}
+    - {id: sign-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "the swapped difference"
+      input: "x = 5, i32, (x < 0 ? 1 : 0) - (x > 0 ? 1 : 0)"
+      naive: "-1"
+      correct: "1"
+    - description: "a logical shift of x instead of -x"
+      input: "x = 5, i32, (x >> 31) | (int)((uint)x >> 31)"
+      naive: "0"
+      correct: "1"
+  switch: "--disable-opt O0122"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0122-signum-recognition.md
