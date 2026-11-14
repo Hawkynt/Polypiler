@@ -133,8 +133,8 @@ public static class JavaScriptSyntaxReader {
           return new JsThrow(this.Expression(exception.Argument));
         case FunctionDeclaration function:
           return new JsFunctionDeclaration(function.Id!.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body));
-        case ClassDeclaration { SuperClass: null } type:
-          return new JsClass(type.Id!.Name, [.. type.Body.Body.Select(this.ClassMember)]);
+        case ClassDeclaration { SuperClass: null or Identifier } type:
+          return new JsClass(type.Id!.Name, [.. type.Body.Body.Select(this.ClassMember)]) { Base = (type.SuperClass as Identifier)?.Name };
         case ExportNamedDeclaration { Declaration: Statement declared }:
           return new JsExport(this.Statement(declared));
         default:
@@ -158,6 +158,8 @@ public static class JavaScriptSyntaxReader {
           return new JsIdentifier(identifier.Name);
         case ThisExpression:
           return new JsThis();
+        case Super:
+          return new JsIdentifier("super");
         case NullLiteral:
           return new JsNull();
         case MemberExpression { Computed: true } member:

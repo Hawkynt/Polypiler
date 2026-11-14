@@ -309,7 +309,12 @@ public sealed record JsClassMember(JsClassMemberKind Kind, string Name, bool IsS
 /// <summary><c>class Name { members }</c>.</summary>
 /// <param name="Name">The name.</param>
 /// <param name="Members">The members, in order.</param>
-public sealed record JsClass(string Name, IReadOnlyList<JsClassMember> Members) : JsStatement;
+public sealed record JsClass(string Name, IReadOnlyList<JsClassMember> Members) : JsStatement {
+
+  /// <summary>The class it derives from, <c>extends Base</c>, or <see langword="null"/>.</summary>
+  public string? Base { get; init; }
+
+}
 
 /// <summary><c>export</c> in front of a declaration.</summary>
 /// <param name="Declaration">The declaration.</param>

@@ -274,6 +274,11 @@ public static partial class JavaScriptEmitter {
       for (var index = 0; index < this._structHelpers.Count; ++index) {
         var (kind, declared) = this._structHelpers[index];
         var name = $"${kind}_{declared.Name}";
+        if (kind is "is" or "as" or "cast") {
+          helpers.Add(this.ConversionHelper(name, kind, declared) with { Leading = JsTrivia.Blank, IsHelper = true });
+          continue;
+        }
+
         if (declared is IrClassType record) {
           helpers.Add(this.RecordEquals(name, record) with { Leading = JsTrivia.Blank, IsHelper = true });
           continue;

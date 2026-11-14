@@ -22,7 +22,7 @@ public static partial class JavaScriptEmitter {
     private bool _underscored;
 
     /// <summary>Whether a function of the module is the body of a member of a class.</summary>
-    private bool IsMember(IrFunction function) => this._owners.ContainsKey(function.Name);
+    private bool IsMember(IrFunction function) => this._owners.ContainsKey(function.Name) || this._signatures.Contains(function.Name);
 
     /// <summary>
     /// Takes note of the classes of a module and names their members: a private member is
@@ -36,6 +36,10 @@ public static partial class JavaScriptEmitter {
 
         var taken = new HashSet<string>();
         string Named(string name, IrVisibility visibility) {
+          // A protected member is reached by the classes derived from its own, which a private name would hide from them.
+          if (visibility == IrVisibility.Protected)
+            return Named("_" + name.TrimStart('_'), IrVisibility.Public);
+
           if (visibility != IrVisibility.Private)
             return taken.Add(name) ? name : Named(name + "$", IrVisibility.Public);
 
@@ -64,17 +68,29 @@ public static partial class JavaScriptEmitter {
           this._globals[global] = $"{this.Name(type.Name)}.{Named(local, IrVisibility.Public)}";
         }
       }
+
+      foreach (var contract in module.Types.OfType<IrInterfaceType>()) {
+        foreach (var function in contract.Functions)
+          this._signatures.Add(function);
+
+        foreach (var method in contract.Methods)
+          this._memberNames[method] = method.Name;
+      }
     }
 
     /// <summary>The name of a field, an accessor's property or a method as the class writes it.</summary>
     private string MemberName(IrField field) => this._memberNames[field];
 
-    private string MemberName(IrMethod method, IrClassType owner)
-      => method.Kind == IrMethodKind.Method ? this._memberNames[method] : this._memberNames[owner.PropertyOf(method)!];
+    private string MemberName(IrMethod method, IrClassType? owner)
+      => method.Kind == IrMethodKind.Method || owner is null ? this._memberNames[method] : this._memberNames[owner.PropertyOf(method)!];
 
-    /// <summary>The method of the class a constructor is written as when the class has several: <c>$init&lt;k&gt;</c>.</summary>
-    private static string Initializer(IrClassType type, string function)
-      => "$init" + (type.Constructors.Select(constructor => constructor.Function).ToList().IndexOf(function) + 1);
+    /// <summary>
+    /// The method of the class a constructor is written as when the class has several:
+    /// <c>$init&lt;k&gt;</c>, and <c>$init_&lt;Class&gt;&lt;k&gt;</c> in a hierarchy, where the
+    /// method of a derived class would otherwise replace that of its base class.
+    /// </summary>
+    private string Initializer(IrClassType type, string function)
+      => "$init" + (this.InHierarchy(type) ? $"_{type.Name}" : "") + (type.Constructors.Select(constructor => constructor.Function).ToList().IndexOf(function) + 1);
 
     /// <summary>
     /// The declarations of a class: an ECMAScript 2015 class where the level has classes, otherwise a
@@ -84,6 +100,7 @@ public static partial class JavaScriptEmitter {
     /// </summary>
     private List<JsStatement> Class(IrClassType type, IrModule module) {
       this._construct = $"the class '{type.Name}'";
+      this._class = type;
       var name = this.Name(type.Name);
       var functions = module.Functions.Where(function => this._owners.GetValueOrDefault(function.Name) == type).ToDictionary(function => function.Name);
       var classes = this.Native("class");
@@ -92,22 +109,28 @@ public static partial class JavaScriptEmitter {
       var accessors = classes && this.Native("class accessor");
       var defaults = fields ? [] : type.Fields.Select(field => (JsStatement)new JsExpressionStatement(new JsAssignment(new JsMember(new JsThis(), this.MemberName(field)), "=", this.FieldDefault(field.Type)))).ToList();
 
-      // The constructor of JavaScript.
+      // The constructor of JavaScript; a derived class of ECMAScript 2015 reaches this only after super(…).
       var parameters = new List<string>();
-      var body = new List<JsStatement>(defaults);
+      var body = new List<JsStatement>(type.Base is not null && classes ? [] : defaults);
       if (type.Constructors.Count == 1) {
         var (written, block) = this.Member(functions[type.Constructors[0].Function], type);
         parameters = written;
         body.AddRange(block.Statements);
+        if (type.Base is not null && classes)
+          body.InsertRange(1, defaults);
       } else {
         var arities = type.Constructors.Select(constructor => functions[constructor.Function].Parameters.Count - 1).ToList();
         if (arities.Distinct().Count() != arities.Count && this._refused.Add("constructors of one arity"))
           this._problems.Add(InexpressibleDescriptor.At($"'constructors of one arity' of the class '{type.Name}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
 
+        // super(…) stands in the constructor itself, never in a method it calls.
+        if (type.Base is not null && classes && this._refused.Add("several constructors of a derived class"))
+          this._problems.Add(InexpressibleDescriptor.At($"'several constructors of a derived class' of the class '{type.Name}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
+
         parameters = [.. Enumerable.Range(0, arities.Max()).Select(index => $"a{index}")];
         JsStatement? choice = null;
         for (var index = type.Constructors.Count - 1; index >= 0; --index) {
-          var call = new JsExpressionStatement(new JsCall(new JsMember(new JsThis(), Initializer(type, type.Constructors[index].Function)), [.. parameters.Take(arities[index]).Select(Id)]));
+          var call = new JsExpressionStatement(new JsCall(new JsMember(new JsThis(), this.Initializer(type, type.Constructors[index].Function)), [.. parameters.Take(arities[index]).Select(Id)]));
           choice = choice is null ? new JsBlock([call]) : new JsIf(Infix(new JsMember(Id("arguments"), "length"), "===", Number(arities[index])), new JsBlock([call]), choice);
         }
 
@@ -129,14 +152,14 @@ public static partial class JavaScriptEmitter {
       if (type.Constructors.Count > 1)
         foreach (var constructor in type.Constructors) {
           var (written, block) = this.Member(functions[constructor.Function], type);
-          var initializer = Initializer(type, constructor.Function);
+          var initializer = this.Initializer(type, constructor.Function);
           if (classes)
             members.Add(new JsClassMember(JsClassMemberKind.Method, initializer, false, written, block, null));
           else
             after.Add(new JsExpressionStatement(new JsAssignment(new JsMember(Prototype(), initializer), "=", new JsFunctionExpression(null, written, block))));
         }
 
-      foreach (var method in type.Methods.Where(method => method.Kind == IrMethodKind.Method)) {
+      foreach (var method in type.Methods.Where(method => method.Kind == IrMethodKind.Method && method.Dispatch != IrDispatch.Abstract)) {
         var (written, block) = this.Member(functions[method.Function], type);
         var member = this.MemberName(method, type);
         if (classes)
@@ -172,12 +195,25 @@ public static partial class JavaScriptEmitter {
       }
 
       JsStatement declaration;
+      var baseName = type.Base is { } inherited ? this.Name(inherited.Name) : null;
       if (classes) {
-        declaration = new JsClass(name, members);
+        this.Native("extends");
+        declaration = new JsClass(name, members) { Base = baseName };
       } else {
         var constructor = members.Single(member => member.Kind == JsClassMemberKind.Constructor);
         declaration = new JsFunctionDeclaration(name, constructor.Parameters, constructor.Body!);
+        if (baseName is not null) {
+          // The prototype is replaced before the methods are put on it.
+          this.Native("extends");
+          this.Native("Object.create");
+          after.InsertRange(0, [
+            new JsExpressionStatement(new JsAssignment(Prototype(), "=", Invoke("Object.create", new JsMember(Id(baseName), "prototype")))),
+            new JsExpressionStatement(new JsAssignment(new JsMember(Prototype(), "constructor"), "=", Id(name)))
+          ]);
+        }
       }
+
+      after.AddRange(this.Markers(type, Prototype()));
 
       var exported = type.Visibility == IrVisibility.Public && this._profile.Module == JavaScriptModuleFormat.Esm;
       if (type.Visibility == IrVisibility.Public && !exported)
@@ -223,8 +259,11 @@ public static partial class JavaScriptEmitter {
           return (new JsMember(this.Operand(load.Target), this.MemberName(load.Field)), true);
         default:
           var call = (IrMethodCall)expression;
-          var owner = this._owners[call.Method.Function];
-          var target = call.Target is null ? Id(this.Name(owner.Name)) : this.Operand(call.Target);
+          var owner = this._owners.GetValueOrDefault(call.Method.Function);
+          if (call.Kind == IrMethodCallKind.Base && call.Method.Kind == IrMethodKind.Method)
+            return (this.BaseCall(call, owner!), true);
+
+          var target = call.Target is null ? Id(this.Name(owner!.Name)) : this.Operand(call.Target);
           var member = new JsMember(target, this.MemberName(call.Method, owner));
           return call.Method.Kind switch {
             IrMethodKind.Getter => (member, true),
@@ -234,10 +273,23 @@ public static partial class JavaScriptEmitter {
       }
     }
 
-    /// <summary>A call of a constructor's function from another constructor: the method <c>$init&lt;k&gt;</c> on <c>this</c>.</summary>
+    /// <summary>
+    /// A call of a constructor's function from another constructor: the method <c>$init&lt;k&gt;</c> on
+    /// <c>this</c>; of a constructor of the base class, <c>super(…)</c>, or <c>Base.call(this, …)</c>
+    /// where the level has no classes.
+    /// </summary>
     private JsCall Chained(IrCall call) {
       var owner = this._owners[call.Function];
-      return new JsCall(new JsMember(new JsThis(), Initializer(owner, call.Function)), [.. call.Arguments.Skip(1).Select(this.Value)]);
+      var arguments = call.Arguments.Skip(1).Select(this.Value).ToList();
+      if (owner != this._class && this.Native("class"))
+        return new JsCall(Id("super"), arguments);
+
+      if (owner != this._class) {
+        this.Native(".call");
+        return new JsCall(new JsMember(Id(this.Name(owner.Name)), "call"), [new JsThis(), .. arguments]);
+      }
+
+      return new JsCall(new JsMember(new JsThis(), this.Initializer(owner, call.Function)), arguments);
     }
 
     /// <summary>
