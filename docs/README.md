@@ -27,6 +27,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Views](reference/views.md) — `Span<T>`, `ReadOnlySpan<T>`, `stackalloc` and `subarray`: the view of the IR, its traps, what each frontend imports and how each profile writes it.
 - [String operations](reference/string-operations.md) — strings of UTF-16 code units: every operation with its ordinal meaning, the two white-space sets, what each frontend imports or refuses and how each profile writes it.
 - [Numbers to text and back](reference/number-text.md) — the conversions between numbers, truth values and text by the rules of .NET and of ECMA-262, each an operation of its own: what each frontend imports or refuses and how each profile writes it.
+- [Enums](reference/enums.md) — C# enums and JavaScript frozen objects of named numbers as named integer types, with .NET's rules for the text, the parse and the order of the names: what each frontend imports or refuses and how each profile writes it.
 - [Benchmarks](benchmarks/README.md) — how to add a benchmark, run it, read its result and compare two result sets against the budgets.
 - [Audit of the PB-Compiler LLVM emitter](llvm/pb-emitter-audit.md) — what PB-Compiler's `--emit-llvm` writes at the pinned commit, what LLVM 23.1.3 accepts of it, and the gaps against PRD §26.3.
 - [Error catalogue](errors/README.md) — every diagnostic code with its severity, exit code, cause and what to do, generated from `spec/diagnostics.yaml` by `polypiler-tooling report errors`.
