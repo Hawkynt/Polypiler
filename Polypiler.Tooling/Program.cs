@@ -7,6 +7,7 @@ using Polypiler.Core.IR;
 using Polypiler.Tooling.Bench;
 using Polypiler.Tooling.Commands;
 using Polypiler.Tooling.Fuzz;
+using Polypiler.Tooling.Rebuild;
 using Polypiler.Tooling.Report;
 
 namespace Polypiler.Tooling;
@@ -57,6 +58,8 @@ public static class Program {
       output.WriteLine($"       {Name} {LicensesCommand.Verb} inventory [--policy <file>]");
       output.WriteLine($"       {Name} {BenchCommand.Verb} run (--id <id> | --all) [--out <dir>]");
       output.WriteLine($"       {Name} {BenchCommand.Verb} compare --baseline <dir> --current <dir> [--budgets <file>] [--out <file.md>]");
+      output.WriteLine($"       {Name} {RebuildCommand.Verb} check --output <dir> [--runs <n>] [--input <path>]... [--wall-time <seconds>] [--memory <MiB>] -- <toolchain key> <args>");
+      output.WriteLine($"       {Name} {RebuildCommand.Verb} compare <first dir> <second dir>");
       return Success;
     }
 
@@ -90,6 +93,8 @@ public static class Program {
       return new LicensesCommand().Run(args[1..], output, error);
     if (args[0] == BenchCommand.Verb)
       return new BenchCommand().Run(args[1..], output, error);
+    if (args[0] == RebuildCommand.Verb)
+      return new RebuildCommand().Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;
