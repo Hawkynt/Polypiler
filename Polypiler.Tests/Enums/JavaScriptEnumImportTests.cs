@@ -113,6 +113,8 @@ public sealed class JavaScriptEnumImportTests {
   [TestCase("const C = Object.freeze({ A: 0, B: 1 }); export function f() { return Object.keys(C).length; }", "the enum object C used other than by its members, as X.A")]
   [TestCase("const C = Object.freeze({ A: 0 }); function g(x) { return 1; } export function f() { return g(C); }", "the enum object C used other than by its members, as X.A")]
   [TestCase("const C = Object.freeze({ A: 0 }); export function f() { return C.Q; }", "C.Q, which is no member of the enum object C")]
+  [TestCase("var C; (function (C) { C[C[\"A\"] = 0] = \"A\"; })(C || (C = {})); export function f() { return C.A; }",
+    "the TypeScript-style enum C, an object that maps names to numbers and numbers to names: an enum object is Object.freeze({ … })")]
   public void Construct_IsRefusedByName(string source, string what) {
     var result = JavaScriptFrontend.Import("snippet.js", source);
     Assert.That(result.Module, Is.Null);

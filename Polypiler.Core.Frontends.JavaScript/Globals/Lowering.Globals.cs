@@ -51,7 +51,10 @@ internal sealed partial class Lowering {
   }
 
   /// <summary>Refuses a statement at the top level of a module that has variables: it would run, and change them, when the module is loaded.</summary>
-  public Diagnostic TopLevel(Node statement) => this.Unsupported(statement, "a statement at the top level of the module").Diagnostic;
+  public Diagnostic TopLevel(Node statement)
+    => this.Unsupported(statement, TypeScriptEnum(statement) is { } named
+      ? $"the TypeScript-style enum {named}, an object that maps names to numbers and numbers to names: an enum object is Object.freeze({{ … }})"
+      : "a statement at the top level of the module").Diagnostic;
 
   /// <summary>Refuses an initializer that calls a function that reads or writes a variable of the module.</summary>
   public Diagnostic Impure(Node initializer, string function)

@@ -22,4 +22,13 @@ internal sealed partial class Lowering {
       : throw this.Unsupported(member, $"{named.Name}.{key}, which is no member of the enum object {named.Name}");
   }
 
+  /// <summary>
+  /// The name of the enum a statement declares as TypeScript writes one,
+  /// <c>(function (E) { E[E["A"] = 0] = "A"; })(E || (E = {}));</c>, or <see langword="null"/>.
+  /// </summary>
+  private static string? TypeScriptEnum(Node statement)
+    => statement is ExpressionStatement { Expression: CallExpression { Callee: FunctionExpression { Params.Count: 1 }, Arguments: [LogicalExpression { Operator: Acornima.Operator.LogicalOr, Left: Identifier { Name: var name } }] } }
+      ? name
+      : null;
+
 }
