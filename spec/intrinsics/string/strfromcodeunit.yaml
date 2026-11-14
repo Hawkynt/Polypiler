@@ -1,0 +1,28 @@
+id: INTRINSICS.StrFromCodeUnit
+title: String of one code unit
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrFromCodeUnit
+  group: String
+  typeParameters: []
+  parameters: [{name: unit, type: TYPES.u16}]
+  returns: [{name: text, type: TYPES.str}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the string whose only code unit is unit"
+    source: "ECMA-262 2022 §22.1.2.1 (String.fromCharCode); the .NET API reference of Char.ToString(Char)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [65], outputs: [[65]]}
+    - {types: {}, inputs: [55296], outputs: [[55296]]}
+    - {types: {}, inputs: [0], outputs: [[0]]}

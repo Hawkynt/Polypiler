@@ -132,7 +132,7 @@ default: the effect of every operation nothing else describes. Rules (`PLY0046`)
 of one intrinsic (PRD §4.1, §4.3), which a backend lowers from and a recognizer rewrites to.
 [`schemas/intrinsics.schema.json`](schemas/intrinsics.schema.json) states the body: `name` (PascalCase),
 `group` (`IntMath`, `FloatMath`, `Boolean`, `Bitfield`, `BitCount`, `Shuffle`, `Saturation`, `Carry`,
-`Endian`, `Trig`, `Sequence`, `Matrix`, `Tensor`, `CopyFill`), `typeParameters` `{name, constraint}`
+`Endian`, `Trig`, `Sequence`, `Matrix`, `Tensor`, `CopyFill`, `String`), `typeParameters` `{name, constraint}`
 (`integer`, `unsigned`, `signed`, `float`, `any`), `parameters` (0–8) and `returns` (1–4) `{name, type}`,
 `legality` `{id, text, fact}`, `effects` (`[pure]` or `EFFECTS.` IDs), `exactness` (`{mode: exact}`, or
 `{mode: tolerance, policy: VERIFICATION.tolerance.<name>}`), `reference` `{algorithm, source}`,
@@ -151,7 +151,7 @@ any NaN. The rules (`PLY0046`):
 | `layout` | the path follows from `group` and `name`, the ID is `INTRINSICS.<name>`; when it fails, nothing else is checked |
 | `type-bound` | every type is declared; every vector binds each type parameter, and only those, to a type its constraint admits |
 | `vector-arity` | one input per parameter and one output per return value |
-| `vector-width` | each literal fits the type bound to it; a list exactly for an array type |
+| `vector-width` | each literal fits the type bound to it; a list exactly for an array type; a value of a `text` type is the list of its code units, an array of them a list of such lists |
 | `unique-name` | no two documents share a name, ignoring case, or a `spelling` |
 | `integer-is-exact` | groups other than `FloatMath`, `Trig`, `Matrix` and `Tensor` are `exact` |
 
@@ -303,7 +303,8 @@ rules `layout` (the folder is `spec.family`, the ID follows from the file name),
 `family-requirements` (`overflow` for integer and fixed; `rounding` for float, fixed, decimal, posit
 and mbf; `nan` for float, posit and mbf; `subnormals` for float and mbf; `lanes` exactly for vector;
 `encoding` exactly for encoded-integer; signedness `none` only for boolean, text and custom). The seed
-documents are the scalar types of the IR: `bool`, `i8` … `u64`, `f32` and `f64`.
+documents are the scalar types of the IR: `bool`, `i8` … `u64`, `f32` and `f64`, and the string type
+`str` of the family `text`, whose `bits` and `layout` describe one UTF-16 code unit.
 
 ## Family `targets`
 
