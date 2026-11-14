@@ -93,3 +93,15 @@ standard output is `<n> documents, <m> errors`; the exit code is 0 without error
 | `PLY0044` | `deprecatedIn` earlier than `introducedIn`; `reviewedRevision` above `version` |
 | `PLY0046` | a family rule, `<reason> (rule: <rule>)` |
 | `PLY0047` | a file that is not valid YAML, an unknown family, an unreadable schema, a missing root |
+
+## Family `binary`
+
+CPU instruction tables, token tables of BASIC dialects and binary file layouts:
+`binary/<name>/instructions.yaml`, `binary/<name>/tokens.yaml` and `binary/<name>/format.yaml`, with the
+IDs `BINARY.<name>.instructions`, `.tokens` and `.format`. [`schemas/binary.schema.json`](schemas/binary.schema.json)
+states the body of each kind. Opcodes, token values and magic bytes are upper-case hex strings, quoted
+(`"0xA9"`), or YAML reads a number. Opcodes, lengths, cycles and token values are copied from the
+vendor's manual, never filled in from memory; `documented: false` marks an opcode a lifter refuses.
+The rules (`PLY0046`): `layout`, `register-unique`, `opcode-unique`, `mode-declared`, `flags-declared`,
+`length-matches-mode` (opcode bytes plus the mode's `operandBytes`), `token-unique`, `token-in-range`
+and `fields-ordered`. `cpu.parent` names the instruction document a variant extends (`PLY0043`).
