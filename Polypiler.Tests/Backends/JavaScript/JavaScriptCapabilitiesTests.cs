@@ -27,6 +27,8 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("numeric separators", 2021, "digits")]
   [TestCase("| 0", 5, null)]
   [TestCase(">>> 0", 5, null)]
+  [TestCase("object literal", 5, null)]
+  [TestCase("shorthand property", 2015, "key: key")]
   [TestCase("NaN", 5, null)]
   [TestCase("Infinity", 5, null)]
   [TestCase("RangeError", 5, null)]

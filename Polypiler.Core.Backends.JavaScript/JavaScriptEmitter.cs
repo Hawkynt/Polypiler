@@ -189,9 +189,12 @@ public static partial class JavaScriptEmitter {
         this.Function(function);
 
       this._construct = "the module";
+      var structs = this.StructHelpers();
       var body = new StringBuilder();
       foreach (var (_, lines) in JavaScriptHelpers.For(this._used, this.Native))
         body.Append('\n').AppendJoin('\n', lines).Append('\n');
+
+      body.Append(structs);
 
       if (module.Constants.Count > 0)
         body.Append('\n');
@@ -208,6 +211,9 @@ public static partial class JavaScriptEmitter {
 
       if (this._halves)
         text.Append("// A 64-bit integer is an object { hi, lo }: its upper and its lower 32 bits, each as an unsigned number.\n");
+
+      if (this._structs)
+        text.Append("// A struct is an object of its fields, copied wherever the place it is read from can still be used.\n");
 
       switch (this._profile.Module) {
         case JavaScriptModuleFormat.Esm:
@@ -266,7 +272,9 @@ public static partial class JavaScriptEmitter {
         case IrTypeKind.Bool:
           return "boolean";
         case IrTypeKind.Array:
-          return this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
+          return !type.Element!.IsStruct && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
+        case IrTypeKind.Struct:
+          return type.Declaration!.Name;
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)
             return "bigint";
@@ -322,6 +330,10 @@ public static partial class JavaScriptEmitter {
         this._exported.Add(name);
 
       this._code.Append(exported ? "export function " : "function ").Append(name).Append('(').Append(parameters).Append(") {\n");
+      this._liveness = Liveness.Of(function);
+      foreach (var parameter in this._liveness.CopiedOnEntry)
+        this._code.Append("  ").Append(this.Local(parameter)).Append(" = ").Append(this.Copy(new IrLocalRef(parameter))).Append(";\n");
+
       var start = this._code.Length;
       this._previous = false;
       this.Statements(function.Body, 1);
@@ -377,14 +389,17 @@ public static partial class JavaScriptEmitter {
           this.Line(depth).Append("}\n");
           break;
         case IrDeclare declare:
-          var initializer = declare.Initializer is null ? "" : " = " + this.Text(declare.Initializer);
+          var initializer = declare.Initializer is null ? "" : " = " + this.Value(declare.Initializer);
           this.Line(depth).Append(this.Let).Append(' ').Append(this.Declare(declare.Local)).Append(initializer).Append(";\n");
           break;
         case IrAssign assign:
-          this.Line(depth).Append(this.Local(assign.Local)).Append(" = ").Append(this.Text(assign.Value)).Append(";\n");
+          this.Line(depth).Append(this.Local(assign.Local)).Append(" = ").Append(this.Value(assign.Value)).Append(";\n");
           break;
         case IrStore store:
-          this.Line(depth).Append(this.Helper("$set", store.Array, store.Index, store.Value)).Append(";\n");
+          this.Line(depth).Append(this.Stored(store)).Append(";\n");
+          break;
+        case IrFieldStore store:
+          this.Line(depth).Append(this.FieldStore(store)).Append(";\n");
           break;
         case IrExprStmt expression:
           // An object literal at the start of a statement would be read as a block.
@@ -419,7 +434,7 @@ public static partial class JavaScriptEmitter {
           break;
         default:
           var result = (IrReturn)statement;
-          this.Line(depth).Append(result.Value is null ? "return" : "return " + this.Text(result.Value)).Append(";\n");
+          this.Line(depth).Append(result.Value is null ? "return" : "return " + this.Value(result.Value)).Append(";\n");
           break;
       }
     }
@@ -442,14 +457,17 @@ public static partial class JavaScriptEmitter {
             var name = this.Declare(declare.Local);
             this.Line(depth).Append(this.Let).Append(' ').Append(name).Append(";\n");
             if (declare.Initializer is not null)
-              parts.Add($"{name} = {this.Text(declare.Initializer)}");
+              parts.Add($"{name} = {this.Value(declare.Initializer)}");
 
             break;
           case IrAssign assign:
-            parts.Add($"{this.Local(assign.Local)} = {this.Text(assign.Value)}");
+            parts.Add($"{this.Local(assign.Local)} = {this.Value(assign.Value)}");
             break;
           case IrStore store:
-            parts.Add(this.Helper("$set", store.Array, store.Index, store.Value));
+            parts.Add(this.Stored(store));
+            break;
+          case IrFieldStore store:
+            parts.Add(this.FieldStore(store));
             break;
           default:
             parts.Add(this.Text(((IrExprStmt)step).Expression));
@@ -513,6 +531,9 @@ public static partial class JavaScriptEmitter {
     }
 
     private string Helper(string name, params IrExpr[] arguments) => this.Helper(name, arguments.Select(this.Text));
+
+    /// <summary>A store into an array element, through the helper that checks the index; a struct is stored as a value.</summary>
+    private string Stored(IrStore store) => this.Helper("$set", [this.Text(store.Array), this.Text(store.Index), this.Value(store.Value)]);
 
     private string Helper(string name, IEnumerable<string> arguments) {
       this._used.Add(name);

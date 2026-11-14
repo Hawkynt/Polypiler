@@ -631,6 +631,7 @@ public sealed class JavaScriptProfileEmissionTests {
       [".setUint32"] = (bits, "$view.setUint32(0, value.hi);", "function $float64(value) {\n  var exponent"),
       [".getUint32"] = (bits, "hi: $view.getUint32(0)", "function $bits64(value) {\n  if (value !== value)"),
       [".fill"] = ("public static void F(int[] a) { System.Array.Fill(a, 7); }", "a.fill(7)", "$fill(a, 7)"),
+      ["shorthand property"] = ("public struct V { public double X; public V(double x) { X = x; } } public static V F(double X) => new V(X);", "return { X };", "return { X: X };"),
       ["BigInt"] = ("public static long F(int a) => a;", "BigInt(a)", "$sx64(a)"),
       ["BigInt.asIntN"] = ("public static long F(long a) => a + a;", "BigInt.asIntN(64, a + a)", "$add64(a, a)"),
       ["BigInt.asUintN"] = ("public static ulong F(ulong a) => a + a;", "BigInt.asUintN(64, a + a)", "$add64(a, a)"),

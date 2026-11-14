@@ -56,18 +56,26 @@ public static partial class JavaScriptEmitter {
         case IrNewArray creation:
           var element = creation.Type.Element!;
           var count = this.Helper("$len", creation.Length);
+          if (element.StructType is { } elements)
+            return ($"{this.StructHelper("newArray", elements)}({count})", true);
+
           return (this.Native(Storage(element)) ? $"new {Storage(element)}({count})" : this.Helper("$new", [count, this.Zero(element)]), true);
         case IrStep step:
           return this.Step(step);
+        case IrStructNew or IrStructDefault or IrFieldLoad or IrStructEquals:
+          return this.Struct(expression);
         default:
           var call = (IrCall)expression;
-          return ($"{this.Name(call.Function)}({string.Join(", ", call.Arguments.Select(this.Text))})", true);
+          return ($"{this.Name(call.Function)}({string.Join(", ", call.Arguments.Select(this.Value))})", true);
       }
     }
 
     private (string Text, bool Atomic) Intrinsic(IrIntrinsic intrinsic) {
       var arguments = intrinsic.Arguments;
       switch (intrinsic.Op) {
+        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct:
+          // Typed arrays hold numbers: an array of structs is an Array of objects.
+          return ($"[{string.Join(", ", arguments.Select(this.Value))}]", true);
         case IrIntrinsicOp.ArrayOf:
           return (this.ArrayOf(intrinsic.Type.Element!, string.Join(", ", arguments.Select(this.Text))), true);
         case IrIntrinsicOp.ArrayCopy:
