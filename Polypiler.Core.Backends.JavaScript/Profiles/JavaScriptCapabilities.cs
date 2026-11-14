@@ -85,6 +85,11 @@ public sealed class JavaScriptCapabilities {
     new("NaN", 5),
     new("Infinity", 5),
     new("RangeError", 5),
+    new("Error", 5),
+    // The prototypes of the native errors the generated error classes of ECMAScript 5 chain to (#1323).
+    new("Error.prototype", 5),
+    new("RangeError.prototype", 5),
+    new("TypeError.prototype", 5),
     new("Math", 5),
     new("Math.abs", 5),
     new("Math.min", 5),

@@ -56,7 +56,7 @@ internal static partial class JavaScriptHelpers {
     Same("$lastIndexOf", Lines("function $lastIndexOf(s, n, from) {", Position, "  return s.lastIndexOf(n, from);", "}")),
     Same("$startsWith", Lines("function $startsWith(s, n) {", "  return s.lastIndexOf(n, 0) === 0;", "}")),
     Same("$endsWith", Lines("function $endsWith(s, n) {", "  @const at = s.length - n.length;", "  return at >= 0 && s.indexOf(n, at) === at;", "}")),
-    Same("$replaceAll", Lines("function $replaceAll(s, n, r) {", "  if (n === \"\") throw new RangeError(\"invalid operation\");", "  return s.split(n).join(r);", "}")),
+    Same("$replaceAll", Lines("function $replaceAll(s, n, r) {", "  if (n === \"\") throw new ArithmeticError(\"invalid operation\");", "  return s.split(n).join(r);", "}")),
     Same("$replaceFirst", Lines(
       "function $replaceFirst(s, n, r) {",
       "  @const at = s.indexOf(n);",

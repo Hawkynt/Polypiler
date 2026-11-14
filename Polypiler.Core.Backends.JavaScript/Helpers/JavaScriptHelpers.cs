@@ -17,18 +17,19 @@ namespace Polypiler.Core.Backends.JavaScript;
 /// </summary>
 internal static partial class JavaScriptHelpers {
 
-  private const string Overflow = "throw new RangeError(\"integer overflow\");";
-  private const string ZeroDivisor = "  if (b === 0) throw new RangeError(\"divide by zero\");";
-  private const string ZeroDivisor64 = "  if (b === 0n) throw new RangeError(\"divide by zero\");";
+  private const string Overflow = "throw new OverflowError(\"integer overflow\");";
+  private const string ZeroDivisor = "  if (b === 0) throw new DivideByZeroError(\"divide by zero\");";
+  private const string ZeroDivisor64 = "  if (b === 0n) throw new DivideByZeroError(\"divide by zero\");";
   private const string Unrepresentable = "  if (a === -2147483648 && b === -1) " + Overflow;
   private const string Unrepresentable64 = "  if (a === -9223372036854775808n && b === -1n) " + Overflow;
   private const string Unrepresentable64Halves = "  if (a.hi === 2147483648 && a.lo === 0 && b.hi === 4294967295 && b.lo === 4294967295) " + Overflow;
-  private const string OutOfRange = "  if (index < 0 || index >= array.length) throw new RangeError(\"index out of range\");";
-  private const string RangeOutOfRange = "  if (from < 0 || to < 0 || length < 0 || from + length > source.length || to + length > target.length) throw new RangeError(\"index out of range\");";
+  private const string OutOfRange = "  if (index < 0 || index >= array.length) throw new IndexOutOfRangeError(\"index out of range\");";
+  private const string RangeOutOfRange = "  if (from < 0 || to < 0 || length < 0 || from + length > source.length || to + length > target.length) throw new IndexOutOfRangeError(\"index out of range\");";
   private const string Joined = "{ hi: ((w[3] << 16) | w[2]) >>> 0, lo: ((w[1] << 16) | w[0]) >>> 0 }";
 
   /// <summary>The names of all helpers, in the order a module lists the ones it uses.</summary>
   public static readonly IReadOnlyList<string> Order = [
+    .. ErrorOrder,
     "$imul", "$clz32", "$f32a", "$fround", "$trunc", "$sign",
     "$add64", "$sub64", "$neg64", "$not64", "$and64", "$or64", "$xor64", "$shl64", "$shr64", "$sar64",
     "$eq64", "$ucmp64", "$scmp64", "$mulw", "$mul64", "$mag64", "$udm64",
@@ -72,7 +73,9 @@ internal static partial class JavaScriptHelpers {
       var text = string.Join('\n', Source(name, native).ReplaceLineEndings("\n").Split('\n').Select(line => Resolve(line, native)));
       var statements = _read.GetOrAdd(text, JavaScriptSyntaxReader.Statements);
       written.Add(name, statements);
-      foreach (var called in statements.SelectMany(JavaScriptSyntaxRewriter.DescendantsAndSelf).OfType<JsIdentifier>().Select(identifier => identifier.Name).Where(_names.Contains))
+      var nodes = statements.SelectMany(JavaScriptSyntaxRewriter.DescendantsAndSelf).ToList();
+      // A class extends another by its name, which is no identifier of the tree.
+      foreach (var called in nodes.OfType<JsIdentifier>().Select(identifier => identifier.Name).Concat(nodes.OfType<JsClass>().Select(type => type.Base ?? "")).Where(_names.Contains))
         pending.Enqueue(called);
     }
 
@@ -262,7 +265,7 @@ internal static partial class JavaScriptHelpers {
         @const v = [b.lo & 0xFFFF, b.lo >>> 16, b.hi & 0xFFFF, b.hi >>> 16];
         @let n = 4;
         while (n > 0 && v[n - 1] === 0) --n;
-        if (n === 0) throw new RangeError("divide by zero");
+        if (n === 0) throw new DivideByZeroError("divide by zero");
         @const u = [a.lo & 0xFFFF, a.lo >>> 16, a.hi & 0xFFFF, a.hi >>> 16, 0];
         @const w = [0, 0, 0, 0];
         if (n === 1) {
@@ -515,7 +518,7 @@ internal static partial class JavaScriptHelpers {
       : Lines("function $sign64(value) {", "  return value.hi >= 2147483648 ? -1 : (value.hi | value.lo) !== 0 ? 1 : 0;", "}"),
     "$roundd" => """
       function $roundd(value, digits, mode) {
-        if (digits < 0 || digits > 15) throw new RangeError("invalid operation");
+        if (digits < 0 || digits > 15) throw new ArgumentOutOfRangeError("argument out of range");
         if (Math.abs(value) < 1e16) {
           @let power10 = 1;
           for (@let index = 0; index < digits; ++index) power10 *= 10;
@@ -527,7 +530,7 @@ internal static partial class JavaScriptHelpers {
       """,
     "$roundd32" => """
       function $roundd32(value, digits, mode) {
-        if (digits < 0 || digits > 6) throw new RangeError("invalid operation");
+        if (digits < 0 || digits > 6) throw new ArgumentOutOfRangeError("argument out of range");
         if (Math.abs(value) < 1e8) {
           @let power10 = 1;
           for (@let index = 0; index < digits; ++index) power10 *= 10;
@@ -539,7 +542,7 @@ internal static partial class JavaScriptHelpers {
       """,
     "$fsign" => """
       function $fsign(value) {
-        if (value !== value) throw new RangeError("invalid operation");
+        if (value !== value) throw new ArithmeticError("invalid operation");
         return value < 0 ? -1 : value > 0 ? 1 : 0;
       }
       """,
@@ -742,6 +745,7 @@ internal static partial class JavaScriptHelpers {
     _ when ViewSource(name, native) is { } view => view,
     _ when StringSource(name, native) is { } text => text,
     _ when OptionalSource(name) is { } optional => optional,
+    _ when ErrorSource(name, native) is { } error => error,
     _ => Lines("function $len(length) {", "  if (length < 0) " + Overflow, "  return length;", "}")
   };
 

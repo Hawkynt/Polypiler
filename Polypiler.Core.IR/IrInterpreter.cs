@@ -39,12 +39,41 @@ public enum IrTrap {
 
 }
 
-/// <summary>Thrown by <see cref="IrInterpreter"/> when an operation traps.</summary>
-public sealed class IrTrapException : Exception {
+/// <summary>
+/// Thrown by <see cref="IrInterpreter"/> when an exception of the IR leaves the function called: it
+/// carries the object thrown, an object of an exception class (<see cref="IrExceptionClass"/>).
+/// </summary>
+public class IrException : System.Exception {
+
+  /// <summary>Makes the exception for an object thrown.</summary>
+  /// <param name="exception">The object, as the interpreter carries it.</param>
+  /// <param name="type">Its class.</param>
+  /// <param name="message">Its message.</param>
+  private protected IrException(object exception, IrClassType type, string message) : base(message) {
+    this.Exception = exception;
+    this.Class = type;
+  }
+
+  /// <summary>The object thrown: an opaque value of the interpreter, as an object crosses the boundary.</summary>
+  public object Exception { get; }
+
+  /// <summary>The class of the object thrown.</summary>
+  public IrClassType Class { get; }
+
+  /// <summary>Makes the exception for an object the IR throws, which is no trap.</summary>
+  internal static IrException Thrown(object exception, IrClassType type, string message) => new(exception, type, message);
+
+}
+
+/// <summary>
+/// Thrown by <see cref="IrInterpreter"/> when an operation traps: the throw of an object of the trap's
+/// class (<see cref="IrExceptionClass.Of(IrTrap)"/>) whose message is the trap's (<see cref="Describe"/>).
+/// </summary>
+public sealed class IrTrapException : IrException {
 
   /// <summary>Creates the exception for a trap.</summary>
   /// <param name="trap">What went wrong.</param>
-  public IrTrapException(IrTrap trap) : base(Describe(trap)) => this.Trap = trap;
+  public IrTrapException(IrTrap trap) : base(IrInterpreter.NewException(IrExceptionClass.Of(trap), Describe(trap)), IrExceptionClass.Of(trap), Describe(trap)) => this.Trap = trap;
 
   /// <summary>What went wrong.</summary>
   public IrTrap Trap { get; }

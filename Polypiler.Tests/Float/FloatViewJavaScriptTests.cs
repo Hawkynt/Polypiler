@@ -94,7 +94,7 @@ public sealed class FloatViewJavaScriptTests {
     var text = Emit("StoreBig_f64", Profile("es2022"));
     Assert.That(text, Does.Contain(string.Join("\n",
       "function $storef64(array, index, value, little) {",
-      "  if (index < 0 || index + 8 > array.length) throw new RangeError(\"index out of range\");",
+      "  if (index < 0 || index + 8 > array.length) throw new IndexOutOfRangeError(\"index out of range\");",
       "  new DataView(array.buffer, array.byteOffset, array.byteLength).setFloat64(index, value, little);",
       "}")));
   }

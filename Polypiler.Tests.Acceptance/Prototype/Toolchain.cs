@@ -27,7 +27,7 @@ internal static class Toolchain {
   /// calls, zero, mode)</c> runs each call and gives its outcome in the notation
   /// <see cref="PrototypeFixture.Outcome"/> uses. A function is taken from the exports of an ES module,
   /// or from the object a CommonJS file such as Cipher's <c>OpCodes.js</c> exports as a whole. Only a
-  /// <c>RangeError</c> is an outcome; anything else the module throws is thrown on.
+  /// <c>RangeError</c> and an error class of the generated code is an outcome; anything else the module throws is thrown on.
   /// <para>
   /// An argument is a JSON number or truth value, or an object: <c>{t:"n"}</c> a 64-bit integer in
   /// decimal that becomes a <c>BigInt</c>, <c>{t:"f"}</c> the 64 bits of a double in hexadecimal,
@@ -90,8 +90,9 @@ internal static class Toolchain {
           values.forEach((value, index) => { if (isArray(value)) shown.push(show(value, encoded[index].k)); });
           lines.push(shown.join(' | '));
         } catch (error) {
-          // The traps of the generated code are RangeErrors, and the TypeError of the cast helper.
-          if (!(error instanceof RangeError) && !(error instanceof TypeError && error.message === 'invalid cast')) throw error;
+          // The traps of the generated code are its error classes (#1323): most of them RangeErrors, the
+          // InvalidCastError a TypeError and the InvalidOperationError of a missing value an Error.
+          if (!(error instanceof RangeError) && !['InvalidCastError', 'InvalidOperationError'].includes(error.name)) throw error;
           lines.push('trap: ' + error.message);
         }
       }

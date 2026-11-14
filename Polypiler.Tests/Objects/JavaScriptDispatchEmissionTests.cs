@@ -121,7 +121,7 @@ public sealed class JavaScriptDispatchEmissionTests {
   [TestCase("if ($as_Tile(Make(rect)) === null) {")]
   [TestCase("(s instanceof Tile ? s : null) === null")]
   [TestCase("s != null && s.$is_INamed === true")]
-  [TestCase("function $cast_IOther(value) {\n  if (value === null || value != null && value.$is_IOther === true) return value;\n  throw new TypeError(\"invalid cast\");\n}")]
+  [TestCase("function $cast_IOther(value) {\n  if (value === null || value != null && value.$is_IOther === true) return value;\n  throw new InvalidCastError(\"invalid cast\");\n}")]
   public void Es5_WritesTheChain(string form) {
     var text = Emit(Everything, "es5");
     Assert.That(text, Does.Contain(form));

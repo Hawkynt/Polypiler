@@ -236,7 +236,7 @@ public static partial class JavaScriptEmitter {
       this._profile = profile;
       this._mode = mode;
       this._capabilities = capabilities;
-      this._reserved = [.. JavaScriptWords.Reserved, .. capabilities.Globals()];
+      this._reserved = [.. JavaScriptWords.Reserved, .. capabilities.Globals(), .. JavaScriptHelpers.ErrorOrder];
       if (profile.Module == JavaScriptModuleFormat.Cjs)
         this._reserved.Add("exports");
     }

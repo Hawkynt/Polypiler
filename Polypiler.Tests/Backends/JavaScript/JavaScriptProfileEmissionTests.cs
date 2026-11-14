@@ -116,8 +116,15 @@ public sealed class JavaScriptProfileEmissionTests {
       "// JavaScript profile: es2015, cjs.",
       "\"use strict\";",
       "",
+      "class IndexOutOfRangeError extends RangeError {",
+      "  constructor(message) {",
+      "    super(message);",
+      "    this.name = \"IndexOutOfRangeError\";",
+      "  }",
+      "}",
+      "",
       "function $get(array, index) {",
-      "  if (index < 0 || index >= array.length) throw new RangeError(\"index out of range\");",
+      "  if (index < 0 || index >= array.length) throw new IndexOutOfRangeError(\"index out of range\");",
       "  return array[index];",
       "}",
       "",
@@ -160,8 +167,16 @@ public sealed class JavaScriptProfileEmissionTests {
       "var Checksums = (function () {",
       "  \"use strict\";",
       "",
+      "  function IndexOutOfRangeError(message) {",
+      "    this.name = \"IndexOutOfRangeError\";",
+      "    this.message = message;",
+      "    this.stack = new RangeError(message).stack;",
+      "  }",
+      "  IndexOutOfRangeError.prototype = Object.create(RangeError.prototype);",
+      "  IndexOutOfRangeError.prototype.constructor = IndexOutOfRangeError;",
+      "",
       "  function $get(array, index) {",
-      "    if (index < 0 || index >= array.length) throw new RangeError(\"index out of range\");",
+      "    if (index < 0 || index >= array.length) throw new IndexOutOfRangeError(\"index out of range\");",
       "    return array[index];",
       "  }",
       "",
@@ -557,8 +572,8 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(text, Does.Contain("const $view = new DataView(new ArrayBuffer(8));")
       .And.Contain("  return { hi: $view.getUint32(0), lo: $view.getUint32(4) };")
       .And.Contain("  $view.setUint32(0, value.hi);\n  $view.setUint32(4, value.lo);\n  return $view.getFloat64(0);")
-      .And.Contain("  if (n === 0) throw new RangeError(\"divide by zero\");")
-      .And.Contain("  if (a.hi === 2147483648 && a.lo === 0 && b.hi === 4294967295 && b.lo === 4294967295) throw new RangeError(\"integer overflow\");")
+      .And.Contain("  if (n === 0) throw new DivideByZeroError(\"divide by zero\");")
+      .And.Contain("  if (a.hi === 2147483648 && a.lo === 0 && b.hi === 4294967295 && b.lo === 4294967295) throw new OverflowError(\"integer overflow\");")
       .And.Contain("  return Math.fround((value.hi >>> 11) * 4294967296 + lo) * 2048;")
       .And.Not.Contain("BigInt").And.Not.Contain("var "));
     Assert.That(text.Split('\n').Count(line => line.StartsWith("function $", StringComparison.Ordinal)), Is.EqualTo(Helpers(text).Distinct().Count()));

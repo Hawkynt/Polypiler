@@ -40,7 +40,7 @@ internal static class ExactFamilies {
     FloatOperation.Of(IrIntrinsicOp.RoundDigits, Rounding, FloatShape.WithDigits, _exact, nameof(FloatOperations.RoundDigits),
       arguments => FloatOperations.RoundDigitsF((float)arguments[0], (int)(long)arguments[1], (int)(long)arguments[2]),
       arguments => FloatOperations.RoundDigits((double)arguments[0], (int)(long)arguments[1], (int)(long)arguments[2]),
-      arguments => (ulong)(long)arguments[1] > (arguments[0] is float ? 6UL : 15UL)),
+      arguments => (ulong)(long)arguments[1] > (arguments[0] is float ? 6UL : 15UL), IrTrap.ArgumentOutOfRange),
 
     FloatOperation.Existing(IrIntrinsicOp.Abs, Sign, FloatShape.Unary, _exact),
     FloatOperation.Existing(IrIntrinsicOp.Sign, Sign, FloatShape.ToInteger, _exact),
