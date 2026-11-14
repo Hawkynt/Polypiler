@@ -246,8 +246,8 @@ public enum IrIntrinsicOp {
   ArrayClear,
 
   /// <summary>
-  /// The absolute value of a signed integer or a floating-point number. The smallest value of an
-  /// integer type has none and traps with an integer overflow.
+  /// The absolute value of an integer or a floating-point number; an unsigned integer is its own.
+  /// The smallest value of a signed integer type has none and traps with an integer overflow.
   /// </summary>
   Abs,
 
@@ -258,8 +258,8 @@ public enum IrIntrinsicOp {
   Max,
 
   /// <summary>
-  /// -1, 0 or 1 as an <c>i32</c> for a negative, zero or positive signed integer or floating-point
-  /// number. A NaN has no sign and traps with an invalid operation.
+  /// -1, 0 or 1 as an <c>i32</c> for a negative, zero or positive integer or floating-point number.
+  /// A NaN has no sign and traps with an invalid operation.
   /// </summary>
   Sign,
 
@@ -281,25 +281,25 @@ public enum IrIntrinsicOp {
   /// <summary>The nearest integral floating-point number; a tie goes away from zero.</summary>
   RoundAway,
 
-  /// <summary><c>(value, count)</c>: a <c>u32</c> or <c>u64</c> rotated left by the count modulo its width.</summary>
+  /// <summary><c>(value, count)</c>: an integer rotated left by the <c>i32</c> count modulo its width, a negative count included.</summary>
   RotateLeft,
 
-  /// <summary><c>(value, count)</c>: a <c>u32</c> or <c>u64</c> rotated right by the count modulo its width.</summary>
+  /// <summary><c>(value, count)</c>: an integer rotated right by the <c>i32</c> count modulo its width.</summary>
   RotateRight,
 
-  /// <summary>The number of set bits of a <c>u32</c> or <c>u64</c>, as an <c>i32</c>.</summary>
+  /// <summary>The number of set bits of an integer, as an <c>i32</c>; of a signed one those of its bit pattern.</summary>
   PopCount,
 
-  /// <summary>The number of zero bits above the highest set bit of a <c>u32</c> or <c>u64</c>; the width for 0.</summary>
+  /// <summary>The number of zero bits above the highest set bit of an integer, as an <c>i32</c>; the width for 0.</summary>
   LeadingZeroCount,
 
-  /// <summary>The number of zero bits below the lowest set bit of a <c>u32</c> or <c>u64</c>; the width for 0.</summary>
+  /// <summary>The number of zero bits below the lowest set bit of an integer, as an <c>i32</c>; the width for 0.</summary>
   TrailingZeroCount,
 
-  /// <summary>The position of the highest set bit of a <c>u32</c> or <c>u64</c>, as an <c>i32</c>; 0 for 0.</summary>
+  /// <summary>The position of the highest set bit of the bit pattern of an integer, as an <c>i32</c>; 0 for 0.</summary>
   Log2,
 
-  /// <summary>The full product of two <c>u32</c>, as a <c>u64</c>.</summary>
+  /// <summary>The full product of two <c>i32</c> as an <c>i64</c>, or of two <c>u32</c> as a <c>u64</c>.</summary>
   BigMul,
 
   /// <summary>The IEEE 754 bits of an <c>f64</c> as an <c>i64</c>, or of an <c>f32</c> as an <c>i32</c>.</summary>
@@ -323,7 +323,140 @@ public enum IrIntrinsicOp {
   ToInt32,
 
   /// <summary>ECMA-262's <c>ToUint32</c> of an <c>f64</c>, as a <c>u32</c>: like <see cref="ToInt32"/>, read as an unsigned integer.</summary>
-  ToUint32
+  ToUint32,
+
+  // The integer and bit operations that IntegerOperations defines, each on every integer type.
+
+  /// <summary>Whether an integer has an odd number of set bits: 1 or 0 as an <c>i32</c>.</summary>
+  Parity,
+
+  /// <summary>An integer with its bytes in the opposite order; one of 8 bits is itself.</summary>
+  ByteSwap,
+
+  /// <summary>An integer with its bits in the opposite order.</summary>
+  BitReverse,
+
+  /// <summary>Whether an integer is a power of two, as a truth value; never 0 and never a negative value.</summary>
+  IsPow2,
+
+  /// <summary>The smallest power of two not below the bit pattern of an integer, modulo 2^width; 0 for 0.</summary>
+  RoundUpPow2,
+
+  /// <summary><c>(a, b)</c>: the upper half of the product of two integers in twice their width, signed or unsigned as their type.</summary>
+  MulHigh,
+
+  /// <summary><c>(a, b)</c>: the quotient rounded towards negative infinity; it traps where <see cref="IrBinaryOp.Divide"/> does.</summary>
+  DivFloor,
+
+  /// <summary><c>(a, b)</c>: the remainder of <see cref="DivFloor"/>, with the sign of the divisor; it traps where <see cref="IrBinaryOp.Divide"/> does.</summary>
+  ModFloor,
+
+  /// <summary><c>(a, b)</c>: the quotient of the Euclidean division; it traps where <see cref="IrBinaryOp.Divide"/> does.</summary>
+  DivEuclid,
+
+  /// <summary><c>(a, b)</c>: the remainder of the Euclidean division, never negative; it traps where <see cref="IrBinaryOp.Divide"/> does.</summary>
+  ModEuclid,
+
+  /// <summary><c>(value, low, high)</c>: the value within two bounds; a low bound above the high one traps with an invalid operation.</summary>
+  Clamp,
+
+  /// <summary>The absolute value of an integer modulo 2^width: the smallest value of a signed type is its own.</summary>
+  AbsWrap,
+
+  /// <summary><c>(a, b)</c>: the sum of two integers, the nearest value of the type when it lies outside.</summary>
+  AddSaturate,
+
+  /// <summary><c>(a, b)</c>: the difference of two integers, the nearest value of the type when it lies outside.</summary>
+  SubSaturate,
+
+  /// <summary><c>(a, b)</c>: the product of two integers, the nearest value of the type when it lies outside.</summary>
+  MulSaturate,
+
+  /// <summary><c>(a, b, carry)</c>: the low word of <c>a + b + carry</c> of an unsigned type, the carry a truth value.</summary>
+  AddCarry,
+
+  /// <summary><c>(a, b, carry)</c>: whether <c>a + b + carry</c> of an unsigned type reaches 2^width, as a truth value.</summary>
+  CarryOut,
+
+  /// <summary><c>(a, b, borrow)</c>: the low word of <c>a - b - borrow</c> of an unsigned type, the borrow a truth value.</summary>
+  SubBorrow,
+
+  /// <summary><c>(a, b, borrow)</c>: whether <c>a - b - borrow</c> of an unsigned type is negative, as a truth value.</summary>
+  BorrowOut,
+
+  /// <summary><c>(a, b)</c>: whether the sum of two integers is not a value of their type, as a truth value; it never traps.</summary>
+  AddOverflows,
+
+  /// <summary><c>(a, b)</c>: whether the difference of two integers is not a value of their type; it never traps.</summary>
+  SubOverflows,
+
+  /// <summary><c>(a, b)</c>: whether the product of two integers is not a value of their type; it never traps.</summary>
+  MulOverflows,
+
+  /// <summary>
+  /// <c>(value, start, length)</c>: the field of <c>length</c> bits from bit <c>start</c> on, at the
+  /// bottom with zeros above; a field outside the width traps with an invalid operation.
+  /// </summary>
+  ExtractBits,
+
+  /// <summary>
+  /// <c>(value, field, start, length)</c>: the value with that field replaced by the lowest bits of
+  /// <c>field</c>; a field outside the width traps with an invalid operation.
+  /// </summary>
+  InsertBits,
+
+  /// <summary><c>(value, position)</c>: whether one bit is set, as a truth value; a position outside the width traps with an invalid operation.</summary>
+  TestBit,
+
+  /// <summary><c>(value, position)</c>: the value with one bit set; a position outside the width traps with an invalid operation.</summary>
+  SetBit,
+
+  /// <summary><c>(value, position)</c>: the value with one bit cleared; a position outside the width traps with an invalid operation.</summary>
+  ClearBit,
+
+  /// <summary><c>(value, position)</c>: the value with one bit inverted; a position outside the width traps with an invalid operation.</summary>
+  ToggleBit,
+
+  /// <summary>
+  /// <c>(count)</c>: the integer of the type of the node whose lowest <c>count</c> bits are set, all
+  /// ones for the width; a count outside 0 to the width traps with an invalid operation.
+  /// </summary>
+  LowMask,
+
+  /// <summary>The lowest set bit of an integer alone, <c>x &amp; -x</c>.</summary>
+  IsolateLowestSet,
+
+  /// <summary>An integer without its lowest set bit, <c>x &amp; (x - 1)</c>.</summary>
+  ClearLowestSet,
+
+  /// <summary>The bits of an integer up to and including its lowest set bit, <c>x ^ (x - 1)</c>; all ones for 0.</summary>
+  MaskToLowestSet,
+
+  /// <summary><c>(value, bits)</c>: the lowest <c>bits</c> bits extended by their sign; <c>bits</c> outside 1 to the width traps with an invalid operation.</summary>
+  SignExtend,
+
+  /// <summary><c>(value, bits)</c>: the lowest <c>bits</c> bits with zeros above; <c>bits</c> outside 1 to the width traps with an invalid operation.</summary>
+  ZeroExtend,
+
+  /// <summary>
+  /// <c>(array, index)</c>: the integer of 16, 32 or 64 bits of the type of the node whose bytes
+  /// stand in a <c>u8[]</c> from the index on, the lowest first. A byte outside the array traps with
+  /// an index out of range.
+  /// </summary>
+  LoadLittle,
+
+  /// <summary><c>(array, index)</c>: like <see cref="LoadLittle"/>, the highest byte first.</summary>
+  LoadBig,
+
+  /// <summary>
+  /// <c>(array, index, value)</c>: writes the bytes of an integer of 16, 32 or 64 bits into a
+  /// <c>u8[]</c> from the index on, the lowest first. A byte outside the array traps with an index
+  /// out of range before anything is written.
+  /// </summary>
+  StoreLittle,
+
+  /// <summary><c>(array, index, value)</c>: like <see cref="StoreLittle"/>, the highest byte first.</summary>
+  StoreBig
 
 }
 
