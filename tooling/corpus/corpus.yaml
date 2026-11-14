@@ -1,0 +1,64 @@
+# The pinned upstream corpus (PRD §8 P0, §11): the repositories tests read from, each at one commit,
+# and the fixtures taken from them. Hand-edited; the format is spec/schemas/corpus.schema.json.
+#
+#   polypiler-tooling corpus import [--source <checkout>]... [--update-lock] [--fixture <id>]...
+#       writes the fixtures' files and every repository's licence files to
+#       corpus/upstream/<owner>/<repo>@<commit>/ (git-ignored) and checks them against corpus.lock.json
+#   polypiler-tooling corpus verify
+#       re-hashes the imported files offline
+#   polypiler-tooling corpus discover --repository <owner/repo> --glob <pattern>
+#       prints fixture stubs for the files of a pin
+#
+# The repositories are the pin table of backlog/README.md. A fixture is added by the issue that first
+# uses it; after adding one, run `corpus import --update-lock` and commit the lock with it.
+schema: 1
+
+repositories:
+  - name: Hawkynt/PB-Compiler
+    url: https://github.com/Hawkynt/PB-Compiler.git
+    commit: 0d73acbea185a2597357d53f7ce9acb44758ba76
+    licence: LGPL-3.0-or-later
+    licenceFiles: [LICENSE]
+  - name: Hawkynt/Hawkynt.github.io
+    url: https://github.com/Hawkynt/Hawkynt.github.io.git
+    commit: b3a8a8e92cbca83475986391c3cac56f0b185d29
+    licence: LGPL-3.0-or-later
+    licenceFiles: [LICENSE, Cipher/LICENSE]
+  - name: Hawkynt/MediaDroid
+    url: https://github.com/Hawkynt/MediaDroid.git
+    commit: 7f8b6b995cbe54a6afb290a900748393bf01e272
+    licence: LGPL-3.0-or-later
+    licenceFiles: [LICENSE]
+  - name: Hawkynt/CompressionWorkbench
+    url: https://github.com/Hawkynt/CompressionWorkbench.git
+    commit: 21e609396e8fceb80e49185cc34cab7bce7f6483
+    licence: LGPL-3.0-or-later
+    licenceFiles: [LICENSE]
+  - name: Hawkynt/PNGCrushCS
+    url: https://github.com/Hawkynt/PNGCrushCS.git
+    commit: 9d8117695e12457bf0c1158d1fc6ebccc53acc45
+    licence: LGPL-3.0-or-later
+    licenceFiles: [LICENSE]
+  - name: Hawkynt/Randomizer
+    url: https://github.com/Hawkynt/Randomizer.git
+    commit: 656a1560350f1551de65c1e4bab179e3b048e282
+    licence: LGPL-3.0-or-later
+    licenceFiles: [LICENSE]
+  - name: Hawkynt/C--FrameworkExtensions
+    url: https://github.com/Hawkynt/C--FrameworkExtensions.git
+    commit: be3e13cbbe28dd54cc973c64b84cd71e1147f95f
+    licence: LGPL-3.0-or-later
+    licenceFiles: [LICENSE]
+
+fixtures:
+  - id: cipher.checksum.adler32
+    repository: Hawkynt/Hawkynt.github.io
+    path: Cipher/algorithms/checksum/adler.js
+    export: AdlerAlgorithm
+    dependencies: [Cipher/OpCodes.js]
+    run: [node, '{file}']
+    vectors: { kind: embedded, source: "the tests of new AdlerAlgorithm('32')" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
