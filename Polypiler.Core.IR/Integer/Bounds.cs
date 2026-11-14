@@ -7,14 +7,14 @@ public static partial class IntegerOperations {
 
   /// <summary>
   /// The smaller and the larger of two values, a value within bounds, the magnitude and the sign, of
-  /// every integer type. The smaller, the larger, the magnitude and the sign are defined on
-  /// floating-point numbers as well, which is not this class's concern.
+  /// every integer type. The smaller, the larger, the value within bounds, the magnitude and the sign
+  /// are defined on floating-point numbers as well, which is not this class's concern.
   /// </summary>
   private static IEnumerable<IntegerOperation> Bounds => [
     Same(IrIntrinsicOp.Min, _integers, type => [type, type], (_, types, arguments) => Min(types[0], Long(arguments, 0), Long(arguments, 1)), true),
     Same(IrIntrinsicOp.Max, _integers, type => [type, type], (_, types, arguments) => Max(types[0], Long(arguments, 0), Long(arguments, 1)), true),
     Same(IrIntrinsicOp.Clamp, _integers, type => [type, type, type],
-      (_, types, arguments) => Clamp(types[0], Long(arguments, 0), Long(arguments, 1), Long(arguments, 2))),
+      (_, types, arguments) => Clamp(types[0], Long(arguments, 0), Long(arguments, 1), Long(arguments, 2)), true),
     Same(IrIntrinsicOp.Abs, _integers, type => [type], (_, types, arguments) => Abs(types[0], Long(arguments, 0)), true),
     Same(IrIntrinsicOp.AbsWrap, _integers, type => [type], (_, types, arguments) => AbsWrap(types[0], Long(arguments, 0))),
     Fixed(IrIntrinsicOp.Sign, IrType.I32, _integers, type => [type], (_, types, arguments) => (long)Sign(types[0], Long(arguments, 0)), true)

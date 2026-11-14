@@ -1,0 +1,56 @@
+Parts of Polypiler.Core.IR/Float/Operations are converted to C# from CORE-MATH
+(https://core-math.gitlabpages.inria.fr/, https://gitlab.inria.fr/core-math/core-math),
+commit 018fa97cbdacf59924b899a9dfa422d532cb2bb7:
+
+  Exponential.Exp.cs    Exp     src/binary64/exp/exp.c
+                                Copyright (c) 2022-2026 Alexei Sibidanov <sibid@uvic.ca>.
+  Exponential.Exp.cs    ExpF    src/binary32/exp/expf.c
+                                Copyright (c) 2023-2025 Alexei Sibidanov.
+  Exponential.Exp2.cs   Exp2    src/binary64/exp2/exp2.c
+                                Copyright (c) 2023-2026 Alexei Sibidanov <sibid@uvic.ca>.
+  Exponential.Exp2.cs   Exp2F   src/binary32/exp2/exp2f.c
+                                Copyright (c) 2023-2025 Alexei Sibidanov.
+  Exponential.Exp10.cs  Exp10   src/binary64/exp10/exp10.c
+                                Copyright (c) 2023-2026 Alexei Sibidanov <sibid@uvic.ca>.
+  Exponential.Exp10.cs  Exp10F  src/binary32/exp10/exp10f.c
+                                Copyright (c) 2023-2025 Alexei Sibidanov.
+  Exponential.ExpM1.cs  ExpM1   src/binary64/expm1/expm1.c
+                                Copyright (c) 2024 Alexei Sibidanov.
+  Exponential.ExpM1.cs  ExpM1F  src/binary32/expm1/expm1f.c
+                                Copyright (c) 2022-2025 Alexei Sibidanov.
+  Exponential.cs        the double-double helpers and the tables of 2^(i/2^6) and 2^(i/2^12)
+                        the four binary64 files share (fasttwosum, fastsum, muldd, mulddd,
+                        as_ldexp, as_todenormal, t0, t1)
+
+The constants and tables are copied exactly. Tables the sources repeat are kept once: the
+double-double t0 and t1 of exp2.c, exp10.c and expm1.c are identical; exp.c differs from them
+only in low parts, which it keeps as its own tables; the binary32 tables of 2^(i/2^6) and
+2^(i/2^5) are the high parts of t0 and their even entries. The output parameters of the helpers
+become one-element arrays, and the lists of exceptional cases find their entry by the same binary
+search. expm1f.c's shortcut to -1 for x < -17.32 on its slower path is left out: rounding to
+nearest, no float reaches it (checked on all 2^32 inputs).
+
+Each of these files carries the following MIT license:
+
+----------------------------------------------------------------------
+This file is part of the CORE-MATH project
+(https://core-math.gitlabpages.inria.fr/).
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+----------------------------------------------------------------------

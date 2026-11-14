@@ -1,0 +1,42 @@
+Parts of Polypiler.Core.IR/Float/Operations are converted to C# from CORE-MATH
+(https://gitlab.inria.fr/core-math/core-math, commit 018fa97cbdacf59924b899a9dfa422d532cb2bb7):
+
+  Trigonometric.Sine.cs    Sin    src/binary64/sin/sin.c (cr_sin)
+                                  Copyright (c) 2026 Paul Zimmermann and Alexei Sibidanov
+  Trigonometric.Sine.cs    SinF   src/binary32/sin/sinf.c (cr_sinf)
+                                  Copyright (c) 2022-2025 Alexei Sibidanov.
+  Trigonometric.Cosine.cs  Cos    src/binary64/cos/cos.c (cr_cos)
+                                  Copyright (c) 2026 Paul Zimmermann
+  Trigonometric.Cosine.cs  CosF   src/binary32/cos/cosf.c (cr_cosf)
+                                  Copyright (c) 2022-2023 Alexei Sibidanov.
+  Trigonometric.cs                the tables, argument reductions and fixed-point helpers that
+                                  sin.c and cos.c, and sinf.c and cosf.c, carry identically
+
+Every table and constant is copied exactly; hexadecimal floating-point literals are written as
+the decimal literals that round-trip to the same double. Behaviour that only matters in the
+directed rounding modes, errno and the floating-point exception flags are left out: the
+conversions round to nearest. cos.c's table of four exceptions near 2^-22 is not carried, since
+rounding to nearest never reaches it, nor the entry of sinf.c's table of exceptions for
+0x1.2d97c8p+3, which cr_sinf never consults.
+
+Each of these files carries the following MIT license, as does CORE-MATH as a whole:
+
+----------------------------------------------------------------------
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+----------------------------------------------------------------------

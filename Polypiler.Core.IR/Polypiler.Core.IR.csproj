@@ -5,6 +5,11 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- The portable implementations are also data: a backend that has no native function emits them, translated from this source. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Float\Operations\*.cs" LogicalName="Polypiler.Core.IR.Float.Operations.%(Filename).cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
   </ItemGroup>

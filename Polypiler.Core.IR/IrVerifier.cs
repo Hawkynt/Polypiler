@@ -276,6 +276,9 @@ public static class IrVerifier {
 
           this.Require(IrOperators.Accepts(intrinsic.Op, intrinsic.Type, intrinsic.Arguments.Select(argument => argument.Type).ToList()),
             $"{intrinsic.Op} with the type {intrinsic.Type} is applied to ({string.Join(", ", intrinsic.Arguments.Select(argument => argument.Type))})");
+          if (FloatOperationTable.Problem(intrinsic) is { } problem)
+            this.Require(false, problem);
+
           break;
         case IrStep step:
           if (step.Target is IrArrayLoad stepped)

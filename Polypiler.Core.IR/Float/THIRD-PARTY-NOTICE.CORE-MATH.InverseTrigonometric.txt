@@ -1,0 +1,46 @@
+Parts of Polypiler.Core.IR/Float/Operations are converted to C# from the CORE-MATH project
+(https://core-math.gitlabpages.inria.fr/, https://gitlab.inria.fr/core-math/core-math,
+commit 018fa97cbdacf59924b899a9dfa422d532cb2bb7):
+
+  InverseTrigonometric.Asin.cs   Asin     src/binary64/asin/asin.c
+                                          Copyright (c) 2022-2026 Alexei Sibidanov <sibid@uvic.ca>.
+  InverseTrigonometric.Asin.cs   AsinF    src/binary32/asin/asinf.c
+                                          Copyright (c) 2023 Alexei Sibidanov.
+  InverseTrigonometric.Acos.cs   Acos     src/binary64/acos/acos.c
+                                          Copyright (c) 2024-2025 Alexei Sibidanov.
+  InverseTrigonometric.Acos.cs   AcosF    src/binary32/acos/acosf.c
+                                          Copyright (c) 2023 Alexei Sibidanov.
+  InverseTrigonometric.Atan.cs   Atan     src/binary64/atan/atan.c
+                                          Copyright (c) 2023-2026 Alexei Sibidanov <sibid@uvic.ca>.
+  InverseTrigonometric.Atan.cs   AtanF    src/binary32/atan/atanf.c
+                                          Copyright (c) 2022-2025 Alexei Sibidanov.
+  InverseTrigonometric.Atan2.cs  Atan2    src/binary64/atan2/atan2.c
+                                          Copyright (c) 2024-2025 Paul Zimmermann and Alexei Sibidanov
+                                          with its 192-bit arithmetic src/binary64/atan2/tint.h
+                                          Copyright (c) 2023-2024 Paul Zimmermann and Alexei Sibidanov
+  InverseTrigonometric.Atan2.cs  Atan2F   src/binary32/atan2/atan2f.c
+                                          Copyright (c) 2022-2025 Alexei Sibidanov and Paul Zimmermann.
+
+The tables Asin and Acos have in common (asin.c and acos.c carry identical copies) are kept once,
+in InverseTrigonometric.Asin.cs, and so are the two accurate polynomials asinf.c and acosf.c have
+in common. Every constant is the exact value of the upstream one, written as a decimal literal.
+
+Each of these files carries the following license:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
