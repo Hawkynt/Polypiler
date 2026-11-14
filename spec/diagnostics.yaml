@@ -107,7 +107,7 @@ codes:
     rule: io.write
     area: infrastructure
     owner: CLI-FOUNDATION
-    surfaces: "standard error of polypiler for an output directory that is not empty without --force, and as \"output path '<path>' cannot be created: <reason>\" for one that is a file or cannot be created or written"
+    surfaces: "standard error of polypiler for an output directory that is not empty without --force, and as \"output path '<path>' cannot be created: <reason>\" for one that is a file or cannot be created or written; standard error of polypiler-tooling report errors as \"the output directory '<path>' cannot be written: <reason>\" when the output directory cannot be created or a page cannot be written or deleted"
   - code: PLY0006
     severity: error
     exit: UsageError
@@ -648,10 +648,11 @@ codes:
     severity: error
     exit: EnvironmentError
     title: generated document out of date
-    message: "generated document out of date: '<path>' <differs|is missing>"
+    message: "<reason>"
+    rule: docs.generated
     area: infrastructure
     owner: INFRA-DEVDOCS
-    reserved: true
+    surfaces: "standard error of polypiler-tooling report errors: 'generated document out of date: '<path>' <differs|is missing|has no registered code>' under --check, and for a note of docs/errors/notes 'note '<path>' belongs to no registered code', 'note '<path>' has an unknown section '<heading>'', 'note '<path>' has the section '<heading>' twice' and 'note '<path>' has text before its first section'"
   - code: PLY0100
     severity: error
     exit: InternalError

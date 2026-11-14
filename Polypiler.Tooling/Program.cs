@@ -5,6 +5,7 @@ using System.Linq;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Tooling.Commands;
+using Polypiler.Tooling.Report;
 
 namespace Polypiler.Tooling;
 
@@ -40,6 +41,7 @@ public static class Program {
       output.WriteLine($"       {Name} {ToolchainsCommand.Verb} validate [--lock <path>]");
       output.WriteLine($"       {Name} {ToolchainsCommand.Verb} probe [--lock <path>] [--only <key>[,<key>...]] [--format text|json]");
       output.WriteLine($"       {Name} {DiagnosticsCommand.Verb} validate [--registry <path>]");
+      output.WriteLine($"       {Name} {ErrorCatalogueCommand.Verb} {ErrorCatalogueCommand.Report} [--registry <file>] [--notes <dir>] [--out <dir>] [--check]");
       return Success;
     }
 
@@ -56,6 +58,9 @@ public static class Program {
 
     if (args[0] == DiagnosticsCommand.Verb)
       return DiagnosticsCommand.Run(args[1..], output, error);
+
+    if (args[0] == ErrorCatalogueCommand.Verb)
+      return ErrorCatalogueCommand.Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;
