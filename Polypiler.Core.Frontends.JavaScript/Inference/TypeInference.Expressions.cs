@@ -173,7 +173,11 @@ internal sealed partial class TypeInference {
   }
 
   private JsType Call(CallExpression call) {
-    switch (this.Names.Builtin(call)) {
+    var builtin = this.Names.Builtin(call);
+    if (this.IntegerCall(call, builtin) is { } integer)
+      return integer;
+
+    switch (builtin) {
       case "Math.imul" or "Math.clz32":
         return JsType.I32;
       case "Math.fround":

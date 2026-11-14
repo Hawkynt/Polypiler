@@ -339,6 +339,9 @@ internal sealed partial class Lowering(TypeInference types) {
         throw this.Unsupported(id, refused);
 
       var variable = (Variable)this._model.Bindings[id];
+      if (this.View(declarator, variable, into))
+        continue;
+
       var local = new IrLocal(name, this.Storable(variable.Type, declarator.Init ?? id));
       var value = declarator.Init is null ? null : this.Value(declarator.Init, local.Type);
       variable.Local = local;
@@ -355,6 +358,9 @@ internal sealed partial class Lowering(TypeInference types) {
         break;
       case UpdateExpression step:
         this.Step(step, into);
+        break;
+      case CallExpression call when this.ByteStore(call) is { } store:
+        into.Add(store);
         break;
       case CallExpression call:
         into.Add(new IrExprStmt(this.Expression(call)));
