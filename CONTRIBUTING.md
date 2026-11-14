@@ -55,6 +55,17 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   runner isolates: no network, the caller's home hidden, nothing writable but the run's own directory.
   Without it, and on Windows and macOS, the runner only limits, and refuses untrusted code with
   `PLY0034`.
+- Whatever Polypiler generates must come out the same when it is generated again.
+  `polypiler-tooling rebuild check --output <dir> [--runs <n>] [--input <path>]... -- <toolchain key>
+  <args>` runs a command through the runner `n` times (at least 2), each in a fresh directory that
+  starts with the `--input` files and directories, with `{output}` in the arguments standing for the
+  output directory; it prints each run's tree hash (the SHA-256 of the `sha256sum` listing of the
+  tree) and reports every file that differs, or that only one run wrote, as `PLY0036`.
+  `rebuild compare <dir> <dir>` compares two trees built outside the runner, such as two ReadyToRun
+  publishes. `polypiler.manifest.json` is compared as canonical JSON. Content that may differ between
+  runs is exempted only in [`tooling/ci/rebuild-ignore.yaml`](tooling/ci/rebuild-ignore.yaml), each
+  entry with its reason; the `deterministic rebuild` CI job checks the embedded floating-point
+  implementations, a strict float translation and the ReadyToRun publish of `polypiler`.
 
 ## Build
 

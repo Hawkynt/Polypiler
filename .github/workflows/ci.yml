@@ -134,3 +134,44 @@ jobs:
           start=$(date +%s%N)
           node tooling/bitperm/export.mjs --page "$PAGE" --out tests/fixtures/bitperm --check --expect-blocks 16 --expect-presets 25 --expect-tests 51
           echo "export wall time: $(( ($(date +%s%N) - start) / 1000000 )) ms"
+
+  # PRD §13.1 and §23.3: what Polypiler writes must come out byte for byte the same when it is generated
+  # again. `rebuild check` runs each command twice through the sandboxed runner, each run in a fresh
+  # directory, and compares the trees with tooling/ci/rebuild-ignore.yaml applied (PLY0036 otherwise):
+  # the floating-point implementations the build embeds into polypiler, and a strict float translation
+  # with its manifest. The ReadyToRun publish of polypiler cannot run inside the runner (restore needs
+  # the network and the package cache), so it is published twice, each time from a build directory
+  # deleted beforehand, into separate output directories, and the two trees are compared with
+  # `rebuild compare`. The build directory keeps its path: the regex source generator names its types
+  # after the path of the file it generates, so assemblies built under different paths differ, which
+  # is the build-path independence of #29, not run-to-run determinism.
+  rebuild-check:
+    name: deterministic rebuild
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      TOOLING: Polypiler.Tooling/bin/Release/net10.0/polypiler-tooling
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build polypiler and polypiler-tooling
+        run: dotnet build Polypiler.Cli/Polypiler.Cli.csproj -c Release
+      - name: Float implementations embedded into polypiler
+        run: |
+          "$TOOLING" rebuild check --output out --input Polypiler.Tooling/bin/Release/net10.0 \
+            -- dotnet-sdk net10.0/polypiler-tooling.dll float-implementations '{output}/float-implementations.irm'
+      - name: Strict float translation with its manifest
+        run: |
+          "$TOOLING" rebuild check --output out --input Polypiler.Cli/bin/Release/net10.0 --input tests/fixtures/prototype/float/Dct8.cs \
+            -- dotnet-sdk net10.0/polypiler.dll translate Dct8.cs --from csharp --to javascript --profile es5 --float strict --output '{output}'
+      - name: ReadyToRun publish of polypiler
+        run: |
+          for run in 1 2; do
+            rm -rf "$RUNNER_TEMP/build"
+            dotnet publish Polypiler.Cli/Polypiler.Cli.csproj -c Release -r linux-x64 -p:UseSharedCompilation=false \
+              --artifacts-path "$RUNNER_TEMP/build" -o "$RUNNER_TEMP/publish$run"
+          done
+          "$TOOLING" rebuild compare "$RUNNER_TEMP/publish1" "$RUNNER_TEMP/publish2"
