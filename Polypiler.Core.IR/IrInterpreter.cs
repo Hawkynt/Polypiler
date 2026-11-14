@@ -395,7 +395,8 @@ public static class IrInterpreter {
 
     /// <summary>The floating-point number with the bits of an integer: the one operation on an integer that is no integer operation.</summary>
     private static object BitsFloat(IrIntrinsic intrinsic, long value)
-      => intrinsic.Arguments[0].Type.IsLong ? BitConverter.Int64BitsToDouble(value) : BitConverter.Int32BitsToSingle((int)value);
+      // The arms are of different types; without the cast the compiler would make the float a double.
+      => intrinsic.Arguments[0].Type.IsLong ? BitConverter.Int64BitsToDouble(value) : (object)BitConverter.Int32BitsToSingle((int)value);
 
     /// <summary>
     /// Copies element by element, from the end when the target lies behind the source in the same

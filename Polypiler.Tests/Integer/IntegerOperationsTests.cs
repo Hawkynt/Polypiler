@@ -69,6 +69,22 @@ public sealed class IntegerOperationsTests {
     Assert.That(IrOperators.Accepts(IrIntrinsicOp.Abs, IrType.I32, []), Is.False);
   }
 
+  /// <summary>
+  /// The bits of a float are no integer operation: the interpreter still makes an <c>f32</c> of an
+  /// <c>i32</c> and an <c>f64</c> of an <c>i64</c>, each of its own type.
+  /// </summary>
+  [Test]
+  public void FloatFromBits_IsStillAFloatOfItsWidth() {
+    var word = new IrLocal("a", IrType.I32);
+    var wide = new IrLocal("b", IrType.I64);
+    var module = new IrModule("Bits", [
+      new IrFunction("Single", true, IrType.F32, [word], [], new IrBlock([new IrReturn(new IrIntrinsic(IrIntrinsicOp.BitsFloat, IrType.F32, [new IrLocalRef(word)]))])),
+      new IrFunction("Double", true, IrType.F64, [wide], [], new IrBlock([new IrReturn(new IrIntrinsic(IrIntrinsicOp.BitsFloat, IrType.F64, [new IrLocalRef(wide)]))]))
+    ]);
+    Assert.That(IrInterpreter.Call(module, "Single", [0x3F800000]), Is.TypeOf<float>().And.EqualTo(1.0f));
+    Assert.That(IrInterpreter.Call(module, "Double", [0x3FF0000000000000L]), Is.TypeOf<double>().And.EqualTo(1.0));
+  }
+
   /// <summary>Published and hand-computed values: one or two per family, through the interpreter.</summary>
   [TestCase("RotateLeft_u16", (ushort)0x8001, 17, "3")]
   [TestCase("RotateLeft_i8", (sbyte)-128, -1, "64")]
