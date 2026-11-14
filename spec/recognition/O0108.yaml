@@ -1,0 +1,63 @@
+id: RECOGNITION.O0108
+title: Recognize single-bit test, set, clear and toggle with a variable position
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#558"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeSingleBit.cs
+  - tests/fixtures/prototype/recognize/singlebit.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  The single-bit idioms MUST become TestBit, SetBit, ClearBit or ToggleBit only with one bit of the
+  value's width, and with the position masked to the width unless it is a constant or already masked.
+  The prototype rule O0108SingleBit in Polypiler.Core.Recognize matches the structured IR of
+  Polypiler.Core.IR, not the typed SSA IR: pattern.before and replacement.after are written in that
+  structured form, and matching typed SSA graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests
+  is the evidence the prototype has: it checks that the rule fires exactly on the marked functions of
+  its fixtures, that --disable-opt O0108 keeps it from firing, and that the IR interpreter computes
+  the same before and after the rule - result, kind of trap and the arrays a trap leaves behind - for
+  every value of each 8- and 16-bit parameter and for the edges and 10 000 random tuples of the wider
+  ones. The proof obligations below are planned and not discharged yet: exhaustive checks with VER-
+  EXHAUSTIVE (#70), bit-vector proofs with VER-SMT (#71). The prototype knows only the levels default,
+  where the rule is on, and none; the optLevels name the levels of the target state. The document
+  stays a draft until its obligations are discharged.
+spec:
+  optimization: O0108
+  level: typed-ssa
+  pattern:
+    before: "%r = Ne.u32 And.u32(LShr.u32(%x, %i), 1), 0"
+    bindings:
+      - {name: x, role: "tested value"}
+      - {name: i, role: "bit position"}
+  replacement:
+    after: "%r = TestBit.u32 %x, And.i32(%i, 31)"
+    introduces: [INTRINSICS.TestBit, INTRINSICS.SetBit, INTRINSICS.ClearBit, INTRINSICS.ToggleBit]
+  preconditions:
+    - {id: one-bit, text: "the mask or the shifted one is the constant 1 of the width of the value", fact: none}
+    - {id: position-masked, text: "a shift takes its count modulo the width while the intrinsics trap outside it, so the position becomes i & (w - 1) unless it is a constant or already masked", fact: range}
+    - {id: wide-value, text: "the value is 32 or 64 bits wide; a narrower one, widened before the shift, gives a result where the intrinsic would trap", fact: type}
+    - {id: trap-free, text: "the value and the position has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: single-bit-8, class: exhaustive-8bit, widths: [8]}
+    - {id: single-bit-16, class: exhaustive-16bit, widths: [16]}
+    - {id: single-bit-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "more than one bit"
+      input: "x = 0x00000002, i = 0, u32, ((x >> i) & 3) != 0"
+      naive: "true"
+      correct: "false"
+    - description: "a comparison with 1 instead of 0"
+      input: "x = 0x00000002, i = 1, u32, (x & (1 << i)) == 1"
+      naive: "false"
+      correct: "true"
+    - description: "a position left unmasked"
+      input: "x = 0x00000000, i = 32, u32, x | (1 << i) as SetBit(x, i)"
+      naive: "0x00000001"
+      correct: "trap invalid operation"
+  switch: "--disable-opt O0108"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0108-single-bit-recognition.md

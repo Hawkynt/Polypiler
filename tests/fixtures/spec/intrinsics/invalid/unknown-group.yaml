@@ -1,0 +1,31 @@
+# at: intrinsics/bitcount/popcount.yaml
+# expect: PLY0040: /spec/group:
+id: INTRINSICS.PopCount
+title: Population count
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITCOUNT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: PopCount
+  group: Crypto
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: count, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the number of bits of value that are 1, independent of signedness"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 5-1"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: [0]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF"], outputs: [32]}
+    - {types: {T: TYPES.u32}, inputs: ["0x80000001"], outputs: [2]}
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678"], outputs: [13]}

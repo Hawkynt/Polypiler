@@ -1,0 +1,29 @@
+id: INTRINSICS.BorrowOut
+title: Borrow out of a subtraction
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-CARRY
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: BorrowOut
+  group: Carry
+  typeParameters: [{name: T, constraint: unsigned}]
+  parameters: [{name: a, type: T}, {name: b, type: T}, {name: borrow, type: TYPES.bool}]
+  returns: [{name: borrowOut, type: TYPES.bool}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "a - b - borrow < 0, borrow counting 1 when true"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-16"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF", "0x00000000", 1], outputs: [0]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000001", "0x00000002", 0], outputs: [1]}
+    - {types: {T: TYPES.u8}, inputs: ["0x80", "0x80", 1], outputs: [1]}
+    - {types: {T: TYPES.u64}, inputs: ["0x0000000000000000", "0x0000000000000001", 1], outputs: [1]}

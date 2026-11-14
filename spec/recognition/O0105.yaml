@@ -1,0 +1,57 @@
+id: RECOGNITION.O0105
+title: Recognize bit reversal from swap cascades and shift loops
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#557"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeBitReverse.cs
+  - tests/fixtures/prototype/recognize/bitreverse.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A swap cascade or a bit-moving loop MUST become BitReverse only when its result holds bit j of one
+  value on bit w - 1 - j and nothing else. The prototype rule O0105BitReverse in
+  Polypiler.Core.Recognize matches the structured IR of Polypiler.Core.IR, not the typed SSA IR:
+  pattern.before and replacement.after are written in that structured form, and matching typed SSA
+  graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it
+  checks that the rule fires exactly on the marked functions of its fixtures, that --disable-opt O0105
+  keeps it from firing, and that the IR interpreter computes the same before and after the rule -
+  result, kind of trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit
+  parameter and for the edges and 10 000 random tuples of the wider ones. The proof obligations below
+  are planned and not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs
+  with VER-SMT (#71). The prototype knows only the levels default, where the rule is on, and none; the
+  optLevels name the levels of the target state. The document stays a draft until its obligations are
+  discharged.
+spec:
+  optimization: O0105
+  level: typed-ssa
+  pattern:
+    before: "%a = Or.u32 And.u32(LShr.u32(%x, 1), 0x55555555), Shl.u32(And.u32(%x, 0x55555555), 1); %b = Or.u32 And.u32(LShr.u32(%a, 2), 0x33333333), Shl.u32(And.u32(%a, 0x33333333), 2); %c = Or.u32 And.u32(LShr.u32(%b, 4), 0x0F0F0F0F), Shl.u32(And.u32(%b, 0x0F0F0F0F), 4); %d = Or.u32 And.u32(LShr.u32(%c, 8), 0x00FF00FF), Shl.u32(And.u32(%c, 0x00FF00FF), 8); %r = Or.u32 LShr.u32(%d, 16), Shl.u32(%d, 16)"
+    bindings:
+      - {name: x, role: "reversed value"}
+  replacement:
+    after: "%r = BitReverse.u32 %x"
+    introduces: [INTRINSICS.BitReverse]
+  preconditions:
+    - {id: exact-reversal, text: "the result is exactly the bits of one value, bit j on bit w - 1 - j", fact: known-bits}
+    - {id: whole-loop, text: "a loop runs w passes, its result starts at 0 or shifts all its old bits out, and every other variable it writes ends as a constant or one shift of its old value", fact: range}
+    - {id: trap-free, text: "the reversed value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: bit-reverse-8, class: exhaustive-8bit, widths: [8]}
+    - {id: bit-reverse-16, class: exhaustive-16bit, widths: [16]}
+    - {id: bit-reverse-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "a cascade without the swap of halves"
+      input: "x = 0x00000001, u32, the first four steps of the 32-bit cascade"
+      naive: "0x00008000"
+      correct: "0x80000000"
+    - description: "a loop of fewer passes than the width"
+      input: "x = 0x00000001, u32, for (i = 0; i < 16; i++) { r = (r << 1) | (x & 1); x >>= 1; }"
+      naive: "0x00008000"
+      correct: "0x80000000"
+  switch: "--disable-opt O0105"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0105-bit-reverse-recognition.md

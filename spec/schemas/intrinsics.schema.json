@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/intrinsics.schema.json",
+  "title": "Polypiler spec family 'intrinsics'",
+  "description": "The body under 'spec' of a document in spec/intrinsics/<group in lower case>/<name in lower case>.yaml (PRD §4.1, §4.3): the contract of one intrinsic, which a backend lowers from and a recognizer rewrites to. Rules the schema cannot state (PLY0046): layout, vector-arity, vector-width, unique-name, integer-is-exact, type-bound; every TYPES., EFFECTS., IR., INTRINSICS. and VERIFICATION. id names an existing spec document (PLY0043).",
+  "type": "object",
+  "required": ["name", "group", "typeParameters", "parameters", "returns", "legality", "effects", "exactness", "reference", "mustSurviveUntil", "vectors"],
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$", "description": "PascalCase; the last segment of the id; its lower case is the file name; unique across the family, ignoring case." },
+    "group": {
+      "enum": ["IntMath", "FloatMath", "Boolean", "Bitfield", "BitCount", "Shuffle", "Saturation", "Carry", "Endian", "Trig", "Sequence", "Matrix", "Tensor", "CopyFill"],
+      "description": "The group; its lower case is the folder under spec/intrinsics/. Groups other than FloatMath, Trig, Matrix and Tensor are exact."
+    },
+    "typeParameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "constraint"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "$ref": "#/$defs/typeParameterName" },
+          "constraint": { "enum": ["integer", "unsigned", "signed", "float", "any"] }
+        }
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/value" }
+    },
+    "returns": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/value" },
+      "description": "Several for DivMod, SinCos or an add with carry."
+    },
+    "legality": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "fact"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "text": { "type": "string", "pattern": "\\S" },
+          "fact": { "enum": ["none", "range", "known-bits", "alias", "effect", "shape"], "description": "The kind of fact that proves the condition." }
+        }
+      },
+      "description": "The conditions under which the intrinsic has its result; outside them it traps or is undefined, as the text says."
+    },
+    "effects": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "if": { "const": "pure" },
+        "else": { "type": "string", "pattern": "^EFFECTS\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$" }
+      },
+      "if": { "contains": { "const": "pure" } },
+      "then": { "maxItems": 1 },
+      "description": "pure, or one or more EFFECTS. ids; pure excludes every other entry."
+    },
+    "exactness": {
+      "type": "object",
+      "required": ["mode"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["exact", "tolerance"] },
+        "policy": { "type": "string", "pattern": "^VERIFICATION\\.tolerance\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$", "description": "The tolerance document the comparison of --verify uses." }
+      },
+      "if": { "required": ["mode"], "properties": { "mode": { "const": "tolerance" } } },
+      "then": { "required": ["policy"] },
+      "else": { "properties": { "policy": false } },
+      "description": "exact: one result, the same bits on every target; tolerance: within the policy a VERIFICATION. tolerance document states."
+    },
+    "reference": {
+      "type": "object",
+      "required": ["algorithm", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": { "type": "string", "pattern": "\\S", "description": "The defining algorithm, in words or pseudo-code." },
+        "source": { "type": "string", "pattern": "\\S", "description": "Its citation." }
+      }
+    },
+    "mustSurviveUntil": { "$ref": "#/$defs/stageId", "description": "The last IR stage that must still contain the intrinsic unlowered." },
+    "vectors": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["types", "inputs", "outputs"],
+        "additionalProperties": false,
+        "properties": {
+          "types": {
+            "type": "object",
+            "propertyNames": { "$ref": "#/$defs/typeParameterName" },
+            "additionalProperties": { "$ref": "#/$defs/typeId" },
+            "description": "The TYPES. id each type parameter stands for in this vector."
+          },
+          "inputs": { "type": "array", "items": { "$ref": "#/$defs/literal" } },
+          "outputs": { "type": "array", "items": { "$ref": "#/$defs/literal" } }
+        }
+      },
+      "description": "Reference vectors: one input per parameter, one output per return value; data for the oracle, never produced by Polypiler."
+    },
+    "attributes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "low", "high"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+          "type": { "$ref": "#/$defs/typeId" },
+          "low": { "type": "integer" },
+          "high": { "type": "integer" }
+        }
+      },
+      "description": "Compile-time immediates with their inclusive range."
+    },
+    "algebra": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["commutative", "associative", "idempotent", "involution", "identity-element", "absorbing-element"] }
+    },
+    "lowersTo": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^(INTRINSICS|IR)\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$" },
+      "description": "The INTRINSICS. and IR. documents a decomposition may use, in lowering order."
+    },
+    "facts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resultRange": { "type": "array", "prefixItems": [{ "type": "integer" }, { "type": "integer" }], "minItems": 2, "maxItems": 2, "description": "[low, high], inclusive." },
+        "knownZeroBits": { "$ref": "#/$defs/hex", "description": "The bits of the result that are always 0." },
+        "knownOneBits": { "$ref": "#/$defs/hex", "description": "The bits of the result that are always 1." }
+      },
+      "description": "Derived value facts; the keys are a closed list."
+    },
+    "laneLiftable": { "type": "boolean", "description": "Whether the operation applies lane-wise to vectors; default false." },
+    "requiresRuntime": { "type": "boolean", "description": "No decomposition exists and a runtime helper is required; default false." },
+    "spelling": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*(\\.[A-Z][A-Za-z0-9]*)*$", "description": "The IR spelling when it differs from name, dotted PascalCase such as Memory.Copy; unique." },
+    "accuracy": { "type": "string", "pattern": "^(ulp\\([1-9][0-9]*\\)|cr|library\\([A-Za-z0-9_.-]+\\))$", "description": "For exactness.mode tolerance: ulp(<n>), cr or library(<name>)." }
+  },
+  "dependentSchemas": {
+    "accuracy": {
+      "properties": { "exactness": { "properties": { "mode": { "const": "tolerance" } } } }
+    }
+  },
+  "$defs": {
+    "typeParameterName": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
+    "typeId": { "type": "string", "pattern": "^TYPES\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$" },
+    "type": {
+      "type": "string",
+      "pattern": "^([A-Z][A-Za-z0-9]*|TYPES\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*)(\\[\\])?$",
+      "description": "A type parameter of the intrinsic or the id of a TYPES. document; a trailing [] makes it an array of that type."
+    },
+    "value": {
+      "type": "object",
+      "required": ["name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "type": { "$ref": "#/$defs/type" }
+      }
+    },
+    "stageId": { "type": "string", "pattern": "^IR\\.stage\\.[a-z0-9][a-z0-9-]*$" },
+    "hex": { "type": "string", "pattern": "^0x[0-9A-Fa-f]+$" },
+    "scalar": {
+      "description": "A hexadecimal string, 0x followed by hex digits, which is the bit pattern; or a decimal integer, which is the value.",
+      "if": { "type": "string" },
+      "then": { "$ref": "#/$defs/hex" },
+      "else": { "type": "integer" }
+    },
+    "literal": {
+      "description": "A scalar, or for an array type a list of scalars.",
+      "if": { "type": "array" },
+      "then": { "items": { "$ref": "#/$defs/scalar" } },
+      "else": { "$ref": "#/$defs/scalar" }
+    }
+  }
+}

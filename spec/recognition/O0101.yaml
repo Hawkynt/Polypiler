@@ -1,0 +1,63 @@
+id: RECOGNITION.O0101
+title: Recognize population count from bit-counting loops
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#278"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizePopCountLoop.cs
+  - tests/fixtures/prototype/recognize/popcountloop.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A loop that adds every bit of one value once to a wrapping counter MUST become an addition of
+  PopCount, and only such a loop. The prototype rule O0101PopCountLoop in Polypiler.Core.Recognize
+  matches the structured IR of Polypiler.Core.IR, not the typed SSA IR: pattern.before and
+  replacement.after are written in that structured form, and matching typed SSA graphs belongs to REC-
+  ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it checks that the rule
+  fires exactly on the marked functions of its fixtures, that --disable-opt O0101 keeps it from
+  firing, and that the IR interpreter computes the same before and after the rule - result, kind of
+  trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit parameter and for
+  the edges and 10 000 random tuples of the wider ones. The proof obligations below are planned and
+  not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs with VER-SMT
+  (#71). The prototype knows only the levels default, where the rule is on, and none; the optLevels
+  name the levels of the target state. The document stays a draft until its obligations are
+  discharged.
+spec:
+  optimization: O0101
+  level: typed-ssa
+  pattern:
+    before: "while (Ne.u32(%x, 0)) { %c = Add.i32 %c, 1; %x = And.u32 %x, Sub.u32(%x, 1) }"
+    bindings:
+      - {name: x, role: "counted value"}
+      - {name: c, role: "counter"}
+  replacement:
+    after: "%c = Add.i32 %c, PopCount.u32(%x); %x = 0"
+    introduces: [INTRINSICS.PopCount]
+  preconditions:
+    - {id: clear-lowest, text: "Kernighan's loop: the step is x & (x - 1), the condition x != 0, or x > 0 for an unsigned x, the two statements in either order", fact: none}
+    - {id: whole-width, text: "a counted loop runs over exactly the width and adds every bit of one value from before the loop once", fact: range}
+    - {id: wrapping-counter, text: "the counter wraps; a counter that traps on overflow is left alone", fact: effect}
+    - {id: wide-value, text: "the value of Kernighan's loop is 32 or 64 bits wide", fact: type}
+  proofObligations:
+    - {id: popcount-8, class: exhaustive-8bit, widths: [8]}
+    - {id: popcount-16, class: exhaustive-16bit, widths: [16]}
+    - {id: popcount-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "a loop over fewer passes than the width"
+      input: "x = 0x80000000, u32, for (i = 0; i < 31; i++) c += (x >> i) & 1"
+      naive: "0"
+      correct: "1"
+    - description: "two bits tested per pass"
+      input: "x = 0x00000002, u32, for (i = 0; i < 32; i++) c += (x >> i) & 3"
+      naive: "3"
+      correct: "1"
+    - description: "a counter that traps"
+      input: "x = 0x00000001, c = 0x7FFFFFFF, i32, while (x != 0) { checked { c++; } x &= x - 1; }"
+      naive: "trap overflow"
+      correct: "0x80000000"
+  switch: "--disable-opt O0101"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0101-popcount-loop-recognition.md

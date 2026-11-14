@@ -1,0 +1,31 @@
+id: IR.mul
+title: Multiply
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-INT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  Mul multiplies two integers. Mul[wrap] MUST give the product modulo 2^width of T. Mul[trap] MUST
+  trap with overflow when the product is not a value of T. The prototype's structured IR
+  (Polypiler.Core.IR) implements both variants for integers, as IrBinaryOp.Multiply and
+  IrBinaryOp.MultiplyChecked; it also uses Multiply for floating point, which belongs to a document of
+  its own. The examples are of T = TYPES.i32.
+spec:
+  kind: operation
+  mnemonic: Mul
+  category: arithmetic
+  typeParameters: [{name: T, constraint: integer}]
+  operands: [{name: left, type: T}, {name: right, type: T}]
+  result: {type: T}
+  flags: [wrap, trap]
+  effects: [pure]
+  traps: [{when: "flag trap and the product is not a value of T", kind: overflow}]
+  stages: {from: IR.stage.source-semantic, to: IR.stage.legalized-target}
+  examples:
+    - {flag: wrap, operands: ["0x0CCCCCCD", 10], result: "0x80000002"}
+    - {flag: trap, operands: [-6, 7], result: -42}
+    - {flag: trap, operands: [1073741824, 2], trap: overflow}

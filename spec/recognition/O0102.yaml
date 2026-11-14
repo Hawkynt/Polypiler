@@ -1,0 +1,58 @@
+id: RECOGNITION.O0102
+title: Recognize population count from the SWAR mask-and-add sequence
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#575"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizePopCountSwar.cs
+  - tests/fixtures/prototype/recognize/popcountswar.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A mask-and-add sequence MUST become PopCount only when its value is one field at bit 0 that counts
+  every bit of one value of at least 8 bits exactly once. The prototype rule O0102PopCountSwar in
+  Polypiler.Core.Recognize matches the structured IR of Polypiler.Core.IR, not the typed SSA IR:
+  pattern.before and replacement.after are written in that structured form, and matching typed SSA
+  graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it
+  checks that the rule fires exactly on the marked functions of its fixtures, that --disable-opt O0102
+  keeps it from firing, and that the IR interpreter computes the same before and after the rule -
+  result, kind of trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit
+  parameter and for the edges and 10 000 random tuples of the wider ones. The proof obligations below
+  are planned and not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs
+  with VER-SMT (#71). The prototype knows only the levels default, where the rule is on, and none; the
+  optLevels name the levels of the target state. The document stays a draft until its obligations are
+  discharged.
+spec:
+  optimization: O0102
+  level: typed-ssa
+  pattern:
+    before: "%a = Sub.u32 %x, And.u32(LShr.u32(%x, 1), 0x55555555); %b = Add.u32 And.u32(%a, 0x33333333), And.u32(LShr.u32(%a, 2), 0x33333333); %c = And.u32 Add.u32(%b, LShr.u32(%b, 4)), 0x0F0F0F0F; %r = LShr.u32 Mul.u32(%c, 0x01010101), 24"
+    bindings:
+      - {name: x, role: "counted value"}
+  replacement:
+    after: "%r = PopCount.u32 %x"
+    introduces: [INTRINSICS.PopCount]
+  preconditions:
+    - {id: no-carry, text: "every mask keeps or drops whole fields and no sum carries from one field into the next", fact: known-bits}
+    - {id: every-bit-once, text: "the result is one field at bit 0 counting every bit of one value of at least 8 bits once", fact: known-bits}
+    - {id: run-dead, text: "a run of assignments is replaced only where nothing reads its variable afterwards", fact: none}
+    - {id: trap-free, text: "the counted value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: popcount-swar-8, class: exhaustive-8bit, widths: [8]}
+    - {id: popcount-swar-16, class: exhaustive-16bit, widths: [16]}
+    - {id: popcount-swar-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "a wrong mask"
+      input: "x = 0xFFFFFFFF, u32, the second mask 0x13333333 instead of 0x33333333"
+      naive: "28"
+      correct: "32"
+    - description: "the final multiplication missing"
+      input: "x = 0xFFFFFFFF, u32, the last step x >> 24 without the multiplication by 0x01010101"
+      naive: "8"
+      correct: "32"
+  switch: "--disable-opt O0102"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0102-popcount-swar-recognition.md

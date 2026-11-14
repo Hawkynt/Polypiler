@@ -1,0 +1,15 @@
+{
+  "name": "test-30-solveexhaustive-empty-permutation",
+  "source": {"line": 1188},
+  "width": 8,
+  "mapping": [
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"}
+  ]
+}

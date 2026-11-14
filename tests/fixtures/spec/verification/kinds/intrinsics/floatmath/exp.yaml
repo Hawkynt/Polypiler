@@ -1,0 +1,28 @@
+id: INTRINSICS.Exp
+title: Natural exponential
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Exp
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}]
+  returns: [{name: power, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: tolerance, policy: VERIFICATION.tolerance.exp}
+  reference:
+    algorithm: "e raised to the power x"
+    source: "IEEE Std 754-2019, section 9.2 (exp)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000000"], outputs: ["0x3FF0000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0xFFF0000000000000"], outputs: ["0x0000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF0000000000000"], outputs: ["0x7FF0000000000000"]}

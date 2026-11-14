@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/targets.schema.json",
+  "title": "Polypiler spec family 'targets'",
+  "description": "The body under 'spec' of spec/targets/<language identifier>/<profile>/target.yaml (PRD §4.1, §4.7): the physical types, ABI, alignment, pointer and union model, SIMD features, limits, runtime dependencies and packaging of one target profile. The document states facts about the target, never decisions; choosing native or helper for a program stays with the legalizer. Rules the schema cannot state (PLY0046): layout, pointer-consistency, limit-order, toolchain-known, type-fits-target, unique-type, unique-target; 'language' and every physical 'type' name an existing document (PLY0043).",
+  "type": "object",
+  "required": ["language", "profile", "toolchain", "abi", "pointers", "unions", "physicalTypes", "alignment", "simd", "limits", "dependencies", "packaging"],
+  "additionalProperties": false,
+  "properties": {
+    "language": { "type": "string", "pattern": "^LANGUAGES\\.[a-z][a-z0-9-]*$", "description": "The language document; its identifier is the first folder." },
+    "profile": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$", "description": "The --target-profile value; equals the second folder. A dot is allowed because the C# profiles are target framework monikers (net10.0)." },
+    "toolchain": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "A key of tooling/toolchains.lock." },
+    "abi": {
+      "type": "object",
+      "required": ["name", "byteOrder", "pointerBits"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "byteOrder": { "enum": ["little", "big", "host"] },
+        "pointerBits": { "enum": [0, 16, 32, 64], "description": "0 exactly when pointers is none or fat (pointer-consistency)." }
+      }
+    },
+    "pointers": { "enum": ["native", "fat", "none"] },
+    "unions": { "enum": ["native", "bitcast", "accessor", "none"] },
+    "physicalTypes": {
+      "type": "array",
+      "description": "How each IR type is represented; each type once (unique-type).",
+      "items": {
+        "type": "object",
+        "required": ["type", "native", "helper"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string", "pattern": "^TYPES\\.[a-z0-9][a-z0-9_.-]*$" },
+          "native": { "type": "string", "minLength": 1, "description": "The target's spelling of the type." },
+          "helper": { "type": "boolean", "description": "Whether generated code needs a runtime helper for the type." }
+        }
+      }
+    },
+    "alignment": {
+      "type": "object",
+      "required": ["max", "packing"],
+      "additionalProperties": false,
+      "properties": {
+        "max": { "enum": [1, 2, 4, 8, 16, 32, 64] },
+        "packing": { "enum": ["natural", "packed", "not-observable"] }
+      }
+    },
+    "simd": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" } },
+    "limits": {
+      "type": "object",
+      "required": ["maxIntegerBits", "exactIntegerBits"],
+      "additionalProperties": false,
+      "properties": {
+        "maxIntegerBits": { "type": "integer", "minimum": 1, "description": "The widest fixed-width integer the target computes with natively." },
+        "exactIntegerBits": { "type": "integer", "minimum": 1, "description": "The widest integer the target's default number type holds exactly; not above maxIntegerBits (limit-order)." },
+        "maxRamBytes": { "type": "integer", "minimum": 1 },
+        "maxCodeBytes": { "type": "integer", "minimum": 1 },
+        "maxArrayLength": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "Runtime dependencies of generated code.",
+      "items": {
+        "type": "object",
+        "required": ["name", "licence", "required"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "licence": { "type": "string", "pattern": "^[A-Za-z0-9.+-]+( (AND|OR|WITH) [A-Za-z0-9.+-]+)*$", "description": "An SPDX licence expression." },
+          "required": { "type": "boolean" }
+        }
+      }
+    },
+    "packaging": {
+      "type": "object",
+      "required": ["ecosystem", "layout"],
+      "additionalProperties": false,
+      "properties": {
+        "ecosystem": { "enum": ["nuget", "cargo", "npm", "cpan", "pypi", "maven", "go-module", "composer", "gem", "source-only", "binary-image"] },
+        "layout": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

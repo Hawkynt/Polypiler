@@ -1,0 +1,16 @@
+id: VERIFICATION.tolerance.sine
+title: A second tolerance of Sin
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: tolerance
+  operation: INTRINSICS.Sin
+  mode: ulp
+  bound: 5

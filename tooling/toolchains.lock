@@ -27,8 +27,17 @@
 #   bubblewrap  the sandbox of the cross-language runner on Linux (tooling/ci/runner.yaml); the
 #               version installed on the development host. Where it is missing or the kernel forbids
 #               it to unshare namespaces, the runner is Limited and refuses untrusted plans.
+#   vice, vice-x128, vice-xvic, petcat
+#               the Commodore emulators and BASIC lister of the development host's VICE 3.10, which
+#               run the Commodore BASIC oracles (Polypiler.Core.Verification/Emulators).
+#   xvfb-run    the virtual X server the VICE emulators run under on Linux: the X.Org version
+#               xdpyinfo reports for the server xvfb-run starts (xorg-server-xvfb on the
+#               development host).
+#   pcbasic     the GW-BASIC oracle (Polypiler.Core.Verification.Emulators.PcBasic): the PyPI release
+#               installed with pip into a virtual environment, whose folder PCBASIC_HOME names. Used
+#               only as an external process; none of its GPL code enters the repository.
 #   others      no test runs them yet. Installed on the development host: read from the tool
-#               (clang, llvm, jdk, perl, python, ruby, rust, go, vice). Not installed: the latest
+#               (clang, llvm, jdk, perl, python, ruby, rust, go). Not installed: the latest
 #               stable upstream release (aflplusplus, dosbox-x, fbc, fpc, ilspy-cli, ilverify,
 #               kotlinc, nasm, php, qemu-user, typescript, wabt, wasmtime, z3). pb-compiler is the
 #               commit backlog/README.md pins.
@@ -194,6 +203,15 @@ toolchains:
     platforms: [linux, windows, macos]
     licence: LGPL-3.0-or-later
     source: https://github.com/Hawkynt/PB-Compiler
+  pcbasic:
+    version: "2.0.8"
+    probe: [pcbasic, --version]
+    versionPattern: '^PC-BASIC (?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: GPL-3.0-or-later
+    source: https://pypi.org/project/pcbasic/
+    home: PCBASIC_HOME
+    oracleOnly: true
   perl:
     version: "5.42.3"
     probe: [perl, -e, 'print $^V']
@@ -201,6 +219,14 @@ toolchains:
     platforms: [linux, windows, macos]
     licence: Artistic-1.0-Perl OR GPL-1.0-or-later
     source: https://www.perl.org/get.html
+  petcat:
+    version: "3.10"
+    probe: [petcat, -version]
+    versionPattern: '\(VICE (?<version>\d+\.\d+(\.\d+)?)\)'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-or-later
+    source: https://vice-emu.sourceforge.io/
+    oracleOnly: true
   php:
     version: "8.5.12"
     probe: [php, --version]
@@ -341,6 +367,22 @@ toolchains:
     licence: GPL-2.0-or-later
     source: https://vice-emu.sourceforge.io/
     oracleOnly: true
+  vice-x128:
+    version: "3.10"
+    probe: [x128, --version]
+    versionPattern: '\(VICE (?<version>\d+\.\d+(\.\d+)?)\)'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-or-later
+    source: https://vice-emu.sourceforge.io/
+    oracleOnly: true
+  vice-xvic:
+    version: "3.10"
+    probe: [xvic, --version]
+    versionPattern: '\(VICE (?<version>\d+\.\d+(\.\d+)?)\)'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-or-later
+    source: https://vice-emu.sourceforge.io/
+    oracleOnly: true
   wabt:
     version: "1.0.42"
     probe: [wasm2wat, --version]
@@ -355,6 +397,13 @@ toolchains:
     platforms: [linux, windows, macos]
     licence: Apache-2.0 WITH LLVM-exception
     source: https://github.com/bytecodealliance/wasmtime/releases
+  xvfb-run:
+    version: "21.1.25"
+    probe: [xvfb-run, -a, xdpyinfo]
+    versionPattern: '^X\.Org version: (?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux]
+    licence: MIT
+    source: https://gitlab.freedesktop.org/xorg/xserver
   z3:
     version: "5.3.3"
     probe: [z3, --version]
