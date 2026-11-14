@@ -43,8 +43,8 @@ public sealed class FuzzCommandTests {
       name => name == "PATH" ? path ?? "" : null, platform, this._instrumented.Add);
 
   private (int ExitCode, string Output, string Error) Invoke(FuzzCommand command, params string[] args) {
-    using var output = new StringWriter();
-    using var error = new StringWriter();
+    using var output = new StringWriter { NewLine = "\n" };
+    using var error = new StringWriter { NewLine = "\n" };
     var exitCode = command.Run(args, output, error, Stream.Null, Stream.Null);
     return (exitCode, output.ToString(), error.ToString());
   }
@@ -184,8 +184,8 @@ public sealed class FuzzCommandTests {
     "PLY"u8.CopyTo(request.AsSpan(4));
     using var requests = new MemoryStream(request);
     using var responses = new MemoryStream();
-    using var output = new StringWriter();
-    using var error = new StringWriter();
+    using var output = new StringWriter { NewLine = "\n" };
+    using var error = new StringWriter { NewLine = "\n" };
     var exitCode = this.Command().Run(["worker", "--target", "demo-marker", "--assembly", _assembly], output, error, requests, responses);
     Assert.That((exitCode, error.ToString()), Is.EqualTo((0, "")));
     Assert.That(responses.ToArray()[0], Is.EqualTo(FuzzWorker.Ready));
@@ -205,10 +205,10 @@ public sealed class FuzzCommandTests {
 
   [Test]
   public void TheShell_ListsTheFuzzVerbsAndRoutesToThem() {
-    using var output = new StringWriter();
+    using var output = new StringWriter { NewLine = "\n" };
     Program.Run([], output, TextWriter.Null);
     Assert.That(output.ToString(), Does.Contain("polypiler-tooling fuzz run --target <id>").And.Contain("fuzz minimize").And.Contain("fuzz replay"));
-    using var error = new StringWriter();
+    using var error = new StringWriter { NewLine = "\n" };
     Assert.That(Program.Run(["fuzz"], TextWriter.Null, error), Is.EqualTo(Program.UsageError));
     Assert.That(error.ToString(), Is.EqualTo("polypiler-tooling: error PLY0003: fuzz needs 'run', 'minimize' or 'replay'\n"));
     Assert.That(() => this.Command().Run(null!, TextWriter.Null, TextWriter.Null), Throws.ArgumentNullException);
@@ -255,7 +255,9 @@ public sealed class FuzzCommandTests {
         return new(1, "\u001b[1;96mafl-fuzz++5.03c\u001b[0m based on afl by Michal Zalewski\n", "", false);
       var output = argv[Array.IndexOf([.. argv], "-o") + 1];
       Directory.CreateDirectory(Path.Combine(output, "default", "crashes"));
-      File.WriteAllBytes(Path.Combine(output, "default", "crashes", "id:000000,sig:06"), "aPLYb"u8.ToArray());
+      // AFL++'s own name; ':' is not allowed in a Windows file name, where AFL++ never runs.
+      var name = OperatingSystem.IsWindows() ? "id_000000,sig_06" : "id:000000,sig:06";
+      File.WriteAllBytes(Path.Combine(output, "default", "crashes", name), "aPLYb"u8.ToArray());
       File.WriteAllBytes(Path.Combine(output, "default", "crashes", "README.txt"), "not an input"u8.ToArray());
       return new(0, "", "", false);
     });
@@ -362,7 +364,7 @@ public sealed class FuzzCommandTests {
       Throws.InvalidOperationException.With.Message.EqualTo("the marker PLY"));
     Assert.That(inputs, Is.Empty);
 
-    using var error = new StringWriter();
+    using var error = new StringWriter { NewLine = "\n" };
     Assert.That(command.Run(["afl-worker", "--target", "no-such-target"], TextWriter.Null, error), Is.EqualTo(2));
     Assert.That(error.ToString(), Is.EqualTo("polypiler-tooling: error PLY0003: unknown fuzz target 'no-such-target'\n"));
     Assert.That(command.Run(["afl-worker", "--target", "demo-clean", "--assembly", _assembly], TextWriter.Null, TextWriter.Null), Is.Zero);

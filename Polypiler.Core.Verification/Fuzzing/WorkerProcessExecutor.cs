@@ -40,7 +40,8 @@ public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IF
     Task<FuzzOutcome> response;
     try {
       FuzzWorker.WriteRequest(process.StandardInput.BaseStream, input);
-      response = FuzzWorker.ReadResponseAsync(process.StandardOutput.BaseStream, CancellationToken.None);
+      var stream = process.StandardOutput.BaseStream;
+      response = OnOwnThread(() => FuzzWorker.ReadResponse(stream));
     } catch (IOException) {
       return this.Died(process, Stopwatch.GetElapsedTime(started));
     }
@@ -105,7 +106,8 @@ public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IF
     process.BeginErrorReadLine();
     ++this._starts;
 
-    var ready = process.StandardOutput.BaseStream.ReadAsync(new byte[1]).AsTask();
+    var announcement = process.StandardOutput.BaseStream;
+    var ready = OnOwnThread(() => announcement.Read(new byte[1]));
     if (!ready.Wait(StartTimeout) || ready.Result != 1) {
       this.Stop(process);
       throw new FuzzWorkerException($"the worker '{info.FileName}' did not start: {this.ErrorText()}");
@@ -114,6 +116,13 @@ public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IF
     this._process = process;
     return process;
   }
+
+  /// <summary>
+  /// Runs a blocking read on a thread of its own. On Windows an asynchronous read of a pipe waits for a
+  /// thread-pool thread, and a busy pool would turn a prompt answer into a hang.
+  /// </summary>
+  private static Task<T> OnOwnThread<T>(Func<T> read)
+    => Task.Factory.StartNew(read, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
   private FuzzOutcome Died(Process process, TimeSpan elapsed) {
     // A worker whose output has ended is on its way out; one that lingers is helped along.

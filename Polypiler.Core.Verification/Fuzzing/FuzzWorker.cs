@@ -2,8 +2,6 @@ using System;
 using System.Buffers.Binary;
 using System.IO;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Polypiler.Core.Verification.Fuzzing;
 
@@ -81,11 +79,11 @@ public static class FuzzWorker {
   }
 
   /// <summary>Reads one response; throws <see cref="EndOfStreamException"/> when the worker is gone.</summary>
-  internal static async Task<FuzzOutcome> ReadResponseAsync(Stream stream, CancellationToken cancellation) {
+  internal static FuzzOutcome ReadResponse(Stream stream) {
     var header = new byte[21];
-    await stream.ReadExactlyAsync(header, cancellation).ConfigureAwait(false);
+    stream.ReadExactly(header);
     var signature = new byte[BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(17))];
-    await stream.ReadExactlyAsync(signature, cancellation).ConfigureAwait(false);
+    stream.ReadExactly(signature);
     FindingKind? kind = header[0] switch {
       1 => FindingKind.Crash,
       2 => FindingKind.Mismatch,
