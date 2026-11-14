@@ -456,18 +456,21 @@ public sealed class JavaScriptFrontendTests {
     yield return Case("Math.trunc(a)", "f64", new IrIntrinsic(IrIntrinsicOp.Truncate, IrType.F64, [AsDouble(A)]));
     yield return Case("Math.floor(0.5)", "f64", new IrIntrinsic(IrIntrinsicOp.Floor, IrType.F64, [Double(0.5)]));
     yield return Case("Math.ceil(0.5)", "f64", new IrIntrinsic(IrIntrinsicOp.Ceiling, IrType.F64, [Double(0.5)]));
-    yield return Case("Math.abs(a)", "f64", new IrIntrinsic(IrIntrinsicOp.Abs, IrType.F64, [AsDouble(A)]));
+    yield return Case("Math.abs(a / 2)", "f64", new IrIntrinsic(IrIntrinsicOp.Abs, IrType.F64, [new IrBinary(IrBinaryOp.Divide, AsDouble(A), Double(2))]));
+    yield return Case("Math.abs(a)", "u32", new IrConvert(IrType.U32, new IrIntrinsic(IrIntrinsicOp.AbsWrap, IrType.I32, [A])));
     yield return Case("Math.sqrt(u)", "f64", new IrIntrinsic(IrIntrinsicOp.Sqrt, IrType.F64, [AsDouble(U)]));
     yield return Case("Math.fround(a)", "f32", new IrConvert(IrType.F32, AsDouble(A)));
     yield return Case("Math.min(a, 0.5)", "f64", new IrIntrinsic(IrIntrinsicOp.Min, IrType.F64, [AsDouble(A), Double(0.5)]));
     yield return Case("Math.max(a, u, c)", "f64", new IrIntrinsic(IrIntrinsicOp.Max, IrType.F64, [new IrIntrinsic(IrIntrinsicOp.Max, IrType.F64, [AsDouble(A), AsDouble(U)]), AsDouble(C)]));
-    yield return Case("Math.max(a)", "f64", AsDouble(A));
+    yield return Case("Math.max(0.5)", "f64", Double(0.5));
+    yield return Case("Math.max(a)", "i32", A);
     yield return Case("Math.max()", "f64", Double(double.NegativeInfinity));
     yield return Case("Math.min()", "f64", Double(double.PositiveInfinity));
-    yield return Case("Math.sign(a)", "f64", new IrIntrinsic(IrIntrinsicOp.Max, IrType.F64, [
+    yield return Case("Math.sign(0.5)", "f64", new IrIntrinsic(IrIntrinsicOp.Max, IrType.F64, [
       new IrIntrinsic(IrIntrinsicOp.Min, IrType.F64, [
-        new IrBinary(IrBinaryOp.Multiply, new IrBinary(IrBinaryOp.Multiply, AsDouble(A), Double(8.98846567431158e307)), Double(8.98846567431158e307)), one]),
+        new IrBinary(IrBinaryOp.Multiply, new IrBinary(IrBinaryOp.Multiply, Double(0.5), Double(8.98846567431158e307)), Double(8.98846567431158e307)), one]),
       Double(-1)]));
+    yield return Case("Math.sign(a)", "i32", new IrIntrinsic(IrIntrinsicOp.Sign, IrType.I32, [A]));
 
     // 64-bit integers under their two wrappers.
     yield return Case("123n", "i64", new IrConst(IrType.I64, 123));
@@ -576,8 +579,8 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("return Math.PI;", "Math.PI")]
   [TestCase("return Math.imul(t, a);", "boolean as a number")]
   [TestCase("return Math.abs(d);", "uint8[] as a number")]
-  [TestCase("return BigInt.asUintN(32, 1n);", "BigInt.asUintN with a width other than 64")]
-  [TestCase("return BigInt.asIntN(a, 1n);", "BigInt.asIntN with a width other than 64")]
+  [TestCase("return BigInt.asUintN(65, 1n);", "BigInt.asUintN with a width other than a literal from 1 to 64")]
+  [TestCase("return BigInt.asIntN(a, 1n);", "BigInt.asIntN with a width other than a literal from 1 to 64")]
   [TestCase("return BigInt.asUintN(64);", "BigInt.asUintN with 1 arguments")]
   [TestCase("return BigInt.asUintN(64, a);", "number as a bigint")]
   [TestCase("return BigInt.asUintN(64, 1n << 64n);", "<< on bigint and bigint")]
