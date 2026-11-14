@@ -724,6 +724,15 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0950
+    severity: error
+    exit: LicenseBlocker
+    title: adapter licence audit violated
+    message: "'<path>' has no licence audit record"
+    rule: catalog.adapter-audit
+    area: catalog
+    owner: ADP-NCNN-LICENCE
+    surfaces: "standard error of polypiler-tooling catalog audit-adapter; also ''<path>' is <decision> in the licence audit: <reason>', ''<path>' is a restricted asset and its licence clearance is pending', 'licence audit record '<path>' is stale: SHA-256 <actual>, recorded <recorded>[ (<n> bytes, recorded <m> bytes)]', 'licence clearance was refused (<adr>)' and 'licence audit: <schema or rule detail>' for an audit file that cannot be read, is not YAML, breaks spec/schemas/adapter-audit.schema.json or a rule of the validator; a path or notice missing from the corpus stays PLY0025"
   - code: PLY1000
     severity: error
     exit: InvalidSource

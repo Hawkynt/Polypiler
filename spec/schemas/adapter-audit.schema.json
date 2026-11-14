@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/adapter-audit.schema.json",
+  "title": "Polypiler adapter licence audit",
+  "description": "spec/adapters/<adapter>/licence-audit.yaml, written in YAML: one record per upstream file an adapter may compile, link or load, at one pinned commit of the corpus, and one entry per component the adapter needs that is not a file of that commit. 'polypiler-tooling catalog audit-adapter' checks the file against this schema and adds the rules a schema cannot state: records sorted by path and unique, every path and notice in the corpus lock, every digest equal to the imported file, a reason for every decision but usable, a restricting obligation for every blocked entry, 'model' exactly for the policy's restricted assets, and no contradiction with the licence the scanner detects.",
+  "type": "object",
+  "required": ["schema", "repository", "commit", "clearance", "records", "external"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", "description": "owner/repo, a repository of tooling/corpus/corpus.yaml." },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$", "description": "The pinned commit the records describe." },
+    "clearance": {
+      "type": "object",
+      "required": ["status", "adr", "date"],
+      "additionalProperties": false,
+      "description": "The owner's decision whether the usable entries may be fetched, linked and run; pending until an ADR records it. A refused clearance blocks every touch; a restricted asset may be touched only once it is granted.",
+      "properties": {
+        "status": { "enum": ["pending", "granted", "refused"] },
+        "adr": { "type": ["string", "null"], "pattern": "^docs/adr/[0-9]{4}-[a-z0-9-]+\\.md$" },
+        "date": { "type": ["string", "null"], "format": "date", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+      },
+      "if": { "properties": { "status": { "const": "pending" } } },
+      "then": { "properties": { "adr": { "type": "null" }, "date": { "type": "null" } } },
+      "else": { "properties": { "adr": { "type": "string" }, "date": { "type": "string" } } }
+    },
+    "records": { "type": "array", "items": { "$ref": "#/$defs/record" } },
+    "external": { "type": "array", "items": { "$ref": "#/$defs/external" } }
+  },
+  "$defs": {
+    "text": { "type": "string", "pattern": "\\S" },
+    "path": {
+      "type": "string",
+      "description": "A path relative to the repository root, '/'-separated: not absolute, no backslash, no empty, '.' or '..' segment.",
+      "pattern": "^(?![A-Za-z]:)(?!.*\\\\)(?!/)(?!.*//)(?!(.*/)?\\.\\.?(/|$))[^/].*$"
+    },
+    "licence": { "type": "string", "pattern": "\\S", "description": "An SPDX expression; a licence SPDX does not list is LicenseRef-<name>." },
+    "obligations": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["notice", "attribution", "source-offer", "no-redistribution", "research-only"] }
+    },
+    "decision": { "enum": ["usable", "reference-only", "blocked"] },
+    "issues": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*(-[A-Z0-9]+)+$", "description": "A backlog issue ID." }
+    },
+    "origin": {
+      "description": "'own' for a file written in the repository itself, or what it was converted or copied from with the notice of the pinned commit that says so.",
+      "if": { "type": "string" },
+      "then": { "const": "own" },
+      "else": {
+        "type": "object",
+        "required": ["project", "url", "licence", "notice"],
+        "additionalProperties": false,
+        "properties": {
+          "project": { "$ref": "#/$defs/text" },
+          "url": { "type": "string", "pattern": "^https://\\S+$" },
+          "licence": { "$ref": "#/$defs/licence" },
+          "notice": { "$ref": "#/$defs/path" }
+        }
+      }
+    },
+    "record": {
+      "type": "object",
+      "required": ["path", "kind", "sha256", "bytes", "licence", "origin", "obligations", "decision", "usedBy", "reviewer", "reviewedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "kind": { "enum": ["code", "model"], "description": "'model' for weights and network descriptions, the policy's restricted assets; 'code' for everything else." },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "licence": { "$ref": "#/$defs/licence" },
+        "origin": { "$ref": "#/$defs/origin" },
+        "obligations": { "$ref": "#/$defs/obligations" },
+        "decision": { "$ref": "#/$defs/decision" },
+        "usedBy": { "$ref": "#/$defs/issues" },
+        "reviewer": { "type": "string", "pattern": "^[A-Za-z0-9](-?[A-Za-z0-9])*$", "description": "The GitHub login of the person who read the file's header and the notices it rests on." },
+        "reviewedAt": { "type": "string", "format": "date", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "reason": { "$ref": "#/$defs/text", "description": "Why the decision is what it is; required unless the decision is usable." }
+      }
+    },
+    "external": {
+      "type": "object",
+      "description": "A component the adapter needs that is not a file of the pinned commit: a prebuilt provider or weights fetched at build or run time. Its terms are recorded here, its files are not audited.",
+      "required": ["name", "kind", "licence", "url", "notice", "obligations", "decision", "reason", "reviewer", "reviewedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "kind": { "enum": ["provider", "weights"] },
+        "licence": { "$ref": "#/$defs/licence" },
+        "url": { "type": "string", "pattern": "^https://\\S+$" },
+        "notice": { "$ref": "#/$defs/path" },
+        "obligations": { "$ref": "#/$defs/obligations" },
+        "decision": { "$ref": "#/$defs/decision" },
+        "reason": { "$ref": "#/$defs/text" },
+        "reviewer": { "type": "string", "pattern": "^[A-Za-z0-9](-?[A-Za-z0-9])*$" },
+        "reviewedAt": { "type": "string", "format": "date", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" }
+      }
+    }
+  }
+}

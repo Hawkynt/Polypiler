@@ -10,6 +10,8 @@ spec/
   diagnostics.yaml        the diagnostics registry (ADR 0003); not a spec document
   schemas/                JSON Schema 2020-12: meta.schema.json, and <family>.schema.json per family
   <family>/**/*.yaml      the documents of one family
+  adapters/<adapter>/     not spec documents: the adapter licence audits (schemas/adapter-audit.schema.json),
+                          checked by polypiler-tooling catalog audit-adapter
 ```
 
 ## The metadata block

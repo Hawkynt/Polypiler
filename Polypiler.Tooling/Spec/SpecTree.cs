@@ -9,9 +9,16 @@ namespace Polypiler.Tooling.Spec;
 /// <summary>
 /// Every spec document under a root: the files <c>&lt;root&gt;/&lt;family&gt;/**/*.yaml</c> in ordinal
 /// order of their relative paths, and the index of their IDs. Files directly in the root — the
-/// diagnostics registry, the schemas — are not spec documents.
+/// diagnostics registry, the schemas — are not spec documents, and neither are the files of the
+/// <see cref="DataFolders"/>, which a verb of their own checks.
 /// </summary>
 public sealed class SpecTree {
+
+  /// <summary>
+  /// The folders under the root that hold checked data rather than spec documents: <c>adapters</c>,
+  /// the adapter licence audits <c>polypiler-tooling catalog audit-adapter</c> checks.
+  /// </summary>
+  public static IReadOnlyList<string> DataFolders { get; } = ["adapters"];
 
   private SpecTree(string root, string repositoryRoot, IReadOnlyList<SpecDocument> documents, IReadOnlyList<Diagnostic> unreadable) {
     this.Root = root;
@@ -62,6 +69,7 @@ public sealed class SpecTree {
     var documents = new List<SpecDocument>();
     var unreadable = new List<Diagnostic>();
     var paths = Directory.EnumerateDirectories(full)
+      .Where(folder => !DataFolders.Contains(Path.GetFileName(folder)))
       .SelectMany(folder => Directory.EnumerateFiles(folder, "*.yaml", SearchOption.AllDirectories))
       .Select(file => Path.GetRelativePath(full, file).Replace(Path.DirectorySeparatorChar, '/'))
       .Order(StringComparer.Ordinal);
