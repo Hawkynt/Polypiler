@@ -42,7 +42,8 @@ public sealed class JavaScriptProfileEmissionTests {
   private static IrModule Import(string methods) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
 
   private static string Emit(string methods, JavaScriptProfile profile) {
-    var text = JavaScriptEmitter.Emit(Import(methods), profile).Single().Content;
+    var module = JavaScriptEmitter.Legalize(Import(methods), () => Polypiler.Tests.Float.Support.FloatImplementations.Module, profile, FloatMode.Accurate);
+    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -598,6 +599,13 @@ public sealed class JavaScriptProfileEmissionTests {
       ["const"] = ("const int K = 2; public static int F() => K;", "const K = 2;", "var K = 2;"),
       ["export"] = ("public static int F() => 1;", "export function F() {", "exports.F = F;"),
       ["Math.imul"] = ("public static int F(int a) => a * a;", "Math.imul(a, a)", "$imul(a, a)"),
+      ["Math.log2"] = ("public static float F(float a) => System.MathF.Log2(a);", "Math.log2(", "Float"),
+      ["Math.log10"] = ("public static float F(float a) => System.MathF.Log10(a);", "Math.log10(", "Float"),
+      ["Math.sinh"] = ("public static float F(float a) => System.MathF.Sinh(a);", "Math.sinh(", "Float"),
+      ["Math.cosh"] = ("public static float F(float a) => System.MathF.Cosh(a);", "Math.cosh(", "Float"),
+      ["Math.tanh"] = ("public static float F(float a) => System.MathF.Tanh(a);", "Math.tanh(", "Float"),
+      ["Math.cbrt"] = ("public static float F(float a) => System.MathF.Cbrt(a);", "Math.cbrt(", "Float"),
+      ["Math.hypot"] = ("public static float F(float a) => System.Single.Hypot(a, a);", "Math.hypot(", "Float"),
       ["Math.clz32"] = ("public static int F(uint a) => System.Numerics.BitOperations.LeadingZeroCount(a);", "Math.clz32(a)", "$clz32(a)"),
       ["Math.fround"] = ("public static float F(float a) => a + a;", "Math.fround(a + a)", "$fround(a + a)"),
       ["Math.trunc"] = ("public static double F(double a) => System.Math.Truncate(a);", "Math.trunc(a)", "$trunc(a)"),
@@ -650,7 +658,7 @@ public sealed class JavaScriptProfileEmissionTests {
   [Test, Category("Slow")]
   public void NeverEmittedCapabilities_AreInNoFile() {
     var never = JavaScriptCapabilities.Standard.Entries.Where(entry => !entry.Emitted).Select(entry => entry.Name).Where(name => name != "numeric separators").ToList();
-    Assert.That(never, Has.Count.EqualTo(6));
+    Assert.That(never, Has.Count.EqualTo(12));
     foreach (var fixture in PrototypeFixture.Names)
       foreach (var profile in new[] { _es5, _es2017, JavaScriptProfile.Default }) {
         var text = JavaScriptEmitter.Emit(PrototypeFixture.Imported(fixture), profile).Single().Content;

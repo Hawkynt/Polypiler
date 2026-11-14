@@ -14,7 +14,7 @@ namespace Polypiler.Tests.Prototype;
 [TestFixture]
 public sealed class TranslateCommandTests {
 
-  private const string Usage = "usage: polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--explain-types] [--profile <name>] [--module <esm|cjs|iife>] [--global <name>] [--typed-arrays] [--namespace <name>] [--langversion <version>]";
+  private const string Usage = "usage: polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--export <name>[,<name>...]] [--explain-types] [--profile <name>] [--module <esm|cjs|iife>] [--global <name>] [--typed-arrays] [--float <strict|accurate>] [--namespace <name>] [--langversion <version>]";
 
   private string _directory = "";
   private string _out = "";
@@ -71,9 +71,6 @@ public sealed class TranslateCommandTests {
     .GetCustomAttributes(typeof(TestCaseAttribute), false)
     .Cast<TestCaseAttribute>()
     .Select(attribute => (string)attribute.Arguments[0]!)
-    .Concat(CSharpFrontendTests.Transcendentals.SelectMany(name => new[] {
-      CSharpFrontendTests.Transcendental("Math", name), CSharpFrontendTests.Transcendental("MathF", name)
-    }))
     .ToArray();
 
   /// <summary>
@@ -90,8 +87,8 @@ public sealed class TranslateCommandTests {
 
   [Test]
   public void UnsupportedMethods_AreTheOnesOfTheFrontendTests()
-    => Assert.That(UnsupportedMethods(), Has.Length.GreaterThan(120).And.Contain("public static decimal F(decimal a) => a + 1;")
-      .And.Contain("public static double F(double x) => System.Math.Sin(x);").And.Contain("public static float F(float x) => System.MathF.Pow(x, x);"));
+    => Assert.That(UnsupportedMethods(), Has.Length.GreaterThan(80).And.Contain("public static decimal F(decimal a) => a + 1;")
+      .And.Contain("public static double F(double a) => System.Math.ReciprocalSqrtEstimate(a);"));
 
   /// <summary>Test design 12: invalid C# is exit code 4 and carries the compiler's message.</summary>
   [TestCase("public static int F( => 1;", "CS1001")]

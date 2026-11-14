@@ -45,6 +45,7 @@ public static class TranslateCommand {
   private const string Module = "--module";
   private const string Global = "--global";
   private const string TypedArrays = "--typed-arrays";
+  private const string Float = "--float";
 
   private static readonly string[] _required = [From, To, Output];
 
@@ -171,6 +172,7 @@ public static class TranslateCommand {
     => Emit(module, options, output, error, CSharp(capabilities));
 
   private static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error, Backend backend) {
+    module = backend.Lower(module, options);
     var problems = backend.Check(module, options);
     if (problems.Count > 0) {
       foreach (var problem in problems)
@@ -236,10 +238,11 @@ public static class TranslateCommand {
   /// <summary>The JavaScript backend with a capability table; <c>--profile</c> names the language level.</summary>
   private static Backend JavaScript(JavaScriptCapabilities capabilities) => new(
     "javascript",
-    [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null)],
-    options => JavaScriptProfileOf(options).Error,
+    [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error,
+    (module, options) => JavaScriptEmitter.Legalize(module, Implementations, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities),
     (module, options) => JavaScriptEmitter.Check(module, JavaScriptProfileOf(options).Profile!, capabilities),
-    (module, options) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, capabilities));
+    (module, options) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities));
 
   /// <summary>The JavaScript profile the options of a command line name, or what is wrong with them.</summary>
   private static (JavaScriptProfile? Profile, string? Error) JavaScriptProfileOf(IReadOnlyDictionary<string, string> options) {
@@ -250,9 +253,34 @@ public static class TranslateCommand {
   }
 
   /// <summary>The C# backend with a capability table.</summary>
-  private static Backend CSharp(CSharpCapabilities capabilities) => new("csharp", [new(Namespace, "<name>"), new(Profile, "<name>"), new(LangVersion, "<version>")], CSharpMisuse,
+  private static Backend CSharp(CSharpCapabilities capabilities) => new("csharp",
+    [new(Namespace, "<name>"), new(Profile, "<name>"), new(LangVersion, "<version>"), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? CSharpMisuse(options),
+    (module, options) => CSharpEmitter.Legalize(module, Implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
-    (module, options) => CSharpEmitter.Emit(module, CSharpProfileOf(options), options.GetValueOrDefault(Namespace), capabilities));
+    (module, options) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities));
+
+  /// <summary>The values <c>--float</c> takes.</summary>
+  private static string FloatChoice => Choice(["strict", "accurate"]);
+
+  /// <summary>What is wrong with <c>--float</c>: a value other than <c>strict</c> or <c>accurate</c>.</summary>
+  private static string? FloatMisuse(IReadOnlyDictionary<string, string> options)
+    => options.TryGetValue(Float, out var mode) && mode is not ("strict" or "accurate")
+      ? $"unknown floating-point mode '{mode}'; the modes are strict and accurate"
+      : null;
+
+  /// <summary>The floating-point mode of <c>--float</c>; <c>accurate</c> by default (ADR 0005).</summary>
+  private static FloatMode FloatModeOf(IReadOnlyDictionary<string, string> options)
+    => options.GetValueOrDefault(Float) == "strict" ? FloatMode.Strict : FloatMode.Accurate;
+
+  /// <summary>
+  /// The portable floating-point implementations, imported from their source the first time a
+  /// translation needs one: what a target lacks is emitted from it.
+  /// </summary>
+  private static IrModule Implementations() => _implementations.Value;
+
+  private static readonly Lazy<IrModule> _implementations = new(() => CSharpFrontend.Import(
+    FloatOperationSources.All.Select(file => new CSharpSource(file.Name, file.Text)).ToList()).Module!);
 
   /// <summary>What is wrong with the options of the C# backend: the namespace first, then the profile and its language version.</summary>
   private static string? CSharpMisuse(IReadOnlyDictionary<string, string> options) {
@@ -304,12 +332,14 @@ public static class TranslateCommand {
   /// <param name="Name">The name <c>--to</c> takes.</param>
   /// <param name="Options">The options this language reads; another target may read one of them its own way.</param>
   /// <param name="Misuse">What is wrong with the values of those options, or <see langword="null"/>.</param>
+  /// <param name="Lower">The module with the floating-point operations the target lacks replaced by their portable implementations.</param>
   /// <param name="Check">Why a module cannot be emitted with the options given; empty when it can.</param>
   /// <param name="Emit">Writes a module that passed the check.</param>
   private sealed record Backend(
     string Name,
     Option[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
+    Func<IrModule, IReadOnlyDictionary<string, string>, IrModule> Lower,
     Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<Diagnostic>> Check,
     Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<GeneratedFile>> Emit) {
 

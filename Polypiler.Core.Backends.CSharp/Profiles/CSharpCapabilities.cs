@@ -252,7 +252,10 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfSaturation("saturating cast to ulong", CSharpProfile.Net100, IrTypeKind.U64, new CSharpForm(null), CSharpHelpers.SaturatedUInt64),
 
     // The integer and bit operations of every width, one family after the other.
-    .. CSharpIntegerRows.All
+    .. CSharpIntegerRows.All,
+
+    // The floating-point operations of #1301.
+    .. CSharpFloatCapabilities.Rows
   ]);
 
   /// <summary>Makes a table of rows.</summary>

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using Polypiler.Core.IR;
+using Polypiler.Core.Legalize;
 
 namespace Polypiler.Core.Backends.CSharp;
 
@@ -180,7 +181,60 @@ public static class CSharpEmitter {
   /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>The generated file.</returns>
   /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
-  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, CSharpProfile profile, string? @namespace = null, CSharpCapabilities? capabilities = null) {
+  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, CSharpProfile profile, string? @namespace = null, CSharpCapabilities? capabilities = null)
+    => Emit(module, profile, FloatMode.Accurate, @namespace, capabilities);
+
+  /// <summary>
+  /// Whether the class writes a floating-point operation itself, in a profile and a mode: an exact one
+  /// where the profile's framework has the call, one with an <c>ulp(n)</c> contract only in
+  /// <see cref="FloatMode.Accurate"/> and where <see cref="NativeAccuracy"/> admits .NET's function.
+  /// Every other operation of the table is its portable implementation, which
+  /// <see cref="Legalize"/> puts in; an operation outside the table is the emitter's own business.
+  /// </summary>
+  /// <param name="intrinsic">The operation.</param>
+  /// <param name="profile">The profile.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
+  /// <returns><see langword="true"/> when the operation is written as a call of the base library or a helper of the emitter.</returns>
+  public static bool Writes(IrIntrinsic intrinsic, CSharpProfile profile, FloatMode mode, CSharpCapabilities? capabilities = null) {
+    if (!FloatLegalization.IsReplaceable(intrinsic))
+      return true;
+
+    var format = intrinsic.Arguments[0].Type;
+    if ((capabilities ?? CSharpCapabilities.Default).Of(intrinsic.Op, format.Kind) is not { } row || !row.IsIn(profile))
+      return false;
+
+    return FloatOperationTable.Of(intrinsic.Op)!.Contract.Kind == FloatContractKind.Exact
+      || (mode == FloatMode.Accurate && NativeAccuracy.Slack(NativeAccuracy.DotNet, intrinsic.Op, format) is not null);
+  }
+
+  /// <summary>
+  /// The module with every floating-point operation the class does not write itself (<see cref="Writes"/>)
+  /// replaced by its portable implementation, copied into the class.
+  /// </summary>
+  /// <param name="module">The module.</param>
+  /// <param name="implementations">Gives the portable implementations, as the C# frontend imports <see cref="FloatOperationSources"/>; asked only when needed.</param>
+  /// <param name="profile">The profile.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
+  /// <returns>The module to emit.</returns>
+  public static IrModule Legalize(IrModule module, Func<IrModule> implementations, CSharpProfile profile, FloatMode mode, CSharpCapabilities? capabilities = null)
+    => FloatLegalization.Lower(module, implementations, intrinsic => Writes(intrinsic, profile, mode, capabilities));
+
+  /// <summary>
+  /// Emits the module for a profile and a floating-point mode. The header names the profile and, where
+  /// the class calls a native function with an <c>ulp(n)</c> contract, each such function with the
+  /// comparison bound of ADR 0005; in <see cref="FloatMode.Strict"/> it says that the results are the
+  /// same bits on every target.
+  /// </summary>
+  /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check(IrModule, CSharpProfile, CSharpCapabilities?)"/> accepts.</param>
+  /// <param name="profile">The target framework and language version.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="namespace">The namespace of the class, or <see langword="null"/> for none.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
+  /// <returns>The generated file.</returns>
+  /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
+  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace = null, CSharpCapabilities? capabilities = null) {
     if (@namespace is not null && !IsNamespace(@namespace))
       throw new ArgumentException($"'{@namespace}' is not a namespace name.", nameof(@namespace));
 
@@ -190,9 +244,9 @@ public static class CSharpEmitter {
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problems[0].Message}.", nameof(module));
 
     // The first pass finds out which helpers the class calls; their names are settled before the second one writes it.
-    var draft = new Writer(module, profile, table, []);
+    var draft = new Writer(module, profile, table, [], mode);
     draft.Module(@namespace);
-    var writer = new Writer(module, profile, table, draft.Helpers);
+    var writer = new Writer(module, profile, table, draft.Helpers, mode);
     return [new GeneratedFile(writer.ClassName + ".cs", writer.Module(@namespace))];
   }
 
@@ -397,6 +451,7 @@ public static class CSharpEmitter {
     private readonly IrModule _module;
     private readonly CSharpProfile _profile;
     private readonly CSharpCapabilities _table;
+    private readonly FloatMode _mode;
     private readonly StringBuilder _code = new();
     private readonly string _class;
     private readonly HashSet<CSharpHelper> _used = [];
@@ -418,8 +473,10 @@ public static class CSharpEmitter {
     /// <param name="profile">The profile to write it for.</param>
     /// <param name="table">The capability table.</param>
     /// <param name="helpers">The helpers the class is known to call, whose names no variable may take.</param>
-    public Writer(IrModule module, CSharpProfile profile, CSharpCapabilities table, IReadOnlyCollection<CSharpHelper> helpers) {
+    /// <param name="mode">The floating-point mode, which the header states.</param>
+    public Writer(IrModule module, CSharpProfile profile, CSharpCapabilities table, IReadOnlyCollection<CSharpHelper> helpers, FloatMode mode) {
       this._module = module;
+      this._mode = mode;
       this._profile = profile;
       this._table = table;
       this._class = Names([module.Name], [])[module.Name];
@@ -495,7 +552,8 @@ public static class CSharpEmitter {
         this._code.Append("\n  ").AppendJoin("\n  ", helper.Lines(this._helpers.GetValueOrDefault(helper.Name, helper.Name))).Append('\n');
 
       var type = this._code.Append("\n}\n").ToString();
-      var header = $"// {this.ClassName}: generated by polypiler. Change the source, not this file.\n// Profile: {this._profile}.\n\n";
+      var header = $"// {this.ClassName}: generated by polypiler. Change the source, not this file.\n// Profile: {this._profile}.\n"
+        + string.Concat(FloatManifest.Lines(this._module, this._mode, NativeAccuracy.DotNet).Select(line => $"// {line}\n")) + "\n";
       if (@namespace is null)
         return header + type;
 

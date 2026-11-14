@@ -32,6 +32,7 @@ public sealed class JavaScriptCapabilities {
 
   private const string Halves = "{ hi, lo }";
   private const string PlainArray = "Array";
+  private const string Portable = "the portable implementation";
 
   private readonly Dictionary<string, JavaScriptCapability> _byName;
 
@@ -78,8 +79,16 @@ public sealed class JavaScriptCapabilities {
     new("Math.fround", 2015, "$fround"),
     new("Math.trunc", 2015, "$trunc"),
     new("Math.sign", 2015, "$sign"),
-    new("Math.cbrt", 2015, "Math.pow", Emitted: false),
-    new("Math.hypot", 2015, "Math.sqrt", Emitted: false),
+    // The functions of Math that compute a floating-point operation with an ulp(n) contract. Below the
+    // level that has one, or where its error is not admitted, the operation is its portable
+    // implementation, which legalization puts in before the module is written.
+    new("Math.sin", 5), new("Math.cos", 5), new("Math.tan", 5), new("Math.atan2", 5), new("Math.exp", 5), new("Math.log", 5), new("Math.pow", 5),
+    new("Math.log2", 2015, Portable), new("Math.log10", 2015, Portable), new("Math.sinh", 2015, Portable), new("Math.cosh", 2015, Portable),
+    new("Math.tanh", 2015, Portable), new("Math.cbrt", 2015, Portable), new("Math.hypot", 2015, Portable),
+    // Without a measurement of V8's function ADR 0005 admits none of these: never written today.
+    new("Math.asin", 5, Emitted: false), new("Math.acos", 5, Emitted: false), new("Math.atan", 5, Emitted: false),
+    new("Math.asinh", 2015, Portable, Emitted: false), new("Math.acosh", 2015, Portable, Emitted: false), new("Math.atanh", 2015, Portable, Emitted: false),
+    new("Math.expm1", 2015, Portable, Emitted: false), new("Math.log1p", 2015, Portable, Emitted: false),
     new("Number", 5),
     new("Number.isNaN", 2015, "!==", Emitted: false),
     new("globalThis", 2020, "this", Emitted: false),
