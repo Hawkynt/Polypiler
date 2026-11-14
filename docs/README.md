@@ -26,6 +26,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Benchmarks](benchmarks/README.md) — how to add a benchmark, run it, read its result and compare two result sets against the budgets.
 - [Audit of the PB-Compiler LLVM emitter](llvm/pb-emitter-audit.md) — what PB-Compiler's `--emit-llvm` writes at the pinned commit, what LLVM 23.1.3 accepts of it, and the gaps against PRD §26.3.
 - [Error catalogue](errors/README.md) — every diagnostic code with its severity, exit code, cause and what to do, generated from `spec/diagnostics.yaml` by `polypiler-tooling report errors`.
+- [Backends: tree, passes, printer](architecture/BACKENDS.md) — the syntax tree each backend builds of its language, the target passes over it and the printer that writes it; how to add a capability row or a pass.
 
 ## Work-item readiness
 

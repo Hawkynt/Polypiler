@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.Backends.CSharp.Syntax;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Backends.CSharp;
@@ -80,7 +81,26 @@ public enum CSharpRuntimeDefect {
 /// the row; or <see langword="null"/> for a call. It is a primary
 /// expression and stands where overflow is not checked, so its casts keep the low bits.
 /// </param>
-public sealed record CSharpForm(string? Method, string? Cast = null, string? Further = null, string? Template = null);
+public sealed record CSharpForm(string? Method, string? Cast = null, string? Further = null, string? Template = null) {
+
+  /// <summary>
+  /// The form as a fragment of the syntax tree: the template with its places filled, or the call of
+  /// the method - the helper's where it has none - with the arguments and the further ones, cast where
+  /// the form says so.
+  /// </summary>
+  /// <param name="arguments">The arguments in their order; for a template each written as an operand that may stand where a primary expression does.</param>
+  /// <param name="helper">Gives the name of the row's helper; asked only when the form calls it.</param>
+  /// <returns>The expression.</returns>
+  public CsExpression Build(IReadOnlyList<CsExpression> arguments, Func<string> helper) {
+    if (this.Template is not null)
+      return CSharpFragments.Fill(this.Template, arguments, helper);
+
+    var target = this.Method is null ? new CsName(helper()) : CSharpFragments.Expression(this.Method);
+    var call = new CsInvocation(target, this.Further is null ? arguments : [.. arguments, .. CSharpFragments.Arguments(this.Further)]);
+    return this.Cast is null ? call : new CsCast(new CsType(this.Cast), call);
+  }
+
+}
 
 /// <summary>
 /// One row of the capability table: something the emitter may want to write, the first profile or

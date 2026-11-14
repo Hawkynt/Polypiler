@@ -5,10 +5,16 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- The helpers and the forms of the capability table are C# source, which Roslyn reads into the syntax tree once. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Legalize\Polypiler.Core.Legalize.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
   </ItemGroup>
 
 </Project>

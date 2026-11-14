@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
+using Polypiler.Core.Backends.CSharp.Passes;
+using Polypiler.Core.Backends.CSharp.Printing;
+using Polypiler.Core.Backends.CSharp.Syntax;
 using Polypiler.Core.IR;
 using Polypiler.Core.Legalize;
+using Polypiler.Core.Optimize.Target;
 
 namespace Polypiler.Core.Backends.CSharp;
 
@@ -110,6 +113,9 @@ public static partial class CSharpEmitter {
     [IrBinaryOp.LogicalAnd] = "&&",
     [IrBinaryOp.LogicalOr] = "||"
   };
+
+  /// <summary>The keyword of a scalar IR type in C#, such as <c>uint</c> for <c>u32</c>.</summary>
+  internal static string Keyword(IrType type) => _types[type.Kind];
 
   /// <summary>Says why a module cannot be emitted for the default profile.</summary>
   /// <param name="module">The module to check.</param>
@@ -240,7 +246,8 @@ public static partial class CSharpEmitter {
   /// Emits the module for a profile and a floating-point mode. The header names the profile and, where
   /// the class calls a native function with an <c>ulp(n)</c> contract, each such function with the
   /// comparison bound of ADR 0005; in <see cref="FloatMode.Strict"/> it says that the results are the
-  /// same bits on every target.
+  /// same bits on every target. The tree is printed as the emitter built it, without the target
+  /// passes; the overload that takes <see cref="TargetPassOptions"/> runs them, as <c>translate</c> does.
   /// </summary>
   /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check(IrModule, CSharpProfile, CSharpCapabilities?)"/> accepts.</param>
   /// <param name="profile">The target framework and language version.</param>
@@ -249,7 +256,41 @@ public static partial class CSharpEmitter {
   /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>The generated file.</returns>
   /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
-  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace = null, CSharpCapabilities? capabilities = null) {
+  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace = null, CSharpCapabilities? capabilities = null)
+    => Emit(module, profile, mode, @namespace, capabilities, TargetPassOptions.None).Files;
+
+  /// <summary>
+  /// Emits the module for a profile and a floating-point mode: builds its syntax tree, runs the target
+  /// passes the options let run (<see cref="CSharpTargetPasses.Pipeline"/>) and prints the tree.
+  /// </summary>
+  /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check(IrModule, CSharpProfile, CSharpCapabilities?)"/> accepts.</param>
+  /// <param name="profile">The target framework and language version.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="namespace">The namespace of the class, or <see langword="null"/> for none.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
+  /// <param name="passes">Which target passes run.</param>
+  /// <returns>The generated file and what the passes changed.</returns>
+  /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
+  public static TargetEmission Emit(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace, CSharpCapabilities? capabilities, TargetPassOptions passes) {
+    var (unit, applications) = Build(module, profile, mode, @namespace, capabilities, passes);
+    var name = CSharpTargetPasses.ModuleClass(unit)!.Name.TrimStart('@');
+    return new([new GeneratedFile(name + ".cs", CSharpPrinter.Print(unit, profile, capabilities))], applications);
+  }
+
+  /// <summary>
+  /// The syntax tree of the module for a profile and a floating-point mode, after the target passes
+  /// the options let run: what <see cref="Emit(IrModule, CSharpProfile, FloatMode, string?, CSharpCapabilities?, TargetPassOptions)"/> prints.
+  /// </summary>
+  /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check(IrModule, CSharpProfile, CSharpCapabilities?)"/> accepts.</param>
+  /// <param name="profile">The target framework and language version.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="namespace">The namespace of the class, or <see langword="null"/> for none.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
+  /// <param name="passes">Which target passes run.</param>
+  /// <returns>The tree and what the passes changed.</returns>
+  /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
+  public static TargetPipelineResult<CsCompilationUnit> Build(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace, CSharpCapabilities? capabilities, TargetPassOptions passes) {
+    ArgumentNullException.ThrowIfNull(passes);
     if (@namespace is not null && !IsNamespace(@namespace))
       throw new ArgumentException($"'{@namespace}' is not a namespace name.", nameof(@namespace));
 
@@ -262,7 +303,7 @@ public static partial class CSharpEmitter {
     var draft = new Writer(module, profile, table, [], mode);
     draft.Module(@namespace);
     var writer = new Writer(module, profile, table, draft.Helpers, mode);
-    return [new GeneratedFile(writer.ClassName + ".cs", writer.Module(@namespace))];
+    return CSharpTargetPasses.Pipeline.Run(writer.Module(@namespace), profile, passes);
   }
 
   private static void Known(IrType type, List<string> unknown) {
@@ -482,14 +523,10 @@ public static partial class CSharpEmitter {
     /// <summary>How tightly an expression binds: a primary expression, a cast, another unary one, or anything looser.</summary>
     private const int Primary = 0, Cast = 1, Unary = 2, Loose = 3;
 
-    /// <summary>How many elements of a table stand on one line.</summary>
-    private const int Row = 8;
-
     private readonly IrModule _module;
     private readonly CSharpProfile _profile;
     private readonly CSharpCapabilities _table;
     private readonly FloatMode _mode;
-    private readonly StringBuilder _code = new();
     private readonly string _class;
     private readonly HashSet<CSharpHelper> _used = [];
     private readonly Dictionary<string, string> _helpers;
@@ -595,96 +632,86 @@ public static partial class CSharpEmitter {
 
     /// <summary>
     /// The file: a header that names the profile, the namespace in the form the language version has
-    /// — one that holds the rest of the file, or a block around the class — and the class.
+    /// — one that holds the rest of the file, or a block around the class — and the class, whose
+    /// helpers follow its functions in the order of the table, each as its source has it.
     /// </summary>
-    public string Module(string? @namespace) {
-      this._code.Append("public static class ").Append(this._class).Append(" {\n");
+    public CsCompilationUnit Module(string? @namespace) {
+      var members = new List<CsMember>();
       foreach (var constant in this._module.Constants)
-        this.Constant(constant);
+        members.Add(this.Constant(constant));
 
       foreach (var function in this._module.Functions)
-        this.Function(function);
+        members.Add(this.Function(function));
 
       // The table's order is the order of the helpers, whatever order the class calls them in.
       foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains))
-        this._code.Append("\n  ").AppendJoin("\n  ", helper.Lines(this._helpers.GetValueOrDefault(helper.Name, helper.Name))).Append('\n');
+        members.Add(HelperDeclaration(helper) with { Name = this._helpers.GetValueOrDefault(helper.Name, helper.Name), Leading = CsTrivia.Blank, IsHelper = true });
 
-      var type = this.Structs() + this._code.Append("\n}\n").ToString();
-      var header = $"// {this.ClassName}: generated by polypiler. Change the source, not this file.\n// Profile: {this._profile}.\n"
-        + string.Concat(FloatManifest.Lines(this._module, this._mode, NativeAccuracy.DotNet).Select(line => $"// {line}\n")) + "\n";
+      var types = this.Structs();
+      types.Add(new CsTypeDeclaration(["public", "static"], "class", this._class, null, [], [.. members.Select(member => member with { Leading = CsTrivia.Blank })]));
+      List<string> header = [
+        $"{this.ClassName}: generated by polypiler. Change the source, not this file.",
+        $"Profile: {this._profile}.",
+        .. FloatManifest.Lines(this._module, this._mode, NativeAccuracy.DotNet)
+      ];
       if (@namespace is null)
-        return header + type;
+        return new CsCompilationUnit(header, types);
 
       var name = string.Join('.', @namespace.Split('.').Select(part => Names([part], [])[part]));
-      if (this.Has(CSharpFeature.FileScopedNamespace))
-        return $"{header}namespace {name};\n\n{type}";
-
-      var indented = string.Join('\n', type.TrimEnd('\n').Split('\n').Select(line => line.Length == 0 ? line : "  " + line));
-      return $"{header}namespace {name} {{\n\n{indented}\n\n}}\n";
+      return new CsCompilationUnit(header, [new CsNamespace(name, this.Has(CSharpFeature.FileScopedNamespace), types)]);
     }
 
     /// <summary>
     /// A number of the module as a <c>const</c>, a table as a field that is assigned once: nothing
     /// the IR can say stores into a table, so the generated class never does either.
     /// </summary>
-    private void Constant(IrModuleConst constant) {
-      this._code.Append("\n  private ");
+    private CsField Constant(IrModuleConst constant) {
       var name = this._members[constant.Name];
-      if (constant.Type.Element is not { } element) {
-        this._code.Append("const ").Append(TypeName(constant.Type)).Append(' ').Append(name).Append(" = ").Append(Bare(constant.Type, constant.Values[0])).Append(";\n");
-        return;
-      }
+      if (constant.Type.Element is not { } element)
+        return new CsField(["private", "const"], new CsType(this.TypeName(constant.Type)), name, Bare(constant.Type, constant.Values[0]));
 
       var elements = constant.Values.Select(value => Bare(element, value)).ToList();
-      this._code.Append("static readonly ").Append(TypeName(constant.Type)).Append(' ').Append(name).Append(" = ");
-      if (elements.Count <= Row)
-        this._code.Append(Braces(elements));
-      else
-        this._code.Append("{\n    ").AppendJoin(",\n    ", elements.Chunk(Row).Select(row => string.Join(", ", row))).Append("\n  }");
-
-      this._code.Append(";\n");
+      return new CsField(["private", "static", "readonly"], new CsType(this.TypeName(constant.Type)), name, new CsArrayInitializer(elements) { Tabulated = true });
     }
 
-    private void Function(IrFunction function) {
+    private CsMethod Function(IrFunction function) {
       // A variable spelled like a member or a helper would hide it, so their names are taken.
       this._spellings = Names(function.Parameters.Concat(function.Locals).Select(variable => variable.Name), this._taken);
       this._names = [.. this._taken.Concat(this._spellings.Values).Select(name => name.TrimStart('@'))];
       this._complements = Complements(function);
       this._scopes.Clear();
       this._scopes.Add(new Scope());
-      var parameters = string.Join(", ", function.Parameters.Select(parameter => $"{TypeName(parameter.Type)} {this.Declare(parameter)}"));
-      this._code.Append("\n  ").Append(function.IsPublic ? "public" : "private").Append(" static ")
-        .Append(TypeName(function.ReturnType)).Append(' ').Append(this._members[function.Name])
-        .Append('(').Append(parameters).Append(')');
+      var parameters = function.Parameters.Select(parameter => new CsParameter(new CsType(this.TypeName(parameter.Type)), this.Declare(parameter))).ToList();
+      IReadOnlyList<string> modifiers = [function.IsPublic ? "public" : "private", "static"];
+      var returns = new CsType(this.TypeName(function.ReturnType));
+      var name = this._members[function.Name];
       var wraps = Expressions(function.Body).Any(this.Wraps);
       if (function.Body.Statements is [IrReturn { Value: { } result }] && this.Has(CSharpFeature.ExpressionBody)) {
         // A result that is itself a checked expression sets the context of everything in it.
         var value = this.Stored(result);
-        this._code.Append(" => ").Append(wraps && !Traps(Promoted(result)) ? $"unchecked({value})" : value).Append(";\n");
-        return;
+        return new CsMethod(modifiers, returns, name, [], parameters, null, wraps && !Traps(Promoted(result)) ? new CsCheckedExpression(false, value) { Type = value.Type } : value);
       }
 
-      this._code.Append(" {\n");
-      if (wraps) {
-        this.Line(2).Append("unchecked {\n");
-        this.Statements(function.Body, 3);
-        this.Line(2).Append("}\n");
-      } else {
-        this.Statements(function.Body, 2);
-      }
-
-      this._code.Append("  }\n");
+      var body = this.Statements(function.Body);
+      return new CsMethod(modifiers, returns, name, [], parameters, new CsBlock(wraps ? [new CsCheckedStatement(false, new CsBlock(body))] : body), null);
     }
 
     private string TypeName(IrType type)
       => type.Declaration is { } declared ? this._typeNames[declared.Name] : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
-    private void Statements(IrBlock block, int depth) {
+    private List<CsStatement> Statements(IrBlock block) {
+      var statements = new List<CsStatement>();
+      this.Statements(block, statements);
+      return statements;
+    }
+
+    /// <summary>The statements of a block, added to a list of statements of C#.</summary>
+    private void Statements(IrBlock block, List<CsStatement> statements) {
       var scope = new Scope();
       this._scopes.Add(scope);
       foreach (var statement in block.Statements)
-        this.Statement(statement, depth);
+        this.Statement(statement, statements);
 
       this._scopes.RemoveAt(this._scopes.Count - 1);
       this._scopes[^1].Within.UnionWith(scope.Within);
@@ -717,55 +744,52 @@ public static partial class CSharpEmitter {
     /// <summary>The C# name of a variable: that of its declaration in the innermost block around the statement being written that has one.</summary>
     private string Local(IrLocal local) => this._scopes.Last(scope => scope.Declared.ContainsKey(local)).Declared[local];
 
-    private StringBuilder Line(int depth) => this._code.Append(' ', depth * 2);
+    /// <summary>A variable as an expression of its type.</summary>
+    private CsName Variable(IrLocal local) => new(this.Local(local)) { Type = local.Type };
 
-    private void Statement(IrStmt statement, int depth) {
+    private void Statement(IrStmt statement, List<CsStatement> statements) {
       switch (statement) {
         case IrBlock block:
-          this.Line(depth).Append("{\n");
-          this.Statements(block, depth + 1);
-          this.Line(depth).Append("}\n");
+          statements.Add(new CsBlock(this.Statements(block)));
           break;
         case IrDeclare declare:
           // The initializer is read before the variable is declared, as the IR reads it.
-          var initializer = declare.Initializer is null ? "" : " = " + this.Stored(declare.Initializer);
-          this.Line(depth).Append(this.Infers(declare) ? "var" : TypeName(declare.Local.Type)).Append(' ').Append(this.Declare(declare.Local)).Append(initializer).Append(";\n");
+          var initializer = declare.Initializer is null ? null : this.Stored(declare.Initializer);
+          var type = this.Infers(declare) ? CsType.Var : new CsType(this.TypeName(declare.Local.Type));
+          statements.Add(new CsLocalDeclaration(type, this.Declare(declare.Local), initializer));
           break;
         case IrAssign or IrStore or IrFieldStore or IrExprStmt:
-          this.Line(depth).Append(this.Effect(statement)).Append(";\n");
+          statements.Add(new CsExpressionStatement(this.Effect(statement)));
           break;
         case IrIf conditional:
-          this.Line(depth);
-          this.If(conditional, depth);
+          statements.Add(this.If(conditional));
           break;
         case IrWhile loop:
-          this.Line(depth).Append("while (").Append(this.Text(loop.Condition)).Append(") {\n");
-          this.Body(loop.Body, null, depth);
-          this.Line(depth).Append("}\n");
+          var condition = this.Text(loop.Condition);
+          statements.Add(new CsWhile(condition, new CsBlock(this.Body(loop.Body, null))));
           break;
         case IrDoWhile loop:
-          this.Line(depth).Append("do {\n");
-          this.Body(loop.Body, null, depth);
-          this.Line(depth).Append("} while (").Append(this.Text(loop.Condition)).Append(");\n");
+          var body = this.Body(loop.Body, null);
+          statements.Add(new CsDo(new CsBlock(body), this.Text(loop.Condition)));
           break;
         case IrFor loop:
-          this.For(loop, depth);
+          statements.Add(this.For(loop));
           break;
         case IrSwitch choice:
-          this.Switch(choice, depth);
+          statements.Add(this.Switch(choice));
           break;
         case IrBreak:
-          this.Line(depth).Append("break;\n");
+          statements.Add(new CsBreak());
           break;
         case IrContinue:
           if (this._steps.Peek() is { } step)
-            this.Step(step, depth);
+            this.Step(step, statements);
 
-          this.Line(depth).Append("continue;\n");
+          statements.Add(new CsContinue());
           break;
         default:
           var result = (IrReturn)statement;
-          this.Line(depth).Append(result.Value is null ? "return" : "return " + this.Stored(result.Value)).Append(";\n");
+          statements.Add(new CsReturn(result.Value is null ? null : this.Stored(result.Value)));
           break;
       }
     }
@@ -784,23 +808,28 @@ public static partial class CSharpEmitter {
     /// An expression evaluated for its effects only: assigned to the discard where the language has
     /// one, handed to a helper that does nothing with it where it has not.
     /// </summary>
-    private string Discarded(IrExpr expression) {
-      var text = this.Text(expression);
-      return this.Has(CSharpFeature.Discard) ? "_ = " + text : $"{this.Helper(this._table.Of(CSharpFeature.Discard)!.Helper!)}({text})";
+    private CsExpression Discarded(IrExpr expression) {
+      var value = this.Text(expression);
+      return this.Has(CSharpFeature.Discard)
+        ? new CsAssignment(new CsName("_"), "=", value)
+        : new CsInvocation(new CsName(this.Helper(this._table.Of(CSharpFeature.Discard)!.Helper!)), [value]);
     }
 
     /// <summary>
     /// A statement that is one expression to C#, without its semicolon: an assignment, a call or a
     /// step as it stands, any other expression discarded so that it is evaluated.
     /// </summary>
-    private string Effect(IrStmt statement) {
+    private CsExpression Effect(IrStmt statement) {
       switch (statement) {
         case IrAssign assign:
-          return $"{this.Local(assign.Local)} = {this.Stored(assign.Value)}";
+          var variable = this.Variable(assign.Local);
+          return new CsAssignment(variable, "=", this.Stored(assign.Value));
         case IrStore store:
-          return $"{this.Element(store.Array, store.Index)} = {this.Stored(store.Value)}";
+          var element = this.Element(store.Array, store.Index);
+          return new CsAssignment(element, "=", this.Stored(store.Value));
         case IrFieldStore store:
-          return $"{this.Operand(store.Target, Primary)}.{this.FieldName(store.Field, store.Target.Type)} = {this.Stored(store.Value)}";
+          var field = new CsMemberAccess(this.Operand(store.Target, Primary), this.FieldName(store.Field, store.Target.Type)) { Type = store.Field.Type };
+          return new CsAssignment(field, "=", this.Stored(store.Value));
         default:
           var expression = ((IrExprStmt)statement).Expression;
           return expression.Type == IrType.Void || expression is IrCall or IrStep { Trap: false } ? this.Text(expression) : this.Discarded(expression);
@@ -808,10 +837,11 @@ public static partial class CSharpEmitter {
     }
 
     /// <summary>The body of a loop, whose <c>continue</c> statements run the given step first.</summary>
-    private void Body(IrBlock body, IrBlock? step, int depth) {
+    private List<CsStatement> Body(IrBlock body, IrBlock? step) {
       this._steps.Push(step);
-      this.Statements(body, depth + 1);
+      var statements = this.Statements(body);
       this._steps.Pop();
+      return statements;
     }
 
     /// <summary>
@@ -819,77 +849,66 @@ public static partial class CSharpEmitter {
     /// <c>for</c>. Any other step is written out wherever a pass ends: at the end of the body when
     /// execution gets there, and in front of every <c>continue</c> of the loop.
     /// </summary>
-    private void For(IrFor loop, int depth) {
+    private CsStatement For(IrFor loop) {
+      var condition = this.Text(loop.Condition);
       if (loop.Step.Statements is [IrAssign or IrStore or IrFieldStore or IrExprStmt]) {
-        this.Line(depth).Append("for (; ").Append(this.Text(loop.Condition)).Append("; ").Append(this.Effect(loop.Step.Statements[0])).Append(") {\n");
-        this.Body(loop.Body, null, depth);
-      } else {
-        this.Line(depth).Append("while (").Append(this.Text(loop.Condition)).Append(") {\n");
-        this.Body(loop.Body, loop.Step, depth);
-        if (Completes(loop.Body))
-          this.Step(loop.Step, depth + 1);
+        var step = this.Effect(loop.Step.Statements[0]);
+        return new CsFor(null, condition, [step], new CsBlock(this.Body(loop.Body, null)));
       }
 
-      this.Line(depth).Append("}\n");
+      var body = this.Body(loop.Body, loop.Step);
+      if (Completes(loop.Body))
+        this.Step(loop.Step, body);
+
+      return new CsWhile(condition, new CsBlock(body));
     }
 
     /// <summary>The statements of a step, in a block of their own when they declare something, because a step can stand more than once in a block.</summary>
-    private void Step(IrBlock step, int depth) {
+    private void Step(IrBlock step, List<CsStatement> statements) {
       if (step.Statements.Any(statement => statement is IrDeclare))
-        this.Statement(step, depth);
+        this.Statement(step, statements);
       else
-        this.Statements(step, depth);
+        this.Statements(step, statements);
     }
 
     /// <summary>
     /// A switch whose sections are blocks, as the sections of the IR are scopes, each ending in the
     /// <c>break</c> C# demands where execution would otherwise leave the section at its end.
     /// </summary>
-    private void Switch(IrSwitch choice, int depth) {
+    private CsStatement Switch(IrSwitch choice) {
       // C# warns about a switch without sections; its value is evaluated all the same.
-      if (choice.Sections.Count == 0) {
-        this.Line(depth).Append(this.Discarded(choice.Value)).Append(";\n");
-        return;
-      }
+      if (choice.Sections.Count == 0)
+        return new CsExpressionStatement(this.Discarded(choice.Value));
 
       var type = choice.Value.Type;
-      this.Line(depth).Append("switch (").Append(this.Text(choice.Value)).Append(") {\n");
+      var value = this.Text(choice.Value);
+      var sections = new List<CsSwitchSection>();
       foreach (var section in choice.Sections) {
-        var labels = section.Labels.Select(label => $"case {Bare(type, label)}:").ToList();
+        var labels = section.Labels.Select(label => (CsExpression?)Bare(type, label)).ToList();
         if (section.IsDefault)
-          labels.Add("default:");
+          labels.Add(null);
 
-        for (var index = 0; index < labels.Count; ++index)
-          this.Line(depth + 1).Append(labels[index]).Append(index + 1 < labels.Count ? "\n" : " {\n");
-
-        this.Statements(section.Body, depth + 2);
+        var body = this.Statements(section.Body);
         if (Completes(section.Body))
-          this.Line(depth + 2).Append("break;\n");
+          body.Add(new CsBreak());
 
-        this.Line(depth + 1).Append("}\n");
+        sections.Add(new CsSwitchSection(labels, [new CsBlock(body)]));
       }
 
-      this.Line(depth).Append("}\n");
+      return new CsSwitch(value, sections);
     }
 
-    private void If(IrIf conditional, int depth) {
-      this._code.Append("if (").Append(this.Text(conditional.Condition)).Append(") {\n");
-      this.Statements(conditional.Then, depth + 1);
-      this.Line(depth).Append('}');
-      if (conditional.Else is null) {
-        this._code.Append('\n');
-      } else if (conditional.Else.Statements is [IrIf chained]) {
-        this._code.Append(" else ");
-        this.If(chained, depth);
-      } else {
-        this._code.Append(" else {\n");
-        this.Statements(conditional.Else, depth + 1);
-        this.Line(depth).Append("}\n");
-      }
+    private CsIf If(IrIf conditional) {
+      var condition = this.Text(conditional.Condition);
+      var then = new CsBlock(this.Statements(conditional.Then));
+      if (conditional.Else is null)
+        return new CsIf(condition, then, null);
+
+      return new CsIf(condition, then, conditional.Else.Statements is [IrIf chained] ? this.If(chained) : new CsBlock(this.Statements(conditional.Else)));
     }
 
     /// <summary>The expression as it stands on its own: a condition, an argument of the base library or the operand of nothing.</summary>
-    private string Text(IrExpr expression) => this.Expression(expression).Text;
+    private CsExpression Text(IrExpr expression) => this.Expression(expression).Node;
 
     /// <summary>
     /// The expression where its type is already given — an initializer, a right-hand side, an
@@ -897,17 +916,17 @@ public static partial class CSharpEmitter {
     /// converts a literal to the integer type that holds its value, and a narrow integer becomes an
     /// <c>int</c> unasked.
     /// </summary>
-    private string Stored(IrExpr expression) => expression switch {
+    private CsExpression Stored(IrExpr expression) => expression switch {
       IrConst constant => Bare(constant.Type, constant.Value),
       // The literal default takes the type of the place it goes to.
-      IrStructDefault when this.Has(CSharpFeature.DefaultLiteral) => "default",
+      IrStructDefault when this.Has(CSharpFeature.DefaultLiteral) => new CsDefaultLiteral { Type = expression.Type },
       _ => this.Text(Promoted(expression))
     };
 
     /// <summary>The expression as an operand: in parentheses when it binds more loosely than <paramref name="level"/>.</summary>
-    private string Operand(IrExpr expression, int level) {
-      var (text, binding) = this.Expression(expression);
-      return binding > level ? $"({text})" : text;
+    private CsExpression Operand(IrExpr expression, int level) {
+      var (node, binding) = this.Expression(expression);
+      return binding > level ? new CsParenthesized(node) { Type = node.Type } : node;
     }
 
     /// <summary>
@@ -916,58 +935,57 @@ public static partial class CSharpEmitter {
     /// or length, an operand of checked arithmetic, a number cast to an integer type that does not
     /// hold it. <c>Math.Max</c> of the value and itself is the value, and no constant to C#.
     /// </summary>
-    private string AtRunTime(IrExpr expression, bool harmless, int level) {
+    private CsExpression AtRunTime(IrExpr expression, bool harmless, int level) {
       if (expression is IrConst ? harmless : !IsConstant(expression))
         return this.Operand(expression, level);
 
-      var text = this.Text(expression);
-      return $"{Base}Math.Max({text}, {text})";
+      var value = this.Text(expression);
+      return new CsInvocation(CSharpFragments.Expression(Base + "Math.Max"), [value, value]) { Type = value.Type };
     }
 
-    private string Element(IrExpr array, IrExpr index)
-      => $"{this.Operand(array, Primary)}[{this.AtRunTime(Promoted(index), index is IrConst { Value: >= 0 }, Loose)}]";
+    private CsElementAccess Element(IrExpr array, IrExpr index)
+      => new(this.Operand(array, Primary), this.AtRunTime(Promoted(index), index is IrConst { Value: >= 0 }, Loose)) { Type = array.Type.Element };
 
     /// <summary>The digits of an integer; those of a <c>u64</c> are the ones of its 64 bits read as unsigned.</summary>
-    private static string Number(IrType type, long value) => IrOperators.Number(type, value).ToString(CultureInfo.InvariantCulture);
+    private static System.Numerics.BigInteger Number(IrType type, long value) => (System.Numerics.BigInteger)IrOperators.Number(type, value);
 
     /// <summary>A constant where C# knows its type: an integer as its digits, anything else as its literal.</summary>
-    private static string Bare(IrType type, long value) => type.IsInteger ? Number(type, value) : Literal(type, value).Text;
-
-    private static string Braces(IReadOnlyList<string> elements) => elements.Count == 0 ? "{ }" : $"{{ {string.Join(", ", elements)} }}";
+    private static CsExpression Bare(IrType type, long value) => type.IsInteger ? new CsIntegerLiteral(Number(type, value)) { Type = type } : Literal(type, value).Node;
 
     /// <summary>
     /// A constant as an expression of exactly its type: a suffix where C# has one, a cast for the
     /// integers narrower than <c>int</c>, and the shortest digits that read back as the same
     /// floating-point number.
     /// </summary>
-    private static (string Text, int Binding) Literal(IrType type, long value) {
+    private static (CsExpression Node, int Binding) Literal(IrType type, long value) {
       if (type == IrType.Bool)
-        return (value != 0 ? "true" : "false", Primary);
+        return (new CsBooleanLiteral(value != 0) { Type = type }, Primary);
 
-      var text = type.IsFloat ? Real(type, IrOperators.Float(type, value)) : Number(type, value);
-      var binding = text[0] == '-' ? Unary : Primary;
+      if (type.IsFloat) {
+        var real = Real(type, IrOperators.Float(type, value));
+        return (real, CSharpPrinter.Precedence(real) < 15 ? Unary : Primary);
+      }
+
+      var number = Number(type, value);
+      var binding = number.Sign < 0 ? Unary : Primary;
       return type.Kind switch {
-        IrTypeKind.I32 or IrTypeKind.F32 or IrTypeKind.F64 => (text, binding),
-        IrTypeKind.U32 => (text + "u", Primary),
-        IrTypeKind.I64 => (text + "L", binding),
-        IrTypeKind.U64 => (text + "UL", Primary),
-        _ => ($"({_types[type.Kind]}){(binding == Unary ? $"({text})" : text)}", Cast)
+        IrTypeKind.I32 => (new CsIntegerLiteral(number) { Type = type }, binding),
+        IrTypeKind.U32 => (new CsIntegerLiteral(number, CsIntegerSuffix.U) { Type = type }, Primary),
+        IrTypeKind.I64 => (new CsIntegerLiteral(number, CsIntegerSuffix.L) { Type = type }, binding),
+        IrTypeKind.U64 => (new CsIntegerLiteral(number, CsIntegerSuffix.UL) { Type = type }, Primary),
+        _ => (new CsCast(new CsType(_types[type.Kind]), binding == Unary ? new CsParenthesized(new CsIntegerLiteral(number)) : new CsIntegerLiteral(number)) { Type = type }, Cast)
       };
     }
 
-    private static string Real(IrType type, double value) {
+    private static CsExpression Real(IrType type, double value) {
       var name = _types[type.Kind];
       if (double.IsNaN(value))
-        return name + ".NaN";
+        return new CsMemberAccess(new CsName(name), "NaN") { Type = type };
 
       if (double.IsInfinity(value))
-        return name + (value < 0 ? ".NegativeInfinity" : ".PositiveInfinity");
+        return new CsMemberAccess(new CsName(name), value < 0 ? "NegativeInfinity" : "PositiveInfinity") { Type = type };
 
-      if (type == IrType.F32)
-        return ((float)value).ToString("R", CultureInfo.InvariantCulture) + "f";
-
-      var digits = value.ToString("R", CultureInfo.InvariantCulture);
-      return digits.Contains('.') || digits.Contains('E') ? digits : digits + ".0";
+      return new CsRealLiteral(value, type == IrType.F32) { Type = type };
     }
 
     /// <summary>
@@ -975,65 +993,73 @@ public static partial class CSharpEmitter {
     /// <c>unchecked(...)</c> where it wraps around inside one of those. Outside of both, the body of
     /// the method is unchecked.
     /// </summary>
-    private (string Text, int Binding) Expression(IrExpr expression) {
+    private (CsExpression Node, int Binding) Expression(IrExpr expression) {
       var traps = Traps(expression);
-      if (traps == this._checked || !(traps || this.Wraps(expression)))
-        return this.Plain(expression);
+      if (traps == this._checked || !(traps || this.Wraps(expression))) {
+        var (plain, binding) = this.Plain(expression);
+        return (plain.Type is null ? plain with { Type = expression.Type } : plain, binding);
+      }
 
       this._checked = traps;
-      var text = this.Plain(expression).Text;
+      var node = this.Plain(expression).Node;
       this._checked = !traps;
-      return ($"{(traps ? "checked" : "unchecked")}({text})", Primary);
+      return (new CsCheckedExpression(traps, node) { Type = expression.Type }, Primary);
     }
 
-    private (string Text, int Binding) Plain(IrExpr expression) {
+    private (CsExpression Node, int Binding) Plain(IrExpr expression) {
       switch (expression) {
         case IrConst constant:
           return Literal(constant.Type, constant.Value);
         case IrConstRef reference:
-          return (this._members[reference.Constant.Name], Primary);
+          return (new CsName(this._members[reference.Constant.Name]), Primary);
         case IrLocalRef reference:
-          return (this.Local(reference.Local), Primary);
+          return (this.Variable(reference.Local), Primary);
         case IrUnary unary:
           var operand = Promoted(unary.Operand);
-          return (_unary[unary.Op] + (unary.Op == IrUnaryOp.NegateChecked ? this.AtRunTime(operand, false, Cast) : this.Operand(operand, Cast)), Unary);
+          return (new CsPrefixUnary(_unary[unary.Op], unary.Op == IrUnaryOp.NegateChecked ? this.AtRunTime(operand, false, Cast) : this.Operand(operand, Cast)), Unary);
         case IrBinary binary:
           return this.Binary(binary);
         case IrConvert conversion:
           return this.Convert(conversion);
         case IrConditional choice:
-          return ($"{this.Operand(choice.Condition, Unary)} ? {this.Operand(choice.WhenTrue, Unary)} : {this.Operand(choice.WhenFalse, Unary)}", Loose);
+          var condition = this.Operand(choice.Condition, Unary);
+          var whenTrue = this.Operand(choice.WhenTrue, Unary);
+          return (new CsConditional(condition, whenTrue, this.Operand(choice.WhenFalse, Unary)), Loose);
         case IrArrayLoad load:
           return (this.Element(load.Array, load.Index), Primary);
         case IrArrayLength length:
-          return ($"{this.Operand(length.Array, Primary)}.Length", Primary);
+          return (new CsMemberAccess(this.Operand(length.Array, Primary), "Length"), Primary);
         case IrNewArray creation:
           var count = this.AtRunTime(Promoted(creation.Length), creation.Length is IrConst { Value: >= 0 }, Loose);
-          return ($"new {TypeName(creation.Type.Element!)}[{count}]", Unary);
+          return (new CsArrayCreation(new CsType(this.TypeName(creation.Type.Element!)), count, null), Unary);
         case IrStep step:
-          var target = step.Target is IrArrayLoad element ? this.Element(element.Array, element.Index) : this.Local(((IrLocalRef)step.Target).Local);
+          CsExpression target = step.Target is IrArrayLoad element ? this.Element(element.Array, element.Index) : this.Variable(((IrLocalRef)step.Target).Local);
           var sign = step.Increment ? "++" : "--";
-          return step.Postfix ? (target + sign, Primary) : (sign + target, Unary);
+          return step.Postfix ? (new CsPostfixUnary(target, sign), Primary) : (new CsPrefixUnary(sign, target), Unary);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
         case IrStructNew creation:
-          return ($"new {this.TypeName(creation.Type)}({string.Join(", ", creation.Arguments.Select(this.Stored))})", Primary);
+          return (new CsObjectCreation(new CsType(this.TypeName(creation.Type)), [.. creation.Arguments.Select(this.Stored)]), Primary);
         case IrStructDefault value:
-          return this.Has(CSharpFeature.DefaultLiteral) ? ($"default({this.TypeName(value.Type)})", Primary) : ($"new {this.TypeName(value.Type)}()", Primary);
+          return this.Has(CSharpFeature.DefaultLiteral)
+            ? (new CsDefaultExpression(new CsType(this.TypeName(value.Type))), Primary)
+            : (new CsObjectCreation(new CsType(this.TypeName(value.Type)), []), Primary);
         case IrFieldLoad load:
-          return ($"{this.Operand(load.Target, Primary)}.{this.FieldName(load.Field, load.Target.Type)}", Primary);
+          return (new CsMemberAccess(this.Operand(load.Target, Primary), this.FieldName(load.Field, load.Target.Type)), Primary);
         case IrStructEquals equality when SameVariable(equality.Left, equality.Right):
           // C# warns about == between a variable and itself (CS1718); Equals is the same comparison.
-          return ($"{this.Operand(equality.Left, Primary)}.Equals({this.Text(equality.Right)})", Primary);
+          var self = this.Operand(equality.Left, Primary);
+          return (new CsInvocation(new CsMemberAccess(self, "Equals"), [this.Text(equality.Right)]), Primary);
         case IrStructEquals equality:
-          return ($"{this.Operand(equality.Left, Unary)} == {this.Operand(equality.Right, Unary)}", Loose);
+          var left = this.Operand(equality.Left, Unary);
+          return (new CsBinary(left, "==", this.Operand(equality.Right, Unary)), Loose);
         default:
           var call = (IrCall)expression;
-          return ($"{this._members[call.Function]}({string.Join(", ", call.Arguments.Select(this.Stored))})", Primary);
+          return (new CsInvocation(new CsName(this._members[call.Function]), [.. call.Arguments.Select(this.Stored)]), Primary);
       }
     }
 
-    private (string Text, int Binding) Binary(IrBinary binary) {
+    private (CsExpression Node, int Binding) Binary(IrBinary binary) {
       // RyuJIT takes some exclusive ors of two shifts for a rotation also where they are none (CSharpRuntimeDefect.ShiftXorRotation).
       if (binary.Op == IrBinaryOp.Xor && this._table.Suffers(CSharpRuntimeDefect.ShiftXorRotation, this._profile))
         binary = ShiftXorGuard.Guarded(binary, this._complements);
@@ -1043,15 +1069,17 @@ public static partial class CSharpEmitter {
       var first = Promoted(binary.Left);
       var second = Promoted(binary.Right);
       var left = this.Operand(first, Unary);
-      string right;
+      CsExpression right;
       switch (binary.Op) {
         case IrBinaryOp.Divide or IrBinaryOp.Remainder when type.IsInteger:
           right = this.AtRunTime(second, second is IrConst { Value: not 0 } divisor && !(type.IsSigned && divisor.Value == -1), Unary);
           break;
         case IrBinaryOp.ShiftRightLogical when type.IsSigned && this.Has(CSharpFeature.UnsignedRightShift):
-          return ($"{left} >>> {this.Operand(second, Unary)}", Loose);
+          return (new CsBinary(left, ">>>", this.Operand(second, Unary)), Loose);
         case IrBinaryOp.ShiftRightLogical when type.IsSigned:
-          return ($"({TypeName(type)})(({(type.IsLong ? "ulong" : "uint")}){this.Operand(first, Cast)} >> {this.Operand(second, Unary)})", Cast);
+          var shifted = this.Operand(first, Cast);
+          var unsigned = new CsCast(new CsType(type.IsLong ? "ulong" : "uint"), shifted);
+          return (new CsCast(new CsType(this.TypeName(type)), new CsParenthesized(new CsBinary(unsigned, ">>", this.Operand(second, Unary)))), Cast);
         case IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked:
           left = this.AtRunTime(first, !IsConstant(second), Unary);
           right = this.Operand(second, Unary);
@@ -1062,7 +1090,9 @@ public static partial class CSharpEmitter {
       }
 
       // C# may compute a float expression more precisely than float; the cast makes it binary32 (ECMA-334, "Floating-point types").
-      return binary.Type == IrType.F32 ? ($"(float)({left} {symbol} {right})", Cast) : ($"{left} {symbol} {right}", Loose);
+      return binary.Type == IrType.F32
+        ? (new CsCast(new CsType("float"), new CsParenthesized(new CsBinary(left, symbol, right))), Cast)
+        : (new CsBinary(left, symbol, right), Loose);
     }
 
     /// <summary>
@@ -1072,7 +1102,7 @@ public static partial class CSharpEmitter {
     /// no cast that saturates — an older framework, or a target narrower than <c>int</c>, whose cast
     /// saturates to <c>int</c> and then keeps the low bits — the row's helper compares first.
     /// </summary>
-    private (string Text, int Binding) Convert(IrConvert conversion) {
+    private (CsExpression Node, int Binding) Convert(IrConvert conversion) {
       var from = conversion.Operand.Type;
       var to = conversion.Type;
       if (from == to)
@@ -1083,12 +1113,12 @@ public static partial class CSharpEmitter {
 
       var foldable = !Keeps(conversion) && (from.IsFloat || conversion.Contract == IrConversion.Trap);
       var operand = foldable ? this.AtRunTime(conversion.Operand, false, Cast) : this.Operand(conversion.Operand, Cast);
-      return ($"({TypeName(to)}){operand}", Cast);
+      return (new CsCast(new CsType(this.TypeName(to)), operand), Cast);
     }
 
-    private (string Text, int Binding) Intrinsic(IrIntrinsic intrinsic) {
+    private (CsExpression Node, int Binding) Intrinsic(IrIntrinsic intrinsic) {
       if (intrinsic.Op == IrIntrinsicOp.ArrayOf)
-        return ($"new {TypeName(intrinsic.Type)} {Braces(intrinsic.Arguments.Select(this.Stored).ToList())}", Unary);
+        return (new CsArrayCreation(new CsType(this.TypeName(intrinsic.Type.Element!)), null, new CsArrayInitializer([.. intrinsic.Arguments.Select(this.Stored)])), Unary);
 
       return this.Rewritten(intrinsic) is { } rewritten ? this.Expression(rewritten) : this.Call(Row(intrinsic, this._table)!, intrinsic.Arguments);
     }
@@ -1097,21 +1127,27 @@ public static partial class CSharpEmitter {
     /// A row of the capability table as a call: the framework's own method where the profile has it,
     /// otherwise the replacement — a method of the older base library or the helper of the row.
     /// </summary>
-    private (string Text, int Binding) Call(CSharpCapability row, IReadOnlyList<IrExpr> arguments) {
+    private (CsExpression Node, int Binding) Call(CSharpCapability row, IReadOnlyList<IrExpr> arguments) {
       var form = this.Form(row, arguments);
-      if (form.Template is { } template) {
+      if (form.Template is not null) {
         // The arguments are written in their order, which is the order of the IR; {h} is the helper of the row.
         var written = arguments.Select(argument => this.Operand(argument, Primary)).ToList();
         // A template may be a cast, so it binds like one.
-        return (_placeholder.Replace(template, match => match.Value == "{h}" ? this.Helper(row.Helper!) : written[match.Value[1] - '0']), Cast);
+        return (form.Build(written, () => this.Helper(row.Helper!)), Cast);
       }
 
-      var all = arguments.Select(this.Text);
-      var call = $"{form.Method ?? this.Helper(row.Helper!)}({string.Join(", ", form.Further is null ? all : all.Append(form.Further))})";
-      return form.Cast is null ? (call, Primary) : ($"({form.Cast}){call}", Cast);
+      var call = form.Build([.. arguments.Select(this.Text)], () => this.Helper(row.Helper!));
+      return (call, form.Cast is null ? Primary : Cast);
     }
 
   }
+
+  /// <summary>
+  /// The declaration of a helper as its source has it, read into the syntax tree once and shared by
+  /// every class that calls it; the class gives it its name.
+  /// </summary>
+  private static CsMethod HelperDeclaration(CSharpHelper helper) => (CsMethod)CSharpFragments.Member(string.Join('\n', helper.Lines(helper.Name)));
+
 
   /// <summary>A block of the method being written, as a declaration space of C#.</summary>
   private sealed class Scope {

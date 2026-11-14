@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Polypiler.Core.Backends.JavaScript.Syntax;
 
 namespace Polypiler.Core.Backends.JavaScript;
 
@@ -47,32 +48,39 @@ internal static partial class JavaScriptHelpers {
   /// <summary>What a helper leaves open for the level to decide.</summary>
   private static readonly Regex _placeholder = new(@"@let|@const|@imul\(|@clz32\(|@fround\(|@trunc\(", RegexOptions.CultureInvariant);
 
-  /// <summary>A name as the helpers have them: whether it is one of them is asked of <see cref="_names"/>.</summary>
-  private static readonly Regex _helperName = new(@"\$[a-z0-9]+", RegexOptions.CultureInvariant);
+  /// <summary>Every helper as read into the syntax tree, by its text for a profile: read once, shared by every module.</summary>
+  private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, IReadOnlyList<JsStatement>> _read = new(StringComparer.Ordinal);
 
   /// <summary>
   /// The helpers a module carries: the ones its code uses and the ones those call, each written for
-  /// the profile.
+  /// the profile and read into the syntax tree.
   /// </summary>
   /// <param name="used">The names of the helpers the code of the module calls.</param>
   /// <param name="native">Whether the profile has a capability; asking for one it lacks and cannot replace reports it.</param>
-  /// <returns>The helpers in their order, each with the lines of its text.</returns>
-  public static IReadOnlyList<(string Name, string[] Lines)> For(IEnumerable<string> used, Func<string, bool> native) {
-    var written = new Dictionary<string, string[]>();
+  /// <returns>The helpers in their order, each with its statements.</returns>
+  public static IReadOnlyList<(string Name, IReadOnlyList<JsStatement> Statements)> For(IEnumerable<string> used, Func<string, bool> native) {
+    var written = new Dictionary<string, IReadOnlyList<JsStatement>>();
     var pending = new Queue<string>(used);
     while (pending.Count > 0) {
       var name = pending.Dequeue();
       if (written.ContainsKey(name))
         continue;
 
-      var lines = Source(name, native).ReplaceLineEndings("\n").Split('\n').Select(line => Resolve(line, native)).ToArray();
-      written.Add(name, lines);
-      foreach (var called in lines.SelectMany(line => _helperName.Matches(line)).Select(match => match.Value).Where(_names.Contains))
+      var text = string.Join('\n', Source(name, native).ReplaceLineEndings("\n").Split('\n').Select(line => Resolve(line, native)));
+      var statements = _read.GetOrAdd(text, JavaScriptSyntaxReader.Statements);
+      written.Add(name, statements);
+      foreach (var called in statements.SelectMany(JavaScriptSyntaxRewriter.DescendantsAndSelf).OfType<JsIdentifier>().Select(identifier => identifier.Name).Where(_names.Contains))
         pending.Enqueue(called);
     }
 
     return [.. Order.Where(written.ContainsKey).Select(name => (name, written[name]))];
   }
+
+  /// <summary>The text of every helper as a profile has it, in the order a module lists them.</summary>
+  /// <param name="native">Whether the profile has a capability.</param>
+  /// <returns>Each helper's name and text.</returns>
+  public static IEnumerable<(string Name, string Text)> Sources(Func<string, bool> native)
+    => Order.Select(name => (name, string.Join('\n', Source(name, native).ReplaceLineEndings("\n").Split('\n').Select(line => Resolve(line, native)))));
 
   /// <summary>A line with everything a level decides written the way the profile has it.</summary>
   private static string Resolve(string line, Func<string, bool> native) {

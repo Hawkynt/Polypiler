@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using Polypiler.Core.Backends.JavaScript.Syntax;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Backends.JavaScript;
@@ -16,32 +18,32 @@ public static partial class JavaScriptEmitter {
     /// 16-bit digits, as the product is beyond 2^53; of 64 bits it is the <c>BigInt</c> product
     /// shifted down, or the upper digits of the product of two pairs.
     /// </summary>
-    private static IEnumerable<(IrIntrinsicOp, Func<Writer, IrIntrinsic, (string, bool)>)> WideMultiplyForms => [
+    private static IEnumerable<(IrIntrinsicOp, Func<Writer, IrIntrinsic, (JsExpression, bool)>)> WideMultiplyForms => [
       (IrIntrinsicOp.BigMul, (writer, intrinsic) => writer.BigMul(intrinsic)),
       (IrIntrinsicOp.MulHigh, (writer, intrinsic) => writer.MulHigh(intrinsic))
     ];
 
-    private (string, bool) BigMul(IrIntrinsic intrinsic) {
+    private (JsExpression, bool) BigMul(IrIntrinsic intrinsic) {
       var signed = intrinsic.Arguments[0].Type.IsSigned;
       if (this.Halves)
-        return (this.Helper("$mul64", intrinsic.Arguments.Select(argument => signed ? this.Helper("$sx64", [this.Text(argument)]) : $"{{ hi: 0, lo: {this.Text(argument)} }}")), true);
+        return (this.Helper("$mul64", intrinsic.Arguments.Select(argument => signed ? this.Helper("$sx64", [this.Text(argument)]) : (JsExpression)Halves(Number("0"), this.Text(argument)))), true);
 
-      return ($"BigInt({this.Text(intrinsic.Arguments[0])}) * BigInt({this.Text(intrinsic.Arguments[1])})", false);
+      return (Infix(Invoke("BigInt", this.Text(intrinsic.Arguments[0])), "*", Invoke("BigInt", this.Text(intrinsic.Arguments[1]))), false);
     }
 
-    private (string, bool) MulHigh(IrIntrinsic intrinsic) {
+    private (JsExpression, bool) MulHigh(IrIntrinsic intrinsic) {
       var (left, right) = (intrinsic.Arguments[0], intrinsic.Arguments[1]);
       var type = left.Type;
       if (this.AsHalves(type))
         return this.Call("$mulhi64", intrinsic, Signed(type));
 
       if (type.IsLong)
-        return Cut64(type, $"{this.Operand(left)} * {this.Operand(right)} >> 64n");
+        return Cut64(type, Infix(Infix(this.Operand(left), "*", this.Operand(right)), ">>", new JsBigInt(64)));
 
       if (type.Bits == 32)
         return (this.Helper(type.IsSigned ? "$smulhi" : "$mulhi", [this.Text(left), this.Text(right)]), true);
 
-      return Cut(type, $"Math.floor({this.Operand(left)} * {this.Operand(right)} / {1 << type.Bits})");
+      return Cut(type, Invoke("Math.floor", Infix(Infix(this.Operand(left), "*", this.Operand(right)), "/", Number((1 << type.Bits).ToString(CultureInfo.InvariantCulture)))));
     }
 
   }

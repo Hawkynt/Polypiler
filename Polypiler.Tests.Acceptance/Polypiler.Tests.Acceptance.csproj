@@ -39,6 +39,7 @@
   <ItemGroup>
     <Compile Include="..\tests\fixtures\prototype\**\*.cs" LinkBase="Prototype\Fixtures" />
     <Compile Include="..\Polypiler.Tests\Prototype\Support\*.cs" LinkBase="Prototype\Support" />
+    <Compile Include="..\Polypiler.Tests\Backends\Support\*.cs" LinkBase="Backends\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\JavaScript\Support\*.cs" LinkBase="Frontends\JavaScript\Support" />
     <Compile Include="..\Polypiler.Tests\Float\Support\FloatVectors.cs" LinkBase="Float\Support" />
     <Compile Include="..\Polypiler.Tests\Recognize\Support\*.cs" LinkBase="Recognize\Support" />

@@ -23,7 +23,7 @@ Feature: C# output for a concrete target framework
     Given the C# method "public static uint F(uint x, int n) => System.Numerics.BitOperations.RotateLeft(x, n);"
     When it is translated with "--profile netcoreapp3.1"
     Then the output calls "BitOperations.RotateLeft"
-    When it is translated with "--profile net4.6"
+    When it is translated with "--profile net4.6 --disable-opt O0500"
     Then the output contains no "BitOperations" and declares a private rotate helper
     And both return 878082066 for F(0x12345678, 8)
 
