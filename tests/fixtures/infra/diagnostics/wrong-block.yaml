@@ -1,0 +1,31 @@
+# PLY0150 is registered for area 'cli' but lies in the block of 'ir'; PLY0100, the first code of
+# that block, is just outside the block of 'cli'.
+schema: 1
+blocks:
+  - { first: PLY0001, last: PLY0099, area: cli }
+  - { first: PLY0100, last: PLY0199, area: ir }
+codes:
+  - code: PLY0099
+    severity: error
+    exit: UsageError
+    title: the last code of the block of 'cli'
+    message: "<reason>"
+    area: cli
+    owner: CLI-FOUNDATION
+    reserved: true
+  - code: PLY0100
+    severity: error
+    exit: UsageError
+    title: just outside the block of 'cli'
+    message: "<reason>"
+    area: cli
+    owner: CLI-FOUNDATION
+    reserved: true
+  - code: PLY0150
+    severity: error
+    exit: UsageError
+    title: inside the block of 'ir'
+    message: "<reason>"
+    area: cli
+    owner: CLI-FOUNDATION
+    reserved: true

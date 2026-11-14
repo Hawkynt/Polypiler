@@ -1,51 +1,787 @@
-# Diagnostics registry: one entry per code, with the exact message template and where it surfaces.
-diagnostics:
+# The diagnostics registry (ADR 0003, docs/adr/0003-diagnostics-and-exit-codes.md): every PLY code
+# that exists, once, in ascending order. `polypiler-tooling diagnostics validate` checks the file;
+# the registry test compares it with every [Diagnostic] descriptor the assemblies declare.
+#
+# blocks: the ranges each area allocates from (backlog/README.md); a code belongs to the innermost
+#   block that contains it, and its `area` must name that block's area.
+# codes:
+#   code      PLY and four digits
+#   severity  info | warning | error
+#   exit      the ExitCode member an error stands for; errors only
+#   title     a few words naming the diagnostic
+#   message   the message, <placeholders> for what the emitter fills in
+#   rule      the ID of the rule or specification the diagnostic enforces; the descriptor carries the same
+#   area      the area of the block the code lies in
+#   owner     the backlog ID of the issue that registered the code
+#   surfaces  where the diagnostic is seen (optional)
+#   strict    true when --strict turns the warning into an error (optional, warnings only)
+#   reserved  true while the owning issue has not been implemented: nothing may declare the code yet
+#   retired   true for a code that is no longer emitted; it is never given to anything else
+schema: 1
+
+blocks:
+  - { first: PLY0001, last: PLY0099, area: infrastructure }
+  - { first: PLY0100, last: PLY0199, area: ir }
+  - { first: PLY0200, last: PLY0299, area: types }
+  - { first: PLY0300, last: PLY0399, area: optimization }
+  - { first: PLY0400, last: PLY0499, area: recognition }
+  - { first: PLY0500, last: PLY0599, area: legalization }
+  - { first: PLY0600, last: PLY0699, area: interop }
+  - { first: PLY0700, last: PLY0799, area: objects }
+  - { first: PLY0800, last: PLY0899, area: permutation }
+  - { first: PLY0900, last: PLY0999, area: catalog }
+  - { first: PLY1000, last: PLY2999, area: languages }
+  - { first: PLY1000, last: PLY1099, area: csharp }
+  - { first: PLY1100, last: PLY1199, area: javascript }
+  - { first: PLY1200, last: PLY1299, area: powerbasic }
+  - { first: PLY1300, last: PLY1399, area: c }
+  - { first: PLY1400, last: PLY1499, area: cpp }
+  - { first: PLY1500, last: PLY1599, area: rust }
+  - { first: PLY1600, last: PLY1699, area: kotlin }
+  - { first: PLY1700, last: PLY1799, area: perl }
+  - { first: PLY1800, last: PLY1899, area: python }
+  - { first: PLY1900, last: PLY1999, area: typescript }
+  - { first: PLY2000, last: PLY2099, area: java }
+  - { first: PLY2100, last: PLY2199, area: go }
+  - { first: PLY2200, last: PLY2299, area: delphi }
+  - { first: PLY2300, last: PLY2399, area: freebasic }
+  - { first: PLY2400, last: PLY2499, area: php }
+  - { first: PLY2500, last: PLY2599, area: ruby }
+  - { first: PLY2600, last: PLY2699, area: visualbasic }
+  - { first: PLY2700, last: PLY2799, area: vintagebasic }
+  - { first: PLY3000, last: PLY3999, area: formats }
+  - { first: PLY3000, last: PLY3099, area: msil }
+  - { first: PLY3100, last: PLY3199, area: jvm }
+  - { first: PLY3200, last: PLY3299, area: wasm }
+  - { first: PLY3300, last: PLY3399, area: llvm }
+  - { first: PLY3400, last: PLY3499, area: mos65xx }
+  - { first: PLY3500, last: PLY3599, area: z80-8080-68000 }
+  - { first: PLY3600, last: PLY3699, area: x86-16 }
+  - { first: PLY3700, last: PLY3799, area: x86 }
+  - { first: PLY3800, last: PLY3899, area: arm }
+  - { first: PLY3900, last: PLY3999, area: tokenized-basic }
+  - { first: PLY4000, last: PLY4099, area: machine }
+
+codes:
+  - code: PLY0001
+    severity: error
+    exit: InternalError
+    title: internal compiler error
+    message: "internal compiler error: <exception>"
+    rule: adr-0003.internal-error
+    area: infrastructure
+    owner: ADR-DIAGNOSTICS
+    surfaces: "any command, for an exception nothing anticipated; its presence makes the exit code 70 whatever else was reported"
+  - code: PLY0002
+    severity: error
+    exit: UsageError
+    title: unknown command
+    message: "unknown command '<word>'; run 'polypiler --help'"
+    rule: adr-0004.grammar
+    area: infrastructure
+    owner: CLI-FOUNDATION
+    reserved: true
   - code: PLY0003
     severity: error
+    exit: UsageError
     title: command line not understood
     message: "<reason>"
-    exit-code: 2
-    surfaces: "standard error of polypiler-tooling toolchains as '<command>: error PLY0003: <reason>', for an unknown subcommand or option, an option without its value or given twice, an empty --only element, or an unknown --format"
-    source: Polypiler.Tooling/Commands/ToolchainsCommand.cs
+    rule: adr-0004.grammar
+    area: infrastructure
+    owner: INFRA-TOOLCHAINS
+    surfaces: "standard error of polypiler translate, followed by the usage line, for an unknown option or language, an option without its value, a missing operand or option, a value outside its set, a source file that cannot be read or an output directory that cannot be written; standard error of polypiler-tooling toolchains and diagnostics as '<command>: error PLY0003: <reason>'"
   - code: PLY0004
     severity: error
+    exit: EnvironmentError
     title: file cannot be read
     message: "cannot read the toolchain lock: <reason>"
-    exit-code: 1
+    rule: io.read
+    area: infrastructure
+    owner: INFRA-TOOLCHAINS
     surfaces: standard error of polypiler-tooling toolchains validate and probe
-    source: Polypiler.Tooling/Toolchains/ToolchainLock.cs
+  - code: PLY0005
+    severity: error
+    exit: EnvironmentError
+    title: output not writable
+    message: "the output directory '<path>' cannot be written: <reason>"
+    area: infrastructure
+    owner: CLI-FOUNDATION
+    reserved: true
+  - code: PLY0006
+    severity: error
+    exit: UsageError
+    title: unknown identifier
+    message: "unknown <kind> '<identifier>'"
+    area: infrastructure
+    owner: CLI-TRANSLATE
+    reserved: true
+  - code: PLY0007
+    severity: error
+    exit: UsageError
+    title: assumption not understood
+    message: "'<assumption>' is not an assumption: <reason>"
+    area: infrastructure
+    owner: CLI-OPTIONS
+    reserved: true
+  - code: PLY0008
+    severity: error
+    exit: UsageError
+    title: unknown optimization ID
+    message: "'<id>' is not an optimization ID (expected O followed by four digits)"
+    area: infrastructure
+    owner: CLI-OPTIONS
+    reserved: true
+  - code: PLY0009
+    severity: warning
+    title: assumption trusted
+    message: "assumption '<assumption>' is trusted, not proven"
+    area: infrastructure
+    owner: CLI-OPTIONS
+    strict: true
+    reserved: true
+  - code: PLY0010
+    severity: error
+    exit: UnsupportedConstruct
+    title: refused under --strict
+    message: "<code>: <message> (refused by --strict)"
+    area: infrastructure
+    owner: CLI-OPTIONS
+    reserved: true
+  - code: PLY0011
+    severity: error
+    exit: UsageError
+    title: exclusive options
+    message: "the options '<first>' and '<second>' exclude each other"
+    rule: adr-0004.grammar
+    area: infrastructure
+    owner: CLI-FOUNDATION
+    reserved: true
+  - code: PLY0012
+    severity: error
+    exit: UsageError
+    title: unknown optimization level
+    message: "'<level>' is not an optimization level; expected one of: <levels>"
+    area: infrastructure
+    owner: CLI-OPTIONS
+    reserved: true
+  - code: PLY0013
+    severity: error
+    exit: InvalidSource
+    title: export not found
+    message: "export '<name>' not found in '<file>'"
+    area: infrastructure
+    owner: CLI-TRANSLATE
+    reserved: true
+  - code: PLY0014
+    severity: error
+    exit: UnsupportedConstruct
+    title: no frontend or backend
+    message: "no <frontend|backend> for '<language>'"
+    area: infrastructure
+    owner: CLI-TRANSLATE
+    reserved: true
+  - code: PLY0015
+    severity: error
+    exit: UsageError
+    title: unknown facet
+    message: "unknown facet '<facet>'"
+    area: infrastructure
+    owner: CLI-INSPECT
+    reserved: true
+  - code: PLY0016
+    severity: error
+    exit: EnvironmentError
+    title: no manifest
+    message: "no manifest in '<path>'"
+    area: infrastructure
+    owner: CLI-VERIFY
+    reserved: true
+  - code: PLY0017
+    severity: error
+    exit: UsageError
+    title: vectors not understood
+    message: "'<path>' holds no test vectors: <reason>"
+    area: infrastructure
+    owner: CLI-VERIFY
+    reserved: true
+  - code: PLY0018
+    severity: error
+    exit: EnvironmentError
+    title: catalogue index unreadable
+    message: "catalogue index '<path>' not found"
+    area: infrastructure
+    owner: CLI-SEARCH
+    reserved: true
+  - code: PLY0019
+    severity: error
+    exit: UsageError
+    title: unknown algorithm
+    message: "unknown algorithm '<id>'"
+    area: infrastructure
+    owner: CLI-GENERATE
+    reserved: true
   - code: PLY0020
     severity: error
+    exit: EnvironmentError
     title: toolchain lock invalid
     message: "<reason>"
-    exit-code: 1
+    rule: toolchains.lock
+    area: infrastructure
+    owner: INFRA-TOOLCHAINS
     surfaces: "standard error of polypiler-tooling toolchains validate and probe as '<file>(<line>,<column>): error PLY0020: <reason>'; reasons include a missing or unknown property, an unsupported schema, keys out of ordinal order, a versionPattern without the group 'version', a missing core toolchain and an unknown key"
-    source: Polypiler.Tooling/Toolchains/ToolchainLock.cs
   - code: PLY0021
     severity: error
+    exit: EnvironmentError
     title: toolchain not installed
     message: "toolchain '<key>' is not installed (probe: <command>)[: <cause>]"
-    exit-code: 1
+    rule: toolchains.installed
+    area: infrastructure
+    owner: INFRA-TOOLCHAINS
     surfaces: standard error of polypiler-tooling toolchains probe; the failure, or the inconclusive outcome outside CI, of a test marked RequiresToolchain
-    source: Polypiler.Tooling/Toolchains/ToolchainProbe.cs
   - code: PLY0022
     severity: error
+    exit: EnvironmentError
     title: toolchain version mismatch
     message: "toolchain '<key>' is <actual>, the lock pins <expected>[: <cause>]"
-    exit-code: 1
+    rule: toolchains.version
+    area: infrastructure
+    owner: INFRA-TOOLCHAINS
     surfaces: standard error of polypiler-tooling toolchains probe; the failure, or the inconclusive outcome outside CI, of a test marked RequiresToolchain
-    source: Polypiler.Tooling/Toolchains/ToolchainProbe.cs
+  - code: PLY0023
+    severity: error
+    exit: EnvironmentError
+    title: corpus hash mismatch
+    message: "corpus file '<path>' does not match its pinned hash"
+    area: infrastructure
+    owner: INFRA-CORPUS
+    reserved: true
+  - code: PLY0024
+    severity: error
+    exit: LicenseBlocker
+    title: licence not approved
+    message: "the licence '<licence>' of '<component>' is not approved"
+    area: infrastructure
+    owner: INFRA-LICENSES
+    reserved: true
+  - code: PLY0025
+    severity: error
+    exit: EnvironmentError
+    title: corpus path invalid
+    message: "corpus path '<path>' <reason>"
+    area: infrastructure
+    owner: INFRA-CORPUS
+    reserved: true
+  - code: PLY0026
+    severity: error
+    exit: EnvironmentError
+    title: corpus manifest invalid
+    message: "<reason>"
+    area: infrastructure
+    owner: INFRA-CORPUS
+    reserved: true
+  - code: PLY0027
+    severity: error
+    exit: EnvironmentError
+    title: vector modified
+    message: "vector file '<path>' was modified"
+    area: infrastructure
+    owner: INFRA-INTEGRITY
+    reserved: true
+  - code: PLY0028
+    severity: error
+    exit: EnvironmentError
+    title: provenance missing
+    message: "'<path>': <reason>"
+    area: infrastructure
+    owner: INFRA-INTEGRITY
+    reserved: true
+  - code: PLY0029
+    severity: error
+    exit: LicenseBlocker
+    title: licence undetectable
+    message: "the licence of '<component>' cannot be determined: <reason>"
+    area: infrastructure
+    owner: INFRA-LICENSES
+    reserved: true
+  - code: PLY0030
+    severity: error
+    exit: TargetBuildFailure
+    title: target build failed
+    message: "building '<target>' failed: <reason>"
+    area: infrastructure
+    owner: INFRA-RUNNER
+    reserved: true
+  - code: PLY0031
+    severity: error
+    exit: BudgetExceeded
+    title: time limit exceeded
+    message: "'<command>' exceeded its time limit of <limit>"
+    area: infrastructure
+    owner: INFRA-RUNNER
+    reserved: true
+  - code: PLY0032
+    severity: error
+    exit: BudgetExceeded
+    title: memory limit exceeded
+    message: "'<command>' exceeded its memory limit of <limit>"
+    area: infrastructure
+    owner: INFRA-RUNNER
+    reserved: true
+  - code: PLY0033
+    severity: error
+    exit: BudgetExceeded
+    title: output limit exceeded
+    message: "'<command>' exceeded its output limit of <limit>"
+    area: infrastructure
+    owner: INFRA-RUNNER
+    reserved: true
+  - code: PLY0034
+    severity: error
+    exit: EnvironmentError
+    title: isolation unavailable
+    message: "isolation is not available: <reason>"
+    area: infrastructure
+    owner: INFRA-RUNNER
+    reserved: true
+  - code: PLY0036
+    severity: error
+    exit: EnvironmentError
+    title: rebuild differs
+    message: "rebuild not deterministic: '<path>' differs at byte <offset>"
+    area: infrastructure
+    owner: INFRA-REBUILD
+    reserved: true
+  - code: PLY0037
+    severity: error
+    exit: LicenseBlocker
+    title: SBOM component unlicensed
+    message: "SBOM component '<component>' lacks a licence"
+    area: infrastructure
+    owner: INFRA-SBOM
+    reserved: true
+  - code: PLY0038
+    severity: error
+    exit: EnvironmentError
+    title: module rule violated
+    message: "<from> must not reference <to> (rule: <rule>)"
+    rule: modules.dependency-direction
+    area: infrastructure
+    owner: INFRA-MODULES
+    surfaces: "the assertion message of the dependency-direction tests, for a reference the layers of tooling/ci/module-rules.yaml forbid, a reference cycle, a missing reference target or a project the rules do not cover"
+  - code: PLY0040
+    severity: error
+    exit: EnvironmentError
+    title: spec schema violation
+    message: "<json pointer>: <schema keyword message>"
+    area: infrastructure
+    owner: SPEC-META
+    reserved: true
+  - code: PLY0041
+    severity: error
+    exit: EnvironmentError
+    title: spec metadata rule violated
+    message: "<reason>"
+    area: infrastructure
+    owner: SPEC-META
+    reserved: true
+  - code: PLY0042
+    severity: error
+    exit: EnvironmentError
+    title: duplicate spec id
+    message: "duplicate spec id '<id>', first defined in <path>"
+    area: infrastructure
+    owner: SPEC-META
+    reserved: true
+  - code: PLY0043
+    severity: error
+    exit: EnvironmentError
+    title: spec reference broken
+    message: "unknown spec id '<id>'"
+    area: infrastructure
+    owner: SPEC-META
+    reserved: true
+  - code: PLY0044
+    severity: error
+    exit: EnvironmentError
+    title: spec lifecycle invalid
+    message: "<reason>"
+    area: infrastructure
+    owner: SPEC-META
+    reserved: true
+  - code: PLY0045
+    severity: error
+    exit: EnvironmentError
+    title: diagnostics registry invalid
+    message: "<reason>"
+    rule: adr-0003.registry
+    area: infrastructure
+    owner: ADR-DIAGNOSTICS
+    surfaces: "standard error of polypiler-tooling diagnostics validate as '<file>(<line>,<column>): error PLY0045: <reason>', one line per problem of spec/diagnostics.yaml"
+  - code: PLY0046
+    severity: error
+    exit: EnvironmentError
+    title: spec layout violated
+    message: "id '<id>' does not match file name '<file>' (rule: layout)"
+    area: infrastructure
+    owner: SPEC-META
+    reserved: true
+  - code: PLY0047
+    severity: error
+    exit: EnvironmentError
+    title: spec file unreadable
+    message: "not valid YAML: <parser message>"
+    area: infrastructure
+    owner: SPEC-META
+    reserved: true
+  - code: PLY0050
+    severity: error
+    exit: OracleFailure
+    title: oracle failed
+    message: "oracle '<oracle>' failed: <reason>"
+    area: infrastructure
+    owner: VER-ORACLE
+    reserved: true
+  - code: PLY0051
+    severity: error
+    exit: SemanticMismatch
+    title: output mismatch
+    message: "<function>(<arguments>) returned <actual>, the oracle <expected>"
+    area: infrastructure
+    owner: VER-ORACLE
+    reserved: true
+  - code: PLY0052
+    severity: error
+    exit: SemanticMismatch
+    title: outside tolerance
+    message: "<function>(<arguments>) returned <actual>, <ulps> ulp from the oracle's <expected>"
+    area: infrastructure
+    owner: VER-ORACLE
+    reserved: true
+  - code: PLY0053
+    severity: error
+    exit: EnvironmentError
+    title: manifest invalid
+    message: "'<path>' is not a valid manifest: <reason>"
+    area: infrastructure
+    owner: VER-MANIFEST
+    reserved: true
+  - code: PLY0054
+    severity: error
+    exit: EnvironmentError
+    title: manifest file missing or changed
+    message: "'<path>' listed in the manifest is <missing|changed>"
+    area: infrastructure
+    owner: VER-MANIFEST
+    reserved: true
+  - code: PLY0055
+    severity: warning
+    title: proof budget exhausted
+    message: "proof of <rule> gave up after <budget>"
+    area: infrastructure
+    owner: VER-SMT
+    reserved: true
+  - code: PLY0056
+    severity: error
+    exit: SemanticMismatch
+    title: counterexample
+    message: "proof of <rule> refuted: <name>=<hex>[, ...]: before <hex>, after <hex>"
+    area: infrastructure
+    owner: VER-SMT
+    reserved: true
+  - code: PLY0057
+    severity: error
+    exit: BudgetExceeded
+    title: domain too large
+    message: "exhaustive proof of <rule> needs <n> input bits, budget is <m>"
+    area: infrastructure
+    owner: VER-EXHAUSTIVE
+    reserved: true
+  - code: PLY0058
+    severity: error
+    exit: EnvironmentError
+    title: gate record invalid
+    message: "<reason>"
+    area: infrastructure
+    owner: VER-GATES
+    reserved: true
+  - code: PLY0059
+    severity: error
+    exit: SemanticMismatch
+    title: round trip differs
+    message: "round trip '<id>' leg <leg> (<opt>): <function>(<arguments>) expected <expected>, got <actual>"
+    area: infrastructure
+    owner: VER-ROUNDTRIP
+    reserved: true
+  - code: PLY0060
+    severity: error
+    exit: EnvironmentError
+    title: evidence invalid
+    message: "<reason>"
+    area: infrastructure
+    owner: VER-EVIDENCE
+    reserved: true
+  - code: PLY0061
+    severity: error
+    exit: EnvironmentError
+    title: capability claim invalid
+    message: "<reason>"
+    area: infrastructure
+    owner: SPEC-CAPABILITIES
+    reserved: true
+  - code: PLY0062
+    severity: error
+    exit: UnsupportedConstruct
+    title: unmodelled operation
+    message: "the proof of <rule> meets the unmodelled operation <operation>"
+    area: infrastructure
+    owner: VER-SMT
+    reserved: true
+  - code: PLY0063
+    severity: error
+    exit: OracleFailure
+    title: no oracle
+    message: "no independent oracle is registered for '<fixture>'"
+    area: infrastructure
+    owner: VER-ORACLE
+    reserved: true
+  - code: PLY0070
+    severity: error
+    exit: EnvironmentError
+    title: fuzz finding
+    message: "fuzz target '<target>': <kind> '<signature>' at iteration <i>"
+    area: infrastructure
+    owner: INFRA-FUZZ
+    reserved: true
   - code: PLY0071
     severity: error
+    exit: EnvironmentError
     title: property falsified
     message: "property '<test>' falsified after <n> inputs (seed <seed>): <shrunk> (original <original>, <k> shrink steps); replay with POLYPILER_PROPERTY_SEED=<seed>"
-    exit-code: 1
+    rule: property.falsified
+    area: infrastructure
+    owner: INFRA-PROPERTY
     surfaces: the assertion message of a property test; the failure record artifacts/properties/<test>.json
-    source: tests/shared/Properties/PropertyRunner.cs
+  - code: PLY0072
+    severity: error
+    exit: EnvironmentError
+    title: benchmark environment differs
+    message: "benchmark '<id>/<variant>': environment differs from the baseline (<field>: <baseline> -> <current>)"
+    area: infrastructure
+    owner: INFRA-BENCH
+    reserved: true
+  - code: PLY0073
+    severity: error
+    exit: EnvironmentError
+    title: performance budget exceeded
+    message: "benchmark '<id>/<variant>': <metric> <value> exceeds its budget <budget>"
+    area: infrastructure
+    owner: INFRA-BENCH
+    reserved: true
+  - code: PLY0074
+    severity: error
+    exit: EnvironmentError
+    title: feature file not bound
+    message: "<file>(<line>): step '<step>' has no binding"
+    rule: bdd.binding
+    area: infrastructure
+    owner: INFRA-BDD
+    surfaces: "the assertion message of the feature-binding tests, for a step without a binding or with several, a feature without a scenario, a file that does not parse and a feature path that does not follow tests/features/<area>/<id>.feature"
+  - code: PLY0080
+    severity: error
+    exit: UsageError
+    title: package not allowed
+    message: "<reason>"
+    area: infrastructure
+    owner: CLI-PACKAGE
+    reserved: true
+  - code: PLY0081
+    severity: error
+    exit: MissingDependency
+    title: dependency missing
+    message: "native dependency '<name>' required by '<component>' is missing"
+    area: infrastructure
+    owner: CLI-EXITCODES
+    reserved: true
+  - code: PLY0082
+    severity: error
+    exit: LicenseBlocker
+    title: package licence forbids publishing
+    message: "<reason>"
+    area: infrastructure
+    owner: CLI-PACKAGE
+    reserved: true
+  - code: PLY0083
+    severity: error
+    exit: UsageError
+    title: recovery input not understood
+    message: "<reason>"
+    area: infrastructure
+    owner: CLI-RECOVER
+    reserved: true
+  - code: PLY0084
+    severity: error
+    exit: MissingDependency
+    title: recovery dependency missing
+    message: "<reason>"
+    area: infrastructure
+    owner: CLI-RECOVER
+    reserved: true
+  - code: PLY0085
+    severity: error
+    exit: UsageError
+    title: package target invalid
+    message: "<reason>"
+    area: infrastructure
+    owner: CLI-PACKAGE
+    reserved: true
+  - code: PLY0090
+    severity: error
+    exit: EnvironmentError
+    title: dashboard input invalid
+    message: "<reason>"
+    area: infrastructure
+    owner: INFRA-DASHBOARD
+    reserved: true
+  - code: PLY0091
+    severity: error
+    exit: EnvironmentError
+    title: generated document out of date
+    message: "generated document out of date: '<path>' <differs|is missing>"
+    area: infrastructure
+    owner: INFRA-DEVDOCS
+    reserved: true
+  - code: PLY0100
+    severity: error
+    exit: InternalError
+    title: ill-typed IR
+    message: "ill-typed IR in '<member>': <reason>"
+    rule: ir.verifier
+    area: ir
+    owner: PROTOTYPE
+    surfaces: "standard error of polypiler translate, when the module a frontend produced or the passes rewrote does not verify; a defect of Polypiler, exit code 70"
   - code: PLY0101
     severity: error
+    exit: InternalError
     title: precomputed float implementations missing or damaged
     message: "<reason>"
-    exit-code: 70
+    rule: cli.precomputed-implementations
+    area: ir
+    owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
-    source: Polypiler.Cli/PrecomputedImplementations.cs
+  - code: PLY1000
+    severity: error
+    exit: InvalidSource
+    title: C# compiler error
+    message: "<CS####>: <the compiler's message>"
+    rule: csharp.compiler
+    area: csharp
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from csharp, one line per error the C# compiler reports
+  - code: PLY1002
+    severity: error
+    exit: UnsupportedConstruct
+    title: C# construct not supported
+    message: "'<construct>' is not supported yet"
+    rule: csharp.subset
+    area: csharp
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from csharp, one line per refused construct
+  - code: PLY1003
+    severity: error
+    exit: InvalidSource
+    title: C# constant expression overflows
+    message: "<CS0220|CS0221>: <the compiler's message>"
+    rule: csharp.constant-overflow
+    area: csharp
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from csharp
+  - code: PLY1052
+    severity: error
+    exit: UnsupportedConstruct
+    title: IR not writable as C#
+    message: "<reason>"
+    rule: csharp.backend.ir
+    area: csharp
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --to csharp
+  - code: PLY1053
+    severity: error
+    exit: UnsupportedConstruct
+    title: operation inexpressible in the C# profile
+    message: "'<operation>' cannot be expressed in C# profile '<profile>'"
+    rule: csharp.backend.profile
+    area: csharp
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --to csharp
+  - code: PLY1100
+    severity: error
+    exit: InvalidSource
+    title: JavaScript syntax error
+    message: "<the parser's message>"
+    rule: javascript.syntax
+    area: javascript
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from javascript
+  - code: PLY1101
+    severity: error
+    exit: UnsupportedConstruct
+    title: JavaScript type unknown
+    message: "<reason>"
+    rule: javascript.types
+    area: javascript
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from javascript, for a JSDoc type the importer does not know and an array parameter nothing gives a type
+  - code: PLY1102
+    severity: error
+    exit: UnsupportedConstruct
+    title: JavaScript construct not supported
+    message: "'<construct>' is not supported yet"
+    rule: javascript.subset
+    area: javascript
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from javascript, one line per refused function
+  - code: PLY1103
+    severity: error
+    exit: UnsupportedConstruct
+    title: BigInt not bounded
+    message: "<reason>"
+    rule: javascript.bigint-bounds
+    area: javascript
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from javascript
+  - code: PLY1104
+    severity: error
+    exit: UnsupportedConstruct
+    title: export not in the file
+    message: "the file has no function '<name>' to export"
+    rule: javascript.export
+    area: javascript
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from javascript --export
+  - code: PLY1105
+    severity: error
+    exit: UnsupportedConstruct
+    title: values of two kinds
+    message: "<reason>"
+    rule: javascript.mixed-kinds
+    area: javascript
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from javascript
+  - code: PLY1106
+    severity: error
+    exit: UnsupportedConstruct
+    title: read before assignment
+    message: "<reason>"
+    rule: javascript.definite-assignment
+    area: javascript
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from javascript
+  - code: PLY1152
+    severity: error
+    exit: UnsupportedConstruct
+    title: operation inexpressible in the JavaScript profile
+    message: "'<operation>' cannot be expressed in JavaScript profile '<profile>'"
+    rule: javascript.backend.profile
+    area: javascript
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --to javascript

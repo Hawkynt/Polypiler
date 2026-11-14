@@ -1,0 +1,48 @@
+# A valid registry: the first and the last code of a block, a nested block, every severity.
+schema: 1
+blocks:
+  - { first: PLY0001, last: PLY0099, area: cli }
+  - { first: PLY0100, last: PLY0199, area: ir }
+  - { first: PLY1000, last: PLY2999, area: languages }
+  - { first: PLY1000, last: PLY1099, area: csharp }
+codes:
+  - code: PLY0001
+    severity: error
+    exit: InternalError
+    title: internal compiler error
+    message: "internal compiler error: <exception>"
+    rule: adr-0003.internal-error
+    area: cli
+    owner: ADR-DIAGNOSTICS
+  - code: PLY0009
+    severity: warning
+    title: assumption trusted
+    message: "assumption '<assumption>' is trusted, not proven"
+    area: cli
+    owner: CLI-OPTIONS
+    strict: true
+    reserved: true
+  - code: PLY0099
+    severity: info
+    title: the last code of the block
+    message: "<text>"
+    area: cli
+    owner: ADR-DIAGNOSTICS
+    reserved: true
+  - code: PLY1002
+    severity: error
+    exit: UnsupportedConstruct
+    title: C# construct not supported
+    message: "'<construct>' is not supported yet"
+    rule: csharp.subset
+    area: csharp
+    owner: PROTOTYPE
+    surfaces: standard error of polypiler translate --from csharp
+  - code: PLY2900
+    severity: error
+    exit: InvalidSource
+    title: a language outside every sub-block
+    message: "<text>"
+    area: languages
+    owner: ADR-DIAGNOSTICS
+    retired: true

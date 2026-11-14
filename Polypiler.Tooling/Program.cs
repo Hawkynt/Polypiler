@@ -39,6 +39,7 @@ public static class Program {
       output.WriteLine($"       {Name} {FloatImplementations} <file>");
       output.WriteLine($"       {Name} {ToolchainsCommand.Verb} validate [--lock <path>]");
       output.WriteLine($"       {Name} {ToolchainsCommand.Verb} probe [--lock <path>] [--only <key>[,<key>...]] [--format text|json]");
+      output.WriteLine($"       {Name} {DiagnosticsCommand.Verb} validate [--registry <path>]");
       return Success;
     }
 
@@ -52,6 +53,9 @@ public static class Program {
 
     if (args[0] == ToolchainsCommand.Verb)
       return new ToolchainsCommand().Run(args[1..], output, error);
+
+    if (args[0] == DiagnosticsCommand.Verb)
+      return DiagnosticsCommand.Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;
