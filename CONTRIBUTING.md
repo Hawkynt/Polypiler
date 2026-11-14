@@ -227,6 +227,44 @@ The same facts go to `artifacts/properties/<test>.json` (`test`, `seed`, `index`
 other inputs, set `POLYPILER_PROPERTY_SEED` to a decimal or `0x` hexadecimal number: it replaces
 every declared seed, and the message says so.
 
+### Fuzz targets
+
+Code that reads untrusted input — a parser, a decoder, a command line — registers a **fuzz target**:
+a public class with a parameterless constructor that implements `IFuzzTarget`
+(`Polypiler.Core.Verification.Fuzzing`). It returns for every input it accepts or cleanly refuses;
+diagnostics are values, so an exception escaping `Execute` is a crash. A differential target throws
+`FuzzMismatchException` when its two sides disagree. Never catch exceptions inside a target to keep
+it quiet.
+
+```csharp
+public sealed class CliArgsFuzzTarget : IFuzzTarget {
+  public string Id => "cli-args";
+  public void Execute(ReadOnlySpan<byte> input) => Program.Run(Arguments(input), TextWriter.Null, TextWriter.Null);
+}
+```
+
+Its seed corpus is `tests/fixtures/fuzz/<id>/corpus/*.bin`, with an empty `regressions/` beside it.
+Run it with
+
+```
+dotnet run --project Polypiler.Tooling -- fuzz run --target cli-args --assembly <path of the assembly that declares it>
+```
+
+`--seed` (default 1) and `--iterations` (default 10 000) fix the run: the same seed, iterations and
+corpus give the same inputs and the same findings on every platform. The target runs in a
+supervised `fuzz worker` process; an input runs out of budget after 1 s or 64 MiB allocated and is
+then a `Hang` or an `Allocation`, and a worker that dies is a `Crash` named after its exit code. Each
+distinct finding is reported once as `PLY0070`, minimized to a 1-minimal input and recorded as
+`artifacts/fuzz/<id>/<sha256-prefix>.bin` and `.json`. `fuzz minimize --target <id> --input <file>`
+does the same for one input. The nightly engine, `--engine afl --duration <seconds>`, instruments
+the target's assembly with SharpFuzz and runs AFL++ (`aflplusplus` in `tooling/toolchains.lock`);
+without it the run stops with `PLY0021`.
+
+Once the bug is fixed, **promote the finding**: copy its `.bin` into
+`tests/fixtures/fuzz/<id>/regressions/`. `FuzzRegressionTests` (fast tier) and `fuzz replay` run
+every regression input against its target and fail on any finding. A regression file is never
+deleted to get a green run.
+
 ## Commit conventions
 
 - One concern per commit, with a descriptive body.
