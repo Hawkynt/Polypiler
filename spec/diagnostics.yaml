@@ -841,3 +841,12 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY3960
+    severity: error
+    exit: OracleFailure
+    title: PC-BASIC failed
+    message: "PC-BASIC <operation> failed: <cause>"
+    rule: gwbasic.oracle.pcbasic
+    area: tokenized-basic
+    owner: FMT-GWBASIC-ORACLE
+    surfaces: "the PcBasicException of a conversion to ASCII or to a token file, and the diagnostics of a PcBasicRun, when PC-BASIC exited non-zero, hit a runner limit (the cause names the runner's PLY0031, PLY0032 or PLY0033), wrote no conversion, or wrote an empty one for an input that is not empty"
