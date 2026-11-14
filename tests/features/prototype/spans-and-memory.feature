@@ -38,17 +38,17 @@ Feature: Views of arrays in both languages and every profile
     Then the array is "0,1,0,1,2,3,4,5,6,7" in .NET, in the interpreter, in node at es5 without typed arrays and at es2022, and in C# for net2.0 and net10.0
 
   Scenario: Sequence equality follows .NET, not ===
-    Given the C# method "bool F() => new double[] { double.NaN, 0.0 }.AsSpan().SequenceEqual(new double[] { double.NaN, -0.0 });"
+    Given the static C# method "bool F() => new double[] { double.NaN, 0.0 }.AsSpan().SequenceEqual(new double[] { double.NaN, -0.0 });"
     Then it returns true in .NET and in every profile of both backends
 
   Scenario: Reinterpretation is little-endian and needs no alignment in JavaScript
-    Given the C# method "uint F(byte[] d) => MemoryMarshal.Read<uint>(d.AsSpan(1));"
+    Given the static C# method "uint F(byte[] d) => MemoryMarshal.Read<uint>(d.AsSpan(1));"
     When it is translated to JavaScript with "--profile es2022"
     Then the output reads through a DataView with getUint32(…, true) and constructs no Uint32Array
     And F(d) returns 67305985, as in .NET
 
   Scenario: A ref into a span is refused
-    Given the C# method "int F(int[] a) { ref int r = ref MemoryMarshal.GetReference(a.AsSpan()); return r; }"
+    Given the static C# method "int F(int[] a) { ref int r = ref MemoryMarshal.GetReference(a.AsSpan()); return r; }"
     When I run the translate command
     Then the exit code is 3 and the output contains "PLY1002" and "MemoryMarshal.GetReference"
 

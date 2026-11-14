@@ -177,7 +177,7 @@ public sealed class SpansAndMemorySteps(PrototypeScenario scenario) {
     }
   }
 
-  [Given("^the C# method " + StepText.Quoted + "$")]
+  [Given("^the static C# method " + StepText.Quoted + "$")]
   public void CSharpMethod(string method) => this.Method(StepText.Unescape(method));
 
   [Then("^it returns true in .NET and in every profile of both backends$")]
