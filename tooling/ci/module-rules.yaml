@@ -36,6 +36,8 @@ projects:
 sameLayerExceptions:
   - { from: Polypiler.Core.Recovery, to: Polypiler.Core.Recognize }
   - { from: Polypiler.Core.Legalize, to: Polypiler.Core.Optimize }
+  # Build order only: the executable embeds the float implementations that polypiler-tooling precomputes.
+  - { from: Polypiler.Cli, to: Polypiler.Tooling }
 
 standalone:
   - Polypiler.Base
