@@ -297,6 +297,8 @@ Before starting work, follow the [issue-writing standard](ISSUES.md) and its
 
 Start with the [documentation index](docs/README.md), then follow the [end-to-end compilation flow](docs/architecture/PIPELINE.md), [IR and analysis contracts](docs/architecture/IR.md), [semantic recovery](docs/architecture/SEMANTIC-RECOVERY.md), [foreign interoperability](docs/architecture/INTEROP.md), and [verification gates](docs/quality/VERIFICATION.md). The [full PRD](docs/PRD.md) remains the normative implementation plan; these pages describe the proposed design, not shipped features.
 
+Every diagnostic code Polypiler reports, from `PLY0001` on, has a page in the [error catalogue](docs/errors/README.md): its severity, its exit code and what to do about it. The catalogue is generated from [`spec/diagnostics.yaml`](spec/diagnostics.yaml) by `polypiler-tooling report errors`, and CI refuses a copy that is out of date.
+
 ## 🔬 What makes it different
 
 ### Recover semantics before optimizing
