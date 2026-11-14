@@ -1,3 +1,6 @@
+Origin: Hawkynt/PB-Compiler@0d73acbea185a2597357d53f7ce9acb44758ba76:PowerBasic.Compiler.Tests/Exec/Vice.cs
+Licence: LGPL-3.0-or-later
+
 ViceRunner.cs is converted to this codebase from the VICE test driver of PB-Compiler,
 PowerBasic.Compiler.Tests/Exec/Vice.cs at commit 0d73acbea185a2597357d53f7ce9acb44758ba76
 (https://github.com/Hawkynt/PB-Compiler), copyright Hawkynt. Taken from it: the headless start of
