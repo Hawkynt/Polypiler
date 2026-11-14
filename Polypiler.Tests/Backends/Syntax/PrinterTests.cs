@@ -197,7 +197,7 @@ public sealed class PrinterTests {
       Assert.That(CSharpSyntaxReader.CompilationUnit(text, "14", out var problems) is { } parsed ? SyntaxShape.Of(parsed) : string.Join("; ", problems), Is.EqualTo(SyntaxShape.Of(unit)), text);
     }
 
-    Assert.That(CSharpSyntaxReader.CompilationUnit("namespace N;", "9", out var refused), Is.Null);
+    Assert.That(CSharpSyntaxReader.CompilationUnit("class {", "9", out var refused), Is.Null);
     Assert.That(refused, Is.Not.Empty);
   }
 
@@ -217,7 +217,8 @@ public sealed class PrinterTests {
       new JsFunctionDeclaration("f", ["a"], new JsBlock([new JsReturn(new JsIndex(new JsIdentifier("a"), new JsNumber(0)))]))
     ];
     foreach (var statement in statements) {
-      var function = new JsFunctionDeclaration("m", [], new JsBlock([statement]));
+      // A loop around the statement makes its break and continue legal.
+      var function = new JsFunctionDeclaration("m", [], new JsBlock([new JsWhile(X, new JsBlock([statement]))]));
       var text = JavaScriptPrinter.Print(function);
       var parsed = JavaScriptSyntaxReader.Statements(text).Single();
       Assert.That(SyntaxShape.Of(parsed), Is.EqualTo(SyntaxShape.Of(function)), text);
