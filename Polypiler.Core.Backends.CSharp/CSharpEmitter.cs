@@ -139,6 +139,12 @@ public static partial class CSharpEmitter {
     foreach (var constant in module.Constants)
       Known(constant.Type, unknown);
 
+    foreach (var global in module.Globals) {
+      Known(global.Type, unknown);
+      if (global.Initializer is not null)
+        Known(global.Initializer, table, unknown);
+    }
+
     foreach (var function in module.Functions) {
       Known(function.ReturnType, unknown);
       foreach (var variable in function.Parameters.Concat(function.Locals))
@@ -168,7 +174,8 @@ public static partial class CSharpEmitter {
         problems.Add(InexpressibleDescriptor.At($"'{row.Name}' cannot be expressed in C# profile '{profile.Name}'"));
     }
 
-    foreach (var expression in module.Functions.SelectMany(function => Expressions(function.Body)).Where(IsTabled))
+    var initializers = module.Globals.Select(global => global.Initializer).OfType<IrExpr>().SelectMany(Expressions);
+    foreach (var expression in module.Functions.SelectMany(function => Expressions(function.Body)).Concat(initializers).Where(IsTabled))
       Ask(expression);
 
     return problems.Distinct().ToList();
@@ -361,6 +368,7 @@ public static partial class CSharpEmitter {
     IrBlock block => ([], block.Statements),
     IrDeclare declare => (declare.Initializer is null ? [] : [declare.Initializer], []),
     IrAssign assign => ([assign.Value], []),
+    IrGlobalAssign assign => ([assign.Value], []),
     IrStore store => ([store.Array, store.Index, store.Value], []),
     IrFieldStore store => ([store.Target, store.Value], []),
     IrExprStmt expression => ([expression.Expression], []),
@@ -376,7 +384,7 @@ public static partial class CSharpEmitter {
 
   /// <summary>The operands of an expression, or <see langword="null"/> for a kind this backend does not know.</summary>
   private static IReadOnlyList<IrExpr>? Operands(IrExpr expression) => expression switch {
-    IrConst or IrLocalRef or IrConstRef => [],
+    IrConst or IrLocalRef or IrConstRef or IrGlobalRef => [],
     IrUnary unary => [unary.Operand],
     IrBinary binary => [binary.Left, binary.Right],
     IrConvert conversion => [conversion.Operand],
@@ -570,7 +578,7 @@ public static partial class CSharpEmitter {
         this._class = "@" + this._class;
 
       // A member keeps its name in every profile; a helper of that name gives way, as does a variable to both.
-      var members = module.Constants.Select(constant => constant.Name).Concat(module.Functions.Select(function => function.Name));
+      var members = module.Constants.Select(constant => constant.Name).Concat(module.Globals.Select(global => global.Name)).Concat(module.Functions.Select(function => function.Name));
       this._members = Names(members, [this.ClassName]);
       // A struct is named beside the class, where a member of the class of its name would hide it.
       this._typeNames = Names(module.Types.Select(type => type.Name), [this.ClassName, .. this._members.Values.Select(member => member.TrimStart('@'))]);
@@ -639,6 +647,9 @@ public static partial class CSharpEmitter {
       var members = new List<CsMember>();
       foreach (var constant in this._module.Constants)
         members.Add(this.Constant(constant));
+
+      foreach (var global in this._module.Globals)
+        members.Add(this.Global(global));
 
       foreach (var function in this._module.Functions)
         members.Add(this.Function(function));
@@ -758,7 +769,7 @@ public static partial class CSharpEmitter {
           var type = this.Infers(declare) ? CsType.Var : new CsType(this.TypeName(declare.Local.Type));
           statements.Add(new CsLocalDeclaration(type, this.Declare(declare.Local), initializer));
           break;
-        case IrAssign or IrStore or IrFieldStore or IrExprStmt:
+        case IrAssign or IrGlobalAssign or IrStore or IrFieldStore or IrExprStmt:
           statements.Add(new CsExpressionStatement(this.Effect(statement)));
           break;
         case IrIf conditional:
@@ -824,6 +835,9 @@ public static partial class CSharpEmitter {
         case IrAssign assign:
           var variable = this.Variable(assign.Local);
           return new CsAssignment(variable, "=", this.Stored(assign.Value));
+        case IrGlobalAssign assign:
+          var global = this.GlobalName(assign.Global);
+          return new CsAssignment(global, "=", this.Stored(assign.Value));
         case IrStore store:
           var element = this.Element(store.Array, store.Index);
           return new CsAssignment(element, "=", this.Stored(store.Value));
@@ -851,7 +865,7 @@ public static partial class CSharpEmitter {
     /// </summary>
     private CsStatement For(IrFor loop) {
       var condition = this.Text(loop.Condition);
-      if (loop.Step.Statements is [IrAssign or IrStore or IrFieldStore or IrExprStmt]) {
+      if (loop.Step.Statements is [IrAssign or IrGlobalAssign or IrStore or IrFieldStore or IrExprStmt]) {
         var step = this.Effect(loop.Step.Statements[0]);
         return new CsFor(null, condition, [step], new CsBlock(this.Body(loop.Body, null)));
       }
@@ -1014,6 +1028,8 @@ public static partial class CSharpEmitter {
           return (new CsName(this._members[reference.Constant.Name]), Primary);
         case IrLocalRef reference:
           return (this.Variable(reference.Local), Primary);
+        case IrGlobalRef reference:
+          return (this.GlobalName(reference.Global), Primary);
         case IrUnary unary:
           var operand = Promoted(unary.Operand);
           return (new CsPrefixUnary(_unary[unary.Op], unary.Op == IrUnaryOp.NegateChecked ? this.AtRunTime(operand, false, Cast) : this.Operand(operand, Cast)), Unary);
@@ -1033,7 +1049,11 @@ public static partial class CSharpEmitter {
           var count = this.AtRunTime(Promoted(creation.Length), creation.Length is IrConst { Value: >= 0 }, Loose);
           return (new CsArrayCreation(new CsType(this.TypeName(creation.Type.Element!)), count, null), Unary);
         case IrStep step:
-          CsExpression target = step.Target is IrArrayLoad element ? this.Element(element.Array, element.Index) : this.Variable(((IrLocalRef)step.Target).Local);
+          CsExpression target = step.Target switch {
+            IrArrayLoad element => this.Element(element.Array, element.Index),
+            IrGlobalRef reference => this.GlobalName(reference.Global),
+            _ => this.Variable(((IrLocalRef)step.Target).Local)
+          };
           var sign = step.Increment ? "++" : "--";
           return step.Postfix ? (new CsPostfixUnary(target, sign), Primary) : (new CsPrefixUnary(sign, target), Unary);
         case IrIntrinsic intrinsic:
