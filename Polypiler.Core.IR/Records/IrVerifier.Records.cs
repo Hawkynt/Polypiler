@@ -52,7 +52,8 @@ public static partial class IrVerifier {
 
   /// <summary>
   /// The fields of a declaration, each named once and of a type a field can have: a truth value, a
-  /// number, a struct, an array of numbers, and in a class also a reference to an object.
+  /// number, a struct, an array of numbers, and in a class also a reference to an object, and in a class
+  /// that is no record a memory, which a record could not compare as both languages do.
   /// </summary>
   private static void Fields(IrTypeDeclaration type, bool references, System.Action<bool, string> require) {
     var fields = new HashSet<string>();
@@ -60,7 +61,8 @@ public static partial class IrVerifier {
       require(fields.Add(field.Name), $"the field '{field.Name}' is declared twice");
       var element = field.Type.Element;
       require(!field.Type.IsView && !OnHeap(field.Type), Stored);
-      require(field.Type.IsStruct || (references && field.Type.IsObject) || field.Type == IrType.Bool || field.Type.IsNumeric || element is { IsNumeric: true },
+      require(field.Type.IsStruct || (references && field.Type.IsObject) || field.Type == IrType.Bool || field.Type.IsNumeric || (element is { IsNumeric: true } && !field.Type.IsMemory)
+        || (references && field.Type.IsMemory && type is IrClassType { IsRecord: false }),
         $"the field '{field.Name}' has the type {field.Type}");
     }
   }

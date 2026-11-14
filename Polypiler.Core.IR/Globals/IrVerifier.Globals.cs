@@ -32,7 +32,7 @@ public static partial class IrVerifier {
 
       Require(names.Add(global.Name), "the module declares the name twice");
       var element = global.Type.Element ?? global.Type;
-      Require(global.Type.IsStorable && !element.IsStruct && !element.IsObject && !global.Type.IsView, $"a global of the type {global.Type}");
+      Require(global.Type.IsStorable && !element.IsStruct && !element.IsObject && !global.Type.IsView && !global.Type.IsMemory, $"a global of the type {global.Type}");
       if (global.Initializer is not { } initializer) {
         Require(!global.Type.IsArray && !global.Type.IsString, $"{(global.Type.IsArray ? "an array" : "a string")} global without an initializer");
       } else {

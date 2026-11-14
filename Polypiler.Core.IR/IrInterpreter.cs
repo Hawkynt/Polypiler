@@ -143,7 +143,7 @@ public static partial class IrInterpreter {
 
   /// <summary>A value of a type taken across the boundary, or <see langword="null"/> when it is none.</summary>
   private static object? Accepted(IrType type, object? value) {
-    if (type.IsView)
+    if (type.IsView || type.IsMemory)
       return AcceptedView(type, value);
 
     if (type.IsObject)

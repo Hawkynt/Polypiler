@@ -61,7 +61,17 @@ public enum IrTypeKind {
   /// A reference to an object of a class, an <see cref="IrClassType"/>, or <c>null</c>: the object has an
   /// identity, and every copy of the reference names the same object.
   /// </summary>
-  Object
+  Object,
+
+  /// <summary>
+  /// A writable view of a run of elements of numbers, like <see cref="Span"/>, that may be stored: in a field
+  /// of a class, as well as in a local, a parameter or a result. Its elements are reached through the
+  /// <see cref="Span"/> it gives (#1325).
+  /// </summary>
+  Memory,
+
+  /// <summary>A view like <see cref="Memory"/> whose elements are only read.</summary>
+  ReadOnlyMemory
 
 }
 
@@ -142,6 +152,19 @@ public sealed record IrType {
   /// <returns>The view type.</returns>
   public static IrType ReadOnlySpan(IrType element) => new(IrTypeKind.ReadOnlySpan, element);
 
+  /// <summary>The type of a writable view of elements of a number type that may be stored in a field.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <returns>The memory type.</returns>
+  public static IrType Memory(IrType element) => new(IrTypeKind.Memory, element);
+
+  /// <summary>The type of a read-only view of elements of a number type that may be stored in a field.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <returns>The memory type.</returns>
+  public static IrType ReadOnlyMemory(IrType element) => new(IrTypeKind.ReadOnlyMemory, element);
+
+  /// <summary>Whether the type is a memory, a view that may be stored, writable or read-only.</summary>
+  public bool IsMemory => this.Kind is IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory;
+
   /// <summary>Whether the type is a view of elements, writable or read-only.</summary>
   public bool IsView => this.Kind is IrTypeKind.Span or IrTypeKind.ReadOnlySpan;
 
@@ -221,9 +244,9 @@ public sealed record IrType {
 
   /// <summary>
   /// Whether the type can be the type of a local: not void, an array only of numbers, of structs or of
-  /// strings, and a view only of numbers.
+  /// strings, and a view or a memory only of numbers.
   /// </summary>
-  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && (this.Element.IsStruct || this.Element.IsString)));
+  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && !this.IsMemory && (this.Element.IsStruct || this.Element.IsString)));
 
   /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c> or the name of a struct.</summary>
   public override string ToString()
@@ -232,6 +255,8 @@ public sealed record IrType {
       : this.Element is null ? this.Kind.ToString().ToLowerInvariant()
       : this.Kind == IrTypeKind.Span ? $"span<{this.Element}>"
       : this.Kind == IrTypeKind.ReadOnlySpan ? $"readonly span<{this.Element}>"
+      : this.Kind == IrTypeKind.Memory ? $"memory<{this.Element}>"
+      : this.Kind == IrTypeKind.ReadOnlyMemory ? $"readonly memory<{this.Element}>"
       : $"{this.Element}[]";
 
 }

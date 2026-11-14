@@ -33,9 +33,10 @@ public static partial class IrInterpreter {
   /// <summary>A value that is reached through: an object or an array, never <c>null</c>, which traps.</summary>
   private static object NotNull(object value) => value is NullReference ? throw new IrTrapException(IrTrap.NullReference) : value;
 
-  /// <summary>The value a field of a new object holds before its constructor runs.</summary>
+  /// <summary>The value a field of a new object holds before its constructor runs; a memory is empty, as <c>default(Memory&lt;T&gt;)</c> is.</summary>
   private static object FieldDefault(IrType type)
     => type.StructType is { } nested ? Default(nested)
+      : type.IsMemory ? EmptyView(type.Element!)
       : type.IsObject || type.IsArray || type.IsString ? NullReference.Value
       : Constant(type, 0);
 
