@@ -167,11 +167,13 @@ internal static class Toolchain {
   }
 
   /// <summary>
-  /// The runtime settings of the executable under test. A translation is a process of a few seconds,
-  /// most of them in methods the JIT compiles at the first tier; instrumenting those for profile-guided
-  /// optimization costs a quarter of the time (3.5 s against 2.6 s for a strict float translation) and
-  /// pays off only in a process that runs long enough to use the profile. It changes how fast the
-  /// executable runs, not what it does.
+  /// The runtime settings of the executable under test. A translation is a process of under a second,
+  /// most of it in methods the JIT compiles at the first tier (the tests start the build output, which
+  /// is not ReadyToRun); instrumenting those for profile-guided optimization pays off only in a process
+  /// that runs long enough to use the profile. Measured on the build output, median of 7 runs: a strict
+  /// float translation of Dct8 to ES5 takes 0.87 s instead of 0.90 s, Crc32 to JavaScript 0.76 s
+  /// instead of 0.81 s, and a translation from JavaScript 0.22 s instead of 0.24 s. It changes how fast
+  /// the executable runs, not what it does.
   /// </summary>
   private static readonly Dictionary<string, string> _polypilerEnvironment = new() { ["DOTNET_TieredPGO"] = "0" };
 
