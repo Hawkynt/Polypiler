@@ -568,6 +568,15 @@ codes:
     area: infrastructure
     owner: VER-ORACLE
     surfaces: "the diagnostics of a verification of a fixture without an oracle; the registry refuses an oracle whose producer is polypiler or whose reference file lies in a directory with polypiler.manifest.json"
+  - code: PLY0064
+    severity: error
+    exit: UsageError
+    title: value image invalid
+    message: "<reason>"
+    rule: verification.images
+    area: infrastructure
+    owner: VER-IMAGES
+    surfaces: "loading a vector file whose signature names an unknown image type, or whose input or expected image is truncated, has bytes left over or is not canonical, as '<file>: signature: unknown image type 'int'' or '<file>: vector '<name>': input image has 1 byte(s) left over after '<parameter>''; encoding a value that does not fit its image type, as 'value 256 does not fit u8'"
   - code: PLY0070
     severity: error
     exit: EnvironmentError
