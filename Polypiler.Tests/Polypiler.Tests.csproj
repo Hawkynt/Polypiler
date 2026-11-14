@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Gherkin" Version="35.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
@@ -23,6 +24,16 @@
   <!-- The prototype fixtures are compiled into the tests: the C# compiler's build of them is the oracle. -->
   <ItemGroup>
     <Compile Include="..\tests\fixtures\prototype\**\*.cs" LinkBase="Prototype\Fixtures" />
+  </ItemGroup>
+
+  <!-- The parts of the acceptance harness that need no Reqnroll - slugs, command lines and the static
+       check of the feature files - are tested here, as source: the two test projects do not
+       reference each other. -->
+  <ItemGroup>
+    <Compile Include="..\Polypiler.Tests.Acceptance\Support\BindingCheck.cs" LinkBase="Support\Acceptance" />
+    <Compile Include="..\Polypiler.Tests.Acceptance\Support\CommandLine.cs" LinkBase="Support\Acceptance" />
+    <Compile Include="..\Polypiler.Tests.Acceptance\Support\FeatureFiles.cs" LinkBase="Support\Acceptance" />
+    <Compile Include="..\Polypiler.Tests.Acceptance\Support\Slug.cs" LinkBase="Support\Acceptance" />
   </ItemGroup>
 
   <ItemGroup>

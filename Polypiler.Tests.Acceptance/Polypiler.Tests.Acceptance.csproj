@@ -3,6 +3,11 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!-- The code Reqnroll generates for a feature file goes to obj, not next to the feature in tests/. -->
+    <ReqnrollUseIntermediateOutputPathForCodeBehind>true</ReqnrollUseIntermediateOutputPathForCodeBehind>
+    <!-- Reqnroll names the culture of a feature file ("en"); with invariant globalization, which the
+         repository keeps, that culture can only be created when it need not be a predefined one. -->
+    <PredefinedCulturesOnly>false</PredefinedCulturesOnly>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,6 +15,16 @@
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
+    <PackageReference Include="Gherkin" Version="35.0.0" />
+    <PackageReference Include="Reqnroll.NUnit" Version="3.3.4" />
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
+  </ItemGroup>
+
+  <!-- Every feature file of the repository is a Reqnroll feature of this project: one NUnit test per
+       scenario and per example row. reqnroll.json makes a step without a binding an error. -->
+  <ItemGroup>
+    <ReqnrollFeatureFile Include="..\tests\features\**\*.feature" Link="Features\%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="reqnroll.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Import Project="..\Polypiler.Tests\Prototype\Support\ReferenceAssemblies.props" />
@@ -23,6 +38,8 @@
     <Compile Include="..\Polypiler.Tests\Frontends\JavaScript\Support\*.cs" LinkBase="Frontends\JavaScript\Support" />
     <Compile Include="..\Polypiler.Tests\Float\Support\FloatVectors.cs" LinkBase="Float\Support" />
     <Compile Include="..\Polypiler.Tests\Recognize\Support\*.cs" LinkBase="Recognize\Support" />
+    <Compile Include="..\Polypiler.Tests\Architecture\ModuleRules.cs" LinkBase="Infra\Support" />
+    <Compile Include="..\Polypiler.Tests\Support\DocumentationChecks.cs" LinkBase="Infrastructure\Support" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,6 +50,7 @@
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
+    <ProjectReference Include="..\Polypiler.Tooling\Polypiler.Tooling.csproj" />
   </ItemGroup>
 
 </Project>
