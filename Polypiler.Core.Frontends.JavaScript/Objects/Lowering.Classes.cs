@@ -43,8 +43,9 @@ internal sealed partial class Lowering {
         return new IrNew(IrType.Object(created.Ir), created.Creator!, this.Arguments(creation, creation.Arguments, created.Constructor));
       case MemberExpression { Object: ThisExpression self } when this._receiver is null:
         throw this.Unsupported(self, "this");
-      case CallExpression { Callee: CallExpression called } when this.Instance(called) is not null:
-        // What a call yields is never a function of the subset.
+      case CallExpression { Callee: CallExpression called }:
+        // What a call yields is never a function of the subset; a call of call, apply or bind is refused by name.
+        this.Instance(called);
         return null;
       case CallExpression { Callee: MemberExpression { Object: MemberExpression inner } bound } when Binder.KeyOf(bound) is "call" or "apply" or "bind" && types.Of(inner.Object).Class is not null:
         throw this.Unsupported(bound, "call, apply or bind of a method");
@@ -158,11 +159,11 @@ internal sealed partial class Lowering {
       return false;
 
     if (Binder.KeyOf(member) is not { } key || owner.Field(key) is not { } field)
-      throw this.Unsupported(step, $"{OperatorText(step.Operator)} of {types.Text(member)}, which is no field");
+      throw this.Unsupported(step, $"{(step.Operator == Operator.Increment ? "++" : "--")} of {types.Text(member)}, which is no field");
 
     var target = this.Once(this.Expression(member.Object), into);
     var current = new IrFieldLoad(target, field.Ir!);
-    into.Add(new IrFieldStore(target, field.Ir!, field.Ir!.Type == IrType.F64 ? new IrBinary(op, current, one) : throw this.Unsupported(step, $"{OperatorText(step.Operator)} of the field {key} of the type {field.Ir.Type}")));
+    into.Add(new IrFieldStore(target, field.Ir!, field.Ir!.Type == IrType.F64 ? new IrBinary(op, current, one) : throw this.Unsupported(step, $"{(step.Operator == Operator.Increment ? "++" : "--")} of the field {key} of the type {field.Ir.Type}")));
     return true;
   }
 
@@ -170,10 +171,8 @@ internal sealed partial class Lowering {
   private IrExpr Identity(Operator op, Node left, Node right, Node whole) {
     var first = this.Expression(left);
     var second = this.Expression(right);
+    // The inference compares a reference only with a reference or null, never null with null.
     var type = first is IrNull { Type.Kind: IrTypeKind.Void } ? second.Type : first.Type;
-    if (!type.IsObject)
-      throw this.Unsupported(whole, $"{OperatorText(op)} of null and null");
-
     IrExpr Typed(IrExpr value) => value is IrNull { Type.Kind: IrTypeKind.Void } ? new IrNull(type) : value;
     var same = new IrReferenceEquals(Typed(first), Typed(second));
     return op == Operator.StrictEquality ? same : new IrUnary(IrUnaryOp.LogicalNot, same);
