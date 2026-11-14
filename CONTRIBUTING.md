@@ -140,6 +140,37 @@ Two rules that make the difference real:
   fixed iteration count, so the window holds on a fast machine and a slow one alike — and tag it
   `Slow`, because now it is.
 
+### Property-based tests
+
+A test that checks many generated inputs states a **property** with `Property.ForAll`
+(`tests/shared/Properties/`, compiled into both test projects). The seed has no default, so a
+property without one does not compile; the inputs come from the seed alone, through the
+platform-independent generators of `Polypiler.Core.Verification.Generators` (SplitMix64, never
+`System.Random`, the clock or the culture):
+
+```csharp
+Property.ForAll(7, 1000, seed => BitPatterns.Sequence(8, seed), Shrink.Integer, x => x < 100);
+```
+
+`BitPatterns.Sequence(width, seed)` starts with the edge values of a width (0, 1, the largest and
+smallest signed value, all ones and one below) before the random patterns; `FloatPatterns` does the
+same for binary32 and binary64 (both zeros, the subnormal limits, 1, the largest finite value, both
+infinities, a quiet and a signalling NaN); `Buffers` draws byte buffers and strided shapes. An
+FsCheck `Arbitrary<T>` works too: `Property.ForAll(7, 1000, ArbMap.Default.ArbFor<int>(), predicate)`
+samples it from the same seed and shrinks with its own shrinker.
+
+The first failing input — a predicate that throws counts as failing — is shrunk greedily to a
+minimal one, at most 1000 steps, and the test fails with
+
+```
+PLY0071: property 'LessThan100' falsified after 3 inputs (seed 7): 0x64 (original 0x7F, 5 shrink steps); replay with POLYPILER_PROPERTY_SEED=7
+```
+
+The same facts go to `artifacts/properties/<test>.json` (`test`, `seed`, `index`, `original`,
+`shrunk`, `shrinkSteps`, and `exception` when the predicate threw). To replay a failure, or to explore
+other inputs, set `POLYPILER_PROPERTY_SEED` to a decimal or `0x` hexadecimal number: it replaces
+every declared seed, and the message says so.
+
 ## Commit conventions
 
 - One concern per commit, with a descriptive body.

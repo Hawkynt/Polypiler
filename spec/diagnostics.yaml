@@ -1,0 +1,9 @@
+# Diagnostics registry: one entry per code, with the exact message template and where it surfaces.
+diagnostics:
+  - code: PLY0071
+    severity: error
+    title: property falsified
+    message: "property '<test>' falsified after <n> inputs (seed <seed>): <shrunk> (original <original>, <k> shrink steps); replay with POLYPILER_PROPERTY_SEED=<seed>"
+    exit-code: 1
+    surfaces: the assertion message of a property test; the failure record artifacts/properties/<test>.json
+    source: tests/shared/Properties/PropertyRunner.cs

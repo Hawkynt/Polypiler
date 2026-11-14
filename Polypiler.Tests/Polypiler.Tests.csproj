@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="FsCheck" Version="3.6.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
@@ -23,6 +24,11 @@
   <!-- The prototype fixtures are compiled into the tests: the C# compiler's build of them is the oracle. -->
   <ItemGroup>
     <Compile Include="..\tests\fixtures\prototype\**\*.cs" LinkBase="Prototype\Fixtures" />
+  </ItemGroup>
+
+  <!-- The property harness is shared with the acceptance tests as source. -->
+  <ItemGroup>
+    <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
   </ItemGroup>
 
   <ItemGroup>

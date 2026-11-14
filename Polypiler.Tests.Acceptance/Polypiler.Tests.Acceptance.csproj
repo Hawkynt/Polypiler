@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="FsCheck" Version="3.6.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.0" />
     <PackageReference Include="NUnit" Version="4.3.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.7.0" />
@@ -23,6 +24,7 @@
     <Compile Include="..\Polypiler.Tests\Frontends\JavaScript\Support\*.cs" LinkBase="Frontends\JavaScript\Support" />
     <Compile Include="..\Polypiler.Tests\Float\Support\FloatVectors.cs" LinkBase="Float\Support" />
     <Compile Include="..\Polypiler.Tests\Recognize\Support\*.cs" LinkBase="Recognize\Support" />
+    <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
   </ItemGroup>
 
   <ItemGroup>
