@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using NUnit.Framework;
 using Polypiler.Cli;
 using Polypiler.Core;
@@ -162,7 +164,9 @@ public sealed class TranslateCommandTests {
     var source = this.Source(PrototypeFixture.Wrap("public static int F() => int.MaxValue + 1;"));
     var (exitCode, output, error) = Invoke("--diagnostics", "json", "translate", source, "--from", "csharp", "--to", "javascript", "--output", this._out);
     Assert.That((exitCode, output), Is.EqualTo((TranslateCommand.InvalidSource, "")));
-    Assert.That(error, Does.StartWith("{\"code\":\"PLY1003\"").And.Contain($"\"command\":\"polypiler --diagnostics json translate {source} --from"));
+    var command = CliContext.Invocation(["--diagnostics", "json", "translate", source, "--from"]);
+    var encoded = JsonSerializer.Serialize(command, new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping })[1..^1];
+    Assert.That(error, Does.StartWith("{\"code\":\"PLY1003\"").And.Contain($"\"command\":\"{encoded}"));
   }
 
   /// <summary>The notes and the explanations of the optimizer are no diagnostics: text only, and not with <c>--quiet</c>.</summary>
