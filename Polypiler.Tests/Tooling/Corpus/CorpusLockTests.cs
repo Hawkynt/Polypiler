@@ -116,7 +116,8 @@ public sealed class CorpusLockTests {
   [Test]
   public void RepositoryLock_IsCanonical() {
     var path = Path.Combine(PrototypeFixture.RepositoryRoot, CorpusLock.RepositoryPath);
-    var text = File.ReadAllText(path);
+    // The canonical form has LF line ends; a Windows checkout may have turned them into CRLF.
+    var text = File.ReadAllText(path).ReplaceLineEndings("\n");
     Assert.That(CorpusLock.Parse(text, path).ToJson(), Is.EqualTo(text));
   }
 

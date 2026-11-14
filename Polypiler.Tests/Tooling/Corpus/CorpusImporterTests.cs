@@ -259,7 +259,9 @@ public sealed class CorpusImporterTests {
   [Test]
   public void Verify_OfAMissingFile_ReportsPly0023() {
     var locked = this.ImportAll(_mini, MiniUpstream.Fixture("mini.a", "a.txt"));
-    File.Delete(this.Upstream(_mini, "a.txt"));
+    var file = this.Upstream(_mini, "a.txt");
+    File.SetAttributes(file, FileAttributes.Normal);
+    File.Delete(file);
     var diagnostic = CorpusVerifier.Verify(this._root, Manifest(_mini.Manifest()), locked).Single();
     Assert.That(Text(diagnostic), Does.StartWith($"PLY0023: corpus file '{MiniUpstream.Name}:a.txt' cannot be read, the lock records {Hello}: "));
   }

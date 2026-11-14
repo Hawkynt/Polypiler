@@ -21,7 +21,7 @@ public sealed class CorpusManifestTests {
         licence: MIT
         licenceFiles: {licenceFiles}
 
-    """;
+    """.ReplaceLineEndings("\n");
 
   private static string Fixture(
     string id = "a.b",
@@ -46,7 +46,7 @@ public sealed class CorpusManifestTests {
         tolerance: {tolerance}
         profiles: [es2022]
 
-    """ + extra;
+    """.ReplaceLineEndings("\n") + extra;
 
   private static string Manifest(string repositories, string fixtures) => $"schema: 1\nrepositories:\n{repositories}fixtures:\n{fixtures}";
 

@@ -101,8 +101,10 @@ public sealed class CorpusSchemaTests {
   [TestCase("{ kind: embedded, source: inline }", "{ kind: guessed, source: inline }")]
   [TestCase("profiles: []", "profiles: []\n    extra: 1")]
   public void InvalidManifest_IsRefusedByBoth(string from, string to) {
-    var text = Fixture.Replace(from, to);
-    Assert.That(text, Is.Not.EqualTo(Fixture));
+    // A checkout with CRLF line ends gives the raw string CRLF too.
+    var fixture = Fixture.ReplaceLineEndings("\n");
+    var text = fixture.Replace(from, to);
+    Assert.That(text, Is.Not.EqualTo(fixture));
     Assert.That(_manifestSchema.Evaluate(ToJson(text)).IsValid, Is.False, "schema");
     Assert.That(() => CorpusManifest.Parse(text, "corpus.yaml"), Throws.InstanceOf<CorpusException>(), "loader");
   }
