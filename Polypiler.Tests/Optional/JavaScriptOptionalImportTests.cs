@@ -79,7 +79,7 @@ public sealed class JavaScriptOptionalImportTests {
   public void BothAbsentValuesToldApart_AreRefused() {
     var result = JavaScriptFrontend.Import("absent.js", File.ReadAllText(OptionalFixtures.PathOf("absent.js")));
     Assert.That(result.Module, Is.Null);
-    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.ToString()), Is.EqualTo(new[] { "absent.js(5,10): error PLY1105: 'x' holds both null and undefined, and the program tells them apart" }));
+    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.ToString()), Is.EqualTo(new[] { "absent.js(4,31): error PLY1105: 'x' holds both null and undefined, and the program tells them apart" }));
   }
 
   private static IReadOnlyList<string> Problems(string source) {
