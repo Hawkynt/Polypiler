@@ -27,6 +27,9 @@ public static class IrTree {
     IrMethodCall { Target: { } target } call => [target, .. call.Arguments],
     IrMethodCall call => call.Arguments,
     IrReferenceEquals equality => [equality.Left, equality.Right],
+    IrTypeTest test => [test.Value],
+    IrCast cast => [cast.Value],
+    IrAsCast cast => [cast.Value],
     _ => []
   };
 

@@ -14,7 +14,10 @@ public enum IrVisibility {
   Internal,
 
   /// <summary>Only the members of the declaration it belongs to.</summary>
-  Private
+  Private,
+
+  /// <summary>The members of the class it belongs to and of every class derived from it.</summary>
+  Protected
 
 }
 
@@ -45,11 +48,38 @@ public enum IrMethodKind {
 /// <param name="IsStatic">Whether the method is called without a receiver.</param>
 public sealed record IrMethod(string Name, string Function, bool IsStatic) {
 
+  private readonly IrDispatch? _dispatch;
+
   /// <summary>Who may call the method.</summary>
   public IrVisibility Visibility { get; init; } = IrVisibility.Public;
 
   /// <summary>Whether the method is called by its name or is an accessor of a property.</summary>
   public IrMethodKind Kind { get; init; } = IrMethodKind.Method;
+
+  /// <summary>
+  /// How a call reaches the method: <see cref="IrDispatch.Static"/> for a static method and
+  /// <see cref="IrDispatch.Instance"/> for any other unless stated otherwise. What a virtual call
+  /// selects is stated at <see cref="IrMethodCallKind"/>.
+  /// </summary>
+  public IrDispatch Dispatch {
+    get => this._dispatch ?? (this.IsStatic ? IrDispatch.Static : IrDispatch.Instance);
+    init => this._dispatch = value;
+  }
+
+  /// <summary>The method of a base class an <see cref="IrDispatch.Override"/> replaces; <see langword="null"/> for every other method.</summary>
+  public IrMethod? Overrides { get; init; }
+
+  /// <summary>Whether an override cannot be overridden again, as C# <c>sealed override</c> says.</summary>
+  public bool IsSealedOverride { get; init; }
+
+  /// <summary>The methods of interfaces the method is the implementation of, in its class and every class derived from it.</summary>
+  public IReadOnlyList<IrMethod> Implements { get; init; } = [];
+
+  /// <summary>Whether a call of the method selects an override by the class of the receiver: a virtual, abstract or overriding method.</summary>
+  public bool IsVirtual => this.Dispatch is IrDispatch.Virtual or IrDispatch.Override or IrDispatch.Abstract;
+
+  /// <summary>The method that first declared the slot an overriding method fills: the method itself for any other.</summary>
+  public IrMethod Root => this.Overrides?.Root ?? this;
 
 }
 
@@ -100,9 +130,8 @@ public sealed record IrProperty(string Name, IrType Type) {
 /// <summary>
 /// A class: objects with an identity and mutable fields, made by its constructors, with methods,
 /// properties and static fields, as a C# class and a JavaScript class or constructor function are.
-/// What creating, sharing and comparing objects means is stated once, at <see cref="IrNew"/>. Only
-/// sealed classes without a base class exist so far: <see cref="Base"/>, <see cref="Interfaces"/>,
-/// <see cref="IsSealed"/> and <see cref="IsAbstract"/> name what inheritance will add.
+/// What creating, sharing and comparing objects means is stated once, at <see cref="IrNew"/>; what
+/// deriving a class from another and implementing an interface mean, at <see cref="IrMethodCallKind"/>.
 /// </summary>
 public sealed class IrClassType : IrTypeDeclaration {
 
@@ -110,17 +139,84 @@ public sealed class IrClassType : IrTypeDeclaration {
   /// <param name="name">The name, unique among the declarations of the module.</param>
   public IrClassType(string name) : base(name) { }
 
-  /// <summary>The class this one derives from; there is none yet.</summary>
-  public IrClassType? Base => null;
+  /// <summary>The class this one derives from, whose fields and methods it has as well; <see langword="null"/> for none.</summary>
+  public IrClassType? Base { get; private set; }
 
-  /// <summary>The interfaces the class implements; there are none yet.</summary>
-  public IReadOnlyList<IrClassType> Interfaces => [];
+  /// <summary>The interfaces the class names as implemented; those of its base class and their base interfaces are implemented as well.</summary>
+  public IReadOnlyList<IrInterfaceType> Interfaces { get; private set; } = [];
 
-  /// <summary>Whether no class derives from this one; every class is so far.</summary>
-  public bool IsSealed => true;
+  /// <summary>Whether the source forbids deriving from the class, as C# <c>sealed</c> does.</summary>
+  public bool IsSealed { get; init; }
 
-  /// <summary>Whether the class has no objects of its own; no class is so far.</summary>
-  public bool IsAbstract => false;
+  /// <summary>Whether the class has no objects of its own, only those of the classes derived from it, and may have abstract methods.</summary>
+  public bool IsAbstract { get; init; }
+
+  /// <summary>Whether <see cref="Inherit"/> has been called.</summary>
+  public bool HasHierarchy { get; private set; }
+
+  /// <summary>Gives the class its base class and the interfaces it implements, once.</summary>
+  /// <param name="base">The base class, or <see langword="null"/>.</param>
+  /// <param name="interfaces">The interfaces.</param>
+  /// <exception cref="InvalidOperationException">The hierarchy has been given before.</exception>
+  public void Inherit(IrClassType? @base, IReadOnlyList<IrInterfaceType> interfaces) {
+    if (this.HasHierarchy)
+      throw new InvalidOperationException($"The base of '{this.Name}' is given already.");
+
+    this.Base = @base;
+    this.Interfaces = [.. interfaces];
+    this.HasHierarchy = true;
+  }
+
+  /// <summary>The class and its base classes, the class first; a cycle, which the verifier refuses, ends at its first repetition.</summary>
+  public IEnumerable<IrClassType> Lineage {
+    get {
+      var seen = new HashSet<IrClassType>(ReferenceEqualityComparer.Instance);
+      for (var type = this; type is not null && seen.Add(type); type = type.Base)
+        yield return type;
+    }
+  }
+
+  /// <summary>Whether a class is this one or one of its base classes.</summary>
+  /// <param name="type">The class.</param>
+  /// <returns><see langword="true"/> when an object of this class is one of <paramref name="type"/>.</returns>
+  public bool DerivesFrom(IrClassType type) => this.Lineage.Any(ancestor => ReferenceEquals(ancestor, type));
+
+  /// <summary>Every interface an object of the class is one of: those of the class and its base classes, and their base interfaces.</summary>
+  public IEnumerable<IrInterfaceType> AllInterfaces => this.Lineage.SelectMany(type => type.Interfaces).SelectMany(type => type.Closure).Distinct();
+
+  /// <summary>The fields an object of the class has: those of its base classes first, then its own.</summary>
+  public IReadOnlyList<IrField> AllFields => [.. this.Lineage.Reverse().SelectMany(type => type.Fields)];
+
+  /// <summary>The class of the hierarchy whose fields a field is, or <see langword="null"/>.</summary>
+  /// <param name="field">The field.</param>
+  /// <returns>This class or a base class.</returns>
+  public IrClassType? OwnerOf(IrField field) => this.Lineage.FirstOrDefault(type => type.IsDefined && type.Owns(field));
+
+  /// <summary>The class of the hierarchy that has a method, or <see langword="null"/>.</summary>
+  /// <param name="method">The method.</param>
+  /// <returns>This class or a base class.</returns>
+  public IrClassType? OwnerOf(IrMethod method) => this.Lineage.FirstOrDefault(type => type.Methods.Contains(method));
+
+  /// <summary>
+  /// The method a virtual call of a method selects on an object of the class: the last override of
+  /// its slot on the way from the class to the method's own class, or the method itself.
+  /// </summary>
+  /// <param name="method">The method called.</param>
+  /// <returns>The method that runs; an abstract one only where the class does not implement it.</returns>
+  public IrMethod Select(IrMethod method) {
+    var slot = method.Root;
+    foreach (var type in this.Lineage)
+      if (type.Methods.FirstOrDefault(candidate => candidate.IsVirtual && ReferenceEquals(candidate.Root, slot) && candidate.Dispatch != IrDispatch.Abstract) is { } found)
+        return found;
+
+    return method;
+  }
+
+  /// <summary>The method of the class or a base class that implements a method of an interface, or <see langword="null"/>.</summary>
+  /// <param name="member">The method of the interface.</param>
+  /// <returns>The implementation, before any override of it is selected.</returns>
+  public IrMethod? Implementation(IrMethod member)
+    => this.Lineage.SelectMany(type => type.Methods).FirstOrDefault(candidate => candidate.Implements.Contains(member));
 
   /// <summary>
   /// Whether objects of the class compare by value as well, as a C# <c>record class</c> does: its

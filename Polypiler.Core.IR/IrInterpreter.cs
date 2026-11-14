@@ -29,7 +29,10 @@ public enum IrTrap {
   ArgumentOutOfRange,
 
   /// <summary>A field, a method or an array field reached through a reference that names no object.</summary>
-  NullReference
+  NullReference,
+
+  /// <summary>A reference converted to a class or an interface it names no object of.</summary>
+  InvalidCast
 
 }
 
@@ -52,6 +55,7 @@ public sealed class IrTrapException : Exception {
     IrTrap.InvalidOperation => "invalid operation",
     IrTrap.ArgumentOutOfRange => "argument out of range",
     IrTrap.NullReference => "null reference",
+    IrTrap.InvalidCast => "invalid cast",
     _ => "integer overflow"
   };
 
@@ -403,6 +407,8 @@ public static partial class IrInterpreter {
           return NullReference.Value;
         case IrMethodCall call:
           return this.MethodCall(call, frame);
+        case IrTypeTest or IrCast or IrAsCast:
+          return this.Conversion(expression, frame);
         case IrReferenceEquals identity:
           var first = this.Evaluate(identity.Left, frame);
           return ReferenceEquals(first, this.Evaluate(identity.Right, frame));

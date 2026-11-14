@@ -73,6 +73,9 @@ public static class IrShape {
     IrMethodCall { Target: { } target } call => [target, .. call.Arguments],
     IrMethodCall call => call.Arguments,
     IrReferenceEquals equality => [equality.Left, equality.Right],
+    IrTypeTest test => [test.Value],
+    IrCast cast => [cast.Value],
+    IrAsCast cast => [cast.Value],
     _ => []
   };
 
@@ -184,6 +187,9 @@ public static class IrShape {
     IrMethodCall { Target: not null } call => call with { Target = operands[0], Arguments = [.. operands.Skip(1)] },
     IrMethodCall call => call with { Arguments = operands },
     IrReferenceEquals => new IrReferenceEquals(operands[0], operands[1]),
+    IrTypeTest test => test with { Value = operands[0] },
+    IrCast cast => cast with { Value = operands[0] },
+    IrAsCast cast => cast with { Value = operands[0] },
     _ => expression
   };
 

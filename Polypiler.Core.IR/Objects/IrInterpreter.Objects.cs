@@ -6,7 +6,8 @@ namespace Polypiler.Core.IR;
 public static partial class IrInterpreter {
 
   /// <summary>
-  /// An object of a class on the heap: its class and the values of its fields in declaration order.
+  /// An object of a class on the heap: its class and the values of its fields in the order of
+  /// <see cref="IrClassType.AllFields"/>, those of the base classes first.
   /// Every reference to it is this very instance, which is what gives it its identity. It crosses the
   /// boundary as itself, an opaque value a later call can be given back.
   /// </summary>
@@ -39,6 +40,23 @@ public static partial class IrInterpreter {
       : type.IsObject || type.IsArray || type.IsString ? NullReference.Value
       : Constant(type, 0);
 
+  /// <summary>
+  /// The position of a field among the fields of an object of a class: the same in the class that
+  /// declares it and in every class derived from it, since the fields of a base class come first.
+  /// </summary>
+  private static int ObjectPosition(IrField field, IrType owner) {
+    var type = owner.ClassType!;
+    var index = 0;
+    foreach (var ancestor in type.Lineage.Skip(1))
+      index += ancestor.Fields.Count;
+
+    return type.OwnerOf(field) == type ? index + Position(field, owner) : ObjectPosition(field, IrType.Object(type.OwnerOf(field)!));
+  }
+
+  /// <summary>Whether a value is an object of a class or an interface.</summary>
+  private static bool IsOf(object value, IrType type)
+    => value is Instance instance && IrType.Object(instance.Type).IsAssignableTo(type);
+
   /// <summary>Whether two record objects, or two <c>null</c>s, are equal as <see cref="IrStructEquals"/> defines it for a record class.</summary>
   private static bool SameObject(object left, object right) {
     if (left is not Instance first || right is not Instance second)
@@ -62,7 +80,7 @@ public static partial class IrInterpreter {
     private object New(IrNew creation, Frame frame) {
       var arguments = creation.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
       var type = creation.Type.ClassType!;
-      var created = new Instance(type, [.. type.Fields.Select(field => FieldDefault(field.Type))]);
+      var created = new Instance(type, [.. type.AllFields.Select(field => FieldDefault(field.Type))]);
       this.Invoke(program.Functions[creation.Constructor.Function], [created, .. arguments]);
       return created;
     }
@@ -73,29 +91,49 @@ public static partial class IrInterpreter {
     /// field store's is.
     /// </summary>
     private object MethodCall(IrMethodCall call, Frame frame) {
-      var function = program.Functions[call.Method.Function];
       if (call.Target is not { } target)
-        return this.Invoke(function, [.. call.Arguments.Select(argument => this.Evaluate(argument, frame))])!;
+        return this.Invoke(program.Functions[call.Method.Function], [.. call.Arguments.Select(argument => this.Evaluate(argument, frame))])!;
 
       var receiver = this.Evaluate(target, frame);
       if (call.Method.Kind != IrMethodKind.Setter)
         NotNull(receiver);
 
       var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
-      return this.Invoke(function, [NotNull(receiver), .. arguments])!;
+      var self = (Instance)NotNull(receiver);
+      var method = call.Kind switch {
+        IrMethodCallKind.Virtual => self.Type.Select(call.Method),
+        IrMethodCallKind.Interface => self.Type.Select(self.Type.Implementation(call.Method)!),
+        _ => call.Method
+      };
+      return this.Invoke(program.Functions[method.Function], [self, .. arguments])!;
+    }
+
+    /// <summary>A type test, a cast or an <c>as</c>: the reference evaluated, then tested against the type.</summary>
+    private object Conversion(IrExpr expression, Frame frame) {
+      switch (expression) {
+        case IrTypeTest test:
+          return IsOf(this.Evaluate(test.Value, frame), test.Target);
+        case IrCast cast:
+          var value = this.Evaluate(cast.Value, frame);
+          return value is NullReference || IsOf(value, cast.Type) ? value : throw new IrTrapException(IrTrap.InvalidCast);
+        default:
+          var converted = (IrAsCast)expression;
+          var reference = this.Evaluate(converted.Value, frame);
+          return IsOf(reference, converted.Type) ? reference : NullReference.Value;
+      }
     }
 
     /// <summary>A field of the object a reference names, read after the reference is checked.</summary>
     private object ObjectField(IrFieldLoad load, Frame frame) {
       var instance = (Instance)NotNull(this.Evaluate(load.Target, frame));
-      return Copied(instance.Fields[Position(load.Field, load.Target.Type)]);
+      return Copied(instance.Fields[ObjectPosition(load.Field, load.Target.Type)]);
     }
 
     /// <summary>A field of the object a reference names, written once the value is evaluated and the reference checked.</summary>
     private void StoreObjectField(IrFieldStore store, Frame frame) {
       var target = this.Evaluate(store.Target, frame);
       var value = this.Evaluate(store.Value, frame);
-      ((Instance)NotNull(target)).Fields[Position(store.Field, store.Target.Type)] = value;
+      ((Instance)NotNull(target)).Fields[ObjectPosition(store.Field, store.Target.Type)] = value;
     }
 
   }
