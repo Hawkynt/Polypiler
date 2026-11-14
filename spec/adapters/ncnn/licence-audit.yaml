@@ -1,0 +1,401 @@
+# The file-level licence audit of the NCNN adapter's native inputs (ADP-NCNN-LICENCE): one record per
+# MediaDroid file at the pin that an issue of ADP-NCNN may compile, link or load, and one entry per
+# component it needs that is not a file of the pin. Format: spec/schemas/adapter-audit.schema.json;
+#
+#   polypiler-tooling catalog audit-adapter --audit spec/adapters/ncnn/licence-audit.yaml [--touch <path>]...
+#
+# holds it against the imported corpus (tooling/corpus/corpus.yaml, fixtures mediadroid.ncnn.*).
+# Every fact is read from the file's own header and the notice it names, at the pin; the digests are
+# sha256sum's of the imported files. The licence scanner (licenses scan --mode corpus) finds no
+# SPDX header in any of these files and falls back to the repository's LICENSE (LGPL-3.0) for all of
+# them; it reports the model files and xvfi.cpp, whose terms come from their notices, as disagreeing
+# with that LICENSE. Model weights are restricted assets of tooling/licensing/policy.yaml whatever
+# their licence: kind 'model' marks them, and they may be touched only once ADP-NCNN-CLEARANCE
+# grants the clearance below.
+schema: 1
+repository: Hawkynt/MediaDroid
+commit: 7f8b6b995cbe54a6afb290a900748393bf01e272
+
+clearance:
+  status: pending
+  adr: null
+  date: null
+
+records:
+  # IFRNet notice, lines 5-6: "ifrnet-ncnn-vulkan's IFRNet_S_Vimeo90K model, copied unchanged";
+  # IFRNet (line 12) and ifrnet-ncnn-vulkan (line 37) are MIT.
+  - path: app/src/main/assets/models/ifrnet-s/ifrnet.bin
+    kind: model
+    sha256: 7c3fe0a5eb7e544bc8c615ee47d4bafcbc077f98d75eda217c9657979adb1e14
+    bytes: 5921992
+    licence: MIT
+    origin:
+      project: ifrnet-ncnn-vulkan IFRNet_S_Vimeo90K
+      url: https://github.com/nihui/ifrnet-ncnn-vulkan
+      licence: MIT
+      notice: app/THIRD-PARTY-NOTICE.IFRNet.txt
+    obligations: [notice, attribution]
+    decision: usable
+    usedBy: [ADP-NCNN-WEIGHTS]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "weights copied unchanged from an MIT port; a restricted asset, usable once ADP-NCNN-CLEARANCE grants the clearance"
+  - path: app/src/main/assets/models/ifrnet-s/ifrnet.param
+    kind: model
+    sha256: fc684bb14ca0135adb7016125d5ecfcdd18f30922fd9937a64346804c909d6ae
+    bytes: 13490
+    licence: MIT
+    origin:
+      project: ifrnet-ncnn-vulkan IFRNet_S_Vimeo90K
+      url: https://github.com/nihui/ifrnet-ncnn-vulkan
+      licence: MIT
+      notice: app/THIRD-PARTY-NOTICE.IFRNet.txt
+    obligations: [notice, attribution]
+    decision: usable
+    usedBy: [ADP-NCNN-WEIGHTS]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "network description copied unchanged from an MIT port; a restricted asset, usable once ADP-NCNN-CLEARANCE grants the clearance"
+  # RIFE notice, lines 5-6: "TNTwise's conversion of the 4.25.lite model (flownet.pkl, released under
+  # the same MIT licence as Practical-RIFE), copied unchanged"; Practical-RIFE's MIT text, lines 13-33.
+  - path: app/src/main/assets/models/rife-4.25-lite/flownet.bin
+    kind: model
+    sha256: 350a15e464bea5ad378e06c0fb43996e90a0d35653d5a6ef6bc980d832538fb7
+    bytes: 11276252
+    licence: MIT
+    origin:
+      project: Practical-RIFE 4.25 lite, as converted for rife-ncnn-vulkan by TNTwise
+      url: https://github.com/TNTwise/rife-ncnn-vulkan
+      licence: MIT
+      notice: app/THIRD-PARTY-NOTICE.RIFE.txt
+    obligations: [notice, attribution]
+    decision: usable
+    usedBy: [ADP-NCNN-E2E, ADP-NCNN-WEIGHTS]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "weights copied unchanged from an MIT conversion; a restricted asset, usable once ADP-NCNN-CLEARANCE grants the clearance"
+  - path: app/src/main/assets/models/rife-4.25-lite/flownet.param
+    kind: model
+    sha256: e55b76f197b89637dc824ce89e64878df419214d3cf6a10aea0283c61b93a908
+    bytes: 35830
+    licence: MIT
+    origin:
+      project: Practical-RIFE 4.25 lite, as converted for rife-ncnn-vulkan by TNTwise
+      url: https://github.com/TNTwise/rife-ncnn-vulkan
+      licence: MIT
+      notice: app/THIRD-PARTY-NOTICE.RIFE.txt
+    obligations: [notice, attribution]
+    decision: usable
+    usedBy: [ADP-NCNN-E2E, ADP-NCNN-WEIGHTS]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "network description copied unchanged from an MIT conversion; a restricted asset, usable once ADP-NCNN-CLEARANCE grants the clearance"
+  # Header, lines 1-3: ncnn (BSD-3-Clause) and libass (ISC) named with their notices; nothing converted.
+  - path: native/CMakeLists.txt
+    kind: code
+    sha256: b820bfe9366bbc7272f179e8088eb09d94d28d2b0aa8d218a28b92843a9d5fe9
+    bytes: 4719
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: usable
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  - path: native/build.gradle.kts
+    kind: code
+    sha256: 5dca71ad75acd116036cc1b738259d01f3d786ca64241081d2769d02d2ab2858
+    bytes: 14459
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: reference-only
+    usedBy: [ADP-NCNN-ABI-ADR]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "read for the ncnn provider's version, release URLs and SHA-256 digests (lines 24-79); the adapter does not run MediaDroid's Gradle build"
+  # Header, lines 1-3: the JNI side of NativeInterpolation; it also loads XVFI and FLAVR.
+  - path: native/jni/interpolator.cpp
+    kind: code
+    sha256: f1611e09262e9e3fbe6283d2446be2982d98d101e6f68f02a18b74cce218ecf5
+    bytes: 7976
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: reference-only
+    usedBy: [ADP-NCNN-SHIM]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "read for the semantics of the calls the shim mirrors; it is MediaDroid's JNI surface, which also reaches the blocked XVFI network, and is not compiled into the adapter"
+  # Header, lines 1-4: runs DDColor (piddnad/DDColor, Apache-2.0) as tools/ddcolor/export.py writes it out.
+  - path: native/src/colorizer.cpp
+    kind: code
+    sha256: 844fa734d1e8abf1132ed8fbd4ed038a199bf34aacee89d4551f4f1ea8db5755
+    bytes: 1344
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: reference-only
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "not used by the adapter (ADP-NCNN: the colorizer is not planned); it runs an Apache-2.0 model its header names"
+  # DAIN notice, lines 6-8: the layers dain.Correlation, dain.OpticalFlowWarp, dain.DepthFlowProjection
+  # and dain.FilterInterpolation "are converted from dain-ncnn-vulkan's"; dain_layers.h, line 1, says so too.
+  - path: native/src/dain_layers.cpp
+    kind: code
+    sha256: dc3241ad50b8b9f685a4a78a067ef8760049a22959275402f97ea4908fd9224d
+    bytes: 17978
+    licence: LGPL-3.0-or-later AND MIT
+    origin:
+      project: dain-ncnn-vulkan
+      url: https://github.com/nihui/dain-ncnn-vulkan
+      licence: MIT
+      notice: app/THIRD-PARTY-NOTICE.DAIN.txt
+    obligations: [notice, attribution, source-offer]
+    decision: usable
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "converted from an MIT port with its notice; no issue of the adapter uses it"
+  - path: native/src/dain_layers.h
+    kind: code
+    sha256: 48404b3c5ad58b9615496762299946cc51fe90e8d16c2c886d74a2768cdbeac8
+    bytes: 3664
+    licence: LGPL-3.0-or-later AND MIT
+    origin:
+      project: dain-ncnn-vulkan
+      url: https://github.com/nihui/dain-ncnn-vulkan
+      licence: MIT
+      notice: app/THIRD-PARTY-NOTICE.DAIN.txt
+    obligations: [notice, attribution, source-offer]
+    decision: usable
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "converted from an MIT port with its notice; no issue of the adapter uses it"
+  # Header, lines 1-2 and 208: runs nihui's MIT ports of waifu2x, Real-CUGAN, RealSR and Real-ESRGAN.
+  - path: native/src/enlarger.cpp
+    kind: code
+    sha256: a91d36f7789e7eead8451661833958fd1153d5105b7a8ad428ddd2930d41b3ba
+    bytes: 10260
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: reference-only
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "not used by the adapter (ADP-NCNN: the upscalers are not planned); it runs MIT ports its header names"
+  # FLAVR notice, lines 1-2 (Apache License 2.0) and 7-12 (the changes made, Apache-2.0 section 4b):
+  # "native/src/flavr.cpp joins them as the original's forward does".
+  - path: native/src/flavr.cpp
+    kind: code
+    sha256: 3c5120de8f190310faf1b8bedfbce95a1ba63e6383f0adffbdb0bd04b8a33802
+    bytes: 3912
+    licence: LGPL-3.0-or-later AND Apache-2.0
+    origin:
+      project: FLAVR
+      url: https://github.com/tarun005/FLAVR
+      licence: Apache-2.0
+      notice: app/THIRD-PARTY-NOTICE.FLAVR.txt
+    obligations: [notice, attribution, source-offer]
+    decision: reference-only
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "not used by the adapter; it joins networks exported from FLAVR as the original's forward does, with the changes its notice states"
+  # RIFE notice, lines 8-9: networks.cpp runs the model "the way its RIFE::process_v4 does"; DAIN
+  # notice, lines 8-9: it runs the four networks "the way its DAIN::process_notile does"; both MIT.
+  - path: native/src/networks.cpp
+    kind: code
+    sha256: e5bbf07df3f61ad92a8bf60eba74b5bac1e71c2d86b3b47976b60b18b1d7872a
+    bytes: 13599
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: usable
+    usedBy: [ADP-NCNN-ABI-ADR, ADP-NCNN-SHIM]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "MediaDroid's own code; it runs RIFE and DAIN the way the MIT ports' RIFE::process_v4 and DAIN::process_notile do, as the RIFE and DAIN notices state"
+  # Header, lines 1-9: the networks' interface; names RIFE and DAIN (MIT) and XVFI (research and education only).
+  - path: native/src/networks.h
+    kind: code
+    sha256: 77e5e7c54ade6ae08a09c012553f293691d2dc33fbce6b8c500c1a79b4d4fdae
+    bytes: 6848
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: usable
+    usedBy: [ADP-NCNN-SAFE, ADP-NCNN-SHIM]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "MediaDroid's own interface; it also declares the XVFI network, whose implementation native/src/xvfi.cpp is blocked"
+  # Header, lines 1-5; CAIN notice, lines 5-7, and IFRNet notice, lines 6-8: pair_networks.cpp runs
+  # them "the way the port does".
+  - path: native/src/pair_networks.cpp
+    kind: code
+    sha256: 53d895317682fc7528b55b7b9fb5b63c869ab5df8437f31af86ef7462c3b3714
+    bytes: 7167
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: usable
+    usedBy: [ADP-NCNN-SHIM]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "MediaDroid's own code; it runs CAIN and IFRNet the way cain-ncnn-vulkan and ifrnet-ncnn-vulkan (MIT) do, as their notices state"
+  - path: native/src/shaders.cpp
+    kind: code
+    sha256: b3daebba8f349e59aae4cb602c4c400c2bcf1b91f3724c00b8a86b7f76897f9a
+    bytes: 720
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: usable
+    usedBy: [ADP-NCNN-SHIM]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  - path: native/src/shaders.h
+    kind: code
+    sha256: d9f70fc5afed3f1dde51192d49a4ec61d66f6bf1fe38c862bfd033677fdb4e0f
+    bytes: 624
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: usable
+    usedBy: [ADP-NCNN-SHIM]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  # RIFE notice, lines 6-8: "The warp layer the model calls (rife.Warp: native/src/warp_layer.cpp and
+  # stage/src/main/glsl/ncnn/warp.comp) is converted from rife-ncnn-vulkan's"; warp_layer.h, line 1,
+  # and warp.comp, line 1, say so too. IFRNet notice, lines 6-7: IFRNet's warp is the same layer.
+  - path: native/src/warp_layer.cpp
+    kind: code
+    sha256: cb27ba46e319023e6391e2db699ffd0238880c123cf299d99d91fa6d07e74dd0
+    bytes: 3352
+    licence: LGPL-3.0-or-later AND MIT
+    origin:
+      project: rife-ncnn-vulkan (rife.Warp)
+      url: https://github.com/nihui/rife-ncnn-vulkan
+      licence: MIT
+      notice: app/THIRD-PARTY-NOTICE.RIFE.txt
+    obligations: [notice, attribution, source-offer]
+    decision: usable
+    usedBy: [ADP-NCNN-SHIM]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  - path: native/src/warp_layer.h
+    kind: code
+    sha256: 8a1119b1a0547b34bf57e20fbc293f3a6293904285159641aedae7cbd70adbc9
+    bytes: 1273
+    licence: LGPL-3.0-or-later AND MIT
+    origin:
+      project: rife-ncnn-vulkan (rife.Warp)
+      url: https://github.com/nihui/rife-ncnn-vulkan
+      licence: MIT
+      notice: app/THIRD-PARTY-NOTICE.RIFE.txt
+    obligations: [notice, attribution, source-offer]
+    decision: usable
+    usedBy: [ADP-NCNN-SHIM]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  # XVFI notice, lines 4-7 (XVFI's terms), 9 (MediaDroid uses XVFI with its authors' permission),
+  # 12-15 (xvfi.cpp joins the blocks; "they are not covered by MediaDroyd's own licence").
+  - path: native/src/xvfi.cpp
+    kind: code
+    sha256: 7d8f2ab84972d596d95cfeb1e0dc6bee1b7f024421e1fc61c1c6a41bb97980d1
+    bytes: 13658
+    licence: LicenseRef-XVFI-Research-Only
+    origin:
+      project: XVFI
+      url: https://github.com/JihyongOh/XVFI
+      licence: LicenseRef-XVFI-Research-Only
+      notice: app/THIRD-PARTY-NOTICE.XVFI.txt
+    obligations: [attribution, research-only, no-redistribution]
+    decision: blocked
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: "written from XVFI's published architecture; XVFI's terms: \"freely used for research and education only. Any commercial use should get formal permission first\"; the authors' permission is MediaDroid's and does not extend to Polypiler"
+  - path: stage/src/main/glsl/ncnn/warp.comp
+    kind: code
+    sha256: bfd2fdb67f91c48d15db4c94e635d23fcd751db2a5f1f905e04c8dc2bee0f4a6
+    bytes: 2221
+    licence: LGPL-3.0-or-later AND MIT
+    origin:
+      project: rife-ncnn-vulkan (rife.Warp)
+      url: https://github.com/nihui/rife-ncnn-vulkan
+      licence: MIT
+      notice: app/THIRD-PARTY-NOTICE.RIFE.txt
+    obligations: [notice, attribution, source-offer]
+    decision: usable
+    usedBy: [ADP-NCNN-SHIM]
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+
+# Components that are not files of the pin: their terms as their notices record them; their files are
+# not audited.
+external:
+  # CAIN notice, lines 4-5 (fetched from huggingface.co/Hawkynt/mediadroid-models, cain/, unchanged);
+  # CAIN (line 9) and cain-ncnn-vulkan (line 34) are MIT.
+  - name: cain-weights
+    kind: weights
+    licence: MIT
+    url: https://github.com/nihui/cain-ncnn-vulkan
+    notice: app/THIRD-PARTY-NOTICE.CAIN.txt
+    obligations: [notice, attribution]
+    decision: reference-only
+    reason: "fetched at run time, not in the repository, so its files are not audited; no issue of the adapter uses them"
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  # DAIN notice, lines 4-6 (fetched from huggingface.co/Hawkynt/mediadroid-models, dain/, unchanged);
+  # DAIN (line 11) and dain-ncnn-vulkan (line 36) are MIT.
+  - name: dain-weights
+    kind: weights
+    licence: MIT
+    url: https://github.com/nihui/dain-ncnn-vulkan
+    notice: app/THIRD-PARTY-NOTICE.DAIN.txt
+    obligations: [notice, attribution]
+    decision: reference-only
+    reason: "fetched at run time, not in the repository, so its files are not audited; no issue of the adapter uses them"
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  # FLAVR notice, lines 1-5 (Apache License 2.0; fetched from huggingface.co/Hawkynt/mediadroid-models,
+  # flavr/) and 7-12 (converted for ncnn, the changes stated).
+  - name: flavr-weights
+    kind: weights
+    licence: Apache-2.0
+    url: https://github.com/tarun005/FLAVR
+    notice: app/THIRD-PARTY-NOTICE.FLAVR.txt
+    obligations: [notice, attribution]
+    decision: reference-only
+    reason: "fetched at run time, not in the repository, so its files are not audited; converted for ncnn with the changes its notice states; no issue of the adapter uses them"
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  # ncnn notice, lines 1-5 (ncnn 20261020's prebuilt releases, fetched by native/build.gradle.kts and
+  # checked against their digests) and 10 (the binary is BSD-3-Clause); lines 11 and 14-64 list the
+  # zlib- and BSD-2-Clause-licensed components of its source, which only a source build carries.
+  - name: ncnn
+    kind: provider
+    licence: BSD-3-Clause
+    url: https://github.com/Tencent/ncnn
+    notice: app/THIRD-PARTY-NOTICE.ncnn.txt
+    obligations: [notice]
+    decision: usable
+    reason: "Tencent ncnn 20261020's prebuilt releases, BSD-3-Clause; a build from its full source also carries zlib- and BSD-2-Clause-licensed components its notice lists"
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  # XVFI notice, lines 4-7 and 9-12 (the authors' Vimeo-trained weights, fetched from
+  # huggingface.co/Hawkynt/mediadroid-models, xvfi/).
+  - name: xvfi-weights
+    kind: weights
+    licence: LicenseRef-XVFI-Research-Only
+    url: https://github.com/JihyongOh/XVFI
+    notice: app/THIRD-PARTY-NOTICE.XVFI.txt
+    obligations: [attribution, research-only, no-redistribution]
+    decision: blocked
+    reason: "XVFI's terms: \"freely used for research and education only. Any commercial use should get formal permission first\"; the authors' permission is MediaDroid's and does not extend to Polypiler"
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
