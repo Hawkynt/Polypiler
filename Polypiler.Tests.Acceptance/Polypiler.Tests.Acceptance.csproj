@@ -62,6 +62,7 @@
     <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
     <ProjectReference Include="..\Polypiler.Tooling\Polypiler.Tooling.csproj" />
     <ProjectReference Include="..\Polypiler.Tests.Probe\Polypiler.Tests.Probe.csproj" />
+    <ProjectReference Include="..\Polypiler.Tests.Generator\Polypiler.Tests.Generator.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The program the rebuild-check tests run several times: each verb writes an output tree that is
+       deterministic or differs between runs in one known way. It references nothing, so the tests can
+       copy it into a run's directory. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>polypiler-generator</AssemblyName>
+    <RootNamespace>Polypiler.TestGenerator</RootNamespace>
+    <Version>0.1.0</Version>
+    <IsPackable>false</IsPackable>
+    <UseAppHost>false</UseAppHost>
+    <!-- No symbols, so that the coverage collector leaves the generator alone: it runs in processes of
+         its own, where no test can see its lines. -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+</Project>
