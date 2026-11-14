@@ -1,62 +1,63 @@
 # O0109 — Recognize sign extension from shift pairs, xor-subtract and compare-select idioms
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#580](https://github.com/Hawkynt/Polypiler/issues/580). Once implemented it is switched off with `--disable-opt O0109`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0109SignExtend` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#580](https://github.com/Hawkynt/Polypiler/issues/580). Switched off with `--disable-opt O0109`.
 
 ## What it does
 
-Languages without narrow signed types sign-extend by hand: `(x << 24) >> 24`, `(x ^ 0x80) - 0x80`, or
-Cipher's `ToSByte`, which masks to a byte and subtracts 256 when the value exceeds 127. Each is a
-truncation followed by a sign extension — a single `MOVSX`, a cast in C#, a `CBW` on the 8086 — and
-bit-field decoders use the same idiom for odd widths. PRD §4.4 (logical minimum width), §4.5, §19.2.
+The sign extension of the low `b` bits is written as a shift pair or with xor and subtract. The rule
+replaces both by `SignExtend` of the IR. With a constant bit count the C# backend writes the operation
+as the shift pair of the signed type; elsewhere it calls the helper that traps on a count outside the
+width. Sourced from Warren, *Hacker's Delight*, 2nd ed., §2-6.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static int F(int x) => (x << 20) >> 20;
+```
+
 ### Before
 
-```
-%a = Shl.i32[strict] %x, 24
-%r = AShr.i32[strict] %a, 24
+With `--opt none`:
+
+```csharp
+public static int F(int x) => (x << 20) >> 20;
 ```
 
 ### After
 
-```
-%t = Trunc.i8 %x
-%r = SExt.i32 %t
+By default; `--explain-opt` prints `O0109 sign extension from a shift pair or xor-subtract: 'F' statement 1`:
+
+```csharp
+public static int F(int x) => unchecked(((x << (32 - 12)) >> (32 - 12)));
 ```
 
 ## When it applies
 
-shift pair: both amounts are the same constant `w-k`, the second shift is
-arithmetic. Xor-subtract and compare-select: the constants are exactly `2^(k-1)` (and `2^k`, `2^(k-1)
-- 1`) for one `k`, and the operand is provably below `2^k` — by an explicit `And` with `2^k - 1`, or
-by a known-bits or range fact; the comparison is consistent with the operand's range (signed or
-unsigned compare both hold once `0 ≤ y < 2^k`). Wrapping subtraction; a `Sub` marked checked in the
-source profile is not rewritten.
+- `(x << k) >> k` with a constant `0 < k < w` and an arithmetic right shift - the shift of a signed
+  32- or 64-bit value - is `SignExtend(x, w - k)`.
+- `(x ^ m) - m` with `m = 1 << (b - 1)` is `SignExtend(x, b)` when the bits of `x` from `b` on are
+  known to be zero: a mask (`(x & 0xFF) ^ 0x80`), a zero-extended byte. The weighted bits of `x`
+  (`WeightEvaluator`) show that: every field ends below `b`.
 
 ## How it is proven
 
-`exhaustive-8bit` (`w = 8`, every `k` in 1..7, three forms) plus `smt-bitvector` at
-16, 32 and 64 bit for the matched `k`; the bound on the operand is a `KnownBitsFact` or `RangeFact`
-obligation when no explicit mask is present. A failed, unknown or timed-out obligation (budget 5 s
-each) leaves the IR unchanged and reports `not applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeSignExtend.cs` and `signextend.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Logical second shift: `LShr(Shl(x, 24), 24)` with `x = 0x000000FF` gives `0x000000FF`; the sign
-  extension gives `0xFFFFFFFF`.
-- Xor-subtract without mask or fact, `k = 8`: `x = 0x00000100` gives `(0x100 ^ 0x80) - 0x80 =
-  0x00000100`; `SExt(Trunc.i8 x)` gives 0.
-- Uneven shifts `Shl 24`, `AShr 16`: the result is the sign-extended byte times 256.
-- Compare-select with the wrong threshold (`y > 128`): `y = 0x80` stays 128 instead of becoming −128.
+- An unmasked `(x ^ 0x80) - 0x80`: bits above the field pass through unchanged.
+- A logical right shift (`(x << 20) >> 20` on a `uint`), which extends with zeros.
+- Different amounts (`(x << 20) >> 19`), or a constant that is no power of two (`0x81`).
 
 ## Switching it off
 
-`--disable-opt O0109`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0109`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after known-bits and range propagation; enables storage
-narrowing and cast emission in the backends.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run.

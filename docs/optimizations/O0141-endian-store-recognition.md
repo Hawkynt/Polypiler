@@ -1,80 +1,88 @@
 # O0141 — Recognize little- and big-endian stores from shifted byte stores
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#567](https://github.com/Hawkynt/Polypiler/issues/567). Once implemented it is switched off with `--disable-opt O0141`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0141EndianStore` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#567](https://github.com/Hawkynt/Polypiler/issues/567). Switched off with `--disable-opt O0141`.
 
 ## What it does
 
-The mirror image of the byte-assembly load: a word is written as `out[0] = x; out[1] = x >> 8; out[2] =
-x >> 16; out[3] = x >> 24`. Cipher's `Unpack32LE`/`Unpack32BE` and every hash finalization do it. As
-four stores it blocks `BinaryPrimitives.WriteUInt32LittleEndian`, `to_le_bytes` and a single `MOV`.
-Stores are harder than loads: each byte store is observable to anything that reads between them, and a
-bounds trap in the middle leaves a half-written word. PRD §4.5, §4.7 (`StoreLE/BE`).
+Portable code writes a multi-byte integer one byte at a time. The rule replaces 2, 4 or 8 such stores
+by `StoreLittle` or `StoreBig` of the IR.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static void F(byte[] b, int i, uint v) { b[i] = (byte)v; b[i + 1] = (byte)(v >> 8); b[i + 2] = (byte)(v >> 16); b[i + 3] = (byte)(v >> 24); }
+```
+
 ### Before
 
-```
-%t0 = Trunc.u8 %x
-Store.u8 %p, %t0
-%s1 = LShr.u32[strict] %x, 8
-%t1 = Trunc.u8 %s1
-%p1 = PtrAdd %p, 1
-Store.u8 %p1, %t1
-%s2 = LShr.u32[strict] %x, 16
-%t2 = Trunc.u8 %s2
-%p2 = PtrAdd %p, 2
-Store.u8 %p2, %t2
-%s3 = LShr.u32[strict] %x, 24
-%t3 = Trunc.u8 %s3
-%p3 = PtrAdd %p, 3
-Store.u8 %p3, %t3
+With `--opt none`:
+
+```csharp
+public static void F(byte[] b, int i, uint v) {
+  unchecked {
+    b[i] = (byte)v;
+    b[i + 1] = (byte)(v >> 8);
+    b[i + 2] = (byte)(v >> 16);
+    b[i + 3] = (byte)(v >> 24);
+  }
+}
 ```
 
 ### After
 
-```
-StoreLE.u32 %p, %x
+By default; `--explain-opt` prints `O0141 endian store from byte stores: 'F' statement 1`:
+
+```csharp
+public static void F(byte[] b, int i, uint v) {
+  unchecked {
+    if ((i >= 0) && (i <= (b.Length - 4))) {
+      Store(b, i, (ulong)v, 4, true);
+    } else {
+      b[i] = (byte)v;
+      b[i + 1] = (byte)(v >> 8);
+      b[i + 2] = (byte)(v >> 16);
+      b[i + 3] = (byte)(v >> 24);
+    }
+  }
+}
 ```
 
 ## When it applies
 
-(1) `w/8` byte stores to consecutive offsets of one base, all in one basic
-block; (2) the stored bytes are the `w/8` distinct bytes of one SSA value `x` of width `w`, in
-ascending (little-endian) or descending (big-endian) significance; (3) between the first and the last
-store there is no load, call or other instruction that may read any of the bytes ([#82](https://github.com/Hawkynt/Polypiler/issues/82)), so
-the intermediate, partially written state is unobservable; (4) the destination is ordinary memory —
-not volatile, not a device register, not executable memory ([#80](https://github.com/Hawkynt/Polypiler/issues/80)); (5) bounds: all `w/8`
-addresses are proven in bounds, or the stores carry no bounds trap — a trapping store in the middle
-would leave earlier bytes written; (6) the destination bytes do not overlap the storage `x` was loaded
-from in a way the original order made visible (covered by 3 when `x` is an SSA value).
+2, 4 or 8 consecutive statements store `(byte)(v >> 8m)` into `b[i + k]`: one `byte[]` variable, one
+base index plus consecutive constants, one value `v`, each stored value exactly byte `m` of `v` by its
+weighted bits (`WeightEvaluator`); offset `k` receives byte `k` (little-endian) or `n - 1 - k`
+(big-endian), the statements in either order. Array, base index and value have no effect and cannot
+trap, and no index may trap on its own - JavaScript's sums in doubles are left alone, constant indices
+are taken.
+
+The byte stores write the elements inside the array before the first one outside traps; the combined
+store traps before writing anything. Those partial writes are visible to whoever catches the trap, so
+the replacement runs the combined store only where every element lies inside the array and keeps the
+byte stores, with their trap and partial writes, everywhere else:
+`if (i >= 0 && i <= b.Length - n) StoreLittle(b, i, v); else { the byte stores }`. The stores it keeps
+are not combined again.
 
 ## How it is proven
 
-`range+alias facts` (obligations 3–5) plus `smt-bitvector` over a symbolic word and a
-symbolic `w/8`-byte memory window; the 16-bit instance by `exhaustive` enumeration. A failed, unknown
-or timed-out obligation (budget 5 s each) leaves the IR unchanged and reports `not applied: proof
-timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeEndianStore.cs` and `endianstore.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Half-written word on a trap: with a trapping bounds check and a 3-byte buffer the original writes
-  three bytes and then raises; `StoreLE` raises before writing anything.
-- A reader between the stores: a load of `p[1]` after the first store sees the new low byte with the
-  old second byte.
-- Device memory: four byte writes to a memory-mapped register are four bus writes in a defined order;
-  one word write is not the same I/O trace (PRD §17.5).
-- Duplicate byte: offset 2 receives `x >> 8`; for `x = 0x12345678` the bytes are `78 56 56 12`.
-- Bytes from two values (`x` for the low half, `y` for the high half): two 16-bit stores at most, not
-  one 32-bit store.
+- A gap, a wrong byte, or two values.
+- A store between that changes the value (`v = v >> 8;`).
+- Bytes that are not whole bytes of the value (`(byte)(v >> 4)`).
+- A JavaScript index `i + k`.
 
 ## Switching it off
 
-`--disable-opt O0141`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0141`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after address canonicalization, before dead-store
-elimination; enables store-to-load forwarding with [#275](https://github.com/Hawkynt/Polypiler/issues/275) and word-wide serialization.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run. Without range facts the guard stays; the full target state proves the range and drops it.

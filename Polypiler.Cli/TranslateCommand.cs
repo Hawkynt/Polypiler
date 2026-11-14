@@ -8,6 +8,8 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
+using Polypiler.Core.Optimize;
+using Polypiler.Core.Recognize;
 
 namespace Polypiler.Cli;
 
@@ -18,7 +20,9 @@ namespace Polypiler.Cli;
 /// own way: for C# it names the target framework, and <c>--langversion</c> raises the version of the
 /// language above the one the profile brings; for JavaScript it names the language level, and
 /// <c>--module</c>, <c>--global</c> and <c>--typed-arrays</c> say how the file is packaged and what
-/// an ECMAScript 5 engine has.
+/// an ECMAScript 5 engine has. The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
+/// <c>--explain-opt</c> (ADR 0004) apply to every pair: the optimizer runs between the frontend and
+/// the backend unless <c>--opt none</c> says otherwise.
 /// </summary>
 public static class TranslateCommand {
 
@@ -46,8 +50,14 @@ public static class TranslateCommand {
   private const string Global = "--global";
   private const string TypedArrays = "--typed-arrays";
   private const string Float = "--float";
+  private const string Opt = "--opt";
+  private const string DisableOpt = "--disable-opt";
+  private const string ExplainOpt = "--explain-opt";
 
   private static readonly string[] _required = [From, To, Output];
+
+  /// <summary>The options of the pass pipeline, which every pair of languages takes.</summary>
+  private static readonly Option[] _pipeline = [new(Opt, "<none|default>"), new(DisableOpt, "<O####>[,<O####>...]"), new(ExplainOpt, null)];
 
   /// <summary>The source languages; another one is another entry.</summary>
   private static readonly Frontend[] _frontends = [
@@ -68,7 +78,7 @@ public static class TranslateCommand {
   public static string UsageLine { get; } =
     $"{ProductInfo.Name} translate <file> {From} {Choice(_frontends.Select(frontend => frontend.Name))}"
     + $" {To} {Choice(_backends.Select(backend => backend.Name))} {Output} <directory>"
-    + string.Concat(_frontends.SelectMany(frontend => frontend.Options).Concat(_backends.SelectMany(backend => backend.Options))
+    + string.Concat(_pipeline.Concat(_frontends.SelectMany(frontend => frontend.Options)).Concat(_backends.SelectMany(backend => backend.Options))
       .DistinctBy(option => option.Name)
       .Select(option => option.Value is null ? $" [{option.Name}]" : $" [{option.Name} {option.Value}]"));
 
@@ -92,7 +102,7 @@ public static class TranslateCommand {
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
     string? file = null;
     var known = new Dictionary<string, bool>();
-    foreach (var option in _required.Select(name => new Option(name, "")).Concat(_frontends.SelectMany(frontend => frontend.Options)).Concat(backends.SelectMany(backend => backend.Options)))
+    foreach (var option in _required.Select(name => new Option(name, "")).Concat(_pipeline).Concat(_frontends.SelectMany(frontend => frontend.Options)).Concat(backends.SelectMany(backend => backend.Options)))
       known.TryAdd(option.Name, option.Value is not null);
 
     var options = new Dictionary<string, string>();
@@ -109,6 +119,9 @@ public static class TranslateCommand {
         options[argument] = "";
       } else if (index + 1 == arguments.Count) {
         return Refuse(error, $"the option '{argument}' needs a value");
+      } else if (argument == DisableOpt && options.TryGetValue(argument, out var listed)) {
+        // A list option may be repeated; the items of every occurrence count.
+        options[argument] = listed + "," + arguments[++index];
       } else {
         options[argument] = arguments[++index];
       }
@@ -130,8 +143,8 @@ public static class TranslateCommand {
       return Refuse(error, $"unknown target language '{options[To]}'; the prototype writes {Listed(backends.Select(candidate => candidate.Name))}");
 
     // An option that is not required belongs to a source or to a target language, and only to the chosen one.
-    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && !frontend.Has(option) && !backend.Has(option));
-    var misuse = foreign is null ? frontend.Misuse(options) ?? backend.Misuse(options)
+    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && _pipeline.All(pipeline => pipeline.Name != option) && !frontend.Has(option) && !backend.Has(option));
+    var misuse = foreign is null ? PipelineMisuse(options) ?? frontend.Misuse(options) ?? backend.Misuse(options)
       : _frontends.Any(candidate => candidate.Has(foreign)) ? $"the option '{foreign}' does not apply to the source language '{frontend.Name}'"
       : $"the option '{foreign}' does not apply to the target language '{backend.Name}'";
     if (misuse is not null)
@@ -145,7 +158,48 @@ public static class TranslateCommand {
     }
 
     var (module, exitCode) = frontend.Import(file, source, options, output, error);
-    return module is null ? exitCode : Emit(module, options, output, error, backend);
+    return module is null ? exitCode : Emit(Optimized(file, module, options, error, backend), options, output, error, backend);
+  }
+
+  /// <summary>The level of <c>--opt</c>, or <see langword="null"/> for a value that names none.</summary>
+  private static OptimizationLevel? LevelOf(IReadOnlyDictionary<string, string> options) => options.GetValueOrDefault(Opt, "default") switch {
+    "none" => OptimizationLevel.None,
+    "default" => OptimizationLevel.Default,
+    _ => null
+  };
+
+  /// <summary>What is wrong with the pipeline options: an unknown level, an empty item, or an optimization number the pipeline does not have.</summary>
+  private static string? PipelineMisuse(IReadOnlyDictionary<string, string> options) {
+    if (LevelOf(options) is null)
+      return $"unknown optimization level '{options[Opt]}'; the levels are none and default";
+
+    if (!options.TryGetValue(DisableOpt, out var list))
+      return null;
+
+    var unknown = list.Split(',').FirstOrDefault(id => RuleTable.Default.Find(id) is null);
+    return unknown switch {
+      null => null,
+      "" => $"the option '{DisableOpt}' has an empty item",
+      _ when !IrRule.IsId(unknown) => $"'{unknown}' is not an optimization number of the form O####",
+      _ => $"unknown optimization '{unknown}'; the pipeline has {string.Join(", ", RuleTable.Default.Ids)}"
+    };
+  }
+
+  /// <summary>
+  /// Runs the pass pipeline on an imported module with the options of the command line; with
+  /// <c>--explain-opt</c> every rule application is written to the error stream.
+  /// </summary>
+  private static IrModule Optimized(string file, IrModule module, IReadOnlyDictionary<string, string> options, TextWriter error, Backend backend) {
+    var result = Optimizer.Run(module, new OptimizerOptions {
+      Level = LevelOf(options)!.Value,
+      Disabled = options.TryGetValue(DisableOpt, out var list) ? list.Split(',').ToHashSet() : [],
+      Target = backend.Target
+    });
+    if (options.ContainsKey(ExplainOpt))
+      foreach (var application in result.Applications)
+        error.WriteLine($"{file}: opt {application}");
+
+    return result.Module;
   }
 
   /// <summary>Checks a module and writes it in the target language into the output directory.</summary>
@@ -238,6 +292,7 @@ public static class TranslateCommand {
   /// <summary>The JavaScript backend with a capability table; <c>--profile</c> names the language level.</summary>
   private static Backend JavaScript(JavaScriptCapabilities capabilities) => new(
     "javascript",
+    new RuleTarget(capabilities.RemainderFromQuotient),
     [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error,
     (module, options) => JavaScriptEmitter.Legalize(module, Implementations, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities),
@@ -254,6 +309,7 @@ public static class TranslateCommand {
 
   /// <summary>The C# backend with a capability table.</summary>
   private static Backend CSharp(CSharpCapabilities capabilities) => new("csharp",
+    new RuleTarget(capabilities.RemainderFromQuotient),
     [new(Namespace, "<name>"), new(Profile, "<name>"), new(LangVersion, "<version>"), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? CSharpMisuse(options),
     (module, options) => CSharpEmitter.Legalize(module, Implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
@@ -330,6 +386,7 @@ public static class TranslateCommand {
 
   /// <summary>A target language of the command.</summary>
   /// <param name="Name">The name <c>--to</c> takes.</param>
+  /// <param name="Target">What the capability table tells the optimizer about the costs of the target.</param>
   /// <param name="Options">The options this language reads; another target may read one of them its own way.</param>
   /// <param name="Misuse">What is wrong with the values of those options, or <see langword="null"/>.</param>
   /// <param name="Lower">The module with the floating-point operations the target lacks replaced by their portable implementations.</param>
@@ -337,6 +394,7 @@ public static class TranslateCommand {
   /// <param name="Emit">Writes a module that passed the check.</param>
   private sealed record Backend(
     string Name,
+    RuleTarget Target,
     Option[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
     Func<IrModule, IReadOnlyDictionary<string, string>, IrModule> Lower,

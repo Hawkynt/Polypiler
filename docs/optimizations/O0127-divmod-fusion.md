@@ -1,74 +1,79 @@
 # O0127 — Fuse a division and a remainder of the same operands into DivMod
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#274](https://github.com/Hawkynt/Polypiler/issues/274). Once implemented it is switched off with `--disable-opt O0127`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0127QuotientRemainder` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#274](https://github.com/Hawkynt/Polypiler/issues/274). Switched off with `--disable-opt O0127`.
 
 ## What it does
 
-Digit extraction, radix conversion and index splitting compute `x / y` and `x % y` side by side —
-CompressionWorkbench prints `versionNeeded / 10` and `versionNeeded % 10` in one expression. Hardware
-dividers produce both results at once, C# has `Math.DivRem`, Python `divmod`, and on a CPU without a
-divider one software routine can return both. PRD §4.3 lists `DivMod` among the operations that stay
-recognizable; PRD §8 P2 asks for "integer `DivMod` where safe" — safe meaning that no division is
-executed that the source would not have executed, and that signedness and rounding of the pair agree.
+A remainder `a % b` that follows the quotient `q = a / b` of the same operands needs no second
+division: `a - q * b` is the same. The rule makes that replacement where the target's capability table
+says it is cheaper than a second division (`RuleTarget.RemainderFromQuotient`): the C# table says so,
+because the .NET JIT emits one division instruction per operator; the JavaScript table does not, because
+an engine computes the remainder of two integers in one instruction and the product needs `Math.imul`.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static int F(int a, int b) { int q = a / b; int r = a % b; return q * 1000 + r; }
+```
+
 ### Before
 
-```
-%q = UDiv.u32 %x, %y
-%r = URem.u32 %x, %y
+With `--opt none`:
+
+```csharp
+public static int F(int a, int b) {
+  unchecked {
+    var q = a / b;
+    var r = a % b;
+    return (q * 1000) + r;
+  }
+}
 ```
 
 ### After
 
-```
-%d = DivMod.u32[trunc] %x, %y
-%q = Quot %d
-%r = Rem %d
+By default; `--explain-opt` prints `O0127 remainder from the quotient of the same operands: 'F' statement 1`:
+
+```csharp
+public static int F(int a, int b) {
+  unchecked {
+    var q = a / b;
+    var r = a - (q * b);
+    return (q * 1000) + r;
+  }
+}
 ```
 
 ## When it applies
 
-both instructions take the *same* SSA values `x` and `y` in the same
-operand positions; they agree in signedness, in rounding mode and in trap contract (division by zero,
-and the most-negative-by-minus-one case for signed types, each either trapping in both or defined in
-both, as the source profiles of the two instructions state); one instruction dominates the other, and
-the `DivMod` is placed at the dominating one — the shared contract becomes the attributes of the
-`DivMod` as [#99](https://github.com/Hawkynt/Polypiler/issues/99) defines them (`[trunc]`, `[floor]` or the Euclidean mode; `ovf=wrap|trap`;
-`zero=trap|zero`) — so a division with these operands was executed there anyway and any trap occurs at
-the same point as before; nothing is moved across an effect. If the dominated instruction is the one
-that trapped in the source while the dominating one was defined (possible only with differing
-contracts), the pair is refused by the contract check.
+The quotient is declared or assigned to a variable; the remainder stands in a later statement of
+the same block, in the expressions that statement evaluates itself. In between, and before the remainder
+within its statement, nothing writes the quotient's variable or a variable of the operands, and both
+operands have no effect and cannot trap. The quotient has trapped already where the remainder would - a
+zero divisor, the smallest value divided by -1 - so the remainder from it, computed with wrapping
+arithmetic, is the same everywhere it is reached. Where the table does not prefer it, both divisions
+stay: their operands are variables already, read once each.
 
 ## How it is proven
 
-`exhaustive-8bit` over all `(x, y)` with `y ≠ 0` for each signedness and rounding
-mode (quotient and remainder projections against the separate operations) plus `smt-bitvector` at 16,
-32 and 64 bit; dominance and the identical trap contract are structural facts checked by the rule and
-recorded as `EffectFact` obligations. A failed, unknown or timed-out obligation (budget 5 s each)
-leaves the IR unchanged and reports `not applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeQuotient.cs` and `quotient.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Mixed signedness: `UDiv.u32` and `SRem.i32` on `x = 0xFFFFFFF9`, `y = 2`: the unsigned quotient is
-  `0x7FFFFFFC` and the signed remainder is −1; no single `DivMod` yields both (the unsigned remainder
-  is 1).
-- Mixed rounding: truncating `-17 / 5 = -3` with flooring `-17 mod 5 = 3`; `DivMod[trunc]` would give
-  remainder −2.
-- Sibling branches: `if (c) q = x / y; else r = x % y;` — fusing requires a division before the
-  branch; when `c` is false and the profile makes only `/` trap on zero, a trap would appear on a path
-  that had none.
-- Different divisor values that happen to be equal at run time (`y` and a reloaded `y2`): not the same
-  SSA value, so not provably the same division.
+- An operand changed between the two (`a = a + 1`).
+- Different operands (`a % c`), or the remainder before the quotient.
+- A remainder inside a nested block (`if (q > 0) return a % b;`).
+- JavaScript's `(a % b) | 0`, which is a remainder of doubles.
 
 ## Switching it off
 
-`--disable-opt O0127`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0127`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after global value numbering (so equal operands are the
-same SSA value) and after [#565](https://github.com/Hawkynt/Polypiler/issues/565) where present; enables single-division lowering.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run.

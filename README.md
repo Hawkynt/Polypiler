@@ -162,7 +162,7 @@ dotnet run --project Polypiler.Cli -c Release -- translate tests/fixtures/protot
   --from csharp --to csharp --profile net4.8 --output ./generated
 ```
 
-This is a walking skeleton, not the product: one thin path from source to generated code, without optimization, analysis or `--verify`.
+This is a walking skeleton, not the product: one thin path from source to generated code, with the first recognition rules as its only optimization and without analysis or `--verify`.
 
 - **Input:** one C# file holding one `static class` of `static` methods and constants.
   - **Types:** `sbyte`, `byte`, `short`, `ushort`, `char`, `int`, `uint`, `long`, `ulong`, `float`, `double`, `bool`, and one-dimensional arrays of the numeric ones.
@@ -190,6 +190,7 @@ This is a walking skeleton, not the product: one thin path from source to genera
   - Constants come back as `private const` fields, tables as `private static readonly` arrays that no method writes to, a `char` as `ushort`, and the library operations as the calls of `System.Math`, `MathF`, `BitOperations`, `BitConverter` and `Array` they were, named in full.
   - A `for` with a `continue` comes back as a `for` when its step is one statement and otherwise as a `while` that runs the step before each `continue`; any other `for` and every `foreach` come back as a `while`, and `x += y` as `x = x + y`.
 - **Everything else is refused, not approximated:** `decimal`, `Half`, `Int128`, `nint`, strings and text operations on `char`, spans, multi-dimensional and jagged arrays, `bool[]`, classes with state, generics, lambdas, exceptions, `goto`, pattern matching and `ref`/`out` are reported as `PLY1002` with their position, and nothing is written. So is every library member outside the mapping tables, by its name, and every write to a `static readonly` array. LINQ is not referenced at all, so its use is a compiler error.
+- **Optimization:** between the frontend and the backend the pass pipeline runs 17 recognition rules over the IR until nothing changes: rotates (O0100), population counts from loops and from the SWAR sequence (O0101, O0102), zero counts from bit-scanning loops (O0103), bit reversal (O0105), byte swaps (O0106), single-bit test, set, clear and toggle (O0108), sign extension (O0109), parity (O0110), minimum and maximum (O0120), the absolute value that wraps (O0121), sign (O0122), clamp (O0123), multiplication by a constant (O0125), the remainder from the quotient (O0127, where the target's table prefers it) and endian loads and stores (O0140, O0141). A spelled-out rotate becomes `BitOperations.RotateLeft`, four byte loads `BinaryPrimitives.ReadUInt32LittleEndian`. A rule applies only where its result is exact, traps included; each [page](docs/optimizations/README.md#recognition-and-recovery) says what it matches and what it leaves alone. `--opt none|default` (default `default`) switches the pipeline off or on, `--disable-opt O####[,O####…]` (repeatable) switches single rules off, and `--explain-opt` lists every rule application with its number, function and statement on standard error. An unknown or malformed number is `PLY0001`.
 - **`--float strict|accurate`** (default `accurate`, [ADR 0005](docs/adr/0005-floating-point-tolerance.md)): `strict` writes the portable, correctly rounded implementation of every floating-point function with a tolerance, so every target and profile returns the same bits; `accurate` calls the target's own function where its measured error is admitted and names each one with its comparison bound in the header of the file.
 - **Exit codes:** 0 success, 2 usage error (`PLY0001`), 3 unsupported construct (`PLY1002` in the source, `PLY1052` for IR the C# backend cannot write, `PLY1053` for IR that has no form in the chosen C# profile, `PLY1152` for IR that has no form in the chosen JavaScript profile — nothing today), 4 invalid C# (`PLY1000`, or `PLY1003` for a constant expression that overflows, each with the compiler's own message), 70 internal error.
 
@@ -381,7 +382,7 @@ example before and after, the conditions under which it applies, the cases in wh
 fire, and a switch to turn it off.
 
 **[The optimization checklist](docs/optimizations/README.md)** lists all of them with their state:
-0 of 290 are implemented today. The families from "Loop transformations" on are borrowed from
+17 of 290 are implemented today, as prototypes in the pipeline of `translate`. The families from "Loop transformations" on are borrowed from
 [PB-Compiler](https://github.com/Hawkynt/PB-Compiler); the
 [catalog](docs/optimizations/pb-compiler-catalog.md) maps each of its 424 optimization documents to the
 page here that covers it.

@@ -1,63 +1,69 @@
 # O0108 — Recognize single-bit test, set, clear and flip with a variable index
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#558](https://github.com/Hawkynt/Polypiler/issues/558). Once implemented it is switched off with `--disable-opt O0108`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0108SingleBit` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#558](https://github.com/Hawkynt/Polypiler/issues/558). Switched off with `--disable-opt O0108`.
 
 ## What it does
 
-Bit sets, Bloom filters, flag words and bit streams address one bit by a computed index: `(x >> n) & 1`,
-`x | (1 << n)`, `x & ~(1 << n)`, `x ^ (1 << n)`. x86 has `BT`/`BTS`/`BTR`/`BTC`, PowerBASIC has `BIT`,
-`BIT SET` and `BIT RESET`, and a 6502 backend wants a mask table rather than a variable shift. The
-classic defect in this idiom — a 32-bit `1` shifted and then widened — is exactly what a naive matcher
-would paper over. PRD §4.5, §19.2.
+Single-bit operations with a position are written with a shifted one. The rule replaces them by
+`TestBit`, `SetBit`, `ClearBit` and `ToggleBit` of the IR. Where the position cannot be outside the
+width - a constant inside it, or a count masked to it, which is what the rule writes - the C# backend
+writes the operation with the shift and the mask themselves; elsewhere it calls the helper that traps.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static bool F(uint x, int i) => ((x >> i) & 1) != 0;
+```
+
 ### Before
 
-```
-%m = Shl.u32[mask] 1, %n
-%r = Or.u32 %x, %m
+With `--opt none`:
+
+```csharp
+public static bool F(uint x, int i) => ((x >> i) & 1u) != 0u;
 ```
 
 ### After
 
-```
-%r = BitSet.u32[mask] %x, %n
+By default; `--explain-opt` prints `O0108 single-bit test, set, clear or toggle: 'F' statement 1`:
+
+```csharp
+public static bool F(uint x, int i) => unchecked((((x >> (i & 31)) & 1u) != 0));
 ```
 
 ## When it applies
 
-the shifted constant is exactly 1 and has the same type `u<w>`/`i<w>` as
-`x` — no conversion lies between the shift and the combining operation; the shift's contract is
-`[mask]`, or `[strict]` with the range fact `0 ≤ n ≤ w-1`, and the intrinsic takes the same contract;
-for the test form through `LShr`, the shift is logical *or* arithmetic (bit 0 of the result is bit `n`
-of `x` either way for `n ≤ w-1`), and the `And` constant is exactly 1. The shifted mask may have other
-users; only the root is rewritten.
+- `((x >> i) & 1) != 0`, `== 0` and `== 1`, with an arithmetic or a logical shift - bit 0 of
+  `x >> i` is bit `i` of `x` either way;
+- `(x & (1 << i)) != 0` and `== 0`;
+- `x | (1 << i)`, `x & ~(1 << i)`, `x ^ (1 << i)`, the shifted one on either side.
+
+`x` is a 32- or 64-bit value (a narrower one widened before the shift counts as its widening), the one
+has its width, and conversions between the signed and unsigned type of one width are looked through. A
+shift of the IR takes its count modulo the width while these operations trap outside it, so the
+position becomes `i & (w - 1)`, unless it is a constant or already masked so. Value and position have no
+effect and cannot trap.
 
 ## How it is proven
 
-`exhaustive-8bit` (all 256 values × all 8 indices × four operations × both test
-spellings) plus `smt-bitvector` at 16, 32 and 64 bit. A failed, unknown or timed-out obligation
-(budget 5 s each) leaves the IR unchanged and reports `not applied: proof timeout` or the failing
-precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeSingleBit.cs` and `singlebit.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Narrow mask widened: `%m32 = Shl.i32[mask] 1, %n; %m = SExt.u64 %m32; Or.u64 %x, %m` with `x = 0`,
-  `n = 31` gives `0xFFFFFFFF80000000`; `BitSet.u64 0, 31` gives `0x0000000080000000`. With `n = 40`
-  the 32-bit shift masks the amount to 8 and sets bit 8, not bit 40.
-- Shifted constant 2: `Or(x, Shl(2, n))` sets bit `n + 1` and nothing at `n = w-1`.
-- `And(LShr(x, n), 3)`: a two-bit field, not a bit test.
-- `[strict]` shift without a range fact on `n`: the original is a verifier error or a trap for `n ≥
-  w`; the intrinsic must not hide it.
+- More than one bit: `(x >> i) & 3`, `x | (3 << i)`.
+- `(x & (1 << i)) == 1`, which is true only for bit 0.
+- A one of another width: `x | (long)(uint)(1 << i)` on a `long`.
+- A value that may trap: `a[0] | (1 << i)`.
 
 ## Switching it off
 
-`--disable-opt O0108`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0108`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after range propagation; enables bit-test instruction
-selection and PowerBASIC `BIT` statements.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run. O0101 runs on a counting loop before this rule could turn its bit test into `TestBit`.

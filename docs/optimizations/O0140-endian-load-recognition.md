@@ -1,86 +1,71 @@
 # O0140 — Recognize little- and big-endian loads from byte loads combined by shifts
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#275](https://github.com/Hawkynt/Polypiler/issues/275). Once implemented it is switched off with `--disable-opt O0140`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0140EndianLoad` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#275](https://github.com/Hawkynt/Polypiler/issues/275). Switched off with `--disable-opt O0140`.
 
 ## What it does
 
-Portable code reads a multi-byte integer one byte at a time: `b[0] | b[1] << 8 | b[2] << 16 | b[3] <<
-24`. Cipher's `Pack32LE`/`Pack32BE` do it for every block, CompressionWorkbench's CRC-32 slicing loop
-and GRZip do it inline. The four loads, three shifts and three ORs are one `MOV` on a little-endian
-machine, one `BinaryPrimitives.ReadUInt32LittleEndian` in C#, one `u32::from_le_bytes` in Rust. PRD §4.5
-("endian loads"), §4.7 (`LoadLE/BE`), §8 P2. The idiom's standing defect — sign-extended bytes in
-languages whose byte type is signed — is the mandatory counterexample.
+Portable code reads a multi-byte integer one byte at a time and joins the bytes with shifts. The rule
+replaces 2, 4 or 8 such loads by `LoadLittle` or `LoadBig` of the IR, which the C# backend writes as
+`BinaryPrimitives.ReadUInt32LittleEndian` and its siblings from .NET Standard 2.1 on and as a helper
+before, and the JavaScript backend as the `$load` helper.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static uint F(byte[] b, int i) => (uint)(b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24);
+```
+
 ### Before
 
-```
-%b0 = Load.u8 %p
-%p1 = PtrAdd %p, 1
-%b1 = Load.u8 %p1
-%p2 = PtrAdd %p, 2
-%b2 = Load.u8 %p2
-%p3 = PtrAdd %p, 3
-%b3 = Load.u8 %p3
-%z0 = ZExt.u32 %b0
-%z1 = ZExt.u32 %b1
-%z2 = ZExt.u32 %b2
-%z3 = ZExt.u32 %b3
-%s1 = Shl.u32[strict] %z1, 8
-%s2 = Shl.u32[strict] %z2, 16
-%s3 = Shl.u32[strict] %z3, 24
-%o1 = Or.u32 %z0, %s1
-%o2 = Or.u32 %o1, %s2
-%r  = Or.u32 %o2, %s3
+With `--opt none`:
+
+```csharp
+public static uint F(byte[] b, int i) => unchecked((uint)(((b[i] | (b[i + 1] << 8)) | (b[i + 2] << 16)) | (b[i + 3] << 24)));
 ```
 
 ### After
 
-```
-%r = LoadLE.u32 %p
+By default; `--explain-opt` prints `O0140 endian load from byte loads: 'F' statement 1`:
+
+```csharp
+public static uint F(byte[] b, int i) => unchecked(global::System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(new global::System.ReadOnlySpan<byte>(b, i, 4)));
 ```
 
 ## When it applies
 
-(1) the `w/8` loads are byte loads from one base with consecutive constant
-offsets `k … k + w/8 - 1`; (2) each byte reaches the result zero-extended — a sign extension is
-accepted only if a later mask removes the fill, which the byte-provenance check decides; (3) each byte
-occupies one distinct byte position and the positions are monotone in the address (ascending:
-little-endian, descending: big-endian); (4) all loads observe the same memory state: no store, call or
-other write that [#82](https://github.com/Hawkynt/Polypiler/issues/82) cannot prove disjoint from the `w/8` bytes lies between the first and
-the last load; (5) the bytes are ordinary memory — not volatile, not device registers, where the
-number and order of reads is observable ([#80](https://github.com/Hawkynt/Polypiler/issues/80)); (6) bounds: the loads share one bounds
-contract; with a trapping contract the same trap is raised by `LoadLE` and nothing observable
-separates the original loads, with the `default-zero` contract (JavaScript arrays) a range fact must
-prove all `w/8` indices in bounds. The byte loads may have other users and then stay.
+The expression is evaluated as weighted bits (`WeightEvaluator`) whose atoms are the byte loads. Each
+byte must land, all eight bits in order, on its own byte slot, and the slots must fill the whole width of
+the expression - so a pair of bytes inside a 32-bit sum waits for the whole sum. The bytes come from one
+`byte[]` variable at one base index plus consecutive constants (`i`, `i + 1`, …, constant indices from
+0), joined by `|`, `+` or `^`; the slot of offset `k` is `k` for little-endian and `n - 1 - k` for
+big-endian. The combined load traps, before reading anything, exactly when one of the byte loads would,
+with the same kind of trap, and the byte loads have no effect that the earlier trap could skip. An index
+computed in JavaScript's doubles traps with an overflow where it passes the largest `int32`; such indices
+are accepted only when the load at the base itself is evaluated first and no offset is negative, so
+that an index that large has already failed as out of range.
 
 ## How it is proven
 
-`range+alias facts` (obligations 4–6 as `AliasFact`, `EffectFact`, `RangeFact`) plus
-`smt-bitvector` over `w/8` symbolic bytes; the 16-bit instance is additionally checked by `exhaustive`
-enumeration of both bytes (65 536 cases). A failed, unknown or timed-out obligation (budget 5 s each)
-leaves the IR unchanged and reports `not applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeEndianLoad.cs` and `endianload.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Sign-extended bytes (Java `byte`, C `char`): bytes `80 00 00 00` give `SExt(0x80) | 0 | 0 | 0 =
-  0xFFFFFF80`; `LoadLE.u32` gives `0x00000080`.
-- A gap: offsets 0, 1, 2, 4 read five bytes' worth of address range and skip one.
-- A store between the loads that may alias byte 2: the original reads the new byte, a single load
-  placed at the first position reads the old one.
-- JavaScript out-of-range read: `data[i + 3]` past the end is `undefined`, coerced to 0, and the
-  expression yields the three valid bytes; a `LoadLE` would raise.
-- Volatile source: four reads of a device register are four bus cycles.
+- A gap (`i + 3` after `i + 1`), a byte out of order, or the same byte twice.
+- Bytes of two arrays.
+- Signed bytes (`sbyte[]`), which the idiom masks.
+- Fewer bytes than the width of the expression: `b[i] | b[i + 1] << 8` as an `int`.
+- In JavaScript, the highest byte loaded first (`b[i + 3] << 24 | … | b[i]`): its index could overflow
+  before the base fails.
 
 ## Switching it off
 
-`--disable-opt O0140`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0140`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after address canonicalization (constant offsets folded
-into `PtrAdd`) and alias analysis; enables [#559](https://github.com/Hawkynt/Polypiler/issues/559) folding and word-wide processing of block
-ciphers.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run.

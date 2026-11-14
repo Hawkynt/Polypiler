@@ -22,6 +22,8 @@
     <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.JavaScript\Polypiler.Core.Frontends.JavaScript.csproj" />
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Recognize\Polypiler.Core.Recognize.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,7 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**0 of 290 implemented.**
+**17 of 290 implemented** - as prototypes in the pass pipeline of `translate` (#1307), proven by exhaustive and random testing; their full target states stay open.
 
 ## General passes
 
@@ -67,31 +67,31 @@ maps every one of its optimization documents to the page here that covers it.
 
 ## Recognition and recovery
 
-- [ ] [O0100](O0100-rotate-recognition.md) — Recognize rotate-left and rotate-right from shift pairs (P2)
-- [ ] [O0101](O0101-popcount-loop-recognition.md) — Recognize population count from bit-counting loops (P2)
-- [ ] [O0102](O0102-popcount-swar-recognition.md) — Recognize population count from the SWAR mask-and-add sequence (P3)
-- [ ] [O0103](O0103-zero-count-loop-recognition.md) — Recognize leading and trailing zero counts from bit-scanning loops (P3)
+- [x] [O0100](O0100-rotate-recognition.md) — Recognize rotate-left and rotate-right from shift pairs (P2)
+- [x] [O0101](O0101-popcount-loop-recognition.md) — Recognize population count from bit-counting loops (P2)
+- [x] [O0102](O0102-popcount-swar-recognition.md) — Recognize population count from the SWAR mask-and-add sequence (P3)
+- [x] [O0103](O0103-zero-count-loop-recognition.md) — Recognize leading and trailing zero counts from bit-scanning loops (P3)
 - [ ] [O0104](O0104-zero-count-debruijn-recognition.md) — Recognize trailing zero count and floor-log2 from de Bruijn multiply-and-lookup (P3)
-- [ ] [O0105](O0105-bit-reverse-recognition.md) — Recognize bit reversal from swap cascades and shift loops (P3)
-- [ ] [O0106](O0106-byte-swap-recognition.md) — Recognize byte swap from shift-and-mask expressions and byte loops (P3)
+- [x] [O0105](O0105-bit-reverse-recognition.md) — Recognize bit reversal from swap cascades and shift loops (P3)
+- [x] [O0106](O0106-byte-swap-recognition.md) — Recognize byte swap from shift-and-mask expressions and byte loops (P3)
 - [ ] [O0107](O0107-pext-pdep-loop-recognition.md) — Recognize parallel bit extract and deposit from mask-driven loops (P3)
-- [ ] [O0108](O0108-single-bit-recognition.md) — Recognize single-bit test, set, clear and flip with a variable index (P3)
-- [ ] [O0109](O0109-sign-extension-recognition.md) — Recognize sign extension from shift pairs, xor-subtract and compare-select idioms (P3)
-- [ ] [O0110](O0110-parity-recognition.md) — Recognize parity from xor folding, nibble lookup and toggling loops (P3)
-- [ ] [O0120](O0120-min-max-recognition.md) — Recognize minimum and maximum from branchless mask selection and compare-select (P3)
-- [ ] [O0121](O0121-abs-recognition.md) — Recognize absolute value from sign-mask idioms and compare-select (P3)
-- [ ] [O0122](O0122-signum-recognition.md) — Recognize signum from comparison-difference, shift-or and select idioms (P3)
-- [ ] [O0123](O0123-clamp-recognition.md) — Recognize clamp from nested minimum/maximum and compare-select chains (P2)
+- [x] [O0108](O0108-single-bit-recognition.md) — Recognize single-bit test, set, clear and flip with a variable index (P3)
+- [x] [O0109](O0109-sign-extension-recognition.md) — Recognize sign extension from shift pairs, xor-subtract and compare-select idioms (P3)
+- [x] [O0110](O0110-parity-recognition.md) — Recognize parity from xor folding, nibble lookup and toggling loops (P3)
+- [x] [O0120](O0120-min-max-recognition.md) — Recognize minimum and maximum from branchless mask selection and compare-select (P3)
+- [x] [O0121](O0121-abs-recognition.md) — Recognize absolute value from sign-mask idioms and compare-select (P3)
+- [x] [O0122](O0122-signum-recognition.md) — Recognize signum from comparison-difference, shift-or and select idioms (P3)
+- [x] [O0123](O0123-clamp-recognition.md) — Recognize clamp from nested minimum/maximum and compare-select chains (P2)
 - [ ] [O0124](O0124-xor-swap-recognition.md) — Recognize an exchange of two memory cells from the three-xor sequence (P3)
-- [ ] [O0125](O0125-shift-add-multiply-recognition.md) — Recognize multiplication by a constant from shift-add and shift-subtract chains (P3)
+- [x] [O0125](O0125-shift-add-multiply-recognition.md) — Recognize multiplication by a constant from shift-add and shift-subtract chains (P3)
 - [ ] [O0126](O0126-reciprocal-division-recognition.md) — Recognize division and remainder by a constant from multiply-high sequences (P3)
-- [ ] [O0127](O0127-divmod-fusion.md) — Fuse a division and a remainder of the same operands into DivMod (P2)
+- [x] [O0127](O0127-divmod-fusion.md) — Fuse a division and a remainder of the same operands into DivMod (P2)
 - [ ] [O0128](O0128-saturating-arithmetic-recognition.md) — Recognize saturating addition and subtraction from overflow-test and widen-clamp idioms (P3)
 - [ ] [O0129](O0129-average-recognition.md) — Recognize overflow-free average from and-xor-shift and widen-add-shift idioms (P3)
 - [ ] [O0130](O0130-carry-chain-recognition.md) — Recognize multi-precision addition and subtraction with carry from limb idioms (P3)
 - [ ] [O0131](O0131-widening-multiply-recognition.md) — Recognize widening multiplication and multiply-high from half-width partial products (P3)
-- [ ] [O0140](O0140-endian-load-recognition.md) — Recognize little- and big-endian loads from byte loads combined by shifts (P2)
-- [ ] [O0141](O0141-endian-store-recognition.md) — Recognize little- and big-endian stores from shifted byte stores (P3)
+- [x] [O0140](O0140-endian-load-recognition.md) — Recognize little- and big-endian loads from byte loads combined by shifts (P2)
+- [x] [O0141](O0141-endian-store-recognition.md) — Recognize little- and big-endian stores from shifted byte stores (P3)
 - [ ] [O0142](O0142-byte-xor-loop-recognition.md) — Recognize byte-wise XOR loops over two buffers (P2)
 - [ ] [O0143](O0143-copy-loop-recognition.md) — Recognize element copy loops as Memory.Copy, Memory.Move or Memory.CopyForward (P2)
 - [ ] [O0144](O0144-fill-loop-recognition.md) — Recognize element fill loops as Memory.Fill (P2)

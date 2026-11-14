@@ -1,71 +1,65 @@
 # O0120 — Recognize minimum and maximum from branchless mask selection and compare-select
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#571](https://github.com/Hawkynt/Polypiler/issues/571). Once implemented it is switched off with `--disable-opt O0120`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** The rule `O0120MinMax` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#571](https://github.com/Hawkynt/Polypiler/issues/571). Switched off with `--disable-opt O0120`.
 
 ## What it does
 
-Branch-free minimum and maximum — `y ^ ((x ^ y) & -(x < y))` and the subtract-and-sign-mask variant —
-were written to avoid mispredicted branches on CPUs without conditional moves. Today they hide
-`Min`/`Max` from range analysis, from `Math.Min`, from SIMD `PMINSD` and from a 6502 backend that would
-rather compare and branch. PRD §19.3 allows the recovery only if sign extension, comparison, overflow
-and evaluation count match; the subtract variant is wrong whenever the subtraction overflows. PRD §24
-S2.
+The smaller or the larger of two integers is selected by a comparison, or without a branch by a mask.
+The rule replaces both by `Min` or `Max` of the IR, which the backends write as `Math.Min`/`Math.Max`.
+Sourced from Warren, *Hacker's Delight*, 2nd ed., §2-18.
 
 ## Example
 
+`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+
+```csharp
+public static int F(int a, int b) => b ^ ((a ^ b) & -(a < b ? 1 : 0));
+```
+
 ### Before
 
-```
-%c = ICmp.slt.i32 %x, %y
-%z = ZExt.i32 %c
-%m = Neg.i32 %z
-%d = Xor.i32 %x, %y
-%a = And.i32 %d, %m
-%r = Xor.i32 %y, %a
+With `--opt none`:
+
+```csharp
+public static int F(int a, int b) => unchecked(b ^ ((a ^ b) & -((a < b) ? 1 : 0)));
 ```
 
 ### After
 
-```
-%r = SMin.i32 %x, %y
+By default; `--explain-opt` prints `O0120 minimum or maximum from a comparison and selection: 'F' statement 1`:
+
+```csharp
+public static int F(int a, int b) => global::System.Math.Min(a, b);
 ```
 
 ## When it applies
 
-`x` and `y` are SSA values of the same integer type (each is therefore
-evaluated once in both versions); mask-select: the mask is exactly `Neg(ZExt(c))` or `SExt(c)` of a
-comparison of the *same* two values, and the xor structure selects one of them for each outcome — the
-proof decides which intrinsic, including the swapped-comparison spellings; subtract-sign: range facts
-must show `Sub(x, y)` does not overflow in the signed sense (`-2^(w-1) ≤ x - y ≤ 2^(w-1) - 1`), and
-the shift is arithmetic by exactly `w-1`; compare-select: both selected values are the compared
-values. Wrapping arithmetic only; a `Sub` under a checked profile is refused.
+- `a < b ? a : b` and every mirrored form: `<=`, `>`, `>=`, the operands of the comparison swapped,
+  the branches swapped. Equal operands give the same value either way. Operands widened without loss
+  before the comparison - bytes compared as `int` - compare as their original values, and a constant
+  compared after the widening is the same constant of the narrow type.
+- The branchless `b ^ ((a ^ b) & -(a < b ? 1 : 0))`, with the mask also written `0 - (c ? 1 : 0)` or
+  `c ? -1 : 0`: where the comparison holds it selects the other operand, elsewhere the kept one.
+
+Both operands are evaluated once instead of up to twice and must have no effect and not trap.
 
 ## How it is proven
 
-`exhaustive-8bit` over all 65 536 operand pairs for the mask-select and
-compare-select forms; `smt-bitvector` at 16, 32 and 64 bit. The subtract-sign form adds a `RangeFact`
-obligation for the non-overflow of `x - y`, and its equivalence is proven under that assumption. A
-failed, unknown or timed-out obligation (budget 5 s each) leaves the IR unchanged and reports `not
-applied: proof timeout` or the failing precondition.
+The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeMinMax.cs` and `minmax.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
 
 ## When it must not fire
 
-- Subtract-sign with overflow: `x = 0x7FFFFFFF`, `y = 0xFFFFFFFF` (−1): `x - y` wraps to `0x80000000`,
-  the mask is all ones and the result is `0x7FFFFFFF`; `SMin` is −1.
-- Signedness: for `x = 5`, `y = 0xFFFFFFFD`, `ICmp.slt` selects `0xFFFFFFFD` (−3) but `ICmp.ult`
-  selects 5 — the comparison decides between `SMin` and `UMin`, never the operand types alone.
-- Mask from a comparison of other values (`-(x < z)`): a select on an unrelated condition, not a
-  minimum.
-- Mask from `LShr(d, w-1)` (0 or 1 instead of 0 or −1) in the subtract-sign form: only bit 0 of `d` is
-  added.
+- Floating-point operands, where NaN and the signed zeros make the forms differ from `Math.Min`.
+- A comparison for equality, or branches that are not the compared operands.
+- An operand that may trap: `values[0] < a ? values[0] : a`.
 
 ## Switching it off
 
-`--disable-opt O0120`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+`--disable-opt O0120`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `recognize` after range propagation and if-conversion; enables
-[#272](https://github.com/Hawkynt/Polypiler/issues/272) on nested results, range refinement of the result, and `Select`-to-blend vectorization.
+Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
+backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
+passes have run. O0123 recognizes a compare-select chain whose inner selection this rule turned into `Min` or `Max`.
