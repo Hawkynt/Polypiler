@@ -9,7 +9,7 @@ using Polypiler.Core.IR;
 namespace Polypiler.Core.Frontends.CSharp;
 
 /// <summary>
-/// Lowers one bound syntax tree to IR. Everything is taken from the semantic model: the types the
+/// Lowers one bound syntax tree, or the parts of one class in several, to IR. Everything is taken from the semantic model: the types the
 /// compiler chose, the conversions it inserted and the constants it folded. A construct outside the
 /// subset ends the method it stands in with one diagnostic; nothing is guessed.
 /// </summary>
@@ -22,14 +22,38 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   private readonly HashSet<string> _read = [];
   private INamedTypeSymbol? _class;
 
-  public ImportResult Run(CompilationUnitSyntax root) {
+  public ImportResult Run(CompilationUnitSyntax root) => this.Run([(path, model, root)]);
+
+  /// <summary>
+  /// Lowers the parts of one static class that several files declare, each <c>partial</c>: the
+  /// constants of every part first, so that a method may read a constant of another file, then the
+  /// methods in file order. Each part is read with the semantic model of its own tree, and a
+  /// diagnostic names the file it stands in.
+  /// </summary>
+  public ImportResult Run(IReadOnlyList<(string Path, SemanticModel Model, CompilationUnitSyntax Root)> parts) {
     var functions = new List<IrFunction>();
     var name = "";
-    try {
-      var type = this.TheClass(root);
-      name = type.Identifier.Text;
-      this._class = model.GetDeclaredSymbol(type);
-      var seen = new HashSet<string>();
+    var classes = new List<(string Path, SemanticModel Model, ClassDeclarationSyntax Type)>();
+    foreach (var part in parts) {
+      path = part.Path;
+      model = part.Model;
+      try {
+        var type = this.TheClass(part.Root);
+        var symbol = model.GetDeclaredSymbol(type);
+        if (this._class is not null && !SymbolEqualityComparer.Default.Equals(this._class, symbol))
+          throw new UnsupportedException(type, "files that declare different classes");
+
+        this._class = symbol;
+        name = type.Identifier.Text;
+        classes.Add((part.Path, part.Model, type));
+      } catch (UnsupportedException unsupported) {
+        this.Report(unsupported);
+      }
+    }
+
+    foreach (var (file, semantics, type) in classes) {
+      path = file;
+      model = semantics;
       foreach (var field in type.Members.OfType<FieldDeclarationSyntax>()) {
         try {
           this.Field(field);
@@ -37,7 +61,12 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
           this.Report(unsupported);
         }
       }
+    }
 
+    var seen = new HashSet<string>();
+    foreach (var (file, semantics, type) in classes) {
+      path = file;
+      model = semantics;
       foreach (var member in type.Members.Where(member => member is not FieldDeclarationSyntax)) {
         try {
           if (member is not MethodDeclarationSyntax method)
@@ -51,8 +80,6 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
           this.Report(unsupported);
         }
       }
-    } catch (UnsupportedException unsupported) {
-      this.Report(unsupported);
     }
 
     return this._diagnostics.Count > 0
@@ -635,6 +662,10 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         return this.ArrayOf(type, expression);
       case InvocationExpressionSyntax invocation:
         return this.Call(invocation, type);
+      case MemberAccessExpressionSyntax { Expression: InvocationExpressionSyntax inner } part
+        when model.GetSymbolInfo(inner).Symbol is IMethodSymbol { Name: "SinCos" or "SinCosPi" } sinCos && inner.ArgumentList.Arguments.Count == 1:
+        return this.SinCos(sinCos, inner.ArgumentList.Arguments[0].Expression, part.Name.Identifier.Text, type)
+          ?? throw new UnsupportedException(expression, $"{sinCos.ContainingType.Name}.{sinCos.Name}");
       default:
         throw new UnsupportedException(expression, expression.Kind().ToString());
     }
@@ -747,6 +778,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       return integer;
 
     var parameters = method.Parameters.Select(parameter => parameter.Type.SpecialType).ToList();
+    if (CSharpFloatApi.Find(method.ContainingType.ToDisplayString(), method.Name, operands.Count) is { } member)
+      return this.Floating(member, method, operands, type);
+
     switch (method.ContainingType.ToDisplayString(), method.Name, operands.Count) {
       case ("System.Array", "Copy", 5) when parameters[4] == SpecialType.System_Int32:
         var source = this.Read(operands[0]);
@@ -783,6 +817,45 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       _ => null
     };
     return op is null ? null : this.Exact(op.Value, type, operands);
+  }
+
+  /// <summary>
+  /// One part of <c>Math.SinCos</c>, <c>MathF.SinCos</c> or <c>double.SinCos</c>: the sine as <c>Sin</c>
+  /// or <c>Item1</c>, the cosine as <c>Cos</c> or <c>Item2</c>. The pair as a value is outside the subset.
+  /// </summary>
+  private IrExpr? SinCos(IMethodSymbol method, ExpressionSyntax operand, string part, IrType type) {
+    if (method.Name != "SinCos" || method.ContainingType.ToDisplayString() is not ("System.Math" or "System.MathF" or "double" or "float"))
+      return null;
+
+    var op = part is "Sin" or "Item1" ? IrIntrinsicOp.Sin : IrIntrinsicOp.Cos;
+    return new IrIntrinsic(op, type, [this.Value(operand)]);
+  }
+
+  /// <summary>
+  /// A floating-point member of the table, when the overload the compiler chose is one its operation
+  /// is defined on: an overload on integers (<c>Math.Clamp(int, int, int)</c>) is refused by name.
+  /// </summary>
+  private IrExpr? Floating(CSharpFloatMember member, IMethodSymbol method, List<ExpressionSyntax> operands, IrType type) {
+    if (!method.Parameters.Any(parameter => parameter.Type.SpecialType is SpecialType.System_Double or SpecialType.System_Single))
+      return null;
+
+    // A mode of MidpointRounding is no value of the subset: it is read as the constant it has to be.
+    var arguments = new List<IrExpr>();
+    for (var index = 0; index < operands.Count; ++index) {
+      if (method.Parameters[index].Type.TypeKind != TypeKind.Enum)
+        arguments.Add(this.Value(operands[index]));
+      else if (model.GetConstantValue(operands[index]) is { HasValue: true, Value: int mode })
+        arguments.Add(new IrConst(IrType.I32, mode));
+      else
+        return null;
+    }
+
+    var call = new CSharpFloatCall(
+      arguments,
+      operands.Select(operand => model.GetConstantValue(operand) is { HasValue: true } constant ? constant.Value : null).ToList(),
+      method.Parameters.Select(parameter => parameter.Type.ToDisplayString()).ToList(),
+      type);
+    return member.Lower(call);
   }
 
   /// <summary>
