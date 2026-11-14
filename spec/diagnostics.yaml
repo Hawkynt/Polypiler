@@ -307,42 +307,47 @@ codes:
     severity: error
     exit: TargetBuildFailure
     title: target build failed
-    message: "building '<target>' failed: <reason>"
+    message: "target build failed: '<toolchain> <arguments>' exited with <code>"
+    rule: runner.build
     area: infrastructure
     owner: INFRA-RUNNER
-    reserved: true
+    surfaces: "the diagnostics of a run whose outcome is BuildFailed; the step's standard error, or its standard output when standard error is empty, is the cause"
   - code: PLY0031
     severity: error
     exit: BudgetExceeded
     title: time limit exceeded
-    message: "'<command>' exceeded its time limit of <limit>"
+    message: "time limit of <milliseconds> ms exceeded"
+    rule: runner.time
     area: infrastructure
     owner: INFRA-RUNNER
-    reserved: true
+    surfaces: the diagnostics of a run whose outcome is TimedOut
   - code: PLY0032
     severity: error
     exit: BudgetExceeded
     title: memory limit exceeded
-    message: "'<command>' exceeded its memory limit of <limit>"
+    message: "memory limit of <bytes> bytes exceeded"
+    rule: runner.memory
     area: infrastructure
     owner: INFRA-RUNNER
-    reserved: true
+    surfaces: the diagnostics of a run whose outcome is MemoryExceeded
   - code: PLY0033
     severity: error
     exit: BudgetExceeded
     title: output limit exceeded
-    message: "'<command>' exceeded its output limit of <limit>"
+    message: "output limit of <bytes> bytes exceeded"
+    rule: runner.output
     area: infrastructure
     owner: INFRA-RUNNER
-    reserved: true
+    surfaces: the diagnostics of a run whose outcome is OutputExceeded
   - code: PLY0034
     severity: error
     exit: EnvironmentError
     title: isolation unavailable
-    message: "isolation is not available: <reason>"
+    message: "isolation is unavailable on this host; untrusted input was not executed"
+    rule: runner.isolation
     area: infrastructure
     owner: INFRA-RUNNER
-    reserved: true
+    surfaces: the diagnostics of an untrusted run refused on a host whose sandbox is Limited
   - code: PLY0036
     severity: error
     exit: EnvironmentError
