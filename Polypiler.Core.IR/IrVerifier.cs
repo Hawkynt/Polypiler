@@ -4,7 +4,7 @@ using System.Linq;
 namespace Polypiler.Core.IR;
 
 /// <summary>Checks that a module is well-typed before anything interprets or emits it.</summary>
-public static class IrVerifier {
+public static partial class IrVerifier {
 
   /// <summary>The code of every diagnostic the verifier reports.</summary>
   public const string Code = "PLY0100";
@@ -19,6 +19,7 @@ public static class IrVerifier {
       if (!functions.TryAdd(function.Name, function))
         diagnostics.Add(Error(function.Name, "the module declares the function twice"));
 
+    var types = Types(module, diagnostics);
     var constants = new HashSet<IrModuleConst>(ReferenceEqualityComparer.Instance);
     var names = new HashSet<string>(functions.Keys);
     foreach (var constant in module.Constants) {
@@ -30,14 +31,14 @@ public static class IrVerifier {
       }
 
       Require(names.Add(constant.Name), "the module declares the name twice");
-      Require(constant.Type.IsStorable, $"a constant of the type {constant.Type}");
+      Require(constant.Type.IsStorable && !element.IsStruct, $"a constant of the type {constant.Type}");
       Require(constant.Type.IsArray || constant.Values.Count == 1, $"a constant of the type {constant.Type} with {constant.Values.Count} values");
       foreach (var value in constant.Values.Where(value => !FunctionCheck.InRange(new IrConst(element, value))).Take(1))
         Require(false, $"the constant {value} is not a value of {element}");
     }
 
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, diagnostics).Run();
+      new FunctionCheck(function, functions, constants, types, diagnostics).Run();
 
     return diagnostics;
   }
@@ -49,6 +50,7 @@ public static class IrVerifier {
     IrFunction function,
     Dictionary<string, IrFunction> functions,
     HashSet<IrModuleConst> constants,
+    TypeTable types,
     List<Diagnostic> diagnostics) {
 
     private readonly HashSet<IrLocal> _visible = [];
@@ -58,13 +60,17 @@ public static class IrVerifier {
     public void Run() {
       this.Require(function.ReturnType.IsStorable || function.ReturnType == IrType.Void,
         $"the return type {function.ReturnType} is not a type of the IR");
+      this.Declared(function.ReturnType);
       foreach (var parameter in function.Parameters) {
         this.Require(parameter.Type.IsStorable, $"parameter '{parameter.Name}' has the type {parameter.Type}");
+        this.Declared(parameter.Type);
         this.Require(this._visible.Add(parameter), $"parameter '{parameter.Name}' is declared twice");
       }
 
-      foreach (var local in function.Locals)
+      foreach (var local in function.Locals) {
         this.Require(local.Type.IsStorable, $"local '{local.Name}' has the type {local.Type}");
+        this.Declared(local.Type);
+      }
 
       this.Block(function.Body);
     }
@@ -72,6 +78,12 @@ public static class IrVerifier {
     private void Require(bool holds, string message) {
       if (!holds)
         diagnostics.Add(Error(function.Name, message));
+    }
+
+    /// <summary>A struct type, or an array of one, is one the module declares.</summary>
+    private void Declared(IrType type) {
+      var named = (type.Element ?? type).StructType;
+      this.Require(named is null || types.Declares(named), $"the type {named} is not among the types of the module");
     }
 
     private void Block(IrBlock block) {
@@ -111,6 +123,13 @@ public static class IrVerifier {
         case IrExprStmt expression:
           this.Expression(expression.Expression);
           break;
+        case IrFieldStore store:
+          this.Expression(store.Target);
+          this.Require(IsPlace(store.Target), $"a field is written of a {store.Target.GetType().Name}, which is no place");
+          this.Member(store.Target, store.Field);
+          this.Require(!store.Field.IsReadOnly, $"the read-only field '{store.Field.Name}' is written");
+          this.Value(store.Value, store.Field.Type, $"the value stored in the field '{store.Field.Name}'");
+          break;
         case IrIf conditional:
           this.Value(conditional.Condition, IrType.Bool, "the condition of an if");
           this.Block(conditional.Then);
@@ -130,7 +149,7 @@ public static class IrVerifier {
           this.Value(loop.Condition, IrType.Bool, "the condition of a for");
           this.Loop(loop.Body);
           foreach (var step in loop.Step.Statements)
-            this.Require(step is IrDeclare or IrAssign or IrStore or IrExprStmt, $"the step of a for holds a {step.GetType().Name}");
+            this.Require(step is IrDeclare or IrAssign or IrStore or IrFieldStore or IrExprStmt, $"the step of a for holds a {step.GetType().Name}");
 
           this.Block(loop.Step);
           break;
@@ -263,6 +282,33 @@ public static class IrVerifier {
           this.Expression(creation.Length);
           this.Require(creation.Type.IsArray && creation.Type.IsStorable, $"an array is created of the type {creation.Type}");
           this.Require(creation.Length.Type.IsWord, $"an array length has the type {creation.Length.Type}");
+          this.Defaulted(creation.Type.Element);
+          break;
+        case IrStructNew creation:
+          foreach (var argument in creation.Arguments)
+            this.Expression(argument);
+
+          if (this.Struct(creation.Type) is { } built) {
+            this.Require(creation.Arguments.Count == built.Fields.Count,
+              $"the struct {built.Name} is built from {creation.Arguments.Count} values for {built.Fields.Count} fields");
+            foreach (var (argument, field) in creation.Arguments.Zip(built.Fields))
+              this.Require(argument.Type == field.Type, $"the field '{field.Name}' of {built.Name} is given the type {argument.Type}, expected {field.Type}");
+          }
+
+          break;
+        case IrStructDefault value:
+          this.Struct(value.Type);
+          this.Defaulted(value.Type);
+          break;
+        case IrFieldLoad load:
+          this.Expression(load.Target);
+          this.Member(load.Target, load.Field);
+          break;
+        case IrStructEquals equality:
+          this.Expression(equality.Left);
+          this.Expression(equality.Right);
+          this.Struct(equality.Left.Type);
+          this.Require(equality.Right.Type == equality.Left.Type, $"a struct of the type {equality.Left.Type} is compared with one of the type {equality.Right.Type}");
           break;
         case IrCall call:
           this.Call(call);
@@ -295,6 +341,33 @@ public static class IrVerifier {
       }
     }
 
+    /// <summary>The struct of a struct type the module declares, or <see langword="null"/> after reporting that it is none.</summary>
+    private IrStructType? Struct(IrType type) {
+      this.Require(type.IsStruct, $"a struct is expected, not the type {type}");
+      this.Declared(type);
+      return type.StructType is { } named && types.Declares(named) ? named : null;
+    }
+
+    /// <summary>A struct type, or the element type of an array, has a default value where one is built.</summary>
+    private void Defaulted(IrType? type) {
+      if (type?.StructType is { } named && types.Declares(named))
+        this.Require(types.HasDefault(named), $"the struct {named.Name} has a field of an array type and so no default value");
+    }
+
+    /// <summary>A field is one of the target type's own.</summary>
+    private void Member(IrExpr target, IrField field) {
+      if (this.Struct(target.Type) is { } owner)
+        this.Require(owner.Owns(field), $"the field '{field.Name}' is not a field of {owner.Name}");
+    }
+
+    /// <summary>Whether an expression names a place a field can be written in: a variable, an array element, or a field of a place.</summary>
+    private static bool IsPlace(IrExpr target) => target switch {
+      IrLocalRef => true,
+      IrArrayLoad load => load.Array is not IrConstRef,
+      IrFieldLoad load => IsPlace(load.Target),
+      _ => false
+    };
+
     private void Call(IrCall call) {
       foreach (var argument in call.Arguments)
         this.Expression(argument);
@@ -323,7 +396,7 @@ public static class IrVerifier {
 
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.Void or IrTypeKind.Array => false,
+      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

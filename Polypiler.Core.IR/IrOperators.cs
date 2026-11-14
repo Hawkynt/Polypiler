@@ -46,14 +46,16 @@ public static class IrOperators {
 
     bool Are(params Func<IrType, bool>[] rules) => arguments.Count == rules.Length && !rules.Where((rule, index) => !rule(arguments[index])).Any();
     bool Table(IrType type) => type.IsArray && type.IsStorable;
+    // Copying, filling and clearing work on elements of a number: an element that is a struct is a value that each would have to copy.
+    bool Numbers(IrType type) => Table(type) && type.Element!.IsNumeric;
     var first = arguments.Count > 0 ? arguments[0] : IrType.Void;
     bool Same(IrType type) => type == first;
     bool Float(IrType type) => type.IsFloat;
     return op switch {
       IrIntrinsicOp.ArrayOf => Table(result) && arguments.All(argument => argument == result.Element),
-      IrIntrinsicOp.ArrayCopy => result == IrType.Void && Are(Table, type => type.IsWord, Same, type => type.IsWord, type => type.IsWord),
-      IrIntrinsicOp.ArrayFill => result == IrType.Void && Are(Table, type => type == first.Element),
-      IrIntrinsicOp.ArrayClear => result == IrType.Void && Are(Table),
+      IrIntrinsicOp.ArrayCopy => result == IrType.Void && Are(Numbers, type => type.IsWord, Same, type => type.IsWord, type => type.IsWord),
+      IrIntrinsicOp.ArrayFill => result == IrType.Void && Are(Numbers, type => type == first.Element),
+      IrIntrinsicOp.ArrayClear => result == IrType.Void && Are(Numbers),
       IrIntrinsicOp.Abs => result == first && Are(Float),
       IrIntrinsicOp.Min or IrIntrinsicOp.Max => result == first && Are(Float, Same),
       IrIntrinsicOp.Sign => result == IrType.I32 && Are(Float),

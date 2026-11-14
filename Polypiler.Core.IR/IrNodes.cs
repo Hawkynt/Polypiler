@@ -226,6 +226,50 @@ public sealed record IrCall(string Function, IrType Type, IReadOnlyList<IrExpr> 
 /// <param name="Trap">Whether an integer result outside the type traps instead of wrapping around.</param>
 public sealed record IrStep(IrExpr Target, bool Increment, bool Postfix, bool Trap) : IrExpr(Target.Type);
 
+/// <summary>
+/// A new value of a struct, built from one value per field in declaration order; the arguments are
+/// evaluated in that order.
+/// <para>
+/// A struct is a value, never a reference. This is stated here once for every node of the IR and
+/// every implementation of it: every read of a struct value - of a variable, a parameter, an array
+/// element or a field - yields a copy, so an assignment, an argument, a returned value, a store into
+/// an array and a load from one each copy the value, and two variables never share one. A write of a
+/// field through a place (<see cref="IrFieldStore"/>) changes that place alone; a field of an array
+/// element is a field of the element itself, not of a copy of it. A field of an array type holds the
+/// array by reference, as every array is held. Two struct values are equal when
+/// <see cref="IrStructEquals"/> says so; the default value has every field zero or false.
+/// </para>
+/// </summary>
+/// <param name="Type">The struct type.</param>
+/// <param name="Arguments">The value of every field, in declaration order.</param>
+public sealed record IrStructNew(IrType Type, IReadOnlyList<IrExpr> Arguments) : IrExpr(Type);
+
+/// <summary>
+/// The default value of a struct: every number zero, every truth value false, every struct field its
+/// own default. A struct with a field of an array type has none.
+/// </summary>
+/// <param name="Type">The struct type.</param>
+public sealed record IrStructDefault(IrType Type) : IrExpr(Type);
+
+/// <summary>
+/// The value of a field. The target is evaluated first; when it is a place - a variable, a
+/// parameter, an array element or a field of a place - the field is read there, and only the field
+/// is copied, as every read of a struct value is.
+/// </summary>
+/// <param name="Target">A value of a struct type that has the field.</param>
+/// <param name="Field">The field, one of the target type's own.</param>
+public sealed record IrFieldLoad(IrExpr Target, IrField Field) : IrExpr(Field.Type);
+
+/// <summary>
+/// Field-wise equality of two values of one struct type, the fields compared in declaration order:
+/// numbers of an integer type and truth values by value, floating-point numbers as
+/// <c>double.Equals</c> compares them - a NaN equals a NaN, and <c>+0.0</c> equals <c>-0.0</c> -
+/// a struct field recursively, and an array field by identity. Both operands are evaluated, left first.
+/// </summary>
+/// <param name="Left">The value evaluated first.</param>
+/// <param name="Right">The value evaluated second.</param>
+public sealed record IrStructEquals(IrExpr Left, IrExpr Right) : IrExpr(IrType.Bool);
+
 /// <summary>The operations an <see cref="IrIntrinsic"/> performs.</summary>
 public enum IrIntrinsicOp {
 
@@ -660,6 +704,17 @@ public sealed record IrAssign(IrLocal Local, IrExpr Value) : IrStmt;
 /// <param name="Value">The value stored, of the element type.</param>
 public sealed record IrStore(IrExpr Array, IrExpr Index, IrExpr Value) : IrStmt;
 
+/// <summary>
+/// A write to a field of a place: of a variable or parameter, of an array element, or of a field of
+/// such a place. The target place is evaluated first - for an array element its array and index,
+/// which are checked - then the value; the write changes that place alone (see <see cref="IrStructNew"/>).
+/// A read-only field is never written this way.
+/// </summary>
+/// <param name="Target">The place: an <see cref="IrLocalRef"/>, an <see cref="IrArrayLoad"/> or an <see cref="IrFieldLoad"/> of a place.</param>
+/// <param name="Field">The field, one of the target type's own.</param>
+/// <param name="Value">The value stored, of the field's type.</param>
+public sealed record IrFieldStore(IrExpr Target, IrField Field, IrExpr Value) : IrStmt;
+
 /// <summary>An expression evaluated for its effect; the value is dropped.</summary>
 /// <param name="Expression">The expression.</param>
 public sealed record IrExprStmt(IrExpr Expression) : IrStmt;
@@ -687,7 +742,7 @@ public sealed record IrDoWhile(IrBlock Body, IrExpr Condition) : IrStmt;
 /// </summary>
 /// <param name="Condition">The truth value that keeps the loop running.</param>
 /// <param name="Body">The statements of one pass.</param>
-/// <param name="Step">What follows every pass: declarations, assignments, stores and expressions only.</param>
+/// <param name="Step">What follows every pass: declarations, assignments, stores into arrays and fields, and expressions only.</param>
 public sealed record IrFor(IrExpr Condition, IrBlock Body, IrBlock Step) : IrStmt;
 
 /// <summary>One section of a <see cref="IrSwitch"/>.</summary>
@@ -730,7 +785,7 @@ public sealed record IrFunction(
   IReadOnlyList<IrLocal> Locals,
   IrBlock Body);
 
-/// <summary>A module: the functions and constants of one source class.</summary>
+/// <summary>A module: the functions and constants of one source class, and the types they use.</summary>
 /// <param name="Name">The name of the module.</param>
 /// <param name="Functions">The functions, in source order.</param>
 /// <param name="Constants">The constants, in source order.</param>
@@ -740,5 +795,11 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// <param name="name">The name of the module.</param>
   /// <param name="functions">The functions, in source order.</param>
   public IrModule(string name, IReadOnlyList<IrFunction> functions) : this(name, functions, []) { }
+
+  /// <summary>
+  /// The types the module declares, in source order. Every declared type a function, a local, a field
+  /// or a node of the module names is one of them.
+  /// </summary>
+  public IReadOnlyList<IrTypeDeclaration> Types { get; init; } = [];
 
 }

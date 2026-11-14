@@ -69,6 +69,10 @@ public static class FloatManifest {
       case IrExprStmt expression:
         Collect(expression.Expression, found);
         break;
+      case IrFieldStore store:
+        Collect(store.Target, found);
+        Collect(store.Value, found);
+        break;
       case IrIf conditional:
         Collect(conditional.Condition, found);
         Collect(conditional.Then, found);
@@ -113,6 +117,9 @@ public static class FloatManifest {
       IrCall call => call.Arguments,
       IrStep step => [step.Target],
       IrIntrinsic intrinsic => intrinsic.Arguments,
+      IrStructNew creation => creation.Arguments,
+      IrFieldLoad load => [load.Target],
+      IrStructEquals equality => [equality.Left, equality.Right],
       _ => []
     };
     if (expression is IrIntrinsic intrinsic1)

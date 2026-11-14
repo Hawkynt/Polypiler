@@ -39,17 +39,26 @@ public enum IrTypeKind {
   /// <summary>An IEEE 754 binary64 number.</summary>
   F64,
 
-  /// <summary>A one-dimensional, zero-based array of numbers with a fixed length.</summary>
-  Array
+  /// <summary>A one-dimensional, zero-based array of numbers or of structs with a fixed length.</summary>
+  Array,
+
+  /// <summary>A record of named fields that is copied by value: an <see cref="IrStructType"/>.</summary>
+  Struct
 
 }
 
-/// <summary>A type of the prototype IR. Two types are equal when kind and element type are.</summary>
+/// <summary>
+/// A type of the prototype IR. Two types are equal when kind and element type are, and for a
+/// declared type when the declaration is the same one: declared types are nominal.
+/// </summary>
 public sealed record IrType {
 
-  private IrType(IrTypeKind kind, IrType? element) {
+  private IrType(IrTypeKind kind, IrType? element) : this(kind, element, null) { }
+
+  private IrType(IrTypeKind kind, IrType? element, IrTypeDeclaration? declaration) {
     this.Kind = kind;
     this.Element = element;
+    this.Declaration = declaration;
   }
 
   /// <summary>The shape of the type.</summary>
@@ -57,6 +66,9 @@ public sealed record IrType {
 
   /// <summary>The element type of an array, otherwise <see langword="null"/>.</summary>
   public IrType? Element { get; }
+
+  /// <summary>The declaration of a declared type, such as a struct; otherwise <see langword="null"/>.</summary>
+  public IrTypeDeclaration? Declaration { get; }
 
   /// <summary>No value.</summary>
   public static IrType Void { get; } = new(IrTypeKind.Void, null);
@@ -98,6 +110,17 @@ public sealed record IrType {
   /// <param name="element">The type of every element.</param>
   /// <returns>The array type.</returns>
   public static IrType Array(IrType element) => new(IrTypeKind.Array, element);
+
+  /// <summary>The type of the values of a struct.</summary>
+  /// <param name="declaration">The struct.</param>
+  /// <returns>The struct type.</returns>
+  public static IrType Struct(IrStructType declaration) => new(IrTypeKind.Struct, null, declaration);
+
+  /// <summary>The struct of a struct type, otherwise <see langword="null"/>.</summary>
+  public IrStructType? StructType => this.Declaration as IrStructType;
+
+  /// <summary>Whether the type is a struct, which is copied by value.</summary>
+  public bool IsStruct => this.Kind == IrTypeKind.Struct;
 
   /// <summary>Whether values of the type are integers of any width.</summary>
   public bool IsInteger => this.Kind is >= IrTypeKind.I8 and <= IrTypeKind.U64;
@@ -142,11 +165,13 @@ public sealed record IrType {
   /// <summary>Whether the type is an array.</summary>
   public bool IsArray => this.Kind == IrTypeKind.Array;
 
-  /// <summary>Whether the type can be the type of a local: not void, and an array only of numbers.</summary>
-  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric);
+  /// <summary>Whether the type can be the type of a local: not void, and an array only of numbers or of structs.</summary>
+  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || this.Element.IsStruct);
 
-  /// <summary>The name of the type as the IR writes it, for example <c>i32</c> or <c>u8[]</c>.</summary>
+  /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c> or the name of a struct.</summary>
   public override string ToString()
-    => this.Element is null ? this.Kind.ToString().ToLowerInvariant() : $"{this.Element}[]";
+    => this.Declaration is { } declaration ? declaration.Name
+      : this.Element is null ? this.Kind.ToString().ToLowerInvariant()
+      : $"{this.Element}[]";
 
 }

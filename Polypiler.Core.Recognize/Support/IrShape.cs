@@ -39,6 +39,10 @@ public static class IrShape {
       (IrCall a, IrCall b) => a.Function == b.Function && All(a.Arguments, b.Arguments),
       (IrIntrinsic a, IrIntrinsic b) => a.Op == b.Op && All(a.Arguments, b.Arguments),
       (IrStep a, IrStep b) => a.Increment == b.Increment && a.Postfix == b.Postfix && a.Trap == b.Trap && Same(a.Target, b.Target),
+      (IrStructNew a, IrStructNew b) => All(a.Arguments, b.Arguments),
+      (IrStructDefault, IrStructDefault) => true,
+      (IrFieldLoad a, IrFieldLoad b) => ReferenceEquals(a.Field, b.Field) && Same(a.Target, b.Target),
+      (IrStructEquals a, IrStructEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       _ => false
     };
   }
@@ -60,6 +64,9 @@ public static class IrShape {
     IrCall call => call.Arguments,
     IrIntrinsic intrinsic => intrinsic.Arguments,
     IrStep step => [step.Target],
+    IrStructNew creation => creation.Arguments,
+    IrFieldLoad load => [load.Target],
+    IrStructEquals equality => [equality.Left, equality.Right],
     _ => []
   };
 
@@ -160,6 +167,9 @@ public static class IrShape {
     IrCall call => call with { Arguments = operands },
     IrIntrinsic intrinsic => intrinsic with { Arguments = operands },
     IrStep step => step with { Target = operands[0] },
+    IrStructNew creation => creation with { Arguments = operands },
+    IrFieldLoad load => load with { Target = operands[0] },
+    IrStructEquals => new IrStructEquals(operands[0], operands[1]),
     _ => expression
   };
 

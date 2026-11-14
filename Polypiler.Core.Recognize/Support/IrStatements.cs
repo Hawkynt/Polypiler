@@ -14,6 +14,7 @@ public static class IrStatements {
     IrDeclare { Initializer: { } value } => [value],
     IrAssign assign => [assign.Value],
     IrStore store => [store.Array, store.Index, store.Value],
+    IrFieldStore store => [store.Target, store.Value],
     IrExprStmt expression => [expression.Expression],
     IrIf conditional => [conditional.Condition],
     IrWhile loop => [loop.Condition],
@@ -61,7 +62,7 @@ public static class IrStatements {
     => All(statement).Any(inner => inner is IrAssign assign && assign.Local == local || inner is IrDeclare declare && declare.Local == local)
       || AllExpressions(statement).Any(expression => IrShape.Reads(expression, local));
 
-  /// <summary>The variables a statement writes anywhere: by assignment, declaration or step.</summary>
+  /// <summary>The variables a statement writes anywhere: by assignment, declaration, step, or a store into one of their fields.</summary>
   /// <param name="statement">The statement.</param>
   /// <returns>Each variable once.</returns>
   public static IReadOnlyCollection<IrLocal> Writes(IrStmt statement) {
@@ -71,11 +72,25 @@ public static class IrStatements {
         written.Add(assign.Local);
       else if (inner is IrDeclare declare)
         written.Add(declare.Local);
+      else if (inner is IrFieldStore { Target: var target } && Root(target) is { } root)
+        written.Add(root);
 
     written.AddRange(AllExpressions(statement).SelectMany(IrShape.Nodes).OfType<IrStep>()
       .Select(step => step.Target).OfType<IrLocalRef>().Select(reference => reference.Local));
     return written.Distinct().ToList();
   }
+
+  /// <summary>
+  /// The variable a place of a field store is a part of: the variable itself, or the one whose field
+  /// holds the place; <see langword="null"/> for an array element, whose array is shared by reference.
+  /// </summary>
+  /// <param name="place">The target of a field store.</param>
+  /// <returns>The variable, or <see langword="null"/>.</returns>
+  public static IrLocal? Root(IrExpr place) => place switch {
+    IrLocalRef reference => reference.Local,
+    IrFieldLoad load => Root(load.Target),
+    _ => null
+  };
 
   /// <summary>Whether a statement may leave its block other than by running to its end: a break, a continue or a return anywhere in it.</summary>
   /// <param name="statement">The statement.</param>

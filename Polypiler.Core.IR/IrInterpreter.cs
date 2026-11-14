@@ -54,9 +54,11 @@ public sealed class IrTrapException : Exception {
 /// signedness (a <c>u16</c> is accepted as <see cref="ushort"/> or <see cref="char"/> and returned as
 /// <see cref="ushort"/>), as <see cref="float"/>, <see cref="double"/> and <see cref="bool"/>, and as
 /// one-dimensional arrays of the numeric types;
-/// arrays are passed by reference, so a function can change the caller's array.
+/// arrays are passed by reference, so a function can change the caller's array. A struct crosses as
+/// an <see cref="object"/> array of the values of its fields in declaration order, each crossing as
+/// its own type does; inside, it is a value that every read copies, as <see cref="IrStructNew"/> states.
 /// </summary>
-public static class IrInterpreter {
+public static partial class IrInterpreter {
 
   /// <summary>
   /// The functions of a module by name and its tables as arrays, kept for as long as the module lives.
@@ -118,11 +120,27 @@ public static class IrInterpreter {
   /// Takes an argument across the boundary. The type is compared exactly: to a pattern such as
   /// <c>is int[]</c> a <c>uint[]</c> would pass as well, and its elements would be read as signed.
   /// </summary>
-  private static object FromHost(IrLocal parameter, object argument) {
-    if (argument is null || TypeOf(argument.GetType()) != parameter.Type)
-      throw new ArgumentException($"The argument for '{parameter.Name}' is not a value of {parameter.Type}.", nameof(argument));
+  private static object FromHost(IrLocal parameter, object argument)
+    => Accepted(parameter.Type, argument) ?? throw new ArgumentException($"The argument for '{parameter.Name}' is not a value of {parameter.Type}.", nameof(argument));
 
-    return Internal(argument);
+  /// <summary>A value of a type taken across the boundary, or <see langword="null"/> when it is none.</summary>
+  private static object? Accepted(IrType type, object? value) {
+    if (type.StructType is { } declared)
+      return value is object?[] fields && fields.Length == declared.Fields.Count && Fields(declared, fields) is { } accepted ? new Record(accepted) : null;
+
+    return value is not null && TypeOf(value.GetType()) == type ? Internal(value) : null;
+  }
+
+  /// <summary>The fields of a struct taken across the boundary, or <see langword="null"/> when one is not a value of its field.</summary>
+  private static object[]? Fields(IrStructType type, object?[] values) {
+    var fields = new object[values.Length];
+    for (var index = 0; index < values.Length; ++index)
+      if (Accepted(type.Fields[index].Type, values[index]) is { } field)
+        fields[index] = field;
+      else
+        return null;
+
+    return fields;
   }
 
   /// <summary>The IR type a .NET type crosses the boundary as, or <see langword="null"/> when it does not.</summary>
@@ -156,12 +174,13 @@ public static class IrInterpreter {
     IrTypeKind.I64 => typeof(long),
     IrTypeKind.U64 => typeof(ulong),
     IrTypeKind.F32 => typeof(float),
-    _ => typeof(double)
+    IrTypeKind.F64 => typeof(double),
+    _ => typeof(object)
   };
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool or float or double => value,
+    Array or bool or float or double or Record => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -180,12 +199,15 @@ public static class IrInterpreter {
     _ => value
   };
 
-  private static object? ToHost(IrType type, object? value)
-    => value is null or Array or bool ? value : External(HostType(type), value);
+  private static object? ToHost(IrType type, object? value) => value switch {
+    Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
+    null or Array or bool => value,
+    _ => External(HostType(type), value)
+  };
 
   private sealed record Program(Dictionary<string, IrFunction> Functions, Dictionary<IrModuleConst, object> Constants);
 
-  private sealed class Machine(Program program) {
+  private sealed partial class Machine(Program program) {
 
     public object? Invoke(IrFunction function, object[] arguments) {
       var frame = new Frame();
@@ -225,6 +247,10 @@ public static class IrInterpreter {
           return Flow.Next;
         case IrExprStmt expression:
           this.Evaluate(expression.Expression, frame);
+          return Flow.Next;
+        case IrFieldStore store:
+          var place = (Record)this.Place(store.Target, frame);
+          place.Fields[Position(store.Field, store.Target.Type)] = this.Evaluate(store.Value, frame);
           return Flow.Next;
         case IrIf conditional:
           if ((bool)this.Evaluate(conditional.Condition, frame))
@@ -287,7 +313,7 @@ public static class IrInterpreter {
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
-          return frame.Locals[reference.Local];
+          return Copied(frame.Locals[reference.Local]);
         case IrUnary unary:
           var operand = this.Evaluate(unary.Operand, frame);
           if (unary.Type.IsFloat)
@@ -307,7 +333,7 @@ public static class IrInterpreter {
           return this.Evaluate((bool)this.Evaluate(choice.Condition, frame) ? choice.WhenTrue : choice.WhenFalse, frame);
         case IrArrayLoad load:
           var array = (Array)this.Evaluate(load.Array, frame);
-          return Load(array, Checked(array, (long)this.Evaluate(load.Index, frame)));
+          return Copied(Load(array, Checked(array, (long)this.Evaluate(load.Index, frame))));
         case IrArrayLength length:
           return (long)((Array)this.Evaluate(length.Array, frame)).Length;
         case IrNewArray creation:
@@ -315,7 +341,21 @@ public static class IrInterpreter {
           if (count < 0)
             throw new IrTrapException(IrTrap.IntegerOverflow);
 
-          return Array.CreateInstance(HostType(creation.Type.Element!), count);
+          var created = Array.CreateInstance(HostType(creation.Type.Element!), count);
+          if (creation.Type.Element!.StructType is { } element)
+            for (var index = 0; index < count; ++index)
+              created.SetValue(Default(element), index);
+
+          return created;
+        case IrStructNew creation:
+          return new Record([.. creation.Arguments.Select(argument => this.Evaluate(argument, frame))]);
+        case IrStructDefault value:
+          return Default(value.Type.StructType!);
+        case IrFieldLoad load:
+          return Copied(((Record)this.Place(load.Target, frame)).Fields[Position(load.Field, load.Target.Type)]);
+        case IrStructEquals equality:
+          var left = this.Evaluate(equality.Left, frame);
+          return Same(left, this.Evaluate(equality.Right, frame));
         case IrCall call:
           var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
           return this.Invoke(program.Functions[call.Function], arguments)!;
