@@ -29,18 +29,18 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0020](PLY0020.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-TOOLCHAINS |
 | [PLY0021](PLY0021.md) | error | 1 (EnvironmentError) | `toolchain '<key>' is not installed (probe: <command>)[: <cause>]` | INFRA-TOOLCHAINS |
 | [PLY0022](PLY0022.md) | error | 1 (EnvironmentError) | `toolchain '<key>' is <actual>, the lock pins <expected>[: <cause>]` | INFRA-TOOLCHAINS |
-| [PLY0023](PLY0023.md) (reserved) | error | 1 (EnvironmentError) | `corpus file '<path>' does not match its pinned hash` | INFRA-CORPUS |
+| [PLY0023](PLY0023.md) | error | 1 (EnvironmentError) | `corpus file '<repository>:<path>' has SHA-256 <actual>, the lock records <expected>[ (<n> bytes, the lock records <m> bytes)]` | INFRA-CORPUS |
 | [PLY0024](PLY0024.md) (reserved) | error | 8 (LicenseBlocker) | `the licence '<licence>' of '<component>' is not approved` | INFRA-LICENSES |
-| [PLY0025](PLY0025.md) (reserved) | error | 1 (EnvironmentError) | `corpus path '<path>' <reason>` | INFRA-CORPUS |
-| [PLY0026](PLY0026.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | INFRA-CORPUS |
+| [PLY0025](PLY0025.md) | error | 1 (EnvironmentError) | `'<path>' does not exist in <repository> at <commit>[: <cause>]` | INFRA-CORPUS |
+| [PLY0026](PLY0026.md) | error | 1 (EnvironmentError) | `corpus manifest invalid: <reason>` | INFRA-CORPUS |
 | [PLY0027](PLY0027.md) (reserved) | error | 1 (EnvironmentError) | `vector file '<path>' was modified` | INFRA-INTEGRITY |
 | [PLY0028](PLY0028.md) (reserved) | error | 1 (EnvironmentError) | `'<path>': <reason>` | INFRA-INTEGRITY |
 | [PLY0029](PLY0029.md) (reserved) | error | 8 (LicenseBlocker) | `the licence of '<component>' cannot be determined: <reason>` | INFRA-LICENSES |
-| [PLY0030](PLY0030.md) (reserved) | error | 6 (TargetBuildFailure) | `building '<target>' failed: <reason>` | INFRA-RUNNER |
-| [PLY0031](PLY0031.md) (reserved) | error | 10 (BudgetExceeded) | `'<command>' exceeded its time limit of <limit>` | INFRA-RUNNER |
-| [PLY0032](PLY0032.md) (reserved) | error | 10 (BudgetExceeded) | `'<command>' exceeded its memory limit of <limit>` | INFRA-RUNNER |
-| [PLY0033](PLY0033.md) (reserved) | error | 10 (BudgetExceeded) | `'<command>' exceeded its output limit of <limit>` | INFRA-RUNNER |
-| [PLY0034](PLY0034.md) (reserved) | error | 1 (EnvironmentError) | `isolation is not available: <reason>` | INFRA-RUNNER |
+| [PLY0030](PLY0030.md) | error | 6 (TargetBuildFailure) | `target build failed: '<toolchain> <arguments>' exited with <code>` | INFRA-RUNNER |
+| [PLY0031](PLY0031.md) | error | 10 (BudgetExceeded) | `time limit of <milliseconds> ms exceeded` | INFRA-RUNNER |
+| [PLY0032](PLY0032.md) | error | 10 (BudgetExceeded) | `memory limit of <bytes> bytes exceeded` | INFRA-RUNNER |
+| [PLY0033](PLY0033.md) | error | 10 (BudgetExceeded) | `output limit of <bytes> bytes exceeded` | INFRA-RUNNER |
+| [PLY0034](PLY0034.md) | error | 1 (EnvironmentError) | `isolation is unavailable on this host; untrusted input was not executed` | INFRA-RUNNER |
 | [PLY0036](PLY0036.md) (reserved) | error | 1 (EnvironmentError) | `rebuild not deterministic: '<path>' differs at byte <offset>` | INFRA-REBUILD |
 | [PLY0037](PLY0037.md) (reserved) | error | 8 (LicenseBlocker) | `SBOM component '<component>' lacks a licence` | INFRA-SBOM |
 | [PLY0038](PLY0038.md) | error | 1 (EnvironmentError) | `<from> must not reference <to> (rule: <rule>)` | INFRA-MODULES |
@@ -66,11 +66,12 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0061](PLY0061.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | SPEC-CAPABILITIES |
 | [PLY0062](PLY0062.md) (reserved) | error | 3 (UnsupportedConstruct) | `the proof of <rule> meets the unmodelled operation <operation>` | VER-SMT |
 | [PLY0063](PLY0063.md) (reserved) | error | 7 (OracleFailure) | `no independent oracle is registered for '<fixture>'` | VER-ORACLE |
-| [PLY0070](PLY0070.md) (reserved) | error | 1 (EnvironmentError) | `fuzz target '<target>': <kind> '<signature>' at iteration <i>` | INFRA-FUZZ |
+| [PLY0070](PLY0070.md) | error | 1 (EnvironmentError) | `fuzz target '<target>': <kind> '<signature>' at iteration <i> (seed <seed>); minimized to <n> bytes: artifacts/fuzz/<target>/<id>.bin` | INFRA-FUZZ |
 | [PLY0071](PLY0071.md) | error | 1 (EnvironmentError) | `property '<test>' falsified after <n> inputs (seed <seed>): <shrunk> (original <original>, <k> shrink steps); replay with POLYPILER_PROPERTY_SEED=<seed>` | INFRA-PROPERTY |
 | [PLY0072](PLY0072.md) (reserved) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': environment differs from the baseline (<field>: <baseline> -> <current>)` | INFRA-BENCH |
 | [PLY0073](PLY0073.md) (reserved) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': <metric> <value> exceeds its budget <budget>` | INFRA-BENCH |
 | [PLY0074](PLY0074.md) | error | 1 (EnvironmentError) | `<file>(<line>): step '<step>' has no binding` | INFRA-BDD |
+| [PLY0077](PLY0077.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-FUZZ |
 | [PLY0080](PLY0080.md) (reserved) | error | 2 (UsageError) | `<reason>` | CLI-PACKAGE |
 | [PLY0081](PLY0081.md) | error | 9 (MissingDependency) | `native dependency '<name>' required by '<component>' is missing` | CLI-EXITCODES |
 | [PLY0082](PLY0082.md) (reserved) | error | 8 (LicenseBlocker) | `<reason>` | CLI-PACKAGE |
