@@ -17,3 +17,6 @@ categories:
   # Exhaustive checks that run the same code paths up to millions of times: the layer jobs run them on
   # every OS, the coverage gate leaves them out (#1352).
   - { name: Exhaustive, job: layer-core, step: test }
+  # The end-to-end suites of the prototype (Polypiler.Tests.Acceptance/Prototype), the third part of
+  # each OS's layer-core job: the other acceptance tests leave them out (#1352).
+  - { name: Prototype, job: layer-core, step: test-prototype }

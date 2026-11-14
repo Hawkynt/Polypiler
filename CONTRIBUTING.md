@@ -218,6 +218,12 @@ makes it the larger part of the gate's time and the first inputs already reach e
 reaches. Leaving a category out of the coverage gate must not lower the coverage by more than 0.2
 points.
 
+`Prototype` marks the fixtures of `Polypiler.Tests.Acceptance/Prototype`, the end-to-end suites of the
+prototype. It changes no tier: `layer-core` runs them on each OS as a part of their own, beside the
+unit tests and the other acceptance tests, because the three on one runner would compete for its
+cores. A new fixture in that folder carries the category too; one that does not still runs, in the
+other acceptance part.
+
 **Write `TestCategory!=`, never `Category!=`.** They select the same tests and report the same
 results, and only one of them actually skips anything: with `Category!=` the adapter filters the
 REPORTING and still executes the excluded fixtures. Measured on a 5,489-test suite, same assembly,

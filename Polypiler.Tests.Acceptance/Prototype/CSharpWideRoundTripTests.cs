@@ -23,6 +23,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 [Layer("core")]
+[Category("Prototype")]
 public sealed class CSharpWideRoundTripTests {
 
   private static readonly bool[] _overflowChecking = [false, true];

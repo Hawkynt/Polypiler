@@ -19,6 +19,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 [Layer("core")]
+[Category("Prototype")]
 public sealed class RecognitionTests {
 
   private static readonly bool[] _overflowChecking = [false, true];

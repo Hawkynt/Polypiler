@@ -111,20 +111,23 @@ jobs:
   # files, this workflow, the test categories and the tests to each other (tooling/ci/categories.yaml).
   # The toolchains come at the versions tooling/toolchains.lock pins, as `ci env` prints them; format,
   # spec validation and the audit read nothing that differs per runner and run on Linux only, in the
-  # unit part. Each OS runs the two test projects as two parts side by side: run together on one
-  # runner they compete for its cores and take twice as long. The full target sweep (category Sweep)
-  # runs once, in target-sweep; its representative slice runs here.
+  # unit part. Each OS runs the tests as three parts side by side: the unit tests, the acceptance
+  # tests, and of these the end-to-end suites of the prototype (category Prototype) on a runner of
+  # their own - run together on one runner they compete for its cores and take twice as long. The
+  # full target sweep (category Sweep) runs once, in target-sweep; its representative slice runs here.
   layer-core:
     name: layer-core ${{ matrix.os }} ${{ matrix.part }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        part: [unit, acceptance]
+        part: [unit, acceptance, acceptance-prototype]
         include:
           - part: unit
             project: Polypiler.Tests/Polypiler.Tests.csproj
           - part: acceptance
+            project: Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj
+          - part: acceptance-prototype
             project: Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -172,8 +175,13 @@ jobs:
         # an unformatted file on purpose.
         run: dotnet format Polypiler.slnx --verify-no-changes --no-restore --exclude tests/fixtures
       - name: test
-        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "(TestCategory!~Layer.|TestCategory=Layer.core)&TestCategory!=Sweep" --logger "trx;LogFileName=tests.trx"
+        if: matrix.part != 'acceptance-prototype'
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "(TestCategory!~Layer.|TestCategory=Layer.core)&TestCategory!=Sweep&TestCategory!=Prototype" --logger "trx;LogFileName=tests.trx"
+      - name: test-prototype
+        if: matrix.part == 'acceptance-prototype'
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "(TestCategory!~Layer.|TestCategory=Layer.core)&TestCategory!=Sweep&TestCategory=Prototype" --logger "trx;LogFileName=tests.trx"
       - name: ir-verifier
+        if: matrix.part != 'acceptance-prototype'
         run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "TestCategory=IrVerifier"
       - name: spec validate
         if: runner.os == 'Linux' && matrix.part == 'unit'
