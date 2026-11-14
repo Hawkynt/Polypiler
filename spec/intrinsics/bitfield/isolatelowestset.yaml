@@ -1,0 +1,28 @@
+id: INTRINSICS.IsolateLowestSet
+title: Isolate the lowest set bit
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITFIELD
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: IsolateLowestSet
+  group: Bitfield
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "value & -value modulo 2^width: the lowest 1 bit alone, 0 for 0"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-1"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: ["0x00000000"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000058"], outputs: ["0x00000008"]}
+    - {types: {T: TYPES.i32}, inputs: [-2147483648], outputs: [-2147483648]}

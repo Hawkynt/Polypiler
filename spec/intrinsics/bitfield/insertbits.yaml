@@ -1,0 +1,30 @@
+id: INTRINSICS.InsertBits
+title: Insert a bit field
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITFIELD
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: InsertBits
+  group: Bitfield
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}, {name: field, type: T}, {name: start, type: TYPES.i32}, {name: length, type: TYPES.i32}]
+  returns: [{name: result, type: T}]
+  legality:
+    - {id: field-in-width, text: "start and length are at least 0 and start + length is at most the width of T; otherwise the operation traps with an invalid operation", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "value with the length bits from bit start on replaced by the lowest length bits of field: (value & ~m) | ((field << start) & m) with m = ((1 << length) - 1) << start"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., chapter 7"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678", "0x000000AB", 8, 8], outputs: ["0x1234AB78"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000", "0xFFFFFFFF", 0, 32], outputs: ["0xFFFFFFFF"]}
+    - {types: {T: TYPES.u8}, inputs: ["0xFF", "0x00", 2, 3], outputs: ["0xE3"]}
+    - {types: {T: TYPES.i16}, inputs: [0, 1, 15, 1], outputs: [-32768]}

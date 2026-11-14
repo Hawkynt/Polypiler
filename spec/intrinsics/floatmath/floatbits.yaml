@@ -1,0 +1,29 @@
+id: INTRINSICS.FloatBits
+title: Bits of a float
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FloatBits
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}, {name: I, constraint: signed}]
+  parameters: [{name: x, type: F}]
+  returns: [{name: bits, type: I}]
+  legality:
+    - {id: same-width, text: "F is TYPES.f64 with I TYPES.i64, or F is TYPES.f32 with I TYPES.i32", fact: none}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the IEEE 754 binary interchange encoding of x read as a two's complement integer of the same width"
+    source: "IEEE Std 754-2019, section 3.4; .NET API reference, System.BitConverter.DoubleToInt64Bits"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64, I: TYPES.i64}, inputs: ["0x3FF0000000000000"], outputs: [4607182418800017408]}
+    - {types: {F: TYPES.f64, I: TYPES.i64}, inputs: ["0x8000000000000000"], outputs: [-9223372036854775808]}
+    - {types: {F: TYPES.f32, I: TYPES.i32}, inputs: ["0xC0000000"], outputs: [-1073741824]}

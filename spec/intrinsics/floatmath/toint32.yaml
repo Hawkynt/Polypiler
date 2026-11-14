@@ -1,0 +1,30 @@
+id: INTRINSICS.ToInt32
+title: ECMAScript ToInt32
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ToInt32
+  group: FloatMath
+  typeParameters: []
+  parameters: [{name: x, type: TYPES.f64}]
+  returns: [{name: result, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "x without its fraction, modulo 2^32, read as a two's complement number; a NaN and the infinities give 0"
+    source: "ECMA-262, 15th ed. (2024), section 7.1.6 (ToInt32)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: ["0xBFF8000000000000"], outputs: [-1]}
+    - {types: {}, inputs: ["0x41F0000000500000"], outputs: [5]}
+    - {types: {}, inputs: ["0x41E0000000000000"], outputs: [-2147483648]}
+    - {types: {}, inputs: ["0x7FF8000000000000"], outputs: [0]}
+    - {types: {}, inputs: ["0x43F0000000000002"], outputs: [8192]}

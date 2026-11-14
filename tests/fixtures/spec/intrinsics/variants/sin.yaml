@@ -1,0 +1,31 @@
+# at: intrinsics/trig/sin.yaml
+# expect: PLY0040: /spec/exactness: Required properties ["policy"] are not present
+id: INTRINSICS.Sin
+title: Sine
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Sin
+  group: Trig
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}]
+  returns: [{name: sine, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: tolerance}
+  reference:
+    algorithm: "the sine of x in radians"
+    source: "IEEE Std 754-2019, section 9.2 (sin)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000000"], outputs: ["0x0000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x8000000000000000"], outputs: ["0x8000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF0000000000000"], outputs: ["0x7FF8000000000000"]}
+  accuracy: ulp(1)

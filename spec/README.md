@@ -124,6 +124,43 @@ default: the effect of every operation nothing else describes. Rules (`PLY0046`)
 | `write-implies-order` | an effect that writes anything is not `free` |
 | `unique-name` | no two documents share a `name` |
 
+## Family `intrinsics`
+
+`spec/intrinsics/<group in lower case>/<name in lower case>.yaml`, ID `INTRINSICS.<name>`: the contract
+of one intrinsic (PRD §4.1, §4.3), which a backend lowers from and a recognizer rewrites to.
+[`schemas/intrinsics.schema.json`](schemas/intrinsics.schema.json) states the body: `name` (PascalCase),
+`group` (`IntMath`, `FloatMath`, `Boolean`, `Bitfield`, `BitCount`, `Shuffle`, `Saturation`, `Carry`,
+`Endian`, `Trig`, `Sequence`, `Matrix`, `Tensor`, `CopyFill`), `typeParameters` `{name, constraint}`
+(`integer`, `unsigned`, `signed`, `float`, `any`), `parameters` (0–8) and `returns` (1–4) `{name, type}`,
+`legality` `{id, text, fact}`, `effects` (`[pure]` or `EFFECTS.` IDs), `exactness` (`{mode: exact}`, or
+`{mode: tolerance, policy: VERIFICATION.tolerance.<name>}`), `reference` `{algorithm, source}`,
+`mustSurviveUntil` (the last `IR.stage.` that still holds it unlowered) and at least three `vectors`
+`{types, inputs, outputs}`; optional are `attributes`, `algebra`, `lowersTo`, `facts`, `laneLiftable`,
+`requiresRuntime`, `spelling` and `accuracy` (`ulp(<n>)`, `cr` or `library(<name>)`, tolerance only).
+
+A `type` is a type parameter or a `TYPES.` ID; a trailing `[]` makes it an array of that type, quoted in
+YAML (`"TYPES.u8[]"`). A vector literal is a quoted hexadecimal bit pattern (`"0x3FF0000000000000"` for
+the `f64` 1.0), which must lie below 2^bits, or a decimal integer, which must lie in the range of the type
+— two's complement for a signed type; an array value is a list of such literals. A NaN output stands for
+any NaN. The rules (`PLY0046`):
+
+| Rule | What it requires |
+| --- | --- |
+| `layout` | the path follows from `group` and `name`, the ID is `INTRINSICS.<name>`; when it fails, nothing else is checked |
+| `type-bound` | every type is declared; every vector binds each type parameter, and only those, to a type its constraint admits |
+| `vector-arity` | one input per parameter and one output per return value |
+| `vector-width` | each literal fits the type bound to it; a list exactly for an array type |
+| `unique-name` | no two documents share a name, ignoring case, or a `spelling` |
+| `integer-is-exact` | groups other than `FloatMath`, `Trig`, `Matrix` and `Tensor` are `exact` |
+
+Every `TYPES.`, `EFFECTS.`, `IR.`, `INTRINSICS.` and `VERIFICATION.` ID resolves or fails with `PLY0043`.
+The IDs are stable: a recognition rule names an intrinsic by them. The seed is every exact intrinsic the
+prototype IR implements (`IrIntrinsicOp`), 85 documents with vectors worked out from their references,
+not from Polypiler: the integer and bit operations, saturation, carry and overflow, the endian loads and
+stores, and the floating-point operations whose contract is exact. The array operations and the
+floating-point operations with a `ulp(n)` contract, the integer `Log2`'s floating-point half among them,
+follow once their tolerance documents exist.
+
 ## Family `ir`
 
 The IR operations, stages and version (PRD §4.1–§4.3, [ADR 0001](../docs/adr/0001-ir-stage-invariants.md)),

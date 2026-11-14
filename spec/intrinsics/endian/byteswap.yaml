@@ -1,0 +1,30 @@
+id: INTRINSICS.ByteSwap
+title: Reverse the bytes
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-ENDIAN
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ByteSwap
+  group: Endian
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the bytes of the bit pattern of value in the opposite order; an 8-bit value is itself"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 7-1"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678"], outputs: ["0x78563412"]}
+    - {types: {T: TYPES.u16}, inputs: ["0xFF00"], outputs: ["0x00FF"]}
+    - {types: {T: TYPES.u8}, inputs: ["0xAB"], outputs: ["0xAB"]}
+    - {types: {T: TYPES.i64}, inputs: [1], outputs: [72057594037927936]}
+  algebra: [involution]
