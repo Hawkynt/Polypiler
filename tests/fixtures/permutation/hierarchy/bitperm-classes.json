@@ -1,0 +1,21 @@
+{
+  "description": "The class of each of the 44 BitPerm fixtures in tests/fixtures/bitperm/mappings, worked out by hand from PRD 20.2: the 15 identity, reverse and swap-halves patterns of widths 8 to 128 and the 8-bit rotation test map read every input exactly once through a plain source and are permutations; every other fixture has a don't-care, a constant or a duplicated input and is a routing.",
+  "permutations": [
+    "pattern-identity-8",
+    "pattern-identity-16",
+    "pattern-identity-32",
+    "pattern-identity-64",
+    "pattern-identity-128",
+    "pattern-reverse-8",
+    "pattern-reverse-16",
+    "pattern-reverse-32",
+    "pattern-reverse-64",
+    "pattern-reverse-128",
+    "pattern-swap_halves-8",
+    "pattern-swap_halves-16",
+    "pattern-swap_halves-32",
+    "pattern-swap_halves-64",
+    "pattern-swap_halves-128",
+    "test-29-solveexhaustive-rotation-permutation"
+  ]
+}

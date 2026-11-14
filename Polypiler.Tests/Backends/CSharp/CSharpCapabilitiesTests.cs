@@ -98,7 +98,34 @@ public sealed class CSharpCapabilitiesTests {
     ("saturating cast to int", "net10.0"),
     ("saturating cast to uint", "net10.0"),
     ("saturating cast to long", "net10.0"),
-    ("saturating cast to ulong", "net10.0")
+    ("saturating cast to ulong", "net10.0"),
+    ("stackalloc in expression", "C# 8"),
+    ("range and index", "C# 8"),
+    ("Span<T>", "netstandard2.1"),
+    ("Memory<T>", "netstandard2.1"),
+    ("MemoryExtensions.SequenceEqual", "netstandard2.1"),
+    ("MemoryMarshal.Cast", "netstandard2.1"),
+    ("System.Index", "netstandard2.1"),
+    ("System.Range", "netstandard2.1"),
+    ("ArraySegment<T>", "net2.0"),
+    ("MemoryExtensions.AsSpan", "netstandard2.1"),
+    ("Span<T>.Slice", "netstandard2.1"),
+    ("Span<T>.Length", "netstandard2.1"),
+    ("stackalloc T[n] into a span", "netstandard2.1"),
+    ("Span<T>.CopyTo", "netstandard2.1"),
+    ("Span<T>.TryCopyTo", "netstandard2.1"),
+    ("Span<T>.Fill", "netstandard2.1"),
+    ("MemoryExtensions.SequenceEqual of two views", "netstandard2.1"),
+    ("Span<T>.ToArray", "netstandard2.1"),
+    ("MemoryMarshal.Cast<TFrom, TTo>", "netstandard2.1"),
+    ("ArraySegment<T> from an index on", "net2.0"),
+    ("ArraySegment<T> sliced from an index on", "net2.0"),
+    ("ArraySegment<T> element read", "net2.0"),
+    ("ArraySegment<T> element written", "net2.0"),
+    ("ArraySegment<T> element place", "net2.0"),
+    ("BinaryPrimitives.Read… on an ArraySegment<byte>", "net2.0"),
+    ("BinaryPrimitives.Write… on an ArraySegment<byte>", "net2.0"),
+    ("BinaryPrimitives.Write… on a span, the value evaluated first", "netstandard2.1")
   ];
 
   /// <summary>
@@ -276,12 +303,15 @@ public sealed class CSharpCapabilitiesTests {
   internal static bool IsFloating(CSharpCapability row)
     => row.Operation is { } op && FloatOperationTable.Of(op) is { DoubleName: not null } && row.Operands.All(kind => kind is IrTypeKind.F32 or IrTypeKind.F64);
 
+  /// <summary>Whether a row writes a string operation, which CSharpStringEmissionTests test.</summary>
+  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && StringOperations.IsString(op);
+
   /// <summary>The table names every API and every feature of the language the issue lists, each with the first profile or version that has it.</summary>
   [Test]
   public void Table_IsWhatTheBackendKnows() {
     // The rows of the integer and bit operations, one per operation and width, have tests of their own
     // (IntegerCSharpTests), and so do the rows of the floating-point operations (CSharpFloatCapabilitiesTests).
-    var rows = CSharpCapabilities.Default.Rows.Where(row => !IsIntegerRow(row) && !IsFloating(row)).ToList();
+    var rows = CSharpCapabilities.Default.Rows.Where(row => !IsIntegerRow(row) && !IsFloating(row) && !IsStringRow(row)).ToList();
     Assert.That(rows.Select(row => (row.Name, First(row))), Is.EqualTo(_table));
     Assert.That(rows.Select(row => row.Name), Is.Unique);
     Assert.That(rows.Select(row => row.ToString()), Is.EqualTo(rows.Select(row => row.Name)));
@@ -370,7 +400,9 @@ public sealed class CSharpCapabilitiesTests {
   /// <summary>Every row an operation or a conversion is written by has a function here that uses it.</summary>
   [Test]
   public void EveryWrittenRow_HasAUse() {
-    var written = CSharpCapabilities.Default.Rows.Where(row => (row.Operation is not null || row.Saturates is not null) && !IsIntegerRow(row) && !IsFloating(row)).Select(row => row.Name);
+    // The rows of the views have tests of their own (CSharpViewTests).
+    var written = CSharpCapabilities.Default.Rows.Where(row => (row.Operation is not null || row.Saturates is not null) && !IsIntegerRow(row) && !IsFloating(row) && !IsStringRow(row)
+      && !(row.Operation is { } op && IrViews.IsViewOperation(op))).Select(row => row.Name);
     Assert.That(_uses.Select(use => use.Row).Distinct(), Is.EquivalentTo(written));
   }
 
@@ -424,9 +456,12 @@ public sealed class CSharpCapabilitiesTests {
   /// </summary>
   [Test]
   public void EveryHelper_IsCSharp2ForNetFramework20() {
-    var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().ToList();
+    // The store on a span is the one helper only a profile with spans calls; it is C# 8 for .NET Standard 2.1.
+    var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(helper => helper != CSharpViewHelpers.StoreSpan).ToList();
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(82));
+    Assert.That(helpers, Has.Count.EqualTo(112));
+    var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
+    Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);
     foreach (var checking in _overflowChecking)
       Assert.That(() => GeneratedCSharp.Compile(text, checking), Throws.Nothing);

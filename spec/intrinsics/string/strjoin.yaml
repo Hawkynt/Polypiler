@@ -1,0 +1,28 @@
+id: INTRINSICS.StrJoin
+title: Strings joined by a separator
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrJoin
+  group: String
+  typeParameters: []
+  parameters: [{name: separator, type: TYPES.str}, {name: parts, type: "TYPES.str[]"}]
+  returns: [{name: joined, type: TYPES.str}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the elements of parts in order with separator between each two"
+    source: "the .NET API reference of System.String.Join(String, String[])"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[44, 32], [[97], [], [99]]], outputs: [[97, 44, 32, 44, 32, 99]]}
+    - {types: {}, inputs: [[45], []], outputs: [[]]}
+    - {types: {}, inputs: [[], [[120], [121]]], outputs: [[120, 121]]}

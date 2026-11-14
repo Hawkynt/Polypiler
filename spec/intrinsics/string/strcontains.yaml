@@ -1,0 +1,28 @@
+id: INTRINSICS.StrContains
+title: Whether a needle stands in a string
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrContains
+  group: String
+  typeParameters: [{name: N, constraint: any}]
+  parameters: [{name: text, type: TYPES.str}, {name: needle, type: N}]
+  returns: [{name: result, type: TYPES.bool}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "by code unit, a needle that is a string or a code unit"
+    source: "ECMA-262 2022 §22.1.3.8 (includes); the .NET API reference of System.String.Contains(String)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {N: TYPES.str}, inputs: [[97, 98, 99], [98]], outputs: [1]}
+    - {types: {N: TYPES.str}, inputs: [[97, 98, 99], []], outputs: [1]}
+    - {types: {N: TYPES.u16}, inputs: [[97, 98, 99], 120], outputs: [0]}

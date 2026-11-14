@@ -38,11 +38,19 @@ public static class IrOperators {
   /// <param name="arguments">The types of the arguments, in order.</param>
   /// <returns><see langword="true"/> when the operation applies.</returns>
   public static bool Accepts(IrIntrinsicOp op, IrType result, IReadOnlyList<IrType> arguments) {
+    // The views, and the endian loads and stores on a view of bytes, which are checked as on an array of them.
+    if (IrViews.Accepts(op, result, arguments) is { } view)
+      return view;
+    if (IrViews.AsBytes(op, arguments) is { } bytes)
+      arguments = bytes;
+
     // The integer and bit operations, also those on integers that are defined on floating point as well.
     if (IntegerOperations.Accepts(op, result, arguments) is { } integer)
       return integer;
     if (FloatOperationTable.Accepts(op, result, arguments) is { } floating)
       return floating;
+    if (StringOperations.Accepts(op, result, arguments) is { } text)
+      return text;
 
     bool Are(params Func<IrType, bool>[] rules) => arguments.Count == rules.Length && !rules.Where((rule, index) => !rule(arguments[index])).Any();
     bool Table(IrType type) => type.IsArray && type.IsStorable;

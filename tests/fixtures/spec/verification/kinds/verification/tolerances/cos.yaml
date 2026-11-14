@@ -1,0 +1,16 @@
+id: VERIFICATION.tolerance.cos
+title: Cos compared bit for bit
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: tolerance
+  operation: INTRINSICS.Cos
+  mode: exact
+  specialValues: bitwise

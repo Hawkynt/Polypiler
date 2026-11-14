@@ -1,0 +1,29 @@
+id: INTRINSICS.RotateLeft
+title: Rotate left
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-ROTATE
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: RotateLeft
+  group: Shuffle
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}, {name: count, type: TYPES.i32}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the bit pattern of value rotated left by count mod width, a negative count included: (x << c) | (x >> (width - c)) with c = count mod width"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-15"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x80000001", 1], outputs: ["0x00000003"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678", 36], outputs: ["0x23456781"]}
+    - {types: {T: TYPES.u8}, inputs: ["0x81", -1], outputs: ["0xC0"]}
+    - {types: {T: TYPES.i32}, inputs: [1, 32], outputs: [1]}

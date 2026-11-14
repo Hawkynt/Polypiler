@@ -1,0 +1,30 @@
+id: INTRINSICS.BitReverse
+title: Reverse the bits
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITREV
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: BitReverse
+  group: Shuffle
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the bit pattern of value in the opposite order: bit i of the result is bit width - 1 - i of value"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 7-1"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000001"], outputs: ["0x80000000"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678"], outputs: ["0x1E6A2C48"]}
+    - {types: {T: TYPES.u8}, inputs: ["0x0F"], outputs: ["0xF0"]}
+    - {types: {T: TYPES.i16}, inputs: [1], outputs: [-32768]}
+  algebra: [involution]

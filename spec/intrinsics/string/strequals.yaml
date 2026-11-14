@@ -1,0 +1,28 @@
+id: INTRINSICS.StrEquals
+title: Ordinal equality of two strings
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrEquals
+  group: String
+  typeParameters: []
+  parameters: [{name: left, type: TYPES.str}, {name: right, type: TYPES.str}]
+  returns: [{name: equal, type: TYPES.bool}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "whether the two strings have the same code units in the same order"
+    source: "ECMA-262 2022 §7.2.16 (IsStrictlyEqual of strings); the .NET API reference of String.Equals(String, String)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[97], [97]], outputs: [1]}
+    - {types: {}, inputs: [[97], [65]], outputs: [0]}
+    - {types: {}, inputs: [[101, 769], [233]], outputs: [0]}

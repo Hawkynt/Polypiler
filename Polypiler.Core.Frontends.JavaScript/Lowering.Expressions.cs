@@ -21,6 +21,9 @@ internal sealed partial class Lowering {
     if (this._substitutes.TryGetValue(node, out var substitute))
       return substitute;
 
+    if (this.StringExpression(node) is { } text)
+      return text;
+
     switch (node) {
       case NumericLiteral literal:
         return Number(literal.Value);
@@ -79,13 +82,13 @@ internal sealed partial class Lowering {
         if (variable.IsUninitialized && !this._assigned.Contains(variable))
           throw this.Refuse(identifier, JavaScriptFrontend.ReadBeforeAssignmentDescriptor, $"'{identifier.Name}' may be read before it is assigned");
 
-        return new IrLocalRef(variable.Local!);
+        return Read(variable);
       case ModuleConstant constant:
         // A table never comes here: one that is used as a value is no constant.
         this.Constants.Add(constant);
         return new IrConstRef(constant.Constant);
       default:
-        throw this.Unsupported(identifier, identifier.Name);
+        throw this.Unsupported(identifier, types.IsGlobal(identifier.Name) ? $"reading the variable {identifier.Name} before its declaration" : identifier.Name);
     }
   }
 
@@ -192,6 +195,12 @@ internal sealed partial class Lowering {
       case Plan.Float or Plan.CompareFloat:
         expression = new IrBinary(Operation(op), this.Float(left), this.Float(right));
         break;
+      case Plan.Concat:
+        expression = this.Concatenation(left, right);
+        break;
+      case Plan.CompareString:
+        expression = this.StringComparison(op, left, right);
+        break;
       case Plan.Power:
         expression = new IrIntrinsic(IrIntrinsicOp.PowEcma, IrType.F64, [this.Float(left), this.Float(right)]);
         break;
@@ -264,9 +273,11 @@ internal sealed partial class Lowering {
     if (types.Names.Library(member) is { } library)
       return JavaScriptFloatApi.FindConstant(library) is { } constant ? Number(constant.Value) : throw this.Unsupported(member, library);
 
-    return member.Property is Identifier { Name: "length" }
-      ? new IrArrayLength(this.Array(member.Object))
-      : throw this.Unsupported(member, types.Text(member));
+    if (member.Property is not Identifier { Name: "length" })
+      throw this.Unsupported(member, types.Text(member));
+
+    var measured = this.Array(member.Object);
+    return measured.Type.IsView ? new IrIntrinsic(IrIntrinsicOp.ViewLength, IrType.I32, [measured]) : new IrArrayLength(measured);
   }
 
   /// <summary>An element as JavaScript reads it: a binary32 number is the double it is.</summary>
@@ -330,6 +341,8 @@ internal sealed partial class Lowering {
       return integer;
 
     switch (builtin) {
+      case null when this.ViewMethod(call) is { } view:
+        return view;
       case null:
         return this.CallFunction(call);
       case "Math.imul":

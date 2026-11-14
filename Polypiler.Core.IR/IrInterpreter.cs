@@ -23,7 +23,10 @@ public enum IrTrap {
   IntegerOverflow,
 
   /// <summary>An operation that has no result for its operand: the sign of a NaN.</summary>
-  InvalidOperation
+  InvalidOperation,
+
+  /// <summary>A range outside its source: a view or a slice that does not lie in it, or a copy into a view too short.</summary>
+  ArgumentOutOfRange
 
 }
 
@@ -44,6 +47,7 @@ public sealed class IrTrapException : Exception {
     IrTrap.DivideByZero => "divide by zero",
     IrTrap.IndexOutOfRange => "index out of range",
     IrTrap.InvalidOperation => "invalid operation",
+    IrTrap.ArgumentOutOfRange => "argument out of range",
     _ => "integer overflow"
   };
 
@@ -53,8 +57,8 @@ public sealed class IrTrapException : Exception {
 /// Evaluates the IR directly. Values cross the boundary as the .NET type of the same width and
 /// signedness (a <c>u16</c> is accepted as <see cref="ushort"/> or <see cref="char"/> and returned as
 /// <see cref="ushort"/>), as <see cref="float"/>, <see cref="double"/> and <see cref="bool"/>, and as
-/// one-dimensional arrays of the numeric types;
-/// arrays are passed by reference, so a function can change the caller's array. A struct crosses as
+/// one-dimensional arrays of the numeric types; a <c>str</c> crosses as a <see cref="string"/> and an array of
+/// them as a <see cref="string"/> array; arrays are passed by reference, so a function can change the caller's array. A struct crosses as
 /// an <see cref="object"/> array of the values of its fields in declaration order, each crossing as
 /// its own type does; inside, it is a value that every read copies, as <see cref="IrStructNew"/> states.
 /// </summary>
@@ -66,15 +70,23 @@ public static partial class IrInterpreter {
   /// </summary>
   private static readonly ConditionalWeakTable<IrModule, Program> _programs = new();
 
-  /// <summary>Calls a function of a module that <see cref="IrVerifier"/> accepted.</summary>
+  /// <summary>
+  /// Calls a function of a module that <see cref="IrVerifier"/> accepted, in an instance of the module
+  /// of its own: the globals are initialised for this call and forgotten after it.
+  /// </summary>
   /// <param name="module">The module.</param>
   /// <param name="function">The name of the function to call.</param>
   /// <param name="arguments">One value per parameter, of the parameter's type.</param>
   /// <returns>The value returned, or <see langword="null"/> for a function that returns nothing.</returns>
   /// <exception cref="ArgumentException">The function does not exist or the arguments do not fit it.</exception>
-  /// <exception cref="IrTrapException">An operation trapped.</exception>
-  public static object? Call(IrModule module, string function, object[] arguments) {
-    var program = _programs.GetValue(module, Index);
+  /// <exception cref="IrTrapException">An operation trapped, also one of an initializer.</exception>
+  public static object? Call(IrModule module, string function, object[] arguments)
+    // A module without globals has no state to keep apart, and the many calls of the equivalence tests need no instance each.
+    => module.Globals.Count == 0 ? Call(_programs.GetValue(module, Index), [], module, function, arguments) : Instantiate(module).Call(function, arguments);
+
+
+  /// <summary>A function of the module called with values taken across the boundary, in the globals of an instance.</summary>
+  private static object? Call(Program program, Dictionary<IrGlobal, object> globals, IrModule module, string function, object[] arguments) {
     var functions = program.Functions;
     if (!functions.TryGetValue(function, out var target))
       throw new ArgumentException($"The module '{module.Name}' has no function '{function}'.", nameof(function));
@@ -83,7 +95,7 @@ public static partial class IrInterpreter {
       throw new ArgumentException($"'{function}' takes {target.Parameters.Count} arguments, not {arguments.Length}.", nameof(arguments));
 
     var values = arguments.Select((argument, index) => FromHost(target.Parameters[index], argument)).ToArray();
-    return ToHost(target.ReturnType, new Machine(program).Invoke(target, values));
+    return ToHost(target.ReturnType, new Machine(program, globals).Invoke(target, values));
   }
 
   private static Program Index(IrModule module) {
@@ -93,7 +105,9 @@ public static partial class IrInterpreter {
 
     var constants = new Dictionary<IrModuleConst, object>(ReferenceEqualityComparer.Instance);
     foreach (var constant in module.Constants)
-      constants[constant] = constant.Type.Element is { } element
+      constants[constant] = (constant.Type.Element ?? constant.Type).IsString
+        ? constant.Type.IsArray ? ArrayOf(IrType.String, [.. constant.Strings]) : constant.Strings[0]
+        : constant.Type.Element is { } element
         ? ArrayOf(element, constant.Values.Select(value => Constant(element, value)).ToList())
         : Constant(constant.Type, constant.Values[0]);
 
@@ -125,6 +139,9 @@ public static partial class IrInterpreter {
 
   /// <summary>A value of a type taken across the boundary, or <see langword="null"/> when it is none.</summary>
   private static object? Accepted(IrType type, object? value) {
+    if (type.IsView)
+      return AcceptedView(type, value);
+
     if (type.StructType is { } declared)
       return value is object?[] fields && fields.Length == declared.Fields.Count && Fields(declared, fields) is { } accepted ? new Record(accepted) : null;
 
@@ -146,9 +163,10 @@ public static partial class IrInterpreter {
   /// <summary>The IR type a .NET type crosses the boundary as, or <see langword="null"/> when it does not.</summary>
   private static IrType? TypeOf(Type host) {
     if (host.IsSZArray)
-      return TypeOf(host.GetElementType()!) is { IsNumeric: true } element ? IrType.Array(element) : null;
+      return TypeOf(host.GetElementType()!) is { } element && (element.IsNumeric || element.IsString) ? IrType.Array(element) : null;
 
     return Type.GetTypeCode(host) switch {
+      TypeCode.String => IrType.String,
       TypeCode.Boolean => IrType.Bool,
       TypeCode.SByte => IrType.I8,
       TypeCode.Byte => IrType.U8,
@@ -175,12 +193,13 @@ public static partial class IrInterpreter {
     IrTypeKind.U64 => typeof(ulong),
     IrTypeKind.F32 => typeof(float),
     IrTypeKind.F64 => typeof(double),
+    IrTypeKind.String => typeof(string),
     _ => typeof(object)
   };
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool or float or double or Record => value,
+    Array or bool or float or double or Record or string => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -200,6 +219,7 @@ public static partial class IrInterpreter {
   };
 
   private static object? ToHost(IrType type, object? value) => value switch {
+    View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
     null or Array or bool => value,
     _ => External(HostType(type), value)
@@ -207,7 +227,7 @@ public static partial class IrInterpreter {
 
   private sealed record Program(Dictionary<string, IrFunction> Functions, Dictionary<IrModuleConst, object> Constants);
 
-  private sealed partial class Machine(Program program) {
+  private sealed partial class Machine(Program program, Dictionary<IrGlobal, object> globals) {
 
     public object? Invoke(IrFunction function, object[] arguments) {
       var frame = new Frame();
@@ -239,11 +259,14 @@ public static partial class IrInterpreter {
         case IrAssign assign:
           frame.Locals[assign.Local] = this.Evaluate(assign.Value, frame);
           return Flow.Next;
+        case IrGlobalAssign assign:
+          globals[assign.Global] = this.Evaluate(assign.Value, frame);
+          return Flow.Next;
         case IrStore store:
-          var array = (Array)this.Evaluate(store.Array, frame);
+          var array = this.Evaluate(store.Array, frame);
           var index = (long)this.Evaluate(store.Index, frame);
           var value = this.Evaluate(store.Value, frame);
-          Store(array, Checked(array, index), value);
+          StoreElement(array, index, value);
           return Flow.Next;
         case IrExprStmt expression:
           this.Evaluate(expression.Expression, frame);
@@ -314,6 +337,10 @@ public static partial class IrInterpreter {
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
           return Copied(frame.Locals[reference.Local]);
+        case IrGlobalRef reference:
+          return Copied(globals[reference.Global]);
+        case IrStrConst text:
+          return text.Value;
         case IrUnary unary:
           var operand = this.Evaluate(unary.Operand, frame);
           if (unary.Type.IsFloat)
@@ -332,8 +359,8 @@ public static partial class IrInterpreter {
         case IrConditional choice:
           return this.Evaluate((bool)this.Evaluate(choice.Condition, frame) ? choice.WhenTrue : choice.WhenFalse, frame);
         case IrArrayLoad load:
-          var array = (Array)this.Evaluate(load.Array, frame);
-          return Copied(Load(array, Checked(array, (long)this.Evaluate(load.Index, frame))));
+          var array = this.Evaluate(load.Array, frame);
+          return Copied(LoadElement(array, (long)this.Evaluate(load.Index, frame)));
         case IrArrayLength length:
           return (long)((Array)this.Evaluate(length.Array, frame)).Length;
         case IrNewArray creation:
@@ -368,6 +395,9 @@ public static partial class IrInterpreter {
 
     private object? Intrinsic(IrIntrinsic intrinsic, Frame frame) {
       var arguments = intrinsic.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
+      if (IsView(intrinsic))
+        return Views(intrinsic, arguments);
+
       switch (intrinsic.Op) {
         case IrIntrinsicOp.ArrayOf:
           return ArrayOf(intrinsic.Type.Element!, arguments);
@@ -385,6 +415,8 @@ public static partial class IrInterpreter {
           Array.Clear(cleared);
           return null;
         default:
+          if (StringOperations.IsString(intrinsic.Op))
+            return StringOperations.Evaluate(intrinsic, arguments);
           if (IntegerOperations.Evaluates(intrinsic))
             return IntegerOperations.Evaluate(intrinsic, arguments);
           if (FloatOperationTable.TryEvaluate(intrinsic.Op, arguments, out var computed))
@@ -459,11 +491,15 @@ public static partial class IrInterpreter {
       object before;
       object after;
       if (step.Target is IrArrayLoad element) {
-        var array = (Array)this.Evaluate(element.Array, frame);
-        var index = Checked(array, (long)this.Evaluate(element.Index, frame));
-        before = Load(array, index);
+        var array = this.Evaluate(element.Array, frame);
+        var index = (long)this.Evaluate(element.Index, frame);
+        before = LoadElement(array, index);
         after = Stepped(step, before);
-        Store(array, index, after);
+        StoreElement(array, index, after);
+      } else if (step.Target is IrGlobalRef reference) {
+        before = globals[reference.Global];
+        after = Stepped(step, before);
+        globals[reference.Global] = after;
       } else {
         var local = ((IrLocalRef)step.Target).Local;
         before = frame.Locals[local];

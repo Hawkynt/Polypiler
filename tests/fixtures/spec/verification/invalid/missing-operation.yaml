@@ -1,0 +1,14 @@
+id: VERIFICATION.tolerance.no-operation
+title: A document without operation
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: tolerance
+  mode: exact

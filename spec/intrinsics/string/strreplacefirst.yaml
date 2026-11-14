@@ -1,0 +1,28 @@
+id: INTRINSICS.StrReplaceFirst
+title: First occurrence replaced
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrReplaceFirst
+  group: String
+  typeParameters: []
+  parameters: [{name: text, type: TYPES.str}, {name: needle, type: TYPES.str}, {name: replacement, type: TYPES.str}]
+  returns: [{name: result, type: TYPES.str}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the first occurrence of needle replaced by replacement, with no pattern in it; an empty needle stands at 0"
+    source: "ECMA-262 2022 §22.1.3.18 (replace with a string pattern and a string replacement without $)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[97, 98, 99, 98], [98], [88, 89]], outputs: [[97, 88, 89, 99, 98]]}
+    - {types: {}, inputs: [[97, 98], [], [120]], outputs: [[120, 97, 98]]}
+    - {types: {}, inputs: [[97, 98], [99], [120]], outputs: [[97, 98]]}

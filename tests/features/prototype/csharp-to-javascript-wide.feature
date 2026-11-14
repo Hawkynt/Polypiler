@@ -52,7 +52,7 @@ Feature: Translate wider C# to JavaScript
     Then the exit code is 3 and the output contains "PLY1002" and "Math.ReciprocalSqrtEstimate"
     And nothing is written
 
-  Scenario: Writing to a constant table is refused
-    Given a class with "static readonly uint[] T = { 1, 2 };" and a method assigning T[0]
+  Scenario: Writing to a public constant table is refused
+    Given a class with "public static readonly uint[] T = { 1, 2 };" and a method assigning T[0]
     When it is translated
     Then the exit code is 3 and the output contains "PLY1002"

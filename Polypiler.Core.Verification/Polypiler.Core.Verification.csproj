@@ -15,4 +15,9 @@
     <EmbeddedResource Include="..\tooling\ci\runner.yaml" LogicalName="Polypiler.Core.Verification.Running.runner.yaml" Link="Running\runner.yaml" />
   </ItemGroup>
 
+  <!-- petcat's named escapes, recorded from petcat itself; the normalisation of its listings reads them. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Emulators\Resources\petcat-escapes.tsv" LogicalName="Polypiler.Core.Verification.Emulators.petcat-escapes.tsv" />
+  </ItemGroup>
+
 </Project>

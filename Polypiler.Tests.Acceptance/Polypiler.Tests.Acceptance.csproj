@@ -39,6 +39,7 @@
   <ItemGroup>
     <Compile Include="..\tests\fixtures\prototype\**\*.cs" LinkBase="Prototype\Fixtures" />
     <Compile Include="..\Polypiler.Tests\Prototype\Support\*.cs" LinkBase="Prototype\Support" />
+    <Compile Include="..\Polypiler.Tests\Backends\Support\*.cs" LinkBase="Backends\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\JavaScript\Support\*.cs" LinkBase="Frontends\JavaScript\Support" />
     <Compile Include="..\Polypiler.Tests\Float\Support\FloatVectors.cs" LinkBase="Float\Support" />
     <Compile Include="..\Polypiler.Tests\Recognize\Support\*.cs" LinkBase="Recognize\Support" />
@@ -49,6 +50,7 @@
     <Compile Include="..\Polypiler.Tests\Tooling\Corpus\MiniUpstream.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Verification\Running\Support\*.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Verification\Fuzzing\DemoTargets.cs" LinkBase="Infra\Support" />
+    <Compile Include="..\Polypiler.Tests\Tooling\Integrity\GoldenTree.cs" LinkBase="Infra\Support" />
   </ItemGroup>
 
   <ItemGroup>
@@ -59,6 +61,7 @@
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
+    <ProjectReference Include="..\Polypiler.Permutation\Polypiler.Permutation.csproj" />
     <ProjectReference Include="..\Polypiler.Tooling\Polypiler.Tooling.csproj" />
     <ProjectReference Include="..\Polypiler.Tests.Probe\Polypiler.Tests.Probe.csproj" />
   </ItemGroup>

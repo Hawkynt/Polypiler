@@ -117,7 +117,7 @@ public sealed class JavaScriptTranslateCommandTests {
 
   /// <summary>Test design 9 to 13: what the importer refuses is exit code 4 for a syntax error and 3 otherwise, and writes nothing.</summary>
   [TestCase("function f( {", new string[0], 4, "PLY1100: Unexpected end of input")]
-  [TestCase("/** @param {string} a */ function f(a) { return a; }", new string[0], 3, "PLY1101: parameter 'a' of 'f' has no supported JSDoc type")]
+  [TestCase("/** @param {symbol} a */ function f(a) { return a; }", new string[0], 3, "PLY1101: parameter 'a' of 'f' has no supported JSDoc type")]
   [TestCase("function f(a) { return a[0]; }", new string[0], 3, "PLY1101: parameter 'a' of 'f' is used as an array and needs a JSDoc type")]
   [TestCase("function f() { return this; }", new string[0], 3, "PLY1102: 'this' is not supported yet")]
   [TestCase("function f() { return 2n * 3n; }", new string[0], 3, "PLY1103: the result of '2n * 3n' has no bounded type")]

@@ -123,7 +123,8 @@ internal sealed partial class Lowering {
       throw this.Unsupported(creation, variable.IsConstant ? "a DataView that is not made of the buffer of a Uint8Array of the function" : "a DataView in a variable that is not const");
 
     var value = this.Expression(array);
-    if (value.Type != IrType.Array(IrType.U8))
+    // A view of bytes is one only with its offset and length: the buffer alone is the whole of the array it views.
+    if (value.Type != IrType.Array(IrType.U8) && !(value.Type == IrType.Span(IrType.U8) && creation.Arguments.Count == 3))
       throw this.Unsupported(array, $"a DataView of {value.Type}, which is no Uint8Array");
 
     var held = new IrLocal($"{variable.Name}$bytes", value.Type);

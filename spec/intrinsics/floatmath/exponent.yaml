@@ -1,0 +1,30 @@
+id: INTRINSICS.Exponent
+title: Exponent of frexp
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Exponent
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}]
+  returns: [{name: exponent, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the exponent of frexp: e with x = Fraction(x) * 2^e; 0 for a zero, an infinity and a NaN"
+    source: "ISO/IEC 9899:2018, section 7.12.6.4 (frexp)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x4020000000000000"], outputs: [4]}
+    - {types: {F: TYPES.f64}, inputs: ["0xC008000000000000"], outputs: [2]}
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000001"], outputs: [-1073]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF0000000000000"], outputs: [0]}
+    - {types: {F: TYPES.f32}, inputs: ["0x3F400000"], outputs: [0]}

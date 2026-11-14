@@ -1,0 +1,29 @@
+id: INTRINSICS.TrailingZeroCount
+title: Trailing zero count
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITCOUNT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: TrailingZeroCount
+  group: BitCount
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: count, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the number of 0 bits below the lowest 1 bit of the bit pattern of value; the width of T when value is 0"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 5-4"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: [32]}
+    - {types: {T: TYPES.u32}, inputs: ["0x80000000"], outputs: [31]}
+    - {types: {T: TYPES.i16}, inputs: [-32768], outputs: [15]}
+    - {types: {T: TYPES.u8}, inputs: ["0x28"], outputs: [3]}

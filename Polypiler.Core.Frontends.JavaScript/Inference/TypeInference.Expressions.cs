@@ -46,7 +46,13 @@ internal enum Plan {
   BigDivide,
 
   /// <summary><c>**</c> of two numbers: ECMA-262's exponentiation of doubles, which is <c>Math.pow</c>.</summary>
-  Power
+  Power,
+
+  /// <summary>Two strings joined.</summary>
+  Concat,
+
+  /// <summary>Two strings compared by code unit.</summary>
+  CompareString
 
 }
 
@@ -94,6 +100,9 @@ internal sealed partial class TypeInference {
   }
 
   private JsType Compute(Node node, Coercion coercion) {
+    if (this.StringType(node) is { } text)
+      return text;
+
     switch (node) {
       case NumericLiteral literal:
         return JsType.Literal(literal.Value);
@@ -200,6 +209,10 @@ internal sealed partial class TypeInference {
         return _i64;
       case { } library when JavaScriptFloatApi.Find(library) is { } member:
         return JsType.Of(member.Result);
+      // A view of a typed array or of a view, and the copy of a part of one (#1325).
+      case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "subarray" or "slice" } method } member
+        && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: false } source:
+        return method.Name == "subarray" ? JsType.ViewOf(source.Element!) : JsType.ArrayOf(source.Element!, false);
       case null when this.Names.Callee(call.Callee) is { } callee:
         var model = this.ModelOf(callee);
         return model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType);
@@ -246,6 +259,9 @@ internal sealed partial class TypeInference {
 
   /// <summary>Decides how a binary operator is computed on two operands where a coercion is applied to its value.</summary>
   public Operation Decide(Operator op, Node left, Node right, Coercion coercion) {
+    if (this.DecideString(op, left, right) is { } text)
+      return text;
+
     if (this.IsBig(left, coercion) || this.Of(right).Kind == JsKind.BigInt)
       return this.DecideBig(op, left, right, coercion);
 

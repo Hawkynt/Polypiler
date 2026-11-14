@@ -1,0 +1,29 @@
+id: INTRINSICS.StrReplaceAll
+title: Every occurrence replaced
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrReplaceAll
+  group: String
+  typeParameters: [{name: N, constraint: any}]
+  parameters: [{name: text, type: TYPES.str}, {name: needle, type: N}, {name: replacement, type: N}]
+  returns: [{name: result, type: TYPES.str}]
+  legality:
+    - {id: needle-not-empty, text: "a needle that is a string is not empty; an empty one traps InvalidOperation", fact: none}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "every occurrence of needle replaced by replacement, left to right, each search going on behind the last replacement; needle and replacement are both strings or both code units"
+    source: "the .NET API reference of System.String.Replace(String, String)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {N: TYPES.str}, inputs: [[97, 98, 99, 98], [98], [88, 89]], outputs: [[97, 88, 89, 99, 88, 89]]}
+    - {types: {N: TYPES.str}, inputs: [[97, 97, 97], [97, 97], [98]], outputs: [[98, 97]]}
+    - {types: {N: TYPES.u16}, inputs: [[97, 98, 97, 98], 97, 45], outputs: [[45, 98, 45, 98]]}

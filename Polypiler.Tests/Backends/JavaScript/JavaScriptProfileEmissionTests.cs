@@ -594,6 +594,10 @@ public sealed class JavaScriptProfileEmissionTests {
     const string bits = "public static long F(double d, float f, long l, int i) => System.BitConverter.DoubleToInt64Bits(d) + System.BitConverter.SingleToInt32Bits(f) "
       + "+ (long)System.BitConverter.Int64BitsToDouble(l) + (long)System.BitConverter.Int32BitsToSingle(i);";
     string Array(string element) => $"public static int F(int n) => new {element}[n].Length;";
+    string Read(string name, string type)
+      => $"public static {type} F(byte[] a) {{ System.ReadOnlySpan<byte> s = a; return System.Buffers.Binary.BinaryPrimitives.Read{name}LittleEndian(s.Slice(1)); }}";
+    string Write(string name, string type)
+      => $"public static byte[] F(byte[] a, {type} v) {{ System.Span<byte> s = a; System.Buffers.Binary.BinaryPrimitives.Write{name}LittleEndian(s, v); return a; }}";
     var cases = new Dictionary<string, (string Source, string Native, string Replacement)> {
       ["let"] = ("public static int F(int a) { int b = a; return b; }", "let b = a;", "var b = a;"),
       ["const"] = ("const int K = 2; public static int F() => K;", "const K = 2;", "var K = 2;"),
@@ -638,9 +642,18 @@ public sealed class JavaScriptProfileEmissionTests {
       ["BigInt64Array"] = (Array("long"), "new BigInt64Array($len(n))", "$new($len(n), { hi: 0, lo: 0 })"),
       ["BigUint64Array"] = (Array("ulong"), "new BigUint64Array($len(n))", "$new($len(n), { hi: 0, lo: 0 })"),
       [".getBigInt64"] = (bits, "return $view.getBigInt64(0);", "hi: $view.getUint32(0)"),
-      [".setBigInt64"] = (bits, "$view.setBigInt64(0, value);", "$view.setUint32(0, value.hi);")
+      [".setBigInt64"] = (bits, "$view.setBigInt64(0, value);", "$view.setUint32(0, value.hi);"),
+      ["subarray as a view"] = ("public static int F(byte[] a) { System.Span<byte> s = System.MemoryExtensions.AsSpan(a, 1); return s.Length; }", "view.subarray(start, start + length)", "$vobj(a, 1)"),
+      [".getInt16"] = (Read("Int16", "short"), ".getInt16(0, true)", "$vat("),
+      [".getUint16"] = (Read("UInt16", "ushort"), ".getUint16(0, true)", "$vat("),
+      [".setInt16"] = (Write("Int16", "short"), "\"setInt16\"", "$vat(s, 0, 2)"),
+      [".setUint16"] = (Write("UInt16", "ushort"), "\"setUint16\"", "$vat(s, 0, 2)"),
+      [".getBigUint64"] = (Read("UInt64", "ulong"), ".getBigUint64(0, true)", "$load64("),
+      [".setBigUint64"] = (Write("UInt64", "ulong"), "\"setBigUint64\"", "$store64(")
     };
-    var replaceable = JavaScriptCapabilities.Standard.Entries.Where(entry => entry is { Emitted: true, Replacement: not null }).ToList();
+    // The methods of strings begin at levels this test does not compare; JavaScriptStringEmissionTests checks each at its first level and the one before.
+    var replaceable = JavaScriptCapabilities.Standard.Entries
+      .Where(entry => entry is { Emitted: true, Replacement: not null } && !Polypiler.Tests.String.JavaScriptStringEmissionTests.Methods.Contains(entry.Name)).ToList();
     Assert.That(cases.Keys, Is.EquivalentTo(replaceable.Select(entry => entry.Name)));
     foreach (var entry in replaceable) {
       var (source, native, replacement) = cases[entry.Name];
@@ -671,8 +684,10 @@ public sealed class JavaScriptProfileEmissionTests {
   /// <summary>
   /// A <c>var</c> belongs to its function. A local that is declared while another one of its name
   /// is visible gets a name of its own, also against a name that only looks like such a one; where
-  /// the other one is no longer visible the name is free again. A <c>let</c> keeps its name: its
-  /// block is its scope. The frontend never shadows, so the module is built by hand.
+  /// the other one is no longer visible the name is free again. A <c>let</c> declared while one of its
+  /// name is visible would hide that one from its block, so it is renamed as well, to
+  /// <c>&lt;name&gt;_&lt;k&gt;</c> with a <c>k</c> no other local of the function has (#1343). The
+  /// frontend never shadows, so the module is built by hand.
   /// </summary>
   [Test]
   public void Var_GetsAHoistingSafeName() {
@@ -706,8 +721,8 @@ public sealed class JavaScriptProfileEmissionTests {
       "{", "var x$2 = 3;", "x$2 = x$2;", "}", "return (x + x$1) | 0;", "}", ""
     }));
     Assert.That(Lines(JavaScriptProfile.Parse("es2015", "cjs")), Is.EqualTo(new[] {
-      "let x$1 = 7;", "{", "let x = 1;", "{", "let x;", "x = 2;", "}", "x = (x + 1) >>> 0;", "x = x | 0;", "}",
-      "{", "let x = 3;", "x = x;", "}", "return (x + x$1) | 0;", "}", ""
+      "let x$1 = 7;", "{", "let x_1 = 1;", "{", "let x_2;", "x_2 = 2;", "}", "x_1 = (x_1 + 1) >>> 0;", "x = x_1 | 0;", "}",
+      "{", "let x_3 = 3;", "x_3 = x_3;", "}", "return (x + x$1) | 0;", "}", ""
     }));
     Assert.That(IrInterpreter.Call(module, "F", [5]), Is.EqualTo(9));
   }

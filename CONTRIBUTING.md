@@ -26,6 +26,37 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   them offline. A test reads one with `CorpusFixture.Open("<fixture id>")`. A new fixture entry is
   added with `corpus import --update-lock`, and `corpus discover --repository <owner/repo> --glob
   <pattern>` prints stubs for it.
+- Expected values the repository keeps itself are golden files: every `*.vectors.json` and every file
+  in a `golden/` folder below `tests/fixtures` or `tests/vectors`, and every file a
+  `golden.provenance.json` marker covers (the MPFR vectors of `tests/vectors/float`, the node
+  recordings of `tests/fixtures/prototype/js/recorded`). Each names an independent source - a
+  published document, a toolchain of the lock, or a pinned upstream file - and never Polypiler.
+  [`tests/fixtures/golden.lock.json`](tests/fixtures/golden.lock.json) holds their hashes;
+  `polypiler-tooling integrity check` compares them, and in CI also refuses a commit that changes one
+  together with code (`--base`). A deliberate change - regenerated with the reference tool, never
+  edited to fit the output - is recorded with `integrity seal <path>...` and a line in
+  [`tests/fixtures/golden.changes.md`](tests/fixtures/golden.changes.md), in a commit of its own.
+- Licences are checked against [`tooling/licensing/policy.yaml`](tooling/licensing/policy.yaml).
+  `polypiler-tooling licenses scan --mode corpus` checks every imported corpus file;
+  `licenses scan --mode distribution --root <dir>` checks a tree that ships, where reference-only
+  licences (`GPL-2.0-only`, AGPL) and model weights are refused. A file's licence is its
+  `SPDX-License-Identifier` header, else a reviewed override of the policy, else its nearest
+  `LICENSE`/`COPYING` file, recognized by the texts in `tooling/licensing/texts/`; a `licences.yaml`
+  at the root of a scanned tree says which variant (`-only`, `-or-later`) a shared text means. The
+  report goes to `artifacts/licenses/report.json`. `licenses inventory` checks that every
+  `THIRD-PARTY-NOTICE.*` file and every NuGet package is listed in
+  [`tooling/licensing/third-party.yaml`](tooling/licensing/third-party.yaml) with an allowed licence,
+  so converting code or adding a package adds its row there. Only the repository owner moves a
+  licence between the policy's lists, with a row in
+  [`tooling/licensing/DECISIONS.md`](tooling/licensing/DECISIONS.md).
+- An adapter compiles, links or loads an upstream file only when its licence audit
+  (`spec/adapters/<adapter>/licence-audit.yaml`, format
+  [`spec/schemas/adapter-audit.schema.json`](spec/schemas/adapter-audit.schema.json)) records it as
+  `usable`: one record per file with its digest at the pin, licence, origin and the notice that says
+  so, and one entry per provider or set of weights fetched from elsewhere.
+  `polypiler-tooling catalog audit-adapter --audit <file> [--touch <path>]...` holds the audit against
+  the imported corpus and refuses a touched path without a usable record (`PLY0950`); a model, a
+  restricted asset of the policy, needs the audit's clearance granted as well.
 - Generated and foreign code is built and run only through the cross-language runner
   (`Polypiler.Core.Verification/Running`), under the limits of
   [`tooling/ci/runner.yaml`](tooling/ci/runner.yaml). On Linux with a working `bwrap` (bubblewrap) the
@@ -278,6 +309,18 @@ Once the bug is fixed, **promote the finding**: copy its `.bin` into
 `tests/fixtures/fuzz/<id>/regressions/`. `FuzzRegressionTests` (fast tier) and `fuzz replay` run
 every regression input against its target and fail on any finding. A regression file is never
 deleted to get a green run.
+
+### Benchmarks
+
+A benchmark is one file, `tests/benchmarks/<id>.bench.yaml`; `polypiler-tooling bench run --id <id>`
+(or `--all`) measures it in the sandbox and writes `artifacts/bench/<id>/<variant>.json` and
+`artifacts/bench/summary.md`, and `bench compare --baseline <dir> --current <dir>` sets two result sets
+side by side. Results are recorded, not judged: a metric fails (`PLY0073`) only under a budget that an
+ADR wrote into `tooling/bench/budgets.yaml`, and only against a baseline from the same environment
+(`PLY0072` otherwise). Never commit a budget with numbers of your own, never drop the slowest sample,
+and never assert on real elapsed time in a unit test: the harness's tests script the runner. The
+format, the metrics and how to add an in-process benchmark to `Polypiler.Benchmarks` are in
+[docs/benchmarks/README.md](docs/benchmarks/README.md).
 
 ## Commit conventions
 

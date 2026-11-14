@@ -157,3 +157,55 @@ jobs:
       - name: ci audit
         if: runner.os == 'Linux'
         run: $TOOLING ci audit
+
+  # Golden files (PRD 11.2): every one matches tests/fixtures/golden.lock.json and names an independent
+  # source, and on a pull request no commit changes one together with code or without its line in
+  # tests/fixtures/golden.changes.md.
+  golden-integrity:
+    name: golden integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Check golden files
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            dotnet run --project Polypiler.Tooling -c Release -- integrity check --base "origin/$BASE_REF"
+          else
+            dotnet run --project Polypiler.Tooling -c Release -- integrity check
+          fi
+
+  # tests/fixtures/bitperm is exported from the pinned BitPerm page (tooling/bitperm/export.mjs). This
+  # re-runs the exporter on the corpus copy of the page and fails on any file that differs, is missing
+  # or is no longer produced; the wall time of the export is printed for the record, not gated.
+  bitperm-drift:
+    name: bitperm fixture drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      PAGE: corpus/upstream/Hawkynt/Hawkynt.github.io@b3a8a8e92cbca83475986391c3cac56f0b185d29/BitPerm/index.html
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Import the pinned page
+        run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- corpus import --fixture bitperm.page
+      - name: Check the fixtures against the page
+        run: |
+          start=$(date +%s%N)
+          node tooling/bitperm/export.mjs --page "$PAGE" --out tests/fixtures/bitperm --check --expect-blocks 16 --expect-presets 25 --expect-tests 51
+          echo "export wall time: $(( ($(date +%s%N) - start) / 1000000 )) ms"
+      # spec/permutations/{mappings,grammars,costs}/bitperm-*.yaml are generated from those fixtures.
+      - name: Check spec/permutations against the fixtures
+        run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- permutations import-bitperm --fixtures tests/fixtures/bitperm --out spec/permutations --check

@@ -1,0 +1,17 @@
+{
+  "description": "Mappings of the test design of PERM-HIERARCHY with their class and explanation, worked out by hand from the definitions of PRD 20.2: a permutation is square, has only plain sources and reads every input exactly once; the explanation of anything else is the first of: widths differ, an input read more than once (lowest input first), an output that is inverted, a constant or a don't-care (lowest output first).",
+  "cases": [
+    { "mapping": "8:[7,6,5,4,3,2,1,0]", "class": "Permutation", "explanation": "each of the 8 input bits is read exactly once" },
+    { "mapping": "2:[0,0]", "class": "Routing", "explanation": "input bit 0 is used 2 times" },
+    { "mapping": "8:[0,?,0,?,0,?,?,?]", "class": "Routing", "explanation": "input bit 0 is used 3 times" },
+    { "mapping": "4:[~0,1,2,3]", "class": "Routing", "explanation": "output bit 0 is inverted" },
+    { "mapping": "2:[0,=1]", "class": "Routing", "explanation": "output bit 1 is a constant" },
+    { "mapping": "2:[=0,1]", "class": "Routing", "explanation": "output bit 0 is a constant" },
+    { "mapping": "2:[0,?]", "class": "Routing", "explanation": "output bit 1 is a don't-care" },
+    { "mapping": "8:[0,2,4,6]", "class": "Routing", "explanation": "widths differ (8 in, 4 out)" },
+    { "mapping": "4:[0,1,2,3,0,1,2,3]", "class": "Routing", "explanation": "widths differ (4 in, 8 out)" },
+    { "mapping": "1:[0]", "class": "Permutation", "explanation": "each of the 1 input bits is read exactly once" },
+    { "mapping": "1:[~0]", "class": "Routing", "explanation": "output bit 0 is inverted" },
+    { "mapping": "4:[1,~1,2,3]", "class": "Routing", "explanation": "input bit 1 is used 2 times" }
+  ]
+}

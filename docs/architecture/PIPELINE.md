@@ -43,8 +43,10 @@ These are **conceptual stages**, not necessarily separate serialized IR formats.
 | 5. Recognize | Expressions, loops, library calls, mixed ASM | Canonical operations and proof obligations | Exact bit, floating-point and memory semantics |
 | 6. Optimize | Semantic operations and proven facts | Optimized IR, proof/decision log | Behavioral equivalence under selected contract |
 | 7. Legalize | Optimized IR and target capabilities | Target IR, type layouts, runtime closure, ABI adapters | Target instruction, runtime and FFI legality |
-| 8. Emit/package | Target IR and dependencies | Source/binary plus build and dependency manifest | Reproducibility and debug/provenance mapping |
+| 8. Emit/package | Target IR and dependencies | A syntax tree of the target language, rewritten by the target passes and printed last ([backends](BACKENDS.md)); source/binary plus build and dependency manifest | Reproducibility and debug/provenance mapping |
 | 9. Verify | Source oracle, generated artifact, target toolchain | Passed/failed evidence and support tier | No false "verified" claims |
+
+Stage 8 is built for the C# and the JavaScript backend of the prototype: each builds a typed syntax tree of its language from the IR, the capability table contributing tree fragments, runs the target passes (`O0500` helper inlining, `O0501` unused declaration removal) between building and printing, and only its printer makes text. `--opt`, `--disable-opt` and `--explain-opt` govern the target passes as they govern the IR rules. See [backends](BACKENDS.md).
 
 ## Semantic recognition is not mandatory rewriting
 

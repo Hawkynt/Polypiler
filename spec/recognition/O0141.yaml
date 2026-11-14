@@ -1,0 +1,63 @@
+id: RECOGNITION.O0141
+title: Recognize little- and big-endian stores from shifted byte stores
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#567"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeEndianStore.cs
+  - tests/fixtures/prototype/recognize/endianstore.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  2, 4 or 8 consecutive stores of the bytes of one value MUST become StoreLittle or StoreBig only
+  behind a guard that every element lies inside the array, keeping the byte stores, their trap and
+  their partial writes everywhere else. The prototype rule O0141EndianStore in
+  Polypiler.Core.Recognize matches the structured IR of Polypiler.Core.IR, not the typed SSA IR:
+  pattern.before and replacement.after are written in that structured form, and matching typed SSA
+  graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it
+  checks that the rule fires exactly on the marked functions of its fixtures, that --disable-opt O0141
+  keeps it from firing, and that the IR interpreter computes the same before and after the rule -
+  result, kind of trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit
+  parameter and for the edges and 10 000 random tuples of the wider ones. The proof obligations below
+  are planned and not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs
+  with VER-SMT (#71). The prototype knows only the levels default, where the rule is on, and none; the
+  optLevels name the levels of the target state. The document stays a draft until its obligations are
+  discharged.
+spec:
+  optimization: O0141
+  level: typed-ssa
+  pattern:
+    before: "Store.u8 %a[%i], Trunc.u8(%v); Store.u8 %a[%i + 1], Trunc.u8(LShr.u32(%v, 8)); Store.u8 %a[%i + 2], Trunc.u8(LShr.u32(%v, 16)); Store.u8 %a[%i + 3], Trunc.u8(LShr.u32(%v, 24))"
+    bindings:
+      - {name: a, role: "byte array"}
+      - {name: i, role: "base index"}
+      - {name: v, role: "stored value"}
+  replacement:
+    after: "if (And.bool(Ge.i32(%i, 0), Le.i32(%i, Sub.i32(Length(%a), 4)))) { StoreLittle.u32 %a, %i, %v } else { the four byte stores }"
+    introduces: [INTRINSICS.StoreLittle, INTRINSICS.StoreBig]
+  preconditions:
+    - {id: in-bounds-guard, text: "the combined store runs only where every element lies inside the array", fact: range}
+    - {id: consecutive, text: "one array, indices of one base plus consecutive constants that cannot trap on their own", fact: alias}
+    - {id: whole-bytes, text: "the element at offset k receives exactly byte k (little) or n - 1 - k (big) of one value", fact: known-bits}
+    - {id: value-unchanged, text: "nothing between the stores writes the value, the array or the base", fact: alias}
+    - {id: trap-free, text: "the array, the base and the value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: endian-store-bytes, class: alias-facts, widths: [16, 32, 64]}
+    - {id: endian-store-guard, class: range-facts, widths: [16, 32, 64]}
+    - {id: endian-store-16, class: exhaustive-16bit, widths: [16]}
+    - {id: endian-store-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "an array too short, without the guard"
+      input: "a = [0x00, 0x00, 0x00], i = 0, v = 0x04030201, u32, the four byte stores"
+      naive: "trap bounds, a = [0x01, 0x02, 0x03]"
+      correct: "trap bounds, a = [0x00, 0x00, 0x00]"
+    - description: "a byte that is not a whole byte of the value"
+      input: "a = [0x00, 0x00, 0x00, 0x00], i = 0, v = 0x00000010, u32, a[i + 1] = (byte)(v >> 4)"
+      naive: "a = [0x10, 0x01, 0x00, 0x00]"
+      correct: "a = [0x10, 0x00, 0x00, 0x00]"
+  switch: "--disable-opt O0141"
+  optLevels: [balanced, speed]
+  document: docs/optimizations/O0141-endian-store-recognition.md

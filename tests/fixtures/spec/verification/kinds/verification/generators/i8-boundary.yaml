@@ -1,0 +1,16 @@
+id: VERIFICATION.generator.i8-boundary
+title: Boundary values of the signed 8-bit integer
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: generator
+  type: TYPES.i8
+  strategy: boundary
+  values: ["0x80", "-1", "0", "1", "0x7F"]

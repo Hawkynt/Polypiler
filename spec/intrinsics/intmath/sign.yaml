@@ -1,0 +1,32 @@
+id: INTRINSICS.Sign
+title: Sign
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-MINMAX
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Sign
+  group: IntMath
+  typeParameters: [{name: T, constraint: any}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: sign, type: TYPES.i32}]
+  legality:
+    - {id: not-nan, text: "for a float T, value is not a NaN; otherwise the operation traps with an invalid operation", fact: range}
+    - {id: number, text: "T is an integer type or TYPES.f32 or TYPES.f64", fact: none}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "-1, 0 or 1 for a negative, zero or positive value; -0 and +0 are 0"
+    source: ".NET API reference, System.Math.Sign"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.i32}, inputs: [-7], outputs: [-1]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF"], outputs: [1]}
+    - {types: {T: TYPES.f64}, inputs: ["0x8000000000000000"], outputs: [0]}
+    - {types: {T: TYPES.f64}, inputs: ["0x3FE0000000000000"], outputs: [1]}
+  facts: {resultRange: [-1, 1]}

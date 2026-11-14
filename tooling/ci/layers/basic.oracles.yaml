@@ -1,0 +1,20 @@
+# The oracles of the BASIC CI layer and where each can run (PRD §7.3, §23.1).
+#
+# oracles: a list of { oracle, toolchain?, availability }
+#   oracle        the oracle's name
+#   toolchain     its key in tooling/toolchains.lock, when it is a toolchain the layer can install
+#   availability  ci        runs in the layer's job
+#                 external  exists, but cannot run on a hosted runner; its results are accepted only as
+#                           recorded evidence files that name their origin, and it contributes no pass
+#                 none      no implementation is available
+schema: 1
+oracles:
+  # The genuine GW-BASIC interpreter: not redistributable, so it never runs in CI.
+  - { oracle: gwbasic-genuine, availability: external }
+  # PC-BASIC, the independent GW-BASIC token codec and interpreter (FMT-GWBASIC-ORACLE).
+  - { oracle: pcbasic, toolchain: pcbasic, availability: ci }
+  # VICE's emulators and petcat, the Commodore BASIC oracles (FMT-CBMBASIC-ORACLE).
+  - { oracle: vice, toolchain: vice, availability: ci }
+  - { oracle: vice-x128, toolchain: vice-x128, availability: ci }
+  - { oracle: vice-xvic, toolchain: vice-xvic, availability: ci }
+  - { oracle: petcat, toolchain: petcat, availability: ci }

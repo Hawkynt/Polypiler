@@ -10,6 +10,8 @@ spec/
   diagnostics.yaml        the diagnostics registry (ADR 0003); not a spec document
   schemas/                JSON Schema 2020-12: meta.schema.json, and <family>.schema.json per family
   <family>/**/*.yaml      the documents of one family
+  adapters/<adapter>/     not spec documents: the adapter licence audits (schemas/adapter-audit.schema.json),
+                          checked by polypiler-tooling catalog audit-adapter
 ```
 
 ## The metadata block
@@ -124,6 +126,43 @@ default: the effect of every operation nothing else describes. Rules (`PLY0046`)
 | `write-implies-order` | an effect that writes anything is not `free` |
 | `unique-name` | no two documents share a `name` |
 
+## Family `intrinsics`
+
+`spec/intrinsics/<group in lower case>/<name in lower case>.yaml`, ID `INTRINSICS.<name>`: the contract
+of one intrinsic (PRD §4.1, §4.3), which a backend lowers from and a recognizer rewrites to.
+[`schemas/intrinsics.schema.json`](schemas/intrinsics.schema.json) states the body: `name` (PascalCase),
+`group` (`IntMath`, `FloatMath`, `Boolean`, `Bitfield`, `BitCount`, `Shuffle`, `Saturation`, `Carry`,
+`Endian`, `Trig`, `Sequence`, `Matrix`, `Tensor`, `CopyFill`, `String`), `typeParameters` `{name, constraint}`
+(`integer`, `unsigned`, `signed`, `float`, `any`), `parameters` (0–8) and `returns` (1–4) `{name, type}`,
+`legality` `{id, text, fact}`, `effects` (`[pure]` or `EFFECTS.` IDs), `exactness` (`{mode: exact}`, or
+`{mode: tolerance, policy: VERIFICATION.tolerance.<name>}`), `reference` `{algorithm, source}`,
+`mustSurviveUntil` (the last `IR.stage.` that still holds it unlowered) and at least three `vectors`
+`{types, inputs, outputs}`; optional are `attributes`, `algebra`, `lowersTo`, `facts`, `laneLiftable`,
+`requiresRuntime`, `spelling` and `accuracy` (`ulp(<n>)`, `cr` or `library(<name>)`, tolerance only).
+
+A `type` is a type parameter or a `TYPES.` ID; a trailing `[]` makes it an array of that type, quoted in
+YAML (`"TYPES.u8[]"`). A vector literal is a quoted hexadecimal bit pattern (`"0x3FF0000000000000"` for
+the `f64` 1.0), which must lie below 2^bits, or a decimal integer, which must lie in the range of the type
+— two's complement for a signed type; an array value is a list of such literals. A NaN output stands for
+any NaN. The rules (`PLY0046`):
+
+| Rule | What it requires |
+| --- | --- |
+| `layout` | the path follows from `group` and `name`, the ID is `INTRINSICS.<name>`; when it fails, nothing else is checked |
+| `type-bound` | every type is declared; every vector binds each type parameter, and only those, to a type its constraint admits |
+| `vector-arity` | one input per parameter and one output per return value |
+| `vector-width` | each literal fits the type bound to it; a list exactly for an array type; a value of a `text` type is the list of its code units, an array of them a list of such lists |
+| `unique-name` | no two documents share a name, ignoring case, or a `spelling` |
+| `integer-is-exact` | groups other than `FloatMath`, `Trig`, `Matrix` and `Tensor` are `exact` |
+
+Every `TYPES.`, `EFFECTS.`, `IR.`, `INTRINSICS.` and `VERIFICATION.` ID resolves or fails with `PLY0043`.
+The IDs are stable: a recognition rule names an intrinsic by them. The seed is every exact intrinsic the
+prototype IR implements (`IrIntrinsicOp`), 85 documents with vectors worked out from their references,
+not from Polypiler: the integer and bit operations, saturation, carry and overflow, the endian loads and
+stores, and the floating-point operations whose contract is exact. The array operations and the
+floating-point operations with a `ulp(n)` contract, the integer `Log2`'s floating-point half among them,
+follow once their tolerance documents exist.
+
 ## Family `ir`
 
 The IR operations, stages and version (PRD §4.1–§4.3, [ADR 0001](../docs/adr/0001-ir-stage-invariants.md)),
@@ -189,6 +228,48 @@ don't-care, every vector needs a `mask` of the compared bits. The rules (`PLY004
 A grammar's `target` names an existing `TARGETS.` document (`PLY0043`). The seed document is
 `permutations/mappings/reverse8.yaml`.
 
+Every `bitperm-*.yaml` document is generated from the BitPerm fixtures by
+`polypiler-tooling permutations import-bitperm --fixtures tests/fixtures/bitperm --out spec/permutations`
+and checked with `--check` in CI; change the fixtures or the importer, never the generated file. They are
+44 mappings (one per fixture mapping, its vectors BitPerm's own evaluation of inputs 0, all ones and the
+first two single-bit inputs), the four grammars of BitPerm's solutions (`composite`, `bmi2`,
+`byte-shuffle`, `lut`) and one cost table per CPU preset (25). A cost table copies the preset's
+latencies with the page's citation as `documented` evidence; an operation BitPerm marks unavailable
+(cost 999 or disabled) has no entry, and no `bytes` is given because BitPerm records none. What a
+network built from a grammar must prove before it is recorded is
+[`permutations/proof-requirements.md`](permutations/proof-requirements.md).
+
+## Family `recognition`
+
+`spec/recognition/O<4 digits>.yaml`, ID `RECOGNITION.O<4 digits>`: one recognition rule of the block
+`O0100`–`O0169`, or of the bit-permutation recovery block `O0200`–`O0229` (PRD §4.1, §4.5).
+[`schemas/recognition.schema.json`](schemas/recognition.schema.json) states the body: the `level` it
+matches at (`source-ast`, `typed-ssa`), the `pattern` (`before`, `bindings`), the `replacement`
+(`after`, and the `INTRINSICS.` or `IR.` documents it `introduces`), at least one each of
+`preconditions` `{id, text, fact}`, `proofObligations` `{id, class, widths, budgetSeconds?}` and
+`counterexamples` `{description, input, naive, correct}` — `naive` what the near-miss source computes,
+`correct` what the replacement would give instead — the `switch`, the `optLevels` it runs at and its
+optimization page. The rules (`PLY0046`):
+
+| Rule | What it requires |
+| --- | --- |
+| `layout` | the path is `recognition/O####.yaml`, and the ID, `optimization` and `document` follow from it; when it fails, nothing else is checked |
+| `id-in-block` | the number lies in `O0100`–`O0169` or `O0200`–`O0229` |
+| `switch-matches` | `switch` is `--disable-opt` of the document's own optimization |
+| `counterexample-differs` | in every counterexample `naive` and `correct` differ, ignoring case and surrounding blanks |
+| `smt-needs-budget` | an obligation of class `smt-bitvector` states `budgetSeconds` (1–600) |
+| `exhaustive-width` | `exhaustive-8bit` lists only width 8, `exhaustive-16bit` only widths up to 16 |
+| `document-exists` | a `normative` document's optimization page exists |
+
+Every ID under `replacement.introduces` resolves or fails with `PLY0043`. The seed is one draft document
+per rule the prototype runs (`Polypiler.Core.Recognize`, `RuleTable.Default`), 17 in all, each stating
+what its rule matches and refuses as its optimization page does, with counterexamples worked out by hand.
+The prototype matches the structured IR rather than typed SSA and is held by `RecognitionFixtureTests`,
+not yet by the listed proof obligations; each document's `normative` text says so, and it stays a draft
+until the obligations are discharged. `ir/operations/mul.yaml` and `ir/operations/sub.yaml` describe
+the IR operations O0125 and O0127 introduce. The valid fixture and one fixture per rule and per required
+property live in `tests/fixtures/spec/recognition/`.
+
 ## Family `recovery`
 
 `spec/recovery/O<4 digits>.yaml`, ID `RECOVERY.O<4 digits>`: one recovery rule of the block
@@ -233,4 +314,65 @@ rules `layout` (the folder is `spec.family`, the ID follows from the file name),
 `family-requirements` (`overflow` for integer and fixed; `rounding` for float, fixed, decimal, posit
 and mbf; `nan` for float, posit and mbf; `subnormals` for float and mbf; `lanes` exactly for vector;
 `encoding` exactly for encoded-integer; signedness `none` only for boolean, text and custom). The seed
-documents are the scalar types of the IR: `bool`, `i8` … `u64`, `f32` and `f64`.
+documents are the scalar types of the IR: `bool`, `i8` … `u64`, `f32` and `f64`, and the string type
+`str` of the family `text`, whose `bits` and `layout` describe one UTF-16 code unit.
+
+## Family `targets`
+
+`spec/targets/<language identifier>/<profile>/target.yaml`, ID `TARGETS.<language identifier>.<profile>`:
+one target profile, the one `--target-profile` selects, with its `abi` (`name`, `byteOrder`,
+`pointerBits`), `pointers`, `unions`, `physicalTypes` (each `TYPES.` ID with its native spelling and
+whether generated code needs a helper for it), `alignment`, `simd` features, `limits`, runtime
+`dependencies` (SPDX licence) and `packaging` (PRD §4.1, §4.7). The document states facts about the
+target; choosing native or helper for a program stays with the legalizer.
+[`schemas/targets.schema.json`](schemas/targets.schema.json) is the body. Rules (`PLY0046`):
+
+| Rule | What it requires |
+| --- | --- |
+| `layout` | the path has the form above and the ID follows from it (nothing else is checked otherwise); `language` is `LANGUAGES.<first folder>` and `profile` the second folder |
+| `pointer-consistency` | `pointers: native` has `abi.pointerBits` above 0; `none` and `fat` have 0 |
+| `limit-order` | `limits.exactIntegerBits` does not exceed `limits.maxIntegerBits` |
+| `toolchain-known` | `toolchain` is a key of `tooling/toolchains.lock` |
+| `type-fits-target` | an `integer` type mapped with `helper: false` is not wider than `limits.maxIntegerBits` |
+| `unique-type` | each type is listed once in `physicalTypes` |
+| `unique-target` | no earlier document in path order has the same `language` and `profile` |
+
+`language` and every physical `type` resolve or fail with `PLY0043`. `maxIntegerBits` is the widest
+fixed-width integer the target computes with natively, `exactIntegerBits` the widest integer its
+default number type holds exactly. The seed is one target per profile the backends write, with the
+toolchain of the language profile of the same name: C# `net2.0` … `net10.0` (verifiable code, so no
+pointers; explicit struct layout gives native unions; every scalar type native) and JavaScript `es5` …
+`es2022` (from ECMA-262: a Number holds integers exactly up to 2^53; `BigInt` makes 64-bit integers
+native from ES2020, below that they are a `{ hi, lo }` pair behind a helper; `Math.fround` makes `f32`
+native from ES2015). The fixtures are in `tests/fixtures/spec/targets/`.
+
+## Family `verification`
+
+What a comparison of generated code with its oracle runs under (PRD §4.1, §7.2, §23), body schema
+[`schemas/verification.schema.json`](schemas/verification.schema.json). A document of kind `generator`,
+`tolerance` or `oracle` lives in `verification/<kind>s/<name>.yaml` with the ID
+`VERIFICATION.<kind>.<name>`.
+
+| Kind | Body |
+| --- | --- |
+| `generator` | `type` (a `TYPES.` ID) and `strategy`: `boundary` with the explicit `values` (quoted bit patterns `"0x…"` or decimal integers, unique), `uniform` and `bit-pattern` with `seed` (0 … 4294967295) and `count` (1 … 1000000), `corpus` with neither |
+| `tolerance` | `operation` (an `INTRINSICS.` or `IR.` ID), `mode` (`exact`, `ulp`, `relative`, `absolute`), `bound` (> 0, a whole number in `ulp` mode), `specialValues` (`bitwise`, `signed-zero` when absent, `class`): the modes and rules of [ADR 0005](../docs/adr/0005-floating-point-tolerance.md). The ID is the policy name vector files and manifests refer to |
+| `oracle` | `implementation` (what produces the reference result: `node`, `published-vectors`, …), `toolchain` (a key of `tooling/toolchains.lock`, optional), `observes` (≥ 1 of `return-value`, `buffers`, `flags`, `registers`, `memory-writes`, `io`, `external-calls`, `traps`, `cycles`) |
+
+An operation without a tolerance document is compared `exact`; a tolerance document's bound is the one
+ADR 0005's formula gives, never a number that makes a fixture pass. Changing a seed, a value or a bound
+raises `version`. The rules, each `PLY0046`:
+
+| Rule | What it refuses |
+| --- | --- |
+| `layout` | a folder other than the kind's, or an ID that does not follow from the path |
+| `strategy-requirements` | a generator without a property its strategy requires, or with one it does not take |
+| `value-fits-type` | a value wider than the type's `bits`; a decimal outside an integer type's range |
+| `boundary-covers-extremes` | a `boundary` generator of an integer type without the type's minimum and maximum |
+| `bound-for-mode` | `exact` with a `bound`, any other mode without one |
+| `one-tolerance-per-operation` | a second tolerance document for an operation, reported on the later path |
+| `oracle-not-self` | an oracle whose `implementation` is `polypiler` |
+
+A generator's `type` and a tolerance's `operation` resolve or fail with `PLY0043`. The seed document is
+`verification/generators/u32-boundary.yaml`; tolerance documents arrive with the intrinsics they belong
+to. The fixtures live in `tests/fixtures/spec/verification/`.
