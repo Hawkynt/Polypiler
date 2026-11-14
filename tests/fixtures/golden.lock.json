@@ -683,13 +683,13 @@
     },
     {
       "path": "tests/fixtures/backend/golden/optional/Find.cs.csharp.golden",
-      "sha256": "286f719f9bf41e947eec8a289683022efea6124e85f3ef6a42dbefbb9232fcab",
-      "bytes": 194878
+      "sha256": "b8944b822f5fadfe1474c7d5e99dfe5666d1941b3cb8d7247435ad4011d91106",
+      "bytes": 254314
     },
     {
       "path": "tests/fixtures/backend/golden/optional/Find.cs.javascript.golden",
-      "sha256": "38d60322986ff79b46284d752b0f4177e3c8ff56e00af2e16930b92f07c31562",
-      "bytes": 254360
+      "sha256": "2b7d94de9edad05eff8edef90d73238eba6dcdfe04ac452f98ccc5f9c05b8b3c",
+      "bytes": 329129
     },
     {
       "path": "tests/fixtures/backend/golden/optional/absent.js.csharp.golden",
@@ -703,13 +703,13 @@
     },
     {
       "path": "tests/fixtures/backend/golden/optional/find.js.csharp.golden",
-      "sha256": "b2e7df9c57de5d318243215367b874ab1728cb233d8610f833c1e09dbc1a328e",
-      "bytes": 71322
+      "sha256": "c30f7ecca399cd4f50fadf9734ddc2af0f797ea8fed7dd37b81cbf1f3799191c",
+      "bytes": 111310
     },
     {
       "path": "tests/fixtures/backend/golden/optional/find.js.javascript.golden",
-      "sha256": "0a523679279a7d2e7c663ae3a6889a07a181c51e193cab7f20523be9eb6c1271",
-      "bytes": 88528
+      "sha256": "a9cfd684e0c2d946cddb03d3384b6512dddf2e51f771869d9ec8db41efa20c93",
+      "bytes": 122436
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeAbs.cs.csharp.golden",
