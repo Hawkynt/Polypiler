@@ -1,0 +1,26 @@
+id: LANGUAGES.csharp.net8.0
+title: "C# 12 on .NET 8"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#54"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.csharp
+  languageVersion: "C# 12"
+  toolchain: ref-net8-0
+  evaluationOrder: left-to-right
+  integerOverflow: {signed: wrap, unsigned: wrap}
+  divisionRounding: truncate
+  remainderSign: dividend
+  shiftAmount: masked
+  stringEncoding: utf-16
+  exceptions: structured
+  memoryModel: managed
+  defaultRuntime: dotnet
+  constructs: []

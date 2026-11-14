@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/languages.schema.json",
+  "title": "Polypiler spec family 'languages'",
+  "description": "The body under 'spec' of a document in spec/languages/ (PRD §4.1): a source language in spec/languages/<identifier>/language.yaml, or one of its profiles in spec/languages/<identifier>/profiles/<profile>.yaml. A profile records what the language defines; it grants no capability. Rules the schema cannot state (PLY0046): layout, diagnosed-needs-code, diagnostic-in-block, toolchain-known, unique-identifier, profile-has-language, unique-construct; a profile's 'language' names an existing document (PLY0043).",
+  "type": "object",
+  "required": ["kind"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "enum": ["language", "profile"] },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "The --from/--to value; equals the folder name and is unique among the languages."
+    },
+    "displayName": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "backlogCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9]*$", "description": "The language code of backlog/README.md: CS, JS, PB and so on; unique." },
+    "diagnosticBlock": {
+      "type": "integer",
+      "minimum": 1000,
+      "maximum": 2900,
+      "multipleOf": 100,
+      "description": "The first code of the language's diagnostic block; its frontend range is block to block + 49. Unique."
+    },
+    "language": { "type": "string", "pattern": "^LANGUAGES\\.[a-z][a-z0-9-]*$", "description": "The ID of the language document of the profile's own folder." },
+    "languageVersion": { "type": "string", "minLength": 1, "description": "The standard or dialect version: ES2022, C# 14." },
+    "toolchain": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "A key of tooling/toolchains.lock." },
+    "evaluationOrder": { "enum": ["left-to-right", "right-to-left", "unspecified", "source-defined"] },
+    "integerOverflow": {
+      "type": "object",
+      "required": ["signed", "unsigned"],
+      "additionalProperties": false,
+      "properties": {
+        "signed": { "$ref": "#/$defs/overflow" },
+        "unsigned": { "$ref": "#/$defs/overflow" }
+      }
+    },
+    "divisionRounding": { "enum": ["truncate", "floor", "euclidean", "float"] },
+    "remainderSign": { "enum": ["dividend", "divisor", "non-negative"] },
+    "shiftAmount": { "enum": ["masked", "undefined-beyond-width", "arbitrary", "trap"] },
+    "stringEncoding": { "enum": ["utf-8", "utf-16", "bytes", "codepage", "petscii"] },
+    "exceptions": { "enum": ["structured", "error-codes", "on-error-goto", "none"] },
+    "memoryModel": { "enum": ["managed", "manual", "ownership", "static"] },
+    "defaultRuntime": { "type": "string", "minLength": 1, "description": "What executes the source in the oracle: node, dotnet." },
+    "constructs": {
+      "type": "array",
+      "description": "The construct table of the profile's frontend: every construct is supported or diagnosed with a code. Names are unique (unique-construct).",
+      "items": {
+        "type": "object",
+        "required": ["construct", "family", "state"],
+        "additionalProperties": false,
+        "properties": {
+          "construct": { "type": "string", "minLength": 1 },
+          "family": { "enum": ["scalars", "control", "memory", "functions", "types"] },
+          "state": { "enum": ["supported", "diagnosed"] },
+          "diagnostic": { "type": "string", "pattern": "^PLY[0-9]{4}$", "description": "Exactly when state is diagnosed; inside the frontend range of the language's block." }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "language" } } },
+      "then": {
+        "required": ["identifier", "displayName", "backlogCode", "diagnosticBlock"],
+        "properties": {
+          "language": false, "languageVersion": false, "toolchain": false, "evaluationOrder": false, "integerOverflow": false,
+          "divisionRounding": false, "remainderSign": false, "shiftAmount": false, "stringEncoding": false, "exceptions": false,
+          "memoryModel": false, "defaultRuntime": false, "constructs": false
+        }
+      }
+    },
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "profile" } } },
+      "then": {
+        "required": ["language", "languageVersion", "toolchain", "evaluationOrder", "integerOverflow", "divisionRounding", "remainderSign",
+          "shiftAmount", "stringEncoding", "exceptions", "memoryModel", "defaultRuntime", "constructs"],
+        "properties": {
+          "identifier": false, "displayName": false, "backlogCode": false, "diagnosticBlock": false
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "overflow": { "enum": ["wrap", "trap", "undefined", "arbitrary-precision", "float-promote", "not-applicable"] }
+  }
+}

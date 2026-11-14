@@ -1,0 +1,16 @@
+id: LANGUAGES.javascript
+title: JavaScript
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#54"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: language
+  displayName: JavaScript
+  backlogCode: JS
+  diagnosticBlock: 1100
