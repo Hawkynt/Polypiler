@@ -33,6 +33,9 @@
 #   xvfb-run    the virtual X server the VICE emulators run under on Linux: the X.Org version
 #               xdpyinfo reports for the server xvfb-run starts (xorg-server-xvfb on the
 #               development host).
+#   pcbasic     the GW-BASIC oracle (Polypiler.Core.Verification.Emulators.PcBasic): the PyPI release
+#               installed with pip into a virtual environment, whose folder PCBASIC_HOME names. Used
+#               only as an external process; none of its GPL code enters the repository.
 #   others      no test runs them yet. Installed on the development host: read from the tool
 #               (clang, llvm, jdk, perl, python, ruby, rust, go). Not installed: the latest
 #               stable upstream release (aflplusplus, dosbox-x, fbc, fpc, ilspy-cli, ilverify,
@@ -200,6 +203,15 @@ toolchains:
     platforms: [linux, windows, macos]
     licence: LGPL-3.0-or-later
     source: https://github.com/Hawkynt/PB-Compiler
+  pcbasic:
+    version: "2.0.8"
+    probe: [pcbasic, --version]
+    versionPattern: '^PC-BASIC (?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: GPL-3.0-or-later
+    source: https://pypi.org/project/pcbasic/
+    home: PCBASIC_HOME
+    oracleOnly: true
   perl:
     version: "5.42.3"
     probe: [perl, -e, 'print $^V']
