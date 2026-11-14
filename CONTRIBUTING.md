@@ -26,6 +26,16 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   them offline. A test reads one with `CorpusFixture.Open("<fixture id>")`. A new fixture entry is
   added with `corpus import --update-lock`, and `corpus discover --repository <owner/repo> --glob
   <pattern>` prints stubs for it.
+- Expected values the repository keeps itself are golden files: every `*.vectors.json` and every file
+  in a `golden/` folder below `tests/fixtures` or `tests/vectors`, and every file a
+  `golden.provenance.json` marker covers (the MPFR vectors of `tests/vectors/float`, the node
+  recordings of `tests/fixtures/prototype/js/recorded`). Each names an independent source - a
+  published document, a toolchain of the lock, or a pinned upstream file - and never Polypiler.
+  [`tests/fixtures/golden.lock.json`](tests/fixtures/golden.lock.json) holds their hashes;
+  `polypiler-tooling integrity check` compares them, and in CI also refuses a commit that changes one
+  together with code (`--base`). A deliberate change - regenerated with the reference tool, never
+  edited to fit the output - is recorded with `integrity seal <path>...` and a line in
+  [`tests/fixtures/golden.changes.md`](tests/fixtures/golden.changes.md), in a commit of its own.
 - Generated and foreign code is built and run only through the cross-language runner
   (`Polypiler.Core.Verification/Running`), under the limits of
   [`tooling/ci/runner.yaml`](tooling/ci/runner.yaml). On Linux with a working `bwrap` (bubblewrap) the

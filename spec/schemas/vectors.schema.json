@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/vectors.schema.json",
+  "title": "Polypiler vector file",
+  "description": "A tests/fixtures/**/*.vectors.json file: the expected values of a corpus fixture and where they came from (PRD 11.2). 'polypiler-tooling integrity check' additionally requires that a reference-run source is a key of tooling/toolchains.lock, an upstream-embedded source is a file of tooling/corpus/corpus.lock.json, and generatedBy does not name Polypiler.",
+  "type": "object",
+  "required": ["schema", "fixture", "provenance", "vectors"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "fixture": { "type": "string", "minLength": 1, "description": "The corpus fixture ID the vectors belong to." },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "vectors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "input", "expected"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "input": {
+            "oneOf": [
+              { "$ref": "#/$defs/hex" },
+              { "$ref": "#/$defs/text" },
+              { "type": "object", "required": ["args"], "additionalProperties": false, "properties": { "args": { "type": "array" } } }
+            ]
+          },
+          "expected": {
+            "oneOf": [
+              { "$ref": "#/$defs/hex" },
+              { "$ref": "#/$defs/text" },
+              { "type": "object", "required": ["value"], "additionalProperties": false, "properties": { "value": true } }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["kind", "source", "detail", "generatedBy"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["published", "reference-run", "upstream-embedded"] },
+        "source": { "type": "string", "pattern": "\\S", "description": "published: the document; reference-run: a key of tooling/toolchains.lock; upstream-embedded: owner/repo@<commit>:<path>." },
+        "detail": { "type": "string", "pattern": "\\S", "description": "The section, the exact command, or the line." },
+        "generatedBy": { "type": "string", "pattern": "\\S", "not": { "pattern": "^\\s*[Pp][Oo][Ll][Yy][Pp][Ii][Ll][Ee][Rr]" }, "description": "The tool that wrote the values, or 'hand'; never Polypiler." }
+      }
+    },
+    "hex": { "type": "object", "required": ["hex"], "additionalProperties": false, "properties": { "hex": { "type": "string", "pattern": "^(?:[0-9A-Fa-f]{2})*$" } } },
+    "text": { "type": "object", "required": ["text"], "additionalProperties": false, "properties": { "text": { "type": "string" } } }
+  }
+}

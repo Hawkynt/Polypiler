@@ -286,19 +286,21 @@ codes:
   - code: PLY0027
     severity: error
     exit: EnvironmentError
-    title: vector modified
-    message: "vector file '<path>' was modified"
+    title: golden file modified
+    message: "golden file '<path>' was modified: <reason>"
+    rule: golden.lock
     area: infrastructure
     owner: INFRA-INTEGRITY
-    reserved: true
+    surfaces: "standard error of polypiler-tooling integrity check and seal; reasons are 'hash differs from the golden lock', 'not in the golden lock', 'missing on disk', 'changed together with '<file>'[, ...] in commit <sha>', 'no entry in tests/fixtures/golden.changes.md', 'the entry in tests/fixtures/golden.changes.md does not name the source '<source>'' and 'not a valid golden lock: <reason>' for tests/fixtures/golden.lock.json itself"
   - code: PLY0028
     severity: error
     exit: EnvironmentError
     title: provenance missing
-    message: "'<path>': <reason>"
+    message: "vectors '<path>' lack independent provenance: <reason>"
+    rule: golden.provenance
     area: infrastructure
     owner: INFRA-INTEGRITY
-    reserved: true
+    surfaces: "standard error of polypiler-tooling integrity check and seal, for a *.vectors.json file or a golden.provenance.json marker; reasons include 'no provenance', an unknown kind, a generatedBy naming Polypiler, 'source is not a toolchain key of tooling/toolchains.lock: '<source>'', 'source is not in the corpus lock: '<source>'', 'no vectors' and every other violation of spec/schemas/vectors.schema.json"
   - code: PLY0029
     severity: error
     exit: LicenseBlocker
