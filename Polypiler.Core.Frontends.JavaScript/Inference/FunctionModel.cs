@@ -85,6 +85,9 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// <summary>The first expression that takes an element or the length of the variable, or <see langword="null"/>.</summary>
   public Node? UsedAsArray { get; set; }
 
+  /// <summary>The first expression that uses the variable as only a string can be used - a method only strings have, or the iterable of a <c>for…of</c> - or <see langword="null"/>.</summary>
+  public Node? UsedAsString { get; set; }
+
   /// <summary>Whether a parameter without a JSDoc type is an integer because of how the function reads it.</summary>
   public bool IsIntegerByUse { get; set; }
 

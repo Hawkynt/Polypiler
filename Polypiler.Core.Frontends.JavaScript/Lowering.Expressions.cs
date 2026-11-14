@@ -21,6 +21,9 @@ internal sealed partial class Lowering {
     if (this._substitutes.TryGetValue(node, out var substitute))
       return substitute;
 
+    if (this.StringExpression(node) is { } text)
+      return text;
+
     switch (node) {
       case NumericLiteral literal:
         return Number(literal.Value);
@@ -191,6 +194,12 @@ internal sealed partial class Lowering {
         break;
       case Plan.Float or Plan.CompareFloat:
         expression = new IrBinary(Operation(op), this.Float(left), this.Float(right));
+        break;
+      case Plan.Concat:
+        expression = this.Concatenation(left, right);
+        break;
+      case Plan.CompareString:
+        expression = this.StringComparison(op, left, right);
         break;
       case Plan.Power:
         expression = new IrIntrinsic(IrIntrinsicOp.PowEcma, IrType.F64, [this.Float(left), this.Float(right)]);

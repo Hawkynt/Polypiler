@@ -163,8 +163,11 @@ internal sealed partial class Lowering(TypeInference types) {
       case ForStatement loop:
         into.Add(this.For(loop));
         break;
+      case ForOfStatement loop:
+        into.Add(this.ForOf(loop));
+        break;
       case SwitchStatement choice:
-        into.Add(this.Switch(choice));
+        into.Add(this.Switch(choice, into));
         break;
       case BreakStatement:
         // A jump to a label stands inside the labeled statement, which is refused before it is reached.
@@ -265,12 +268,16 @@ internal sealed partial class Lowering(TypeInference types) {
   /// without a value is assigned behind the switch when there is a default and every section that
   /// reaches the end assigns it.
   /// </summary>
-  private IrSwitch Switch(SwitchStatement choice) {
+  private IrSwitch Switch(SwitchStatement choice, List<IrStmt> into) {
     var selector = this.Evaluate(choice.Discriminant);
-    if (!selector.Type.IsWord)
+    // A switch on a string chooses by the position of the section whose label is equal to the value, found in source order: the first of two equal labels wins.
+    var text = selector.Type.Kind == JsKind.String ? this.Once(selector.Expr, into) : null;
+    var chosen = new List<(int Section, List<string> Labels)>();
+    var group = new List<string>();
+    if (text is null && !selector.Type.IsWord)
       throw this.Unsupported(choice.Discriminant, $"a switch on {selector.Type.Describe()}");
 
-    var type = selector.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32;
+    var type = text is not null || selector.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32;
     var before = this._assigned;
     var sections = new List<IrSwitchSection>();
     var seen = new HashSet<long>();
@@ -282,6 +289,10 @@ internal sealed partial class Lowering(TypeInference types) {
       var section = choice.Cases[index];
       if (section.Test is null) {
         isDefault = true;
+      } else if (text is not null) {
+        group.Add(section.Test is StringLiteral label ? label.Value : throw this.Unsupported(section.Test, $"the case label {types.Text(section.Test)}"));
+        if (labels.Count == 0)
+          labels.Add(sections.Count);
       } else {
         var label = types.Of(section.Test);
         if (!label.IsInteger || !label.IsLiteral || label.Low != label.High || !label.Within(type))
@@ -306,6 +317,10 @@ internal sealed partial class Lowering(TypeInference types) {
 
       this._assigned = before;
       hasDefault |= isDefault;
+      if (group.Count > 0)
+        chosen.Add((sections.Count, group));
+
+      group = [];
       sections.Add(new IrSwitchSection(labels, isDefault, this.Block(statements)));
       labels = [];
       isDefault = false;
@@ -319,7 +334,16 @@ internal sealed partial class Lowering(TypeInference types) {
     }
 
     this._assigned = hasDefault && after is not null ? after : before;
-    return new IrSwitch(Convert(selector.Expr, type), sections);
+    if (text is null)
+      return new IrSwitch(Convert(selector.Expr, type), sections);
+
+    IrExpr position = I32(-1);
+    foreach (var (section, matches) in Enumerable.Reverse(chosen)) {
+      var test = matches.Select(label => (IrExpr)Str(IrIntrinsicOp.StrEquals, IrType.Bool, text, new IrStrConst(label))).Aggregate((a, b) => new IrBinary(IrBinaryOp.LogicalOr, a, b));
+      position = new IrConditional(test, I32(section), position);
+    }
+
+    return new IrSwitch(this.Once(position, into), sections);
   }
 
   /// <summary>

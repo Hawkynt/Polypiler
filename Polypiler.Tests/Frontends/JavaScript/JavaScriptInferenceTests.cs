@@ -355,7 +355,7 @@ public sealed class JavaScriptInferenceTests {
   [TestCase("const C = 1 + 1;")]
   [TestCase("let C = 1;")]
   [TestCase("var C = 1;")]
-  [TestCase("const C = 'text';")]
+  [TestCase("const C = null;")]
   [TestCase("const C = [];")]
   [TestCase("const C = [1, , 2];")]
   [TestCase("const C = [1, x];")]

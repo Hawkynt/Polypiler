@@ -292,7 +292,7 @@ public sealed class JavaScriptFrontendTests {
 
   /// <summary>Test design 12: a parameter whose JSDoc states a type the IR does not have is PLY1101, at the parameter.</summary>
   [TestCase("/** @param {BigInt} a */ function f(a) { }")]
-  [TestCase("/** @param {string} a */ function f(a) { }")]
+  [TestCase("/** @param {symbol} a */ function f(a) { }")]
   [TestCase("/** @param {Int32} a */ function f(a) { }")]
   [TestCase("/** @param {{x: int32}} a */ function f(a) { }")]
   [TestCase("/** @param {boolean[]} a */ function f(a) { }")]
@@ -499,10 +499,10 @@ public sealed class JavaScriptFrontendTests {
   }
 
   /// <summary>Test design 11: every construct outside the subset is PLY1102, with its line and column.</summary>
-  [TestCase("return 'text';", "'text'")]
+  [TestCase("return 'text' - a;", "- on string and number")]
   [TestCase("return null;", "null")]
-  [TestCase("return /x/.length;", "/x/")]
-  [TestCase("return `text`;", "a template string")]
+  [TestCase("return /x/.length;", "a regular expression")]
+  [TestCase("return `${a}`;", "number as a template hole, which converts a number to text, not supported until number-to-text conversion")]
   [TestCase("return this;", "this")]
   [TestCase("const p = { ...d }; return 1;", "a spread in an object literal (...)")]
   [TestCase("({ x: 1 }); return 1;", "an object literal")]
@@ -616,7 +616,7 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("return [1, ...d].length;", "an array literal with a hole or a spread element")]
   [TestCase("return [[1], [2]].length;", "int32[] where float64 is expected")]
   [TestCase("return [1, true].length;", "boolean where float64 is expected")]
-  [TestCase("const x = 'text'; return 1;", "'text'")]
+  [TestCase("const x = 'text' * 2; return 1;", "* on string and number")]
   [TestCase("const [x] = d; return 1;", "a destructuring declaration")]
   [TestCase("const [x] = d; return 1;", "a destructuring declaration")]
   [TestCase("let x = 1; { let x = 2; } return x;", "a second declaration of x")]
@@ -652,7 +652,7 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("throw a;", "throw")]
   [TestCase("try { } finally { } return a;", "try")]
   [TestCase("for (const x in d) { } return a;", "for-in")]
-  [TestCase("for (const x of d) { } return a;", "for-of")]
+  [TestCase("for (const x of d) { } return a;", "a for...of over uint8[]")]
   [TestCase("outer: while (t) { } return a;", "a label")]
   [TestCase("debugger; return a;", "debugger")]
   [TestCase("class X { } return a;", "class")]

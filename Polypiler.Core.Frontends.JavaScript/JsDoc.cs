@@ -34,7 +34,7 @@ internal static class JsDoc {
   private static IrType? TypeOf(string spelling) {
     spelling = spelling.Trim();
     if (spelling.EndsWith("[]", System.StringComparison.Ordinal))
-      return Scalar(spelling[..^2]) is { IsNumeric: true } element ? IrType.Array(element) : null;
+      return Scalar(spelling[..^2]) is { } element && (element.IsNumeric || element.IsString) ? IrType.Array(element) : null;
 
     return Inference.TypeInference.TypedArrays.TryGetValue(spelling, out var typed) ? IrType.Array(typed) : Scalar(spelling);
   }
@@ -51,6 +51,7 @@ internal static class JsDoc {
     "float32" => IrType.F32,
     "number" or "float64" => IrType.F64,
     "boolean" => IrType.Bool,
+    "string" => IrType.String,
     _ => null
   };
 
