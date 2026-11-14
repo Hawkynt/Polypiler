@@ -8,6 +8,14 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- A published executable carries its code compiled ahead of time, Roslyn's included: without it a
+       translation spends most of its start-up in the JIT (0.41 s against 1.23 s for a strict float
+       translation, at 51 MB against 22 MB for the compressed single file). ReadyToRun needs a runtime
+       identifier, which every publish names. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+
   <!-- The C# frontend hands the core library of the running process to Roslyn as the reference to
        compile against. A trimmed publish must therefore keep that library whole: with members such as
        int.MaxValue trimmed away, valid C# would be reported as invalid. -->
@@ -25,5 +33,38 @@
     <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Recognize\Polypiler.Core.Recognize.csproj" />
   </ItemGroup>
+
+  <!-- The portable floating-point implementations depend only on the build: polypiler-tooling imports
+       them from their source once, here, and the executable carries the module as bytes instead of
+       importing 850 kB of C# with Roslyn on every strict translation. The tool is built first, but
+       not referenced by the code. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Polypiler.Tooling\Polypiler.Tooling.csproj" ReferenceOutputAssembly="false" Private="false" GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishSingleFile;PublishTrimmed;PublishReadyToRun" />
+  </ItemGroup>
+
+  <Target Name="ResolveFloatImplementationsTool" DependsOnTargets="ResolveProjectReferences">
+    <PropertyGroup>
+      <FloatImplementationsFile>$(ProjectDir)$(IntermediateOutputPath)float-implementations.irm</FloatImplementationsFile>
+      <DotnetHost>$(DOTNET_HOST_PATH)</DotnetHost>
+      <DotnetHost Condition="'$(DotnetHost)' == ''">dotnet</DotnetHost>
+    </PropertyGroup>
+    <MSBuild Projects="@(ProjectReference)" Condition="'%(Filename)' == 'Polypiler.Tooling'" Targets="GetTargetPath" RemoveProperties="%(ProjectReference.GlobalPropertiesToRemove);TargetFramework">
+      <Output TaskParameter="TargetOutputs" ItemName="_FloatImplementationsTool" />
+    </MSBuild>
+    <ItemGroup>
+      <_FloatImplementationsInputs Include="%(_FloatImplementationsTool.RootDir)%(_FloatImplementationsTool.Directory)*.dll" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="PrecomputeFloatImplementations" DependsOnTargets="ResolveFloatImplementationsTool" Inputs="@(_FloatImplementationsInputs)" Outputs="$(FloatImplementationsFile)">
+    <Exec Command="&quot;$(DotnetHost)&quot; &quot;@(_FloatImplementationsTool)&quot; float-implementations &quot;$(FloatImplementationsFile)&quot;" StandardOutputImportance="low" />
+  </Target>
+
+  <Target Name="EmbedFloatImplementations" DependsOnTargets="PrecomputeFloatImplementations" BeforeTargets="AssignTargetPaths">
+    <ItemGroup>
+      <EmbeddedResource Include="$(FloatImplementationsFile)" LogicalName="Polypiler.Cli.float-implementations.irm" />
+      <FileWrites Include="$(FloatImplementationsFile)" />
+    </ItemGroup>
+  </Target>
 
 </Project>

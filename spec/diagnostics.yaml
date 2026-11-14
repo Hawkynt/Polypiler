@@ -1,0 +1,51 @@
+# Diagnostics registry: one entry per code, with the exact message template and where it surfaces.
+diagnostics:
+  - code: PLY0003
+    severity: error
+    title: command line not understood
+    message: "<reason>"
+    exit-code: 2
+    surfaces: "standard error of polypiler-tooling toolchains as '<command>: error PLY0003: <reason>', for an unknown subcommand or option, an option without its value or given twice, an empty --only element, or an unknown --format"
+    source: Polypiler.Tooling/Commands/ToolchainsCommand.cs
+  - code: PLY0004
+    severity: error
+    title: file cannot be read
+    message: "cannot read the toolchain lock: <reason>"
+    exit-code: 1
+    surfaces: standard error of polypiler-tooling toolchains validate and probe
+    source: Polypiler.Tooling/Toolchains/ToolchainLock.cs
+  - code: PLY0020
+    severity: error
+    title: toolchain lock invalid
+    message: "<reason>"
+    exit-code: 1
+    surfaces: "standard error of polypiler-tooling toolchains validate and probe as '<file>(<line>,<column>): error PLY0020: <reason>'; reasons include a missing or unknown property, an unsupported schema, keys out of ordinal order, a versionPattern without the group 'version', a missing core toolchain and an unknown key"
+    source: Polypiler.Tooling/Toolchains/ToolchainLock.cs
+  - code: PLY0021
+    severity: error
+    title: toolchain not installed
+    message: "toolchain '<key>' is not installed (probe: <command>)[: <cause>]"
+    exit-code: 1
+    surfaces: standard error of polypiler-tooling toolchains probe; the failure, or the inconclusive outcome outside CI, of a test marked RequiresToolchain
+    source: Polypiler.Tooling/Toolchains/ToolchainProbe.cs
+  - code: PLY0022
+    severity: error
+    title: toolchain version mismatch
+    message: "toolchain '<key>' is <actual>, the lock pins <expected>[: <cause>]"
+    exit-code: 1
+    surfaces: standard error of polypiler-tooling toolchains probe; the failure, or the inconclusive outcome outside CI, of a test marked RequiresToolchain
+    source: Polypiler.Tooling/Toolchains/ToolchainProbe.cs
+  - code: PLY0071
+    severity: error
+    title: property falsified
+    message: "property '<test>' falsified after <n> inputs (seed <seed>): <shrunk> (original <original>, <k> shrink steps); replay with POLYPILER_PROPERTY_SEED=<seed>"
+    exit-code: 1
+    surfaces: the assertion message of a property test; the failure record artifacts/properties/<test>.json
+    source: tests/shared/Properties/PropertyRunner.cs
+  - code: PLY0101
+    severity: error
+    title: precomputed float implementations missing or damaged
+    message: "<reason>"
+    exit-code: 70
+    surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+    source: Polypiler.Cli/PrecomputedImplementations.cs

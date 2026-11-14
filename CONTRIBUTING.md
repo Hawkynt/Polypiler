@@ -12,6 +12,12 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
 - A recent [.NET SDK](https://dotnet.microsoft.com/download) matching the `TargetFramework` in
   `Directory.Build.props`.
 - `perl` and `node` are only needed to run the release/versioning scripts locally; CI provides them.
+- Every external toolchain a test runs, and the version it expects, is pinned in
+  [`tooling/toolchains.lock`](tooling/toolchains.lock). `polypiler-tooling toolchains probe` lists the
+  core toolchains and how this machine compares (`--only node,dotnet-sdk` narrows it, `--format json`
+  prints one object per line); `polypiler-tooling toolchains validate` checks the file itself. A test
+  marked `[RequiresToolchain("<key>")]` is inconclusive when its toolchain is absent or at another
+  version, and fails instead when `POLYPILER_REQUIRE_TOOLCHAINS=1`.
 
 ## Build
 
@@ -49,8 +55,9 @@ garbage collector, because most of its tests allocate hard. What that asks of a 
   calls inside one method keeps the scheduler from spreading it and ends up as the last test of the
   run. It takes the fixture, the profile or a slice of the calls as an argument instead.
 
-The acceptance tests start processes where a process is what they are about. A scenario of a
-feature file runs the real `polypiler`, and so does every test of a command-line behaviour. A test
+The acceptance tests start processes where a process is what they are about. Every scenario of a
+feature file starts the real `polypiler` once (see "Acceptance scenarios" below), and every test of a
+command-line behaviour does too. A test
 that only needs the generated file translates with `Toolchain.Translate`, which calls
 `Program.Run` — what the executable's `Main` calls — in process; `InProcessTranslationTests` holds it
 to the executable's exit code, text and files for every kind of command line the tests use. Generated
@@ -68,6 +75,55 @@ Measured on a laptop with 16 logical processors that was busy with other work at
 | `Polypiler.Tests.Acceptance` | 955 tests, 385 s | 2,319 cases, 134 to 137 s |
 
 The same checks run as before; the cases are more because loops became cases.
+
+Since the scenarios run from their feature files and start the executable once each, the
+acceptance project runs 2,115 cases in 116 to 119 s, where the same machine took 152 s for the
+2,319 cases before, under a load average of 23 to 37 both times. The cases are fewer because a
+scenario that holds for every profile is one test again, which checks its profiles side by side.
+
+### Acceptance scenarios
+
+Every `.feature` file under `tests/features/` is compiled into `Polypiler.Tests.Acceptance` by
+[Reqnroll](https://reqnroll.net) (`Reqnroll.NUnit`): one NUnit test per scenario and per example row
+of a scenario outline, named after the scenario. Nothing else has to be wired. `reqnroll.json` makes
+a step without a binding an error, so an unimplemented criterion can never count as passed, and a
+file that is not Gherkin fails the build.
+
+- **Where a feature file goes:** `tests/features/<area>/<issue id in lower case>.feature`, where
+  `<area>` is a folder of the backlog's table "Areas, ID prefixes and anchor issues" and the ID
+  starts with one of the area's prefixes — `tests/features/infra/infra-bdd.feature` for `INFRA-BDD`.
+  The files of the prototype, written before the rule, keep their names (`BindingCheck.LegacyPaths`,
+  a list that only shrinks). Inputs of a checker that must not run as scenarios go to
+  `tests/fixtures/<area>/`.
+- **Tags:** a feature or scenario tagged `@Slow`, `@EndToEnd`, `@OsIntegration`, `@ExternalInterop`,
+  `@PolyglotInterop` or `@Performance` gets the NUnit category of the same name; everything in the
+  project is also `Acceptance`. An untagged scenario is in the fast tier.
+- **The shared steps** (`Polypiler.Tests.Acceptance/Steps/`): `When I run "<command line>"` — the
+  first word `polypiler` is dropped and the rest goes to `polypiler`; a first word `polypiler-tooling`
+  is dropped too, and that line, like one whose first word is a verb of `polypiler-tooling`
+  (`toolchains`, `spec`, `corpus`, `licenses`, `integrity`, `rebuild`, `sbom`, `report`), starts the
+  `polypiler-tooling` executable in the workspace, with the workspace first on `PATH` — its verbs
+  read the working directory and `PATH`; text in single quotes is one argument. Then
+  `the exit code is <n>`, `stdout contains "<text>"`, `stderr contains "<text>"`,
+  `stdout is "<text>"`, `stdout does not contain "<text>"`, `stderr is empty`, and
+  `Given the file "<path>" with content "<text>"` (with `\n`, `\t`, `\\` and `\"`),
+  `the file "<path>" exists`, `does not exist`, `contains "<text>"`. Steps of one issue go to
+  `Polypiler.Tests.Acceptance/<Area>/`, scoped to their feature with `[Scope(Feature = "…")]`.
+- **One executable per scenario:** the first `polypiler` command line of a scenario, or of the first
+  example row of an outline, starts the real executable; every other runs in process through
+  `Program.Run`, which `InProcessTranslationTests` holds to the executable byte for byte. A scenario
+  that holds "for every profile" runs its first profile on its own thread and the others side by side
+  (`Sweep`).
+- **Every scenario has a workspace:** `polypiler-scenario-<random>` under the temporary folder,
+  created before the scenario and deleted after it; relative paths of the steps resolve against it.
+  The current directory is never changed, so the scenarios run in parallel like every other test.
+  An `IScenarioObserver` registered in the Reqnroll container is told about every scenario —
+  feature, scenario, passed or not, the command lines and their results — before the workspace goes.
+- **The static check** (`FeatureBindingTests` in `Polypiler.Tests`, `SupportTests` in the acceptance
+  project) reads every feature file with the Gherkin parser and reports `PLY0074` for a step with no
+  binding or more than one, a feature without a scenario and a path that breaks the rule. The
+  scenario `Every scenario in tests/features is a generated NUnit test` holds the count of scenarios
+  and example rows to the count of generated test cases.
 
 ### Generated C# is compiled for the framework it names
 
@@ -139,6 +195,37 @@ Two rules that make the difference real:
   how a four-core runner once reported 6.2 cores busy. Run such a test to a *duration*, not to a
   fixed iteration count, so the window holds on a fast machine and a slow one alike — and tag it
   `Slow`, because now it is.
+
+### Property-based tests
+
+A test that checks many generated inputs states a **property** with `Property.ForAll`
+(`tests/shared/Properties/`, compiled into both test projects). The seed has no default, so a
+property without one does not compile; the inputs come from the seed alone, through the
+platform-independent generators of `Polypiler.Core.Verification.Generators` (SplitMix64, never
+`System.Random`, the clock or the culture):
+
+```csharp
+Property.ForAll(7, 1000, seed => BitPatterns.Sequence(8, seed), Shrink.Integer, x => x < 100);
+```
+
+`BitPatterns.Sequence(width, seed)` starts with the edge values of a width (0, 1, the largest and
+smallest signed value, all ones and one below) before the random patterns; `FloatPatterns` does the
+same for binary32 and binary64 (both zeros, the subnormal limits, 1, the largest finite value, both
+infinities, a quiet and a signalling NaN); `Buffers` draws byte buffers and strided shapes. An
+FsCheck `Arbitrary<T>` works too: `Property.ForAll(7, 1000, ArbMap.Default.ArbFor<int>(), predicate)`
+samples it from the same seed and shrinks with its own shrinker.
+
+The first failing input — a predicate that throws counts as failing — is shrunk greedily to a
+minimal one, at most 1000 steps, and the test fails with
+
+```
+PLY0071: property 'LessThan100' falsified after 3 inputs (seed 7): 0x64 (original 0x7F, 5 shrink steps); replay with POLYPILER_PROPERTY_SEED=7
+```
+
+The same facts go to `artifacts/properties/<test>.json` (`test`, `seed`, `index`, `original`,
+`shrunk`, `shrinkSteps`, and `exception` when the predicate threw). To replay a failure, or to explore
+other inputs, set `POLYPILER_PROPERTY_SEED` to a decimal or `0x` hexadecimal number: it replaces
+every declared seed, and the message says so.
 
 ## Commit conventions
 

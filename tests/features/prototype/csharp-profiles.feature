@@ -1,3 +1,4 @@
+@EndToEnd
 Feature: C# output for a concrete target framework
 
   Scenario Outline: The same algorithm compiles for and runs like every profile

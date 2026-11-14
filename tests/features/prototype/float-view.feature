@@ -1,3 +1,4 @@
+@EndToEnd
 Feature: Floating-point numbers in byte buffers
 
   Scenario Outline: A JavaScript DataView float read translates to C# for every profile

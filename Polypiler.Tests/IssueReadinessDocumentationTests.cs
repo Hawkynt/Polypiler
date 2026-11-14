@@ -2,16 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
+using static Polypiler.Tests.Support.DocumentationChecks;
 
 namespace Polypiler.Tests;
 
 /// <summary>Checks the issue-readiness documentation and its acceptance bindings.</summary>
 [TestFixture]
 public sealed class IssueReadinessDocumentationTests {
-  private static readonly string _root = RepositoryRoot();
+  private static readonly string _root = Root;
   private const string ExamplePath = "docs/examples/ISSUE-READINESS.md";
   private const string FeaturePath = "tests/features/infrastructure/issue-readiness.feature";
   private static readonly string[] _scenarios = [
@@ -134,24 +134,4 @@ public sealed class IssueReadinessDocumentationTests {
       target => Path.GetFileName(target).StartsWith("present", StringComparison.Ordinal));
     Assert.That(failures, Has.Count.EqualTo(expected));
   }
-
-  private static List<string> MissingLinks(string source, string markdown, Func<string, bool> exists) {
-    var missing = new List<string>();
-    foreach (Match match in Regex.Matches(markdown, @"\[[^\]\r\n]+\]\(([^)\s]+)\)")) {
-      var target = match.Groups[1].Value;
-      if (target.StartsWith('#') || Uri.TryCreate(target, UriKind.Absolute, out _))
-        continue;
-      target = Uri.UnescapeDataString(target.Split('#')[0]);
-      var absolute = Path.GetFullPath(Path.Combine(_root, Path.GetDirectoryName(source)!, target));
-      var relative = Path.GetRelativePath(_root, absolute).Replace('\\', '/');
-      if (!exists(relative))
-        missing.Add(source + " -> " + relative);
-    }
-    return missing;
-  }
-
-  private static string Read(string path) => File.ReadAllText(Path.Combine(_root, path));
-
-  private static string RepositoryRoot([CallerFilePath] string source = "")
-    => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(source)!, ".."));
 }

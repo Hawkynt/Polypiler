@@ -7,7 +7,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
-using Polypiler.Core.Optimize;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
@@ -20,15 +19,6 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class RecognitionTests {
-
-  private static readonly string[] _scenarios = [
-    "A rotate written as two shifts becomes the library call",
-    "Byte loads joined by shifts become one endian load",
-    "A spelled-out xxHash32 recovers its rotates and loads",
-    "A branchless absolute value does not become a trapping one",
-    "A near-miss is left alone",
-    "An unknown optimization id is a usage error"
-  ];
 
   private static readonly bool[] _overflowChecking = [false, true];
 
@@ -43,14 +33,6 @@ public sealed class RecognitionTests {
   [TearDown]
   public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
 
-  /// <summary>Ensures the feature and its NUnit bindings stay in agreement.</summary>
-  [Test]
-  public void FeatureScenarios_HaveBindings() {
-    var feature = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests/features/prototype/recognition.feature"));
-    var scenarios = Regex.Matches(feature, @"(?m)^  Scenario(?: Outline)?: (.+?)\r?$").Select(match => match.Groups[1].Value.Trim());
-    Assert.That(scenarios, Is.EqualTo(_scenarios));
-  }
-
   /// <summary>Translates a file of the working directory with the real executable: the file written, its text, everything the command printed and how long it took.</summary>
   private (string Path, string Text, string Printed, TimeSpan Took) Translate(string source, string from, string to, params string[] further)
     => this.Translate(false, source, from, to, further);
@@ -63,11 +45,6 @@ public sealed class RecognitionTests {
     Assert.That(exitCode, Is.Zero, printed);
     var file = Directory.GetFiles(output).Single();
     return (file, File.ReadAllText(file), printed, watch.Elapsed);
-  }
-
-  private string Snippet(string method) {
-    File.WriteAllText(Path.Combine(this._directory, "Snippet.cs"), PrototypeFixture.Wrap(method));
-    return "Snippet.cs";
   }
 
   private string Copy(string fixture) {
@@ -95,74 +72,6 @@ public sealed class RecognitionTests {
 
     TestContext.Out.WriteLine($"{source} {target} {string.Join(" ", further)}: {outcomes.Count} runs, translated in {took.TotalMilliseconds:0} ms");
     return outcomes;
-  }
-
-  /// <summary>Scenario: a rotate written as two shifts becomes the library call.</summary>
-  [Test]
-  public void Rotate_BecomesTheLibraryCall() {
-    var source = this.Snippet("public static uint F(uint x) => (x << 8) | (x >> 24);");
-    var optimized = this.Translate(source, "csharp", "csharp", "--profile", "net10.0").Text;
-    Assert.That(optimized, Does.Contain("BitOperations.RotateLeft").And.Not.Contain("<< 8"));
-    Assert.That(GeneratedCSharp.Compile(optimized, false).Outcome(new PrototypeCall("F", [0x12345678u])), Is.EqualTo("878082066"));
-    var disabled = this.Translate(source, "csharp", "csharp", "--profile", "net10.0", "--disable-opt", "O0100").Text;
-    Assert.That(disabled, Does.Contain("<< 8").And.Not.Contain("RotateLeft"));
-  }
-
-  /// <summary>Scenario: byte loads joined by shifts become one endian load.</summary>
-  [Test]
-  public void ByteLoads_BecomeOneEndianLoad() {
-    var source = this.Snippet("public static uint F(byte[] b, int i) => (uint)(b[i] | b[i + 1] << 8 | b[i + 2] << 16 | b[i + 3] << 24);");
-    var text = this.Translate(source, "csharp", "csharp", "--profile", "net10.0").Text;
-    Assert.That(text, Does.Contain("BinaryPrimitives.ReadUInt32LittleEndian"));
-    Assert.That(GeneratedCSharp.Compile(text, false).Outcome(new PrototypeCall("F", [new byte[] { 0x78, 0x56, 0x34, 0x12 }, 0])), Does.StartWith("305419896 | "));
-  }
-
-  /// <summary>Scenario: a spelled-out xxHash32 recovers its rotates and loads.</summary>
-  [Test]
-  public void SpelledXxHash_RecoversItsRotatesAndLoads() {
-    var source = this.Copy("XxHash32Spelled.cs");
-    var call = new PrototypeCall("Hash", [Array.Empty<byte>(), 0u]);
-    foreach (var level in new[] { "default", "none" }) {
-      var (file, _, printed, _) = this.Translate(source, "csharp", "javascript", "--profile", "es2022", "--explain-opt", "--opt", level);
-      var applied = printed.Split('\n').Where(line => line.Contains(": opt ", StringComparison.Ordinal)).ToList();
-      if (level == "default") {
-        Assert.That(applied.Count(line => line.Contains(" O0100 ", StringComparison.Ordinal)), Is.GreaterThanOrEqualTo(5));
-        Assert.That(applied.Count(line => line.Contains(" O0140 ", StringComparison.Ordinal)), Is.GreaterThanOrEqualTo(1));
-      } else {
-        Assert.That(applied, Is.Empty);
-      }
-
-      Assert.That(Toolchain.NodeOutcomes(Path.GetDirectoryName(file)!, Path.GetFileName(file), [call]).Single(), Is.EqualTo("46947589 | []"), level);
-    }
-  }
-
-  /// <summary>Scenario: a branchless absolute value does not become a trapping one, in any profile.</summary>
-  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.All))]
-  public void BranchlessAbs_DoesNotTrap(TargetCase target) {
-    const string method = "public static int F(int x) { int m = x >> 31; return (x ^ m) - m; }";
-    var source = this.Snippet(method);
-    var ir = IrText.Of(Optimizer.Run(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method)), new OptimizerOptions()).Module);
-    Assert.That(ir, Does.Contain("AbsWrap").And.Not.Contain("Abs("));
-    var outcomes = this.OneProfile(false, source, target, [new PrototypeCall("F", [int.MinValue])]);
-    Assert.That(outcomes.Where(run => run.Value.Single() != "-2147483648").Select(run => $"{run.Key}: {run.Value.Single()}"), Is.Empty);
-  }
-
-  /// <summary>Scenario: a near-miss is left alone.</summary>
-  [Test]
-  public void NearMiss_IsLeftAlone() {
-    var source = this.Snippet("public static uint F(uint x) => (x << 8) | (x >> 23);");
-    var (_, text, printed, _) = this.Translate(source, "csharp", "csharp", "--profile", "net10.0", "--explain-opt");
-    Assert.That(printed, Does.Not.Contain(": opt "));
-    Assert.That(text, Does.Contain("<< 8").And.Contain(">> 23"));
-  }
-
-  /// <summary>Scenario: an unknown optimization id is a usage error.</summary>
-  [Test]
-  public void UnknownOptimizationId_IsAUsageError() {
-    var source = this.Snippet("public static int F(int x) => x;");
-    var (exitCode, printed) = Toolchain.RunPolypiler(this._directory, "translate", source, "--from", "csharp", "--to", "javascript", "--output", "out", "--disable-opt", "O9999x");
-    Assert.That(exitCode, Is.EqualTo(2));
-    Assert.That(printed, Does.Contain("PLY0001"));
   }
 
   /// <summary>

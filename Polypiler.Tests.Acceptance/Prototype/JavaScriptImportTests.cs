@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using NUnit.Framework;
-using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
@@ -25,16 +23,6 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 public sealed class JavaScriptImportTests {
 
   private const string Sum = "/** @param {int32} a @param {int32} b @returns {int32} */ function f(a, b) { return a + b; }";
-
-  private static readonly string[] _scenarios = [
-    "Cipher's rotates import and behave like the original",
-    "A JavaScript checksum survives the round trip through the IR",
-    "An uncoerced sum is a double",
-    "A coerced sum wraps",
-    "A coerced product is computed in doubles, Math.imul in 32 bits",
-    "A function without JSDoc types is typed by what it does",
-    "An unknown export name is an error"
-  ];
 
   private string _directory = "";
 
@@ -56,99 +44,6 @@ public sealed class JavaScriptImportTests {
 
   [TearDown]
   public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
-
-  /// <summary>Ensures the feature and its NUnit bindings stay in agreement.</summary>
-  [Test]
-  public void FeatureScenarios_HaveBindings() {
-    var feature = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests/features/prototype/javascript-to-ir.feature"));
-    var scenarios = Regex.Matches(feature, @"(?m)^  Scenario(?: Outline)?: (.+?)\r?$").Select(match => match.Groups[1].Value.Trim());
-    Assert.That(scenarios, Is.EqualTo(_scenarios));
-  }
-
-  /// <summary>
-  /// Scenario outline: Cipher's rotates import and behave like the original. The same call also goes
-  /// through the executable with <c>--export</c> and through the module it writes.
-  /// </summary>
-  [TestCase("RotL32", 0x80000001u, 1, "3")]
-  [TestCase("RotL32", 0x12345678u, 8, "878082066")]
-  [TestCase("RotL32", 0x12345678u, 32, "305419896")]
-  [TestCase("RotR32", 0x00000003u, 1, "2147483649")]
-  [TestCase("RotR32", 0x12345678u, 0, "305419896")]
-  public void CiphersRotates_ImportAndBehaveLikeTheOriginal(string function, uint value, int positions, string expected) {
-    var call = new PrototypeCall(function, [value, positions]);
-    var module = JavaScriptFixture.Import("OpCodes.js", File.ReadAllText(JavaScriptFixture.OpCodesPath), [function]);
-    Assert.That(PrototypeFixture.InterpretedOutcome(module, call), Is.EqualTo(expected));
-    Assert.That(Exact(this._directory, JavaScriptFixture.OpCodesPath, [call]).Single(), Is.EqualTo(expected));
-
-    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", JavaScriptFixture.OpCodesPath, "--from", "javascript", "--to", "javascript", "--output", "out", "--export", function);
-    Assert.That(exitCode, Is.Zero, output);
-    Assert.That(Exact(Path.Combine(this._directory, "out"), "OpCodes.mjs", [call]).Single(), Is.EqualTo(expected));
-    foreach (var build in this.TranslateToCSharp(JavaScriptFixture.OpCodesPath, "OpCodes", "--export", function))
-      Assert.That(build.Outcome(call), Is.EqualTo(expected));
-  }
-
-  /// <summary>Scenario outline: A JavaScript checksum survives the round trip through the IR.</summary>
-  [TestCase("adler32", "compute", "Wikipedia", "300286872")]
-  [TestCase("crc32", "compute", "123456789", "3421780262")]
-  [TestCase("fnv1a", "hash", "a", "3826002220")]
-  public void Checksum_SurvivesTheRoundTripThroughTheIr(string fixture, string function, string text, string expected) {
-    var call = new PrototypeCall(function, [PrototypeCases.Text(text)]);
-    File.Copy(JavaScriptFixture.PathOf(fixture), Path.Combine(this._directory, fixture + ".mjs"));
-    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", fixture + ".mjs", "--from", "javascript", "--to", "javascript", "--output", "out");
-    Assert.That(exitCode, Is.Zero, output);
-
-    var unchanged = PrototypeFixture.Outcome(null, call.Arguments)["void".Length..];
-    Assert.That(Exact(Path.Combine(this._directory, "out"), fixture + ".mjs", [call]).Single(), Is.EqualTo(expected + unchanged));
-    Assert.That(Exact(this._directory, fixture + ".mjs", [call]).Single(), Is.EqualTo(expected + unchanged));
-  }
-
-  /// <summary>Scenario: An uncoerced sum is a double.</summary>
-  [Test]
-  public void UncoercedSum_IsADouble() {
-    var call = new PrototypeCall("f", [2147483647, 1]);
-    var module = JavaScriptFixture.Import("snippet.js", Sum);
-    Assert.That(module.Functions.Single().ReturnType, Is.EqualTo(Polypiler.Core.IR.IrType.F64));
-    Assert.That(PrototypeFixture.InterpretedOutcome(module, call), Is.EqualTo("2147483648"));
-    Assert.That(this.OriginalAndTranslated(Sum, call), Is.EqualTo(("2147483648", "2147483648")));
-  }
-
-  /// <summary>Scenario: A coerced sum wraps.</summary>
-  [Test]
-  public void CoercedSum_Wraps() {
-    var call = new PrototypeCall("f", [2147483647, 1]);
-    var source = Sum.Replace("a + b", "(a + b) | 0", StringComparison.Ordinal);
-    Assert.That(PrototypeFixture.InterpretedOutcome(JavaScriptFixture.Import("snippet.js", source), call), Is.EqualTo("-2147483648"));
-    Assert.That(this.OriginalAndTranslated(source, call), Is.EqualTo(("-2147483648", "-2147483648")));
-  }
-
-  /// <summary>Scenario: A coerced product is computed in doubles, Math.imul in 32 bits.</summary>
-  [TestCase("(a * b) | 0")]
-  [TestCase("Math.imul(a, b)")]
-  public void CoercedProduct_IsComputedInDoubles_MathImulIn32Bits(string product) {
-    var call = new PrototypeCall("f", [65537, 65537]);
-    var source = Sum.Replace("a + b", product, StringComparison.Ordinal);
-    Assert.That(PrototypeFixture.InterpretedOutcome(JavaScriptFixture.Import("snippet.js", source), call), Is.EqualTo("131073"));
-    Assert.That(this.OriginalAndTranslated(source, call), Is.EqualTo(("131073", "131073")));
-  }
-
-  /// <summary>Scenario: A function without JSDoc types is typed by what it does.</summary>
-  [Test]
-  public void FunctionWithoutJsDocTypes_IsTypedByWhatItDoes() {
-    var (exitCode, output) = this.TranslateText("function f(a) { return a | 0; }");
-    Assert.That(exitCode, Is.Zero, output);
-    Assert.That(output, Does.Contain("snippet.js: note js-param-integer-inferred:").And.Contain(": f(a)"));
-    var function = JavaScriptFixture.Import("snippet.js", "function f(a) { return a | 0; }").Functions.Single();
-    Assert.That((function.Parameters.Single().Type, function.ReturnType), Is.EqualTo((Polypiler.Core.IR.IrType.I32, Polypiler.Core.IR.IrType.I32)));
-  }
-
-  /// <summary>Scenario: An unknown export name is an error.</summary>
-  [Test]
-  public void UnknownExportName_IsAnError() {
-    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", JavaScriptFixture.OpCodesPath, "--from", "javascript", "--to", "javascript", "--output", "out", "--export", "NoSuchFunction");
-    Assert.That(exitCode, Is.EqualTo(3));
-    Assert.That(output, Does.Contain("error PLY1104: the file has no function 'NoSuchFunction' to export"));
-    Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
-  }
 
   /// <summary>Test design 9: a syntax error is exit code 4 and carries the parser's message and position.</summary>
   [Test]
@@ -315,18 +210,6 @@ public sealed class JavaScriptImportTests {
   private static string ClassNameOf(string fixture) {
     var name = Path.GetFileName(fixture);
     return char.ToUpperInvariant(name[0]) + name[1..];
-  }
-
-  /// <summary>What node does for a call with a source as it is, and with the module translated from it.</summary>
-  private (string Original, string Translated) OriginalAndTranslated(string source, PrototypeCall call) {
-    var (exitCode, text) = this.TranslateText(source);
-    Assert.That(exitCode, Is.Zero, text);
-
-    // A script exports nothing; for node to reach the function, the same text is given an export.
-    File.WriteAllText(Path.Combine(this._directory, "original.cjs"), source + $"\nmodule.exports = {{ {call.Method} }};\n");
-    return (
-      Exact(this._directory, "original.cjs", [call]).Single(),
-      Exact(Path.Combine(this._directory, "out"), "snippet.mjs", [call]).Single());
   }
 
   private (int ExitCode, string Output) TranslateText(string source) {

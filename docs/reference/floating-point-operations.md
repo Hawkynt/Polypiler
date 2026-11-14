@@ -169,6 +169,13 @@ are legalized the same way (in JavaScript the fused multiply-add inside `Sin` is
 backends then write that code like any other: generated files stay self-contained, and the interpreter,
 the C# file and the JavaScript file of a strict translation agree bit for bit.
 
+That module depends only on the build, so the build imports it once: `polypiler-tooling
+float-implementations <file>` writes it as an `IrModuleFormat` file, and the `polypiler` executable
+carries the file as a resource and reads it on the first translation that needs it, instead of
+compiling the 850 kB of source with Roslyn on every run. A test checks that the embedded bytes are the
+module the source imports to; missing or damaged bytes (a SHA-256 guards them) stop the translation
+with `PLY0101` and exit code 70 before anything is written.
+
 ## Source members
 
 - C#: `CSharpFloatApi` in the C# frontend - one entry per member of `Math`, `MathF`, `double` and

@@ -1,0 +1,10 @@
+schema: 1
+toolchains:
+  mpmath:
+    kind: package
+    version: "1.3.0"
+    probe: [mpmath, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/mpmath

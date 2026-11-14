@@ -1,0 +1,13 @@
+{
+  "source": "splitmix64.c by Sebastiano Vigna (public domain), https://prng.di.unimi.it/splitmix64.c, compiled with gcc and run with the state set to each seed",
+  "sequences": [
+    {
+      "seed": 0,
+      "outputs": ["0xE220A8397B1DCDAF", "0x6E789E6AA1B965F4", "0x06C45D188009454F"]
+    },
+    {
+      "seed": 1234567,
+      "outputs": ["0x599ED017FB08FC85", "0x2C73F08458540FA5", "0x883EBCE5A3F27C77"]
+    }
+  ]
+}

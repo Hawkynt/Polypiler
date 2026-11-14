@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using NUnit.Framework;
 using Polypiler.Prototype.Testing;
+using Polypiler.Tests.Acceptance.Support;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -141,17 +142,38 @@ internal static class Toolchain {
   /// <summary>Runs <c>polypiler</c> with the given arguments in a working directory.</summary>
   /// <returns>The exit code and everything the process wrote, standard output first.</returns>
   public static (int ExitCode, string Output) RunPolypiler(string workingDirectory, params string[] arguments) {
+    var result = Executable(workingDirectory, arguments);
+    return (result.ExitCode, result.Output);
+  }
+
+  /// <summary>Runs <c>polypiler</c> with the given arguments in a working directory and keeps its two streams apart.</summary>
+  public static CommandResult Executable(string workingDirectory, params string[] arguments) {
     var executable = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "polypiler.exe" : "polypiler");
     Assert.That(File.Exists(executable), Is.True, $"the polypiler executable was not built next to the tests: {executable}");
     return Run(executable, workingDirectory, arguments, _polypilerEnvironment);
   }
 
   /// <summary>
-  /// The runtime settings of the executable under test. A translation is a process of a few seconds,
-  /// most of them in methods the JIT compiles at the first tier; instrumenting those for profile-guided
-  /// optimization costs a quarter of the time (3.5 s against 2.6 s for a strict float translation) and
-  /// pays off only in a process that runs long enough to use the profile. It changes how fast the
-  /// executable runs, not what it does.
+  /// Runs <c>polypiler-tooling</c> with the given arguments in a working directory, with that directory
+  /// first on <c>PATH</c>: its verbs look for files above the working directory and for tools on
+  /// <c>PATH</c>, both of which a process has of its own.
+  /// </summary>
+  public static CommandResult Tooling(string workingDirectory, params string[] arguments) {
+    var executable = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "polypiler-tooling.exe" : "polypiler-tooling");
+    Assert.That(File.Exists(executable), Is.True, $"the polypiler-tooling executable was not built next to the tests: {executable}");
+    return Run(executable, workingDirectory, arguments, new Dictionary<string, string> {
+      ["PATH"] = workingDirectory + Path.PathSeparator + Environment.GetEnvironmentVariable("PATH")
+    });
+  }
+
+  /// <summary>
+  /// The runtime settings of the executable under test. A translation is a process of under a second,
+  /// most of it in methods the JIT compiles at the first tier (the tests start the build output, which
+  /// is not ReadyToRun); instrumenting those for profile-guided optimization pays off only in a process
+  /// that runs long enough to use the profile. Measured on the build output, median of 7 runs: a strict
+  /// float translation of Dct8 to ES5 takes 0.87 s instead of 0.90 s, Crc32 to JavaScript 0.76 s
+  /// instead of 0.81 s, and a translation from JavaScript 0.22 s instead of 0.24 s. It changes how fast
+  /// the executable runs, not what it does.
   /// </summary>
   private static readonly Dictionary<string, string> _polypilerEnvironment = new() { ["DOTNET_TieredPGO"] = "0" };
 
@@ -168,6 +190,22 @@ internal static class Toolchain {
   /// <param name="arguments">The command line, <c>translate</c> first and the source file second.</param>
   /// <returns>The exit code and everything the command wrote, standard output first.</returns>
   public static (int ExitCode, string Output) Translate(string workingDirectory, params string[] arguments) {
+    var result = TranslateInProcess(workingDirectory, arguments);
+    return (result.ExitCode, result.Output);
+  }
+
+  /// <summary>
+  /// Whether <see cref="Translate"/> can run a command line in process: <c>translate</c>, a source file
+  /// that exists, and an <c>--output</c> with a value.
+  /// </summary>
+  public static bool CanTranslateInProcess(string workingDirectory, string[] arguments) {
+    var output = Array.IndexOf(arguments, "--output") + 1;
+    return arguments.Length > 1 && arguments[0] == "translate" && !arguments[1].StartsWith("--", StringComparison.Ordinal) && output > 0 && output < arguments.Length
+      && File.Exists(Path.Combine(workingDirectory, arguments[1]));
+  }
+
+  /// <summary><see cref="Translate"/> with the two streams kept apart.</summary>
+  public static CommandResult TranslateInProcess(string workingDirectory, params string[] arguments) {
     var output = Array.IndexOf(arguments, "--output") + 1;
     Assert.That(arguments.Length > 1 && arguments[0] == "translate" && !arguments[1].StartsWith("--", StringComparison.Ordinal) && output > 0 && output < arguments.Length, Is.True,
       $"a translation in process needs 'translate', a source file and '--output': {string.Join(' ', arguments)}");
@@ -182,7 +220,8 @@ internal static class Toolchain {
         File.WriteAllBytes(Path.Combine(directory, path), content);
     }
 
-    return (translation.ExitCode, translation.Output.Replace(InputMark, arguments[1], StringComparison.Ordinal).Replace(OutputMark, arguments[output], StringComparison.Ordinal));
+    string Unmarked(string text) => text.Replace(InputMark, arguments[1], StringComparison.Ordinal).Replace(OutputMark, arguments[output], StringComparison.Ordinal);
+    return new CommandResult(translation.ExitCode, Unmarked(translation.Stdout), Unmarked(translation.Stderr));
   }
 
   /// <summary><see cref="Translate"/> where <paramref name="inProcess"/> is set, <see cref="RunPolypiler"/> otherwise.</summary>
@@ -209,11 +248,11 @@ internal static class Toolchain {
       using var standardOutput = new StringWriter();
       using var standardError = new StringWriter();
       var exitCode = global::Polypiler.Cli.Program.Run(actual, standardOutput, standardError);
-      var text = (standardOutput.ToString() + standardError).Replace(directory, OutputMark, StringComparison.Ordinal).Replace(source, InputMark, StringComparison.Ordinal);
+      string Marked(string text) => text.Replace(directory, OutputMark, StringComparison.Ordinal).Replace(source, InputMark, StringComparison.Ordinal);
       var files = Directory.Exists(directory)
         ? Directory.GetFiles(directory).Order(StringComparer.Ordinal).Select(file => (Path.GetFileName(file), File.ReadAllBytes(file))).ToArray()
         : null;
-      return new Translation(exitCode, text, files);
+      return new Translation(exitCode, Marked(standardOutput.ToString()), Marked(standardError.ToString()), files);
     } finally {
       if (Directory.Exists(directory))
         Directory.Delete(directory, true);
@@ -304,7 +343,8 @@ internal static class Toolchain {
 
   private static (int ExitCode, string Output) Node(string workingDirectory, params string[] arguments) {
     try {
-      return Run("node", workingDirectory, arguments);
+      var result = Run("node", workingDirectory, arguments);
+      return (result.ExitCode, result.Output);
     } catch (Win32Exception exception) {
       Assert.Fail($"node is required to run the generated JavaScript but could not be started: {exception.Message}");
       throw;
@@ -342,7 +382,7 @@ internal static class Toolchain {
     _ => "f64"
   };
 
-  private static (int ExitCode, string Output) Run(string executable, string workingDirectory, string[] arguments, IReadOnlyDictionary<string, string>? environment = null) {
+  private static CommandResult Run(string executable, string workingDirectory, string[] arguments, IReadOnlyDictionary<string, string>? environment = null) {
     var start = new ProcessStartInfo(executable) {
       WorkingDirectory = workingDirectory,
       RedirectStandardOutput = true,
@@ -359,10 +399,10 @@ internal static class Toolchain {
     var error = process.StandardError.ReadToEndAsync();
     var output = process.StandardOutput.ReadToEnd();
     process.WaitForExit();
-    return (process.ExitCode, output + error.Result);
+    return new CommandResult(process.ExitCode, output, error.Result);
   }
 
-  /// <summary>A translation as the command did it: its exit code, its text with the paths marked, and the files it wrote, if it created the output directory.</summary>
-  private sealed record Translation(int ExitCode, string Output, (string Path, byte[] Content)[]? Files);
+  /// <summary>A translation as the command did it: its exit code, its two streams with the paths marked, and the files it wrote, if it created the output directory.</summary>
+  private sealed record Translation(int ExitCode, string Stdout, string Stderr, (string Path, byte[] Content)[]? Files);
 
 }
