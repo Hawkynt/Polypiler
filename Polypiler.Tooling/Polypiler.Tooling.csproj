@@ -12,6 +12,7 @@
     <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
+    <PackageReference Include="SharpFuzz" Version="2.3.0" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 

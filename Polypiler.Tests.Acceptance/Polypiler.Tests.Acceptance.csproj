@@ -44,6 +44,7 @@
     <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
     <Compile Include="..\Polypiler.Tests\Tooling\Corpus\MiniUpstream.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Verification\Running\Support\*.cs" LinkBase="Infra\Support" />
+    <Compile Include="..\Polypiler.Tests\Verification\Fuzzing\DemoTargets.cs" LinkBase="Infra\Support" />
   </ItemGroup>
 
   <ItemGroup>
