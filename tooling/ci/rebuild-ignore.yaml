@@ -1,0 +1,16 @@
+# The rebuild check (polypiler-tooling rebuild check / rebuild compare, Polypiler.Core.Verification/
+# Rebuild, PRD §13.1 and §23.3) runs every generating command twice in fresh directories and compares
+# the outputs byte for byte. This file is the only place where content that depends on the run may be
+# exempted, and every entry says why. Adding an entry to make a failing emitter pass is not a reason:
+# the emitter is fixed instead.
+#
+#   files             globs matched against the whole path relative to the output directory ('*' and
+#                     '?' within one segment, '**' across segments); a match is left out of the listing
+#   manifestPointers  RFC 6901 pointers into polypiler.manifest.json; the member is removed before the
+#                     manifest is compared in its canonical form (keys sorted, no whitespace)
+#
+# Both lists are empty: the manifest specification (spec/schemas/manifest.schema.json) documents no
+# run-dependent member - the manifest carries no timestamps, host names or absolute paths.
+schema: 1
+files: []
+manifestPointers: []

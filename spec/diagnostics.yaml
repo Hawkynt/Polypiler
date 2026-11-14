@@ -89,7 +89,7 @@ codes:
     rule: adr-0004.grammar
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: "standard error of polypiler, alone, for a command line the grammar of ADR 0004 refuses (unknown option, option without its value, flag given a value, option given more than once, value outside its set, empty list element, missing required option, missing or surplus operand, no command), and of polypiler translate for a language it does not know or an option that does not apply to the languages chosen; standard error of polypiler-tooling toolchains, diagnostics and fuzz as '<command>: error PLY0003: <reason>', for fuzz also an unknown target and a corpus directory that is missing or empty"
+    surfaces: "standard error of polypiler, alone, for a command line the grammar of ADR 0004 refuses (unknown option, option without its value, flag given a value, option given more than once, value outside its set, empty list element, missing required option, missing or surplus operand, no command), and of polypiler translate for a language it does not know or an option that does not apply to the languages chosen; standard error of polypiler-tooling toolchains, diagnostics and fuzz as '<command>: error PLY0003: <reason>', for fuzz also an unknown target and a corpus directory that is missing or empty; standard error of polypiler-tooling rebuild check for '--runs' below 2 or not a number, a missing '--output' or '-- <toolchain key>', an '--output' that is absolute or contains '..', and an '--input' that does not exist, and of rebuild compare for a directory that does not exist"
   - code: PLY0004
     severity: error
     exit: EnvironmentError
@@ -283,7 +283,7 @@ codes:
     rule: corpus.manifest
     area: infrastructure
     owner: INFRA-CORPUS
-    surfaces: "standard error of polypiler-tooling corpus import, verify and discover; reasons include a schema violation of corpus.yaml or corpus.lock.json, a fixture naming an undeclared repository, a duplicated fixture ID, an absolute path or one containing '..', a file under corpus/upstream that is not in the lock, a file not yet in the lock and an unknown fixture or repository asked for; also standard error of polypiler-tooling licenses scan and licenses inventory with the reasons 'licence policy: <detail>' (tooling/licensing/policy.yaml or its DECISIONS.md), 'licence declarations: <detail>' (licences.yaml of a scanned tree) and 'licence inventory: <detail>' (tooling/licensing/third-party.yaml)"
+    surfaces: "standard error of polypiler-tooling corpus import, verify and discover; reasons include a schema violation of corpus.yaml or corpus.lock.json, a fixture naming an undeclared repository, a duplicated fixture ID, an absolute path or one containing '..', a file under corpus/upstream that is not in the lock, a file not yet in the lock and an unknown fixture or repository asked for; also standard error of polypiler-tooling licenses scan and licenses inventory with the reasons 'licence policy: <detail>' (tooling/licensing/policy.yaml or its DECISIONS.md), 'licence declarations: <detail>' (licences.yaml of a scanned tree) and 'licence inventory: <detail>' (tooling/licensing/third-party.yaml); also standard error of polypiler-tooling rebuild check and rebuild compare with the reason 'rebuild ignore: <detail>' for a tooling/ci/rebuild-ignore.yaml that is not schema 1, has an unknown key, an entry without its reason or a manifest pointer that is not an RFC 6901 pointer below the root"
   - code: PLY0027
     severity: error
     exit: EnvironmentError
@@ -361,9 +361,10 @@ codes:
     exit: EnvironmentError
     title: rebuild differs
     message: "rebuild not deterministic: '<path>' differs at byte <offset>"
+    rule: rebuild.determinism
     area: infrastructure
     owner: INFRA-REBUILD
-    reserved: true
+    surfaces: "standard error of polypiler-tooling rebuild check and rebuild compare, one per difference between run 1 and a later run; a file that only one run wrote reads 'rebuild not deterministic: '<path>' exists only in run <n>'"
   - code: PLY0037
     severity: error
     exit: LicenseBlocker
