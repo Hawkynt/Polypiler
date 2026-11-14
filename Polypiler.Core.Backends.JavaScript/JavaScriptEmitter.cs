@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Polypiler.Core.Backends.JavaScript.Passes;
 using Polypiler.Core.Backends.JavaScript.Printing;
 using Polypiler.Core.Backends.JavaScript.Syntax;
 using Polypiler.Core.IR;
+using Polypiler.Core.Optimize.Target;
 
 namespace Polypiler.Core.Backends.JavaScript;
 
@@ -59,7 +61,8 @@ public static partial class JavaScriptEmitter {
   /// Emits the module for a profile and a floating-point mode. The header names the profile and, where
   /// the module calls a native function with an <c>ulp(n)</c> contract, each such function with the
   /// comparison bound of ADR 0005; in <see cref="FloatMode.Strict"/> it says that the results are the
-  /// same bits on every target.
+  /// same bits on every target. The tree is printed as the emitter built it, without the target
+  /// passes; the overload that takes <see cref="TargetPassOptions"/> runs them, as <c>translate</c> does.
   /// </summary>
   /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check"/> accepts.</param>
   /// <param name="profile">The JavaScript to write.</param>
@@ -67,14 +70,45 @@ public static partial class JavaScriptEmitter {
   /// <param name="capabilities">The table the constructs are chosen from; the standard one when <see langword="null"/>.</param>
   /// <returns>The generated file.</returns>
   /// <exception cref="ArgumentException">The module is ill-typed or cannot be expressed in the profile.</exception>
-  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities = null) {
+  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities = null)
+    => Emit(module, profile, mode, capabilities, TargetPassOptions.None).Files;
+
+  /// <summary>
+  /// Emits the module for a profile and a floating-point mode: builds its syntax tree, runs the target
+  /// passes the options let run (<see cref="JavaScriptTargetPasses.Pipeline"/>) and prints the tree.
+  /// </summary>
+  /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check"/> accepts.</param>
+  /// <param name="profile">The JavaScript to write.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="capabilities">The table the constructs are chosen from; the standard one when <see langword="null"/>.</param>
+  /// <param name="passes">Which target passes run.</param>
+  /// <returns>The generated file and what the passes changed.</returns>
+  /// <exception cref="ArgumentException">The module is ill-typed or cannot be expressed in the profile.</exception>
+  public static TargetEmission Emit(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes) {
+    var (program, applications) = Build(module, profile, mode, capabilities, passes);
+    return new([new GeneratedFile(module.Name + profile.Extension, JavaScriptPrinter.Print(program, profile))], applications);
+  }
+
+  /// <summary>
+  /// The syntax tree of the module for a profile and a floating-point mode, after the target passes
+  /// the options let run: what <see cref="Emit(IrModule, JavaScriptProfile, FloatMode, JavaScriptCapabilities?, TargetPassOptions)"/> prints.
+  /// </summary>
+  /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check"/> accepts.</param>
+  /// <param name="profile">The JavaScript to write.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="capabilities">The table the constructs are chosen from; the standard one when <see langword="null"/>.</param>
+  /// <param name="passes">Which target passes run.</param>
+  /// <returns>The tree and what the passes changed.</returns>
+  /// <exception cref="ArgumentException">The module is ill-typed or cannot be expressed in the profile.</exception>
+  public static TargetPipelineResult<JsProgram> Build(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes) {
+    ArgumentNullException.ThrowIfNull(passes);
     var writer = new Writer(profile, capabilities ?? JavaScriptCapabilities.Standard, mode);
     var problems = IrVerifier.Verify(module);
-    var text = problems.Count > 0 ? "" : JavaScriptPrinter.Print(writer.Module(module), profile);
+    var program = problems.Count > 0 ? null : writer.Module(module);
     if (problems.Concat(writer.Problems).FirstOrDefault() is { } problem)
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problem.Message}.", nameof(module));
 
-    return [new GeneratedFile(module.Name + profile.Extension, text)];
+    return JavaScriptTargetPasses.Pipeline.Run(program!, profile, passes);
   }
 
   /// <summary>Says why a module cannot be emitted for a profile.</summary>
@@ -120,6 +154,13 @@ public static partial class JavaScriptEmitter {
     IrTypeKind.U64 => "BigUint64Array",
     IrTypeKind.F32 => "Float32Array",
     _ => "Float64Array"
+  };
+
+  /// <summary>A declaration of a helper, marked as one so that the target passes may inline or remove it.</summary>
+  private static JsStatement AsHelper(JsStatement statement) => statement switch {
+    JsFunctionDeclaration function => function with { IsHelper = true },
+    JsVariableDeclaration variable => variable with { IsHelper = true },
+    _ => statement
   };
 
   /// <summary>A 64-bit integer as the object of its two unsigned halves.</summary>
@@ -242,7 +283,7 @@ public static partial class JavaScriptEmitter {
       var structs = this.StructHelpers();
       var body = new List<JsStatement>();
       foreach (var (_, statements) in JavaScriptHelpers.For(this._used, this.Native))
-        body.AddRange(statements.Select((statement, index) => index == 0 ? statement with { Leading = JsTrivia.Blank } : statement));
+        body.AddRange(statements.Select((statement, index) => AsHelper(index == 0 ? statement with { Leading = JsTrivia.Blank } : statement)));
 
       body.AddRange(structs);
       foreach (var constant in module.Constants) {

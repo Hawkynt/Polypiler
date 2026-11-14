@@ -192,7 +192,12 @@ public sealed record JsDeclarator(string Name, JsExpression? Initializer) : JsNo
 /// <summary><c>var</c>, <c>let</c> or <c>const</c> with its variables.</summary>
 /// <param name="Kind">The keyword.</param>
 /// <param name="Declarators">The variables.</param>
-public sealed record JsVariableDeclaration(string Kind, IReadOnlyList<JsDeclarator> Declarators) : JsStatement;
+public sealed record JsVariableDeclaration(string Kind, IReadOnlyList<JsDeclarator> Declarators) : JsStatement {
+
+  /// <summary>Whether the backend declares the variable in support of the module's code, as a helper; a target pass may remove it.</summary>
+  public bool IsHelper { get; init; }
+
+}
 
 /// <summary>An expression evaluated as a statement.</summary>
 /// <param name="Expression">The expression.</param>
@@ -254,7 +259,12 @@ public sealed record JsThrow(JsExpression Value) : JsStatement;
 /// <param name="Name">The name.</param>
 /// <param name="Parameters">The names of the parameters.</param>
 /// <param name="Body">The body.</param>
-public sealed record JsFunctionDeclaration(string Name, IReadOnlyList<string> Parameters, JsBlock Body) : JsStatement;
+public sealed record JsFunctionDeclaration(string Name, IReadOnlyList<string> Parameters, JsBlock Body) : JsStatement {
+
+  /// <summary>Whether the backend declares the function in support of the module's code: a helper, which a target pass may inline or remove.</summary>
+  public bool IsHelper { get; init; }
+
+}
 
 /// <summary><c>export</c> in front of a declaration.</summary>
 /// <param name="Declaration">The declaration.</param>

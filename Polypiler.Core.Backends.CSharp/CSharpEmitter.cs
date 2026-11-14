@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.CSharp.Printing;
 using Polypiler.Core.Backends.CSharp.Syntax;
 using Polypiler.Core.IR;
 using Polypiler.Core.Legalize;
+using Polypiler.Core.Optimize.Target;
 
 namespace Polypiler.Core.Backends.CSharp;
 
@@ -111,6 +113,9 @@ public static partial class CSharpEmitter {
     [IrBinaryOp.LogicalAnd] = "&&",
     [IrBinaryOp.LogicalOr] = "||"
   };
+
+  /// <summary>The keyword of a scalar IR type in C#, such as <c>uint</c> for <c>u32</c>.</summary>
+  internal static string Keyword(IrType type) => _types[type.Kind];
 
   /// <summary>Says why a module cannot be emitted for the default profile.</summary>
   /// <param name="module">The module to check.</param>
@@ -241,7 +246,8 @@ public static partial class CSharpEmitter {
   /// Emits the module for a profile and a floating-point mode. The header names the profile and, where
   /// the class calls a native function with an <c>ulp(n)</c> contract, each such function with the
   /// comparison bound of ADR 0005; in <see cref="FloatMode.Strict"/> it says that the results are the
-  /// same bits on every target.
+  /// same bits on every target. The tree is printed as the emitter built it, without the target
+  /// passes; the overload that takes <see cref="TargetPassOptions"/> runs them, as <c>translate</c> does.
   /// </summary>
   /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check(IrModule, CSharpProfile, CSharpCapabilities?)"/> accepts.</param>
   /// <param name="profile">The target framework and language version.</param>
@@ -250,7 +256,41 @@ public static partial class CSharpEmitter {
   /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>The generated file.</returns>
   /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
-  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace = null, CSharpCapabilities? capabilities = null) {
+  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace = null, CSharpCapabilities? capabilities = null)
+    => Emit(module, profile, mode, @namespace, capabilities, TargetPassOptions.None).Files;
+
+  /// <summary>
+  /// Emits the module for a profile and a floating-point mode: builds its syntax tree, runs the target
+  /// passes the options let run (<see cref="CSharpTargetPasses.Pipeline"/>) and prints the tree.
+  /// </summary>
+  /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check(IrModule, CSharpProfile, CSharpCapabilities?)"/> accepts.</param>
+  /// <param name="profile">The target framework and language version.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="namespace">The namespace of the class, or <see langword="null"/> for none.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
+  /// <param name="passes">Which target passes run.</param>
+  /// <returns>The generated file and what the passes changed.</returns>
+  /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
+  public static TargetEmission Emit(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace, CSharpCapabilities? capabilities, TargetPassOptions passes) {
+    var (unit, applications) = Build(module, profile, mode, @namespace, capabilities, passes);
+    var name = CSharpTargetPasses.ModuleClass(unit)!.Name.TrimStart('@');
+    return new([new GeneratedFile(name + ".cs", CSharpPrinter.Print(unit, profile, capabilities))], applications);
+  }
+
+  /// <summary>
+  /// The syntax tree of the module for a profile and a floating-point mode, after the target passes
+  /// the options let run: what <see cref="Emit(IrModule, CSharpProfile, FloatMode, string?, CSharpCapabilities?, TargetPassOptions)"/> prints.
+  /// </summary>
+  /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check(IrModule, CSharpProfile, CSharpCapabilities?)"/> accepts.</param>
+  /// <param name="profile">The target framework and language version.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="namespace">The namespace of the class, or <see langword="null"/> for none.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
+  /// <param name="passes">Which target passes run.</param>
+  /// <returns>The tree and what the passes changed.</returns>
+  /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
+  public static TargetPipelineResult<CsCompilationUnit> Build(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace, CSharpCapabilities? capabilities, TargetPassOptions passes) {
+    ArgumentNullException.ThrowIfNull(passes);
     if (@namespace is not null && !IsNamespace(@namespace))
       throw new ArgumentException($"'{@namespace}' is not a namespace name.", nameof(@namespace));
 
@@ -263,7 +303,7 @@ public static partial class CSharpEmitter {
     var draft = new Writer(module, profile, table, [], mode);
     draft.Module(@namespace);
     var writer = new Writer(module, profile, table, draft.Helpers, mode);
-    return [new GeneratedFile(writer.ClassName + ".cs", CSharpPrinter.Print(writer.Module(@namespace), profile, table))];
+    return CSharpTargetPasses.Pipeline.Run(writer.Module(@namespace), profile, passes);
   }
 
   private static void Known(IrType type, List<string> unknown) {
@@ -605,7 +645,7 @@ public static partial class CSharpEmitter {
 
       // The table's order is the order of the helpers, whatever order the class calls them in.
       foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains))
-        members.Add(HelperDeclaration(helper) with { Name = this._helpers.GetValueOrDefault(helper.Name, helper.Name), Leading = CsTrivia.Blank });
+        members.Add(HelperDeclaration(helper) with { Name = this._helpers.GetValueOrDefault(helper.Name, helper.Name), Leading = CsTrivia.Blank, IsHelper = true });
 
       var types = this.Structs();
       types.Add(new CsTypeDeclaration(["public", "static"], "class", this._class, null, [], [.. members.Select(member => member with { Leading = CsTrivia.Blank })]));

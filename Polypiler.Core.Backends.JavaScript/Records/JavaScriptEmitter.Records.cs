@@ -297,7 +297,7 @@ public static partial class JavaScriptEmitter {
             break;
         }
 
-        helpers.Add(function with { Leading = JsTrivia.Blank });
+        helpers.Add(function with { Leading = JsTrivia.Blank, IsHelper = true });
       }
 
       return helpers;

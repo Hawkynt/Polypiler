@@ -329,7 +329,12 @@ public sealed record CsField(IReadOnlyList<string> Modifiers, CsType FieldType, 
 /// <param name="ExpressionBody">The expression body, or <see langword="null"/>.</param>
 public sealed record CsMethod(
   IReadOnlyList<string> Modifiers, CsType ReturnType, string Name, IReadOnlyList<string> TypeParameters, IReadOnlyList<CsParameter> Parameters,
-  CsBlock? Body, CsExpression? ExpressionBody) : CsMember;
+  CsBlock? Body, CsExpression? ExpressionBody) : CsMember {
+
+  /// <summary>Whether the backend declares the method in support of the module's code: a helper, which a target pass may inline or remove.</summary>
+  public bool IsHelper { get; init; }
+
+}
 
 /// <summary>A constructor.</summary>
 /// <param name="Modifiers">The modifiers.</param>

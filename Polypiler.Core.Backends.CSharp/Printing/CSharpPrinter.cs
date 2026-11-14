@@ -506,14 +506,16 @@ public static class CSharpPrinter {
           break;
         case CsBinary binary:
           var precedence = Of(binary.Operator);
-          this.Operand(binary.Left, Precedence(binary.Left) >= precedence, depth);
+          // ?? groups to the right, every other binary operator to the left.
+          var right = binary.Operator == "??";
+          this.Operand(binary.Left, right ? Precedence(binary.Left) > precedence : Precedence(binary.Left) >= precedence, depth);
           if (binary.BreakBefore)
             this.Break(depth);
           else
             this._text.Append(' ');
 
           this._text.Append(binary.Operator).Append(' ');
-          this.Operand(binary.Right, Precedence(binary.Right) > precedence, depth);
+          this.Operand(binary.Right, right ? Precedence(binary.Right) >= precedence : Precedence(binary.Right) > precedence, depth);
           break;
         case CsIsType test:
           this.Operand(test.Operand, Precedence(test.Operand) >= Relational, depth);
