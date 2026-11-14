@@ -1,0 +1,359 @@
+[
+  {
+    "index": 1,
+    "section": "Basic Operations",
+    "name": "shl.canRoute: bit 0->4 should be possible",
+    "sourceLine": 880,
+    "body": "        assert(BUILDING_BLOCKS.shl.canRoute(0, 4, 8), 'shl should route 0->4');"
+  },
+  {
+    "index": 2,
+    "section": "Basic Operations",
+    "name": "shl.canRoute: bit 4->0 should NOT be possible",
+    "sourceLine": 884,
+    "body": "        assert(!BUILDING_BLOCKS.shl.canRoute(4, 0, 8), 'shl cannot route right');"
+  },
+  {
+    "index": 3,
+    "section": "Basic Operations",
+    "name": "shl.apply: mask 0x0F << 4 = 0xF0",
+    "sourceLine": 888,
+    "body": "        assertEq(BUILDING_BLOCKS.shl.apply(0x0Fn, 8, 4), 0xF0n);"
+  },
+  {
+    "index": 4,
+    "section": "Basic Operations",
+    "name": "shr.apply: mask 0xF0 >> 4 = 0x0F",
+    "sourceLine": 892,
+    "body": "        assertEq(BUILDING_BLOCKS.shr.apply(0xF0n, 8, 4), 0x0Fn);"
+  },
+  {
+    "index": 5,
+    "section": "Basic Operations",
+    "name": "rol.apply: 0x81 rol 1 in 8-bit = 0x03",
+    "sourceLine": 896,
+    "body": "        assertEq(BUILDING_BLOCKS.rol.apply(0x81n, 8, 1), 0x03n);"
+  },
+  {
+    "index": 6,
+    "section": "Basic Operations",
+    "name": "ror.apply: 0x03 ror 1 in 8-bit = 0x81",
+    "sourceLine": 900,
+    "body": "        assertEq(BUILDING_BLOCKS.ror.apply(0x03n, 8, 1), 0x81n);"
+  },
+  {
+    "index": 7,
+    "section": "Bit Movement Tracking",
+    "name": "shl: tracks bit movement correctly (no side effects)",
+    "sourceLine": 909,
+    "body": "        // Shift bits 0,1,2 left by 4 -> should land at 4,5,6\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.shl.apply, [0, 1, 2], 8, 4);\n        assertEq(analysis.movements.length, 3, 'Should have 3 movements');\n        assert(analysis.movements.some(m => m.src === 0 && m.dst === 4), 'Bit 0 should go to 4');\n        assert(analysis.movements.some(m => m.src === 1 && m.dst === 5), 'Bit 1 should go to 5');\n        assert(analysis.movements.some(m => m.src === 2 && m.dst === 6), 'Bit 2 should go to 6');\n        assertEq(analysis.collisions.length, 0, 'Should have no collisions');"
+  },
+  {
+    "index": 8,
+    "section": "Bit Movement Tracking",
+    "name": "shl: bits shifted out are lost (no wrap)",
+    "sourceLine": 919,
+    "body": "        // Shift bit 7 left by 1 in 8-bit -> should disappear\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.shl.apply, [7], 8, 1);\n        assertEq(analysis.movements.length, 0, 'Bit 7 shifted out should be lost');"
+  },
+  {
+    "index": 9,
+    "section": "Bit Movement Tracking",
+    "name": "rol: tracks wrap-around correctly",
+    "sourceLine": 925,
+    "body": "        // Rotate bit 7 left by 1 -> should wrap to position 0\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.rol.apply, [7], 8, 1);\n        assertEq(analysis.movements.length, 1, 'Should have 1 movement');\n        assert(analysis.movements[0].src === 7 && analysis.movements[0].dst === 0, 'Bit 7 should wrap to 0');"
+  },
+  {
+    "index": 10,
+    "section": "Bit Movement Tracking",
+    "name": "rol: all bits move together (side effects expected)",
+    "sourceLine": 932,
+    "body": "        // Rotate bits 0,1,7 left by 2 -> 0->2, 1->3, 7->1\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.rol.apply, [0, 1, 7], 8, 2);\n        assertEq(analysis.movements.length, 3, 'All 3 bits should move');\n        assert(analysis.movements.some(m => m.src === 0 && m.dst === 2), '0->2');\n        assert(analysis.movements.some(m => m.src === 1 && m.dst === 3), '1->3');\n        assert(analysis.movements.some(m => m.src === 7 && m.dst === 1), '7->1 (wrap)');"
+  },
+  {
+    "index": 11,
+    "section": "Collision Detection",
+    "name": "mul: detects collision when multiple bits land on same position",
+    "sourceLine": 946,
+    "body": "        // Multiply by 3 (bits 0,1 set): each source bit lands at +0 and +1\n        // If we have bits at 0 and 1, then:\n        //   bit 0 -> positions 0, 1\n        //   bit 1 -> positions 1, 2\n        // Position 1 has collision (bits 0 and 1 both land there)\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0, 1], 8, 3n);\n        assert(analysis.collisions.length > 0, 'Should detect collision');\n        const collision = analysis.collisions.find(c => c.dst === 1);\n        assert(collision, 'Collision should be at position 1');\n        assertEq(collision.sources.length, 2, 'Two sources collide at position 1');"
+  },
+  {
+    "index": 12,
+    "section": "Collision Detection",
+    "name": "mul: no collision when bits spread without overlap",
+    "sourceLine": 959,
+    "body": "        // Multiply by 5 (bits 0,2 set): source bit lands at +0 and +2\n        // If only bit 0 is set: lands at 0 and 2 (no collision)\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0], 8, 5n);\n        assertEq(analysis.collisions.length, 0, 'Single bit should not collide with itself');\n        assertEq(analysis.movements.length, 2, 'Should land at 2 positions');"
+  },
+  {
+    "index": 13,
+    "section": "Collision Detection",
+    "name": "mul: detects carry-risk collision pattern",
+    "sourceLine": 967,
+    "body": "        // Multiply by 0x11 (bits 0,4 set): source bit lands at +0 and +4\n        // Bits 0 and 4 as input: 0->0,4 and 4->4,8(overflow)\n        // Position 4 has collision from bit 0's +4 and bit 4's +0\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0, 4], 8, 0x11n);\n        const collision = analysis.collisions.find(c => c.dst === 4);\n        assert(collision, 'Should have collision at position 4');"
+  },
+  {
+    "index": 14,
+    "section": "Side Effect Detection",
+    "name": "shl: pure shift has predictable side effects",
+    "sourceLine": 981,
+    "body": "        // When shifting, ALL bits in the mask move, not just wanted ones\n        // Input: bits 0,1,2,3 set. Shift left 4. ALL move to 4,5,6,7\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.shl.apply, [0, 1, 2, 3], 8, 4);\n        assertEq(analysis.movements.length, 4, 'All 4 bits should move');\n        // If we only wanted bit 0->4, bits 1,2,3 moving are side effects\n        const wantedDst = 4;\n        const sideEffects = analysis.movements.filter(m => m.dst !== wantedDst);\n        assertEq(sideEffects.length, 3, '3 side effect movements');"
+  },
+  {
+    "index": 15,
+    "section": "Side Effect Detection",
+    "name": "bmi2: no side effects (precise bit placement)",
+    "sourceLine": 992,
+    "body": "        // BMI2 places bits exactly where specified, no extras\n        // Extract bits 1,3,5 and deposit to 0,1,2\n        const srcMask = 0b00101010n; // bits 1,3,5\n        const dstMask = 0b00000111n; // bits 0,1,2\n        const inputBits = [1, 3, 5];\n        const analysis = analyzeBitMovement(\n            (mask, w, s, d) => BUILDING_BLOCKS.bmi2.apply(mask, w, s, d),\n            inputBits, 8, srcMask, dstMask\n        );\n        // Each source bit should go to exactly one destination\n        assertEq(analysis.movements.length, 3, 'Exactly 3 movements');\n        assertEq(analysis.collisions.length, 0, 'No collisions');\n        // Verify precise placement\n        assert(analysis.movements.some(m => m.src === 1 && m.dst === 0), '1->0');\n        assert(analysis.movements.some(m => m.src === 3 && m.dst === 1), '3->1');\n        assert(analysis.movements.some(m => m.src === 5 && m.dst === 2), '5->2');"
+  },
+  {
+    "index": 16,
+    "section": "Routing Report Verification",
+    "name": "shl.findRoutings: correctly identifies routable bits",
+    "sourceLine": 1016,
+    "body": "        const rm = makeRouteMap({4: 0, 5: 1, 6: 2}, 8);\n        const remaining = maskFrom(4, 5, 6);\n        const results = BUILDING_BLOCKS.shl.findRoutings(rm, remaining, 8);\n        const shift4 = results.find(r => r.n === 4);\n        assert(shift4, 'Should find shift-4');\n        assertEq(shift4.count, 3, 'Should route 3 bits');\n        // Verify mask matches claimed count\n        assertEq(popcount(shift4.mask), 3, 'Mask popcount should match count');"
+  },
+  {
+    "index": 17,
+    "section": "Routing Report Verification",
+    "name": "shl.findRoutings: excludes bits that cannot be routed by this shift",
+    "sourceLine": 1027,
+    "body": "        // Want: 4 from 0 (shift 4), 5 from 0 (shift 5) - different shifts needed\n        const rm = makeRouteMap({4: 0, 5: 0}, 8);\n        const remaining = maskFrom(4, 5);\n        const results = BUILDING_BLOCKS.shl.findRoutings(rm, remaining, 8);\n        // Shift-4 should only claim bit 4, not bit 5\n        const shift4 = results.find(r => r.n === 4);\n        if (shift4) {\n            assert((shift4.mask & (1n << 5n)) === 0n, 'Shift-4 should not claim bit 5');\n        }"
+  },
+  {
+    "index": 18,
+    "section": "Routing Report Verification",
+    "name": "bmi2.findRoutings: rejects duplicate sources",
+    "sourceLine": 1039,
+    "body": "        const rm = makeRouteMap({0: 5, 1: 5}, 8); // Both from source 5\n        const remaining = maskFrom(0, 1);\n        const results = BUILDING_BLOCKS.bmi2.findRoutings(rm, remaining, 8, defaultCosts);\n        assertEq(results.length, 0, 'Should reject duplicate sources');"
+  },
+  {
+    "index": 19,
+    "section": "Routing Report Verification",
+    "name": "bmi2.findRoutings: accepts unique sources",
+    "sourceLine": 1046,
+    "body": "        const rm = makeRouteMap({0: 5, 1: 6, 2: 7}, 8);\n        const remaining = maskFrom(0, 1, 2);\n        const results = BUILDING_BLOCKS.bmi2.findRoutings(rm, remaining, 8, defaultCosts);\n        assertEq(results.length, 1, 'Should find one routing');\n        assertEq(results[0].count, 3, 'Should route all 3 bits');"
+  },
+  {
+    "index": 20,
+    "section": "Routing Report Verification",
+    "name": "mul.findRoutings: avoids collision-prone patterns",
+    "sourceLine": 1054,
+    "body": "        // If findRoutings returns a routing, verify it won't cause collisions\n        const rm = makeRouteMap({0: 0, 4: 0}, 8); // bit 0 to positions 0 and 4\n        const remaining = maskFrom(0, 4);\n        const results = BUILDING_BLOCKS.mul.findRoutings(rm, remaining, 8, defaultCosts);\n        // If any routing is returned, verify its mask doesn't include collision positions\n        for (const r of results) {\n            // The mask should only include positions that are safe\n            const claimedBits = [];\n            for (let i = 0; i < 8; ++i) {\n                if ((r.mask >> BigInt(i)) & 1n) claimedBits.push(i);\n            }\n            // Each claimed bit should be from a unique source\n            const sources = claimedBits.map(d => rm[d]);\n            const uniqueSources = new Set(sources);\n            // For multiply, we allow same source going to multiple places\n            // but the mask should not include collision positions\n        }\n        assert(true, 'Routing analysis passed');"
+  },
+  {
+    "index": 21,
+    "section": "Byte-Level Operations",
+    "name": "pshufb: tracks byte movement correctly",
+    "sourceLine": 1080,
+    "body": "        // Swap bytes 0 and 1 in 16-bit\n        const indices = [1, 0];\n        // Input: byte 0 = bits 0-7, byte 1 = bits 8-15\n        const analysis = analyzeBitMovement(\n            (mask, w, idx) => BUILDING_BLOCKS.pshufb.apply(mask, w, idx),\n            [0, 1, 2, 3, 4, 5, 6, 7], 16, indices\n        );\n        // All 8 bits from byte 0 should move to byte 1 positions (8-15)\n        for (let i = 0; i < 8; ++i) {\n            assert(analysis.movements.some(m => m.src === i && m.dst === i + 8),\n                `Bit ${i} should move to ${i + 8}`);\n        }"
+  },
+  {
+    "index": 22,
+    "section": "Byte-Level Operations",
+    "name": "pshufb.findRoutings: rejects non-byte-aligned permutation",
+    "sourceLine": 1095,
+    "body": "        // bit 0 from bit 9 (bit 1 of byte 1) - not aligned\n        const rm = Array(64).fill(-1);\n        rm[0] = 9; // bit 0 wants bit 9 (wrong alignment within byte)\n        const remaining = maskFrom(0);\n        const mapping = makeMapping(rm, 64);\n        const results = BUILDING_BLOCKS.pshufb.findRoutings(rm, remaining, 64, defaultCosts, mapping);\n        assertEq(results.length, 0, 'Should reject non-aligned');"
+  },
+  {
+    "index": 23,
+    "section": "Byte-Level Operations",
+    "name": "rev: tracks byte reversal correctly",
+    "sourceLine": 1105,
+    "body": "        // 32-bit reversal: byte 0 <-> byte 3, byte 1 <-> byte 2\n        const inputBits = [0, 8, 16, 24]; // one bit from each byte\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.rev.apply, inputBits, 32);\n        assert(analysis.movements.some(m => m.src === 0 && m.dst === 24), 'Bit 0 -> 24');\n        assert(analysis.movements.some(m => m.src === 8 && m.dst === 16), 'Bit 8 -> 16');\n        assert(analysis.movements.some(m => m.src === 16 && m.dst === 8), 'Bit 16 -> 8');\n        assert(analysis.movements.some(m => m.src === 24 && m.dst === 0), 'Bit 24 -> 0');"
+  },
+  {
+    "index": 24,
+    "section": "Byte-Level Operations",
+    "name": "rbit: tracks bit reversal correctly",
+    "sourceLine": 1115,
+    "body": "        const inputBits = [0, 1, 7];\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.rbit.apply, inputBits, 8);\n        assert(analysis.movements.some(m => m.src === 0 && m.dst === 7), '0 -> 7');\n        assert(analysis.movements.some(m => m.src === 1 && m.dst === 6), '1 -> 6');\n        assert(analysis.movements.some(m => m.src === 7 && m.dst === 0), '7 -> 0');"
+  },
+  {
+    "index": 25,
+    "section": "Integration",
+    "name": "generateAllOperations: finds correct operations",
+    "sourceLine": 1128,
+    "body": "        const rm = makeRouteMap({4: 0, 5: 1, 6: 2, 7: 3}, 8);\n        const remaining = maskFrom(4, 5, 6, 7);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n        const mapping = makeMapping(rm, 8);\n        const ops = generateAllOperations(remaining, rm, 8, defaultCosts, enables, mapping);\n        assert(ops.length > 0, 'Should find operations');\n        const shiftOp = ops.find(o => o.type === 'delta' && o.shift === 4);\n        assert(shiftOp, 'Should find shift-4');"
+  },
+  {
+    "index": 26,
+    "section": "Integration",
+    "name": "verifyOperationReport: shl reports match reality",
+    "sourceLine": 1139,
+    "body": "        const rm = makeRouteMap({4: 0, 5: 1}, 8);\n        const remaining = maskFrom(4, 5);\n        const verification = verifyOperationReport(BUILDING_BLOCKS.shl, rm, remaining, 8, defaultCosts);\n        assertEq(verification.issues.length, 0, 'No issues with shl report');"
+  },
+  {
+    "index": 27,
+    "section": "Solver Tests",
+    "name": "solveExhaustive: simple shift permutation",
+    "sourceLine": 1151,
+    "body": "        // Bits 0,1,2,3 -> 4,5,6,7 (shift left by 4)\n        const rm = makeRouteMap({4: 0, 5: 1, 6: 2, 7: 3}, 8);\n        const routedMask = maskFrom(4, 5, 6, 7);\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n        const result = solveExhaustive(rm, routedMask, 8, defaultCosts, enables, mapping);\n        assert(result !== null, 'Should find solution');\n        assert(result.steps.length >= 1, 'Should have at least 1 step');\n        assertEq(result.steps.length, 1, 'Optimal: single shift operation');"
+  },
+  {
+    "index": 28,
+    "section": "Solver Tests",
+    "name": "solveExhaustive: identity permutation (no change)",
+    "sourceLine": 1163,
+    "body": "        // Bits stay in place: 0->0, 1->1, 2->2, 3->3\n        const rm = makeRouteMap({0: 0, 1: 1, 2: 2, 3: 3}, 8);\n        const routedMask = maskFrom(0, 1, 2, 3);\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n        const result = solveExhaustive(rm, routedMask, 8, defaultCosts, enables, mapping);\n        assert(result !== null, 'Should find solution');\n        // Identity should need just one operation (shift by 0 or mask)\n        assert(result.steps.length <= 1, 'Identity should be trivial');"
+  },
+  {
+    "index": 29,
+    "section": "Solver Tests",
+    "name": "solveExhaustive: rotation permutation",
+    "sourceLine": 1175,
+    "body": "        // Rotate left by 3: 0->3, 1->4, ..., 5->0, 6->1, 7->2\n        const rm = makeRouteMap({3: 0, 4: 1, 5: 2, 6: 3, 7: 4, 0: 5, 1: 6, 2: 7}, 8);\n        const routedMask = 0xFFn;\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n        const result = solveExhaustive(rm, routedMask, 8, defaultCosts, enables, mapping);\n        assert(result !== null, 'Should find solution');\n        assertEq(result.steps.length, 1, 'Pure rotation should be 1 step');"
+  },
+  {
+    "index": 30,
+    "section": "Solver Tests",
+    "name": "solveExhaustive: empty permutation",
+    "sourceLine": 1186,
+    "body": "        // No bits to route\n        const rm = Array(8).fill(-1);\n        const routedMask = 0n;\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n        const result = solveExhaustive(rm, routedMask, 8, defaultCosts, enables, mapping);\n        assert(result !== null, 'Should handle empty');\n        assertEq(result.steps.length, 0, 'No steps needed');\n        assertEq(result.totalCost, 0, 'Zero cost');"
+  },
+  {
+    "index": 31,
+    "section": "Solver Tests",
+    "name": "solveExhaustive: two different shifts needed",
+    "sourceLine": 1198,
+    "body": "        // 0->2 (shift 2) and 4->7 (shift 3) - needs 2 operations\n        const rm = makeRouteMap({2: 0, 7: 4}, 8);\n        const routedMask = maskFrom(2, 7);\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: false, mul: false, bmi: false, pshufb: false };\n        const result = solveExhaustive(rm, routedMask, 8, defaultCosts, enables, mapping);\n        assert(result !== null, 'Should find solution');\n        assertEq(result.steps.length, 2, 'Needs 2 separate shifts');"
+  },
+  {
+    "index": 32,
+    "section": "Complex Permutations",
+    "name": "mixed: some bits swap, some stay, some shift",
+    "sourceLine": 1214,
+    "body": "        // bit 0 stays at 0, bit 1<->2 swap, bit 3->5\n        // 0->0 (delta 0), 1->2 (delta 1), 2->1 (delta -1 = 7), 3->5 (delta 2)\n        const rm = makeRouteMap({0: 0, 2: 1, 1: 2, 5: 3}, 8);\n        const routedMask = maskFrom(0, 1, 2, 5);\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n        const ops = generateAllOperations(routedMask, rm, 8, defaultCosts, enables, mapping);\n        // Should find operations for different deltas\n        const delta0 = ops.filter(o => o.type === 'delta' && o.shift === 0);\n        const delta1 = ops.filter(o => o.type === 'delta' && o.shift === 1);\n        const delta7 = ops.filter(o => o.type === 'delta' && o.shift === 7);\n        const delta2 = ops.filter(o => o.type === 'delta' && o.shift === 2);\n        assert(delta0.length > 0, 'Should find delta-0 for bit 0');\n        assert(delta1.length > 0, 'Should find delta-1 for bit 1->2');\n        assert(delta7.length > 0, 'Should find delta-7 (rot) for bit 2->1');\n        assert(delta2.length > 0, 'Should find delta-2 for bit 3->5');"
+  },
+  {
+    "index": 33,
+    "section": "Complex Permutations",
+    "name": "duplicate: same source to multiple destinations",
+    "sourceLine": 1233,
+    "body": "        // bit 0 goes to positions 0, 2, and 4 (duplication)\n        const rm = makeRouteMap({0: 0, 2: 0, 4: 0}, 8);\n        const routedMask = maskFrom(0, 2, 4);\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n\n        // Shift operations should handle parts separately\n        const ops = generateAllOperations(routedMask, rm, 8, defaultCosts, enables, mapping);\n        // Delta 0 handles 0->0, delta 2 handles 0->2, delta 4 handles 0->4\n        const delta0 = ops.find(o => o.type === 'delta' && o.shift === 0);\n        const delta2 = ops.find(o => o.type === 'delta' && o.shift === 2);\n        const delta4 = ops.find(o => o.type === 'delta' && o.shift === 4);\n        assert(delta0, 'Should find delta-0');\n        assert(delta2, 'Should find delta-2');\n        assert(delta4, 'Should find delta-4');\n\n        // BMI2 should NOT handle duplicates (requires unique sources)\n        const bmiResults = BUILDING_BLOCKS.bmi2.findRoutings(rm, routedMask, 8, defaultCosts);\n        assertEq(bmiResults.length, 0, 'BMI2 rejects duplicates');"
+  },
+  {
+    "index": 34,
+    "section": "Complex Permutations",
+    "name": "duplicate: multiply can handle bit spreading",
+    "sourceLine": 1255,
+    "body": "        // bit 0 spreads to 0 and 2 via multiply by 5 (bits 0,2 set)\n        // This is x * 5 pattern\n        const inputBits = [0];\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, inputBits, 8, 5n);\n        assertEq(analysis.movements.length, 2, 'Multiply by 5 spreads to 2 positions');\n        assert(analysis.movements.some(m => m.src === 0 && m.dst === 0), '0->0');\n        assert(analysis.movements.some(m => m.src === 0 && m.dst === 2), '0->2');\n        assertEq(analysis.collisions.length, 0, 'Single source: no collisions');"
+  },
+  {
+    "index": 35,
+    "section": "Complex Permutations",
+    "name": "swap: adjacent bits (hardest case)",
+    "sourceLine": 1266,
+    "body": "        // Swap bits 0 and 1: 0->1, 1->0\n        const rm = makeRouteMap({1: 0, 0: 1}, 8);\n        const routedMask = maskFrom(0, 1);\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n        const result = solveExhaustive(rm, routedMask, 8, defaultCosts, enables, mapping);\n        assert(result !== null, 'Should find solution for swap');\n        // Swap requires at least 2 operations (one for each direction)\n        assert(result.steps.length >= 2, 'Swap needs multiple operations');"
+  },
+  {
+    "index": 36,
+    "section": "Complex Permutations",
+    "name": "swap: non-adjacent bits (equidistant = 1 rotation)",
+    "sourceLine": 1278,
+    "body": "        // Swap bits 0 and 4: 0->4, 4->0\n        // This is special: bits are exactly half-width apart, so ROL 4 does both!\n        const rm = makeRouteMap({4: 0, 0: 4}, 8);\n        const routedMask = maskFrom(0, 4);\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n        const result = solveExhaustive(rm, routedMask, 8, defaultCosts, enables, mapping);\n        assert(result !== null, 'Should find solution');\n        assertEq(result.steps.length, 1, 'Equidistant swap = single rotation');"
+  },
+  {
+    "index": 37,
+    "section": "Complex Permutations",
+    "name": "swap: non-equidistant bits (needs 2+ ops)",
+    "sourceLine": 1290,
+    "body": "        // Swap bits 0 and 3: 0->3, 3->0 - NOT equidistant, no single rotation works\n        const rm = makeRouteMap({3: 0, 0: 3}, 8);\n        const routedMask = maskFrom(0, 3);\n        const mapping = makeMapping(rm, 8);\n        const enables = { shift: true, rotate: true, mul: true, bmi: false, pshufb: false };\n        const result = solveExhaustive(rm, routedMask, 8, defaultCosts, enables, mapping);\n        assert(result !== null, 'Should find solution');\n        assert(result.steps.length >= 2, 'Non-equidistant swap needs 2+ operations');"
+  },
+  {
+    "index": 38,
+    "section": "Multiply Patterns",
+    "name": "mul by 3 (0b11): adjacent bits set",
+    "sourceLine": 1306,
+    "body": "        // Each input bit lands at +0 and +1\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0], 8, 3n);\n        assertEq(analysis.movements.length, 2, '1 bit -> 2 positions');\n        assert(analysis.movements.some(m => m.dst === 0), 'lands at 0');\n        assert(analysis.movements.some(m => m.dst === 1), 'lands at 1');"
+  },
+  {
+    "index": 39,
+    "section": "Multiply Patterns",
+    "name": "mul by 5 (0b101): sparse mask",
+    "sourceLine": 1314,
+    "body": "        // Each input bit lands at +0 and +2\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0], 8, 5n);\n        assertEq(analysis.movements.length, 2, '1 bit -> 2 positions');\n        assert(analysis.movements.some(m => m.dst === 0), 'lands at 0');\n        assert(analysis.movements.some(m => m.dst === 2), 'lands at 2');"
+  },
+  {
+    "index": 40,
+    "section": "Multiply Patterns",
+    "name": "mul by 9 (0b1001): wide sparse mask",
+    "sourceLine": 1322,
+    "body": "        // Each input bit lands at +0 and +3\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0], 8, 9n);\n        assertEq(analysis.movements.length, 2, '1 bit -> 2 positions');\n        assert(analysis.movements.some(m => m.dst === 0), 'lands at 0');\n        assert(analysis.movements.some(m => m.dst === 3), 'lands at 3');"
+  },
+  {
+    "index": 41,
+    "section": "Multiply Patterns",
+    "name": "mul by 127 (0b1111111): dense mask",
+    "sourceLine": 1330,
+    "body": "        // Each input bit lands at 7 positions (+0 to +6)\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0], 8, 127n);\n        assertEq(analysis.movements.length, 7, '1 bit -> 7 positions');\n        for (let i = 0; i < 7; ++i)\n            assert(analysis.movements.some(m => m.dst === i), `lands at ${i}`);"
+  },
+  {
+    "index": 42,
+    "section": "Multiply Patterns",
+    "name": "mul by 255 (0xFF): all low bits set",
+    "sourceLine": 1338,
+    "body": "        // Each input bit lands at 8 positions, but bit 0 at positions 0-7\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0], 8, 255n);\n        assertEq(analysis.movements.length, 8, '1 bit -> 8 positions');"
+  },
+  {
+    "index": 43,
+    "section": "Multiply Patterns",
+    "name": "mul collision: 3 * [bits 0,1]",
+    "sourceLine": 1344,
+    "body": "        // 3 = 0b11: bit lands at +0,+1\n        // bit 0 -> 0,1\n        // bit 1 -> 1,2\n        // Collision at position 1!\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0, 1], 8, 3n);\n        assert(analysis.collisions.length > 0, 'Should detect collision');\n        const col = analysis.collisions.find(c => c.dst === 1);\n        assert(col, 'Collision at position 1');\n        assert(col.sources.includes(0) && col.sources.includes(1), 'Both bits collide');"
+  },
+  {
+    "index": 44,
+    "section": "Multiply Patterns",
+    "name": "mul no collision: 5 * [bits 0,2]",
+    "sourceLine": 1356,
+    "body": "        // 5 = 0b101: bit lands at +0,+2\n        // bit 0 -> 0,2\n        // bit 2 -> 2,4\n        // Collision at position 2!\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0, 2], 8, 5n);\n        const col = analysis.collisions.find(c => c.dst === 2);\n        assert(col, 'Collision at position 2');"
+  },
+  {
+    "index": 45,
+    "section": "Multiply Patterns",
+    "name": "mul no collision: 9 * [bits 0,4]",
+    "sourceLine": 1366,
+    "body": "        // 9 = 0b1001: bit lands at +0,+3\n        // bit 0 -> 0,3\n        // bit 4 -> 4,7\n        // No collision - positions don't overlap\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0, 4], 8, 9n);\n        assertEq(analysis.collisions.length, 0, 'No collision with well-spaced bits');"
+  },
+  {
+    "index": 46,
+    "section": "Multiply Patterns",
+    "name": "mul.findRoutings: handles sparse source pattern",
+    "sourceLine": 1375,
+    "body": "        // Source bits 0,4 need to go to 0,3 and 4,7 respectively\n        // This matches multiply by 9 pattern for each\n        const rm = makeRouteMap({0: 0, 3: 0, 4: 4, 7: 4}, 8);\n        const remaining = maskFrom(0, 3, 4, 7);\n        const results = BUILDING_BLOCKS.mul.findRoutings(rm, remaining, 8, defaultCosts);\n        // Should find multiply patterns\n        assert(results.length > 0 || true, 'May or may not find mul pattern (depends on collision analysis)');"
+  },
+  {
+    "index": 47,
+    "section": "Multiply Patterns",
+    "name": "mul.findRoutings: rejects collision-prone patterns",
+    "sourceLine": 1385,
+    "body": "        // Try to route bit 0 to positions 0,1 and bit 1 to positions 1,2\n        // This would require multiply by 3, but positions 1 collides\n        const rm = makeRouteMap({0: 0, 1: 0, 2: 1}, 8);\n        const remaining = maskFrom(0, 1, 2);\n        const results = BUILDING_BLOCKS.mul.findRoutings(rm, remaining, 8, defaultCosts);\n        // Any result should NOT include collision positions\n        for (const r of results) {\n            // Position 1 should not be in the mask if there's a collision\n            // (This depends on the implementation - it may exclude the entire pattern)\n        }\n        assert(true, 'Collision handling checked');"
+  },
+  {
+    "index": 48,
+    "section": "Multiply Patterns",
+    "name": "mul overflow: bit near top edge",
+    "sourceLine": 1399,
+    "body": "        // bit 6 * 5 = positions 6,8 - but 8 overflows in 8-bit\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [6], 8, 5n);\n        // Only position 6 should be valid (8 is out of range)\n        assertEq(analysis.movements.length, 1, 'Only 1 position (other overflows)');\n        assert(analysis.movements[0].dst === 6, 'Lands at 6');"
+  },
+  {
+    "index": 49,
+    "section": "Multiply Patterns",
+    "name": "mul combined: 9 as (8+1)",
+    "sourceLine": 1407,
+    "body": "        // 9 = 0b1001 can be seen as (x << 3) + x\n        // Useful for understanding multiplication decomposition\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0, 1], 8, 9n);\n        // bit 0 -> 0,3\n        // bit 1 -> 1,4\n        // No collision expected\n        assertEq(analysis.collisions.length, 0, 'Well-spaced multiplier');\n        assertEq(analysis.movements.length, 4, '2 bits x 2 positions each');"
+  },
+  {
+    "index": 50,
+    "section": "Multiply Patterns",
+    "name": "mul combined: 17 (0x11) as (16+1)",
+    "sourceLine": 1418,
+    "body": "        // 17 = 0b10001: bit lands at +0 and +4\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0], 8, 17n);\n        assertEq(analysis.movements.length, 2, '2 landing positions');\n        assert(analysis.movements.some(m => m.dst === 0), 'lands at 0');\n        assert(analysis.movements.some(m => m.dst === 4), 'lands at 4');"
+  },
+  {
+    "index": 51,
+    "section": "Multiply Patterns",
+    "name": "mul 16-bit: larger patterns",
+    "sourceLine": 1426,
+    "body": "        // 257 = 0x101: bit lands at +0 and +8\n        const analysis = analyzeBitMovement(BUILDING_BLOCKS.mul.apply, [0], 16, 257n);\n        assertEq(analysis.movements.length, 2, '2 landing positions');\n        assert(analysis.movements.some(m => m.dst === 0), 'lands at 0');\n        assert(analysis.movements.some(m => m.dst === 8), 'lands at 8');"
+  }
+]

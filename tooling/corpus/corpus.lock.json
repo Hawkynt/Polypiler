@@ -18,6 +18,20 @@
     {
       "repository": "Hawkynt/Hawkynt.github.io",
       "commit": "b3a8a8e92cbca83475986391c3cac56f0b185d29",
+      "path": "BitPerm/README.md",
+      "sha256": "82de29b0dbe780e65ad40fcd9d08fb9f7da3f06280239c57bdd18e7e261476cf",
+      "bytes": 10197
+    },
+    {
+      "repository": "Hawkynt/Hawkynt.github.io",
+      "commit": "b3a8a8e92cbca83475986391c3cac56f0b185d29",
+      "path": "BitPerm/index.html",
+      "sha256": "a263fee7d3562c119c301d5236337ab04fa60499df40b1665249184ff695609a",
+      "bytes": 185197
+    },
+    {
+      "repository": "Hawkynt/Hawkynt.github.io",
+      "commit": "b3a8a8e92cbca83475986391c3cac56f0b185d29",
       "path": "Cipher/LICENSE",
       "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
       "bytes": 7652
@@ -56,6 +70,55 @@
       "path": "LICENSE",
       "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
       "bytes": 7652
+    },
+    {
+      "repository": "Hawkynt/PB-Compiler",
+      "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
+      "path": "tests/ARITH.BAS",
+      "sha256": "d704c9abf317c777d1da383b8bf80a0075ffd905f0dfceb70b0a47c2242dc359",
+      "bytes": 222
+    },
+    {
+      "repository": "Hawkynt/PB-Compiler",
+      "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
+      "path": "tests/ARRAY.BAS",
+      "sha256": "b1bff5a752fe371613aeb2b8b8dc2ea11447a4dc99da697407c08e82ff4682a7",
+      "bytes": 805
+    },
+    {
+      "repository": "Hawkynt/PB-Compiler",
+      "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
+      "path": "tests/CTRL.BAS",
+      "sha256": "099267dcbed24cc455d1893f0916ec3eabdbf00c6494e898e4efa4433320a027",
+      "bytes": 372
+    },
+    {
+      "repository": "Hawkynt/PB-Compiler",
+      "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
+      "path": "tests/MINI.BAS",
+      "sha256": "31262e33cad8bf522064a7fd1f2db2745f34b5ed35099e164d418241f660192b",
+      "bytes": 2979
+    },
+    {
+      "repository": "Hawkynt/PB-Compiler",
+      "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
+      "path": "tests/TESTLIB.BI",
+      "sha256": "fc9ec119a713d32944d68bd5f89552df954981135ab29d1a355c17a4ad13a078",
+      "bytes": 5049
+    },
+    {
+      "repository": "Hawkynt/PB-Compiler",
+      "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
+      "path": "tests/diff/DIFF36.BAS",
+      "sha256": "25d92b4fbc3d25e27249807ca1f4fcb7acd9498a5a7d722565d431e267286dfb",
+      "bytes": 566
+    },
+    {
+      "repository": "Hawkynt/PB-Compiler",
+      "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
+      "path": "tests/diff/NARROW.BAS",
+      "sha256": "ea2e0db77f70cddb1a9cbdec1479199f3141b7bfe512fa75ac0f4b381cac8039",
+      "bytes": 392
     },
     {
       "repository": "Hawkynt/PNGCrushCS",

@@ -1,0 +1,15 @@
+{
+  "name": "test-36-swap-non-adjacent-bits-equidistant-1-rotation",
+  "source": {"line": 1281},
+  "width": 8,
+  "mapping": [
+    {"type": "src", "val": 4, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"}
+  ]
+}

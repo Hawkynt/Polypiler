@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "fixture": "cipher.checksum.adler32",
+  "provenance": {
+    "kind": "published",
+    "source": "RFC 1950",
+    "detail": "section 8.2 defines Adler-32; empty, a and abc are also the test cases of Hawkynt/Hawkynt.github.io@b3a8a8e92cbca83475986391c3cac56f0b185d29:Cipher/algorithms/checksum/adler.js, and every value agrees with python3 zlib.adler32 of the same bytes",
+    "generatedBy": "hand"
+  },
+  "exactness": { "mode": "exact" },
+  "vectors": [
+    { "name": "empty", "input": { "hex": "" }, "expected": { "hex": "00000001" } },
+    { "name": "a", "input": { "hex": "61" }, "expected": { "hex": "00620062" } },
+    { "name": "abc", "input": { "hex": "616263" }, "expected": { "hex": "024d0127" } },
+    { "name": "300 x ff", "input": { "hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" }, "expected": { "hex": "b90f2ae4" } }
+  ]
+}
