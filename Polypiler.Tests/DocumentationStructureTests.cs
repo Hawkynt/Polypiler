@@ -2,16 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
+using static Polypiler.Tests.Support.DocumentationChecks;
 
 namespace Polypiler.Tests;
 
 /// <summary>Checks the architecture diagrams and the split requirements navigation.</summary>
 [TestFixture]
 public sealed class DocumentationStructureTests {
-  private static readonly string _root = RepositoryRoot();
+  private static readonly string _root = Root;
   private static readonly string[] _scenarios = [
     "Find every PRD chapter through the index",
     "Follow old and new requirement links",
@@ -98,42 +98,4 @@ public sealed class DocumentationStructureTests {
       Assert.That(LinkErrors(relative, File.ReadAllText(path)), Is.Empty, relative);
     }
   }
-
-  private static List<string> LinkErrors(string source, string markdown) {
-    var failures = new List<string>();
-    foreach (Match match in Regex.Matches(markdown, @"\[[^\]\r\n]+\]\(([^)\s]+)\)")) {
-      var target = match.Groups[1].Value;
-      if (target.StartsWith('#') || Uri.TryCreate(target, UriKind.Absolute, out _))
-        continue;
-      var file = Uri.UnescapeDataString(target.Split('#')[0]);
-      var path = Path.GetFullPath(Path.Combine(_root, Path.GetDirectoryName(source)!, file));
-      if (!File.Exists(path) && !Directory.Exists(path))
-        failures.Add(source + " -> " + target);
-    }
-    return failures;
-  }
-
-  private static IEnumerable<int> Chapters(string text)
-    => Regex.Matches(text, @"(?m)^## (\d+)\. ")
-      .Select(match => int.Parse(match.Groups[1].Value));
-
-  private static List<string> ChapterErrors(IEnumerable<int> chapters) {
-    var values = chapters.ToArray();
-    var errors = Enumerable.Range(1, 34).Except(values).Select(chapter => "missing chapter " + chapter).ToList();
-    errors.AddRange(values.GroupBy(chapter => chapter).Where(group => group.Count() > 1)
-      .Select(group => "duplicate chapter " + group.Key));
-    errors.AddRange(values.Where(chapter => chapter < 1 || chapter > 34)
-      .Select(chapter => "unexpected chapter " + chapter));
-    return errors;
-  }
-
-  private static string[] Parts() => Directory.GetFiles(Path.Combine(_root, "docs/prd"), "*.md").Order().ToArray();
-
-  private static IEnumerable<string> ArchitecturePaths()
-    => Directory.GetFiles(Path.Combine(_root, "docs/architecture"), "*.md").Append(Path.Combine(_root, "README.md"));
-
-  private static string Read(string path) => File.ReadAllText(Path.Combine(_root, path));
-
-  private static string RepositoryRoot([CallerFilePath] string source = "")
-    => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(source)!, ".."));
 }

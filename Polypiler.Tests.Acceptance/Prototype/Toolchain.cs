@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using NUnit.Framework;
 using Polypiler.Prototype.Testing;
+using Polypiler.Tests.Acceptance.Support;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -141,6 +142,12 @@ internal static class Toolchain {
   /// <summary>Runs <c>polypiler</c> with the given arguments in a working directory.</summary>
   /// <returns>The exit code and everything the process wrote, standard output first.</returns>
   public static (int ExitCode, string Output) RunPolypiler(string workingDirectory, params string[] arguments) {
+    var result = Executable(workingDirectory, arguments);
+    return (result.ExitCode, result.Output);
+  }
+
+  /// <summary>Runs <c>polypiler</c> with the given arguments in a working directory and keeps its two streams apart.</summary>
+  public static CommandResult Executable(string workingDirectory, params string[] arguments) {
     var executable = Path.Combine(AppContext.BaseDirectory, OperatingSystem.IsWindows() ? "polypiler.exe" : "polypiler");
     Assert.That(File.Exists(executable), Is.True, $"the polypiler executable was not built next to the tests: {executable}");
     return Run(executable, workingDirectory, arguments, _polypilerEnvironment);
@@ -168,6 +175,22 @@ internal static class Toolchain {
   /// <param name="arguments">The command line, <c>translate</c> first and the source file second.</param>
   /// <returns>The exit code and everything the command wrote, standard output first.</returns>
   public static (int ExitCode, string Output) Translate(string workingDirectory, params string[] arguments) {
+    var result = TranslateInProcess(workingDirectory, arguments);
+    return (result.ExitCode, result.Output);
+  }
+
+  /// <summary>
+  /// Whether <see cref="Translate"/> can run a command line in process: <c>translate</c>, a source file
+  /// that exists, and an <c>--output</c> with a value.
+  /// </summary>
+  public static bool CanTranslateInProcess(string workingDirectory, string[] arguments) {
+    var output = Array.IndexOf(arguments, "--output") + 1;
+    return arguments.Length > 1 && arguments[0] == "translate" && !arguments[1].StartsWith("--", StringComparison.Ordinal) && output > 0 && output < arguments.Length
+      && File.Exists(Path.Combine(workingDirectory, arguments[1]));
+  }
+
+  /// <summary><see cref="Translate"/> with the two streams kept apart.</summary>
+  public static CommandResult TranslateInProcess(string workingDirectory, params string[] arguments) {
     var output = Array.IndexOf(arguments, "--output") + 1;
     Assert.That(arguments.Length > 1 && arguments[0] == "translate" && !arguments[1].StartsWith("--", StringComparison.Ordinal) && output > 0 && output < arguments.Length, Is.True,
       $"a translation in process needs 'translate', a source file and '--output': {string.Join(' ', arguments)}");
@@ -182,7 +205,8 @@ internal static class Toolchain {
         File.WriteAllBytes(Path.Combine(directory, path), content);
     }
 
-    return (translation.ExitCode, translation.Output.Replace(InputMark, arguments[1], StringComparison.Ordinal).Replace(OutputMark, arguments[output], StringComparison.Ordinal));
+    string Unmarked(string text) => text.Replace(InputMark, arguments[1], StringComparison.Ordinal).Replace(OutputMark, arguments[output], StringComparison.Ordinal);
+    return new CommandResult(translation.ExitCode, Unmarked(translation.Stdout), Unmarked(translation.Stderr));
   }
 
   /// <summary><see cref="Translate"/> where <paramref name="inProcess"/> is set, <see cref="RunPolypiler"/> otherwise.</summary>
@@ -209,11 +233,11 @@ internal static class Toolchain {
       using var standardOutput = new StringWriter();
       using var standardError = new StringWriter();
       var exitCode = global::Polypiler.Cli.Program.Run(actual, standardOutput, standardError);
-      var text = (standardOutput.ToString() + standardError).Replace(directory, OutputMark, StringComparison.Ordinal).Replace(source, InputMark, StringComparison.Ordinal);
+      string Marked(string text) => text.Replace(directory, OutputMark, StringComparison.Ordinal).Replace(source, InputMark, StringComparison.Ordinal);
       var files = Directory.Exists(directory)
         ? Directory.GetFiles(directory).Order(StringComparer.Ordinal).Select(file => (Path.GetFileName(file), File.ReadAllBytes(file))).ToArray()
         : null;
-      return new Translation(exitCode, text, files);
+      return new Translation(exitCode, Marked(standardOutput.ToString()), Marked(standardError.ToString()), files);
     } finally {
       if (Directory.Exists(directory))
         Directory.Delete(directory, true);
@@ -304,7 +328,8 @@ internal static class Toolchain {
 
   private static (int ExitCode, string Output) Node(string workingDirectory, params string[] arguments) {
     try {
-      return Run("node", workingDirectory, arguments);
+      var result = Run("node", workingDirectory, arguments);
+      return (result.ExitCode, result.Output);
     } catch (Win32Exception exception) {
       Assert.Fail($"node is required to run the generated JavaScript but could not be started: {exception.Message}");
       throw;
@@ -342,7 +367,7 @@ internal static class Toolchain {
     _ => "f64"
   };
 
-  private static (int ExitCode, string Output) Run(string executable, string workingDirectory, string[] arguments, IReadOnlyDictionary<string, string>? environment = null) {
+  private static CommandResult Run(string executable, string workingDirectory, string[] arguments, IReadOnlyDictionary<string, string>? environment = null) {
     var start = new ProcessStartInfo(executable) {
       WorkingDirectory = workingDirectory,
       RedirectStandardOutput = true,
@@ -359,10 +384,10 @@ internal static class Toolchain {
     var error = process.StandardError.ReadToEndAsync();
     var output = process.StandardOutput.ReadToEnd();
     process.WaitForExit();
-    return (process.ExitCode, output + error.Result);
+    return new CommandResult(process.ExitCode, output, error.Result);
   }
 
-  /// <summary>A translation as the command did it: its exit code, its text with the paths marked, and the files it wrote, if it created the output directory.</summary>
-  private sealed record Translation(int ExitCode, string Output, (string Path, byte[] Content)[]? Files);
+  /// <summary>A translation as the command did it: its exit code, its two streams with the paths marked, and the files it wrote, if it created the output directory.</summary>
+  private sealed record Translation(int ExitCode, string Stdout, string Stderr, (string Path, byte[] Content)[]? Files);
 
 }

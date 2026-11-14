@@ -49,8 +49,9 @@ garbage collector, because most of its tests allocate hard. What that asks of a 
   calls inside one method keeps the scheduler from spreading it and ends up as the last test of the
   run. It takes the fixture, the profile or a slice of the calls as an argument instead.
 
-The acceptance tests start processes where a process is what they are about. A scenario of a
-feature file runs the real `polypiler`, and so does every test of a command-line behaviour. A test
+The acceptance tests start processes where a process is what they are about. Every scenario of a
+feature file starts the real `polypiler` once (see "Acceptance scenarios" below), and every test of a
+command-line behaviour does too. A test
 that only needs the generated file translates with `Toolchain.Translate`, which calls
 `Program.Run` — what the executable's `Main` calls — in process; `InProcessTranslationTests` holds it
 to the executable's exit code, text and files for every kind of command line the tests use. Generated
@@ -68,6 +69,53 @@ Measured on a laptop with 16 logical processors that was busy with other work at
 | `Polypiler.Tests.Acceptance` | 955 tests, 385 s | 2,319 cases, 134 to 137 s |
 
 The same checks run as before; the cases are more because loops became cases.
+
+Since the scenarios run from their feature files and start the executable once each, the
+acceptance project runs 2,115 cases in 116 to 119 s, where the same machine took 152 s for the
+2,319 cases before, under a load average of 23 to 37 both times. The cases are fewer because a
+scenario that holds for every profile is one test again, which checks its profiles side by side.
+
+### Acceptance scenarios
+
+Every `.feature` file under `tests/features/` is compiled into `Polypiler.Tests.Acceptance` by
+[Reqnroll](https://reqnroll.net) (`Reqnroll.NUnit`): one NUnit test per scenario and per example row
+of a scenario outline, named after the scenario. Nothing else has to be wired. `reqnroll.json` makes
+a step without a binding an error, so an unimplemented criterion can never count as passed, and a
+file that is not Gherkin fails the build.
+
+- **Where a feature file goes:** `tests/features/<area>/<issue id in lower case>.feature`, where
+  `<area>` is a folder of the backlog's table "Areas, ID prefixes and anchor issues" and the ID
+  starts with one of the area's prefixes — `tests/features/infra/infra-bdd.feature` for `INFRA-BDD`.
+  The files of the prototype, written before the rule, keep their names (`BindingCheck.LegacyPaths`,
+  a list that only shrinks). Inputs of a checker that must not run as scenarios go to
+  `tests/fixtures/<area>/`.
+- **Tags:** a feature or scenario tagged `@Slow`, `@EndToEnd`, `@OsIntegration`, `@ExternalInterop`,
+  `@PolyglotInterop` or `@Performance` gets the NUnit category of the same name; everything in the
+  project is also `Acceptance`. An untagged scenario is in the fast tier.
+- **The shared steps** (`Polypiler.Tests.Acceptance/Steps/`): `When I run "<command line>"` — the
+  first word `polypiler` is dropped and the rest goes to `polypiler`; a first word that is a verb of
+  `polypiler-tooling` (`toolchains`, `spec`, `corpus`, `licenses`, `integrity`, `rebuild`, `sbom`,
+  `report`) goes to `Polypiler.Tooling.Program.Run`; text in single quotes is one argument. Then
+  `the exit code is <n>`, `stdout contains "<text>"`, `stderr contains "<text>"`,
+  `stdout is "<text>"`, `stdout does not contain "<text>"`, `stderr is empty`, and
+  `Given the file "<path>" with content "<text>"` (with `\n`, `\t`, `\\` and `\"`),
+  `the file "<path>" exists`, `does not exist`, `contains "<text>"`. Steps of one issue go to
+  `Polypiler.Tests.Acceptance/<Area>/`, scoped to their feature with `[Scope(Feature = "…")]`.
+- **One executable per scenario:** the first `polypiler` command line of a scenario, or of the first
+  example row of an outline, starts the real executable; every other runs in process through
+  `Program.Run`, which `InProcessTranslationTests` holds to the executable byte for byte. A scenario
+  that holds "for every profile" runs its first profile on its own thread and the others side by side
+  (`Sweep`).
+- **Every scenario has a workspace:** `polypiler-scenario-<random>` under the temporary folder,
+  created before the scenario and deleted after it; relative paths of the steps resolve against it.
+  The current directory is never changed, so the scenarios run in parallel like every other test.
+  An `IScenarioObserver` registered in the Reqnroll container is told about every scenario —
+  feature, scenario, passed or not, the command lines and their results — before the workspace goes.
+- **The static check** (`FeatureBindingTests` in `Polypiler.Tests`, `SupportTests` in the acceptance
+  project) reads every feature file with the Gherkin parser and reports `PLY0074` for a step with no
+  binding or more than one, a feature without a scenario and a path that breaks the rule. The
+  scenario `Every scenario in tests/features is a generated NUnit test` holds the count of scenarios
+  and example rows to the count of generated test cases.
 
 ### Generated C# is compiled for the framework it names
 

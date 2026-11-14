@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
@@ -20,15 +19,6 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class FloatViewTests {
 
-  private static readonly string[] _scenarios = [
-    "A JavaScript DataView float read translates to C# for every profile",
-    "A C# float store translates to JavaScript for every level and writes the same bytes",
-    "Negative zero keeps its sign bit in both directions",
-    "A read outside the buffer traps",
-    "A computed byte order is refused",
-    "Half precision stays refused"
-  ];
-
   private static readonly bool[] _overflowChecking = [false, true];
 
   private string _directory = "";
@@ -44,14 +34,6 @@ public sealed class FloatViewTests {
 
   [TearDown]
   public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
-
-  /// <summary>Ensures the feature and its NUnit bindings stay in agreement.</summary>
-  [Test]
-  public void FeatureScenarios_HaveBindings() {
-    var feature = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests/features/prototype/float-view.feature"));
-    var scenarios = Regex.Matches(feature, @"(?m)^  Scenario(?: Outline)?: (.+?)\r?$").Select(match => match.Groups[1].Value.Trim());
-    Assert.That(scenarios, Is.EqualTo(_scenarios));
-  }
 
   private string Copy(string fixture) {
     var name = Path.GetFileName(fixture);
@@ -86,95 +68,17 @@ public sealed class FloatViewTests {
   /// What node does with the JavaScript fixture as it is written. A <c>DataView</c> reports a range it
   /// does not hold in its own words; any <c>RangeError</c> is the IR's index out of range.
   /// </summary>
-  private IReadOnlyList<string> Original(IReadOnlyList<PrototypeCall> calls) {
-    File.Copy(Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "prototype", "js", "FloatView.js"), Path.Combine(this._directory, "FloatView.mjs"), true);
-    return [.. Toolchain.NodeOutcomes(this._directory, "FloatView.mjs", calls, true)
+  private IReadOnlyList<string> Original(IReadOnlyList<PrototypeCall> calls) => Original(this._directory, calls);
+
+  /// <summary>What node does with the JavaScript fixture as it is written, copied into a directory as a module.</summary>
+  internal static IReadOnlyList<string> Original(string directory, IReadOnlyList<PrototypeCall> calls) {
+    File.Copy(Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "prototype", "js", "FloatView.js"), Path.Combine(directory, "FloatView.mjs"), true);
+    return [.. Toolchain.NodeOutcomes(directory, "FloatView.mjs", calls, true)
       .Select(outcome => outcome.StartsWith("trap: ", StringComparison.Ordinal) ? "trap: index out of range" : outcome)];
   }
 
-  private static string Bytes(string text) => "[" + string.Join(",", text.Split(' ').Select(pair => byte.Parse(pair, NumberStyles.HexNumber, CultureInfo.InvariantCulture))) + "]";
-
-  /// <summary>Scenario outline: a JavaScript DataView float read translates to C# for every profile.</summary>
-  [TestCase("net2.0")]
-  [TestCase("netstandard2.1")]
-  [TestCase("net10.0")]
-  public void JavaScriptFloatRead_TranslatesToCSharp(string profile) {
-    PrototypeCall[] calls = [
-      new("getF32LE", [new byte[] { 0x00, 0x00, 0x80, 0x3F }, 0]) { Returns = typeof(float) },
-      new("getF64BE", [new byte[] { 0x40, 0x09, 0x21, 0xFB, 0x54, 0x44, 0x2D, 0x18 }, 0]) { Returns = typeof(double) }
-    ];
-    string[] expected = ["1 | " + Bytes("00 00 80 3F"), "f:400921fb54442d18 | " + Bytes("40 09 21 FB 54 44 2D 18")];
-    Assert.That(BitConverter.Int64BitsToDouble(0x400921fb54442d18), Is.EqualTo(3.141592653589793));
-    Assert.That(this.Original(calls), Is.EqualTo(expected), "node");
-    var build = this.CSharp(this.Copy("js/FloatView.js"), "javascript", CSharpProfile.Parse(profile));
-    Assert.That(calls.Select(build.Outcome), Is.EqualTo(expected), profile);
-  }
-
-  /// <summary>Scenario outline: a C# float store translates to JavaScript for every level and writes the same bytes.</summary>
-  [TestCase("es5", false, 0.1, "CD CC CC 3D")]
-  [TestCase("es5", true, 1e40, "00 00 80 7F")]
-  [TestCase("es2015", false, 3.4028235677973366e38, "00 00 80 7F")]
-  [TestCase("es2022", false, 1.0509738482436128e-45, "01 00 00 00")]
-  public void CSharpFloatStore_WritesTheSameBytesInNode(string level, bool typed, double x, string bytes) {
-    var call = new PrototypeCall("PutF32LE", [new byte[4], 0, x]);
-    var expected = $"{Bytes(bytes)} | {Bytes(bytes)}";
-    Assert.That(PrototypeFixture.CompiledOutcome("float/FloatView", call), Is.EqualTo(expected), ".NET");
-    var profile = new ProfileCase(level, level == "es5" ? "cjs" : "esm", typed, null);
-    Assert.That(this.Node(this.Copy("float/FloatView.cs"), "csharp", profile, [call]).Single(), Is.EqualTo(expected), profile.ToString());
-  }
-
-  /// <summary>Scenario: negative zero keeps its sign bit in both directions, in every profile of both backends.</summary>
-  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.All))]
-  public void NegativeZero_KeepsItsSignBit(TargetCase target) {
-    var expected = $"{Bytes("80 00 00 00 00 00 00 00")} | {Bytes("80 00 00 00 00 00 00 00")}";
-    var call = new PrototypeCall("PutF64BE", [new byte[8], 0, -0.0]);
-    var script = call with { Method = "putF64BE" };
-    Assert.That(PrototypeFixture.CompiledOutcome("float/FloatView", call), Is.EqualTo(expected), ".NET");
-    Assert.That(this.Original([script]).Single(), Is.EqualTo(expected), "node");
-    var outcomes = new Dictionary<string, string>();
-    if (target.CSharp is { } profile) {
-      outcomes[$"C# to {profile.Name}"] = this.CSharp(this.Copy("float/FloatView.cs"), "csharp", profile, true).Outcome(call);
-      outcomes[$"JavaScript to {profile.Name}"] = this.CSharp(this.Copy("js/FloatView.js"), "javascript", profile, true).Outcome(script);
-    } else {
-      outcomes[$"C# to {target}"] = this.Node(this.Copy("float/FloatView.cs"), "csharp", target.JavaScript!, [call]).Single();
-      outcomes[$"JavaScript to {target}"] = this.Node(this.Copy("js/FloatView.js"), "javascript", target.JavaScript!, [script]).Single();
-    }
-
-    Assert.That(outcomes.Where(run => run.Value != expected).Select(run => $"{run.Key}: {run.Value}"), Is.Empty);
-  }
-
-  /// <summary>Scenario: a read outside the 12-byte buffer traps in node and in the C# translation of every profile.</summary>
-  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.CSharpProfiles))]
-  public void ReadOutsideTheBuffer_Traps(TargetCase target) {
-    var call = new PrototypeCall("getF32LE", [new byte[FloatViewCases.Length], 9]) { Returns = typeof(float) };
-    var trap = "trap: index out of range";
-    var (exitCode, output) = Toolchain.RunNode(this._directory, this.Script(
-      "const view = new DataView(new Uint8Array(12).buffer); try { view.getFloat32(9, true); console.log('read'); } catch (error) { console.log(error.constructor.name); }"));
-    Assert.That((exitCode, output.Trim()), Is.EqualTo((0, "RangeError")));
-    Assert.That(this.Original([call]).Single(), Is.EqualTo(trap));
-    foreach (var checking in _overflowChecking)
-      Assert.That(this.CSharp(this.Copy("js/FloatView.js"), "javascript", target.CSharp!, checking).Outcome(call), Is.EqualTo(trap), target.ToString());
-  }
-
-  private string Script(string text) {
-    var path = Path.Combine(this._directory, "script-" + Guid.NewGuid().ToString("N") + ".mjs");
-    File.WriteAllText(path, text);
-    return path;
-  }
-
-  /// <summary>Scenarios: a computed byte order and half precision are refused, and nothing is written.</summary>
-  [TestCase("/** @param {Uint8Array} b @param {boolean} le */ export function f(b, le) { const v = new DataView(b.buffer); return v.getFloat32(0, le); }",
-    "DataView.getFloat32 with a byte order that is not a literal")]
-  [TestCase("/** @param {Uint8Array} b */ export function f(b) { const v = new DataView(b.buffer); return v.getFloat16(0, true); }",
-    "the DataView method getFloat16")]
-  public void Refusal_IsReported(string function, string message) {
-    File.WriteAllText(Path.Combine(this._directory, "snippet.mjs"), function);
-    var output = Path.Combine(this._directory, "out");
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, "translate", "snippet.mjs", "--from", "javascript", "--to", "csharp", "--output", output);
-    Assert.That(exitCode, Is.EqualTo(3), text);
-    Assert.That(text, Does.Contain("PLY1102").And.Contain(message));
-    Assert.That(Directory.Exists(output), Is.False);
-  }
+  /// <summary>Bytes written in hexadecimal pairs, as an outcome shows an array of them.</summary>
+  internal static string Bytes(string text) => "[" + string.Join(",", text.Split(' ').Select(pair => byte.Parse(pair, NumberStyles.HexNumber, CultureInfo.InvariantCulture))) + "]";
 
   /// <summary>
   /// The differential measurement for JavaScript: the eight operations in every profile run by node,
