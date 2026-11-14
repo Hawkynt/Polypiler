@@ -31,12 +31,17 @@ public static partial class JavaScriptEmitter {
           return this.Constant(constant.Type, constant.Value);
         case IrConstRef reference:
           return (Id(this.Name(reference.Constant.Name)), true);
+        case IrStrConst text:
+          return (new JsString(text.Value), true);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
         case IrLocalRef reference:
           return (this.Variable(reference.Local), true);
         case IrUnary unary:
           return this.Unary(unary);
+        case IrBinary { Left: IrIntrinsic { Op: IrIntrinsicOp.StrCompareOrdinal } ordinal, Right: IrConst { Value: 0 } } binary:
+          // The sign of an ordinal comparison against 0 is the relational comparison of the strings, by code unit (ECMA-262 §7.2.13).
+          return (Infix(this.Operand(ordinal.Arguments[0]), Sign(binary.Op), this.Operand(ordinal.Arguments[1])), false);
         case IrBinary binary:
           var operands = binary.Left.Type;
           return operands.IsFloat ? this.BinaryFloat(binary)
@@ -73,8 +78,8 @@ public static partial class JavaScriptEmitter {
     private (JsExpression Node, bool Atomic) Intrinsic(IrIntrinsic intrinsic) {
       var arguments = intrinsic.Arguments;
       switch (intrinsic.Op) {
-        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct:
-          // Typed arrays hold numbers: an array of structs is an Array of objects.
+        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct || intrinsic.Type.Element.IsString:
+          // Typed arrays hold numbers: an array of structs or of strings is an Array of objects.
           return (new JsArray([.. arguments.Select(this.Value)]), true);
         case IrIntrinsicOp.ArrayOf:
           return (this.ArrayOf(intrinsic.Type.Element!, [.. arguments.Select(this.Text)]), true);
@@ -86,6 +91,9 @@ public static partial class JavaScriptEmitter {
         case IrIntrinsicOp.ArrayClear:
           return (this.Fill(arguments[0], this.Zero(arguments[0].Type.Element!)), true);
       }
+
+      if (StringOperations.IsString(intrinsic.Op))
+        return this.StringOperation(intrinsic);
 
       // The integer and bit operations, also those defined on floating-point numbers as well, are written by their families.
       if (this.Integer(intrinsic) is { } integer)

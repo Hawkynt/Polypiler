@@ -98,6 +98,27 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("BigUint64Array", 2020, "Array")]
   [TestCase(".getBigInt64", 2020, ".getUint32")]
   [TestCase(".setBigInt64", 2020, ".setUint32")]
+  [TestCase("String", 5, null)]
+  [TestCase("String.fromCharCode", 5, null)]
+  [TestCase(".charCodeAt", 5, null)]
+  [TestCase(".charAt", 5, null)]
+  [TestCase(".indexOf", 5, null)]
+  [TestCase(".lastIndexOf", 5, null)]
+  [TestCase(".substring", 5, null)]
+  [TestCase(".split", 5, null)]
+  [TestCase(".join", 5, null)]
+  [TestCase(".replace", 5, null)]
+  [TestCase(".trim", 5, null)]
+  [TestCase(".startsWith", 2015, "$startsWith")]
+  [TestCase(".endsWith", 2015, "$endsWith")]
+  [TestCase(".includes", 2015, ".indexOf")]
+  [TestCase(".repeat", 2015, "$repeat")]
+  [TestCase(".codePointAt", 2015, "$codePointAt")]
+  [TestCase(".padStart", 2017, "$pad")]
+  [TestCase(".padEnd", 2017, "$pad")]
+  [TestCase(".trimStart", 2019, "$trimEcma")]
+  [TestCase(".trimEnd", 2019, "$trimEcma")]
+  [TestCase(".replaceAll", 2021, ".split")]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
     Assert.That((entry.Name, entry.Since, entry.Replacement), Is.EqualTo((name, since, replacement)));
@@ -200,7 +221,7 @@ public sealed class JavaScriptCapabilitiesTests {
   public void Globals_AreTheIdentifiersTheEntriesStartWith()
     => Assert.That(_table.Globals(), Is.EquivalentTo(new[] {
       "NaN", "Infinity", "RangeError", "Math", "Number", "globalThis", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array",
-      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array"
+      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String"
     }));
 
   [Test]

@@ -330,6 +330,12 @@ public static partial class JavaScriptEmitter {
     /// eight to a line when it has more than that.
     /// </summary>
     private JsExpression Value(IrModuleConst constant) {
+      if (constant.Type == IrType.String)
+        return new JsString(constant.Strings[0]);
+
+      if (constant.Type.Element == IrType.String)
+        return new JsArray([.. constant.Strings.Select(text => new JsString(text))]) { Tabulated = true };
+
       if (constant.Type.Element is not { } element)
         return this.Constant(constant.Type, constant.Values[0]).Node;
 
@@ -354,7 +360,9 @@ public static partial class JavaScriptEmitter {
         case IrTypeKind.Bool:
           return "boolean";
         case IrTypeKind.Array:
-          return !type.Element!.IsStruct && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
+          return !type.Element!.IsStruct && !type.Element.IsString && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
+        case IrTypeKind.String:
+          return "string";
         case IrTypeKind.Struct:
           return type.Declaration!.Name;
         case IrTypeKind.I64 or IrTypeKind.U64:
