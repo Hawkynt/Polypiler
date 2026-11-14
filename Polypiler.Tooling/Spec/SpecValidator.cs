@@ -30,7 +30,7 @@ public sealed class SpecValidator {
     return Build(reader.ReadToEnd());
   });
 
-  private static readonly EvaluationOptions _evaluation = new() { OutputFormat = OutputFormat.List };
+  private static readonly EvaluationOptions _evaluation = new() { OutputFormat = OutputFormat.Hierarchical };
 
   private readonly Dictionary<string, ISpecFamily> _families = new(StringComparer.Ordinal);
 
@@ -100,22 +100,64 @@ public sealed class SpecValidator {
 
   /// <summary>
   /// Every error of a schema on a value, as <c>PLY0040: &lt;pointer&gt;: &lt;message&gt;</c> at the value.
-  /// The condition of an <c>if</c> is a test, not a requirement: what fails inside it is no error.
+  /// The condition of an <c>if</c> is a test, not a requirement: what fails inside it is no error. Of a
+  /// <c>oneOf</c> or <c>anyOf</c> that no alternative satisfies only the best-matching alternative speaks
+  /// (see <see cref="Errors"/>), so one defect never yields one message per alternative.
   /// </summary>
   private static List<Diagnostic> SchemaProblems(JsonSchema schema, SpecDocument document, JsonNode? value, string prefix) {
     var results = schema.Evaluate(JsonSerializer.SerializeToElement(value), _evaluation);
-    if (results.IsValid)
-      return [];
-
-    return [.. results.Details!
-      .Where(detail => !$"{detail.EvaluationPath}/".Contains("/if/", StringComparison.Ordinal))
-      .SelectMany(detail => (detail.Errors ?? new Dictionary<string, string>()).Select(error => (
-        Pointer: prefix + detail.InstanceLocation,
-        Message: detail.EvaluationPath.ToString().EndsWith("/additionalProperties", StringComparison.Ordinal)
-          ? $"property '{Unescape(detail.InstanceLocation.ToString())}' is not allowed"
-          : error.Value)))
+    return [.. Errors(results)
+      .Select(error => (Pointer: prefix + error.Pointer, error.Message))
       .Distinct()
       .Select(error => SpecDiagnostics.At(SpecDiagnostics.SchemaViolation, document, error.Pointer, error.Pointer.Length == 0 ? "/" : error.Pointer, error.Message))];
+  }
+
+  /// <summary>
+  /// The errors of one node of the hierarchical output and of the nodes below it. The alternatives of
+  /// one <c>oneOf</c> or <c>anyOf</c> are judged together: a combinator they satisfy contributes nothing,
+  /// a <c>oneOf</c> that more than one alternative satisfies contributes one summary error, and one that
+  /// none satisfies contributes the errors of its best-matching alternative only — the first of those
+  /// whose own <c>type</c> holds and that have the fewest errors.
+  /// </summary>
+  private static List<(string Pointer, string Message)> Errors(EvaluationResults node) {
+    if (node.IsValid || node.EvaluationPath.ToString().EndsWith("/if", StringComparison.Ordinal))
+      return [];
+
+    var errors = new List<(string Pointer, string Message)>();
+    foreach (var error in node.Errors ?? new Dictionary<string, string>())
+      errors.Add((node.InstanceLocation.ToString(), node.EvaluationPath.ToString().EndsWith("/additionalProperties", StringComparison.Ordinal)
+        ? $"property '{Unescape(node.InstanceLocation.ToString())}' is not allowed"
+        : error.Value));
+
+    foreach (var group in (node.Details ?? []).GroupBy(Combinator)) {
+      if (group.Key is null) {
+        foreach (var child in group)
+          errors.AddRange(Errors(child));
+        continue;
+      }
+
+      var matches = group.Count(alternative => alternative.IsValid);
+      if (matches > 1 && group.Key.EndsWith("/oneOf", StringComparison.Ordinal))
+        errors.Add((node.InstanceLocation.ToString(), $"the value matches {matches} alternatives of oneOf, but must match exactly one"));
+      else if (matches == 0)
+        errors.AddRange(group
+          .Select(alternative => (Alternative: alternative, Errors: Errors(alternative)))
+          .OrderBy(candidate => candidate.Alternative.Errors?.ContainsKey("type") == true)
+          .ThenBy(candidate => candidate.Errors.Count)
+          .First().Errors);
+    }
+
+    return errors;
+  }
+
+  /// <summary>The evaluation path of the <c>oneOf</c> or <c>anyOf</c> a node is an alternative of, or <see langword="null"/> for any other node.</summary>
+  private static string? Combinator(EvaluationResults node) {
+    var path = node.EvaluationPath.ToString();
+    var last = path.LastIndexOf('/');
+    var keyword = path[..Math.Max(last, 0)];
+    return last > 0 && int.TryParse(path[(last + 1)..], out _) && (keyword.EndsWith("/oneOf", StringComparison.Ordinal) || keyword.EndsWith("/anyOf", StringComparison.Ordinal))
+      ? keyword
+      : null;
   }
 
   /// <summary>The last segment of a JSON pointer, unescaped.</summary>

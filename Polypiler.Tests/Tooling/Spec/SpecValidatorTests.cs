@@ -363,6 +363,49 @@ public sealed class SpecValidatorTests {
     Assert.That(family.Seen, Is.EqualTo(new[] { (tree.Documents[0], tree) }));
   }
 
+  /// <summary>A family schema with <c>oneOf</c> and <c>anyOf</c> for the tests of <see cref="Combinator_ReportsOnlyTheBestAlternative"/>.</summary>
+  private const string CombinatorSchema = """
+    {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "size": { "oneOf": [
+          { "type": "integer", "minimum": 0 },
+          { "type": "object", "required": ["width", "height"], "properties": { "width": { "type": "integer" } }, "additionalProperties": false },
+          { "type": "string", "pattern": "^[a-z]+$" }
+        ] },
+        "flag": { "anyOf": [{ "type": "integer" }, { "type": "boolean" }] },
+        "kind": { "maxLength": 3, "anyOf": [{ "const": "a" }, { "type": "string" }] },
+        "count": { "multipleOf": 2, "oneOf": [{ "minimum": 0 }, { "maximum": 10 }] }
+      }
+    }
+    """;
+
+  /// <summary>
+  /// A value that fails a <c>oneOf</c> or <c>anyOf</c> gets the errors of the best-matching alternative
+  /// only — the first whose <c>type</c> holds, then the one with the fewest errors; a satisfied
+  /// combinator adds nothing to the errors of its siblings, and a <c>oneOf</c> matched twice gets one summary.
+  /// </summary>
+  [TestCase("{size: {width: x, depth: 1}}",
+    "/spec/size: Required properties [\"height\"] are not present",
+    "/spec/size/width: Value is \"string\" but should be \"integer\"",
+    "/spec/size/depth: property 'depth' is not allowed")]
+  [TestCase("{size: -1}", "/spec/size: -1 should be at least 0")]
+  [TestCase("{size: Big}", "/spec/size: The string value is not a match for the indicated regular expression")]
+  [TestCase("{flag: s}", "/spec/flag: Value is \"string\" but should be \"integer\"")]
+  [TestCase("{kind: abcd}", "/spec/kind: Value should be at most 3 characters")]
+  [TestCase("{count: 15}", "/spec/count: 15 should be a multiple of 2")]
+  [TestCase("{count: 4}", "/spec/count: the value matches 2 alternatives of oneOf, but must match exactly one")]
+  [TestCase("{size: 3, flag: true, kind: a, count: 12}")]
+  public void Combinator_ReportsOnlyTheBestAlternative(string body, params string[] expected) {
+    using var repository = new SpecRepository();
+    repository.Write("spec/schemas/demo.schema.json", CombinatorSchema).Document("demo/widget.yaml", SpecText.Document(("spec", body)));
+    var family = new TestFamily("demo", "spec/schemas/demo.schema.json");
+    var problems = new SpecValidator([family]).Run(repository.Tree()).Diagnostics;
+    Assert.That(problems.Where(problem => problem.Code == "PLY0040").Select(problem => problem.Message), Is.EquivalentTo(expected));
+    Assert.That(family.Seen, expected.Length == 0 ? Is.Not.Empty : Is.Empty);
+  }
+
   /// <summary>A family that records what it is given and reports one rule per document.</summary>
   private sealed class TestFamily(string folder, string schemaPath) : ISpecFamily {
 
