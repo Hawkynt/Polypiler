@@ -89,6 +89,35 @@ public sealed class SandboxTests {
     }
   }
 
+  /// <summary>A tool installed with pip into a virtual environment starts only with the environment's libraries beside its folder.</summary>
+  [Test]
+  public void Bubblewrap_BindsTheVirtualEnvironmentOfAToolchainBackIn() {
+    if (OperatingSystem.IsWindows()) {
+      Assert.Pass("bubblewrap is Linux only, and Windows reads these paths with its own separator");
+      return;
+    }
+
+    var home = Directory.CreateTempSubdirectory("polypiler-home-").FullName;
+    try {
+      var environment = Path.Combine(home, "venv");
+      Directory.CreateDirectory(Path.Combine(environment, "bin"));
+      File.WriteAllText(Path.Combine(environment, "pyvenv.cfg"), "");
+      File.WriteAllText(Path.Combine(environment, "bin", "tool"), "");
+      var line = string.Join('|', new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), home).CommandLine(_command with { Executable = Path.Combine(environment, "bin", "tool") }));
+      Assert.That(line, Does.Contain($"--tmpfs|{home}|--ro-bind|{environment}|{environment}|--bind|"));
+      File.Delete(Path.Combine(environment, "pyvenv.cfg"));
+      var plain = string.Join('|', new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), home).CommandLine(_command with { Executable = Path.Combine(environment, "bin", "tool") }));
+      Assert.That(plain, Does.Contain($"--tmpfs|{home}|--ro-bind|{environment}/bin|{environment}/bin|--bind|"));
+    } finally {
+      Directory.Delete(home, true);
+    }
+  }
+
+  [Test]
+  public void Bubblewrap_WithAToolchainInTheRoot_BindsNothingMore()
+    => Assert.That(new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user").CommandLine(_command with { Executable = "/tool" }),
+      Has.Exactly(1).EqualTo("--ro-bind"));
+
   [Test]
   public void Polling_RunsTheCommandAsItIs() {
     var sandbox = new PollingSandbox(new ProcFileSystemTable());
