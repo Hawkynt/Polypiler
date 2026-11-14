@@ -64,8 +64,8 @@ Measured on a laptop with 16 logical processors that was busy with other work at
 
 | Project | Before | After |
 |---|---|---|
-| `Polypiler.Tests` | 8,265 tests, one at a time, 203 s | 8,306 cases, 78 s |
-| `Polypiler.Tests.Acceptance` | 955 tests, 385 s | 2,319 cases, 142 s |
+| `Polypiler.Tests` | 8,265 tests, one at a time, 203 s | 8,706 cases, 67 to 75 s |
+| `Polypiler.Tests.Acceptance` | 955 tests, 385 s | 2,319 cases, 134 to 137 s |
 
 The same checks run as before; the cases are more because loops became cases.
 
