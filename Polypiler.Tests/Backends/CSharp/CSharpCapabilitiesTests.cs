@@ -276,12 +276,15 @@ public sealed class CSharpCapabilitiesTests {
   internal static bool IsFloating(CSharpCapability row)
     => row.Operation is { } op && FloatOperationTable.Of(op) is { DoubleName: not null } && row.Operands.All(kind => kind is IrTypeKind.F32 or IrTypeKind.F64);
 
+  /// <summary>Whether a row writes a string operation, which CSharpStringEmissionTests test.</summary>
+  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && StringOperations.IsString(op);
+
   /// <summary>The table names every API and every feature of the language the issue lists, each with the first profile or version that has it.</summary>
   [Test]
   public void Table_IsWhatTheBackendKnows() {
     // The rows of the integer and bit operations, one per operation and width, have tests of their own
     // (IntegerCSharpTests), and so do the rows of the floating-point operations (CSharpFloatCapabilitiesTests).
-    var rows = CSharpCapabilities.Default.Rows.Where(row => !IsIntegerRow(row) && !IsFloating(row)).ToList();
+    var rows = CSharpCapabilities.Default.Rows.Where(row => !IsIntegerRow(row) && !IsFloating(row) && !IsStringRow(row)).ToList();
     Assert.That(rows.Select(row => (row.Name, First(row))), Is.EqualTo(_table));
     Assert.That(rows.Select(row => row.Name), Is.Unique);
     Assert.That(rows.Select(row => row.ToString()), Is.EqualTo(rows.Select(row => row.Name)));
@@ -370,7 +373,7 @@ public sealed class CSharpCapabilitiesTests {
   /// <summary>Every row an operation or a conversion is written by has a function here that uses it.</summary>
   [Test]
   public void EveryWrittenRow_HasAUse() {
-    var written = CSharpCapabilities.Default.Rows.Where(row => (row.Operation is not null || row.Saturates is not null) && !IsIntegerRow(row) && !IsFloating(row)).Select(row => row.Name);
+    var written = CSharpCapabilities.Default.Rows.Where(row => (row.Operation is not null || row.Saturates is not null) && !IsIntegerRow(row) && !IsFloating(row) && !IsStringRow(row)).Select(row => row.Name);
     Assert.That(_uses.Select(use => use.Row).Distinct(), Is.EquivalentTo(written));
   }
 
@@ -426,7 +429,7 @@ public sealed class CSharpCapabilitiesTests {
   public void EveryHelper_IsCSharp2ForNetFramework20() {
     var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().ToList();
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(82));
+    Assert.That(helpers, Has.Count.EqualTo(95));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);
     foreach (var checking in _overflowChecking)
       Assert.That(() => GeneratedCSharp.Compile(text, checking), Throws.Nothing);

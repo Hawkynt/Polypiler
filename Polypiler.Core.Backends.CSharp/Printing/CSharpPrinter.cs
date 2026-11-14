@@ -466,7 +466,7 @@ public static class CSharpPrinter {
           this._text.Append(truth.Value ? "true" : "false");
           break;
         case CsStringLiteral text:
-          this._text.Append('"').Append(text.Value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal)).Append('"');
+          this._text.Append('"').Append(CSharpLiterals.Escape(text.Value)).Append('"');
           break;
         case CsDefaultLiteral:
           this._text.Append("default");
@@ -662,6 +662,26 @@ public static class CSharpPrinter {
 
 /// <summary>Reads the spelling of a C# numeric literal (ECMA-334, "Literals"), so that a spelling can be checked against a value.</summary>
 public static class CSharpLiterals {
+
+  /// <summary>
+  /// The text of a regular string literal without its quotes: a backslash and a quote escaped, and
+  /// every code unit outside printable ASCII as <c>\uXXXX</c>, so that a file holds every string -
+  /// an unpaired surrogate too - in ASCII.
+  /// </summary>
+  /// <param name="value">The code units.</param>
+  /// <returns>The escaped text.</returns>
+  public static string Escape(string value) {
+    var text = new System.Text.StringBuilder(value.Length);
+    foreach (var unit in value)
+      if (unit is '\\' or '"')
+        text.Append('\\').Append(unit);
+      else if (unit is < ' ' or > '~')
+        text.Append("\\u").Append(((int)unit).ToString("X4", System.Globalization.CultureInfo.InvariantCulture));
+      else
+        text.Append(unit);
+
+    return text.ToString();
+  }
 
   /// <summary>The value and the suffix of an integer literal, with an optional minus sign in front.</summary>
   /// <param name="text">The spelling.</param>

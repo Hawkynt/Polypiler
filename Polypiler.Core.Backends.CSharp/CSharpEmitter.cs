@@ -74,7 +74,8 @@ public static partial class CSharpEmitter {
     [IrTypeKind.I64] = "long",
     [IrTypeKind.U64] = "ulong",
     [IrTypeKind.F32] = "float",
-    [IrTypeKind.F64] = "double"
+    [IrTypeKind.F64] = "double",
+    [IrTypeKind.String] = "string"
   };
 
   private static readonly Dictionary<IrUnaryOp, string> _unary = new() {
@@ -354,7 +355,7 @@ public static partial class CSharpEmitter {
 
   /// <summary>The row of the capability table an expression that <see cref="IsTabled"/> is written by, or <see langword="null"/> when the table has none.</summary>
   private static CSharpCapability? Row(IrExpr expression, CSharpCapabilities table)
-    => expression is IrIntrinsic intrinsic ? table.Of(intrinsic.Op, CSharpCapabilities.OperandOf(intrinsic)) : table.OfSaturation(expression.Type.Kind);
+    => expression is IrIntrinsic intrinsic ? table.Of(intrinsic) : table.OfSaturation(expression.Type.Kind);
 
   /// <summary>The expressions and statements a statement consists of, or <see langword="null"/> for a kind this backend does not know.</summary>
   private static (IReadOnlyList<IrExpr> Expressions, IReadOnlyList<IrStmt> Statements)? Parts(IrStmt statement) => statement switch {
@@ -376,7 +377,7 @@ public static partial class CSharpEmitter {
 
   /// <summary>The operands of an expression, or <see langword="null"/> for a kind this backend does not know.</summary>
   private static IReadOnlyList<IrExpr>? Operands(IrExpr expression) => expression switch {
-    IrConst or IrLocalRef or IrConstRef => [],
+    IrConst or IrLocalRef or IrConstRef or IrStrConst => [],
     IrUnary unary => [unary.Operand],
     IrBinary binary => [binary.Left, binary.Right],
     IrConvert conversion => [conversion.Operand],
@@ -603,6 +604,8 @@ public static partial class CSharpEmitter {
         || (binary.Op == IrBinaryOp.ShiftRightLogical && binary.Type.IsSigned && !this.Has(CSharpFeature.UnsignedRightShift)),
       IrConvert conversion => conversion.Contract != IrConversion.Trap && !Keeps(conversion) && this.Casts(conversion),
       IrStep step => !step.Trap && step.Type.IsInteger,
+      // A string operation casts between char and ushort, which loses nothing, and computes nothing that overflows.
+      IrIntrinsic intrinsic when StringOperations.IsString(intrinsic.Op) => false,
       IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic => this.Rewritten(intrinsic) is { } rewritten ? Expressions(rewritten).Any(this.Wraps) : this.Form(intrinsic).Template is not null,
       _ => false
     };
@@ -667,6 +670,13 @@ public static partial class CSharpEmitter {
     /// </summary>
     private CsField Constant(IrModuleConst constant) {
       var name = this._members[constant.Name];
+      if (constant.Type == IrType.String)
+        return new CsField(["private", "const"], new CsType("string"), name, new CsStringLiteral(constant.Strings[0]) { Type = IrType.String });
+
+      if (constant.Type.Element == IrType.String)
+        return new CsField(["private", "static", "readonly"], new CsType("string[]"), name,
+          new CsArrayInitializer([.. constant.Strings.Select(text => new CsStringLiteral(text) { Type = IrType.String })]) { Tabulated = true });
+
       if (constant.Type.Element is not { } element)
         return new CsField(["private", "const"], new CsType(this.TypeName(constant.Type)), name, Bare(constant.Type, constant.Values[0]));
 
@@ -1012,6 +1022,8 @@ public static partial class CSharpEmitter {
           return Literal(constant.Type, constant.Value);
         case IrConstRef reference:
           return (new CsName(this._members[reference.Constant.Name]), Primary);
+        case IrStrConst text:
+          return (new CsStringLiteral(text.Value), Primary);
         case IrLocalRef reference:
           return (this.Variable(reference.Local), Primary);
         case IrUnary unary:
@@ -1063,6 +1075,12 @@ public static partial class CSharpEmitter {
       // RyuJIT takes some exclusive ors of two shifts for a rotation also where they are none (CSharpRuntimeDefect.ShiftXorRotation).
       if (binary.Op == IrBinaryOp.Xor && this._table.Suffers(CSharpRuntimeDefect.ShiftXorRotation, this._profile))
         binary = ShiftXorGuard.Guarded(binary, this._complements);
+
+      // The sign of an ordinal comparison against 0 is the comparison of the value .NET documents only by its sign.
+      if (binary is { Left: IrIntrinsic { Op: IrIntrinsicOp.StrCompareOrdinal } ordinal, Right: IrConst { Value: 0 } }) {
+        var compared = new CsInvocation(CSharpFragments.Expression("string.CompareOrdinal"), [this.Text(ordinal.Arguments[0]), this.Text(ordinal.Arguments[1])]) { Type = IrType.I32 };
+        return (new CsBinary(compared, _binary[binary.Op], new CsIntegerLiteral(0) { Type = IrType.I32 }), Loose);
+      }
 
       var type = binary.Left.Type;
       var symbol = _binary[binary.Op];
@@ -1132,8 +1150,9 @@ public static partial class CSharpEmitter {
       if (form.Template is not null) {
         // The arguments are written in their order, which is the order of the IR; {h} is the helper of the row.
         var written = arguments.Select(argument => this.Operand(argument, Primary)).ToList();
-        // A template may be a cast, so it binds like one.
-        return (form.Build(written, () => this.Helper(row.Helper!)), Cast);
+        var built = form.Build(written, () => this.Helper(row.Helper!));
+        // A template may be a cast, so it binds like one; a string operation's binds as tightly as the expression it is.
+        return (built, row.Operation is { } op && StringOperations.IsString(op) && CSharpPrinter.Precedence(built) == 15 ? Primary : Cast);
       }
 
       var call = form.Build([.. arguments.Select(this.Text)], () => this.Helper(row.Helper!));
