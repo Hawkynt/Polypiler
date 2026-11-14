@@ -446,26 +446,29 @@ codes:
     severity: error
     exit: OracleFailure
     title: oracle failed
-    message: "oracle '<oracle>' failed: <reason>"
+    message: "reference oracle '<oracle>' failed for '<fixture>': <cause>"
+    rule: verification.oracle.failed
     area: infrastructure
     owner: VER-ORACLE
-    reserved: true
+    surfaces: "the diagnostics of a verification whose reference did not run, hit a runner limit (the cause names the runner's PLY0031, PLY0032 or PLY0033), printed something that is not hexadecimal, or disagrees with the vectors' published values"
   - code: PLY0051
     severity: error
     exit: SemanticMismatch
     title: output mismatch
-    message: "<function>(<arguments>) returned <actual>, the oracle <expected>"
+    message: "'<fixture>' vector '<name>': expected <hex>, actual <hex>, first difference at byte <offset>"
+    rule: verification.compare.exact
     area: infrastructure
     owner: VER-ORACLE
-    reserved: true
+    surfaces: "the diagnostics of a verification, one per vector that differs under the exact policy, or whose outputs differ in length or are not whole elements of a tolerance's format"
   - code: PLY0052
     severity: error
     exit: SemanticMismatch
     title: outside tolerance
-    message: "<function>(<arguments>) returned <actual>, <ulps> ulp from the oracle's <expected>"
+    message: "'<fixture>' vector '<name>' element <index>: expected <hex>, actual <hex>, <distance> exceeds <mode> <bound>"
+    rule: verification.compare.tolerance
     area: infrastructure
     owner: VER-ORACLE
-    reserved: true
+    surfaces: "the diagnostics of a verification, one per vector with an element outside the tolerance; when the special-value rule rejects the element the tail reads 'special values differ under <rule>'"
   - code: PLY0053
     severity: error
     exit: EnvironmentError
@@ -550,9 +553,10 @@ codes:
     exit: OracleFailure
     title: no oracle
     message: "no independent oracle is registered for '<fixture>'"
+    rule: verification.oracle.independent
     area: infrastructure
     owner: VER-ORACLE
-    reserved: true
+    surfaces: "the diagnostics of a verification of a fixture without an oracle; the registry refuses an oracle whose producer is polypiler or whose reference file lies in a directory with polypiler.manifest.json"
   - code: PLY0070
     severity: error
     exit: EnvironmentError
