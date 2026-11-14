@@ -99,9 +99,11 @@ file that is not Gherkin fails the build.
   `@PolyglotInterop` or `@Performance` gets the NUnit category of the same name; everything in the
   project is also `Acceptance`. An untagged scenario is in the fast tier.
 - **The shared steps** (`Polypiler.Tests.Acceptance/Steps/`): `When I run "<command line>"` — the
-  first word `polypiler` is dropped and the rest goes to `polypiler`; a first word that is a verb of
-  `polypiler-tooling` (`toolchains`, `spec`, `corpus`, `licenses`, `integrity`, `rebuild`, `sbom`,
-  `report`) goes to `Polypiler.Tooling.Program.Run`; text in single quotes is one argument. Then
+  first word `polypiler` is dropped and the rest goes to `polypiler`; a first word `polypiler-tooling`
+  is dropped too, and that line, like one whose first word is a verb of `polypiler-tooling`
+  (`toolchains`, `spec`, `corpus`, `licenses`, `integrity`, `rebuild`, `sbom`, `report`), starts the
+  `polypiler-tooling` executable in the workspace, with the workspace first on `PATH` — its verbs
+  read the working directory and `PATH`; text in single quotes is one argument. Then
   `the exit code is <n>`, `stdout contains "<text>"`, `stderr contains "<text>"`,
   `stdout is "<text>"`, `stdout does not contain "<text>"`, `stderr is empty`, and
   `Given the file "<path>" with content "<text>"` (with `\n`, `\t`, `\\` and `\"`),
