@@ -8,16 +8,16 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | Code | Severity | Exit code | Message | Owner |
 | --- | --- | --- | --- | --- |
 | [PLY0001](PLY0001.md) | error | 70 (InternalError) | `internal compiler error: <exception>` | ADR-DIAGNOSTICS |
-| [PLY0002](PLY0002.md) (reserved) | error | 2 (UsageError) | `unknown command '<word>'; run 'polypiler --help'` | CLI-FOUNDATION |
+| [PLY0002](PLY0002.md) | error | 2 (UsageError) | `unknown command '<word>'; run 'polypiler --help'` | CLI-FOUNDATION |
 | [PLY0003](PLY0003.md) | error | 2 (UsageError) | `<reason>` | INFRA-TOOLCHAINS |
 | [PLY0004](PLY0004.md) | error | 1 (EnvironmentError) | `cannot read the toolchain lock: <reason>` | INFRA-TOOLCHAINS |
-| [PLY0005](PLY0005.md) | error | 1 (EnvironmentError) | `the output directory '<path>' cannot be written: <reason>` | CLI-FOUNDATION |
+| [PLY0005](PLY0005.md) | error | 1 (EnvironmentError) | `output directory '<path>' is not empty; pass --force to write into it` | CLI-FOUNDATION |
 | [PLY0006](PLY0006.md) (reserved) | error | 2 (UsageError) | `unknown <kind> '<identifier>'` | CLI-TRANSLATE |
 | [PLY0007](PLY0007.md) (reserved) | error | 2 (UsageError) | `'<assumption>' is not an assumption: <reason>` | CLI-OPTIONS |
 | [PLY0008](PLY0008.md) (reserved) | error | 2 (UsageError) | `'<id>' is not an optimization ID (expected O followed by four digits)` | CLI-OPTIONS |
 | [PLY0009](PLY0009.md) (reserved) | warning | — (3 with --strict) | `assumption '<assumption>' is trusted, not proven` | CLI-OPTIONS |
 | [PLY0010](PLY0010.md) (reserved) | error | 3 (UnsupportedConstruct) | `<code>: <message> (refused by --strict)` | CLI-OPTIONS |
-| [PLY0011](PLY0011.md) (reserved) | error | 2 (UsageError) | `the options '<first>' and '<second>' exclude each other` | CLI-FOUNDATION |
+| [PLY0011](PLY0011.md) | error | 2 (UsageError) | `options '<first>' and '<second>' cannot be combined` | CLI-FOUNDATION |
 | [PLY0012](PLY0012.md) (reserved) | error | 2 (UsageError) | `'<level>' is not an optimization level; expected one of: <levels>` | CLI-OPTIONS |
 | [PLY0013](PLY0013.md) (reserved) | error | 4 (InvalidSource) | `export '<name>' not found in '<file>'` | CLI-TRANSLATE |
 | [PLY0014](PLY0014.md) (reserved) | error | 3 (UnsupportedConstruct) | `no <frontend\|backend> for '<language>'` | CLI-TRANSLATE |
@@ -44,14 +44,14 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0036](PLY0036.md) (reserved) | error | 1 (EnvironmentError) | `rebuild not deterministic: '<path>' differs at byte <offset>` | INFRA-REBUILD |
 | [PLY0037](PLY0037.md) (reserved) | error | 8 (LicenseBlocker) | `SBOM component '<component>' lacks a licence` | INFRA-SBOM |
 | [PLY0038](PLY0038.md) | error | 1 (EnvironmentError) | `<from> must not reference <to> (rule: <rule>)` | INFRA-MODULES |
-| [PLY0040](PLY0040.md) (reserved) | error | 1 (EnvironmentError) | `<json pointer>: <schema keyword message>` | SPEC-META |
-| [PLY0041](PLY0041.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | SPEC-META |
-| [PLY0042](PLY0042.md) (reserved) | error | 1 (EnvironmentError) | `duplicate spec id '<id>', first defined in <path>` | SPEC-META |
-| [PLY0043](PLY0043.md) (reserved) | error | 1 (EnvironmentError) | `unknown spec id '<id>'` | SPEC-META |
-| [PLY0044](PLY0044.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | SPEC-META |
+| [PLY0040](PLY0040.md) | error | 1 (EnvironmentError) | `<json pointer>: <schema keyword message>` | SPEC-META |
+| [PLY0041](PLY0041.md) | error | 1 (EnvironmentError) | `<reason>` | SPEC-META |
+| [PLY0042](PLY0042.md) | error | 1 (EnvironmentError) | `duplicate spec id '<id>', first defined in <path>` | SPEC-META |
+| [PLY0043](PLY0043.md) | error | 1 (EnvironmentError) | `<reason>` | SPEC-META |
+| [PLY0044](PLY0044.md) | error | 1 (EnvironmentError) | `<reason>` | SPEC-META |
 | [PLY0045](PLY0045.md) | error | 1 (EnvironmentError) | `<reason>` | ADR-DIAGNOSTICS |
-| [PLY0046](PLY0046.md) (reserved) | error | 1 (EnvironmentError) | `id '<id>' does not match file name '<file>' (rule: layout)` | SPEC-META |
-| [PLY0047](PLY0047.md) (reserved) | error | 1 (EnvironmentError) | `not valid YAML: <parser message>` | SPEC-META |
+| [PLY0046](PLY0046.md) | error | 1 (EnvironmentError) | `<reason> (rule: <rule>)` | SPEC-META |
+| [PLY0047](PLY0047.md) | error | 1 (EnvironmentError) | `<reason>` | SPEC-META |
 | [PLY0050](PLY0050.md) (reserved) | error | 7 (OracleFailure) | `oracle '<oracle>' failed: <reason>` | VER-ORACLE |
 | [PLY0051](PLY0051.md) (reserved) | error | 5 (SemanticMismatch) | `<function>(<arguments>) returned <actual>, the oracle <expected>` | VER-ORACLE |
 | [PLY0052](PLY0052.md) (reserved) | error | 5 (SemanticMismatch) | `<function>(<arguments>) returned <actual>, <ulps> ulp from the oracle's <expected>` | VER-ORACLE |
@@ -72,7 +72,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0073](PLY0073.md) (reserved) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': <metric> <value> exceeds its budget <budget>` | INFRA-BENCH |
 | [PLY0074](PLY0074.md) | error | 1 (EnvironmentError) | `<file>(<line>): step '<step>' has no binding` | INFRA-BDD |
 | [PLY0080](PLY0080.md) (reserved) | error | 2 (UsageError) | `<reason>` | CLI-PACKAGE |
-| [PLY0081](PLY0081.md) (reserved) | error | 9 (MissingDependency) | `native dependency '<name>' required by '<component>' is missing` | CLI-EXITCODES |
+| [PLY0081](PLY0081.md) | error | 9 (MissingDependency) | `native dependency '<name>' required by '<component>' is missing` | CLI-EXITCODES |
 | [PLY0082](PLY0082.md) (reserved) | error | 8 (LicenseBlocker) | `<reason>` | CLI-PACKAGE |
 | [PLY0083](PLY0083.md) (reserved) | error | 2 (UsageError) | `<reason>` | CLI-RECOVER |
 | [PLY0084](PLY0084.md) (reserved) | error | 9 (MissingDependency) | `<reason>` | CLI-RECOVER |
