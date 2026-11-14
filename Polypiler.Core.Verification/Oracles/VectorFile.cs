@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Polypiler.Core.Verification.Images;
 
 namespace Polypiler.Core.Verification.Oracles;
 
@@ -23,14 +25,20 @@ public sealed record VectorProvenance(string Kind, string Source, string Detail,
 /// A <c>*.vectors.json</c> file, schema 1 (<c>spec/schemas/vectors.schema.json</c>): a fixture, the
 /// provenance of its expected values, the exactness policy its outputs are compared under, and its
 /// vectors in file order. Inputs and expected values are byte images, written as <c>hex</c> or as
-/// <c>text</c> (its UTF-8 bytes); typed <c>args</c> and <c>value</c> forms are refused here.
+/// <c>text</c> (its UTF-8 bytes); typed <c>args</c> and <c>value</c> forms are refused here. A file a
+/// language runner uses also names the function (<c>export</c>) and its typed <see cref="CallSignature"/>;
+/// every input then decodes completely as the call's input image and every expected value as its output
+/// image, and a vector may expect a trap (<c>expectedTrap</c>) instead of an output. Problems with the
+/// images or the signature are <see cref="ImageException"/>s (<c>PLY0064</c>).
 /// </summary>
 public sealed class VectorFile {
 
   private static readonly string[] _provenanceKinds = ["published", "reference-run", "upstream-embedded"];
 
-  private VectorFile(string path, string fixture, VectorProvenance provenance, ExactnessPolicy exactness, IReadOnlyList<TestVector> vectors) {
+  private VectorFile(string path, string fixture, VectorProvenance provenance, ExactnessPolicy exactness, IReadOnlyList<TestVector> vectors, string? export, CallSignature? signature) {
     this.Path = path;
+    this.Export = export;
+    this.Signature = signature;
     this.Fixture = fixture;
     this.Provenance = provenance;
     this.Exactness = exactness;
@@ -52,10 +60,17 @@ public sealed class VectorFile {
   /// <summary>The vectors, in file order.</summary>
   public IReadOnlyList<TestVector> Vectors { get; }
 
+  /// <summary>The function a language runner calls; <see langword="null"/> in a whole-program byte-stream file.</summary>
+  public string? Export { get; }
+
+  /// <summary>The call signature the images follow; <see langword="null"/> in a whole-program byte-stream file.</summary>
+  public CallSignature? Signature { get; }
+
   /// <summary>Loads a vector file.</summary>
   /// <param name="path">The file.</param>
   /// <returns>The file's content.</returns>
   /// <exception cref="FormatException">The file is not valid JSON or not of the declared shape; the message names the property.</exception>
+  /// <exception cref="ImageException">The signature or an image is invalid (<c>PLY0064</c>).</exception>
   /// <exception cref="IOException">The file cannot be read.</exception>
   public static VectorFile Load(string path) {
     ArgumentNullException.ThrowIfNull(path);
@@ -67,6 +82,7 @@ public sealed class VectorFile {
   /// <param name="path">The file the text came from, as the vector file and the messages name it.</param>
   /// <returns>The file's content.</returns>
   /// <exception cref="FormatException">The text is not valid JSON or not of the declared shape; the message names the property.</exception>
+  /// <exception cref="ImageException">The signature or an image is invalid (<c>PLY0064</c>).</exception>
   public static VectorFile Parse(string json, string path) {
     ArgumentNullException.ThrowIfNull(json);
     ArgumentNullException.ThrowIfNull(path);
@@ -79,7 +95,7 @@ public sealed class VectorFile {
 
     using (document) {
       var root = Object(document.RootElement, "$", path);
-      Only(root, "$", path, "schema", "fixture", "provenance", "exactness", "vectors");
+      Only(root, "$", path, "schema", "fixture", "provenance", "exactness", "vectors", "export", "signature");
       if (Required(root, "schema", "$", path) is not { ValueKind: JsonValueKind.Number } version || !version.TryGetInt32(out var number) || number != 1)
         throw Error(path, "schema", "must be 1");
 
@@ -87,7 +103,12 @@ public sealed class VectorFile {
       var provenance = ReadProvenance(Required(root, "provenance", "$", path), path);
       var exactness = root.TryGetProperty("exactness", out var declared) ? ReadExactness(declared, path) : new ExactnessPolicy.Exact();
       var vectors = ReadVectors(Required(root, "vectors", "$", path), path);
-      return new(path, fixture, provenance, exactness, vectors);
+      var (export, signature) = ReadCall(root, path);
+      if (signature is not null)
+        foreach (var vector in vectors)
+          Check(vector, signature, path);
+
+      return new(path, fixture, provenance, exactness, vectors, export, signature);
     }
   }
 
@@ -156,17 +177,58 @@ public sealed class VectorFile {
     foreach (var item in element.EnumerateArray()) {
       var at = $"vectors[{vectors.Count}]";
       Object(item, at, path);
-      Only(item, at, path, "name", "input", "expected");
+      Only(item, at, path, "name", "input", "expected", "expectedTrap");
       var name = Text(item, "name", at, path);
       if (!names.Add(name))
         throw Error(path, $"{at}.name", $"'{name}' is not unique");
 
       var input = Bytes(Required(item, "input", at, path), $"{at}.input", path);
       var expected = item.TryGetProperty("expected", out var value) ? Bytes(value, $"{at}.expected", path) : null;
-      vectors.Add(new(name, input, expected));
+      TrapClass? trap = null;
+      if (item.TryGetProperty("expectedTrap", out var declared)) {
+        if (expected is not null)
+          throw Image(path, $"vector '{name}': both expected and expectedTrap are present");
+        if (declared.ValueKind != JsonValueKind.String)
+          throw Image(path, $"vector '{name}': expectedTrap must be a string");
+
+        try {
+          trap = TrapClass.Parse(declared.GetString()!);
+        } catch (ImageException exception) {
+          throw Image(path, $"vector '{name}': {exception.Message}");
+        }
+      }
+
+      vectors.Add(new(name, input, expected) { ExpectedTrap = trap });
     }
 
     return vectors;
+  }
+
+  private static (string? Export, CallSignature? Signature) ReadCall(JsonElement root, string path) {
+    var hasExport = root.TryGetProperty("export", out _);
+    var hasSignature = root.TryGetProperty("signature", out var signature);
+    if (hasExport != hasSignature)
+      throw Image(path, hasExport ? "signature is required" : "export is required");
+    if (!hasExport)
+      return (null, null);
+
+    var export = Text(root, "export", "$", path);
+    try {
+      return (export, CallSignature.Parse(JsonNode.Parse(signature.GetRawText())));
+    } catch (ImageException exception) {
+      throw Image(path, exception.Message);
+    }
+  }
+
+  /// <summary>Checks that a vector's input decodes completely as the input image, and its expected output as the output image.</summary>
+  private static void Check(TestVector vector, CallSignature signature, string path) {
+    try {
+      CallImages.Decode(signature, CallImage.Input, vector.Input);
+      if (vector.Expected is { } expected)
+        CallImages.Decode(signature, CallImage.Output, expected);
+    } catch (ImageException exception) {
+      throw Image(path, $"vector '{vector.Name}': {exception.Message}");
+    }
   }
 
   private static byte[] Bytes(JsonElement element, string at, string path) {
@@ -207,5 +269,7 @@ public sealed class VectorFile {
   }
 
   private static FormatException Error(string path, string property, string problem) => new($"{path}: '{property}' {problem}");
+
+  private static ImageException Image(string path, string problem) => new($"{path}: {problem}");
 
 }

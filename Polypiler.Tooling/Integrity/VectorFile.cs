@@ -94,7 +94,10 @@ public enum VectorValueKind {
   Args,
 
   /// <summary>Any JSON value; expected values only.</summary>
-  Value
+  Value,
+
+  /// <summary>The trap class a call ends in (<c>expectedTrap</c>), as its <see cref="VectorValue.Text"/>; expected values only.</summary>
+  Trap
 
 }
 
@@ -121,8 +124,9 @@ public sealed class VectorFile {
   /// <summary>The ending of every vector file's name.</summary>
   public const string Extension = ".vectors.json";
 
-  private static readonly string[] _fields = ["schema", "fixture", "provenance", "exactness", "vectors"];
+  private static readonly string[] _fields = ["schema", "fixture", "provenance", "exactness", "vectors", "export", "signature"];
   private static readonly string[] _vectorFields = ["expected", "input", "name"];
+  private static readonly string[] _trapFields = ["expectedTrap", "input", "name"];
 
   private VectorFile(string name, string fixture, Provenance provenance, ImmutableArray<Vector> vectors) {
     this.Name = name;
@@ -216,8 +220,10 @@ public sealed class VectorFile {
     var index = 0;
     foreach (var item in list.EnumerateArray()) {
       ++index;
-      if (item.ValueKind != JsonValueKind.Object || !item.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal).SequenceEqual(_vectorFields)) {
-        problems.Add($"vector {index} must be an object of exactly 'name', 'input' and 'expected'");
+      var fields = item.ValueKind == JsonValueKind.Object ? item.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal).ToList() : [];
+      var trap = fields.SequenceEqual(_trapFields);
+      if (!trap && !fields.SequenceEqual(_vectorFields)) {
+        problems.Add($"vector {index} must be an object of exactly 'name', 'input' and 'expected' or 'expectedTrap'");
         continue;
       }
 
@@ -231,12 +237,21 @@ public sealed class VectorFile {
       if (!names.Add(label))
         problems.Add($"vector '{label}' is listed twice");
       var input = ReadValue(item.GetProperty("input"), $"vector '{label}' input", VectorValueKind.Args, problems);
-      var expected = ReadValue(item.GetProperty("expected"), $"vector '{label}' expected", VectorValueKind.Value, problems);
+      var expected = trap ? ReadTrap(item.GetProperty("expectedTrap"), label, problems) : ReadValue(item.GetProperty("expected"), $"vector '{label}' expected", VectorValueKind.Value, problems);
       if (input is not null && expected is not null)
         vectors.Add(new(label, input, expected));
     }
 
     return vectors.ToImmutable();
+  }
+
+  /// <summary>The trap class of a vector; its spelling is checked by the verification framework's reader.</summary>
+  private static VectorValue? ReadTrap(JsonElement element, string label, List<string> problems) {
+    if (element.ValueKind == JsonValueKind.String && element.GetString()!.Length > 0)
+      return new(VectorValueKind.Trap, [], element.GetString(), element.GetRawText());
+
+    problems.Add($"vector '{label}' expectedTrap must be a non-empty string");
+    return null;
   }
 
   private static VectorValue? ReadValue(JsonElement element, string what, VectorValueKind third, List<string> problems) {

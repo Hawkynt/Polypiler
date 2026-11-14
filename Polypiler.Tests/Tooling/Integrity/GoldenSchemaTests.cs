@@ -76,6 +76,17 @@ public sealed class GoldenSchemaTests {
     Assert.That(new IntegrityChecker(_root).Independence(VectorFile.Parse(text, "v").Provenance), Is.Not.Empty);
   }
 
+  /// <summary>A language runner's file with a signature and a trap vector conforms; one with both expected values, or with half of the call, does not.</summary>
+  [TestCase("u32-identity.json", true)]
+  [TestCase("invalid/hex-and-trap.json", false)]
+  [TestCase("invalid/missing-signature.json", false)]
+  public void RunnerFiles_AreCheckedByTheSchema(string file, bool valid) {
+    var text = File.ReadAllText(Path.Combine(_root, "tests", "fixtures", "verify", "images", file));
+    Assert.That(Valid("vectors.schema.json", text), Is.EqualTo(valid));
+    if (valid)
+      Assert.That(VectorFile.Parse(text, file).Find("max widened by a width-less number")!.Expected.Kind, Is.EqualTo(VectorValueKind.Trap));
+  }
+
   [Test]
   public void EmptyVectorList_IsRefusedByTheSchema()
     => Assert.That(Valid("vectors.schema.json", "{\"schema\":1,\"fixture\":\"f\",\"provenance\":{\"kind\":\"published\",\"source\":\"s\",\"detail\":\"d\",\"generatedBy\":\"hand\"},\"vectors\":[]}"), Is.False);
