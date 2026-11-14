@@ -15,6 +15,10 @@ public sealed partial record DiagnosticDescriptor {
   [Diagnostic]
   public static readonly DiagnosticDescriptor InternalError = new("PLY0001", DiagnosticSeverity.Error, Core.ExitCode.InternalError, "internal compiler error: {0}", "adr-0003.internal-error");
 
+  /// <summary>A native library or a model a component needs is not available: exit code <see cref="Core.ExitCode.MissingDependency"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor MissingDependency = new("PLY0081", DiagnosticSeverity.Error, Core.ExitCode.MissingDependency, "native dependency '{0}' required by '{1}' is missing", "adr-0003.missing-dependency");
+
   /// <summary>Creates a descriptor.</summary>
   /// <param name="code">The code, <c>PLY</c> and four digits.</param>
   /// <param name="severity">How serious the diagnostic is.</param>

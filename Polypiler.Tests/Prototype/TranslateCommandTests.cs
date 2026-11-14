@@ -79,7 +79,7 @@ public sealed class TranslateCommandTests {
   public void UnsupportedConstruct_IsExitCode3AndWritesNothing(string method) {
     var (exitCode, output, error) = this.Translate(PrototypeFixture.Wrap(method));
     Assert.That((exitCode, output), Is.EqualTo((TranslateCommand.UnsupportedConstruct, "")));
-    Assert.That(error, Does.Match(@"^.*Snippet\.cs\(1,\d+\): error PLY1002: '.+' is not supported yet\r?\n$"));
+    Assert.That(error, Does.Match(@"^.*Snippet\.cs\(1,\d+\): error PLY1002: '.+' is not supported yet\r?\npolypiler: 1 error\(s\), 0 warning\(s\)\r?\n$"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -123,8 +123,17 @@ public sealed class TranslateCommandTests {
     var (exitCode, output, error) = Invoke(arguments.Prepend("translate").ToArray());
     Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.UsageError, "")));
     Assert.That(error, Does.StartWith("polypiler: error PLY0003: " + message));
-    Assert.That(error.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries), Has.Length.EqualTo(1));
+    // A refusal of the grammar is the one line; a command that ran and refused ends with the tally line (issue #23).
+    Assert.That(error.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)[1..], Is.EqualTo(OfTheGrammar(message) ? [] : new[] { "polypiler: 1 error(s), 0 warning(s)" }));
   }
+
+  /// <summary>Whether a <c>PLY0003</c> message is one of the grammar, which refuses before the command runs, rather than of the command.</summary>
+  internal static bool OfTheGrammar(string message)
+    => message == CliDiagnostics.NoCommand
+      || message.StartsWith("option '", StringComparison.Ordinal)
+      || message.StartsWith("unknown option '", StringComparison.Ordinal)
+      || message.StartsWith("unexpected argument '", StringComparison.Ordinal)
+      || message.StartsWith("missing argument <", StringComparison.Ordinal);
 
   /// <summary>A source file that is missing or a directory is PLY0004, exit code 1, and nothing is written.</summary>
   [Test]
@@ -132,7 +141,7 @@ public sealed class TranslateCommandTests {
     foreach (var source in new[] { Path.Combine(this._directory, "does-not-exist.cs"), this._directory }) {
       var (exitCode, output, error) = Invoke("translate", source, "--from", "csharp", "--to", "javascript", "--output", this._out);
       Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.EnvironmentError, "")));
-      Assert.That(error, Is.EqualTo($"polypiler: error PLY0004: input '{source}' does not exist or is not readable{Environment.NewLine}"));
+      Assert.That(error, Is.EqualTo($"polypiler: error PLY0004: input '{source}' does not exist or is not readable{Environment.NewLine}polypiler: 1 error(s), 0 warning(s){Environment.NewLine}"));
     }
 
     Assert.That(Directory.Exists(this._out), Is.False);

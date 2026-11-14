@@ -173,7 +173,8 @@ public sealed class TranslateToJavaScriptProfileTests {
     Assert.That(error.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), Is.EqualTo(new[] {
       "polypiler: error PLY1152: 'the function 'F'' cannot be expressed in JavaScript profile 'es2017'",
       "polypiler: error PLY1152: 'Convert' cannot be expressed in JavaScript profile 'es2017'",
-      "polypiler: error PLY1152: 'Multiply' cannot be expressed in JavaScript profile 'es2017'"
+      "polypiler: error PLY1152: 'Multiply' cannot be expressed in JavaScript profile 'es2017'",
+      "polypiler: 3 error(s), 0 warning(s)"
     }));
     Assert.That(Directory.Exists(this._out), Is.False);
 

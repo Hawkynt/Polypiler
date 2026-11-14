@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Polypiler.Cli;
 using Polypiler.Core;
 using Polypiler.Prototype.Testing;
+using Polypiler.Tests.Prototype;
 
 namespace Polypiler.Tests.Frontends.JavaScript;
 
@@ -127,7 +128,7 @@ public sealed class JavaScriptTranslateCommandTests {
   public void RefusedSource_IsExitCode3Or4AndWritesNothing(string source, string[] further, int expected, string message) {
     var (exitCode, output, error) = this.Translate(source, further);
     Assert.That((exitCode, output), Is.EqualTo((expected, "")));
-    Assert.That(error, Does.Match(@"^.*snippet\.js\(1,\d+\): error " + System.Text.RegularExpressions.Regex.Escape(message) + @"\r?\n$"));
+    Assert.That(error, Does.Match(@"^.*snippet\.js\(1,\d+\): error " + System.Text.RegularExpressions.Regex.Escape(message) + @"\r?\npolypiler: 1 error\(s\), 0 warning\(s\)\r?\n$"));
     Assert.That(Directory.Exists(this._out), Is.False);
     Assert.That((TranslateCommand.InvalidSource, TranslateCommand.UnsupportedConstruct), Is.EqualTo((4, 3)));
   }
@@ -143,7 +144,9 @@ public sealed class JavaScriptTranslateCommandTests {
   public void Misuse_IsAUsageError(string[] arguments, string message) {
     var (exitCode, output, error) = Invoke(arguments.Prepend("translate").ToArray());
     Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.UsageError, "")));
-    Assert.That(error, Is.EqualTo("polypiler: error PLY0003: " + message + Environment.NewLine));
+    // A refusal of the grammar is the one line; a command that ran and refused ends with the tally line (issue #23).
+    var tally = TranslateCommandTests.OfTheGrammar(message) ? "" : "polypiler: 1 error(s), 0 warning(s)" + Environment.NewLine;
+    Assert.That(error, Is.EqualTo("polypiler: error PLY0003: " + message + Environment.NewLine + tally));
   }
 
   /// <summary>A source file that cannot be read is PLY0004, exit code 1.</summary>
@@ -151,7 +154,7 @@ public sealed class JavaScriptTranslateCommandTests {
   public void UnreadableFile_IsPly0004() {
     var (exitCode, output, error) = Invoke("translate", "missing.js", "--from", "javascript", "--to", "javascript", "--output", "out");
     Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.EnvironmentError, "")));
-    Assert.That(error, Is.EqualTo("polypiler: error PLY0004: input 'missing.js' does not exist or is not readable" + Environment.NewLine));
+    Assert.That(error, Is.EqualTo("polypiler: error PLY0004: input 'missing.js' does not exist or is not readable" + Environment.NewLine + "polypiler: 1 error(s), 0 warning(s)" + Environment.NewLine));
   }
 
   /// <summary>The help names every language the command takes, and <c>--export</c>.</summary>
