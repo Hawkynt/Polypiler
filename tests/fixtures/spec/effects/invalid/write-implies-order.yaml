@@ -1,0 +1,22 @@
+id: EFFECTS.write-implies-order
+title: Allocation that may be reordered at will
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-EFFECTS
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: write-implies-order
+  class: allocation
+  ordering: free
+  duplication: allowed
+  elimination: allowed
+  reads: []
+  writes: [heap]
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

@@ -1,0 +1,25 @@
+id: TYPES.unknown-encoding-target
+title: Invalid type unknown-encoding-target
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-TYPES
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: encoded-integer
+  parameters: []
+  bits: 32
+  signedness: signed
+  encoding: {of: TYPES.i31, scheme: zigzag}
+  layout:
+    sizeBytes: 4
+    alignment: 4
+    byteOrder: target
+  distinctFrom: []
+  values:
+    - bits: "0x00000000"
+      value: "0"

@@ -137,7 +137,7 @@ public sealed class CSharpProfilesSteps(PrototypeScenario scenario) {
   public void ExitCodeAndOutput(int exitCode, string text) {
     var result = scenario.Log.Last;
     Assert.That(result.ExitCode, Is.EqualTo(exitCode), result.Output);
-    Assert.That(result.Output, Does.Contain(text).And.Contain("usage: polypiler translate"));
+    Assert.That(result.Output, Does.Contain(text).And.Not.Contain("usage:"));
     Assert.That(Directory.Exists(scenario.Workspace.Resolve("out")), Is.False);
   }
 

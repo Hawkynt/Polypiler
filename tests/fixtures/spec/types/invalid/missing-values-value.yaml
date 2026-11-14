@@ -1,0 +1,24 @@
+id: TYPES.missing-values-value
+title: Invalid type missing-values-value
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-TYPES
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: integer
+  parameters: []
+  bits: 32
+  signedness: unsigned
+  overflow: wrap
+  layout:
+    sizeBytes: 4
+    alignment: 4
+    byteOrder: target
+  distinctFrom: []
+  values:
+    - bits: "0x00000000"

@@ -1,0 +1,15 @@
+id: BINARY.c64-basic-v2.tokens
+title: Commodore 64 BASIC V2 keyword tokens
+version: 1
+status: draft
+owner: Hawkynt
+issue: FMT-CBMBASIC
+tests: []
+introducedIn: P3
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: tokens
+  dialect: c64-basic-v2
+  range: {min: "0x80", max: "0xCB"}

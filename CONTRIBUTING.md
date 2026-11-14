@@ -337,6 +337,13 @@ DiagnosticDescriptor` with the same severity, exit code and rule; a code allocat
 registered `reserved: true`. `RegistryMatchesCodeTests` fails when the two disagree, and
 `polypiler-tooling diagnostics validate` checks the registry by itself (`PLY0045` per problem).
 
+## Spec documents
+
+Every document under `spec/<family>/` starts with the metadata block of PRD §4.1 and carries its family
+body under `spec:`. [`spec/README.md`](spec/README.md) lists the keys and their rules and shows how to
+add a document or a family; `polypiler-tooling spec validate [--family <folder>]` checks them
+(`PLY0040`–`PLY0047`).
+
 ## GUI screenshots
 
 GUI applications treat screenshots as generated product documentation. The README/docs should show

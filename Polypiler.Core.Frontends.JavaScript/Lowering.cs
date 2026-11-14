@@ -79,7 +79,7 @@ internal sealed partial class Lowering(TypeInference types) {
   /// <summary>Refuses a place that values of two kinds reach, and a <c>BigInt</c> that nothing bounds.</summary>
   private void CheckType(JsType type, string name, Node evidence) {
     if (type.Kind == JsKind.Conflict)
-      throw this.Refuse(evidence, JavaScriptFrontend.MixedKinds, $"'{name}' holds both {type.Kinds.First} and {type.Kinds.Second}");
+      throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"'{name}' holds both {type.Kinds.First} and {type.Kinds.Second}");
 
     if (type.Kind == JsKind.BigInt && type.Ir is null)
       throw this.Unbounded(evidence);
@@ -499,12 +499,12 @@ internal sealed partial class Lowering(TypeInference types) {
   }
 
   private Refusal Unsupported(Node node, string what)
-    => this.Refuse(node, JavaScriptFrontend.Unsupported, $"'{what}' is not supported yet");
+    => this.Refuse(node, JavaScriptFrontend.UnsupportedDescriptor, $"'{what}' is not supported yet");
 
   private Refusal Unbounded(Node node)
-    => this.Refuse(node, JavaScriptFrontend.NotBounded, $"the result of '{types.Text(node)}' has no bounded type");
+    => this.Refuse(node, JavaScriptFrontend.NotBoundedDescriptor, $"the result of '{types.Text(node)}' has no bounded type");
 
-  private Refusal Refuse(Node node, string code, string message) => new(types.Diagnose(node, code, message));
+  private Refusal Refuse(Node node, DiagnosticDescriptor descriptor, string message) => new(types.Diagnose(node, descriptor, message));
 
   /// <summary>The name a diagnostic gives a statement or an expression outside the subset, where it has one.</summary>
   private static string? Describe(Node node) => node switch {

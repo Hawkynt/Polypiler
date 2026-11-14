@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/binary.schema.json",
+  "title": "Polypiler spec family 'binary'",
+  "description": "The body under 'spec' of a document in spec/binary/: a CPU instruction table (kind 'instructions', spec/binary/<name>/instructions.yaml), a token table of a BASIC dialect (kind 'tokens', spec/binary/<name>/tokens.yaml) or a binary file layout (kind 'format', spec/binary/<name>/format.yaml). Rules the schema cannot state (PLY0046): layout, register-unique, opcode-unique, mode-declared, flags-declared, length-matches-mode, token-unique, token-in-range, fields-ordered; cpu.parent names an existing spec document (PLY0043).",
+  "type": "object",
+  "required": ["kind"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "enum": ["instructions", "tokens", "format"] },
+    "cpu": {
+      "type": "object",
+      "required": ["name", "variant", "byteOrder"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "variant": { "type": "string", "minLength": 1 },
+        "parent": { "type": "string", "pattern": "^BINARY\\.[A-Za-z0-9][A-Za-z0-9_-]*\\.instructions$", "description": "The ID of the instruction document this variant extends." },
+        "byteOrder": { "$ref": "#/$defs/byteOrder" }
+      }
+    },
+    "registers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "bits"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "bits": { "type": "integer", "minimum": 1, "maximum": 128 }
+        }
+      }
+    },
+    "flags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "modes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "operandBytes"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "operandBytes": { "type": "integer", "minimum": 0, "maximum": 8 }
+        }
+      }
+    },
+    "instructions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["opcode", "mnemonic", "mode", "length", "flags", "documented"],
+        "additionalProperties": false,
+        "properties": {
+          "opcode": { "type": "string", "pattern": "^0x([0-9A-F]{2}){1,4}$", "description": "The opcode bytes, 1 to 4, as upper-case hex: \"0xA9\", \"0xCB40\"." },
+          "mnemonic": { "type": "string", "minLength": 1 },
+          "mode": { "type": "string", "minLength": 1, "description": "The name of a mode of 'modes'." },
+          "length": { "type": "integer", "minimum": 1, "description": "The instruction's size in bytes: the opcode bytes plus the mode's operandBytes." },
+          "cycles": { "type": "integer", "minimum": 1 },
+          "flags": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 }, "description": "The flags of 'flags' the instruction affects." },
+          "documented": { "type": "boolean", "description": "false marks an opcode the manufacturer does not document; a lifter refuses it unless its issue says otherwise." }
+        }
+      }
+    },
+    "dialect": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "range": {
+      "type": "object",
+      "required": ["min", "max"],
+      "additionalProperties": false,
+      "properties": {
+        "min": { "$ref": "#/$defs/tokenValue" },
+        "max": { "$ref": "#/$defs/tokenValue" }
+      }
+    },
+    "tokens": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["value", "text"],
+        "additionalProperties": false,
+        "properties": {
+          "value": { "$ref": "#/$defs/tokenValue" },
+          "text": { "type": "string", "minLength": 1, "description": "The keyword the token stands for." }
+        }
+      }
+    },
+    "magic": { "type": "string", "pattern": "^0x([0-9A-F]{2})+$", "description": "The bytes that identify the file, as upper-case hex." },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "offset", "size", "byteOrder", "meaning"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "offset": { "type": "integer", "minimum": 0 },
+          "size": { "type": "integer", "minimum": 1 },
+          "byteOrder": { "$ref": "#/$defs/byteOrder" },
+          "meaning": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "instructions" } } },
+      "then": {
+        "required": ["cpu", "registers", "flags", "modes", "instructions"],
+        "properties": { "dialect": false, "range": false, "tokens": false, "magic": false, "fields": false }
+      }
+    },
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "tokens" } } },
+      "then": {
+        "required": ["dialect", "range", "tokens"],
+        "properties": { "cpu": false, "registers": false, "flags": false, "modes": false, "instructions": false, "magic": false, "fields": false }
+      }
+    },
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "format" } } },
+      "then": {
+        "required": ["fields"],
+        "properties": { "cpu": false, "registers": false, "flags": false, "modes": false, "instructions": false, "dialect": false, "range": false, "tokens": false }
+      }
+    }
+  ],
+  "$defs": {
+    "byteOrder": { "enum": ["little", "big"] },
+    "tokenValue": { "type": "string", "pattern": "^0x([0-9A-F]{2}){1,2}$", "description": "A token value of 1 or 2 bytes, as upper-case hex." }
+  }
+}

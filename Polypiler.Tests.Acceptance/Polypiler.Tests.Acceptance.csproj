@@ -8,6 +8,9 @@
     <!-- Reqnroll names the culture of a feature file ("en"); with invariant globalization, which the
          repository keeps, that culture can only be created when it need not be a predefined one. -->
     <PredefinedCulturesOnly>false</PredefinedCulturesOnly>
+    <!-- The assembly's entry point is Cli/RaiseHost.cs, which runs the test-only commands as a child
+         process for the exit-code tests, instead of the empty one the test SDK would generate. -->
+    <GenerateProgramFile>false</GenerateProgramFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,6 +45,7 @@
     <Compile Include="..\Polypiler.Tests\Architecture\ModuleRules.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Support\DocumentationChecks.cs" LinkBase="Infrastructure\Support" />
     <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
+    <Compile Include="..\tests\shared\Cli\*.cs" LinkBase="Cli\Support" />
     <Compile Include="..\Polypiler.Tests\Tooling\Corpus\MiniUpstream.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Verification\Running\Support\*.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Verification\Fuzzing\DemoTargets.cs" LinkBase="Infra\Support" />

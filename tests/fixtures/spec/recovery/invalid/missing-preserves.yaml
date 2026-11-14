@@ -1,0 +1,25 @@
+id: RECOVERY.O0170
+title: De-unroll repeated stores into a counted loop
+version: 1
+status: draft
+owner: Hawkynt
+issue: REC-ENGINE
+tests: []
+introducedIn: P5
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  optimization: O0170
+  technique: de-unroll
+  before: "Store.u8 %p+0, %v; Store.u8 %p+1, %v; Store.u8 %p+2, %v; Store.u8 %p+3, %v"
+  after: "for %i in 0..3: Store.u8 %p+%i, %v"
+  proofMode: proven
+  proofObligations:
+    - {id: same-writes, class: alias-facts, widths: [8]}
+  negativeCases:
+    - {description: "the stored value is reloaded from the destination between stores", reason: "overlapping writes change later values"}
+    - {description: "the destination is volatile or memory-mapped", reason: "access count and order are observable"}
+  minRepetitions: 2
+  switch: "--disable-opt O0170"
+  document: docs/optimizations/O0170-de-unroll-stores.md

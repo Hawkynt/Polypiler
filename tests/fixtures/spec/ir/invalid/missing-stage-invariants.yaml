@@ -1,0 +1,16 @@
+# at: ir/stages/source-semantic.yaml
+# expect: PLY0040: /spec: Required properties
+id: IR.stage.source-semantic
+title: "Source Semantic IR"
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-STAGES
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: stage
+  order: 10

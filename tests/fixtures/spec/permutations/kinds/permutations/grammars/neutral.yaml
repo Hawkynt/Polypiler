@@ -1,0 +1,15 @@
+id: PERMUTATIONS.grammar.neutral
+title: Shifts only, for any target
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: grammar
+  primitives: [shift]
+  maxDepth: 1

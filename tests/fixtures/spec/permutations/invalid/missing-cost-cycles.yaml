@@ -1,0 +1,17 @@
+id: PERMUTATIONS.cost.missing-cost-cycles
+title: Without cost-cycles
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: cost
+  cpu: z80
+  costs:
+    - {primitive: shift}
+  evidence: {kind: documented, reference: "Zilog, Z80 CPU User Manual UM0080"}

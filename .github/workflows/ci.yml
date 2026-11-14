@@ -29,6 +29,22 @@ jobs:
       # report, so the coverage leg does not run them a second time on Linux.
       coverage-target: Polypiler.Tests/Polypiler.Tests.csproj
 
+  # The documents generated from the specifications must match them: the error catalogue docs/errors
+  # is what spec/diagnostics.yaml and the notes of docs/errors/notes give (PLY0091 otherwise).
+  generated-docs:
+    name: generated documents
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: report errors --check
+        run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- report errors --check
+
   # Polypiler gates coverage, which the shared workflow only reports: at least 95 % of all lines AND
   # of all conditional branches must be executed by the tests (ISSUES.md, "Test strategy").
   coverage-gate:

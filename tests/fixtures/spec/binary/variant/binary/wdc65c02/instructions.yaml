@@ -1,0 +1,19 @@
+id: BINARY.wdc65c02.instructions
+title: WDC 65C02 instructions beyond the MOS 6502
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-BINARY
+tests: []
+introducedIn: P3
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: instructions
+  cpu: {name: wdc65c02, variant: cmos, parent: BINARY.mos6502.instructions, byteOrder: little}
+  registers: [{name: A, bits: 8}, {name: X, bits: 8}, {name: Y, bits: 8}, {name: SP, bits: 8}, {name: PC, bits: 16}, {name: P, bits: 8}]
+  flags: [N, V, B, D, I, Z, C]
+  modes: [{name: relative, operandBytes: 1}]
+  instructions:
+    - {opcode: "0x80", mnemonic: BRA, mode: relative, length: 2, flags: [], documented: true}

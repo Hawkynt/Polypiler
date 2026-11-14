@@ -44,8 +44,7 @@ public sealed class FuzzCommand {
 
   /// <summary>The registered diagnostic of <see cref="NotWritableCode"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
   [Diagnostic]
-  public static readonly DiagnosticDescriptor NotWritableDescriptor = new(NotWritableCode, DiagnosticSeverity.Error, ExitCode.EnvironmentError,
-    "the output directory '{0}' cannot be written: {1}", "io.write");
+  public static readonly DiagnosticDescriptor NotWritableDescriptor = new(NotWritableCode, DiagnosticSeverity.Error, ExitCode.EnvironmentError, "{0}", "io.write");
 
   /// <summary>The diagnostic code of an engine that failed: a worker that does not start, or AFL++ ending with an error.</summary>
   public const string EngineFailedCode = "PLY0077";

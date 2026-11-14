@@ -1,0 +1,17 @@
+id: PERMUTATIONS.cost.z80
+title: Documented Z80 costs
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: cost
+  cpu: z80
+  costs:
+    - {primitive: shift, cycles: 0}
+  evidence: {kind: documented, reference: "Zilog, Z80 CPU User Manual UM0080, instruction SLA"}

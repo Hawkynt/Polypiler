@@ -1,0 +1,14 @@
+id: PERMUTATIONS.grammar.missing-max-depth
+title: Without max-depth
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: grammar
+  primitives: [shift]

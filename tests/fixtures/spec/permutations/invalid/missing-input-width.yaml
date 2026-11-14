@@ -1,0 +1,18 @@
+id: PERMUTATIONS.mapping.missing-input-width
+title: Without input-width
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: mapping
+  outputs: [0, {dontCare: true}]
+  bijective: false
+  vectors:
+    - {input: "0x1", output: "0x3", mask: "0x1"}
+    - {input: "0x0", output: "0x0", mask: "0x1"}

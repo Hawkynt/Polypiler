@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Cli;
+using Polypiler.Core;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Recognize;
@@ -43,7 +44,7 @@ public sealed class OptimizationOptionsTests {
   [Test]
   public void ByDefault_TheRulesRun() {
     var (exitCode, text, error) = this.Translate(Rotate, "csharp", "--profile", "net10.0");
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     Assert.That(text, Does.Contain("BitOperations.RotateLeft(x, 8)").And.Not.Contain("<< 8"));
   }
 
@@ -51,7 +52,7 @@ public sealed class OptimizationOptionsTests {
   [TestCase("default", true)]
   public void Opt_ChoosesTheLevel(string level, bool rotated) {
     var (exitCode, text, _) = this.Translate(Rotate, "javascript", "--opt", level);
-    Assert.That(exitCode, Is.EqualTo(Program.Success));
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     Assert.That(text.Contains("<< 8", StringComparison.Ordinal), Is.EqualTo(!rotated));
   }
 
@@ -59,7 +60,7 @@ public sealed class OptimizationOptionsTests {
   [TestCase("--disable-opt", "O0106,O0100")]
   public void DisableOpt_SwitchesARuleOff(string option, string list) {
     var (exitCode, text, error) = this.Translate(Rotate, "csharp", "--profile", "net10.0", "--explain-opt", option, list);
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     Assert.That(text, Does.Contain("<< 8").And.Not.Contain("RotateLeft"));
   }
 
@@ -67,14 +68,14 @@ public sealed class OptimizationOptionsTests {
   public void DisableOpt_MayBeRepeated() {
     var (exitCode, text, _) = this.Translate(Rotate + " public static int G(int x) => x < 0 ? -x : x;", "csharp", "--profile", "net10.0",
       "--disable-opt", "O0100", "--disable-opt", "O0121", "--explain-opt");
-    Assert.That(exitCode, Is.EqualTo(Program.Success));
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     Assert.That(text, Does.Not.Contain("RotateLeft").And.Not.Contain("AbsWrap"));
   }
 
   [Test]
   public void ExplainOpt_ListsEveryApplicationOnTheErrorStream() {
     var (exitCode, _, error) = this.Translate(Rotate + " public static int G(int x) => x < 0 ? -x : x;", "javascript", "--explain-opt");
-    Assert.That(exitCode, Is.EqualTo(Program.Success));
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     var lines = error.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => line.TrimEnd('\r')).ToList();
     Assert.That(lines, Has.Count.EqualTo(2));
     Assert.That(lines[0], Does.EndWith("Snippet.cs: opt O0100 rotate from a shift pair: 'F' statement 1"));
@@ -89,7 +90,7 @@ public sealed class OptimizationOptionsTests {
   [TestCase("javascript", false)]
   public void RemainderFromQuotient_FollowsTheTarget(string to, bool fired) {
     var (exitCode, _, error) = this.Translate("public static int F(int a, int b) { int q = a / b; return q + a % b; }", to, "--explain-opt");
-    Assert.That(exitCode, Is.EqualTo(Program.Success));
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     Assert.That(error.Contains("O0127", StringComparison.Ordinal), Is.EqualTo(fired));
   }
 
@@ -98,20 +99,20 @@ public sealed class OptimizationOptionsTests {
   [TestCase("--disable-opt", "O9999x", "'O9999x' is not an optimization number of the form O####")]
   [TestCase("--disable-opt", "o0100", "'o0100' is not an optimization number")]
   [TestCase("--disable-opt", "O9999", "unknown optimization 'O9999'; the pipeline has O0100, O0101")]
-  [TestCase("--disable-opt", "", "the option '--disable-opt' has an empty item")]
-  [TestCase("--disable-opt", "O0100,,O0106", "the option '--disable-opt' has an empty item")]
-  [TestCase("--disable-opt", "O0100,", "the option '--disable-opt' has an empty item")]
+  [TestCase("--disable-opt", "", "option '--disable-opt' has an empty list element")]
+  [TestCase("--disable-opt", "O0100,,O0106", "option '--disable-opt' has an empty list element")]
+  [TestCase("--disable-opt", "O0100,", "option '--disable-opt' has an empty list element")]
   public void MalformedOption_IsAUsageError(string option, string value, string message) {
     var (exitCode, text, error) = this.Translate(Rotate, "javascript", option, value);
-    Assert.That((exitCode, text), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.Contain("error PLY0003: " + message).And.Contain("usage: polypiler translate"));
+    Assert.That((exitCode, text), Is.EqualTo(((int)ExitCode.UsageError, "")));
+    Assert.That(error, Does.StartWith("polypiler: error PLY0003: " + message).And.Not.Contain("usage:"));
   }
 
   [Test]
   public void DisableOpt_WithoutAValue_IsAUsageError() {
     var (exitCode, _, error) = this.Translate(Rotate, "javascript", "--disable-opt");
-    Assert.That(exitCode, Is.EqualTo(Program.UsageError));
-    Assert.That(error, Does.Contain("PLY0003: the option '--disable-opt' needs a value"));
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.UsageError));
+    Assert.That(error, Does.Contain("PLY0003: option '--disable-opt' requires a value"));
   }
 
   [Test]
@@ -121,7 +122,7 @@ public sealed class OptimizationOptionsTests {
     using var standard = new StringWriter();
     using var error = new StringWriter();
     var exitCode = Program.Run(["translate", script, "--from", "javascript", "--to", "csharp", "--output", Path.Combine(this._directory, "js"), "--explain-opt"], standard, error);
-    Assert.That(exitCode, Is.EqualTo(Program.Success));
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     Assert.That(error.ToString(), Does.Contain("opt O0100"));
   }
 
