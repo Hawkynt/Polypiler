@@ -56,6 +56,10 @@ internal sealed partial class Lowering {
         return Text(this.Natural(expression, IrType.U16));
       case SpecialType.System_Boolean:
         return this.Text(this.Own(expression), format, expression, "string + bool");
+      case var _ when this.EnumOf(type) is not null:
+        return format is null
+          ? EnumText(this.Own(expression), expression, $"string + {type!.Name}")
+          : throw new UnsupportedException(expression, $"string + {type!.Name} with a format");
       case var _ when IsNumber(type):
         this._cultureImplied |= !IsHexadecimal(format);
         return this.Text(this.Own(expression), format, expression, $"string + {type!.ToDisplayString()}");

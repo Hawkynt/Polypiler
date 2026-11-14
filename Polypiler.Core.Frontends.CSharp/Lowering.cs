@@ -35,13 +35,16 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     var name = "";
     var classes = new List<(string Path, SemanticModel Model, ClassDeclarationSyntax Type)>();
     var structs = new List<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)>();
+    var enums = new List<(string Path, SemanticModel Model, EnumDeclarationSyntax Type)>();
     foreach (var part in parts) {
       path = part.Path;
       model = part.Model;
       try {
         var found = new List<TypeDeclarationSyntax>();
-        var type = this.TheClass(part.Root, found);
+        var named = new List<EnumDeclarationSyntax>();
+        var type = this.TheClass(part.Root, found, named);
         structs.AddRange(found.Select(declaration => (part.Path, part.Model, declaration)));
+        enums.AddRange(named.Select(declaration => (part.Path, part.Model, declaration)));
         var symbol = model.GetDeclaredSymbol(type);
         if (this._class is not null && !SymbolEqualityComparer.Default.Equals(this._class, symbol))
           throw new UnsupportedException(type, "files that declare different classes");
@@ -54,6 +57,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       }
     }
 
+    this.DeclareEnums(enums);
     this.DeclareStructs(structs);
     this.FindWrittenArrays(classes);
     foreach (var (file, semantics, type) in classes) {
@@ -73,7 +77,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     foreach (var (file, semantics, type) in classes) {
       path = file;
       model = semantics;
-      foreach (var member in type.Members.Where(member => member is not FieldDeclarationSyntax && !IsStruct(member))) {
+      foreach (var member in type.Members.Where(member => member is not FieldDeclarationSyntax && !IsStruct(member) && !IsEnumDeclaration(member))) {
         try {
           if (member is not MethodDeclarationSyntax method)
             throw new UnsupportedException(member, member switch {
@@ -180,18 +184,19 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
   /// <summary>
   /// The one static class of a file, with the structs the file declares beside it and inside it
-  /// added to <paramref name="structs"/>.
+  /// added to <paramref name="structs"/> and the enums to <paramref name="enums"/>.
   /// </summary>
-  private ClassDeclarationSyntax TheClass(CompilationUnitSyntax root, List<TypeDeclarationSyntax> structs) {
+  private ClassDeclarationSyntax TheClass(CompilationUnitSyntax root, List<TypeDeclarationSyntax> structs, List<EnumDeclarationSyntax> enums) {
     var members = root.Members;
     if (members.Count == 1 && members[0] is BaseNamespaceDeclarationSyntax scope)
       members = scope.Members;
 
-    var types = members.Where(member => !IsStruct(member)).ToList();
+    var types = members.Where(member => !IsStruct(member) && !IsEnumDeclaration(member)).ToList();
     if (types.Count != 1 || types[0] is not ClassDeclarationSyntax type)
       throw new UnsupportedException(types.Count > 1 ? types[1] : root, "a file that is not exactly one static class");
 
     structs.AddRange(members.Concat(type.Members).Where(IsStruct).Cast<TypeDeclarationSyntax>());
+    enums.AddRange(members.Concat(type.Members).OfType<EnumDeclarationSyntax>());
 
     if (!type.Modifiers.Any(SyntaxKind.StaticKeyword))
       throw new UnsupportedException(type, "a class that is not static");
@@ -293,6 +298,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
     if (type is INamedTypeSymbol named && this._structs.TryGetValue(named, out var declared))
       return IrType.Struct(declared);
+
+    if (this.EnumOf(type) is { } enumerated)
+      return enumerated.Type;
 
     if (type is IArrayTypeSymbol { Rank: 1 } array) {
       var element = this.Map(array.ElementType, node);
@@ -601,7 +609,10 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     var current = target.Read();
     var left = Convert(current, this.Map(operation.Parameters[0].Type, assignment));
     var right = this.Value(assignment.Right);
-    into.Add(target.Write(Convert(Binary(op, left, right, assignment, trap), current.Type, trap)));
+    var combined = left.Type.IsEnum || right.Type.IsEnum
+      ? EnumBinary(op, left, right, this.Map(operation.ReturnType, assignment), assignment, trap)
+      : Binary(op, left, right, assignment, trap);
+    into.Add(target.Write(Convert(combined, current.Type, trap)));
   }
 
   /// <summary>
@@ -612,7 +623,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     var trap = this.IsChecked(operand);
     var target = this.Target(operand, into, true);
     var current = target.Read();
-    var word = current.Type.IsArithmetic ? current.Type : IrType.I32;
+    // An enum steps as its underlying type does.
+    var word = current.Type.IsEnum ? Promoted(current.Type) : current.Type.IsArithmetic ? current.Type : IrType.I32;
     var stepped = Binary(increment ? IrBinaryOp.Add : IrBinaryOp.Subtract, Convert(current, word), One(word), operand, trap);
     into.Add(target.Write(Convert(stepped, current.Type, trap)));
   }
@@ -751,6 +763,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         return this.Binary(binary);
       case ConditionalExpressionSyntax choice:
         return new IrConditional(this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse));
+      case CastExpressionSyntax cast when this.EnumCast(cast, type) is { } listed:
+        return listed;
       case CastExpressionSyntax cast:
         return Convert(this.Value(cast.Expression), type, this.IsChecked(cast));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments: [{ Expression: RangeExpressionSyntax or PrefixUnaryExpressionSyntax { RawKind: (int)SyntaxKind.IndexExpression } }] } element when model.GetTypeInfo(element.Expression).Type?.SpecialType == SpecialType.System_String:
@@ -843,6 +857,10 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     }
 
     var operand = this.Value(unary.Operand);
+    // C# has no operator on one enum but the complement.
+    if (operand.Type.IsEnum)
+      return EnumComplement(operand);
+
     if (op == IrUnaryOp.Negate && operand.Type.IsInteger && this.IsChecked(unary))
       op = IrUnaryOp.NegateChecked;
 
@@ -880,6 +898,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
     var left = this.Value(binary.Left);
     var right = this.Value(binary.Right);
+    if (left.Type.IsEnum || right.Type.IsEnum)
+      return EnumBinary(op.Value, left, right, this.Map(model.GetTypeInfo(binary).Type, binary), binary, this.IsChecked(binary));
+
     return left.Type.IsStruct
       ? this.Equality(op.Value, left, right, binary)
       : Binary(op.Value, left, right, binary, this.IsChecked(binary));
@@ -916,6 +937,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       throw new UnsupportedException(invocation, invocation.Kind().ToString());
 
     var operands = arguments.Select(argument => argument.Expression).ToList();
+    if (this.EnumCall(invocation, method, operands) is { } named)
+      return named;
     if (this.NumberTextCall(invocation, method, operands) is { } number)
       return number;
     if (this.StringCall(invocation, method, operands) is { } text)
@@ -1044,6 +1067,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     var from = value.Type;
     if (from == type)
       return value;
+
+    if (from.IsEnum || type.IsEnum)
+      return ConvertEnum(value, type, trap);
 
     if (type.IsFloat)
       return value is IrConst number

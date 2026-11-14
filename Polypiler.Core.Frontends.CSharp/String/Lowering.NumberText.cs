@@ -28,8 +28,17 @@ internal sealed partial class Lowering {
   /// <summary>Whether a format writes hexadecimal digits, which no culture changes: <c>x</c> or <c>X</c> with its padding.</summary>
   private static bool IsHexadecimal(string? format) => format is { Length: > 0 } && format[0] is 'x' or 'X';
 
-  /// <summary>An expression as the value of its own type, not of what the compiler converts it to - the object of a concatenation or of <c>string.Concat</c>.</summary>
-  private IrExpr Own(ExpressionSyntax expression) => this.Natural(expression, this.Map(model.GetTypeInfo(expression).Type, expression));
+  /// <summary>
+  /// An expression as the value of its own type, not of what the compiler converts it to - the object
+  /// of a concatenation or of <c>string.Concat</c>. Inside parentheses the compiler converts the
+  /// expression itself, so they are looked through.
+  /// </summary>
+  private IrExpr Own(ExpressionSyntax expression) {
+    while (expression is ParenthesizedExpressionSyntax parenthesized)
+      expression = parenthesized.Expression;
+
+    return this.Natural(expression, this.Map(model.GetTypeInfo(expression).Type, expression));
+  }
 
   /// <summary>Whether an argument is the invariant culture: <c>CultureInfo.InvariantCulture</c> or <c>NumberFormatInfo.InvariantInfo</c>.</summary>
   private bool IsInvariant(ExpressionSyntax argument)
