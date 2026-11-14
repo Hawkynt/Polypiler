@@ -8,6 +8,14 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- A published executable carries its code compiled ahead of time, Roslyn's included: without it a
+       translation spends most of its start-up in the JIT (0.41 s against 1.23 s for a strict float
+       translation, at 51 MB against 22 MB for the compressed single file). ReadyToRun needs a runtime
+       identifier, which every publish names. -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishReadyToRun>true</PublishReadyToRun>
+  </PropertyGroup>
+
   <!-- The C# frontend hands the core library of the running process to Roslyn as the reference to
        compile against. A trimmed publish must therefore keep that library whole: with members such as
        int.MaxValue trimmed away, valid C# would be reported as invalid. -->
