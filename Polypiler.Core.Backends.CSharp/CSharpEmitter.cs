@@ -524,10 +524,11 @@ public static class CSharpEmitter {
     /// there is. A form with a template casts between the widths of the integers it works on, which
     /// has to wrap around: it stands where overflow is not checked.
     /// </summary>
-    private CSharpForm Form(IrIntrinsic intrinsic) {
-      var row = Row(intrinsic, this._table)!;
-      return row.IsIn(this._profile) ? row.Native! : row.Replacement!;
-    }
+    private CSharpForm Form(IrIntrinsic intrinsic) => this.Form(Row(intrinsic, this._table)!, intrinsic.Arguments);
+
+    /// <summary>The form of a row for arguments: the one for arguments that cannot trap where they cannot, else the profile's.</summary>
+    private CSharpForm Form(CSharpCapability row, IReadOnlyList<IrExpr> arguments)
+      => row.Total is { } total && row.IsTotal!(arguments) ? total : row.IsIn(this._profile) ? row.Native! : row.Replacement!;
 
     /// <summary>Whether a conversion is written as a cast: any but a saturating one the profile has no cast for.</summary>
     private bool Casts(IrConvert conversion) => !Saturates(conversion) || Row(conversion, this._table)!.IsIn(this._profile);
@@ -983,7 +984,7 @@ public static class CSharpEmitter {
     /// otherwise the replacement — a method of the older base library or the helper of the row.
     /// </summary>
     private (string Text, int Binding) Call(CSharpCapability row, IReadOnlyList<IrExpr> arguments) {
-      var form = row.IsIn(this._profile) ? row.Native! : row.Replacement!;
+      var form = this.Form(row, arguments);
       if (form.Template is { } template) {
         // The arguments are written in their order, which is the order of the IR; {h} is the helper of the row.
         var written = arguments.Select(argument => this.Operand(argument, Primary)).ToList();

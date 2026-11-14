@@ -6,15 +6,16 @@ namespace Polypiler.Core.Backends.JavaScript;
 internal static partial class JavaScriptHelpers {
 
   /// <summary>
-  /// The byte swap and the bit reversal, built up byte by byte and bit by bit in a number, which is
-  /// exact below 2^53; of 64 bits on the unsigned <c>BigInt</c>, or as the swapped halves.
+  /// The byte swap, written out for each width so that it costs no more than the shifts it stands
+  /// for, and the bit reversal, built up bit by bit in a number, which is exact below 2^53; of 64 bits
+  /// on the unsigned <c>BigInt</c>, or as the swapped halves.
   /// </summary>
   private static IEnumerable<(string Name, Func<Func<string, bool>, string> Text)> ReorderingHelpers => [
     Same("$bswap", """
       function $bswap(value, bits) {
-        @let result = 0;
-        for (@let shift = 0; shift < bits; shift += 8) result = result * 256 + ((value >>> shift) & 0xFF);
-        return result;
+        if (bits === 32) return (((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | ((value >>> 8) & 0xFF00) | ((value >>> 24) & 0xFF)) >>> 0;
+        if (bits === 16) return ((value & 0xFF) << 8) | ((value >>> 8) & 0xFF);
+        return value & 0xFF;
       }
       """),
     Wide("$bswap64", """

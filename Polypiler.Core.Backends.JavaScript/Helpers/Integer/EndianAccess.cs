@@ -10,16 +10,18 @@ internal static partial class JavaScriptHelpers {
 
   /// <summary>
   /// Loads and stores of the bytes of an integer, typed array or plain, the whole range checked
-  /// before anything is read or written: up to 32 bits as a number built from the bytes, which is
-  /// exact, of 64 bits as a <c>BigInt</c> or as two halves of four bytes each.
+  /// before anything is read or written: of 16 and 32 bits written out byte by byte, so that they cost
+  /// no more than the byte accesses they stand for; of 64 bits as a <c>BigInt</c> or as two halves of
+  /// four bytes each.
   /// </summary>
   private static IEnumerable<(string Name, Func<Func<string, bool>, string> Text)> EndianHelpers => [
     Same("$load", Lines(
       "function $load(array, index, size, little) {",
       OutsideBytes,
-      "  @let value = 0;",
-      "  for (@let k = 0; k < size; ++k) value = value * 256 + array[little ? index + size - 1 - k : index + k];",
-      "  return value;",
+      "  if (size === 2) return little ? array[index] | (array[index + 1] << 8) : (array[index] << 8) | array[index + 1];",
+      "  return (little",
+      "    ? array[index] | (array[index + 1] << 8) | (array[index + 2] << 16) | (array[index + 3] << 24)",
+      "    : (array[index] << 24) | (array[index + 1] << 16) | (array[index + 2] << 8) | array[index + 3]) >>> 0;",
       "}")),
     Wide("$load64",
       Lines(
@@ -43,7 +45,13 @@ internal static partial class JavaScriptHelpers {
     Same("$store", Lines(
       "function $store(array, index, value, size, little) {",
       OutsideBytes,
-      "  for (@let k = 0; k < size; ++k) array[little ? index + k : index + size - 1 - k] = (value >>> (8 * k)) & 0xFF;",
+      "  @const last = index + size - 1;",
+      "  array[little ? index : last] = value & 0xFF;",
+      "  array[little ? index + 1 : last - 1] = (value >>> 8) & 0xFF;",
+      "  if (size === 4) {",
+      "    array[little ? index + 2 : index + 1] = (value >>> 16) & 0xFF;",
+      "    array[little ? index + 3 : index] = (value >>> 24) & 0xFF;",
+      "  }",
       "}")),
     Wide("$store64",
       Lines(

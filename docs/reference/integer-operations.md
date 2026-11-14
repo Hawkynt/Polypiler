@@ -138,6 +138,13 @@ an invalid operation (`ArithmeticException` in generated C#). A store is a helpe
 the span of `BinaryPrimitives.Write…` would check the range before the value is evaluated, where the
 IR evaluates every argument first.
 
+Where the arguments cannot make an operation trap, the operators of the language say it as cheaply as
+the idiom a recognition rule found (`CSharpCapability.Total`): `TestBit`, `SetBit`, `ClearBit` and
+`ToggleBit` at a position that is a constant inside the width or masked to it are the shift and the
+mask, `SignExtend` by a constant count is the shift pair of the signed type, and `Clamp` between
+constant bounds in order is `Math.Min(Math.Max(x, lo), hi)`. The helpers for a byte swap, a bit
+reversal and a load before .NET Standard 2.1 are written out without loops.
+
 ### JavaScript
 
 An integer of up to 32 bits is a number; a helper told the width returns the bits of the result and
@@ -157,7 +164,9 @@ below; every 64-bit helper has a body for each. The library forms:
 
 Everything else is a helper (`$rotln`, `$bswap`, `$brev`, `$rup2`, `$mulhi`, `$divf`, `$clamp`,
 `$sat`, `$outside`, `$extract`, `$insert`, `$lowmask`, `$blsi`, `$sext`, `$load`, `$store`, … and
-their 64-bit forms), declared only when a module calls it.
+their 64-bit forms), declared only when a module calls it. `$bswap`, `$load` and `$store` of up to 32
+bits are written out byte by byte, so that they cost no more than the shifts and byte accesses a
+recognition rule replaced by them.
 
 ## How it is tested
 

@@ -17,9 +17,21 @@ internal static partial class CSharpIntegerRows {
       Helped(IrIntrinsicOp.IsolateLowestSet, kind, $"({Type(kind)}){{h}}({Pattern(kind)})", CSharpIntegerHelpers.IsolateLowestSet),
       Helped(IrIntrinsicOp.ClearLowestSet, kind, $"({Type(kind)}){{h}}({Pattern(kind)})", CSharpIntegerHelpers.ClearLowestSet),
       Helped(IrIntrinsicOp.MaskToLowestSet, kind, $"({Type(kind)}){{h}}({Pattern(kind)})", CSharpIntegerHelpers.MaskToLowestSet),
-      Helped(IrIntrinsicOp.SignExtend, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {{1}}, {Digits(Width(kind))})", CSharpIntegerHelpers.SignExtend),
+      Helped(IrIntrinsicOp.SignExtend, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {{1}}, {Digits(Width(kind))})", CSharpIntegerHelpers.SignExtend)
+        .WithTotal(new CSharpForm(null, Template: Extended(kind)), arguments => arguments[1] is IrConst bits && bits.Value >= 1 && bits.Value <= Width(kind)),
       Helped(IrIntrinsicOp.ZeroExtend, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {{1}}, {Digits(Width(kind))})", CSharpIntegerHelpers.ZeroExtend)
     ])
   ];
+
+  /// <summary>
+  /// The sign extension of the low bits by a constant count as the shift pair of the signed type the
+  /// operators compute in: the constant count stands twice, which is safe for a constant.
+  /// </summary>
+  private static string Extended(IrTypeKind kind) => kind switch {
+    IrTypeKind.I64 => "(({0} << (64 - {1})) >> (64 - {1}))",
+    IrTypeKind.U64 => "(ulong)(((long){0} << (64 - {1})) >> (64 - {1}))",
+    IrTypeKind.I32 => "(({0} << (32 - {1})) >> (32 - {1}))",
+    _ => $"({Type(kind)})(((int){{0}} << (32 - {{1}})) >> (32 - {{1}}))"
+  };
 
 }
