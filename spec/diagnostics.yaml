@@ -373,41 +373,46 @@ codes:
     exit: EnvironmentError
     title: spec schema violation
     message: "<json pointer>: <schema keyword message>"
+    rule: spec.schema
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0040: <message>', or one JSON line with --diagnostics json"
   - code: PLY0041
     severity: error
     exit: EnvironmentError
     title: spec metadata rule violated
     message: "<reason>"
+    rule: spec.metadata
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0041: <message>', or one JSON line with --diagnostics json"
   - code: PLY0042
     severity: error
     exit: EnvironmentError
     title: duplicate spec id
     message: "duplicate spec id '<id>', first defined in <path>"
+    rule: spec.unique-id
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0042: <message>', or one JSON line with --diagnostics json"
   - code: PLY0043
     severity: error
     exit: EnvironmentError
     title: spec reference broken
-    message: "unknown spec id '<id>'"
+    message: "<reason>"
+    rule: spec.reference
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0043: <message>', or one JSON line with --diagnostics json"
   - code: PLY0044
     severity: error
     exit: EnvironmentError
     title: spec lifecycle invalid
     message: "<reason>"
+    rule: spec.lifecycle
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0044: <message>', or one JSON line with --diagnostics json"
   - code: PLY0045
     severity: error
     exit: EnvironmentError
@@ -420,19 +425,21 @@ codes:
   - code: PLY0046
     severity: error
     exit: EnvironmentError
-    title: spec layout violated
-    message: "id '<id>' does not match file name '<file>' (rule: layout)"
+    title: spec family rule violated
+    message: "<reason> (rule: <rule>)"
+    rule: spec.family
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0046: <message>', or one JSON line with --diagnostics json"
   - code: PLY0047
     severity: error
     exit: EnvironmentError
     title: spec file unreadable
-    message: "not valid YAML: <parser message>"
+    message: "<reason>"
+    rule: spec.readable
     area: infrastructure
     owner: SPEC-META
-    reserved: true
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0047: <message>', or one JSON line with --diagnostics json"
   - code: PLY0050
     severity: error
     exit: OracleFailure

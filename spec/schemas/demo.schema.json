@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/demo.schema.json",
+  "title": "Polypiler spec family 'demo'",
+  "description": "The body under 'spec' of a document in spec/demo/: the worked example of a spec family (spec/README.md). Rules the schema cannot state: part names are unique (unique-part, PLY0046), and 'uses' names an existing spec document (PLY0043).",
+  "type": "object",
+  "required": ["parts"],
+  "additionalProperties": false,
+  "properties": {
+    "parts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "uses": { "type": "string", "description": "The ID of a spec document the part relies on." }
+        }
+      }
+    }
+  }
+}
