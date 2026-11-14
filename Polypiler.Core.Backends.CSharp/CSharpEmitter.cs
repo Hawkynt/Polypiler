@@ -142,13 +142,20 @@ public static class CSharpEmitter {
 
     // What the table decides is asked of well-typed IR only: an operation then has its operands.
     var problems = new List<Diagnostic>();
-    foreach (var expression in module.Functions.SelectMany(function => Expressions(function.Body)).Where(IsTabled)) {
+    void Ask(IrExpr expression) {
       var row = Row(expression, table);
       if (row is null)
         problems.Add(Unknown(expression is IrIntrinsic intrinsic ? $"{intrinsic.Op} of {intrinsic.Arguments[0].Type}" : $"{expression.Type} with saturation"));
+      else if (row.IsRewrittenIn(profile))
+        // Written as other operations, the profile has to have what those are written with.
+        foreach (var part in Expressions(row.Rewrite!((IrIntrinsic)expression)).Where(IsTabled))
+          Ask(part);
       else if (!row.IsIn(profile) && row.Replacement is null)
         problems.Add(new Diagnostic(Inexpressible, DiagnosticSeverity.Error, $"'{row.Name}' cannot be expressed in C# profile '{profile.Name}'"));
     }
+
+    foreach (var expression in module.Functions.SelectMany(function => Expressions(function.Body)).Where(IsTabled))
+      Ask(expression);
 
     return problems.Distinct().ToList();
   }
@@ -535,7 +542,7 @@ public static class CSharpEmitter {
         || (binary.Op == IrBinaryOp.ShiftRightLogical && binary.Type.IsSigned && !this.Has(CSharpFeature.UnsignedRightShift)),
       IrConvert conversion => conversion.Contract != IrConversion.Trap && !Keeps(conversion) && this.Casts(conversion),
       IrStep step => !step.Trap && step.Type.IsInteger,
-      IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic => this.Form(intrinsic).Template is not null,
+      IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic => this.Rewritten(intrinsic) is { } rewritten ? Expressions(rewritten).Any(this.Wraps) : this.Form(intrinsic).Template is not null,
       _ => false
     };
 
@@ -545,6 +552,12 @@ public static class CSharpEmitter {
     /// has to wrap around: it stands where overflow is not checked.
     /// </summary>
     private CSharpForm Form(IrIntrinsic intrinsic) => this.Form(Row(intrinsic, this._table)!, intrinsic.Arguments);
+
+    /// <summary>An intrinsic as the other operations its row writes it as in the profile, or <see langword="null"/> when its row writes it itself.</summary>
+    private IrExpr? Rewritten(IrIntrinsic intrinsic) {
+      var row = Row(intrinsic, this._table)!;
+      return row.IsRewrittenIn(this._profile) ? row.Rewrite!(intrinsic) : null;
+    }
 
     /// <summary>The form of a row for arguments: the one for arguments that cannot trap where they cannot, else the profile's.</summary>
     private CSharpForm Form(CSharpCapability row, IReadOnlyList<IrExpr> arguments)
@@ -1001,7 +1014,7 @@ public static class CSharpEmitter {
       if (intrinsic.Op == IrIntrinsicOp.ArrayOf)
         return ($"new {TypeName(intrinsic.Type)} {Braces(intrinsic.Arguments.Select(this.Stored).ToList())}", Unary);
 
-      return this.Call(Row(intrinsic, this._table)!, intrinsic.Arguments);
+      return this.Rewritten(intrinsic) is { } rewritten ? this.Expression(rewritten) : this.Call(Row(intrinsic, this._table)!, intrinsic.Arguments);
     }
 
     /// <summary>
