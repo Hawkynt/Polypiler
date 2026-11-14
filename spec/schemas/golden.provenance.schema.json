@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/golden.provenance.schema.json",
+  "title": "Polypiler provenance marker",
+  "description": "A golden.provenance.json file below tests/fixtures or tests/vectors: every file of its folder and below, except those an exclude pattern (relative to the folder; * within a segment, ** for whole segments) matches, is golden and came from the provenance given.",
+  "type": "object",
+  "required": ["schema", "provenance"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "provenance": {
+      "description": "The same block as in a vector file (vectors.schema.json).",
+      "type": "object",
+      "required": ["kind", "source", "detail", "generatedBy"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["published", "reference-run", "upstream-embedded"] },
+        "source": { "type": "string", "pattern": "\\S" },
+        "detail": { "type": "string", "pattern": "\\S" },
+        "generatedBy": { "type": "string", "pattern": "\\S", "not": { "pattern": "^\\s*[Pp][Oo][Ll][Yy][Pp][Ii][Ll][Ee][Rr]" } }
+      }
+    },
+    "exclude": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}
