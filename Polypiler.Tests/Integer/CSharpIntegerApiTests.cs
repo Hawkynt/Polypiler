@@ -119,6 +119,8 @@ public sealed class CSharpIntegerApiTests {
       }
 
       yield return ("System.BitConverter", $"To{sized}", $"public static {type} F(byte[] a, int b) => System.BitConverter.To{sized}(a, b);");
+      // A stored value made of operators that cannot trap: a choice, a negation, a complement, a conversion.
+      yield return (Binary, $"Write{sized}BigEndian", $"public static byte[] F(byte[] a, int c) {{ {Binary}.Write{sized}BigEndian(a, ({type})(c > 0 ? -c : ~c)); return a; }}");
       yield return ("System.BitConverter", $"To{sized}", $"public static {type} F(byte[] a) => System.BitConverter.To{sized}(a.AsSpan());");
     }
   }
