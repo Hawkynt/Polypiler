@@ -75,6 +75,7 @@ public sealed class JavaScriptCapabilities {
     new("Object.create", 5),
     new("instanceof", 5),
     new(".call", 5),
+    new("TypeError", 5),
 
     // Globals and the functions of Math.
     new("NaN", 5),

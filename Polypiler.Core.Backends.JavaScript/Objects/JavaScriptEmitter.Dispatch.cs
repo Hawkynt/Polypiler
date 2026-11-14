@@ -97,6 +97,9 @@ public static partial class JavaScriptEmitter {
         "as" => new JsReturn(new JsConditional(this.IsOf(value, type), value, new JsNull())),
         _ => new JsIf(Infix(Infix(value, "===", new JsNull()), "||", this.IsOf(value, type)), new JsReturn(value), null)
       };
+      if (kind == "cast")
+        this.Native("TypeError");
+
       List<JsStatement> statements = kind == "cast"
         ? [body, new JsThrow(new JsNew(Id("TypeError"), [new JsString(IrTrapException.Describe(IrTrap.InvalidCast))]))]
         : [body];
