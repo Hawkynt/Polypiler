@@ -1,0 +1,2 @@
+# The reference vectors are golden files: tests/fixtures/golden.lock.json hashes their bytes, which must be the same on every platform.
+* -text

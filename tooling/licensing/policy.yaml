@@ -1,0 +1,56 @@
+# The licence policy (PRD §8 P0, §13.3, §15): which licences the corpus and the repository's outputs
+# may carry. `polypiler-tooling licenses scan` reads it, with DECISIONS.md and texts/ beside it.
+#
+#   allowed            sources of shipped code; pass in corpus and distribution mode
+#   referenceOnly      oracles only (rung 2 of AGENTS.md); pass in corpus mode, denied in distribution
+#   allowedExceptions  exceptions a `WITH` may name; any other makes the expression denied
+#   restrictedAssets   files never redistributed whatever their licence, unless an override names them;
+#                      a glob without '/' matches the file name at any depth
+#   overrides          reviewed per-path licences: {glob, licence, reason, reviewer}
+#   pendingDecisions   requests awaiting the owner: {licence, requestedBy, question}; denied until decided
+#
+# Any identifier in no list is denied. Moving an identifier into or between the lists is the
+# repository owner's decision alone, made in a commit that also adds its row to DECISIONS.md; the scan
+# refuses a listed identifier whose last DECISIONS.md row names another list or none.
+#
+# A file under a GPL licence keeps it: whatever is generated from it is labelled GPL-3.0-or-later,
+# never LGPL, and never becomes part of the Polypiler.* projects.
+schema: 1
+
+allowed:
+  - LGPL-3.0-or-later
+  - LGPL-3.0-only
+  - LGPL-2.1-or-later
+  - LGPL-2.0-or-later
+  - LGPL-2.0-only
+  - GPL-3.0-or-later
+  - GPL-3.0-only
+  - GPL-2.0-or-later
+  - MIT
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - Apache-2.0
+  - ISC
+  - Zlib
+  - 0BSD
+  - Unlicense
+  - CC0-1.0
+
+referenceOnly:
+  - GPL-2.0-only
+  - AGPL-3.0-only
+  - AGPL-3.0-or-later
+
+allowedExceptions: []
+
+restrictedAssets:
+  - '*.onnx'
+  - '*.param'
+  - '*.bin'
+  - '*.pt'
+  - '*.safetensors'
+  - '*.mlmodel'
+
+overrides: []
+
+pendingDecisions: []
