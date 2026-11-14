@@ -1,0 +1,11 @@
+# PB-Compiler pinned at another commit than the one installed: the probe runs the real pbc, which
+# reports the commit it was built from. BasicLayerTests checks that this is a version mismatch.
+schema: 1
+toolchains:
+  pb-compiler:
+    version: "1111111111111111111111111111111111111111"
+    probe: [pbc, --version]
+    versionPattern: '(?<version>[0-9a-f]{40})'
+    platforms: [linux, windows, macos]
+    licence: LGPL-3.0-or-later
+    source: https://github.com/Hawkynt/PB-Compiler

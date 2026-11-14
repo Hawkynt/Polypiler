@@ -1,0 +1,12 @@
+# DOSBox-X as on a machine without it: its probe names an executable that does not exist.
+# BasicLayerTests checks what a test that requires it reports there.
+schema: 1
+toolchains:
+  dosbox-x:
+    version: "2026.10.01"
+    probe: [no-such-dosbox-x-polypiler, --version]
+    versionPattern: 'version (?<version>\d{4}\.\d{2}\.\d{2})'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-or-later
+    source: https://github.com/joncampbell123/dosbox-x/releases
+    oracleOnly: true

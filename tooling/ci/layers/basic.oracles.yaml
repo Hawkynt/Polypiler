@@ -1,0 +1,15 @@
+# The oracles of the BASIC/PB layer and where each of them runs (PRD §7.3: the genuine commercial
+# compiler is marked separately rather than implied). availability is
+#   ci        runs in the job layer-basic; its toolchain is probed there at its pin
+#   external  exists, but cannot run on a hosted runner; its results count only as recorded evidence
+#             files that name their origin
+#   none      no oracle is available
+# Only a `ci` oracle can make a test pass. The job prints this table into its summary, and
+# Polypiler.Tests.Acceptance/Infra/Ci checks it against tests/fixtures/infra/ci/basic/oracles.expected.txt.
+# A retro issue that adds an oracle to the layer adds its row here.
+schema: 1
+oracles:
+  - { oracle: pb-compiler, toolchain: pb-compiler, availability: ci }
+  - { oracle: dosbox-x, toolchain: dosbox-x, availability: ci }
+  - { oracle: vice, toolchain: vice, availability: ci }
+  - { oracle: powerbasic-genuine, availability: external }

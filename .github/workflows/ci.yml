@@ -206,3 +206,68 @@ jobs:
           start=$(date +%s%N)
           node tooling/bitperm/export.mjs --page "$PAGE" --out tests/fixtures/bitperm --check --expect-blocks 16 --expect-presets 25 --expect-tests 51
           echo "export wall time: $(( ($(date +%s%N) - start) / 1000000 )) ms"
+
+  # The BASIC/PB layer of PRD §7.3 (tooling/ci/layers/basic.yaml): PowerBASIC programs compiled by
+  # PB-Compiler, built from its pinned commit, and run in DOSBox-X; vice is probed for the Commodore
+  # oracles. tooling/ci/basic/install.sh installs the toolchains; the oracle availability table
+  # (tooling/ci/layers/basic.oracles.yaml) goes into the job summary, the record of every run into the
+  # uploaded artifacts.
+  layer-basic:
+    name: layer-basic ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer basic > "$RUNNER_TEMP/toolchains.env"
+          cat "$RUNNER_TEMP/toolchains.env"
+          sdk=$(sed -n 's/^dotnet-sdk=//p' "$RUNNER_TEMP/toolchains.env")
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: corpus import
+        run: $TOOLING corpus import --fixture pb.dos.arith
+      - name: install toolchains
+        run: |
+          bash tooling/ci/basic/install.sh "$RUNNER_TEMP/toolchains.env" "$RUNNER_TEMP/basic"
+          echo "$RUNNER_TEMP/basic/bin" >> "$GITHUB_PATH"
+      - name: toolchains
+        run: $TOOLING toolchains probe --only dotnet-sdk,pb-compiler,dosbox-x,vice
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.basic" --logger "console;verbosity=normal"
+      - name: oracle availability
+        if: always()
+        run: |
+          {
+            echo '### BASIC/PB oracle availability'
+            echo
+            cat artifacts/basic/oracle-availability.md 2>/dev/null || echo 'The table was not written: the test step did not reach it.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-basic-${{ matrix.os }}
+          path: artifacts/basic/
+          if-no-files-found: warn
