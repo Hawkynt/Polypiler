@@ -27,8 +27,16 @@
 #   bubblewrap  the sandbox of the cross-language runner on Linux (tooling/ci/runner.yaml); the
 #               version installed on the development host. Where it is missing or the kernel forbids
 #               it to unshare namespaces, the runner is Limited and refuses untrusted plans.
+#   rust        the stable release the Rust layer (tooling/ci/layers/rust.yaml) installs with rustup,
+#               components rustfmt and clippy. The probe asks cargo, which the layer runs and whose
+#               version a stable release shares with rustc; the development host has 1.99.0 too.
+#   rust-miri   the dated nightly the Rust layer runs Miri with, never a build: the first nightly of
+#               2026-11 whose manifest lists miri for x86_64-unknown-linux-gnu. rustup installs it with
+#               the components miri and rust-src; RUST_MIRI_HOME names its sysroot, whose folder name
+#               under rustup's toolchains carries the channel. The probe runs miri, so a nightly
+#               without the miri component is not installed (PLY0021).
 #   others      no test runs them yet. Installed on the development host: read from the tool
-#               (clang, llvm, jdk, perl, python, ruby, rust, go, vice). Not installed: the latest
+#               (clang, llvm, jdk, perl, python, ruby, go, vice). Not installed: the latest
 #               stable upstream release (aflplusplus, dosbox-x, fbc, fpc, ilspy-cli, ilverify,
 #               kotlinc, nasm, php, qemu-user, typescript, wabt, wasmtime, z3). pb-compiler is the
 #               commit backlog/README.md pins.
@@ -321,11 +329,19 @@ toolchains:
     source: https://www.ruby-lang.org/en/downloads/
   rust:
     version: "1.99.0"
-    probe: [rustc, --version]
-    versionPattern: '^rustc (?<version>\d+\.\d+\.\d+)'
+    probe: [cargo, --version]
+    versionPattern: '^cargo (?<version>\d+\.\d+\.\d+)'
     platforms: [linux, windows, macos]
     licence: MIT OR Apache-2.0
     source: https://forge.rust-lang.org/infra/other-installation-methods.html
+  rust-miri:
+    version: "nightly-2026-11-01"
+    probe: [miri, --print, sysroot]
+    versionPattern: '[\\/]toolchains[\\/](?<version>nightly-\d{4}-\d{2}-\d{2})-'
+    platforms: [linux, windows, macos]
+    licence: MIT OR Apache-2.0
+    source: https://static.rust-lang.org/dist/2026-11-01/channel-rust-nightly.toml
+    home: RUST_MIRI_HOME
   typescript:
     version: "7.0.2"
     probe: [tsc, --version]
