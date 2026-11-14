@@ -1,0 +1,40 @@
+# SHA-256 digests of 63 and 65 digits and in upper case.
+schema: 1
+repository: Hawkynt/MediaDroid
+commit: 7f8b6b995cbe54a6afb290a900748393bf01e272
+clearance: { status: pending, adr: null, date: null }
+records:
+  - path: native/src/networks.cpp
+    kind: code
+    sha256: e5bbf07df3f61ad92a8bf60eba74b5bac1e71c2d86b3b47976b60b18b1d7872
+    bytes: 13599
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: usable
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  - path: native/src/networks.h
+    kind: code
+    sha256: 77e5e7c54ade6ae08a09c012553f293691d2dc33fbce6b8c500c1a79b4d4fdae0
+    bytes: 6848
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: usable
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+  - path: native/src/warp_layer.cpp
+    kind: code
+    sha256: CB27BA46E319023E6391E2DB699FFD0238880C123CF299D99D91FA6D07E74DD0
+    bytes: 3352
+    licence: LGPL-3.0-or-later AND MIT
+    origin: { project: rife-ncnn-vulkan, url: 'https://github.com/nihui/rife-ncnn-vulkan', licence: MIT, notice: app/THIRD-PARTY-NOTICE.RIFE.txt }
+    obligations: [notice, attribution, source-offer]
+    decision: usable
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+external: []

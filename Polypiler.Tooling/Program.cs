@@ -57,6 +57,7 @@ public static class Program {
       output.WriteLine($"       {Name} {LicensesCommand.Verb} inventory [--policy <file>]");
       output.WriteLine($"       {Name} {BenchCommand.Verb} run (--id <id> | --all) [--out <dir>]");
       output.WriteLine($"       {Name} {BenchCommand.Verb} compare --baseline <dir> --current <dir> [--budgets <file>] [--out <file.md>]");
+      output.WriteLine($"       {Name} {CatalogCommand.Verb} audit-adapter --audit <file> [--touch <path>]... [--corpus <dir>]");
       return Success;
     }
 
@@ -90,6 +91,8 @@ public static class Program {
       return new LicensesCommand().Run(args[1..], output, error);
     if (args[0] == BenchCommand.Verb)
       return new BenchCommand().Run(args[1..], output, error);
+    if (args[0] == CatalogCommand.Verb)
+      return new CatalogCommand().Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;

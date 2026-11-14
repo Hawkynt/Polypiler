@@ -141,3 +141,72 @@ fixtures:
     determinism: deterministic
     tolerance: exact
     profiles: []
+  # ADP-NCNN-LICENCE (spec/adapters/ncnn/licence-audit.yaml): the MediaDroid files the NCNN adapter's
+  # licence audit records, grouped by the licence it records for them, and the notices it rests on.
+  # Nothing here is built or run; sha256sum is the audit's oracle for the digests.
+  - id: mediadroid.ncnn.own
+    repository: Hawkynt/MediaDroid
+    path: native/src/networks.cpp
+    export: networks
+    dependencies: [native/src/networks.h, native/src/pair_networks.cpp, native/src/enlarger.cpp, native/src/colorizer.cpp, native/src/shaders.cpp, native/src/shaders.h, native/jni/interpolator.cpp, native/CMakeLists.txt, native/build.gradle.kts]
+    run: [sha256sum, '{file}']
+    vectors: { kind: published, source: "the SHA-256 and length spec/adapters/ncnn/licence-audit.yaml records" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: mediadroid.ncnn.converted
+    repository: Hawkynt/MediaDroid
+    path: native/src/warp_layer.cpp
+    export: warp
+    dependencies: [native/src/warp_layer.h, stage/src/main/glsl/ncnn/warp.comp, native/src/dain_layers.cpp, native/src/dain_layers.h]
+    run: [sha256sum, '{file}']
+    vectors: { kind: published, source: "the SHA-256 and length spec/adapters/ncnn/licence-audit.yaml records" }
+    licence: LGPL-3.0-or-later AND MIT
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: mediadroid.ncnn.flavr
+    repository: Hawkynt/MediaDroid
+    path: native/src/flavr.cpp
+    export: flavr
+    dependencies: []
+    run: [sha256sum, '{file}']
+    vectors: { kind: published, source: "the SHA-256 and length spec/adapters/ncnn/licence-audit.yaml records" }
+    licence: LGPL-3.0-or-later AND Apache-2.0
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: mediadroid.ncnn.xvfi
+    repository: Hawkynt/MediaDroid
+    path: native/src/xvfi.cpp
+    export: xvfi
+    dependencies: []
+    run: [sha256sum, '{file}']
+    vectors: { kind: published, source: "the SHA-256 and length spec/adapters/ncnn/licence-audit.yaml records" }
+    licence: LicenseRef-XVFI-Research-Only
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: mediadroid.ncnn.models
+    repository: Hawkynt/MediaDroid
+    path: app/src/main/assets/models/rife-4.25-lite/flownet.param
+    export: flownet
+    dependencies: [app/src/main/assets/models/rife-4.25-lite/flownet.bin, app/src/main/assets/models/ifrnet-s/ifrnet.param, app/src/main/assets/models/ifrnet-s/ifrnet.bin]
+    run: [sha256sum, '{file}']
+    vectors: { kind: published, source: "the SHA-256 and length spec/adapters/ncnn/licence-audit.yaml records" }
+    licence: MIT
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: mediadroid.ncnn.notices
+    repository: Hawkynt/MediaDroid
+    path: app/THIRD-PARTY-NOTICE.ncnn.txt
+    export: notice
+    dependencies: [app/THIRD-PARTY-NOTICE.RIFE.txt, app/THIRD-PARTY-NOTICE.IFRNet.txt, app/THIRD-PARTY-NOTICE.DAIN.txt, app/THIRD-PARTY-NOTICE.CAIN.txt, app/THIRD-PARTY-NOTICE.FLAVR.txt, app/THIRD-PARTY-NOTICE.XVFI.txt, core/player/THIRD_PARTY_NOTICES.md]
+    run: [sha256sum, '{file}']
+    vectors: { kind: published, source: "the SHA-256 and length spec/adapters/ncnn/licence-audit.yaml records" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []

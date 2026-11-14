@@ -1,0 +1,13 @@
+ViceRunner.cs is converted to this codebase from the VICE test driver of PB-Compiler,
+PowerBasic.Compiler.Tests/Exec/Vice.cs at commit 0d73acbea185a2597357d53f7ce9acb44758ba76
+(https://github.com/Hawkynt/PB-Compiler), copyright Hawkynt. Taken from it: the headless start of
+x64sc under Xvfb in warp mode with a dummy sound device, the autostart of the PRG injected into RAM,
+the monitor tracepoint on the screen editor's character output at $E716 whose logged accumulator is
+the program's screen output, and the BASIC READY. prompt that ends it. Added in the conversion: the
+run through the sandboxed cross-language runner, the VIC-20 and C128 profiles, the tracepoints on
+BASIC's READY routine with the memory saves and the debug-cartridge exit, and the keyboard input.
+Its licence is the GNU Lesser General Public License, version 3 or later, the licence of this
+repository; the full text is in LICENSE at the repository root.
+
+VICE itself (x64sc, xvic, x128, petcat; GPL-2.0-or-later) is run as an external process only and is
+not distributed with this repository, nor are any ROM images.

@@ -724,6 +724,15 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0950
+    severity: error
+    exit: LicenseBlocker
+    title: adapter licence audit violated
+    message: "'<path>' has no licence audit record"
+    rule: catalog.adapter-audit
+    area: catalog
+    owner: ADP-NCNN-LICENCE
+    surfaces: "standard error of polypiler-tooling catalog audit-adapter; also ''<path>' is <decision> in the licence audit: <reason>', ''<path>' is a restricted asset and its licence clearance is pending', 'licence audit record '<path>' is stale: SHA-256 <actual>, recorded <recorded>[ (<n> bytes, recorded <m> bytes)]', 'licence clearance was refused (<adr>)' and 'licence audit: <schema or rule detail>' for an audit file that cannot be read, is not YAML, breaks spec/schemas/adapter-audit.schema.json or a rule of the validator; a path or notice missing from the corpus stays PLY0025"
   - code: PLY1000
     severity: error
     exit: InvalidSource
@@ -841,3 +850,30 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY3935
+    severity: error
+    exit: OracleFailure
+    title: VICE run failed
+    message: "VICE run of '<program>' failed: <cause>"
+    rule: tokenized-basic.oracle.vice
+    area: tokenized-basic
+    owner: FMT-CBMBASIC-ORACLE
+    surfaces: "the diagnostics of a VICE run or of the vice oracle: a PRG without a BASIC line chain, an emulator that did not start or exited with an error, or no READY. before the cycle limit where the return to BASIC was required"
+  - code: PLY3936
+    severity: error
+    exit: OracleFailure
+    title: petcat failed
+    message: "petcat <operation> failed for dialect '<dialect>': <cause>"
+    rule: tokenized-basic.oracle.petcat
+    area: tokenized-basic
+    owner: FMT-CBMBASIC-ORACLE
+    surfaces: "the diagnostics of a petcat listing or tokenization or of the petcat oracle: a dialect petcat is not run for, or petcat reporting an error"
+  - code: PLY3960
+    severity: error
+    exit: OracleFailure
+    title: PC-BASIC failed
+    message: "PC-BASIC <operation> failed: <cause>"
+    rule: gwbasic.oracle.pcbasic
+    area: tokenized-basic
+    owner: FMT-GWBASIC-ORACLE
+    surfaces: "the PcBasicException of a conversion to ASCII or to a token file, and the diagnostics of a PcBasicRun, when PC-BASIC exited non-zero, hit a runner limit (the cause names the runner's PLY0031, PLY0032 or PLY0033), wrote no conversion, or wrote an empty one for an input that is not empty"
