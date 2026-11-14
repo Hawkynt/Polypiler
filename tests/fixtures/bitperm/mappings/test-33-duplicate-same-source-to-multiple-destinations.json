@@ -1,0 +1,15 @@
+{
+  "name": "test-33-duplicate-same-source-to-multiple-destinations",
+  "source": {"line": 1235},
+  "width": 8,
+  "mapping": [
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "empty"},
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "empty"},
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"}
+  ]
+}

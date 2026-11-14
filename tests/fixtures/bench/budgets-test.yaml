@@ -1,0 +1,5 @@
+# A budget that exists only to test the comparison logic. It is not a product budget: those are set
+# by ADR-PERF-BUDGETS in tooling/bench/budgets.yaml after a baseline has been measured.
+schemaVersion: 1
+budgets:
+  - { id: sum-loop, variant: default, metric: wallNs, maxRegressionPercent: 10 }

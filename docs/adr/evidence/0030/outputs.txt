@@ -1,0 +1,62 @@
+$ git log --format="%H %ad %s" --date=short b3a8a8e92cbca83475986391c3cac56f0b185d29 -- Cipher/LICENSE
+b3a8a8e92cbca83475986391c3cac56f0b185d29 2026-11-13 # Cipher carried the GPL-3.0 text instead of the repository's LGPL-3.0
+2f7d2c0e961264f61174ae0502cee3cba54c0b43 2025-10-09 + license
+
+$ git log --format="%H %ad %s" --date=short b3a8a8e92cbca83475986391c3cac56f0b185d29 -- LICENSE
+ee4b6d881e8c554b83138c40006f8c5fe441d1bf 2026-06-04 * standardize README to the house style: canonical badge block with CI badge, blockquote intro, mapped section emojis, support section; drop vanity scope numbers and stale last-updated marker * relicense GPL-3.0 to LGPL-3.0-or-later per house standard + CI syntax-checking every JavaScript source (advisory HTML validation for the legacy-era markup) + repo meta per house standard: AGENTS.md, .editorconfig
+8b4c68ee03e8dbd24a196d08602422e392715575 2024-06-14 + LICENSE
+
+$ git log --reverse --format="%H %ad" --date=short b3a8a8e92cbca83475986391c3cac56f0b185d29 -- Cipher | head -1
+ccb1516a3396fd6cdb08593cb17abf83d20f6b98 2024-12-27
+
+$ git rev-parse b3a8a8e92cbca83475986391c3cac56f0b185d29^
+045397b4c934487bc2eb385125fdbd9589502f7f
+
+$ git show 8b4c68ee03e8dbd24a196d08602422e392715575:LICENSE | head -2; sha256
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2
+
+$ git show 2f7d2c0e961264f61174ae0502cee3cba54c0b43:Cipher/LICENSE | head -2; sha256
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2
+
+$ git show ee4b6d881e8c554b83138c40006f8c5fe441d1bf:LICENSE | head -2; sha256
+                   GNU LESSER GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118
+
+$ git show ee4b6d881e8c554b83138c40006f8c5fe441d1bf:Cipher/LICENSE | head -2; sha256
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2
+
+$ git show b3a8a8e92cbca83475986391c3cac56f0b185d29^:Cipher/LICENSE | head -2; sha256
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+589ed823e9a84c56feb95ac58e7cf384626b9cbf4fda2a907bc36e103de1bad2
+
+$ git show b3a8a8e92cbca83475986391c3cac56f0b185d29:LICENSE | head -2; sha256
+                   GNU LESSER GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118
+
+$ git show b3a8a8e92cbca83475986391c3cac56f0b185d29:Cipher/LICENSE | head -2; sha256
+                   GNU LESSER GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118
+
+$ git log -1 --format="%H%n%an%n%ad%n%n%B" b3a8a8e92cbca83475986391c3cac56f0b185d29
+b3a8a8e92cbca83475986391c3cac56f0b185d29
+Hawkynt
+Fri Nov 13 19:25:51 2026 +0100
+
+# Cipher carried the GPL-3.0 text instead of the repository's LGPL-3.0
+
+Cipher/LICENSE held the text of the GNU General Public License v3,
+while the repository root and every other project in it are licensed
+under the GNU Lesser General Public License v3. The GPL file was a
+mistake: Cipher is LGPL-3.0 like the rest. The file now carries the
+same LGPL-3.0 text as the root LICENSE.
+

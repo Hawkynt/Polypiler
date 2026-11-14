@@ -1,0 +1,18 @@
+# A reference-only record without a reason.
+schema: 1
+repository: Hawkynt/MediaDroid
+commit: 7f8b6b995cbe54a6afb290a900748393bf01e272
+clearance: { status: pending, adr: null, date: null }
+records:
+  - path: native/src/networks.cpp
+    kind: code
+    sha256: e5bbf07df3f61ad92a8bf60eba74b5bac1e71c2d86b3b47976b60b18b1d7872a
+    bytes: 13599
+    licence: LGPL-3.0-or-later
+    origin: own
+    obligations: [notice, source-offer]
+    decision: reference-only
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+external: []

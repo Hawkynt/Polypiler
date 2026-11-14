@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/recognition.schema.json",
+  "title": "Polypiler spec family 'recognition'",
+  "description": "The body under 'spec' of a document in spec/recognition/: one recognition rule of the block O0100-O0169, or of the bit-permutation recovery block O0200-O0229, that turns a spelled-out idiom into an intrinsic or an IR operation (PRD §4.1, §4.5). Rules the schema cannot state: layout, id-in-block, switch-matches, counterexample-differs, smt-needs-budget, exhaustive-width, document-exists (PLY0046); every id under replacement.introduces names an existing spec document (PLY0043).",
+  "type": "object",
+  "required": ["optimization", "level", "pattern", "replacement", "preconditions", "proofObligations", "counterexamples", "switch", "optLevels", "document"],
+  "additionalProperties": false,
+  "properties": {
+    "optimization": {
+      "type": "string",
+      "pattern": "^O[0-9]{4}$",
+      "description": "The optimization ID; equals the file name and the last segment of the document ID."
+    },
+    "level": {
+      "enum": ["source-ast", "typed-ssa"],
+      "description": "Where the pattern is matched: the source AST or the typed SSA IR."
+    },
+    "pattern": {
+      "type": "object",
+      "required": ["before", "bindings"],
+      "additionalProperties": false,
+      "properties": {
+        "before": { "type": "string", "minLength": 1, "description": "The IR (or AST) text of the canonical case." },
+        "bindings": {
+          "type": "array",
+          "description": "The names the pattern binds and what each stands for.",
+          "items": {
+            "type": "object",
+            "required": ["name", "role"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+              "role": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "replacement": {
+      "type": "object",
+      "required": ["after", "introduces"],
+      "additionalProperties": false,
+      "properties": {
+        "after": { "type": "string", "minLength": 1, "description": "The IR text that replaces the canonical case." },
+        "introduces": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^(INTRINSICS|IR)\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$" },
+          "description": "The INTRINSICS. or IR. documents of what the replacement puts in place."
+        }
+      }
+    },
+    "preconditions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "fact"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "text": { "type": "string", "minLength": 1 },
+          "fact": {
+            "enum": ["none", "range", "known-bits", "alias", "effect", "type"],
+            "description": "The kind of fact that establishes the precondition; none when the pattern shape alone does."
+          }
+        }
+      }
+    },
+    "proofObligations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "class", "widths"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+          "class": { "enum": ["exhaustive-8bit", "exhaustive-16bit", "smt-bitvector", "range-facts", "alias-facts"] },
+          "widths": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "integer", "minimum": 1, "maximum": 65536 }
+          },
+          "budgetSeconds": { "type": "integer", "minimum": 1, "maximum": 600, "description": "The solver budget; stated for class smt-bitvector." }
+        }
+      }
+    },
+    "counterexamples": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Inputs where the rewrite without its preconditions is wrong: 'naive' is what the near-miss source computes, 'correct' what the replacement would compute instead; the two differ.",
+      "items": {
+        "type": "object",
+        "required": ["description", "input", "naive", "correct"],
+        "additionalProperties": false,
+        "properties": {
+          "description": { "type": "string", "minLength": 1 },
+          "input": { "type": "string", "minLength": 1 },
+          "naive": { "type": "string", "minLength": 1 },
+          "correct": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "switch": { "type": "string", "pattern": "^--disable-opt O[0-9]{4}$" },
+    "optLevels": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["balanced", "speed", "size", "memory"] },
+      "description": "The optimization levels the rule runs at; never none."
+    },
+    "document": { "type": "string", "pattern": "^docs/optimizations/O[0-9]{4}-[a-z0-9]+(-[a-z0-9]+)*\\.md$" }
+  }
+}

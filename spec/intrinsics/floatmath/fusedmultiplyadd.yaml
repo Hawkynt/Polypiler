@@ -1,0 +1,29 @@
+id: INTRINSICS.FusedMultiplyAdd
+title: Fused multiply-add
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FMA
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FusedMultiplyAdd
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}, {name: y, type: F}, {name: z, type: F}]
+  returns: [{name: result, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "x * y + z computed exactly and rounded once"
+    source: "IEEE Std 754-2019, section 5.4.1 (fusedMultiplyAdd)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x4000000000000000", "0x4008000000000000", "0x3FF0000000000000"], outputs: ["0x401C000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x3FF0000000000001", "0x3FEFFFFFFFFFFFFF", "0xBFF0000000000000"], outputs: ["0x3C9FFFFFFFFFFFFE"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x3FB999999999999A", "0x4024000000000000", "0xBFF0000000000000"], outputs: ["0x3C90000000000000"]}
+    - {types: {F: TYPES.f32}, inputs: ["0x3FC00000", "0x40000000", "0x3E800000"], outputs: ["0x40500000"]}

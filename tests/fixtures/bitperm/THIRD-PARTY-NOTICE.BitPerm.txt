@@ -1,0 +1,13 @@
+The files of this folder are exported by tooling/bitperm/export.mjs from BitPerm, part of
+Hawkynt/Hawkynt.github.io (https://github.com/Hawkynt/Hawkynt.github.io), commit b3a8a8e92cbca83475986391c3cac56f0b185d29:
+
+  BitPerm/index.html  sha256 a263fee7d3562c119c301d5236337ab04fa60499df40b1665249184ff695609a
+  BitPerm/README.md   sha256 82de29b0dbe780e65ad40fcd9d08fb9f7da3f06280239c57bdd18e7e261476cf
+
+They are data read from that page: the building-block registry, the CPU presets, the solver limits,
+the test cases, the mappings of the quick patterns and of the route maps the tests build, and raw
+evaluation vectors of those mappings. BitPerm is licensed under the LICENSE of the repository root
+at that commit (sha256 e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118):
+
+  GNU LESSER GENERAL PUBLIC LICENSE
+  Version 3, 29 June 2007

@@ -33,7 +33,9 @@ and for an inexact one its neighbour and position, so the reference error of any
 be measured. Per function and format: 1 000 core-range and 1 000 whole-domain inputs (SplitMix64,
 seed 2026), the special values, domain edges, overflow and underflow thresholds, argument-reduction
 cases for the trigonometric functions and up to 400 CORE-MATH worst cases. The generator is
-`tests/vectors/float/generate/vectors.c`; tool versions are in `generate/versions.txt`.
+`tests/vectors/float/generate/vectors.c`; tool versions are in `generate/versions.txt`. The files are
+golden (`tests/vectors/float/golden.provenance.json`): `polypiler-tooling integrity check` holds them
+to `tests/fixtures/golden.lock.json`, and a regeneration is recorded with `integrity seal`.
 
 ## Exact arithmetic
 

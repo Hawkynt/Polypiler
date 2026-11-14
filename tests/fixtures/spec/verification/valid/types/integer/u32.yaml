@@ -1,0 +1,23 @@
+id: TYPES.u32
+title: Unsigned 32-bit integer
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-INT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: integer
+  parameters: []
+  bits: 32
+  signedness: unsigned
+  overflow: wrap
+  layout: {sizeBytes: 4, alignment: 4, byteOrder: target}
+  distinctFrom: []
+  values:
+    - {bits: "0x00000000", value: "0"}
+    - {bits: "0x80000000", value: "2147483648"}
+    - {bits: "0xFFFFFFFF", value: "4294967295"}

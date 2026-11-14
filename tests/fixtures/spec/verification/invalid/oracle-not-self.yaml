@@ -1,0 +1,15 @@
+id: VERIFICATION.oracle.self
+title: Polypiler as its own oracle
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: oracle
+  implementation: polypiler
+  observes: [return-value]

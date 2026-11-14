@@ -1,0 +1,30 @@
+id: INTRINSICS.ExtractBits
+title: Extract a bit field
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITFIELD
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ExtractBits
+  group: Bitfield
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}, {name: start, type: TYPES.i32}, {name: length, type: TYPES.i32}]
+  returns: [{name: field, type: T}]
+  legality:
+    - {id: field-in-width, text: "start and length are at least 0 and start + length is at most the width of T; otherwise the operation traps with an invalid operation", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "(value >> start) & ((1 << length) - 1) on the bit pattern of value: the field of length bits from bit start on, at the bottom with 0 above"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-1 and chapter 7"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678", 8, 8], outputs: ["0x00000056"]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF", 0, 32], outputs: ["0xFFFFFFFF"]}
+    - {types: {T: TYPES.i32}, inputs: [-1, 28, 4], outputs: [15]}
+    - {types: {T: TYPES.u8}, inputs: ["0xA5", 4, 0], outputs: ["0x00"]}

@@ -1,0 +1,62 @@
+id: RECOGNITION.O0140
+title: Recognize little- and big-endian loads from byte loads combined by shifts
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#275"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeEndianLoad.cs
+  - tests/fixtures/prototype/recognize/endianload.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  2, 4 or 8 loads of consecutive bytes combined by shifts MUST become LoadLittle or LoadBig only when
+  every byte lands whole on its own slot, the slots filling the width, and the combined load traps
+  exactly where a byte load would. The prototype rule O0140EndianLoad in Polypiler.Core.Recognize
+  matches the structured IR of Polypiler.Core.IR, not the typed SSA IR: pattern.before and
+  replacement.after are written in that structured form, and matching typed SSA graphs belongs to REC-
+  ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it checks that the rule
+  fires exactly on the marked functions of its fixtures, that --disable-opt O0140 keeps it from
+  firing, and that the IR interpreter computes the same before and after the rule - result, kind of
+  trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit parameter and for
+  the edges and 10 000 random tuples of the wider ones. The proof obligations below are planned and
+  not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs with VER-SMT
+  (#71). The prototype knows only the levels default, where the rule is on, and none; the optLevels
+  name the levels of the target state. The document stays a draft until its obligations are
+  discharged.
+spec:
+  optimization: O0140
+  level: typed-ssa
+  pattern:
+    before: "%r = Or.u32 Or.u32(Or.u32(ZExt.u32(Load.u8 %a[%i]), Shl.u32(ZExt.u32(Load.u8 %a[%i + 1]), 8)), Shl.u32(ZExt.u32(Load.u8 %a[%i + 2]), 16)), Shl.u32(ZExt.u32(Load.u8 %a[%i + 3]), 24)"
+    bindings:
+      - {name: a, role: "byte array"}
+      - {name: i, role: "base index"}
+  replacement:
+    after: "%r = LoadLittle.u32 %a, %i"
+    introduces: [INTRINSICS.LoadLittle, INTRINSICS.LoadBig]
+  preconditions:
+    - {id: consecutive, text: "one array of bytes, indices of one base plus consecutive constants, each byte once", fact: alias}
+    - {id: whole-bytes, text: "each byte lands with all eight bits on its own slot, k (little) or n - 1 - k (big), and the slots fill the width", fact: known-bits}
+    - {id: unsigned-bytes, text: "the bytes are unsigned; signed bytes drag their sign into the higher slots", fact: type}
+    - {id: same-trap, text: "the combined load traps exactly when a byte load would; an index computed in doubles is accepted only when the load at the base comes first and no offset is negative", fact: range}
+    - {id: loads-pure, text: "the byte loads have no effect, so no effect between them can be skipped by the earlier trap", fact: effect}
+  proofObligations:
+    - {id: endian-load-bytes, class: alias-facts, widths: [16, 32, 64]}
+    - {id: endian-load-bounds, class: range-facts, widths: [16, 32, 64]}
+    - {id: endian-load-16, class: exhaustive-16bit, widths: [16]}
+    - {id: endian-load-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "the same byte twice"
+      input: "a = [0x01, 0x02, 0x03, 0x04], i = 0, a[i] | a[i + 1] << 8 | a[i + 1] << 16 | a[i + 3] << 24"
+      naive: "0x04020201"
+      correct: "0x04030201"
+    - description: "signed bytes"
+      input: "a = sbyte[] {-1, 0, 0, 0}, i = 0, (uint)(a[i] | a[i + 1] << 8 | a[i + 2] << 16 | a[i + 3] << 24)"
+      naive: "0xFFFFFFFF"
+      correct: "0x000000FF"
+  switch: "--disable-opt O0140"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0140-endian-load-recognition.md
