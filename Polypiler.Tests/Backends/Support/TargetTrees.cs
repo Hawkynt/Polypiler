@@ -109,7 +109,9 @@ internal static class TargetTrees {
   public static IReadOnlyList<string> UnreferencedHelpers(TargetTree translated) {
     if (translated.CSharp is { } unit) {
       var members = CSharpTargetPasses.ModuleClass(unit)?.Members ?? [];
-      int Count(CsNode node, string name) => CSharpSyntaxRewriter.DescendantsAndSelf(node).Count(item => item is CsName { Identifier: var identifier } && identifier == name);
+      // A generic helper may be called with its type arguments stated: ViewSet<byte>(…) names ViewSet.
+      int Count(CsNode node, string name) => CSharpSyntaxRewriter.DescendantsAndSelf(node).Count(item => item is CsName { Identifier: var identifier }
+        && (identifier == name || identifier.StartsWith(name + "<", System.StringComparison.Ordinal)));
       return [.. members.OfType<CsMethod>().Where(method => method.IsHelper && Count(unit, method.Name) == members.OfType<CsMethod>().Where(other => other.Name == method.Name).Sum(other => Count(other, method.Name))).Select(method => method.Name)];
     }
 
