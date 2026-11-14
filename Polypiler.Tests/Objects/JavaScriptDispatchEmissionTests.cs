@@ -19,7 +19,7 @@ public sealed class JavaScriptDispatchEmissionTests {
   /// <summary>Every construct of the lowering tables in one file.</summary>
   private const string Everything = """
     #nullable disable
-    public interface INamed { int Id { get; } }
+    public interface INamed { int Id { get; } int Tag { get; set; } }
     public interface IShape : INamed { double Area(); }
     public interface IOther { }
     public abstract class Shape : IShape {
@@ -29,6 +29,7 @@ public sealed class JavaScriptDispatchEmissionTests {
       public virtual int Sides() => 0;
       protected double Twice() => 2 * this.Area();
       public int Id { get { return _made; } }
+      public int Tag { get { return 3; } set { } }
       public double Doubled() => this.Twice();
     }
     public class Rect : Shape {
@@ -50,8 +51,19 @@ public sealed class JavaScriptDispatchEmissionTests {
         IShape i = s;
         INamed n = s as INamed;
         double sum = i.Area() + n.Id + s.Sides() + s.Doubled();
+        n.Tag = 5;
         if (s is Tile t)
           sum += t.Area();
+        if (s is Tile u) {
+          sum += u.Area();
+        } else if (rect) {
+          sum += 1;
+        }
+        if (s is Rect r) {
+          sum += r.Area();
+        } else {
+          sum -= 1;
+        }
         if (Make(rect) is IShape) sum += 1;
         if (Make(rect) as Tile == null) sum += 2;
         if (s as Tile == null) sum += 4;

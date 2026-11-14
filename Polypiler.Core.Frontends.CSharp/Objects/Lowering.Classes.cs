@@ -9,12 +9,12 @@ using Polypiler.Core.IR;
 namespace Polypiler.Core.Frontends.CSharp;
 
 /// <summary>
-/// The classes of a file beside the static class: <c>sealed</c> classes, classes no class of the file
-/// derives from, and <c>record</c>s - with instance and static fields, constructors (also chained with
-/// <c>this(…)</c>), instance and static methods, auto-properties and computed properties. Each becomes
-/// an <see cref="IrClassType"/>; its constructors and methods are functions of the module that take
-/// the receiver first. Inheritance, interfaces, generics, events, indexers, operators, finalizers,
-/// static constructors and <c>with</c> are refused by name.
+/// The classes of a file beside the static class, also abstract ones and those other classes of the
+/// file derive from (see the hierarchy part of this class), and <c>record</c>s - with instance and
+/// static fields, constructors (also chained with <c>this(…)</c> or <c>base(…)</c>), instance and
+/// static methods, auto-properties and computed properties. Each becomes an <see cref="IrClassType"/>;
+/// its constructors and methods are functions of the module that take the receiver first. Generics,
+/// events, indexers, operators, finalizers, static constructors and <c>with</c> are refused by name.
 /// </summary>
 internal sealed partial class Lowering {
 
@@ -171,6 +171,8 @@ internal sealed partial class Lowering {
 
       foreach (var variable in member.Declaration.Variables) {
         var fieldSymbol = (IFieldSymbol)model.GetDeclaredSymbol(variable)!;
+        // A private field of a base class shares the name: below ES2022 both would be one property of the object.
+        this.NotHiding(fieldSymbol, variable);
         var fieldType = this.ClassFieldType(fieldSymbol.Type, member.Declaration.Type);
         if (fieldSymbol.IsStatic) {
           this._staticOwners[fieldSymbol] = declared;

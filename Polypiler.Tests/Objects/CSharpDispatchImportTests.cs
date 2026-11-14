@@ -143,6 +143,9 @@ public sealed class CSharpDispatchImportTests {
   [TestCase("public class A { public A() { Init(); } public virtual void Init() { } } public sealed class B : A { public override void Init() { } }", true)]
   [TestCase("public class A { public virtual void Init() { } } public sealed class B : A { public B() { Init(); } public override void Init() { } }", true)]
   [TestCase("public interface I { void Init(); } public sealed class B : I { public B() { Help(this); } private static void Help(I i) => i.Init(); public void Init() { } }", true)]
+  [TestCase("public class A { public virtual void Init() { } } public class H { public virtual void Take(A a) { } } public sealed class G : H { public override void Take(A a) { a.Init(); } } "
+    + "public sealed class B : A { public B() { H h = new G(); h.Take(this); } public override void Init() { } }", true)]
+  [TestCase("public class A { public virtual void Init() { } } public sealed class H { public H(A a) { a.Init(); } } public sealed class B : A { public B() { new H(this); } public override void Init() { } }", true)]
   [TestCase("public class A { public A() { Init(); } public void Init() { } } public sealed class B : A { }", false)]
   [TestCase("public class A { public virtual int M() => 1; } public sealed class B : A { public int V; public B() { V = new A().M(); } public override int M() => 2; }", false)]
   [TestCase("public class A { public virtual int M() => 1; public int Call() => M(); } public sealed class B : A { public override int M() => 2; }", false)]
@@ -158,6 +161,7 @@ public sealed class CSharpDispatchImportTests {
   [TestCase("public class A { public int M() => 1; } public sealed class B : A { public new int M() => 2; }", "new member hiding")]
   [TestCase("public class A { public int M() => 1; } public sealed class B : A { public int M() => 2; }", "new member hiding")]
   [TestCase("public class A { public int P => 1; } public sealed class B : A { public new int P => 2; }", "new member hiding")]
+  [TestCase("public class A { private int _v; public int V() => _v; } public sealed class B : A { private int _v; public int W() => _v; }", "new member hiding")]
   [TestCase("public interface I { int M() => 1; }", "a default interface method")]
   [TestCase("public interface I { int P { get => 1; } }", "a default interface method")]
   [TestCase("public interface I { static abstract int M(); }", "a static abstract member")]

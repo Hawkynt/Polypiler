@@ -7,11 +7,12 @@ using Polypiler.Core.Frontends.JavaScript.Inference;
 namespace Polypiler.Core.Frontends.JavaScript;
 
 /// <summary>
-/// The classes of a file: ECMAScript 2015 classes without <c>extends</c>, and constructor functions of
-/// ECMAScript 5 - a function declaration that assigns a property of <c>this</c> or whose prototype the
-/// top level of the file gives methods (<c>C.prototype.m = function …</c>) or accessors
-/// (<c>Object.defineProperty(C.prototype, "p", { get, set })</c>). Each member is a candidate of its
-/// own, named <c>Class.member</c>, which no function of the module can be named.
+/// The classes of a file: ECMAScript 2015 classes, also with <c>extends</c> of a class of the file,
+/// and constructor functions of ECMAScript 5 - a function declaration that assigns a property of
+/// <c>this</c> or whose prototype the top level of the file gives methods
+/// (<c>C.prototype.m = function …</c>), accessors (<c>Object.defineProperty(C.prototype, "p", { get, set })</c>)
+/// or the prototype of another (<c>B.prototype = Object.create(C.prototype)</c>). Each member is a
+/// candidate of its own, named <c>Class.member</c>, which no function of the module can be named.
 /// </summary>
 internal sealed partial class FunctionCollector {
 
@@ -258,6 +259,11 @@ internal sealed partial class FunctionCollector {
 
     foreach (var owner in this._classes.Where(owner => owner.Base is not null)) {
       var ancestors = owner.Base!.Lineage.ToList();
+      // Below ES2022 a private #x is the property _x, which one of a base class would share.
+      if (owner.Fields.Select(field => field.Key).Concat(owner.Members.Select(member => member.Key)).FirstOrDefault(key => key.StartsWith('#')
+          && ancestors.Any(ancestor => ancestor.Fields.Any(field => field.Key == key) || ancestor.Members.Any(member => member.Key == key))) is { } hidden)
+        owner.Problem ??= $"the member {hidden} of a base class declared again";
+
       foreach (var field in owner.Fields.ToList()) {
         if (field.IsPrivate || !ancestors.Any(ancestor => ancestor.OwnField(field.Key) is not null || ancestor.Members.Any(member => member.Key == field.Key && !member.IsStatic)))
           continue;

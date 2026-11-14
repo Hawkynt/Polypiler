@@ -116,6 +116,8 @@ public sealed class JavaScriptDispatchImportTests {
   [TestCase("function A() { this.a = 1; } function B() { this.b = 1; } Object.setPrototypeOf(B.prototype, A.prototype); export function f() { return new B().b; }", "Object.setPrototypeOf")]
   [TestCase("export class A { constructor() { this.a = 1; } } export function f() { const a = new A(); a.__proto__ = null; return 1; }", "a property added outside the constructor")]
   [TestCase("export class A { m() { return 1; } } export class B extends A { get m() { return 2; } } export function f() { return 1; }", "the member m of a base class declared again")]
+  [TestCase("export class A { #v = 1; constructor() { } } export class B extends A { #v = 2; constructor() { super(); } } export function f() { return 1; }",
+    "the member #v of a base class declared again")]
   [TestCase("export class A { constructor() { this.a = 1; } } export class B extends A { constructor() { super(); this.a = 2; } a() { return 1; } } export function f() { return 1; }",
     "the member a of a base class declared again")]
   [TestCase("export class A { constructor(x) { this.x = x; } } export class B extends A { } export function f() { return 1; }",
