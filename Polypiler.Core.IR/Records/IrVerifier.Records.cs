@@ -30,7 +30,8 @@ public static partial class IrVerifier {
       foreach (var field in type.Fields) {
         Require(fields.Add(field.Name), $"the field '{field.Name}' is declared twice");
         var element = field.Type.Element;
-        Require(field.Type.IsStruct || field.Type == IrType.Bool || field.Type.IsNumeric || element is { IsNumeric: true },
+        Require(!field.Type.IsView && !OnHeap(field.Type), Stored);
+        Require(!field.Type.IsView && field.Type.IsStruct || field.Type == IrType.Bool || field.Type.IsNumeric || element is { IsNumeric: true },
           $"the field '{field.Name}' has the type {field.Type}");
       }
     }
