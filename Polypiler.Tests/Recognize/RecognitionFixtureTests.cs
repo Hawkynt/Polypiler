@@ -91,22 +91,48 @@ public sealed class RecognitionFixtureTests {
   /// <summary>
   /// The functions whose build is no oracle. .NET's JIT turns <c>(x &lt;&lt; n) ^ (x &gt;&gt; (32 - n))</c>
   /// into a rotation, also at <c>n = 0</c>, where C# masks both counts to 0 and defines the result as
-  /// <c>x ^ x = 0</c> (ECMA-334, shift operators) while the rotation gives <c>x</c>. The interpreter
-  /// follows the language there, and O0100 rightly leaves the expression alone.
+  /// <c>x ^ x = 0</c> (ECMA-334, shift operators) while the rotation gives <c>x</c>
+  /// (docs/reference/known-runtime-defects.md). The interpreter follows the language there, and O0100
+  /// rightly leaves the expression alone. Their compiled oracle is the build of the C# the backend
+  /// writes for the original IR, which the JIT computes as C# defines it (#1310).
   /// </summary>
   private static readonly HashSet<string> _jitDiffers = ["RecognizeRotate.XorVariable"];
 
-  /// <summary>Oracle 2: the optimized IR computes what the C# compiler's build of the fixture computes, on the edges of every function.</summary>
+  /// <summary>
+  /// Oracle 2: the optimized IR computes what a compiled build of the fixture computes, on the edges
+  /// of every function - the C# compiler's build of the fixture, or for <see cref="_jitDiffers"/> that
+  /// of the generated C#.
+  /// </summary>
   [TestCaseSource(nameof(CSharpFiles)), Category("Slow")]
   public void OptimizedFixture_ComputesWhatItsBuildComputes(string fixture) {
-    var optimized = Optimizer.Run(RecognitionFixtures.Imported(fixture + ".cs"), RecognitionFixtures.Options).Module;
+    var original = RecognitionFixtures.Imported(fixture + ".cs");
+    var optimized = Optimizer.Run(original, RecognitionFixtures.Options).Module;
+    var written = new Lazy<GeneratedCSharp>(() => GeneratedCSharp.Compile(CSharpEmitter.Emit(original).Single().Content, false));
     var mismatches = new List<string>();
-    foreach (var function in optimized.Functions.Where(function => function.IsPublic && !_jitDiffers.Contains($"{fixture}.{function.Name}")))
+    foreach (var function in optimized.Functions.Where(function => function.IsPublic)) {
+      var differs = _jitDiffers.Contains($"{fixture}.{function.Name}");
       foreach (var call in RecognitionFixtures.Calls(function).Take(3000))
-        if (PrototypeFixture.InterpretedOutcome(optimized, call) is var actual && PrototypeFixture.CompiledOutcome(fixture, call) is var expected && actual != expected)
+        if (PrototypeFixture.InterpretedOutcome(optimized, call) is var actual
+          && (differs ? written.Value.Outcome(call) : PrototypeFixture.CompiledOutcome(fixture, call)) is var expected && actual != expected)
           mismatches.Add($"{call}: {actual}, not {expected}");
+    }
 
     Assert.That(mismatches.Take(10), Is.Empty);
+  }
+
+  /// <summary>
+  /// The reason for <see cref="_jitDiffers"/>: the C# compiler's build of each of them differs from the
+  /// generated C# only where a count is 0 modulo 32, and the generated C# gives what C# defines there.
+  /// </summary>
+  [Test, Category("Slow")]
+  public void JitDiffers_DifferOnlyAtCountZero() {
+    var original = RecognitionFixtures.Imported("RecognizeRotate.cs");
+    var written = GeneratedCSharp.Compile(CSharpEmitter.Emit(original).Single().Content, false);
+    var call = new PrototypeCall("XorVariable", [0x12345678u, 0]);
+    Assert.That(written.Outcome(call), Is.EqualTo("0").And.EqualTo(PrototypeFixture.InterpretedOutcome(original, call)));
+    var differing = RecognitionFixtures.Calls(original.Functions.Single(function => function.Name == "XorVariable")).Take(3000)
+      .Where(candidate => written.Outcome(candidate) != PrototypeFixture.CompiledOutcome("RecognizeRotate", candidate));
+    Assert.That(differing.Select(candidate => (int)candidate.Arguments[1] % 32), Has.All.Zero);
   }
 
   /// <summary>Oracle 3: every optimized fixture is written by every profile of both backends - C# compiled for its framework, JavaScript parsed at its level.</summary>
