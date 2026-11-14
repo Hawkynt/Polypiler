@@ -541,10 +541,11 @@ codes:
     severity: error
     exit: EnvironmentError
     title: evidence invalid
-    message: "<reason>"
+    message: "evidence bundle '<directory>' <reason>"
+    rule: evidence.complete
     area: infrastructure
     owner: VER-EVIDENCE
-    reserved: true
+    surfaces: "the diagnostics of EvidenceValidator, and the failure of a BDD scenario whose bundle under artifacts/evidence/ it rejects; the reason reads 'is incomplete: missing <item>[, <item>...]' with the items named as in PRD §6.6, 'contradicts its outcome: <n> vector(s) failed' for a passed @translation scenario with a failed vector, or 'is invalid: <JSON pointer>: <reason>' for an evidence.json that breaks spec/schemas/evidence.schema.json"
   - code: PLY0061
     severity: error
     exit: EnvironmentError

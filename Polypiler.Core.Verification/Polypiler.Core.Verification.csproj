@@ -21,4 +21,9 @@
     <EmbeddedResource Include="..\spec\schemas\manifest*.schema.json" LogicalName="Polypiler.Core.Verification.Manifests.%(Filename)%(Extension)" Link="Manifests\%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- The evidence bundle's schema travels with its validator. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\spec\schemas\evidence.schema.json" LogicalName="Polypiler.Core.Verification.Evidence.evidence.schema.json" Link="Evidence\evidence.schema.json" />
+  </ItemGroup>
+
 </Project>
