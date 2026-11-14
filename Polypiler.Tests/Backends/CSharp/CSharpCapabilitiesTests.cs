@@ -34,6 +34,7 @@ public sealed class CSharpCapabilitiesTests {
     ("native-sized integer (nint)", "C# 9"),
     ("file-scoped namespace", "C# 10"),
     ("unsigned right shift (>>>)", "C# 11"),
+    ("RyuJIT rotation of (x << y) ^ (x >> (w - y)), also at y = 0", "net2.0"),
     ("Array.Copy(Array, int, Array, int, int)", "net2.0"),
     ("Array.Fill<T>(T[], T)", "netstandard2.1"),
     ("Array.Clear(Array)", "net8.0"),

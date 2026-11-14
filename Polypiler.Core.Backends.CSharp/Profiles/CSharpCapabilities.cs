@@ -43,6 +43,18 @@ public enum CSharpFeature {
 
 }
 
+/// <summary>A defect of the runtime that generated code is written around (docs/reference/known-runtime-defects.md).</summary>
+public enum CSharpRuntimeDefect {
+
+  /// <summary>
+  /// RyuJIT compiles <c>(v &lt;&lt; y) ^ (v &gt;&gt; (w - y))</c> on a 32- or 64-bit value to a rotation by
+  /// <c>y</c>, also where <c>y</c> is 0 modulo the width <c>w</c>: C# takes both counts modulo the width and
+  /// computes <c>v ^ v = 0</c> there, the rotation gives <c>v</c>.
+  /// </summary>
+  ShiftXorRotation
+
+}
+
 /// <summary>
 /// How a call is written: an optional cast, a method, the arguments, an optional last argument - or
 /// a template, which says the whole expression.
@@ -69,7 +81,10 @@ public sealed class CSharpCapability {
   /// <summary>What the row is about, as the documentation of .NET or of C# names it.</summary>
   public string Name { get; }
 
-  /// <summary>The first profile whose framework has the API, or <see langword="null"/> for a language feature and for what no framework has.</summary>
+  /// <summary>
+  /// The first profile whose framework has the API - for a defect of the runtime, the first profile
+  /// whose runtime has it - or <see langword="null"/> for a language feature and for what no framework has.
+  /// </summary>
   public CSharpProfile? Since { get; private init; }
 
   /// <summary>The first language version that has the feature, or <see langword="null"/> for an API.</summary>
@@ -77,6 +92,9 @@ public sealed class CSharpCapability {
 
   /// <summary>The language feature the row is about, or <see langword="null"/>.</summary>
   public CSharpFeature? Feature { get; private init; }
+
+  /// <summary>The defect of the runtime the row writes around, or <see langword="null"/>.</summary>
+  public CSharpRuntimeDefect? Defect { get; private init; }
 
   /// <summary>The intrinsic operation of the IR the row writes, or <see langword="null"/>.</summary>
   public IrIntrinsicOp? Operation { get; private init; }
@@ -112,7 +130,7 @@ public sealed class CSharpCapability {
   /// <param name="holds">Whether given arguments are such.</param>
   /// <returns>The row extended.</returns>
   public CSharpCapability WithTotal(CSharpForm form, Func<IReadOnlyList<IrExpr>, bool> holds) => new(this.Name) {
-    Since = this.Since, Language = this.Language, Feature = this.Feature, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
+    Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
     Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds
   };
 
@@ -132,6 +150,14 @@ public sealed class CSharpCapability {
   /// <returns>The row.</returns>
   public static CSharpCapability OfApi(string name, CSharpProfile since, CSharpHelper? helper = null)
     => new(name) { Since = since, Helper = helper, Replacement = helper is null ? null : new CSharpForm(null) };
+
+  /// <summary>A defect of the runtime, which the emitter writes around in every profile from the first one whose runtime has it.</summary>
+  /// <param name="name">What the defect does.</param>
+  /// <param name="defect">The defect.</param>
+  /// <param name="since">The first profile whose runtime has it.</param>
+  /// <returns>The row.</returns>
+  public static CSharpCapability OfRuntimeDefect(string name, CSharpRuntimeDefect defect, CSharpProfile since)
+    => new(name) { Defect = defect, Since = since };
 
   /// <summary>An intrinsic operation of the IR that is a call of the base library.</summary>
   /// <param name="name">The API as the .NET API reference names it.</param>
@@ -201,6 +227,11 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfLanguage("native-sized integer (nint)", CSharpFeature.NativeInteger, new Version(9, 0)),
     CSharpCapability.OfLanguage("file-scoped namespace", CSharpFeature.FileScopedNamespace, new Version(10, 0)),
     CSharpCapability.OfLanguage("unsigned right shift (>>>)", CSharpFeature.UnsignedRightShift, new Version(11, 0)),
+
+    // The defects of the runtime. RyuJIT's shift-xor rotation was measured on .NET 8.0.31 and 10.0.12, x64, in
+    // every tier; the runtimes of the older profiles were not, and the form written around it costs what the
+    // plain one costs on a runtime without the defect, so every profile gets it (docs/reference/known-runtime-defects.md).
+    CSharpCapability.OfRuntimeDefect("RyuJIT rotation of (x << y) ^ (x >> (w - y)), also at y = 0", CSharpRuntimeDefect.ShiftXorRotation, CSharpProfile.Net20),
 
     // Arrays.
     Call("Array.Copy(Array, int, Array, int, int)", CSharpProfile.Net20, IrIntrinsicOp.ArrayCopy, _any, "Array.Copy"),
@@ -299,6 +330,12 @@ public sealed class CSharpCapabilities {
   /// <param name="profile">The profile.</param>
   /// <returns><see langword="true"/> when the table has a row for the feature and the profile's language version reaches it.</returns>
   public bool Has(CSharpFeature feature, CSharpProfile profile) => this.Of(feature) is { } row && row.IsIn(profile);
+
+  /// <summary>Whether the runtime of a profile has a defect the emitter writes around.</summary>
+  /// <param name="defect">The defect.</param>
+  /// <param name="profile">The profile.</param>
+  /// <returns><see langword="true"/> when the table has a row for the defect and the profile is at or after its first profile.</returns>
+  public bool Suffers(CSharpRuntimeDefect defect, CSharpProfile profile) => this.Rows.FirstOrDefault(row => row.Defect == defect) is { } row && row.IsIn(profile);
 
   /// <summary>The row of a feature of the language.</summary>
   /// <param name="feature">The feature.</param>

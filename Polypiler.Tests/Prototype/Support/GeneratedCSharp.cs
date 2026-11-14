@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Polypiler.Prototype.Testing;
 
@@ -29,11 +30,27 @@ internal sealed class GeneratedCSharp {
   /// The project default for arithmetic: <see langword="true"/> is <c>CheckForOverflowUnderflow</c>,
   /// which makes every operation outside an <c>unchecked</c> context throw on overflow.
   /// </param>
+  /// <param name="fullyOptimized">
+  /// Whether every method is marked <c>MethodImplOptions.AggressiveOptimization</c>, which makes the JIT
+  /// compile it fully optimized at once, as a method the runtime calls often ends up after tiering;
+  /// otherwise the first calls run the code of the first tier.
+  /// </param>
   /// <exception cref="InvalidOperationException">The compiler reported an error or a warning.</exception>
-  public static GeneratedCSharp Compile(string source, bool checkOverflow) {
+  public static GeneratedCSharp Compile(string source, bool checkOverflow, bool fullyOptimized = false) {
+    var tree = CSharpSyntaxTree.ParseText(source);
+    if (fullyOptimized) {
+      var root = tree.GetRoot();
+      var optimized = SyntaxFactory.Attribute(
+        SyntaxFactory.ParseName("global::System.Runtime.CompilerServices.MethodImpl"),
+        SyntaxFactory.ParseAttributeArgumentList("(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveOptimization)"));
+      tree = tree.WithRootAndOptions(
+        root.ReplaceNodes(root.DescendantNodes().OfType<MethodDeclarationSyntax>(), (_, method) => method.AddAttributeLists(SyntaxFactory.AttributeList(SyntaxFactory.SingletonSeparatedList(optimized)))),
+        tree.Options);
+    }
+
     var compilation = CSharpCompilation.Create(
       "Generated" + Guid.NewGuid().ToString("N"),
-      [CSharpSyntaxTree.ParseText(source)],
+      [tree],
       [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
       new CSharpCompilationOptions(
         OutputKind.DynamicallyLinkedLibrary,
