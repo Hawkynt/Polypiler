@@ -54,14 +54,27 @@ public sealed record CiLayer(string Name, string File, IReadOnlyList<string> Too
     return this.Always || this.Paths.Any(glob => GlobPattern.Parse(glob).IsMatch(normalized));
   }
 
+  /// <summary>
+  /// The layer files of a repository, sorted: every <c>&lt;name&gt;.yaml</c> of the folder. A file whose
+  /// name has a further dot, such as <c>native.sanitizers.yaml</c>, holds data a layer reads and is no
+  /// layer file: a layer's name has no dot.
+  /// </summary>
+  /// <param name="root">The repository root.</param>
+  /// <returns>The full paths; none when the folder does not exist.</returns>
+  public static IReadOnlyList<string> Files(string root) {
+    ArgumentNullException.ThrowIfNull(root);
+    var folder = Path.Combine(root, Folder);
+    return Directory.Exists(folder)
+      ? [.. Directory.GetFiles(folder, "*.yaml").Where(file => !Path.GetFileNameWithoutExtension(file).Contains('.', StringComparison.Ordinal)).Order(StringComparer.Ordinal)]
+      : [];
+  }
+
   /// <summary>Reads every layer file of a repository.</summary>
   /// <param name="root">The repository root.</param>
   /// <returns>The valid layers, sorted by name, and a <c>PLY0075</c> for every file that is not valid; no layer file at all is one <c>PLY0075</c> too.</returns>
   public static (IReadOnlyList<CiLayer> Layers, IReadOnlyList<Diagnostic> Problems) LoadAll(string root) {
-    ArgumentNullException.ThrowIfNull(root);
-    var folder = Path.Combine(root, Folder);
-    var files = Directory.Exists(folder) ? Directory.GetFiles(folder, "*.yaml").Order(StringComparer.Ordinal).ToArray() : [];
-    if (files.Length == 0)
+    var files = Files(root);
+    if (files.Count == 0)
       return ([], [CiDiagnostics.InconsistentWith($"no layer files found in {Folder}")]);
 
     var layers = new List<CiLayer>();
