@@ -158,6 +158,8 @@ public static class JavaScriptFrontend {
     var candidates = collector.Collect(program);
     var constants = collector.Constants;
     var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name));
+    var globals = collector.Globals;
+    inference.DeclareGlobals(globals, program);
     var diagnostics = new List<Diagnostic>();
     List<Candidate> chosen;
     if (exports is null) {
@@ -186,6 +188,10 @@ public static class JavaScriptFrontend {
 
     inference.Shapes.Seal();
     var lowering = new Lowering(inference);
+    var state = ModuleState.Lower(program, globals, models, inference.Initializers, lowering, diagnostics);
+    if (diagnostics.Count > 0)
+      return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
+
     var functions = new Dictionary<Candidate, IrFunction>();
     foreach (var model in models)
       if (lowering.Function(model, diagnostics) is { } function)
@@ -195,10 +201,17 @@ public static class JavaScriptFrontend {
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
     var lowered = candidates.Where(functions.ContainsKey).Select(candidate => functions[candidate]).ToList();
+    ModuleState.CheckInitializers(state, lowered, lowering, diagnostics);
+    if (diagnostics.Count > 0)
+      return Refused(diagnostics);
+
     var module = new IrModule(
       Path.GetFileNameWithoutExtension(path),
       lowered,
-      constants.Where(lowering.Constants.Contains).Select(constant => constant.Constant).ToList()) { Types = lowering.Structs(lowered, inference.Shapes) };
+      constants.Where(lowering.Constants.Contains).Select(constant => constant.Constant).ToList()) {
+      Types = lowering.Structs(lowered, inference.Shapes),
+      Globals = [.. state.Select(global => global.Global!)]
+    };
     var caveats = new List<ImportCaveat>();
     if (lowering.AccessesElements)
       caveats.Add(_outOfRangeAccess);

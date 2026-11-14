@@ -1,0 +1,2 @@
+# The golden outputs of the backends are compared byte for byte, so no checkout may change their line endings.
+*.golden -text

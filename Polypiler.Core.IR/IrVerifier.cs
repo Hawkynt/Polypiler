@@ -35,22 +35,32 @@ public static partial class IrVerifier {
       }
 
       Require(names.Add(constant.Name), "the module declares the name twice");
-      Require(constant.Type.IsStorable && !element.IsStruct, $"a constant of the type {constant.Type}");
-      Require(constant.Type.IsArray || constant.Values.Count == 1, $"a constant of the type {constant.Type} with {constant.Values.Count} values");
+      Require(!OnHeap(constant.Type), Stored);
+      Require(constant.Type.IsStorable && !element.IsStruct && !constant.Type.IsView, $"a constant of the type {constant.Type}");
+      var count = element.IsString ? constant.Strings.Count : constant.Values.Count;
+      Require(constant.Type.IsArray || count == 1, $"a constant of the type {constant.Type} with {count} values");
+      Require(element.IsString ? constant.Values.Count == 0 : constant.Strings.Count == 0, $"a constant of the type {constant.Type} with values of another type");
       foreach (var value in constant.Values.Where(value => !FunctionCheck.InRange(new IrConst(element, value))).Take(1))
         Require(false, $"the constant {value} is not a value of {element}");
     }
 
+    var globals = Globals(module, names, functions, constants, types, diagnostics);
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, types, diagnostics).Run();
+      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals }.Run();
 
     return diagnostics;
   }
 
+  /// <summary>What the verifier says of a view that would outlive the stack: in a field, a constant or an array.</summary>
+  internal const string Stored = "a span is stored outside the stack";
+
+  /// <summary>Whether a type puts a view where only the heap can hold it: as the element of an array.</summary>
+  internal static bool OnHeap(IrType type) => type.IsView ? false : type.Element is { } element && (element.IsView || OnHeap(element));
+
   private static Diagnostic Error(string member, string message)
     => Descriptor.At($"ill-typed IR in '{member}': {message}");
 
-  private sealed class FunctionCheck(
+  private sealed partial class FunctionCheck(
     IrFunction function,
     Dictionary<string, IrFunction> functions,
     HashSet<IrModuleConst> constants,
@@ -59,6 +69,9 @@ public static partial class IrVerifier {
 
     private readonly HashSet<IrLocal> _visible = [];
     private int _loops;
+
+    /// <summary>The globals the code checked may name: every one of the module in a function, the earlier ones in an initializer.</summary>
+    public IReadOnlySet<IrGlobal> Globals { get; init; } = new HashSet<IrGlobal>();
     private int _breakable;
 
     public void Run() {
@@ -66,12 +79,14 @@ public static partial class IrVerifier {
         $"the return type {function.ReturnType} is not a type of the IR");
       this.Declared(function.ReturnType);
       foreach (var parameter in function.Parameters) {
+        this.Require(!OnHeap(parameter.Type), Stored);
         this.Require(parameter.Type.IsStorable, $"parameter '{parameter.Name}' has the type {parameter.Type}");
         this.Declared(parameter.Type);
         this.Require(this._visible.Add(parameter), $"parameter '{parameter.Name}' is declared twice");
       }
 
       foreach (var local in function.Locals) {
+        this.Require(!OnHeap(local.Type), Stored);
         this.Require(local.Type.IsStorable, $"local '{local.Name}' has the type {local.Type}");
         this.Declared(local.Type);
       }
@@ -119,6 +134,11 @@ public static partial class IrVerifier {
           this.InScope(assign.Local);
           this.Value(assign.Value, assign.Local.Type, $"the value assigned to '{assign.Local.Name}'");
           break;
+        case IrGlobalAssign assign:
+          this.Global(assign.Global);
+          this.Require(!assign.Global.Type.IsArray, $"the array global '{assign.Global.Name}' is assigned");
+          this.Value(assign.Value, assign.Global.Type, $"the value assigned to '{assign.Global.Name}'");
+          break;
         case IrStore store:
           this.Writable(store.Array);
           this.Element(store.Array, store.Index);
@@ -153,7 +173,7 @@ public static partial class IrVerifier {
           this.Value(loop.Condition, IrType.Bool, "the condition of a for");
           this.Loop(loop.Body);
           foreach (var step in loop.Step.Statements)
-            this.Require(step is IrDeclare or IrAssign or IrStore or IrFieldStore or IrExprStmt, $"the step of a for holds a {step.GetType().Name}");
+            this.Require(step is IrDeclare or IrAssign or IrGlobalAssign or IrStore or IrFieldStore or IrExprStmt, $"the step of a for holds a {step.GetType().Name}");
 
           this.Block(loop.Step);
           break;
@@ -229,16 +249,22 @@ public static partial class IrVerifier {
         this.Expression(array);
     }
 
-    private void Writable(IrExpr array)
-      => this.Require(array is not IrConstRef, "the elements of a constant table are written");
+    private void Writable(IrExpr array) {
+      this.Require(array is not IrConstRef, "the elements of a constant table are written");
+      this.Require(array.Type.Kind != IrTypeKind.ReadOnlySpan, "an element of a read-only span is written");
+    }
 
     private void Known(IrModuleConst constant)
       => this.Require(constants.Contains(constant), $"the constant '{constant.Name}' is not among the constants of the module");
 
+    /// <summary>A global is one the code may name: of the module, and in an initializer one declared before.</summary>
+    private void Global(IrGlobal global)
+      => this.Require(this.Globals.Contains(global), $"the global '{global.Name}' is not among the globals it may read");
+
     private void Element(IrExpr array, IrExpr index) {
       this.Readable(array);
       this.Expression(index);
-      this.Require(array.Type.IsArray, $"an element is taken of the type {array.Type}");
+      this.Require(array.Type.IsSequence, $"an element is taken of the type {array.Type}");
       this.Require(index.Type.IsWord, $"an array index has the type {index.Type}");
     }
 
@@ -249,6 +275,11 @@ public static partial class IrVerifier {
           break;
         case IrLocalRef reference:
           this.InScope(reference.Local);
+          break;
+        case IrGlobalRef reference:
+          this.Global(reference.Global);
+          break;
+        case IrStrConst:
           break;
         case IrConstRef reference:
           this.Known(reference.Constant);
@@ -286,6 +317,7 @@ public static partial class IrVerifier {
           this.Expression(creation.Length);
           this.Require(creation.Type.IsArray && creation.Type.IsStorable, $"an array is created of the type {creation.Type}");
           this.Require(creation.Length.Type.IsWord, $"an array length has the type {creation.Length.Type}");
+          this.Require(creation.Type.Element?.IsString != true, "an array of strings is created without its elements, which no string could be");
           this.Defaulted(creation.Type.Element);
           break;
         case IrStructNew creation:
@@ -319,7 +351,7 @@ public static partial class IrVerifier {
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
-            if (index == 0 && intrinsic.Op == IrIntrinsicOp.ArrayCopy)
+            if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind == IrTypeKind.ReadOnlySpan)))
               this.Readable(intrinsic.Arguments[index]);
             else
               this.Expression(intrinsic.Arguments[index]);
@@ -328,6 +360,8 @@ public static partial class IrVerifier {
             $"{intrinsic.Op} with the type {intrinsic.Type} is applied to ({string.Join(", ", intrinsic.Arguments.Select(argument => argument.Type))})");
           if (FloatOperationTable.Problem(intrinsic) is { } problem)
             this.Require(false, problem);
+          if (StringOperations.Problem(intrinsic) is { } malformed)
+            this.Require(false, malformed);
 
           break;
         case IrStep step:
@@ -335,7 +369,7 @@ public static partial class IrVerifier {
             this.Writable(stepped.Array);
 
           this.Expression(step.Target);
-          this.Require(step.Target is IrLocalRef or IrArrayLoad, $"a step of a {step.Target.GetType().Name}");
+          this.Require(step.Target is IrLocalRef or IrGlobalRef or IrArrayLoad, $"a step of a {step.Target.GetType().Name}");
           this.Require(step.Type.IsNumeric, $"a step of the type {step.Type}");
           this.Require(!step.Trap || !step.Type.IsFloat, $"a trapping step of the type {step.Type}");
           break;
@@ -400,7 +434,7 @@ public static partial class IrVerifier {
 
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct => false,
+      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

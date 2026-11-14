@@ -1,0 +1,28 @@
+id: INTRINSICS.StrToCodeUnits
+title: Code units of a string as a new array
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrToCodeUnits
+  group: String
+  typeParameters: []
+  parameters: [{name: text, type: TYPES.str}]
+  returns: [{name: units, type: "TYPES.u16[]"}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "a new array of the code units of text, in order"
+    source: "the .NET API reference of System.String.ToCharArray()"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[97, 98]], outputs: [[97, 98]]}
+    - {types: {}, inputs: [[]], outputs: [[]]}
+    - {types: {}, inputs: [[55357, 56832]], outputs: [[55357, 56832]]}

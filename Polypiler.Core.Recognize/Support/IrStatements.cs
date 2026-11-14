@@ -13,6 +13,7 @@ public static class IrStatements {
   public static IReadOnlyList<IrExpr> Expressions(IrStmt statement) => statement switch {
     IrDeclare { Initializer: { } value } => [value],
     IrAssign assign => [assign.Value],
+    IrGlobalAssign assign => [assign.Value],
     IrStore store => [store.Array, store.Index, store.Value],
     IrFieldStore store => [store.Target, store.Value],
     IrExprStmt expression => [expression.Expression],

@@ -9,7 +9,7 @@
   "properties": {
     "name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$", "description": "PascalCase; the last segment of the id; its lower case is the file name; unique across the family, ignoring case." },
     "group": {
-      "enum": ["IntMath", "FloatMath", "Boolean", "Bitfield", "BitCount", "Shuffle", "Saturation", "Carry", "Endian", "Trig", "Sequence", "Matrix", "Tensor", "CopyFill"],
+      "enum": ["IntMath", "FloatMath", "Boolean", "Bitfield", "BitCount", "Shuffle", "Saturation", "Carry", "Endian", "Trig", "Sequence", "Matrix", "Tensor", "CopyFill", "String"],
       "description": "The group; its lower case is the folder under spec/intrinsics/. Groups other than FloatMath, Trig, Matrix and Tensor are exact."
     },
     "typeParameters": {
@@ -177,7 +177,13 @@
       "else": { "type": "integer" }
     },
     "literal": {
-      "description": "A scalar, or for an array type a list of scalars.",
+      "description": "A scalar, or for an array type a list of scalars; a value of a type of the family text is the list of its code units, and an array of such values a list of those lists.",
+      "if": { "type": "array" },
+      "then": { "items": { "$ref": "#/$defs/element" } },
+      "else": { "$ref": "#/$defs/scalar" }
+    },
+    "element": {
+      "description": "An element of a list: a scalar, or the code units of a value of the family text.",
       "if": { "type": "array" },
       "then": { "items": { "$ref": "#/$defs/scalar" } },
       "else": { "$ref": "#/$defs/scalar" }

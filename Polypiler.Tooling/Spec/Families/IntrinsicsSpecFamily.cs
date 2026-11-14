@@ -197,6 +197,14 @@ public sealed class IntrinsicsSpecFamily : ISpecFamily {
       || body["bits"] is not JsonValue bitsValue || !bitsValue.TryGetValue<long>(out var bits) || Text(type, "signedness") is not { } signedness)
       yield break;
 
+    // A value of a type of the family text is the list of its code units; an array of them a list of such lists.
+    if (Text(type, "family") == "text") {
+      foreach (var problem in Units(document, name, pointer, literal, declared.IsArray, id, bits))
+        yield return problem;
+
+      yield break;
+    }
+
     if (literal is JsonArray != declared.IsArray) {
       yield return declared.IsArray
         ? SpecDiagnostics.Rule(document, pointer, $"{name} {Shown(literal)} is not a list, the value is an array of {id}", "vector-width")
@@ -216,6 +224,28 @@ public sealed class IntrinsicsSpecFamily : ISpecFamily {
   /// Whether a literal fits a type: a hexadecimal string is a bit pattern below 2^bits; a decimal integer
   /// is a value of the type's range, two's complement for a signed type, from 0 otherwise.
   /// </summary>
+  /// <summary>The code units of a string, or of every string of an array of them: each a list of unsigned scalars of the type's width.</summary>
+  private static IEnumerable<Diagnostic> Units(SpecDocument document, string name, string pointer, JsonNode literal, bool isArray, string id, long bits) {
+    var texts = isArray
+      ? literal is JsonArray list ? list.Select((element, position) => (Name: $"{name}[{position}]", Pointer: $"{pointer}/{position}", Literal: element!)).ToList() : null
+      : [(Name: name, Pointer: pointer, Literal: literal)];
+    if (texts is null) {
+      yield return SpecDiagnostics.Rule(document, pointer, $"{name} {Shown(literal)} is not a list, the value is an array of {id}", "vector-width");
+      yield break;
+    }
+
+    foreach (var text in texts) {
+      if (text.Literal is not JsonArray units || units.Any(unit => unit is JsonArray)) {
+        yield return SpecDiagnostics.Rule(document, text.Pointer, $"{text.Name} {Shown(text.Literal)} is not the list of the code units of a {id}", "vector-width");
+        continue;
+      }
+
+      for (var position = 0; position < units.Count; ++position)
+        if (!Fits(units[position]!, bits, "unsigned"))
+          yield return SpecDiagnostics.Rule(document, $"{text.Pointer}/{position}", $"{text.Name}[{position}] {Shown(units[position]!)} does not fit a code unit of {id} ({bits} bits)", "vector-width");
+    }
+  }
+
   private static bool Fits(JsonNode literal, long bits, string signedness) {
     var text = literal.ToJsonString();
     if (text.StartsWith('"'))

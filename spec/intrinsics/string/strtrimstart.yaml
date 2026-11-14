@@ -1,0 +1,29 @@
+id: INTRINSICS.StrTrimStart
+title: White space removed at the start
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrTrimStart
+  group: String
+  typeParameters: []
+  parameters: [{name: text, type: TYPES.str}, {name: set, type: TYPES.i32}]
+  returns: [{name: result, type: TYPES.str}]
+  legality:
+    - {id: set-constant, text: "set is the constant 0 or 1", fact: none}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "text without the code units of a white-space set at its start: set 0 is .NET (char.IsWhiteSpace: Unicode White_Space, U+0085 in, U+FEFF out), set 1 is ECMA-262 (WhiteSpace and LineTerminator, U+FEFF in, U+0085 out)"
+    source: "ECMA-262 2022 §12.2, §12.3, §22.1.3.30; the .NET API reference of Char.IsWhiteSpace and String.Trim()"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[32, 65279, 97, 65279, 32, 133], 0], outputs: [[65279, 97, 65279, 32, 133]]}
+    - {types: {}, inputs: [[32, 65279, 97, 65279, 32, 133], 1], outputs: [[97, 65279, 32, 133]]}
+    - {types: {}, inputs: [[9, 12288, 120], 1], outputs: [[120]]}

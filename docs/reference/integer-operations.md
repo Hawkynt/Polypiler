@@ -79,7 +79,7 @@ member of these types the table does not list (`BitOperations.Crc32C`), is refus
 | `T.Min`, `T.Max`, `T.Abs`, `T.Sign` | `Min`, `Max`, `Abs`, `Sign` | |
 | `T.CreateSaturating` | `Clamp` and `Convert`, or a saturating `Convert` of a floating-point number | |
 | `T.CreateTruncating`, `T.CreateChecked` | `Convert`, wrapping or trapping | `CreateTruncating` of a floating-point number is refused |
-| `BinaryPrimitives.Read…LittleEndian`/`BigEndian` | `LoadLittle`, `LoadBig` | the bytes a `byte[]`, `array.AsSpan()`, `array.AsSpan(index)` or `array.AsSpan(index, size)` with the size of the value as a constant |
+| `BinaryPrimitives.Read…LittleEndian`/`BigEndian` | `LoadLittle`, `LoadBig` | the bytes a `byte[]`, `array.AsSpan()`, `array.AsSpan(index)` or `array.AsSpan(index, size)` with the size of the value as a constant, or any other span of bytes, which is a [view](views.md) read from its start: a value outside it traps with `ArgumentOutOfRange` |
 | `BinaryPrimitives.Write…LittleEndian`/`BigEndian` | `StoreLittle`, `StoreBig` | as the reads; the value one that cannot trap and has no effect, as .NET checks the span before it evaluates the value |
 | `BitConverter.ToInt16` … `ToUInt64` | `LoadLittle` | little-endian, as on every supported host |
 | `BinaryPrimitives.Read`/`Write` `Single`/`Double` `LittleEndian`/`BigEndian` | `LoadLittle`, `LoadBig`, `StoreLittle`, `StoreBig` of `f32`, `f64` | as the integer ones |
@@ -103,7 +103,7 @@ A spelled-out idiom such as `(x << n) | (x >>> (32 - n))` is no member; recognis
 | `Math.sign` | `Sign` | on a proven integer, as an `int32` |
 | `BigInt.asUintN(n, x)`, `BigInt.asIntN(n, x)` | `ZeroExtend`, `SignExtend` | `n` a literal from 1 to 64; 64 is the cut to `uint64` or `int64` itself |
 | `DataView` `getInt8`, `getUint8`, `setInt8`, `setUint8` | an element of the array | the view a `const` of `new DataView(bytes.buffer)` or `new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)` of a `Uint8Array` of the function |
-| `DataView` `get`/`set` `Int16` … `BigUint64` | `LoadLittle`, `LoadBig`, `StoreLittle`, `StoreBig` | as above, at a proven integer index; the byte order a literal, big-endian when it is missing |
+| `DataView` `get`/`set` `Int16` … `BigUint64` | `LoadLittle`, `LoadBig`, `StoreLittle`, `StoreBig` | as above, at a proven integer index; the byte order a literal, big-endian when it is missing; also of `new DataView(v.buffer, v.byteOffset, v.byteLength)` of a [view](views.md) `v`, the loads and stores then on the view |
 | `DataView` `getFloat32`, `getFloat64` | `LoadLittle`, `LoadBig` of `f32`, `f64` | as above; the binary32 number read is a double exactly (ECMA-262 `RawBytesToNumeric`) |
 | `DataView` `setFloat32`, `setFloat64` | `Convert` to `f32` and `StoreLittle`, `StoreBig`; `StoreLittle`, `StoreBig` of `f64` | as above; the value a number, which `setFloat32` rounds to binary32, to the nearest with ties to even (`NumericToRawBytes`) |
 

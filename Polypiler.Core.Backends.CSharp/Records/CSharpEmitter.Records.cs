@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using Polypiler.Core.Backends.CSharp.Syntax;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Backends.CSharp;
@@ -37,7 +37,7 @@ public static partial class CSharpEmitter {
   private sealed partial class Writer {
 
     /// <summary>The prime the hash of a struct is combined with, field by field, where the framework has no <c>System.HashCode</c>.</summary>
-    private const string HashFactor = "-1521134295";
+    private const int HashFactor = -1521134295;
 
     private const string Comparer = Base + "Collections.Generic.EqualityComparer<";
 
@@ -59,93 +59,91 @@ public static partial class CSharpEmitter {
     }
 
     /// <summary>The structs of the module, each in the form the profile has (see the lowering table of <c>docs/reference/records.md</c>).</summary>
-    private string Structs() {
-      var code = new StringBuilder();
-      foreach (var type in this._module.Types.OfType<IrStructType>())
-        this.Struct(type, code);
+    private List<CsMember> Structs() => [.. this._module.Types.OfType<IrStructType>().Select(this.Struct)];
 
-      return code.ToString();
-    }
-
-    private void Struct(IrStructType type, StringBuilder code) {
+    private CsTypeDeclaration Struct(IrStructType type) {
       var name = this._typeNames[type.Name];
       var fields = type.Fields.Select(field => (Type: this.TypeName(field.Type), Name: this.FieldNames(type)[field.Name], Field: field)).ToList();
       var equatable = this._equatable.Contains(type);
       var readOnly = type.IsReadOnly && this.Has(CSharpFeature.ReadOnlyStruct);
       // A readonly record struct has init accessors, which need a type of the framework; without it the struct is written out.
       if (equatable && this.Has(CSharpFeature.RecordStruct) && (!type.IsReadOnly || this._table.HasApi("IsExternalInit", this._profile))) {
-        code.Append("public ").Append(type.IsReadOnly ? "readonly " : "").Append("record struct ").Append(name)
-          .Append('(').AppendJoin(", ", fields.Select(field => $"{field.Type} {field.Name}")).Append(')');
+        IReadOnlyList<string> modifiers = type.IsReadOnly ? ["public", "readonly"] : ["public"];
         // A component that is a struct is a field, not a property, so that its own fields can be written through it.
         var nested = fields.Where(field => field.Field.Type.IsStruct).ToList();
-        if (nested.Count == 0) {
-          code.Append(";\n\n");
-          return;
-        }
-
-        code.Append(" {\n\n");
-        foreach (var field in nested)
-          code.Append("  public ").Append(type.IsReadOnly ? "readonly " : "").Append(field.Type).Append(' ').Append(field.Name).Append(" = ").Append(field.Name).Append(";\n");
-
-        code.Append("\n}\n\n");
-        return;
+        return new CsTypeDeclaration(
+          type.IsReadOnly ? ["public", "readonly"] : ["public"], "record struct", name, [.. fields.Select(field => new CsParameter(new CsType(field.Type), field.Name))], [],
+          nested.Count == 0 ? null : [.. nested.Select(field => new CsField(modifiers, new CsType(field.Type), field.Name, new CsName(field.Name)))]) { OpenBlank = true };
       }
 
-      code.Append("public ").Append(readOnly ? "readonly " : "").Append("struct ").Append(name);
-      if (equatable)
-        code.Append(" : ").Append(Base).Append("IEquatable<").Append(name).Append('>');
-
-      code.Append(" {\n\n");
+      var members = new List<CsMember>();
       foreach (var field in fields)
-        code.Append("  public ").Append(field.Field.IsReadOnly ? "readonly " : "").Append(field.Type).Append(' ').Append(field.Name).Append(";\n");
+        members.Add(new CsField(field.Field.IsReadOnly ? ["public", "readonly"] : ["public"], new CsType(field.Type), field.Name, null));
 
       // A struct without fields has the parameterless constructor only, which C# before 10 does not let it declare.
-      if (fields.Count > 0) {
-        code.Append("\n  public ").Append(name).Append('(').AppendJoin(", ", fields.Select(field => $"{field.Type} {field.Name}")).Append(") {\n");
-        foreach (var field in fields)
-          code.Append("    this.").Append(field.Name).Append(" = ").Append(field.Name).Append(";\n");
-
-        code.Append("  }\n");
-      }
+      if (fields.Count > 0)
+        members.Add(new CsConstructor(["public"], name, [.. fields.Select(field => new CsParameter(new CsType(field.Type), field.Name))],
+          new CsBlock([.. fields.Select(field => new CsExpressionStatement(new CsAssignment(new CsMemberAccess(new CsName("this"), field.Name), "=", new CsName(field.Name))))])) {
+          Leading = CsTrivia.Blank
+        });
 
       if (equatable)
-        this.EqualityMembers(name, fields.Select(field => (field.Type, field.Name)).ToList(), code);
+        members.AddRange(this.EqualityMembers(name, [.. fields.Select(field => (field.Type, field.Name))]).Select(member => member with { Leading = CsTrivia.Blank }));
 
-      code.Append("\n}\n\n");
+      return new CsTypeDeclaration(readOnly ? ["public", "readonly"] : ["public"], "struct", name, null, equatable ? [new CsType($"{Base}IEquatable<{name}>")] : [], members) {
+        OpenBlank = true
+      };
     }
+
+    /// <summary>A field of the struct being compared, read from <c>this</c> or from another value.</summary>
+    private static CsMemberAccess Of(string owner, string field) => new(new CsName(owner), field);
+
+    /// <summary>The comparer of a type, <c>EqualityComparer&lt;F&gt;.Default</c>.</summary>
+    private static CsMemberAccess DefaultComparer(string type) => new(CSharpFragments.Expression(Comparer + type + ">"), "Default");
+
+    private static CsMethod Method(IReadOnlyList<string> modifiers, string returns, string name, IReadOnlyList<CsParameter> parameters, params CsStatement[] body)
+      => new(modifiers, new CsType(returns), name, [], parameters, new CsBlock(body), null);
 
     /// <summary>
     /// The members a <c>record struct</c> has, written out: <c>Equals(T)</c> comparing every field with
     /// <c>EqualityComparer&lt;F&gt;.Default</c>, which compares a floating-point number as
     /// <c>double.Equals</c> does; <c>Equals(object)</c>, <c>GetHashCode()</c> and the two operators.
     /// </summary>
-    private void EqualityMembers(string name, List<(string Type, string Name)> fields, StringBuilder code) {
-      code.Append("\n  public bool Equals(").Append(name).Append(" other) {\n    return ")
-        .Append(fields.Count == 0 ? "true" : string.Join("\n      && ", fields.Select(field => $"{Comparer}{field.Type}>.Default.Equals(this.{field.Name}, other.{field.Name})")))
-        .Append(";\n  }\n");
-      code.Append("\n  public override bool Equals(object obj) {\n    return obj is ").Append(name).Append(" && this.Equals((").Append(name).Append(")obj);\n  }\n");
-      code.Append("\n  public override int GetHashCode() {\n");
+    private IEnumerable<CsMember> EqualityMembers(string name, List<(string Type, string Name)> fields) {
+      var comparisons = fields.Select(field => (CsExpression)new CsInvocation(new CsMemberAccess(DefaultComparer(field.Type), "Equals"), [Of("this", field.Name), Of("other", field.Name)]));
+      var equal = fields.Count == 0 ? new CsBooleanLiteral(true) : comparisons.Aggregate((left, right) => new CsBinary(left, "&&", right) { BreakBefore = true });
+      yield return Method(["public"], "bool", "Equals", [new CsParameter(new CsType(name), "other")], new CsReturn(equal));
+      yield return Method(["public", "override"], "bool", "Equals", [new CsParameter(new CsType("object"), "obj")], new CsReturn(new CsBinary(
+        new CsIsType(new CsName("obj"), new CsType(name)), "&&", new CsInvocation(Of("this", "Equals"), [new CsCast(new CsType(name), new CsName("obj"))]))));
+      yield return Method(["public", "override"], "int", "GetHashCode", [], [.. this.HashCode(fields)]);
+      IReadOnlyList<CsParameter> operands = [new CsParameter(new CsType(name), "left"), new CsParameter(new CsType(name), "right")];
+      var equals = new CsInvocation(Of("left", "Equals"), [new CsName("right")]);
+      yield return Method(["public", "static"], "bool", "operator ==", operands, new CsReturn(equals));
+      yield return Method(["public", "static"], "bool", "operator !=", operands, new CsReturn(new CsPrefixUnary("!", equals)));
+    }
+
+    /// <summary>The body of <c>GetHashCode()</c>: <c>HashCode</c> where the framework has it, else the fields combined with a prime.</summary>
+    private IEnumerable<CsStatement> HashCode(List<(string Type, string Name)> fields) {
       if (fields.Count == 0) {
-        code.Append("    return 0;\n");
+        yield return new CsReturn(new CsIntegerLiteral(0));
       } else if (this._table.HasApi("HashCode.Combine", this._profile) && fields.Count <= 8) {
-        code.Append("    return ").Append(Base).Append("HashCode.Combine(").AppendJoin(", ", fields.Select(field => $"this.{field.Name}")).Append(");\n");
+        yield return new CsReturn(new CsInvocation(CSharpFragments.Expression(Base + "HashCode.Combine"), [.. fields.Select(field => Of("this", field.Name))]));
       } else if (this._table.HasApi("HashCode.Combine", this._profile)) {
-        code.Append("    ").Append(Base).Append("HashCode hash = new ").Append(Base).Append("HashCode();\n");
+        yield return new CsLocalDeclaration(new CsType(Base + "HashCode"), "hash", new CsObjectCreation(new CsType(Base + "HashCode"), []));
         foreach (var field in fields)
-          code.Append("    hash.Add(this.").Append(field.Name).Append(");\n");
+          yield return new CsExpressionStatement(new CsInvocation(Of("hash", "Add"), [Of("this", field.Name)]));
 
-        code.Append("    return hash.ToHashCode();\n");
+        yield return new CsReturn(new CsInvocation(Of("hash", "ToHashCode"), []));
       } else {
-        code.Append("    unchecked {\n      int hash = 0;\n");
+        List<CsStatement> statements = [new CsLocalDeclaration(new CsType("int"), "hash", new CsIntegerLiteral(0))];
         foreach (var field in fields)
-          code.Append("      hash = hash * ").Append(HashFactor).Append(" + ").Append(Comparer).Append(field.Type).Append(">.Default.GetHashCode(this.").Append(field.Name).Append(");\n");
+          statements.Add(new CsExpressionStatement(new CsAssignment(new CsName("hash"), "=", new CsBinary(
+            new CsBinary(new CsName("hash"), "*", new CsIntegerLiteral(HashFactor)), "+",
+            new CsInvocation(new CsMemberAccess(DefaultComparer(field.Type), "GetHashCode"), [Of("this", field.Name)])))));
 
-        code.Append("      return hash;\n    }\n");
+        statements.Add(new CsReturn(new CsName("hash")));
+        yield return new CsCheckedStatement(false, new CsBlock(statements));
       }
-
-      code.Append("  }\n");
-      code.Append("\n  public static bool operator ==(").Append(name).Append(" left, ").Append(name).Append(" right) {\n    return left.Equals(right);\n  }\n");
-      code.Append("\n  public static bool operator !=(").Append(name).Append(" left, ").Append(name).Append(" right) {\n    return !left.Equals(right);\n  }\n");
     }
 
   }

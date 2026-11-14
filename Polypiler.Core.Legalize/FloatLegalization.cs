@@ -64,7 +64,9 @@ public static class FloatLegalization {
   private sealed class Run(IrModule module, Func<IrModule> implementations, Func<IrIntrinsic, bool> native) {
 
     private readonly Lazy<Dictionary<string, IrFunction>> _available = new(() => implementations().Functions.ToDictionary(function => function.Name));
-    private readonly HashSet<string> _taken = [.. module.Functions.Select(function => function.Name), .. module.Constants.Select(constant => constant.Name)];
+    private readonly HashSet<string> _taken = [
+      .. module.Functions.Select(function => function.Name), .. module.Constants.Select(constant => constant.Name), .. module.Globals.Select(global => global.Name)
+    ];
     private readonly Dictionary<IrModuleConst, IrModuleConst> _tables = new(ReferenceEqualityComparer.Instance);
     private bool _inHelper;
 
@@ -124,6 +126,7 @@ public static class FloatLegalization {
       IrBlock block => this.Block(block),
       IrDeclare declare => declare with { Initializer = declare.Initializer is null ? null : this.Expression(declare.Initializer) },
       IrAssign assign => assign with { Value = this.Expression(assign.Value) },
+      IrGlobalAssign assign => assign with { Value = this.Expression(assign.Value) },
       IrStore store => new IrStore(this.Expression(store.Array), this.Expression(store.Index), this.Expression(store.Value)),
       IrFieldStore store => store with { Target = this.Expression(store.Target), Value = this.Expression(store.Value) },
       IrExprStmt expression => new IrExprStmt(this.Expression(expression.Expression)),

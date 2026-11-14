@@ -95,6 +95,6 @@ public sealed class IrStructType : IrTypeDeclaration {
   /// struct. A field that is an array has none, because the IR has no array that is not there. Asked
   /// of a struct that contains itself, which the verifier refuses, it does not end.
   /// </summary>
-  public bool HasDefault => this.Fields.All(member => member.Type.Declaration is IrStructType nested ? nested.HasDefault : !member.Type.IsArray);
+  public bool HasDefault => this.Fields.All(member => member.Type.Declaration is IrStructType nested ? nested.HasDefault : !member.Type.IsArray && !member.Type.IsString);
 
 }

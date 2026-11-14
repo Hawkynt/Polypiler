@@ -5,10 +5,16 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- The helpers are JavaScript source, which Acornima reads into the syntax tree once. -->
+  <ItemGroup>
+    <PackageReference Include="Acornima" Version="1.9.1" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Legalize\Polypiler.Core.Legalize.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
   </ItemGroup>
 
 </Project>

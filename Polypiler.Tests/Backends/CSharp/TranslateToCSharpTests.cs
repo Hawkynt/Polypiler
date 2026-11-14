@@ -7,6 +7,7 @@ using Polypiler.Cli;
 using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
+using Polypiler.Core.Optimize.Target;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
@@ -231,7 +232,8 @@ public sealed class TranslateToCSharpTests {
     var text = File.ReadAllText(output.Trim());
     var parsed = CSharpProfile.Parse(profile ?? "net10.0", languageVersion);
     Assert.That(text, Does.Contain($"\n// Profile: {header}.\n"));
-    Assert.That(text, Is.EqualTo(CSharpEmitter.Emit(PrototypeFixture.Imported("wide/Library"), parsed, "Demo").Single().Content));
+    // translate runs the target passes, which the emitter runs when it is told to.
+    Assert.That(text, Is.EqualTo(CSharpEmitter.Emit(PrototypeFixture.Imported("wide/Library"), parsed, FloatMode.Accurate, "Demo", null, TargetPassOptions.Default).Files.Single().Content));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, parsed.Name, parsed.LanguageVersionName), Is.Empty);
   }
 
@@ -251,7 +253,7 @@ public sealed class TranslateToCSharpTests {
   [Test]
   public void Emit_TakesTheProfileFromTheOptions() {
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap("public static uint F(uint a) => System.Numerics.BitOperations.RotateLeft(a, 3);"));
-    var (exitCode, output, error) = this.Emit(module, ("--profile", "net4.6"), ("--langversion", "7.3"));
+    var (exitCode, output, error) = this.Emit(module, ("--profile", "net4.6"), ("--langversion", "7.3"), ("--disable-opt", "O0500"));
     Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     Assert.That(File.ReadAllText(output.Trim()), Does.Contain("\n// Profile: net4.6, C# 7.3.\n").And.Contain("private static uint RotateLeft(uint value, int count) {"));
   }

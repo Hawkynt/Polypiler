@@ -28,7 +28,29 @@ public sealed record IrConst(IrType Type, long Value) : IrExpr(Type);
 /// <param name="Name">The name, unique among the constants and functions of the module.</param>
 /// <param name="Type">A truth value, a number, or an array of numbers.</param>
 /// <param name="Values">The value, or the elements in order, each as an <see cref="IrConst"/> carries it.</param>
-public sealed record IrModuleConst(string Name, IrType Type, IReadOnlyList<long> Values);
+public sealed record IrModuleConst(string Name, IrType Type, IReadOnlyList<long> Values) {
+
+  /// <summary>
+  /// A constant of the module that is a string or a table of strings: <see cref="Values"/> is empty
+  /// and <see cref="Strings"/> holds the value, or the elements in order.
+  /// </summary>
+  /// <param name="name">The name, unique among the constants and functions of the module.</param>
+  /// <param name="type"><see cref="IrType.String"/> or an array of it.</param>
+  /// <param name="strings">The value, or the elements in order.</param>
+  /// <returns>The constant.</returns>
+  public static IrModuleConst OfStrings(string name, IrType type, IReadOnlyList<string> strings) => new(name, type, System.Array.Empty<long>()) { Strings = strings };
+
+  /// <summary>The value or the elements of a constant of strings, otherwise empty.</summary>
+  public IReadOnlyList<string> Strings { get; init; } = [];
+
+}
+
+/// <summary>
+/// A constant string: its code units in order, any of them, also an unpaired surrogate. Its type is
+/// <see cref="IrType.String"/>.
+/// </summary>
+/// <param name="Value">The code units.</param>
+public sealed record IrStrConst(string Value) : IrExpr(IrType.String);
 
 /// <summary>The value of a constant of the module, or the table it is.</summary>
 /// <param name="Constant">The constant read.</param>
@@ -194,8 +216,8 @@ public sealed record IrConvert(IrType Type, IrExpr Operand, IrConversion Contrac
 /// <param name="WhenFalse">The value when it does not.</param>
 public sealed record IrConditional(IrExpr Condition, IrExpr WhenTrue, IrExpr WhenFalse) : IrExpr(WhenTrue.Type);
 
-/// <summary>An element of an array; traps when the index is outside the array.</summary>
-/// <param name="Array">The array read.</param>
+/// <summary>An element of an array or of a view; traps when the index is outside it.</summary>
+/// <param name="Array">The array or view read.</param>
 /// <param name="Index">The zero-based index.</param>
 public sealed record IrArrayLoad(IrExpr Array, IrExpr Index) : IrExpr(Array.Type.Element ?? IrType.Void);
 
@@ -664,7 +686,141 @@ public enum IrIntrinsicOp {
   PowEcma,
 
   /// <summary><c>(x, n)</c>: the <c>n</c>-th root of IEEE 754 §9.2 for an <c>i32</c> <c>n</c>; contract <c>ulp(1)</c>.</summary>
-  RootN
+  RootN,
+
+  // The views of #1325: docs/reference/views.md.
+
+  /// <summary>
+  /// <c>(source)</c>, <c>(source, start)</c> or <c>(source, start, length)</c>: a view of an array or of another
+  /// view, the whole of it, or the elements from <c>start</c> on, to its end or <c>length</c> of them. A range outside the source traps with an argument out of
+  /// range. A writable view is never made of a read-only one.
+  /// </summary>
+  ViewOf,
+
+  /// <summary>
+  /// <c>(view, start)</c> or <c>(view, start, length)</c>: the part of a view from <c>start</c> on, to its end or
+  /// <c>length</c> elements of it, of the same type; a range outside it traps with an argument out of range.
+  /// </summary>
+  Slice,
+
+  /// <summary><c>(view)</c>: the number of elements of a view, as an <c>i32</c>.</summary>
+  ViewLength,
+
+  /// <summary>
+  /// <c>(length)</c>: a writable view of a new run of zeros of the element type of the node, which lives no
+  /// longer than the function; a negative length traps with an integer overflow, as an array's does.
+  /// </summary>
+  StackAlloc,
+
+  /// <summary>
+  /// <c>(source, target)</c>: copies every element of a view to the start of a writable one of the same
+  /// element type, as if through a buffer, so that overlapping views are safe; a target shorter than the
+  /// source traps with an argument out of range before anything is copied.
+  /// </summary>
+  ViewCopy,
+
+  /// <summary><c>(source, target)</c>: <see cref="ViewCopy"/> when the target is long enough, then true; false and nothing copied otherwise.</summary>
+  ViewTryCopy,
+
+  /// <summary><c>(view, value)</c>: stores the value in every element of a writable view.</summary>
+  ViewFill,
+
+  /// <summary>
+  /// <c>(a, b)</c>: whether two views of one element type have the same length and equal elements, a
+  /// floating-point element compared as <c>double.Equals</c> compares it: a NaN equals a NaN, and
+  /// <c>+0.0</c> equals <c>-0.0</c>.
+  /// </summary>
+  ViewEqual,
+
+  /// <summary><c>(view)</c>: a new array holding the elements of a view.</summary>
+  ViewToArray,
+
+  /// <summary>
+  /// <c>(view)</c>: the bytes of a view read as elements of another number type, the lowest byte first,
+  /// whatever the host's order: a view of the same memory, of the same writability, whose length is the
+  /// number of whole elements the bytes hold.
+  /// </summary>
+  Reinterpret,
+
+  // The strings of #1314: docs/reference/string-operations.md.
+
+  /// <summary><c>str → i32</c>: the number of code units.</summary>
+  StrLength,
+
+  /// <summary><c>(str, i32) → u16</c>: the code unit at an index; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length)</c>.</summary>
+  StrCodeUnitAt,
+
+  /// <summary><c>(str, str, …) → str</c>: two or more strings one after the other.</summary>
+  StrConcat,
+
+  /// <summary><c>u16 → str</c>: the string of one code unit.</summary>
+  StrFromCodeUnit,
+
+  /// <summary><c>(u16[], i32 start, i32 length) → str</c>: the code units of a range of an array, of all of it without a range; traps <see cref="IrTrap.IndexOutOfRange"/> outside the array.</summary>
+  StrFromCodeUnits,
+
+  /// <summary><c>str → u16[]</c>: a new array of the code units.</summary>
+  StrToCodeUnits,
+
+  /// <summary><c>(u16, i32) → str</c> or <c>(str, i32) → str</c>: a code unit or a string the given number of times; traps <see cref="IrTrap.IntegerOverflow"/> for a negative count.</summary>
+  StrRepeat,
+
+  /// <summary><c>(str, i32 start, i32 length) → str</c>, or <c>(str, i32 start)</c> up to the end: traps <see cref="IrTrap.IndexOutOfRange"/> unless <c>0 ≤ start</c>, <c>0 ≤ length</c> and <c>start + length ≤ StrLength</c>.</summary>
+  StrSubstring,
+
+  /// <summary><c>(str, str) → bool</c>: the same code units in the same order.</summary>
+  StrEquals,
+
+  /// <summary><c>(str, str) → i32</c>: -1, 0 or 1 by the first code unit that differs, a proper prefix first.</summary>
+  StrCompareOrdinal,
+
+  /// <summary><c>(str, str | u16, i32 from) → i32</c>: the first start at or after <c>from</c> (0 without it) of the needle, -1 when there is none; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length]</c>.</summary>
+  StrIndexOf,
+
+  /// <summary><c>(str, str | u16, i32 from) → i32</c>: the last start at or before <c>from</c> (the length without it) of the needle, -1 when there is none; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length]</c>.</summary>
+  StrLastIndexOf,
+
+  /// <summary><c>(str, str | u16) → bool</c>: whether the string begins with the needle.</summary>
+  StrStartsWith,
+
+  /// <summary><c>(str, str | u16) → bool</c>: whether the string ends with the needle.</summary>
+  StrEndsWith,
+
+  /// <summary><c>(str, str | u16) → bool</c>: whether the needle stands anywhere in the string.</summary>
+  StrContains,
+
+  /// <summary><c>(str, str, str) → str</c> or <c>(str, u16, u16) → str</c>: every occurrence replaced, left to right; traps <see cref="IrTrap.InvalidOperation"/> for an empty needle.</summary>
+  StrReplaceAll,
+
+  /// <summary><c>(str, str, str) → str</c>: the first occurrence replaced; an empty needle stands at 0.</summary>
+  StrReplaceFirst,
+
+  /// <summary><c>(str, str | u16, i32 limit) → str[]</c>: the parts between the separators, at most <c>limit</c> of them when it is not negative; an empty separator splits between every code unit.</summary>
+  StrSplit,
+
+  /// <summary><c>(str, str[]) → str</c>: the elements with the separator between each two.</summary>
+  StrJoin,
+
+  /// <summary><c>(str, i32 set) → str</c>: without the white space of a <see cref="WhitespaceSet"/>, a constant, at both ends.</summary>
+  StrTrim,
+
+  /// <summary><c>(str, i32 set) → str</c>: without the white space of a <see cref="WhitespaceSet"/> at the start.</summary>
+  StrTrimStart,
+
+  /// <summary><c>(str, i32 set) → str</c>: without the white space of a <see cref="WhitespaceSet"/> at the end.</summary>
+  StrTrimEnd,
+
+  /// <summary><c>(str, i32 length, str filler) → str</c>: the filler repeated in front up to the length, its last copy cut to fit; the string itself when it is as long or the filler is empty.</summary>
+  StrPadStart,
+
+  /// <summary><c>(str, i32 length, str filler) → str</c>: as <see cref="StrPadStart"/>, at the end.</summary>
+  StrPadEnd,
+
+  /// <summary><c>(str, i32) → i32</c>: ECMA-262's <c>codePointAt</c>, a pair of surrogates as one code point; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length)</c>.</summary>
+  StrCodePointAt,
+
+  /// <summary><c>(str, i32) → i32</c>: the code units of the code point at an index, 2 for a pair of surrogates and 1 otherwise; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length)</c>.</summary>
+  StrNextCodePoint
 
 }
 
@@ -696,10 +852,10 @@ public sealed record IrDeclare(IrLocal Local, IrExpr? Initializer) : IrStmt;
 public sealed record IrAssign(IrLocal Local, IrExpr Value) : IrStmt;
 
 /// <summary>
-/// A write to an array element. Array, index and value are evaluated in that order, then the index
-/// is checked; the write traps when it is outside the array.
+/// A write to an element of an array or of a writable view. Array, index and value are evaluated in
+/// that order, then the index is checked; the write traps when it is outside the array.
 /// </summary>
-/// <param name="Array">The array written.</param>
+/// <param name="Array">The array or view written.</param>
 /// <param name="Index">The zero-based index.</param>
 /// <param name="Value">The value stored, of the element type.</param>
 public sealed record IrStore(IrExpr Array, IrExpr Index, IrExpr Value) : IrStmt;
@@ -785,7 +941,7 @@ public sealed record IrFunction(
   IReadOnlyList<IrLocal> Locals,
   IrBlock Body);
 
-/// <summary>A module: the functions and constants of one source class, and the types they use.</summary>
+/// <summary>A module: the functions, constants and globals of one source class, and the types they use.</summary>
 /// <param name="Name">The name of the module.</param>
 /// <param name="Functions">The functions, in source order.</param>
 /// <param name="Constants">The constants, in source order.</param>
@@ -801,5 +957,11 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// or a node of the module names is one of them.
   /// </summary>
   public IReadOnlyList<IrTypeDeclaration> Types { get; init; } = [];
+
+  /// <summary>
+  /// The globals of the module, in source order, which is the order they are initialised in. Every
+  /// global a function or an initializer names is one of them.
+  /// </summary>
+  public IReadOnlyList<IrGlobal> Globals { get; init; } = [];
 
 }

@@ -153,11 +153,10 @@ public sealed class FloatViewFrontendTests {
     Assert.That((double)0.1f + 0.1, Is.Not.EqualTo((double)(0.1f + 0.1f)), "a sum in binary32 would differ");
   }
 
-  /// <summary>Test design 9 for C#: a span for BitConverter, a stored value that can trap, a slice of another size and Half are refused by name.</summary>
+  /// <summary>Test design 9 for C#: a span for BitConverter, a stored value that can trap and Half are refused by name; a slice of another size is a view since #1325.</summary>
   [TestCase("public static float F(byte[] a) => System.BitConverter.ToSingle(a.AsSpan());", "BitConverter.ToSingle")]
   [TestCase("public static double F(byte[] a) => System.BitConverter.ToDouble(a.AsSpan(1));", "BitConverter.ToDouble")]
   [TestCase("public static byte[] F(byte[] a, float x, int d) { System.Buffers.Binary.BinaryPrimitives.WriteSingleBigEndian(a, x / (float)(4 / d)); return a; }", "a value that can trap or has an effect")]
-  [TestCase("public static double F(byte[] a) => System.Buffers.Binary.BinaryPrimitives.ReadDoubleLittleEndian(a.AsSpan(0, 4));", "as anything but an array or its AsSpan with an index and the size of the value")]
   [TestCase("public static float F(byte[] a) => (float)System.Buffers.Binary.BinaryPrimitives.ReadHalfLittleEndian(a);", "Half")]
   public void UnsupportedForm_IsRefusedByName(string method, string named) {
     var result = CSharpFrontend.Import("Snippet.cs", "using System; " + PrototypeFixture.Wrap(method));

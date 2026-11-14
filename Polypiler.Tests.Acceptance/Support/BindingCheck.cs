@@ -63,7 +63,8 @@ public static partial class BindingCheck {
     "tests/features/prototype/javascript-to-ir.feature",
     "tests/features/prototype/jit-shift-xor.feature",
     "tests/features/prototype/recognition.feature",
-    "tests/features/prototype/value-records.feature"
+    "tests/features/prototype/value-records.feature",
+    "tests/features/prototype/spans-and-memory.feature"
   };
 
   [GeneratedRegex(@"^\| `(?<folder>[a-z0-9]+(?:/<code>)?)/` \| (?<prefixes>[^|]+)\|", RegexOptions.Multiline)]

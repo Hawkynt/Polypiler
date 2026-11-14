@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Polypiler.Core.Backends.JavaScript.Syntax;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Backends.JavaScript;
@@ -11,34 +12,38 @@ public static partial class JavaScriptEmitter {
   private sealed partial class Writer {
 
     /// <summary>The expression as it stands on its own: as a statement, an argument or a right-hand side.</summary>
-    private string Text(IrExpr expression) => this.Expression(expression).Text;
+    private JsExpression Text(IrExpr expression) => this.Expression(expression).Node;
 
     /// <summary>The expression as an operand: in parentheses unless it already binds tighter than any operator.</summary>
-    private string Operand(IrExpr expression) {
-      var (text, atomic) = this.Expression(expression);
-      return atomic ? text : $"({text})";
-    }
+    private JsExpression Operand(IrExpr expression) => JavaScriptEmitter.Operand(this.Expression(expression));
 
-    private (string Text, bool Atomic) Expression(IrExpr expression) {
+    private (JsExpression Node, bool Atomic) Expression(IrExpr expression) {
       var outer = this._construct;
       this._construct = expression;
-      var written = this.Write(expression);
+      var (node, atomic) = this.Write(expression);
       this._construct = outer;
-      return written;
+      return (node.Type is null ? node with { Type = expression.Type } : node, atomic);
     }
 
-    private (string Text, bool Atomic) Write(IrExpr expression) {
+    private (JsExpression Node, bool Atomic) Write(IrExpr expression) {
       switch (expression) {
         case IrConst constant:
           return this.Constant(constant.Type, constant.Value);
         case IrConstRef reference:
-          return (this.Name(reference.Constant.Name), true);
+          return (Id(this.Name(reference.Constant.Name)), true);
+        case IrStrConst text:
+          return (new JsString(text.Value), true);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
         case IrLocalRef reference:
-          return (this.Local(reference.Local), true);
+          return (this.Variable(reference.Local), true);
+        case IrGlobalRef reference:
+          return (this.GlobalName(reference.Global), true);
         case IrUnary unary:
           return this.Unary(unary);
+        case IrBinary { Left: IrIntrinsic { Op: IrIntrinsicOp.StrCompareOrdinal } ordinal, Right: IrConst { Value: 0 } } binary:
+          // The sign of an ordinal comparison against 0 is the relational comparison of the strings, by code unit (ECMA-262 §7.2.13).
+          return (Infix(this.Operand(ordinal.Arguments[0]), Sign(binary.Op), this.Operand(ordinal.Arguments[1])), false);
         case IrBinary binary:
           var operands = binary.Left.Type;
           return operands.IsFloat ? this.BinaryFloat(binary)
@@ -48,36 +53,43 @@ public static partial class JavaScriptEmitter {
         case IrConvert conversion:
           return this.Convert(conversion);
         case IrConditional choice:
-          return ($"{this.Operand(choice.Condition)} ? {this.Operand(choice.WhenTrue)} : {this.Operand(choice.WhenFalse)}", false);
+          var test = this.Operand(choice.Condition);
+          var whenTrue = this.Operand(choice.WhenTrue);
+          return (new JsConditional(test, whenTrue, this.Operand(choice.WhenFalse)), false);
+        case IrArrayLoad load when this.Plain(load.Array):
+          return (this.ViewElement(load), true);
         case IrArrayLoad load:
           return (this.Helper("$get", load.Array, load.Index), true);
         case IrArrayLength length:
-          return ($"{this.Operand(length.Array)}.length", true);
+          return (new JsMember(this.Operand(length.Array), "length"), true);
         case IrNewArray creation:
           var element = creation.Type.Element!;
           var count = this.Helper("$len", creation.Length);
           if (element.StructType is { } elements)
-            return ($"{this.StructHelper("newArray", elements)}({count})", true);
+            return (Invoke(this.StructHelper("newArray", elements), count), true);
 
-          return (this.Native(Storage(element)) ? $"new {Storage(element)}({count})" : this.Helper("$new", [count, this.Zero(element)]), true);
+          return (this.Native(Storage(element)) ? new JsNew(Id(Storage(element)), [count]) : this.Helper("$new", [count, this.Zero(element)]), true);
         case IrStep step:
           return this.Step(step);
         case IrStructNew or IrStructDefault or IrFieldLoad or IrStructEquals:
           return this.Struct(expression);
         default:
           var call = (IrCall)expression;
-          return ($"{this.Name(call.Function)}({string.Join(", ", call.Arguments.Select(this.Value))})", true);
+          return (new JsCall(Id(this.Name(call.Function)), [.. call.Arguments.Select(this.Value)]), true);
       }
     }
 
-    private (string Text, bool Atomic) Intrinsic(IrIntrinsic intrinsic) {
+    private (JsExpression Node, bool Atomic) Intrinsic(IrIntrinsic intrinsic) {
+      if (this.View(intrinsic) is { } view)
+        return view;
+
       var arguments = intrinsic.Arguments;
       switch (intrinsic.Op) {
-        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct:
-          // Typed arrays hold numbers: an array of structs is an Array of objects.
-          return ($"[{string.Join(", ", arguments.Select(this.Value))}]", true);
+        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct || intrinsic.Type.Element.IsString:
+          // Typed arrays hold numbers: an array of structs or of strings is an Array of objects.
+          return (new JsArray([.. arguments.Select(this.Value)]), true);
         case IrIntrinsicOp.ArrayOf:
-          return (this.ArrayOf(intrinsic.Type.Element!, string.Join(", ", arguments.Select(this.Text))), true);
+          return (this.ArrayOf(intrinsic.Type.Element!, [.. arguments.Select(this.Text)]), true);
         case IrIntrinsicOp.ArrayCopy:
           var typed = this.Native(Storage(arguments[0].Type.Element!)) && this.Native(".set") && this.Native(".subarray");
           return (this.Helper(typed ? "$copy" : "$copya", arguments.ToArray()), true);
@@ -87,50 +99,53 @@ public static partial class JavaScriptEmitter {
           return (this.Fill(arguments[0], this.Zero(arguments[0].Type.Element!)), true);
       }
 
+      if (StringOperations.IsString(intrinsic.Op))
+        return this.StringOperation(intrinsic);
+
       // The integer and bit operations, also those defined on floating-point numbers as well, are written by their families.
       if (this.Integer(intrinsic) is { } integer)
         return integer;
 
       var type = arguments[0].Type;
-      var all = string.Join(", ", arguments.Select(this.Text));
+      var all = arguments.Select(this.Text).ToList();
       if (this.Floating(intrinsic, all) is { } floating)
         return floating;
 
       switch (intrinsic.Op) {
         case IrIntrinsicOp.Abs:
-          return ($"Math.abs({all})", true);
+          return (Invoke("Math.abs", all), true);
         case IrIntrinsicOp.Min:
-          return ($"Math.min({all})", true);
+          return (Invoke("Math.min", all), true);
         case IrIntrinsicOp.Max:
-          return ($"Math.max({all})", true);
+          return (Invoke("Math.max", all), true);
         case IrIntrinsicOp.Sign:
-          return (this.Helper("$fsign", [all]), true);
+          return (this.Helper("$fsign", all), true);
         case IrIntrinsicOp.Sqrt:
-          return (type == IrType.F32 ? this.Fround($"Math.sqrt({all})") : $"Math.sqrt({all})", true);
+          return (type == IrType.F32 ? this.Fround(Invoke("Math.sqrt", all)) : Invoke("Math.sqrt", all), true);
         case IrIntrinsicOp.Floor:
-          return ($"Math.floor({all})", true);
+          return (Invoke("Math.floor", all), true);
         case IrIntrinsicOp.Ceiling:
-          return ($"Math.ceil({all})", true);
+          return (Invoke("Math.ceil", all), true);
         case IrIntrinsicOp.Truncate:
-          return (this.Native("Math.trunc") ? $"Math.trunc({all})" : this.Helper("$trunc", [all]), true);
+          return (this.Native("Math.trunc") ? Invoke("Math.trunc", all) : this.Helper("$trunc", all), true);
         case IrIntrinsicOp.RoundEven:
-          return (this.Helper("$round", [all]), true);
+          return (this.Helper("$round", all), true);
         case IrIntrinsicOp.RoundAway:
-          return (this.Helper("$rounda", [all]), true);
+          return (this.Helper("$rounda", all), true);
         case IrIntrinsicOp.FloatBits:
-          return (this.Helper(type == IrType.F64 ? "$bits64" : "$bits32", [all]), true);
+          return (this.Helper(type == IrType.F64 ? "$bits64" : "$bits32", all), true);
         case IrIntrinsicOp.RoundHalfUp:
           // The result is integral, and an integral number that a binary32 operand rounds to is a binary32 number.
           this.Native("Math.round");
-          return ($"Math.round({all})", true);
+          return (Invoke("Math.round", all), true);
         case IrIntrinsicOp.ToInt32:
           this.Native("| 0");
-          return ($"{this.Operand(arguments[0])} | 0", false);
+          return (Infix(this.Operand(arguments[0]), "|", Number("0")), false);
         case IrIntrinsicOp.ToUint32:
           this.Native(">>> 0");
-          return ($"{this.Operand(arguments[0])} >>> 0", false);
+          return (Infix(this.Operand(arguments[0]), ">>>", Number("0")), false);
         default:
-          return (this.Helper(type.IsLong ? "$float64" : "$float32", [all]), true);
+          return (this.Helper(type.IsLong ? "$float64" : "$float32", all), true);
       }
     }
 
@@ -138,8 +153,11 @@ public static partial class JavaScriptEmitter {
     /// One value stored in every element of an array: the <c>fill</c> of the array, or a loop where
     /// the profile has none.
     /// </summary>
-    private string Fill(IrExpr array, string value)
-      => this.Native(".fill") ? $"{this.Operand(array)}.fill({value})" : this.Helper("$fill", [this.Text(array), value]);
+    private JsCall Fill(IrExpr array, JsExpression value)
+      => this.Native(".fill") ? new JsCall(new JsMember(this.Operand(array), "fill"), [value]) : this.Helper("$fill", [this.Text(array), value]);
+
+    /// <summary>A Boolean as the literal a helper is told it by.</summary>
+    private static JsBoolean Flag(bool value) => new(value);
 
     /// <summary>
     /// A step by one as an expression. An array element goes through a helper: storing into a typed
@@ -147,18 +165,19 @@ public static partial class JavaScriptEmitter {
     /// and a pair of halves is stepped by the helpers of its arithmetic. A variable is assigned inside
     /// the expression; the postfix form keeps the old value in a variable of the function.
     /// </summary>
-    private (string Text, bool Atomic) Step(IrStep step) {
+    private (JsExpression Node, bool Atomic) Step(IrStep step) {
       var type = step.Type;
       var halves = type.IsLong && this.Halves;
-      var post = step.Postfix ? "true" : "false";
+      var post = Flag(step.Postfix);
       if (step.Target is IrArrayLoad element) {
-        var arguments = new List<string> { this.Text(element.Array), this.Text(element.Index) };
+        var (array, index) = this.Place(element);
+        var arguments = new List<JsExpression> { array, index };
         if (halves) {
-          arguments.AddRange([step.Increment ? "true" : "false", post]);
+          arguments.AddRange([Flag(step.Increment), post]);
           return (this.Helper(!step.Trap ? "$step64" : type.IsSigned ? "$stepck64s" : "$stepck64u", arguments), true);
         }
 
-        arguments.AddRange([(step.Increment ? "1" : "-1") + (type.IsLong ? "n" : ""), post]);
+        arguments.AddRange([type.IsLong ? new JsBigInt(step.Increment ? 1 : -1) : Number(step.Increment ? "1" : "-1"), post]);
         if (step.Trap) {
           arguments.Add(this.Literal(type, IrOperators.Minimum(type)));
           arguments.Add(this.Literal(type, IrOperators.Maximum(type)));
@@ -171,24 +190,25 @@ public static partial class JavaScriptEmitter {
         if (type == IrType.F32)
           return (this.Helper("$stepf", arguments), true);
 
-        arguments.AddRange([(32 - type.Bits).ToString(CultureInfo.InvariantCulture), type.IsSigned ? "true" : "false"]);
+        arguments.AddRange([Number((32 - type.Bits).ToString(CultureInfo.InvariantCulture)), Flag(type.IsSigned)]);
         return (this.Helper("$stepi", arguments), true);
       }
 
-      var name = this.Local(((IrLocalRef)step.Target).Local);
+      var name = step.Target is IrGlobalRef global ? this.GlobalName(global.Global).Name : this.Local(((IrLocalRef)step.Target).Local);
       var current = step.Postfix ? Previous : name;
-      var moved = $"{current} {(step.Increment ? "+" : "-")} 1{(type.IsLong ? "n" : "")}";
-      var stepped = halves ? this.Helper(HalvesStep(step), [current, One64])
-        : step.Trap ? this.Check(type, moved).Text
-        : type == IrType.F64 ? moved
-        : type == IrType.F32 ? this.Fround(moved)
-        : type.IsWideInteger ? Wrap(type, moved).Text
-        : Narrow(type, $"({moved})");
+      JsExpression One() => type.IsLong ? new JsBigInt(1) : Number("1");
+      JsExpression Moved() => Infix(Id(current), step.Increment ? "+" : "-", One());
+      var stepped = halves ? this.Helper(HalvesStep(step), [Id(current), One64])
+        : step.Trap ? this.Check(type, Moved()).Node
+        : type == IrType.F64 ? Moved()
+        : type == IrType.F32 ? this.Fround(Moved())
+        : type.IsWideInteger ? Wrap(type, Moved()).Node
+        : Narrow(type, Parenthesized(Moved()));
       if (!step.Postfix)
-        return ($"{name} = {stepped}", false);
+        return (new JsAssignment(Id(name), "=", stepped), false);
 
       this._previous = true;
-      return ($"({Previous} = {name}, {name} = {stepped}, {Previous})", true);
+      return (Parenthesized(new JsSequence([new JsAssignment(Id(Previous), "=", Id(name)), new JsAssignment(Id(name), "=", stepped), Id(Previous)])), true);
     }
 
     /// <summary>The helper that adds one to a pair of halves or subtracts it, wrapping around or trapping.</summary>
@@ -198,33 +218,33 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>A number cut to an integer type of up to 32 bits; the operand is written as an operand already.</summary>
-    private static string Narrow(IrType type, string operand) => type.Kind switch {
-      IrTypeKind.I8 => $"{operand} << 24 >> 24",
-      IrTypeKind.U8 => $"{operand} & 0xFF",
-      IrTypeKind.I16 => $"{operand} << 16 >> 16",
-      IrTypeKind.U16 => $"{operand} & 0xFFFF",
-      IrTypeKind.I32 => $"{operand} | 0",
-      _ => $"{operand} >>> 0"
+    private static JsExpression Narrow(IrType type, JsExpression operand) => type.Kind switch {
+      IrTypeKind.I8 => Infix(Infix(operand, "<<", Number("24")), ">>", Number("24")),
+      IrTypeKind.U8 => Infix(operand, "&", Number("0xFF")),
+      IrTypeKind.I16 => Infix(Infix(operand, "<<", Number("16")), ">>", Number("16")),
+      IrTypeKind.U16 => Infix(operand, "&", Number("0xFFFF")),
+      IrTypeKind.I32 => Infix(operand, "|", Number("0")),
+      _ => Infix(operand, ">>>", Number("0"))
     };
 
     /// <summary>A result that may have left its type, cut back to it: modulo 2^width.</summary>
-    private static (string Text, bool Atomic) Wrap(IrType type, string text) => type.Kind switch {
-      IrTypeKind.I64 => ($"BigInt.asIntN(64, {text})", true),
-      IrTypeKind.U64 => ($"BigInt.asUintN(64, {text})", true),
-      IrTypeKind.I32 => ($"({text}) | 0", false),
-      _ => ($"({text}) >>> 0", false)
+    private static (JsExpression Node, bool Atomic) Wrap(IrType type, JsExpression value) => type.Kind switch {
+      IrTypeKind.I64 => (Invoke("BigInt.asIntN", Number("64"), value), true),
+      IrTypeKind.U64 => (Invoke("BigInt.asUintN", Number("64"), value), true),
+      IrTypeKind.I32 => (Infix(Parenthesized(value), "|", Number("0")), false),
+      _ => (Infix(Parenthesized(value), ">>>", Number("0")), false)
     };
 
     /// <summary>
     /// A result checked against the range of its type; it traps when it is outside. A number that can
     /// come out as the negative zero an integer does not have, is made the zero it has.
     /// </summary>
-    private (string Text, bool Atomic) Check(IrType type, string text, bool signedZero = false) {
-      var inRange = this.Helper("$ck", [text, this.Literal(type, IrOperators.Minimum(type)), this.Literal(type, IrOperators.Maximum(type))]);
-      return signedZero && type == IrType.I32 ? (inRange + " | 0", false) : (inRange, true);
+    private (JsExpression Node, bool Atomic) Check(IrType type, JsExpression value, bool signedZero = false) {
+      var inRange = this.Helper("$ck", [value, this.Literal(type, IrOperators.Minimum(type)), this.Literal(type, IrOperators.Maximum(type))]);
+      return signedZero && type == IrType.I32 ? (Infix(inRange, "|", Number("0")), false) : (inRange, true);
     }
 
-    private (string Text, bool Atomic) Unary(IrUnary unary) {
+    private (JsExpression Node, bool Atomic) Unary(IrUnary unary) {
       var type = unary.Type;
       if (type.IsLong && this.Halves)
         return (unary.Op switch {
@@ -236,53 +256,59 @@ public static partial class JavaScriptEmitter {
       var operand = this.Operand(unary.Operand);
       switch (unary.Op) {
         case IrUnaryOp.Negate when type.IsFloat:
-          return ("-" + operand, false);
+          return (new JsUnary("-", operand), false);
         case IrUnaryOp.Negate:
-          return type.IsLong ? Wrap(type, "-" + operand) : ($"-{operand} | 0", false);
+          return type.IsLong ? Wrap(type, new JsUnary("-", operand)) : (Infix(new JsUnary("-", operand), "|", Number("0")), false);
         case IrUnaryOp.NegateChecked:
-          return this.Check(type, "-" + operand, true);
+          return this.Check(type, new JsUnary("-", operand), true);
         case IrUnaryOp.BitNot:
-          return type.IsSigned ? ("~" + operand, false) : type.IsLong ? Wrap(type, "~" + operand) : ($"~{operand} >>> 0", false);
+          return type.IsSigned ? (new JsUnary("~", operand), false)
+            : type.IsLong ? Wrap(type, new JsUnary("~", operand))
+            : (Infix(new JsUnary("~", operand), ">>>", Number("0")), false);
         default:
-          return ("!" + operand, false);
+          return (new JsUnary("!", operand), false);
       }
     }
 
     /// <summary>An operator on numbers: 32-bit integers and truth values.</summary>
-    private (string Text, bool Atomic) Binary(IrBinary binary) {
+    private (JsExpression Node, bool Atomic) Binary(IrBinary binary) {
       var type = binary.Left.Type;
       var signed = type == IrType.I32;
       switch (binary.Op) {
         case IrBinaryOp.Multiply:
-          var product = this.Imul($"{this.Text(binary.Left)}, {this.Text(binary.Right)}");
-          return signed ? (product, true) : ($"{product} >>> 0", false);
+          var left = this.Text(binary.Left);
+          var product = this.Imul(left, this.Text(binary.Right));
+          return signed ? (product, true) : (Infix(product, ">>>", Number("0")), false);
         case IrBinaryOp.Divide:
           return (this.Helper(signed ? "$div" : "$udiv", binary.Left, binary.Right), true);
         case IrBinaryOp.Remainder:
           return (this.Helper(signed ? "$rem" : "$urem", binary.Left, binary.Right), true);
       }
 
-      var left = this.Operand(binary.Left);
-      var right = this.Operand(binary.Right);
+      var first = this.Operand(binary.Left);
+      var second = this.Operand(binary.Right);
       switch (binary.Op) {
         case IrBinaryOp.Add:
-          return Wrap(type, $"{left} + {right}");
+          return Wrap(type, Infix(first, "+", second));
         case IrBinaryOp.Subtract:
-          return Wrap(type, $"{left} - {right}");
+          return Wrap(type, Infix(first, "-", second));
         case IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked:
           // Sum and difference of two 32-bit integers are exact in a double. A product that is not
           // exact is beyond 2^53 and so outside the range on either side of the rounding.
-          return this.Check(type, $"{left} {CheckedSign(binary.Op)} {right}", binary.Op == IrBinaryOp.MultiplyChecked);
+          return this.Check(type, Infix(first, CheckedSign(binary.Op), second), binary.Op == IrBinaryOp.MultiplyChecked);
       }
 
+      JsExpression Unsigned(JsExpression value) => Infix(Parenthesized(value), ">>>", Number("0"));
       return (binary.Op switch {
-        IrBinaryOp.And => signed ? $"{left} & {right}" : $"({left} & {right}) >>> 0",
-        IrBinaryOp.Or => signed ? $"{left} | {right}" : $"({left} | {right}) >>> 0",
-        IrBinaryOp.Xor => signed ? $"{left} ^ {right}" : $"({left} ^ {right}) >>> 0",
-        IrBinaryOp.ShiftLeft => signed ? $"{left} << {right}" : $"({left} << {right}) >>> 0",
-        IrBinaryOp.ShiftRight => signed ? $"{left} >> {right}" : $"{left} >>> {right}",
-        IrBinaryOp.ShiftRightLogical => signed ? $"({left} >>> {right}) | 0" : $"{left} >>> {right}",
-        _ => $"{left} {Sign(binary.Op)} {right}"
+        IrBinaryOp.And => signed ? Infix(first, "&", second) : Unsigned(Infix(first, "&", second)),
+        IrBinaryOp.Or => signed ? Infix(first, "|", second) : Unsigned(Infix(first, "|", second)),
+        IrBinaryOp.Xor => signed ? Infix(first, "^", second) : Unsigned(Infix(first, "^", second)),
+        IrBinaryOp.ShiftLeft => signed ? Infix(first, "<<", second) : Unsigned(Infix(first, "<<", second)),
+        IrBinaryOp.ShiftRight => Infix(first, signed ? ">>" : ">>>", second),
+        IrBinaryOp.ShiftRightLogical => signed
+          ? Infix(Parenthesized(Infix(first, ">>>", second)), "|", Number("0"))
+          : Infix(first, ">>>", second),
+        _ => Infix(first, Sign(binary.Op), second)
       }, false);
     }
 
@@ -291,7 +317,7 @@ public static partial class JavaScriptEmitter {
     /// so the bitwise operators and the shift to the right need no cutting back; the count of a shift
     /// is a number and is masked to 6 bits as C# masks it.
     /// </summary>
-    private (string Text, bool Atomic) Binary64(IrBinary binary) {
+    private (JsExpression Node, bool Atomic) Binary64(IrBinary binary) {
       var type = binary.Left.Type;
       var signed = type == IrType.I64;
       switch (binary.Op) {
@@ -303,24 +329,24 @@ public static partial class JavaScriptEmitter {
 
       var left = this.Operand(binary.Left);
       var right = this.Operand(binary.Right);
-      var count = binary.Right is IrConst constant ? $"{constant.Value & 63}n" : $"BigInt({right} & 63)";
+      JsExpression count = binary.Right is IrConst constant ? new JsBigInt(constant.Value & 63) : Invoke("BigInt", Infix(right, "&", Number("63")));
       switch (binary.Op) {
         case IrBinaryOp.Add:
-          return Wrap(type, $"{left} + {right}");
+          return Wrap(type, Infix(left, "+", right));
         case IrBinaryOp.Subtract:
-          return Wrap(type, $"{left} - {right}");
+          return Wrap(type, Infix(left, "-", right));
         case IrBinaryOp.Multiply:
-          return Wrap(type, $"{left} * {right}");
+          return Wrap(type, Infix(left, "*", right));
         case IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked:
-          return this.Check(type, $"{left} {CheckedSign(binary.Op)} {right}");
+          return this.Check(type, Infix(left, CheckedSign(binary.Op), right));
         case IrBinaryOp.ShiftLeft:
-          return Wrap(type, $"{left} << {count}");
+          return Wrap(type, Infix(left, "<<", count));
         case IrBinaryOp.ShiftRightLogical when signed:
-          return Wrap(type, $"BigInt.asUintN(64, {left}) >> {count}");
+          return Wrap(type, Infix(Invoke("BigInt.asUintN", Number("64"), left), ">>", count));
         case IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical:
-          return ($"{left} >> {count}", false);
+          return (Infix(left, ">>", count), false);
         default:
-          return ($"{left} {Sign(binary.Op)} {right}", false);
+          return (Infix(left, Sign(binary.Op), right), false);
       }
     }
 
@@ -329,18 +355,18 @@ public static partial class JavaScriptEmitter {
     /// An order is the sign of the helper that compares two pairs, as signed or as unsigned numbers;
     /// the count of a shift is a number, which the helper masks to 6 bits as C# masks it.
     /// </summary>
-    private (string Text, bool Atomic) BinaryHalves(IrBinary binary) {
+    private (JsExpression Node, bool Atomic) BinaryHalves(IrBinary binary) {
       var signed = binary.Left.Type == IrType.I64;
       var suffix = signed ? "s" : "u";
       switch (binary.Op) {
         case IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical:
           var shift = binary.Op == IrBinaryOp.ShiftLeft ? "$shl64" : binary.Op == IrBinaryOp.ShiftRight && signed ? "$sar64" : "$shr64";
-          var count = binary.Right is IrConst constant ? (constant.Value & 63).ToString(CultureInfo.InvariantCulture) : this.Text(binary.Right);
+          var count = binary.Right is IrConst constant ? Number((constant.Value & 63).ToString(CultureInfo.InvariantCulture)) : this.Text(binary.Right);
           return (this.Helper(shift, [this.Text(binary.Left), count]), true);
         case IrBinaryOp.NotEqual:
-          return ("!" + this.Helper("$eq64", binary.Left, binary.Right), false);
+          return (new JsUnary("!", this.Helper("$eq64", binary.Left, binary.Right)), false);
         case IrBinaryOp.Less or IrBinaryOp.LessOrEqual or IrBinaryOp.Greater or IrBinaryOp.GreaterOrEqual:
-          return ($"{this.Helper(signed ? "$scmp64" : "$ucmp64", binary.Left, binary.Right)} {Sign(binary.Op)} 0", false);
+          return (Infix(this.Helper(signed ? "$scmp64" : "$ucmp64", binary.Left, binary.Right), Sign(binary.Op), Number("0")), false);
       }
 
       return (this.Helper(binary.Op switch {
@@ -363,7 +389,7 @@ public static partial class JavaScriptEmitter {
     /// An operator on floating-point numbers. JavaScript computes in binary64, which is the operation
     /// itself for <c>f64</c>; for <c>f32</c> the result is rounded to binary32.
     /// </summary>
-    private (string Text, bool Atomic) BinaryFloat(IrBinary binary) {
+    private (JsExpression Node, bool Atomic) BinaryFloat(IrBinary binary) {
       var left = this.Operand(binary.Left);
       var right = this.Operand(binary.Right);
       var sign = binary.Op switch {
@@ -374,7 +400,8 @@ public static partial class JavaScriptEmitter {
         IrBinaryOp.Remainder => "%",
         _ => Sign(binary.Op)
       };
-      return binary.Type == IrType.F32 ? (this.Fround($"{left} {sign} {right}"), true) : ($"{left} {sign} {right}", false);
+      var result = Infix(left, sign, right);
+      return binary.Type == IrType.F32 ? (this.Fround(result), true) : (result, false);
     }
 
     private static string CheckedSign(IrBinaryOp op) => op switch {
@@ -398,7 +425,7 @@ public static partial class JavaScriptEmitter {
       _ => "||"
     };
 
-    private (string Text, bool Atomic) Convert(IrConvert conversion) {
+    private (JsExpression Node, bool Atomic) Convert(IrConvert conversion) {
       var from = conversion.Operand.Type;
       var to = conversion.Type;
       if (to.IsFloat)
@@ -413,17 +440,17 @@ public static partial class JavaScriptEmitter {
       if (conversion.Contract == IrConversion.Trap) {
         var (low, high) = Bounds(conversion);
         var inRange = this.Helper("$ck", [this.Text(conversion.Operand), this.Literal(from, low), this.Literal(from, high)]);
-        return (from.IsLong == to.IsLong ? inRange : to.IsLong ? $"BigInt({inRange})" : $"Number({inRange})", true);
+        return (from.IsLong == to.IsLong ? inRange : Invoke(to.IsLong ? "BigInt" : "Number", inRange), true);
       }
 
       var lossless = IrOperators.Contains(to, from);
       if (to.IsLong) {
-        var big = from.IsLong ? this.Text(conversion.Operand) : $"BigInt({this.Text(conversion.Operand)})";
+        var big = from.IsLong ? this.Text(conversion.Operand) : Invoke("BigInt", this.Text(conversion.Operand));
         return lossless ? (big, true) : Wrap(to, big);
       }
 
       if (from.IsLong)
-        return ($"Number(BigInt.as{(to.IsSigned ? "Int" : "Uint")}N({to.Bits}, {this.Text(conversion.Operand)}))", true);
+        return (Invoke("Number", Invoke(to.IsSigned ? "BigInt.asIntN" : "BigInt.asUintN", Number(to.Bits.ToString(CultureInfo.InvariantCulture)), this.Text(conversion.Operand))), true);
 
       if (lossless)
         return this.Expression(conversion.Operand);
@@ -443,43 +470,43 @@ public static partial class JavaScriptEmitter {
     /// share their bits, so one becomes the other as it stands; a narrower type is the lower half cut
     /// to size, and becomes a pair by sign extension or with an upper half of zero.
     /// </summary>
-    private (string Text, bool Atomic) ConvertHalves(IrConvert conversion) {
+    private (JsExpression Node, bool Atomic) ConvertHalves(IrConvert conversion) {
       var from = conversion.Operand.Type;
       var to = conversion.Type;
       if (conversion.Contract == IrConversion.Trap) {
         var (low, high) = Bounds(conversion);
-        var bounds = new[] { this.Text(conversion.Operand), this.Literal(from, low), this.Literal(from, high) };
+        JsExpression[] bounds = [this.Text(conversion.Operand), this.Literal(from, low), this.Literal(from, high)];
         if (!from.IsLong)
           return this.Widen(from, this.Helper("$ck", bounds));
 
         var inRange = this.Helper(from.IsSigned ? "$ck64s" : "$ck64u", bounds);
-        return to.IsLong ? (inRange, true) : to.IsSigned ? ($"{inRange}.lo | 0", false) : ($"{inRange}.lo", true);
+        return to.IsLong ? (inRange, true) : to.IsSigned ? (Infix(new JsMember(inRange, "lo"), "|", Number("0")), false) : (new JsMember(inRange, "lo"), true);
       }
 
       if (to.IsLong)
         return from.IsLong ? this.Expression(conversion.Operand) : this.Widen(from, this.Text(conversion.Operand));
 
-      var half = this.Operand(conversion.Operand) + ".lo";
+      var half = new JsMember(this.Operand(conversion.Operand), "lo");
       return to == IrType.U32 ? (half, true) : (Narrow(to, half), false);
     }
 
     /// <summary>A number of up to 32 bits as a pair of halves.</summary>
-    private (string Text, bool Atomic) Widen(IrType from, string text)
-      => (from.IsSigned ? this.Helper("$sx64", [text]) : $"{{ hi: 0, lo: {text} }}", true);
+    private (JsExpression Node, bool Atomic) Widen(IrType from, JsExpression value)
+      => (from.IsSigned ? this.Helper("$sx64", [value]) : Halves(Number("0"), value), true);
 
     /// <summary>
     /// A number converted to floating point. An integer of up to 32 bits is already a double with its
     /// value; a 64-bit integer becomes the nearest double, and for <c>f32</c> goes through a helper
     /// that rounds it once, because rounding to binary64 and then to binary32 can differ from that.
     /// </summary>
-    private (string Text, bool Atomic) ToFloat(IrConvert conversion) {
+    private (JsExpression Node, bool Atomic) ToFloat(IrConvert conversion) {
       var from = conversion.Operand.Type;
       var single = conversion.Type == IrType.F32;
       if (from.IsLong && this.Halves)
         return (this.Helper((from.IsSigned ? "$l2" : "$ul2") + (single ? "f" : "d"), conversion.Operand), true);
 
       if (from.IsLong)
-        return (single ? this.Helper("$f32", conversion.Operand) : $"Number({this.Text(conversion.Operand)})", true);
+        return (single ? this.Helper("$f32", conversion.Operand) : Invoke("Number", this.Text(conversion.Operand)), true);
 
       return single ? (this.Fround(this.Text(conversion.Operand)), true) : this.Expression(conversion.Operand);
     }
@@ -488,13 +515,13 @@ public static partial class JavaScriptEmitter {
     /// A floating-point number converted to an integer by a helper that saturates or traps. The bounds
     /// of a 64-bit target are numbers: its smallest value and the power of two just above its largest.
     /// </summary>
-    private string FromFloat(IrConvert conversion) {
+    private JsCall FromFloat(IrConvert conversion) {
       var to = conversion.Type;
       var trap = conversion.Contract == IrConversion.Trap;
-      var low = IrOperators.Minimum(to).ToString(CultureInfo.InvariantCulture);
+      var low = Number(IrOperators.Minimum(to));
       return to.IsLong
-        ? this.Helper(trap ? "$f2lc" : "$f2l", [this.Text(conversion.Operand), low, (IrOperators.Maximum(to) + 1).ToString(CultureInfo.InvariantCulture)])
-        : this.Helper(trap ? "$f2ic" : "$f2i", [this.Text(conversion.Operand), low, IrOperators.Maximum(to).ToString(CultureInfo.InvariantCulture)]);
+        ? this.Helper(trap ? "$f2lc" : "$f2l", [this.Text(conversion.Operand), low, Number(IrOperators.Maximum(to) + 1)])
+        : this.Helper(trap ? "$f2ic" : "$f2i", [this.Text(conversion.Operand), low, Number(IrOperators.Maximum(to))]);
     }
 
   }
