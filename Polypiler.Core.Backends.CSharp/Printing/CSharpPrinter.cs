@@ -180,13 +180,53 @@ public static class CSharpPrinter {
           this.Parameters(method.Parameters);
           this.Body(method.Body, method.ExpressionBody, depth);
           break;
+        case CsProperty property:
+          this.Property(property, depth);
+          break;
         default:
           var constructor = (CsConstructor)member;
           this.Modifiers(constructor.Modifiers, depth).Append(constructor.Name);
           this.Parameters(constructor.Parameters);
+          if (constructor.Chained is { } chained) {
+            this._text.Append(" : this(");
+            for (var index = 0; index < chained.Count; ++index) {
+              if (index > 0)
+                this._text.Append(", ");
+
+              this.Expression(chained[index], depth);
+            }
+
+            this._text.Append(')');
+          }
+
           this.Body(constructor.Body, null, depth);
           break;
       }
+    }
+
+    /// <summary>A property: automatic accessors on its line, written ones each on a line of their own, or an expression body.</summary>
+    private void Property(CsProperty property, int depth) {
+      this.Modifiers(property.Modifiers, depth).Append(property.PropertyType.Name).Append(' ').Append(property.Name);
+      if (property.Accessors is not { } accessors) {
+        this.Body(null, property.ExpressionBody, depth);
+        return;
+      }
+
+      if (accessors.All(accessor => accessor.Body is null && accessor.ExpressionBody is null)) {
+        this._text.Append(" { ").AppendJoin(" ", accessors.Select(accessor => accessor.Keyword + ";")).Append(" }\n");
+        return;
+      }
+
+      this._text.Append(" {\n");
+      foreach (var accessor in accessors) {
+        this.Line(depth + 1).Append(accessor.Keyword);
+        if (accessor.Body is null && accessor.ExpressionBody is null)
+          this._text.Append(";\n");
+        else
+          this.Body(accessor.Body, accessor.ExpressionBody, depth + 1);
+      }
+
+      this.Line(depth).Append("}\n");
     }
 
     private StringBuilder Modifiers(IReadOnlyList<string> modifiers, int depth) {
@@ -470,6 +510,9 @@ public static class CSharpPrinter {
           break;
         case CsDefaultLiteral:
           this._text.Append("default");
+          break;
+        case CsNullLiteral:
+          this._text.Append("null");
           break;
         case CsName name:
           this._text.Append(name.Identifier);

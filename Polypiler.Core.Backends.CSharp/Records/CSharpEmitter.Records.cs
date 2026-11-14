@@ -16,6 +16,7 @@ public static partial class CSharpEmitter {
     var compared = module.Functions
       .SelectMany(function => Expressions(function.Body))
       .OfType<IrStructEquals>()
+      .Where(equality => equality.Left.Type.IsStruct)
       .Select(equality => equality.Left.Type.StructType!);
     var pending = new Stack<IrStructType>(module.Types.OfType<IrStructType>().Where(type => type.IsEquatable).Concat(compared));
     var equatable = new HashSet<IrStructType>(ReferenceEqualityComparer.Instance);

@@ -97,12 +97,20 @@ public static class CSharpSyntaxReader {
       OperatorDeclarationSyntax @operator => new CsMethod(
         Modifiers(@operator.Modifiers), new CsType(@operator.ReturnType.ToString()), "operator " + @operator.OperatorToken.Text, [],
         Read(@operator.ParameterList), @operator.Body is null ? null : Block(@operator.Body), @operator.ExpressionBody is null ? null : Read(@operator.ExpressionBody.Expression)),
-      ConstructorDeclarationSyntax constructor => new CsConstructor(Modifiers(constructor.Modifiers), constructor.Identifier.Text, Read(constructor.ParameterList), Block(constructor.Body!)),
+      ConstructorDeclarationSyntax constructor => new CsConstructor(Modifiers(constructor.Modifiers), constructor.Identifier.Text, Read(constructor.ParameterList), Block(constructor.Body!)) {
+        Chained = constructor.Initializer is { } chain ? [.. chain.ArgumentList.Arguments.Select(argument => Read(argument.Expression))] : null
+      },
+      PropertyDeclarationSyntax property => new CsProperty(
+        Modifiers(property.Modifiers), new CsType(property.Type.ToString()), property.Identifier.Text,
+        property.AccessorList is null ? null : [.. property.AccessorList.Accessors.Select(accessor => new CsAccessor(
+          string.Join(' ', [.. accessor.Modifiers.Select(modifier => modifier.Text), accessor.Keyword.Text]),
+          accessor.Body is null ? null : Block(accessor.Body), accessor.ExpressionBody is null ? null : Read(accessor.ExpressionBody.Expression)))],
+        property.ExpressionBody is null ? null : Read(property.ExpressionBody.Expression)),
       FieldDeclarationSyntax { Declaration.Variables: [var variable] } field => new CsField(
         Modifiers(field.Modifiers), new CsType(field.Declaration.Type.ToString()), variable.Identifier.Text, variable.Initializer is null ? null : Read(variable.Initializer.Value)),
       TypeDeclarationSyntax type => new CsTypeDeclaration(
         Modifiers(type.Modifiers),
-        type is RecordDeclarationSyntax record ? "record " + record.ClassOrStructKeyword.Text : type.Keyword.Text,
+        type is RecordDeclarationSyntax record ? record.ClassOrStructKeyword.IsKind(SyntaxKind.None) ? "record" : "record " + record.ClassOrStructKeyword.Text : type.Keyword.Text,
         type.Identifier.Text,
         type.ParameterList is null ? null : Read(type.ParameterList),
         type.BaseList is null ? [] : [.. type.BaseList.Types.Select(baseType => new CsType(baseType.Type.ToString()))],
@@ -198,6 +206,8 @@ public static class CSharpSyntaxReader {
         return new CsBooleanLiteral(false);
       case SyntaxKind.DefaultLiteralExpression:
         return new CsDefaultLiteral();
+      case SyntaxKind.NullLiteralExpression:
+        return new CsNullLiteral();
       case SyntaxKind.StringLiteralExpression:
         return new CsStringLiteral((string)token.Value!);
       case SyntaxKind.NumericLiteralExpression when token.Value is float or double or decimal:

@@ -98,6 +98,9 @@ public sealed record CsStringLiteral(string Value) : CsExpression;
 /// <summary>The literal <c>default</c>, which takes the type of the place it goes to.</summary>
 public sealed record CsDefaultLiteral : CsExpression;
 
+/// <summary>The literal <c>null</c>.</summary>
+public sealed record CsNullLiteral : CsExpression;
+
 /// <summary>
 /// A name: of a variable, a member, a type in an expression (<c>int</c>, <c>EqualityComparer&lt;T&gt;</c>),
 /// the alias <c>global::System</c>, <c>this</c> or the discard <c>_</c>; spelled with its <c>@</c> where it needs one.
@@ -341,12 +344,34 @@ public sealed record CsMethod(
 
 }
 
-/// <summary>A constructor.</summary>
+/// <summary>A constructor, which may chain to another of its type: <c>: this(arguments)</c>.</summary>
 /// <param name="Modifiers">The modifiers.</param>
 /// <param name="Name">The name of the type.</param>
 /// <param name="Parameters">The parameters.</param>
 /// <param name="Body">The body.</param>
-public sealed record CsConstructor(IReadOnlyList<string> Modifiers, string Name, IReadOnlyList<CsParameter> Parameters, CsBlock Body) : CsMember;
+public sealed record CsConstructor(IReadOnlyList<string> Modifiers, string Name, IReadOnlyList<CsParameter> Parameters, CsBlock Body) : CsMember {
+
+  /// <summary>The arguments of <c>: this(…)</c>, or <see langword="null"/> for a constructor that does not chain.</summary>
+  public IReadOnlyList<CsExpression>? Chained { get; init; }
+
+}
+
+/// <summary>An accessor of a property: <c>get;</c>, <c>set { … }</c>, <c>init;</c> or <c>get =&gt; …;</c>.</summary>
+/// <param name="Keyword">The kind, with any modifier in front of it: <c>get</c>, <c>set</c>, <c>init</c>, <c>private set</c>.</param>
+/// <param name="Body">The body, or <see langword="null"/>.</param>
+/// <param name="ExpressionBody">The expression body, or <see langword="null"/>; neither for an automatic accessor.</param>
+public sealed record CsAccessor(string Keyword, CsBlock? Body, CsExpression? ExpressionBody) : CsNode;
+
+/// <summary>
+/// A property: <c>modifiers T Name { accessors } = initializer;</c>, or one with an expression body,
+/// <c>modifiers T Name =&gt; expression;</c>.
+/// </summary>
+/// <param name="Modifiers">The modifiers.</param>
+/// <param name="PropertyType">The type.</param>
+/// <param name="Name">The name.</param>
+/// <param name="Accessors">The accessors, or <see langword="null"/> for an expression body.</param>
+/// <param name="ExpressionBody">The expression body, or <see langword="null"/>.</param>
+public sealed record CsProperty(IReadOnlyList<string> Modifiers, CsType PropertyType, string Name, IReadOnlyList<CsAccessor>? Accessors, CsExpression? ExpressionBody) : CsMember;
 
 /// <summary>
 /// A type: a <c>class</c>, a <c>struct</c> or a <c>record struct</c>, with the parameters of a record

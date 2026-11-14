@@ -37,7 +37,7 @@ public static partial class CSharpEmitter {
     }
 
     /// <summary>A call of a helper of the views, with the arguments as they stand.</summary>
-    private CsInvocation ViewHelper(CSharpHelper helper, params CsExpression[] arguments) => new(new CsName(this.Helper(helper)), arguments);
+    private CsInvocation ViewHelper(CSharpHelper helper, params CsExpression[] arguments) => new(CSharpFragments.Name(this.Helper(helper)), arguments);
 
     /// <summary>A call of a member of a value: <c>value.Member(arguments)</c>.</summary>
     private CsInvocation Member(IrExpr target, string member, params CsExpression[] arguments)
@@ -55,7 +55,7 @@ public static partial class CSharpEmitter {
     /// as an <c>int</c> C# made of a narrow integer would not tell the compiler what <c>T</c> is.
     /// </summary>
     private CsInvocation Typed(CSharpHelper helper, IrType element, params CsExpression[] arguments)
-      => new(new CsName($"{this.Helper(helper)}<{this.TypeName(element)}>"), arguments);
+      => new(CSharpFragments.Name($"{this.Helper(helper)}<{this.TypeName(element)}>"), arguments);
 
     /// <summary>An element of a view of a profile without spans, written through its helper.</summary>
     private CsExpression SegmentStore(IrStore store)

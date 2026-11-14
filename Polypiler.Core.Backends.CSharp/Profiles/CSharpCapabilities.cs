@@ -58,7 +58,19 @@ public enum CSharpFeature {
   StackAllocExpression,
 
   /// <summary>The ranges and indices <c>v[a..b]</c> and <c>v[^n]</c> (C# 8).</summary>
-  Ranges
+  Ranges,
+
+  /// <summary>An auto-implemented property <c>{ get; set; }</c>, whose field the compiler declares (C# 3).</summary>
+  AutoProperty,
+
+  /// <summary>A get-only auto-property <c>{ get; }</c>, assigned in a constructor (C# 6).</summary>
+  GetOnlyAutoProperty,
+
+  /// <summary>An <c>init</c> accessor, for constructors and object initializers only (C# 9); it needs the type <c>IsExternalInit</c> of the framework.</summary>
+  InitAccessor,
+
+  /// <summary>A <c>record</c> class with its positional parameters and the value equality the compiler gives it (C# 9); its init accessors need <c>IsExternalInit</c>.</summary>
+  Record
 
 }
 
@@ -101,7 +113,7 @@ public sealed record CSharpForm(string? Method, string? Cast = null, string? Fur
     if (this.Template is not null)
       return CSharpFragments.Fill(this.Template, arguments, helper);
 
-    var target = this.Method is null ? new CsName(helper()) : CSharpFragments.Expression(this.Method);
+    var target = this.Method is null ? CSharpFragments.Name(helper()) : CSharpFragments.Expression(this.Method);
     var call = new CsInvocation(target, this.Further is null ? arguments : [.. arguments, .. CSharpFragments.Arguments(this.Further)]);
     return this.Cast is null ? call : new CsCast(new CsType(this.Cast), call);
   }
@@ -308,6 +320,10 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfLanguage("object initializer", CSharpFeature.ObjectInitializer, new Version(3, 0)),
     CSharpCapability.OfLanguage("readonly struct", CSharpFeature.ReadOnlyStruct, new Version(7, 2)),
     CSharpCapability.OfLanguage("record struct", CSharpFeature.RecordStruct, new Version(10, 0)),
+    CSharpCapability.OfLanguage("auto-implemented property", CSharpFeature.AutoProperty, new Version(3, 0)),
+    CSharpCapability.OfLanguage("get-only auto-property", CSharpFeature.GetOnlyAutoProperty, new Version(6, 0)),
+    CSharpCapability.OfLanguage("init accessor", CSharpFeature.InitAccessor, new Version(9, 0)),
+    CSharpCapability.OfLanguage("record class", CSharpFeature.Record, new Version(9, 0)),
 
     // The equality members of a struct written out where the language has no record struct.
     CSharpCapability.OfApi("IEquatable<T>", CSharpProfile.Net20),

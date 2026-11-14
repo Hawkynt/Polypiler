@@ -137,9 +137,10 @@ internal sealed partial class Lowering {
       constructors.Add(creator);
       this._creators[primary] = creator;
       var owner = declared;
+      var components = fields.ToList();
       this.Body(declared, () => this.Function(function, false, primary, record, positional.Parameters, Receiver(owner), () => [
         .. this.Initializers(initializers),
-        .. fields.Select((field, index) => (IrStmt)new IrFieldStore(new IrLocalRef(this._receiver!), field, new IrLocalRef(this._variables[primary.Parameters[index]])))
+        .. components.Select((field, index) => (IrStmt)new IrFieldStore(new IrLocalRef(this._receiver!), field, new IrLocalRef(this._variables[primary.Parameters[index]])))
       ], null, null));
     }
 

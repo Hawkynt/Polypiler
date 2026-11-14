@@ -16,11 +16,11 @@ public static class CSharpTargetPasses {
   /// <summary>The pipeline the emitter runs between building the tree and printing it.</summary>
   public static TargetPipeline<CsCompilationUnit, CSharpProfile> Pipeline { get; } = new([new CSharpHelperInlining(), new CSharpUnusedDeclarations()]);
 
-  /// <summary>The class of a module in a file: the one type declaration of kind <c>class</c>, at the top or in the namespace.</summary>
+  /// <summary>The class of a module in a file: the one static class, at the top or in the namespace, beside the structs and classes of the module.</summary>
   /// <param name="unit">The file.</param>
   /// <returns>The class, or <see langword="null"/> when the file has none.</returns>
   public static CsTypeDeclaration? ModuleClass(CsCompilationUnit unit)
-    => unit.Members.SelectMany(member => member is CsNamespace scope ? scope.Members : [member]).OfType<CsTypeDeclaration>().FirstOrDefault(type => type.Keyword == "class");
+    => unit.Members.SelectMany(member => member is CsNamespace scope ? scope.Members : [member]).OfType<CsTypeDeclaration>().FirstOrDefault(type => type.Keyword == "class" && type.Modifiers.Contains("static"));
 
   /// <summary>The file with its module class replaced.</summary>
   /// <param name="unit">The file.</param>
