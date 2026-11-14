@@ -1,0 +1,37 @@
+# The registry of the error-catalogue fixtures: an error with a rule, a strict warning, an error with
+# another exit code and a retired code, all in the block of one area; the block of 'ir' stays empty.
+schema: 1
+blocks:
+  - { first: PLY0001, last: PLY0099, area: infrastructure }
+  - { first: PLY0100, last: PLY0199, area: ir }
+codes:
+  - code: PLY0004
+    severity: error
+    exit: EnvironmentError
+    title: input cannot be read
+    message: "cannot read input '{0}'"
+    rule: CLI.input
+    area: infrastructure
+    owner: CLI-FOUNDATION
+  - code: PLY0009
+    severity: warning
+    title: assumption trusted
+    message: "assumption '{0}' is trusted without proof"
+    area: infrastructure
+    owner: CLI-OPTIONS
+    strict: true
+  - code: PLY0031
+    severity: error
+    exit: BudgetExceeded
+    title: time limit exceeded
+    message: "time limit of {0} ms exceeded"
+    area: infrastructure
+    owner: INFRA-RUNNER
+  - code: PLY0035
+    severity: error
+    exit: EnvironmentError
+    title: sandbox lost
+    message: "the sandbox of '{0}' was lost"
+    area: infrastructure
+    owner: INFRA-RUNNER
+    retired: true
