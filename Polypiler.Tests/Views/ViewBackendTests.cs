@@ -6,6 +6,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
+using Polypiler.Core.Optimize.Target;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Views;
@@ -168,6 +169,17 @@ public sealed class ViewBackendTests {
   public void Form_IsTheOneOfTheProfile(string name, string first, string second) {
     var text = CSharpEmitter.Emit(SpanFixtures.Imported("Spans"), CSharpProfile.Parse(name)).Single().Content.Replace("global::System.MemoryExtensions.AsSpan(a, 0, 8)", "a.AsSpan(0, 8)");
     Assert.That(text, Does.Contain(first).And.Contain(second));
+  }
+
+  /// <summary>
+  /// The target passes keep a helper the class calls with its type argument stated, <c>ViewSet&lt;byte&gt;</c>:
+  /// O0501 counts that as a use of <c>ViewSet</c>, and removes what nothing calls.
+  /// </summary>
+  [Test]
+  public void TargetPasses_KeepAGenericHelperThatIsCalled() {
+    var text = CSharpEmitter.Emit(SpanFixtures.Imported("Spans"), CSharpProfile.Net20, FloatMode.Accurate, null, null, TargetPassOptions.Default).Files.Single().Content;
+    Assert.That(text, Does.Contain("private static void ViewSet<T>(").And.Contain("ViewSet<byte>(").And.Contain("private static global::System.ArraySegment<TTo> ViewCast<TFrom, TTo>("));
+    Assert.That(text, Does.Not.Contain("StoreSpan"));
   }
 
   /// <summary>A large or looped <c>stackalloc</c> is an array: 1024 bytes and more, or inside a loop.</summary>

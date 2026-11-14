@@ -280,6 +280,9 @@ public sealed class CSharpUnusedDeclarations : ITargetPass<CsCompilationUnit, CS
   /// <summary>Whether a name stands anywhere in the file outside the declaration itself: more often in the file than in the declaration.</summary>
   private static bool Named(CsCompilationUnit tree, CsMember declaration, string name) => Count(tree, name) > Count(declaration, name);
 
-  private static int Count(CsNode node, string name) => CSharpSyntaxRewriter.DescendantsAndSelf(node).Count(item => item is CsName { Identifier: var identifier } && identifier == name);
+  /// <summary>How often a name stands in a node, also as a generic method with its type arguments stated, <c>name&lt;T&gt;</c>.</summary>
+  private static int Count(CsNode node, string name)
+    => CSharpSyntaxRewriter.DescendantsAndSelf(node).Count(item => item is CsName { Identifier: var identifier }
+      && (identifier == name || (identifier.StartsWith(name, StringComparison.Ordinal) && identifier.Length > name.Length && identifier[name.Length] == '<')));
 
 }
