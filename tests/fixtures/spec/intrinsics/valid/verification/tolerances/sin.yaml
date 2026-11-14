@@ -1,0 +1,16 @@
+id: VERIFICATION.tolerance.sin
+title: Tolerance of the sine
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-VERIFICATION
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: tolerance
+  operation: INTRINSICS.Sin
+  mode: ulp
+  bound: 1

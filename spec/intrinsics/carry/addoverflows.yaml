@@ -1,0 +1,31 @@
+id: INTRINSICS.AddOverflows
+title: Addition overflow test
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-OVERFLOW
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: AddOverflows
+  group: Carry
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}]
+  returns: [{name: overflows, type: TYPES.bool}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "whether the exact a + b lies outside the range of T; it never traps"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-13"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.i32}, inputs: [2147483647, 1], outputs: [1]}
+    - {types: {T: TYPES.i32}, inputs: [-2147483648, 1], outputs: [0]}
+    - {types: {T: TYPES.u8}, inputs: ["0x00", "0x01"], outputs: [0]}
+    - {types: {T: TYPES.u8}, inputs: ["0x10", "0x10"], outputs: [0]}
+    - {types: {T: TYPES.i8}, inputs: [-1, -1], outputs: [0]}
+  algebra: [commutative]

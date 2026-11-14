@@ -1,0 +1,31 @@
+id: INTRINSICS.MulSaturate
+title: Saturating multiplication
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-SATURATE
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: MulSaturate
+  group: Saturation
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the exact a * b, or the nearest value of T when it lies outside the range of T"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-13"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u8}, inputs: ["0xC8", "0x64"], outputs: ["0xFF"]}
+    - {types: {T: TYPES.i8}, inputs: [-100, 100], outputs: [-128]}
+    - {types: {T: TYPES.i8}, inputs: [100, -100], outputs: [-128]}
+    - {types: {T: TYPES.i32}, inputs: [2147483647, 2], outputs: [2147483647]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000003", "0x00000004"], outputs: ["0x0000000C"]}
+  algebra: [commutative]

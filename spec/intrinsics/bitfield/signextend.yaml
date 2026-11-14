@@ -1,0 +1,30 @@
+id: INTRINSICS.SignExtend
+title: Sign-extend the low bits
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITFIELD
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: SignExtend
+  group: Bitfield
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}, {name: bits, type: TYPES.i32}]
+  returns: [{name: result, type: T}]
+  legality:
+    - {id: bits-in-width, text: "bits is at least 1 and at most the width of T; otherwise the operation traps with an invalid operation", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the lowest bits bits of value read as a two's complement number of that width, as a value of T"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-6"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000080", 8], outputs: ["0xFFFFFF80"]}
+    - {types: {T: TYPES.i32}, inputs: [127, 8], outputs: [127]}
+    - {types: {T: TYPES.i32}, inputs: [4095, 12], outputs: [-1]}
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678", 32], outputs: ["0x12345678"]}

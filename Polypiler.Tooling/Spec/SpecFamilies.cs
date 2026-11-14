@@ -19,6 +19,7 @@ public static class SpecFamilies {
     new TypesSpecFamily(),
     new TargetsSpecFamily(),
     new VerificationSpecFamily(),
+    new IntrinsicsSpecFamily(),
   ];
 
 }
