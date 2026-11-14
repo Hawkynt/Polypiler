@@ -25,8 +25,14 @@ public readonly record struct ExitUsage(TimeSpan CpuTime, long PeakMemoryBytes) 
   /// </summary>
   /// <param name="pid">The child's process ID.</param>
   /// <returns>The usage; <see langword="null"/> where the call is not available (not Linux on x64 or Arm64) or the runtime reaped the child first.</returns>
-  public static ExitUsage? Wait(int pid) {
-    if (!OperatingSystem.IsLinux() || WaitIdNumber(RuntimeInformation.ProcessArchitecture) is not { } number)
+  public static ExitUsage? Wait(int pid) => Wait(pid, RuntimeInformation.ProcessArchitecture);
+
+  /// <summary>Waits for a child as <see cref="Wait(int)"/> does, with the system call of the given architecture.</summary>
+  /// <param name="pid">The child's process ID.</param>
+  /// <param name="architecture">The architecture this process runs on.</param>
+  /// <returns>The usage; <see langword="null"/> where the call is not available or the runtime reaped the child first.</returns>
+  public static ExitUsage? Wait(int pid, Architecture architecture) {
+    if (!OperatingSystem.IsLinux() || WaitIdNumber(architecture) is not { } number)
       return null;
 
     var info = new byte[SigInfoBytes];

@@ -20,7 +20,7 @@ internal sealed class YamlReader(string file) {
     try {
       stream.Load(new StringReader(text));
     } catch (YamlException exception) {
-      throw new BenchmarkFileException(file, (int)exception.Start.Line, (int)exception.Start.Column, $"not valid YAML: {exception.InnerException?.Message ?? exception.Message}");
+      throw new BenchmarkFileException(file, (int)exception.Start.Line, (int)exception.Start.Column, $"not valid YAML: {exception.Message}");
     }
 
     if (stream.Documents.Count == 0 || stream.Documents[0].RootNode is not YamlMappingNode root)
@@ -56,14 +56,14 @@ internal sealed class YamlReader(string file) {
 
   /// <summary>An integer value within a range.</summary>
   public long Integer(YamlNode node, string field, long minimum, long maximum = long.MaxValue)
-    => node is YamlScalarNode { Style: ScalarStyle.Plain, Value: { } text } && long.TryParse(text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value)
+    => node is YamlScalarNode { Style: ScalarStyle.Plain } scalar && long.TryParse(scalar.Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value)
       ? value >= minimum && value <= maximum ? value : throw this.Error(node, $"'{field}' must be at least {minimum}" + (maximum == long.MaxValue ? "" : $" and at most {maximum}") + $", not {value}")
       : throw this.Error(node, $"'{field}' must be an integer");
 
   /// <summary>A non-negative decimal number.</summary>
   public decimal Number(YamlNode node, string field)
-    => node is YamlScalarNode { Style: ScalarStyle.Plain, Value: { } text } && decimal.TryParse(text, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var value)
-      ? value >= 0 ? value : throw this.Error(node, $"'{field}' must not be negative, not {text}")
+    => node is YamlScalarNode { Style: ScalarStyle.Plain } scalar && decimal.TryParse(scalar.Value, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var value)
+      ? value >= 0 ? value : throw this.Error(node, $"'{field}' must not be negative, not {scalar.Value}")
       : throw this.Error(node, $"'{field}' must be a number");
 
   /// <summary>A list of text values.</summary>

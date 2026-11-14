@@ -40,12 +40,19 @@ public sealed record BenchmarkEnvironment(string Os, string OsVersion, string Ar
   /// <param name="toolchains">The version of each toolchain used.</param>
   public static BenchmarkEnvironment Detect(IReadOnlyDictionary<string, string> toolchains)
     => new(
-      OperatingSystem.IsLinux() ? "linux" : OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "macos" : "other",
+      OsName(RuntimeInformation.IsOSPlatform),
       Environment.OSVersion.Version.ToString(),
       RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant(),
-      CpuModelOf(OperatingSystem.IsLinux() ? ReadOrNull("/proc/cpuinfo") : null, Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER")),
+      CpuModelOf(ReadIfPresent(CpuInfo), Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER")),
       Environment.ProcessorCount,
       toolchains);
+
+  /// <summary>The name of the operating system: <c>linux</c>, <c>windows</c>, <c>macos</c> or <c>other</c>.</summary>
+  /// <param name="isPlatform">Whether this is a given platform, <see cref="RuntimeInformation.IsOSPlatform"/> on a real machine.</param>
+  public static string OsName(Func<OSPlatform, bool> isPlatform) {
+    ArgumentNullException.ThrowIfNull(isPlatform);
+    return isPlatform(OSPlatform.Linux) ? "linux" : isPlatform(OSPlatform.Windows) ? "windows" : isPlatform(OSPlatform.OSX) ? "macos" : "other";
+  }
 
   /// <summary>The processor's model: the first <c>model name</c> of <c>/proc/cpuinfo</c>, else the Windows processor identifier, else <c>unknown</c>.</summary>
   /// <param name="cpuinfo">The text of <c>/proc/cpuinfo</c>, or <see langword="null"/>.</param>
@@ -57,13 +64,12 @@ public sealed record BenchmarkEnvironment(string Os, string OsVersion, string Ar
     return string.IsNullOrWhiteSpace(processorIdentifier) ? "unknown" : processorIdentifier.Trim();
   }
 
-  private static string? ReadOrNull(string path) {
-    try {
-      return File.ReadAllText(path);
-    } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
-      return null;
-    }
-  }
+  /// <summary>Where Linux describes the processors; other systems have no such file.</summary>
+  public const string CpuInfo = "/proc/cpuinfo";
+
+  /// <summary>The text of a file such as <see cref="CpuInfo"/>; <see langword="null"/> where it does not exist.</summary>
+  /// <param name="path">The file.</param>
+  public static string? ReadIfPresent(string path) => File.Exists(path) ? File.ReadAllText(path) : null;
 
   /// <summary>
   /// The first field in which two environments differ, in the order os, osVersion, architecture,

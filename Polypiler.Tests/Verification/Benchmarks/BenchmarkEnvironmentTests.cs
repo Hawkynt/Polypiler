@@ -48,6 +48,7 @@ public sealed class BenchmarkEnvironmentTests {
   public void AToolchainOnOneSideOnly_ReadsNoneOnTheOther() {
     var both = Machine() with { Toolchains = new Dictionary<string, string> { ["node"] = "24.22.2", ["dotnet-sdk"] = "10.0.404" } };
     Assert.That(both.FirstDifference(Machine()), Is.EqualTo(("toolchains.dotnet-sdk", "10.0.404", "none")));
+    Assert.That(Machine().FirstDifference(both), Is.EqualTo(("toolchains.dotnet-sdk", "none", "10.0.404")));
   }
 
   [Test]
@@ -63,6 +64,21 @@ public sealed class BenchmarkEnvironmentTests {
     Assert.That((environment.LogicalCores, environment.Toolchains["node"]), Is.EqualTo((Environment.ProcessorCount, "1")));
     Assert.That(environment.CpuModel, Is.Not.Empty);
     Assert.That(environment.Architecture, Is.EqualTo(environment.Architecture.ToLowerInvariant()));
+  }
+
+  [Test]
+  public void ReadIfPresent_ReadsAFile_AndHasNothingForAMissingOne() {
+    Assert.That(BenchmarkEnvironment.ReadIfPresent(System.IO.Path.Combine(FixtureFolder, "size", "abc.txt")), Is.EqualTo("abc"));
+    Assert.That(BenchmarkEnvironment.ReadIfPresent(System.IO.Path.Combine(FixtureFolder, "size", "none.txt")), Is.Null);
+  }
+
+  [TestCase("LINUX", "linux")]
+  [TestCase("WINDOWS", "windows")]
+  [TestCase("OSX", "macos")]
+  [TestCase("FREEBSD", "other")]
+  public void OsName_NamesThePlatform(string platform, string expected) {
+    Assert.That(BenchmarkEnvironment.OsName(candidate => candidate == System.Runtime.InteropServices.OSPlatform.Create(platform)), Is.EqualTo(expected));
+    Assert.That(() => BenchmarkEnvironment.OsName(null!), Throws.ArgumentNullException);
   }
 
   [TestCase("processor\t: 0\nmodel name\t: Intel(R) Core(TM) i9\nflags: x\n", null, "Intel(R) Core(TM) i9")]

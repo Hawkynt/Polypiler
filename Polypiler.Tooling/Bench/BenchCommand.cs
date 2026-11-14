@@ -154,7 +154,7 @@ public sealed class BenchCommand {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, result.ToJson());
         var wall = result.Stats[BenchmarkResult.WallNsMetric];
-        output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"bench '{definition.Id}/{variant.Name}': {result.Samples.Count} samples, wall median {wall.Median} ns, MAD {wall.Mad} ns: {Path.GetRelativePath(this._currentDirectory, path).Replace('\\', '/')}"));
+        output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"bench '{definition.Id}/{variant.Name}': {result.Samples.Count} samples, wall median {wall.Median} ns, MAD {wall.Mad} ns: {this.Shown(path)}"));
         results.Add(result);
       }
     }
@@ -187,6 +187,12 @@ public sealed class BenchCommand {
     }
 
     return Report(bag, error);
+  }
+
+  /// <summary>A path as the output names it: relative to the current directory when it lies below it, else in full.</summary>
+  private string Shown(string path) {
+    var relative = Path.GetRelativePath(this._currentDirectory, path);
+    return (relative.StartsWith("..", StringComparison.Ordinal) || Path.IsPathRooted(relative) ? path : relative).Replace('\\', '/');
   }
 
   private string ExistingDirectory(Dictionary<string, string?> options, string name) {

@@ -29,6 +29,10 @@ public sealed class ExitUsageTests {
     => Assert.That(ExitUsage.Wait(1), Is.Null);
 
   [Test]
+  public void Wait_OnAnUnknownArchitecture_HasNoAnswer()
+    => Assert.That(ExitUsage.Wait(Environment.ProcessId, CpuArchitecture.X86), Is.Null);
+
+  [Test]
   [Category("OsIntegration")]
   public void Wait_ForAChild_AccountsItWithoutReapingIt() {
     using var process = Process.Start(new ProcessStartInfo("dotnet", "--version") { RedirectStandardOutput = true, UseShellExecute = false })!;

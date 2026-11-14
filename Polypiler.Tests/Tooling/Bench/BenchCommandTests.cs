@@ -85,6 +85,13 @@ public sealed class BenchCommandTests {
   }
 
   [Test]
+  public void Run_OutsideTheCurrentDirectory_NamesTheResultInFull() {
+    using var elsewhere = new ScratchFolder();
+    var (_, output, _) = this.Run("run", "--id", "sum-loop", "--out", elsewhere.Path);
+    Assert.That(output, Does.EndWith($": {elsewhere.Path.Replace('\\', '/')}/sum-loop/default.json\n"));
+  }
+
+  [Test]
   public void Run_All_MeasuresEveryDefinition_AndReportsTheInvalidOnes() {
     File.WriteAllText(this.Path("tests/benchmarks/broken.bench.yaml"), "id: broken\n");
     File.WriteAllText(this.Path("tests/benchmarks/misnamed.bench.yaml"), File.ReadAllText(this.Path("tests/benchmarks/sum-loop.bench.yaml")));
@@ -94,6 +101,14 @@ public sealed class BenchCommandTests {
     Assert.That(error, Is.EqualTo(
       "polypiler-tooling: tests/benchmarks/broken.bench.yaml(1,1): error PLY0078: missing property 'kind'\n" +
       "polypiler-tooling: tests/benchmarks/misnamed.bench.yaml: error PLY0078: 'id' is 'sum-loop', but the file is named 'misnamed.bench.yaml'\n"));
+  }
+
+  [Test]
+  public void Run_WithoutALockAbove_TakesTheCurrentDirectoryAsTheRoot() {
+    using var bare = new ScratchFolder();
+    var (exitCode, _, _) = this.RunIn(bare.Path, "run", "--all");
+    Assert.That(exitCode, Is.Zero);
+    Assert.That(File.Exists(System.IO.Path.Combine(bare.Path, "artifacts", "bench", "summary.md")), Is.True);
   }
 
   [Test]
@@ -201,6 +216,7 @@ public sealed class BenchCommandTests {
   public void LockToolchains_ProbeTheVersionOnce_AndKnowNoVersionOfAnUnknownKey() {
     var toolchains = BenchCommand.LockToolchains(Polypiler.Prototype.Testing.PrototypeFixture.RepositoryRoot);
     Assert.That(toolchains.Version("no-such-toolchain"), Is.Null);
+    Assert.That(toolchains.Version("dotnet-sdk"), Does.Match(@"^\d+\.\d+\.\d+$"), "a known key is probed");
     Assert.That(toolchains.Resolver.Resolve("no-such-toolchain").Problem!.Code, Is.EqualTo("PLY0020"));
   }
 

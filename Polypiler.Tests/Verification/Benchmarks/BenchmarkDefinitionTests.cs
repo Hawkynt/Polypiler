@@ -21,7 +21,7 @@ public sealed class BenchmarkDefinitionTests {
   [Test]
   public void TheFixture_IsReadWithEveryField() {
     var definition = BenchmarkDefinition.Load(Path.Combine(FixtureFolder, "sum-loop.bench.yaml"));
-    Assert.That(definition.Id, Is.EqualTo("sum-loop"));
+    Assert.That((definition.Id, definition.Description), Is.EqualTo(("sum-loop", "Sums the integers 0 to 999 999 in node and prints the sum.")));
     Assert.That((definition.Kind, definition.Toolchain, definition.Warmup, definition.Runs), Is.EqualTo((BenchmarkKind.Process, "node", 1, 5)));
     Assert.That(definition.Sources, Is.EqualTo(new[] { "tests/fixtures/bench/sum-loop.js" }));
     Assert.That(definition.Run, Is.EqualTo(new[] { "tests/fixtures/bench/sum-loop.js" }));
@@ -77,6 +77,8 @@ public sealed class BenchmarkDefinitionTests {
   [TestCase("runs: 1001\n", "6:'runs' must be at least 1 and at most 1000, not 1001")]
   [TestCase("warmup: -1\n", "6:'warmup' must be at least 0 and at most 1000, not -1")]
   [TestCase("runs: many\n", "6:'runs' must be an integer")]
+  [TestCase("runs: [1]\n", "6:'runs' must be an integer")]
+  [TestCase("runs: '5'\n", "6:'runs' must be an integer")]
   [TestCase("speed: 1\n", "6:definition: unknown property 'speed'")]
   [TestCase("variants: []\n", "6:'variants' needs at least one variant when given")]
   [TestCase("variants: [plain]\n", "6:'variants' must be a list of mappings")]

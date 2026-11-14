@@ -17,11 +17,17 @@ public sealed class BudgetFileTests {
     Assert.That(budgets.Budgets, Is.EqualTo(new[] { new Budget("sum-loop", "default", "wallNs", 10) }));
     Assert.That(budgets.Find("sum-loop", "default", "wallNs"), Is.Not.Null);
     Assert.That(budgets.Find("sum-loop", "default", "cpuNs"), Is.Null);
+    Assert.That(budgets.Find("sum-loop", "opt-speed", "wallNs"), Is.Null);
+    Assert.That(budgets.Find("other", "default", "wallNs"), Is.Null);
   }
 
   [Test]
   public void NoProductBudget_IsCommittedWithNumbers()
     => Assert.That(File.Exists(Path.Combine(PrototypeFixture.RepositoryRoot, "tooling", "bench", "budgets.yaml")), Is.False, "budgets come from ADR-PERF-BUDGETS after a baseline");
+
+  [Test]
+  public void BudgetsDifferingInOneKeyField_AreDistinct()
+    => Assert.That(BudgetFile.Parse("schemaVersion: 1\nbudgets:\n  - { id: a, variant: b, metric: c, maxRegressionPercent: 1 }\n  - { id: a, variant: x, metric: c, maxRegressionPercent: 1 }\n  - { id: a, variant: b, metric: x, maxRegressionPercent: 1 }\n  - { id: x, variant: b, metric: c, maxRegressionPercent: 1 }\n", "b.yaml").Budgets, Has.Count.EqualTo(4));
 
   [Test]
   public void MaxRelativeMad_AndFractionalPercentages_AreRead() {
@@ -33,6 +39,7 @@ public sealed class BudgetFileTests {
   [TestCase("schemaVersion: 1\nbudgets:\n  - { id: a, variant: b, metric: c, maxRegressionPercent: -1 }\n", "'maxRegressionPercent' must not be negative, not -1")]
   [TestCase("schemaVersion: 1\nbudgets:\n  - { id: a, variant: b, metric: c, maxRegressionPercent: x }\n", "'maxRegressionPercent' must be a number")]
   [TestCase("schemaVersion: 1\nbudgets:\n  - { id: a, variant: b, metric: c }\n", "missing property 'maxRegressionPercent'")]
+  [TestCase("schemaVersion: 1\nbudgets:\n  - { id: a, variant: b, metric: c, maxRegressionPercent: '10' }\n", "'maxRegressionPercent' must be a number")]
   [TestCase("schemaVersion: 1\nbudgets:\n  - { id: a, variant: b, metric: c, maxRegressionPercent: 1, owner: x }\n", "budget: unknown property 'owner'")]
   [TestCase("schemaVersion: 2\nbudgets: []\n", "'schemaVersion' must be at least 1 and at most 1, not 2")]
   [TestCase("budgets: []\n", "missing property 'schemaVersion'")]
