@@ -165,7 +165,9 @@ public static class JavaScriptSyntaxReader {
         case MemberExpression { Property: PrivateIdentifier hidden } member:
           return new JsMember(this.Expression(member.Object), "#" + hidden.Name);
         case MemberExpression member:
-          return new JsMember(this.Expression(member.Object), ((Identifier)member.Property).Name);
+          return new JsMember(this.Expression(member.Object), ((Identifier)member.Property).Name) { Optional = member.Optional };
+        case ChainExpression chain:
+          return this.Expression(chain.Expression);
         case CallExpression { Optional: false } call:
           return new JsCall(this.Expression(call.Callee), this.Expressions(call.Arguments));
         case NewExpression creation:

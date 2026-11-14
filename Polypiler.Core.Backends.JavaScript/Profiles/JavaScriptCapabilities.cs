@@ -70,11 +70,16 @@ public sealed class JavaScriptCapabilities {
     new("static fields", 2022, "assignment after the class"),
     new("Object", 5),
     new("Object.defineProperty", 5),
+    // Optional values (#1322): below its level each is a conditional on a test with == null, never ||.
+    new("??", 2020, "!= null ?"),
+    new("?.", 2020, "== null ?"),
+    new("??=", 2021, "!= null ?"),
 
     // Globals and the functions of Math.
     new("NaN", 5),
     new("Infinity", 5),
     new("RangeError", 5),
+    new("TypeError", 5),
     new("Math", 5),
     new("Math.abs", 5),
     new("Math.min", 5),

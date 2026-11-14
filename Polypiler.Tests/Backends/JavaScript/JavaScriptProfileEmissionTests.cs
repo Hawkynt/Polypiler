@@ -654,7 +654,10 @@ public sealed class JavaScriptProfileEmissionTests {
       [".setInt16"] = (Write("Int16", "short"), "\"setInt16\"", "$vat(s, 0, 2)"),
       [".setUint16"] = (Write("UInt16", "ushort"), "\"setUint16\"", "$vat(s, 0, 2)"),
       [".getBigUint64"] = (Read("UInt64", "ulong"), ".getBigUint64(0, true)", "$load64("),
-      [".setBigUint64"] = (Write("UInt64", "ulong"), "\"setBigUint64\"", "$store64(")
+      [".setBigUint64"] = (Write("UInt64", "ulong"), "\"setBigUint64\"", "$store64("),
+      ["??"] = ("public static int F(int? a) => a ?? 5;", "a ?? 5", "a != null ? a : 5"),
+      ["?."] = ("public static int F(int[] a) => a?.Length ?? -1;", "a?.length", "(a == null) ? null : a.length"),
+      ["??="] = ("public static int F(int? a) { a ??= 3; return a.Value; }", "a ??= 3;", "if (a == null) {")
     };
     // The methods of strings begin at levels this test does not compare; JavaScriptStringEmissionTests checks each at its first level and the one before.
     var replaceable = JavaScriptCapabilities.Standard.Entries
@@ -664,8 +667,8 @@ public sealed class JavaScriptProfileEmissionTests {
       var (source, native, replacement) = cases[entry.Name];
       // The pair of halves has two forms itself: a typed array of 32-bit halves needs the level that brought the
       // typed arrays, so what is native from ECMAScript 2020 is compared with ECMAScript 2017, the rest with ECMAScript 5.
-      var first = entry.Since == 2022 ? JavaScriptProfile.Default : entry.Since == 2020 ? _es2020 : entry.Name is ".setUint32" or ".getUint32" ? _es2017 : _es2015;
-      var last = entry.Since == 2022 ? _es2020 : entry.Since == 2020 ? _es2017 : _es5;
+      var first = entry.Since >= 2021 ? JavaScriptProfile.Default : entry.Since == 2020 ? _es2020 : entry.Name is ".setUint32" or ".getUint32" ? _es2017 : _es2015;
+      var last = entry.Since >= 2021 ? _es2020 : entry.Since == 2020 ? _es2017 : _es5;
       Assert.That(Emit(source, first), Does.Contain(native), $"{entry.Name} is native in {first}");
       Assert.That(Emit(source, last), Does.Not.Contain(native).And.Contain(replacement), $"{entry.Name} is replaced in {last}");
       if (entry.TypedArray)

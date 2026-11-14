@@ -68,10 +68,15 @@ public sealed record JsBoolean(bool Value) : JsExpression;
 /// <param name="Name">The name.</param>
 public sealed record JsIdentifier(string Name) : JsExpression;
 
-/// <summary><c>target.property</c>.</summary>
+/// <summary><c>target.property</c>, or <c>target?.property</c>.</summary>
 /// <param name="Target">The object.</param>
 /// <param name="Property">The name of the property.</param>
-public sealed record JsMember(JsExpression Target, string Property) : JsExpression;
+public sealed record JsMember(JsExpression Target, string Property) : JsExpression {
+
+  /// <summary>Whether the access is an optional chain, <c>target?.property</c> (ECMAScript 2020).</summary>
+  public bool Optional { get; init; }
+
+}
 
 /// <summary><c>target[index]</c>.</summary>
 /// <param name="Target">The object.</param>

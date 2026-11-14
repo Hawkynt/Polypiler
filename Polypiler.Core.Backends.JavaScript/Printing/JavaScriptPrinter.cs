@@ -361,7 +361,11 @@ public static class JavaScriptPrinter {
     }
 
     /// <summary>Whether an expression may stand where a member is read from it: a primary expression, but no number whose dot would be its fraction.</summary>
-    private static bool IsTarget(JsExpression target) => Precedence(target) == Primary && target is not JsNumber;
+    /// <summary>Whether an operand would mix <c>??</c> with <c>&amp;&amp;</c> or <c>||</c> without parentheses, which ECMA-262 (§13.13) does not allow.</summary>
+    private static bool Mixes(string op, JsExpression operand)
+      => operand is JsBinary { Operator: var inner } && (op == "??" ? inner is "&&" or "||" : op is "&&" or "||" && inner == "??");
+
+    private static bool IsTarget(JsExpression target) => Precedence(target) == Primary && target is not JsNumber && target is not JsMember { Optional: true };
 
     public void Expression(JsExpression expression, int depth) {
       switch (expression) {
@@ -388,16 +392,16 @@ public static class JavaScriptPrinter {
           break;
         case JsMember member:
           this.Operand(member.Target, IsTarget(member.Target), depth);
-          this._text.Append('.').Append(member.Property);
+          this._text.Append(member.Optional ? "?." : ".").Append(member.Property);
           break;
         case JsIndex index:
-          this.Operand(index.Target, Precedence(index.Target) == Primary, depth);
+          this.Operand(index.Target, Precedence(index.Target) == Primary && index.Target is not JsMember { Optional: true }, depth);
           this._text.Append('[');
           this.Expression(index.Index, depth);
           this._text.Append(']');
           break;
         case JsCall call:
-          this.Operand(call.Callee, Precedence(call.Callee) == Primary, depth);
+          this.Operand(call.Callee, Precedence(call.Callee) == Primary && call.Callee is not JsMember { Optional: true }, depth);
           this.Arguments(call.Arguments, depth);
           break;
         case JsNew creation:
@@ -423,9 +427,9 @@ public static class JavaScriptPrinter {
         case JsBinary binary:
           var precedence = Of(binary.Operator);
           var rightAssociative = binary.Operator == "**";
-          this.Operand(binary.Left, rightAssociative ? Precedence(binary.Left) > precedence : Precedence(binary.Left) >= precedence, depth);
+          this.Operand(binary.Left, (rightAssociative ? Precedence(binary.Left) > precedence : Precedence(binary.Left) >= precedence) && !Mixes(binary.Operator, binary.Left), depth);
           this._text.Append(' ').Append(binary.Operator).Append(' ');
-          this.Operand(binary.Right, rightAssociative ? Precedence(binary.Right) >= precedence : Precedence(binary.Right) > precedence, depth);
+          this.Operand(binary.Right, (rightAssociative ? Precedence(binary.Right) >= precedence : Precedence(binary.Right) > precedence) && !Mixes(binary.Operator, binary.Right), depth);
           break;
         case JsAssignment assignment:
           this.Operand(assignment.Left, Precedence(assignment.Left) == Primary, depth);
