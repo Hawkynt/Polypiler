@@ -43,7 +43,16 @@ public enum IrTypeKind {
   Array,
 
   /// <summary>A record of named fields that is copied by value: an <see cref="IrStructType"/>.</summary>
-  Struct
+  Struct,
+
+  /// <summary>
+  /// A writable view of a run of elements of numbers: an array, the first element and a length. It lives on
+  /// the stack only: it is a local, a parameter or a result, never stored in an array, a field or a constant.
+  /// </summary>
+  Span,
+
+  /// <summary>A view like <see cref="Span"/> whose elements are only read.</summary>
+  ReadOnlySpan
 
 }
 
@@ -111,6 +120,25 @@ public sealed record IrType {
   /// <returns>The array type.</returns>
   public static IrType Array(IrType element) => new(IrTypeKind.Array, element);
 
+  /// <summary>The type of a writable view of elements of a number type.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <returns>The view type.</returns>
+  public static IrType Span(IrType element) => new(IrTypeKind.Span, element);
+
+  /// <summary>The type of a read-only view of elements of a number type.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <returns>The view type.</returns>
+  public static IrType ReadOnlySpan(IrType element) => new(IrTypeKind.ReadOnlySpan, element);
+
+  /// <summary>Whether the type is a view of elements, writable or read-only.</summary>
+  public bool IsView => this.Kind is IrTypeKind.Span or IrTypeKind.ReadOnlySpan;
+
+  /// <summary>Whether the elements of a value of the type can be written: an array or a writable view.</summary>
+  public bool IsWritableSequence => this.Kind is IrTypeKind.Array or IrTypeKind.Span;
+
+  /// <summary>Whether the type is an array or a view, whose elements are read by index.</summary>
+  public bool IsSequence => this.IsArray || this.IsView;
+
   /// <summary>The type of the values of a struct.</summary>
   /// <param name="declaration">The struct.</param>
   /// <returns>The struct type.</returns>
@@ -165,13 +193,18 @@ public sealed record IrType {
   /// <summary>Whether the type is an array.</summary>
   public bool IsArray => this.Kind == IrTypeKind.Array;
 
-  /// <summary>Whether the type can be the type of a local: not void, and an array only of numbers or of structs.</summary>
-  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || this.Element.IsStruct);
+  /// <summary>
+  /// Whether the type can be the type of a local: not void, an array only of numbers or of structs, and a
+  /// view only of numbers.
+  /// </summary>
+  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (this.Element.IsStruct && !this.IsView));
 
   /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c> or the name of a struct.</summary>
   public override string ToString()
     => this.Declaration is { } declaration ? declaration.Name
       : this.Element is null ? this.Kind.ToString().ToLowerInvariant()
+      : this.Kind == IrTypeKind.Span ? $"span<{this.Element}>"
+      : this.Kind == IrTypeKind.ReadOnlySpan ? $"readonly span<{this.Element}>"
       : $"{this.Element}[]";
 
 }

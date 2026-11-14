@@ -558,7 +558,7 @@ public static class CSharpPrinter {
           this.Arguments(creation.Arguments, depth);
           break;
         case CsArrayCreation creation:
-          this._text.Append("new ").Append(creation.ElementType.Name).Append('[');
+          this._text.Append(creation.OnStack ? "stackalloc " : "new ").Append(creation.ElementType.Name).Append('[');
           if (creation.Size is not null)
             this.Expression(creation.Size, depth);
 

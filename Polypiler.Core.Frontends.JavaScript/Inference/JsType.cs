@@ -107,6 +107,7 @@ internal sealed record JsType {
     IrTypeKind.F32 => F32,
     IrTypeKind.F64 => F64,
     IrTypeKind.Array => ArrayOf(Of(type.Element!), false),
+    IrTypeKind.Span or IrTypeKind.ReadOnlySpan => ViewOf(Of(type.Element!)),
     _ => new(type.IsLong ? JsKind.BigInt : JsKind.Number) { Low = IrOperators.Minimum(type), High = IrOperators.Maximum(type) }
   };
 
@@ -121,6 +122,14 @@ internal sealed record JsType {
     => value >= long.MinValue && value <= ulong.MaxValue
       ? new(JsKind.BigInt) { Low = (Int128)value, High = (Int128)value, IsLiteral = true }
       : UnboundedBigInt;
+
+  /// <summary>A view of the elements of a typed array: what <c>subarray</c> makes, a <c>Span</c> of the IR (#1325).</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <returns>The view type.</returns>
+  public static JsType ViewOf(JsType element) => new(JsKind.Array) { Element = element, IsView = true };
+
+  /// <summary>Whether the value is a view of a typed array, made by <c>subarray</c>, rather than an array of its own.</summary>
+  public bool IsView { get; private init; }
 
   /// <summary>An array type.</summary>
   public static JsType ArrayOf(JsType element, bool plain) => new(JsKind.Array) { Element = element, IsPlain = plain };
@@ -151,6 +160,7 @@ internal sealed record JsType {
     JsKind.Number when this.Float == 64 => IrType.F64,
     JsKind.Number => (this.IsLiteral ? _words.Skip(4) : _words).First(this.Within),
     JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
+    JsKind.Array when this.IsView => IrType.Span(this.Element!.Ir is { IsNumeric: true } viewed ? viewed : IrType.F64),
     JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct) ? element : IrType.F64),
     JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
     _ => null
@@ -182,6 +192,7 @@ internal sealed record JsType {
     IrTypeKind.F32 => "float32",
     IrTypeKind.F64 => "float64",
     IrTypeKind.Struct => type.Declaration!.Name,
+    IrTypeKind.Span or IrTypeKind.ReadOnlySpan => Spell(type.Element!) + " view",
     _ => Spell(type.Element!) + "[]"
   };
 

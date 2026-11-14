@@ -275,6 +275,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         return IrType.Void;
     }
 
+    if (this.ViewType(type, node) is { } view)
+      return view;
+
     if (type is INamedTypeSymbol named && this._structs.TryGetValue(named, out var declared))
       return IrType.Struct(declared);
 
@@ -389,7 +392,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     this._variables[symbol] = item;
     var element = Convert(new IrArrayLoad(array, new IrLocalRef(index)), item.Type, this.IsChecked(loop));
     var body = new IrBlock([new IrDeclare(item, element), .. this.Body(loop.Statement).Statements]);
-    var condition = new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), new IrArrayLength(array));
+    IrExpr length = array.Type.IsView ? new IrIntrinsic(IrIntrinsicOp.ViewLength, IrType.I32, [array]) : new IrArrayLength(array);
+    var condition = new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), length);
     IrStmt advance = new IrAssign(index, new IrBinary(IrBinaryOp.Add, new IrLocalRef(index), new IrConst(IrType.I32, 1)));
     outer.Add(Loop(condition, body, [advance], loop.Statement));
     return new IrBlock(outer);
@@ -648,7 +652,14 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (this.MemberOfStruct(expression) is { } member)
       throw new UnsupportedException(expression, member);
 
+    // A ref expression has no type of its own; it is refused by what it takes a reference to.
+    if (expression is RefExpressionSyntax reference)
+      throw this.Reference(reference);
+
     var info = model.GetTypeInfo(expression);
+    if (expression is StackAllocArrayCreationExpressionSyntax stack)
+      return this.StackAlloc(stack, info.ConvertedType);
+
     if (expression is CollectionExpressionSyntax)
       return this.ArrayOf(this.Map(info.ConvertedType, expression), expression);
 
@@ -656,7 +667,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (natural is IrConstRef { Type.IsArray: true } table)
       throw new UnsupportedException(expression, $"the static readonly array '{table.Constant.Name}' used as a value");
 
-    return Convert(natural, this.Map(info.ConvertedType, expression));
+    var converted = this.Map(info.ConvertedType, expression);
+    return converted.IsView ? ToView(natural, converted) : Convert(natural, converted);
   }
 
   /// <summary>
@@ -700,10 +712,19 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         return new IrConditional(this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse));
       case CastExpressionSyntax cast:
         return Convert(this.Value(cast.Expression), type, this.IsChecked(cast));
+      case ElementAccessExpressionSyntax { ArgumentList.Arguments: [{ Expression: RangeExpressionSyntax range }] } element:
+        return this.Range(element, range, type);
+      case ElementAccessExpressionSyntax { ArgumentList.Arguments: [{ Expression: PrefixUnaryExpressionSyntax { RawKind: (int)SyntaxKind.IndexExpression } fromEnd }] } element:
+        return this.FromEnd(element, fromEnd);
       case ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element:
         return new IrArrayLoad(this.Read(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression));
       case MemberAccessExpressionSyntax member when this.FieldOf(member) is { } field:
         return new IrFieldLoad(this.Value(member.Expression), field);
+      case BaseObjectCreationExpressionSyntax creation when type.IsView:
+        return this.ViewCreation(creation, type);
+      case MemberAccessExpressionSyntax { Name.Identifier.Text: "Length" or "IsEmpty" } member when this.ViewType(model.GetTypeInfo(member.Expression).Type, member) is not null:
+        var length = new IrIntrinsic(IrIntrinsicOp.ViewLength, IrType.I32, [this.Read(member.Expression)]);
+        return member.Name.Identifier.Text == "Length" ? length : new IrBinary(IrBinaryOp.Equal, length, new IrConst(IrType.I32, 0));
       case BaseObjectCreationExpressionSyntax creation when type.IsStruct:
         return this.Creation(creation, type);
       case DefaultExpressionSyntax or LiteralExpressionSyntax when type.IsStruct:
@@ -829,6 +850,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (method is { Name: "Equals", Parameters: [{ Type: INamedTypeSymbol other }] } && this._structs.ContainsKey(method.ContainingType)
         && SymbolEqualityComparer.Default.Equals(other, method.ContainingType) && invocation.Expression is MemberAccessExpressionSyntax receiver)
       return new IrStructEquals(this.Value(receiver.Expression), this.Value(arguments[0].Expression));
+
+    if (this.ViewCall(invocation, method, type) is { } view)
+      return view;
 
     if (method.MethodKind != MethodKind.Ordinary || arguments.Any(argument => argument.NameColon is not null))
       throw new UnsupportedException(invocation, invocation.Kind().ToString());

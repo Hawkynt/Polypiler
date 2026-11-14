@@ -567,7 +567,7 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("return f(a);", "a call of f with 1 arguments for 5 parameters")]
   [TestCase("return g(a);", "a call of g")]
   [TestCase("return a(1);", "a call of a")]
-  [TestCase("return d.slice(1);", "a call of d.slice")]
+  [TestCase("return d.reverse();", "a call of d.reverse")]
   [TestCase("d.push(1); return a;", "a call of d.push")]
   [TestCase("return d.pop();", "a call of d.pop")]
   [TestCase("return Math.imul(a);", "Math.imul with 1 arguments")]

@@ -194,8 +194,8 @@ public sealed record IrConvert(IrType Type, IrExpr Operand, IrConversion Contrac
 /// <param name="WhenFalse">The value when it does not.</param>
 public sealed record IrConditional(IrExpr Condition, IrExpr WhenTrue, IrExpr WhenFalse) : IrExpr(WhenTrue.Type);
 
-/// <summary>An element of an array; traps when the index is outside the array.</summary>
-/// <param name="Array">The array read.</param>
+/// <summary>An element of an array or of a view; traps when the index is outside it.</summary>
+/// <param name="Array">The array or view read.</param>
 /// <param name="Index">The zero-based index.</param>
 public sealed record IrArrayLoad(IrExpr Array, IrExpr Index) : IrExpr(Array.Type.Element ?? IrType.Void);
 
@@ -664,7 +664,61 @@ public enum IrIntrinsicOp {
   PowEcma,
 
   /// <summary><c>(x, n)</c>: the <c>n</c>-th root of IEEE 754 §9.2 for an <c>i32</c> <c>n</c>; contract <c>ulp(1)</c>.</summary>
-  RootN
+  RootN,
+
+  // The views of #1325: docs/reference/views.md.
+
+  /// <summary>
+  /// <c>(source)</c>, <c>(source, start)</c> or <c>(source, start, length)</c>: a view of an array or of another
+  /// view, the whole of it, or the elements from <c>start</c> on, to its end or <c>length</c> of them. A range outside the source traps with an argument out of
+  /// range. A writable view is never made of a read-only one.
+  /// </summary>
+  ViewOf,
+
+  /// <summary>
+  /// <c>(view, start)</c> or <c>(view, start, length)</c>: the part of a view from <c>start</c> on, to its end or
+  /// <c>length</c> elements of it, of the same type; a range outside it traps with an argument out of range.
+  /// </summary>
+  Slice,
+
+  /// <summary><c>(view)</c>: the number of elements of a view, as an <c>i32</c>.</summary>
+  ViewLength,
+
+  /// <summary>
+  /// <c>(length)</c>: a writable view of a new run of zeros of the element type of the node, which lives no
+  /// longer than the function; a negative length traps with an integer overflow, as an array's does.
+  /// </summary>
+  StackAlloc,
+
+  /// <summary>
+  /// <c>(source, target)</c>: copies every element of a view to the start of a writable one of the same
+  /// element type, as if through a buffer, so that overlapping views are safe; a target shorter than the
+  /// source traps with an argument out of range before anything is copied.
+  /// </summary>
+  ViewCopy,
+
+  /// <summary><c>(source, target)</c>: <see cref="ViewCopy"/> when the target is long enough, then true; false and nothing copied otherwise.</summary>
+  ViewTryCopy,
+
+  /// <summary><c>(view, value)</c>: stores the value in every element of a writable view.</summary>
+  ViewFill,
+
+  /// <summary>
+  /// <c>(a, b)</c>: whether two views of one element type have the same length and equal elements, a
+  /// floating-point element compared as <c>double.Equals</c> compares it: a NaN equals a NaN, and
+  /// <c>+0.0</c> equals <c>-0.0</c>.
+  /// </summary>
+  ViewEqual,
+
+  /// <summary><c>(view)</c>: a new array holding the elements of a view.</summary>
+  ViewToArray,
+
+  /// <summary>
+  /// <c>(view)</c>: the bytes of a view read as elements of another number type, the lowest byte first,
+  /// whatever the host's order: a view of the same memory, of the same writability, whose length is the
+  /// number of whole elements the bytes hold.
+  /// </summary>
+  Reinterpret
 
 }
 
@@ -696,10 +750,10 @@ public sealed record IrDeclare(IrLocal Local, IrExpr? Initializer) : IrStmt;
 public sealed record IrAssign(IrLocal Local, IrExpr Value) : IrStmt;
 
 /// <summary>
-/// A write to an array element. Array, index and value are evaluated in that order, then the index
-/// is checked; the write traps when it is outside the array.
+/// A write to an element of an array or of a writable view. Array, index and value are evaluated in
+/// that order, then the index is checked; the write traps when it is outside the array.
 /// </summary>
-/// <param name="Array">The array written.</param>
+/// <param name="Array">The array or view written.</param>
 /// <param name="Index">The zero-based index.</param>
 /// <param name="Value">The value stored, of the element type.</param>
 public sealed record IrStore(IrExpr Array, IrExpr Index, IrExpr Value) : IrStmt;

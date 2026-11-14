@@ -23,7 +23,10 @@ public enum IrTrap {
   IntegerOverflow,
 
   /// <summary>An operation that has no result for its operand: the sign of a NaN.</summary>
-  InvalidOperation
+  InvalidOperation,
+
+  /// <summary>A range outside its source: a view or a slice that does not lie in it, or a copy into a view too short.</summary>
+  ArgumentOutOfRange
 
 }
 
@@ -44,6 +47,7 @@ public sealed class IrTrapException : Exception {
     IrTrap.DivideByZero => "divide by zero",
     IrTrap.IndexOutOfRange => "index out of range",
     IrTrap.InvalidOperation => "invalid operation",
+    IrTrap.ArgumentOutOfRange => "argument out of range",
     _ => "integer overflow"
   };
 
@@ -133,6 +137,9 @@ public static partial class IrInterpreter {
 
   /// <summary>A value of a type taken across the boundary, or <see langword="null"/> when it is none.</summary>
   private static object? Accepted(IrType type, object? value) {
+    if (type.IsView)
+      return AcceptedView(type, value);
+
     if (type.StructType is { } declared)
       return value is object?[] fields && fields.Length == declared.Fields.Count && Fields(declared, fields) is { } accepted ? new Record(accepted) : null;
 
@@ -208,6 +215,7 @@ public static partial class IrInterpreter {
   };
 
   private static object? ToHost(IrType type, object? value) => value switch {
+    View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
     null or Array or bool => value,
     _ => External(HostType(type), value)
@@ -251,10 +259,10 @@ public static partial class IrInterpreter {
           globals[assign.Global] = this.Evaluate(assign.Value, frame);
           return Flow.Next;
         case IrStore store:
-          var array = (Array)this.Evaluate(store.Array, frame);
+          var array = this.Evaluate(store.Array, frame);
           var index = (long)this.Evaluate(store.Index, frame);
           var value = this.Evaluate(store.Value, frame);
-          Store(array, Checked(array, index), value);
+          StoreElement(array, index, value);
           return Flow.Next;
         case IrExprStmt expression:
           this.Evaluate(expression.Expression, frame);
@@ -345,8 +353,8 @@ public static partial class IrInterpreter {
         case IrConditional choice:
           return this.Evaluate((bool)this.Evaluate(choice.Condition, frame) ? choice.WhenTrue : choice.WhenFalse, frame);
         case IrArrayLoad load:
-          var array = (Array)this.Evaluate(load.Array, frame);
-          return Copied(Load(array, Checked(array, (long)this.Evaluate(load.Index, frame))));
+          var array = this.Evaluate(load.Array, frame);
+          return Copied(LoadElement(array, (long)this.Evaluate(load.Index, frame)));
         case IrArrayLength length:
           return (long)((Array)this.Evaluate(length.Array, frame)).Length;
         case IrNewArray creation:
@@ -381,6 +389,9 @@ public static partial class IrInterpreter {
 
     private object? Intrinsic(IrIntrinsic intrinsic, Frame frame) {
       var arguments = intrinsic.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
+      if (IsView(intrinsic))
+        return Views(intrinsic, arguments);
+
       switch (intrinsic.Op) {
         case IrIntrinsicOp.ArrayOf:
           return ArrayOf(intrinsic.Type.Element!, arguments);
@@ -472,11 +483,11 @@ public static partial class IrInterpreter {
       object before;
       object after;
       if (step.Target is IrArrayLoad element) {
-        var array = (Array)this.Evaluate(element.Array, frame);
-        var index = Checked(array, (long)this.Evaluate(element.Index, frame));
-        before = Load(array, index);
+        var array = this.Evaluate(element.Array, frame);
+        var index = (long)this.Evaluate(element.Index, frame);
+        before = LoadElement(array, index);
         after = Stepped(step, before);
-        Store(array, index, after);
+        StoreElement(array, index, after);
       } else if (step.Target is IrGlobalRef reference) {
         before = globals[reference.Global];
         after = Stepped(step, before);

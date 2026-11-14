@@ -125,7 +125,16 @@ public sealed class JavaScriptCapabilities {
     new("BigInt64Array", 2020, PlainArray),
     new("BigUint64Array", 2020, PlainArray),
     new(".getBigInt64", 2020, ".getUint32"),
-    new(".setBigInt64", 2020, ".setUint32")
+    new(".setBigInt64", 2020, ".setUint32"),
+
+    // The views of #1325: a subarray of a typed array, checked by $slice first, or an object { a, o, n } over a plain array.
+    new("subarray as a view", 2015, "$vobj", TypedArray: true),
+    new(".getInt16", 2015, "$vat", TypedArray: true),
+    new(".getUint16", 2015, "$vat", TypedArray: true),
+    new(".setInt16", 2015, "$vat", TypedArray: true),
+    new(".setUint16", 2015, "$vat", TypedArray: true),
+    new(".getBigUint64", 2020, "$load64"),
+    new(".setBigUint64", 2020, "$store64")
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

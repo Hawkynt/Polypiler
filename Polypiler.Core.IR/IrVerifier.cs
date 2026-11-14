@@ -35,7 +35,8 @@ public static partial class IrVerifier {
       }
 
       Require(names.Add(constant.Name), "the module declares the name twice");
-      Require(constant.Type.IsStorable && !element.IsStruct, $"a constant of the type {constant.Type}");
+      Require(!OnHeap(constant.Type), Stored);
+      Require(constant.Type.IsStorable && !element.IsStruct && !constant.Type.IsView, $"a constant of the type {constant.Type}");
       Require(constant.Type.IsArray || constant.Values.Count == 1, $"a constant of the type {constant.Type} with {constant.Values.Count} values");
       foreach (var value in constant.Values.Where(value => !FunctionCheck.InRange(new IrConst(element, value))).Take(1))
         Require(false, $"the constant {value} is not a value of {element}");
@@ -47,6 +48,12 @@ public static partial class IrVerifier {
 
     return diagnostics;
   }
+
+  /// <summary>What the verifier says of a view that would outlive the stack: in a field, a constant or an array.</summary>
+  internal const string Stored = "a span is stored outside the stack";
+
+  /// <summary>Whether a type puts a view where only the heap can hold it: as the element of an array.</summary>
+  internal static bool OnHeap(IrType type) => type.IsView ? false : type.Element is { } element && (element.IsView || OnHeap(element));
 
   private static Diagnostic Error(string member, string message)
     => Descriptor.At($"ill-typed IR in '{member}': {message}");
@@ -70,12 +77,14 @@ public static partial class IrVerifier {
         $"the return type {function.ReturnType} is not a type of the IR");
       this.Declared(function.ReturnType);
       foreach (var parameter in function.Parameters) {
+        this.Require(!OnHeap(parameter.Type), Stored);
         this.Require(parameter.Type.IsStorable, $"parameter '{parameter.Name}' has the type {parameter.Type}");
         this.Declared(parameter.Type);
         this.Require(this._visible.Add(parameter), $"parameter '{parameter.Name}' is declared twice");
       }
 
       foreach (var local in function.Locals) {
+        this.Require(!OnHeap(local.Type), Stored);
         this.Require(local.Type.IsStorable, $"local '{local.Name}' has the type {local.Type}");
         this.Declared(local.Type);
       }
@@ -238,8 +247,10 @@ public static partial class IrVerifier {
         this.Expression(array);
     }
 
-    private void Writable(IrExpr array)
-      => this.Require(array is not IrConstRef, "the elements of a constant table are written");
+    private void Writable(IrExpr array) {
+      this.Require(array is not IrConstRef, "the elements of a constant table are written");
+      this.Require(array.Type.Kind != IrTypeKind.ReadOnlySpan, "an element of a read-only span is written");
+    }
 
     private void Known(IrModuleConst constant)
       => this.Require(constants.Contains(constant), $"the constant '{constant.Name}' is not among the constants of the module");
@@ -251,7 +262,7 @@ public static partial class IrVerifier {
     private void Element(IrExpr array, IrExpr index) {
       this.Readable(array);
       this.Expression(index);
-      this.Require(array.Type.IsArray, $"an element is taken of the type {array.Type}");
+      this.Require(array.Type.IsSequence, $"an element is taken of the type {array.Type}");
       this.Require(index.Type.IsWord, $"an array index has the type {index.Type}");
     }
 
@@ -335,7 +346,7 @@ public static partial class IrVerifier {
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
-            if (index == 0 && intrinsic.Op == IrIntrinsicOp.ArrayCopy)
+            if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind == IrTypeKind.ReadOnlySpan)))
               this.Readable(intrinsic.Arguments[index]);
             else
               this.Expression(intrinsic.Arguments[index]);
@@ -416,7 +427,7 @@ public static partial class IrVerifier {
 
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct => false,
+      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

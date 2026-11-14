@@ -200,6 +200,10 @@ internal sealed partial class TypeInference {
         return _i64;
       case { } library when JavaScriptFloatApi.Find(library) is { } member:
         return JsType.Of(member.Result);
+      // A view of a typed array or of a view, and the copy of a part of one (#1325).
+      case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "subarray" or "slice" } method } member
+        && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: false } source:
+        return method.Name == "subarray" ? JsType.ViewOf(source.Element!) : JsType.ArrayOf(source.Element!, false);
       case null when this.Names.Callee(call.Callee) is { } callee:
         var model = this.ModelOf(callee);
         return model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType);

@@ -215,16 +215,13 @@ public sealed class CSharpIntegerApiTests {
 
   /// <summary>
   /// Test design 10: what the table does not list, or a form of an argument it does not take, is
-  /// refused by name: a member of BitOperations the IR has no operation for, a span that is not the
-  /// array or its slice of the size of the value, a stored value that could trap, a pair that is
+  /// refused by name: a member of BitOperations the IR has no operation for, a span of characters
+  /// (#1314), a stored value that could trap, a pair that is
   /// not a statement, a result that is not a local.
   /// </summary>
   [TestCase("public static uint F(uint a) => System.Numerics.BitOperations.Crc32C(a, a);", "BitOperations.Crc32C")]
-  [TestCase("public static int F(byte[] a, int b) => System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(a.AsSpan(b, 2));", "the bytes of BinaryPrimitives.ReadInt32LittleEndian")]
-  [TestCase("public static int F(byte[] a, int b, int c) => System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(a.AsSpan(b, c));", "the bytes of BinaryPrimitives.ReadInt32LittleEndian")]
-  [TestCase("public static int F(byte[] a) => System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(new System.ReadOnlySpan<byte>(a));", "the bytes of BinaryPrimitives.ReadInt32LittleEndian")]
+  [TestCase("public static int F(char[] a) => System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(System.Runtime.InteropServices.MemoryMarshal.AsBytes(new System.ReadOnlySpan<char>(a)));", "System.ReadOnlySpan<char>")]
   [TestCase("public static void F(byte[] a, int b, int c) { System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(a.AsSpan(b), 10 / c); }", "with a value that can trap")]
-  [TestCase("public static int F(int[] a) => System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(System.Runtime.InteropServices.MemoryMarshal.AsBytes(a.AsSpan()));", "BinaryPrimitives.ReadInt32LittleEndian")]
   [TestCase("public static int F(int a, int b) => System.Math.DivRem(a, b).Quotient;", "SimpleMemberAccessExpression")]
   [TestCase("public static int F(int a, int b) => System.Math.DivRem(a, b, out a);", "Math.DivRem")]
   [TestCase("public static int F(int a, int b, int[] c) { int q = System.Math.DivRem(a, b, out c[0]); return q; }", "a result stored in ElementAccessExpression")]

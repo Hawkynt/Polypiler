@@ -175,6 +175,8 @@ public static class CSharpSyntaxReader {
     ArrayCreationExpressionSyntax { Type.RankSpecifiers: [{ Sizes: [var size] }] } creation => new CsArrayCreation(
       new CsType(creation.Type.ElementType.ToString()), size is OmittedArraySizeExpressionSyntax ? null : Read(size),
       creation.Initializer is null ? null : Initializer(creation.Initializer)),
+    StackAllocArrayCreationExpressionSyntax { Initializer: null, Type: ArrayTypeSyntax { RankSpecifiers: [{ Sizes: [var size] }] } array }
+      => new CsArrayCreation(new CsType(array.ElementType.ToString()), Read(size), null) { OnStack = true },
     InitializerExpressionSyntax { RawKind: (int)SyntaxKind.ArrayInitializerExpression } initializer => Initializer(initializer),
     DefaultExpressionSyntax value => new CsDefaultExpression(new CsType(value.Type.ToString())),
     DeclarationExpressionSyntax { Designation: DiscardDesignationSyntax } => new CsName("_"),

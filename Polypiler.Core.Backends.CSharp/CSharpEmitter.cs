@@ -708,7 +708,8 @@ public static partial class CSharpEmitter {
     }
 
     private string TypeName(IrType type)
-      => type.Declaration is { } declared ? this._typeNames[declared.Name] : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
+      => type.Declaration is { } declared ? this._typeNames[declared.Name] : type.IsView ? this.ViewTypeName(type)
+        : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
     private List<CsStatement> Statements(IrBlock block) {
@@ -812,7 +813,7 @@ public static partial class CSharpEmitter {
     /// <c>int</c> unasked. Inside a class named <c>var</c> the word is that class.
     /// </summary>
     private bool Infers(IrDeclare declare)
-      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault && Promoted(initializer) == initializer
+      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault && Promoted(initializer) == initializer && !declare.Local.Type.IsView
         && this.ClassName != "var" && this.Has(CSharpFeature.ImplicitlyTypedLocal);
 
     /// <summary>
@@ -838,6 +839,8 @@ public static partial class CSharpEmitter {
         case IrGlobalAssign assign:
           var global = this.GlobalName(assign.Global);
           return new CsAssignment(global, "=", this.Stored(assign.Value));
+        case IrStore store when this.Segmented(store.Array):
+          return this.SegmentStore(store);
         case IrStore store:
           var element = this.Element(store.Array, store.Index);
           return new CsAssignment(element, "=", this.Stored(store.Value));
@@ -1041,6 +1044,8 @@ public static partial class CSharpEmitter {
           var condition = this.Operand(choice.Condition, Unary);
           var whenTrue = this.Operand(choice.WhenTrue, Unary);
           return (new CsConditional(condition, whenTrue, this.Operand(choice.WhenFalse, Unary)), Loose);
+        case IrArrayLoad load when this.Segmented(load.Array):
+          return (this.SegmentElement(load), Primary);
         case IrArrayLoad load:
           return (this.Element(load.Array, load.Index), Primary);
         case IrArrayLength length:
@@ -1050,7 +1055,7 @@ public static partial class CSharpEmitter {
           return (new CsArrayCreation(new CsType(this.TypeName(creation.Type.Element!)), count, null), Unary);
         case IrStep step:
           CsExpression target = step.Target switch {
-            IrArrayLoad element => this.Element(element.Array, element.Index),
+            IrArrayLoad element => this.Segmented(element.Array) ? this.SegmentPlace(element) : this.Element(element.Array, element.Index),
             IrGlobalRef reference => this.GlobalName(reference.Global),
             _ => this.Variable(((IrLocalRef)step.Target).Local)
           };
@@ -1140,7 +1145,10 @@ public static partial class CSharpEmitter {
       if (intrinsic.Op == IrIntrinsicOp.ArrayOf)
         return (new CsArrayCreation(new CsType(this.TypeName(intrinsic.Type.Element!)), null, new CsArrayInitializer([.. intrinsic.Arguments.Select(this.Stored)])), Unary);
 
-      return this.Rewritten(intrinsic) is { } rewritten ? this.Expression(rewritten) : this.Call(Row(intrinsic, this._table)!, intrinsic.Arguments);
+      if (this.Rewritten(intrinsic) is { } rewritten)
+        return this.Expression(rewritten);
+
+      return this.View(intrinsic) ?? this.Call(Row(intrinsic, this._table)!, intrinsic.Arguments);
     }
 
     /// <summary>

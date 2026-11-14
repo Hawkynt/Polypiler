@@ -36,9 +36,9 @@ RotL64	imported
 RotR64	imported
 RotL128n	OpCodes.js(447,24): error PLY1101: parameter 'value' of 'RotL128n' has no supported JSDoc type
 RotR128n	OpCodes.js(462,24): error PLY1101: parameter 'value' of 'RotR128n' has no supported JSDoc type
-RotL128	OpCodes.js(478,58): error PLY1102: 'a call of bytes.slice' is not supported yet
-RotR128	OpCodes.js(478,58): error PLY1102: 'a call of bytes.slice' is not supported yet
-RotR128	OpCodes.js(509,58): error PLY1102: 'a call of bytes.slice' is not supported yet
+RotL128	OpCodes.js(499,14): error PLY1105: 'RotL128' holds both uint8[] and uint8[]
+RotR128	OpCodes.js(499,14): error PLY1105: 'RotL128' holds both uint8[] and uint8[]
+RotR128	OpCodes.js(511,14): error PLY1105: 'RotR128' holds both uint8[] and uint8[]
 Pack16BE	imported
 Unpack16BE	imported
 Pack16LE	imported
@@ -71,7 +71,7 @@ Hex8ToBytes	OpCodes.js(2379,27): error PLY1101: parameter 'hexString' of 'Hex8To
 Hex16ToWords	OpCodes.js(2404,28): error PLY1101: parameter 'hexString' of 'Hex16ToWords' has no supported JSDoc type
 Hex32ToDWords	OpCodes.js(2429,29): error PLY1101: parameter 'hexString' of 'Hex32ToDWords' has no supported JSDoc type
 XorArrays	OpCodes.js(2460,9): error PLY1102: 'a call of result.push' is not supported yet
-CopyArray	OpCodes.js(2481,14): error PLY1102: 'a call of arr.slice' is not supported yet
+CopyArray	OpCodes.js(2481,14): error PLY1105: 'CopyArray' holds both uint8[] and uint8[]
 ClearArray	OpCodes.js(2489,26): error PLY1101: parameter 'arr' of 'ClearArray' has no supported JSDoc type
 CopyBytes	imported
 CompareArrays	imported

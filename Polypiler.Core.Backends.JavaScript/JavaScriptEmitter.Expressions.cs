@@ -51,6 +51,8 @@ public static partial class JavaScriptEmitter {
           var test = this.Operand(choice.Condition);
           var whenTrue = this.Operand(choice.WhenTrue);
           return (new JsConditional(test, whenTrue, this.Operand(choice.WhenFalse)), false);
+        case IrArrayLoad load when this.Plain(load.Array):
+          return (this.ViewElement(load), true);
         case IrArrayLoad load:
           return (this.Helper("$get", load.Array, load.Index), true);
         case IrArrayLength length:
@@ -73,6 +75,9 @@ public static partial class JavaScriptEmitter {
     }
 
     private (JsExpression Node, bool Atomic) Intrinsic(IrIntrinsic intrinsic) {
+      if (this.View(intrinsic) is { } view)
+        return view;
+
       var arguments = intrinsic.Arguments;
       switch (intrinsic.Op) {
         case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct:
@@ -157,7 +162,8 @@ public static partial class JavaScriptEmitter {
       var halves = type.IsLong && this.Halves;
       var post = Flag(step.Postfix);
       if (step.Target is IrArrayLoad element) {
-        var arguments = new List<JsExpression> { this.Text(element.Array), this.Text(element.Index) };
+        var (array, index) = this.Place(element);
+        var arguments = new List<JsExpression> { array, index };
         if (halves) {
           arguments.AddRange([Flag(step.Increment), post]);
           return (this.Helper(!step.Trap ? "$step64" : type.IsSigned ? "$stepck64s" : "$stepck64u", arguments), true);
