@@ -5,4 +5,8 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
+  </ItemGroup>
+
 </Project>

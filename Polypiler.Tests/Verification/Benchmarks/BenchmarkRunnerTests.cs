@@ -42,6 +42,7 @@ public sealed class BenchmarkRunnerTests {
     var result = Runner(runner).Run(Definition(), "default")!;
     Assert.That(this._bag.Items, Is.Empty);
     Assert.That(runner.Plans, Has.Count.EqualTo(6));
+    Assert.That(runner.Plans, Has.All.Matches<RunPlan>(plan => plan.Limits == RunLimits.Default));
     Assert.That(result.Samples.Select(sample => sample.WallNs), Is.EqualTo(new[] { 10_000_000L, 12_000_000, 11_000_000, 50_000_000, 13_000_000 }));
     Assert.That(result.Samples.Select(sample => sample.CpuNs), Is.EqualTo(new long?[] { 5_000_000, 6_000_000, 5_000_000, 25_000_000, 6_000_000 }));
     Assert.That(result.Stats["wallNs"], Is.EqualTo(new MetricStatistics(12_000_000, 1_000_000, 10_000_000, 50_000_000)));
@@ -197,8 +198,23 @@ public sealed class BenchmarkRunnerTests {
     var result = Runner(runner).Run(definition, "default")!;
     Assert.That(runner.Plans, Has.Count.EqualTo(1));
     Assert.That(runner.Plans[0].Collect, Is.EqualTo(new[] { "out", BenchmarkDotNetExport.ResultsFolder }));
+    var defaults = RunLimits.Default;
+    Assert.That(runner.Plans[0].Limits, Is.EqualTo(new RunLimits(BenchmarkRunner.DotNetWallTime, defaults.MemoryBytes, defaults.OutputBytes, defaults.Processes)));
     Assert.That(result.Samples.Select(sample => sample.WallNs), Is.EqualTo(new[] { 100L, 120, 110 }));
     Assert.That((result.AllocatedBytes, result.Stats.ContainsKey("cpuNs")), Is.EqualTo(((long?)4312, false)));
+  }
+
+  /// <summary>The BenchmarkDotNet ceiling is a floor: a host that allows a step more wall time keeps its limits.</summary>
+  [TestCase(1, true)]
+  [TestCase(0, true)]
+  [TestCase(-1, false)]
+  public void ADotNetBenchmark_KeepsTheHostsLimitsWhenTheyAllowAsMuch(int extraTicks, bool kept) {
+    var limits = new RunLimits(BenchmarkRunner.DotNetWallTime + TimeSpan.FromTicks(extraTicks), 1, 2, 3);
+    var runner = new ScriptedBenchRunner(Completed("", 1));
+    var host = new BenchmarkHost(PrototypeFixture.RepositoryRoot, "abc123", _ => "10.0.100") { Environment = _ => Machine(), Limits = limits };
+    new BenchmarkRunner(runner, host, this._bag).Run(Definition() with { Kind = BenchmarkKind.DotNet, ExpectStdout = null }, "default");
+    var expected = kept ? limits : new RunLimits(BenchmarkRunner.DotNetWallTime, 1, 2, 3);
+    Assert.That(runner.Plans.Single().Limits, Is.EqualTo(expected));
   }
 
   [Test]
