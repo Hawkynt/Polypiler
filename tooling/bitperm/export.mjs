@@ -187,23 +187,29 @@ const extractRouteMaps = (lines, context, tests) => {
 };
 
 /**
- * The preset IDs in the order the page writes them. Enumerating PRESETS would put '6502' first, as an
- * integer-like key, so the order is read from the `[CPU_…]:` lines of the PRESETS literal.
+ * The preset IDs in the order the page writes them, each with the comment written directly above it.
+ * Enumerating PRESETS would put '6502' first, as an integer-like key, so the order is read from the
+ * `[CPU_…]:` lines of the PRESETS literal. The comment is the run of `//` lines immediately preceding
+ * the key line, without the slashes and joined by '; ': the page's citation of the preset's costs.
  */
 const presetOrder = (lines, context, presets) => {
   const start = lines.findIndex(line => /^const PRESETS = \{\s*$/.test(line));
   if (start < 0)
     fail("'const PRESETS' not found");
-  const ids = [];
+  const entries = [];
   for (let index = start + 1; index < lines.length && !/^\};\s*$/.test(lines[index]); ++index) {
     const key = /^\s*\[(CPU_\w+)\]:/.exec(lines[index]);
-    if (key)
-      ids.push(runInContext(key[1], context));
+    if (!key)
+      continue;
+    const comment = [];
+    for (let above = index - 1; above > start && /^\s*\/\//.test(lines[above]); --above)
+      comment.unshift(lines[above].trim().replace(/^\/\/\s*/, ''));
+    entries.push({ id: runInContext(key[1], context), comment: comment.join('; ') });
   }
-  const listed = new Set(ids);
-  if (ids.length !== listed.size || Object.keys(presets).some(id => !listed.has(id)))
+  const listed = new Set(entries.map(entry => entry.id));
+  if (entries.length !== listed.size || Object.keys(presets).some(id => !listed.has(id)))
     fail('the [CPU_…] keys of PRESETS do not match its entries');
-  return ids;
+  return entries;
 };
 
 /** The quick patterns of the page's mapping editor, applied at every width a preset allows. */
@@ -363,8 +369,8 @@ export const exportPage = (pagePath, expect = {}) => {
     costKey: block.costKey, enableKey: block.enableKey, platforms: block.platforms === undefined ? null : [...block.platforms],
     hasCanRoute: typeof block.canRoute === 'function', hasFindRoutings: typeof block.findRoutings === 'function'
   }));
-  const presets = presetOrder(lines, context, live.PRESETS).map(id => ({
-    id, name: live.PRESETS[id].name, allowedWidths: live.PRESETS[id].allowedWidths, costs: live.PRESETS[id].costs, enables: live.PRESETS[id].enables
+  const presets = presetOrder(lines, context, live.PRESETS).map(({ id, comment }) => ({
+    id, name: live.PRESETS[id].name, comment, allowedWidths: live.PRESETS[id].allowedWidths, costs: live.PRESETS[id].costs, enables: live.PRESETS[id].enables
   }));
   const { tests, defaultCosts } = extractTests(lines);
   for (const [what, actual] of [['blocks', blocks.length], ['presets', presets.length], ['tests', tests.length]])

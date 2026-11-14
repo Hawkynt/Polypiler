@@ -105,6 +105,11 @@ public sealed class BitPermFixtureTests {
   public void Preset_HasThePageCost(string id, string key, int value)
     => Assert.That(Preset(id).GetProperty("costs").GetProperty(key).GetInt32(), Is.EqualTo(value));
 
+  [TestCase("6502", "6502: ASL A/ROL A: 2 cycles (shifts only by 1 bit). No MUL. LDA abs,X: 4-5 cycles")]
+  [TestCase("modern", "Modern x86/x64 - Source: Agner Fog instruction tables, uops.info; SHL/ROR: 1 cycle latency. IMUL r,r: 3 cycles. PEXT/PDEP: 3 cycles. PSHUFB: 1-2 cycles. BSWAP: 1 cycle. L1 load: 4-5 cycles")]
+  public void Preset_CarriesTheCommentAboveItsKey(string id, string comment)
+    => Assert.That(Preset(id).GetProperty("comment").GetString(), Is.EqualTo(comment));
+
   [Test]
   public void Tests_AreFiftyOneInTenSectionsInSourceOrder() {
     var tests = Load("tests.json").EnumerateArray().ToArray();
