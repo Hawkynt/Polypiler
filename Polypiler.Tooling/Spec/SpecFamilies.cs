@@ -14,6 +14,7 @@ public static class SpecFamilies {
     new IrSpecFamily(),
     new LanguagesSpecFamily(),
     new PermutationsSpecFamily(),
+    new RecoverySpecFamily(),
   ];
 
 }
