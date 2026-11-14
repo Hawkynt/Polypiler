@@ -63,7 +63,16 @@ internal static partial class JavaScriptHelpers {
         "function $store64(array, index, value, little) {",
         OutsideBytes64,
         "  for (@let k = 0; k < 8; ++k) array[little ? index + k : index + 7 - k] = (k < 4 ? value.lo >>> (8 * k) : value.hi >>> (8 * (k - 4))) & 0xFF;",
-        "}"))
+        "}")),
+    // A floating-point number through a DataView of the bytes of the array, which only a typed array has; a view is made per access, so that the array may be any Uint8Array, also one of part of a larger buffer.
+    Same("$loadf32", Float("function $loadf32(array, index, little) {", 4, "return new DataView(array.buffer, array.byteOffset, array.byteLength).getFloat32(index, little);")),
+    Same("$loadf64", Float("function $loadf64(array, index, little) {", 8, "return new DataView(array.buffer, array.byteOffset, array.byteLength).getFloat64(index, little);")),
+    Same("$storef32", Float("function $storef32(array, index, value, little) {", 4, "new DataView(array.buffer, array.byteOffset, array.byteLength).setFloat32(index, value, little);")),
+    Same("$storef64", Float("function $storef64(array, index, value, little) {", 8, "new DataView(array.buffer, array.byteOffset, array.byteLength).setFloat64(index, value, little);"))
   ];
+
+  /// <summary>A helper on a floating-point number in the bytes of an array: the range checked, then the access.</summary>
+  private static string Float(string declaration, int size, string access)
+    => Lines(declaration, $"  if (index < 0 || index + {size} > array.length) throw new RangeError(\"index out of range\");", "  " + access, "}");
 
 }

@@ -123,6 +123,13 @@ public sealed record IrType {
     _ => 0
   };
 
+  /// <summary>The number of bytes a value of a number type takes in memory: 1, 2, 4 or 8; 0 for every other type.</summary>
+  public int Size => this.Kind switch {
+    IrTypeKind.F32 => 4,
+    IrTypeKind.F64 => 8,
+    _ => this.Bits / 8
+  };
+
   /// <summary>Whether values of the type are floating-point numbers.</summary>
   public bool IsFloat => this.Kind is IrTypeKind.F32 or IrTypeKind.F64;
 

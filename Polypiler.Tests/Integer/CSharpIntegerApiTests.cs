@@ -123,6 +123,19 @@ public sealed class CSharpIntegerApiTests {
       yield return (Binary, $"Write{sized}BigEndian", $"public static byte[] F(byte[] a, int c) {{ {Binary}.Write{sized}BigEndian(a, ({type})(c > 0 ? -c : ~c)); return a; }}");
       yield return ("System.BitConverter", $"To{sized}", $"public static {type} F(byte[] a) => System.BitConverter.To{sized}(a.AsSpan());");
     }
+
+    // The floating-point numbers of #1313, as their encoding.
+    foreach (var (sized, type, size) in new[] { ("Single", "float", 4), ("Double", "double", 8) }) {
+      foreach (var order in new[] { "Little", "Big" }) {
+        yield return (Binary, $"Read{sized}{order}Endian", $"public static {type} F(byte[] a, int b) => {Binary}.Read{sized}{order}Endian(a.AsSpan(b));");
+        yield return (Binary, $"Read{sized}{order}Endian", $"public static {type} F(byte[] a, int b) => {Binary}.Read{sized}{order}Endian(System.MemoryExtensions.AsSpan(a, b, {size}));");
+        yield return (Binary, $"Read{sized}{order}Endian", $"public static {type} F(byte[] a) => {Binary}.Read{sized}{order}Endian(a);");
+        yield return (Binary, $"Write{sized}{order}Endian", $"public static byte[] F(byte[] a, int b, {type} c) {{ {Binary}.Write{sized}{order}Endian(a.AsSpan(b, {size}), c); return a; }}");
+        yield return (Binary, $"Write{sized}{order}Endian", $"public static byte[] F(byte[] a, {type} c) {{ {Binary}.Write{sized}{order}Endian(a, -c); return a; }}");
+      }
+
+      yield return ("System.BitConverter", $"To{sized}", $"public static {type} F(byte[] a, int b) => System.BitConverter.To{sized}(a, b);");
+    }
   }
 
   /// <summary>A method as the one class of a source file that has <c>System</c> in scope, which <c>AsSpan</c> needs.</summary>
@@ -134,6 +147,7 @@ public sealed class CSharpIntegerApiTests {
   private static object[] Operands(IrType type) => type.Kind switch {
     IrTypeKind.Array => [new byte[] { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0x80, 0x7F }, new byte[] { 0xFF, 0x00 }, new byte[8]],
     IrTypeKind.F64 => [0.0, -1.5, 255.75, 1e10, -1e19, 1e20, double.NaN, double.PositiveInfinity],
+    IrTypeKind.F32 => [0.0f, -0.0f, -1.5f, 0.1f, float.Epsilon, float.MaxValue, float.NaN, float.NegativeInfinity],
     IrTypeKind.I32 => [.. IntegerCases.Edges(IrType.I32), -1, 4, 9, 13, 33],
     _ => IntegerCases.Edges(type)
   };

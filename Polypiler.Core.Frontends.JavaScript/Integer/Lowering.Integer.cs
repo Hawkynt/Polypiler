@@ -64,6 +64,8 @@ internal sealed partial class Lowering {
   /// <summary>
   /// A method of a <c>DataView</c>: a read or a write of 8 bits is an element of the array, one of 16,
   /// 32 or 64 bits the endian load or store in the byte order the last argument states as a literal.
+  /// A floating-point number is loaded and stored as its binary32 or binary64 encoding; the number
+  /// <c>setFloat32</c> stores is rounded to binary32 first.
   /// </summary>
   private object ViewCall(CallExpression call, string method, IrExpr bytes, bool statement) {
     var arguments = call.Arguments;
@@ -75,7 +77,7 @@ internal sealed partial class Lowering {
     if (arguments.Count < count || arguments.Count > count + 1)
       throw this.Unsupported(call, $"DataView.{method} with {arguments.Count} arguments");
 
-    var little = arguments.Count > count && type.Bits > 8
+    var little = arguments.Count > count && type.Size > 1
       ? arguments[count] is BooleanLiteral { Value: var order } ? order : throw this.Unsupported(arguments[count], $"DataView.{method} with a byte order that is not a literal")
       : false;
     var position = this.Evaluate(arguments[0]);
@@ -83,18 +85,19 @@ internal sealed partial class Lowering {
       throw this.Unsupported(arguments[0], $"a DataView index that is no proven integer, which is {position.Type.Describe()}");
 
     var index = Convert(position.Expr, IrType.I32);
-    if (reads && type.Bits == 8)
+    if (reads && type.Size == 1)
       return Convert(new IrArrayLoad(bytes, index), type);
 
     if (reads)
       return new IrIntrinsic(little ? IrIntrinsicOp.LoadLittle : IrIntrinsicOp.LoadBig, type, [bytes, index]);
 
-    if (type.Bits == 8 && !statement)
+    if (type.Size == 1 && !statement)
       throw this.Unsupported(call, $"DataView.{method} inside an expression");
 
-    var value = type.IsLong ? this.Big(arguments[1], type.IsSigned ? Coercion.Int64 : Coercion.Uint64, type)
+    var value = type.IsFloat ? Convert(this.Float(arguments[1]), type)
+      : type.IsLong ? this.Big(arguments[1], type.IsSigned ? Coercion.Int64 : Coercion.Uint64, type)
       : Convert(type.IsSigned ? this.Int32(arguments[1]) : this.Uint32(arguments[1]), type);
-    return type.Bits == 8
+    return type.Size == 1
       ? new IrStore(bytes, index, Convert(value, IrType.U8))
       : new IrIntrinsic(little ? IrIntrinsicOp.StoreLittle : IrIntrinsicOp.StoreBig, IrType.Void, [bytes, index, value]);
   }

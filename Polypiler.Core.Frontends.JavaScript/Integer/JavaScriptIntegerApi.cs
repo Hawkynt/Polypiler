@@ -20,10 +20,11 @@ public static class JavaScriptIntegerApi {
 
   private const string View = "DataView.prototype.";
 
-  /// <summary>The integer type each method of <c>DataView</c> reads or writes.</summary>
+  /// <summary>The type each method of <c>DataView</c> reads or writes: an integer, or a binary32 or binary64 number.</summary>
   private static readonly (string Name, IrType Type)[] _views = [
     ("Int8", IrType.I8), ("Uint8", IrType.U8), ("Int16", IrType.I16), ("Uint16", IrType.U16),
-    ("Int32", IrType.I32), ("Uint32", IrType.U32), ("BigInt64", IrType.I64), ("BigUint64", IrType.U64)
+    ("Int32", IrType.I32), ("Uint32", IrType.U32), ("BigInt64", IrType.I64), ("BigUint64", IrType.U64),
+    ("Float32", IrType.F32), ("Float64", IrType.F64)
   ];
 
   /// <summary>Every member the frontend maps.</summary>
@@ -36,18 +37,27 @@ public static class JavaScriptIntegerApi {
     new("Math.sign", "Sign | Min, Max", "on a proven integer as an int32; on any other number the floating-point form"),
     new("BigInt.asUintN", "ZeroExtend | Convert", "with a literal width from 1 to 64, the argument a BigInt computed modulo 2^64; 64 is the cut to uint64 itself"),
     new("BigInt.asIntN", "SignExtend | Convert", "with a literal width from 1 to 64, the argument a BigInt computed modulo 2^64; 64 is the cut to int64 itself"),
-    .. _views.Select(view => new JavaScriptIntegerMember($"{View}get{view.Name}", view.Type.Bits == 8 ? "ArrayLoad" : "LoadLittle | LoadBig", ViewNote)),
-    .. _views.Select(view => new JavaScriptIntegerMember($"{View}set{view.Name}", view.Type.Bits == 8 ? "Store" : "StoreLittle | StoreBig", ViewNote))
+    .. _views.Select(view => new JavaScriptIntegerMember($"{View}get{view.Name}", view.Type.Size == 1 ? "ArrayLoad" : "LoadLittle | LoadBig", Note(view.Type, true))),
+    .. _views.Select(view => new JavaScriptIntegerMember($"{View}set{view.Name}", view.Type.Size == 1 ? "Store" : view.Type == IrType.F32 ? "Convert, StoreLittle | Convert, StoreBig" : "StoreLittle | StoreBig", Note(view.Type, false)))
   ];
 
   private const string ViewNote = "on a DataView made in the same function by new DataView(bytes.buffer) or new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength) of a Uint8Array, at a proven integer index, the byte order a literal (big-endian when it is missing); the first form is read as the view of the bytes of the array, which it is unless the array is part of a larger buffer";
+
+  /// <summary>The note of a method of <c>DataView</c>: the conditions of every method, and for a floating-point one what becomes of the number.</summary>
+  private static string Note(IrType type, bool reads) => type.Kind switch {
+    IrTypeKind.F32 => ViewNote + (reads
+      ? "; the binary32 number read is a double exactly"
+      : "; the value is a number, rounded to binary32 to the nearest, ties to even (ECMA-262 NumericToRawBytes)"),
+    IrTypeKind.F64 => ViewNote + (reads ? "; the binary64 number read is the double" : "; the value is a number, stored as it is"),
+    _ => ViewNote
+  };
 
   /// <summary>The entry of a member, or <see langword="null"/> when the table has none.</summary>
   /// <param name="member">The function as a program calls it.</param>
   /// <returns>The entry.</returns>
   public static JavaScriptIntegerMember? Find(string member) => Members.FirstOrDefault(entry => entry.Member == member);
 
-  /// <summary>The integer type a method of <c>DataView</c> reads or writes, or <see langword="null"/> for a name that is none of them.</summary>
+  /// <summary>The type a method of <c>DataView</c> reads or writes, or <see langword="null"/> for a name that is none of them.</summary>
   /// <param name="method">The name of the method, for example <c>getUint32</c>.</param>
   /// <returns>The type.</returns>
   internal static IrType? ViewType(string method)

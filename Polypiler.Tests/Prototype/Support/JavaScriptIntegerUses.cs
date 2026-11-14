@@ -74,10 +74,12 @@ internal static class JavaScriptIntegerUses {
     uses.Add(Use("BigInt.asUintN", "return BigInt.asUintN(16, a * a);", ("a", IrType.U64)));
     uses.Add(Use("BigInt.asIntN", "return BigInt.asIntN(32, a + 1n);", ("a", IrType.I64)));
     foreach (var (name, type) in new[] { ("Int8", IrType.I8), ("Uint8", IrType.U8), ("Int16", IrType.I16), ("Uint16", IrType.U16),
-               ("Int32", IrType.I32), ("Uint32", IrType.U32), ("BigInt64", IrType.I64), ("BigUint64", IrType.U64) }) {
-      foreach (var order in type.Bits == 8 ? new[] { "" } : ["", ", true", ", false"]) {
+               ("Int32", IrType.I32), ("Uint32", IrType.U32), ("BigInt64", IrType.I64), ("BigUint64", IrType.U64),
+               ("Float32", IrType.F32), ("Float64", IrType.F64) }) {
+      foreach (var order in type.Size == 1 ? new[] { "" } : ["", ", true", ", false"]) {
         uses.Add(Use($"{View}get{name}", $"const v = new DataView(b.buffer);\n  return v.get{name}(i{order});", ("b", bytes), ("i", IrType.I32)));
-        uses.Add(Use($"{View}set{name}", $"const v = new DataView(b.buffer, b.byteOffset, b.byteLength);\n  v.set{name}(i, x{order});\n  return b;", ("b", bytes), ("i", IrType.I32), ("x", type)));
+        // A floating-point number is stored from a number, which is a double.
+        uses.Add(Use($"{View}set{name}", $"const v = new DataView(b.buffer, b.byteOffset, b.byteLength);\n  v.set{name}(i, x{order});\n  return b;", ("b", bytes), ("i", IrType.I32), ("x", type.IsFloat ? IrType.F64 : type)));
       }
     }
 

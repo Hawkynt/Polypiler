@@ -443,9 +443,9 @@ public enum IrIntrinsicOp {
   ZeroExtend,
 
   /// <summary>
-  /// <c>(array, index)</c>: the integer of 16, 32 or 64 bits of the type of the node whose bytes
-  /// stand in a <c>u8[]</c> from the index on, the lowest first. A byte outside the array traps with
-  /// an index out of range.
+  /// <c>(array, index)</c>: the integer of 16, 32 or 64 bits, or the IEEE 754 binary32 or binary64
+  /// number, of the type of the node whose bytes stand in a <c>u8[]</c> from the index on, the lowest
+  /// first. A byte outside the array traps with an index out of range.
   /// </summary>
   LoadLittle,
 
@@ -453,9 +453,9 @@ public enum IrIntrinsicOp {
   LoadBig,
 
   /// <summary>
-  /// <c>(array, index, value)</c>: writes the bytes of an integer of 16, 32 or 64 bits into a
-  /// <c>u8[]</c> from the index on, the lowest first. A byte outside the array traps with an index
-  /// out of range before anything is written.
+  /// <c>(array, index, value)</c>: writes the bytes of an integer of 16, 32 or 64 bits, or the IEEE 754
+  /// encoding of an <c>f32</c> or <c>f64</c>, into a <c>u8[]</c> from the index on, the lowest first.
+  /// A byte outside the array traps with an index out of range before anything is written.
   /// </summary>
   StoreLittle,
 

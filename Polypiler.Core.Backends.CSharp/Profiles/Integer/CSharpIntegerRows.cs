@@ -29,8 +29,10 @@ internal static partial class CSharpIntegerRows {
     .. Saturating, .. Carry, .. Overflow, .. BitFields, .. Masks, .. EndianAccess
   ];
 
-  /// <summary>The keyword of an integer type.</summary>
+  /// <summary>The keyword of an integer type, or of a floating-point type an array of bytes is read as.</summary>
   private static string Type(IrTypeKind kind) => kind switch {
+    IrTypeKind.F32 => "float",
+    IrTypeKind.F64 => "double",
     IrTypeKind.I8 => "sbyte",
     IrTypeKind.U8 => "byte",
     IrTypeKind.I16 => "short",

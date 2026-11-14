@@ -125,14 +125,34 @@ public sealed class CSharpCapability {
   /// <summary>Whether the arguments of an operation are such that <see cref="Total"/> applies.</summary>
   public Func<IReadOnlyList<IrExpr>, bool>? IsTotal { get; private init; }
 
+  /// <summary>
+  /// The operation as other operations of the IR, each written by its own row, where the profile
+  /// lacks the row and it has no <see cref="Replacement"/>; or <see langword="null"/>. It takes the
+  /// node and gives an expression of the same type that evaluates the same arguments in the same order.
+  /// </summary>
+  public Func<IrIntrinsic, IrExpr>? Rewrite { get; private init; }
+
   /// <summary>The row with a form for arguments with which the operation cannot trap.</summary>
   /// <param name="form">The form, a template.</param>
   /// <param name="holds">Whether given arguments are such.</param>
   /// <returns>The row extended.</returns>
   public CSharpCapability WithTotal(CSharpForm form, Func<IReadOnlyList<IrExpr>, bool> holds) => new(this.Name) {
     Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
-    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds, Rewrite = this.Rewrite
   };
+
+  /// <summary>The row written as other operations of the IR where the profile lacks it.</summary>
+  /// <param name="rewrite">The operation as others, from its node; see <see cref="Rewrite"/>.</param>
+  /// <returns>The row extended.</returns>
+  public CSharpCapability WithRewrite(Func<IrIntrinsic, IrExpr> rewrite) => new(this.Name) {
+    Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = rewrite
+  };
+
+  /// <summary>Whether a profile writes the operation of the row as the others of <see cref="Rewrite"/>.</summary>
+  /// <param name="profile">The profile.</param>
+  /// <returns><see langword="true"/> when the profile lacks the row, the row has no replacement and it has a rewrite.</returns>
+  public bool IsRewrittenIn(CSharpProfile profile) => this.Rewrite is not null && this.Replacement is null && !this.IsIn(profile);
 
   /// <summary>A feature of the language.</summary>
   /// <param name="name">The feature as the language reference names it.</param>

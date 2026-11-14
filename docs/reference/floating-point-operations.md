@@ -75,6 +75,25 @@ cases for the trigonometric functions and up to 400 CORE-MATH worst cases. The g
 | `Fraction(x)`, `Exponent(x)` | C `frexp`: `x = Fraction * 2^Exponent`, 0.5 ≤ \|Fraction\| < 1; 0, ±∞ and NaN give `(x, 0)` |
 | `FloatBits`, `BitsFloat` | the IEEE 754 bits as `i64`/`i32` and back |
 
+## In byte buffers
+
+The endian accesses of the integers take `f32` and `f64` too: `LoadLittle`, `LoadBig`
+`(u8[], index) → f32 | f64` and `StoreLittle`, `StoreBig` `(u8[], index, f32 | f64) → void` read and
+write the binary32 or binary64 encoding of IEEE 754-2019 §3.4, the lowest byte first or the highest;
+a byte outside the array traps with *index out of range*, before anything is written. The interpreter
+reads the integer pattern and makes the number of those bits (`BitsFloat`), never converting a binary32
+number through binary64. The members and the forms per profile are on the page of the
+[integer operations](integer-operations.md): `DataView` `getFloat32`, `getFloat64`, `setFloat32`,
+`setFloat64` (`setFloat32` rounds its number to binary32 first), `BinaryPrimitives.Read`/`Write`
+`Single`/`Double`, `BitConverter.ToSingle` and `ToDouble`. `Half`, `getFloat16` and `setFloat16` are refused.
+
+**NaN.** Every value but a NaN is compared bit for bit, the zeros and the subnormals included. A stored
+NaN is compared by class: any NaN encoding matches any other (ADR 0005), because the runtimes encode
+one differently and none is wrong - `double.NaN` is `fff8000000000000` in .NET and `NaN` is
+`7ff8000000000000` in V8; a binary32 signalling NaN read by `getFloat32` reaches JavaScript as a
+binary64 number and comes back quieted (`7fa00000` → `7fe00000`), while a binary64 NaN keeps its
+payload through `getFloat64` and `setFloat64`. Preserving payloads across targets is not planned.
+
 ## Classification
 
 `IsNaN`, `IsInfinity`, `IsFinite`, `IsNegative` (the sign bit, also of -0 and a NaN), `IsNormal`,
@@ -159,6 +178,8 @@ the C# file and the JavaScript file of a strict translation agree bit for bit.
   `Lerp` is `FusedMultiplyAdd(a, 1 - t, b * t)`. `Math.Round(x, mode)` is `RoundEven`, `RoundAway`,
   `Truncate`, `Floor` or `Ceiling` by the constant mode; with digits it is `RoundDigits`. A member
   outside the table, a computed mode and an estimate are refused with `PLY1002`, naming the member.
+- The members that read and write a number in a byte buffer are listed with the endian accesses of the
+  integers, in `CSharpIntegerApi` and `JavaScriptIntegerApi`.
 - JavaScript: `JavaScriptFloatApi` in the JavaScript frontend - every function of `Math` but `random`
   (refused with `PLY1102`), `Math.round` as `RoundHalfUp`, `Math.pow` and `**` as `PowEcma`,
   `Math.hypot` of more than two arguments as a left fold of `Hypot`, the predicates of `Number`, the
