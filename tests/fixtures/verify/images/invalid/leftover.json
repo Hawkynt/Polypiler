@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "fixture": "verify.images.invalid.leftover",
+  "provenance": {
+    "kind": "published",
+    "source": "backlog/infra/VER-IMAGES.md",
+    "detail": "an invalid vector file: leftover",
+    "generatedBy": "hand"
+  },
+  "export": "f",
+  "signature": {
+    "parameters": [
+      {
+        "name": "x",
+        "type": "u32"
+      }
+    ],
+    "result": "u8"
+  },
+  "vectors": [
+    {
+      "name": "five bytes",
+      "input": {
+        "hex": "0700000000"
+      },
+      "expected": {
+        "hex": "07"
+      }
+    }
+  ]
+}

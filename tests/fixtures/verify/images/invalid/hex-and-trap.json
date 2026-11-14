@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "fixture": "verify.images.invalid.hex-and-trap",
+  "provenance": {
+    "kind": "published",
+    "source": "backlog/infra/VER-IMAGES.md",
+    "detail": "an invalid vector file: hex-and-trap",
+    "generatedBy": "hand"
+  },
+  "export": "f",
+  "signature": {
+    "parameters": [
+      {
+        "name": "x",
+        "type": "u32"
+      }
+    ],
+    "result": "u32"
+  },
+  "vectors": [
+    {
+      "name": "both",
+      "input": {
+        "hex": "00000000"
+      },
+      "expected": {
+        "hex": "00000000"
+      },
+      "expectedTrap": "divide-by-zero"
+    }
+  ]
+}

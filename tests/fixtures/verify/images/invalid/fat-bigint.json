@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "fixture": "verify.images.invalid.fat-bigint",
+  "provenance": {
+    "kind": "published",
+    "source": "backlog/infra/VER-IMAGES.md",
+    "detail": "an invalid vector file: fat-bigint",
+    "generatedBy": "hand"
+  },
+  "export": "f",
+  "signature": {
+    "parameters": [
+      {
+        "name": "n",
+        "type": "bigint"
+      }
+    ],
+    "result": "void"
+  },
+  "vectors": [
+    {
+      "name": "127 with a sign byte",
+      "input": {
+        "hex": "020000007f00"
+      },
+      "expected": {
+        "hex": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "fixture": "verify.images.invalid.unknown-type",
+  "provenance": {
+    "kind": "published",
+    "source": "backlog/infra/VER-IMAGES.md",
+    "detail": "an invalid vector file: unknown-type",
+    "generatedBy": "hand"
+  },
+  "export": "f",
+  "signature": {
+    "parameters": [
+      {
+        "name": "n",
+        "type": "int"
+      }
+    ],
+    "result": "void"
+  },
+  "vectors": [
+    {
+      "name": "any",
+      "input": {
+        "hex": "00"
+      },
+      "expected": {
+        "hex": ""
+      }
+    }
+  ]
+}
