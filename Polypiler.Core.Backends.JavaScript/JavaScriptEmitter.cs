@@ -357,6 +357,8 @@ public static partial class JavaScriptEmitter {
           return !type.Element!.IsStruct && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
         case IrTypeKind.Struct:
           return type.Declaration!.Name;
+        case IrTypeKind.Span or IrTypeKind.ReadOnlySpan:
+          return this.DescribeView(type);
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)
             return "bigint";
@@ -614,7 +616,8 @@ public static partial class JavaScriptEmitter {
     private JsCall Helper(string name, params IrExpr[] arguments) => this.Helper(name, arguments.Select(this.Text));
 
     /// <summary>A store into an array element, through the helper that checks the index; a struct is stored as a value.</summary>
-    private JsCall Stored(IrStore store) => this.Helper("$set", [this.Text(store.Array), this.Text(store.Index), this.Value(store.Value)]);
+    private JsCall Stored(IrStore store)
+      => this.Plain(store.Array) ? this.ViewStore(store) : this.Helper("$set", [this.Text(store.Array), this.Text(store.Index), this.Value(store.Value)]);
 
     private JsCall Helper(string name, IEnumerable<JsExpression> arguments) {
       this._used.Add(name);

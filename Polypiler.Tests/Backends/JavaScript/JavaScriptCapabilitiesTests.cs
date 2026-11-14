@@ -98,6 +98,13 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("BigUint64Array", 2020, "Array")]
   [TestCase(".getBigInt64", 2020, ".getUint32")]
   [TestCase(".setBigInt64", 2020, ".setUint32")]
+  [TestCase("subarray as a view", 2015, "$vobj")]
+  [TestCase(".getInt16", 2015, "$vat")]
+  [TestCase(".getUint16", 2015, "$vat")]
+  [TestCase(".setInt16", 2015, "$vat")]
+  [TestCase(".setUint16", 2015, "$vat")]
+  [TestCase(".getBigUint64", 2020, "$load64")]
+  [TestCase(".setBigUint64", 2020, "$store64")]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
     Assert.That((entry.Name, entry.Since, entry.Replacement), Is.EqualTo((name, since, replacement)));
@@ -119,7 +126,8 @@ public sealed class JavaScriptCapabilitiesTests {
     Assert.That(typed, Is.EqualTo(new[] {
       "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array", "Uint32Array", "Float32Array", "Float64Array",
       "ArrayBuffer", "DataView", ".set", ".subarray", ".setFloat64", ".getFloat64", ".setFloat32", ".getFloat32",
-      ".setInt32", ".getInt32", ".setUint32", ".getUint32"
+      ".setInt32", ".getInt32", ".setUint32", ".getUint32",
+      "subarray as a view", ".getInt16", ".getUint16", ".setInt16", ".setUint16"
     }));
     Assert.That(_table.Entries.Where(entry => entry.TypedArray).Select(entry => entry.Since), Has.All.EqualTo(2015));
   }

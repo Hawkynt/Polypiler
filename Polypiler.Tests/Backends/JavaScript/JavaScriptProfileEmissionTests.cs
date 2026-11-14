@@ -594,6 +594,10 @@ public sealed class JavaScriptProfileEmissionTests {
     const string bits = "public static long F(double d, float f, long l, int i) => System.BitConverter.DoubleToInt64Bits(d) + System.BitConverter.SingleToInt32Bits(f) "
       + "+ (long)System.BitConverter.Int64BitsToDouble(l) + (long)System.BitConverter.Int32BitsToSingle(i);";
     string Array(string element) => $"public static int F(int n) => new {element}[n].Length;";
+    string Read(string name, string type)
+      => $"public static {type} F(byte[] a) {{ System.ReadOnlySpan<byte> s = a; return System.Buffers.Binary.BinaryPrimitives.Read{name}LittleEndian(s.Slice(1)); }}";
+    string Write(string name, string type)
+      => $"public static byte[] F(byte[] a, {type} v) {{ System.Span<byte> s = a; System.Buffers.Binary.BinaryPrimitives.Write{name}LittleEndian(s, v); return a; }}";
     var cases = new Dictionary<string, (string Source, string Native, string Replacement)> {
       ["let"] = ("public static int F(int a) { int b = a; return b; }", "let b = a;", "var b = a;"),
       ["const"] = ("const int K = 2; public static int F() => K;", "const K = 2;", "var K = 2;"),
@@ -638,7 +642,14 @@ public sealed class JavaScriptProfileEmissionTests {
       ["BigInt64Array"] = (Array("long"), "new BigInt64Array($len(n))", "$new($len(n), { hi: 0, lo: 0 })"),
       ["BigUint64Array"] = (Array("ulong"), "new BigUint64Array($len(n))", "$new($len(n), { hi: 0, lo: 0 })"),
       [".getBigInt64"] = (bits, "return $view.getBigInt64(0);", "hi: $view.getUint32(0)"),
-      [".setBigInt64"] = (bits, "$view.setBigInt64(0, value);", "$view.setUint32(0, value.hi);")
+      [".setBigInt64"] = (bits, "$view.setBigInt64(0, value);", "$view.setUint32(0, value.hi);"),
+      ["subarray as a view"] = ("public static int F(byte[] a) { System.Span<byte> s = System.MemoryExtensions.AsSpan(a, 1); return s.Length; }", "view.subarray(start, start + length)", "$vobj(a, 1)"),
+      [".getInt16"] = (Read("Int16", "short"), ".getInt16(0, true)", "$vat("),
+      [".getUint16"] = (Read("UInt16", "ushort"), ".getUint16(0, true)", "$vat("),
+      [".setInt16"] = (Write("Int16", "short"), "\"setInt16\"", "$vat(s, 0, 2)"),
+      [".setUint16"] = (Write("UInt16", "ushort"), "\"setUint16\"", "$vat(s, 0, 2)"),
+      [".getBigUint64"] = (Read("UInt64", "ulong"), ".getBigUint64(0, true)", "$load64("),
+      [".setBigUint64"] = (Write("UInt64", "ulong"), "\"setBigUint64\"", "$store64(")
     };
     var replaceable = JavaScriptCapabilities.Standard.Entries.Where(entry => entry is { Emitted: true, Replacement: not null }).ToList();
     Assert.That(cases.Keys, Is.EquivalentTo(replaceable.Select(entry => entry.Name)));

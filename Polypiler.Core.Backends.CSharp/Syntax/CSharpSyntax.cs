@@ -193,7 +193,12 @@ public sealed record CsObjectCreation(CsType CreatedType, IReadOnlyList<CsExpres
 /// <param name="ElementType">The type of the elements.</param>
 /// <param name="Size">The number of elements, or <see langword="null"/> when the initializer says it.</param>
 /// <param name="Initializer">The elements, or <see langword="null"/>.</param>
-public sealed record CsArrayCreation(CsType ElementType, CsExpression? Size, CsArrayInitializer? Initializer) : CsExpression;
+public sealed record CsArrayCreation(CsType ElementType, CsExpression? Size, CsArrayInitializer? Initializer) : CsExpression {
+
+  /// <summary>Whether the elements are made on the stack, <c>stackalloc T[size]</c>, for a span (C# 7.2; inside an expression C# 8).</summary>
+  public bool OnStack { get; init; }
+
+}
 
 /// <summary><c>{ elements }</c>: the elements of an array.</summary>
 /// <param name="Elements">The elements.</param>

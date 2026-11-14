@@ -52,7 +52,13 @@ public enum CSharpFeature {
   ReadOnlyStruct,
 
   /// <summary>A <c>record struct</c> with its positional parameters and the equality the compiler gives it (C# 10).</summary>
-  RecordStruct
+  RecordStruct,
+
+  /// <summary><c>stackalloc</c> anywhere an expression stands, not only as the initializer of a local (C# 8).</summary>
+  StackAllocExpression,
+
+  /// <summary>The ranges and indices <c>v[a..b]</c> and <c>v[^n]</c> (C# 8).</summary>
+  Ranges
 
 }
 
@@ -369,7 +375,11 @@ public sealed class CSharpCapabilities {
     .. CSharpIntegerRows.All,
 
     // The floating-point operations of #1301.
-    .. CSharpFloatCapabilities.Rows
+    .. CSharpFloatCapabilities.Rows,
+
+    // The views of #1325.
+    .. CSharpViewRows.All,
+    .. CSharpViewRows.Helpers
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>
