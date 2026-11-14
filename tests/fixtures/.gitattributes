@@ -1,0 +1,4 @@
+# Golden files: tests/fixtures/golden.lock.json hashes their bytes, which must be the same on every platform.
+*.vectors.json -text
+golden.provenance.json -text
+golden/** -text

@@ -1,0 +1,15 @@
+{
+  "name": "test-18-bmi2-findroutings-rejects-duplicate-sources",
+  "source": {"line": 1040},
+  "width": 8,
+  "mapping": [
+    {"type": "src", "val": 5, "inv": false},
+    {"type": "src", "val": 5, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"}
+  ]
+}

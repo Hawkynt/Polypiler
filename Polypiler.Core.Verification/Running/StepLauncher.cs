@@ -30,8 +30,8 @@ public enum StepEnd {
 /// <param name="Stdout">Standard output, cut off at the output limit.</param>
 /// <param name="Stderr">Standard error, cut off at the output limit.</param>
 /// <param name="WallTime">How long it took.</param>
-/// <param name="CpuTime">The largest processor time of its tree that was sampled.</param>
-/// <param name="PeakMemoryBytes">The largest resident memory of its tree that was sampled.</param>
+/// <param name="CpuTime">The largest processor time of its tree that was sampled, or the kernel's account of it at the end where that is larger (<see cref="ExitUsage"/>).</param>
+/// <param name="PeakMemoryBytes">The largest resident memory of its tree that was sampled, or the largest single resident set the kernel accounted where that is larger and above the launcher's own peak (<see cref="ExitUsage.Peak"/>).</param>
 public sealed record StepResult(StepEnd End, int ExitCode, byte[] Stdout, byte[] Stderr, TimeSpan WallTime, TimeSpan CpuTime, long PeakMemoryBytes);
 
 /// <summary>
@@ -111,6 +111,8 @@ public static class StepLauncher {
     info.Environment.Clear();
     foreach (var (name, value) in Environment(executable, workingDirectory))
       info.Environment[name] = value;
+    foreach (var (name, value) in step.Environment)
+      info.Environment[name] = value;
 
     var capture = new OutputCapture(limits.OutputBytes);
     var clock = Stopwatch.StartNew();
@@ -134,6 +136,9 @@ public static class StepLauncher {
 
   /// <summary>Starts the process, puts it under the sandbox's watch, serves its pipes and watches it to its end.</summary>
   private static (StepEnd End, int ExitCode, long Peak, TimeSpan Cpu) StartAndWatch(ISandbox sandbox, ProcessStartInfo info, ReadOnlyMemory<byte> stdin, OutputCapture capture, RunLimits limits, Stopwatch clock, CancellationToken cancellationToken) {
+    long launcherPeak;
+    using (var self = Process.GetCurrentProcess())
+      launcherPeak = self.PeakWorkingSet64;
     var process = Process.Start(info)!;
     IProcessTreeMonitor monitor;
     try {
@@ -145,6 +150,9 @@ public static class StepLauncher {
       throw;
     }
 
+    // The kernel's account of the process, read as it ends: a program shorter than the sample
+    // interval would otherwise show no processor time and only the launcher's memory.
+    var usage = Dedicated(() => ExitUsage.Wait(process.Id));
     using (monitor) {
       Task[] pipes = [
         Dedicated(() => capture.Pump(process.StandardOutput.BaseStream, capture.Stdout)),
@@ -153,6 +161,8 @@ public static class StepLauncher {
       ];
       try {
         var (end, peak, cpu) = Watch(process, monitor, capture, limits, clock, cancellationToken);
+        if (usage.Wait(_drainTime) && usage.Result is { } accounted)
+          (peak, cpu) = (accounted.Peak(peak, launcherPeak), accounted.CpuTime > cpu ? accounted.CpuTime : cpu);
         return (end, process.ExitCode, peak, cpu);
       } finally {
         // A pipe still open after the drain time is held by a reading thread; closing it under that

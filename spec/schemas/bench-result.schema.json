@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/bench-result.schema.json",
+  "title": "Benchmark result",
+  "description": "artifacts/bench/<id>/<variant>.json, written canonically by polypiler-tooling bench run. Times are integer nanoseconds, sizes integer bytes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "variant", "commit", "environment", "samples", "stats", "buildNs", "sourceBytes", "binaryBytes", "allocatedBytes", "allocations", "extra"],
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0 },
+    "optionalCount": { "type": ["integer", "null"], "minimum": 0 },
+    "statistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["median", "mad", "min", "max"],
+      "properties": {
+        "median": { "$ref": "#/$defs/count", "description": "The middle sample; for an even count the mean of the two middle ones, rounded half to even." },
+        "mad": { "$ref": "#/$defs/count", "description": "The median absolute deviation from the median; no sample is removed as an outlier." },
+        "min": { "$ref": "#/$defs/count" },
+        "max": { "$ref": "#/$defs/count" }
+      }
+    }
+  },
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "variant": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "commit": { "type": "string", "minLength": 1 },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "osVersion", "architecture", "cpuModel", "logicalCores", "toolchains", "fingerprint"],
+      "description": "Results are compared only when their fingerprints agree (PLY0072).",
+      "properties": {
+        "os": { "type": "string" },
+        "osVersion": { "type": "string" },
+        "architecture": { "type": "string" },
+        "cpuModel": { "type": "string" },
+        "logicalCores": { "type": "integer", "minimum": 1 },
+        "toolchains": { "type": "object", "additionalProperties": { "type": "string" }, "description": "The version of each toolchain used, by its key in tooling/toolchains.lock." },
+        "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 of the canonical JSON of the object without this property." }
+      }
+    },
+    "samples": {
+      "type": "array",
+      "description": "One entry per measured run (process) or measured iteration (dotnet); warm-up runs are excluded.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["wallNs", "cpuNs", "peakRssBytes"],
+        "properties": {
+          "wallNs": { "$ref": "#/$defs/count", "description": "Execution time: wall clock; for dotnet the time of one operation." },
+          "cpuNs": { "$ref": "#/$defs/optionalCount", "description": "Execution time: user and system processor time of the run's process tree." },
+          "peakRssBytes": { "$ref": "#/$defs/optionalCount", "description": "Peak memory: the largest resident memory of the run's process tree." }
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wallNs": { "$ref": "#/$defs/statistics" },
+        "cpuNs": { "$ref": "#/$defs/statistics" },
+        "peakRssBytes": { "$ref": "#/$defs/statistics" }
+      }
+    },
+    "buildNs": { "$ref": "#/$defs/optionalCount", "description": "Build time: the median time of the build steps." },
+    "sourceBytes": { "$ref": "#/$defs/optionalCount", "description": "Generated source size: the bytes of sizes.source." },
+    "binaryBytes": { "$ref": "#/$defs/optionalCount", "description": "Binary size: the bytes of sizes.binary after the build." },
+    "allocatedBytes": { "$ref": "#/$defs/optionalCount", "description": "Compilation cost: the bytes the compiler allocates per operation, measured in process by BenchmarkDotNet (dotnet only)." },
+    "allocations": { "$ref": "#/$defs/optionalCount", "description": "Allocation count per operation, where the measurement provides it (dotnet only)." },
+    "extra": { "type": "object", "additionalProperties": { "type": "integer" }, "description": "Further named metrics the caller supplied, compared like any other." }
+  }
+}
