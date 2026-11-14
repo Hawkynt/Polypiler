@@ -1,0 +1,12 @@
+# The harness's own fixture: a node program whose output is known in closed form.
+id: sum-loop
+description: Sums the integers 0 to 999 999 in node and prints the sum.
+kind: process
+toolchain: node
+sources: [tests/fixtures/bench/sum-loop.js]
+run: [tests/fixtures/bench/sum-loop.js]
+expectStdout: "499999500000"
+warmup: 1
+runs: 5
+sizes:
+  source: [tests/fixtures/bench/sum-loop.js]

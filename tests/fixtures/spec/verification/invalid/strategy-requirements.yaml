@@ -1,0 +1,16 @@
+id: VERIFICATION.generator.u32-uniform
+title: A uniform generator without a seed
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: generator
+  type: TYPES.u32
+  strategy: uniform
+  count: 10000

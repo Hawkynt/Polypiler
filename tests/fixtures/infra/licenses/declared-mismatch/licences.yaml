@@ -1,0 +1,4 @@
+# Declares MIT for a tree whose LICENSE holds the LGPL-3.0 text: the scan must refuse it.
+schema: 1
+declared:
+  - { glob: '**', licence: MIT }

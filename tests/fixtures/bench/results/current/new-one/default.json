@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "id": "new-one",
+  "variant": "default",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "environment": {
+    "os": "linux",
+    "osVersion": "6.8.0",
+    "architecture": "x64",
+    "cpuModel": "Test CPU @ 3.00GHz",
+    "logicalCores": 8,
+    "toolchains": {
+      "node": "24.22.2"
+    },
+    "fingerprint": "c9a9c73b526df5333dd265c3ead3aba7999d7bc3df550231794546c65fa707d4"
+  },
+  "samples": [
+    {
+      "wallNs": 20000000,
+      "cpuNs": 18000000,
+      "peakRssBytes": 50000000
+    },
+    {
+      "wallNs": 20000000,
+      "cpuNs": 18000000,
+      "peakRssBytes": 50000000
+    },
+    {
+      "wallNs": 20000000,
+      "cpuNs": 18000000,
+      "peakRssBytes": 50000000
+    }
+  ],
+  "stats": {
+    "wallNs": {
+      "median": 20000000,
+      "mad": 0,
+      "min": 20000000,
+      "max": 20000000
+    },
+    "cpuNs": {
+      "median": 18000000,
+      "mad": 0,
+      "min": 18000000,
+      "max": 18000000
+    },
+    "peakRssBytes": {
+      "median": 50000000,
+      "mad": 0,
+      "min": 50000000,
+      "max": 50000000
+    }
+  },
+  "buildNs": null,
+  "sourceBytes": 171,
+  "binaryBytes": null,
+  "allocatedBytes": null,
+  "allocations": null,
+  "extra": {}
+}

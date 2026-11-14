@@ -1,0 +1,30 @@
+id: INTRINSICS.LowMask
+title: Mask of the low bits
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITFIELD
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: LowMask
+  group: Bitfield
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: count, type: TYPES.i32}]
+  returns: [{name: mask, type: T}]
+  legality:
+    - {id: count-in-width, text: "count is at least 0 and at most the width of T; otherwise the operation traps with an invalid operation", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the value of T whose lowest count bits are 1 and the others 0: (1 << count) - 1, all ones when count is the width"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-1"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: [0], outputs: ["0x00000000"]}
+    - {types: {T: TYPES.u32}, inputs: [32], outputs: ["0xFFFFFFFF"]}
+    - {types: {T: TYPES.u32}, inputs: [5], outputs: ["0x0000001F"]}
+    - {types: {T: TYPES.i8}, inputs: [8], outputs: [-1]}

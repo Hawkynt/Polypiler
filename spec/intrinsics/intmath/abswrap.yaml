@@ -1,0 +1,28 @@
+id: INTRINSICS.AbsWrap
+title: Wrapping absolute value
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-MINMAX
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: AbsWrap
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the absolute value of value modulo 2^width: the smallest value of a signed T is its own; an unsigned value is itself"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-4"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.i32}, inputs: [-5], outputs: [5]}
+    - {types: {T: TYPES.i32}, inputs: [-2147483648], outputs: [-2147483648]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF"], outputs: ["0xFFFFFFFF"]}

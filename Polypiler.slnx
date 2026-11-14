@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Polypiler.Base/Polypiler.Base.csproj" />
+  <Project Path="Polypiler.Benchmarks/Polypiler.Benchmarks.csproj" />
   <Project Path="Polypiler.Catalog/Polypiler.Catalog.csproj" />
   <Project Path="Polypiler.Cli/Polypiler.Cli.csproj" />
   <Project Path="Polypiler.Core/Polypiler.Core.csproj" />

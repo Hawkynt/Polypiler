@@ -1,0 +1,177 @@
+[
+  {
+    "id": "modern",
+    "name": "Intel Haswell+ (i5/i7/i9)",
+    "allowedWidths": [8, 16, 32, 64, 128],
+    "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 3, "pshufb": 2, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": true, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "zen1_2",
+    "name": "AMD Zen1/2 (Ryzen 1000-2000)",
+    "allowedWidths": [8, 16, 32, 64, 128],
+    "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 18, "pshufb": 1, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": true, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "zen3",
+    "name": "AMD Zen3+ (Ryzen 3000+)",
+    "allowedWidths": [8, 16, 32, 64, 128],
+    "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 3, "pshufb": 1, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": true, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "core2",
+    "name": "Intel Core 2 / Nehalem",
+    "allowedWidths": [8, 16, 32, 64, 128],
+    "costs": {"shift": 1, "rotate": 1, "mul": 4, "bmi": 999, "pshufb": 2, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "atom",
+    "name": "Intel Atom (In-Order)",
+    "allowedWidths": [8, 16, 32, 64],
+    "costs": {"shift": 1, "rotate": 1, "mul": 5, "bmi": 999, "pshufb": 4, "lut": 5, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "pentium4",
+    "name": "Intel Pentium 4",
+    "allowedWidths": [8, 16, 32, 64],
+    "costs": {"shift": 4, "rotate": 4, "mul": 14, "bmi": 999, "pshufb": 999, "lut": 6, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "pentium",
+    "name": "Intel Pentium 1 (P5)",
+    "allowedWidths": [8, 16, 32, 64],
+    "costs": {"shift": 1, "rotate": 1, "mul": 11, "bmi": 999, "pshufb": 999, "lut": 5, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "athlon",
+    "name": "AMD Athlon / Duron",
+    "allowedWidths": [8, 16, 32, 64],
+    "costs": {"shift": 1, "rotate": 1, "mul": 5, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "i486",
+    "name": "Intel 486",
+    "allowedWidths": [8, 16, 32],
+    "costs": {"shift": 2, "rotate": 2, "mul": 18, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "i386",
+    "name": "Intel 386",
+    "allowedWidths": [8, 16, 32],
+    "costs": {"shift": 3, "rotate": 3, "mul": 24, "bmi": 999, "pshufb": 999, "lut": 8, "basic": 2, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "i8086",
+    "name": "Intel 8086",
+    "allowedWidths": [8, 16],
+    "costs": {"shift": 8, "rotate": 8, "mul": 118, "bmi": 999, "pshufb": 999, "lut": 20, "basic": 4, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "arm_a64",
+    "name": "ARM Cortex A64 (NEON)",
+    "allowedWidths": [8, 16, 32, 64, 128],
+    "costs": {"shift": 1, "rotate": 1, "mul": 4, "bmi": 999, "pshufb": 2, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 1, "rev": 1, "rbit": 1},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": false, "bfx": true, "rev": true, "rbit": true}
+  },
+  {
+    "id": "arm_m4",
+    "name": "ARM Cortex M4",
+    "allowedWidths": [8, 16, 32],
+    "costs": {"shift": 1, "rotate": 1, "mul": 1, "bmi": 999, "pshufb": 999, "lut": 3, "basic": 1, "rlwinm": 999, "bfx": 1, "rev": 1, "rbit": 1},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": true, "rev": true, "rbit": true}
+  },
+  {
+    "id": "apple_m1",
+    "name": "Apple M1/M2/M3",
+    "allowedWidths": [8, 16, 32, 64, 128],
+    "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 1, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 1, "rev": 1, "rbit": 1},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": false, "bfx": true, "rev": true, "rbit": true}
+  },
+  {
+    "id": "riscv",
+    "name": "RISC-V (B extension)",
+    "allowedWidths": [32, 64],
+    "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "motorola68k",
+    "name": "Motorola 68000 (Amiga/Atari ST)",
+    "allowedWidths": [8, 16, 32],
+    "costs": {"shift": 6, "rotate": 6, "mul": 70, "bmi": 999, "pshufb": 999, "lut": 12, "basic": 4, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "z80",
+    "name": "Zilog Z80",
+    "allowedWidths": [8, 16],
+    "costs": {"shift": 4, "rotate": 4, "mul": 999, "bmi": 999, "pshufb": 999, "lut": 11, "basic": 4, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": false, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "6502",
+    "name": "MOS 6502",
+    "allowedWidths": [8],
+    "costs": {"shift": 2, "rotate": 2, "mul": 999, "bmi": 999, "pshufb": 999, "lut": 5, "basic": 2, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": false, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "gamecube",
+    "name": "GameCube/Wii (PowerPC 750)",
+    "allowedWidths": [8, 16, 32],
+    "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 1, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": true, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "dreamcast",
+    "name": "Dreamcast (SH-4)",
+    "allowedWidths": [8, 16, 32],
+    "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
+  },
+  {
+    "id": "xbox360",
+    "name": "Xbox 360 (Xenon)",
+    "allowedWidths": [8, 16, 32, 64, 128],
+    "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 1, "lut": 4, "basic": 1, "rlwinm": 1, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": true, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "ps1",
+    "name": "Sony PlayStation 1 (R3000)",
+    "allowedWidths": [8, 16, 32],
+    "costs": {"shift": 1, "rotate": 1, "mul": 20, "bmi": 999, "pshufb": 999, "lut": 5, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "n64",
+    "name": "Nintendo 64 (VR4300)",
+    "allowedWidths": [8, 16, 32, 64],
+    "costs": {"shift": 1, "rotate": 1, "mul": 8, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "ps3",
+    "name": "Sony PlayStation 3 (Cell)",
+    "allowedWidths": [8, 16, 32, 64, 128],
+    "costs": {"shift": 2, "rotate": 2, "mul": 7, "bmi": 999, "pshufb": 2, "lut": 6, "basic": 2, "rlwinm": 1, "bfx": 999, "rev": 999, "rbit": 999},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": true, "bfx": false, "rev": false, "rbit": false}
+  },
+  {
+    "id": "custom",
+    "name": "Custom",
+    "allowedWidths": [8, 16, 32, 64, 128],
+    "costs": {"shift": 1, "rotate": 1, "mul": 4, "bmi": 3, "pshufb": 2, "lut": 4, "basic": 1, "rlwinm": 1, "bfx": 1, "rev": 1, "rbit": 1},
+    "enables": {"shift": true, "rotate": true, "mul": true, "bmi": true, "pshufb": true, "rlwinm": true, "bfx": true, "rev": true, "rbit": true}
+  }
+]

@@ -1,0 +1,19 @@
+# A blocked record without a no-redistribution or research-only obligation.
+schema: 1
+repository: Hawkynt/MediaDroid
+commit: 7f8b6b995cbe54a6afb290a900748393bf01e272
+clearance: { status: pending, adr: null, date: null }
+records:
+  - path: native/src/xvfi.cpp
+    kind: code
+    sha256: 7d8f2ab84972d596d95cfeb1e0dc6bee1b7f024421e1fc61c1c6a41bb97980d1
+    bytes: 13658
+    licence: LicenseRef-XVFI-Research-Only
+    origin: { project: XVFI, url: 'https://github.com/JihyongOh/XVFI', licence: LicenseRef-XVFI-Research-Only, notice: app/THIRD-PARTY-NOTICE.XVFI.txt }
+    obligations: [attribution]
+    decision: blocked
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+    reason: research and education only
+external: []

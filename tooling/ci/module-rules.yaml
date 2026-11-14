@@ -32,6 +32,8 @@ projects:
   - { name: Polypiler.Tooling, layer: 8 }
   - { name: Polypiler.Tests, layer: 9 }
   - { name: Polypiler.Tests.Acceptance, layer: 9 }
+  # The BenchmarkDotNet program of polypiler-tooling bench run: a leaf that may measure any product project.
+  - { name: Polypiler.Benchmarks, layer: 9 }
 
 sameLayerExceptions:
   - { from: Polypiler.Core.Recovery, to: Polypiler.Core.Recognize }

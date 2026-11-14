@@ -1,0 +1,59 @@
+id: RECOGNITION.O0120
+title: Recognize minimum and maximum from compare-select and branchless masks
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#571"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeMinMax.cs
+  - tests/fixtures/prototype/recognize/minmax.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A compare-select of two integers, or the branchless mask selection, MUST become Min or Max only when
+  it selects the compared operands, and never for floating-point operands. The prototype rule
+  O0120MinMax in Polypiler.Core.Recognize matches the structured IR of Polypiler.Core.IR, not the
+  typed SSA IR: pattern.before and replacement.after are written in that structured form, and matching
+  typed SSA graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests is the evidence the prototype
+  has: it checks that the rule fires exactly on the marked functions of its fixtures, that --disable-
+  opt O0120 keeps it from firing, and that the IR interpreter computes the same before and after the
+  rule - result, kind of trap and the arrays a trap leaves behind - for every value of each 8- and
+  16-bit parameter and for the edges and 10 000 random tuples of the wider ones. The proof obligations
+  below are planned and not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector
+  proofs with VER-SMT (#71). The prototype knows only the levels default, where the rule is on, and
+  none; the optLevels name the levels of the target state. The document stays a draft until its
+  obligations are discharged.
+spec:
+  optimization: O0120
+  level: typed-ssa
+  pattern:
+    before: "%r = Select.i32 Lt.i32(%a, %b), %a, %b"
+    bindings:
+      - {name: a, role: "first operand"}
+      - {name: b, role: "second operand"}
+  replacement:
+    after: "%r = Min.i32 %a, %b"
+    introduces: [INTRINSICS.Min, INTRINSICS.Max]
+  preconditions:
+    - {id: integer, text: "the operands are integers; NaN and the signed zeros make the forms differ for floating point", fact: type}
+    - {id: compared-operands, text: "the branches, or the operands of the mask selection, are the two compared values", fact: none}
+    - {id: signedness, text: "the comparison is in the signedness of its operands; operands widened without loss compare as the original values", fact: type}
+    - {id: trap-free, text: "each operand has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: min-max-8, class: exhaustive-8bit, widths: [8]}
+    - {id: min-max-16, class: exhaustive-16bit, widths: [16]}
+    - {id: min-max-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "floating-point operands"
+      input: "a = NaN, b = 1.0, f64, a < b ? a : b"
+      naive: "1.0"
+      correct: "NaN"
+    - description: "a comparison for equality"
+      input: "a = 1, b = 2, i32, a == b ? a : b"
+      naive: "2"
+      correct: "1"
+  switch: "--disable-opt O0120"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0120-min-max-recognition.md

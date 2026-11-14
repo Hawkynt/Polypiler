@@ -1,0 +1,15 @@
+id: VERIFICATION.generator.no-strategy
+title: A document without strategy
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: generator
+  type: TYPES.u32
+  values: ["0x00000000", "0xFFFFFFFF"]

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using Polypiler.Core.IR;
+using Polypiler.Core.Verification.Oracles;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Float.Support;
@@ -103,16 +104,20 @@ internal static class FloatVectors {
 
   /// <summary>
   /// Whether a computed result matches the correctly rounded one exactly, under the special-value rule
-  /// <c>signed-zero</c> of ADR 0005: any NaN equals any NaN, otherwise the bits are compared.
+  /// <c>signed-zero</c> of ADR 0005: any NaN equals any NaN, otherwise the bits are compared. The
+  /// verification framework's comparison decides.
   /// </summary>
   public static bool Same(IrType format, long expected, long actual)
-    => IsNaN(format, expected) ? IsNaN(format, actual) : Mask(format, expected) == Mask(format, actual);
+    => FloatComparison.Compare(Format(format), (ulong)expected, (ulong)actual, new ExactnessPolicy.Exact(Format(format))).Passed;
 
   /// <summary>
   /// The comparison distance of ADR 0005 between two finite values of a format: the number of steps
-  /// between them, both zeros counting as one point.
+  /// between them, both zeros counting as one point, as the verification framework measures it.
   /// </summary>
-  public static long Distance(IrType format, long a, long b) => Math.Abs(Ordinal(format, a) - Ordinal(format, b));
+  public static long Distance(IrType format, long a, long b) => (long)Math.Min(FloatComparison.Distance(Format(format), (ulong)a, (ulong)b), long.MaxValue);
+
+  /// <summary>The framework's format of <see cref="IrType.F32"/> or <see cref="IrType.F64"/>.</summary>
+  public static FloatFormat Format(IrType format) => format == IrType.F64 ? FloatFormat.F64 : FloatFormat.F32;
 
   /// <summary>
   /// The reference error of ADR 0005 of a computed value against an inexact vector, in ULP of the
@@ -122,15 +127,6 @@ internal static class FloatVectors {
     var low = Value(format, vector.Low);
     var high = Value(format, vector.Low + 1);
     return Math.Abs((Value(format, actual) - low) / (high - low) - vector.Fraction);
-  }
-
-  private static long Mask(IrType format, long bits) => format == IrType.F64 ? bits : bits & 0xffffffffL;
-
-  private static long Ordinal(IrType format, long bits) {
-    var masked = Mask(format, bits);
-    var sign = format == IrType.F64 ? long.MinValue : 0x80000000L;
-    var magnitude = format == IrType.F64 ? masked & long.MaxValue : masked & 0x7fffffffL;
-    return (masked & sign) != 0 ? -magnitude : magnitude;
   }
 
   private static long Hex(string text) => (long)ulong.Parse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture);

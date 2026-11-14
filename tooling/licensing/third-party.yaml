@@ -1,0 +1,92 @@
+# The third-party works the repository contains or builds on, with their licences. Hand-edited;
+# `polypiler-tooling licenses inventory` holds it against the repository:
+#
+#   notices   every THIRD-PARTY-NOTICE.* / THIRD_PARTY_NOTICES.* file outside bin, obj and dot-folders,
+#             with the works it records (code converted from them, or files kept verbatim) and the
+#             licence of each as an SPDX expression
+#   packages  every PackageReference of a .csproj, .props or .targets file, by ID and version, with the
+#             licence expression of the package's own manifest at that version
+#
+# A notice or package missing here is PLY0029, an entry nothing matches is PLY0026, and every licence
+# must be allowed in distribution mode by policy.yaml (PLY0024). Adding a dependency or converting code
+# therefore means adding its row here in the same change.
+schema: 1
+
+notices:
+  - path: Polypiler.Cli/THIRD_PARTY_NOTICES.md
+    components:
+      - { name: 'System.CommandLine 2.0.15', licence: MIT }
+  - path: Polypiler.Core.Frontends.CSharp/THIRD_PARTY_NOTICES.md
+    components:
+      - { name: 'Roslyn (Microsoft.CodeAnalysis.CSharp 5.3.0)', licence: MIT }
+  - path: Polypiler.Core.Frontends.JavaScript/THIRD_PARTY_NOTICES.md
+    components:
+      - { name: 'Acornima 1.9.1', licence: BSD-3-Clause }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.CORE-MATH.Exponential.txt
+    components:
+      - { name: 'CORE-MATH 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.CORE-MATH.Hyperbolic.txt
+    components:
+      - { name: 'CORE-MATH 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.CORE-MATH.InverseHyperbolic.txt
+    components:
+      - { name: 'CORE-MATH 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.CORE-MATH.InverseTrigonometric.txt
+    components:
+      - { name: 'CORE-MATH 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.CORE-MATH.Logarithm.txt
+    components:
+      - { name: 'CORE-MATH 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+      - { name: '.NET runtime (dotnet/runtime release/10.0)', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.CORE-MATH.Power.txt
+    components:
+      - { name: 'CORE-MATH 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.CORE-MATH.Roots.txt
+    components:
+      - { name: 'CORE-MATH 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.CORE-MATH.Tangent.txt
+    components:
+      - { name: 'CORE-MATH 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.CORE-MATH.Trigonometric.txt
+    components:
+      - { name: 'CORE-MATH 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.dotnet.txt
+    components:
+      - { name: '.NET runtime (dotnet/runtime release/10.0)', licence: MIT }
+  - path: Polypiler.Core.IR/Float/THIRD-PARTY-NOTICE.musl.txt
+    components:
+      - { name: 'musl libc 1.2.5', licence: MIT }
+      - { name: 'FreeBSD msun s_fmaf.c, through musl fmaf.c', licence: BSD-2-Clause }
+  - path: Polypiler.Core.Verification/Emulators/THIRD-PARTY-NOTICE.ViceDriver.txt
+    components:
+      - { name: 'PB-Compiler VICE test driver (Hawkynt/PB-Compiler 0d73acbea185a2597357d53f7ce9acb44758ba76)', licence: LGPL-3.0-or-later }
+  - path: Polypiler.Core.Verification/Generators/THIRD-PARTY-NOTICE.SplitMix64.txt
+    components:
+      # A public-domain dedication followed by the permission and disclaimer of 0BSD, word for word.
+      - { name: 'splitmix64.c (Sebastiano Vigna, 2015)', licence: 0BSD }
+  - path: tests/fixtures/bitperm/THIRD-PARTY-NOTICE.BitPerm.txt
+    components:
+      - { name: 'BitPerm (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
+  - path: tests/fixtures/prototype/js/THIRD-PARTY-NOTICE.OpCodes.txt
+    components:
+      - { name: 'Cipher OpCodes.js (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
+  - path: tests/vectors/float/THIRD-PARTY-NOTICE.CORE-MATH.txt
+    components:
+      - { name: 'CORE-MATH worst-case inputs 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
+
+packages:
+  - { id: Acornima, version: 1.9.1, licence: BSD-3-Clause }
+  - { id: BenchmarkDotNet, version: 0.15.8, licence: MIT }
+  - { id: coverlet.collector, version: 6.0.4, licence: MIT }
+  - { id: FsCheck, version: 3.6.0, licence: BSD-3-Clause }
+  - { id: Gherkin, version: 35.0.0, licence: MIT }
+  - { id: JsonSchema.Net, version: 8.0.5, licence: MIT }
+  - { id: Microsoft.CodeAnalysis.CSharp, version: 5.3.0, licence: MIT }
+  - { id: Microsoft.NET.Test.Sdk, version: 17.14.0, licence: MIT }
+  - { id: NUnit, version: 4.3.2, licence: MIT }
+  - { id: NUnit.Analyzers, version: 4.7.0, licence: MIT }
+  - { id: NUnit3TestAdapter, version: 5.0.0, licence: MIT }
+  - { id: Reqnroll.NUnit, version: 3.3.4, licence: BSD-3-Clause }
+  - { id: SharpFuzz, version: 2.3.0, licence: MIT }
+  - { id: System.CommandLine, version: 2.0.15, licence: MIT }
+  - { id: YamlDotNet, version: 18.1.0, licence: MIT }

@@ -1,0 +1,31 @@
+id: INTRINSICS.MaxNumber
+title: Maximum number
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: MaxNumber
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}, {name: y, type: F}]
+  returns: [{name: result, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the larger operand, a NaN operand ignored, +0 after -0"
+    source: "IEEE Std 754-2019, section 9.6 (maximumNumber)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0xC008000000000000", "0x4000000000000000"], outputs: ["0x4000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x4000000000000000", "0xC000000000000000"], outputs: ["0x4000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF8000000000000", "0x3FF0000000000000"], outputs: ["0x3FF0000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000000", "0x8000000000000000"], outputs: ["0x0000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x8000000000000000", "0x0000000000000000"], outputs: ["0x0000000000000000"]}
+  algebra: [commutative]

@@ -1,0 +1,15 @@
+id: VERIFICATION.generator.f64-corpus
+title: The f64 values of the corpus
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: generator
+  type: TYPES.f64
+  strategy: corpus
