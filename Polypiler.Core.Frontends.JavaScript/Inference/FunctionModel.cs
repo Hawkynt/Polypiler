@@ -97,6 +97,18 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// <summary>The variable in the IR, once the function is lowered.</summary>
   public IrLocal? Local { get; set; }
 
+  /// <summary>Whether the variable is declared at the top level of the module, so that every function shares it.</summary>
+  public bool IsGlobal { get; init; }
+
+  /// <summary>The value the declaration of a variable of the module gives it, or <see langword="null"/>.</summary>
+  public Node? Initializer { get; init; }
+
+  /// <summary>Why a variable of the module cannot be imported, whoever uses it, or <see langword="null"/>.</summary>
+  public string? Problem { get; set; }
+
+  /// <summary>The global in the IR, once the variable of the module is lowered.</summary>
+  public IrGlobal? Global { get; set; }
+
 }
 
 /// <summary>The ways a value reaches a place.</summary>

@@ -48,7 +48,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
 
     var model = new FunctionModel(candidate);
     this._models[candidate] = model;
-    this._binders[model] = new Binder(model, candidates, constants, source);
+    this._binders[model] = this.BinderOf(model);
     model.Problem = this.ReadSignature(model);
     if (model.Problem is null)
       this._binders[model].Bind();
@@ -106,7 +106,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// <returns>The functions, the called ones after their callers.</returns>
   public List<FunctionModel> Solve(IEnumerable<Candidate> roots, System.Func<Candidate, bool> isPublic) {
     var models = new List<FunctionModel>();
-    var pending = new Queue<Candidate>(roots);
+    // A function an initializer calls is imported as well.
+    var pending = new Queue<Candidate>(roots.Concat(this.Initializers?.Callees ?? []));
     while (pending.TryDequeue(out var candidate)) {
       var model = this.ModelOf(candidate);
       if (models.Contains(model))
@@ -118,7 +119,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         pending.Enqueue(callee);
     }
 
-    var called = models.SelectMany(model => model.Flows).Where(flow => flow.Kind == FlowKind.Argument).Select(flow => flow.Callee).ToHashSet();
+    var called = this.Flowing(models).SelectMany(model => model.Flows).Where(flow => flow.Kind == FlowKind.Argument).Select(flow => flow.Callee).ToHashSet();
     foreach (var model in models)
       foreach (var parameter in model.Parameters)
         this.Seed(model, parameter, model.IsPublic || !called.Contains(model.Candidate));
@@ -126,13 +127,13 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     do {
       for (var changed = true; changed;) {
         changed = false;
-        foreach (var model in models) {
+        foreach (var model in this.Flowing(models)) {
           this.Enter(model);
           foreach (var flow in model.Flows)
             changed |= this.Apply(model, flow);
         }
       }
-    } while (this.Promote(models));
+    } while (this.Promote([.. this.Flowing(models)]));
 
     // Nothing in the file says what array a parameter is that no call passes one to.
     foreach (var model in models)

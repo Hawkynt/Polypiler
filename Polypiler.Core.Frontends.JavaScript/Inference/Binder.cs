@@ -20,6 +20,28 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   private readonly Dictionary<string, Variable> _scope = [];
   private List<string> _declared = [];
 
+  /// <summary>The variables of the module, which every name of a function that no local or parameter hides names.</summary>
+  public IReadOnlyDictionary<string, Variable> Globals { get; init; } = new Dictionary<string, Variable>();
+
+  /// <summary>
+  /// Binds the initializers of the variables of the module, in source order. Each sees the variables
+  /// declared before it and the constants; a later variable it names is in its temporal dead zone.
+  /// </summary>
+  public void BindInitializers(IReadOnlyList<Variable> globals) {
+    foreach (var global in globals) {
+      if (global.Initializer is { } initializer) {
+        this.Expression(initializer);
+        model.Flows.Add(new Flow(FlowKind.Assign, initializer, global));
+      }
+
+      this._scope[global.Name] = global;
+    }
+  }
+
+  /// <summary>The local, the parameter or else the variable of the module a name names in the current scope.</summary>
+  private bool Lookup(string name, out Variable variable)
+    => this._scope.TryGetValue(name, out variable!) || this.Globals.TryGetValue(name, out variable!);
+
   /// <summary>Binds the parameters and the body.</summary>
   public void Bind() {
     foreach (var parameter in model.Parameters)
@@ -250,7 +272,7 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   };
 
   private void Read(Identifier identifier, Coercion coercion, Node use) {
-    if (this._scope.TryGetValue(identifier.Name, out var variable)) {
+    if (this.Lookup(identifier.Name, out var variable)) {
       model.Bindings[identifier] = variable;
       variable.Uses.Add((coercion, use));
     } else if (constants.TryGetValue(identifier.Name, out var constant)) {
@@ -262,7 +284,7 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
     var op = Compound(assignment.Operator);
     switch (assignment.Left) {
       case Identifier target:
-        if (this._scope.TryGetValue(target.Name, out var variable)) {
+        if (this.Lookup(target.Name, out var variable)) {
           model.Bindings[target] = variable;
           if (op is { } compound) {
             variable.Uses.Add((Operands(compound).Left, assignment));

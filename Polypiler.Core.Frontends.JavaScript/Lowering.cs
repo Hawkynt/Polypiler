@@ -390,15 +390,15 @@ internal sealed partial class Lowering(TypeInference types) {
         if (variable.IsConstant)
           throw this.Unsupported(assignment, $"an assignment to the constant {name}");
 
-        var local = variable.Local!;
+        var place = this.Read(variable, target);
         var value = compound is { } op
-          ? this.To(this.Binary(op, target, assignment.Right, Coercion.None, assignment), local.Type, assignment)
-          : this.Value(assignment.Right, local.Type);
+          ? this.To(this.Binary(op, target, assignment.Right, Coercion.None, assignment), place.Type, assignment)
+          : this.Value(assignment.Right, place.Type);
         this._assigned = [.. this._assigned, variable];
 
         // x = x | 0 on an int32 coerces to what the variable already holds: nothing is left to do.
-        if (value != new IrLocalRef(local))
-          into.Add(new IrAssign(local, value));
+        if (value != place)
+          into.Add(Write(variable, value));
 
         break;
       case Identifier { Name: var name } target when this._model.Bindings.ContainsKey(target):
@@ -465,7 +465,7 @@ internal sealed partial class Lowering(TypeInference types) {
       throw this.Unsupported(step, $"an assignment to the constant {name}");
 
     var op = step.Operator == Operator.Increment ? IrBinaryOp.Add : IrBinaryOp.Subtract;
-    into.Add(new IrAssign(variable.Local!, new IrBinary(op, read, new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 1)))));
+    into.Add(Write(variable, new IrBinary(op, read, new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 1)))));
   }
 
   /// <summary>A step of an array element: the IR's step, which reads and writes the element once and yields the value from before.</summary>
@@ -489,7 +489,8 @@ internal sealed partial class Lowering(TypeInference types) {
   /// anything more than a variable or a constant goes into a temporary.
   /// </summary>
   private IrExpr Once(IrExpr expression, List<IrStmt> into) {
-    if (expression is IrLocalRef or IrConst)
+    // An array of the module is one array for good; any other variable of the module may change meanwhile.
+    if (expression is IrLocalRef or IrConst or IrGlobalRef { Type.IsArray: true })
       return expression;
 
     var temporary = new IrLocal($"$t{this._locals.Count}", expression.Type);

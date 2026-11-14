@@ -50,6 +50,22 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
   private readonly List<Candidate> _candidates = [];
   private readonly List<ModuleConstant> _constants = [];
   private readonly HashSet<string> _escaped = [];
+  private readonly List<Variable> _globals = [];
+
+  /// <summary>
+  /// The variables of the module, in source order: every <c>let</c> and <c>var</c> at the top level of
+  /// the file, and every <c>const</c> there of an array that is no constant table - one whose elements
+  /// the file writes or that is not a list of numbers. A name that two of them share, or one of them
+  /// and a function, names none.
+  /// </summary>
+  public IReadOnlyList<Variable> Globals {
+    get {
+      var tables = this.Constants.Select(constant => constant.Name).ToHashSet();
+      return this._globals.Where(global => this._globals.Count(other => other.Name == global.Name) == 1
+        && !tables.Contains(global.Name)
+        && !this._candidates.Exists(candidate => candidate.Name == global.Name)).ToList();
+    }
+  }
 
   /// <summary>
   /// The constants of the scope that encloses the functions, in source order. A name that two
@@ -102,9 +118,18 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
         default:
           this.Objects(statement);
           this.Constant(statement);
+          this.Global(statement);
           break;
       }
     }
+
+    // A variable exported by name is exported as well as one exported where it is declared.
+    var exported = program.Body.OfType<ExportNamedDeclaration>().Where(export => export.Declaration is null && export.Source is null)
+      .SelectMany(export => export.Specifiers).Select(specifier => specifier.Local)
+      .Concat(program.Body.OfType<ExportDefaultDeclaration>().Select(export => export.Declaration))
+      .OfType<Identifier>().Select(identifier => identifier.Name).ToHashSet();
+    foreach (var global in this._globals.Where(global => exported.Contains(global.Name)))
+      global.Problem = $"the exported variable {global.Name}";
 
     var wrappers = program.Body.Select(Wrapped).OfType<FunctionBody>().ToList();
     if (wrappers.Count == 1) {
@@ -131,6 +156,39 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
       if (declarator is { Id: Identifier { Name: var name }, Init: { } value } && !name.Contains('$') && ConstantOf(name, value) is { } constant)
         this._constants.Add(constant);
   }
+
+  /// <summary>
+  /// Takes the variables a declaration at the top level of the file declares: those of a <c>let</c> or
+  /// a <c>var</c>, and those of a <c>const</c> that holds an array. An exported one is taken as well,
+  /// so that a function that uses it is refused for it rather than for an unknown name.
+  /// </summary>
+  private void Global(Statement statement) {
+    var exported = statement is ExportNamedDeclaration;
+    var declaration = statement is ExportNamedDeclaration { Declaration: VariableDeclaration inner } ? inner : statement as VariableDeclaration;
+    if (declaration is null)
+      return;
+
+    foreach (var declarator in declaration.Declarations) {
+      if (declarator.Id is not Identifier { Name: var name } id || name.Contains('$'))
+        continue;
+
+      var constant = declaration.Kind == VariableDeclarationKind.Const;
+      if (constant && !IsArray(declarator.Init))
+        continue;
+
+      this._globals.Add(new Variable(name, id, false) {
+        IsGlobal = true,
+        IsConstant = constant,
+        IsUninitialized = declarator.Init is null,
+        Initializer = declarator.Init,
+        Problem = exported ? $"the exported variable {name}" : null
+      });
+    }
+  }
+
+  /// <summary>Whether an initializer is an array: a list, or a new typed array.</summary>
+  private static bool IsArray(Node? value)
+    => value is ArrayExpression || value is NewExpression { Callee: Identifier { Name: var constructor } } && TypeInference.TypedArrays.ContainsKey(constructor);
 
   private static ModuleConstant? ConstantOf(string name, Node value) {
     if (Literal(value) is { } scalar)

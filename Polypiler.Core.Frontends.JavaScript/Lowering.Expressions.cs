@@ -79,13 +79,13 @@ internal sealed partial class Lowering {
         if (variable.IsUninitialized && !this._assigned.Contains(variable))
           throw this.Refuse(identifier, JavaScriptFrontend.ReadBeforeAssignmentDescriptor, $"'{identifier.Name}' may be read before it is assigned");
 
-        return new IrLocalRef(variable.Local!);
+        return this.Read(variable, identifier);
       case ModuleConstant constant:
         // A table never comes here: one that is used as a value is no constant.
         this.Constants.Add(constant);
         return new IrConstRef(constant.Constant);
       default:
-        throw this.Unsupported(identifier, identifier.Name);
+        throw this.Unsupported(identifier, types.IsGlobal(identifier.Name) ? $"reading the variable {identifier.Name} before its declaration" : identifier.Name);
     }
   }
 
