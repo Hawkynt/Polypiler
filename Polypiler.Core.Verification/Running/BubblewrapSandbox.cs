@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -10,9 +11,10 @@ namespace Polypiler.Core.Verification.Running;
 /// The sandbox of a Linux host with bubblewrap (<c>bwrap</c>, LGPL-2.0-or-later, started as a separate
 /// process and never linked). The options follow bwrap(1): every namespace unshared, so there is no
 /// network; the root file system bound read-only; a private <c>/tmp</c>; the caller's home hidden
-/// behind an empty read-only file system; the toolchain's directory and the working directory bound
-/// back in, the working directory being the only writable place. The limits hold by sampling the
-/// process table, where bubblewrap's own two processes do not count against the process limit.
+/// behind an empty read-only file system; the install root of the toolchain (<see cref="ToolchainRoots"/>)
+/// and the extra roots of its lock entry bound back in read-only, and the working directory bound back
+/// in as the only writable place. The limits hold by sampling the process table, where bubblewrap's
+/// own two processes do not count against the process limit.
 /// </summary>
 public sealed class BubblewrapSandbox : ISandbox {
 
@@ -22,6 +24,7 @@ public sealed class BubblewrapSandbox : ISandbox {
   private readonly string _bwrap;
   private readonly IProcessTable _table;
   private readonly string? _home;
+  private readonly ConcurrentDictionary<string, bool> _noted = new(StringComparer.Ordinal);
 
   /// <summary>Creates the sandbox for the caller of this process.</summary>
   /// <param name="bwrap">The path of <c>bwrap</c>.</param>
@@ -38,6 +41,13 @@ public sealed class BubblewrapSandbox : ISandbox {
     this._home = string.IsNullOrEmpty(home) || home == "/" ? null : Path.TrimEndingDirectorySeparator(home);
   }
 
+  /// <summary>
+  /// Where the sandbox says, once per reason, why it shows less of a toolchain than a root rule would:
+  /// a toolchain without a root marker, a root that would show the whole home folder, an extra root it
+  /// refuses. Standard error unless set.
+  /// </summary>
+  public Action<string> Log { get; init; } = Console.Error.WriteLine;
+
   /// <inheritdoc />
   public IsolationLevel Isolation => IsolationLevel.Isolated;
 
@@ -47,8 +57,8 @@ public sealed class BubblewrapSandbox : ISandbox {
     if (this._home != null)
       line.AddRange(["--tmpfs", this._home]);
 
-    foreach (var directory in ToolchainDirectories(command.Executable).Where(this.IsHidden))
-      line.AddRange(["--ro-bind", directory, directory]);
+    foreach (var root in this.Roots(command))
+      line.AddRange(["--ro-bind", root, root]);
 
     line.AddRange(["--bind", command.WorkingDirectory, command.WorkingDirectory]);
     if (this._home != null)
@@ -62,25 +72,49 @@ public sealed class BubblewrapSandbox : ISandbox {
   /// <inheritdoc />
   public IProcessTreeMonitor Watch(Process process, RunLimits limits) => new PollingMonitor(this._table, process.Id, limits.Processes, LauncherName);
 
-  /// <summary>Whether a directory lies in what the sandbox replaces, <c>/tmp</c> or the caller's home, and so has to be bound back in.</summary>
-  private bool IsHidden(string directory)
-    => IsWithin(directory, "/tmp") || (this._home != null && IsWithin(directory, this._home));
-
-  private static bool IsWithin(string directory, string root)
-    => directory == root || directory.StartsWith(root + "/", StringComparison.Ordinal);
-
   /// <summary>
-  /// The directory of the executable and, when it is a link, the directory of its final target: both
-  /// must stay visible. An executable in a Python virtual environment, which a <c>pyvenv.cfg</c> beside
-  /// its folder marks, starts only with the environment's libraries, so the whole environment is.
+  /// What the command sees again of what the sandbox hides, all of it read-only: the roots of its
+  /// toolchain and its extra roots, each once and none inside another.
   /// </summary>
-  private static IEnumerable<string> ToolchainDirectories(string executable) {
-    var target = File.Exists(executable) ? File.ResolveLinkTarget(executable, true)?.FullName ?? executable : executable;
-    return new[] { executable, target }.Select(path => Path.GetDirectoryName(path)!).Select(VirtualEnvironment).Distinct(StringComparer.Ordinal);
+  /// <param name="command">The command.</param>
+  public IReadOnlyList<string> Roots(SandboxCommand command) {
+    ArgumentNullException.ThrowIfNull(command);
+    var roots = new List<string>();
+    foreach (var root in ToolchainRoots.Of(command.Executable, this.MayShow).Where(root => this.IsHidden(root.Path))) {
+      if (root.Reason != null)
+        this.Note($"sandbox: of the toolchain '{command.Executable}' only '{root.Path}' is shown: {root.Reason}");
+      roots.Add(root.Path);
+    }
+
+    foreach (var extra in command.ReadOnlyRoots) {
+      var full = Path.IsPathFullyQualified(extra) ? Path.TrimEndingDirectorySeparator(extra) : null;
+      if (full == null || !this.MayShow(full))
+        this.Note($"sandbox: the extra root '{extra}' of the toolchain '{command.Executable}' is not shown: it is not a full path, or it would show too much");
+      else if (this.IsHidden(full))
+        roots.Add(full);
+    }
+
+    var distinct = roots.Distinct(StringComparer.Ordinal).ToList();
+    return [.. distinct.Where(root => !distinct.Any(other => other != root && IsWithin(root, other)))];
   }
 
-  /// <summary>The virtual environment a folder of executables belongs to, or the folder itself.</summary>
-  private static string VirtualEnvironment(string directory)
-    => Path.GetDirectoryName(directory) is { } parent && File.Exists(Path.Combine(parent, "pyvenv.cfg")) ? parent : directory;
+  private void Note(string message) {
+    if (this._noted.TryAdd(message, true))
+      this.Log(message);
+  }
+
+  /// <summary>Whether a path lies in what the sandbox replaces, <c>/tmp</c> or the caller's home, and so has to be bound back in.</summary>
+  private bool IsHidden(string path)
+    => IsWithin(path, "/tmp") || (this._home != null && IsWithin(path, this._home));
+
+  /// <summary>
+  /// Whether a folder may be shown: never the whole root, <c>/tmp</c>, the home folder or one above
+  /// it, nor <c>~/.local</c>, the prefix all of a user's own installs share.
+  /// </summary>
+  private bool MayShow(string folder)
+    => folder != "/" && folder != "/tmp" && (this._home == null || (!IsWithin(this._home, folder) && folder != this._home + "/.local"));
+
+  private static bool IsWithin(string path, string root)
+    => path == root || path.StartsWith(root + "/", StringComparison.Ordinal);
 
 }

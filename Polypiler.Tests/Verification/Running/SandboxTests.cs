@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Verification.Running;
 using Polypiler.Tests.Verification.Running.Support;
@@ -44,11 +45,76 @@ public sealed class SandboxTests {
       return;
     }
 
-    var line = new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user").CommandLine(_command with { Executable = "/home/user/.dotnet/dotnet" });
+    var log = new List<string>();
+    var line = new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user") { Log = log.Add }.CommandLine(_command with { Executable = "/home/user/.dotnet/dotnet" });
     Assert.That(string.Join(' ', line), Does.Contain("--tmpfs /home/user --ro-bind /home/user/.dotnet /home/user/.dotnet --bind "));
-    Assert.That(string.Join(' ', new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user").CommandLine(_command with { Executable = "/home/user/dotnet" })),
-      Does.Contain("--tmpfs /home/user --ro-bind /home/user /home/user --bind "));
+    Assert.That(log, Has.One.Contains("only '/home/user/.dotnet' is shown").And.Contains("no root marker"), "the fallback says why");
   }
+
+  /// <summary>A tool right in the home folder shows only itself: the whole home is never bound back in.</summary>
+  [Test]
+  public void Bubblewrap_ShowsAToolchainRightInTheHomeFolderAsAFileOnly() {
+    if (OperatingSystem.IsWindows()) {
+      Assert.Pass("bubblewrap is Linux only, and Windows reads these paths with its own separator");
+      return;
+    }
+
+    var sandbox = new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user") { Log = _ => { } };
+    Assert.That(string.Join(' ', sandbox.CommandLine(_command with { Executable = "/home/user/dotnet" })),
+      Does.Contain("--tmpfs /home/user --ro-bind /home/user/dotnet /home/user/dotnet --bind "));
+    Assert.That(sandbox.Roots(_command with { Executable = "/home/user/bin/tool" }), Is.EqualTo(new[] { "/home/user/bin" }), "~/bin/tool would show the whole home");
+    Assert.That(sandbox.Roots(_command with { Executable = "/home/user/.local/bin/tool" }), Is.EqualTo(new[] { "/home/user/.local/bin" }), "~/.local is every user install's prefix");
+    Assert.That(sandbox.Roots(_command with { Executable = "/tmp/bin/tool" }), Is.EqualTo(new[] { "/tmp/bin" }), "/tmp/bin/tool would show the whole of /tmp");
+    Assert.That(sandbox.Roots(_command with { Executable = "/home/user/tools/node/bin/node" }), Is.EqualTo(new[] { "/home/user/tools/node" }));
+  }
+
+  /// <summary>Test design 2: a toolchain the sandbox does not hide needs nothing bound back in, wherever it is.</summary>
+  [TestCase("/usr/bin/node")]
+  [TestCase("/usr/lib/jvm/java-21/bin/java")]
+  [TestCase("/opt/kotlinc/bin/kotlinc")]
+  [TestCase("/opt/rustup/toolchains/stable/bin/cargo")]
+  [TestCase("/home/username/node/bin/node")]
+  public void Bubblewrap_BindsNothingForAToolchainItDoesNotHide(string executable) {
+    if (OperatingSystem.IsWindows()) {
+      Assert.Pass("bubblewrap is Linux only, and Windows reads these paths with its own separator");
+      return;
+    }
+
+    Assert.That(new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user").Roots(_command with { Executable = executable }), Is.Empty);
+  }
+
+  /// <summary>The extra roots of a lock entry are bound read-only where the sandbox hides them, and refused where they would show too much.</summary>
+  [Test]
+  public void Bubblewrap_BindsTheExtraRootsItHides_AndRefusesTheWideOnes() {
+    if (OperatingSystem.IsWindows()) {
+      Assert.Pass("bubblewrap is Linux only, and Windows reads these paths with its own separator");
+      return;
+    }
+
+    var log = new List<string>();
+    var sandbox = new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user") { Log = log.Add };
+    var command = _command with {
+      Executable = "/home/user/.cargo/bin/cargo",
+      ReadOnlyRoots = ["/home/user/miri/", "/opt/jdk", "relative", "/home/user", "/home", "/", "/tmp", "/home/user/.local", "/home/user/.cargo/bin/sub", "/tmp/sysroot"]
+    };
+    var line = string.Join(' ', sandbox.CommandLine(command));
+    Assert.That(line, Does.Contain("--tmpfs /home/user --ro-bind /home/user/.cargo /home/user/.cargo --ro-bind /home/user/miri /home/user/miri --ro-bind /tmp/sysroot /tmp/sysroot --bind "));
+    Assert.That(line, Does.Not.Contain("--bind /home/user/miri"), "nothing extra is writable");
+    Assert.That(log.Where(entry => entry.Contains("is not shown")).Select(entry => entry.Split('\'')[1]), Is.EqualTo(new[] { "relative", "/home/user", "/home", "/", "/tmp", "/home/user/.local" }));
+    sandbox.CommandLine(command);
+    Assert.That(log, Has.Count.EqualTo(6), "each reason is said once");
+  }
+
+  [Test]
+  public void AStep_NeedsAToolchainThatWasFound() {
+    var missing = ToolchainResolution.Failed(Polypiler.Core.Diagnostic.Create(RunnerDiagnostics.IsolationUnavailable, null));
+    Assert.That(async () => await StepLauncher.RunAsync(new PollingSandbox(new ProcFileSystemTable()), missing, new ProcessSpec("x", []), Path.GetTempPath(), RunLimits.Default, default),
+      Throws.ArgumentException.With.Message.Contains("not found"));
+  }
+
+  [Test]
+  public void Bubblewrap_RootsNeedACommand()
+    => Assert.That(() => new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), "/home/user").Roots(null!), Throws.ArgumentNullException);
 
   [Test]
   public void Bubblewrap_BindsAToolchainUnderTmpBackIn() {
@@ -101,13 +167,11 @@ public sealed class SandboxTests {
     try {
       var environment = Path.Combine(home, "venv");
       Directory.CreateDirectory(Path.Combine(environment, "bin"));
-      File.WriteAllText(Path.Combine(environment, "pyvenv.cfg"), "");
+      Directory.CreateDirectory(Path.Combine(home, "python", "bin"));
+      File.WriteAllText(Path.Combine(environment, "pyvenv.cfg"), $"home = {home}/python/bin\n");
       File.WriteAllText(Path.Combine(environment, "bin", "tool"), "");
       var line = string.Join('|', new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), home).CommandLine(_command with { Executable = Path.Combine(environment, "bin", "tool") }));
-      Assert.That(line, Does.Contain($"--tmpfs|{home}|--ro-bind|{environment}|{environment}|--bind|"));
-      File.Delete(Path.Combine(environment, "pyvenv.cfg"));
-      var plain = string.Join('|', new BubblewrapSandbox("/usr/bin/bwrap", new ProcFileSystemTable(), home).CommandLine(_command with { Executable = Path.Combine(environment, "bin", "tool") }));
-      Assert.That(plain, Does.Contain($"--tmpfs|{home}|--ro-bind|{environment}/bin|{environment}/bin|--bind|"));
+      Assert.That(line, Does.Contain($"--tmpfs|{home}|--ro-bind|{environment}|{environment}|--ro-bind|{home}/python|{home}/python|--bind|"), "the environment and its base interpreter's prefix");
     } finally {
       Directory.Delete(home, true);
     }
