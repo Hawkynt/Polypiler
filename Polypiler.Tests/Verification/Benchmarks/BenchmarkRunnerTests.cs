@@ -74,6 +74,16 @@ public sealed class BenchmarkRunnerTests {
   }
 
   [Test]
+  public void ASourceDirectory_CopiesEveryFileBelowIt_WithPlaceholdersReplaced() {
+    var runner = new ScriptedBenchRunner(Completed(Expected, 1));
+    Runner(runner).Run(Definition() with { Sources = [$"{Root}/size", $"{Root}/sum-loop.{{configuration}}"] }, "default");
+    Assert.That(runner.Plans, Is.Empty, "tests/fixtures/bench/sum-loop.Release does not exist");
+    Assert.That(this._bag.Items.Single().Message, Does.StartWith($"'{Root}/sum-loop.Release' cannot be read"));
+    Runner(runner).Run(Definition() with { Sources = [$"{Root}/size"] }, "default");
+    Assert.That(runner.Plans[0].Files.Keys, Is.EqualTo(new[] { $"{Root}/size/abc.txt" }));
+  }
+
+  [Test]
   public void AMissingSizePath_IsReported() {
     var definition = Definition() with { Sizes = new([$"{Root}/size/none.txt"], []) };
     Assert.That(Runner(new ScriptedBenchRunner(Completed(Expected, 1))).Run(definition, "default"), Is.Null);
@@ -182,10 +192,10 @@ public sealed class BenchmarkRunnerTests {
     var export = """{"Benchmarks":[{"Statistics":{"OriginalValues":[100.0,120.0,110.0]},"Memory":{"BytesAllocatedPerOperation":4312}}]}""";
     var collected = new Dictionary<string, ReadOnlyMemory<byte>> { [$"{BenchmarkDotNetExport.ResultsFolder}/Cli-report-full.json"] = Encoding.UTF8.GetBytes(export) };
     var runner = new ScriptedBenchRunner(Completed("", 3000, collected: collected));
-    var definition = Definition() with { Kind = BenchmarkKind.DotNet, ExpectStdout = null };
+    var definition = Definition() with { Kind = BenchmarkKind.DotNet, ExpectStdout = null, Sizes = new([], ["out"]) };
     var result = Runner(runner).Run(definition, "default")!;
     Assert.That(runner.Plans, Has.Count.EqualTo(1));
-    Assert.That(runner.Plans[0].Collect, Is.EqualTo(new[] { BenchmarkDotNetExport.ResultsFolder }));
+    Assert.That(runner.Plans[0].Collect, Is.EqualTo(new[] { "out", BenchmarkDotNetExport.ResultsFolder }));
     Assert.That(result.Samples.Select(sample => sample.WallNs), Is.EqualTo(new[] { 100L, 120, 110 }));
     Assert.That((result.AllocatedBytes, result.Stats.ContainsKey("cpuNs")), Is.EqualTo(((long?)4312, false)));
   }

@@ -64,7 +64,7 @@ public sealed class BenchmarkRunner(ICrossLanguageRunner runner, BenchmarkHost h
   }
 
   private BenchmarkResult? Measure(BenchmarkDefinition definition, BenchmarkVariant variant, IReadOnlyDictionary<string, long> extra) {
-    var files = definition.Sources.ToDictionary(source => source, source => (ReadOnlyMemory<byte>)this.Read(source), StringComparer.Ordinal);
+    var files = this.Files(definition.Sources);
     var stdin = definition.Stdin is { } input ? this.Read(input) : [];
     var build = definition.Build is { } arguments ? new[] { new ProcessSpec(definition.Toolchain, this.Expand(arguments)) { Environment = variant.Environment } } : [];
     var execute = new ProcessSpec(definition.Toolchain, this.Expand([.. definition.Run, .. variant.Arguments]), stdin) { Environment = variant.Environment };
@@ -145,6 +145,21 @@ public sealed class BenchmarkRunner(ICrossLanguageRunner runner, BenchmarkHost h
 
   private string Full(string path) => Path.Combine(host.RepositoryRoot, path);
 
+  /// <summary>The files of the sources, placeholders replaced, by their path relative to the root; a directory contributes every file below it.</summary>
+  private Dictionary<string, ReadOnlyMemory<byte>> Files(IEnumerable<string> sources) {
+    var files = new Dictionary<string, ReadOnlyMemory<byte>>(StringComparer.Ordinal);
+    foreach (var source in sources.Select(this.ReplacePlaceholders)) {
+      var directory = this.Full(source);
+      var names = Directory.Exists(directory)
+        ? Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories).Select(file => Path.GetRelativePath(host.RepositoryRoot, file).Replace('\\', '/'))
+        : [source];
+      foreach (var name in names)
+        files[name] = this.Read(name);
+    }
+
+    return files;
+  }
+
   private byte[] Read(string path) {
     try {
       return File.ReadAllBytes(this.Full(path));
@@ -164,7 +179,9 @@ public sealed class BenchmarkRunner(ICrossLanguageRunner runner, BenchmarkHost h
   }
 
   private string[] Expand(IEnumerable<string> arguments)
-    => [.. arguments.Select(argument => host.Placeholders.Aggregate(argument.Replace(RootPlaceholder, host.RepositoryRoot, StringComparison.Ordinal),
-      (text, placeholder) => text.Replace(placeholder.Key, placeholder.Value, StringComparison.Ordinal)))];
+    => [.. arguments.Select(argument => this.ReplacePlaceholders(argument.Replace(RootPlaceholder, host.RepositoryRoot, StringComparison.Ordinal)))];
+
+  private string ReplacePlaceholders(string text)
+    => host.Placeholders.Aggregate(text, (replaced, placeholder) => replaced.Replace(placeholder.Key, placeholder.Value, StringComparison.Ordinal));
 
 }

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The in-process benchmarks of the compiler, measured by BenchmarkDotNet with allocations.
+       polypiler-tooling bench run starts this program for a definition of kind dotnet and converts
+       its JSON export; it is never packaged. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>polypiler-benchmarks</AssemblyName>
+    <RootNamespace>Polypiler.Benchmarks</RootNamespace>
+    <Version>0.1.0</Version>
+    <IsPackable>false</IsPackable>
+    <UseAppHost>false</UseAppHost>
+    <!-- The benchmarks run in processes of their own, where coverage instrumentation would only measure itself. -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Polypiler.Cli\Polypiler.Cli.csproj" />
+  </ItemGroup>
+
+</Project>

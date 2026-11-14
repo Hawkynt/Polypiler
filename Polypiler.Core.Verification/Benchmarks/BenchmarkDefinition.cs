@@ -44,7 +44,7 @@ public sealed record BenchmarkSizes(IReadOnlyList<string> Source, IReadOnlyList<
 /// <param name="Description">What it measures.</param>
 /// <param name="Kind">How it is measured.</param>
 /// <param name="Toolchain">The key of <c>tooling/toolchains.lock</c> whose executable the build and run steps start.</param>
-/// <param name="Sources">Files relative to the repository root, copied into the run's directory under the same relative names.</param>
+/// <param name="Sources">Files or directories relative to the repository root, copied into the run's directory under the same relative names; placeholders such as <c>{configuration}</c> are replaced.</param>
 /// <param name="Build">The arguments of the build step; <see langword="null"/> without one.</param>
 /// <param name="Run">The arguments of the run step.</param>
 /// <param name="Stdin">A file relative to the repository root that the run reads on standard input; <see langword="null"/> for none.</param>
