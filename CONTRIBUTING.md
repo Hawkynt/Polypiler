@@ -156,6 +156,18 @@ file that is not Gherkin fails the build.
   The current directory is never changed, so the scenarios run in parallel like every other test.
   An `IScenarioObserver` registered in the Reqnroll container is told about every scenario —
   feature, scenario, passed or not, the command lines and their results — before the workspace goes.
+- **Every scenario leaves an evidence bundle** (PRD §6.6): `artifacts/evidence/<feature-slug>/<scenario-slug>/`
+  with `evidence.json` ([`spec/schemas/evidence.schema.json`](spec/schemas/evidence.schema.json)) and
+  byte-for-byte copies of what was attached, written after the last step whether the scenario passed
+  or failed. A step class takes the scenario's `EvidenceCollector` in its constructor and adds what
+  only it knows — sources, generated files, the manifest, tool versions, processes, the comparison
+  and its policy, opt diagnostics; the hook adds the runtime's and Polypiler's versions, the values
+  of an example row and every command line. A slug is the lower-case title with each run of
+  characters outside `a-z0-9` as one `-`, at most 80 characters, `scenario` when nothing is left; an
+  example row appends `-<n>`, a second scenario with the same slug `-2`. `EvidenceValidator` then
+  checks the bundle and its `PLY0060` fails the scenario: every scenario needs tool versions and the
+  CI link, one tagged `@translation` also a source, a generated file, the manifest, a process and the
+  comparison (and must not pass with a failed vector), one tagged `@optimization` its opt diagnostics.
 - **The static check** (`FeatureBindingTests` in `Polypiler.Tests`, `SupportTests` in the acceptance
   project) reads every feature file with the Gherkin parser and reports `PLY0074` for a step with no
   binding or more than one, a feature without a scenario and a path that breaks the rule. The
