@@ -115,7 +115,7 @@ file that is not Gherkin fails the build.
 - **The shared steps** (`Polypiler.Tests.Acceptance/Steps/`): `When I run "<command line>"` — the
   first word `polypiler` is dropped and the rest goes to `polypiler`; a first word `polypiler-tooling`
   is dropped too, and that line, like one whose first word is a verb of `polypiler-tooling`
-  (`toolchains`, `spec`, `corpus`, `licenses`, `integrity`, `rebuild`, `sbom`, `report`), starts the
+  (`toolchains`, `spec`, `corpus`, `licenses`, `integrity`, `rebuild`, `sbom`, `report`, `ci`), starts the
   `polypiler-tooling` executable in the workspace, with the workspace first on `PATH` — its verbs
   read the working directory and `PATH`; text in single quotes is one argument. Then
   `the exit code is <n>`, `stdout contains "<text>"`, `stderr contains "<text>"`,
@@ -353,7 +353,7 @@ Workflows live in `.github/workflows/`:
 |---|---|---|
 | `smoke.yml` | push to a working branch | The fast tier. One OS, fast tests only, no coverage, no package-README check. Minutes. |
 | `generate.yml` | push to a working branch | Refreshes derived files (screenshots, references) and commits them onto the branch. |
-| `ci.yml` | PR to `main` | The gate. Every OS, every category, coverage. |
+| `ci.yml` | PR to `main` | The gate. Every OS, every category, coverage; the tests run in its layer jobs. |
 | `_build.yml` | called by release/nightly | Shared build/pack step so both paths produce identical artifacts. |
 | `nightly.yml` | automatically after green CI on `main` | Dated `nightly-YYYYMMDD` prerelease, GFS-pruned. |
 | `release.yml` | manual dispatch | Cuts a dated `vYYYYMMDD` release; publishes NuGet packages when configured. |
@@ -407,6 +407,34 @@ linter:
 
 ```bash
 actionlint .github/workflows/*.yml
+```
+
+### The layers of ci.yml
+
+The tests of a pull request run in **layer jobs**, one per file of `tooling/ci/layers/`
+(format: `spec/schemas/ci-layer.schema.json`): the toolchains of `tooling/toolchains.lock` the layer
+installs, the runners it uses, the changed paths that select it and whether it runs always. The job
+`layer-<name>` runs the layer. `layer-core` builds with `-warnaserror`, checks
+`dotnet format --verify-no-changes` (the fixtures under `tests/fixtures` excepted, whose exact text
+the tests read), runs every test that belongs to no other layer
+(`--filter "TestCategory!~Layer.|TestCategory=Layer.core"`) and the `IrVerifier` category, and runs
+`polypiler-tooling spec validate` and `ci audit`. The `ci` job keeps the build, the README checks and
+the coverage report of the shared workflow, without running the tests a second time.
+
+- **Every test of `Polypiler.Tests.Acceptance` names its layer**: `[Layer("core")]` on its class, or
+  the tag `@Layer.core` on its feature file, exactly one.
+- **`tooling/ci/categories.yaml` names the step of every category the fast tier leaves out.**
+  `polypiler-tooling ci audit` evaluates the `--filter` of that step's `dotnet test` and fails with
+  `PLY0076` when it does not select the category, and when a category has no test unless it is
+  `pending` on the issue that brings its first one. It also holds layer files, jobs and the lock to
+  each other (`PLY0075`) and checks the numbering of the decision records under `docs/adr/`. It reads
+  the categories of the tests from the Release builds of the test projects, so build first:
+
+```bash
+dotnet build Polypiler.slnx -c Release
+polypiler-tooling ci audit                              # one line per layer, then "<n> categories, <m> problems"
+polypiler-tooling ci matrix --changed changed.txt       # the layers a list of changed paths selects, as JSON
+polypiler-tooling ci env --layer core                   # <key>=<version> per toolchain, for $GITHUB_OUTPUT
 ```
 
 ### When the package-README check fails

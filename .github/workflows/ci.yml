@@ -23,7 +23,12 @@ jobs:
     with:
       solution: Polypiler.slnx
       dotnet-version: '10.0.x'
-      os-matrix: '["ubuntu-latest","windows-latest"]'
+      # The tests run in the layer jobs below, on the runners of their layer files (layer-core: ubuntu
+      # and windows); this job keeps the build, the package and repository README checks and the
+      # coverage report of the shared workflow. Its test step is pointed at a project without tests,
+      # so that the suite does not run a second time.
+      os-matrix: '["ubuntu-latest"]'
+      test-target: Polypiler.Core/Polypiler.Core.csproj
       repo-readme: true
       # Only Polypiler.Tests references the coverage collector; the acceptance tests add nothing to the
       # report, so the coverage leg does not run them a second time on Linux.
@@ -85,3 +90,70 @@ jobs:
               print(f"::error::{kind} coverage {rate:.2f} % is below {minimum:.0f} %")
               failed = True
           sys.exit(1 if failed else 0)
+
+  # The core layer of PRD §7.3 (tooling/ci/layers/core.yaml): warnings as errors, format, every test
+  # that belongs to no other layer, the IR verifier, spec validation and the audit that holds layer
+  # files, this workflow, the test categories and the tests to each other (tooling/ci/categories.yaml).
+  # The toolchains come at the versions tooling/toolchains.lock pins, as `ci env` prints them; format,
+  # spec validation and the audit read nothing that differs per runner and run on Linux only.
+  layer-core:
+    name: layer-core ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # global.json holds every later dotnet to the SDK the lock pins, whichever others the runner has.
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer core > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          sdk=$(sed -n 's/^dotnet-sdk=//p' "$RUNNER_TEMP/toolchains.env")
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.env.outputs.node }}
+      - name: toolchains
+        run: |
+          $TOOLING toolchains validate
+          $TOOLING toolchains probe --only dotnet-sdk,node
+      - name: build
+        run: dotnet build Polypiler.slnx -c Release -warnaserror
+      - name: format
+        if: runner.os == 'Linux'
+        # The fixtures are inputs whose exact text the tests read; tests/fixtures/infra/ci/core holds
+        # an unformatted file on purpose.
+        run: dotnet format Polypiler.slnx --verify-no-changes --no-restore --exclude tests/fixtures
+      - name: test
+        run: dotnet test Polypiler.slnx -c Release --no-build --filter "TestCategory!~Layer.|TestCategory=Layer.core"
+      - name: ir-verifier
+        run: dotnet test Polypiler.slnx -c Release --no-build --filter "TestCategory=IrVerifier"
+      - name: spec validate
+        if: runner.os == 'Linux'
+        run: $TOOLING spec validate
+      - name: ci audit
+        if: runner.os == 'Linux'
+        run: $TOOLING ci audit
