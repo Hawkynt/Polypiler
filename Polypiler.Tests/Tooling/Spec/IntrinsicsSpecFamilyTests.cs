@@ -29,7 +29,7 @@ public sealed class IntrinsicsSpecFamilyTests {
 
   private static readonly string[] _rules = ["layout", "vector-arity", "vector-width", "unique-name", "integer-is-exact", "type-bound"];
 
-  private static readonly string[] _groups = ["IntMath", "FloatMath", "Boolean", "Bitfield", "BitCount", "Shuffle", "Saturation", "Carry", "Endian", "Trig", "Sequence", "Matrix", "Tensor", "CopyFill"];
+  private static readonly string[] _groups = ["IntMath", "FloatMath", "Boolean", "Bitfield", "BitCount", "Shuffle", "Saturation", "Carry", "Endian", "Trig", "Sequence", "Matrix", "Tensor", "CopyFill", "String"];
 
   /// <summary>A fixture file: where it goes in the tree (<c># at:</c>), what it must produce (<c># expect:</c>) and its ID.</summary>
   public sealed record Fixture(string Name, string At, string Expect, string Id, string Text) {
@@ -132,12 +132,12 @@ public sealed class IntrinsicsSpecFamilyTests {
     var tree = SpecTree.Load(Path.Combine(PrototypeFixture.RepositoryRoot, "spec"), PrototypeFixture.RepositoryRoot);
     var validation = new SpecValidator(SpecFamilies.All).Run(tree, "intrinsics");
     Assert.That(validation.Diagnostics, Is.Empty);
-    Assert.That(validation.Documents, Is.EqualTo(85));
+    Assert.That(validation.Documents, Is.EqualTo(111));
   }
 
   /// <summary>
   /// The seed is every exact intrinsic the IR implements: each document names an operation of
-  /// <see cref="IrIntrinsicOp"/>, and the operations without one are the four array operations and the
+  /// <see cref="IrIntrinsicOp"/>, and the operations without one are the four array operations, the operations on views and the
   /// floating-point operations whose contract is <c>ulp(n)</c>, which wait for their tolerance documents.
   /// </summary>
   [Test]
@@ -147,7 +147,7 @@ public sealed class IntrinsicsSpecFamilyTests {
     Assert.That(names.Where(name => !Enum.TryParse<IrIntrinsicOp>(name, out _)), Is.Empty);
     var missing = Enum.GetValues<IrIntrinsicOp>().Where(op => !names.Contains(op.ToString())).ToList();
     bool Inexact(IrIntrinsicOp op) => FloatOperationTable.Of(op) is { Contract.Kind: FloatContractKind.Ulp } && !IntegerOperations.Operations.Contains(op);
-    Assert.That(missing.Where(op => !Inexact(op)), Is.EquivalentTo(new[] { IrIntrinsicOp.ArrayOf, IrIntrinsicOp.ArrayCopy, IrIntrinsicOp.ArrayFill, IrIntrinsicOp.ArrayClear }));
+    Assert.That(missing.Where(op => !Inexact(op)), Is.EquivalentTo(new[] { IrIntrinsicOp.ArrayOf, IrIntrinsicOp.ArrayCopy, IrIntrinsicOp.ArrayFill, IrIntrinsicOp.ArrayClear }.Concat(IrViews.Operations)));
     Assert.That(Enum.GetValues<IrIntrinsicOp>().Where(Inexact).Where(op => names.Contains(op.ToString())), Is.Empty);
   }
 
@@ -517,6 +517,34 @@ public sealed class IntrinsicsSpecFamilyTests {
   public void ListForAScalar_BreaksVectorWidth()
     => Assert.That(PopCountLines((Vector(0), "{types: {T: TYPES.u32}, inputs: [[\"0x00\"]], outputs: [0]}")).Single(),
       Does.EndWith("error PLY0046: vectors[0].inputs[0] is a list, the value is a single TYPES.u32 (rule: vector-width)"));
+
+  // A value of the family text is the list of its code units, an array of them a list of such lists.
+
+  /// <summary>The text type of the repository, as a document of the tree.</summary>
+  private static readonly (string Path, string Text) _str = ("types/text/str.yaml", File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "spec", "types", "text", "str.yaml")));
+
+  /// <summary>The diagnostics of <c>popcount.yaml</c> whose parameter is a string, or an array of strings, with the given first input.</summary>
+  private static string[] TextLines(string parameter, string first) {
+    using var repository = Repository(null, _str, (PopCountPath, Change(PopCount, [
+      ("parameters: [{name: value, type: T}]", $"parameters: [{{name: value, type: {parameter}}}]"),
+      (Vector(0), $"{{types: {{T: TYPES.u32}}, inputs: [{first}], outputs: [0]}}"),
+      (Vector(1), "{types: {T: TYPES.u32}, inputs: [[]], outputs: [0]}"),
+      (Vector(2), parameter.EndsWith("[]\"", StringComparison.Ordinal) ? "{types: {T: TYPES.u32}, inputs: [[[104, 105], []]], outputs: [0]}" : "{types: {T: TYPES.u32}, inputs: [[104, 105]], outputs: [0]}"),
+      (Vector(3), "{types: {T: TYPES.u32}, inputs: [[]], outputs: [0]}")])));
+    return repository.Lines("intrinsics");
+  }
+
+  [TestCase("TYPES.str", "[\"0xD83D\", 56832]")]
+  [TestCase("\"TYPES.str[]\"", "[[65], [], [\"0xFFFF\"]]")]
+  public void TextParameter_TakesTheListsOfItsCodeUnits(string parameter, string first) => Assert.That(TextLines(parameter, first), Is.Empty);
+
+  [TestCase("TYPES.str", "[65536]", "vectors[0].inputs[0][0] 65536 does not fit a code unit of TYPES.str (16 bits)")]
+  [TestCase("TYPES.str", "65", "vectors[0].inputs[0] 65 is not the list of the code units of a TYPES.str")]
+  [TestCase("TYPES.str", "[[65]]", "vectors[0].inputs[0] [[65]] is not the list of the code units of a TYPES.str")]
+  [TestCase("\"TYPES.str[]\"", "[65]", "vectors[0].inputs[0][0] 65 is not the list of the code units of a TYPES.str")]
+  [TestCase("\"TYPES.str[]\"", "65", "vectors[0].inputs[0] 65 is not a list, the value is an array of TYPES.str")]
+  public void TextLiteral_OfAnotherShape_BreaksVectorWidth(string parameter, string first, string problem)
+    => Assert.That(TextLines(parameter, first).Single(), Does.EndWith($"error PLY0046: {problem} (rule: vector-width)"));
 
   [Test]
   public void ArrayTypeNamingNoDocument_IsABrokenReference()

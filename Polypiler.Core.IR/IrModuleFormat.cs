@@ -15,14 +15,14 @@ namespace Polypiler.Core.IR;
 /// <para>
 /// The bytes keep the module exactly: every node, every type and every name, and also which nodes
 /// are one and the same object - a local that a parameter list, a declaration and every read share,
-/// a constant that its readers share with the list of the module, a struct and its fields. A SHA-256
+/// a constant or a global that its readers share with the list of the module, a struct and its fields. A SHA-256
 /// of the content guards it: damaged bytes are refused, never read as another module.
 /// </para>
 /// </summary>
 public static class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 1;
+  public const int Version = 3;
 
   private static readonly byte[] _magic = "PLYIRMOD"u8.ToArray();
 
@@ -31,14 +31,14 @@ public static class IrModuleFormat {
   private enum Tag : byte {
     Null, Shared,
     Const, ConstRef, LocalRef, Unary, Binary, Convert, Conditional, ArrayLoad, ArrayLength, NewArray, Call, Step,
-    StructNew, StructDefault, FieldLoad, StructEquals, Intrinsic,
-    Block, Declare, Assign, Store, FieldStore, ExprStmt, If, While, DoWhile, For, Switch, Break, Continue, Return
+    StructNew, StructDefault, FieldLoad, StructEquals, Intrinsic, GlobalRef, StrConst,
+    Block, Declare, Assign, Store, FieldStore, ExprStmt, If, While, DoWhile, For, Switch, Break, Continue, Return, GlobalAssign
   }
 
   /// <summary>Writes a module as bytes.</summary>
-  /// <param name="module">The module; every declared type it names is one of its <see cref="IrModule.Types"/>, and every constant it reads one of its <see cref="IrModule.Constants"/>.</param>
+  /// <param name="module">The module; every declared type it names is one of its <see cref="IrModule.Types"/>, every constant it reads one of its <see cref="IrModule.Constants"/>, and every global one of its <see cref="IrModule.Globals"/>.</param>
   /// <returns>The bytes, which <see cref="Read"/> turns back into an equal module.</returns>
-  /// <exception cref="ArgumentException">The module names a struct, a field or a constant that is not its own.</exception>
+  /// <exception cref="ArgumentException">The module names a struct, a field, a constant or a global that is not its own.</exception>
   public static byte[] Write(IrModule module) {
     using var content = new MemoryStream();
     using (var writer = new BinaryWriter(content, Encoding.UTF8, true))
@@ -94,6 +94,7 @@ public static class IrModuleFormat {
     private readonly Dictionary<IrTypeDeclaration, int> _declarations = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrField, (int Declaration, int Index)> _fields = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrModuleConst, int> _constants = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IrGlobal, int> _globals = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrLocal, int> _locals = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<object, int> _nodes = new(ReferenceEqualityComparer.Instance);
 
@@ -127,6 +128,18 @@ public static class IrModuleFormat {
         writer.Write(constant.Name);
         this.Type(constant.Type);
         this.Longs(constant.Values);
+        this.Count(constant.Strings.Count);
+        foreach (var text in constant.Strings)
+          this.Text(text);
+      }
+
+      // A global is numbered before its initializer is written: no initializer names a later one.
+      this.Count(module.Globals.Count);
+      foreach (var global in module.Globals) {
+        this._globals.Add(global, this._globals.Count);
+        writer.Write(global.Name);
+        this.Type(global.Type);
+        this.Node(global.Initializer);
       }
 
       this.Count(module.Functions.Count);
@@ -148,9 +161,16 @@ public static class IrModuleFormat {
         writer.Write(value);
     }
 
+    // A string as its UTF-16 code units, so that an unpaired surrogate is kept as it is.
+    private void Text(string text) {
+      this.Count(text.Length);
+      foreach (var unit in text)
+        writer.Write((ushort)unit);
+    }
+
     private void Type(IrType type) {
       writer.Write((byte)type.Kind);
-      if (type.Kind == IrTypeKind.Array)
+      if (type.Kind is IrTypeKind.Array or IrTypeKind.Span or IrTypeKind.ReadOnlySpan)
         this.Type(type.Element!);
       else if (type.Kind == IrTypeKind.Struct)
         this.Count(this._declarations.TryGetValue(type.Declaration!, out var index) ? index : throw new ArgumentException($"The struct '{type.Declaration}' is not one of the module's types.", nameof(module)));
@@ -158,6 +178,9 @@ public static class IrModuleFormat {
 
     private void Field(IrField field)
       => this.Field(this._fields.TryGetValue(field, out var place) ? place : throw new ArgumentException($"The field '{field.Name}' is not one of a struct of the module.", nameof(module)));
+
+    private void Global(IrGlobal global)
+      => this.Count(this._globals.TryGetValue(global, out var index) ? index : throw new ArgumentException($"The global '{global.Name}' is not one of the module's.", nameof(module)));
 
     private void Field((int Declaration, int Index) place) {
       this.Count(place.Declaration);
@@ -234,6 +257,8 @@ public static class IrModuleFormat {
       IrFieldLoad => Tag.FieldLoad,
       IrStructEquals => Tag.StructEquals,
       IrIntrinsic => Tag.Intrinsic,
+      IrGlobalRef => Tag.GlobalRef,
+      IrStrConst => Tag.StrConst,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -252,6 +277,7 @@ public static class IrModuleFormat {
       IrBreak => Tag.Break,
       IrContinue => Tag.Continue,
       IrReturn => Tag.Return,
+      IrGlobalAssign => Tag.GlobalAssign,
       _ => throw new ArgumentException($"The statement {statement.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -265,6 +291,12 @@ public static class IrModuleFormat {
           break;
         case IrLocalRef reference:
           this.Local(reference.Local);
+          break;
+        case IrGlobalRef reference:
+          this.Global(reference.Global);
+          break;
+        case IrStrConst text:
+          this.Text(text.Value);
           break;
         case IrUnary unary:
           this.Count((int)unary.Op);
@@ -338,6 +370,10 @@ public static class IrModuleFormat {
           this.Local(assignment.Local);
           this.Node(assignment.Value);
           break;
+        case IrGlobalAssign assignment:
+          this.Global(assignment.Global);
+          this.Node(assignment.Value);
+          break;
         case IrStore store:
           this.Node(store.Array);
           this.Node(store.Index);
@@ -396,6 +432,7 @@ public static class IrModuleFormat {
 
     private readonly List<IrStructType> _declarations = [];
     private readonly List<IrModuleConst> _constants = [];
+    private readonly List<IrGlobal> _globals = [];
     private readonly List<IrLocal> _locals = [];
     private readonly List<object?> _nodes = [];
 
@@ -413,13 +450,16 @@ public static class IrModuleFormat {
         structure.Define(this.List(() => new IrField(reader.ReadString(), this.Type(), reader.ReadBoolean())));
 
       var constants = this.List(() => {
-        var constant = new IrModuleConst(reader.ReadString(), this.Type(), this.Longs());
+        var constant = new IrModuleConst(reader.ReadString(), this.Type(), this.Longs()) { Strings = this.List(this.Text) };
         this._constants.Add(constant);
         return constant;
       });
+      for (var count = this.Count(); count > 0; --count)
+        this._globals.Add(new IrGlobal(reader.ReadString(), this.Type(), this.OptionalNode<IrExpr>()));
+
       var functions = this.List(() => new IrFunction(
         reader.ReadString(), reader.ReadBoolean(), this.Type(), this.List(this.Local), this.List(this.Local), this.Node<IrBlock>()));
-      return new IrModule(name, functions, constants) { Types = [.. this._declarations] };
+      return new IrModule(name, functions, constants) { Types = [.. this._declarations], Globals = [.. this._globals] };
     }
 
     private int Count() {
@@ -438,6 +478,14 @@ public static class IrModuleFormat {
 
     private IReadOnlyList<long> Longs() => this.List(reader.ReadInt64);
 
+    private string Text() {
+      var units = new char[this.Count()];
+      for (var index = 0; index < units.Length; ++index)
+        units[index] = (char)reader.ReadUInt16();
+
+      return new string(units);
+    }
+
     private static T Of<T>(IReadOnlyList<T> table, int index, string what)
       => index < table.Count ? table[index] : throw new InvalidDataException($"The {what} {index} does not exist.");
 
@@ -452,6 +500,9 @@ public static class IrModuleFormat {
       return kind switch {
         IrTypeKind.Array => IrType.Array(this.Type()),
         IrTypeKind.Struct => IrType.Struct(Of(this._declarations, this.Count(), "struct")),
+        IrTypeKind.Span => IrType.Span(this.Type()),
+        IrTypeKind.ReadOnlySpan => IrType.ReadOnlySpan(this.Type()),
+        IrTypeKind.String => IrType.String,
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };
@@ -486,7 +537,7 @@ public static class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.Return)
+      if (tag > Tag.GlobalAssign)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
@@ -515,6 +566,8 @@ public static class IrModuleFormat {
         Tag.StructDefault => new IrStructDefault(type),
         Tag.FieldLoad => this.FieldLoad(),
         Tag.StructEquals => new IrStructEquals(this.Node<IrExpr>(), this.Node<IrExpr>()),
+        Tag.GlobalRef => new IrGlobalRef(Of(this._globals, this.Count(), "global")),
+        Tag.StrConst => new IrStrConst(this.Text()),
         _ => new IrIntrinsic(this.Enum<IrIntrinsicOp>(), type, this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };
@@ -544,6 +597,7 @@ public static class IrModuleFormat {
       Tag.Switch => new IrSwitch(this.Node<IrExpr>(), this.List(() => new IrSwitchSection(this.Longs(), reader.ReadBoolean(), this.Node<IrBlock>()))),
       Tag.Break => new IrBreak(),
       Tag.Continue => new IrContinue(),
+      Tag.GlobalAssign => new IrGlobalAssign(Of(this._globals, this.Count(), "global"), this.Node<IrExpr>()),
       _ => new IrReturn(this.OptionalNode<IrExpr>())
     };
 

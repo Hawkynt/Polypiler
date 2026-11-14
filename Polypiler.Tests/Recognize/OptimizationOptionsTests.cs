@@ -52,7 +52,8 @@ public sealed class OptimizationOptionsTests {
   [TestCase("none", false)]
   [TestCase("default", true)]
   public void Opt_ChoosesTheLevel(string level, bool rotated) {
-    var (exitCode, text, _) = this.Translate(Rotate, "javascript", "--opt", level);
+    // The helper inlining of the backend (O0500) would write the rotation as shifts again.
+    var (exitCode, text, _) = this.Translate(Rotate, "javascript", "--opt", level, "--disable-opt", "O0500");
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     Assert.That(text.Contains("<< 8", StringComparison.Ordinal), Is.EqualTo(!rotated));
   }
@@ -75,7 +76,7 @@ public sealed class OptimizationOptionsTests {
 
   [Test]
   public void ExplainOpt_ListsEveryApplicationOnTheErrorStream() {
-    var (exitCode, _, error) = this.Translate(Rotate + " public static int G(int x) => x < 0 ? -x : x;", "javascript", "--explain-opt");
+    var (exitCode, _, error) = this.Translate(Rotate + " public static int G(int x) => x < 0 ? -x : x;", "javascript", "--explain-opt", "--disable-opt", "O0500,O0501");
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     var lines = error.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => line.TrimEnd('\r')).ToList();
     Assert.That(lines, Has.Count.EqualTo(2));

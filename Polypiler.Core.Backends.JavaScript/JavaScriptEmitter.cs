@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
+using Polypiler.Core.Backends.JavaScript.Passes;
+using Polypiler.Core.Backends.JavaScript.Printing;
+using Polypiler.Core.Backends.JavaScript.Syntax;
 using Polypiler.Core.IR;
+using Polypiler.Core.Optimize.Target;
 
 namespace Polypiler.Core.Backends.JavaScript;
 
@@ -66,7 +69,8 @@ public static partial class JavaScriptEmitter {
   /// Emits the module for a profile and a floating-point mode. The header names the profile and, where
   /// the module calls a native function with an <c>ulp(n)</c> contract, each such function with the
   /// comparison bound of ADR 0005; in <see cref="FloatMode.Strict"/> it says that the results are the
-  /// same bits on every target.
+  /// same bits on every target. The tree is printed as the emitter built it, without the target
+  /// passes; the overload that takes <see cref="TargetPassOptions"/> runs them, as <c>translate</c> does.
   /// </summary>
   /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check"/> accepts.</param>
   /// <param name="profile">The JavaScript to write.</param>
@@ -74,15 +78,69 @@ public static partial class JavaScriptEmitter {
   /// <param name="capabilities">The table the constructs are chosen from; the standard one when <see langword="null"/>.</param>
   /// <returns>The generated file.</returns>
   /// <exception cref="ArgumentException">The module is ill-typed or cannot be expressed in the profile.</exception>
-  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities = null) {
+  public static IReadOnlyList<GeneratedFile> Emit(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities = null)
+    => Emit(module, profile, mode, capabilities, TargetPassOptions.None).Files;
+
+  /// <summary>
+  /// Emits the module for a profile and a floating-point mode: builds its syntax tree, runs the target
+  /// passes the options let run (<see cref="JavaScriptTargetPasses.Pipeline"/>) and prints the tree.
+  /// </summary>
+  /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check"/> accepts.</param>
+  /// <param name="profile">The JavaScript to write.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="capabilities">The table the constructs are chosen from; the standard one when <see langword="null"/>.</param>
+  /// <param name="passes">Which target passes run.</param>
+  /// <returns>The generated file and what the passes changed.</returns>
+  /// <exception cref="ArgumentException">The module is ill-typed or cannot be expressed in the profile.</exception>
+  public static TargetEmission Emit(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes) {
+    var ((program, applications), helpers) = Built(module, profile, mode, capabilities, passes);
+    return new([new GeneratedFile(module.Name + profile.Extension, JavaScriptPrinter.Print(program, profile)) { Helpers = Measured(program, helpers) }], applications);
+  }
+
+  /// <summary>
+  /// The syntax tree of the module for a profile and a floating-point mode, after the target passes
+  /// the options let run: what <see cref="Emit(IrModule, JavaScriptProfile, FloatMode, JavaScriptCapabilities?, TargetPassOptions)"/> prints.
+  /// </summary>
+  /// <param name="module">A module, legalized for the profile and the mode, that <see cref="Check"/> accepts.</param>
+  /// <param name="profile">The JavaScript to write.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="capabilities">The table the constructs are chosen from; the standard one when <see langword="null"/>.</param>
+  /// <param name="passes">Which target passes run.</param>
+  /// <returns>The tree and what the passes changed.</returns>
+  /// <exception cref="ArgumentException">The module is ill-typed or cannot be expressed in the profile.</exception>
+  public static TargetPipelineResult<JsProgram> Build(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes)
+    => Built(module, profile, mode, capabilities, passes).Result;
+
+  /// <summary>What <see cref="Build"/> gives, with the helpers the module carried before the target passes, their texts still empty.</summary>
+  private static (TargetPipelineResult<JsProgram> Result, IReadOnlyList<HelperText> Helpers) Built(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes) {
+    ArgumentNullException.ThrowIfNull(passes);
     var writer = new Writer(profile, capabilities ?? JavaScriptCapabilities.Standard, mode);
     var problems = IrVerifier.Verify(module);
-    var text = problems.Count > 0 ? "" : writer.Module(module);
+    var program = problems.Count > 0 ? null : writer.Module(module);
     if (problems.Concat(writer.Problems).FirstOrDefault() is { } problem)
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problem.Message}.", nameof(module));
 
-    return [new GeneratedFile(module.Name + profile.Extension, text) { Helpers = writer.Emitted }];
+    return (JavaScriptTargetPasses.Pipeline.Run(program!, profile, passes), writer.Helpers);
   }
+
+  /// <summary>
+  /// The helpers of a file, measured in its statements at the level of the module, each printed on its
+  /// own without the lines in front of it: the same text whether the file is a module or a script that
+  /// indents them. A helper the target passes inlined everywhere and removed is still listed, as code
+  /// of it is in the file, with no text of its own.
+  /// </summary>
+  private static IReadOnlyList<EmittedHelper> Measured(JsProgram program, IReadOnlyList<HelperText> helpers) {
+    var statements = JavaScriptTargetPasses.ModuleScope(program).Select(statement => (Name: Declared(statement), Text: JavaScriptPrinter.Print(statement with { Leading = JsTrivia.None }))).ToList();
+    var texts = statements.Where(statement => statement.Name is not null).GroupBy(statement => statement.Name!).ToDictionary(group => group.Key, group => string.Concat(group.Select(statement => statement.Text)));
+    return EmittedHelper.Measure([.. helpers.Select(helper => helper with { Text = texts.GetValueOrDefault(helper.Name, "") })], string.Concat(statements.Select(statement => statement.Text)));
+  }
+
+  /// <summary>The name a statement at the level of the module declares, or <see langword="null"/>.</summary>
+  private static string? Declared(JsStatement statement) => statement switch {
+    JsFunctionDeclaration function => function.Name,
+    JsVariableDeclaration { Declarators: [var declarator] } => declarator.Name,
+    _ => null
+  };
 
   /// <summary>Says why a module cannot be emitted for a profile.</summary>
   /// <param name="module">The module.</param>
@@ -103,6 +161,18 @@ public static partial class JavaScriptEmitter {
     return writer.Problems;
   }
 
+  /// <summary>
+  /// The source of every helper as a profile has it, in the order a module lists them: what a module
+  /// that calls the helper declares, read into the syntax tree and printed back.
+  /// </summary>
+  /// <param name="profile">The profile.</param>
+  /// <param name="capabilities">The table the constructs are chosen from; the standard one when <see langword="null"/>.</param>
+  /// <returns>Each helper's name and source.</returns>
+  public static IReadOnlyList<(string Name, string Source)> HelperSources(JavaScriptProfile profile, JavaScriptCapabilities? capabilities = null) {
+    var table = capabilities ?? JavaScriptCapabilities.Standard;
+    return [.. JavaScriptHelpers.Sources(name => table.Has(name, profile))];
+  }
+
   /// <summary>The typed array that stores the elements of an array type, which is also the name of its capability.</summary>
   private static string Storage(IrType element) => element.Kind switch {
     IrTypeKind.I8 => "Int8Array",
@@ -117,39 +187,78 @@ public static partial class JavaScriptEmitter {
     _ => "Float64Array"
   };
 
+  /// <summary>A declaration of a helper, marked as one so that the target passes may inline or remove it.</summary>
+  private static JsStatement AsHelper(JsStatement statement) => statement switch {
+    JsFunctionDeclaration function => function with { IsHelper = true },
+    JsVariableDeclaration variable => variable with { IsHelper = true },
+    _ => statement
+  };
+
   /// <summary>A 64-bit integer as the object of its two unsigned halves.</summary>
-  private static string Pair(ulong bits) => $"{{ hi: {bits >> 32}, lo: {bits & 0xFFFFFFFF} }}";
+  private static JsObject Pair(ulong bits) => Halves(Number((bits >> 32).ToString(CultureInfo.InvariantCulture)), Number((bits & 0xFFFFFFFF).ToString(CultureInfo.InvariantCulture)));
+
+  /// <summary>The object of two halves.</summary>
+  private static JsObject Halves(JsExpression high, JsExpression low) => new([new JsProperty("hi", high), new JsProperty("lo", low)]);
+
+  /// <summary>A number as the emitter spells it, which the printer keeps.</summary>
+  private static JsNumber Number(string spelled) => new(JavaScriptLiterals.ParseNumber(spelled)!.Value) { Raw = spelled };
+
+  /// <summary>An integer as its digits.</summary>
+  private static JsNumber Number(Int128 value) => Number(value.ToString(CultureInfo.InvariantCulture));
+
+  private static JsIdentifier Id(string name) => new(name);
+
+  /// <summary>A name with the members read from it, such as <c>Math.imul</c> or <c>BigInt.asIntN</c>.</summary>
+  private static JsExpression Dotted(string path) {
+    var parts = path.Split('.');
+    JsExpression result = Id(parts[0]);
+    foreach (var part in parts.Skip(1))
+      result = new JsMember(result, part);
+
+    return result;
+  }
+
+  /// <summary>A call of a function of the library or of a name, such as <c>Math.fround(x)</c>.</summary>
+  private static JsCall Invoke(string callee, params IEnumerable<JsExpression> arguments) => new(Dotted(callee), [.. arguments]);
+
+  private static JsBinary Infix(JsExpression left, string op, JsExpression right) => new(left, op, right);
+
+  private static JsParenthesized Parenthesized(JsExpression inner) => new(inner);
+
+  /// <summary>An expression as an operand: in parentheses unless it is one already.</summary>
+  private static JsExpression Operand((JsExpression Node, bool Atomic) written) => written.Atomic ? written.Node : Parenthesized(written.Node);
 
   /// <summary>
   /// A floating-point number as a literal that reads back as exactly that number: the shortest digits
   /// that identify the double. A binary32 number is widened first, which changes nothing about it.
   /// </summary>
-  private static string Literal(double value) {
-    if (double.IsNaN(value))
-      return "NaN";
-
-    return double.IsInfinity(value) ? (value < 0 ? "-Infinity" : "Infinity") : value.ToString("R", CultureInfo.InvariantCulture);
-  }
+  private static JsNumber Literal(double value) => new(value);
 
   private sealed partial class Writer {
 
     /// <summary>The variable a postfix step of a local keeps the old value in; a function that needs it declares it.</summary>
     private const string Previous = "$p";
 
-    private const string Zero64 = "{ hi: 0, lo: 0 }";
-    private const string One64 = "{ hi: 0, lo: 1 }";
+    private static JsObject Zero64 => Halves(Number("0"), Number("0"));
+
+    private static JsObject One64 => Halves(Number("0"), Number("1"));
 
     private readonly JavaScriptProfile _profile;
     private readonly JavaScriptCapabilities _capabilities;
     private readonly FloatMode _mode;
     private readonly HashSet<string> _reserved;
-    private readonly StringBuilder _code = new();
     private readonly HashSet<string> _used = [];
     private readonly List<string> _exported = [];
     private readonly HashSet<string> _refused = [];
     private readonly List<Diagnostic> _problems = [];
     private readonly Dictionary<string, IrLocal> _taken = [];
     private readonly Dictionary<IrLocal, string> _renamed = [];
+
+    /// <summary>The names of the functions and constants of the module, which no renamed local may take.</summary>
+    private readonly HashSet<string> _members = [];
+
+    /// <summary>Every name a <c>let</c> of the function being written may not take when it is renamed.</summary>
+    private readonly HashSet<string> _names = [];
     private object _construct = "the module";
     private bool _previous;
     private bool _halves;
@@ -197,105 +306,107 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>
-    /// The helpers and portable implementations <see cref="Module"/> wrote, measured in the module's
-    /// code before a script's function indents it; none before it ran.
+    /// The file: the header, then the helpers the module uses, the helpers of its structs, its
+    /// constants and its functions, packaged as the module format says - an ES module that exports
+    /// its public functions, a CommonJS module that assigns them to <c>exports</c>, or a script whose
+    /// function expression returns them to a global.
     /// </summary>
-    public IReadOnlyList<EmittedHelper> Emitted { get; private set; } = [];
+    /// <summary>The helpers and portable implementations <see cref="Module"/> put into the module, their texts still empty; none before it ran.</summary>
+    public IReadOnlyList<HelperText> Helpers { get; private set; } = [];
 
-    public string Module(IrModule module) {
+    public JsProgram Module(IrModule module) {
+      this.NameGlobals(module);
+      var functions = new List<JsStatement>();
+      this._members.UnionWith(module.Functions.Select(function => this.Name(function.Name)).Concat(module.Constants.Select(constant => this.Name(constant.Name))));
+      foreach (var function in module.Functions)
+        functions.Add(this.Function(function));
+
       // A portable implementation the legalization copied in is a helper: code of Polypiler's own the module carries.
-      var implementations = module.Implementations.ToDictionary(pair => pair.Function, pair => pair.Implementation);
-      var texts = new List<HelperText>();
-      foreach (var function in module.Functions) {
-        var start = this._code.Length;
-        this.Function(function);
-        if (implementations.TryGetValue(function.Name, out var implementation))
-          texts.Add(FloatOperationSources.Helper(this.Name(function.Name), implementation, this._code.ToString(start, this._code.Length - start).Trim('\n')));
-      }
+      var helpers = module.Implementations.Select(pair => FloatOperationSources.Helper(this.Name(pair.Function), pair.Implementation, "")).ToList();
 
+      // The initializers of the globals call helpers as well, which have to be known before they are declared.
+      var globals = this.Globals(module);
       this._construct = "the module";
       var structs = this.StructHelpers();
-      var body = new StringBuilder();
-      foreach (var (name, lines) in JavaScriptHelpers.For(this._used, this.Native)) {
-        var helper = string.Join('\n', lines);
-        body.Append('\n').Append(helper).Append('\n');
+      var body = new List<JsStatement>();
+      foreach (var (name, statements) in JavaScriptHelpers.For(this._used, this.Native)) {
+        body.AddRange(statements.Select((statement, index) => AsHelper(index == 0 ? statement with { Leading = JsTrivia.Blank } : statement)));
         var (licence, origin) = HelperOrigins[name];
-        texts.Add(new(name, name, licence, origin, helper));
+        helpers.Add(new(name, name, licence, origin, ""));
       }
 
-      body.Append(structs);
+      this.Helpers = helpers;
 
-      if (module.Constants.Count > 0)
-        body.Append('\n');
+      body.AddRange(structs);
+      foreach (var constant in module.Constants) {
+        var keyword = this.Native("const") ? "const" : "var";
+        body.Add(new JsVariableDeclaration(keyword, [new JsDeclarator(this.Name(constant.Name), this.Value(constant))]) {
+          Leading = constant == module.Constants[0] ? JsTrivia.Blank : JsTrivia.None
+        });
+      }
 
-      foreach (var constant in module.Constants)
-        body.Append(this.Native("const") ? "const " : "var ").Append(this.Name(constant.Name)).Append(" = ").Append(this.Value(constant)).Append(";\n");
+      body.AddRange(globals);
+      body.AddRange(functions);
+      var header = new List<string> {
+        $"{module.Name}: generated by polypiler. Change the source, not this file.",
+        $"JavaScript profile: {this._profile}."
+      };
+      if (EmittedHelper.HeaderLine(helpers.Select(helper => helper.Licence)) is { } licences)
+        header.Add(licences);
 
-      body.Append(this._code);
-      this.Emitted = EmittedHelper.Measure(texts, body.ToString());
-      var text = new StringBuilder();
-      text.Append("// ").Append(module.Name).Append(": generated by polypiler. Change the source, not this file.\n");
-      text.Append("// JavaScript profile: ").Append(this._profile).Append(".\n");
-      if (EmittedHelper.HeaderLine(this.Emitted) is { } helpers)
-        text.Append("// ").Append(helpers).Append('\n');
-
-      foreach (var line in FloatManifest.Lines(module, this._mode, NativeAccuracy.Node))
-        text.Append("// ").Append(line).Append('\n');
-
+      header.AddRange(FloatManifest.Lines(module, this._mode, NativeAccuracy.Node));
       if (this._halves)
-        text.Append("// A 64-bit integer is an object { hi, lo }: its upper and its lower 32 bits, each as an unsigned number.\n");
+        header.Add("A 64-bit integer is an object { hi, lo }: its upper and its lower 32 bits, each as an unsigned number.");
 
       if (this._structs)
-        text.Append("// A struct is an object of its fields, copied wherever the place it is read from can still be used.\n");
+        header.Add("A struct is an object of its fields, copied wherever the place it is read from can still be used.");
 
+      var strict = new JsExpressionStatement(new JsString("use strict"));
       switch (this._profile.Module) {
         case JavaScriptModuleFormat.Esm:
           this.Native("export");
-          text.Append(body);
-          break;
+          return new JsProgram(header, body, true);
         case JavaScriptModuleFormat.Cjs:
-          text.Append("\"use strict\";\n").Append(body);
-          if (this._exported.Count > 0)
-            text.Append('\n');
-
-          foreach (var name in this._exported)
-            text.Append("exports.").Append(name).Append(" = ").Append(name).Append(";\n");
-
-          break;
+          List<JsStatement> exports = [.. this._exported.Select((name, index) => new JsExpressionStatement(new JsAssignment(new JsMember(Id("exports"), name), "=", Id(name))) {
+            Leading = index == 0 ? JsTrivia.Blank : JsTrivia.None
+          })];
+          return new JsProgram(header, [strict, .. body, .. exports], false);
         default:
-          text.Append("var ").Append(this._profile.Global).Append(" = (function () {\n  \"use strict\";\n");
-          foreach (var line in body.ToString().TrimEnd('\n').Split('\n'))
-            text.Append(line.Length > 0 ? "  " : "").Append(line).Append('\n');
-
-          text.Append("\n  return {");
-          text.AppendJoin(",", this._exported.Select(name => $"\n    {name}: {name}"));
-          text.Append(this._exported.Count > 0 ? "\n  };\n" : "};\n").Append("})();\n");
-          break;
+          // An empty body still leaves its line, which the blank line before the result follows.
+          var result = new JsReturn(new JsObject([.. this._exported.Select(name => new JsProperty(name, Id(name)))]) { Multiline = true }) {
+            Leading = new JsTrivia(body.Count == 0 ? 2 : 1, [])
+          };
+          var function = new JsFunctionExpression(null, [], new JsBlock([strict, .. body, result]));
+          return new JsProgram(header, [new JsVariableDeclaration("var", [new JsDeclarator(this._profile.Global!, new JsCall(Parenthesized(function), []))])], false);
       }
-
-      return text.ToString();
     }
 
     /// <summary>
     /// The value of a constant of the module. A table is an array built once from its elements,
     /// eight to a line when it has more than that.
     /// </summary>
-    private string Value(IrModuleConst constant) {
-      if (constant.Type.Element is not { } element)
-        return this.Constant(constant.Type, constant.Values[0]).Text;
+    private JsExpression Value(IrModuleConst constant) {
+      if (constant.Type == IrType.String)
+        return new JsString(constant.Strings[0]);
 
-      var elements = constant.Values.Select(value => this.Constant(element, value).Text).ToList();
-      var list = elements.Count <= 8
-        ? string.Join(", ", elements)
-        : "\n  " + string.Join(",\n  ", elements.Chunk(8).Select(row => string.Join(", ", row))) + "\n";
-      return this.ArrayOf(element, list);
+      if (constant.Type.Element == IrType.String)
+        return new JsArray([.. constant.Strings.Select(text => new JsString(text))]) { Tabulated = true };
+
+      if (constant.Type.Element is not { } element)
+        return this.Constant(constant.Type, constant.Values[0]).Node;
+
+      var elements = constant.Values.Select(value => this.Constant(element, value).Node).ToList();
+      return this.ArrayOf(element, elements, true);
     }
 
     /// <summary>An array of the given elements: the typed array of the element type, or a plain array where the profile has none.</summary>
-    private string ArrayOf(IrType element, string list) => this.Native(Storage(element)) ? $"new {Storage(element)}([{list}])" : $"[{list}]";
+    private JsExpression ArrayOf(IrType element, IReadOnlyList<JsExpression> elements, bool tabulated = false) {
+      var array = new JsArray(elements) { Tabulated = tabulated };
+      return this.Native(Storage(element)) ? new JsNew(Id(Storage(element)), [array]) : array;
+    }
 
     /// <summary>The zero of an element type, which a new or a cleared array holds.</summary>
-    private string Zero(IrType element) => !element.IsLong ? "0" : this.Halves ? Zero64 : "0n";
+    private JsExpression Zero(IrType element) => !element.IsLong ? Number("0") : this.Halves ? Zero64 : new JsBigInt(0);
 
     /// <summary>What a value of an IR type is in JavaScript, as the header of a function states it.</summary>
     private string Describe(IrType type) {
@@ -305,9 +416,13 @@ public static partial class JavaScriptEmitter {
         case IrTypeKind.Bool:
           return "boolean";
         case IrTypeKind.Array:
-          return !type.Element!.IsStruct && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
+          return !type.Element!.IsStruct && !type.Element.IsString && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
+        case IrTypeKind.String:
+          return "string";
         case IrTypeKind.Struct:
           return type.Declaration!.Name;
+        case IrTypeKind.Span or IrTypeKind.ReadOnlySpan:
+          return this.DescribeView(type);
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)
             return "bigint";
@@ -320,88 +435,105 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>An integer as a literal of its type: a number, or for 64 bits a <c>BigInt</c> or the pair of its halves.</summary>
-    private string Literal(IrType type, Int128 value) {
+    private JsExpression Literal(IrType type, Int128 value) {
       if (!type.IsLong)
-        return value.ToString(CultureInfo.InvariantCulture);
+        return Number(value);
 
-      return this.Halves ? Pair(unchecked((ulong)value)) : value.ToString(CultureInfo.InvariantCulture) + "n";
+      return this.Halves ? Pair(unchecked((ulong)value)) : new JsBigInt((System.Numerics.BigInteger)value);
     }
 
     /// <summary>A constant as a literal of its type; it is an operand as it stands unless it is negative.</summary>
-    private (string Text, bool Atomic) Constant(IrType type, long value) {
+    private (JsExpression Node, bool Atomic) Constant(IrType type, long value) {
       if (type == IrType.Bool)
-        return (value != 0 ? "true" : "false", true);
+        return (new JsBoolean(value != 0), true);
 
       if (type.IsFloat) {
         var literal = JavaScriptEmitter.Literal(IrOperators.Float(type, value));
-        return (literal, literal[0] != '-');
+        return (literal, !JavaScriptPrinter.IsNegative(literal.Value));
       }
 
       var number = IrOperators.Number(type, value);
-      var text = this.Literal(type, number);
-      return (text, number >= 0 || text[0] == '{');
+      var node = this.Literal(type, number);
+      return (node, number >= 0 || node is JsObject);
     }
 
     /// <summary>
     /// A function under a comment that states what crosses its boundary: integers of up to 32 bits
     /// are numbers, those of 64 bits are <c>BigInt</c>s or pairs of halves, arrays are typed or plain.
     /// </summary>
-    private void Function(IrFunction function) {
+    private JsStatement Function(IrFunction function) {
       this._construct = $"the function '{function.Name}'";
       this._taken.Clear();
       this._renamed.Clear();
+      this._names.Clear();
+      this._names.UnionWith(this._members);
+      this._names.UnionWith(function.Parameters.Concat(function.Locals).Select(variable => this.Name(variable.Name)));
       foreach (var parameter in function.Parameters)
         this._taken[this.Name(parameter.Name)] = parameter;
 
       var name = this.Name(function.Name);
-      var parameters = string.Join(", ", function.Parameters.Select(parameter => this.Name(parameter.Name)));
+      var parameters = function.Parameters.Select(parameter => this.Name(parameter.Name)).ToList();
       var signature = string.Join(", ", function.Parameters.Select(parameter => $"{this.Name(parameter.Name)}: {this.Describe(parameter.Type)}"));
-      this._code.Append("\n// ").Append(name).Append('(').Append(signature).Append("): ")
-        .Append(this.Describe(function.ReturnType)).Append('\n');
+      var comment = $"{name}({signature}): {this.Describe(function.ReturnType)}";
       var exported = function.IsPublic && this._profile.Module == JavaScriptModuleFormat.Esm;
       if (function.IsPublic && !exported)
         this._exported.Add(name);
 
-      this._code.Append(exported ? "export function " : "function ").Append(name).Append('(').Append(parameters).Append(") {\n");
+      var statements = new List<JsStatement>();
       this._liveness = Liveness.Of(function);
       foreach (var parameter in this._liveness.CopiedOnEntry)
-        this._code.Append("  ").Append(this.Local(parameter)).Append(" = ").Append(this.Copy(new IrLocalRef(parameter))).Append(";\n");
+        statements.Add(new JsExpressionStatement(new JsAssignment(Id(this.Local(parameter)), "=", this.Copy(new IrLocalRef(parameter)))));
 
-      var start = this._code.Length;
+      var start = statements.Count;
       this._previous = false;
-      this.Statements(function.Body, 1);
+      this.Statements(function.Body, statements);
       if (this._previous)
-        this._code.Insert(start, $"  {this.Let} {Previous};\n");
+        statements.Insert(start, new JsVariableDeclaration(this.Let, [new JsDeclarator(Previous, null)]));
 
-      this._code.Append("}\n");
+      JsStatement declaration = new JsFunctionDeclaration(name, parameters, new JsBlock(statements));
+      return (exported ? new JsExport(declaration) : declaration) with { Leading = new JsTrivia(1, [comment]) };
+    }
+
+    /// <summary>The statements of a block, as a list.</summary>
+    private List<JsStatement> Statements(IrBlock block) {
+      var statements = new List<JsStatement>();
+      this.Statements(block, statements);
+      return statements;
     }
 
     /// <summary>
     /// The statements of a block. Where a variable is a <c>var</c>, which belongs to the whole
     /// function, the names the block declared are free again when it ends.
     /// </summary>
-    private void Statements(IrBlock block, int depth) {
+    private void Statements(IrBlock block, List<JsStatement> statements) {
       var outer = this._taken.Keys.ToHashSet();
       foreach (var statement in block.Statements)
-        this.Statement(statement, depth);
+        this.Statement(statement, statements);
 
       foreach (var name in this._taken.Keys.Where(name => !outer.Contains(name)).ToList())
         this._taken.Remove(name);
     }
 
     /// <summary>
-    /// The name a declared local is written with. A <c>let</c> belongs to its block and keeps its
-    /// name. A <c>var</c> belongs to its function, so a local that is declared while another one of
-    /// its name is visible gets a name of its own: the two would otherwise be one variable.
+    /// The name a declared local is written with. A <c>var</c> belongs to its function, so a local
+    /// that is declared while another one of its name is visible gets a name of its own: the two would
+    /// otherwise be one variable. A <c>let</c> belongs to its block, where it would hide the other one
+    /// from every read in the block, its own initializer included; it becomes <c>&lt;name&gt;_&lt;k&gt;</c>
+    /// with the smallest <c>k</c> that no other name of the function or the module has, the rule of
+    /// the C# backend. A local nothing of its name is visible to keeps its name.
     /// </summary>
     private string Declare(IrLocal local) {
       var name = this.Name(local.Name);
-      if (this.Native("let"))
-        return name;
-
       var chosen = name;
-      for (var number = 1; this._taken.ContainsKey(chosen); ++number)
-        chosen = $"{name}${number}";
+      if (!this.Native("let"))
+        for (var number = 1; this._taken.ContainsKey(chosen); ++number)
+          chosen = $"{name}${number}";
+      else if (this._taken.ContainsKey(name)) {
+        var number = 0;
+        do
+          chosen = $"{name}_{++number}";
+        while (!this._names.Add(chosen));
+      }
 
       this._taken[chosen] = local;
       this._renamed[local] = chosen;
@@ -411,63 +543,63 @@ public static partial class JavaScriptEmitter {
     /// <summary>The name a parameter or local is read and assigned with.</summary>
     private string Local(IrLocal local) => this._renamed.TryGetValue(local, out var name) ? name : this.Name(local.Name);
 
-    private StringBuilder Line(int depth) => this._code.Append(' ', depth * 2);
+    /// <summary>A parameter or local as an expression of its type.</summary>
+    private JsIdentifier Variable(IrLocal local) => new(this.Local(local)) { Type = local.Type };
 
-    private void Statement(IrStmt statement, int depth) {
+    private void Statement(IrStmt statement, List<JsStatement> statements) {
       this._construct = statement;
       switch (statement) {
         case IrBlock block:
-          this.Line(depth).Append("{\n");
-          this.Statements(block, depth + 1);
-          this.Line(depth).Append("}\n");
+          statements.Add(new JsBlock(this.Statements(block)));
           break;
         case IrDeclare declare:
-          var initializer = declare.Initializer is null ? "" : " = " + this.Value(declare.Initializer);
-          this.Line(depth).Append(this.Let).Append(' ').Append(this.Declare(declare.Local)).Append(initializer).Append(";\n");
+          var initializer = declare.Initializer is null ? null : this.Value(declare.Initializer);
+          var keyword = this.Let;
+          statements.Add(new JsVariableDeclaration(keyword, [new JsDeclarator(this.Declare(declare.Local), initializer)]));
           break;
         case IrAssign assign:
-          this.Line(depth).Append(this.Local(assign.Local)).Append(" = ").Append(this.Value(assign.Value)).Append(";\n");
+          var variable = this.Variable(assign.Local);
+          statements.Add(new JsExpressionStatement(new JsAssignment(variable, "=", this.Value(assign.Value))));
+          break;
+        case IrGlobalAssign assign:
+          statements.Add(new JsExpressionStatement(this.GlobalAssignment(assign)));
           break;
         case IrStore store:
-          this.Line(depth).Append(this.Stored(store)).Append(";\n");
+          statements.Add(new JsExpressionStatement(this.Stored(store)));
           break;
         case IrFieldStore store:
-          this.Line(depth).Append(this.FieldStore(store)).Append(";\n");
+          statements.Add(new JsExpressionStatement(this.FieldStore(store)));
           break;
         case IrExprStmt expression:
-          // An object literal at the start of a statement would be read as a block.
-          var text = this.Text(expression.Expression);
-          this.Line(depth).Append(text[0] == '{' ? $"({text})" : text).Append(";\n");
+          // An object literal at the start of a statement would be read as a block; the printer puts it in parentheses.
+          statements.Add(new JsExpressionStatement(this.Text(expression.Expression)));
           break;
         case IrIf conditional:
-          this.Line(depth);
-          this.If(conditional, depth);
+          statements.Add(this.If(conditional));
           break;
         case IrWhile loop:
-          this.Line(depth).Append("while (").Append(this.Text(loop.Condition)).Append(") {\n");
-          this.Statements(loop.Body, depth + 1);
-          this.Line(depth).Append("}\n");
+          var test = this.Text(loop.Condition);
+          statements.Add(new JsWhile(test, new JsBlock(this.Statements(loop.Body))));
           break;
         case IrDoWhile loop:
-          this.Line(depth).Append("do {\n");
-          this.Statements(loop.Body, depth + 1);
-          this.Line(depth).Append("} while (").Append(this.Text(loop.Condition)).Append(");\n");
+          var body = this.Statements(loop.Body);
+          statements.Add(new JsDoWhile(new JsBlock(body), this.Text(loop.Condition)));
           break;
         case IrFor loop:
-          this.For(loop, depth);
+          this.For(loop, statements);
           break;
         case IrSwitch choice:
-          this.Switch(choice, depth);
+          statements.Add(this.Switch(choice));
           break;
         case IrBreak:
-          this.Line(depth).Append("break;\n");
+          statements.Add(new JsBreak());
           break;
         case IrContinue:
-          this.Line(depth).Append("continue;\n");
+          statements.Add(new JsContinue());
           break;
         default:
           var result = (IrReturn)statement;
-          this.Line(depth).Append(result.Value is null ? "return" : "return " + this.Value(result.Value)).Append(";\n");
+          statements.Add(new JsReturn(result.Value is null ? null : this.Value(result.Value)));
           break;
       }
     }
@@ -477,24 +609,26 @@ public static partial class JavaScriptEmitter {
     /// either. That part is an expression, so the step is written as a list of expressions and the
     /// temporaries it declares are declared in front of the loop, in a block of their own with it.
     /// </summary>
-    private void For(IrFor loop, int depth) {
+    private void For(IrFor loop, List<JsStatement> statements) {
       var scoped = loop.Step.Statements.Any(step => step is IrDeclare);
       var outer = this._taken.Keys.ToHashSet();
-      if (scoped)
-        this.Line(depth++).Append("{\n");
-
-      var parts = new List<string>();
+      var target = scoped ? new List<JsStatement>() : statements;
+      var parts = new List<JsExpression>();
       foreach (var step in loop.Step.Statements)
         switch (step) {
           case IrDeclare declare:
             var name = this.Declare(declare.Local);
-            this.Line(depth).Append(this.Let).Append(' ').Append(name).Append(";\n");
+            target.Add(new JsVariableDeclaration(this.Let, [new JsDeclarator(name, null)]));
             if (declare.Initializer is not null)
-              parts.Add($"{name} = {this.Value(declare.Initializer)}");
+              parts.Add(new JsAssignment(Id(name), "=", this.Value(declare.Initializer)));
 
             break;
           case IrAssign assign:
-            parts.Add($"{this.Local(assign.Local)} = {this.Value(assign.Value)}");
+            var variable = this.Variable(assign.Local);
+            parts.Add(new JsAssignment(variable, "=", this.Value(assign.Value)));
+            break;
+          case IrGlobalAssign assign:
+            parts.Add(this.GlobalAssignment(assign));
             break;
           case IrStore store:
             parts.Add(this.Stored(store));
@@ -507,11 +641,15 @@ public static partial class JavaScriptEmitter {
             break;
         }
 
-      this.Line(depth).Append("for (; ").Append(this.Text(loop.Condition)).Append("; ").AppendJoin(", ", parts).Append(") {\n");
-      this.Statements(loop.Body, depth + 1);
-      this.Line(depth).Append("}\n");
+      var test = this.Text(loop.Condition);
+      var update = parts.Count switch {
+        0 => null,
+        1 => parts[0],
+        _ => new JsSequence(parts)
+      };
+      target.Add(new JsFor(null, test, update, new JsBlock(this.Statements(loop.Body))));
       if (scoped)
-        this.Line(depth - 1).Append("}\n");
+        statements.Add(new JsBlock(target));
 
       foreach (var name in this._taken.Keys.Where(name => !outer.Contains(name)).ToList())
         this._taken.Remove(name);
@@ -523,64 +661,57 @@ public static partial class JavaScriptEmitter {
     /// halves is an object, which a <c>case</c> cannot compare, so a switch over one compares the
     /// text of the two halves.
     /// </summary>
-    private void Switch(IrSwitch choice, int depth) {
+    private JsSwitch Switch(IrSwitch choice) {
       var type = choice.Value.Type;
       var halves = type.IsLong && this.Halves;
-      this.Line(depth).Append("switch (").Append(halves ? this.Helper("$key64", choice.Value) : this.Text(choice.Value)).Append(") {\n");
+      var discriminant = halves ? this.Helper("$key64", choice.Value) : this.Text(choice.Value);
+      var cases = new List<JsSwitchCase>();
       foreach (var section in choice.Sections) {
         var labels = section.Labels
-          .Select(label => halves ? $"case \"{(ulong)label >> 32}:{(ulong)label & 0xFFFFFFFF}\":" : $"case {this.Literal(type, IrOperators.Number(type, label))}:")
+          .Select(label => halves ? (JsExpression?)new JsString($"{(ulong)label >> 32}:{(ulong)label & 0xFFFFFFFF}") : this.Literal(type, IrOperators.Number(type, label)))
           .ToList();
         if (section.IsDefault)
-          labels.Add("default:");
+          labels.Add(null);
+
+        var body = this.Statements(section.Body);
+        if (section.Body.Statements is not [.., IrBreak or IrContinue or IrReturn])
+          body.Add(new JsBreak());
 
         for (var index = 0; index < labels.Count; ++index)
-          this.Line(depth + 1).Append(labels[index]).Append(index + 1 < labels.Count ? "\n" : " {\n");
-
-        this.Statements(section.Body, depth + 2);
-        if (section.Body.Statements is not [.., IrBreak or IrContinue or IrReturn])
-          this.Line(depth + 2).Append("break;\n");
-
-        this.Line(depth + 1).Append("}\n");
+          cases.Add(new JsSwitchCase(labels[index], index + 1 < labels.Count ? [] : [new JsBlock(body)]));
       }
 
-      this.Line(depth).Append("}\n");
+      return new JsSwitch(discriminant, cases);
     }
 
-    private void If(IrIf conditional, int depth) {
-      this._code.Append("if (").Append(this.Text(conditional.Condition)).Append(") {\n");
-      this.Statements(conditional.Then, depth + 1);
-      this.Line(depth).Append('}');
-      if (conditional.Else is null) {
-        this._code.Append('\n');
-      } else if (conditional.Else.Statements is [IrIf chained]) {
-        this._code.Append(" else ");
-        this.If(chained, depth);
-      } else {
-        this._code.Append(" else {\n");
-        this.Statements(conditional.Else, depth + 1);
-        this.Line(depth).Append("}\n");
-      }
+    private JsIf If(IrIf conditional) {
+      var test = this.Text(conditional.Condition);
+      var then = new JsBlock(this.Statements(conditional.Then));
+      if (conditional.Else is null)
+        return new JsIf(test, then, null);
+
+      return new JsIf(test, then, conditional.Else.Statements is [IrIf chained] ? this.If(chained) : new JsBlock(this.Statements(conditional.Else)));
     }
 
-    private string Helper(string name, params IrExpr[] arguments) => this.Helper(name, arguments.Select(this.Text));
+    private JsCall Helper(string name, params IrExpr[] arguments) => this.Helper(name, arguments.Select(this.Text));
 
     /// <summary>A store into an array element, through the helper that checks the index; a struct is stored as a value.</summary>
-    private string Stored(IrStore store) => this.Helper("$set", [this.Text(store.Array), this.Text(store.Index), this.Value(store.Value)]);
+    private JsCall Stored(IrStore store)
+      => this.Plain(store.Array) ? this.ViewStore(store) : this.Helper("$set", [this.Text(store.Array), this.Text(store.Index), this.Value(store.Value)]);
 
-    private string Helper(string name, IEnumerable<string> arguments) {
+    private JsCall Helper(string name, IEnumerable<JsExpression> arguments) {
       this._used.Add(name);
-      return $"{name}({string.Join(", ", arguments)})";
+      return Invoke(name, arguments);
     }
 
     /// <summary>A product of two 32-bit integers cut to 32 bits: <c>Math.imul</c> or its replacement.</summary>
-    private string Imul(string arguments) => this.Native("Math.imul") ? $"Math.imul({arguments})" : this.Helper("$imul", [arguments]);
+    private JsCall Imul(params JsExpression[] arguments) => this.Native("Math.imul") ? Invoke("Math.imul", arguments) : this.Helper("$imul", arguments);
 
     /// <summary>The number of leading zero bits of a 32-bit integer: <c>Math.clz32</c> or its replacement.</summary>
-    private string Clz32(string argument) => this.Native("Math.clz32") ? $"Math.clz32({argument})" : this.Helper("$clz32", [argument]);
+    private JsCall Clz32(JsExpression argument) => this.Native("Math.clz32") ? Invoke("Math.clz32", argument) : this.Helper("$clz32", [argument]);
 
     /// <summary>A number rounded to binary32: <c>Math.fround</c> or its replacement.</summary>
-    private string Fround(string argument) => this.Native("Math.fround") ? $"Math.fround({argument})" : this.Helper("$fround", [argument]);
+    private JsCall Fround(JsExpression argument) => this.Native("Math.fround") ? Invoke("Math.fround", argument) : this.Helper("$fround", [argument]);
 
     /// <summary>
     /// An identifier JavaScript reserves, or one the emitted code relies on itself, gets a <c>$</c>

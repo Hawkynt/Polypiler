@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.Backends.JavaScript.Syntax;
 using Polypiler.Core.IR;
 using Polypiler.Core.Legalize;
 
@@ -61,16 +62,16 @@ public static partial class JavaScriptEmitter {
     /// <c>f32</c> one rounded back; <c>Clamp</c> and <c>RoundDigits</c> as the helpers that trap as the
     /// IR does; <see langword="null"/> for every other operation.
     /// </summary>
-    private (string Text, bool Atomic)? Floating(IrIntrinsic intrinsic, string all) {
+    private (JsExpression Node, bool Atomic)? Floating(IrIntrinsic intrinsic, IReadOnlyList<JsExpression> all) {
       var format = intrinsic.Arguments[0].Type;
       if (!format.IsFloat || FloatOperationTable.Of(intrinsic.Op) is not { Double: not null })
         return null;
 
       if (intrinsic.Op == IrIntrinsicOp.Clamp)
-        return (this.Helper("$clamp", [all]), true);
+        return (this.Helper("$clamp", all), true);
 
       if (intrinsic.Op == IrIntrinsicOp.RoundDigits)
-        return (this.Helper(format == IrType.F32 ? "$roundd32" : "$roundd", [all]), true);
+        return (this.Helper(format == IrType.F32 ? "$roundd32" : "$roundd", all), true);
 
       // An operation without a function of Math is the portable implementation, which legalization puts in.
       if (!_natives.TryGetValue(intrinsic.Op, out var name)) {
@@ -78,11 +79,11 @@ public static partial class JavaScriptEmitter {
           this._problems.Add(InexpressibleDescriptor.At(
             $"'{intrinsic.Op}' cannot be expressed in JavaScript profile '{this._profile.LevelName}' without its portable implementation"));
 
-        return ("NaN", true);
+        return (new JsNumber(double.NaN), true);
       }
 
       this.Native(name);
-      var call = $"{name}({all})";
+      var call = Invoke(name, all);
       return (format == IrType.F32 ? this.Fround(call) : call, true);
     }
 

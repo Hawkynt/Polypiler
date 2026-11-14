@@ -163,8 +163,11 @@ internal sealed partial class Lowering(TypeInference types) {
       case ForStatement loop:
         into.Add(this.For(loop));
         break;
+      case ForOfStatement loop:
+        into.Add(this.ForOf(loop));
+        break;
       case SwitchStatement choice:
-        into.Add(this.Switch(choice));
+        into.Add(this.Switch(choice, into));
         break;
       case BreakStatement:
         // A jump to a label stands inside the labeled statement, which is refused before it is reached.
@@ -265,12 +268,16 @@ internal sealed partial class Lowering(TypeInference types) {
   /// without a value is assigned behind the switch when there is a default and every section that
   /// reaches the end assigns it.
   /// </summary>
-  private IrSwitch Switch(SwitchStatement choice) {
+  private IrSwitch Switch(SwitchStatement choice, List<IrStmt> into) {
     var selector = this.Evaluate(choice.Discriminant);
-    if (!selector.Type.IsWord)
+    // A switch on a string chooses by the position of the section whose label is equal to the value, found in source order: the first of two equal labels wins.
+    var text = selector.Type.Kind == JsKind.String ? this.Once(selector.Expr, into) : null;
+    var chosen = new List<(int Section, List<string> Labels)>();
+    var group = new List<string>();
+    if (text is null && !selector.Type.IsWord)
       throw this.Unsupported(choice.Discriminant, $"a switch on {selector.Type.Describe()}");
 
-    var type = selector.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32;
+    var type = text is not null || selector.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32;
     var before = this._assigned;
     var sections = new List<IrSwitchSection>();
     var seen = new HashSet<long>();
@@ -282,6 +289,10 @@ internal sealed partial class Lowering(TypeInference types) {
       var section = choice.Cases[index];
       if (section.Test is null) {
         isDefault = true;
+      } else if (text is not null) {
+        group.Add(section.Test is StringLiteral label ? label.Value : throw this.Unsupported(section.Test, $"the case label {types.Text(section.Test)}"));
+        if (labels.Count == 0)
+          labels.Add(sections.Count);
       } else {
         var label = types.Of(section.Test);
         if (!label.IsInteger || !label.IsLiteral || label.Low != label.High || !label.Within(type))
@@ -306,6 +317,10 @@ internal sealed partial class Lowering(TypeInference types) {
 
       this._assigned = before;
       hasDefault |= isDefault;
+      if (group.Count > 0)
+        chosen.Add((sections.Count, group));
+
+      group = [];
       sections.Add(new IrSwitchSection(labels, isDefault, this.Block(statements)));
       labels = [];
       isDefault = false;
@@ -319,7 +334,16 @@ internal sealed partial class Lowering(TypeInference types) {
     }
 
     this._assigned = hasDefault && after is not null ? after : before;
-    return new IrSwitch(Convert(selector.Expr, type), sections);
+    if (text is null)
+      return new IrSwitch(Convert(selector.Expr, type), sections);
+
+    IrExpr position = I32(-1);
+    foreach (var (section, matches) in Enumerable.Reverse(chosen)) {
+      var test = matches.Select(label => (IrExpr)Str(IrIntrinsicOp.StrEquals, IrType.Bool, text, new IrStrConst(label))).Aggregate((a, b) => new IrBinary(IrBinaryOp.LogicalOr, a, b));
+      position = new IrConditional(test, I32(section), position);
+    }
+
+    return new IrSwitch(this.Once(position, into), sections);
   }
 
   /// <summary>
@@ -390,15 +414,15 @@ internal sealed partial class Lowering(TypeInference types) {
         if (variable.IsConstant)
           throw this.Unsupported(assignment, $"an assignment to the constant {name}");
 
-        var local = variable.Local!;
+        var place = Read(variable);
         var value = compound is { } op
-          ? this.To(this.Binary(op, target, assignment.Right, Coercion.None, assignment), local.Type, assignment)
-          : this.Value(assignment.Right, local.Type);
+          ? this.To(this.Binary(op, target, assignment.Right, Coercion.None, assignment), place.Type, assignment)
+          : this.Value(assignment.Right, place.Type);
         this._assigned = [.. this._assigned, variable];
 
         // x = x | 0 on an int32 coerces to what the variable already holds: nothing is left to do.
-        if (value != new IrLocalRef(local))
-          into.Add(new IrAssign(local, value));
+        if (value != place)
+          into.Add(Write(variable, value));
 
         break;
       case Identifier { Name: var name } target when this._model.Bindings.ContainsKey(target):
@@ -465,7 +489,7 @@ internal sealed partial class Lowering(TypeInference types) {
       throw this.Unsupported(step, $"an assignment to the constant {name}");
 
     var op = step.Operator == Operator.Increment ? IrBinaryOp.Add : IrBinaryOp.Subtract;
-    into.Add(new IrAssign(variable.Local!, new IrBinary(op, read, new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 1)))));
+    into.Add(Write(variable, new IrBinary(op, read, new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 1)))));
   }
 
   /// <summary>A step of an array element: the IR's step, which reads and writes the element once and yields the value from before.</summary>
@@ -489,7 +513,8 @@ internal sealed partial class Lowering(TypeInference types) {
   /// anything more than a variable or a constant goes into a temporary.
   /// </summary>
   private IrExpr Once(IrExpr expression, List<IrStmt> into) {
-    if (expression is IrLocalRef or IrConst)
+    // An array of the module is one array for good; any other variable of the module may change meanwhile.
+    if (expression is IrLocalRef or IrConst or IrGlobalRef { Type.IsArray: true })
       return expression;
 
     var temporary = new IrLocal($"$t{this._locals.Count}", expression.Type);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using Polypiler.Core.Backends.JavaScript.Syntax;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Backends.JavaScript;
@@ -17,19 +18,20 @@ public static partial class JavaScriptEmitter {
     /// through a <c>DataView</c> of the array where the profile has one; elsewhere it is the integer
     /// of its width, made of its bits or into them by the helpers of the bit casts.
     /// </summary>
-    private static IEnumerable<(IrIntrinsicOp, Func<Writer, IrIntrinsic, (string, bool)>)> EndianForms => [
-      (IrIntrinsicOp.LoadLittle, (writer, intrinsic) => writer.Load(intrinsic, "true")),
-      (IrIntrinsicOp.LoadBig, (writer, intrinsic) => writer.Load(intrinsic, "false")),
-      (IrIntrinsicOp.StoreLittle, (writer, intrinsic) => writer.Store(intrinsic, "true")),
-      (IrIntrinsicOp.StoreBig, (writer, intrinsic) => writer.Store(intrinsic, "false"))
+    private static IEnumerable<(IrIntrinsicOp, Func<Writer, IrIntrinsic, (JsExpression, bool)>)> EndianForms => [
+      (IrIntrinsicOp.LoadLittle, (writer, intrinsic) => writer.Load(intrinsic, true)),
+      (IrIntrinsicOp.LoadBig, (writer, intrinsic) => writer.Load(intrinsic, false)),
+      (IrIntrinsicOp.StoreLittle, (writer, intrinsic) => writer.Store(intrinsic, true)),
+      (IrIntrinsicOp.StoreBig, (writer, intrinsic) => writer.Store(intrinsic, false))
     ];
 
-    private static string Size(IrType type) => (type.Bits / 8).ToString(CultureInfo.InvariantCulture);
+    private static JsNumber Size(IrType type) => Number((type.Bits / 8).ToString(CultureInfo.InvariantCulture));
 
     /// <summary>The integer type of the width of a floating-point type, whose bits it is read and written as without a <c>DataView</c>.</summary>
     private static IrType IntegerOf(IrType type) => type == IrType.F32 ? IrType.I32 : IrType.I64;
 
-    private (string, bool) Load(IrIntrinsic intrinsic, string little) {
+    private (JsExpression, bool) Load(IrIntrinsic intrinsic, bool littleEndian) {
+      var little = new JsBoolean(littleEndian);
       var type = intrinsic.Type;
       if (type.IsFloat) {
         var single = type == IrType.F32;
@@ -43,7 +45,8 @@ public static partial class JavaScriptEmitter {
         : Cut(type, this.Call("$load", intrinsic, Size(type), little).Item1);
     }
 
-    private (string, bool) Store(IrIntrinsic intrinsic, string little) {
+    private (JsExpression, bool) Store(IrIntrinsic intrinsic, bool littleEndian) {
+      var little = new JsBoolean(littleEndian);
       var type = intrinsic.Arguments[2].Type;
       if (type.IsFloat) {
         var single = type == IrType.F32;

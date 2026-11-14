@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Polypiler.Core.Backends.JavaScript.Syntax;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Backends.JavaScript;
@@ -13,7 +14,7 @@ public static partial class JavaScriptEmitter {
     /// the halves with their signedness; the rounding up works on the pattern, and the cut to the type
     /// makes 2^width the 0 it wraps to.
     /// </summary>
-    private static IEnumerable<(IrIntrinsicOp, Func<Writer, IrIntrinsic, (string, bool)>)> PowerForms => [
+    private static IEnumerable<(IrIntrinsicOp, Func<Writer, IrIntrinsic, (JsExpression, bool)>)> PowerForms => [
       (IrIntrinsicOp.IsPow2, (writer, intrinsic) => {
         var value = intrinsic.Arguments[0];
         return (value.Type.IsLong

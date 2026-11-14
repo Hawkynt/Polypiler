@@ -81,10 +81,7 @@ public sealed class EmittedHelperTests {
 
   [Test]
   public void HeaderLine_NamesEveryLicenceOnce_InOrdinalOrder() {
-    EmittedHelper[] helpers = [
-      new("$a", "MIT", Origin, 1, 1, []), new("FloatF", "MIT AND BSD-2-Clause", Origin, 1, 1, []), new("$b", "MIT", Origin, 1, 1, [])
-    ];
-    Assert.That(EmittedHelper.HeaderLine(helpers), Is.EqualTo(
+    Assert.That(EmittedHelper.HeaderLine(["MIT", "MIT AND BSD-2-Clause", "MIT"]), Is.EqualTo(
       "Helpers added by polypiler: BSD-2-Clause AND MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source."));
   }
 

@@ -125,7 +125,39 @@ public sealed class JavaScriptCapabilities {
     new("BigInt64Array", 2020, PlainArray),
     new("BigUint64Array", 2020, PlainArray),
     new(".getBigInt64", 2020, ".getUint32"),
-    new(".setBigInt64", 2020, ".setUint32")
+    new(".setBigInt64", 2020, ".setUint32"),
+
+    // The views of #1325: a subarray of a typed array, checked by $slice first, or an object { a, o, n } over a plain array.
+    new("subarray as a view", 2015, "$vobj", TypedArray: true),
+    new(".getInt16", 2015, "$vat", TypedArray: true),
+    new(".getUint16", 2015, "$vat", TypedArray: true),
+    new(".setInt16", 2015, "$vat", TypedArray: true),
+    new(".setUint16", 2015, "$vat", TypedArray: true),
+    new(".getBigUint64", 2020, "$load64"),
+    new(".setBigUint64", 2020, "$store64"),
+
+    // Strings (#1314): ECMAScript 5 has what is searched and cut by code unit; what came later has a helper below its level.
+    new("String", 5),
+    new("String.fromCharCode", 5),
+    new(".charCodeAt", 5),
+    new(".charAt", 5),
+    new(".indexOf", 5),
+    new(".lastIndexOf", 5),
+    new(".substring", 5),
+    new(".split", 5),
+    new(".join", 5),
+    new(".replace", 5),
+    new(".trim", 5),
+    new(".startsWith", 2015, "$startsWith"),
+    new(".endsWith", 2015, "$endsWith"),
+    new(".includes", 2015, ".indexOf"),
+    new(".repeat", 2015, "$repeat"),
+    new(".codePointAt", 2015, "$codePointAt"),
+    new(".padStart", 2017, "$pad"),
+    new(".padEnd", 2017, "$pad"),
+    new(".trimStart", 2019, "$trimEcma"),
+    new(".trimEnd", 2019, "$trimEcma"),
+    new(".replaceAll", 2021, ".split")
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

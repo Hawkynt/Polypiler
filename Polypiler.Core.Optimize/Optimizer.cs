@@ -208,6 +208,7 @@ public static class Optimizer {
       IrBlock => new IrBlock([.. parts.Cast<IrStmt>()]),
       IrDeclare declare => declare with { Initializer = parts.Count > 0 ? (IrExpr)parts[0] : null },
       IrAssign assign => assign with { Value = (IrExpr)parts[0] },
+      IrGlobalAssign assign => assign with { Value = (IrExpr)parts[0] },
       IrStore => new IrStore((IrExpr)parts[0], (IrExpr)parts[1], (IrExpr)parts[2]),
       IrFieldStore store => store with { Target = (IrExpr)parts[0], Value = (IrExpr)parts[1] },
       IrExprStmt => new IrExprStmt((IrExpr)parts[0]),

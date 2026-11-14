@@ -85,6 +85,9 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// <summary>The first expression that takes an element or the length of the variable, or <see langword="null"/>.</summary>
   public Node? UsedAsArray { get; set; }
 
+  /// <summary>The first expression that uses the variable as only a string can be used - a method only strings have, or the iterable of a <c>for…of</c> - or <see langword="null"/>.</summary>
+  public Node? UsedAsString { get; set; }
+
   /// <summary>Whether a parameter without a JSDoc type is an integer because of how the function reads it.</summary>
   public bool IsIntegerByUse { get; set; }
 
@@ -96,6 +99,18 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
 
   /// <summary>The variable in the IR, once the function is lowered.</summary>
   public IrLocal? Local { get; set; }
+
+  /// <summary>Whether the variable is declared at the top level of the module, so that every function shares it.</summary>
+  public bool IsGlobal { get; init; }
+
+  /// <summary>The value the declaration of a variable of the module gives it, or <see langword="null"/>.</summary>
+  public Node? Initializer { get; init; }
+
+  /// <summary>Why a variable of the module cannot be imported, whoever uses it, or <see langword="null"/>.</summary>
+  public string? Problem { get; set; }
+
+  /// <summary>The global in the IR, once the variable of the module is lowered.</summary>
+  public IrGlobal? Global { get; set; }
 
 }
 

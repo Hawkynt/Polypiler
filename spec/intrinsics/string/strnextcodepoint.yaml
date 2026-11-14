@@ -1,0 +1,29 @@
+id: INTRINSICS.StrNextCodePoint
+title: Width of the code point at an index
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1314"
+tests: [Polypiler.Tests/String/IrStringTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: StrNextCodePoint
+  group: String
+  typeParameters: []
+  parameters: [{name: text, type: TYPES.str}, {name: index, type: TYPES.i32}]
+  returns: [{name: width, type: TYPES.i32}]
+  legality:
+    - {id: index-in-range, text: "index is within [0, length); outside it traps IndexOutOfRange", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "2 when a high surrogate at index is followed by a low one, 1 otherwise"
+    source: "ECMA-262 2022 §11.1.4 (CodePointAt); the .NET API reference of Char.IsSurrogatePair(String, Int32)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[97, 55357, 56832], 1], outputs: [2]}
+    - {types: {}, inputs: [[97, 55357, 56832], 2], outputs: [1]}
+    - {types: {}, inputs: [[55296], 0], outputs: [1]}

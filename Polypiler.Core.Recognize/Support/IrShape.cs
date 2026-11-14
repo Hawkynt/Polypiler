@@ -82,12 +82,14 @@ public static class IrShape {
   /// <summary>
   /// Whether evaluating an expression changes nothing but may trap: it calls no function, steps no
   /// variable, allocates nothing and writes no array. Evaluated twice it yields the same value or the
-  /// same trap, and evaluated once fewer it is missed by nobody.
+  /// same trap, and evaluated once fewer it is missed by nobody. A read of a global of the module
+  /// counts as an effect: what it yields depends on where it stands among the calls and the
+  /// assignments of the function, so no rule may move, merge or drop it.
   /// </summary>
   /// <param name="expression">The expression.</param>
   /// <returns><see langword="true"/> when it has no effect.</returns>
   public static bool IsSideEffectFree(IrExpr expression) => Nodes(expression).All(node => node switch {
-    IrCall or IrStep or IrNewArray => false,
+    IrCall or IrStep or IrNewArray or IrGlobalRef => false,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
   });

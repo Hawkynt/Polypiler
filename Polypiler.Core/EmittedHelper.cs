@@ -81,14 +81,11 @@ public sealed record EmittedHelper(string Symbol, string Licence, string Origin,
   /// each identifier once in ordinal order, and where the grant can be read; <see langword="null"/>
   /// without helpers.
   /// </summary>
-  /// <param name="helpers">The helpers of the file.</param>
-  public static string? HeaderLine(IReadOnlyCollection<EmittedHelper> helpers) {
-    ArgumentNullException.ThrowIfNull(helpers);
-    if (helpers.Count == 0)
-      return null;
-
-    var licences = helpers.SelectMany(helper => helper.Licence.Split(" AND ", StringSplitOptions.TrimEntries)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
-    return $"Helpers added by {ProductInfo.Name}: {string.Join(" AND ", licences)} ({GrantUrl}); the translated code keeps the licence of its source.";
+  /// <param name="licences">The licence of each helper of the file, identifiers joined by <c>AND</c>.</param>
+  public static string? HeaderLine(IEnumerable<string> licences) {
+    ArgumentNullException.ThrowIfNull(licences);
+    var identifiers = licences.SelectMany(licence => licence.Split(" AND ", StringSplitOptions.TrimEntries)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+    return identifiers.Count == 0 ? null : $"Helpers added by {ProductInfo.Name}: {string.Join(" AND ", identifiers)} ({GrantUrl}); the translated code keeps the licence of its source.";
   }
 
   private static Regex Call(string name) => new($@"(?<![\w$.]){Regex.Escape(name)}(?![\w$])", RegexOptions.CultureInvariant);
