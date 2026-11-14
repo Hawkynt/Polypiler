@@ -9,7 +9,10 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
+using Polypiler.Core.Backends.CSharp.Passes;
+using Polypiler.Core.Backends.JavaScript.Passes;
 using Polypiler.Core.Optimize;
+using Polypiler.Core.Optimize.Target;
 using Polypiler.Core.Recognize;
 
 namespace Polypiler.Cli;
@@ -23,7 +26,9 @@ namespace Polypiler.Cli;
 /// <c>--module</c>, <c>--global</c> and <c>--typed-arrays</c> say how the file is packaged and what
 /// an ECMAScript 5 engine has. The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
 /// <c>--explain-opt</c> (ADR 0004) apply to every pair: the optimizer runs between the frontend and
-/// the backend unless <c>--opt none</c> says otherwise. The foundation checks the command line
+/// the backend, and the target passes between the backend's syntax tree and its printer (#1336),
+/// unless <c>--opt none</c> says otherwise; the rules of the one and the passes of the other share
+/// one namespace of optimization numbers. The foundation checks the command line
 /// against the grammar; the command refuses, as <c>PLY0003</c>, a language it does not know and an
 /// option that does not apply to the chosen languages or has a value they do not take.
 /// </summary>
@@ -213,7 +218,7 @@ public sealed class TranslateCommand : ICliCommand {
 
     var source = File.ReadAllText(context.Resolve(file));
     var (module, exitCode) = frontend.Import(file, source, options, context);
-    return module is null ? exitCode : Emit(Optimized(file, module, options, context, backend), options, context, backend);
+    return module is null ? exitCode : Emit(Optimized(file, module, options, context, backend), options, context, backend, file);
   }
 
   /// <summary>The level of <c>--opt</c>, or <see langword="null"/> for a value that names none.</summary>
@@ -223,6 +228,14 @@ public sealed class TranslateCommand : ICliCommand {
     _ => null
   };
 
+  /// <summary>
+  /// The optimization numbers of the pipeline: the rules of the IR optimizer and the target passes of
+  /// every backend, which share one namespace, in the order of their numbers.
+  /// </summary>
+  private static readonly string[] _optimizations = [
+    .. RuleTable.Default.Ids.Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Distinct().Order(StringComparer.Ordinal)
+  ];
+
   /// <summary>What is wrong with the pipeline options: an unknown level, or an optimization number the pipeline does not have; the foundation refuses an empty item.</summary>
   private static string? PipelineMisuse(IReadOnlyDictionary<string, string> options) {
     if (LevelOf(options) is null)
@@ -231,13 +244,19 @@ public sealed class TranslateCommand : ICliCommand {
     if (!options.TryGetValue(DisableOpt, out var list))
       return null;
 
-    var unknown = list.Split(',').FirstOrDefault(id => RuleTable.Default.Find(id) is null);
+    var unknown = list.Split(',').FirstOrDefault(id => !_optimizations.Contains(id));
     return unknown switch {
       null => null,
       _ when !IrRule.IsId(unknown) => $"'{unknown}' is not an optimization number of the form O####",
-      _ => $"unknown optimization '{unknown}'; the pipeline has {string.Join(", ", RuleTable.Default.Ids)}"
+      _ => $"unknown optimization '{unknown}'; the pipeline has {string.Join(", ", _optimizations)}"
     };
   }
+
+  /// <summary>Which target passes run by the options of a command line: those of the level that <c>--disable-opt</c> does not name.</summary>
+  private static TargetPassOptions PassesOf(IReadOnlyDictionary<string, string> options) => new() {
+    Level = LevelOf(options) ?? OptimizationLevel.Default,
+    Disabled = options.TryGetValue(DisableOpt, out var list) ? list.Split(',').ToHashSet() : []
+  };
 
   /// <summary>
   /// Runs the pass pipeline on an imported module with the options of the command line; with
@@ -283,7 +302,11 @@ public sealed class TranslateCommand : ICliCommand {
   private static CliContext Context(TextWriter output, TextWriter error)
     => new(output, error, "", DiagnosticsFormat.Text, false, Directory.GetCurrentDirectory());
 
-  private static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend) {
+  /// <summary>
+  /// Lowers, checks and writes a module; with <c>--explain-opt</c> and the name of the source file,
+  /// every change of a target pass is written to the error stream as a note, as the rules are.
+  /// </summary>
+  private static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend, string? file = null) {
     try {
       module = backend.Lower(module, options);
     } catch (InvalidDataException exception) {
@@ -304,7 +327,12 @@ public sealed class TranslateCommand : ICliCommand {
     try {
       var full = context.Resolve(directory);
       Directory.CreateDirectory(full);
-      foreach (var generated in backend.Emit(module, options)) {
+      var emission = backend.Emit(module, options, PassesOf(options));
+      if (file is not null && options.ContainsKey(ExplainOpt))
+        foreach (var application in emission.Applications)
+          context.Note($"{file}: opt {application}");
+
+      foreach (var generated in emission.Files) {
         File.WriteAllText(Path.Combine(full, generated.Path), generated.Content);
         context.Output.WriteLine(Path.Combine(directory, generated.Path));
       }
@@ -363,7 +391,7 @@ public sealed class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error,
     (module, options) => JavaScriptEmitter.Legalize(module, implementations, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities),
     (module, options) => JavaScriptEmitter.Check(module, JavaScriptProfileOf(options).Profile!, capabilities),
-    (module, options) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities));
+    (module, options, passes) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
 
   /// <summary>The JavaScript profile the options of a command line name, or what is wrong with them.</summary>
   private static (JavaScriptProfile? Profile, string? Error) JavaScriptProfileOf(IReadOnlyDictionary<string, string> options) {
@@ -380,7 +408,7 @@ public sealed class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? CSharpMisuse(options),
     (module, options) => CSharpEmitter.Legalize(module, implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
-    (module, options) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities));
+    (module, options, passes) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
 
   /// <summary>The values <c>--float</c> takes.</summary>
   private static string FloatChoice => Choice(["strict", "accurate"]);
@@ -454,7 +482,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// <param name="Misuse">What is wrong with the values of those options, or <see langword="null"/>.</param>
   /// <param name="Lower">The module with the floating-point operations the target lacks replaced by their portable implementations.</param>
   /// <param name="Check">Why a module cannot be emitted with the options given; empty when it can.</param>
-  /// <param name="Emit">Writes a module that passed the check.</param>
+  /// <param name="Emit">Writes a module that passed the check, running the target passes the options let run.</param>
   private sealed record Backend(
     string Name,
     RuleTarget Target,
@@ -462,7 +490,7 @@ public sealed class TranslateCommand : ICliCommand {
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
     Func<IrModule, IReadOnlyDictionary<string, string>, IrModule> Lower,
     Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<Diagnostic>> Check,
-    Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<GeneratedFile>> Emit) {
+    Func<IrModule, IReadOnlyDictionary<string, string>, TargetPassOptions, TargetEmission> Emit) {
 
     /// <summary>Whether an option belongs to this language.</summary>
     public bool Has(string option) => this.Options.Any(candidate => candidate.Name == option);
