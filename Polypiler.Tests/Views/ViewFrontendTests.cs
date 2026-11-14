@@ -56,7 +56,7 @@ public sealed class ViewFrontendTests {
     Assert.That(CSharpViewApi.Find("System.Span<T>", "Slice", 4), Is.Null);
     Assert.That(CSharpViewApi.Find("System.Span<T>", "Reverse", 1), Is.Null);
     Assert.That(CSharpViewApi.Members.Select(member => member.Ir).Distinct(), Is.SubsetOf(IrViews.Operations.Select(op => op.ToString()).Append("LoadLittle").Append("StoreLittle")));
-    Assert.That((CSharpViewApi.Syntax.Count, CSharpViewApi.Diagnosed.Count), Is.EqualTo((12, 8)));
+    Assert.That((CSharpViewApi.Syntax.Count, CSharpViewApi.Diagnosed.Count), Is.EqualTo((16, 11)));
   }
 
   /// <summary>Measurement "share of the construct table covered by fixtures": every member and every syntax of the table stands in a fixture.</summary>

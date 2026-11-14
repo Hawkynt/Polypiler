@@ -651,7 +651,7 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("throw a;", "throw")]
   [TestCase("try { } finally { } return a;", "try")]
   [TestCase("for (const x in d) { } return a;", "for-in")]
-  [TestCase("for (const x of d) { } return a;", "a for...of over uint8[]")]
+  [TestCase("for (const x of [1, 2]) { } return a;", "a for...of over int32[]")]
   [TestCase("outer: while (t) { } return a;", "a label")]
   [TestCase("debugger; return a;", "debugger")]
   [TestCase("class X { } return a;", "class")]
