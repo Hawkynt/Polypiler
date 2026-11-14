@@ -1,0 +1,25 @@
+id: TYPES.i16
+title: Signed 16-bit integer
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-INT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: integer
+  parameters: []
+  bits: 16
+  signedness: signed
+  overflow: wrap
+  layout: {sizeBytes: 2, alignment: 2, byteOrder: target}
+  distinctFrom: []
+  values:
+    - {bits: "0x0000", value: "0"}
+    - {bits: "0x0001", value: "1"}
+    - {bits: "0x7FFF", value: "32767"}
+    - {bits: "0x8000", value: "-32768"}
+    - {bits: "0xFFFF", value: "-1"}

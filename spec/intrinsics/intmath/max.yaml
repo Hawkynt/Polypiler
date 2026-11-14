@@ -1,0 +1,31 @@
+id: INTRINSICS.Max
+title: Maximum
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-MINMAX
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Max
+  group: IntMath
+  typeParameters: [{name: T, constraint: any}]
+  parameters: [{name: a, type: T}, {name: b, type: T}]
+  returns: [{name: result, type: T}]
+  legality:
+    - {id: number, text: "T is an integer type or TYPES.f32 or TYPES.f64", fact: none}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the larger of a and b; of floats a NaN when either is one, and +0 after -0"
+    source: ".NET API reference, System.Math.Max; IEEE Std 754-2019, section 9.6 (maximum)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.i32}, inputs: [-1, 1], outputs: [1]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF", "0x00000001"], outputs: ["0xFFFFFFFF"]}
+    - {types: {T: TYPES.f64}, inputs: ["0x8000000000000000", "0x0000000000000000"], outputs: ["0x0000000000000000"]}
+    - {types: {T: TYPES.f64}, inputs: ["0x3FF0000000000000", "0x7FF8000000000000"], outputs: ["0x7FF8000000000000"]}
+  algebra: [commutative, associative, idempotent]

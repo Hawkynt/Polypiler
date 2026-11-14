@@ -1,0 +1,28 @@
+id: INTRINSICS.ClearLowestSet
+title: Clear the lowest set bit
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITFIELD
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ClearLowestSet
+  group: Bitfield
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "value & (value - 1) modulo 2^width: value without its lowest 1 bit, 0 for 0"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-1"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: ["0x00000000"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000058"], outputs: ["0x00000050"]}
+    - {types: {T: TYPES.i8}, inputs: [-1], outputs: [-2]}

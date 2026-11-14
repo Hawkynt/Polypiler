@@ -1,0 +1,29 @@
+id: INTRINSICS.IeeeRemainder
+title: IEEE remainder
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: IeeeRemainder
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}, {name: y, type: F}]
+  returns: [{name: remainder, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "x - n * y with n the integer nearest x / y, a tie to the even one; exact; a zero result has the sign of x"
+    source: "IEEE Std 754-2019, section 5.3.1 (remainder)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x4014000000000000", "0x4000000000000000"], outputs: ["0x3FF0000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x401C000000000000", "0x4000000000000000"], outputs: ["0xBFF0000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x8000000000000000", "0x3FF0000000000000"], outputs: ["0x8000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x3FF0000000000000", "0x0000000000000000"], outputs: ["0x7FF8000000000000"]}

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/verification.schema.json",
+  "title": "Polypiler spec family 'verification'",
+  "description": "The body under 'spec' of a document in spec/verification/ (PRD §4.1, §7.2, §23): an input generator, the tolerance of one operation (ADR 0005) or a reference oracle. Rules the schema cannot state (PLY0046): layout, strategy-requirements, boundary-covers-extremes, value-fits-type, bound-for-mode, one-tolerance-per-operation, oracle-not-self; 'type' and 'operation' name existing documents (PLY0043).",
+  "type": "object",
+  "required": ["kind"],
+  "additionalProperties": false,
+  "properties": {
+    "kind": { "enum": ["generator", "tolerance", "oracle"] },
+    "type": { "type": "string", "pattern": "^TYPES\\.", "description": "The TYPES document the generated values belong to." },
+    "strategy": {
+      "enum": ["boundary", "uniform", "bit-pattern", "corpus"],
+      "description": "boundary: the explicit list 'values'; uniform: 'count' values drawn uniformly from 'seed'; bit-pattern: walking ones and zeros and alternating patterns, then random patterns from 'seed' up to 'count'; corpus: the type's values of the corpus."
+    },
+    "values": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/literal" },
+      "description": "The values of a boundary generator, each a bit pattern '0x…' or a decimal integer, quoted."
+    },
+    "seed": { "type": "integer", "minimum": 0, "maximum": 4294967295, "description": "The seed of the random sequence; the same seed draws the same values (PRD §23.3)." },
+    "count": { "type": "integer", "minimum": 1, "maximum": 1000000, "description": "The number of values drawn." },
+    "operation": { "type": "string", "pattern": "^(INTRINSICS|IR)\\.", "description": "The INTRINSICS or IR document the tolerance applies to." },
+    "mode": {
+      "enum": ["exact", "ulp", "relative", "absolute"],
+      "description": "The comparison mode of ADR 0005: exact (bit patterns identical), ulp (representable values between the results), relative (difference against the reference's magnitude), absolute (difference)."
+    },
+    "bound": { "type": "number", "exclusiveMinimum": 0, "description": "The largest admitted distance; a positive integer in 'ulp' mode, absent in 'exact' mode." },
+    "specialValues": {
+      "enum": ["bitwise", "signed-zero", "class"],
+      "description": "The special-value rule of ADR 0005, signed-zero when absent: bitwise compares NaN sign, quiet bit and payload and tells +0 from -0; signed-zero lets any NaN equal any NaN and tells +0 from -0; class lets any NaN equal any NaN and +0 equal -0."
+    },
+    "implementation": { "type": "string", "minLength": 1, "description": "What produces the reference result: node, pb-compiler, published-vectors, … — never Polypiler itself." },
+    "toolchain": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "The key of tooling/toolchains.lock when the oracle is a tool." },
+    "observes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["return-value", "buffers", "flags", "registers", "memory-writes", "io", "external-calls", "traps", "cycles"] },
+      "description": "The observable behaviour the oracle reports (PRD §23.1)."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "generator" } } },
+      "then": {
+        "required": ["type", "strategy"],
+        "properties": { "operation": false, "mode": false, "bound": false, "specialValues": false, "implementation": false, "toolchain": false, "observes": false }
+      }
+    },
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "tolerance" } } },
+      "then": {
+        "required": ["operation", "mode"],
+        "properties": { "type": false, "strategy": false, "values": false, "seed": false, "count": false, "implementation": false, "toolchain": false, "observes": false },
+        "allOf": [
+          {
+            "if": { "required": ["mode"], "properties": { "mode": { "const": "ulp" } } },
+            "then": { "properties": { "bound": { "type": "integer" } } }
+          }
+        ]
+      }
+    },
+    {
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "oracle" } } },
+      "then": {
+        "required": ["implementation", "observes"],
+        "properties": { "type": false, "strategy": false, "values": false, "seed": false, "count": false, "operation": false, "mode": false, "bound": false, "specialValues": false }
+      }
+    }
+  ],
+  "$defs": {
+    "literal": { "type": "string", "pattern": "^(0x[0-9A-Fa-f]{1,16384}|-?(0|[1-9][0-9]{0,19999}))$" }
+  }
+}

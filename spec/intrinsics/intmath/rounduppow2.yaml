@@ -1,0 +1,29 @@
+id: INTRINSICS.RoundUpPow2
+title: Round up to a power of two
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-POW2
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: RoundUpPow2
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the smallest power of two not below the bit pattern of value, modulo 2^width; 0 for 0"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 3-2 (clp2)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: ["0x00000000"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000005"], outputs: ["0x00000008"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x80000001"], outputs: ["0x00000000"]}
+    - {types: {T: TYPES.u8}, inputs: ["0x40"], outputs: ["0x40"]}

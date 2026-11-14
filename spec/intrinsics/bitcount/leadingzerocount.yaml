@@ -1,0 +1,30 @@
+id: INTRINSICS.LeadingZeroCount
+title: Leading zero count
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITCOUNT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: LeadingZeroCount
+  group: BitCount
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: count, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the number of 0 bits above the highest 1 bit of the bit pattern of value; the width of T when value is 0"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 5-3"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: [32]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000001"], outputs: [31]}
+    - {types: {T: TYPES.i32}, inputs: [-1], outputs: [0]}
+    - {types: {T: TYPES.u8}, inputs: ["0x10"], outputs: [3]}
+    - {types: {T: TYPES.u64}, inputs: ["0x00000000FFFFFFFF"], outputs: [32]}

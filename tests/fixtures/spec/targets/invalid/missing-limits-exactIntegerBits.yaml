@@ -1,0 +1,35 @@
+id: TARGETS.javascript.es2022
+title: "JavaScript target, ECMAScript 2022 on Node"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#60"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  language: LANGUAGES.javascript
+  profile: es2022
+  toolchain: node
+  abi: {name: ecmascript, byteOrder: host, pointerBits: 0}
+  pointers: none
+  unions: accessor
+  physicalTypes:
+    - {type: TYPES.bool, native: "Boolean", helper: false}
+    - {type: TYPES.i8, native: "Number, wrapped to the i8 range", helper: false}
+    - {type: TYPES.u8, native: "Number, wrapped to the u8 range", helper: false}
+    - {type: TYPES.i16, native: "Number, wrapped to the i16 range", helper: false}
+    - {type: TYPES.u16, native: "Number, wrapped to the u16 range", helper: false}
+    - {type: TYPES.i32, native: "Number, normalised with | 0", helper: false}
+    - {type: TYPES.u32, native: "Number, normalised with >>> 0", helper: false}
+    - {type: TYPES.i64, native: "BigInt, normalised with BigInt.asIntN(64, …)", helper: false}
+    - {type: TYPES.u64, native: "BigInt, normalised with BigInt.asUintN(64, …)", helper: false}
+    - {type: TYPES.f32, native: "Number, rounded with Math.fround", helper: false}
+    - {type: TYPES.f64, native: "Number", helper: false}
+  alignment: {max: 8, packing: not-observable}
+  simd: []
+  limits: {maxIntegerBits: 64, maxArrayLength: 4294967295}
+  dependencies: []
+  packaging: {ecosystem: npm, layout: "one module file per translated module, in the format --module names"}
