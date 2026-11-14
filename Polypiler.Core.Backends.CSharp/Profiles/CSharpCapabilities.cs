@@ -70,7 +70,19 @@ public enum CSharpFeature {
   InitAccessor,
 
   /// <summary>A <c>record</c> class with its positional parameters and the value equality the compiler gives it (C# 9); its init accessors need <c>IsExternalInit</c>.</summary>
-  Record
+  Record,
+
+  /// <summary>The null-conditional operators <c>r?.m</c> and <c>r?[i]</c> (C# 6); below, a temporary and a conditional.</summary>
+  NullConditional,
+
+  /// <summary>The null-coalescing assignment <c>x ??= v</c> (C# 8); below, <c>if (x == null) x = v;</c>.</summary>
+  NullCoalescingAssignment,
+
+  /// <summary>
+  /// Nullable reference types, <c>#nullable enable</c> and <c>T?</c> on a reference (C# 8). Recorded for
+  /// the table: the IR carries no annotation of a reference, so the emitter writes none in any profile.
+  /// </summary>
+  NullableReferenceTypes
 
 }
 
@@ -324,6 +336,9 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfLanguage("get-only auto-property", CSharpFeature.GetOnlyAutoProperty, new Version(6, 0)),
     CSharpCapability.OfLanguage("init accessor", CSharpFeature.InitAccessor, new Version(9, 0)),
     CSharpCapability.OfLanguage("record class", CSharpFeature.Record, new Version(9, 0)),
+    CSharpCapability.OfLanguage("null-conditional operator", CSharpFeature.NullConditional, new Version(6, 0)),
+    CSharpCapability.OfLanguage("null-coalescing assignment", CSharpFeature.NullCoalescingAssignment, new Version(8, 0)),
+    CSharpCapability.OfLanguage("nullable reference types", CSharpFeature.NullableReferenceTypes, new Version(8, 0)),
 
     // The equality members of a struct written out where the language has no record struct.
     CSharpCapability.OfApi("IEquatable<T>", CSharpProfile.Net20),

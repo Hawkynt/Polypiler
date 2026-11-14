@@ -108,10 +108,15 @@ public sealed record CsNullLiteral : CsExpression;
 /// <param name="Identifier">The spelling.</param>
 public sealed record CsName(string Identifier) : CsExpression;
 
-/// <summary><c>target.Member</c>.</summary>
+/// <summary><c>target.Member</c>, or <c>target?.Member</c>.</summary>
 /// <param name="Target">What the member is read from.</param>
 /// <param name="Member">The name of the member.</param>
-public sealed record CsMemberAccess(CsExpression Target, string Member) : CsExpression;
+public sealed record CsMemberAccess(CsExpression Target, string Member) : CsExpression {
+
+  /// <summary>Whether the access is null-conditional, <c>target?.Member</c> (C# 6).</summary>
+  public bool Conditional { get; init; }
+
+}
 
 /// <summary><c>target(arguments)</c>.</summary>
 /// <param name="Target">What is called.</param>
@@ -122,10 +127,15 @@ public sealed record CsInvocation(CsExpression Target, IReadOnlyList<CsExpressio
 /// <param name="Value">The variable, or the discard.</param>
 public sealed record CsOutArgument(CsExpression Value) : CsExpression;
 
-/// <summary><c>target[index]</c>.</summary>
+/// <summary><c>target[index]</c>, or <c>target?[index]</c>.</summary>
 /// <param name="Target">The array.</param>
 /// <param name="Index">The index.</param>
-public sealed record CsElementAccess(CsExpression Target, CsExpression Index) : CsExpression;
+public sealed record CsElementAccess(CsExpression Target, CsExpression Index) : CsExpression {
+
+  /// <summary>Whether the access is null-conditional, <c>target?[index]</c> (C# 6).</summary>
+  public bool Conditional { get; init; }
+
+}
 
 /// <summary><c>(T)operand</c>.</summary>
 /// <param name="TargetType">The type cast to.</param>
