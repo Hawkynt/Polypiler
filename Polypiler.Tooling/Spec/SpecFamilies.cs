@@ -17,6 +17,10 @@ public static class SpecFamilies {
     new RecoverySpecFamily(),
     new RewritesSpecFamily(),
     new TypesSpecFamily(),
+    new TargetsSpecFamily(),
+    new VerificationSpecFamily(),
+    new IntrinsicsSpecFamily(),
+    new RecognitionSpecFamily(),
   ];
 
 }

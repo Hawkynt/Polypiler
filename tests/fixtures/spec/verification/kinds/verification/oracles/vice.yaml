@@ -1,0 +1,16 @@
+id: VERIFICATION.oracle.vice
+title: The VICE emulator, observing the whole machine
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: oracle
+  implementation: vice
+  toolchain: vice
+  observes: [return-value, buffers, flags, registers, memory-writes, io, external-calls, traps, cycles]

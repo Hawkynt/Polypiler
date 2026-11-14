@@ -1,0 +1,16 @@
+id: VERIFICATION.generator.u32-too-wide
+title: A boundary value one past the maximum
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: generator
+  type: TYPES.u32
+  strategy: boundary
+  values: ["0x00000000", "0x00000001", "0x7FFFFFFF", "0x80000000", "0xFFFFFFFF", "0x100000000"]

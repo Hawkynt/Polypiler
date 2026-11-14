@@ -1,0 +1,28 @@
+id: INTRINSICS.Lerp
+title: Linear interpolation
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-FLOATREF
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Lerp
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: a, type: F}, {name: b, type: F}, {name: t, type: F}]
+  returns: [{name: result, type: F}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "a + (b - a) * t, three operations each rounded once, in this order"
+    source: "IEEE Std 754-2019, section 5.4.1 (addition, subtraction, multiplication)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x3FF0000000000000", "0x4008000000000000", "0x3FE0000000000000"], outputs: ["0x4000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000000", "0x4024000000000000", "0x3FF8000000000000"], outputs: ["0x402E000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x4000000000000000", "0x4000000000000000", "0x7FF0000000000000"], outputs: ["0x7FF8000000000000"]}
