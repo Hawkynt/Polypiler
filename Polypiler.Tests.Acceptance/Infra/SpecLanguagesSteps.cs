@@ -11,7 +11,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Infra;
 
 /// <summary>
-/// The steps of <c>tests/features/spec/spec-languages.feature</c>. The scenario's workspace stands in
+/// The steps of <c>tests/features/infra/spec-languages.feature</c>. The scenario's workspace stands in
 /// for the repository: it holds the family's schema and <c>tooling/toolchains.lock</c>, which the
 /// <c>toolchain-known</c> rule reads, and the real <c>polypiler-tooling</c> validates the tree there.
 /// </summary>
