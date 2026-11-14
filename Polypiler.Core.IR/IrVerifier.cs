@@ -36,7 +36,9 @@ public static partial class IrVerifier {
 
       Require(names.Add(constant.Name), "the module declares the name twice");
       Require(constant.Type.IsStorable && !element.IsStruct, $"a constant of the type {constant.Type}");
-      Require(constant.Type.IsArray || constant.Values.Count == 1, $"a constant of the type {constant.Type} with {constant.Values.Count} values");
+      var count = element.IsString ? constant.Strings.Count : constant.Values.Count;
+      Require(constant.Type.IsArray || count == 1, $"a constant of the type {constant.Type} with {count} values");
+      Require(element.IsString ? constant.Values.Count == 0 : constant.Strings.Count == 0, $"a constant of the type {constant.Type} with values of another type");
       foreach (var value in constant.Values.Where(value => !FunctionCheck.InRange(new IrConst(element, value))).Take(1))
         Require(false, $"the constant {value} is not a value of {element}");
     }
@@ -250,6 +252,8 @@ public static partial class IrVerifier {
         case IrLocalRef reference:
           this.InScope(reference.Local);
           break;
+        case IrStrConst:
+          break;
         case IrConstRef reference:
           this.Known(reference.Constant);
           this.Require(!reference.Type.IsArray, $"the constant table '{reference.Constant.Name}' is used as a value");
@@ -286,6 +290,7 @@ public static partial class IrVerifier {
           this.Expression(creation.Length);
           this.Require(creation.Type.IsArray && creation.Type.IsStorable, $"an array is created of the type {creation.Type}");
           this.Require(creation.Length.Type.IsWord, $"an array length has the type {creation.Length.Type}");
+          this.Require(creation.Type.Element?.IsString != true, "an array of strings is created without its elements, which no string could be");
           this.Defaulted(creation.Type.Element);
           break;
         case IrStructNew creation:
@@ -328,6 +333,8 @@ public static partial class IrVerifier {
             $"{intrinsic.Op} with the type {intrinsic.Type} is applied to ({string.Join(", ", intrinsic.Arguments.Select(argument => argument.Type))})");
           if (FloatOperationTable.Problem(intrinsic) is { } problem)
             this.Require(false, problem);
+          if (StringOperations.Problem(intrinsic) is { } malformed)
+            this.Require(false, malformed);
 
           break;
         case IrStep step:

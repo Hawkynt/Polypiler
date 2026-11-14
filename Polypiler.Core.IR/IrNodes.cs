@@ -28,7 +28,29 @@ public sealed record IrConst(IrType Type, long Value) : IrExpr(Type);
 /// <param name="Name">The name, unique among the constants and functions of the module.</param>
 /// <param name="Type">A truth value, a number, or an array of numbers.</param>
 /// <param name="Values">The value, or the elements in order, each as an <see cref="IrConst"/> carries it.</param>
-public sealed record IrModuleConst(string Name, IrType Type, IReadOnlyList<long> Values);
+public sealed record IrModuleConst(string Name, IrType Type, IReadOnlyList<long> Values) {
+
+  /// <summary>
+  /// A constant of the module that is a string or a table of strings: <see cref="Values"/> is empty
+  /// and <see cref="Strings"/> holds the value, or the elements in order.
+  /// </summary>
+  /// <param name="name">The name, unique among the constants and functions of the module.</param>
+  /// <param name="type"><see cref="IrType.String"/> or an array of it.</param>
+  /// <param name="strings">The value, or the elements in order.</param>
+  /// <returns>The constant.</returns>
+  public static IrModuleConst OfStrings(string name, IrType type, IReadOnlyList<string> strings) => new(name, type, System.Array.Empty<long>()) { Strings = strings };
+
+  /// <summary>The value or the elements of a constant of strings, otherwise empty.</summary>
+  public IReadOnlyList<string> Strings { get; init; } = [];
+
+}
+
+/// <summary>
+/// A constant string: its code units in order, any of them, also an unpaired surrogate. Its type is
+/// <see cref="IrType.String"/>.
+/// </summary>
+/// <param name="Value">The code units.</param>
+public sealed record IrStrConst(string Value) : IrExpr(IrType.String);
 
 /// <summary>The value of a constant of the module, or the table it is.</summary>
 /// <param name="Constant">The constant read.</param>
@@ -664,7 +686,85 @@ public enum IrIntrinsicOp {
   PowEcma,
 
   /// <summary><c>(x, n)</c>: the <c>n</c>-th root of IEEE 754 §9.2 for an <c>i32</c> <c>n</c>; contract <c>ulp(1)</c>.</summary>
-  RootN
+  RootN,
+
+  /// <summary><c>str → i32</c>: the number of code units.</summary>
+  StrLength,
+
+  /// <summary><c>(str, i32) → u16</c>: the code unit at an index; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length)</c>.</summary>
+  StrCodeUnitAt,
+
+  /// <summary><c>(str, str, …) → str</c>: two or more strings one after the other.</summary>
+  StrConcat,
+
+  /// <summary><c>u16 → str</c>: the string of one code unit.</summary>
+  StrFromCodeUnit,
+
+  /// <summary><c>(u16[], i32 start, i32 length) → str</c>: the code units of a range of an array; traps <see cref="IrTrap.IndexOutOfRange"/> outside the array.</summary>
+  StrFromCodeUnits,
+
+  /// <summary><c>str → u16[]</c>: a new array of the code units.</summary>
+  StrToCodeUnits,
+
+  /// <summary><c>(u16, i32) → str</c> or <c>(str, i32) → str</c>: a code unit or a string the given number of times; traps <see cref="IrTrap.IntegerOverflow"/> for a negative count.</summary>
+  StrRepeat,
+
+  /// <summary><c>(str, i32 start, i32 length) → str</c>: traps <see cref="IrTrap.IndexOutOfRange"/> unless <c>0 ≤ start</c>, <c>0 ≤ length</c> and <c>start + length ≤ StrLength</c>.</summary>
+  StrSubstring,
+
+  /// <summary><c>(str, str) → bool</c>: the same code units in the same order.</summary>
+  StrEquals,
+
+  /// <summary><c>(str, str) → i32</c>: -1, 0 or 1 by the first code unit that differs, a proper prefix first.</summary>
+  StrCompareOrdinal,
+
+  /// <summary><c>(str, str | u16, i32 from) → i32</c>: the first start at or after <c>from</c> of the needle, -1 when there is none; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length]</c>.</summary>
+  StrIndexOf,
+
+  /// <summary><c>(str, str | u16, i32 from) → i32</c>: the last start at or before <c>from</c> of the needle, -1 when there is none; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length]</c>.</summary>
+  StrLastIndexOf,
+
+  /// <summary><c>(str, str | u16) → bool</c>: whether the string begins with the needle.</summary>
+  StrStartsWith,
+
+  /// <summary><c>(str, str | u16) → bool</c>: whether the string ends with the needle.</summary>
+  StrEndsWith,
+
+  /// <summary><c>(str, str | u16) → bool</c>: whether the needle stands anywhere in the string.</summary>
+  StrContains,
+
+  /// <summary><c>(str, str, str) → str</c> or <c>(str, u16, u16) → str</c>: every occurrence replaced, left to right; traps <see cref="IrTrap.InvalidOperation"/> for an empty needle.</summary>
+  StrReplaceAll,
+
+  /// <summary><c>(str, str, str) → str</c>: the first occurrence replaced; an empty needle stands at 0.</summary>
+  StrReplaceFirst,
+
+  /// <summary><c>(str, str | u16, i32 limit) → str[]</c>: the parts between the separators, at most <c>limit</c> of them when it is not negative; an empty separator splits between every code unit.</summary>
+  StrSplit,
+
+  /// <summary><c>(str, str[]) → str</c>: the elements with the separator between each two.</summary>
+  StrJoin,
+
+  /// <summary><c>(str, i32 set) → str</c>: without the white space of a <see cref="WhitespaceSet"/>, a constant, at both ends.</summary>
+  StrTrim,
+
+  /// <summary><c>(str, i32 set) → str</c>: without the white space of a <see cref="WhitespaceSet"/> at the start.</summary>
+  StrTrimStart,
+
+  /// <summary><c>(str, i32 set) → str</c>: without the white space of a <see cref="WhitespaceSet"/> at the end.</summary>
+  StrTrimEnd,
+
+  /// <summary><c>(str, i32 length, str filler) → str</c>: the filler repeated in front up to the length, its last copy cut to fit; the string itself when it is as long or the filler is empty.</summary>
+  StrPadStart,
+
+  /// <summary><c>(str, i32 length, str filler) → str</c>: as <see cref="StrPadStart"/>, at the end.</summary>
+  StrPadEnd,
+
+  /// <summary><c>(str, i32) → i32</c>: ECMA-262's <c>codePointAt</c>, a pair of surrogates as one code point; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length)</c>.</summary>
+  StrCodePointAt,
+
+  /// <summary><c>(str, i32) → i32</c>: the code units of the code point at an index, 2 for a pair of surrogates and 1 otherwise; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length)</c>.</summary>
+  StrNextCodePoint
 
 }
 

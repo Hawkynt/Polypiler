@@ -53,8 +53,8 @@ public sealed class IrTrapException : Exception {
 /// Evaluates the IR directly. Values cross the boundary as the .NET type of the same width and
 /// signedness (a <c>u16</c> is accepted as <see cref="ushort"/> or <see cref="char"/> and returned as
 /// <see cref="ushort"/>), as <see cref="float"/>, <see cref="double"/> and <see cref="bool"/>, and as
-/// one-dimensional arrays of the numeric types;
-/// arrays are passed by reference, so a function can change the caller's array. A struct crosses as
+/// one-dimensional arrays of the numeric types; a <c>str</c> crosses as a <see cref="string"/> and an array of
+/// them as a <see cref="string"/> array; arrays are passed by reference, so a function can change the caller's array. A struct crosses as
 /// an <see cref="object"/> array of the values of its fields in declaration order, each crossing as
 /// its own type does; inside, it is a value that every read copies, as <see cref="IrStructNew"/> states.
 /// </summary>
@@ -93,7 +93,9 @@ public static partial class IrInterpreter {
 
     var constants = new Dictionary<IrModuleConst, object>(ReferenceEqualityComparer.Instance);
     foreach (var constant in module.Constants)
-      constants[constant] = constant.Type.Element is { } element
+      constants[constant] = (constant.Type.Element ?? constant.Type).IsString
+        ? constant.Type.IsArray ? ArrayOf(IrType.String, [.. constant.Strings]) : constant.Strings[0]
+        : constant.Type.Element is { } element
         ? ArrayOf(element, constant.Values.Select(value => Constant(element, value)).ToList())
         : Constant(constant.Type, constant.Values[0]);
 
@@ -146,9 +148,10 @@ public static partial class IrInterpreter {
   /// <summary>The IR type a .NET type crosses the boundary as, or <see langword="null"/> when it does not.</summary>
   private static IrType? TypeOf(Type host) {
     if (host.IsSZArray)
-      return TypeOf(host.GetElementType()!) is { IsNumeric: true } element ? IrType.Array(element) : null;
+      return TypeOf(host.GetElementType()!) is { } element && (element.IsNumeric || element.IsString) ? IrType.Array(element) : null;
 
     return Type.GetTypeCode(host) switch {
+      TypeCode.String => IrType.String,
       TypeCode.Boolean => IrType.Bool,
       TypeCode.SByte => IrType.I8,
       TypeCode.Byte => IrType.U8,
@@ -175,12 +178,13 @@ public static partial class IrInterpreter {
     IrTypeKind.U64 => typeof(ulong),
     IrTypeKind.F32 => typeof(float),
     IrTypeKind.F64 => typeof(double),
+    IrTypeKind.String => typeof(string),
     _ => typeof(object)
   };
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool or float or double or Record => value,
+    Array or bool or float or double or Record or string => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -314,6 +318,8 @@ public static partial class IrInterpreter {
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
           return Copied(frame.Locals[reference.Local]);
+        case IrStrConst text:
+          return text.Value;
         case IrUnary unary:
           var operand = this.Evaluate(unary.Operand, frame);
           if (unary.Type.IsFloat)
@@ -385,6 +391,8 @@ public static partial class IrInterpreter {
           Array.Clear(cleared);
           return null;
         default:
+          if (StringOperations.IsString(intrinsic.Op))
+            return StringOperations.Evaluate(intrinsic, arguments);
           if (IntegerOperations.Evaluates(intrinsic))
             return IntegerOperations.Evaluate(intrinsic, arguments);
           if (FloatOperationTable.TryEvaluate(intrinsic.Op, arguments, out var computed))

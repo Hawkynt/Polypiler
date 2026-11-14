@@ -43,7 +43,10 @@ public enum IrTypeKind {
   Array,
 
   /// <summary>A record of named fields that is copied by value: an <see cref="IrStructType"/>.</summary>
-  Struct
+  Struct,
+
+  /// <summary>An immutable sequence of UTF-16 code units, never null; compared and searched by code unit.</summary>
+  String
 
 }
 
@@ -106,6 +109,9 @@ public sealed record IrType {
   /// <summary>An IEEE 754 binary64 number.</summary>
   public static IrType F64 { get; } = new(IrTypeKind.F64, null);
 
+  /// <summary>An immutable, non-null sequence of UTF-16 code units, written <c>str</c>.</summary>
+  public static IrType String { get; } = new(IrTypeKind.String, null);
+
   /// <summary>The array type with the given element type.</summary>
   /// <param name="element">The type of every element.</param>
   /// <returns>The array type.</returns>
@@ -118,6 +124,9 @@ public sealed record IrType {
 
   /// <summary>The struct of a struct type, otherwise <see langword="null"/>.</summary>
   public IrStructType? StructType => this.Declaration as IrStructType;
+
+  /// <summary>Whether the type is the string type <c>str</c>.</summary>
+  public bool IsString => this.Kind == IrTypeKind.String;
 
   /// <summary>Whether the type is a struct, which is copied by value.</summary>
   public bool IsStruct => this.Kind == IrTypeKind.Struct;
@@ -165,12 +174,13 @@ public sealed record IrType {
   /// <summary>Whether the type is an array.</summary>
   public bool IsArray => this.Kind == IrTypeKind.Array;
 
-  /// <summary>Whether the type can be the type of a local: not void, and an array only of numbers or of structs.</summary>
-  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || this.Element.IsStruct);
+  /// <summary>Whether the type can be the type of a local: not void, and an array only of numbers, of structs or of strings.</summary>
+  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || this.Element.IsStruct || this.Element.IsString);
 
-  /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c> or the name of a struct.</summary>
+  /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c> or the name of a struct.</summary>
   public override string ToString()
     => this.Declaration is { } declaration ? declaration.Name
+      : this.IsString ? "str"
       : this.Element is null ? this.Kind.ToString().ToLowerInvariant()
       : $"{this.Element}[]";
 
