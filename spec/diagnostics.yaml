@@ -754,6 +754,24 @@ codes:
     area: permutation
     owner: PERM-MODEL
     surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for a mapping text that is not '<inputWidth>:[<entry>,...]' (missing width, empty or unknown entry, constant other than =0 or =1) and for a BitPerm state or spec mapping document that is not JSON or lacks its width, its entries, an entry's type or value, or has an unknown type"
+  - code: PLY0803
+    severity: error
+    exit: UnsupportedConstruct
+    title: mapping has no inverse
+    message: "mapping is not a bijection (<reason>); it has no inverse"
+    rule: permutation.algebra.inverse
+    area: permutation
+    owner: PERM-ALGEBRA
+    surfaces: "the refusal of BitPermutationAlgebra.TryInverse in Polypiler.Permutation.Algebra, the only entry point that inverts an untyped bit mapping, when the mapping is not a bijection; the reason is that of rule H1, such as 'input bit 0 is used 2 times', 'output bit 1 is inverted', 'output bit 0 is a constant', 'output bit 4 is a don't-care' or 'widths differ (8 in, 4 out)'"
+  - code: PLY0804
+    severity: error
+    exit: UnsupportedConstruct
+    title: composed mappings do not meet
+    message: "cannot compose: the inner mapping has <inner> output bits, the outer mapping reads <outer> input bits"
+    rule: permutation.algebra.compose
+    area: permutation
+    owner: PERM-ALGEBRA
+    surfaces: "PermutationModelException from BitPermutationAlgebra.Compose and BitRoutingAlgebra.Compose in Polypiler.Permutation.Algebra when the output width of the inner operand, applied first, is not the input width of the outer one"
   - code: PLY0805
     severity: error
     exit: UnsupportedConstruct
