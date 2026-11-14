@@ -21,5 +21,6 @@
   <Project Path="Polypiler.Permutation/Polypiler.Permutation.csproj" />
   <Project Path="Polypiler.Tests/Polypiler.Tests.csproj" />
   <Project Path="Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj" />
+  <Project Path="Polypiler.Tests.Probe/Polypiler.Tests.Probe.csproj" />
   <Project Path="Polypiler.Tooling/Polypiler.Tooling.csproj" />
 </Solution>

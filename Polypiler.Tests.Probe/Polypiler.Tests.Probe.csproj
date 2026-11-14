@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The program the runner tests start inside the sandbox: each verb does one thing a limit or the
+       isolation has to stop. It references nothing, so the tests can copy it into a run's directory. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>polypiler-probe</AssemblyName>
+    <RootNamespace>Polypiler.TestProbe</RootNamespace>
+    <Version>0.1.0</Version>
+    <IsPackable>false</IsPackable>
+    <UseAppHost>false</UseAppHost>
+    <!-- No symbols, so that the coverage collector leaves the probe alone: it runs in processes of its
+         own, where instrumentation would only collide on its hit files and count lines no test can see. -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+</Project>

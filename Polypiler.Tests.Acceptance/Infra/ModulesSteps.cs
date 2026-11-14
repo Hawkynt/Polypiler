@@ -31,7 +31,7 @@ public sealed class ModulesSteps {
   ];
 
   /// <summary>The test projects, which the issue does not count among its modules.</summary>
-  private static readonly string[] _tests = ["Polypiler.Tests", "Polypiler.Tests.Acceptance"];
+  private static readonly string[] _tests = ["Polypiler.Tests", "Polypiler.Tests.Acceptance", "Polypiler.Tests.Probe"];
 
   private static readonly string _root = PrototypeFixture.RepositoryRoot;
 

@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "repository": "Hawkynt/C--FrameworkExtensions",
+      "commit": "be3e13cbbe28dd54cc973c64b84cd71e1147f95f",
+      "path": "LICENSE",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651
+    },
+    {
+      "repository": "Hawkynt/CompressionWorkbench",
+      "commit": "21e609396e8fceb80e49185cc34cab7bce7f6483",
+      "path": "LICENSE",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651
+    },
+    {
+      "repository": "Hawkynt/Hawkynt.github.io",
+      "commit": "b3a8a8e92cbca83475986391c3cac56f0b185d29",
+      "path": "Cipher/LICENSE",
+      "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
+      "bytes": 7652
+    },
+    {
+      "repository": "Hawkynt/Hawkynt.github.io",
+      "commit": "b3a8a8e92cbca83475986391c3cac56f0b185d29",
+      "path": "Cipher/OpCodes.js",
+      "sha256": "d92b569cc08f4cd1ac785faddc7ecb034abe71fa396baffa64338910a1a95861",
+      "bytes": 136355
+    },
+    {
+      "repository": "Hawkynt/Hawkynt.github.io",
+      "commit": "b3a8a8e92cbca83475986391c3cac56f0b185d29",
+      "path": "Cipher/algorithms/checksum/adler.js",
+      "sha256": "4218b3ff959e32ad852855aeebe9f56f2319eb6c9dc495cc8526bcbde6797bbc",
+      "bytes": 11914
+    },
+    {
+      "repository": "Hawkynt/Hawkynt.github.io",
+      "commit": "b3a8a8e92cbca83475986391c3cac56f0b185d29",
+      "path": "LICENSE",
+      "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
+      "bytes": 7652
+    },
+    {
+      "repository": "Hawkynt/MediaDroid",
+      "commit": "7f8b6b995cbe54a6afb290a900748393bf01e272",
+      "path": "LICENSE",
+      "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
+      "bytes": 7652
+    },
+    {
+      "repository": "Hawkynt/PB-Compiler",
+      "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
+      "path": "LICENSE",
+      "sha256": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
+      "bytes": 7652
+    },
+    {
+      "repository": "Hawkynt/PNGCrushCS",
+      "commit": "9d8117695e12457bf0c1158d1fc6ebccc53acc45",
+      "path": "LICENSE",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651
+    },
+    {
+      "repository": "Hawkynt/Randomizer",
+      "commit": "656a1560350f1551de65c1e4bab179e3b048e282",
+      "path": "LICENSE",
+      "sha256": "da7eabb7bafdf7d3ae5e9f223aa5bdc1eece45ac569dc21b3b037520b4464768",
+      "bytes": 7651
+    }
+  ]
+}

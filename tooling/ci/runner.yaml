@@ -1,0 +1,15 @@
+# The defaults of the cross-language runner (Polypiler.Core.Verification/Running, PRD §7.2, §13.3).
+# They are safety ceilings that stop a hang, a leak or a flood, not performance budgets: a plan that
+# needs a tighter limit sets its own. Each limit applies to every step of a run separately.
+# Polypiler.Core.Verification embeds this file; RunLimits.Default is what it says.
+#
+#   wallTimeMs   how long a step may run, in milliseconds
+#   memoryBytes  the resident memory of the step's whole process tree, in bytes
+#   outputBytes  standard output and standard error together, in bytes; what lies beyond is cut off
+#   processes    how many processes the step's tree may have at the same time
+schema: 1
+limits:
+  wallTimeMs: 60000
+  memoryBytes: 1073741824
+  outputBytes: 16777216
+  processes: 64

@@ -55,8 +55,13 @@ public sealed class ScenarioWorkspace {
 
   /// <summary>Deletes the directory and everything in it; a workspace already gone is left alone.</summary>
   public void Delete() {
-    if (Directory.Exists(this.Path))
-      Directory.Delete(this.Path, true);
+    if (!Directory.Exists(this.Path))
+      return;
+
+    // Imported corpus files and git's pack files are read-only, which stops Windows from deleting them.
+    foreach (var file in Directory.EnumerateFiles(this.Path, "*", SearchOption.AllDirectories))
+      File.SetAttributes(file, FileAttributes.Normal);
+    Directory.Delete(this.Path, true);
   }
 
 }
