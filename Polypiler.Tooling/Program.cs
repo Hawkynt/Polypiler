@@ -113,6 +113,7 @@ public static class Program {
       return Failure;
 
     try {
+      Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(file))!);
       File.WriteAllBytes(file, IrModuleFormat.Write(imported.Module));
     } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
       error.WriteLine($"{Name}: '{file}' cannot be written: {exception.Message}");
