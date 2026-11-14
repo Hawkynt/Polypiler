@@ -256,15 +256,16 @@ codes:
     rule: corpus.lock
     area: infrastructure
     owner: INFRA-CORPUS
-    surfaces: "standard error of polypiler-tooling corpus import (before anything is written) and corpus verify; also 'corpus file '<repository>:<path>' cannot be read, the lock records <expected>: <reason>' for a locked file that is missing; the failure of a test that opens a stale fixture with CorpusFixture.Open"
+    surfaces: "standard error of polypiler-tooling corpus import (before anything is written) and corpus verify; also 'corpus file '<repository>:<path>' cannot be read, the lock records <expected>: <reason>' for a locked file that is missing; the failure of a test that opens a stale fixture with CorpusFixture.Open; standard error of polypiler-tooling licenses scan --mode corpus for a locked file that is not imported"
   - code: PLY0024
     severity: error
     exit: LicenseBlocker
     title: licence not approved
-    message: "the licence '<licence>' of '<component>' is not approved"
+    message: "'<path>': licence '<expression>' is denied in <mode> mode[ (<licence> awaits an owner decision, requested by <issue>)]"
+    rule: licences.policy
     area: infrastructure
     owner: INFRA-LICENSES
-    reserved: true
+    surfaces: "standard error of polypiler-tooling licenses scan and licenses inventory; also ''<path>': declared licence '<declared>' disagrees with detected '<family>'' and ''<path>' is a restricted asset and may not be redistributed'"
   - code: PLY0025
     severity: error
     exit: EnvironmentError
@@ -273,7 +274,7 @@ codes:
     rule: corpus.path
     area: infrastructure
     owner: INFRA-CORPUS
-    surfaces: "standard error of polypiler-tooling corpus import and discover, git's stderr as the cause; also '<repository> at <commit> cannot be fetched from <url>: <cause>', 'the files of <repository> at <commit> cannot be listed: <cause>' and 'corpus path '<path>' cannot be written: <cause>'"
+    surfaces: "standard error of polypiler-tooling corpus import and discover, git's stderr as the cause; also '<repository> at <commit> cannot be fetched from <url>: <cause>', 'the files of <repository> at <commit> cannot be listed: <cause>' and 'corpus path '<path>' cannot be written: <cause>' and, from polypiler-tooling licenses scan, 'licence report '<file>' cannot be written: <cause>'"
   - code: PLY0026
     severity: error
     exit: EnvironmentError
@@ -282,31 +283,34 @@ codes:
     rule: corpus.manifest
     area: infrastructure
     owner: INFRA-CORPUS
-    surfaces: "standard error of polypiler-tooling corpus import, verify and discover; reasons include a schema violation of corpus.yaml or corpus.lock.json, a fixture naming an undeclared repository, a duplicated fixture ID, an absolute path or one containing '..', a file under corpus/upstream that is not in the lock, a file not yet in the lock and an unknown fixture or repository asked for"
+    surfaces: "standard error of polypiler-tooling corpus import, verify and discover; reasons include a schema violation of corpus.yaml or corpus.lock.json, a fixture naming an undeclared repository, a duplicated fixture ID, an absolute path or one containing '..', a file under corpus/upstream that is not in the lock, a file not yet in the lock and an unknown fixture or repository asked for; also standard error of polypiler-tooling licenses scan and licenses inventory with the reasons 'licence policy: <detail>' (tooling/licensing/policy.yaml or its DECISIONS.md), 'licence declarations: <detail>' (licences.yaml of a scanned tree) and 'licence inventory: <detail>' (tooling/licensing/third-party.yaml)"
   - code: PLY0027
     severity: error
     exit: EnvironmentError
-    title: vector modified
-    message: "vector file '<path>' was modified"
+    title: golden file modified
+    message: "golden file '<path>' was modified: <reason>"
+    rule: golden.lock
     area: infrastructure
     owner: INFRA-INTEGRITY
-    reserved: true
+    surfaces: "standard error of polypiler-tooling integrity check and seal; reasons are 'hash differs from the golden lock', 'not in the golden lock', 'missing on disk', 'changed together with '<file>'[, ...] in commit <sha>', 'no entry in tests/fixtures/golden.changes.md', 'the entry in tests/fixtures/golden.changes.md does not name the source '<source>'' and 'not a valid golden lock: <reason>' for tests/fixtures/golden.lock.json itself"
   - code: PLY0028
     severity: error
     exit: EnvironmentError
     title: provenance missing
-    message: "'<path>': <reason>"
+    message: "vectors '<path>' lack independent provenance: <reason>"
+    rule: golden.provenance
     area: infrastructure
     owner: INFRA-INTEGRITY
-    reserved: true
+    surfaces: "standard error of polypiler-tooling integrity check and seal, for a *.vectors.json file or a golden.provenance.json marker; reasons include 'no provenance', an unknown kind, a generatedBy naming Polypiler, 'source is not a toolchain key of tooling/toolchains.lock: '<source>'', 'source is not in the corpus lock: '<source>'', 'no vectors' and every other violation of spec/schemas/vectors.schema.json"
   - code: PLY0029
     severity: error
     exit: LicenseBlocker
     title: licence undetectable
-    message: "the licence of '<component>' cannot be determined: <reason>"
+    message: "'<path>': no licence could be determined[: <reason>]"
+    rule: licences.detection
     area: infrastructure
     owner: INFRA-LICENSES
-    reserved: true
+    surfaces: "standard error of polypiler-tooling licenses scan, for a file no rule yields a licence for, a header expression that does not parse, an unknown licence text, a shared text no declaration selects a variant of, and a Vendored/<library>/ folder without a licence file; of licenses inventory for a notice file or package reference tooling/licensing/third-party.yaml does not list"
   - code: PLY0030
     severity: error
     exit: TargetBuildFailure
@@ -453,26 +457,29 @@ codes:
     severity: error
     exit: OracleFailure
     title: oracle failed
-    message: "oracle '<oracle>' failed: <reason>"
+    message: "reference oracle '<oracle>' failed for '<fixture>': <cause>"
+    rule: verification.oracle.failed
     area: infrastructure
     owner: VER-ORACLE
-    reserved: true
+    surfaces: "the diagnostics of a verification whose reference did not run, hit a runner limit (the cause names the runner's PLY0031, PLY0032 or PLY0033), printed something that is not hexadecimal, or disagrees with the vectors' published values"
   - code: PLY0051
     severity: error
     exit: SemanticMismatch
     title: output mismatch
-    message: "<function>(<arguments>) returned <actual>, the oracle <expected>"
+    message: "'<fixture>' vector '<name>': expected <hex>, actual <hex>, first difference at byte <offset>"
+    rule: verification.compare.exact
     area: infrastructure
     owner: VER-ORACLE
-    reserved: true
+    surfaces: "the diagnostics of a verification, one per vector that differs under the exact policy, or whose outputs differ in length or are not whole elements of a tolerance's format; standard error of polypiler-tooling bench run for a run that prints other than its expectStdout, with '<id>/<variant>' as fixture and 'stdout' as vector"
   - code: PLY0052
     severity: error
     exit: SemanticMismatch
     title: outside tolerance
-    message: "<function>(<arguments>) returned <actual>, <ulps> ulp from the oracle's <expected>"
+    message: "'<fixture>' vector '<name>' element <index>: expected <hex>, actual <hex>, <distance> exceeds <mode> <bound>"
+    rule: verification.compare.tolerance
     area: infrastructure
     owner: VER-ORACLE
-    reserved: true
+    surfaces: "the diagnostics of a verification, one per vector with an element outside the tolerance; when the special-value rule rejects the element the tail reads 'special values differ under <rule>'"
   - code: PLY0053
     severity: error
     exit: EnvironmentError
@@ -557,9 +564,10 @@ codes:
     exit: OracleFailure
     title: no oracle
     message: "no independent oracle is registered for '<fixture>'"
+    rule: verification.oracle.independent
     area: infrastructure
     owner: VER-ORACLE
-    reserved: true
+    surfaces: "the diagnostics of a verification of a fixture without an oracle; the registry refuses an oracle whose producer is polypiler or whose reference file lies in a directory with polypiler.manifest.json"
   - code: PLY0070
     severity: error
     exit: EnvironmentError
@@ -581,19 +589,21 @@ codes:
   - code: PLY0072
     severity: error
     exit: EnvironmentError
-    title: benchmark environment differs
-    message: "benchmark '<id>/<variant>': environment differs from the baseline (<field>: <baseline> -> <current>)"
+    title: benchmark results not comparable
+    message: "benchmark '<id>/<variant>': <reason>"
+    rule: bench.comparable
     area: infrastructure
     owner: INFRA-BENCH
-    reserved: true
+    surfaces: "standard error of polypiler-tooling bench compare, one line per pair of results with different environment fingerprints, as 'environment differs from the baseline (<field>: '<baseline>' vs '<current>')' naming the first differing field, or as 'unstable, relative MAD <x> exceeds <limit>' when, with maxRelativeMad in the budget file, the wall time's MAD / median is above it; the pair's table row reads 'not compared'"
   - code: PLY0073
     severity: error
     exit: EnvironmentError
     title: performance budget exceeded
-    message: "benchmark '<id>/<variant>': <metric> <value> exceeds its budget <budget>"
+    message: "benchmark '<id>/<variant>': <metric> regressed by <p> % (baseline <b>, current <c>), budget <m> % from <budget file>"
+    rule: bench.budget
     area: infrastructure
     owner: INFRA-BENCH
-    reserved: true
+    surfaces: "standard error of polypiler-tooling bench compare --budgets, one line per metric whose median exceeds baseline * (1 + maxRegressionPercent / 100); the table row reads 'regressed'"
   - code: PLY0074
     severity: error
     exit: EnvironmentError
@@ -630,6 +640,24 @@ codes:
     area: infrastructure
     owner: INFRA-FUZZ
     surfaces: "standard error of polypiler-tooling fuzz, for a worker process that cannot be started or does not announce itself, and for afl-fuzz ending with an error"
+  - code: PLY0078
+    severity: error
+    exit: EnvironmentError
+    title: benchmark file invalid
+    message: "<file>(<line>,<column>): <reason naming the field>"
+    rule: bench.schema
+    area: infrastructure
+    owner: INFRA-BENCH
+    surfaces: "standard error of polypiler-tooling bench run and bench compare, for a definition (tests/benchmarks/<id>.bench.yaml), result or budget file that cannot be read or breaks its schema, a source or size path that does not exist, and a dotnet benchmark that wrote no BenchmarkDotNet export"
+  - code: PLY0079
+    severity: error
+    exit: EnvironmentError
+    title: benchmark program failed
+    message: "benchmark '<id>/<variant>': the program exited with <code>; nothing is recorded"
+    rule: bench.exit
+    area: infrastructure
+    owner: INFRA-BENCH
+    surfaces: "standard error of polypiler-tooling bench run, with the program's standard error as the cause"
   - code: PLY0080
     severity: error
     exit: UsageError

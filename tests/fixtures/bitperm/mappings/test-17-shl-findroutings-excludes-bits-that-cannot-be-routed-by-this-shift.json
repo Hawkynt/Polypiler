@@ -1,0 +1,15 @@
+{
+  "name": "test-17-shl-findroutings-excludes-bits-that-cannot-be-routed-by-this-shift",
+  "source": {"line": 1029},
+  "width": 8,
+  "mapping": [
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"}
+  ]
+}
