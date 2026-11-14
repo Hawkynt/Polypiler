@@ -1,0 +1,23 @@
+id: TYPES.u8
+title: Unsigned 8-bit integer
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-INT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: integer
+  parameters: []
+  bits: 8
+  signedness: unsigned
+  overflow: wrap
+  layout: {sizeBytes: 1, alignment: 1, byteOrder: target}
+  distinctFrom: []
+  values:
+    - {bits: "0x00", value: "0"}
+    - {bits: "0x80", value: "128"}
+    - {bits: "0xFF", value: "255"}
