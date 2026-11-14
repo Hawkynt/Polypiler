@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/meta.schema.json",
+  "title": "Polypiler spec document metadata",
+  "description": "The metadata block every document under spec/<family>/ starts with (PRD §4.1), followed by the family body under 'spec'. polypiler-tooling spec validate also checks the rules a schema cannot state: the family prefix of 'id', its uniqueness, tests of a normative document, review at the current version, the lifecycle order of 'introducedIn' and 'deprecatedIn', and that every test path exists in the repository.",
+  "type": "object",
+  "required": ["id", "title", "version", "status", "owner", "issue", "tests", "introducedIn", "compatibility", "reviewedRevision", "normative", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$",
+      "description": "<FAMILY>.<name>: FAMILY is the upper-cased family folder; unique across spec/."
+    },
+    "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "version": { "type": "integer", "minimum": 1, "maximum": 2147483647, "description": "Raised by every normative change." },
+    "status": { "enum": ["draft", "normative", "deprecated"] },
+    "owner": { "type": "string", "pattern": "\\S", "description": "A GitHub login or team." },
+    "issue": { "type": "string", "pattern": "^([A-Z0-9][A-Z0-9+-]*|#[1-9][0-9]*)$", "description": "A backlog issue ID or #<number>." },
+    "tests": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "Repository-relative paths that must exist; at least one when status is normative."
+    },
+    "introducedIn": { "$ref": "#/$defs/phase" },
+    "deprecatedIn": { "$ref": "#/$defs/phase", "description": "Exactly when status is deprecated; not earlier than introducedIn." },
+    "compatibility": { "enum": ["none", "additive", "breaking"], "description": "Impact of this version on the previous one; none at version 1." },
+    "reviewedRevision": { "type": "integer", "minimum": 0, "maximum": 2147483647, "description": "0 to version; a normative document is reviewed at its current version." },
+    "normative": { "type": "string", "description": "The normative text, RFC 2119 keywords in capitals; non-empty unless status is draft." },
+    "spec": { "description": "The family body; its schema is spec/schemas/<family>.schema.json." }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "enum": ["normative", "deprecated"] } } },
+      "then": { "properties": { "normative": { "pattern": "\\S" } } }
+    }
+  ],
+  "$defs": {
+    "phase": { "enum": ["P0", "P1", "P2", "P3", "P4", "P5", "P6"] }
+  }
+}
