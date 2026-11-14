@@ -20,6 +20,10 @@ internal sealed partial class Lowering {
 
     switch (member.Ir) {
       case "LoadLittle" or "LoadBig":
+        // BitConverter reads a floating-point number from an array and an index only.
+        if (operands.Count == 1 && member.Type == "System.BitConverter" && type.IsFloat)
+          return null;
+
         var (array, index) = this.Bytes(method, operands[0], operands.Count == 2 ? operands[1] : null, type);
         return new IrIntrinsic(Enum.Parse<IrIntrinsicOp>(member.Ir), type, [array, index]);
       case "StoreLittle" or "StoreBig":
@@ -100,7 +104,7 @@ internal sealed partial class Lowering {
         arguments.Insert(0, ((MemberAccessExpressionSyntax)slice.Expression).Expression);
 
       if (model.GetTypeInfo(arguments[0]).Type is IArrayTypeSymbol && arguments.Count <= 3
-          && (arguments.Count < 3 || model.GetConstantValue(arguments[2]) is { HasValue: true, Value: int length } && length == value.Bits / 8))
+          && (arguments.Count < 3 || model.GetConstantValue(arguments[2]) is { HasValue: true, Value: int length } && length == value.Size))
         return (this.ByteArray(arguments[0], name), arguments.Count == 1 ? new IrConst(IrType.I32, 0) : this.Index(arguments[1]));
     }
 
