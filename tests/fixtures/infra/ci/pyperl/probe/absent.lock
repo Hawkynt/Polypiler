@@ -1,0 +1,17 @@
+# The interpreters under executable names no host has: the probe reports PLY0021 for both.
+schema: 1
+toolchains:
+  perl:
+    version: "5.42.3"
+    probe: [no-such-perl-polypiler, -e, 'print $^V']
+    versionPattern: '^v(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: Artistic-1.0-Perl OR GPL-1.0-or-later
+    source: https://www.perl.org/get.html
+  python:
+    version: "3.14.8"
+    probe: [no-such-python3-polypiler, --version]
+    versionPattern: '^Python (?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: PSF-2.0
+    source: https://www.python.org/downloads/

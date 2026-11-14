@@ -1,0 +1,17 @@
+# The real interpreters, pinned at versions no host of the layer runs: the probe reports PLY0022 for both.
+schema: 1
+toolchains:
+  perl:
+    version: "5.8.9"
+    probe: [perl, -e, 'print $^V']
+    versionPattern: '^v(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: Artistic-1.0-Perl OR GPL-1.0-or-later
+    source: https://www.perl.org/get.html
+  python:
+    version: "2.7.18"
+    probe: [python3, --version]
+    versionPattern: '^Python (?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: PSF-2.0
+    source: https://www.python.org/downloads/
