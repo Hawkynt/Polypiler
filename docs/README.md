@@ -22,6 +22,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Floating-point operations](reference/floating-point-operations.md) — every floating-point operation of the IR with its contract, special values and portable implementation.
 - [Known runtime defects](reference/known-runtime-defects.md) — defects of a target runtime that change what correct generated code computes, their minimal reproductions and the forms the backends write around them.
 - [Value records](reference/records.md) — structs, record structs and fixed-shape object literals: their value semantics, what each frontend imports and how each profile writes them.
+- [Audit of the PB-Compiler LLVM emitter](llvm/pb-emitter-audit.md) — what PB-Compiler's `--emit-llvm` writes at the pinned commit, what LLVM 23.1.3 accepts of it, and the gaps against PRD §26.3.
 
 ## Work-item readiness
 
