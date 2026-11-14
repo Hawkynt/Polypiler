@@ -43,7 +43,8 @@ internal static partial class JavaScriptHelpers {
     .. IntegerOrder,
     .. ViewOrder,
     .. StringOrder,
-    .. NumberTextOrder
+    .. NumberTextOrder,
+    .. EnumOrder
   ];
 
   private static readonly HashSet<string> _names = [.. Order];
@@ -742,6 +743,7 @@ internal static partial class JavaScriptHelpers {
     _ when ViewSource(name, native) is { } view => view,
     _ when StringSource(name, native) is { } text => text,
     _ when NumberTextSource(name, native) is { } number => number,
+    _ when EnumSource(name, native) is { } named => named,
     _ => Lines("function $len(length) {", "  if (length < 0) " + Overflow, "  return length;", "}")
   };
 

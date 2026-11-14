@@ -167,7 +167,11 @@ public sealed class JavaScriptCapabilities {
     new(".push", 5),
     new(".pop", 5),
     new("parseFloat", 5),
-    new("parseInt", 5)
+    new("parseInt", 5),
+
+    // Enums (#1318): a frozen object of named numbers, ECMA-262 5.1 §15.2.3.9.
+    new("Object", 5),
+    new("Object.freeze", 5)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

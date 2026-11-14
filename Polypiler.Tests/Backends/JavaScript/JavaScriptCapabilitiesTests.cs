@@ -134,6 +134,8 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase(".pop", 5, null)]
   [TestCase("parseFloat", 5, null)]
   [TestCase("parseInt", 5, null)]
+  [TestCase("Object", 5, null)]
+  [TestCase("Object.freeze", 5, null)]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
     Assert.That((entry.Name, entry.Since, entry.Replacement), Is.EqualTo((name, since, replacement)));
@@ -238,7 +240,7 @@ public sealed class JavaScriptCapabilitiesTests {
     => Assert.That(_table.Globals(), Is.EquivalentTo(new[] {
       "NaN", "Infinity", "RangeError", "Math", "Number", "globalThis", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array",
       "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String",
-      "parseFloat", "parseInt"
+      "parseFloat", "parseInt", "Object"
     }));
 
   [Test]

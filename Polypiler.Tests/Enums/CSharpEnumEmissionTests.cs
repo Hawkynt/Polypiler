@@ -19,13 +19,13 @@ public sealed class CSharpEnumEmissionTests {
   /// <summary>Test design 1, 2, 11 and 13: every operation over every underlying type in every profile is written, compiles and runs like the interpreter.</summary>
   [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
   public void EveryOperation_IsWrittenInEveryProfile_AndRunsLikeTheInterpreter(CSharpProfile profile) {
-    var module = EnumModules.Module;
+    var module = EnumFixtures.Module;
     Assert.That(CSharpEmitter.Check(module, profile), Is.Empty);
     var text = Emitted(module, profile);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);
-    var mismatches = EnumModules.Calls()
-      .Select(call => (call, Expected: PrototypeFixture.InterpretedOutcome(module, call), Actual: EnumModules.Normalized(build.Outcome(call))))
+    var mismatches = EnumFixtures.Calls()
+      .Select(call => (call, Expected: PrototypeFixture.InterpretedOutcome(module, call), Actual: EnumFixtures.Normalized(build.Outcome(call))))
       .Where(result => result.Expected != result.Actual)
       .Select(result => $"{result.call}: {result.Actual}, the interpreter {result.Expected}")
       .ToList();
@@ -54,11 +54,11 @@ public sealed class CSharpEnumEmissionTests {
   [TestCase("net2.0", "case Color.Red:")]
   [TestCase("net2.0", "Color.Green")]
   public void Operation_HasTheFormOfTheProfile(string profile, string form)
-    => Assert.That(Emitted(EnumModules.Module, CSharpProfile.Parse(profile)), Does.Contain(form));
+    => Assert.That(Emitted(EnumFixtures.Module, CSharpProfile.Parse(profile)), Does.Contain(form));
 
   [Test]
   public void HasFlag_IsNeverWritten()
-    => Assert.That(CSharpProfile.All.Select(profile => Emitted(EnumModules.Module, profile)), Has.None.Contains("HasFlag("));
+    => Assert.That(CSharpProfile.All.Select(profile => Emitted(EnumFixtures.Module, profile)), Has.None.Contains("HasFlag("));
 
   /// <summary>A constant of an enum that no member has is the number cast to the enum, a negative one in parentheses.</summary>
   [Test]

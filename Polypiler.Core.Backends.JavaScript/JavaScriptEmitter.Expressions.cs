@@ -103,6 +103,8 @@ public static partial class JavaScriptEmitter {
         return this.StringOperation(intrinsic);
       if (NumberTextOperations.IsNumberText(intrinsic.Op))
         return this.NumberText(intrinsic);
+      if (EnumOperations.IsEnum(intrinsic.Op))
+        return this.EnumOperation(intrinsic);
 
       // The integer and bit operations, also those defined on floating-point numbers as well, are written by their families.
       if (this.Integer(intrinsic) is { } integer)
@@ -275,7 +277,7 @@ public static partial class JavaScriptEmitter {
     /// <summary>An operator on numbers: 32-bit integers and truth values.</summary>
     private (JsExpression Node, bool Atomic) Binary(IrBinary binary) {
       var type = binary.Left.Type;
-      var signed = type == IrType.I32;
+      var signed = type.Underlying == IrType.I32;
       switch (binary.Op) {
         case IrBinaryOp.Multiply:
           var left = this.Text(binary.Left);
@@ -321,7 +323,7 @@ public static partial class JavaScriptEmitter {
     /// </summary>
     private (JsExpression Node, bool Atomic) Binary64(IrBinary binary) {
       var type = binary.Left.Type;
-      var signed = type == IrType.I64;
+      var signed = type.Underlying == IrType.I64;
       switch (binary.Op) {
         case IrBinaryOp.Divide:
           return (this.Helper(signed ? "$div64" : "$udiv64", binary.Left, binary.Right), true);
@@ -358,7 +360,7 @@ public static partial class JavaScriptEmitter {
     /// the count of a shift is a number, which the helper masks to 6 bits as C# masks it.
     /// </summary>
     private (JsExpression Node, bool Atomic) BinaryHalves(IrBinary binary) {
-      var signed = binary.Left.Type == IrType.I64;
+      var signed = binary.Left.Type.Underlying == IrType.I64;
       var suffix = signed ? "s" : "u";
       switch (binary.Op) {
         case IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical:

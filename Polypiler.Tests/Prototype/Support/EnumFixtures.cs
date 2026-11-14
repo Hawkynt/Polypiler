@@ -1,16 +1,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using Polypiler.Core.IR;
-using Polypiler.Prototype.Testing;
 
-namespace Polypiler.Tests.Enums;
+namespace Polypiler.Prototype.Testing;
 
 /// <summary>
 /// A module of every operation on enums over every underlying type, imported from C#, and the calls
 /// every backend is compared on: the values of the issue, the boundaries of every underlying type, a
 /// value between members, and every class of text a parse distinguishes.
 /// </summary>
-internal static class EnumModules {
+internal static class EnumFixtures {
 
   /// <summary>The source: one enum per underlying type, a flags enum with and one without a zero member, and functions over plain numbers and text.</summary>
   public const string Source = """
@@ -23,7 +22,7 @@ internal static class EnumModules {
     public enum Small : sbyte { Low = -128, Minus = -1, High = 127 }
     public enum Half : short { Low = -32768, High = 2 }
     public enum Word : ushort { A = 65535, B = 0 }
-    [Flags] public enum Long : long { Low = 1, High = -9223372036854775808 }
+    [Flags] internal enum Long : long { Low = 1, High = -9223372036854775808 }
     internal enum Big : ulong { Max = 18446744073709551615, One = 1 }
     public enum None { }
 
