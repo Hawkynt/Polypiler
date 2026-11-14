@@ -5,7 +5,7 @@ Feature: Benchmark harness for speed, memory and code size
     Given the benchmark definition "tests/fixtures/bench/sum-loop.bench.yaml" with 1 warm-up and 5 runs on toolchain "node"
     When "bench run --id sum-loop" is invoked
     Then "artifacts/bench/sum-loop/default.json" contains exactly 5 samples
-    And every sample has a positive "wallNs", "cpuNs" and "peakRssBytes"
+    And every sample has a positive "wallNs" and records "cpuNs" and "peakRssBytes"
     And each run printed "499999500000"
     And the summary row for "sum-loop" carries the note "record only"
     And the tooling exit code is 0

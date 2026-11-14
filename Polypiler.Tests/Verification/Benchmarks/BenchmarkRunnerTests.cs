@@ -49,6 +49,19 @@ public sealed class BenchmarkRunnerTests {
     Assert.That((result.BuildNs, result.BinaryBytes, result.AllocatedBytes, result.Allocations), Is.EqualTo(((long?)null, (long?)null, (long?)null, (long?)null)));
   }
 
+  /// <summary>
+  /// A run shorter than one sampling interval, which no sample of its tree saw, measured 0 processor
+  /// time and 0 memory: it is recorded as it is and does not fail the benchmark.
+  /// </summary>
+  [Test]
+  public void ARunNoSampleSaw_IsRecordedWithZeros_NotFailed() {
+    var runner = new ScriptedBenchRunner(Completed(Expected, 1, 0, 0), Completed(Expected, 1, 0, 0), Completed(Expected, 2, 3, 1 << 20), Completed(Expected, 1, 0, 0), Completed(Expected, 1, 0, 0), Completed(Expected, 1, 0, 0));
+    var result = Runner(runner).Run(Definition(), "default")!;
+    Assert.That(this._bag.Items, Is.Empty);
+    Assert.That(result.Samples.Select(sample => (sample.CpuNs, sample.PeakRssBytes)), Is.EqualTo(new (long?, long?)[] { (0, 0), (3_000_000, 1 << 20), (0, 0), (0, 0), (0, 0) }));
+    Assert.That((result.Stats["cpuNs"].Median, result.Stats["peakRssBytes"].Median), Is.EqualTo((0L, 0L)));
+  }
+
   [Test]
   public void ThePlan_CopiesTheSources_AndRunsTheToolchainWithTheArguments() {
     var runner = new ScriptedBenchRunner(Completed(Expected, 1));
