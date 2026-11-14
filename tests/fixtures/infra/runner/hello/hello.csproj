@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Builds without the network, as every build in the runner's sandbox must: no package source
+       (NuGet.config), no vulnerability audit, and no download of the targeting packs of frameworks
+       the project does not use. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <NuGetAudit>false</NuGetAudit>
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
+  </PropertyGroup>
+
+</Project>

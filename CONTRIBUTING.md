@@ -26,6 +26,12 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   them offline. A test reads one with `CorpusFixture.Open("<fixture id>")`. A new fixture entry is
   added with `corpus import --update-lock`, and `corpus discover --repository <owner/repo> --glob
   <pattern>` prints stubs for it.
+- Generated and foreign code is built and run only through the cross-language runner
+  (`Polypiler.Core.Verification/Running`), under the limits of
+  [`tooling/ci/runner.yaml`](tooling/ci/runner.yaml). On Linux with a working `bwrap` (bubblewrap) the
+  runner isolates: no network, the caller's home hidden, nothing writable but the run's own directory.
+  Without it, and on Windows and macOS, the runner only limits, and refuses untrusted code with
+  `PLY0034`.
 
 ## Build
 
