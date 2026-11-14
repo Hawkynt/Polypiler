@@ -38,24 +38,23 @@ public static class IrOperators {
   /// <param name="arguments">The types of the arguments, in order.</param>
   /// <returns><see langword="true"/> when the operation applies.</returns>
   public static bool Accepts(IrIntrinsicOp op, IrType result, IReadOnlyList<IrType> arguments) {
+    // The integer and bit operations, also those on integers that are defined on floating point as well.
+    if (IntegerOperations.Accepts(op, result, arguments) is { } integer)
+      return integer;
+
     bool Are(params Func<IrType, bool>[] rules) => arguments.Count == rules.Length && !rules.Where((rule, index) => !rule(arguments[index])).Any();
     bool Table(IrType type) => type.IsArray && type.IsStorable;
     var first = arguments.Count > 0 ? arguments[0] : IrType.Void;
     bool Same(IrType type) => type == first;
-    bool Unsigned(IrType type) => type == IrType.U32 || type == IrType.U64;
-    bool Signed(IrType type) => type.IsFloat || type.IsSigned;
+    bool Float(IrType type) => type.IsFloat;
     return op switch {
       IrIntrinsicOp.ArrayOf => Table(result) && arguments.All(argument => argument == result.Element),
       IrIntrinsicOp.ArrayCopy => result == IrType.Void && Are(Table, type => type.IsWord, Same, type => type.IsWord, type => type.IsWord),
       IrIntrinsicOp.ArrayFill => result == IrType.Void && Are(Table, type => type == first.Element),
       IrIntrinsicOp.ArrayClear => result == IrType.Void && Are(Table),
-      IrIntrinsicOp.Abs => result == first && Are(Signed),
-      IrIntrinsicOp.Min or IrIntrinsicOp.Max => result == first && Are(type => type.IsNumeric, Same),
-      IrIntrinsicOp.Sign => result == IrType.I32 && Are(Signed),
-      IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight => result == first && Are(Unsigned, type => type == IrType.I32),
-      IrIntrinsicOp.PopCount or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.Log2
-        => result == IrType.I32 && Are(Unsigned),
-      IrIntrinsicOp.BigMul => result == IrType.U64 && Are(type => type == IrType.U32, Same),
+      IrIntrinsicOp.Abs => result == first && Are(Float),
+      IrIntrinsicOp.Min or IrIntrinsicOp.Max => result == first && Are(Float, Same),
+      IrIntrinsicOp.Sign => result == IrType.I32 && Are(Float),
       IrIntrinsicOp.FloatBits => Are(type => type.IsFloat) && result == (first == IrType.F64 ? IrType.I64 : IrType.I32),
       IrIntrinsicOp.BitsFloat => Are(type => type == IrType.I32 || type == IrType.I64) && result == (first == IrType.I64 ? IrType.F64 : IrType.F32),
       IrIntrinsicOp.ToInt32 => result == IrType.I32 && Are(type => type == IrType.F64),

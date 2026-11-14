@@ -79,24 +79,21 @@ public static partial class JavaScriptEmitter {
           return (this.Fill(arguments[0], this.Zero(arguments[0].Type.Element!)), true);
       }
 
+      // The integer and bit operations, also those defined on floating-point numbers as well, are written by their families.
+      if (this.Integer(intrinsic) is { } integer)
+        return integer;
+
       var type = arguments[0].Type;
-      var wide = type.IsLong;
-      var halves = wide && this.Halves;
       var all = string.Join(", ", arguments.Select(this.Text));
       switch (intrinsic.Op) {
         case IrIntrinsicOp.Abs:
-          return type.IsFloat ? ($"Math.abs({all})", true)
-            : halves ? (this.Helper("$abs64", [all]), true)
-            : (this.Helper("$abs", [all, this.Literal(type, IrOperators.Minimum(type))]), true);
+          return ($"Math.abs({all})", true);
         case IrIntrinsicOp.Min:
-          return (halves ? this.Helper(type.IsSigned ? "$smin64" : "$umin64", [all]) : wide ? this.Helper("$min64", [all]) : $"Math.min({all})", true);
+          return ($"Math.min({all})", true);
         case IrIntrinsicOp.Max:
-          return (halves ? this.Helper(type.IsSigned ? "$smax64" : "$umax64", [all]) : wide ? this.Helper("$max64", [all]) : $"Math.max({all})", true);
+          return ($"Math.max({all})", true);
         case IrIntrinsicOp.Sign:
-          return (type.IsFloat ? this.Helper("$fsign", [all])
-            : wide ? this.Helper("$sign64", [all])
-            : this.Native("Math.sign") ? $"Math.sign({all})"
-            : this.Helper("$sign", [all]), true);
+          return (this.Helper("$fsign", [all]), true);
         case IrIntrinsicOp.Sqrt:
           return (type == IrType.F32 ? this.Fround($"Math.sqrt({all})") : $"Math.sqrt({all})", true);
         case IrIntrinsicOp.Floor:
@@ -109,25 +106,6 @@ public static partial class JavaScriptEmitter {
           return (this.Helper("$round", [all]), true);
         case IrIntrinsicOp.RoundAway:
           return (this.Helper("$rounda", [all]), true);
-        case IrIntrinsicOp.RotateLeft:
-          return (this.Helper(wide ? "$rotl64" : "$rotl", [all]), true);
-        case IrIntrinsicOp.RotateRight:
-          return (this.Helper(wide ? "$rotr64" : "$rotr", [all]), true);
-        case IrIntrinsicOp.PopCount:
-          return (this.Helper(wide ? "$pop64" : "$pop", [all]), true);
-        case IrIntrinsicOp.LeadingZeroCount:
-          return (wide ? this.Helper("$clz64", [all]) : this.Clz32(all), true);
-        case IrIntrinsicOp.TrailingZeroCount:
-          return (this.Helper(wide ? "$ctz64" : "$ctz", [all]), true);
-        case IrIntrinsicOp.Log2:
-          // The lowest bit set by hand makes 0 behave like 1, whose logarithm is the 0 that is wanted.
-          return halves ? ($"63 - {this.Helper("$clz64", [this.Helper("$or64", [all, One64])])}", false)
-            : wide ? ($"63 - {this.Helper("$clz64", [this.Operand(arguments[0]) + " | 1n"])}", false)
-            : ($"31 - {this.Clz32(this.Operand(arguments[0]) + " | 1")}", false);
-        case IrIntrinsicOp.BigMul:
-          return this.Halves
-            ? (this.Helper("$mul64", arguments.Select(argument => $"{{ hi: 0, lo: {this.Text(argument)} }}")), true)
-            : ($"BigInt({this.Text(arguments[0])}) * BigInt({this.Text(arguments[1])})", false);
         case IrIntrinsicOp.FloatBits:
           return (this.Helper(type == IrType.F64 ? "$bits64" : "$bits32", [all]), true);
         case IrIntrinsicOp.RoundHalfUp:
@@ -141,7 +119,7 @@ public static partial class JavaScriptEmitter {
           this.Native(">>> 0");
           return ($"{this.Operand(arguments[0])} >>> 0", false);
         default:
-          return (this.Helper(wide ? "$float64" : "$float32", [all]), true);
+          return (this.Helper(type.IsLong ? "$float64" : "$float32", [all]), true);
       }
     }
 

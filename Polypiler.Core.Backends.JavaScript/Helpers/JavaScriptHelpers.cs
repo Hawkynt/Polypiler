@@ -14,7 +14,7 @@ namespace Polypiler.Core.Backends.JavaScript;
 /// changes the whole body — 64-bit integers as <c>BigInt</c>s or as pairs of halves, the bits of a
 /// floating-point number through a <c>DataView</c> or by arithmetic — a helper has one body per case.
 /// </summary>
-internal static class JavaScriptHelpers {
+internal static partial class JavaScriptHelpers {
 
   private const string Overflow = "throw new RangeError(\"integer overflow\");";
   private const string ZeroDivisor = "  if (b === 0) throw new RangeError(\"divide by zero\");";
@@ -38,7 +38,8 @@ internal static class JavaScriptHelpers {
     "$get", "$set", "$new", "$fill", "$abs", "$abs64", "$min64", "$max64", "$smin64", "$umin64", "$smax64", "$umax64",
     "$sign64", "$fsign", "$round", "$rounda", "$rotl", "$rotr", "$rotl64", "$rotr64",
     "$pop", "$pop64", "$clz64", "$ctz", "$ctz64", "$view", "$bits64", "$bits32", "$float64", "$float32", "$key64",
-    "$copy", "$copya", "$step", "$stepi", "$stepf", "$step64", "$stepck", "$stepck64s", "$stepck64u", "$len"
+    "$copy", "$copya", "$step", "$stepi", "$stepf", "$step64", "$stepck", "$stepck64s", "$stepck64u", "$len",
+    .. IntegerOrder
   ];
 
   private static readonly HashSet<string> _names = [.. Order];
@@ -702,6 +703,7 @@ internal static class JavaScriptHelpers {
       "}"),
     "$stepck64s" => CheckedStep("s"),
     "$stepck64u" => CheckedStep("u"),
+    _ when IntegerSource(name, native) is { } integer => integer,
     _ => Lines("function $len(length) {", "  if (length < 0) " + Overflow, "  return length;", "}")
   };
 

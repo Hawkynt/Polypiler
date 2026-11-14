@@ -36,6 +36,9 @@ public static class CSharpEmitter {
   /// <summary>The code for an IR construct that has no form in the chosen profile.</summary>
   public const string Inexpressible = "PLY1053";
 
+  /// <summary>A place of a <see cref="CSharpForm.Template"/>: an argument by its position, or the helper.</summary>
+  private static readonly System.Text.RegularExpressions.Regex _placeholder = new(@"\{[0-9h]\}", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
   /// <summary>The reserved words of C# (ECMA-334, "Keywords"); as an identifier each needs an <c>@</c>.</summary>
   private static readonly HashSet<string> _keywords = [
     "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class", "const",
@@ -241,7 +244,7 @@ public static class CSharpEmitter {
 
   /// <summary>The row of the capability table an expression that <see cref="IsTabled"/> is written by, or <see langword="null"/> when the table has none.</summary>
   private static CSharpCapability? Row(IrExpr expression, CSharpCapabilities table)
-    => expression is IrIntrinsic intrinsic ? table.Of(intrinsic.Op, intrinsic.Arguments[0].Type.Kind) : table.OfSaturation(expression.Type.Kind);
+    => expression is IrIntrinsic intrinsic ? table.Of(intrinsic.Op, CSharpCapabilities.OperandOf(intrinsic)) : table.OfSaturation(expression.Type.Kind);
 
   /// <summary>The expressions and statements a statement consists of, or <see langword="null"/> for a kind this backend does not know.</summary>
   private static (IReadOnlyList<IrExpr> Expressions, IReadOnlyList<IrStmt> Statements)? Parts(IrStmt statement) => statement switch {
@@ -455,8 +458,19 @@ public static class CSharpEmitter {
         || (binary.Op == IrBinaryOp.ShiftRightLogical && binary.Type.IsSigned && !this.Has(CSharpFeature.UnsignedRightShift)),
       IrConvert conversion => conversion.Contract != IrConversion.Trap && !Keeps(conversion) && this.Casts(conversion),
       IrStep step => !step.Trap && step.Type.IsInteger,
+      IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic => this.Form(intrinsic).Template is not null,
       _ => false
     };
+
+    /// <summary>
+    /// The form an intrinsic is written in for the profile, which the check before writing made sure
+    /// there is. A form with a template casts between the widths of the integers it works on, which
+    /// has to wrap around: it stands where overflow is not checked.
+    /// </summary>
+    private CSharpForm Form(IrIntrinsic intrinsic) {
+      var row = Row(intrinsic, this._table)!;
+      return row.IsIn(this._profile) ? row.Native! : row.Replacement!;
+    }
 
     /// <summary>Whether a conversion is written as a cast: any but a saturating one the profile has no cast for.</summary>
     private bool Casts(IrConvert conversion) => !Saturates(conversion) || Row(conversion, this._table)!.IsIn(this._profile);
@@ -912,6 +926,13 @@ public static class CSharpEmitter {
     /// </summary>
     private (string Text, int Binding) Call(CSharpCapability row, IReadOnlyList<IrExpr> arguments) {
       var form = row.IsIn(this._profile) ? row.Native! : row.Replacement!;
+      if (form.Template is { } template) {
+        // The arguments are written in their order, which is the order of the IR; {h} is the helper of the row.
+        var written = arguments.Select(argument => this.Operand(argument, Primary)).ToList();
+        // A template may be a cast, so it binds like one.
+        return (_placeholder.Replace(template, match => match.Value == "{h}" ? this.Helper(row.Helper!) : written[match.Value[1] - '0']), Cast);
+      }
+
       var all = arguments.Select(this.Text);
       var call = $"{form.Method ?? this.Helper(row.Helper!)}({string.Join(", ", form.Further is null ? all : all.Append(form.Further))})";
       return form.Cast is null ? (call, Primary) : ($"({form.Cast}){call}", Cast);

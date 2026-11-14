@@ -184,7 +184,7 @@ public sealed class IrTests {
     yield return Case("intrinsic argument is checked", Statement(new IrExprStmt(Operation(IrIntrinsicOp.ArrayClear, IrType.Void, new IrNewArray(_ints, Ref(_x))))), "'x' is used outside the scope");
     IrExpr wideNumber = new IrConst(IrType.U64, 1);
     IrExpr fraction = new IrConst(IrType.F64, 0);
-    yield return Case("absolute value of an unsigned integer", Returning(Operation(IrIntrinsicOp.Abs, IrType.U32, Ref(_u))), "Abs with the type u32 is applied to (u32)");
+    yield return Case("absolute value of a truth value", Returning(Operation(IrIntrinsicOp.Abs, IrType.Bool, _true)), "Abs with the type bool is applied to (bool)");
     yield return Case("absolute value of another type", Returning(Operation(IrIntrinsicOp.Abs, IrType.I64, _one)), "Abs with the type i64 is applied to (i32)");
     yield return Case("minimum of mixed types", Returning(Operation(IrIntrinsicOp.Min, IrType.I32, _one, Ref(_u))), "Min with the type i32 is applied to (i32, u32)");
     yield return Case("maximum of truth values", Returning(Operation(IrIntrinsicOp.Max, IrType.Bool, _true, _true)), "Max with the type bool is applied to (bool, bool)");
@@ -192,7 +192,7 @@ public sealed class IrTests {
     yield return Case("rotation as another type", Returning(Operation(IrIntrinsicOp.RotateLeft, IrType.U64, Ref(_u), _one)), "RotateLeft with the type u64 is applied to (u32, i32)");
     yield return Case("f32 constant below 32 bits", Returning(new IrConst(IrType.F32, long.MinValue)), "is not a value of f32");
     yield return Case("maximum of one number", Returning(Operation(IrIntrinsicOp.Max, IrType.I32, _one)), "Max with the type i32 is applied to (i32)");
-    yield return Case("sign of an unsigned integer", Returning(Operation(IrIntrinsicOp.Sign, IrType.I32, Ref(_u))), "Sign with the type i32 is applied to (u32)");
+    yield return Case("sign of a truth value", Returning(Operation(IrIntrinsicOp.Sign, IrType.I32, _true)), "Sign with the type i32 is applied to (bool)");
     yield return Case("sign as a float", Returning(Operation(IrIntrinsicOp.Sign, IrType.F64, fraction)), "Sign with the type f64 is applied to (f64)");
     yield return Case("square root of an integer", Returning(Operation(IrIntrinsicOp.Sqrt, IrType.I32, _one)), "Sqrt with the type i32 is applied to (i32)");
     yield return Case("floor as an integer", Returning(Operation(IrIntrinsicOp.Floor, IrType.I32, fraction)), "Floor with the type i32 is applied to (f64)");
@@ -200,12 +200,12 @@ public sealed class IrTests {
     yield return Case("truncation of an integer", Returning(Operation(IrIntrinsicOp.Truncate, IrType.I32, _one)), "Truncate with the type i32 is applied to (i32)");
     yield return Case("rounding of an integer", Returning(Operation(IrIntrinsicOp.RoundEven, IrType.I32, _one)), "RoundEven with the type i32 is applied to (i32)");
     yield return Case("rounding away of nothing", Returning(Operation(IrIntrinsicOp.RoundAway, IrType.F64)), "RoundAway with the type f64 is applied to ()");
-    yield return Case("rotation of a signed integer", Returning(Operation(IrIntrinsicOp.RotateLeft, IrType.I32, _one, _one)), "RotateLeft with the type i32 is applied to (i32, i32)");
+    yield return Case("rotation of a truth value", Returning(Operation(IrIntrinsicOp.RotateLeft, IrType.Bool, _true, _one)), "RotateLeft with the type bool is applied to (bool, i32)");
     yield return Case("rotation by an unsigned count", Returning(Operation(IrIntrinsicOp.RotateRight, IrType.U32, Ref(_u), Ref(_u))), "RotateRight with the type u32 is applied to (u32, u32)");
-    yield return Case("bit count of a signed integer", Returning(Operation(IrIntrinsicOp.PopCount, IrType.I32, _one)), "PopCount with the type i32 is applied to (i32)");
+    yield return Case("bit count of a truth value", Returning(Operation(IrIntrinsicOp.PopCount, IrType.I32, _true)), "PopCount with the type i32 is applied to (bool)");
     yield return Case("leading zeros as 64 bits", Returning(Operation(IrIntrinsicOp.LeadingZeroCount, IrType.U64, wideNumber)), "LeadingZeroCount with the type u64 is applied to (u64)");
     yield return Case("trailing zeros of a float", Returning(Operation(IrIntrinsicOp.TrailingZeroCount, IrType.I32, fraction)), "TrailingZeroCount with the type i32 is applied to (f64)");
-    yield return Case("logarithm of a byte", Returning(Operation(IrIntrinsicOp.Log2, IrType.I32, new IrConst(IrType.U8, 1))), "Log2 with the type i32 is applied to (u8)");
+    yield return Case("logarithm of a byte as a byte", Returning(Operation(IrIntrinsicOp.Log2, IrType.U8, new IrConst(IrType.U8, 1))), "Log2 with the type u8 is applied to (u8)");
     yield return Case("full product of 64 bits", Returning(Operation(IrIntrinsicOp.BigMul, IrType.U64, wideNumber, wideNumber)), "BigMul with the type u64 is applied to (u64, u64)");
     yield return Case("full product as 32 bits", Returning(Operation(IrIntrinsicOp.BigMul, IrType.U32, Ref(_u), Ref(_u))), "BigMul with the type u32 is applied to (u32, u32)");
     yield return Case("bits of a double as 32 bits", Returning(Operation(IrIntrinsicOp.FloatBits, IrType.I32, fraction)), "FloatBits with the type i32 is applied to (f64)");

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace Polypiler.Core.IR;
@@ -346,10 +345,13 @@ public static class IrInterpreter {
           Array.Clear(cleared);
           return null;
         default:
+          if (IntegerOperations.Evaluates(intrinsic))
+            return IntegerOperations.Evaluate(intrinsic, arguments);
+
           return arguments[0] switch {
             float single => Single(intrinsic.Op, single, arguments),
             double number => Double(intrinsic.Op, number, arguments),
-            _ => Integer(intrinsic, (long)arguments[0], arguments)
+            _ => BitsFloat(intrinsic, (long)arguments[0])
           };
       }
     }
@@ -391,39 +393,10 @@ public static class IrInterpreter {
     private static long Sign(double value)
       => double.IsNaN(value) ? throw new IrTrapException(IrTrap.InvalidOperation) : Math.Sign(value);
 
-    private static object Integer(IrIntrinsic intrinsic, long value, object[] arguments) {
-      var type = intrinsic.Arguments[0].Type;
-      var number = IrOperators.Number(type, value);
-      var wide = type.IsLong;
-      switch (intrinsic.Op) {
-        case IrIntrinsicOp.Abs:
-          return number == IrOperators.Minimum(type) ? throw new IrTrapException(IrTrap.IntegerOverflow) : Math.Abs(value);
-        case IrIntrinsicOp.Min:
-          return number <= IrOperators.Number(type, (long)arguments[1]) ? value : arguments[1];
-        case IrIntrinsicOp.Max:
-          return number >= IrOperators.Number(type, (long)arguments[1]) ? value : arguments[1];
-        case IrIntrinsicOp.Sign:
-          return (long)Math.Sign(value);
-        case IrIntrinsicOp.RotateLeft:
-          var left = (int)(long)arguments[1];
-          return wide ? (long)BitOperations.RotateLeft((ulong)value, left) : BitOperations.RotateLeft((uint)value, left);
-        case IrIntrinsicOp.RotateRight:
-          var right = (int)(long)arguments[1];
-          return wide ? (long)BitOperations.RotateRight((ulong)value, right) : BitOperations.RotateRight((uint)value, right);
-        case IrIntrinsicOp.PopCount:
-          return (long)BitOperations.PopCount((ulong)value);
-        case IrIntrinsicOp.LeadingZeroCount:
-          return (long)(wide ? BitOperations.LeadingZeroCount((ulong)value) : BitOperations.LeadingZeroCount((uint)value));
-        case IrIntrinsicOp.TrailingZeroCount:
-          return (long)(wide ? BitOperations.TrailingZeroCount((ulong)value) : BitOperations.TrailingZeroCount((uint)value));
-        case IrIntrinsicOp.Log2:
-          return (long)BitOperations.Log2((ulong)value);
-        case IrIntrinsicOp.BigMul:
-          return value * (long)arguments[1];
-        default:
-          return wide ? BitConverter.Int64BitsToDouble(value) : (object)BitConverter.Int32BitsToSingle((int)value);
-      }
-    }
+    /// <summary>The floating-point number with the bits of an integer: the one operation on an integer that is no integer operation.</summary>
+    private static object BitsFloat(IrIntrinsic intrinsic, long value)
+      // The arms are of different types; without the cast the compiler would make the float a double.
+      => intrinsic.Arguments[0].Type.IsLong ? BitConverter.Int64BitsToDouble(value) : (object)BitConverter.Int32BitsToSingle((int)value);
 
     /// <summary>
     /// Copies element by element, from the end when the target lies behind the source in the same
