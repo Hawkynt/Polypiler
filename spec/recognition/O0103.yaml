@@ -1,0 +1,63 @@
+id: RECOGNITION.O0103
+title: Recognize leading and trailing zero counts from bit-scanning loops
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#584"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeZeroCount.cs
+  - tests/fixtures/prototype/recognize/zerocount.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A loop that counts zero bits from the bottom or the top up to the first set bit MUST become
+  TrailingZeroCount or LeadingZeroCount only when it is bounded by the width and its counter starts at
+  0. The prototype rule O0103ZeroCountLoop in Polypiler.Core.Recognize matches the structured IR of
+  Polypiler.Core.IR, not the typed SSA IR: pattern.before and replacement.after are written in that
+  structured form, and matching typed SSA graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests
+  is the evidence the prototype has: it checks that the rule fires exactly on the marked functions of
+  its fixtures, that --disable-opt O0103 keeps it from firing, and that the IR interpreter computes
+  the same before and after the rule - result, kind of trap and the arrays a trap leaves behind - for
+  every value of each 8- and 16-bit parameter and for the edges and 10 000 random tuples of the wider
+  ones. The proof obligations below are planned and not discharged yet: exhaustive checks with VER-
+  EXHAUSTIVE (#70), bit-vector proofs with VER-SMT (#71). The prototype knows only the levels default,
+  where the rule is on, and none; the optLevels name the levels of the target state. The document
+  stays a draft until its obligations are discharged.
+spec:
+  optimization: O0103
+  level: typed-ssa
+  pattern:
+    before: "%n = 0; while (And.bool(Lt.i32(%n, 32), Eq.u32(And.u32(%x, 1), 0))) { %x = LShr.u32 %x, 1; %n = Add.i32 %n, 1 }"
+    bindings:
+      - {name: x, role: "scanned value"}
+      - {name: n, role: "counter"}
+  replacement:
+    after: "%n = TrailingZeroCount.u32 %x; %x = LShr.u32 %x, %n"
+    introduces: [INTRINSICS.TrailingZeroCount, INTRINSICS.LeadingZeroCount]
+  preconditions:
+    - {id: bounded, text: "the condition holds n < w, w the width of the tested value, joined by && with the bit test", fact: range}
+    - {id: starts-at-zero, text: "the counter is the constant 0 right before the loop", fact: range}
+    - {id: scanned-bit, text: "pass r tests bit r (trailing) or bit w - 1 - r (leading) of one value from before the loop", fact: known-bits}
+    - {id: body, text: "the body adds one to the counter and may shift one variable by one", fact: none}
+  proofObligations:
+    - {id: zero-count-8, class: exhaustive-8bit, widths: [8]}
+    - {id: zero-count-16, class: exhaustive-16bit, widths: [16]}
+    - {id: zero-count-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+  counterexamples:
+    - description: "a bound below the width"
+      input: "x = 0x00000000, u32, while (n < 31 && (x & 1) == 0) { x >>= 1; n++; }"
+      naive: "31"
+      correct: "32"
+    - description: "a bit the count does not reach"
+      input: "x = 0x00000001, u32, while (n < 32 && (x & 2) == 0) { x >>= 1; n++; }"
+      naive: "32"
+      correct: "0"
+    - description: "no bound"
+      input: "x = 0x00000000, u32, while ((x & 1) == 0) { x >>= 1; n++; }"
+      naive: "does not terminate"
+      correct: "32"
+  switch: "--disable-opt O0103"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0103-zero-count-loop-recognition.md

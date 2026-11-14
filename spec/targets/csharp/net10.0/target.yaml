@@ -1,0 +1,35 @@
+id: TARGETS.csharp.net10.0
+title: "C# target, .NET 10"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#60"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  language: LANGUAGES.csharp
+  profile: net10.0
+  toolchain: ref-net10-0
+  abi: {name: ecma-335, byteOrder: host, pointerBits: 0}
+  pointers: none
+  unions: native
+  physicalTypes:
+    - {type: TYPES.bool, native: bool, helper: false}
+    - {type: TYPES.i8, native: sbyte, helper: false}
+    - {type: TYPES.u8, native: byte, helper: false}
+    - {type: TYPES.i16, native: short, helper: false}
+    - {type: TYPES.u16, native: ushort, helper: false}
+    - {type: TYPES.i32, native: int, helper: false}
+    - {type: TYPES.u32, native: uint, helper: false}
+    - {type: TYPES.i64, native: long, helper: false}
+    - {type: TYPES.u64, native: ulong, helper: false}
+    - {type: TYPES.f32, native: float, helper: false}
+    - {type: TYPES.f64, native: double, helper: false}
+  alignment: {max: 8, packing: natural}
+  simd: [vector128, vector256, vector512]
+  limits: {maxIntegerBits: 64, exactIntegerBits: 64}
+  dependencies: []
+  packaging: {ecosystem: nuget, layout: "one C# source file per translated module, named after its class"}

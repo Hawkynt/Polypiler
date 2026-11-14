@@ -88,6 +88,24 @@ public sealed class SpecCommandTests {
   public void TheRepository_Validates()
     => Assert.That(RunIn(PrototypeFixture.RepositoryRoot, "validate").ExitCode, Is.Zero);
 
+  /// <summary>
+  /// The valid fixture trees, every one of them and the <c>kinds</c> tree of <c>verification</c>, validate
+  /// whole: the documents of other families they refer to are real documents of those families, not
+  /// stand-ins that pass only behind <c>--family</c>.
+  /// </summary>
+  private static string[] ValidFixtureTrees()
+    => [.. Directory.GetDirectories(Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "spec"))
+        .Select(family => Path.Combine(family, "valid")).Where(Directory.Exists)
+        .Append(Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "spec", "verification", "kinds"))
+        .Select(tree => Path.GetRelativePath(PrototypeFixture.RepositoryRoot, tree).Replace(Path.DirectorySeparatorChar, '/'))
+        .Order(StringComparer.Ordinal)];
+
+  [TestCaseSource(nameof(ValidFixtureTrees))]
+  public void ValidFixtureTree_ValidatesWithoutFamily(string tree) {
+    var (exitCode, output, error) = RunIn(PrototypeFixture.RepositoryRoot, "validate", "--root", tree);
+    Assert.That((exitCode, error), Is.EqualTo((0, "")), output);
+  }
+
   [Test]
   public void FamilyOption_ValidatesOnlyThatFamily() {
     using var repository = new SpecRepository();

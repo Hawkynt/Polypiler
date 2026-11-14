@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "fixture": "cipher.checksum.adler32",
+  "provenance": {
+    "kind": "published",
+    "source": "RFC 1950",
+    "detail": "section 8.2, the initial value 1 for the empty input",
+    "generatedBy": "hand"
+  },
+  "vectors": [
+    { "name": "empty", "input": { "hex": "" }, "expected": { "hex": "00000001" } }
+  ]
+}

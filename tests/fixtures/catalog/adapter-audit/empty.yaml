@@ -1,0 +1,7 @@
+# No records and no components: valid, and nothing may be touched.
+schema: 1
+repository: Hawkynt/MediaDroid
+commit: 7f8b6b995cbe54a6afb290a900748393bf01e272
+clearance: { status: pending, adr: null, date: null }
+records: []
+external: []

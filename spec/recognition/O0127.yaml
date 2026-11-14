@@ -1,0 +1,62 @@
+id: RECOGNITION.O0127
+title: Compute a remainder from the quotient of the same operands
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#274"
+tests:
+  - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
+  - tests/fixtures/prototype/recognize/RecognizeQuotient.cs
+  - tests/fixtures/prototype/recognize/quotient.js
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  An integer remainder a % b that follows the quotient q = a / b of the same unchanged operands in one
+  block MUST become a - q * b, and only where the target's capability table says that is cheaper than
+  a second division. The prototype rule O0127QuotientRemainder in Polypiler.Core.Recognize matches the
+  structured IR of Polypiler.Core.IR, not the typed SSA IR: pattern.before and replacement.after are
+  written in that structured form, and matching typed SSA graphs belongs to REC-ENGINE (#276).
+  RecognitionFixtureTests is the evidence the prototype has: it checks that the rule fires exactly on
+  the marked functions of its fixtures, that --disable-opt O0127 keeps it from firing, and that the IR
+  interpreter computes the same before and after the rule - result, kind of trap and the arrays a trap
+  leaves behind - for every value of each 8- and 16-bit parameter and for the edges and 10 000 random
+  tuples of the wider ones. The proof obligations below are planned and not discharged yet: exhaustive
+  checks with VER-EXHAUSTIVE (#70), bit-vector proofs with VER-SMT (#71). The prototype knows only the
+  levels default, where the rule is on, and none; the optLevels name the levels of the target state.
+  The document stays a draft until its obligations are discharged.
+spec:
+  optimization: O0127
+  level: typed-ssa
+  pattern:
+    before: "%q = Div.i32 %a, %b; %r = Rem.i32 %a, %b"
+    bindings:
+      - {name: a, role: "dividend"}
+      - {name: b, role: "divisor"}
+      - {name: q, role: "quotient"}
+  replacement:
+    after: "%q = Div.i32 %a, %b; %r = Sub.i32[wrap] %a, Mul.i32[wrap](%q, %b)"
+    introduces: [IR.sub, IR.mul]
+  preconditions:
+    - {id: target-cheaper, text: "the target's capability table answers RemainderFromQuotient", fact: none}
+    - {id: unchanged, text: "nothing writes the quotient's variable or a variable of the operands between the two", fact: alias}
+    - {id: same-block, text: "the remainder stands in a later statement of the same block, not inside a block of it", fact: none}
+    - {id: integer, text: "both are integer operations; JavaScript's (a % b) | 0 is a remainder of doubles", fact: type}
+    - {id: trap-free, text: "each operand has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: divmod-8, class: exhaustive-8bit, widths: [8]}
+    - {id: divmod-16, class: exhaustive-16bit, widths: [16]}
+    - {id: divmod-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 30}
+    - {id: divmod-unchanged, class: alias-facts, widths: [32, 64]}
+  counterexamples:
+    - description: "an operand changed between the two"
+      input: "a = 7, b = 4, i32, q = a / b; a = a + 1; r = a % b"
+      naive: "0"
+      correct: "4"
+    - description: "a different divisor"
+      input: "a = 7, b = 4, c = 3, i32, q = a / b; r = a % c"
+      naive: "1"
+      correct: "3"
+  switch: "--disable-opt O0127"
+  optLevels: [balanced, speed, size, memory]
+  document: docs/optimizations/O0127-divmod-fusion.md

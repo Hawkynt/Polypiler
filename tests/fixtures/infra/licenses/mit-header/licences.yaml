@@ -1,0 +1,4 @@
+# The licence the tree is published under; it selects the variant of the LGPL-3.0 text of LICENSE.
+schema: 1
+declared:
+  - { glob: '**', licence: LGPL-3.0-or-later }

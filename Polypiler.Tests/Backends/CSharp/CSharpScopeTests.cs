@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Cli;
+using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
@@ -72,7 +73,7 @@ public sealed class CSharpScopeTests {
     using var printed = new StringWriter();
     using var error = new StringWriter();
     var exitCode = Program.Run(["translate", source, "--from", from, "--to", "csharp", "--profile", profile, "--output", output], printed, error);
-    Assert.That((exitCode, error.ToString()), Is.EqualTo(((int)Polypiler.Core.ExitCode.Success, "")));
+    Assert.That((exitCode, error.ToString()), Is.EqualTo(((int)ExitCode.Success, "")));
     return File.ReadAllText(Directory.GetFiles(output).Single());
   }
 

@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "fixture": "cipher.checksum.adler32",
+  "provenance": {
+    "kind": "upstream-embedded",
+    "source": "Hawkynt/Hawkynt.github.io@b3a8a8e92cbca83475986391c3cac56f0b185d29:Cipher/algorithms/checksum/adler.js",
+    "detail": "the tests of new AdlerAlgorithm('32')",
+    "generatedBy": "hand"
+  },
+  "vectors": [
+    { "name": "empty", "input": { "text": "" }, "expected": { "hex": "00000001" } },
+    { "name": "a", "input": { "text": "a" }, "expected": { "hex": "00620062" } },
+    { "name": "abc", "input": { "text": "abc" }, "expected": { "hex": "024D0127" } }
+  ]
+}

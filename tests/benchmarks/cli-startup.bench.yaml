@@ -1,0 +1,9 @@
+# polypiler --version in process, measured by BenchmarkDotNet with allocations. The build output of
+# Polypiler.Benchmarks is copied into the run's directory: the sandbox hides the caller's home, where a
+# checkout may lie. Build the solution in the configuration polypiler-tooling runs in first.
+id: cli-startup
+description: polypiler --version in process; the cost of argument handling and output without a translation.
+kind: dotnet
+toolchain: dotnet-sdk
+sources: ["Polypiler.Benchmarks/bin/{configuration}/net10.0"]
+run: ["Polypiler.Benchmarks/bin/{configuration}/net10.0/polypiler-benchmarks.dll", --filter, "*CliStartupBenchmark*"]

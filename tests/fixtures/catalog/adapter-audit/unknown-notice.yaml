@@ -1,0 +1,18 @@
+# A converted record whose notice is not a file of the corpus.
+schema: 1
+repository: Hawkynt/MediaDroid
+commit: 7f8b6b995cbe54a6afb290a900748393bf01e272
+clearance: { status: pending, adr: null, date: null }
+records:
+  - path: native/src/warp_layer.cpp
+    kind: code
+    sha256: cb27ba46e319023e6391e2db699ffd0238880c123cf299d99d91fa6d07e74dd0
+    bytes: 3352
+    licence: LGPL-3.0-or-later AND MIT
+    origin: { project: rife-ncnn-vulkan, url: 'https://github.com/nihui/rife-ncnn-vulkan', licence: MIT, notice: app/THIRD-PARTY-NOTICE.NOPE.txt }
+    obligations: [notice, attribution, source-offer]
+    decision: usable
+    usedBy: []
+    reviewer: Hawkynt
+    reviewedAt: 2026-11-14
+external: []

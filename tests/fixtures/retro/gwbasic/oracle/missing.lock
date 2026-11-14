@@ -1,0 +1,11 @@
+# PC-BASIC as on a machine that does not have it: the probe names an executable that does not
+# exist. PcBasicTests checks what a test that requires it reports there.
+schema: 1
+toolchains:
+  pcbasic:
+    version: "2.0.8"
+    probe: [no-such-pcbasic-polypiler, --version]
+    versionPattern: '^PC-BASIC (?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: GPL-3.0-or-later
+    source: https://pypi.org/project/pcbasic/

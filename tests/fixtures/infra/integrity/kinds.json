@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "fixture": "cipher.checksum.adler32",
+  "provenance": {
+    "kind": "reference-run",
+    "source": "python",
+    "detail": "python3 -c \"import zlib; print(zlib.adler32(b'abc'))\"",
+    "generatedBy": "python"
+  },
+  "vectors": [
+    { "name": "hex", "input": { "hex": "616263" }, "expected": { "hex": "024d0127" } },
+    { "name": "text", "input": { "text": "abc" }, "expected": { "text": "024D0127" } },
+    { "name": "value", "input": { "args": [[97, 98, 99]] }, "expected": { "value": 38600999 } }
+  ]
+}

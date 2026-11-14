@@ -1,0 +1,31 @@
+id: IR.sub
+title: Subtract
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-INT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  Sub subtracts its second operand from its first. Sub[wrap] MUST give the difference modulo 2^width
+  of T. Sub[trap] MUST trap with overflow when the difference is not a value of T. The prototype's
+  structured IR (Polypiler.Core.IR) implements both variants for integers, as IrBinaryOp.Subtract and
+  IrBinaryOp.SubtractChecked; it also uses Subtract for floating point, which belongs to a document of
+  its own. The examples are of T = TYPES.i32.
+spec:
+  kind: operation
+  mnemonic: Sub
+  category: arithmetic
+  typeParameters: [{name: T, constraint: integer}]
+  operands: [{name: left, type: T}, {name: right, type: T}]
+  result: {type: T}
+  flags: [wrap, trap]
+  effects: [pure]
+  traps: [{when: "flag trap and the difference is not a value of T", kind: overflow}]
+  stages: {from: IR.stage.source-semantic, to: IR.stage.legalized-target}
+  examples:
+    - {flag: wrap, operands: [0, 1], result: "0xFFFFFFFF"}
+    - {flag: trap, operands: [5, 7], result: -2}
+    - {flag: trap, operands: [-2147483648, 1], trap: overflow}

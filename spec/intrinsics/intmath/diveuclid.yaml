@@ -1,0 +1,32 @@
+id: INTRINSICS.DivEuclid
+title: Euclidean division
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-DIVISION
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: DivEuclid
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}]
+  returns: [{name: result, type: T}]
+  legality:
+    - {id: divisor-not-zero, text: "b is not 0; otherwise the operation traps with a division by zero", fact: range}
+    - {id: quotient-fits, text: "for a signed T, not a = the smallest value of T with b = -1; otherwise the operation traps with an integer overflow", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the quotient q of the Euclidean division: a = b * q + r with 0 <= r < |b|"
+    source: "R. T. Boute, The Euclidean definition of the functions div and mod, ACM TOPLAS 14(2), 1992"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.i32}, inputs: [-7, 2], outputs: [-4]}
+    - {types: {T: TYPES.i32}, inputs: [7, -2], outputs: [-3]}
+    - {types: {T: TYPES.i32}, inputs: [-7, -2], outputs: [4]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000007", "0x00000002"], outputs: ["0x00000003"]}
+    - {types: {T: TYPES.i8}, inputs: [-128, 3], outputs: [-43]}

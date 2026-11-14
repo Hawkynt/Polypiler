@@ -1,0 +1,15 @@
+id: VERIFICATION.generator.misplaced
+title: A tolerance in the folder of the generators
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-ORACLE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: tolerance
+  operation: INTRINSICS.Sin
+  mode: exact

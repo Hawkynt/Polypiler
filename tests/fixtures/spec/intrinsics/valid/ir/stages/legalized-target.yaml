@@ -1,0 +1,44 @@
+id: IR.stage.legalized-target
+title: Legalized Target IR
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-STAGES
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  The last stage of PRD §4.2 and the only one an emitter accepts (ADR 0001, stage list). It is the
+  only stage parameterized by a target: it holds for a function together with one target capability
+  set and means every remaining operation is in that set.
+spec:
+  kind: stage
+  order: 90
+  invariants:
+    - id: block-structure
+      text: Every block ends in exactly one terminator; branch targets exist; the entry block has no predecessor.
+    - id: types
+      text: Operand and result types satisfy the opcode's type rule; every type is concrete and every (opcode, type) pair is in the capability set.
+    - id: dominance
+      text: Every use of an SSA value is dominated by its definition; unreachable blocks are exempt.
+    - id: phi-structure
+      text: Phis lead their block, with one incoming value per predecessor, none from a non-predecessor and none twice.
+    - id: memory-bounds
+      text: "Every memory access states one access contract (bounds, inbounds #id or unchecked)."
+    - id: effect-order
+      text: Every effectful instruction is on the token chain of each channel it touches; no instruction touches a machine channel except a preserved operation.
+    - id: machine-residue
+      text: No machine opcode; a preserved operation needs a capability entry.
+    - id: source-call-residue
+      text: No SourceCall.
+    - id: dynamic-residue
+      text: No Dyn.* operation, no dynamic value, no unresolved flexible type; Guard.* only with a capability entry.
+    - id: high-level-vocabulary
+      text: No sequence value form and no PolyIteration; parallel and placed regions only with a capability entry.
+    - id: physical-layout
+      text: Natural-layout address operations, SizeOf/OffsetOf, optional layouts and folded byte order are admitted.
+    - id: target-legality
+      text: Every instruction is native in the capability set, a call to a recorded helper, or a preserved ABI reference.
+    - id: source-mapping
+      text: Every instruction has an origin.

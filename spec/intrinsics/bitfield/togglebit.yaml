@@ -1,0 +1,29 @@
+id: INTRINSICS.ToggleBit
+title: Toggle one bit
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-BITFIELD
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ToggleBit
+  group: Bitfield
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}, {name: position, type: TYPES.i32}]
+  returns: [{name: result, type: T}]
+  legality:
+    - {id: position-in-width, text: "position is at least 0 and below the width of T; otherwise the operation traps with an invalid operation", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "value ^ (1 << position)"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-1"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000", 31], outputs: ["0x80000000"]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF", 0], outputs: ["0xFFFFFFFE"]}
+    - {types: {T: TYPES.i16}, inputs: [-1, 15], outputs: [32767]}
