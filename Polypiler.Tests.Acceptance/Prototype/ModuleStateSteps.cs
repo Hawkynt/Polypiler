@@ -10,7 +10,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The steps of <c>tests/features/prototype/module-state.feature</c>: the state of a module, called
+/// The steps of <c>tests/features/ir/ir-module-state.feature</c>: the state of a module, called
 /// in sequence in one fresh load of the generated file - one <c>node</c> import, one load of the
 /// compiled C# - against the values Marsaglia's generators produce.
 /// </summary>

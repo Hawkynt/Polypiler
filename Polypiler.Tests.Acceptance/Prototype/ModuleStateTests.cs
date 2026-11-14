@@ -10,7 +10,7 @@ using Polypiler.Prototype.Testing;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The differential rows of the test design of <c>tests/features/prototype/module-state.feature</c>:
+/// The differential rows of the test design of <c>tests/features/ir/ir-module-state.feature</c>:
 /// every fixture of <c>tests/fixtures/prototype/state</c>, in both directions, in every profile and
 /// module format, called in sequence in one fresh load of the generated file. The expected outcomes
 /// are the values of the issue, which .NET reproduces of the C# fixture and node of the JavaScript one.
