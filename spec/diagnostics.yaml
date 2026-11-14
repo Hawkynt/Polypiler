@@ -80,7 +80,7 @@ codes:
     rule: adr-0004.grammar
     area: infrastructure
     owner: CLI-FOUNDATION
-    reserved: true
+    surfaces: "standard error of polypiler, alone, for a command name no command is registered under, also as the word of 'help <word>' or before --help"
   - code: PLY0003
     severity: error
     exit: UsageError
@@ -89,7 +89,7 @@ codes:
     rule: adr-0004.grammar
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: "standard error of polypiler translate, followed by the usage line, for an unknown option or language, an option without its value, a missing operand or option, a value outside its set, a source file that cannot be read or an output directory that cannot be written; standard error of polypiler-tooling toolchains and diagnostics as '<command>: error PLY0003: <reason>'"
+    surfaces: "standard error of polypiler, alone, for a command line the grammar of ADR 0004 refuses (unknown option, option without its value, flag given a value, option given more than once, value outside its set, empty list element, missing required option, missing or surplus operand, no command), and of polypiler translate for a language it does not know or an option that does not apply to the languages chosen; standard error of polypiler-tooling toolchains and diagnostics as '<command>: error PLY0003: <reason>'"
   - code: PLY0004
     severity: error
     exit: EnvironmentError
@@ -98,15 +98,16 @@ codes:
     rule: io.read
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: standard error of polypiler-tooling toolchains validate and probe
+    surfaces: "standard error of polypiler-tooling toolchains validate and probe; standard error of polypiler as \"input '<path>' does not exist or is not readable\" for an input of the command line"
   - code: PLY0005
     severity: error
     exit: EnvironmentError
     title: output not writable
-    message: "the output directory '<path>' cannot be written: <reason>"
+    message: "output directory '<path>' is not empty; pass --force to write into it"
+    rule: io.write
     area: infrastructure
     owner: CLI-FOUNDATION
-    reserved: true
+    surfaces: "standard error of polypiler for an output directory that is not empty without --force, and as \"output path '<path>' cannot be created: <reason>\" for one that is a file or cannot be created or written"
   - code: PLY0006
     severity: error
     exit: UsageError
@@ -151,11 +152,11 @@ codes:
     severity: error
     exit: UsageError
     title: exclusive options
-    message: "the options '<first>' and '<second>' exclude each other"
+    message: "options '<first>' and '<second>' cannot be combined"
     rule: adr-0004.grammar
     area: infrastructure
     owner: CLI-FOUNDATION
-    reserved: true
+    surfaces: "standard error of polypiler, alone, for two options a command declares exclusive"
   - code: PLY0012
     severity: error
     exit: UsageError

@@ -9,9 +9,11 @@ namespace Polypiler.Tests.Acceptance.Support;
 /// scenario, or of the first example row of a scenario outline, starts the real executable, so that
 /// every scenario stays bound to what ships; every other runs in process through
 /// <c>Program.Run</c>, which <c>InProcessTranslationTests</c> holds to the executable byte for byte.
-/// Every result goes to the scenario's <see cref="CommandLog"/>.
+/// A scenario that set test commands in its <see cref="TestCommandSet"/> runs every command line in
+/// process with them, since the executable has none. Every result goes to the scenario's
+/// <see cref="CommandLog"/>.
 /// </summary>
-public sealed class PolypilerRunner(ScenarioWorkspace workspace, ScenarioIdentity identity, CommandLog log) {
+public sealed class PolypilerRunner(ScenarioWorkspace workspace, ScenarioIdentity identity, CommandLog log, TestCommandSet commands) {
 
   private readonly Lock _lock = new();
   private bool _executableStarted;
@@ -29,6 +31,14 @@ public sealed class PolypilerRunner(ScenarioWorkspace workspace, ScenarioIdentit
 
   /// <summary>Runs a command line, without the word <c>polypiler</c>, in the workspace.</summary>
   public CommandResult Run(params string[] arguments) {
+    if (commands.Registry is { } registry) {
+      this.LastArguments = arguments;
+      using var output = new StringWriter();
+      using var error = new StringWriter();
+      var exitCode = global::Polypiler.Cli.Program.Run(arguments, output, error, registry, workspace.Path);
+      return log.Add(new CommandResult(exitCode, output.ToString(), error.ToString()));
+    }
+
     bool executable;
     lock (this._lock) {
       this.LastArguments = arguments;

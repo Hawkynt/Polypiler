@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.CommandLine;
 using System.IO;
 using System.Linq;
 using Polypiler.Core;
@@ -22,16 +23,11 @@ namespace Polypiler.Cli;
 /// <c>--module</c>, <c>--global</c> and <c>--typed-arrays</c> say how the file is packaged and what
 /// an ECMAScript 5 engine has. The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
 /// <c>--explain-opt</c> (ADR 0004) apply to every pair: the optimizer runs between the frontend and
-/// the backend unless <c>--opt none</c> says otherwise.
+/// the backend unless <c>--opt none</c> says otherwise. The foundation checks the command line
+/// against the grammar; the command refuses, as <c>PLY0003</c>, a language it does not know and an
+/// option that does not apply to the chosen languages or has a value they do not take.
 /// </summary>
-public static class TranslateCommand {
-
-  /// <summary>The code for a command line that names an unknown language or lacks an argument.</summary>
-  public const string Usage = "PLY0003";
-
-  /// <summary>The registered diagnostic of <see cref="Usage"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
-  [Diagnostic]
-  public static readonly DiagnosticDescriptor UsageDescriptor = new(Usage, DiagnosticSeverity.Error, ExitCode.UsageError, "{0}", "adr-0004.grammar");
+public sealed class TranslateCommand : ICliCommand {
 
   /// <summary>Exit code when the source, or the IR for the chosen target, uses a construct that is not supported.</summary>
   public const int UnsupportedConstruct = (int)ExitCode.UnsupportedConstruct;
@@ -60,8 +56,44 @@ public static class TranslateCommand {
 
   private static readonly string[] _required = [From, To, Output];
 
+  /// <summary>The name of the operand.</summary>
+  private const string Operand = "file";
+
+  /// <summary>What every option says in the help, by its name.</summary>
+  private static readonly Dictionary<string, string> _descriptions = new(StringComparer.Ordinal) {
+    [From] = "the source language",
+    [To] = "the target language",
+    [Output] = "the directory to write into; it is created when it does not exist",
+    [Opt] = "the optimization level",
+    [DisableOpt] = "optimizations not to apply",
+    [ExplainOpt] = "write every optimization applied to standard error",
+    [Export] = "JavaScript: the functions to translate",
+    [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript",
+    [Module] = "JavaScript: how the file is packaged",
+    [Global] = "JavaScript: the global object a script declares",
+    [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
+    [Float] = "the floating-point mode",
+    [Namespace] = "C#: the namespace of the generated code",
+    [LangVersion] = "C#: the language version, above the one of the profile"
+  };
+
+  private readonly Backend[] _backendsOfThis;
+
+  /// <summary>Creates the command with the standard backends.</summary>
+  public TranslateCommand() : this(_backends) {
+  }
+
+  private TranslateCommand(Backend[] backends) => this._backendsOfThis = backends;
+
+  /// <inheritdoc/>
+  public string Name => "translate";
+
+  /// <inheritdoc/>
+  public string Description => "translate a source file into another language; a prototype for small subsets of its languages, see the README for the planned interface";
+
   /// <summary>The options of the pass pipeline, which every pair of languages takes.</summary>
-  private static readonly Option[] _pipeline = [new(Opt, "<none|default>"), new(DisableOpt, "<O####>[,<O####>...]"), new(ExplainOpt, null)];
+  private static readonly OptionSpec[] _pipeline = [new(Opt, "<none|default>"), new(DisableOpt, "<O####>[,<O####>...]"), new(ExplainOpt, null)];
 
   /// <summary>The source languages; another one is another entry.</summary>
   private static readonly Frontend[] _frontends = [
@@ -76,17 +108,39 @@ public static class TranslateCommand {
   ];
 
   /// <summary>
-  /// How the command is called, as the help and every usage error show it. An option that several
-  /// targets read, such as <c>--profile</c>, is listed once.
+  /// Declares the operand <c>&lt;file&gt;</c> and the options of the pipeline and of every language,
+  /// each once; <c>--from</c>, <c>--to</c> and <c>--output</c> are required. Which of them apply
+  /// depends on the languages chosen, which <see cref="Execute"/> checks.
   /// </summary>
-  public static string UsageLine { get; } =
-    $"{ProductInfo.Name} translate <file> {From} {Choice(_frontends.Select(frontend => frontend.Name))}"
-    + $" {To} {Choice(_backends.Select(backend => backend.Name))} {Output} <directory>"
-    + string.Concat(_pipeline.Concat(_frontends.SelectMany(frontend => frontend.Options)).Concat(_backends.SelectMany(backend => backend.Options))
-      .DistinctBy(option => option.Name)
-      .Select(option => option.Value is null ? $" [{option.Name}]" : $" [{option.Name} {option.Value}]"));
+  /// <param name="command">The command to add the symbols to.</param>
+  public void Configure(Command command) {
+    ArgumentNullException.ThrowIfNull(command);
+    command.Arguments.Add(new Argument<string>(Operand) { Description = "the source file" });
+    OptionSpec[] required = [
+      new(From, Choice(_frontends.Select(frontend => frontend.Name))), new(To, Choice(this._backendsOfThis.Select(backend => backend.Name))), new(Output, "<directory>")
+    ];
+    var options = required
+      .Concat(_pipeline)
+      .Concat(_frontends.SelectMany(frontend => frontend.Options))
+      .Concat(this._backendsOfThis.SelectMany(backend => backend.Options))
+      .DistinctBy(option => option.Name);
+    foreach (var option in options)
+      command.Options.Add(Declared(option));
+  }
 
-  /// <summary>Runs the command.</summary>
+  /// <summary>The option of the command line for an option of the command: a flag, a list or a single value.</summary>
+  private static Option Declared(OptionSpec option) {
+    var description = _descriptions[option.Name];
+    if (option.Value is null)
+      return new Option<bool>(option.Name) { Description = description };
+
+    var helpName = option.Value[1..option.Value.IndexOf('>')];
+    return option.Name is DisableOpt or Export
+      ? new Option<string[]>(option.Name) { Description = description, HelpName = helpName }
+      : new Option<string>(option.Name) { Description = description, HelpName = helpName, Required = _required.Contains(option.Name) };
+  }
+
+  /// <summary>Runs the command with the standard languages.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
   /// <param name="output">Receives the names of the files written.</param>
   /// <param name="error">Receives the diagnostics and the caveats of an import.</param>
@@ -115,48 +169,36 @@ public static class TranslateCommand {
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
     => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations)]);
 
+  /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
-    string? file = null;
-    var known = new Dictionary<string, bool>();
-    foreach (var option in _required.Select(name => new Option(name, "")).Concat(_pipeline).Concat(_frontends.SelectMany(frontend => frontend.Options)).Concat(backends.SelectMany(backend => backend.Options)))
-      known.TryAdd(option.Name, option.Value is not null);
+    var registry = new CommandRegistry();
+    registry.Add(new TranslateCommand(backends));
+    return Program.Run(["translate", .. arguments], output, error, registry, Directory.GetCurrentDirectory());
+  }
 
-    var options = new Dictionary<string, string>();
-    for (var index = 0; index < arguments.Count; ++index) {
-      var argument = arguments[index];
-      if (!argument.StartsWith("--", StringComparison.Ordinal)) {
-        if (file is not null)
-          return Refuse(error, $"more than one source file: '{file}' and '{argument}'");
-
-        file = argument;
-      } else if (!known.TryGetValue(argument, out var valued)) {
-        return Refuse(error, $"unknown option '{argument}'");
-      } else if (!valued) {
-        options[argument] = "";
-      } else if (index + 1 == arguments.Count) {
-        return Refuse(error, $"the option '{argument}' needs a value");
-      } else if (argument == DisableOpt && options.TryGetValue(argument, out var listed)) {
-        // A list option may be repeated; the items of every occurrence count.
-        options[argument] = listed + "," + arguments[++index];
-      } else {
-        options[argument] = arguments[++index];
-      }
-    }
-
-    if (file is null)
-      return Refuse(error, "no source file was given");
-
-    foreach (var option in _required)
-      if (!options.ContainsKey(option))
-        return Refuse(error, $"the option '{option}' is missing");
+  /// <inheritdoc/>
+  public int Execute(ParseResult parse, CliContext context) {
+    ArgumentNullException.ThrowIfNull(parse);
+    ArgumentNullException.ThrowIfNull(context);
+    var symbol = parse.CommandResult.Command;
+    var file = parse.GetValue((Argument<string>)symbol.Arguments[0])!;
+    var options = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (var option in symbol.Options)
+      if (parse.GetResult(option) is { Implicit: false })
+        options[option.Name] = option switch {
+          Option<bool> => "",
+          Option<string[]> list => string.Join(',', parse.GetValue(list)!),
+          _ => parse.GetValue((Option<string>)option)!
+        };
 
     var frontend = _frontends.FirstOrDefault(candidate => candidate.Name == options[From]);
     if (frontend is null)
-      return Refuse(error, $"unknown source language '{options[From]}'; the prototype reads {Listed(_frontends.Select(candidate => candidate.Name))}");
+      return Refuse(context, $"unknown source language '{options[From]}'; the prototype reads {Listed(_frontends.Select(candidate => candidate.Name))}");
 
+    var backends = this._backendsOfThis;
     var backend = backends.FirstOrDefault(candidate => candidate.Name == options[To]);
     if (backend is null)
-      return Refuse(error, $"unknown target language '{options[To]}'; the prototype writes {Listed(backends.Select(candidate => candidate.Name))}");
+      return Refuse(context, $"unknown target language '{options[To]}'; the prototype writes {Listed(backends.Select(candidate => candidate.Name))}");
 
     // An option that is not required belongs to a source or to a target language, and only to the chosen one.
     var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && _pipeline.All(pipeline => pipeline.Name != option) && !frontend.Has(option) && !backend.Has(option));
@@ -164,17 +206,14 @@ public static class TranslateCommand {
       : _frontends.Any(candidate => candidate.Has(foreign)) ? $"the option '{foreign}' does not apply to the source language '{frontend.Name}'"
       : $"the option '{foreign}' does not apply to the target language '{backend.Name}'";
     if (misuse is not null)
-      return Refuse(error, misuse);
+      return Refuse(context, misuse);
 
-    string source;
-    try {
-      source = File.ReadAllText(file);
-    } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
-      return Refuse(error, $"the source file '{file}' cannot be read: {exception.Message}");
-    }
+    if (!CliPaths.RequireInput(file, context))
+      return (int)ExitCode.EnvironmentError;
 
-    var (module, exitCode) = frontend.Import(file, source, options, output, error);
-    return module is null ? exitCode : Emit(Optimized(file, module, options, error, backend), options, output, error, backend);
+    var source = File.ReadAllText(context.Resolve(file));
+    var (module, exitCode) = frontend.Import(file, source, options, context);
+    return module is null ? exitCode : Emit(Optimized(file, module, options, context, backend), options, context, backend);
   }
 
   /// <summary>The level of <c>--opt</c>, or <see langword="null"/> for a value that names none.</summary>
@@ -184,7 +223,7 @@ public static class TranslateCommand {
     _ => null
   };
 
-  /// <summary>What is wrong with the pipeline options: an unknown level, an empty item, or an optimization number the pipeline does not have.</summary>
+  /// <summary>What is wrong with the pipeline options: an unknown level, or an optimization number the pipeline does not have; the foundation refuses an empty item.</summary>
   private static string? PipelineMisuse(IReadOnlyDictionary<string, string> options) {
     if (LevelOf(options) is null)
       return $"unknown optimization level '{options[Opt]}'; the levels are none and default";
@@ -195,7 +234,6 @@ public static class TranslateCommand {
     var unknown = list.Split(',').FirstOrDefault(id => RuleTable.Default.Find(id) is null);
     return unknown switch {
       null => null,
-      "" => $"the option '{DisableOpt}' has an empty item",
       _ when !IrRule.IsId(unknown) => $"'{unknown}' is not an optimization number of the form O####",
       _ => $"unknown optimization '{unknown}'; the pipeline has {string.Join(", ", RuleTable.Default.Ids)}"
     };
@@ -203,9 +241,9 @@ public static class TranslateCommand {
 
   /// <summary>
   /// Runs the pass pipeline on an imported module with the options of the command line; with
-  /// <c>--explain-opt</c> every rule application is written to the error stream.
+  /// <c>--explain-opt</c> every rule application is written to the error stream as a note.
   /// </summary>
-  private static IrModule Optimized(string file, IrModule module, IReadOnlyDictionary<string, string> options, TextWriter error, Backend backend) {
+  private static IrModule Optimized(string file, IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend) {
     var result = Optimizer.Run(module, new OptimizerOptions {
       Level = LevelOf(options)!.Value,
       Disabled = options.TryGetValue(DisableOpt, out var list) ? list.Split(',').ToHashSet() : [],
@@ -213,7 +251,7 @@ public static class TranslateCommand {
     });
     if (options.ContainsKey(ExplainOpt))
       foreach (var application in result.Applications)
-        error.WriteLine($"{file}: opt {application}");
+        context.Note($"{file}: opt {application}");
 
     return result.Module;
   }
@@ -221,61 +259,67 @@ public static class TranslateCommand {
   /// <summary>Checks a module and writes it in the target language into the output directory.</summary>
   /// <param name="module">The module to emit.</param>
   /// <param name="options">
-  /// The options of a command line that <see cref="Run"/> accepts, by their names: <c>--to</c> with
+  /// The options of a command line that <see cref="Execute"/> accepts, by their names: <c>--to</c> with
   /// the target language, <c>--output</c> with the directory to write into, which is created when it
   /// does not exist, and the options of that target language.
   /// </param>
   /// <param name="output">Receives the names of the files written.</param>
-  /// <param name="error">Receives the diagnostics.</param>
+  /// <param name="error">Receives the diagnostics, as text.</param>
   /// <returns>The process exit code.</returns>
   public static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error)
-    => Emit(module, options, output, error, _backends.First(candidate => candidate.Name == options[To]));
+    => Emit(module, options, Context(output, error), _backends.First(candidate => candidate.Name == options[To]));
 
   /// <summary>Checks a module and writes it as C# by a capability table of the caller's.</summary>
   /// <param name="module">The module to emit.</param>
   /// <param name="options">The options as <see cref="Emit(IrModule, IReadOnlyDictionary{string, string}, TextWriter, TextWriter)"/> takes them; <c>--to</c> is not read.</param>
   /// <param name="output">Receives the names of the files written.</param>
-  /// <param name="error">Receives the diagnostics.</param>
+  /// <param name="error">Receives the diagnostics, as text.</param>
   /// <param name="capabilities">What each profile has, and what replaces what it lacks.</param>
   /// <returns>The process exit code.</returns>
   public static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error, CSharpCapabilities capabilities)
-    => Emit(module, options, output, error, CSharp(capabilities, Implementations));
+    => Emit(module, options, Context(output, error), CSharp(capabilities, Implementations));
 
-  private static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error, Backend backend) {
+  /// <summary>The context of an emission outside a command line: diagnostics as text, paths relative to the current directory.</summary>
+  private static CliContext Context(TextWriter output, TextWriter error)
+    => new(output, error, "", DiagnosticsFormat.Text, false, Directory.GetCurrentDirectory());
+
+  private static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend) {
     try {
       module = backend.Lower(module, options);
     } catch (InvalidDataException exception) {
-      error.WriteLine(new Diagnostic(PrecomputedImplementations.Damaged, DiagnosticSeverity.Error, exception.Message));
+      context.Report(Diagnostic.Create(PrecomputedImplementations.DamagedDescriptor, null, exception.Message));
       return InternalError;
     }
 
     var problems = backend.Check(module, options);
     if (problems.Count > 0) {
       foreach (var problem in problems)
-        error.WriteLine(problem);
+        context.Report(problem);
 
       return problems.Any(problem => problem.Code == IrVerifier.Code) ? InternalError : UnsupportedConstruct;
     }
 
+    // The files are written below the directory as resolved, and named on standard output as typed.
     var directory = options[Output];
     try {
-      Directory.CreateDirectory(directory);
+      var full = context.Resolve(directory);
+      Directory.CreateDirectory(full);
       foreach (var generated in backend.Emit(module, options)) {
-        var path = Path.Combine(directory, generated.Path);
-        File.WriteAllText(path, generated.Content);
-        output.WriteLine(path);
+        File.WriteAllText(Path.Combine(full, generated.Path), generated.Content);
+        context.Output.WriteLine(Path.Combine(directory, generated.Path));
       }
-    } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
-      return Refuse(error, $"the output directory '{directory}' cannot be written: {exception.Message}");
+    } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException) {
+      CliPaths.NotCreatable(directory, exception.Message, context);
+      return (int)ExitCode.EnvironmentError;
     }
 
-    return Program.Success;
+    return (int)ExitCode.Success;
   }
 
-  private static (IrModule? Module, int ExitCode) ImportCSharp(string file, string source, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error) {
+  private static (IrModule? Module, int ExitCode) ImportCSharp(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
     var imported = CSharpFrontend.Import(file, source);
     foreach (var diagnostic in imported.Diagnostics)
-      error.WriteLine(diagnostic);
+      context.Report(diagnostic);
 
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code is CSharpFrontend.CompilerError or CSharpFrontend.ConstantOverflow)
       ? InvalidSource
@@ -287,18 +331,18 @@ public static class TranslateCommand {
   /// Imports JavaScript, all of the file or the functions <c>--export</c> names. What the imported
   /// code is known to do differently from the original is written as a note; it is no error.
   /// </summary>
-  private static (IrModule? Module, int ExitCode) ImportJavaScript(string file, string source, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error) {
+  private static (IrModule? Module, int ExitCode) ImportJavaScript(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
     var imported = JavaScriptFrontend.Import(file, source, options.TryGetValue(Export, out var names) ? Names(names) : null);
     foreach (var diagnostic in imported.Diagnostics)
-      error.WriteLine(diagnostic);
+      context.Report(diagnostic);
 
     // Why every parameter, local and result has its type: the answer to "why is this a double?".
     if (options.ContainsKey(ExplainTypes))
       foreach (var explanation in imported.Explanations)
-        output.WriteLine($"{file}: type {explanation}");
+        context.Output.WriteLine($"{file}: type {explanation}");
 
     foreach (var caveat in imported.Caveats)
-      error.WriteLine($"{file}: note {caveat.Id}: {caveat.Description}");
+      context.Note($"{file}: note {caveat.Id}: {caveat.Description}");
 
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == JavaScriptFrontend.SyntaxError)
       ? InvalidSource
@@ -373,16 +417,16 @@ public static class TranslateCommand {
 
   private static string Listed(IEnumerable<string> names) => string.Join(" and ", names.Select(name => $"'{name}'"));
 
-  private static int Refuse(TextWriter error, string message) {
-    error.WriteLine(new Diagnostic(Usage, DiagnosticSeverity.Error, message));
-    error.WriteLine("usage: " + UsageLine);
-    return Program.UsageError;
+  /// <summary>Reports a command line the command cannot carry out as <c>PLY0003</c>.</summary>
+  private static int Refuse(CliContext context, string message) {
+    context.Report(Diagnostic.Create(CliDiagnostics.CommandLine, null, message));
+    return (int)ExitCode.UsageError;
   }
 
   /// <summary>An option of the command.</summary>
   /// <param name="Name">The option as the command line writes it.</param>
-  /// <param name="Value">What the usage shows as its value, or <see langword="null"/> for an option that takes none.</param>
-  private sealed record Option(string Name, string? Value);
+  /// <param name="Value">What the help shows as its value, or <see langword="null"/> for an option that takes none.</param>
+  private sealed record OptionSpec(string Name, string? Value);
 
   /// <summary>A source language of the command.</summary>
   /// <param name="Name">The name <c>--from</c> takes.</param>
@@ -394,9 +438,9 @@ public static class TranslateCommand {
   /// </param>
   private sealed record Frontend(
     string Name,
-    Option[] Options,
+    OptionSpec[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
-    Func<string, string, IReadOnlyDictionary<string, string>, TextWriter, TextWriter, (IrModule? Module, int ExitCode)> Import) {
+    Func<string, string, IReadOnlyDictionary<string, string>, CliContext, (IrModule? Module, int ExitCode)> Import) {
 
     /// <summary>Whether an option belongs to this language.</summary>
     public bool Has(string option) => this.Options.Any(candidate => candidate.Name == option);
@@ -414,7 +458,7 @@ public static class TranslateCommand {
   private sealed record Backend(
     string Name,
     RuleTarget Target,
-    Option[] Options,
+    OptionSpec[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
     Func<IrModule, IReadOnlyDictionary<string, string>, IrModule> Lower,
     Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<Diagnostic>> Check,

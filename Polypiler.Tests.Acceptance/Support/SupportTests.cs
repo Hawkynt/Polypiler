@@ -72,7 +72,7 @@ public sealed class SupportTests {
     try {
       var log = new CommandLog();
       var identity = new ScenarioIdentity("../tests/features/infra", "Feature files are bound to NUnit", "A refused command line reports its exit code and message", []);
-      var steps = new CommandSteps(new PolypilerRunner(workspace, identity, log), workspace, log);
+      var steps = new CommandSteps(new PolypilerRunner(workspace, identity, log, new TestCommandSet()), workspace, log);
       steps.Run("toolchains list");
       Assert.That(log.Last, Is.EqualTo(new CommandResult(2, "", "polypiler-tooling: error PLY0003: unknown toolchains command 'list'" + Environment.NewLine)));
       steps.Run("polypiler 'frob nicate'");
@@ -108,7 +108,7 @@ public sealed class SupportTests {
       File.Copy(PrototypeFixture.PathOf("Adler32"), workspace.Resolve("Adler32.cs"));
       var result = PolypilerRunner.InProcess(workspace.Path, ["translate", "Adler32.cs", "--from", "csharp", "--to", "csharp"]);
       Assert.That(result.ExitCode, Is.EqualTo(2));
-      Assert.That(result.Stderr, Does.Contain("the option '--output' is missing"));
+      Assert.That(result.Stderr, Does.Contain("option '--output' is required"));
     } finally {
       workspace.Delete();
     }

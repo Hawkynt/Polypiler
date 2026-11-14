@@ -41,6 +41,7 @@
   <!-- The property harness is shared with the acceptance tests as source. -->
   <ItemGroup>
     <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
+    <Compile Include="..\tests\shared\Cli\*.cs" LinkBase="Cli\Support" />
   </ItemGroup>
 
   <ItemGroup>

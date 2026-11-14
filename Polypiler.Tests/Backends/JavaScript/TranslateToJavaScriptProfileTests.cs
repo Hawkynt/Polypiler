@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Cli;
+using Polypiler.Core;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
 
@@ -57,7 +58,7 @@ public sealed class TranslateToJavaScriptProfileTests {
   public void Profile_ChoosesTheFileAndIsStatedInIt(string[] options, string file, string stated) {
     var path = Path.Combine(this._out, file);
     var (exitCode, output, error) = this.Translate("javascript", options);
-    Assert.That((exitCode, error), Is.EqualTo((Program.Success, "")));
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     Assert.That(output.Trim(), Is.EqualTo(path));
     Assert.That(Directory.GetFiles(this._out), Is.EqualTo(new[] { path }));
 
@@ -81,7 +82,7 @@ public sealed class TranslateToJavaScriptProfileTests {
     Assert.That(File.ReadAllText(Path.Combine(this._out, "Snippet.cjs")), Does.Contain("// F(a: Int32Array): number"));
   }
 
-  /// <summary>Test design 8: what names no profile is PLY0003, exit code 2, with the usage, and nothing is written.</summary>
+  /// <summary>Test design 8: what names no profile is PLY0003, exit code 2, and nothing is written.</summary>
   [TestCase(new[] { "--profile", "es3" }, "unknown JavaScript profile 'es3'; the profiles are 'es5', 'es2015', 'es2017', 'es2020', 'es2022'")]
   [TestCase(new[] { "--profile", "es2016" }, "unknown JavaScript profile 'es2016'")]
   [TestCase(new[] { "--module", "amd" }, "unknown module format 'amd'; the module formats are 'esm', 'cjs', 'iife'")]
@@ -94,8 +95,8 @@ public sealed class TranslateToJavaScriptProfileTests {
   [TestCase(new[] { "--module", "iife", "--global", "class" }, "'class' is not a name a JavaScript global can have")]
   public void InvalidProfile_IsAUsageError(string[] options, string message) {
     var (exitCode, output, error) = this.Translate("javascript", options);
-    Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0003: " + message).And.Contain("usage: " + TranslateCommand.UsageLine));
+    Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.UsageError, "")));
+    Assert.That(error, Does.StartWith("polypiler: error PLY0003: " + message).And.Not.Contain("usage:"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -105,8 +106,8 @@ public sealed class TranslateToJavaScriptProfileTests {
   [TestCase(new[] { "--typed-arrays" }, "the option '--typed-arrays' does not apply to the target language 'csharp'")]
   public void ProfileOption_DoesNotApplyToAnotherTarget(string[] options, string message) {
     var (exitCode, output, error) = this.Translate("csharp", options);
-    Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0003: " + message));
+    Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.UsageError, "")));
+    Assert.That(error, Does.StartWith("polypiler: error PLY0003: " + message));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -120,19 +121,21 @@ public sealed class TranslateToJavaScriptProfileTests {
   [TestCase("javascript", new[] { "--langversion", "14" }, "the option '--langversion' does not apply to the target language 'javascript'")]
   public void SharedProfileOption_IsReadByTheChosenTarget(string to, string[] options, string message) {
     var (exitCode, output, error) = this.Translate(to, options);
-    Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0003: " + message));
+    Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.UsageError, "")));
+    Assert.That(error, Does.StartWith("polypiler: error PLY0003: " + message));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
   /// <summary>The same option names a profile of either target, and each target writes for its own.</summary>
   [Test]
   public void SharedProfileOption_ChoosesTheProfileOfEitherTarget() {
-    Assert.That(this.Translate("csharp", "--profile", "net8.0").ExitCode, Is.EqualTo(Program.Success));
-    Assert.That(this.Translate("javascript", "--profile", "es2017").ExitCode, Is.EqualTo(Program.Success));
+    Assert.That(this.Translate("csharp", "--profile", "net8.0").ExitCode, Is.EqualTo((int)ExitCode.Success));
+    Assert.That(this.Translate("javascript", "--profile", "es2017").ExitCode, Is.EqualTo((int)ExitCode.Success));
     Assert.That(Directory.GetFiles(this._out).Select(Path.GetFileName), Is.EquivalentTo(new[] { "Snippet.cs", "Snippet.mjs" }));
     Assert.That(File.ReadAllText(Path.Combine(this._out, "Snippet.mjs")), Does.Contain("// JavaScript profile: es2017, esm."));
-    Assert.That(TranslateCommand.UsageLine.Split(" [--profile ").Length, Is.EqualTo(2), "listed once");
+    using var help = new StringWriter();
+    Program.Run(["translate", "--help"], help, TextWriter.Null);
+    Assert.That(help.ToString().Split("  --profile ").Length, Is.EqualTo(2), "listed once");
   }
 
   [TestCase("--profile")]
@@ -141,13 +144,16 @@ public sealed class TranslateToJavaScriptProfileTests {
   public void ProfileOption_NeedsAValue(string option) {
     using var output = new StringWriter();
     using var error = new StringWriter();
-    Assert.That(Program.Run(["translate", "A.cs", "--from", "csharp", "--to", "javascript", "--output", this._out, option], output, error), Is.EqualTo(Program.UsageError));
-    Assert.That(error.ToString(), Does.StartWith($"error PLY0003: the option '{option}' needs a value"));
+    Assert.That(Program.Run(["translate", "A.cs", "--from", "csharp", "--to", "javascript", "--output", this._out, option], output, error), Is.EqualTo((int)ExitCode.UsageError));
+    Assert.That(error.ToString(), Is.EqualTo($"polypiler: error PLY0003: option '{option}' requires a value{Environment.NewLine}"));
   }
 
   [Test]
-  public void UsageLine_NamesTheProfileOptions()
-    => Assert.That(TranslateCommand.UsageLine, Does.Contain(" [--profile <name>] [--module <esm|cjs|iife>] [--global <name>] [--typed-arrays]"));
+  public void Help_NamesTheProfileOptions() {
+    using var help = new StringWriter();
+    Program.Run(["translate", "--help"], help, TextWriter.Null);
+    Assert.That(help.ToString(), Does.Contain("  --profile <name> ").And.Contain("  --module <esm|cjs|iife> ").And.Contain("  --global <name> ").And.Contain("  --typed-arrays "));
+  }
 
   /// <summary>
   /// Test design 9: a construct that has no form in the chosen profile is PLY1152, exit code 3, and
@@ -165,16 +171,16 @@ public sealed class TranslateToJavaScriptProfileTests {
     Assert.That(TranslateCommand.Run(arguments, output, error, table), Is.EqualTo(TranslateCommand.UnsupportedConstruct));
     Assert.That((TranslateCommand.UnsupportedConstruct, output.ToString()), Is.EqualTo((3, "")));
     Assert.That(error.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), Is.EqualTo(new[] {
-      "error PLY1152: 'the function 'F'' cannot be expressed in JavaScript profile 'es2017'",
-      "error PLY1152: 'Convert' cannot be expressed in JavaScript profile 'es2017'",
-      "error PLY1152: 'Multiply' cannot be expressed in JavaScript profile 'es2017'"
+      "polypiler: error PLY1152: 'the function 'F'' cannot be expressed in JavaScript profile 'es2017'",
+      "polypiler: error PLY1152: 'Convert' cannot be expressed in JavaScript profile 'es2017'",
+      "polypiler: error PLY1152: 'Multiply' cannot be expressed in JavaScript profile 'es2017'"
     }));
     Assert.That(Directory.Exists(this._out), Is.False);
 
     using var written = new StringWriter();
-    Assert.That(TranslateCommand.Run([.. arguments[..^1], "es2020"], written, error, table), Is.EqualTo(Program.Success), "the level that has BigInt needs no replacement");
+    Assert.That(TranslateCommand.Run([.. arguments[..^1], "es2020"], written, error, table), Is.EqualTo((int)ExitCode.Success), "the level that has BigInt needs no replacement");
     Assert.That(written.ToString().Trim(), Is.EqualTo(Path.Combine(this._out, "Snippet.mjs")));
-    Assert.That(TranslateCommand.Run(arguments, written, error), Is.EqualTo(Program.Success), "the standard table has the replacement");
+    Assert.That(TranslateCommand.Run(arguments, written, error), Is.EqualTo((int)ExitCode.Success), "the standard table has the replacement");
   }
 
   /// <summary>A module that is already IR is written for the profile its options name.</summary>
@@ -184,7 +190,7 @@ public sealed class TranslateToJavaScriptProfileTests {
     using var output = new StringWriter();
     using var error = new StringWriter();
     var options = new Dictionary<string, string> { ["--to"] = "javascript", ["--output"] = this._out, ["--profile"] = "es5", ["--module"] = "iife", ["--global"] = "Lib", ["--typed-arrays"] = "" };
-    Assert.That(TranslateCommand.Emit(module, options, output, error), Is.EqualTo(Program.Success), error.ToString());
+    Assert.That(TranslateCommand.Emit(module, options, output, error), Is.EqualTo((int)ExitCode.Success), error.ToString());
     Assert.That(File.ReadAllText(Path.Combine(this._out, "Snippet.js")), Does.Contain("// JavaScript profile: es5 with typed arrays, iife as the global Lib.\n").And.Contain("\nvar Lib = (function () {\n"));
   }
 
