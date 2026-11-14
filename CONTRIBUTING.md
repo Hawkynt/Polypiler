@@ -18,6 +18,12 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   prints one object per line); `polypiler-tooling toolchains validate` checks the file itself. A test
   marked `[RequiresToolchain("<key>")]` is inconclusive when its toolchain is absent or at another
   version, and fails instead when `POLYPILER_REQUIRE_TOOLCHAINS=1`.
+- Generated and foreign code is built and run only through the cross-language runner
+  (`Polypiler.Core.Verification/Running`), under the limits of
+  [`tooling/ci/runner.yaml`](tooling/ci/runner.yaml). On Linux with a working `bwrap` (bubblewrap) the
+  runner isolates: no network, the caller's home hidden, nothing writable but the run's own directory.
+  Without it, and on Windows and macOS, the runner only limits, and refuses untrusted code with
+  `PLY0034`.
 
 ## Build
 

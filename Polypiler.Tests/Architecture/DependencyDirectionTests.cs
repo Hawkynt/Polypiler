@@ -51,6 +51,7 @@ public sealed class DependencyDirectionTests {
     "Polypiler.Permutation",
     "Polypiler.Tests",
     "Polypiler.Tests.Acceptance",
+    "Polypiler.Tests.Probe",
     "Polypiler.Tooling"
   ];
 
@@ -308,7 +309,7 @@ public sealed class DependencyDirectionTests {
     var projects = ProjectFile.Discover(_root).ToDictionary(project => project.Name);
     Assert.That(projects["Polypiler.Core"].References, Is.Empty);
     Assert.That(projects["Polypiler.Tests.Acceptance"].References,
-      Is.EquivalentTo(new[] { "Polypiler.Cli", "Polypiler.Core.Backends.CSharp", "Polypiler.Core.Frontends.CSharp", "Polypiler.Core.Frontends.JavaScript", "Polypiler.Core.IR", "Polypiler.Core.Optimize", "Polypiler.Core.Verification", "Polypiler.Tooling" }));
+      Is.EquivalentTo(new[] { "Polypiler.Cli", "Polypiler.Core.Backends.CSharp", "Polypiler.Core.Frontends.CSharp", "Polypiler.Core.Frontends.JavaScript", "Polypiler.Core.IR", "Polypiler.Core.Optimize", "Polypiler.Core.Verification", "Polypiler.Tooling", "Polypiler.Tests.Probe" }));
     Assert.That(projects["Polypiler.Tests"].References,
       Is.EquivalentTo(_projects.Except(["Polypiler.Tests", "Polypiler.Tests.Acceptance"])));
     Assert.That(projects.Values.SelectMany(project => project.MissingReferences), Is.Empty);
