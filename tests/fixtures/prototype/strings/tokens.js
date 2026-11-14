@@ -35,9 +35,9 @@ export function score(line) {
  */
 export function normalize(line) {
   const parts = line.split(",");
-  const trimmed = [];
-  for (let i = 0; i < parts.length; i++) trimmed[i] = parts[i].trim();
-  return trimmed.join(";");
+  let result = "";
+  for (let i = 0; i < parts.length; i++) result += (i > 0 ? ";" : "") + parts[i].trim();
+  return result;
 }
 
 /**
