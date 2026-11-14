@@ -69,10 +69,18 @@ public sealed class BubblewrapSandbox : ISandbox {
   private static bool IsWithin(string directory, string root)
     => directory == root || directory.StartsWith(root + "/", StringComparison.Ordinal);
 
-  /// <summary>The directory of the executable and, when it is a link, the directory of its final target: both must stay visible.</summary>
+  /// <summary>
+  /// The directory of the executable and, when it is a link, the directory of its final target: both
+  /// must stay visible. An executable in a Python virtual environment, which a <c>pyvenv.cfg</c> beside
+  /// its folder marks, starts only with the environment's libraries, so the whole environment is.
+  /// </summary>
   private static IEnumerable<string> ToolchainDirectories(string executable) {
     var target = File.Exists(executable) ? File.ResolveLinkTarget(executable, true)?.FullName ?? executable : executable;
-    return new[] { executable, target }.Select(path => Path.GetDirectoryName(path)!).Distinct(StringComparer.Ordinal);
+    return new[] { executable, target }.Select(path => Path.GetDirectoryName(path)!).Select(VirtualEnvironment).Distinct(StringComparer.Ordinal);
   }
+
+  /// <summary>The virtual environment a folder of executables belongs to, or the folder itself.</summary>
+  private static string VirtualEnvironment(string directory)
+    => Path.GetDirectoryName(directory) is { } parent && File.Exists(Path.Combine(parent, "pyvenv.cfg")) ? parent : directory;
 
 }
