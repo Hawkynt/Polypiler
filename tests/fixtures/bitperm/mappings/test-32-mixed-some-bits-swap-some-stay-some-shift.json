@@ -1,0 +1,15 @@
+{
+  "name": "test-32-mixed-some-bits-swap-some-stay-some-shift",
+  "source": {"line": 1217},
+  "width": 8,
+  "mapping": [
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "src", "val": 2, "inv": false},
+    {"type": "src", "val": 1, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "src", "val": 3, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"}
+  ]
+}

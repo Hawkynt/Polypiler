@@ -1,0 +1,15 @@
+{
+  "name": "test-19-bmi2-findroutings-accepts-unique-sources",
+  "source": {"line": 1047},
+  "width": 8,
+  "mapping": [
+    {"type": "src", "val": 5, "inv": false},
+    {"type": "src", "val": 6, "inv": false},
+    {"type": "src", "val": 7, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"}
+  ]
+}

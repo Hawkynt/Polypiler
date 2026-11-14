@@ -62,3 +62,14 @@ fixtures:
     determinism: deterministic
     tolerance: exact
     profiles: []
+  - id: bitperm.page
+    repository: Hawkynt/Hawkynt.github.io
+    path: BitPerm/index.html
+    export: BUILDING_BLOCKS, PRESETS, runBuildingBlockTests
+    dependencies: [BitPerm/README.md]
+    run: [node, tooling/bitperm/export.mjs, --page, '{file}', --out, tests/fixtures/bitperm, --check]
+    vectors: { kind: embedded, source: "the tests of runBuildingBlockTests and the page's raw mapping evaluation" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []

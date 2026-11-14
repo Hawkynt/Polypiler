@@ -39,7 +39,7 @@ public sealed class CorpusSteps(ScenarioWorkspace workspace, CommandLog log) : I
   /// <summary>Deletes the mini-upstream repository of the scenario.</summary>
   public void Dispose() => this._mini?.Dispose();
 
-  /// <summary>The checkout of Hawkynt.github.io holding the pin, shared with the licence scenarios.</summary>
+  /// <summary>The checkout of Hawkynt.github.io holding the pin, found or fetched once per run, shared with the licence and BitPerm scenarios.</summary>
   internal static string Checkout => _checkout.Value;
 
   /// <summary>The checkout as a <c>file://</c> URL git accepts.</summary>
