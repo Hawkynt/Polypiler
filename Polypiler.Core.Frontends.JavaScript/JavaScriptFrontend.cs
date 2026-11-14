@@ -157,7 +157,10 @@ public static class JavaScriptFrontend {
     var collector = new FunctionCollector(source, comments);
     var candidates = collector.Collect(program);
     var constants = collector.Constants;
-    var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name));
+    var classes = collector.Classes;
+    var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name)) {
+      Classes = classes.GroupBy(owner => owner.Name).ToDictionary(group => group.Key, group => group.First())
+    };
     var globals = collector.Globals;
     inference.DeclareGlobals(globals, program);
     var diagnostics = new List<Diagnostic>();
@@ -174,6 +177,9 @@ public static class JavaScriptFrontend {
         else
           diagnostics.Add(UnknownExportDescriptor.At($"the file has no function '{name}' to export", path, 1, 1));
       }
+
+      // A class is imported whole, whichever of its members the functions exported use.
+      chosen.AddRange(candidates.Where(candidate => candidate.Class is not null && !chosen.Contains(candidate)));
     }
 
     // With an export list the functions the named ones call are imported too; the types are found for all of them together.
@@ -187,8 +193,9 @@ public static class JavaScriptFrontend {
         inference.Shapes.Prefer(variable.Type, variable.Name, elements);
 
     inference.Shapes.Seal();
+    Classes.Declare(classes, inference, diagnostics);
     var lowering = new Lowering(inference);
-    var state = ModuleState.Lower(program, globals, models, inference.Initializers, lowering, diagnostics);
+    var state = ModuleState.Lower(program, globals, models, inference.Initializers, lowering, diagnostics, classes.SelectMany(owner => owner.Statics.Values), collector.ClassStatements);
     if (diagnostics.Count > 0)
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
@@ -201,6 +208,7 @@ public static class JavaScriptFrontend {
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
     var lowered = candidates.Where(functions.ContainsKey).Select(candidate => functions[candidate]).ToList();
+    lowered.AddRange(Classes.Define(classes, inference));
     ModuleState.CheckInitializers(state, lowered, lowering, diagnostics);
     if (diagnostics.Count > 0)
       return Refused(diagnostics);
@@ -209,7 +217,7 @@ public static class JavaScriptFrontend {
       Path.GetFileNameWithoutExtension(path),
       lowered,
       constants.Where(lowering.Constants.Contains).Select(constant => constant.Constant).ToList()) {
-      Types = lowering.Structs(lowered, inference.Shapes),
+      Types = [.. lowering.Structs(lowered, inference.Shapes), .. classes.Select(owner => owner.Ir)],
       Globals = [.. state.Select(global => global.Global!)]
     };
     var caveats = new List<ImportCaveat>();

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Core.Backends.CSharp;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
@@ -56,6 +57,24 @@ public sealed class ClassesTests {
     => from profile in ProfileCase.All
        from fixture in ClassFixtures.CSharp
        select new TestCaseData(profile, fixture.File, fixture.Class).SetName($"{fixture.File} in {profile}");
+
+  /// <summary>Test design 1: every JavaScript fixture in every C# profile computes what node computes of the original.</summary>
+  [TestCase("counter.js"), TestCase("accumulator.js")]
+  public void JavaScriptFixture_RunsInEveryCSharpProfileLikeNode(string file) {
+    List<PrototypeCall> calls = file == "counter.js"
+      ? [new("run", [10.0, 3.0]), new("run", [-2.5, 0.5]), new("aliased", []), new("sameObject", []), new("made", [])]
+      : [new("sum", [1.0, 2.0, 4.0]), new("sum", [0.25, -1.0, 1e300]), new("mean", [1.0, 4.0]), new("mean", [0.0, 0.0])];
+    var copy = Path.Combine(this._directory, Path.GetFileNameWithoutExtension(file) + ".mjs");
+    var source = File.ReadAllText(ClassFixtures.PathOf(file));
+    File.WriteAllText(copy, source.Contains("export ", StringComparison.Ordinal) ? source : source + "\nexport { sum, mean };\n");
+    var expected = Toolchain.NodeOutcomes(this._directory, Path.GetFileName(copy), calls, true);
+    foreach (var profile in CSharpProfile.All) {
+      var name = Path.GetFileNameWithoutExtension(file);
+      var text = this.Translate(ClassFixtures.PathOf(file), "csharp", name + ".cs", profile.Name, "--profile", profile.Name);
+      Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
+      Assert.That(calls.Select(GeneratedCSharp.Compile(text, false).Outcome), Is.EqualTo(expected), $"{profile.Name}\n{text}");
+    }
+  }
 
   /// <summary>A static field is shared by every object of its class, in node at every level as in the interpreter.</summary>
   [TestCase("es5", "cjs"), TestCase("es2015", "esm"), TestCase("es2022", "esm")]

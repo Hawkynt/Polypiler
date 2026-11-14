@@ -25,13 +25,22 @@ public sealed class ClassesSteps(PrototypeScenario scenario) {
   /// <summary>The profile of a level in the module format the level starts with: an ES module, or CommonJS at ECMAScript 5.</summary>
   private static ProfileCase Level(string level) => ProfileCase.All.First(profile => profile.Level == level && !profile.TypedArrays && profile.Module == (level == "es5" ? "cjs" : "esm"));
 
-  /// <summary>Translates the fixture to JavaScript with the options of the step.</summary>
+  private CSharpProfile? _csharp;
+
+  /// <summary>Translates the fixture with the options of the step, which name the target; C# without a profile is its default.</summary>
   [When("^it is translated with " + StepText.Quoted + "$")]
   public void TranslatedWith(string options) {
     var arguments = CommandLine.Split(options).ToList();
-    var name = arguments[arguments.IndexOf("--profile") + 1];
+    var to = arguments[arguments.IndexOf("--to") + 1];
+    var name = arguments.IndexOf("--profile") is var at and >= 0 ? arguments[at + 1] : null;
     var from = Path.GetExtension(scenario.Source) == ".cs" ? "csharp" : "javascript";
-    this._profile = Level(name);
+    if (to == "csharp") {
+      this._csharp = name is null ? CSharpProfile.Default : CSharpProfile.Parse(name);
+      this._generated = scenario.Translate(scenario.Source, from, to, "--profile", this._csharp.Name);
+      return;
+    }
+
+    this._profile = Level(name!);
     this._generated = scenario.Translate(scenario.Source, from, "javascript", this._profile.Arguments);
     Assert.That(GeneratedJavaScript.Problems(this._generated.Text, this._profile.Parsed), Is.Empty, this._generated.Text);
   }
@@ -51,6 +60,66 @@ public sealed class ClassesSteps(PrototypeScenario scenario) {
     Assert.That(dotNet, Is.EqualTo($"{next} {count}"));
     Assert.That(Node(this._generated.Path, this._profile!.Module == "esm", "Counter", $"const c = new Counter({start}); c.Step = {step}; c.Next(); console.log(c.Next() + ' ' + c.Count);"),
       Is.EqualTo(dotNet), this._generated.Text);
+  }
+
+  /// <summary>The generated C# compiles for its profile at the profile's language version.</summary>
+  [Then(@"^the generated file compiles against the reference assemblies of (\S+) at its language version without diagnostics$")]
+  public void CompilesForTheProfile(string name) {
+    Assert.That(this._csharp!.Name, Is.EqualTo(name));
+    Assert.That(GeneratedCSharp.ComplaintsFor(this._generated.Text, this._csharp.Name, this._csharp.LanguageVersionName), Is.Empty, this._generated.Text);
+  }
+
+  /// <summary>The JavaScript fixture itself in node: the script runs on a copy of it as an ES module.</summary>
+  private string Original(string name, string script) {
+    var copy = Path.Combine(scenario.Workspace.Resolve("."), "original-" + Guid.NewGuid().ToString("N") + ".mjs");
+    var source = File.ReadAllText(scenario.Workspace.Resolve(scenario.Source));
+    // A script declares its functions without export; the copy exports the one the script imports.
+    File.WriteAllText(copy, source.Contains("export ", StringComparison.Ordinal) ? source : source + $"\nexport {{ {name} }};\n");
+    return Node(copy, true, name, script);
+  }
+
+  /// <summary>The C# class translated from JavaScript does what the original does in node.</summary>
+  [Then(@"^new Counter\((\d+)\), step = (\d+), next\(\) twice returns (\d+), count is (\d+) and Counter\.created is (\d+), as in node$")]
+  public void CounterAsInNode(int start, int step, string next, string count, string created) {
+    var expected = $"{next} {count} {created}";
+    Assert.That(this.Original("Counter", $"const c = new Counter({start}); c.step = {step}; c.next(); console.log(c.next() + ' ' + c.count + ' ' + Counter.created);"), Is.EqualTo(expected));
+    var type = GeneratedCSharp.Compile(this._generated.Text, false).Type("Counter");
+    var counter = Activator.CreateInstance(type, [(double)start])!;
+    type.GetField("step")!.SetValue(counter, (double)step);
+    type.GetMethod("next")!.Invoke(counter, []);
+    var last = type.GetMethod("next")!.Invoke(counter, []);
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    Assert.That(string.Join(' ', ((double)last!).ToString(inv), ((double)type.GetProperty("count")!.GetValue(counter)!).ToString(inv), ((double)type.GetField("created")!.GetValue(null)!).ToString(inv)),
+      Is.EqualTo(expected), this._generated.Text);
+  }
+
+  /// <summary>The generated file declares the class.</summary>
+  [Then("^the output declares " + StepText.Quoted + "$")]
+  public void Declares(string declaration) => Assert.That(this._generated.Text, Does.Contain(declaration));
+
+  /// <summary>The constructor function translated to C# sums as the original does in node.</summary>
+  [Then(@"^new Acc\((\d+)\), add\((\d+)\), add\((\d+)\) returns (\d+), as in node$")]
+  public void AccumulatorAsInNode(int start, int first, int second, string sum) {
+    Assert.That(this.Original("Acc", $"const a = new Acc({start}); a.add({first}); console.log(a.add({second}));"), Is.EqualTo(sum));
+    var result = GeneratedCSharp.Compile(this._generated.Text, false).Method("sum").Invoke(null, [(double)start, (double)first, (double)second]);
+    Assert.That(((double)result!).ToString(System.Globalization.CultureInfo.InvariantCulture), Is.EqualTo(sum), this._generated.Text);
+  }
+
+  /// <summary>Writes a JavaScript module into the workspace as the source.</summary>
+  [Given("^the JavaScript module " + StepText.Quoted + "$")]
+  public void JavaScriptModule(string text) => scenario.Script("module.mjs", StepText.Unescape(text));
+
+  /// <summary>Runs the translate command on the JavaScript source, to C#.</summary>
+  [When("^I run the translate command to C#$")]
+  public void ToCSharp() => scenario.Polypiler.Run("translate", scenario.Source, "--from", "javascript", "--to", "csharp", "--output", "out");
+
+  /// <summary>The command was refused with the exit code and a diagnostic naming the construct, and wrote nothing.</summary>
+  [Then(@"^the exit code is (\d+) and the output contains " + StepText.Quoted + " and " + StepText.Quoted + "$")]
+  public void Refused(int exitCode, string code, string subject) {
+    var result = scenario.Log.Last;
+    Assert.That(result.ExitCode, Is.EqualTo(exitCode), result.Output);
+    Assert.That(result.Output, Does.Contain(code).And.Contain(subject));
+    Assert.That(Directory.Exists(scenario.Workspace.Resolve("out")), Is.False);
   }
 
   private readonly List<string> _fixtures = [];

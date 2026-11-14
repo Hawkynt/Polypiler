@@ -147,7 +147,6 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("const f = function (a) { return a; };", TestName = "No function: function expression in a variable")]
   [TestCase("(function () { const A = { f: function (a) { return a; } }; })(); (function () { const B = { g: function (a) { return a; } }; })();", TestName = "No function: two IIFEs")]
   [TestCase("(() => ({ f: function (a) { return a; } }))();", TestName = "No function: IIFE without a body")]
-  [TestCase("class C { f(a) { return a; } }", TestName = "No function: class")]
   [TestCase("export default function f(a) { return a; }", TestName = "No function: default export")]
   [TestCase("(function () { if (true) { function f(a) { return a; } } })();", TestName = "No function: declaration deeper inside an IIFE")]
   public void FileWithoutAFunction_IsRefused(string source)

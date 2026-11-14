@@ -52,7 +52,10 @@ internal enum Plan {
   Concat,
 
   /// <summary>Two strings compared by code unit.</summary>
-  CompareString
+  CompareString,
+
+  /// <summary><c>===</c> or <c>!==</c> of references to objects of one class, or of one and <c>null</c>: identity.</summary>
+  Identity
 
 }
 
@@ -133,6 +136,16 @@ internal sealed partial class TypeInference {
       case ConditionalExpression choice:
         var either = JsType.Join(this.Of(choice.Consequent), this.Of(choice.Alternate));
         return either.Kind == JsKind.Conflict ? JsType.Unknown : either;
+      case ThisExpression:
+        return this._scope!.Candidate is { Class: { } owner, IsStatic: false } ? JsType.Object(owner) : JsType.Unknown;
+      case NullLiteral:
+        return JsType.Null;
+      case NewExpression creation when this.Names.ClassNamed(creation.Callee) is { } created:
+        return JsType.Object(created);
+      case MemberExpression member when this._scope!.Bindings.GetValueOrDefault(member) is Variable field:
+        return field.Type;
+      case MemberExpression { Computed: false } member when this.Of(member.Object).Class is { } holder:
+        return this.MemberType(holder, member);
       case MemberExpression member when this.Names.Library(member) is { } library:
         // A constant of the library is typed as the literal of its value would be.
         return JavaScriptFloatApi.FindConstant(library) is { } value ? JsType.Literal(value.Value) : JsType.Unknown;
@@ -213,9 +226,11 @@ internal sealed partial class TypeInference {
       case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "subarray" or "slice" } method } member
         && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: false } source:
         return method.Name == "subarray" ? JsType.ViewOf(source.Element!) : JsType.ArrayOf(source.Element!, false);
+      case null when call.Callee is MemberExpression { Computed: false } invoked && this.Of(invoked.Object).Class is { } owner:
+        return Binder.KeyOf(invoked) is { } key && owner.Member(MemberKind.Method, key) is { } called ? this.ResultOf(this.ModelOf(called)) : JsType.Unknown;
       case null when this.Names.Callee(call.Callee) is { } callee:
         var model = this.ModelOf(callee);
-        return model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType);
+        return this.ResultOf(model);
       default:
         return JsType.Unknown;
     }
@@ -290,6 +305,8 @@ internal sealed partial class TypeInference {
         return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Float, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
       case Operator.Exponentiation:
         return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Power, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
+      case Operator.StrictEquality or Operator.StrictInequality when a.Kind is JsKind.Object or JsKind.Null && b.Kind is JsKind.Object or JsKind.Null:
+        return JsType.Join(a, b).Kind == JsKind.Conflict || a.Kind == b.Kind && a.Kind == JsKind.Null ? new(Plan.Invalid, JsType.Boolean) : new(Plan.Identity, JsType.Boolean);
       case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality when a.Kind == JsKind.Boolean && b.Kind == JsKind.Boolean:
         return new(Plan.Compare, JsType.Boolean, IrType.Bool);
       case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality

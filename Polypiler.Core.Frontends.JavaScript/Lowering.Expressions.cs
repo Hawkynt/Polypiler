@@ -24,6 +24,9 @@ internal sealed partial class Lowering {
     if (this.StringExpression(node) is { } text)
       return text;
 
+    if (this.Instance(node) is { } instance)
+      return instance;
+
     switch (node) {
       case NumericLiteral literal:
         return Number(literal.Value);
@@ -209,6 +212,9 @@ internal sealed partial class Lowering {
         break;
       case Plan.Big:
         expression = new IrBinary(Operation(op), this.Big(left, coercion, operand), op == Operator.LeftShift ? Count(right) : this.Big(right, coercion, operand));
+        break;
+      case Plan.Identity:
+        expression = this.Identity(op, left, right, whole);
         break;
       default:
         // An operand that is refused for what it is comes first: it is the reason the operator has no type.
@@ -544,6 +550,9 @@ internal sealed partial class Lowering {
   /// that JSDoc states does not bend, and a value it does not hold is refused, as is one of another kind.
   /// </summary>
   private IrExpr To(Typed value, IrType type, Node node) {
+    if (value.Expr is IrNull { Type.Kind: IrTypeKind.Void })
+      return type.IsObject ? new IrNull(type) : throw this.Unsupported(node, "null");
+
     var from = value.Expr.Type;
     if (from == type)
       return value.Expr;

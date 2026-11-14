@@ -31,6 +31,12 @@ internal enum JsKind {
   /// <summary>A string: a sequence of UTF-16 code units.</summary>
   String,
 
+  /// <summary>A reference to an object of a class of the file.</summary>
+  Object,
+
+  /// <summary><c>null</c>, which joins with a reference to an object to that reference.</summary>
+  Null,
+
   /// <summary>Values of two kinds reach the place, which no type of the IR holds.</summary>
   Conflict
 
@@ -76,6 +82,9 @@ internal sealed record JsType {
   /// <summary>The keys and value types of a record.</summary>
   public RecordShape? Shape { get; private init; }
 
+  /// <summary>The class of a reference to an object.</summary>
+  public ClassModel? Class { get; private init; }
+
   /// <summary>The two kinds of a conflict, as a diagnostic names them.</summary>
   public (string First, string Second) Kinds { get; private init; }
 
@@ -102,6 +111,12 @@ internal sealed record JsType {
 
   /// <summary>A string.</summary>
   public static JsType String { get; } = new(JsKind.String);
+
+  /// <summary><c>null</c>.</summary>
+  public static JsType Null { get; } = new(JsKind.Null);
+
+  /// <summary>A reference to an object of a class.</summary>
+  public static JsType Object(ClassModel type) => new(JsKind.Object) { Class = type };
 
   /// <summary>A <c>BigInt</c> without a bound.</summary>
   public static JsType UnboundedBigInt { get; } = new(JsKind.BigInt) { IsUnbounded = true };
@@ -172,6 +187,7 @@ internal sealed record JsType {
     JsKind.Array when this.IsView => IrType.Span(this.Element!.Ir is { IsNumeric: true } viewed ? viewed : IrType.F64),
     JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString) ? element : IrType.F64),
     JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
+    JsKind.Object => IrType.Object(this.Class!.Ir),
     _ => null
   };
 
@@ -184,6 +200,8 @@ internal sealed record JsType {
     JsKind.String => "string",
     JsKind.Array => this.Element!.HasRecord ? $"{this.Element.Describe()}[]" : Spell(this.Ir!),
     JsKind.Record => this.Shape!.ToString(),
+    JsKind.Object => this.Class!.Name,
+    JsKind.Null => "null",
     _ => "nothing"
   };
 
@@ -219,6 +237,13 @@ internal sealed record JsType {
     if (second.Kind == JsKind.Conflict || first.Kind == JsKind.Unknown)
       return second;
 
+    // null is a value of every reference type; of any other type the lowering refuses it where it stands.
+    if (first.Kind == JsKind.Null)
+      return second;
+
+    if (second.Kind == JsKind.Null)
+      return first;
+
     if (first.Kind != second.Kind)
       return Conflict(first, second);
 
@@ -243,6 +268,8 @@ internal sealed record JsType {
 
         var joined = a.Types.Zip(b.Types, Join).ToList();
         return joined.Exists(type => type.Kind == JsKind.Conflict) ? Conflict(first, second) : Record(new RecordShape(a.Registry, a.Keys, joined));
+      case JsKind.Object:
+        return first.Class == second.Class ? first : Conflict(first, second);
       default:
         return first;
     }

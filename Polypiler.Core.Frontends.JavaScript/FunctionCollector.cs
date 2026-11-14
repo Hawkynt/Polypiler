@@ -37,6 +37,18 @@ internal sealed class Candidate(string name, Node anchor, IFunction function) {
   /// <summary>Why the function cannot be imported whatever its body is, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }
 
+  /// <summary>The class the function is a member of, or <see langword="null"/> for a function of the module.</summary>
+  public ClassModel? Class { get; init; }
+
+  /// <summary>What the function is to its class.</summary>
+  public MemberKind Member { get; init; }
+
+  /// <summary>Whether a member is static: called on the class, without <c>this</c>.</summary>
+  public bool IsStatic { get; init; }
+
+  /// <summary>The key of a member as the source spells it, with <c>#</c> when it is private.</summary>
+  public string Key { get; init; } = "";
+
 }
 
 /// <summary>
@@ -45,7 +57,7 @@ internal sealed class Candidate(string name, Node anchor, IFunction function) {
 /// properties of an object literal that stands in either place, also of a literal inside it - and the
 /// constants that enclose them: a <c>const</c> of a number or of a table of numbers.
 /// </summary>
-internal sealed class FunctionCollector(string source, List<Comment> comments) {
+internal sealed partial class FunctionCollector(string source, List<Comment> comments) {
 
   private readonly List<Candidate> _candidates = [];
   private readonly List<ModuleConstant> _constants = [];
@@ -106,7 +118,11 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
     this.Escapes(program, null, null);
     // A file that exports nothing is a script, whose declarations are all visible to whoever loads it.
     var isScript = !program.Body.Any(statement => statement is ExportNamedDeclaration or ExportDefaultDeclaration or ExportAllDeclaration);
+    var constructors = ConstructorFunctions(program);
     foreach (var statement in program.Body) {
+      if (this.ClassOf(statement, isScript, constructors))
+        continue;
+
       switch (statement) {
         case FunctionDeclaration declaration:
           this.Add(new Candidate(declaration.Id!.Name, declaration, declaration) { IsPublic = isScript, Documentation = this.Documentation(declaration) });
@@ -131,6 +147,7 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
     foreach (var global in this._globals.Where(global => exported.Contains(global.Name)))
       global.Problem = $"the exported variable {global.Name}";
 
+    this.Prototypes(program);
     var wrappers = program.Body.Select(Wrapped).OfType<FunctionBody>().ToList();
     if (wrappers.Count == 1) {
       foreach (var statement in wrappers[0].Body) {
