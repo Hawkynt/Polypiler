@@ -4,11 +4,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis.CSharp;
 using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
-using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
@@ -27,16 +25,6 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 public sealed class CSharpRoundTripTests {
 
-  private static readonly string[] _scenarios = [
-    "A fixture survives the round trip C# to IR to C#",
-    "Wrap-around does not depend on the project's overflow setting",
-    "Byte arithmetic is truncated where the source truncated it",
-    "Traps become the matching .NET exceptions",
-    "A C# keyword used as an identifier is escaped",
-    "Ill-typed IR is refused",
-    "The namespace option wraps the class"
-  ];
-
   private static readonly bool[] _overflowChecking = [false, true];
 
   private string _directory = "";
@@ -49,101 +37,6 @@ public sealed class CSharpRoundTripTests {
 
   [TearDown]
   public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
-
-  /// <summary>Ensures the feature and its NUnit bindings stay in agreement.</summary>
-  [Test]
-  public void FeatureScenarios_HaveBindings() {
-    var feature = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests/features/prototype/ir-to-csharp.feature"));
-    var scenarios = Regex.Matches(feature, @"(?m)^  Scenario(?: Outline)?: (.+?)\r?$").Select(match => match.Groups[1].Value.Trim());
-    Assert.That(scenarios, Is.EqualTo(_scenarios));
-  }
-
-  /// <summary>Scenario outline: A fixture survives the round trip C# to IR to C# — the checksums.</summary>
-  [TestCase("Adler32", "Compute", "Wikipedia", "300286872")]
-  [TestCase("Crc32", "Compute", "123456789", "3421780262")]
-  [TestCase("Fnv1a", "Hash", "a", "3826002220")]
-  public void Checksum_SurvivesTheRoundTrip(string fixture, string method, string text, string expected)
-    => this.RoundTrip_Returns(fixture, new PrototypeCall(method, [PrototypeCases.Text(text)]), expected);
-
-  /// <summary>Scenario outline: A fixture survives the round trip C# to IR to C# — the rows of Numbers.</summary>
-  [TestCase("Gcd", new object[] { 1071, 462 }, "21")]
-  [TestCase("Fibonacci", new object[] { 48 }, "512559680")]
-  public void Numbers_SurviveTheRoundTrip(string method, object[] arguments, string expected)
-    => this.RoundTrip_Returns("Numbers", new PrototypeCall(method, arguments), expected);
-
-  private void RoundTrip_Returns(string fixture, PrototypeCall call, string expected) {
-    File.Copy(PrototypeFixture.PathOf(fixture), Path.Combine(this._directory, fixture + ".cs"));
-    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", fixture + ".cs", "--from", "csharp", "--to", "csharp", "--output", "out");
-    Assert.That(exitCode, Is.Zero, output);
-    var generated = Path.Combine(this._directory, "out", fixture + ".cs");
-    Assert.That(File.Exists(generated), Is.True);
-
-    var unchanged = PrototypeFixture.Outcome(null, call.Arguments)["void".Length..];
-    foreach (var checking in _overflowChecking)
-      Assert.That(GeneratedCSharp.Compile(File.ReadAllText(generated), checking).Outcome(call), Is.EqualTo(expected + unchanged), $"CheckOverflow {checking}");
-
-    Assert.That(PrototypeFixture.CompiledOutcome(fixture, call), Is.EqualTo(expected + unchanged));
-  }
-
-  /// <summary>Scenario: Wrap-around does not depend on the project's overflow setting.</summary>
-  [Test]
-  public void WrapAround_DoesNotDependOnTheOverflowSetting() {
-    var build = GeneratedCSharp.Compile(this.TranslateSnippet("public static int F(int a, int b) => a * b + 1;"), checkOverflow: true);
-    Assert.That(build.Method("F").Invoke(null, [65536, 65536]), Is.EqualTo(1));
-  }
-
-  /// <summary>Scenario: Byte arithmetic is truncated where the source truncated it.</summary>
-  [Test]
-  public void ByteArithmetic_IsTruncatedWhereTheSourceTruncatedIt() {
-    var text = this.TranslateSnippet("public static byte F(byte a, byte b) => (byte)(a + b);");
-    foreach (var checking in _overflowChecking)
-      Assert.That(GeneratedCSharp.Compile(text, checking).Method("F").Invoke(null, [(byte)200, (byte)100]), Is.EqualTo((byte)44));
-  }
-
-  /// <summary>Scenario: Traps become the matching .NET exceptions.</summary>
-  [Test]
-  public void Traps_BecomeTheMatchingExceptions() {
-    var text = this.TranslateSnippet("public static int F(int[] d, int i, int b) => d[i] / b;");
-    foreach (var checking in _overflowChecking) {
-      var method = GeneratedCSharp.Compile(text, checking).Method("F");
-      Assert.That(() => method.Invoke(null, [new[] { 1 }, 0, 0]), Throws.TypeOf<TargetInvocationException>().With.InnerException.TypeOf<DivideByZeroException>());
-      Assert.That(() => method.Invoke(null, [new[] { 1 }, 1, 1]), Throws.TypeOf<TargetInvocationException>().With.InnerException.TypeOf<IndexOutOfRangeException>());
-      Assert.That(() => method.Invoke(null, [new[] { int.MinValue }, 0, -1]), Throws.TypeOf<TargetInvocationException>().With.InnerException.TypeOf<OverflowException>());
-    }
-  }
-
-  /// <summary>Scenario: A C# keyword used as an identifier is escaped.</summary>
-  [Test]
-  public void Keyword_UsedAsAnIdentifier_IsEscaped() {
-    var parameter = new IrLocal("a", IrType.I32);
-    var local = new IrLocal("class", IrType.I32);
-    var module = new IrModule("Keywords", [new IrFunction("F", true, IrType.I32, [parameter], [local], new IrBlock([
-      new IrDeclare(local, new IrBinary(IrBinaryOp.Add, new IrLocalRef(parameter), new IrConst(IrType.I32, 1))),
-      new IrReturn(new IrLocalRef(local))
-    ]))]);
-    var text = CSharpEmitter.Emit(module).Single().Content;
-    Assert.That(text, Does.Contain("var @class = a + 1;"));
-    foreach (var checking in _overflowChecking)
-      Assert.That(GeneratedCSharp.Compile(text, checking).Method("F").Invoke(null, [41]), Is.EqualTo(42).And.EqualTo(IrInterpreter.Call(module, "F", [41])));
-  }
-
-  /// <summary>Scenario: Ill-typed IR is refused.</summary>
-  [Test]
-  public void IllTypedIr_IsRefused() {
-    var module = new IrModule("M", [new IrFunction("F", true, IrType.I32, [], [], new IrBlock([
-      new IrReturn(new IrBinary(IrBinaryOp.Add, new IrConst(IrType.I32, 1), new IrConst(IrType.Bool, 1)))
-    ]))]);
-    Assert.That(CSharpEmitter.Check(module).Select(problem => problem.Code), Is.EqualTo(new[] { "PLY0100" }));
-    Assert.That(() => CSharpEmitter.Emit(module), Throws.ArgumentException);
-  }
-
-  /// <summary>Scenario: The namespace option wraps the class.</summary>
-  [Test]
-  public void NamespaceOption_WrapsTheClass() {
-    var text = this.TranslateSnippet("public static int F() => 1;", "--namespace", "Demo.Checksums");
-    Assert.That(text.Split('\n').First(line => line.Length > 0 && !line.StartsWith("//", StringComparison.Ordinal)), Is.EqualTo("namespace Demo.Checksums;"));
-    Assert.That(GeneratedCSharp.Compile(text, false).ClassName, Is.EqualTo("Demo.Checksums.Snippet"));
-  }
 
   /// <summary>Test design 10, with the real executable: a usage error is exit code 2 and writes nothing.</summary>
   [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'")]
@@ -195,14 +88,6 @@ public sealed class CSharpRoundTripTests {
     var compiler = typeof(CSharpCompilation).Assembly.GetName().Version;
     TestContext.Out.WriteLine($"Roslyn {compiler}, .NET {Environment.Version}");
     Assert.That(compiler, Is.Not.Null);
-  }
-
-  /// <summary>Translates one static class of methods with the real executable and returns the generated C#.</summary>
-  private string TranslateSnippet(string method, params string[] options) {
-    File.WriteAllText(Path.Combine(this._directory, "Snippet.cs"), PrototypeFixture.Wrap(method));
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, ["translate", "Snippet.cs", "--from", "csharp", "--to", "csharp", "--output", "out", .. options]);
-    Assert.That(exitCode, Is.Zero, text);
-    return File.ReadAllText(Path.Combine(this._directory, "out", "Snippet.cs"));
   }
 
 }

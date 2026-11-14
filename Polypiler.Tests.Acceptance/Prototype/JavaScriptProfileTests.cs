@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
@@ -26,15 +25,6 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class JavaScriptProfileTests {
-
-  private static readonly string[] _scenarios = [
-    "The same algorithm runs at every language level",
-    "Below ES2020 a 64-bit result is a pair of halves",
-    "Math.imul is replaced where it does not exist",
-    "Float arithmetic stays binary32 without Math.fround",
-    "An ES module is not available at ES5",
-    "The profile is recorded in the output"
-  ];
 
   /// <summary>What the compiled fixture does for every call of a fixture, computed once for all profiles.</summary>
   private static readonly ConcurrentDictionary<string, Lazy<(IReadOnlyList<PrototypeCall> Calls, string[] Compiled)>> _expected = new();
@@ -62,78 +52,7 @@ public sealed class JavaScriptProfileTests {
   /// <summary>One profile per language level, with and without typed arrays at ECMAScript 5: what the arithmetic depends on.</summary>
   private static IEnumerable<ProfileCase> Levels() => [.. Replacing(), ProfileCase.Default];
 
-  /// <summary>Ensures the feature and its NUnit bindings stay in agreement.</summary>
-  [Test]
-  public void FeatureScenarios_HaveBindings() {
-    var feature = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests/features/prototype/javascript-profiles.feature"));
-    var scenarios = Regex.Matches(feature, @"(?m)^  Scenario(?: Outline)?: (.+?)\r?$").Select(match => match.Groups[1].Value.Trim());
-    Assert.That(scenarios, Is.EqualTo(_scenarios));
-  }
-
-  /// <summary>Scenario outline: The same algorithm runs at every language level.</summary>
-  [TestCase("es5", "cjs", null, 5)]
-  [TestCase("es5", "iife", "Fnv", 5)]
-  [TestCase("es2015", "esm", null, 2015)]
-  [TestCase("es2017", "cjs", null, 2017)]
-  [TestCase("es2020", "esm", null, 2020)]
-  [TestCase("es2022", "esm", null, 2022)]
-  public void SameAlgorithm_RunsAtEveryLanguageLevel(string level, string module, string? global, int edition) {
-    var profile = new ProfileCase(level, module, false, global);
-    var call = new PrototypeCall("Hash", [PrototypeCases.Text("a")]) { Returns = typeof(ulong) };
-    Directory.CreateDirectory(Path.Combine(this._directory, "wide"));
-    File.Copy(PrototypeFixture.PathOf("wide/Fnv1a64"), Path.Combine(this._directory, "wide", "Fnv1a64.cs"));
-    string[] arguments = ["translate", "wide/Fnv1a64.cs", "--from", "csharp", "--to", "javascript", .. profile.Arguments, "--output", "out"];
-    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, arguments);
-    Assert.That(exitCode, Is.Zero, output);
-
-    var file = Path.Combine(this._directory, "out", "Fnv1a64" + profile.Parsed.Extension);
-    Assert.That((int)profile.Parsed.Level, Is.EqualTo(edition));
-    Assert.That(GeneratedJavaScript.Problems(File.ReadAllText(file), profile.Parsed), Is.Empty);
-    Assert.That(this.Node(profile, "Fnv1a64", [call]).Single(), Is.EqualTo("12638187200555641996 | [97]"));
-    Assert.That(PrototypeFixture.CompiledOutcome("wide/Fnv1a64", call), Is.EqualTo("12638187200555641996 | [97]"));
-  }
-
-  /// <summary>Scenario: Below ES2020 a 64-bit result is a pair of halves.</summary>
-  [Test]
-  public void Below2020_A64BitResultIsAPairOfHalves() {
-    var profile = new ProfileCase("es2015", "esm", false, null);
-    this.TranslateFixture("wide/Fnv1a64", profile);
-    File.WriteAllText(Path.Combine(this._directory, "call.mjs"),
-      "import { Hash } from './out/Fnv1a64.mjs';\nprocess.stdout.write(JSON.stringify(Hash(Uint8Array.from([97]))));\n");
-    var (exitCode, output) = Toolchain.RunNode(this._directory, "call.mjs");
-    Assert.That((exitCode, output), Is.EqualTo((0, "{\"hi\":2942557260,\"lo\":2248273036}")));
-    Assert.That(PrototypeFixture.CompiledOutcome("wide/Fnv1a64", new PrototypeCall("Hash", [PrototypeCases.Text("a")])),
-      Is.EqualTo($"{(2942557260UL << 32) | 2248273036UL} | [97]"));
-
-    var text = File.ReadAllText(Path.Combine(this._directory, "out", "Fnv1a64.mjs"));
-    Assert.That(text, Does.Not.Contain("BigInt"));
-    Assert.That(text, Does.Contain("// Hash(data: Uint8Array): { hi, lo }")
-      .And.Contain("// A 64-bit integer is an object { hi, lo }: its upper and its lower 32 bits, each as an unsigned number."));
-  }
-
-  /// <summary>Scenario: Math.imul is replaced where it does not exist.</summary>
-  [Test]
-  public void MathImul_IsReplacedWhereItDoesNotExist() {
-    var profile = new ProfileCase("es5", "cjs", false, null);
-    var call = new PrototypeCall("F", [2147483647, 2147483647]);
-    Assert.That(this.Snippet("public static int F(int a, int b) => a * b;", profile, [call]).Single(), Is.EqualTo("1"));
-    Assert.That(File.ReadAllText(Path.Combine(this._directory, "out", "Snippet.cjs")), Does.Not.Contain("Math.imul").And.Contain("function $imul(a, b) {"));
-    Assert.That(PrototypeFixture.CompiledOutcome("Operators", new PrototypeCall("MultiplyInt", call.Arguments)), Is.EqualTo("1"));
-  }
-
-  /// <summary>Scenario: Float arithmetic stays binary32 without Math.fround.</summary>
-  [Test]
-  public void FloatArithmetic_StaysBinary32WithoutMathFround() {
-    var profile = new ProfileCase("es5", "cjs", false, null);
-    var call = new PrototypeCall("F", [16777217f, 3f]);
-    var compiled = PrototypeFixture.CompiledOutcome("wide/OperatorsWide", new PrototypeCall("MultiplyAdd", call.Arguments));
-    Assert.That(PrototypeFixture.SourceOf("wide/OperatorsWide"), Does.Contain("public static float MultiplyAdd(float a, float b) => a * b + a;"));
-    Assert.That(this.Snippet("public static float F(float a, float b) => a * b + a;", profile, [call]).Single(), Is.EqualTo(compiled));
-    Assert.That(File.ReadAllText(Path.Combine(this._directory, "out", "Snippet.cjs")),
-      Does.Not.Contain("Math.fround").And.Not.Contain("Float32Array").And.Contain("return $fround($fround(a * b) + a);"));
-  }
-
-  /// <summary>Scenario: An ES module is not available at ES5; and the other command lines that name no profile (test design 8).</summary>
+  /// <summary>The usage error of the scenario "An ES module is not available at ES5", word for word, and the other command lines that name no profile (test design 8).</summary>
   [TestCase(new[] { "--profile", "es5", "--module", "esm" }, "the profile 'es5' has no ES modules")]
   [TestCase(new[] { "--profile", "es3" }, "unknown JavaScript profile 'es3'")]
   [TestCase(new[] { "--module", "amd" }, "unknown module format 'amd'")]
@@ -146,17 +65,6 @@ public sealed class JavaScriptProfileTests {
     Assert.That(exitCode, Is.EqualTo(2));
     Assert.That(output, Does.Contain("PLY0001").And.Contain(message));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
-  }
-
-  /// <summary>Scenario: The profile is recorded in the output.</summary>
-  [Test]
-  public void Profile_IsRecordedInTheOutput() {
-    this.TranslateFixture("Adler32", new ProfileCase("es2017", "cjs", false, null));
-    var header = File.ReadAllLines(Path.Combine(this._directory, "out", "Adler32.cjs")).TakeWhile(line => line.StartsWith("//", StringComparison.Ordinal)).ToList();
-    Assert.That(header, Is.EqualTo(new[] {
-      "// Adler32: generated by polypiler. Change the source, not this file.",
-      "// JavaScript profile: es2017, cjs."
-    }));
   }
 
   /// <summary>
@@ -469,6 +377,17 @@ public sealed record ProfileCase(string Level, string Module, bool TypedArrays, 
        from typed in level == "es5" ? new[] { false, true } : [false]
        select new ProfileCase(level, module, typed, module == "iife" ? "Generated" : null)
   ];
+
+  /// <summary>
+  /// The profile of the options of a command line: <c>--profile</c>, <c>--module</c>,
+  /// <c>--global</c> and <c>--typed-arrays</c>; without <c>--module</c> a CommonJS module at ECMAScript
+  /// 5, which has no ES modules, and an ES module above.
+  /// </summary>
+  public static ProfileCase Of(string[] options) {
+    string? Value(string option) => Array.IndexOf(options, option) is >= 0 and var index ? options[index + 1] : null;
+    var level = Value("--profile") ?? Default.Level;
+    return new ProfileCase(level, Value("--module") ?? (level == "es5" ? "cjs" : "esm"), options.Contains("--typed-arrays"), Value("--global"));
+  }
 
   /// <summary>The profile as the backend reads it.</summary>
   public JavaScriptProfile Parsed => JavaScriptProfile.Parse(this.Level, this.Module, this.Global, this.TypedArrays);

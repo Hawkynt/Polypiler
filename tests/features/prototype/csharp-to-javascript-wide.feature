@@ -1,3 +1,4 @@
+@EndToEnd
 Feature: Translate wider C# to JavaScript
 
   Scenario Outline: A translated algorithm matches its published value

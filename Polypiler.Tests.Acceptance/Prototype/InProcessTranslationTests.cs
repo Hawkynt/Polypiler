@@ -12,7 +12,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// <summary>
 /// A translation in process (<see cref="Toolchain.Translate"/>) is the translation of the executable:
 /// for every kind of command line the tests translate in process, the same exit code, the same text
-/// and the same files, byte for byte. A translation kept for the run is shared only by command lines
+/// on standard output and on standard error, and the same files, byte for byte. A translation kept for the run is shared only by command lines
 /// that differ in nothing but the output directory.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
@@ -64,15 +64,15 @@ public sealed class InProcessTranslationTests {
     return lines.Select(line => new TestCaseData((object)line).SetArgDisplayNames(string.Join(' ', line)));
   }
 
-  /// <summary>Test design 4: the same exit code, text and files, in process as with the executable.</summary>
+  /// <summary>Test design 4: the same exit code, the same text on each stream and the same files, in process as with the executable.</summary>
   [TestCaseSource(nameof(CommandLines))]
   public void InProcess_IsTheExecutable(string[] line) {
     string[] arguments = ["translate", .. line, "--output", "out"];
     var executable = this.WorkingDirectory("executable");
     var inProcess = this.WorkingDirectory("in-process");
-    var expected = Toolchain.RunPolypiler(executable, arguments);
-    var actual = Toolchain.Translate(inProcess, arguments);
-    Assert.That(actual, Is.EqualTo(expected));
+    var expected = Toolchain.Executable(executable, arguments);
+    var actual = Toolchain.TranslateInProcess(inProcess, arguments);
+    Assert.That(actual, Is.EqualTo(expected), "exit code, standard output and standard error");
     Assert.That(Files(Path.Combine(inProcess, "out")), Is.EqualTo(Files(Path.Combine(executable, "out"))));
   }
 

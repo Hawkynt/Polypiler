@@ -1,3 +1,4 @@
+@EndToEnd
 Feature: Translate a small C# algorithm to JavaScript
 
   Scenario Outline: A translated checksum matches its published value
@@ -35,7 +36,7 @@ Feature: Translate a small C# algorithm to JavaScript
     And the interpreter reports a divide-by-zero trap for the same call
 
   Scenario: An unsupported construct is refused and nothing is written
-    Given the C# method "public static long F(long a) => a + 1;"
+    Given the C# method "public static decimal F(decimal a) => a + 1;"
     When I run the translate command on it
     Then the exit code is 3 and the output contains "PLY1002" with line 1
     And the output directory contains no file
