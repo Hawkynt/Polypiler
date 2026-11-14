@@ -108,7 +108,11 @@ internal sealed partial class Lowering {
         return (this.ByteArray(arguments[0], name), arguments.Count == 1 ? new IrConst(IrType.I32, 0) : this.Index(arguments[1]));
     }
 
-    throw new UnsupportedException(bytes, $"the bytes of {name} as anything but an array or its AsSpan with an index and the size of the value");
+    // Any other span of bytes is a view, read from its start: a value outside it traps as the call throws.
+    if (this.ViewType(model.GetTypeInfo(bytes).ConvertedType, bytes) is { Element.Kind: IrTypeKind.U8 })
+      return (this.AsView(bytes), new IrConst(IrType.I32, 0));
+
+    throw new UnsupportedException(bytes, $"the bytes of {name} as anything but an array or a span of bytes");
   }
 
   /// <summary>An array of bytes an endian access works on, which a table of the module is not.</summary>

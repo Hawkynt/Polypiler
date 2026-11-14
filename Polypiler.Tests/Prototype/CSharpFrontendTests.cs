@@ -115,7 +115,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(int a) { goto end; end: return a; }", "GotoStatement", 30, TestName = "goto")]
   [TestCase("public static int F(int[,] a) => 1;", "int[*,*]", 21, TestName = "multi-dimensional array")]
   [TestCase("public static int F(int[][] a) => 1;", "int[][]", 21, TestName = "jagged array")]
-  [TestCase("public static int F(System.Span<int> a) => 1;", "System.Span<int>", 21, TestName = "span")]
+  [TestCase("public static int F(System.Span<char> a) => 1;", "System.Span<char>", 21, TestName = "span")]
   [TestCase("public static int F<T>(T a) => 1;", "a generic method", 20, TestName = "generic method")]
   [TestCase("public static int F() { System.Func<int, int> f = x => x; return 1; }", "System.Func<int, int>", 25, TestName = "lambda")]
   [TestCase("public static int F() { int G() => 1; return G(); }", "LocalFunctionStatement", 25, TestName = "local function")]
