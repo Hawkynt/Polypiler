@@ -100,8 +100,15 @@ public sealed class IrViewTests {
       return IrType.Array(Type(spelled[..^2]));
 
     return spelled switch {
-      "void" => IrType.Void, "bool" => IrType.Bool, "u8" => IrType.U8, "u16" => IrType.U16, "i32" => IrType.I32, "u32" => IrType.U32,
-      "i64" => IrType.I64, "f32" => IrType.F32, _ => IrType.F64
+      "void" => IrType.Void,
+      "bool" => IrType.Bool,
+      "u8" => IrType.U8,
+      "u16" => IrType.U16,
+      "i32" => IrType.I32,
+      "u32" => IrType.U32,
+      "i64" => IrType.I64,
+      "f32" => IrType.F32,
+      _ => IrType.F64
     };
   }
 

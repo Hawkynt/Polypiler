@@ -86,7 +86,7 @@ public sealed class BenchmarkResultTests {
 
   [Test]
   public void AResultWithoutSamples_HasNoStatistics()
-    => Assert.That(Result("loop", "default", null) .Stats, Is.Empty);
+    => Assert.That(Result("loop", "default", null).Stats, Is.Empty);
 
   /// <summary>Test design 10 and 14: every metric and an extra one has a value to compare.</summary>
   [Test]

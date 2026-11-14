@@ -35,7 +35,8 @@ public sealed class PrinterTests {
     => from outer in _csharpOperators from inner in _csharpOperators select new TestCaseData(outer, inner).SetName($"CSharp({inner} in {outer})");
 
   private static IEnumerable<TestCaseData> JavaScriptPairs()
-    => from outer in _javascriptOperators from inner in _javascriptOperators
+    => from outer in _javascriptOperators
+       from inner in _javascriptOperators
        where !(outer is "&&" or "||" && inner == "??" || inner is "&&" or "||" && outer == "??")
        select new TestCaseData(outer, inner).SetName($"JavaScript({inner} in {outer})");
 

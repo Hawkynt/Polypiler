@@ -57,7 +57,7 @@ public sealed class IntegrityCommandTests {
       $"polypiler: error PLY0027: golden file 'tests/fixtures/new.vectors.json' was modified: not in the golden lock",
       $"polypiler: error PLY0027: golden file '{GoldenTree.Adler32}' was modified: hash differs from the golden lock",
       "polypiler: error PLY0028: vectors 'tests/fixtures/new.vectors.json' lack independent provenance: source is not a toolchain key of tooling/toolchains.lock: 'nodejs'",
-      "") ));
+      "")));
   }
 
   [Test]
