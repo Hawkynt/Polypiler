@@ -27,7 +27,8 @@ internal static class Toolchain {
   /// printed as its bits, so that two results are equal exactly when they are the same double. With
   /// the argument <c>exact</c> that includes the negative zero; without it -0 is printed as the 0 it
   /// is to code that computes in integers. An <c>Array</c> is printed like a typed array, which is
-  /// what it is once imported.
+  /// what it is once imported. Any other object but a pair of halves is a struct, printed as the
+  /// values of its keys in order between braces; a pair of halves among them is read as unsigned.
   /// </para>
   /// <para>
   /// The fourth argument says what the module is written for. <c>native</c>: 64-bit integers are
@@ -76,10 +77,12 @@ internal static class Toolchain {
       bits.setFloat64(0, value);
       return 'f:' + bits.getBigUint64(0).toString(16).padStart(16, '0');
     };
+    const isPair = value => Object.keys(value).length === 2 && 'hi' in value && 'lo' in value;
     const show = (value, kind) => value === undefined ? 'void'
       : isArray(value) ? `[${Array.from(value, element => show(element, kind)).join(',')}]`
       : typeof value === 'number' ? showNumber(value)
-      : typeof value === 'object' ? unpair(value, kind)
+      : typeof value === 'object' && isPair(value) ? unpair(value, kind)
+      : typeof value === 'object' ? `{${Object.values(value).map(field => show(field)).join(',')}}`
       : String(value);
     const lines = [];
     for (const [name, encoded, returns] of JSON.parse(readFileSync(callsPath, 'utf8'))) {
