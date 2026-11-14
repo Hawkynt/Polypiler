@@ -55,7 +55,7 @@ internal static partial class RecognitionFixtures {
   public static IReadOnlyDictionary<string, string[]> Expectations(string file) {
     var expected = new Dictionary<string, string[]>();
     string[]? pending = null;
-    foreach (var line in SourceOf(file).Split('\n')) {
+    foreach (var line in SourceOf(file).Split('\n').Select(text => text.TrimEnd('\r'))) {
       if (ExpectLine().Match(line) is { Success: true } expect) {
         pending = [.. expect.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(id => id != "-").Order(StringComparer.Ordinal)];
         continue;
