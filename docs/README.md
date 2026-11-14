@@ -23,6 +23,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Known runtime defects](reference/known-runtime-defects.md) — defects of a target runtime that change what correct generated code computes, their minimal reproductions and the forms the backends write around them.
 - [Exit codes](cli/exit-codes.md) — the exit code of every failure category of `polypiler`, generated from the code; `polypiler help exit-codes` prints the same table.
 - [Value records](reference/records.md) — structs, record structs and fixed-shape object literals: their value semantics, what each frontend imports and how each profile writes them.
+- [Module state](reference/module-state.md) — static fields and module variables shared by every call: their initialisation rule, what each frontend imports or refuses and how each profile and module format writes them.
 - [Benchmarks](benchmarks/README.md) — how to add a benchmark, run it, read its result and compare two result sets against the budgets.
 - [Audit of the PB-Compiler LLVM emitter](llvm/pb-emitter-audit.md) — what PB-Compiler's `--emit-llvm` writes at the pinned commit, what LLVM 23.1.3 accepts of it, and the gaps against PRD §26.3.
 - [Error catalogue](errors/README.md) — every diagnostic code with its severity, exit code, cause and what to do, generated from `spec/diagnostics.yaml` by `polypiler-tooling report errors`.
