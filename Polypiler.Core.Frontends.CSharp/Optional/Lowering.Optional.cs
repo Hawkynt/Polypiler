@@ -26,8 +26,8 @@ internal sealed partial class Lowering {
     if (type is not INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable)
       return null;
 
-    var underlying = this.Map(nullable.TypeArguments[0], node);
-    return underlying.IsOptionalValue ? IrType.Optional(underlying) : throw new UnsupportedException(node, $"{nullable.ToDisplayString()}");
+    // A nullable value type holds a number, a truth value or a struct, which is what the IR's optional type holds.
+    return IrType.Optional(this.Map(nullable.TypeArguments[0], node));
   }
 
   /// <summary>Whether a type is <c>Nullable&lt;T&gt;</c>.</summary>
@@ -79,13 +79,6 @@ internal sealed partial class Lowering {
 
     if (!from.IsOptional)
       return new IrSome(Convert(value, type.Underlying!, trap));
-
-    switch (value) {
-      case IrNone:
-        return new IrNone(type);
-      case IrSome some:
-        return new IrSome(Convert(some.Value, type.Underlying!, trap));
-    }
 
     var (first, again) = this.Bound(value);
     return new IrConditional(new IrIsNone(first), new IrNone(type), new IrSome(Convert(Held(again), type.Underlying!, trap)));
@@ -208,9 +201,6 @@ internal sealed partial class Lowering {
         SyntaxKind.BitwiseNotExpression => IrUnaryOp.BitNot,
         _ => IrUnaryOp.LogicalNot
       };
-      if (!IrOperators.Accepts(op, value.Type))
-        throw new UnsupportedException(unary, $"{unary.Kind()} on {operand.Type}");
-
       value = new IrUnary(op, value);
     }
 
@@ -300,10 +290,7 @@ internal sealed partial class Lowering {
     return new IrConditional(test, new IrNone(IrType.Optional(value.Type)), new IrSome(value));
   }
 
-  /// <summary>A test that is always true and evaluates its operand: of a reference that it is null or not, of a value that it equals itself or not.</summary>
-  private static IrExpr IsAnything(IrExpr value) => value.Type.IsOptional
-    ? new IrBinary(IrBinaryOp.LogicalOr, new IrIsNone(value), Truth(true))
-    : value.Type.IsNullable ? new IrBinary(IrBinaryOp.LogicalOr, new IrIsNull(value), Truth(true))
-    : new IrBinary(IrBinaryOp.LogicalOr, new IrIsNone(new IrSome(value)), Truth(true));
+  /// <summary>A test of an optional value that is always true and evaluates it: that it holds none or not.</summary>
+  private static IrExpr IsAnything(IrExpr value) => new IrBinary(IrBinaryOp.LogicalOr, new IrIsNone(value), Truth(true));
 
 }

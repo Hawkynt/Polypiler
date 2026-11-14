@@ -64,6 +64,9 @@ internal sealed class CSharpOptionalImportTests {
   [TestCase("public static string? F(string? s) => s ?? \"x\";", "?? on the type str")]
   [TestCase("public static int? F(int? a) { a++; return a; }", "a step of i32?")]
   [TestCase("public static int F(int[]? a) => a?.GetHashCode() ?? 0;", "null-conditional access")]
+  [TestCase("public static int F(int? a) => a?.GetHashCode() ?? 0;", "?. on the type i32?")]
+  [TestCase("public static string F(string[]? a) => a?[0] ?? \"\";", "?. of the type str")]
+  [TestCase("private static int? s; public static int F() => s ??= 1;", "??= of anything but a variable as a value")]
   public void OutOfSubset_IsRefused(string body, string named)
     => Assert.That(Refusals(body), Has.Some.Contains(named), string.Join("\n", Refusals(body)));
 

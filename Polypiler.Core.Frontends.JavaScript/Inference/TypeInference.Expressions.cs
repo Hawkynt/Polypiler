@@ -132,6 +132,9 @@ internal sealed partial class TypeInference {
         if (logical.Operator == Operator.NullishCoalescing) {
           // The left value where it is present, the right one where it is absent.
           var present = this.Of(logical.Left);
+          if (present.Kind == JsKind.Null)
+            return this.Of(logical.Right);
+
           if (!present.IsAbsent && present.Kind is not (JsKind.Object or JsKind.Array))
             return present;
 

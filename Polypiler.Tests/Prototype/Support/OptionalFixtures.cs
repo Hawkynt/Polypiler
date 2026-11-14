@@ -60,11 +60,15 @@ internal static class OptionalFixtures {
       yield return Call("OrDefault", a);
       yield return Call("AtMost", a, 0);
       yield return Call("AssignedValue", a);
+      yield return Call("ConstantLeft", a);
+      yield return Call("CallLeft", new int[1], a);
+      yield return Call("IsFive", a);
       foreach (var b in new int?[] { null, 0, 5 }) {
         yield return Call("Lifted", a, b);
         yield return Call("Equal", a, b);
         yield return Call("NotEqual", a, b);
         yield return Call("Greater", a, b);
+        yield return Call("Operators", a, b);
       }
     }
 
@@ -81,6 +85,14 @@ internal static class OptionalFixtures {
       yield return Call("Cast", l);
 
     yield return Call("Assigned");
+    yield return Call("OtherArray", (int[]?)null, new int[4]);
+    yield return Call("OtherArray", new int[1], new int[4]);
+    yield return Call("BoxedOr", 7, true);
+    yield return Call("BoxedOr", 7, false);
+    yield return Call("AssignedArray", (int[]?)null);
+    yield return Call("AssignedArray", new int[5]);
+    yield return Call("AssignedArrayStatement", (int[]?)null);
+    yield return Call("AssignedArrayStatement", new int[5]);
     yield return Call("Length", (int[]?)null);
     yield return Call("Length", new int[3]);
     yield return Call("Element", (int[]?)null, 0);

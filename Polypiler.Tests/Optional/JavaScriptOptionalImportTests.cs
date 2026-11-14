@@ -55,11 +55,24 @@ public sealed class JavaScriptOptionalImportTests {
   [TestCase("truthy", -1.0, "0")]
   [TestCase("truthy", 3.0, "1")]
   [TestCase("truthy", 0.5, "1")]
+  [TestCase("picked", 1.0, "3")]
+  [TestCase("picked", 0.0, "-1")]
+  [TestCase("chosen", 1.0, "3")]
+  [TestCase("chosen", 0.0, "5")]
+  [TestCase("noArray", "null", "1")]
+  [TestCase("noArray", "3", "0")]
+  [TestCase("widened", 3.0, "3")]
+  [TestCase("widened", -1.0, "f:3ff8000000000000")]
+  [TestCase("literals", "", "101")]
+  [TestCase("flag", 1.0, "1")]
+  [TestCase("flag", -1.0, "0")]
   public void Interpreter_AgreesWithNode(string function, object? argument, string expected) {
     object?[] arguments = function switch {
       "findOr" => [new[] { 4, 5, 6 }, double.Parse((string)argument!, System.Globalization.CultureInfo.InvariantCulture)],
-      "assigned" => [],
-      "length" => [(string)argument! == "null" ? null : new int[3]],
+      "assigned" or "literals" => [],
+      "length" or "noArray" => [(string)argument! == "null" ? null : new int[3]],
+      "picked" => [new int[3], argument],
+      "chosen" => [new int[3], new int[5], argument],
       _ => [argument]
     };
     var outcome = PrototypeFixture.InterpretedOutcome(Imported("find.js"), new PrototypeCall(function, arguments!));
@@ -95,6 +108,9 @@ public sealed class JavaScriptOptionalImportTests {
   [TestCase("export function f(n) { let x = n; x ??= 1; return 1; }", "")]
   [TestCase("export function f(n) { const o = { a: n }; o.a ??= 1; return 1; }", "??= of anything but a variable")]
   [TestCase("export function f(n) { return n === undefined ? 1 : n === null ? 2 : 3; }", "holds both null and undefined")]
+  [TestCase("function g() { return 1; } export function f(n) { return g() === null ? 1 : 2; }", "which is never either")]
+  [TestCase("export function f(n) { const x = n > 0 ? n : null; return x ?? \"s\"; }", "?? on number or null and string")]
+  [TestCase("export function f(n) { const s = \"ab\"; return s?.length ?? 0; }", "?. on string")]
   public void Construct_IsRefusedOrImported(string source, string named) {
     var problems = Problems(source);
     if (named.Length == 0)

@@ -79,6 +79,43 @@ export function scaled(x) {
   return scale(x) + scale(x, 3);
 }
 
+/** @param {Int32Array} a */
+function pick(a, use) {
+  return use ? a : null;
+}
+
+/** @param {Int32Array} a */
+export function picked(a, use) {
+  return pick(a, use)?.length ?? -1;
+}
+
+/**
+ * @param {Int32Array} a
+ * @param {Int32Array} b
+ */
+export function chosen(a, b, use) {
+  return (pick(a, use) ?? b).length;
+}
+
+/** @param {Int32Array} a */
+export function noArray(a) {
+  return a == null ? 1 : 0;
+}
+
+export function widened(n) {
+  const v = n > 0 ? n | 0 : null;
+  return v ?? 1.5;
+}
+
+export function literals() {
+  return (null == undefined ? 1 : 0) + (null === undefined ? 10 : 0) + (null ?? 100) + (0 ?? 1000);
+}
+
+export function flag(n) {
+  const b = n > 0 ? true : undefined;
+  return b ? 1 : 0;
+}
+
 export function truthy(x) {
   const v = x > 0 ? x : null;
   return v ? 1 : 0;

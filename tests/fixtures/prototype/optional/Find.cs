@@ -4,6 +4,16 @@
 #nullable enable
 namespace Polypiler.Fixtures.Prototype.Optional;
 
+public sealed class Box {
+
+  public int V;
+
+  public Box(int v) {
+    this.V = v;
+  }
+
+}
+
 public static class OptionalDemo {
 
   public static int? Find(int[] a, int v) {
@@ -111,6 +121,34 @@ public static class OptionalDemo {
   public static int CountedLifted(int[] calls, bool present) => (NextValue(calls, present) + NextValue(calls, !present)) ?? -calls[0];
 
   public static bool CountedLess(int[] calls, bool present) => NextValue(calls, present) < NextValue(calls, present);
+
+  public static int Operators(int? a, int? b)
+    => ((a % b) ?? -1) + ((a | b) ?? -2) * 3 + ((a ^ b) ?? -3) * 5 + ((a >> 1) ?? -4) * 7 + ((a >>> 1) ?? -5) * 11 + (a >= b ? 13 : 0);
+
+  public static int ConstantLeft(int? a) => (5 - a) ?? -1;
+
+  private static int Twice(int[] calls, int x) {
+    calls[0] += 1;
+    return 2 * x;
+  }
+
+  public static int CallLeft(int[] calls, int? a) => (Twice(calls, 3) - a) ?? -calls[0];
+
+  public static bool IsFive(int? a) => a == 5;
+
+  public static int OtherArray(int[]? a, int[] b) => (a ?? b).Length;
+
+  public static int BoxedOr(int v, bool present) {
+    Box? b = present ? new Box(v) : null;
+    return b?.V ?? -1;
+  }
+
+  public static int AssignedArray(int[]? a) => (a ??= new int[2]).Length;
+
+  public static int AssignedArrayStatement(int[]? a) {
+    a ??= new int[3];
+    return a.Length;
+  }
 
   public static bool CountedEqual(int[] calls, bool present) => NextValue(calls, present) == NextValue(calls, !present);
 

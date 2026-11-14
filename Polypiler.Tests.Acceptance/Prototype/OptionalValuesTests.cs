@@ -10,7 +10,7 @@ using Polypiler.Prototype.Testing;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The differential rows of the test design of <c>tests/features/prototype/optional-values.feature</c>
+/// The differential rows of the test design of <c>tests/features/ir/ir-optional-values.feature</c>
 /// with the real <c>polypiler</c> executable in process, <c>node</c> and the C# compiler. The expected
 /// outcome of a call is never computed here: it is what .NET computes of <c>Find.cs</c>, built into
 /// this assembly, or what <c>node</c> computes of <c>find.js</c>.
@@ -60,7 +60,9 @@ public sealed class OptionalValuesTests {
     new("assigned", []), new("length", [null!]), new("length", [new int[3]]),
     new("coerced", [-3.0]), new("coerced", [2.0]), new("missing", [-3.0]), new("missing", [2.0]),
     new("positive", [0.0]), new("positive", [2.0]), new("either", [0.0]), new("nothing", [0.0]), new("scaled", [2.0]),
-    new("truthy", [-1.0]), new("truthy", [3.0]), new("truthy", [0.5])
+    new("truthy", [-1.0]), new("truthy", [3.0]), new("truthy", [0.5]),
+    new("picked", [new int[3], 1.0]), new("picked", [new int[3], 0.0]), new("chosen", [new int[3], new int[5], 1.0]), new("chosen", [new int[3], new int[5], 0.0]),
+    new("noArray", [null!]), new("noArray", [new int[3]]), new("widened", [3.0]), new("widened", [-1.0]), new("literals", []), new("flag", [1.0]), new("flag", [-1.0])
   ];
 
   /// <summary>What node prints of the calls on find.js itself.</summary>

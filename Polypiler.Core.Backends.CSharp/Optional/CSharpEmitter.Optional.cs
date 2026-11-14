@@ -56,9 +56,6 @@ public static partial class CSharpEmitter {
         return null;
 
       var member = choice.WhenFalse is IrSome some ? some.Value : choice.WhenFalse;
-      if (choice.WhenFalse is not IrSome && choice.Type.IsOptional)
-        return null;
-
       return member switch {
         IrArrayLength { Array: IrLocalRef { Local: var array } } when array == local
           => new CsMemberAccess(this.Variable(local), "Length") { Conditional = true, Type = choice.Type },

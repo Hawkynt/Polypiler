@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The steps of <c>tests/features/prototype/optional-values.feature</c>. The expected value is never
+/// The steps of <c>tests/features/ir/ir-optional-values.feature</c>. The expected value is never
 /// computed here: it is what .NET computes of the original C# - the fixture built into this assembly
 /// or the snippet compiled - or what <c>node</c> computes of the original JavaScript.
 /// </summary>

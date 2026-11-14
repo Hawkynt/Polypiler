@@ -41,6 +41,8 @@ internal sealed class CSharpOptionalEmissionTests {
   [TestCase("netstandard2.0", "q = 7;", true)]
   [TestCase("netstandard2.0", "??=", false)]
   [TestCase("netstandard2.1", "q ??= 7;", true)]
+  [TestCase("netstandard2.1", "a ??= new int[3];", true)]
+  [TestCase("net4.6", "b?.V ?? -1", true)]
   [TestCase("net2.0", "public static int? Find(int[] a, int v)", true)]
   [TestCase("net2.0", "Find(a, v) ?? -1", true)]
   public void Form_IsTheOneOfTheProfile(string profile, string form, bool present) {
