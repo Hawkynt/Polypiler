@@ -27,6 +27,12 @@ public static class IrTree {
     IrMethodCall { Target: { } target } call => [target, .. call.Arguments],
     IrMethodCall call => call.Arguments,
     IrReferenceEquals equality => [equality.Left, equality.Right],
+    IrSome some => [some.Value],
+    IrIsNone test => [test.Value],
+    IrUnwrap unwrap => [unwrap.Value],
+    IrCoalesce coalesce => [coalesce.Value, coalesce.Fallback],
+    IrIsNull test => [test.Value],
+    IrBind bind => [bind.Value],
     _ => []
   };
 

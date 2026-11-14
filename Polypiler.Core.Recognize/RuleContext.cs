@@ -71,6 +71,10 @@ public sealed class RuleContext {
     foreach (var step in IrStatements.AllExpressions(function.Body).SelectMany(IrShape.Nodes).OfType<IrStep>())
       if (step.Target is IrLocalRef reference)
         this.Count(reference.Local);
+
+    // An assignment inside an expression writes its variable as well.
+    foreach (var bind in IrStatements.AllExpressions(function.Body).SelectMany(IrShape.Nodes).OfType<IrBind>())
+      this.Count(bind.Local);
   }
 
   /// <summary>The function.</summary>

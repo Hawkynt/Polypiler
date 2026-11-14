@@ -945,7 +945,16 @@ public sealed record IrFunction(
   IrType ReturnType,
   IReadOnlyList<IrLocal> Parameters,
   IReadOnlyList<IrLocal> Locals,
-  IrBlock Body);
+  IrBlock Body) {
+
+  /// <summary>
+  /// How an optional result that holds none is spelled at the boundary of JavaScript: metadata, which
+  /// the JavaScript frontend records from the source and the JavaScript backend writes; inside the
+  /// module the result holds none either way.
+  /// </summary>
+  public IrAbsent Absent { get; init; }
+
+}
 
 /// <summary>A module: the functions, constants and globals of one source class, and the types they use.</summary>
 /// <param name="Name">The name of the module.</param>

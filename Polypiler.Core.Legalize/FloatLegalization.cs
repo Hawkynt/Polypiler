@@ -171,6 +171,18 @@ public static class FloatLegalization {
           return call with { Target = call.Target is null ? null : this.Expression(call.Target), Arguments = [.. call.Arguments.Select(this.Expression)] };
         case IrReferenceEquals identity:
           return new IrReferenceEquals(this.Expression(identity.Left), this.Expression(identity.Right));
+        case IrSome some:
+          return new IrSome(this.Expression(some.Value));
+        case IrIsNone test:
+          return new IrIsNone(this.Expression(test.Value));
+        case IrUnwrap unwrap:
+          return unwrap with { Value = this.Expression(unwrap.Value) };
+        case IrCoalesce coalesce:
+          return new IrCoalesce(this.Expression(coalesce.Value), this.Expression(coalesce.Fallback));
+        case IrIsNull test:
+          return new IrIsNull(this.Expression(test.Value));
+        case IrBind bind:
+          return bind with { Value = this.Expression(bind.Value) };
         case IrCall call:
           var arguments = call.Arguments.Select(this.Expression).ToList();
           return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);
