@@ -5,7 +5,7 @@ using Polypiler.Tooling;
 
 namespace Polypiler.Tests;
 
-/// <summary>Checks the entry point of the <c>polypiler-tooling</c> shell, which has no verb yet.</summary>
+/// <summary>Checks the entry point of the <c>polypiler-tooling</c> command and its dispatch to the verbs.</summary>
 [TestFixture]
 public sealed class ToolingTests {
 
@@ -47,7 +47,7 @@ public sealed class ToolingTests {
       Console.SetOut(originalOut);
     }
 
-    Assert.That(output.ToString(), Does.Contain("No verb is available yet."));
+    Assert.That(output.ToString(), Does.Contain("toolchains validate"));
   }
 
   [Test]

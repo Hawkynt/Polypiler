@@ -1,0 +1,184 @@
+schema: 1
+toolchains:
+  clang:
+    version: "1.0.0"
+    probe: [clang, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/clang
+  dosbox-x:
+    version: "1.0.0"
+    probe: [dosbox-x, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/dosbox-x
+  dotnet-sdk:
+    version: "1.0.0"
+    probe: [dotnet-sdk, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/dotnet-sdk
+  fbc:
+    version: "1.0.0"
+    probe: [fbc, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/fbc
+  fpc:
+    version: "1.0.0"
+    probe: [fpc, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/fpc
+  gcc:
+    version: "1.0.0"
+    probe: [gcc, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/gcc
+  go:
+    version: "1.0.0"
+    probe: [go, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/go
+  ilspy-cli:
+    version: "1.0.0"
+    probe: [ilspy-cli, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/ilspy-cli
+  ilverify:
+    version: "1.0.0"
+    probe: [ilverify, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/ilverify
+  jdk:
+    version: "1.0.0"
+    probe: [jdk, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/jdk
+  kotlinc:
+    version: "1.0.0"
+    probe: [kotlinc, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/kotlinc
+  llvm:
+    version: "1.0.0"
+    probe: [llvm, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/llvm
+  nasm:
+    version: "1.0.0"
+    probe: [nasm, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/nasm
+  node:
+    version: "1.0.0"
+    probe: [node, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/node
+  pb-compiler:
+    version: "1.0.0"
+    probe: [pb-compiler, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/pb-compiler
+  perl:
+    version: "1.0.0"
+    probe: [perl, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/perl
+  php:
+    version: "1.0.0"
+    probe: [php, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/php
+  python:
+    version: "1.0.0"
+    probe: [python, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/python
+  qemu-user:
+    version: "1.0.0"
+    probe: [qemu-user, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/qemu-user
+  ruby:
+    version: "1.0.0"
+    probe: [ruby, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/ruby
+  rust:
+    version: "1.0.0"
+    probe: [rust, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/rust
+  typescript:
+    version: "1.0.0"
+    probe: [typescript, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/typescript
+  vice:
+    version: "1.0.0"
+    probe: [vice, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/vice
+  wabt:
+    version: "1.0.0"
+    probe: [wabt, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/wabt
+  wasmtime:
+    version: "1.0.0"
+    probe: [wasmtime, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/wasmtime
+  z3:
+    version: "1.0.0"
+    probe: [z3, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/z3

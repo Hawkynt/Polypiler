@@ -1,0 +1,9 @@
+schema: 2
+toolchains:
+  node:
+    version: "22.1.0"
+    probe: [node, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/node

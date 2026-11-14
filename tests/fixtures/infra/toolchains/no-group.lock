@@ -1,0 +1,9 @@
+schema: 1
+toolchains:
+  node:
+    version: "22.1.0"
+    probe: [node, --version]
+    versionPattern: '^v(\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://nodejs.org/dist/

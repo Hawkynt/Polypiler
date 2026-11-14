@@ -1,0 +1,337 @@
+# The one place an exact toolchain version is pinned (ISSUES.md, "Toolchains"). Format:
+# spec/schemas/toolchains.schema.json. Check it with `polypiler-tooling toolchains validate`; compare
+# a machine against it with `polypiler-tooling toolchains probe`.
+#
+# The 26 keys of backlog/README.md are the core: `validate` fails when one is missing, and `probe`
+# without `--only` reports exactly those. Every other key is optional and added by the issue that
+# first needs it. Keys stay in ordinal order.
+#
+# Where each version comes from, as of 2026-11-14:
+#   dotnet-sdk  the SDK `actions/setup-dotnet` installs for `10.0.x` on the CI runners (CI run
+#               43581325761: 10.0.404 on ubuntu-26.04 and windows-2025-vs2026). The development
+#               host builds with 10.0.112; docs/adr measurements name that one.
+#   node        the node of the ubuntu-26.04 runner image 20261111.196, which runs the acceptance
+#               tests (24.22.2). The windows-2025-vs2026 image 20261103.298 carries 22.23.4 and the
+#               development host 22.23.3; until the CI layer installs node from this file, those
+#               two probe as Mismatch.
+#   gcc, mpfr, gmp
+#               the versions tests/vectors/float/generate/versions.txt records for the reference
+#               vectors (gcc 16.2.1, MPFR 4.2.2, GMP 6.3.0).
+#   NuGet       acornima, roslyn and the ref-* reference assemblies are the versions the project
+#               files restore (Polypiler.Core.Frontends.*/*.csproj,
+#               Polypiler.Tests/Prototype/Support/ReferenceAssemblies.props); a test holds both in step.
+#   others      no test runs them yet. Installed on the development host: read from the tool
+#               (clang, llvm, jdk, perl, python, ruby, rust, go, vice). Not installed: the latest
+#               stable upstream release (dosbox-x, fbc, fpc, ilspy-cli, ilverify, kotlinc, nasm,
+#               php, qemu-user, typescript, wabt, wasmtime, z3). pb-compiler is the commit
+#               backlog/README.md pins.
+schema: 1
+toolchains:
+  acornima:
+    version: "1.9.1"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Acornima]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: BSD-3-Clause
+    source: https://www.nuget.org/packages/Acornima
+  clang:
+    version: "23.1.3"
+    probe: [clang, --version]
+    versionPattern: 'clang version (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: Apache-2.0 WITH LLVM-exception
+    source: https://github.com/llvm/llvm-project/releases
+  dosbox-x:
+    version: "2026.10.01"
+    probe: [dosbox-x, --version]
+    versionPattern: 'version (?<version>\d{4}\.\d{2}\.\d{2})'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-or-later
+    source: https://github.com/joncampbell123/dosbox-x/releases
+    oracleOnly: true
+  dotnet-sdk:
+    version: "10.0.404"
+    probe: [dotnet, --version]
+    versionPattern: '^(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://dotnet.microsoft.com/download/dotnet/10.0
+    home: DOTNET_ROOT
+  fbc:
+    version: "1.10.1"
+    probe: [fbc, --version]
+    versionPattern: 'Version (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows]
+    licence: GPL-2.0-or-later
+    source: https://github.com/freebasic/fbc/releases
+  fpc:
+    version: "3.2.2"
+    probe: [fpc, -iV]
+    versionPattern: '^(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-or-later
+    source: https://www.freepascal.org/download.html
+  gcc:
+    version: "16.2.1"
+    probe: [gcc, -dumpfullversion]
+    versionPattern: '^(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: GPL-3.0-or-later WITH GCC-exception-3.1
+    source: https://gcc.gnu.org/releases.html
+  gmp:
+    version: "6.3.0"
+    kind: package
+    requires: gcc
+    probe: [pkg-config, --modversion, gmp]
+    versionPattern: '^(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux]
+    licence: LGPL-3.0-or-later OR GPL-2.0-or-later
+    source: https://gmplib.org/
+    oracleOnly: true
+  go:
+    version: "1.27.2"
+    probe: [go, version]
+    versionPattern: '^go version go(?<version>\d+\.\d+(\.\d+)?)'
+    platforms: [linux, windows, macos]
+    licence: BSD-3-Clause
+    source: https://go.dev/dl/
+  ilspy-cli:
+    version: "11.2.0.10050"
+    probe: [ilspycmd, --version]
+    versionPattern: '^ilspycmd: (?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/ilspycmd
+    oracleOnly: true
+  ilverify:
+    version: "10.0.15"
+    probe: [ilverify, --version]
+    versionPattern: '^(?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/dotnet-ilverify
+    oracleOnly: true
+  jdk:
+    version: "27"
+    probe: [javac, -version]
+    versionPattern: '^javac (?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-only WITH Classpath-exception-2.0
+    source: https://jdk.java.net/
+    home: JAVA_HOME
+  kotlinc:
+    version: "2.4.21"
+    probe: [kotlinc, -version]
+    versionPattern: 'kotlinc-jvm (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: Apache-2.0
+    source: https://github.com/JetBrains/kotlin/releases
+  llvm:
+    version: "23.1.3"
+    probe: [llvm-config, --version]
+    versionPattern: '^(?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: Apache-2.0 WITH LLVM-exception
+    source: https://github.com/llvm/llvm-project/releases
+  mpfr:
+    version: "4.2.2"
+    kind: package
+    requires: gcc
+    probe: [pkg-config, --modversion, mpfr]
+    versionPattern: '^(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux]
+    licence: LGPL-3.0-or-later
+    source: https://www.mpfr.org/
+    oracleOnly: true
+  nasm:
+    version: "3.02"
+    probe: [nasm, -v]
+    versionPattern: '^NASM version (?<version>\S+)'
+    platforms: [linux, windows, macos]
+    licence: BSD-2-Clause
+    source: https://www.nasm.us/pub/nasm/releasebuilds/
+  node:
+    version: "24.22.2"
+    probe: [node, --version]
+    versionPattern: '^v(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://nodejs.org/dist/
+  pb-compiler:
+    version: "0d73acbea185a2597357d53f7ce9acb44758ba76"
+    probe: [pbc, --version]
+    versionPattern: '(?<version>[0-9a-f]{40})'
+    platforms: [linux, windows, macos]
+    licence: LGPL-3.0-or-later
+    source: https://github.com/Hawkynt/PB-Compiler
+  perl:
+    version: "5.42.3"
+    probe: [perl, -e, 'print $^V']
+    versionPattern: '^v(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: Artistic-1.0-Perl OR GPL-1.0-or-later
+    source: https://www.perl.org/get.html
+  php:
+    version: "8.5.12"
+    probe: [php, --version]
+    versionPattern: '^PHP (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: PHP-3.01
+    source: https://www.php.net/downloads.php
+  python:
+    version: "3.14.8"
+    probe: [python3, --version]
+    versionPattern: '^Python (?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: PSF-2.0
+    source: https://www.python.org/downloads/
+  qemu-user:
+    version: "11.1.3"
+    probe: [qemu-x86_64, --version]
+    versionPattern: 'version (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux]
+    licence: GPL-2.0-only
+    source: https://download.qemu.org/
+  ref-net10-0:
+    version: "10.0.0"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Microsoft.NETCore.App.Ref]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/Microsoft.NETCore.App.Ref
+  ref-net2-0:
+    version: "1.0.3"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Microsoft.NETFramework.ReferenceAssemblies.net20]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net20
+  ref-net3-5:
+    version: "1.0.3"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Microsoft.NETFramework.ReferenceAssemblies.net35]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net35
+  ref-net4-6:
+    version: "1.0.3"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Microsoft.NETFramework.ReferenceAssemblies.net46]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net46
+  ref-net4-8:
+    version: "1.0.3"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Microsoft.NETFramework.ReferenceAssemblies.net48]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net48
+  ref-net8-0:
+    version: "8.0.0"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Microsoft.NETCore.App.Ref]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/Microsoft.NETCore.App.Ref
+  ref-netcoreapp3-1:
+    version: "3.1.0"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Microsoft.NETCore.App.Ref]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/Microsoft.NETCore.App.Ref
+  ref-netstandard2-0:
+    version: "2.0.3"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [NETStandard.Library]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/NETStandard.Library
+  ref-netstandard2-1:
+    version: "2.1.0"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [NETStandard.Library.Ref]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/NETStandard.Library.Ref
+  roslyn:
+    version: "5.3.0"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Microsoft.CodeAnalysis.CSharp]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/Microsoft.CodeAnalysis.CSharp
+  ruby:
+    version: "3.4.10"
+    probe: [ruby, --version]
+    versionPattern: '^ruby (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: Ruby OR BSD-2-Clause
+    source: https://www.ruby-lang.org/en/downloads/
+  rust:
+    version: "1.99.0"
+    probe: [rustc, --version]
+    versionPattern: '^rustc (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: MIT OR Apache-2.0
+    source: https://forge.rust-lang.org/infra/other-installation-methods.html
+  typescript:
+    version: "7.0.2"
+    probe: [tsc, --version]
+    versionPattern: '^Version (?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: Apache-2.0
+    source: https://www.npmjs.com/package/typescript
+  vice:
+    version: "3.10"
+    probe: [x64sc, --version]
+    versionPattern: '\(VICE (?<version>\d+\.\d+(\.\d+)?)\)'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-or-later
+    source: https://vice-emu.sourceforge.io/
+    oracleOnly: true
+  wabt:
+    version: "1.0.42"
+    probe: [wasm2wat, --version]
+    versionPattern: '^(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: Apache-2.0
+    source: https://github.com/WebAssembly/wabt/releases
+  wasmtime:
+    version: "50.0.1"
+    probe: [wasmtime, --version]
+    versionPattern: '^wasmtime (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: Apache-2.0 WITH LLVM-exception
+    source: https://github.com/bytecodealliance/wasmtime/releases
+  z3:
+    version: "5.3.3"
+    probe: [z3, --version]
+    versionPattern: '^Z3 version (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://github.com/Z3Prover/z3/releases
+    oracleOnly: true

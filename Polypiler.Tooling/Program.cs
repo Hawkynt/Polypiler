@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Polypiler.Tooling.Commands;
 
 namespace Polypiler.Tooling;
 
@@ -22,9 +23,13 @@ public static class Program {
   public static int Run(string[] args, TextWriter output, TextWriter error) {
     if (args.Length == 0) {
       output.WriteLine($"usage: {Name} <verb> [options]");
-      output.WriteLine("No verb is available yet.");
+      output.WriteLine($"  {ToolchainsCommand.Verb} validate [--lock <path>]");
+      output.WriteLine($"  {ToolchainsCommand.Verb} probe [--lock <path>] [--only <key>[,<key>...]] [--format text|json]");
       return Success;
     }
+
+    if (args[0] == ToolchainsCommand.Verb)
+      return new ToolchainsCommand().Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;

@@ -1,0 +1,9 @@
+schema: 1
+toolchains:
+  ghost:
+    version: "1.0.0"
+    probe: [no-such-binary-polypiler, --version]
+    versionPattern: '^(?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://example.org/ghost
