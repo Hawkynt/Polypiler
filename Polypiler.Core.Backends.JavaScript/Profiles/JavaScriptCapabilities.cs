@@ -157,7 +157,17 @@ public sealed class JavaScriptCapabilities {
     new(".padEnd", 2017, "$pad"),
     new(".trimStart", 2019, "$trimEcma"),
     new(".trimEnd", 2019, "$trimEcma"),
-    new(".replaceAll", 2021, ".split")
+    new(".replaceAll", 2021, ".split"),
+
+    // Numbers to text and back (#1315): ECMAScript 5 has every rule of ECMA-262; the rules of .NET are helpers.
+    new(".toString", 5),
+    new(".toFixed", 5),
+    new(".toPrecision", 5),
+    new(".toUpperCase", 5),
+    new(".push", 5),
+    new(".pop", 5),
+    new("parseFloat", 5),
+    new("parseInt", 5)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

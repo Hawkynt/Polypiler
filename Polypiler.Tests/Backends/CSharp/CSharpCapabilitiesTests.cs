@@ -304,7 +304,7 @@ public sealed class CSharpCapabilitiesTests {
     => row.Operation is { } op && FloatOperationTable.Of(op) is { DoubleName: not null } && row.Operands.All(kind => kind is IrTypeKind.F32 or IrTypeKind.F64);
 
   /// <summary>Whether a row writes a string operation, which CSharpStringEmissionTests test.</summary>
-  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && StringOperations.IsString(op);
+  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && (StringOperations.IsString(op) || NumberTextOperations.IsNumberText(op));
 
   /// <summary>The table names every API and every feature of the language the issue lists, each with the first profile or version that has it.</summary>
   [Test]
@@ -459,7 +459,7 @@ public sealed class CSharpCapabilitiesTests {
     // The store on a span is the one helper only a profile with spans calls; it is C# 8 for .NET Standard 2.1.
     var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(helper => helper != CSharpViewHelpers.StoreSpan).ToList();
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(112));
+    Assert.That(helpers, Has.Count.EqualTo(115));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);

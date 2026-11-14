@@ -101,6 +101,8 @@ public static partial class JavaScriptEmitter {
 
       if (StringOperations.IsString(intrinsic.Op))
         return this.StringOperation(intrinsic);
+      if (NumberTextOperations.IsNumberText(intrinsic.Op))
+        return this.NumberText(intrinsic);
 
       // The integer and bit operations, also those defined on floating-point numbers as well, are written by their families.
       if (this.Integer(intrinsic) is { } integer)

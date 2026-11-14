@@ -402,7 +402,10 @@ public sealed class CSharpCapabilities {
     .. CSharpViewRows.Helpers,
 
     // The string operations of #1314.
-    .. CSharpStringRows.All
+    .. CSharpStringRows.All,
+
+    // The conversions between numbers and text of #1315.
+    .. CSharpNumberTextRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>

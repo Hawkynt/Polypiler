@@ -42,7 +42,8 @@ internal static partial class JavaScriptHelpers {
     "$copy", "$copya", "$step", "$stepi", "$stepf", "$step64", "$stepck", "$stepck64s", "$stepck64u", "$len",
     .. IntegerOrder,
     .. ViewOrder,
-    .. StringOrder
+    .. StringOrder,
+    .. NumberTextOrder
   ];
 
   private static readonly HashSet<string> _names = [.. Order];
@@ -740,6 +741,7 @@ internal static partial class JavaScriptHelpers {
     _ when IntegerSource(name, native) is { } integer => integer,
     _ when ViewSource(name, native) is { } view => view,
     _ when StringSource(name, native) is { } text => text,
+    _ when NumberTextSource(name, native) is { } number => number,
     _ => Lines("function $len(length) {", "  if (length < 0) " + Overflow, "  return length;", "}")
   };
 
