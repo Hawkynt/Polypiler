@@ -456,6 +456,13 @@ the tests read), runs every test that belongs to no other layer
 `polypiler-tooling spec validate` and `ci audit`. The `ci` job keeps the build, the README checks and
 the coverage report of the shared workflow, without running the tests a second time.
 
+`layer-pyperl` installs `python` and `perl` at their pinned versions with their setup actions (never
+the runner image's interpreters, and no package from PyPI or CPAN), probes them and runs
+`--filter "TestCategory=Layer.pyperl"`. Its tests start the interpreters through the cross-language
+runner with the command lines of `Polypiler.Tests.Acceptance/Infra/Ci/PythonCommands.cs` and
+`PerlCommands.cs`: `python -I -B`, `unittest discover -s . -p <file>` (because `-I` keeps the working
+directory off `sys.path`), `perl -c`, `perl -I.` and `prove -I.`.
+
 - **Every test of `Polypiler.Tests.Acceptance` names its layer**: `[Layer("core")]` on its class, or
   the tag `@Layer.core` on its feature file, exactly one.
 - **`tooling/ci/categories.yaml` names the step of every category the fast tier leaves out.**

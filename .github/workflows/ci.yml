@@ -206,3 +206,60 @@ jobs:
           start=$(date +%s%N)
           node tooling/bitperm/export.mjs --page "$PAGE" --out tests/fixtures/bitperm --check --expect-blocks 16 --expect-presets 25 --expect-tests 51
           echo "export wall time: $(( ($(date +%s%N) - start) / 1000000 )) ms"
+
+  # The layer of the interpreted languages (tooling/ci/layers/pyperl.yaml, PRD §7.3): python and perl
+  # at the versions tooling/toolchains.lock pins, installed by their setup actions and never taken from
+  # the runner image, and the acceptance tests of the layer, which run the fixtures of
+  # tests/fixtures/infra/ci/pyperl through the cross-language runner. No package comes from PyPI or CPAN.
+  layer-pyperl:
+    name: layer-pyperl ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # The layer names no .NET toolchain of its own; the SDK is the one the core layer pins.
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer pyperl | tee -a "$GITHUB_OUTPUT"
+          sdk=$($TOOLING ci env --layer core | sed -n 's/^dotnet-sdk=//p')
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ steps.env.outputs.python }}
+      - uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: ${{ steps.env.outputs.perl }}
+      - name: toolchains
+        run: $TOOLING toolchains probe --only python,perl
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.pyperl" --logger "trx;LogFileName=layer-pyperl.trx" --logger "console;verbosity=detailed" --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-pyperl-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn
