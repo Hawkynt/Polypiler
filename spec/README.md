@@ -221,3 +221,16 @@ are not rewrites of this family. Its rules, each `PLY0046`:
 
 Every optimization under `interactions` must have a document (`PLY0043`). The valid example and one
 fixture per rule and per required property live in `tests/fixtures/spec/rewrites/`.
+
+## Family `types`
+
+`spec/types/<family>/<name>.yaml`, ID `TYPES.<name>`: one descriptor per type, with semantic width
+(`bits`), storage (`layout`) and signedness kept apart (PRD §4.4).
+[`schemas/types.schema.json`](schemas/types.schema.json) states the body; `TypesSpecFamily` adds the
+rules `layout` (the folder is `spec.family`, the ID follows from the file name), `bits-fit-layout`
+(`layout.sizeBytes × 8 ≥ bits`), `example-width` (every `values[].bits` fits in `bits`),
+`distinct-symmetric` (a type in `distinctFrom` lists this one back), `alignment-power-of-two` and
+`family-requirements` (`overflow` for integer and fixed; `rounding` for float, fixed, decimal, posit
+and mbf; `nan` for float, posit and mbf; `subnormals` for float and mbf; `lanes` exactly for vector;
+`encoding` exactly for encoded-integer; signedness `none` only for boolean, text and custom). The seed
+documents are the scalar types of the IR: `bool`, `i8` … `u64`, `f32` and `f64`.

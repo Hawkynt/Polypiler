@@ -1,0 +1,27 @@
+id: TYPES.mbf32
+title: Microsoft Binary Format single-precision number
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-FLOAT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  family: mbf
+  parameters: []
+  bits: 32
+  signedness: signed
+  rounding: [nearest-away]
+  nan: none
+  subnormals: false
+  layout: {sizeBytes: 4, alignment: 4, byteOrder: little}
+  distinctFrom: [TYPES.f32]
+  values:
+    - {bits: "0x00000000", value: "0"}
+    - {bits: "0x81000000", value: "1"}
+    - {bits: "0x81800000", value: "-1"}
+    - {bits: "0x80000000", value: "0.5"}
+    - {bits: "0x82400000", value: "3"}
