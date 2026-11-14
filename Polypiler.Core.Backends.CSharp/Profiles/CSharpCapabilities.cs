@@ -43,11 +43,19 @@ public enum CSharpFeature {
 
 }
 
-/// <summary>How a call is written: an optional cast, a method, the arguments, an optional last argument.</summary>
-/// <param name="Method">The method by its full name, or <see langword="null"/> for the helper of the row.</param>
+/// <summary>
+/// How a call is written: an optional cast, a method, the arguments, an optional last argument - or
+/// a template, which says the whole expression.
+/// </summary>
+/// <param name="Method">The method by its full name, or <see langword="null"/> for the helper of the row or for a template that calls no method.</param>
 /// <param name="Cast">The type the result is cast to, or <see langword="null"/> for no cast.</param>
 /// <param name="Further">What follows the arguments of the IR in the argument list, or <see langword="null"/>.</param>
-public sealed record CSharpForm(string? Method, string? Cast = null, string? Further = null);
+/// <param name="Template">
+/// The expression, with <c>{0}</c>, <c>{1}</c> and so on for the arguments in their order, each once,
+/// and <c>{h}</c> for the helper of the row; or <see langword="null"/> for a call. It is a primary
+/// expression and stands where overflow is not checked, so its casts keep the low bits.
+/// </param>
+public sealed record CSharpForm(string? Method, string? Cast = null, string? Further = null, string? Template = null);
 
 /// <summary>
 /// One row of the capability table: something the emitter may want to write, the first profile or
@@ -241,7 +249,10 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfSaturation("saturating cast to int", CSharpProfile.Net100, IrTypeKind.I32, new CSharpForm(null, Further: "-2147483648, 2147483647"), CSharpHelpers.Saturated),
     CSharpCapability.OfSaturation("saturating cast to uint", CSharpProfile.Net100, IrTypeKind.U32, new CSharpForm(null), CSharpHelpers.SaturatedUInt32),
     CSharpCapability.OfSaturation("saturating cast to long", CSharpProfile.Net100, IrTypeKind.I64, new CSharpForm(null), CSharpHelpers.SaturatedInt64),
-    CSharpCapability.OfSaturation("saturating cast to ulong", CSharpProfile.Net100, IrTypeKind.U64, new CSharpForm(null), CSharpHelpers.SaturatedUInt64)
+    CSharpCapability.OfSaturation("saturating cast to ulong", CSharpProfile.Net100, IrTypeKind.U64, new CSharpForm(null), CSharpHelpers.SaturatedUInt64),
+
+    // The integer and bit operations of every width, one family after the other.
+    .. CSharpIntegerRows.All
   ]);
 
   /// <summary>Makes a table of rows.</summary>
@@ -269,6 +280,19 @@ public sealed class CSharpCapabilities {
   public CSharpCapability? Of(IrIntrinsicOp operation, IrTypeKind operand)
     => this.Rows.FirstOrDefault(row => row.Operation == operation && row.Operands.Contains(operand))
       ?? this.Rows.FirstOrDefault(row => row.Operation == operation && row.Operands.Count == 0);
+
+  /// <summary>
+  /// The type an intrinsic's row is chosen by: that of its first argument, but the type of the node
+  /// for a mask and a load, whose first argument is the same for every width, and the type of the
+  /// value for a store.
+  /// </summary>
+  /// <param name="intrinsic">The intrinsic.</param>
+  /// <returns>The type of operand to look the row up with.</returns>
+  public static IrTypeKind OperandOf(IrIntrinsic intrinsic) => intrinsic.Op switch {
+    IrIntrinsicOp.LowMask or IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig => intrinsic.Type.Kind,
+    IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => intrinsic.Arguments[2].Type.Kind,
+    _ => intrinsic.Arguments[0].Type.Kind
+  };
 
   /// <summary>The row of the saturating conversion of a floating-point number to an integer type.</summary>
   /// <param name="target">The integer type.</param>
