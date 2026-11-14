@@ -1,0 +1,11 @@
+# The node entry of tooling/toolchains.lock with a version command no host has: the probe reports
+# PLY0021 (JsLayerTests, test design 13).
+schema: 1
+toolchains:
+  node:
+    version: "24.22.2"
+    probe: [polypiler-no-such-node, --version]
+    versionPattern: '^v(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://nodejs.org/dist/

@@ -1,0 +1,11 @@
+# The node entry of tooling/toolchains.lock pinned to a version no host has: the installed node
+# probes as PLY0022 (JsLayerTests, test design 13).
+schema: 1
+toolchains:
+  node:
+    version: "0.0.1"
+    probe: [node, --version]
+    versionPattern: '^v(?<version>\d+\.\d+\.\d+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://nodejs.org/dist/
