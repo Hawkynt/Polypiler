@@ -30,7 +30,7 @@ public sealed class CSharpProfilesSteps(PrototypeScenario scenario) {
   private string Translated(params string[] options) => scenario.Translate(scenario.Source, "csharp", "csharp", options).Text;
 
   /// <summary>The one file the last command line wrote into <c>out</c>.</summary>
-  private string Generated() => File.ReadAllText(Directory.GetFiles(scenario.Workspace.Resolve("out")).Single());
+  private string Generated() => File.ReadAllText(Directory.GetFiles(scenario.Workspace.Resolve("out")).Single(path => Path.GetFileName(path) != "polypiler.manifest.json"));
 
   /// <summary>Scenario outline: the file compiles for its profile and names it in its header.</summary>
   [Then(@"^the generated file compiles against the reference assemblies of (\S+) at C# (\S+) without diagnostics$")]

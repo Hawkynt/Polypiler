@@ -49,7 +49,7 @@ public sealed class FloatOperationsTests {
     var output = Path.Combine(this._directory, "out-" + Guid.NewGuid().ToString("N"));
     var (exitCode, text) = Toolchain.Polypiler(inProcess, this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
     Assert.That(exitCode, Is.Zero, text);
-    var file = Directory.GetFiles(output).Single();
+    var file = Directory.GetFiles(output).Single(path => Path.GetFileName(path) != "polypiler.manifest.json");
     return (file, File.ReadAllText(file));
   }
 

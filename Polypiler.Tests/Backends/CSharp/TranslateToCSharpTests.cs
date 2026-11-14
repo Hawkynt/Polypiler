@@ -5,6 +5,7 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Cli;
 using Polypiler.Core;
+using Polypiler.Core.Verification.Manifests;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
@@ -53,7 +54,7 @@ public sealed class TranslateToCSharpTests {
     var (exitCode, output, error) = Invoke("translate", PrototypeFixture.PathOf("Adler32"), "--from", "csharp", "--to", "csharp", "--output", this._out);
     Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     Assert.That(output.Trim(), Is.EqualTo(path));
-    Assert.That(Directory.GetFiles(this._out), Is.EqualTo(new[] { path }));
+    Assert.That(Directory.GetFiles(this._out), Is.EquivalentTo(new[] { path, Path.Combine(this._out, Manifest.FileName) }));
     var text = File.ReadAllText(path);
     Assert.That(text, Does.Contain("\npublic static class Adler32 {\n").And.Contain("  public static uint Compute(byte[] data) {\n").And.Not.Contain("namespace"));
     Assert.That(GeneratedCSharp.Compile(text, true).Method("Compute").Invoke(null, [PrototypeCases.Text("Wikipedia")]), Is.EqualTo(300286872u));

@@ -9,6 +9,7 @@ that breaks a rule below. A capability may only be claimed against a document it
 spec/
   diagnostics.yaml        the diagnostics registry (ADR 0003); not a spec document
   schemas/                JSON Schema 2020-12: meta.schema.json, and <family>.schema.json per family
+                          manifest.schema.json: polypiler.manifest.json of an output directory, not a spec document
   <family>/**/*.yaml      the documents of one family
 ```
 
