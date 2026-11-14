@@ -241,6 +241,15 @@ every declared seed, and the message says so.
   qualification, XML docs on public members, LF endings.
 - `Nullable` and `ImplicitUsings` are enabled centrally in `Directory.Build.props`.
 
+## Diagnostic codes
+
+Every `PLY####` code is registered once in [`spec/diagnostics.yaml`](spec/diagnostics.yaml), inside
+its area's block ([ADR 0003](docs/adr/0003-diagnostics-and-exit-codes.md)). A change that emits a new
+code registers it and declares it next to the code that emits it, as a `[Diagnostic] static readonly
+DiagnosticDescriptor` with the same severity, exit code and rule; a code allocated for later is
+registered `reserved: true`. `RegistryMatchesCodeTests` fails when the two disagree, and
+`polypiler-tooling diagnostics validate` checks the registry by itself (`PLY0045` per problem).
+
 ## GUI screenshots
 
 GUI applications treat screenshots as generated product documentation. The README/docs should show

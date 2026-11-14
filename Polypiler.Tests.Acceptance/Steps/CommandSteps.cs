@@ -59,6 +59,10 @@ public sealed class CommandSteps(PolypilerRunner polypiler, ScenarioWorkspace wo
   [Then("^stdout is " + StepText.Quoted + "$")]
   public void StdoutIs(string text) => Assert.That(WithoutTrailingNewline(log.Last.Stdout), Is.EqualTo(StepText.Unescape(text)));
 
+  /// <summary>Checks the end of standard output, after one trailing line break is taken off.</summary>
+  [Then("^stdout ends with " + StepText.Quoted + "$")]
+  public void StdoutEndsWith(string text) => Assert.That(WithoutTrailingNewline(log.Last.Stdout), Does.EndWith(StepText.Unescape(text)), log.Last.Output);
+
   /// <summary>Checks that standard output does not contain a text.</summary>
   [Then("^stdout does not contain " + StepText.Quoted + "$")]
   public void StdoutDoesNotContain(string text) => Assert.That(log.Last.Stdout, Does.Not.Contain(StepText.Unescape(text)));
