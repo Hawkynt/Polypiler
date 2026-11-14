@@ -1,0 +1,19 @@
+id: PERMUTATIONS.cost.layout
+title: A mapping in the folder of the cost tables
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: mapping
+  inputWidth: 1
+  outputs: [0]
+  bijective: true
+  vectors:
+    - {input: "0x0", output: "0x0"}
+    - {input: "0x1", output: "0x1"}

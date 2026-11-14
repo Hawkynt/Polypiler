@@ -1,0 +1,14 @@
+id: PERMUTATIONS.grammar.missing-primitives
+title: Without primitives
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: grammar
+  maxDepth: 4

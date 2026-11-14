@@ -1,0 +1,16 @@
+id: PERMUTATIONS.grammar.every-primitive
+title: Every primitive, for the 6502
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: grammar
+  target: TARGETS.mos6502
+  primitives: [shift, rotate, and, or, xor, not, multiply, pext, pdep, byte-swap, byte-shuffle, lookup-table, bit-test, bit-reverse, rotate-mask, bit-field-insert, bit-field-extract]
+  maxDepth: 64

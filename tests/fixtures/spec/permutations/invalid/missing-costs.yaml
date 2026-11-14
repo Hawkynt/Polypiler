@@ -1,0 +1,15 @@
+id: PERMUTATIONS.cost.missing-costs
+title: Without costs
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: cost
+  cpu: z80
+  evidence: {kind: documented, reference: "Zilog, Z80 CPU User Manual UM0080"}
