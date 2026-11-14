@@ -495,7 +495,15 @@ public static partial class CSharpEmitter {
     private readonly Dictionary<string, string> _helpers;
     private readonly HashSet<string> _taken;
     private readonly Dictionary<string, string> _members;
-    private Dictionary<string, string> _locals = [];
+
+    /// <summary>The C# spelling of every name of a parameter or local of the function being written, before any renaming.</summary>
+    private Dictionary<string, string> _spellings = [];
+
+    /// <summary>Every name, without its <c>@</c>, that a variable of the function being written may not take when it is renamed.</summary>
+    private HashSet<string> _names = [];
+
+    /// <summary>The blocks around the statement being written, the innermost last; the first holds the parameters.</summary>
+    private readonly List<Scope> _scopes = [];
 
     /// <summary>The locals the function being written sets to the complement of a shift count, with its width.</summary>
     private HashSet<(IrLocal Local, int Width)> _complements = [];
@@ -639,9 +647,12 @@ public static partial class CSharpEmitter {
 
     private void Function(IrFunction function) {
       // A variable spelled like a member or a helper would hide it, so their names are taken.
-      this._locals = Names(function.Parameters.Concat(function.Locals).Select(variable => variable.Name), this._taken);
+      this._spellings = Names(function.Parameters.Concat(function.Locals).Select(variable => variable.Name), this._taken);
+      this._names = [.. this._taken.Concat(this._spellings.Values).Select(name => name.TrimStart('@'))];
       this._complements = Complements(function);
-      var parameters = string.Join(", ", function.Parameters.Select(parameter => $"{TypeName(parameter.Type)} {this._locals[parameter.Name]}"));
+      this._scopes.Clear();
+      this._scopes.Add(new Scope());
+      var parameters = string.Join(", ", function.Parameters.Select(parameter => $"{TypeName(parameter.Type)} {this.Declare(parameter)}"));
       this._code.Append("\n  ").Append(function.IsPublic ? "public" : "private").Append(" static ")
         .Append(TypeName(function.ReturnType)).Append(' ').Append(this._members[function.Name])
         .Append('(').Append(parameters).Append(')');
@@ -668,10 +679,43 @@ public static partial class CSharpEmitter {
     private string TypeName(IrType type)
       => type.Declaration is { } declared ? this._typeNames[declared.Name] : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
+    /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
     private void Statements(IrBlock block, int depth) {
+      var scope = new Scope();
+      this._scopes.Add(scope);
       foreach (var statement in block.Statements)
         this.Statement(statement, depth);
+
+      this._scopes.RemoveAt(this._scopes.Count - 1);
+      this._scopes[^1].Within.UnionWith(scope.Within);
     }
+
+    /// <summary>
+    /// Gives a parameter or local declared in the innermost block its C# name. C# forbids a name that
+    /// a variable of an enclosing block has, or one of a block inside this one, wherever in the block
+    /// either declaration stands (ECMA-334, "Local variable declaration spaces"); the IR allows both.
+    /// The later of two such declarations is the one written here, and it becomes
+    /// <c>&lt;name&gt;_&lt;k&gt;</c> with the smallest <c>k</c> that no other name of the function or
+    /// the class has. Every other variable keeps its spelling, with an <c>@</c> when it is a keyword.
+    /// </summary>
+    private string Declare(IrLocal local) {
+      var scope = this._scopes[^1];
+      var name = this._spellings[local.Name].TrimStart('@');
+      if (scope.Within.Contains(name) || this._scopes.Any(outer => outer.Own.Contains(name))) {
+        var spelling = name;
+        var index = 0;
+        do
+          name = $"{spelling}_{++index}";
+        while (!this._names.Add(name));
+      }
+
+      scope.Own.Add(name);
+      scope.Within.Add(name);
+      return scope.Declared[local] = _keywords.Contains(name) ? "@" + name : name;
+    }
+
+    /// <summary>The C# name of a variable: that of its declaration in the innermost block around the statement being written that has one.</summary>
+    private string Local(IrLocal local) => this._scopes.Last(scope => scope.Declared.ContainsKey(local)).Declared[local];
 
     private StringBuilder Line(int depth) => this._code.Append(' ', depth * 2);
 
@@ -683,11 +727,9 @@ public static partial class CSharpEmitter {
           this.Line(depth).Append("}\n");
           break;
         case IrDeclare declare:
-          this.Line(depth).Append(this.Infers(declare) ? "var" : TypeName(declare.Local.Type)).Append(' ').Append(this._locals[declare.Local.Name]);
-          if (declare.Initializer is not null)
-            this._code.Append(" = ").Append(this.Stored(declare.Initializer));
-
-          this._code.Append(";\n");
+          // The initializer is read before the variable is declared, as the IR reads it.
+          var initializer = declare.Initializer is null ? "" : " = " + this.Stored(declare.Initializer);
+          this.Line(depth).Append(this.Infers(declare) ? "var" : TypeName(declare.Local.Type)).Append(' ').Append(this.Declare(declare.Local)).Append(initializer).Append(";\n");
           break;
         case IrAssign or IrStore or IrFieldStore or IrExprStmt:
           this.Line(depth).Append(this.Effect(statement)).Append(";\n");
@@ -754,7 +796,7 @@ public static partial class CSharpEmitter {
     private string Effect(IrStmt statement) {
       switch (statement) {
         case IrAssign assign:
-          return $"{this._locals[assign.Local.Name]} = {this.Stored(assign.Value)}";
+          return $"{this.Local(assign.Local)} = {this.Stored(assign.Value)}";
         case IrStore store:
           return $"{this.Element(store.Array, store.Index)} = {this.Stored(store.Value)}";
         case IrFieldStore store:
@@ -951,7 +993,7 @@ public static partial class CSharpEmitter {
         case IrConstRef reference:
           return (this._members[reference.Constant.Name], Primary);
         case IrLocalRef reference:
-          return (this._locals[reference.Local.Name], Primary);
+          return (this.Local(reference.Local), Primary);
         case IrUnary unary:
           var operand = Promoted(unary.Operand);
           return (_unary[unary.Op] + (unary.Op == IrUnaryOp.NegateChecked ? this.AtRunTime(operand, false, Cast) : this.Operand(operand, Cast)), Unary);
@@ -969,7 +1011,7 @@ public static partial class CSharpEmitter {
           var count = this.AtRunTime(Promoted(creation.Length), creation.Length is IrConst { Value: >= 0 }, Loose);
           return ($"new {TypeName(creation.Type.Element!)}[{count}]", Unary);
         case IrStep step:
-          var target = step.Target is IrArrayLoad element ? this.Element(element.Array, element.Index) : this._locals[((IrLocalRef)step.Target).Local.Name];
+          var target = step.Target is IrArrayLoad element ? this.Element(element.Array, element.Index) : this.Local(((IrLocalRef)step.Target).Local);
           var sign = step.Increment ? "++" : "--";
           return step.Postfix ? (target + sign, Primary) : (sign + target, Unary);
         case IrIntrinsic intrinsic:
@@ -1068,6 +1110,20 @@ public static partial class CSharpEmitter {
       var call = $"{form.Method ?? this.Helper(row.Helper!)}({string.Join(", ", form.Further is null ? all : all.Append(form.Further))})";
       return form.Cast is null ? (call, Primary) : ($"({form.Cast}){call}", Cast);
     }
+
+  }
+
+  /// <summary>A block of the method being written, as a declaration space of C#.</summary>
+  private sealed class Scope {
+
+    /// <summary>The C# name of every variable declared in the block itself.</summary>
+    public Dictionary<IrLocal, string> Declared { get; } = [];
+
+    /// <summary>The names, without an <c>@</c>, of the variables declared in the block itself.</summary>
+    public HashSet<string> Own { get; } = [];
+
+    /// <summary>The names, without an <c>@</c>, of the variables declared in the block so far or in a block inside it.</summary>
+    public HashSet<string> Within { get; } = [];
 
   }
 
