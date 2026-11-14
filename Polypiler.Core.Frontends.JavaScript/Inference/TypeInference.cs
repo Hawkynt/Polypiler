@@ -107,7 +107,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   public List<FunctionModel> Solve(IEnumerable<Candidate> roots, System.Func<Candidate, bool> isPublic) {
     var models = new List<FunctionModel>();
     // A function an initializer calls is imported as well.
-    var pending = new Queue<Candidate>(roots.Concat(this.Initializers?.Callees ?? []));
+    var pending = new Queue<Candidate>(roots.Concat(this.Initializers.Callees));
     while (pending.TryDequeue(out var candidate)) {
       var model = this.ModelOf(candidate);
       if (models.Contains(model))

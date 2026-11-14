@@ -79,7 +79,7 @@ internal sealed partial class Lowering {
         if (variable.IsUninitialized && !this._assigned.Contains(variable))
           throw this.Refuse(identifier, JavaScriptFrontend.ReadBeforeAssignmentDescriptor, $"'{identifier.Name}' may be read before it is assigned");
 
-        return this.Read(variable, identifier);
+        return Read(variable);
       case ModuleConstant constant:
         // A table never comes here: one that is used as a value is no constant.
         this.Constants.Add(constant);

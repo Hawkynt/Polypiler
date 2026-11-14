@@ -126,6 +126,27 @@ public sealed class GlobalEmissionTests {
           Script(module, level, format, level == "es5");
   }
 
+  /// <summary>
+  /// An assignment to a global is the one statement of the step of a for, and a step of a global is a
+  /// value: C# writes a real for and the operator on the field, JavaScript an assignment in the third
+  /// part and the step as an assignment inside the expression.
+  /// </summary>
+  [Test]
+  public void BothBackends_WriteAGlobalInTheStepOfAForAndAsAStep() {
+    var total = new IrGlobal("total", IrType.I32, new IrConst(IrType.I32, 0));
+    var add = new IrBinary(IrBinaryOp.Add, new IrGlobalRef(total), new IrConst(IrType.I32, 2));
+    var loop = new IrFor(new IrBinary(IrBinaryOp.Less, new IrGlobalRef(total), new IrConst(IrType.I32, 5)), new IrBlock([new IrContinue()]), new IrBlock([new IrGlobalAssign(total, add)]));
+    var module = new IrModule("Loop", [
+      new IrFunction("F", true, IrType.I32, [], [], new IrBlock([loop, new IrReturn(new IrGlobalRef(total))])),
+      new IrFunction("G", true, IrType.I32, [], [], new IrBlock([new IrReturn(new IrStep(new IrGlobalRef(total), true, true, false))]))
+    ]) { Globals = [total] };
+    var csharp = CSharp(module, "net2.0");
+    Assert.That(csharp, Does.Contain("for (; total < 5; total = total + 2) {").And.Contain("return total++;"));
+    var build = GeneratedCSharp.Compile(csharp, true);
+    Assert.That(new[] { build.Outcome(new("F", [])), build.Outcome(new("G", [])), build.Outcome(new("G", [])) }, Is.EqualTo(new[] { "6", "6", "7" }));
+    Assert.That(Script(module, "es2022"), Does.Contain("for (; total < 5; total = (total + 2) | 0) {").And.Contain("return ($p = total, total = ($p + 1) | 0, $p);"));
+  }
+
   /// <summary>The checks of both backends find nothing to refuse in a module with globals.</summary>
   [Test]
   public void TheChecks_AcceptEveryNodeOfAGlobal() {

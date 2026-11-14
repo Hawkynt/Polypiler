@@ -58,6 +58,7 @@ public sealed class JavaScriptGlobalImportTests {
   [TestCase("const t = new Uint8Array(2); export function f() { t[0] = t[0] + 255; return t[0]; }", "255", "254")]
   [TestCase("const t = [0, 0]; export function f() { t[1] = (t[1] + 2) | 0; return t[1]; }", "2", "4")]
   [TestCase("const t = new Int32Array([7, 8]); export function f() { t[0]++; return t[0]; }", "8", "9")]
+  [TestCase("let g = 1; const t = new Int32Array(3); export function f() { t[g] += 5; return t[1]; }", "5", "10")]
   [TestCase("let s = 18446744073709551615n; export function f() { s = BigInt.asUintN(64, s + 1n); return s; }", "0", "1")]
   public void AVariableOfTheModule_KeepsItsValueBetweenCalls(string source, string first, string second)
     => Assert.That(Calls(source, "f", "f"), Is.EqualTo(new[] { first, second }));

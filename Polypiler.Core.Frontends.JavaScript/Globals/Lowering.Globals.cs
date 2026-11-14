@@ -7,16 +7,11 @@ namespace Polypiler.Core.Frontends.JavaScript;
 
 internal sealed partial class Lowering {
 
-  /// <summary>A variable as it is read: a local or parameter, or a global of the module.</summary>
-  private IrExpr Read(Variable variable, Node at) {
-    if (!variable.IsGlobal)
-      return new IrLocalRef(variable.Local!);
-
-    if (variable.Problem is { } problem)
-      throw this.Unsupported(at, problem);
-
-    return new IrGlobalRef(variable.Global!);
-  }
+  /// <summary>
+  /// A variable as it is read: a local or parameter, or a global of the module. A variable of the
+  /// module that a function uses was lowered before the function, or refused, and then no function is.
+  /// </summary>
+  private static IrExpr Read(Variable variable) => variable.IsGlobal ? new IrGlobalRef(variable.Global!) : new IrLocalRef(variable.Local!);
 
   /// <summary>An assignment to a variable, a local or a global of the module, that <see cref="Read"/> accepted.</summary>
   private static IrStmt Write(Variable variable, IrExpr value)

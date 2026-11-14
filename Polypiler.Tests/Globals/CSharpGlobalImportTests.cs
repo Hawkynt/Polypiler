@@ -80,6 +80,7 @@ public sealed class CSharpGlobalImportTests {
   [TestCase("static readonly uint[] t = { 1, 2 }; public static uint F() { System.Array.Fill(t, t[0] + 1u); return t[1]; }", 2u, 3u)]
   [TestCase("static readonly uint[] t = { 1, 2 }; public static uint F() { System.Array.Clear(t); t[0]++; return t[0]; }", 1u, 1u)]
   [TestCase("static readonly int[] t = { 1, 2 }; public static int F() { System.Array.Copy(new[] { t[1] + 1 }, 0, t, 1, 1); return t[1]; }", 3, 4)]
+  [TestCase("static int g = 1; static readonly int[] t = new int[3]; public static int F() { t[g] += 5; return t[1]; }", 5, 10)]
   public void TheStateOfAField_LastsFromCallToCall(string methods, object first, object second)
     => Assert.That(Calls(methods, "F", "F"), Is.EqualTo(new[] { first, second }));
 
@@ -119,6 +120,7 @@ public sealed class CSharpGlobalImportTests {
   [TestCase("static int x = x + 1; public static int F() => x;", "an initializer that reads the field x, which is not initialised before it")]
   [TestCase("static int[] t = new int[2]; public static void F() { t = new int[3]; }", "an assignment to the array field t")]
   [TestCase("static int[] t; public static int F() => t.Length;", "an array field without an initializer, t")]
+  [TestCase("static readonly int[] t = { 1, 2 }; public static int F() => System.Array.IndexOf(t, 2);", "Array.IndexOf")]
   public void Construct_IsRefusedByName(string methods, string what) {
     var result = CSharpFrontend.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
     Assert.That(result.Module, Is.Null);

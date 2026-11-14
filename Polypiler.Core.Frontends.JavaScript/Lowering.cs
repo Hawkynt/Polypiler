@@ -390,7 +390,7 @@ internal sealed partial class Lowering(TypeInference types) {
         if (variable.IsConstant)
           throw this.Unsupported(assignment, $"an assignment to the constant {name}");
 
-        var place = this.Read(variable, target);
+        var place = Read(variable);
         var value = compound is { } op
           ? this.To(this.Binary(op, target, assignment.Right, Coercion.None, assignment), place.Type, assignment)
           : this.Value(assignment.Right, place.Type);

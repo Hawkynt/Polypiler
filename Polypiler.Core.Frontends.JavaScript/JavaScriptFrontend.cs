@@ -188,7 +188,7 @@ public static class JavaScriptFrontend {
 
     inference.Shapes.Seal();
     var lowering = new Lowering(inference);
-    var state = ModuleState.Lower(program, globals, models, inference.Initializers!, lowering, diagnostics);
+    var state = ModuleState.Lower(program, globals, models, inference.Initializers, lowering, diagnostics);
     if (diagnostics.Count > 0)
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 

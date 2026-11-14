@@ -13,7 +13,7 @@ internal sealed partial class TypeInference {
   /// its flows let reach a variable is joined with what the functions let reach it, so that a variable
   /// of the module is typed like a local, from every value that reaches it anywhere.
   /// </summary>
-  public FunctionModel? Initializers { get; private set; }
+  public FunctionModel Initializers { get; private set; } = null!;
 
   /// <summary>Takes the variables of the module and binds their initializers; call it before <see cref="Solve"/>.</summary>
   /// <param name="globals">The variables, in source order.</param>
@@ -34,6 +34,6 @@ internal sealed partial class TypeInference {
   private Binder BinderOf(FunctionModel model) => new(model, candidates, constants, source) { Globals = this._globals };
 
   /// <summary>The functions whose flows the fixed point runs over: those imported and the initializers.</summary>
-  private IEnumerable<FunctionModel> Flowing(List<FunctionModel> models) => this.Initializers is { } initializers ? models.Append(initializers) : models;
+  private IEnumerable<FunctionModel> Flowing(List<FunctionModel> models) => models.Append(this.Initializers);
 
 }
