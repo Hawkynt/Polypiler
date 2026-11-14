@@ -1,0 +1,15 @@
+{
+  "name": "pattern-set_all_0-8",
+  "source": {"line": 2347},
+  "width": 8,
+  "mapping": [
+    {"type": "const", "val": 0, "inv": false},
+    {"type": "const", "val": 0, "inv": false},
+    {"type": "const", "val": 0, "inv": false},
+    {"type": "const", "val": 0, "inv": false},
+    {"type": "const", "val": 0, "inv": false},
+    {"type": "const", "val": 0, "inv": false},
+    {"type": "const", "val": 0, "inv": false},
+    {"type": "const", "val": 0, "inv": false}
+  ]
+}

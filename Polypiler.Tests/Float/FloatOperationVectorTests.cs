@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.IR;
+using Polypiler.Core.Verification.Oracles;
 using Polypiler.Tests.Float.Support;
 
 namespace Polypiler.Tests.Float;
@@ -58,22 +59,16 @@ public sealed class FloatOperationVectorTests {
   }
 
   /// <summary>
-  /// Whether a result is the correctly rounded one, or within the distance: a NaN only matches a NaN,
-  /// a zero only the zero of the same sign, an infinity only the same infinity (ADR 0005).
+  /// Whether a result is the correctly rounded one, or within the distance, as the verification
+  /// framework compares them: a NaN only matches a NaN, a zero only the zero of the same sign, an
+  /// infinity only the same infinity (ADR 0005).
   /// </summary>
   private static bool Matches(IrType format, FloatVector vector, long actual, int distance) {
-    if (FloatVectors.Same(format, vector.Result, actual))
-      return true;
-
-    if (distance == 0 || FloatVectors.IsNaN(format, vector.Result) || FloatVectors.IsNaN(format, actual))
-      return false;
-
-    var expected = FloatVectors.Value(format, vector.Result);
-    var computed = FloatVectors.Value(format, actual);
-    if (double.IsInfinity(expected) || double.IsInfinity(computed) || expected == 0 && computed == 0)
-      return false;
-
-    return FloatVectors.Distance(format, vector.Result, actual) <= distance;
+    var element = FloatVectors.Format(format);
+    ExactnessPolicy policy = distance == 0
+      ? new ExactnessPolicy.Exact(element)
+      : new ExactnessPolicy.Ulp(distance, element, reason: "the distance the implementation states from the correctly rounded result");
+    return FloatComparison.Compare(element, (ulong)vector.Result, (ulong)actual, policy).Passed;
   }
 
   /// <summary>Every vector of the special classes and every tenth of the random ones.</summary>
