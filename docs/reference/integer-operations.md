@@ -58,6 +58,55 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
 
 Truncating division and its remainder are the `Divide` and `Remainder` operators of the IR.
 
+## C# frontend
+
+`CSharpIntegerApi` in `Polypiler.Core.Frontends.CSharp` is the table the frontend reads: each member
+with the constructs of the IR it becomes. An overload the IR does not define the operation on, and a
+member of these types the table does not list (`BitOperations.Crc32C`), is refused by name with
+`PLY1002`.
+
+| Member | IR | Edges |
+| --- | --- | --- |
+| `BitOperations.RotateLeft`/`RotateRight`, `T.RotateLeft`/`RotateRight` | `RotateLeft`, `RotateRight` | |
+| `BitOperations.PopCount`/`LeadingZeroCount`/`TrailingZeroCount`/`Log2`, the same of `T` | the count, converted to the result type of the member | `T.Log2` of a negative signed value traps as an integer overflow; .NET throws `ArgumentOutOfRangeException` |
+| `BitOperations.IsPow2`, `T.IsPow2`, `BitOperations.RoundUpToPowerOf2` | `IsPow2`, `RoundUpPow2` | |
+| `BinaryPrimitives.ReverseEndianness` | `ByteSwap` | |
+| `Math.BigMul(int, int)`, `Math.BigMul(uint, uint)` | `BigMul` | |
+| `Math.BigMul(a, b, out low)` of 64 bits | `MulHigh`, `Multiply` | only in a statement, the out argument a local |
+| `Math.DivRem(a, b, out r)`, `Math.DivRem(a, b)`, `T.DivRem(a, b)` | `Divide`, `Remainder` | only in a statement, deconstructed into locals; traps where the division does |
+| `Math.Clamp`, `T.Clamp` | `Clamp` | crossed bounds trap as an invalid operation; .NET throws `ArgumentException` |
+| `T.Min`, `T.Max`, `T.Abs`, `T.Sign` | `Min`, `Max`, `Abs`, `Sign` | |
+| `T.CreateSaturating` | `Clamp` and `Convert`, or a saturating `Convert` of a floating-point number | |
+| `T.CreateTruncating`, `T.CreateChecked` | `Convert`, wrapping or trapping | `CreateTruncating` of a floating-point number is refused |
+| `BinaryPrimitives.Read…LittleEndian`/`BigEndian` | `LoadLittle`, `LoadBig` | the bytes a `byte[]`, `array.AsSpan()`, `array.AsSpan(index)` or `array.AsSpan(index, size)` with the size of the value as a constant |
+| `BinaryPrimitives.Write…LittleEndian`/`BigEndian` | `StoreLittle`, `StoreBig` | as the reads; the value one that cannot trap and has no effect, as .NET checks the span before it evaluates the value |
+| `BitConverter.ToInt16` … `ToUInt64` | `LoadLittle` | little-endian, as on every supported host |
+
+`T` is each of `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`; `T.Abs` exists for the
+signed ones. A file that uses `AsSpan` needs `using System;`, as the frontend compiles it without global
+usings.
+
+## JavaScript frontend
+
+`JavaScriptIntegerApi` in `Polypiler.Core.Frontends.JavaScript` lists what the JavaScript frontend maps.
+A spelled-out idiom such as `(x << n) | (x >>> (32 - n))` is no member; recognising it is a later pass's.
+
+| Member | IR | Edges |
+| --- | --- | --- |
+| `Math.clz32` | `LeadingZeroCount` | of `ToUint32` of the argument |
+| `Math.imul` | `Multiply` | of `ToInt32` of both arguments |
+| `Math.abs` | `AbsWrap`, converted to the unsigned type of the width | on a proven integer: the magnitude of the smallest `int32` is the `uint32` 2147483648 |
+| `Math.min`, `Math.max` | `Min`, `Max` | on proven integers, in the smallest type that holds them all |
+| `Math.sign` | `Sign` | on a proven integer, as an `int32` |
+| `BigInt.asUintN(n, x)`, `BigInt.asIntN(n, x)` | `ZeroExtend`, `SignExtend` | `n` a literal from 1 to 64; 64 is the cut to `uint64` or `int64` itself |
+| `DataView` `getInt8`, `getUint8`, `setInt8`, `setUint8` | an element of the array | the view a `const` of `new DataView(bytes.buffer)` or `new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)` of a `Uint8Array` of the function |
+| `DataView` `get`/`set` `Int16` … `BigUint64` | `LoadLittle`, `LoadBig`, `StoreLittle`, `StoreBig` | as above, at a proven integer index; the byte order a literal, big-endian when it is missing |
+
+`new DataView(bytes.buffer)` is read as the view of the bytes of `bytes`, which it is unless the array is
+part of a larger buffer. A form outside the table - a byte order that is no literal, a view that is not
+`const`, a float method - is refused with `PLY1102`.
+
+
 ## Forms per profile
 
 ### C#
@@ -120,3 +169,8 @@ their 64-bit forms), declared only when a module calls it.
   with overflow checking) and seven JavaScript profiles in `node` (ES5 plain and with typed arrays,
   ES5 as a script, ES2015, ES2017, ES2020, ES2022): 0 mismatches against the reference.
 - Every row of the C# table compiles in its first profile and not in the one before.
+- Every member of both frontend tables has uses; each is imported into the constructs its entry names, and
+  the interpreter computes on the edges of the operands what .NET computes for the C# source and what node
+  computes for the JavaScript source.
+- The fixtures of `tests/fixtures/prototype/bits` - SipHash-2-4, xxHash32, CRC-16/ARC and one file per
+  family - have their published vectors in every profile of both backends.

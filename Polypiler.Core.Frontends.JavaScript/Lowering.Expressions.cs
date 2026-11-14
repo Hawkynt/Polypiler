@@ -68,6 +68,8 @@ internal sealed partial class Lowering {
 
   private IrExpr Name(Identifier identifier) {
     switch (this._model.Bindings.GetValueOrDefault(identifier)) {
+      case Variable variable when this._views.ContainsKey(variable):
+        throw this.Unsupported(identifier, $"the DataView '{identifier.Name}' used other than by its methods get… and set…");
       case Variable variable:
         if (variable.IsUninitialized && !this._assigned.Contains(variable))
           throw this.Refuse(identifier, JavaScriptFrontend.ReadBeforeAssignment, $"'{identifier.Name}' may be read before it is assigned");
@@ -306,6 +308,9 @@ internal sealed partial class Lowering {
 
     IrExpr Constant(double value) => new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, value));
     IrExpr Library(IrIntrinsicOp op, params IrExpr[] operands) => new IrIntrinsic(op, IrType.F64, operands);
+    if (this.IntegerCall(call, builtin) is { } integer)
+      return integer;
+
     switch (builtin) {
       case null:
         return this.CallFunction(call);
@@ -340,12 +345,6 @@ internal sealed partial class Lowering {
         return arguments.Count == 0
           ? Constant(min ? double.PositiveInfinity : double.NegativeInfinity)
           : arguments.Select(argument => this.Float(argument)).Aggregate((first, second) => Library(min ? IrIntrinsicOp.Min : IrIntrinsicOp.Max, first, second));
-      case "BigInt.asUintN" or "BigInt.asIntN":
-        Takes(2);
-        if (arguments[0] is not NumericLiteral { Value: 64 })
-          throw this.Unsupported(call, $"{builtin} with a width other than 64");
-
-        return builtin == "BigInt.asUintN" ? this.Big(arguments[1], Coercion.Uint64, IrType.U64) : this.Big(arguments[1], Coercion.Int64, IrType.I64);
       case "BigInt":
         Takes(1);
         var number = this.Evaluate(arguments[0]);
