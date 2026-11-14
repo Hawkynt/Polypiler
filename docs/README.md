@@ -16,6 +16,10 @@ Original chapter numbers and section links are retained. The pages here are a re
 7. [Worked translation walks](architecture/WALKTHROUGHS.md) — the first required cross-language showcases.
 8. [Verification and release gates](quality/VERIFICATION.md) — the definition of "supported", test oracles and failure behavior.
 
+## Reference
+
+- [Integer and bit operations](reference/integer-operations.md) — every operation of the IR on every width, its edge cases and its form in each target profile.
+
 ## Work-item readiness
 
 Use the [canonical issue-writing standard](../ISSUES.md), its
