@@ -83,7 +83,7 @@ public sealed class ImportBitPermTests {
     Assert.That(_generated.Value.All(file => !file.Content.Contains('\r', StringComparison.Ordinal)), Is.True);
   }
 
-  [Test]
+  [Test, Category("Slow")]
   public void Generate_TheTreeWithTheSeedValidates_SeventyFourDocumentsNoErrors() {
     using var repository = Repository();
     var result = repository.Validate("permutations");
@@ -258,7 +258,7 @@ public sealed class ImportBitPermTests {
 
   // --- 9: a tampered vector ---
 
-  [Test]
+  [Test, Category("Slow")]
   public void TamperedVector_IsRefusedByVectorConsistent() {
     using var repository = Repository();
     var path = "permutations/mappings/bitperm-pattern-reverse-8.yaml";
