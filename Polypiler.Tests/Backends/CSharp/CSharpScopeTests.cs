@@ -80,11 +80,12 @@ public sealed class CSharpScopeTests {
     => CSharpProfile.All.Select(profile => new TestCaseData(fixture, function, argument, result, profile.Name).SetCategory("Slow")
       .SetArgDisplayNames(fixture, $"{function}({argument})", result.ToString(System.Globalization.CultureInfo.InvariantCulture), profile.Name));
 
-  /// <summary>Test design 1, 2 and 4: the values <c>node</c> prints for the sources.</summary>
+  /// <summary>Test design 1, 2 and 4, and the same for a record-typed local: the values <c>node</c> prints for the sources.</summary>
   private static IEnumerable<TestCaseData> Scripts()
     => Profiles("later", "f", 3, 3.5).Concat(Profiles("later", "f", 0, 0.5))
       .Concat(Profiles("loop", "g", 4, 16)).Concat(Profiles("loop", "g", 0, 10))
-      .Concat(Profiles("later2", "f", 3, 6)).Concat(Profiles("later2", "f", 1, 1));
+      .Concat(Profiles("later2", "f", 3, 6)).Concat(Profiles("later2", "f", 1, 1))
+      .Concat(Profiles("records", "f", 4, 14)).Concat(Profiles("records", "f", 0, 0));
 
   /// <summary>
   /// Test design 1, 2 and 4: a block-local <c>let</c> or a loop variable followed by a <c>let</c> of
@@ -117,6 +118,13 @@ public sealed class CSharpScopeTests {
       "double t_1 = 0.5;",
       "return s + t_1;"
     }));
+  }
+
+  /// <summary>A record-typed local is renamed like any other, and its fields are read through the new name.</summary>
+  [Test]
+  public void LaterOuterRecord_IsTheOneRenamed() {
+    var text = this.Translate(Path.Combine(_scripts, "records.js"), "javascript", "net2.0");
+    Assert.That(text, Does.Contain("      P p = new P(ToInt32(n), 3);\n").And.Contain("    P2 p_1 = new P2(0.5, n);\n").And.Contain("return s + (p_1.x * p_1.y);"));
   }
 
   /// <summary>The loop variable keeps its name and the later local of the enclosing block is renamed.</summary>
