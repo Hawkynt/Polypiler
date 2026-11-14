@@ -298,10 +298,10 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       var coercion = builtin switch {
         "Math.imul" => Coercion.Int32,
         "Math.clz32" => Coercion.Uint32,
-        // The value a DataView stores is converted as the method says: ToInt32 or ToUint32, then cut, or modulo 2^64.
+        // The value a DataView stores is converted as the method says: ToInt32 or ToUint32, then cut, or modulo 2^64; a number stays one.
         null when index == 1 && call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: var method } }
           && method.StartsWith("set", System.StringComparison.Ordinal) && JavaScriptIntegerApi.ViewType(method) is { } stored
-          => stored.IsLong ? (stored.IsSigned ? Coercion.Int64 : Coercion.Uint64) : stored.IsSigned ? Coercion.Int32 : Coercion.Uint32,
+          => stored.IsFloat ? Coercion.None : stored.IsLong ? (stored.IsSigned ? Coercion.Int64 : Coercion.Uint64) : stored.IsSigned ? Coercion.Int32 : Coercion.Uint32,
         _ => Coercion.None
       };
       this.Expression(call.Arguments[index], coercion, call);
