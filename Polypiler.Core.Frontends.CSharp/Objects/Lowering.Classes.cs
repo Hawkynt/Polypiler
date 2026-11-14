@@ -25,15 +25,16 @@ internal sealed partial class Lowering {
   private readonly Dictionary<ISymbol, IrClassType> _staticOwners = new(SymbolEqualityComparer.Default);
 
   /// <summary>The members of every class whose bodies are lowered after the globals: what each function is made of.</summary>
-  private readonly List<(string Path, SemanticModel Model, IrClassType Owner, Func<IrFunction> Lower)> _bodies = [];
+  private readonly List<(string Path, SemanticModel Model, IrTypeDeclaration Owner, Func<IrFunction> Lower)> _bodies = [];
 
   /// <summary>The receiver of the member being lowered, <c>this</c>; <see langword="null"/> in a static function.</summary>
   private IrLocal? _receiver;
 
-  /// <summary>Whether a member declares a class that holds objects: a class that is not static, or a record class.</summary>
+  /// <summary>Whether a member declares a class that holds objects - a class that is not static, or a record class - or an interface.</summary>
   private static bool IsClass(MemberDeclarationSyntax member)
     => member is ClassDeclarationSyntax type && !type.Modifiers.Any(SyntaxKind.StaticKeyword)
-      || member is RecordDeclarationSyntax { ClassOrStructKeyword.RawKind: not (int)SyntaxKind.StructKeyword };
+      || member is RecordDeclarationSyntax { ClassOrStructKeyword.RawKind: not (int)SyntaxKind.StructKeyword }
+      || member is InterfaceDeclarationSyntax;
 
   /// <summary>
   /// Declares the classes of every file: first a type for each, so that a field may have the type of a
@@ -45,14 +46,29 @@ internal sealed partial class Lowering {
       path = file;
       model = semantics;
       var symbol = semantics.GetDeclaredSymbol(type)!;
-      var declared = new IrClassType(symbol.Name) { IsRecord = type is RecordDeclarationSyntax, Visibility = VisibilityOf(symbol) };
-      this._classes[symbol] = declared;
-      this._types.Add(declared);
+      IrTypeDeclaration made = type is InterfaceDeclarationSyntax
+        ? this._interfaces[symbol] = new IrInterfaceType(symbol.Name) { Visibility = VisibilityOf(symbol) }
+        : this._classes[symbol] = new IrClassType(symbol.Name) {
+          IsRecord = type is RecordDeclarationSyntax, Visibility = VisibilityOf(symbol), IsAbstract = symbol.IsAbstract, IsSealed = symbol.IsSealed
+        };
+      this._types.Add(made);
       if (!names.Add(symbol.Name))
         this.Report(new UnsupportedException(type, $"a second type named {symbol.Name}"));
     }
 
-    foreach (var (file, semantics, type) in classes) {
+    var hierarchy = this.Hierarchy(classes);
+    foreach (var (file, semantics, type) in hierarchy.OfType<InterfaceDeclarationSyntax>().Select(Find)) {
+      path = file;
+      model = semantics;
+      try {
+        this.Interface(type);
+      } catch (UnsupportedException unsupported) {
+        this.Report(unsupported);
+      }
+    }
+
+    (string, SemanticModel, TypeDeclarationSyntax) Find(TypeDeclarationSyntax type) => classes.First(entry => entry.Type == type);
+    foreach (var (file, semantics, type) in hierarchy.Where(type => type is not InterfaceDeclarationSyntax).Select(Find)) {
       path = file;
       model = semantics;
       var declared = this._classes[semantics.GetDeclaredSymbol(type)!];
@@ -71,6 +87,7 @@ internal sealed partial class Lowering {
   private static IrVisibility VisibilityOf(ISymbol symbol) => symbol.DeclaredAccessibility switch {
     Accessibility.Public => IrVisibility.Public,
     Accessibility.Private => IrVisibility.Private,
+    Accessibility.Protected or Accessibility.ProtectedOrInternal or Accessibility.ProtectedAndInternal => IrVisibility.Protected,
     _ => IrVisibility.Internal
   };
 
@@ -89,7 +106,7 @@ internal sealed partial class Lowering {
   private void Class(TypeDeclarationSyntax type, IrClassType declared, IEnumerable<TypeDeclarationSyntax> all) {
     var symbol = model.GetDeclaredSymbol(type)!;
     foreach (var modifier in type.Modifiers)
-      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.SealedKeyword))
+      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.SealedKeyword or SyntaxKind.AbstractKeyword))
         throw new UnsupportedException(type, $"a {modifier.Text} class");
 
     if (type.AttributeLists.SelectMany(list => list.Attributes).FirstOrDefault() is { } attribute)
@@ -98,11 +115,9 @@ internal sealed partial class Lowering {
     if (type.TypeParameterList is not null)
       throw new UnsupportedException(type.TypeParameterList, "a generic class");
 
-    if (type.BaseList?.Types.FirstOrDefault() is { } inherited)
-      throw new UnsupportedException(inherited, model.GetTypeInfo(inherited.Type).Type is { TypeKind: TypeKind.Interface } ? "an interface" : "inheritance");
-
-    if (all.FirstOrDefault(other => other.BaseList is not null && other.BaseList.Types.Any(@base => SymbolEqualityComparer.Default.Equals(model.Compilation.GetSemanticModel(other.SyntaxTree).GetTypeInfo(@base.Type).Type, symbol))) is { } derived)
-      throw new UnsupportedException(derived, "inheritance");
+    if (type is RecordDeclarationSyntax && (type.BaseList is not null || all.Any(other => other.BaseList is not null && other.BaseList.Types.Any(@base
+        => SymbolEqualityComparer.Default.Equals(model.Compilation.GetSemanticModel(other.SyntaxTree).GetTypeInfo(@base.Type).Type, symbol)))))
+      throw new UnsupportedException(type, "a record in a hierarchy");
 
     if (type.Members.FirstOrDefault(member => Refused(member) is not null) is { } refused)
       throw new UnsupportedException(refused, Refused(refused)!);
@@ -178,14 +193,17 @@ internal sealed partial class Lowering {
     declared.Define(fields);
     foreach (var member in type.Members.OfType<MethodDeclarationSyntax>()) {
       foreach (var modifier in member.Modifiers)
-        if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword))
-          throw new UnsupportedException(member, $"a {modifier.Text} method");
+        if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword or SyntaxKind.ProtectedKeyword
+            or SyntaxKind.VirtualKeyword or SyntaxKind.AbstractKeyword or SyntaxKind.OverrideKeyword or SyntaxKind.SealedKeyword))
+          throw new UnsupportedException(member, modifier.IsKind(SyntaxKind.NewKeyword) ? "new member hiding" : $"a {modifier.Text} method");
 
       if (member.TypeParameterList is not null)
         throw new UnsupportedException(member.TypeParameterList, "a generic method");
 
       var methodSymbol = model.GetDeclaredSymbol(member)!;
-      var method = new IrMethod(methodSymbol.Name, Unique(methodSymbol.Name), methodSymbol.IsStatic) { Visibility = VisibilityOf(methodSymbol) };
+      var method = this.Dispatched(methodSymbol, member, new IrMethod(this.MethodName(methodSymbol), Unique(this.MethodName(methodSymbol)), methodSymbol.IsStatic) {
+        Visibility = methodSymbol.ExplicitInterfaceImplementations.Length > 0 ? IrVisibility.Public : VisibilityOf(methodSymbol)
+      });
       methods.Add(method);
       this._methods[methodSymbol] = method;
       this.Body(declared, () => this.Function(method.Function, false, methodSymbol, member, member.ParameterList.Parameters,
@@ -204,15 +222,17 @@ internal sealed partial class Lowering {
       var constructorSymbol = model.GetDeclaredSymbol(constructor)!;
       var creator = this._creators[constructorSymbol];
       this.Body(declared, () => this.Function(creator.Function, false, constructorSymbol, constructor, constructor.ParameterList.Parameters, Receiver(declared),
-        () => this.Chain(constructor) ?? this.Initializers(initializers), constructor.Body, constructor.ExpressionBody?.Expression));
+        () => this.Chain(constructor) ?? [.. this.BaseCall(symbol, constructor.Initializer, constructor), .. this.Initializers(initializers, declared)],
+        constructor.Body, constructor.ExpressionBody?.Expression));
     }
 
     if (constructors.Count == 0) {
       var implicitConstructor = symbol.InstanceConstructors.Single();
-      var creator = new IrConstructor(Unique("ctor"));
+      var creator = new IrConstructor(Unique("ctor")) { Visibility = VisibilityOf(implicitConstructor) };
       constructors.Add(creator);
       this._creators[implicitConstructor] = creator;
-      this.Body(declared, () => this.Function(creator.Function, false, implicitConstructor, type, [], Receiver(declared), () => this.Initializers(initializers), null, null));
+      this.Body(declared, () => this.Function(creator.Function, false, implicitConstructor, type, [], Receiver(declared),
+        () => [.. this.BaseCall(symbol, null, type), .. this.Initializers(initializers, declared)], null, null));
     }
 
     this._members[declared] = (constructors, methods, properties, statics);
@@ -224,7 +244,7 @@ internal sealed partial class Lowering {
   /// <summary>The receiver of a member of a class: the parameter <c>this</c>.</summary>
   private static IrLocal Receiver(IrClassType owner) => new("this", IrType.Object(owner));
 
-  private void Body(IrClassType owner, Func<IrFunction> lower) => this._bodies.Add((path, model, owner, lower));
+  private void Body(IrTypeDeclaration owner, Func<IrFunction> lower) => this._bodies.Add((path, model, owner, lower));
 
   /// <summary>
   /// Gives every class its members and lowers their bodies, after the globals: a static field of a
@@ -263,8 +283,18 @@ internal sealed partial class Lowering {
       List<IrMethod> methods, Func<string, string> unique) {
     var symbol = model.GetDeclaredSymbol(member)!;
     foreach (var modifier in member.Modifiers)
-      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword))
-        throw new UnsupportedException(member, modifier.IsKind(SyntaxKind.StaticKeyword) ? "a static property" : $"a {modifier.Text} property");
+      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.ProtectedKeyword))
+        throw new UnsupportedException(member, modifier.Kind() switch {
+          SyntaxKind.StaticKeyword => "a static property",
+          SyntaxKind.NewKeyword => "new member hiding",
+          SyntaxKind.VirtualKeyword or SyntaxKind.AbstractKeyword or SyntaxKind.OverrideKeyword or SyntaxKind.SealedKeyword => "a virtual, abstract or overriding property",
+          _ => $"a {modifier.Text} property"
+        });
+
+    if (member.ExplicitInterfaceSpecifier is not null)
+      throw new UnsupportedException(member, "an explicit implementation of a property");
+
+    this.NotHiding(symbol, member);
 
     var type = this.ClassFieldType(symbol.Type, member.Type);
     var visibility = VisibilityOf(symbol);
@@ -272,6 +302,9 @@ internal sealed partial class Lowering {
     if (accessors.FirstOrDefault(accessor => accessor.Body is null && accessor.ExpressionBody is null) is not null) {
       if (accessors.FirstOrDefault(accessor => accessor.Body is not null || accessor.ExpressionBody is not null) is { } mixed)
         throw new UnsupportedException(mixed, "a property with an automatic and a written accessor");
+
+      if (this.InterfaceMembers(symbol.GetMethod).Count > 0 || this.InterfaceMembers(symbol.SetMethod).Count > 0)
+        throw new UnsupportedException(member, "an auto-property that implements a property of an interface");
 
       var setter = accessors.FirstOrDefault(accessor => accessor.Kind() is SyntaxKind.SetAccessorDeclaration or SyntaxKind.InitAccessorDeclaration);
       var field = new IrField(symbol.Name, type, setter is null) { Visibility = visibility };
@@ -292,7 +325,9 @@ internal sealed partial class Lowering {
       if (accessorSymbol is null)
         return null;
 
-      var method = new IrMethod(symbol.Name, unique((kind == IrMethodKind.Getter ? "get_" : "set_") + symbol.Name), false) { Kind = kind, Visibility = visibility };
+      var method = new IrMethod(symbol.Name, unique((kind == IrMethodKind.Getter ? "get_" : "set_") + symbol.Name), false) {
+        Kind = kind, Visibility = visibility, Implements = this.InterfaceMembers(accessorSymbol)
+      };
       methods.Add(method);
       this._methods[accessorSymbol] = method;
       this.Body(owner, () => this.Function(method.Function, false, accessorSymbol, node, [], Receiver(owner), null, body, expression));
@@ -320,9 +355,20 @@ internal sealed partial class Lowering {
     return property;
   }
 
-  /// <summary>The field initializers of a class as stores into the new object, in declaration order.</summary>
-  private List<IrStmt> Initializers(List<(IrField Field, ExpressionSyntax Value)> initializers)
-    => [.. initializers.Select(entry => (IrStmt)new IrFieldStore(new IrLocalRef(this._receiver!), entry.Field, Convert(this.Value(entry.Value), entry.Field.Type)))];
+  /// <summary>
+  /// The field initializers of a class as stores into the new object, in declaration order. C# runs
+  /// those of a derived class before the constructor of its base class, the IR after it: an
+  /// initializer of a derived class may therefore have no effect and read nothing that could change.
+  /// </summary>
+  private List<IrStmt> Initializers(List<(IrField Field, ExpressionSyntax Value)> initializers, IrClassType? owner = null)
+    => [.. initializers.Select(entry => {
+      var value = Convert(this.Value(entry.Value), entry.Field.Type);
+      if (owner?.Base is not null && !IrTree.Nodes(value).All(node => node is IrConst or IrStrConst or IrConstRef or IrUnary or IrBinary or IrConvert or IrConditional
+          or IrNewArray or IrNull or IrStructNew or IrStructDefault or IrIntrinsic))
+        throw new UnsupportedException(entry.Value, "an initializer of a field of a derived class that is not a constant");
+
+      return (IrStmt)new IrFieldStore(new IrLocalRef(this._receiver!), entry.Field, value);
+    })];
 
   /// <summary>The call of the constructor <c>this(…)</c> names, as the first statement; <see langword="null"/> for a constructor without one.</summary>
   private List<IrStmt>? Chain(ConstructorDeclarationSyntax constructor) {
@@ -330,7 +376,7 @@ internal sealed partial class Lowering {
       return null;
 
     if (initializer.IsKind(SyntaxKind.BaseConstructorInitializer))
-      throw new UnsupportedException(initializer, "base(...)");
+      return null;
 
     if (initializer.ArgumentList.Arguments.Any(argument => argument.NameColon is not null))
       throw new UnsupportedException(initializer, "a named argument");
@@ -342,6 +388,15 @@ internal sealed partial class Lowering {
 
   /// <summary>The class a type symbol names, or <see langword="null"/>.</summary>
   private IrClassType? ClassOf(ITypeSymbol? type) => type is INamedTypeSymbol named ? this._classes.GetValueOrDefault(named) : null;
+
+  /// <summary>The reference type of a class or an interface of the file a type symbol names, or <see langword="null"/>.</summary>
+  private IrType? ReferenceOf(ITypeSymbol? type)
+    => this.ClassOf(type) is { } owner ? IrType.Object(owner)
+      : type is INamedTypeSymbol named && this._interfaces.TryGetValue(named, out var contract) ? IrType.Object(contract)
+      : null;
+
+  /// <summary>Whether a type symbol is a class or an interface of the file.</summary>
+  private bool IsFileType(ITypeSymbol? type) => this.ReferenceOf(type) is not null;
 
   /// <summary>The object a member is reached through: the target of a member access, or the receiver for a bare name.</summary>
   private IrExpr Owner(ExpressionSyntax access, SyntaxNode node) => access is MemberAccessExpressionSyntax member
@@ -358,10 +413,10 @@ internal sealed partial class Lowering {
       case ThisExpressionSyntax:
         return this._receiver is { } receiver ? new IrLocalRef(receiver) : null;
       case IdentifierNameSyntax or MemberAccessExpressionSyntax when model.GetSymbolInfo(expression).Symbol is { IsStatic: false } member
-          && member.ContainingType is { } owner && this._classes.ContainsKey(owner):
+          && member.ContainingType is { } owner && this.IsFileType(owner):
         if (member is IPropertySymbol property && this._properties.TryGetValue(property, out var computed))
           return computed.Getter is { } getter
-            ? new IrMethodCall(type, getter, this.Owner(expression, expression), [])
+            ? this.Site(new IrMethodCall(type, getter, this.Owner(expression, expression), []) { Kind = this.CallKind(expression, getter) }, expression)
             : throw new UnsupportedException(expression, $"a read of the property {property.Name}, which has no getter");
 
         return this._fields.TryGetValue(member, out var field) ? new IrFieldLoad(this.Owner(expression, expression), field) : null;
@@ -380,7 +435,9 @@ internal sealed partial class Lowering {
           throw new UnsupportedException(invocation, "a named or ref argument");
 
         var target = called.IsStatic ? null : this.Owner(invocation.Expression, invocation);
-        return new IrMethodCall(type, called, target, [.. invocation.ArgumentList.Arguments.Select(argument => this.Value(argument.Expression))]);
+        return this.Site(new IrMethodCall(type, called, target, [.. invocation.ArgumentList.Arguments.Select(argument => this.Value(argument.Expression))]) {
+          Kind = this.CallKind(invocation.Expression, called)
+        }, invocation);
       case BaseObjectCreationExpressionSyntax creation when type.IsObject:
         if (creation.Initializer is not null)
           throw new UnsupportedException(creation, "an object initializer inside an expression");
@@ -396,7 +453,7 @@ internal sealed partial class Lowering {
       case IsPatternExpressionSyntax { Pattern: UnaryPatternSyntax { Pattern: ConstantPatternSyntax constant } } pattern when IsNull(constant.Expression):
         return new IrUnary(IrUnaryOp.LogicalNot, this.Identity(pattern.Expression, constant.Expression, pattern));
       default:
-        return null;
+        return this.Conversion(expression, type);
     }
   }
 
@@ -406,8 +463,8 @@ internal sealed partial class Lowering {
   /// <summary>A reference as its own type, not the <c>object</c> a comparison converts it to; <c>null</c> as the other side's type.</summary>
   private IrExpr Reference(ExpressionSyntax expression, ExpressionSyntax other, SyntaxNode node) {
     if (IsNull(expression))
-      return this.ClassOf(model.GetTypeInfo(other).Type) is { } owner
-        ? new IrNull(IrType.Object(owner))
+      return this.ReferenceOf(model.GetTypeInfo(other).Type) is { } owner
+        ? new IrNull(owner)
         : throw new UnsupportedException(node, "a comparison of null with null");
 
     var value = this.Natural(expression, this.Map(model.GetTypeInfo(expression).Type, expression));
@@ -418,7 +475,9 @@ internal sealed partial class Lowering {
   private IrExpr Identity(ExpressionSyntax left, ExpressionSyntax right, SyntaxNode node) {
     var first = this.Reference(left, right, node);
     var second = this.Reference(right, left, node);
-    return first.Type == second.Type ? new IrReferenceEquals(first, second) : throw new UnsupportedException(node, $"a comparison of {first.Type} with {second.Type}");
+    return first.Type.IsAssignableTo(second.Type) || second.Type.IsAssignableTo(first.Type)
+      ? new IrReferenceEquals(first, second)
+      : throw new UnsupportedException(node, $"a comparison of {first.Type} with {second.Type}");
   }
 
   /// <summary>
@@ -429,11 +488,11 @@ internal sealed partial class Lowering {
     if (binary.Kind() is not (SyntaxKind.EqualsExpression or SyntaxKind.NotEqualsExpression))
       return null;
 
-    var owner = this.ClassOf(model.GetTypeInfo(binary.Left).Type) ?? this.ClassOf(model.GetTypeInfo(binary.Right).Type);
+    var owner = this.ReferenceOf(model.GetTypeInfo(binary.Left).Type) ?? this.ReferenceOf(model.GetTypeInfo(binary.Right).Type);
     if (owner is null)
       return null;
 
-    IrExpr equal = owner.IsRecord
+    IrExpr equal = owner.ClassType is { IsRecord: true }
       ? new IrStructEquals(this.Reference(binary.Left, binary.Right, binary), this.Reference(binary.Right, binary.Left, binary))
       : this.Identity(binary.Left, binary.Right, binary);
     return binary.IsKind(SyntaxKind.EqualsExpression) ? equal : new IrUnary(IrUnaryOp.LogicalNot, equal);
@@ -445,7 +504,7 @@ internal sealed partial class Lowering {
   /// </summary>
   private (Func<IrExpr> Read, Func<IrExpr, IrStmt> Write)? ObjectTarget(ExpressionSyntax target, List<IrStmt> into, bool alsoRead) {
     if (target is not (IdentifierNameSyntax or MemberAccessExpressionSyntax) || model.GetSymbolInfo(target).Symbol is not { IsStatic: false } member
-        || member.ContainingType is not { } owner || !this._classes.ContainsKey(owner))
+        || member.ContainingType is not { } owner || !this.IsFileType(owner))
       return null;
 
     var computed = member is IPropertySymbol property ? this._properties.GetValueOrDefault(property) : null;
@@ -460,8 +519,10 @@ internal sealed partial class Lowering {
       if (computed.Setter is not { } setter)
         throw new UnsupportedException(target, $"a write of the property {computed.Name}, which has no setter");
 
-      return (() => computed.Getter is { } getter ? new IrMethodCall(computed.Type, getter, holder, []) : throw new UnsupportedException(target, $"a read of the property {computed.Name}, which has no getter"),
-        value => new IrExprStmt(new IrMethodCall(IrType.Void, setter, holder, [value])));
+      return (() => computed.Getter is { } getter
+          ? this.Site(new IrMethodCall(computed.Type, getter, holder, []) { Kind = this.CallKind(target, getter) }, target)
+          : throw new UnsupportedException(target, $"a read of the property {computed.Name}, which has no getter"),
+        value => new IrExprStmt(this.Site(new IrMethodCall(IrType.Void, setter, holder, [value]) { Kind = this.CallKind(target, setter) }, target)));
     }
 
     var field = this._fields[member];
