@@ -72,8 +72,8 @@ and every `StringComparison` but `Ordinal` - with the advice to pass `StringComp
 (`"é".StartsWith("e")` is false in .NET and true with `Ordinal`); the value of `CompareOrdinal`
 other than its sign, which .NET documents only by its sign; `Split` with a count, whose last part
 keeps the rest of the string; case mapping (`ToUpper`, `ToLower`, the invariant forms), `Normalize`,
-`string.Format`, `StringBuilder`, `null` of the type string, `new string[n]`; a number joined to text
-and an interpolation with a number, until the conversion of numbers to text exists. `PadLeft` with a
+`string.Format`, `StringBuilder`, `null` of the type string, `new string[n]`. A number joined to text
+and an interpolation with a number are [conversions between numbers and text](number-text.md). `PadLeft` with a
 negative width throws in .NET; the translation returns the string, as ECMA-262 does.
 
 ## JavaScript frontend
@@ -97,7 +97,8 @@ Refused, each by name (`PLY1102`): `localeCompare` and the locale methods, `toUp
 `toLowerCase`, `normalize`, tagged templates (`String.raw`), regular expressions, the patterns
 `` $` ``, `$'` and `$n` and a replacement that is no constant, `replaceAll` with a needle that may be
 empty (JavaScript inserts between every two code units), `String.fromCodePoint`, `new String`, and
-a number joined to text.
+a number given to a method that takes a string. A number joined to text is a [conversion between
+numbers and text](number-text.md).
 
 ## C# backend
 
