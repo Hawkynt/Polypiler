@@ -206,3 +206,66 @@ jobs:
           start=$(date +%s%N)
           node tooling/bitperm/export.mjs --page "$PAGE" --out tests/fixtures/bitperm --check --expect-blocks 16 --expect-presets 25 --expect-tests 51
           echo "export wall time: $(( ($(date +%s%N) - start) / 1000000 )) ms"
+
+  # The Rust layer of PRD §7.3 (tooling/ci/layers/rust.yaml): the stable toolchain `rust` with rustfmt
+  # and clippy, and the dated nightly `rust-miri`, which only runs Miri, at the versions
+  # tooling/toolchains.lock pins. The Miri sysroot is prepared here, where the network is allowed; the
+  # tests run cargo offline (CARGO_NET_OFFLINE) and show each tool rejecting its negative crate.
+  layer-rust:
+    name: layer-rust ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      RUSTUP_AUTO_INSTALL: '0'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer rust | tee -a "$GITHUB_OUTPUT"
+      # The stable toolchain becomes rustup's default, so `cargo` is the pinned one; the nightly is
+      # named by its channel only where Miri runs. RUST_MIRI_HOME is the nightly's sysroot, where the
+      # probe finds miri, and MIRI_SYSROOT the standard library Miri builds for itself.
+      - name: install rust
+        env:
+          STABLE: ${{ steps.env.outputs.rust }}
+          NIGHTLY: ${{ steps.env.outputs['rust-miri'] }}
+        run: |
+          rustup toolchain install "$STABLE" --profile minimal --component rustfmt,clippy
+          rustup default "$STABLE"
+          rustup toolchain install "$NIGHTLY" --profile minimal --component miri,rust-src
+          echo "RUST_MIRI_HOME=$(rustc +"$NIGHTLY" --print sysroot)" >> "$GITHUB_ENV"
+          cargo +"$NIGHTLY" miri setup
+          echo "MIRI_SYSROOT=$(cargo +"$NIGHTLY" miri setup --print-sysroot)" >> "$GITHUB_ENV"
+      - name: toolchains
+        run: $TOOLING toolchains probe --only rust,rust-miri
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: >-
+          dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build
+          --filter "TestCategory=Layer.rust"
+          --logger "console;verbosity=detailed" --logger "trx;LogFileName=layer-rust.trx" --results-directory artifacts/layer-rust
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-rust-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: ignore
