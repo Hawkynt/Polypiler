@@ -29,7 +29,7 @@ public sealed class ToolingTests {
     Assert.That(error, Is.Empty);
   }
 
-  [TestCase("corpus", TestName = "A verb that is not registered yet")]
+  [TestCase("no-such-verb", TestName = "A verb that is not registered")]
   [TestCase("--help", TestName = "An option is not a verb")]
   [TestCase("", TestName = "An empty argument is not a verb")]
   public void AnyVerb_FailsWithUsageError(string verb) {

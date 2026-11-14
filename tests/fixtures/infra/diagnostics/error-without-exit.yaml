@@ -1,0 +1,12 @@
+# PLY0030 is an error without an exit code.
+schema: 1
+blocks:
+  - { first: PLY0001, last: PLY0099, area: infrastructure }
+codes:
+  - code: PLY0030
+    severity: error
+    title: target build failed
+    message: "building '<target>' failed: <reason>"
+    area: infrastructure
+    owner: INFRA-RUNNER
+    reserved: true

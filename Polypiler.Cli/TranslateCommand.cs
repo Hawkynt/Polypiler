@@ -27,16 +27,20 @@ namespace Polypiler.Cli;
 public static class TranslateCommand {
 
   /// <summary>The code for a command line that names an unknown language or lacks an argument.</summary>
-  public const string Usage = "PLY0001";
+  public const string Usage = "PLY0003";
+
+  /// <summary>The registered diagnostic of <see cref="Usage"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UsageDescriptor = new(Usage, DiagnosticSeverity.Error, ExitCode.UsageError, "{0}", "adr-0004.grammar");
 
   /// <summary>Exit code when the source, or the IR for the chosen target, uses a construct that is not supported.</summary>
-  public const int UnsupportedConstruct = 3;
+  public const int UnsupportedConstruct = (int)ExitCode.UnsupportedConstruct;
 
   /// <summary>Exit code when the source is not valid in its own language.</summary>
-  public const int InvalidSource = 4;
+  public const int InvalidSource = (int)ExitCode.InvalidSource;
 
   /// <summary>Exit code for an error inside Polypiler itself.</summary>
-  public const int InternalError = 70;
+  public const int InternalError = (int)ExitCode.InternalError;
 
   private const string From = "--from";
   private const string To = "--to";

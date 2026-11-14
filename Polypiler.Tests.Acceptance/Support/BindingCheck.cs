@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Polypiler.Core;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -36,6 +37,10 @@ public static partial class BindingCheck {
 
   /// <summary>The code of every problem the check reports.</summary>
   public const string Code = "PLY0074";
+
+  /// <summary>The registered diagnostic of <see cref="Code"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor Descriptor = new(Code, DiagnosticSeverity.Error, ExitCode.EnvironmentError, "{0}", "bdd.binding");
 
   /// <summary>
   /// The feature files written before the naming rule, for the prototype that predates the backlog.

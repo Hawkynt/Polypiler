@@ -62,7 +62,7 @@ public sealed class CSharpToJavaScriptTests {
     File.Copy(PrototypeFixture.PathOf("Adler32"), Path.Combine(this._directory, "Adler32.cs"));
     var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", "Adler32.cs", "--from", "csharp", "--to", "cobol", "--output", "out");
     Assert.That(exitCode, Is.EqualTo(2));
-    Assert.That(output, Does.Contain("PLY0001").And.Contain("cobol"));
+    Assert.That(output, Does.Contain("PLY0003").And.Contain("cobol"));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 

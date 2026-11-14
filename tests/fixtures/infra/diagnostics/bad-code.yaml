@@ -1,0 +1,21 @@
+# PLY0000 is well-formed but lies in no block; PLY10000 has five digits and is no code at all.
+schema: 1
+blocks:
+  - { first: PLY0001, last: PLY0099, area: infrastructure }
+codes:
+  - code: PLY0000
+    severity: error
+    exit: InternalError
+    title: below every block
+    message: "<reason>"
+    area: infrastructure
+    owner: ADR-DIAGNOSTICS
+    reserved: true
+  - code: PLY10000
+    severity: error
+    exit: InternalError
+    title: five digits
+    message: "<reason>"
+    area: infrastructure
+    owner: ADR-DIAGNOSTICS
+    reserved: true

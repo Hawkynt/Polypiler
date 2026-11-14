@@ -9,6 +9,10 @@ public static partial class IrVerifier {
   /// <summary>The code of every diagnostic the verifier reports.</summary>
   public const string Code = "PLY0100";
 
+  /// <summary>The registered diagnostic of <see cref="Code"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor Descriptor = new(Code, DiagnosticSeverity.Error, ExitCode.InternalError, "{0}", "ir.verifier");
+
   /// <summary>Checks every function of a module.</summary>
   /// <param name="module">The module to check.</param>
   /// <returns>One diagnostic per violated rule; empty when the module is well-typed.</returns>

@@ -104,14 +104,14 @@ public sealed class OptimizationOptionsTests {
   public void MalformedOption_IsAUsageError(string option, string value, string message) {
     var (exitCode, text, error) = this.Translate(Rotate, "javascript", option, value);
     Assert.That((exitCode, text), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.Contain("error PLY0001: " + message).And.Contain("usage: polypiler translate"));
+    Assert.That(error, Does.Contain("error PLY0003: " + message).And.Contain("usage: polypiler translate"));
   }
 
   [Test]
   public void DisableOpt_WithoutAValue_IsAUsageError() {
     var (exitCode, _, error) = this.Translate(Rotate, "javascript", "--disable-opt");
     Assert.That(exitCode, Is.EqualTo(Program.UsageError));
-    Assert.That(error, Does.Contain("PLY0001: the option '--disable-opt' needs a value"));
+    Assert.That(error, Does.Contain("PLY0003: the option '--disable-opt' needs a value"));
   }
 
   [Test]

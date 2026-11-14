@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Polypiler.Core;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
@@ -81,6 +82,10 @@ public sealed class ModuleRules {
 
   /// <summary>The diagnostic code every violation message starts with.</summary>
   public const string Code = "PLY0038";
+
+  /// <summary>The registered diagnostic of <see cref="Code"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor Descriptor = new(Code, DiagnosticSeverity.Error, ExitCode.EnvironmentError, "{0}", "modules.dependency-direction");
 
   private readonly string _source;
   private readonly List<(string Text, Regex Match, int Layer)> _layers = [];

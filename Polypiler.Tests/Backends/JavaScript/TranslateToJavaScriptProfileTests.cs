@@ -81,7 +81,7 @@ public sealed class TranslateToJavaScriptProfileTests {
     Assert.That(File.ReadAllText(Path.Combine(this._out, "Snippet.cjs")), Does.Contain("// F(a: Int32Array): number"));
   }
 
-  /// <summary>Test design 8: what names no profile is PLY0001, exit code 2, with the usage, and nothing is written.</summary>
+  /// <summary>Test design 8: what names no profile is PLY0003, exit code 2, with the usage, and nothing is written.</summary>
   [TestCase(new[] { "--profile", "es3" }, "unknown JavaScript profile 'es3'; the profiles are 'es5', 'es2015', 'es2017', 'es2020', 'es2022'")]
   [TestCase(new[] { "--profile", "es2016" }, "unknown JavaScript profile 'es2016'")]
   [TestCase(new[] { "--module", "amd" }, "unknown module format 'amd'; the module formats are 'esm', 'cjs', 'iife'")]
@@ -95,7 +95,7 @@ public sealed class TranslateToJavaScriptProfileTests {
   public void InvalidProfile_IsAUsageError(string[] options, string message) {
     var (exitCode, output, error) = this.Translate("javascript", options);
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0001: " + message).And.Contain("usage: " + TranslateCommand.UsageLine));
+    Assert.That(error, Does.StartWith("error PLY0003: " + message).And.Contain("usage: " + TranslateCommand.UsageLine));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -106,7 +106,7 @@ public sealed class TranslateToJavaScriptProfileTests {
   public void ProfileOption_DoesNotApplyToAnotherTarget(string[] options, string message) {
     var (exitCode, output, error) = this.Translate("csharp", options);
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0001: " + message));
+    Assert.That(error, Does.StartWith("error PLY0003: " + message));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -121,7 +121,7 @@ public sealed class TranslateToJavaScriptProfileTests {
   public void SharedProfileOption_IsReadByTheChosenTarget(string to, string[] options, string message) {
     var (exitCode, output, error) = this.Translate(to, options);
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0001: " + message));
+    Assert.That(error, Does.StartWith("error PLY0003: " + message));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
@@ -142,7 +142,7 @@ public sealed class TranslateToJavaScriptProfileTests {
     using var output = new StringWriter();
     using var error = new StringWriter();
     Assert.That(Program.Run(["translate", "A.cs", "--from", "csharp", "--to", "javascript", "--output", this._out, option], output, error), Is.EqualTo(Program.UsageError));
-    Assert.That(error.ToString(), Does.StartWith($"error PLY0001: the option '{option}' needs a value"));
+    Assert.That(error.ToString(), Does.StartWith($"error PLY0003: the option '{option}' needs a value"));
   }
 
   [Test]

@@ -32,6 +32,10 @@ public static partial class JavaScriptEmitter {
   /// <summary>The code for an IR construct that has neither a native form nor a replacement in the chosen profile.</summary>
   public const string Inexpressible = "PLY1152";
 
+  /// <summary>The registered diagnostic of <see cref="Inexpressible"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor InexpressibleDescriptor = new(Inexpressible, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.backend.profile");
+
   /// <summary>Emits the module as <c>&lt;name&gt;.mjs</c>, an ES module of ECMAScript 2022 exporting every public function.</summary>
   /// <param name="module">A module that <see cref="IrVerifier"/> accepts.</param>
   /// <returns>The generated file.</returns>

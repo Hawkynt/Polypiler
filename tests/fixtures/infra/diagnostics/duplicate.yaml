@@ -1,0 +1,21 @@
+# PLY0030 is listed twice.
+schema: 1
+blocks:
+  - { first: PLY0001, last: PLY0099, area: infrastructure }
+codes:
+  - code: PLY0030
+    severity: error
+    exit: TargetBuildFailure
+    title: target build failed
+    message: "building '<target>' failed: <reason>"
+    area: infrastructure
+    owner: INFRA-RUNNER
+    reserved: true
+  - code: PLY0030
+    severity: error
+    exit: TargetBuildFailure
+    title: target build failed again
+    message: "<reason>"
+    area: infrastructure
+    owner: INFRA-RUNNER
+    reserved: true

@@ -42,6 +42,9 @@
     <Compile Include="..\Polypiler.Tests\Architecture\ModuleRules.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Support\DocumentationChecks.cs" LinkBase="Infrastructure\Support" />
     <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
+    <Compile Include="..\Polypiler.Tests\Tooling\Corpus\MiniUpstream.cs" LinkBase="Infra\Support" />
+    <Compile Include="..\Polypiler.Tests\Verification\Running\Support\*.cs" LinkBase="Infra\Support" />
+    <Compile Include="..\Polypiler.Tests\Verification\Fuzzing\DemoTargets.cs" LinkBase="Infra\Support" />
   </ItemGroup>
 
   <ItemGroup>
@@ -53,6 +56,7 @@
     <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
     <ProjectReference Include="..\Polypiler.Tooling\Polypiler.Tooling.csproj" />
+    <ProjectReference Include="..\Polypiler.Tests.Probe\Polypiler.Tests.Probe.csproj" />
   </ItemGroup>
 
 </Project>

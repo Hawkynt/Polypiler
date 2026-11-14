@@ -18,6 +18,20 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   prints one object per line); `polypiler-tooling toolchains validate` checks the file itself. A test
   marked `[RequiresToolchain("<key>")]` is inconclusive when its toolchain is absent or at another
   version, and fails instead when `POLYPILER_REQUIRE_TOOLCHAINS=1`.
+- Upstream files the tests read are pinned in [`tooling/corpus/corpus.yaml`](tooling/corpus/corpus.yaml)
+  by repository and commit, never copied into this repository. `polypiler-tooling corpus import`
+  (with `--source <checkout>` for each local clone that holds a pin, otherwise it fetches the commit
+  with `git`) writes them to the git-ignored `corpus/upstream/` and checks them against
+  [`tooling/corpus/corpus.lock.json`](tooling/corpus/corpus.lock.json); `corpus verify` re-hashes
+  them offline. A test reads one with `CorpusFixture.Open("<fixture id>")`. A new fixture entry is
+  added with `corpus import --update-lock`, and `corpus discover --repository <owner/repo> --glob
+  <pattern>` prints stubs for it.
+- Generated and foreign code is built and run only through the cross-language runner
+  (`Polypiler.Core.Verification/Running`), under the limits of
+  [`tooling/ci/runner.yaml`](tooling/ci/runner.yaml). On Linux with a working `bwrap` (bubblewrap) the
+  runner isolates: no network, the caller's home hidden, nothing writable but the run's own directory.
+  Without it, and on Windows and macOS, the runner only limits, and refuses untrusted code with
+  `PLY0034`.
 
 ## Build
 
@@ -227,6 +241,44 @@ The same facts go to `artifacts/properties/<test>.json` (`test`, `seed`, `index`
 other inputs, set `POLYPILER_PROPERTY_SEED` to a decimal or `0x` hexadecimal number: it replaces
 every declared seed, and the message says so.
 
+### Fuzz targets
+
+Code that reads untrusted input — a parser, a decoder, a command line — registers a **fuzz target**:
+a public class with a parameterless constructor that implements `IFuzzTarget`
+(`Polypiler.Core.Verification.Fuzzing`). It returns for every input it accepts or cleanly refuses;
+diagnostics are values, so an exception escaping `Execute` is a crash. A differential target throws
+`FuzzMismatchException` when its two sides disagree. Never catch exceptions inside a target to keep
+it quiet.
+
+```csharp
+public sealed class CliArgsFuzzTarget : IFuzzTarget {
+  public string Id => "cli-args";
+  public void Execute(ReadOnlySpan<byte> input) => Program.Run(Arguments(input), TextWriter.Null, TextWriter.Null);
+}
+```
+
+Its seed corpus is `tests/fixtures/fuzz/<id>/corpus/*.bin`, with an empty `regressions/` beside it.
+Run it with
+
+```
+dotnet run --project Polypiler.Tooling -- fuzz run --target cli-args --assembly <path of the assembly that declares it>
+```
+
+`--seed` (default 1) and `--iterations` (default 10 000) fix the run: the same seed, iterations and
+corpus give the same inputs and the same findings on every platform. The target runs in a
+supervised `fuzz worker` process; an input runs out of budget after 1 s or 64 MiB allocated and is
+then a `Hang` or an `Allocation`, and a worker that dies is a `Crash` named after its exit code. Each
+distinct finding is reported once as `PLY0070`, minimized to a 1-minimal input and recorded as
+`artifacts/fuzz/<id>/<sha256-prefix>.bin` and `.json`. `fuzz minimize --target <id> --input <file>`
+does the same for one input. The nightly engine, `--engine afl --duration <seconds>`, instruments
+the target's assembly with SharpFuzz and runs AFL++ (`aflplusplus` in `tooling/toolchains.lock`);
+without it the run stops with `PLY0021`.
+
+Once the bug is fixed, **promote the finding**: copy its `.bin` into
+`tests/fixtures/fuzz/<id>/regressions/`. `FuzzRegressionTests` (fast tier) and `fuzz replay` run
+every regression input against its target and fail on any finding. A regression file is never
+deleted to get a green run.
+
 ## Commit conventions
 
 - One concern per commit, with a descriptive body.
@@ -240,6 +292,15 @@ every declared seed, and the message says so.
   line), 2-space indent (C#), file-scoped namespaces, `_camelCase` private fields, `this.`
   qualification, XML docs on public members, LF endings.
 - `Nullable` and `ImplicitUsings` are enabled centrally in `Directory.Build.props`.
+
+## Diagnostic codes
+
+Every `PLY####` code is registered once in [`spec/diagnostics.yaml`](spec/diagnostics.yaml), inside
+its area's block ([ADR 0003](docs/adr/0003-diagnostics-and-exit-codes.md)). A change that emits a new
+code registers it and declares it next to the code that emits it, as a `[Diagnostic] static readonly
+DiagnosticDescriptor` with the same severity, exit code and rule; a code allocated for later is
+registered `reserved: true`. `RegistryMatchesCodeTests` fails when the two disagree, and
+`polypiler-tooling diagnostics validate` checks the registry by itself (`PLY0045` per problem).
 
 ## GUI screenshots
 

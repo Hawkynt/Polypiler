@@ -48,4 +48,4 @@ Feature: Translate a small C# algorithm to JavaScript
 
   Scenario: An unknown target language is a usage error
     When I run "polypiler translate Adler32.cs --from csharp --to cobol --output out"
-    Then the exit code is 2 and the output contains "PLY0001"
+    Then the exit code is 2 and the output contains "PLY0003"

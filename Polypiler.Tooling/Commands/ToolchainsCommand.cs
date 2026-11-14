@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using Polypiler.Core;
 using Polypiler.Tooling.Toolchains;
 
 namespace Polypiler.Tooling.Commands;
@@ -23,6 +24,10 @@ public sealed class ToolchainsCommand {
 
   /// <summary>The diagnostic code of a command line that cannot be understood.</summary>
   public const string UsageCode = "PLY0003";
+
+  /// <summary>The registered diagnostic of <see cref="UsageCode"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UsageDescriptor = new(UsageCode, DiagnosticSeverity.Error, ExitCode.UsageError, "{0}", "adr-0004.grammar");
 
   private readonly IProcessRunner _runner;
   private readonly Func<string, string?> _environment;

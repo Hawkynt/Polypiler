@@ -31,11 +31,19 @@ public static partial class CSharpEmitter {
   /// <summary>The code for an IR construct this backend cannot write.</summary>
   public const string Unsupported = "PLY1052";
 
+  /// <summary>The registered diagnostic of <see cref="Unsupported"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedDescriptor = new(Unsupported, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "csharp.backend.ir");
+
   /// <summary>The base library by its full name, which no name of the module can hide.</summary>
   private const string Base = "global::System.";
 
   /// <summary>The code for an IR construct that has no form in the chosen profile.</summary>
   public const string Inexpressible = "PLY1053";
+
+  /// <summary>The registered diagnostic of <see cref="Inexpressible"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor InexpressibleDescriptor = new(Inexpressible, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "csharp.backend.profile");
 
   /// <summary>A place of a <see cref="CSharpForm.Template"/>: an argument by its position, or the helper.</summary>
   private static readonly System.Text.RegularExpressions.Regex _placeholder = new(@"\{[0-9h]\}", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
