@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "provenance": {
+    "kind": "reference-run",
+    "source": "mpfr",
+    "detail": "tests/vectors/float/generate/regenerate.sh <core-math checkout> <work directory>, with gcc, MPFR and GMP at the versions generate/versions.txt records",
+    "generatedBy": "mpfr"
+  }
+}

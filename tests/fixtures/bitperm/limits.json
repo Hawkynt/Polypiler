@@ -1,0 +1,7 @@
+{
+  "SEARCH_MAX_STATES": 10000,
+  "SEARCH_TIMEOUT_MS": 5000,
+  "MAX_SOLVER_ITERATIONS": 64,
+  "DEFAULT_BIT_WIDTH": 32,
+  "defaultCosts": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 3, "pshufb": 2, "basic": 1}
+}

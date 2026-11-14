@@ -1,0 +1,5 @@
+# The root is LGPL-3.0-or-later; sub/ carries a GPL-3.0 LICENSE of its own and is GPL-3.0-only.
+schema: 1
+declared:
+  - { glob: '**', licence: LGPL-3.0-or-later }
+  - { glob: 'sub/**', licence: GPL-3.0-only }
