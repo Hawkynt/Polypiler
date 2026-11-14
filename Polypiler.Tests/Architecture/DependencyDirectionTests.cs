@@ -94,6 +94,7 @@ public sealed class DependencyDirectionTests {
   /// <summary>Scenario: The documented same-layer exception is allowed (test design 5).</summary>
   [TestCase("Polypiler.Core.Recovery", "Polypiler.Core.Recognize")]
   [TestCase("Polypiler.Core.Legalize", "Polypiler.Core.Optimize")]
+  [TestCase("Polypiler.Cli", "Polypiler.Tooling")]
   [Category("Acceptance")]
   public void SameLayerException_IsAllowed(string from, string to)
     => Assert.That(Check(Project(from, to)), Is.Empty);
@@ -206,7 +207,7 @@ public sealed class DependencyDirectionTests {
   [TestCase("Polypiler.Cli", "Polypiler.Tests", "layer 8 -> 9")]
   [TestCase("Polypiler.Core", "Polypiler.Tests.Acceptance", "layer 0 -> 9")]
   [TestCase("Polypiler.Tests.Acceptance", "Polypiler.Tests", "same layer")]
-  [TestCase("Polypiler.Cli", "Polypiler.Tooling", "same layer")]
+  [TestCase("Polypiler.Tooling", "Polypiler.Cli", "same layer")]
   [TestCase("Polypiler.Core.Recognize", "Polypiler.Core.Recovery", "same layer")]
   [TestCase("Polypiler.Core.Optimize", "Polypiler.Core.Legalize", "same layer")]
   public void ForbiddenReference_IsRefused(string from, string to, string rule) {

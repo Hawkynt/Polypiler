@@ -67,8 +67,8 @@ public static class TranslateCommand {
 
   /// <summary>The target languages; another one is another entry.</summary>
   private static readonly Backend[] _backends = [
-    JavaScript(JavaScriptCapabilities.Standard),
-    CSharp(CSharpCapabilities.Default)
+    JavaScript(JavaScriptCapabilities.Standard, Implementations),
+    CSharp(CSharpCapabilities.Default, Implementations)
   ];
 
   /// <summary>
@@ -97,7 +97,19 @@ public static class TranslateCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities), CSharp(CSharpCapabilities.Default)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations)]);
+
+  /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
+  /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
+  /// <param name="output">Receives the names of the files written.</param>
+  /// <param name="error">Receives the diagnostics and the caveats of an import.</param>
+  /// <param name="implementations">
+  /// Gives the implementations when a translation needs one; an <see cref="InvalidDataException"/> it
+  /// throws is reported as damaged precomputed data, an internal error.
+  /// </param>
+  /// <returns>The process exit code.</returns>
+  public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations)]);
 
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
     string? file = null;
@@ -223,10 +235,16 @@ public static class TranslateCommand {
   /// <param name="capabilities">What each profile has, and what replaces what it lacks.</param>
   /// <returns>The process exit code.</returns>
   public static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error, CSharpCapabilities capabilities)
-    => Emit(module, options, output, error, CSharp(capabilities));
+    => Emit(module, options, output, error, CSharp(capabilities, Implementations));
 
   private static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error, Backend backend) {
-    module = backend.Lower(module, options);
+    try {
+      module = backend.Lower(module, options);
+    } catch (InvalidDataException exception) {
+      error.WriteLine(new Diagnostic(PrecomputedImplementations.Damaged, DiagnosticSeverity.Error, exception.Message));
+      return InternalError;
+    }
+
     var problems = backend.Check(module, options);
     if (problems.Count > 0) {
       foreach (var problem in problems)
@@ -290,12 +308,12 @@ public static class TranslateCommand {
     => options.TryGetValue(Export, out var names) && Names(names).Length == 0 ? $"the option '{Export}' names no function" : null;
 
   /// <summary>The JavaScript backend with a capability table; <c>--profile</c> names the language level.</summary>
-  private static Backend JavaScript(JavaScriptCapabilities capabilities) => new(
+  private static Backend JavaScript(JavaScriptCapabilities capabilities, Func<IrModule> implementations) => new(
     "javascript",
     new RuleTarget(capabilities.RemainderFromQuotient),
     [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error,
-    (module, options) => JavaScriptEmitter.Legalize(module, Implementations, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities),
+    (module, options) => JavaScriptEmitter.Legalize(module, implementations, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities),
     (module, options) => JavaScriptEmitter.Check(module, JavaScriptProfileOf(options).Profile!, capabilities),
     (module, options) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities));
 
@@ -308,11 +326,11 @@ public static class TranslateCommand {
   }
 
   /// <summary>The C# backend with a capability table.</summary>
-  private static Backend CSharp(CSharpCapabilities capabilities) => new("csharp",
+  private static Backend CSharp(CSharpCapabilities capabilities, Func<IrModule> implementations) => new("csharp",
     new RuleTarget(capabilities.RemainderFromQuotient),
     [new(Namespace, "<name>"), new(Profile, "<name>"), new(LangVersion, "<version>"), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? CSharpMisuse(options),
-    (module, options) => CSharpEmitter.Legalize(module, Implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
+    (module, options) => CSharpEmitter.Legalize(module, implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
     (module, options) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities));
 
@@ -330,13 +348,10 @@ public static class TranslateCommand {
     => options.GetValueOrDefault(Float) == "strict" ? FloatMode.Strict : FloatMode.Accurate;
 
   /// <summary>
-  /// The portable floating-point implementations, imported from their source the first time a
-  /// translation needs one: what a target lacks is emitted from it.
+  /// The portable floating-point implementations, as the build precomputed them, read the first time
+  /// a translation needs one: what a target lacks is emitted from it.
   /// </summary>
-  private static IrModule Implementations() => _implementations.Value;
-
-  private static readonly Lazy<IrModule> _implementations = new(() => CSharpFrontend.Import(
-    FloatOperationSources.All.Select(file => new CSharpSource(file.Name, file.Text)).ToList()).Module!);
+  private static IrModule Implementations() => PrecomputedImplementations.Module;
 
   /// <summary>What is wrong with the options of the C# backend: the namespace first, then the profile and its language version.</summary>
   private static string? CSharpMisuse(IReadOnlyDictionary<string, string> options) {
