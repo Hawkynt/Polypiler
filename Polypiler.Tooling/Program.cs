@@ -49,6 +49,8 @@ public static class Program {
       output.WriteLine($"       {Name} {FuzzCommand.Verb} replay [--target <id>] [--assembly <path>]...");
       output.WriteLine($"       {Name} {IntegrityCommand.Verb} check [--base <git ref>]");
       output.WriteLine($"       {Name} {IntegrityCommand.Verb} seal <path>...");
+      output.WriteLine($"       {Name} {LicensesCommand.Verb} scan --mode corpus|distribution [--root <dir>] [--report <file>] [--policy <file>]");
+      output.WriteLine($"       {Name} {LicensesCommand.Verb} inventory [--policy <file>]");
       return Success;
     }
 
@@ -72,6 +74,8 @@ public static class Program {
       return new FuzzCommand().Run(args[1..], output, error);
     if (args[0] == IntegrityCommand.Verb)
       return new IntegrityCommand().Run(args[1..], output, error);
+    if (args[0] == LicensesCommand.Verb)
+      return new LicensesCommand().Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;

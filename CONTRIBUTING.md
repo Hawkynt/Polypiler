@@ -36,6 +36,19 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   together with code (`--base`). A deliberate change - regenerated with the reference tool, never
   edited to fit the output - is recorded with `integrity seal <path>...` and a line in
   [`tests/fixtures/golden.changes.md`](tests/fixtures/golden.changes.md), in a commit of its own.
+- Licences are checked against [`tooling/licensing/policy.yaml`](tooling/licensing/policy.yaml).
+  `polypiler-tooling licenses scan --mode corpus` checks every imported corpus file;
+  `licenses scan --mode distribution --root <dir>` checks a tree that ships, where reference-only
+  licences (`GPL-2.0-only`, AGPL) and model weights are refused. A file's licence is its
+  `SPDX-License-Identifier` header, else a reviewed override of the policy, else its nearest
+  `LICENSE`/`COPYING` file, recognized by the texts in `tooling/licensing/texts/`; a `licences.yaml`
+  at the root of a scanned tree says which variant (`-only`, `-or-later`) a shared text means. The
+  report goes to `artifacts/licenses/report.json`. `licenses inventory` checks that every
+  `THIRD-PARTY-NOTICE.*` file and every NuGet package is listed in
+  [`tooling/licensing/third-party.yaml`](tooling/licensing/third-party.yaml) with an allowed licence,
+  so converting code or adding a package adds its row there. Only the repository owner moves a
+  licence between the policy's lists, with a row in
+  [`tooling/licensing/DECISIONS.md`](tooling/licensing/DECISIONS.md).
 - Generated and foreign code is built and run only through the cross-language runner
   (`Polypiler.Core.Verification/Running`), under the limits of
   [`tooling/ci/runner.yaml`](tooling/ci/runner.yaml). On Linux with a working `bwrap` (bubblewrap) the

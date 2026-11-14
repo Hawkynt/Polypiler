@@ -256,15 +256,16 @@ codes:
     rule: corpus.lock
     area: infrastructure
     owner: INFRA-CORPUS
-    surfaces: "standard error of polypiler-tooling corpus import (before anything is written) and corpus verify; also 'corpus file '<repository>:<path>' cannot be read, the lock records <expected>: <reason>' for a locked file that is missing; the failure of a test that opens a stale fixture with CorpusFixture.Open"
+    surfaces: "standard error of polypiler-tooling corpus import (before anything is written) and corpus verify; also 'corpus file '<repository>:<path>' cannot be read, the lock records <expected>: <reason>' for a locked file that is missing; the failure of a test that opens a stale fixture with CorpusFixture.Open; standard error of polypiler-tooling licenses scan --mode corpus for a locked file that is not imported"
   - code: PLY0024
     severity: error
     exit: LicenseBlocker
     title: licence not approved
-    message: "the licence '<licence>' of '<component>' is not approved"
+    message: "'<path>': licence '<expression>' is denied in <mode> mode[ (<licence> awaits an owner decision, requested by <issue>)]"
+    rule: licences.policy
     area: infrastructure
     owner: INFRA-LICENSES
-    reserved: true
+    surfaces: "standard error of polypiler-tooling licenses scan and licenses inventory; also ''<path>': declared licence '<declared>' disagrees with detected '<family>'' and ''<path>' is a restricted asset and may not be redistributed'"
   - code: PLY0025
     severity: error
     exit: EnvironmentError
@@ -273,7 +274,7 @@ codes:
     rule: corpus.path
     area: infrastructure
     owner: INFRA-CORPUS
-    surfaces: "standard error of polypiler-tooling corpus import and discover, git's stderr as the cause; also '<repository> at <commit> cannot be fetched from <url>: <cause>', 'the files of <repository> at <commit> cannot be listed: <cause>' and 'corpus path '<path>' cannot be written: <cause>'"
+    surfaces: "standard error of polypiler-tooling corpus import and discover, git's stderr as the cause; also '<repository> at <commit> cannot be fetched from <url>: <cause>', 'the files of <repository> at <commit> cannot be listed: <cause>' and 'corpus path '<path>' cannot be written: <cause>' and, from polypiler-tooling licenses scan, 'licence report '<file>' cannot be written: <cause>'"
   - code: PLY0026
     severity: error
     exit: EnvironmentError
@@ -282,7 +283,7 @@ codes:
     rule: corpus.manifest
     area: infrastructure
     owner: INFRA-CORPUS
-    surfaces: "standard error of polypiler-tooling corpus import, verify and discover; reasons include a schema violation of corpus.yaml or corpus.lock.json, a fixture naming an undeclared repository, a duplicated fixture ID, an absolute path or one containing '..', a file under corpus/upstream that is not in the lock, a file not yet in the lock and an unknown fixture or repository asked for"
+    surfaces: "standard error of polypiler-tooling corpus import, verify and discover; reasons include a schema violation of corpus.yaml or corpus.lock.json, a fixture naming an undeclared repository, a duplicated fixture ID, an absolute path or one containing '..', a file under corpus/upstream that is not in the lock, a file not yet in the lock and an unknown fixture or repository asked for; also standard error of polypiler-tooling licenses scan and licenses inventory with the reasons 'licence policy: <detail>' (tooling/licensing/policy.yaml or its DECISIONS.md), 'licence declarations: <detail>' (licences.yaml of a scanned tree) and 'licence inventory: <detail>' (tooling/licensing/third-party.yaml)"
   - code: PLY0027
     severity: error
     exit: EnvironmentError
@@ -305,10 +306,11 @@ codes:
     severity: error
     exit: LicenseBlocker
     title: licence undetectable
-    message: "the licence of '<component>' cannot be determined: <reason>"
+    message: "'<path>': no licence could be determined[: <reason>]"
+    rule: licences.detection
     area: infrastructure
     owner: INFRA-LICENSES
-    reserved: true
+    surfaces: "standard error of polypiler-tooling licenses scan, for a file no rule yields a licence for, a header expression that does not parse, an unknown licence text, a shared text no declaration selects a variant of, and a Vendored/<library>/ folder without a licence file; of licenses inventory for a notice file or package reference tooling/licensing/third-party.yaml does not list"
   - code: PLY0030
     severity: error
     exit: TargetBuildFailure
