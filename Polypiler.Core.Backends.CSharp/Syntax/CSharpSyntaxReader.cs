@@ -98,7 +98,8 @@ public static class CSharpSyntaxReader {
         Modifiers(@operator.Modifiers), new CsType(@operator.ReturnType.ToString()), "operator " + @operator.OperatorToken.Text, [],
         Read(@operator.ParameterList), @operator.Body is null ? null : Block(@operator.Body), @operator.ExpressionBody is null ? null : Read(@operator.ExpressionBody.Expression)),
       ConstructorDeclarationSyntax constructor => new CsConstructor(Modifiers(constructor.Modifiers), constructor.Identifier.Text, Read(constructor.ParameterList), Block(constructor.Body!)) {
-        Chained = constructor.Initializer is { } chain ? [.. chain.ArgumentList.Arguments.Select(argument => Read(argument.Expression))] : null
+        Chained = constructor.Initializer is { } chain ? [.. chain.ArgumentList.Arguments.Select(argument => Read(argument.Expression))] : null,
+        ChainsToBase = constructor.Initializer?.IsKind(SyntaxKind.BaseConstructorInitializer) == true
       },
       PropertyDeclarationSyntax property => new CsProperty(
         Modifiers(property.Modifiers), new CsType(property.Type.ToString()), property.Identifier.Text,
@@ -171,6 +172,9 @@ public static class CSharpSyntaxReader {
     PrefixUnaryExpressionSyntax unary => new CsPrefixUnary(unary.OperatorToken.Text, Read(unary.Operand)),
     PostfixUnaryExpressionSyntax unary => new CsPostfixUnary(Read(unary.Operand), unary.OperatorToken.Text),
     BinaryExpressionSyntax { RawKind: (int)SyntaxKind.IsExpression } test => new CsIsType(Read(test.Left), new CsType(test.Right.ToString())),
+    IsPatternExpressionSyntax { Pattern: DeclarationPatternSyntax { Designation: SingleVariableDesignationSyntax name } declaration } test
+      => new CsIsType(Read(test.Expression), new CsType(declaration.Type.ToString())) { Designation = name.Identifier.Text },
+    BaseExpressionSyntax => new CsName("base"),
     BinaryExpressionSyntax binary => new CsBinary(Read(binary.Left), binary.OperatorToken.Text, Read(binary.Right)) { BreakBefore = Apart(binary.Left.GetLastToken(), binary.OperatorToken) },
     AssignmentExpressionSyntax assignment => new CsAssignment(Read(assignment.Left), assignment.OperatorToken.Text, Read(assignment.Right)),
     ConditionalExpressionSyntax choice => new CsConditional(Read(choice.Condition), Read(choice.WhenTrue), Read(choice.WhenFalse)) {

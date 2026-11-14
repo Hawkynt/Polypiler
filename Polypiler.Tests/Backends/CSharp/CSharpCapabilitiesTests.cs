@@ -43,6 +43,7 @@ public sealed class CSharpCapabilitiesTests {
     ("get-only auto-property", "C# 6"),
     ("init accessor", "C# 9"),
     ("record class", "C# 9"),
+    ("pattern declaration", "C# 7"),
     ("IEquatable<T>", "net2.0"),
     ("EqualityComparer<T>.Default", "net2.0"),
     ("HashCode.Combine", "netstandard2.1"),

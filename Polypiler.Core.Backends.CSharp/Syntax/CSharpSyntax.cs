@@ -156,7 +156,12 @@ public sealed record CsBinary(CsExpression Left, string Operator, CsExpression R
 /// <summary><c>operand is T</c>.</summary>
 /// <param name="Operand">What is tested.</param>
 /// <param name="TestedType">The type.</param>
-public sealed record CsIsType(CsExpression Operand, CsType TestedType) : CsExpression;
+public sealed record CsIsType(CsExpression Operand, CsType TestedType) : CsExpression {
+
+  /// <summary>The variable a pattern declares, <c>x is T t</c> of C# 7, or <see langword="null"/>.</summary>
+  public string? Designation { get; init; }
+
+}
 
 /// <summary>An assignment, simple or compound: <c>=</c>, <c>+=</c>, <c>&lt;&lt;=</c> and so on.</summary>
 /// <param name="Left">The variable assigned to.</param>
@@ -353,6 +358,9 @@ public sealed record CsConstructor(IReadOnlyList<string> Modifiers, string Name,
 
   /// <summary>The arguments of <c>: this(…)</c>, or <see langword="null"/> for a constructor that does not chain.</summary>
   public IReadOnlyList<CsExpression>? Chained { get; init; }
+
+  /// <summary>Whether <see cref="Chained"/> calls a constructor of the base class, <c>: base(…)</c>, rather than another of the type.</summary>
+  public bool ChainsToBase { get; init; }
 
 }
 

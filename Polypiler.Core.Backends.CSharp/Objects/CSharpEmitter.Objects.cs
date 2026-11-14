@@ -10,6 +10,7 @@ public static partial class CSharpEmitter {
   private static string Visibility(IrVisibility visibility) => visibility switch {
     IrVisibility.Public => "public",
     IrVisibility.Internal => "internal",
+    IrVisibility.Protected => "protected",
     _ => "private"
   };
 
@@ -43,7 +44,7 @@ public static partial class CSharpEmitter {
     private Dictionary<string, IrClassType> Owners
       => this._owners ??= this._module.Types.OfType<IrClassType>().SelectMany(type => type.Functions.Select(function => (function, type))).ToDictionary(pair => pair.function, pair => pair.type);
 
-    private bool IsMember(IrFunction function) => this.Owners.ContainsKey(function.Name);
+    private bool IsMember(IrFunction function) => this.Owners.ContainsKey(function.Name) || this.Signatures.Contains(function.Name);
 
     private bool IsOwned(IrGlobal global) => this._module.Types.OfType<IrClassType>().Any(type => type.StaticFields.Contains(global));
 
@@ -86,7 +87,7 @@ public static partial class CSharpEmitter {
     /// any other object, whose private field a member of another class cannot name.
     /// </summary>
     private string ObjectFieldName(IrField field, IrExpr target) {
-      var owner = target.Type.ClassType!;
+      var owner = target.Type.ClassType!.OwnerOf(field)!;
       return !this.AutoProperties && owner.PropertyOf(field) is { } property && !(target is IrLocalRef reference && reference.Local == this._receiver)
         ? this.MemberNames(owner)[property]
         : this.MemberNames(owner)[field];
@@ -96,10 +97,11 @@ public static partial class CSharpEmitter {
     private string MethodName(IrMethod method, IrClassType owner)
       => this.MemberNames(owner)[method.Kind == IrMethodKind.Method ? method : owner.PropertyOf(method)!];
 
-    /// <summary>The classes of the module, each in the form the profile has (see the lowering table of <c>docs/reference/classes.md</c>).</summary>
+    /// <summary>The interfaces and classes of the module, each in the form the profile has (see the lowering tables of <c>docs/reference/classes.md</c>).</summary>
     private List<CsMember> Classes() {
       this._inClass = true;
-      List<CsMember> classes = [.. this._module.Types.OfType<IrClassType>().Select(this.Class)];
+      List<CsMember> classes = [.. this._module.Types.Where(type => type is IrClassType or IrInterfaceType)
+        .Select(type => type is IrClassType declared ? this.Class(declared) : this.Interface((IrInterfaceType)type))];
       this._inClass = false;
       return classes;
     }
@@ -129,11 +131,14 @@ public static partial class CSharpEmitter {
         this._receiver = method.IsStatic ? null : function.Parameters[0];
         var (parameters, body, expression) = this.Body(function, method.IsStatic ? 0 : 1, function.Body, true);
         this._receiver = null;
-        IReadOnlyList<string> modifiers = method.IsStatic ? [Visibility(method.Visibility), "static"] : [Visibility(method.Visibility)];
-        members.Add(new CsMethod(modifiers, new CsType(this.TypeName(function.ReturnType)), names[method], [], parameters, body, expression));
+        if (method.Dispatch == IrDispatch.Abstract)
+          (body, expression) = (null, null);
+
+        members.Add(new CsMethod(this.MethodModifiers(method), new CsType(this.TypeName(function.ReturnType)), names[method], [], parameters, body, expression));
       }
 
-      IReadOnlyList<string> declared = [Visibility(type.Visibility), "sealed"];
+      IReadOnlyList<string> declared = [Visibility(type.Visibility), .. type.IsAbstract ? ["abstract"] : this.Derived(type) ? (string[])[] : ["sealed"]];
+      List<CsType> bases = [.. type.Base is { } @base ? [new CsType(this._typeNames[@base.Name])] : (CsType[])[], .. type.Interfaces.Select(contract => new CsType(this._typeNames[contract.Name]))];
       if (positional is not null)
         return new CsTypeDeclaration(declared, "record", name, positional, [], members.Count == 0 ? null : [.. members.Select(member => member with { Leading = CsTrivia.Blank })]) {
           OpenBlank = false
@@ -143,7 +148,7 @@ public static partial class CSharpEmitter {
       if (equatable)
         members.AddRange(this.ClassEqualityMembers(name, [.. type.Fields.Select(field => (this.TypeName(field.Type), names[field]))]));
 
-      return new CsTypeDeclaration(declared, "class", name, null, equatable ? [new CsType($"{Base}IEquatable<{name}>")] : [], [.. members.Select(member => member with { Leading = CsTrivia.Blank })]);
+      return new CsTypeDeclaration(declared, "class", name, null, equatable ? [.. bases, new CsType($"{Base}IEquatable<{name}>")] : bases, [.. members.Select(member => member with { Leading = CsTrivia.Blank })]);
     }
 
     /// <summary>
@@ -224,10 +229,14 @@ public static partial class CSharpEmitter {
     private static IEnumerable<IrStmt> AllStatements(IrStmt statement)
       => (statement is IrBlock block ? block.Statements : IrTree.Blocks(statement).SelectMany(nested => nested.Statements)).SelectMany(AllStatements).Prepend(statement);
 
-    /// <summary>A constructor; one whose body begins with the call of another constructor's function chains to it with <c>: this(…)</c>.</summary>
+    /// <summary>
+    /// A constructor; one whose body begins with the call of another constructor's function chains to
+    /// it with <c>: this(…)</c>, or with <c>: base(…)</c> to one of the base class.
+    /// </summary>
     private CsConstructor Constructor(IrClassType type, IrConstructor constructor, IrFunction function) {
       this._receiver = function.Parameters[0];
       var chain = function.Body.Statements is [IrExprStmt { Expression: IrCall call }, ..] && this.Owners.ContainsKey(call.Function) ? call : null;
+      var toBase = chain is not null && this.Owners[chain.Function] != type;
       var statements = chain is null ? function.Body : new IrBlock([.. function.Body.Statements.Skip(1)]);
       var (parameters, body, _) = this.Body(function, 1, statements, false);
       IReadOnlyList<CsExpression>? chained = chain is null ? null : [.. chain.Arguments.Skip(1).Select(argument => {
@@ -235,7 +244,10 @@ public static partial class CSharpEmitter {
         return Expressions(argument).Any(this.Wraps) && !Traps(Promoted(argument)) ? new CsCheckedExpression(false, value) { Type = value.Type } : value;
       })];
       this._receiver = null;
-      return new CsConstructor([Visibility(constructor.Visibility)], this._typeNames[type.Name], parameters, body!) { Chained = chained };
+      // : base() is what C# calls without being asked.
+      return new CsConstructor([Visibility(constructor.Visibility)], this._typeNames[type.Name], parameters, body!) {
+        Chained = toBase && chained is [] ? null : chained, ChainsToBase = toBase
+      };
     }
 
     /// <summary>
@@ -282,9 +294,11 @@ public static partial class CSharpEmitter {
           return (new CsMemberAccess(this.Operand(load.Target, Primary), this.ObjectFieldName(load.Field, load.Target)), Primary);
         default:
           var call = (IrMethodCall)expression;
-          var owner = this.Owners[call.Method.Function];
-          var target = call.Target is null ? new CsName(this._typeNames[owner.Name]) : this.Operand(call.Target, Primary);
-          var member = new CsMemberAccess(target, this.MethodName(call.Method, owner)) { Type = call.Type };
+          var owner = this.Owners.GetValueOrDefault(call.Method.Function);
+          var target = call.Target is null ? new CsName(this._typeNames[owner!.Name])
+            : call.Kind == IrMethodCallKind.Base ? new CsName("base")
+            : this.Operand(call.Target, Primary);
+          var member = new CsMemberAccess(target, owner is null ? this.InterfaceMemberName(call.Method) : this.MethodName(call.Method, owner)) { Type = call.Type };
           return call.Method.Kind switch {
             IrMethodKind.Getter => (member, Primary),
             IrMethodKind.Setter => (new CsAssignment(member, "=", this.Stored(call.Arguments[0])), Loose),

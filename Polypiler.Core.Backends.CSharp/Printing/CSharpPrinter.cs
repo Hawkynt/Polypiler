@@ -88,7 +88,7 @@ public static class CSharpPrinter {
     "*" or "/" or "%" => 13,
     "+" or "-" => 12,
     "<<" or ">>" or ">>>" => 11,
-    "<" or ">" or "<=" or ">=" => Relational,
+    "<" or ">" or "<=" or ">=" or "as" => Relational,
     "==" or "!=" => 9,
     "&" => 8,
     "^" => 7,
@@ -188,7 +188,7 @@ public static class CSharpPrinter {
           this.Modifiers(constructor.Modifiers, depth).Append(constructor.Name);
           this.Parameters(constructor.Parameters);
           if (constructor.Chained is { } chained) {
-            this._text.Append(" : this(");
+            this._text.Append(constructor.ChainsToBase ? " : base(" : " : this(");
             for (var index = 0; index < chained.Count; ++index) {
               if (index > 0)
                 this._text.Append(", ");
@@ -254,6 +254,11 @@ public static class CSharpPrinter {
     }
 
     private void Body(CsBlock? body, CsExpression? expression, int depth) {
+      if (body is null && expression is null) {
+        this._text.Append(";\n");
+        return;
+      }
+
       if (body is null) {
         this._text.Append(" => ");
         this.Expression(expression!, depth);
@@ -563,6 +568,8 @@ public static class CSharpPrinter {
         case CsIsType test:
           this.Operand(test.Operand, Precedence(test.Operand) >= Relational, depth);
           this._text.Append(" is ").Append(test.TestedType.Name);
+          if (test.Designation is { } designation)
+            this._text.Append(' ').Append(designation);
           break;
         case CsAssignment assignment:
           this.Operand(assignment.Left, Precedence(assignment.Left) > Assignment, depth);
