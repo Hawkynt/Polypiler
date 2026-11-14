@@ -23,16 +23,23 @@ internal static class CSharpStringRows {
     Written("String.Chars[Int32]", IrIntrinsicOp.StrCodeUnitAt, _text, "(ushort){0}[{1}]"),
     CSharpCapability.OfOperation("String.Concat(String, String)", CSharpProfile.Net20, IrIntrinsicOp.StrConcat, _text, new CSharpForm("string.Concat")),
     Written("Char.ToString(Char)", IrIntrinsicOp.StrFromCodeUnit, _unit, "char.ToString((char){0})"),
+    Helped("String(Char[]) from code units", IrIntrinsicOp.StrFromCodeUnits, [IrTypeKind.Array], "{h}({0})", CSharpStringHelpers.FromAllCodeUnits).When(Arguments(1)),
     Helped("String(Char[], Int32, Int32) from code units", IrIntrinsicOp.StrFromCodeUnits, [IrTypeKind.Array], "{h}({0}, {1}, {2})", CSharpStringHelpers.FromCodeUnits),
     Helped("String.ToCharArray() as code units", IrIntrinsicOp.StrToCodeUnits, _text, "{h}({0})", CSharpStringHelpers.ToCodeUnits),
     Written("String(Char, Int32)", IrIntrinsicOp.StrRepeat, _unit, "new string((char){0}, {1})"),
     Helped("repetition of a string", IrIntrinsicOp.StrRepeat, _text, "{h}({0}, {1})", CSharpStringHelpers.Repeat),
+    Written("String.Substring(Int32)", IrIntrinsicOp.StrSubstring, _text, "{0}.Substring({1})").When(Arguments(2)),
     Written("String.Substring(Int32, Int32)", IrIntrinsicOp.StrSubstring, _text, "{0}.Substring({1}, {2})"),
     CSharpCapability.OfOperation("String.Equals(String, String)", CSharpProfile.Net20, IrIntrinsicOp.StrEquals, _text, new CSharpForm("string.Equals")),
     Written("String.CompareOrdinal(String, String)", IrIntrinsicOp.StrCompareOrdinal, _text, "global::System.Math.Sign(string.CompareOrdinal({0}, {1}))"),
+    Written("String.IndexOf(String, StringComparison)", IrIntrinsicOp.StrIndexOf, _text, $"{{0}}.IndexOf({{1}}, {Ordinal})").When(Arguments(2)),
     Written("String.IndexOf(String, Int32, StringComparison)", IrIntrinsicOp.StrIndexOf, _text, $"{{0}}.IndexOf({{1}}, {{2}}, {Ordinal})"),
+    Written("String.IndexOf(Char)", IrIntrinsicOp.StrIndexOf, _unit, "{0}.IndexOf((char){1})").When(Arguments(2)),
     Written("String.IndexOf(Char, Int32)", IrIntrinsicOp.StrIndexOf, _unit, "{0}.IndexOf((char){1}, {2})"),
+    // .NET Framework finds an empty needle at the last index, .NET 5 and later at the length; the helper has one answer.
+    Helped("last index of a string", IrIntrinsicOp.StrLastIndexOf, _text, "{h}({0}, {1})", CSharpStringHelpers.LastIndexOfAll).When(Arguments(2)),
     Helped("last index of a string at or before a position", IrIntrinsicOp.StrLastIndexOf, _text, "{h}({0}, {1}, {2})", CSharpStringHelpers.LastIndexOf),
+    Written("String.LastIndexOf(Char)", IrIntrinsicOp.StrLastIndexOf, _unit, "{0}.LastIndexOf((char){1})").When(Arguments(2)),
     Helped("last index of a code unit at or before a position", IrIntrinsicOp.StrLastIndexOf, _unit, "{h}({0}, (char){1}, {2})", CSharpStringHelpers.LastIndexOfUnit),
     Written("String.StartsWith(String, StringComparison)", IrIntrinsicOp.StrStartsWith, _text, $"{{0}}.StartsWith({{1}}, {Ordinal})"),
     Row("String.StartsWith(Char)", CSharpProfile.NetStandard21, IrIntrinsicOp.StrStartsWith, _unit, "{0}.StartsWith((char){1})", "{h}({0}, (char){1})", CSharpStringHelpers.StartsWithUnit),
@@ -63,6 +70,9 @@ internal static class CSharpStringRows {
     Helped("codePointAt of ECMA-262", IrIntrinsicOp.StrCodePointAt, _text, "{h}({0}, {1})", CSharpStringHelpers.CodePointAt),
     Written("Char.IsSurrogatePair(String, Int32)", IrIntrinsicOp.StrNextCodePoint, _text, "(char.IsSurrogatePair({0}, {1}) ? 2 : 1)")
   ];
+
+  /// <summary>Whether a node has the given number of arguments, which tells the short form of an operation from the long one.</summary>
+  private static System.Func<IrIntrinsic, bool> Arguments(int count) => intrinsic => intrinsic.Arguments.Count == count;
 
   /// <summary>Whether a split has no limit: a negative constant.</summary>
   private static bool Unlimited(IrIntrinsic intrinsic) => intrinsic.Arguments[2] is IrConst { Value: < 0 };

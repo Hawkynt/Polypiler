@@ -251,6 +251,27 @@ public sealed class IrStringTests {
   public void Search_TrapsOutsideTheString(IrIntrinsicOp op, int from)
     => Assert.That(Trap(Op(op, IrType.I32, S("abc"), U('a'), I(from))), Is.EqualTo(IrTrap.IndexOutOfRange));
 
+  [TestCase("abcab", "ab", 0, 3)]
+  [TestCase("abc", "", 0, 3)]
+  [TestCase("abc", "x", -1, -1)]
+  public void Search_WithoutAPositionGoesOverTheWholeString(string text, string needle, int first, int last) {
+    Assert.That(Run(Op(IrIntrinsicOp.StrIndexOf, IrType.I32, S(text), S(needle))), Is.EqualTo(first));
+    Assert.That(Run(Op(IrIntrinsicOp.StrLastIndexOf, IrType.I32, S(text), S(needle))), Is.EqualTo(last));
+  }
+
+  [TestCase(0, "abc")]
+  [TestCase(3, "")]
+  public void Substring_WithoutALengthGoesToTheEnd(int start, string expected)
+    => Assert.That(Run(Op(IrIntrinsicOp.StrSubstring, _str, S("abc"), I(start))), Is.EqualTo(expected));
+
+  [TestCase(-1)]
+  [TestCase(4)]
+  public void Substring_WithoutALengthTrapsOutside(int start)
+    => Assert.That(Trap(Op(IrIntrinsicOp.StrSubstring, _str, S("abc"), I(start))), Is.EqualTo(IrTrap.IndexOutOfRange));
+
+  [Test]
+  public void FromCodeUnits_WithoutARangeTakesAll() => Assert.That(Run(Op(IrIntrinsicOp.StrFromCodeUnits, _str, Units('x', 'y'))), Is.EqualTo("xy"));
+
   [Test]
   public void Search_TakesACodeUnit() {
     Assert.That(Run(Op(IrIntrinsicOp.StrIndexOf, IrType.I32, S("abab"), U('b'), I(0))), Is.EqualTo(1));

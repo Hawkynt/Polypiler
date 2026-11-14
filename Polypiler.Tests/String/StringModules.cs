@@ -33,7 +33,8 @@ internal static class StringModules {
     ("ReplaceAll", [_a, _b]), ("ReplaceAllUnit", [_a, _c, _d]), ("ReplaceFirst", [_a, _b]),
     ("Split", [_a, _b, _i]), ("SplitUnit", [_a, _c]), ("SplitUnitLimit", [_a, _c, _i]), ("Join", [_a, _parts]),
     ("TrimNet", [_a]), ("TrimStartNet", [_a]), ("TrimEndNet", [_a]), ("TrimEcma", [_a]), ("TrimStartEcma", [_a]), ("TrimEndEcma", [_a]),
-    ("PadStart", [_a, _i, _b]), ("PadEnd", [_a, _i, _b]), ("CodePointAt", [_a, _i]), ("NextCodePoint", [_a, _i]), ("Constants", [_i])
+    ("PadStart", [_a, _i, _b]), ("PadEnd", [_a, _i, _b]), ("CodePointAt", [_a, _i]), ("NextCodePoint", [_a, _i]), ("Constants", [_i]),
+    ("SubstringFrom", [_a, _i]), ("FromAllCodeUnits", [_units]), ("IndexOfAll", [_a, _b]), ("IndexOfUnitAll", [_a, _c]), ("LastIndexOfAll", [_a, _b]), ("LastIndexOfUnitAll", [_a, _c])
   ];
 
   /// <summary>One public function per operation and form, each returning what the operation computes from its parameters.</summary>
@@ -81,6 +82,12 @@ internal static class StringModules {
       "PadEnd" => Op(IrIntrinsicOp.StrPadEnd, _str, Ref(_a), Ref(_i), Ref(_b)),
       "CodePointAt" => Op(IrIntrinsicOp.StrCodePointAt, IrType.I32, Ref(_a), Ref(_i)),
       "NextCodePoint" => Op(IrIntrinsicOp.StrNextCodePoint, IrType.I32, Ref(_a), Ref(_i)),
+      "SubstringFrom" => Op(IrIntrinsicOp.StrSubstring, _str, Ref(_a), Ref(_i)),
+      "FromAllCodeUnits" => Op(IrIntrinsicOp.StrFromCodeUnits, _str, Ref(_units)),
+      "IndexOfAll" => Op(IrIntrinsicOp.StrIndexOf, IrType.I32, Ref(_a), Ref(_b)),
+      "IndexOfUnitAll" => Op(IrIntrinsicOp.StrIndexOf, IrType.I32, Ref(_a), Ref(_c)),
+      "LastIndexOfAll" => Op(IrIntrinsicOp.StrLastIndexOf, IrType.I32, Ref(_a), Ref(_b)),
+      "LastIndexOfUnitAll" => Op(IrIntrinsicOp.StrLastIndexOf, IrType.I32, Ref(_a), Ref(_c)),
       _ => Op(IrIntrinsicOp.StrConcat, _str, new IrConstRef(_greeting), new IrArrayLoad(new IrConstRef(_names), Ref(_i)))
     };
 

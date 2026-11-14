@@ -429,7 +429,7 @@ public sealed class CSharpCapabilitiesTests {
   public void EveryHelper_IsCSharp2ForNetFramework20() {
     var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().ToList();
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(95));
+    Assert.That(helpers, Has.Count.EqualTo(97));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);
     foreach (var checking in _overflowChecking)
       Assert.That(() => GeneratedCSharp.Compile(text, checking), Throws.Nothing);

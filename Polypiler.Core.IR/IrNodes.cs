@@ -700,7 +700,7 @@ public enum IrIntrinsicOp {
   /// <summary><c>u16 → str</c>: the string of one code unit.</summary>
   StrFromCodeUnit,
 
-  /// <summary><c>(u16[], i32 start, i32 length) → str</c>: the code units of a range of an array; traps <see cref="IrTrap.IndexOutOfRange"/> outside the array.</summary>
+  /// <summary><c>(u16[], i32 start, i32 length) → str</c>: the code units of a range of an array, of all of it without a range; traps <see cref="IrTrap.IndexOutOfRange"/> outside the array.</summary>
   StrFromCodeUnits,
 
   /// <summary><c>str → u16[]</c>: a new array of the code units.</summary>
@@ -709,7 +709,7 @@ public enum IrIntrinsicOp {
   /// <summary><c>(u16, i32) → str</c> or <c>(str, i32) → str</c>: a code unit or a string the given number of times; traps <see cref="IrTrap.IntegerOverflow"/> for a negative count.</summary>
   StrRepeat,
 
-  /// <summary><c>(str, i32 start, i32 length) → str</c>: traps <see cref="IrTrap.IndexOutOfRange"/> unless <c>0 ≤ start</c>, <c>0 ≤ length</c> and <c>start + length ≤ StrLength</c>.</summary>
+  /// <summary><c>(str, i32 start, i32 length) → str</c>, or <c>(str, i32 start)</c> up to the end: traps <see cref="IrTrap.IndexOutOfRange"/> unless <c>0 ≤ start</c>, <c>0 ≤ length</c> and <c>start + length ≤ StrLength</c>.</summary>
   StrSubstring,
 
   /// <summary><c>(str, str) → bool</c>: the same code units in the same order.</summary>
@@ -718,10 +718,10 @@ public enum IrIntrinsicOp {
   /// <summary><c>(str, str) → i32</c>: -1, 0 or 1 by the first code unit that differs, a proper prefix first.</summary>
   StrCompareOrdinal,
 
-  /// <summary><c>(str, str | u16, i32 from) → i32</c>: the first start at or after <c>from</c> of the needle, -1 when there is none; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length]</c>.</summary>
+  /// <summary><c>(str, str | u16, i32 from) → i32</c>: the first start at or after <c>from</c> (0 without it) of the needle, -1 when there is none; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length]</c>.</summary>
   StrIndexOf,
 
-  /// <summary><c>(str, str | u16, i32 from) → i32</c>: the last start at or before <c>from</c> of the needle, -1 when there is none; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length]</c>.</summary>
+  /// <summary><c>(str, str | u16, i32 from) → i32</c>: the last start at or before <c>from</c> (the length without it) of the needle, -1 when there is none; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length]</c>.</summary>
   StrLastIndexOf,
 
   /// <summary><c>(str, str | u16) → bool</c>: whether the string begins with the needle.</summary>

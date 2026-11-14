@@ -20,6 +20,13 @@ internal static class CSharpStringHelpers {
     "return new string(text);"
   ]);
 
+  /// <summary>The string of every code unit of an array.</summary>
+  public static CSharpHelper FromAllCodeUnits { get; } = new("FromAllCodeUnits", "string", "ushort[] units", [
+    "char[] text = new char[units.Length];",
+    "for (int index = 0; index < units.Length; ++index) text[index] = (char)units[index];",
+    "return new string(text);"
+  ]);
+
   /// <summary>A new array of the code units of a string.</summary>
   public static CSharpHelper ToCodeUnits { get; } = new("ToCodeUnits", "ushort[]", "string text", [
     "ushort[] units = new ushort[text.Length];",
@@ -39,6 +46,12 @@ internal static class CSharpStringHelpers {
   public static CSharpHelper LastIndexOf { get; } = new("LastIndexOf", "int", "string text, string needle, int from", [
     "if (from < 0 || from > text.Length) " + OutOfRange,
     "for (int start = global::System.Math.Min(from, text.Length - needle.Length); start >= 0; --start) if (string.CompareOrdinal(text, start, needle, 0, needle.Length) == 0) return start;",
+    "return -1;"
+  ]);
+
+  /// <summary>The last start of a needle; an empty one stands at the length.</summary>
+  public static CSharpHelper LastIndexOfAll { get; } = new("LastIndexOfAll", "int", "string text, string needle", [
+    "for (int start = text.Length - needle.Length; start >= 0; --start) if (string.CompareOrdinal(text, start, needle, 0, needle.Length) == 0) return start;",
     "return -1;"
   ]);
 

@@ -60,14 +60,14 @@ public static class StringOperations {
     [IrIntrinsicOp.StrLength] = [(IrType.I32, [_str])],
     [IrIntrinsicOp.StrCodeUnitAt] = [(IrType.U16, [_str, IrType.I32])],
     [IrIntrinsicOp.StrFromCodeUnit] = [(_str, [IrType.U16])],
-    [IrIntrinsicOp.StrFromCodeUnits] = [(_str, [_units, IrType.I32, IrType.I32])],
+    [IrIntrinsicOp.StrFromCodeUnits] = [(_str, [_units, IrType.I32, IrType.I32]), (_str, [_units])],
     [IrIntrinsicOp.StrToCodeUnits] = [(_units, [_str])],
     [IrIntrinsicOp.StrRepeat] = [(_str, [IrType.U16, IrType.I32]), (_str, [_str, IrType.I32])],
-    [IrIntrinsicOp.StrSubstring] = [(_str, [_str, IrType.I32, IrType.I32])],
+    [IrIntrinsicOp.StrSubstring] = [(_str, [_str, IrType.I32, IrType.I32]), (_str, [_str, IrType.I32])],
     [IrIntrinsicOp.StrEquals] = [(IrType.Bool, [_str, _str])],
     [IrIntrinsicOp.StrCompareOrdinal] = [(IrType.I32, [_str, _str])],
-    [IrIntrinsicOp.StrIndexOf] = [(IrType.I32, [_str, _str, IrType.I32]), (IrType.I32, [_str, IrType.U16, IrType.I32])],
-    [IrIntrinsicOp.StrLastIndexOf] = [(IrType.I32, [_str, _str, IrType.I32]), (IrType.I32, [_str, IrType.U16, IrType.I32])],
+    [IrIntrinsicOp.StrIndexOf] = [(IrType.I32, [_str, _str, IrType.I32]), (IrType.I32, [_str, IrType.U16, IrType.I32]), (IrType.I32, [_str, _str]), (IrType.I32, [_str, IrType.U16])],
+    [IrIntrinsicOp.StrLastIndexOf] = [(IrType.I32, [_str, _str, IrType.I32]), (IrType.I32, [_str, IrType.U16, IrType.I32]), (IrType.I32, [_str, _str]), (IrType.I32, [_str, IrType.U16])],
     [IrIntrinsicOp.StrStartsWith] = [(IrType.Bool, [_str, _str]), (IrType.Bool, [_str, IrType.U16])],
     [IrIntrinsicOp.StrEndsWith] = [(IrType.Bool, [_str, _str]), (IrType.Bool, [_str, IrType.U16])],
     [IrIntrinsicOp.StrContains] = [(IrType.Bool, [_str, _str]), (IrType.Bool, [_str, IrType.U16])],
@@ -152,21 +152,22 @@ public static class StringOperations {
       case IrIntrinsicOp.StrFromCodeUnit:
         return ((char)(long)arguments[0]).ToString();
       case IrIntrinsicOp.StrFromCodeUnits:
-        return FromCodeUnits((ushort[])arguments[0], Int(1), Int(2));
+        var units = (ushort[])arguments[0];
+        return arguments.Length == 1 ? FromCodeUnits(units, 0, units.Length) : FromCodeUnits(units, Int(1), Int(2));
       case IrIntrinsicOp.StrToCodeUnits:
         return Text(0).Select(unit => (ushort)unit).ToArray();
       case IrIntrinsicOp.StrRepeat:
         return Repeat(Needle(0), Int(1));
       case IrIntrinsicOp.StrSubstring:
-        return Substring(Text(0), Int(1), Int(2));
+        return arguments.Length == 2 ? Substring(Text(0), Int(1), Text(0).Length - Int(1)) : Substring(Text(0), Int(1), Int(2));
       case IrIntrinsicOp.StrEquals:
         return string.Equals(Text(0), Text(1), StringComparison.Ordinal);
       case IrIntrinsicOp.StrCompareOrdinal:
         return (long)CompareOrdinal(Text(0), Text(1));
       case IrIntrinsicOp.StrIndexOf:
-        return (long)IndexOf(Text(0), Needle(1), Int(2));
+        return (long)IndexOf(Text(0), Needle(1), arguments.Length == 2 ? 0 : Int(2));
       case IrIntrinsicOp.StrLastIndexOf:
-        return (long)LastIndexOf(Text(0), Needle(1), Int(2));
+        return (long)LastIndexOf(Text(0), Needle(1), arguments.Length == 2 ? Text(0).Length : Int(2));
       case IrIntrinsicOp.StrStartsWith:
         return Text(0).StartsWith(Needle(1), StringComparison.Ordinal);
       case IrIntrinsicOp.StrEndsWith:

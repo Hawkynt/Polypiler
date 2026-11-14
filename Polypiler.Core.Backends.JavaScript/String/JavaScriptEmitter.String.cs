@@ -37,12 +37,16 @@ public static partial class JavaScriptEmitter {
           return (sum, false);
         case IrIntrinsicOp.StrFromCodeUnit:
           return (this.Unit(arguments[0]), true);
+        case IrIntrinsicOp.StrFromCodeUnits when arguments.Count == 1:
+          return (this.Helper("$fromAllUnits", arguments[0]), true);
         case IrIntrinsicOp.StrFromCodeUnits:
           return (this.Helper("$fromUnits", arguments[0], arguments[1], arguments[2]), true);
         case IrIntrinsicOp.StrToCodeUnits:
           return (this.Helper("$toUnits", arguments[0]), true);
         case IrIntrinsicOp.StrRepeat:
           return (this.Helper("$repeat", [this.Needle(arguments[0]), Arg(1)]), true);
+        case IrIntrinsicOp.StrSubstring when arguments.Count == 2:
+          return (this.Helper("$substrFrom", arguments[0], arguments[1]), true);
         case IrIntrinsicOp.StrSubstring:
           return (this.Helper("$substr", arguments[0], arguments[1], arguments[2]), true);
         case IrIntrinsicOp.StrEquals:
@@ -53,10 +57,12 @@ public static partial class JavaScriptEmitter {
             ? (new JsConditional(Infix(Target(), "<", this.Operand(arguments[1])), Number("-1"),
                 new JsConditional(Infix(Target(), ">", this.Operand(arguments[1])), Number("1"), Number("0"))), false)
             : (this.Helper("$cmp", arguments[0], arguments[1]), true);
-        case IrIntrinsicOp.StrIndexOf when arguments[2] is IrConst { Value: 0 }:
+        case IrIntrinsicOp.StrIndexOf when arguments.Count == 2 || arguments[2] is IrConst { Value: 0 }:
           return (Method("indexOf", this.Needle(arguments[1])), true);
         case IrIntrinsicOp.StrIndexOf:
           return (this.Helper("$indexOf", [Arg(0), this.Needle(arguments[1]), Arg(2)]), true);
+        case IrIntrinsicOp.StrLastIndexOf when arguments.Count == 2:
+          return (Method("lastIndexOf", this.Needle(arguments[1])), true);
         case IrIntrinsicOp.StrLastIndexOf when arguments[2] is IrIntrinsic { Op: IrIntrinsicOp.StrLength } length && Same(length.Arguments[0], arguments[0]):
           return (Method("lastIndexOf", this.Needle(arguments[1])), true);
         case IrIntrinsicOp.StrLastIndexOf:

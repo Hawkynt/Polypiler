@@ -27,6 +27,12 @@ internal static partial class JavaScriptHelpers {
       "  for (@let k = start; k < start + length; ++k) s += String.fromCharCode(units[k]);",
       "  return s;",
       "}")),
+    Same("$fromAllUnits", Lines(
+      "function $fromAllUnits(units) {",
+      "  @let s = \"\";",
+      "  for (@let k = 0; k < units.length; ++k) s += String.fromCharCode(units[k]);",
+      "  return s;",
+      "}")),
     ("$toUnits", native => Lines(
       "function $toUnits(s) {",
       native("Uint16Array") ? "  @const units = new Uint16Array(s.length);" : "  @const units = [];",
@@ -40,6 +46,11 @@ internal static partial class JavaScriptHelpers {
       "function $substr(s, start, length) {",
       "  if (start < 0 || length < 0 || start > s.length - length) " + IndexOutOfRange,
       "  return s.substring(start, start + length);",
+      "}")),
+    Same("$substrFrom", Lines(
+      "function $substrFrom(s, start) {",
+      "  if (start < 0 || start > s.length) " + IndexOutOfRange,
+      "  return s.substring(start);",
       "}")),
     Same("$cmp", Lines("function $cmp(a, b) {", "  return a < b ? -1 : a > b ? 1 : 0;", "}")),
     Same("$indexOf", Lines("function $indexOf(s, n, from) {", Position, "  return s.indexOf(n, from);", "}")),
