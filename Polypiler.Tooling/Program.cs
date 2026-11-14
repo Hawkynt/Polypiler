@@ -7,6 +7,7 @@ using Polypiler.Core.IR;
 using Polypiler.Tooling.Bench;
 using Polypiler.Tooling.Commands;
 using Polypiler.Tooling.Fuzz;
+using Polypiler.Tooling.Permutations;
 using Polypiler.Tooling.Report;
 
 namespace Polypiler.Tooling;
@@ -58,6 +59,7 @@ public static class Program {
       output.WriteLine($"       {Name} {BenchCommand.Verb} run (--id <id> | --all) [--out <dir>]");
       output.WriteLine($"       {Name} {BenchCommand.Verb} compare --baseline <dir> --current <dir> [--budgets <file>] [--out <file.md>]");
       output.WriteLine($"       {Name} {CatalogCommand.Verb} audit-adapter --audit <file> [--touch <path>]... [--corpus <dir>]");
+      output.WriteLine($"       {Name} {ImportBitPermCommand.Verb} {ImportBitPermCommand.Import} [--fixtures <dir>] [--out <dir>] [--check]");
       return Success;
     }
 
@@ -93,6 +95,8 @@ public static class Program {
       return new BenchCommand().Run(args[1..], output, error);
     if (args[0] == CatalogCommand.Verb)
       return new CatalogCommand().Run(args[1..], output, error);
+    if (args[0] == ImportBitPermCommand.Verb)
+      return ImportBitPermCommand.Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;
