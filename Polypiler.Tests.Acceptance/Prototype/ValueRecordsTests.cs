@@ -37,6 +37,9 @@ public sealed class ValueRecordsTests {
 
   private string _directory = "";
 
+  /// <summary>Whether this case translates in process: the test design does, the scenarios start the executable.</summary>
+  private bool _inProcess;
+
   [SetUp]
   public void CreateWorkingDirectory() {
     this._directory = Path.Combine(Path.GetTempPath(), "polypiler-" + Guid.NewGuid().ToString("N"));
@@ -46,11 +49,11 @@ public sealed class ValueRecordsTests {
   [TearDown]
   public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
 
-  /// <summary>Translates a file with the real executable; returns the generated text, and the time it took is reported.</summary>
+  /// <summary>Translates a file with the real executable, or in process where the test is about the generated file; returns the generated text, and the time it took is reported.</summary>
   private string Translate(string source, string from, string to, string generated, params string[] further) {
     var output = Path.Combine(this._directory, "out");
     var clock = Stopwatch.StartNew();
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
+    var (exitCode, text) = Toolchain.Polypiler(this._inProcess, this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
     TestContext.Out.WriteLine($"translate {Path.GetFileName(source)} --to {to} {string.Join(' ', further)}: {clock.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
     return File.ReadAllText(Path.Combine(output, generated));
@@ -154,6 +157,7 @@ public sealed class ValueRecordsTests {
   /// <summary>Test design 1: every call of every C# fixture in every JavaScript level computes in node what .NET computes.</summary>
   [TestCaseSource(nameof(LevelsAndFixtures))]
   public void CSharpFixture_RunsInNodeLikeDotNet(ProfileCase profile, string file, string className) {
+    this._inProcess = true;
     var calls = RecordFixtures.Calls().Where(call => call.File == file).ToList();
     var text = this.Translate(RecordFixtures.PathOf(file + ".cs"), "csharp", "javascript", className + profile.Parsed.Extension, profile.Arguments);
     Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, text);
@@ -170,6 +174,7 @@ public sealed class ValueRecordsTests {
   /// <summary>Test design 1: the JavaScript fixture in every C# profile computes what node computes of the original.</summary>
   [Test]
   public void JavaScriptFixture_RunsInEveryCSharpProfileLikeNode() {
+    this._inProcess = true;
     var random = new Random(2026);
     var calls = new List<PrototypeCall> { new("pathLength", [3.0]), new("pathLength", [1.0]), new("boxed", [1.0]), new("boxed", [0.0]) };
     for (var draw = 0; draw < 6; ++draw) {

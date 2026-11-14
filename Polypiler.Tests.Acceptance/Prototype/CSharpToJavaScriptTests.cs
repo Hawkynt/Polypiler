@@ -47,6 +47,9 @@ public sealed class CSharpToJavaScriptTests {
 
   private string _directory = "";
 
+  /// <summary>Whether this case translates in process: the test design does, the scenarios start the executable.</summary>
+  private bool _inProcess;
+
   [SetUp]
   public void CreateWorkingDirectory() {
     this._directory = Path.Combine(Path.GetTempPath(), "polypiler-" + Guid.NewGuid().ToString("N"));
@@ -251,6 +254,7 @@ public sealed class CSharpToJavaScriptTests {
   /// </summary>
   [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
   public void Node_Interpreter_AndCompiledFixture_Agree(string fixture) {
+    this._inProcess = true;
     var calls = PrototypeCases.For(fixture);
     var module = PrototypeFixture.Imported(fixture);
     var node = this.TranslateFixture(fixture, calls);
@@ -274,11 +278,11 @@ public sealed class CSharpToJavaScriptTests {
     Assert.That(version, Does.Match(@"^v\d+\.\d+\.\d+"));
   }
 
-  /// <summary>Translates a fixture with the real executable and runs the calls through node.</summary>
+  /// <summary>Translates a fixture with the real executable, or in process where the test is about the generated file, and runs the calls through node.</summary>
   private IReadOnlyList<string> TranslateFixture(string fixture, IReadOnlyList<PrototypeCall> calls) {
     var output = Path.Combine(this._directory, "out");
     var watch = Stopwatch.StartNew();
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.PathOf(fixture), "--from", "csharp", "--to", "javascript", "--output", output);
+    var (exitCode, text) = Toolchain.Polypiler(this._inProcess, this._directory, "translate", PrototypeFixture.PathOf(fixture), "--from", "csharp", "--to", "javascript", "--output", output);
     TestContext.Out.WriteLine($"{fixture}: translated in {watch.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
     return Toolchain.NodeOutcomes(output, PrototypeFixture.ClassOf(fixture) + ".mjs", calls, true);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -40,6 +41,9 @@ public sealed class CSharpProfilesTests {
 
   private static readonly bool[] _overflowChecking = [false, true];
 
+  /// <summary>The calls of a C# fixture with what the compiled fixture and the interpreter do for each, computed once for all profiles.</summary>
+  private static readonly ConcurrentDictionary<string, Lazy<(IReadOnlyList<PrototypeCall> Calls, List<string> Compiled, List<string> Interpreted)>> _expected = new(StringComparer.Ordinal);
+
   private string _directory = "";
 
   [SetUp]
@@ -55,9 +59,13 @@ public sealed class CSharpProfilesTests {
   private static string Code(string text) => text[text.IndexOf("\n\n", StringComparison.Ordinal)..];
 
   /// <summary>Translates a file in the working directory with the real executable and returns the generated C#.</summary>
-  private string Translate(string source, string language, string className, params string[] further) {
+  private string Translate(string source, string language, string className, params string[] further)
+    => this.Translate(false, source, language, className, further);
+
+  /// <summary>Translates a file in the working directory in process or with the real executable and returns the generated C#.</summary>
+  private string Translate(bool inProcess, string source, string language, string className, params string[] further) {
     var output = Path.Combine(this._directory, "out-" + Guid.NewGuid().ToString("N"));
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, ["translate", source, "--from", language, "--to", "csharp", "--output", output, .. further]);
+    var (exitCode, text) = Toolchain.Polypiler(inProcess, this._directory, ["translate", source, "--from", language, "--to", "csharp", "--output", output, .. further]);
     Assert.That(exitCode, Is.Zero, text);
     return File.ReadAllText(Path.Combine(output, className + ".cs"));
   }
@@ -163,39 +171,58 @@ public sealed class CSharpProfilesTests {
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 
+  private static IEnumerable<TestCaseData> FixturesAndProfiles()
+    => from fixture in PrototypeFixture.Names from profile in CSharpProfile.All select new TestCaseData(fixture, profile.Name);
+
+  private static IEnumerable<TestCaseData> ScriptsAndProfiles()
+    => from fixture in JavaScriptFixture.Names from profile in CSharpProfile.All select new TestCaseData(fixture, profile.Name);
+
   /// <summary>
-  /// Test design 1, 2 and 12, with the executable: every C# fixture in every profile. Each file
-  /// compiles against its profile's reference assemblies at its language version, and every call of
-  /// the fixture — the published vectors, each operator and conversion at its boundaries and on a
-  /// thousand random tuples (seed 2026) — has, without and with overflow checking, the outcome of the
-  /// original fixture and of the interpreter.
+  /// The earlier profile whose file has the same code as that of <paramref name="profile"/> and is run
+  /// in its place, or <see langword="null"/> when the code of the profile is run by its own case.
   /// </summary>
-  [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
-  public void EveryFixture_InEveryProfile_CompilesForItAndAgreesWithTheOriginal(string fixture) {
-    var calls = PrototypeCases.For(fixture);
-    var module = PrototypeFixture.Imported(fixture);
-    var expected = calls.Select(call => PrototypeFixture.CompiledOutcome(fixture, call)).ToList();
-    Assert.That(calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call)), Is.EqualTo(expected), "the interpreter and the original fixture differ");
+  private static CSharpProfile? RunBy(CSharpProfile profile, Func<CSharpProfile, string> translate) {
+    var code = Code(translate(profile));
+    return CSharpProfile.All.TakeWhile(candidate => candidate != profile).FirstOrDefault(candidate => Code(translate(candidate)) == code);
+  }
 
-    var executed = new Dictionary<string, string>();
-    var mismatches = new List<string>();
+  /// <summary>
+  /// Test design 1, 2 and 12, with the command's own entry point: every C# fixture in every profile.
+  /// Each file compiles against its profile's reference assemblies at its language version, and every
+  /// call of the fixture — the published vectors, each operator and conversion at its boundaries and on
+  /// a thousand random tuples (seed 2026) — has, without and with overflow checking, the outcome of the
+  /// original fixture and of the interpreter. A profile whose code is that of an earlier profile is
+  /// compiled for its framework, and not run again.
+  /// </summary>
+  [TestCaseSource(nameof(FixturesAndProfiles))]
+  public void EveryFixture_InEveryProfile_CompilesForItAndAgreesWithTheOriginal(string fixture, string name) {
+    var (calls, expected, interpreted) = _expected.GetOrAdd(fixture, key => new(() => {
+      var all = PrototypeCases.For(key);
+      var module = PrototypeFixture.Imported(key);
+      return (all, [.. all.Select(call => PrototypeFixture.CompiledOutcome(key, call))], [.. all.Select(call => PrototypeFixture.InterpretedOutcome(module, call))]);
+    })).Value;
+    Assert.That(interpreted, Is.EqualTo(expected), "the interpreter and the original fixture differ");
+
+    var profile = CSharpProfile.All.Single(candidate => candidate.Name == name);
+    string Translated(CSharpProfile target) => this.Translate(true, PrototypeFixture.PathOf(fixture), "csharp", PrototypeFixture.ClassOf(fixture), "--profile", target.Name);
     var watch = Stopwatch.StartNew();
-    var texts = CSharpProfile.All.ToDictionary(profile => profile, profile => this.Translate(PrototypeFixture.PathOf(fixture), "csharp", PrototypeFixture.ClassOf(fixture), "--profile", profile.Name));
-    TestContext.Out.WriteLine($"{fixture}: translated for {texts.Count} profiles in {watch.ElapsedMilliseconds} ms");
-    foreach (var (profile, text) in texts) {
-      Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
-      if (!executed.TryAdd(Code(text), profile.Name))
-        continue;
-
-      foreach (var checking in _overflowChecking) {
-        var build = GeneratedCSharp.Compile(text, checking);
-        for (var index = 0; index < calls.Count; ++index)
-          if (build.Outcome(calls[index]) is var outcome && outcome != expected[index])
-            mismatches.Add($"{profile.Name}, CheckOverflow {checking}: {calls[index]} is {outcome}, not {expected[index]}");
-      }
+    var text = Translated(profile);
+    TestContext.Out.WriteLine($"{fixture}: translated for {profile.Name} in {watch.ElapsedMilliseconds} ms");
+    Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
+    if (RunBy(profile, Translated) is { } earlier) {
+      TestContext.Out.WriteLine($"{fixture}: {profile.Name} has the code of {earlier.Name}, which runs it");
+      return;
     }
 
-    TestContext.Out.WriteLine($"{fixture}: {calls.Count} calls x {executed.Count} distinct texts ({string.Join(", ", executed.Values)}) x 2 builds, {mismatches.Count} mismatches");
+    var mismatches = new List<string>();
+    foreach (var checking in _overflowChecking) {
+      var build = GeneratedCSharp.Compile(text, checking);
+      for (var index = 0; index < calls.Count; ++index)
+        if (build.Outcome(calls[index]) is var outcome && outcome != expected[index])
+          mismatches.Add($"{profile.Name}, CheckOverflow {checking}: {calls[index]} is {outcome}, not {expected[index]}");
+    }
+
+    TestContext.Out.WriteLine($"{fixture}: {calls.Count} calls x 2 builds of {profile.Name}, {mismatches.Count} mismatches");
     Assert.That(calls, Is.Not.Empty);
     Assert.That(mismatches.Take(20), Is.Empty, $"{mismatches.Count} outcomes differ");
   }
@@ -204,10 +231,11 @@ public sealed class CSharpProfilesTests {
   /// Test design 5: every JavaScript fixture into every profile. Each file compiles against its
   /// profile's reference assemblies, and every call has the outcome <c>node</c> has for the original
   /// source. The file is given the name the class is to have, because a module is named after its
-  /// file.
+  /// file. A profile whose code is that of an earlier profile is compiled for its framework, and not
+  /// run again.
   /// </summary>
-  [TestCaseSource(typeof(JavaScriptFixture), nameof(JavaScriptFixture.Names))]
-  public void EveryJavaScriptFixture_InEveryProfile_AgreesWithNodeOnTheOriginal(string fixture) {
+  [TestCaseSource(nameof(ScriptsAndProfiles))]
+  public void EveryJavaScriptFixture_InEveryProfile_AgreesWithNodeOnTheOriginal(string fixture, string profileName) {
     var calls = JavaScriptCases.For(fixture).ToList();
     if (fixture == "operators")
       calls.AddRange(JavaScriptCases.RandomOperatorCalls());
@@ -219,23 +247,24 @@ public sealed class CSharpProfilesTests {
 
     // A module that computes in doubles has two zeros, so -0 is told from 0.
     var expected = Toolchain.NodeOutcomes(this._directory, JavaScriptFixture.PathOf(fixture), calls, true);
-    var executed = new Dictionary<string, string>();
-    var mismatches = new List<string>();
-    foreach (var profile in CSharpProfile.All) {
-      var text = this.Translate(className + ".mjs", "javascript", className, "--profile", profile.Name);
-      Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
-      if (!executed.TryAdd(Code(text), profile.Name))
-        continue;
-
-      foreach (var checking in _overflowChecking) {
-        var build = GeneratedCSharp.Compile(text, checking);
-        for (var index = 0; index < calls.Count; ++index)
-          if (build.Outcome(calls[index]) is var outcome && outcome != expected[index])
-            mismatches.Add($"{profile.Name}, CheckOverflow {checking}: {calls[index]} is {outcome}, node has {expected[index]}");
-      }
+    var profile = CSharpProfile.All.Single(candidate => candidate.Name == profileName);
+    string Translated(CSharpProfile target) => this.Translate(true, className + ".mjs", "javascript", className, "--profile", target.Name);
+    var text = Translated(profile);
+    Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
+    if (RunBy(profile, Translated) is { } earlier) {
+      TestContext.Out.WriteLine($"{fixture}: {profile.Name} has the code of {earlier.Name}, which runs it");
+      return;
     }
 
-    TestContext.Out.WriteLine($"{fixture}: {calls.Count} calls x {executed.Count} distinct texts ({string.Join(", ", executed.Values)}) x 2 builds, {mismatches.Count} mismatches");
+    var mismatches = new List<string>();
+    foreach (var checking in _overflowChecking) {
+      var build = GeneratedCSharp.Compile(text, checking);
+      for (var index = 0; index < calls.Count; ++index)
+        if (build.Outcome(calls[index]) is var outcome && outcome != expected[index])
+          mismatches.Add($"{profile.Name}, CheckOverflow {checking}: {calls[index]} is {outcome}, node has {expected[index]}");
+    }
+
+    TestContext.Out.WriteLine($"{fixture}: {calls.Count} calls x 2 builds of {profile.Name}, {mismatches.Count} mismatches");
     Assert.That(calls, Is.Not.Empty);
     Assert.That(mismatches.Take(20), Is.Empty, $"{mismatches.Count} outcomes differ");
   }

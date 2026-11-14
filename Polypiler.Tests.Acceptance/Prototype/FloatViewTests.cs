@@ -33,6 +33,9 @@ public sealed class FloatViewTests {
 
   private string _directory = "";
 
+  /// <summary>Whether this case translates in process: the test design does, the scenarios start the executable.</summary>
+  private bool _inProcess;
+
   [SetUp]
   public void CreateWorkingDirectory() {
     this._directory = Path.Combine(Path.GetTempPath(), "polypiler-" + Guid.NewGuid().ToString("N"));
@@ -56,10 +59,10 @@ public sealed class FloatViewTests {
     return name;
   }
 
-  /// <summary>Translates a file of the working directory with the real executable; the one file it writes, with its text.</summary>
+  /// <summary>Translates a file of the working directory with the real executable, or in process where the test is about the generated file; the one file it writes, with its text.</summary>
   private (string Path, string Text) Translate(string source, string from, string to, params string[] further) {
     var output = Path.Combine(this._directory, "out-" + Guid.NewGuid().ToString("N"));
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
+    var (exitCode, text) = Toolchain.Polypiler(this._inProcess, this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
     Assert.That(exitCode, Is.Zero, text);
     var file = Directory.GetFiles(output).Single();
     return (file, File.ReadAllText(file));
@@ -121,39 +124,36 @@ public sealed class FloatViewTests {
   }
 
   /// <summary>Scenario: negative zero keeps its sign bit in both directions, in every profile of both backends.</summary>
-  [Test]
-  public void NegativeZero_KeepsItsSignBit() {
+  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.All))]
+  public void NegativeZero_KeepsItsSignBit(TargetCase target) {
     var expected = $"{Bytes("80 00 00 00 00 00 00 00")} | {Bytes("80 00 00 00 00 00 00 00")}";
     var call = new PrototypeCall("PutF64BE", [new byte[8], 0, -0.0]);
     var script = call with { Method = "putF64BE" };
     Assert.That(PrototypeFixture.CompiledOutcome("float/FloatView", call), Is.EqualTo(expected), ".NET");
     Assert.That(this.Original([script]).Single(), Is.EqualTo(expected), "node");
     var outcomes = new Dictionary<string, string>();
-    foreach (var profile in CSharpProfile.All) {
+    if (target.CSharp is { } profile) {
       outcomes[$"C# to {profile.Name}"] = this.CSharp(this.Copy("float/FloatView.cs"), "csharp", profile, true).Outcome(call);
       outcomes[$"JavaScript to {profile.Name}"] = this.CSharp(this.Copy("js/FloatView.js"), "javascript", profile, true).Outcome(script);
-    }
-
-    foreach (var profile in ProfileCase.All) {
-      outcomes[$"C# to {profile}"] = this.Node(this.Copy("float/FloatView.cs"), "csharp", profile, [call]).Single();
-      outcomes[$"JavaScript to {profile}"] = this.Node(this.Copy("js/FloatView.js"), "javascript", profile, [script]).Single();
+    } else {
+      outcomes[$"C# to {target}"] = this.Node(this.Copy("float/FloatView.cs"), "csharp", target.JavaScript!, [call]).Single();
+      outcomes[$"JavaScript to {target}"] = this.Node(this.Copy("js/FloatView.js"), "javascript", target.JavaScript!, [script]).Single();
     }
 
     Assert.That(outcomes.Where(run => run.Value != expected).Select(run => $"{run.Key}: {run.Value}"), Is.Empty);
   }
 
   /// <summary>Scenario: a read outside the 12-byte buffer traps in node and in the C# translation of every profile.</summary>
-  [Test]
-  public void ReadOutsideTheBuffer_Traps() {
+  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.CSharpProfiles))]
+  public void ReadOutsideTheBuffer_Traps(TargetCase target) {
     var call = new PrototypeCall("getF32LE", [new byte[FloatViewCases.Length], 9]) { Returns = typeof(float) };
     var trap = "trap: index out of range";
     var (exitCode, output) = Toolchain.RunNode(this._directory, this.Script(
       "const view = new DataView(new Uint8Array(12).buffer); try { view.getFloat32(9, true); console.log('read'); } catch (error) { console.log(error.constructor.name); }"));
     Assert.That((exitCode, output.Trim()), Is.EqualTo((0, "RangeError")));
     Assert.That(this.Original([call]).Single(), Is.EqualTo(trap));
-    foreach (var profile in CSharpProfile.All)
-      foreach (var checking in _overflowChecking)
-        Assert.That(this.CSharp(this.Copy("js/FloatView.js"), "javascript", profile, checking).Outcome(call), Is.EqualTo(trap), profile.Name);
+    foreach (var checking in _overflowChecking)
+      Assert.That(this.CSharp(this.Copy("js/FloatView.js"), "javascript", target.CSharp!, checking).Outcome(call), Is.EqualTo(trap), target.ToString());
   }
 
   private string Script(string text) {
@@ -209,8 +209,9 @@ public sealed class FloatViewTests {
   /// JavaScript profile, and the JavaScript fixture as node runs it and in every profile of both
   /// backends, have the outcomes of the C# fixture on .NET - the WAV reader among them.
   /// </summary>
-  [Test]
-  public void Fixtures_ComputeWhatDotNetComputes_InEveryProfile() {
+  [TestCaseSource(typeof(TargetCase), nameof(TargetCase.All))]
+  public void Fixtures_ComputeWhatDotNetComputes_InEveryProfile(TargetCase target) {
+    this._inProcess = true;
     var random = new Random(IntegerCases.Seed);
     var calls = FloatViewCases.FixtureMethods.SelectMany(method => FloatViewCases.FixtureCalls(method, random)).ToList();
     var expected = calls.Select(call => PrototypeFixture.CompiledOutcome("float/FloatView", call)).ToList();
@@ -227,14 +228,12 @@ public sealed class FloatViewTests {
     }
 
     Compare("node", scripted, scriptCalls, scriptExpected, this.Original(scriptCalls));
-    foreach (var profile in ProfileCase.All) {
+    if (target.JavaScript is { } profile) {
       Compare($"C# to {profile}", calls, calls, expected, this.Node(this.Copy("float/FloatView.cs"), "csharp", profile, calls));
       Compare($"JavaScript to {profile}", scripted, scriptCalls, scriptExpected, this.Node(this.Copy("js/FloatView.js"), "javascript", profile, scriptCalls));
-    }
-
-    foreach (var profile in CSharpProfile.All) {
-      var build = this.CSharp(this.Copy("js/FloatView.js"), "javascript", profile);
-      Compare($"JavaScript to {profile.Name}", scripted, scriptCalls, scriptExpected, [.. scriptCalls.Select(build.Outcome)]);
+    } else {
+      var build = this.CSharp(this.Copy("js/FloatView.js"), "javascript", target.CSharp!);
+      Compare($"JavaScript to {target}", scripted, scriptCalls, scriptExpected, [.. scriptCalls.Select(build.Outcome)]);
     }
 
     TestContext.Out.WriteLine($"{calls.Count} calls, {runs} runs, {mismatches.Count} mismatches; node {Toolchain.NodeVersion()}, .NET {Environment.Version}");

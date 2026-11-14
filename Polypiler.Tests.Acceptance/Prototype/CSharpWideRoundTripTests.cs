@@ -144,8 +144,8 @@ public sealed class CSharpWideRoundTripTests {
   /// Test design 1 to 6, 8 to 11 and 13: every call of every wide fixture — the published vectors,
   /// each operator and each conversion on each type at its boundaries and on a thousand random
   /// operand tuples (seed 2026), each statement kind, each library operation and each trap — has one
-  /// outcome in the file the executable wrote, compiled without and with overflow checking, in the
-  /// original fixture and in the interpreter.
+  /// outcome in the file the command wrote - through its own entry point, in process - compiled
+  /// without and with overflow checking, in the original fixture and in the interpreter.
   /// </summary>
   [TestCaseSource(nameof(WideFixtures))]
   public void CompiledOutput_Original_AndInterpreter_Agree(string fixture) {
@@ -153,7 +153,7 @@ public sealed class CSharpWideRoundTripTests {
     var module = PrototypeFixture.Imported(fixture);
     var output = Path.Combine(this._directory, "out");
     var watch = Stopwatch.StartNew();
-    var (exitCode, text) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.PathOf(fixture), "--from", "csharp", "--to", "csharp", "--output", output);
+    var (exitCode, text) = Toolchain.Translate(this._directory, "translate", PrototypeFixture.PathOf(fixture), "--from", "csharp", "--to", "csharp", "--output", output);
     TestContext.Out.WriteLine($"{fixture}: translated in {watch.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
 
