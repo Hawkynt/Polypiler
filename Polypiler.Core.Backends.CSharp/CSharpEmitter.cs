@@ -342,6 +342,23 @@ public static class CSharpEmitter {
   private static IEnumerable<IrExpr> Expressions(IrExpr expression)
     => Operands(expression)!.SelectMany(Expressions).Prepend(expression);
 
+  /// <summary>Every local a statement or one in it sets to a value, with the value.</summary>
+  private static IEnumerable<(IrLocal Local, IrExpr Value)> Definitions(IrStmt statement) {
+    IEnumerable<(IrLocal, IrExpr)> own = statement switch {
+      IrDeclare { Initializer: { } value } declare => [(declare.Local, value)],
+      IrAssign assign => [(assign.Local, assign.Value)],
+      _ => []
+    };
+    return own.Concat(Parts(statement)!.Value.Statements.SelectMany(Definitions));
+  }
+
+  /// <summary>
+  /// The locals a function sets to the complement of a shift count for a width, which the JIT may
+  /// substitute into a shift-xor (<see cref="ShiftXorGuard"/>), each with that width.
+  /// </summary>
+  private static HashSet<(IrLocal Local, int Width)> Complements(IrFunction function)
+    => [.. Definitions(function.Body).SelectMany(definition => new[] { 32, 64 }.Where(width => ShiftXorGuard.IsComplement(definition.Value, width)).Select(width => (definition.Local, width)))];
+
 
   /// <summary>Whether the IR traps where the expression overflows, which C# does in a checked context.</summary>
   private static bool Traps(IrExpr expression) => expression switch {
@@ -459,6 +476,9 @@ public static class CSharpEmitter {
     private readonly HashSet<string> _taken;
     private readonly Dictionary<string, string> _members;
     private Dictionary<string, string> _locals = [];
+
+    /// <summary>The locals the function being written sets to the complement of a shift count, with its width.</summary>
+    private HashSet<(IrLocal Local, int Width)> _complements = [];
 
     /// <summary>
     /// Per loop around the statement being written, the step a <c>continue</c> has to run first, or
@@ -591,6 +611,7 @@ public static class CSharpEmitter {
     private void Function(IrFunction function) {
       // A variable spelled like a member or a helper would hide it, so their names are taken.
       this._locals = Names(function.Parameters.Concat(function.Locals).Select(variable => variable.Name), this._taken);
+      this._complements = Complements(function);
       var parameters = string.Join(", ", function.Parameters.Select(parameter => $"{TypeName(parameter.Type)} {this._locals[parameter.Name]}"));
       this._code.Append("\n  ").Append(function.IsPublic ? "public" : "private").Append(" static ")
         .Append(TypeName(function.ReturnType)).Append(' ').Append(this._members[function.Name])
@@ -924,6 +945,10 @@ public static class CSharpEmitter {
     }
 
     private (string Text, int Binding) Binary(IrBinary binary) {
+      // RyuJIT takes some exclusive ors of two shifts for a rotation also where they are none (CSharpRuntimeDefect.ShiftXorRotation).
+      if (binary.Op == IrBinaryOp.Xor && this._table.Suffers(CSharpRuntimeDefect.ShiftXorRotation, this._profile))
+        binary = ShiftXorGuard.Guarded(binary, this._complements);
+
       var type = binary.Left.Type;
       var symbol = _binary[binary.Op];
       var first = Promoted(binary.Left);
