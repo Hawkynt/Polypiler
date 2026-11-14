@@ -51,8 +51,9 @@ public enum CSharpFeature {
 /// <param name="Cast">The type the result is cast to, or <see langword="null"/> for no cast.</param>
 /// <param name="Further">What follows the arguments of the IR in the argument list, or <see langword="null"/>.</param>
 /// <param name="Template">
-/// The expression, with <c>{0}</c>, <c>{1}</c> and so on for the arguments in their order, each once,
-/// and <c>{h}</c> for the helper of the row; or <see langword="null"/> for a call. It is a primary
+/// The expression, with <c>{0}</c>, <c>{1}</c> and so on for the arguments in their order, each once
+/// - a form for constant arguments only may name a constant twice - and <c>{h}</c> for the helper of
+/// the row; or <see langword="null"/> for a call. It is a primary
 /// expression and stands where overflow is not checked, so its casts keep the low bits.
 /// </param>
 public sealed record CSharpForm(string? Method, string? Cast = null, string? Further = null, string? Template = null);
@@ -94,6 +95,26 @@ public sealed class CSharpCapability {
 
   /// <summary>The helper the replacement calls, or <see langword="null"/> when it calls the base library.</summary>
   public CSharpHelper? Helper { get; private init; }
+
+  /// <summary>
+  /// The form for arguments with which the operation cannot trap - a bit position that is a constant
+  /// inside the width or masked to it, constant bounds in order - in every profile, or <see langword="null"/>.
+  /// It writes what the operation computes there with the operators of the language, which costs
+  /// no more than the idiom a recognition rule found, where the helper would check what cannot fail.
+  /// </summary>
+  public CSharpForm? Total { get; private init; }
+
+  /// <summary>Whether the arguments of an operation are such that <see cref="Total"/> applies.</summary>
+  public Func<IReadOnlyList<IrExpr>, bool>? IsTotal { get; private init; }
+
+  /// <summary>The row with a form for arguments with which the operation cannot trap.</summary>
+  /// <param name="form">The form, a template.</param>
+  /// <param name="holds">Whether given arguments are such.</param>
+  /// <returns>The row extended.</returns>
+  public CSharpCapability WithTotal(CSharpForm form, Func<IReadOnlyList<IrExpr>, bool> holds) => new(this.Name) {
+    Since = this.Since, Language = this.Language, Feature = this.Feature, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds
+  };
 
   /// <summary>A feature of the language.</summary>
   /// <param name="name">The feature as the language reference names it.</param>
@@ -256,7 +277,7 @@ public sealed class CSharpCapabilities {
 
     // The floating-point operations of #1301.
     .. CSharpFloatCapabilities.Rows
-  ]);
+  ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>
   /// <param name="rows">The rows; of two that answer one question the earlier one wins.</param>
@@ -264,6 +285,14 @@ public sealed class CSharpCapabilities {
 
   /// <summary>The rows, in the order the helpers are written in.</summary>
   public IReadOnlyList<CSharpCapability> Rows { get; }
+
+  /// <summary>
+  /// Whether a remainder computed from the quotient of the same operands, <c>a - q * b</c>, is cheaper
+  /// than a second division for <c>a % b</c> - which the optimization O0127 asks. It is for .NET: the
+  /// JIT emits one division instruction per operator, and a multiplication and a subtraction cost a
+  /// fraction of one.
+  /// </summary>
+  public bool RemainderFromQuotient { get; init; }
 
   /// <summary>Whether a profile has a feature of the language.</summary>
   /// <param name="feature">The feature.</param>

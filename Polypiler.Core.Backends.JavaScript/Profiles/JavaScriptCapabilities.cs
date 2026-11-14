@@ -129,6 +129,14 @@ public sealed class JavaScriptCapabilities {
   /// <summary>The entries, in the order they were given.</summary>
   public IReadOnlyList<JavaScriptCapability> Entries { get; }
 
+  /// <summary>
+  /// Whether a remainder computed from the quotient of the same operands, <c>a - q * b</c>, is cheaper
+  /// than a second division for <c>a % b</c> - which the optimization O0127 asks. The standard table
+  /// says no: an engine computes the remainder of two integers in one instruction, and the product
+  /// needs <c>Math.imul</c> to stay exact.
+  /// </summary>
+  public bool RemainderFromQuotient { get; init; }
+
   /// <summary>The entry of a name.</summary>
   /// <exception cref="ArgumentException">The table has no such entry.</exception>
   public JavaScriptCapability this[string name]
