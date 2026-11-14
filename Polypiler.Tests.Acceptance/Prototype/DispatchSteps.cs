@@ -13,7 +13,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The steps of <c>tests/features/prototype/dispatch.feature</c>. The expected value is never computed
+/// The steps of <c>tests/features/ir/ir-dispatch.feature</c>. The expected value is never computed
 /// here: it is what .NET computes of the original C# fixture, built into this assembly, or what
 /// <c>node</c> computes of the original JavaScript.
 /// </summary>
@@ -183,16 +183,11 @@ public sealed class DispatchSteps(PrototypeScenario scenario) {
   [When("^I run the translate command to C#$")]
   public void ToCSharp() => scenario.Polypiler.Run("translate", scenario.Source, "--from", "javascript", "--to", "csharp", "--output", "out");
 
-  /// <summary>The command ended with the exit code and wrote nothing.</summary>
-  [Then(@"^the exit code is (\d+)$")]
-  public void ExitCode(int exitCode) {
-    var result = scenario.Log.Last;
-    Assert.That(result.ExitCode, Is.EqualTo(exitCode), result.Output);
+  /// <summary>The output names the diagnostic and the construct, and nothing was written.</summary>
+  [Then("^the output contains " + StepText.Quoted + " and " + StepText.Quoted + "$")]
+  public void OutputNames(string code, string subject) {
+    Assert.That(scenario.Log.Last.Output, Does.Contain(code).And.Contain(subject));
     Assert.That(Directory.Exists(scenario.Workspace.Resolve("out")), Is.False);
   }
-
-  /// <summary>The output names the diagnostic and the construct.</summary>
-  [Then("^the output contains " + StepText.Quoted + " and " + StepText.Quoted + "$")]
-  public void OutputNames(string code, string subject) => Assert.That(scenario.Log.Last.Output, Does.Contain(code).And.Contain(subject));
 
 }
