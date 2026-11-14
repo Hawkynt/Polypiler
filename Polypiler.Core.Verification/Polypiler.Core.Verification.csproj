@@ -21,4 +21,9 @@
     <EmbeddedResource Include="..\spec\schemas\manifest*.schema.json" LogicalName="Polypiler.Core.Verification.Manifests.%(Filename)%(Extension)" Link="Manifests\%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- The schema of the gate records travels with the store that reads them. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\spec\schemas\gate-record.schema.json" LogicalName="Polypiler.Core.Verification.Gates.gate-record.schema.json" Link="Gates\gate-record.schema.json" />
+  </ItemGroup>
+
 </Project>

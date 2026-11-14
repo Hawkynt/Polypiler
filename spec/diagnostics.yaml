@@ -525,10 +525,11 @@ codes:
     severity: error
     exit: EnvironmentError
     title: gate record invalid
-    message: "<reason>"
+    message: "gate record '<file>': fixture '<fixture>' claims '<state>': <reason>"
+    rule: gates.record
     area: infrastructure
     owner: VER-GATES
-    reserved: true
+    surfaces: "the diagnostics of GateStore.Load, one per problem of a rejected gate record: evidence file missing, evidence hash differs, evidence kind '<k>' not accepted for this state, manifest state '<m>' is below '<required>', unknown state '<text>'; a record that is no JSON, fails spec/schemas/gate-record.schema.json or is named after another pair reads 'gate record '<file>': <reason>'"
   - code: PLY0059
     severity: error
     exit: SemanticMismatch

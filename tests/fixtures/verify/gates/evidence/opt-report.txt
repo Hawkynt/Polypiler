@@ -1,0 +1,1 @@
+O0100 rotate-left recognized in Crc32.Update

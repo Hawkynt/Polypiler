@@ -60,7 +60,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0055](PLY0055.md) (reserved) | warning | — | `proof of <rule> gave up after <budget>` | VER-SMT |
 | [PLY0056](PLY0056.md) (reserved) | error | 5 (SemanticMismatch) | `proof of <rule> refuted: <name>=<hex>[, ...]: before <hex>, after <hex>` | VER-SMT |
 | [PLY0057](PLY0057.md) (reserved) | error | 10 (BudgetExceeded) | `exhaustive proof of <rule> needs <n> input bits, budget is <m>` | VER-EXHAUSTIVE |
-| [PLY0058](PLY0058.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | VER-GATES |
+| [PLY0058](PLY0058.md) | error | 1 (EnvironmentError) | `gate record '<file>': fixture '<fixture>' claims '<state>': <reason>` | VER-GATES |
 | [PLY0059](PLY0059.md) (reserved) | error | 5 (SemanticMismatch) | `round trip '<id>' leg <leg> (<opt>): <function>(<arguments>) expected <expected>, got <actual>` | VER-ROUNDTRIP |
 | [PLY0060](PLY0060.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | VER-EVIDENCE |
 | [PLY0061](PLY0061.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | SPEC-CAPABILITIES |
