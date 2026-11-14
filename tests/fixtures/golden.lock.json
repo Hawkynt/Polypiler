@@ -242,6 +242,56 @@
       "bytes": 16668
     },
     {
+      "path": "tests/fixtures/backend/golden/enums/Big.cs.csharp.golden",
+      "sha256": "b6a059c0b03e9582542186b61075af520262defa8e0510feb63e9616baa40b61",
+      "bytes": 25746
+    },
+    {
+      "path": "tests/fixtures/backend/golden/enums/Big.cs.javascript.golden",
+      "sha256": "94f14abedd36ab56b9a7e0fe899d8c870bbe7c276a84c12ed70e977e60e7ce9b",
+      "bytes": 195888
+    },
+    {
+      "path": "tests/fixtures/backend/golden/enums/Color.cs.csharp.golden",
+      "sha256": "de2d0461d0a37230018d62c2c09f510b7c5367b39bd5a1f526044f716243e58c",
+      "bytes": 31690
+    },
+    {
+      "path": "tests/fixtures/backend/golden/enums/Color.cs.javascript.golden",
+      "sha256": "bbe7c166240346d53cfdd1f712c6a4cf474d8ccdea69b5a211589ac8213fe77c",
+      "bytes": 181008
+    },
+    {
+      "path": "tests/fixtures/backend/golden/enums/Perm.cs.csharp.golden",
+      "sha256": "58d7fac98f19b16396f42818a5fdefdebfeb796b3115829ea309bd494a8f7be9",
+      "bytes": 25470
+    },
+    {
+      "path": "tests/fixtures/backend/golden/enums/Perm.cs.javascript.golden",
+      "sha256": "43e666528a5499a4107ccf7e54dbc95e3afa33738faaf569966ac984056278e8",
+      "bytes": 167276
+    },
+    {
+      "path": "tests/fixtures/backend/golden/enums/Signed.cs.csharp.golden",
+      "sha256": "40d49186aa75847c076b22740648965e565869dcea72fb79cf150cfcad665e8b",
+      "bytes": 34918
+    },
+    {
+      "path": "tests/fixtures/backend/golden/enums/Signed.cs.javascript.golden",
+      "sha256": "fb03566a22187f90b5ced1ee2bed60f3f97ed582943957e9e7dbf96b85ef1d00",
+      "bytes": 70740
+    },
+    {
+      "path": "tests/fixtures/backend/golden/enums/color.js.csharp.golden",
+      "sha256": "e7168804fabe439a89b018720448b4012fc77c9d0f1bbe722f1bdfed35433c0e",
+      "bytes": 29422
+    },
+    {
+      "path": "tests/fixtures/backend/golden/enums/color.js.javascript.golden",
+      "sha256": "df3eb05fbaba54042a4961c5dcfbfdaa8984043a5be9b85b142e329b4141bf4f",
+      "bytes": 27724
+    },
+    {
       "path": "tests/fixtures/backend/golden/float/BoxMuller.cs.csharp.golden",
       "sha256": "ab30be594bda0c0bf11144609d01709b98d159b1caac956a9307930454988eb2",
       "bytes": 2316776
