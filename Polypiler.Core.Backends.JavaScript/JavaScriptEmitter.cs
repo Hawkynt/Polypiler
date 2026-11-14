@@ -384,7 +384,7 @@ public static partial class JavaScriptEmitter {
           return "string";
         case IrTypeKind.Struct or IrTypeKind.Object:
           return type.Declaration!.Name;
-        case IrTypeKind.Span or IrTypeKind.ReadOnlySpan:
+        case IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory:
           return this.DescribeView(type);
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)

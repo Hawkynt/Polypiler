@@ -115,7 +115,7 @@ public static partial class CSharpEmitter {
       var positional = type.IsRecord && this.Has(CSharpFeature.Record) && this._table.HasApi("IsExternalInit", this._profile) ? this.Positional(type, functions) : null;
       foreach (var field in type.Fields.Where(field => type.PropertyOf(field) is null || !this.AutoProperties))
         members.Add(new CsField([type.PropertyOf(field) is null ? Visibility(field.Visibility) : "private", .. field.IsReadOnly ? (string[])["readonly"] : []],
-          new CsType(this.TypeName(field.Type)), names[field], null));
+          new CsType(this.TypeName(field.Type)), names[field], this.EmptyMemory(field.Type)));
 
       foreach (var property in type.Properties.Where(property => positional is null || property.BackingField is null))
         members.Add(this.Property(type, property, functions));
