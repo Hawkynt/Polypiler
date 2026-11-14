@@ -81,6 +81,13 @@
     {
       "repository": "Hawkynt/PB-Compiler",
       "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
+      "path": "tests/ARITH.expected",
+      "sha256": "9fb021dd74355760f5728dbe9ebe0a5402d50c1557fc441f4abb13f32774f93e",
+      "bytes": 55
+    },
+    {
+      "repository": "Hawkynt/PB-Compiler",
+      "commit": "0d73acbea185a2597357d53f7ce9acb44758ba76",
       "path": "tests/ARRAY.BAS",
       "sha256": "b1bff5a752fe371613aeb2b8b8dc2ea11447a4dc99da697407c08e82ff4682a7",
       "bytes": 805

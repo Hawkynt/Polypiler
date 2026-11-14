@@ -141,3 +141,16 @@ fixtures:
     determinism: deterministic
     tolerance: exact
     profiles: []
+  # INFRA-CI-BASIC (tooling/ci/layers/basic.yaml): PB-Compiler's own program and the output it ships
+  # for it, compiled by pbc and run in DOSBox-X (Polypiler.Tests.Acceptance/Infra/Ci).
+  - id: pb.dos.arith
+    repository: Hawkynt/PB-Compiler
+    path: tests/ARITH.BAS
+    export: main
+    dependencies: [tests/ARITH.expected]
+    run: [pbc, '{file}', -O, ARITH.EXE]
+    vectors: { kind: file, source: tests/ARITH.expected }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
