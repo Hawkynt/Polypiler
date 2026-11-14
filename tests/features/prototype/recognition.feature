@@ -37,4 +37,4 @@ Feature: Spelled-out bit idioms become the target's own operations
 
   Scenario: An unknown optimization id is a usage error
     When I run the translate command with "--disable-opt O9999x"
-    Then the exit code is 2 and the output contains "PLY0001"
+    Then the exit code is 2 and the output contains "PLY0003"

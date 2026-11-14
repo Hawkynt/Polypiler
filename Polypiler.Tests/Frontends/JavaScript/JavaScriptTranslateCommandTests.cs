@@ -130,7 +130,7 @@ public sealed class JavaScriptTranslateCommandTests {
     Assert.That((TranslateCommand.InvalidSource, TranslateCommand.UnsupportedConstruct), Is.EqualTo((4, 3)));
   }
 
-  /// <summary>A command line that cannot be carried out is PLY0001, exit code 2, and names what exists.</summary>
+  /// <summary>A command line that cannot be carried out is PLY0003, exit code 2, and names what exists.</summary>
   [TestCase(new[] { "A.js", "--from", "javascript", "--to", "javascript", "--output", "out", "--export" }, "the option '--export' needs a value", TestName = "Misuse: --export without value")]
   [TestCase(new[] { "A.js", "--from", "javascript", "--to", "javascript", "--output", "out", "--export", " , " }, "the option '--export' names no function", TestName = "Misuse: --export without a name")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output", "out", "--export", "F" }, "the option '--export' does not apply to the source language 'csharp'", TestName = "Misuse: --export for C#")]
@@ -142,7 +142,7 @@ public sealed class JavaScriptTranslateCommandTests {
   public void Misuse_IsAUsageError(string[] arguments, string message) {
     var (exitCode, output, error) = Invoke(arguments.Prepend("translate").ToArray());
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0001: " + message).And.Contain("usage: " + TranslateCommand.UsageLine));
+    Assert.That(error, Does.StartWith("error PLY0003: " + message).And.Contain("usage: " + TranslateCommand.UsageLine));
   }
 
   /// <summary>The help and the usage line name every language the command takes, and <c>--export</c>.</summary>

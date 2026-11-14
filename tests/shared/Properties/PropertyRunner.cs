@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using FsCheck;
 using FsCheck.Fluent;
+using Polypiler.Core;
 
 namespace Polypiler.Tests.Properties;
 
@@ -20,6 +21,13 @@ internal sealed class PropertyRunner {
 
   /// <summary>The variable whose decimal or <c>0x</c> hexadecimal value replaces every declared seed.</summary>
   public const string SeedVariable = "POLYPILER_PROPERTY_SEED";
+
+  /// <summary>The code of a falsified property.</summary>
+  public const string FalsifiedCode = "PLY0071";
+
+  /// <summary>The registered diagnostic of <see cref="FalsifiedCode"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor FalsifiedDescriptor = new(FalsifiedCode, DiagnosticSeverity.Error, ExitCode.EnvironmentError, "{0}", "property.falsified");
 
   /// <summary>The most shrink steps one failure takes.</summary>
   public const int MaxShrinkSteps = 1000;
@@ -127,7 +135,7 @@ internal sealed class PropertyRunner {
     }
 
     var failure = new PropertyFailure(test, seed, declared, index, Format(original), Format(shrunk), steps, error?.GetType().FullName, null);
-    var message = new StringBuilder($"PLY0071: property '{test}' falsified after {index + 1} inputs (seed {seed}): {failure.Shrunk} (original {failure.Original}, {steps} shrink steps); replay with {SeedVariable}={seed}");
+    var message = new StringBuilder($"{FalsifiedCode}: property '{test}' falsified after {index + 1} inputs (seed {seed}): {failure.Shrunk} (original {failure.Original}, {steps} shrink steps); replay with {SeedVariable}={seed}");
     if (seed != declared)
       message.Append($"; the seed came from {SeedVariable} and replaced the declared seed {declared}");
 

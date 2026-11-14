@@ -54,23 +54,51 @@ public static class JavaScriptFrontend {
   /// <summary>The code for a syntax error the parser reports.</summary>
   public const string SyntaxError = "PLY1100";
 
+  /// <summary>The registered diagnostic of <see cref="SyntaxError"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor SyntaxErrorDescriptor = new(SyntaxError, DiagnosticSeverity.Error, ExitCode.InvalidSource, "{0}", "javascript.syntax");
+
   /// <summary>The code for a parameter or a result without a supported JSDoc type.</summary>
   public const string MissingType = "PLY1101";
+
+  /// <summary>The registered diagnostic of <see cref="MissingType"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor MissingTypeDescriptor = new(MissingType, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.types");
 
   /// <summary>The code for a construct outside the supported subset.</summary>
   public const string Unsupported = "PLY1102";
 
+  /// <summary>The registered diagnostic of <see cref="Unsupported"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedDescriptor = new(Unsupported, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.subset");
+
   /// <summary>The code for a <c>BigInt</c> whose value nothing bounds, so that no type of the IR holds it.</summary>
   public const string NotBounded = "PLY1103";
+
+  /// <summary>The registered diagnostic of <see cref="NotBounded"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor NotBoundedDescriptor = new(NotBounded, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.bigint-bounds");
 
   /// <summary>The code for an export name that no function of the file has.</summary>
   public const string UnknownExport = "PLY1104";
 
+  /// <summary>The registered diagnostic of <see cref="UnknownExport"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnknownExportDescriptor = new(UnknownExport, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.export");
+
   /// <summary>The code for a variable, a parameter or a result that values of two kinds reach.</summary>
   public const string MixedKinds = "PLY1105";
 
+  /// <summary>The registered diagnostic of <see cref="MixedKinds"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor MixedKindsDescriptor = new(MixedKinds, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.mixed-kinds");
+
   /// <summary>The code for a variable declared without a value that may be read before it is assigned.</summary>
   public const string ReadBeforeAssignment = "PLY1106";
+
+  /// <summary>The registered diagnostic of <see cref="ReadBeforeAssignment"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor ReadBeforeAssignmentDescriptor = new(ReadBeforeAssignment, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.definite-assignment");
 
   /// <summary>
   /// The caveat of a module that accesses array elements: at anything but the index of an element

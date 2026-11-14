@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Polypiler.Core;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Cli;
@@ -15,6 +16,10 @@ public static class PrecomputedImplementations {
 
   /// <summary>The code for precomputed data of the executable that is missing or damaged, an internal error.</summary>
   public const string Damaged = "PLY0101";
+
+  /// <summary>The registered diagnostic of <see cref="Damaged"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor DamagedDescriptor = new(Damaged, DiagnosticSeverity.Error, ExitCode.InternalError, "{0}", "cli.precomputed-implementations");
 
   /// <summary>The name of the resource that carries the module.</summary>
   public const string ResourceName = "Polypiler.Cli.float-implementations.irm";

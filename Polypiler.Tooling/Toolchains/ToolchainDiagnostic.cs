@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Polypiler.Core;
 
 namespace Polypiler.Tooling.Toolchains;
 
@@ -14,14 +15,30 @@ public sealed record ToolchainDiagnostic(string File, int Line, int Column, stri
   /// <summary>The lock is invalid, or names no toolchain under the key asked for.</summary>
   public const string LockInvalid = "PLY0020";
 
+  /// <summary>The registered diagnostic of <see cref="LockInvalid"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor LockInvalidDescriptor = new(LockInvalid, DiagnosticSeverity.Error, ExitCode.EnvironmentError, "{0}", "toolchains.lock");
+
   /// <summary>A toolchain the lock pins is not installed.</summary>
   public const string NotInstalled = "PLY0021";
+
+  /// <summary>The registered diagnostic of <see cref="NotInstalled"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor NotInstalledDescriptor = new(NotInstalled, DiagnosticSeverity.Error, ExitCode.EnvironmentError, "{0}", "toolchains.installed");
 
   /// <summary>A toolchain is installed at another version than the lock pins.</summary>
   public const string VersionMismatch = "PLY0022";
 
+  /// <summary>The registered diagnostic of <see cref="VersionMismatch"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor VersionMismatchDescriptor = new(VersionMismatch, DiagnosticSeverity.Error, ExitCode.EnvironmentError, "{0}", "toolchains.version");
+
   /// <summary>The lock file cannot be read.</summary>
   public const string Unreadable = "PLY0004";
+
+  /// <summary>The registered diagnostic of <see cref="Unreadable"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnreadableDescriptor = new(Unreadable, DiagnosticSeverity.Error, ExitCode.EnvironmentError, "{0}", "io.read");
 
   /// <summary>The diagnostic as a compiler prints it: <c>file(line,col): error CODE: message</c>.</summary>
   public override string ToString()

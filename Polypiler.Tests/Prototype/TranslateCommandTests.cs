@@ -109,7 +109,7 @@ public sealed class TranslateCommandTests {
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
-  /// <summary>Test design 13: a command line that cannot be carried out is PLY0001, exit code 2.</summary>
+  /// <summary>Test design 13: a command line that cannot be carried out is PLY0003, exit code 2.</summary>
   [TestCase(new string[0], "no source file was given", TestName = "Misuse: nothing at all")]
   [TestCase(new[] { "--from", "csharp", "--to", "javascript", "--output", "out" }, "no source file was given", TestName = "Misuse: missing file")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript" }, "the option '--output' is missing", TestName = "Misuse: missing --output")]
@@ -125,7 +125,7 @@ public sealed class TranslateCommandTests {
   public void Misuse_IsAUsageError(string[] arguments, string message) {
     var (exitCode, output, error) = Invoke(arguments.Prepend("translate").ToArray());
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0001: " + message).And.Contain(Usage));
+    Assert.That(error, Does.StartWith("error PLY0003: " + message).And.Contain(Usage));
   }
 
   /// <summary>A directory in place of the source file is as unreadable as a missing one.</summary>
@@ -133,7 +133,7 @@ public sealed class TranslateCommandTests {
   public void SourceThatIsADirectory_IsAUsageError() {
     var (exitCode, _, error) = Invoke("translate", this._directory, "--from", "csharp", "--to", "javascript", "--output", this._out);
     Assert.That(exitCode, Is.EqualTo(Program.UsageError));
-    Assert.That(error, Does.StartWith("error PLY0001: the source file '").And.Contain("cannot be read"));
+    Assert.That(error, Does.StartWith("error PLY0003: the source file '").And.Contain("cannot be read"));
   }
 
   /// <summary>An output directory that cannot exist, because a file has its name.</summary>
@@ -142,7 +142,7 @@ public sealed class TranslateCommandTests {
     var blocked = this.Source(PrototypeFixture.Wrap("public static int F() => 1;"));
     var (exitCode, output, error) = Invoke("translate", blocked, "--from", "csharp", "--to", "javascript", "--output", blocked);
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0001: the output directory '").And.Contain("cannot be written"));
+    Assert.That(error, Does.StartWith("error PLY0003: the output directory '").And.Contain("cannot be written"));
   }
 
   /// <summary>Test design 14: IR the verifier rejects is an internal error, exit code 70, and writes nothing.</summary>

@@ -46,7 +46,7 @@ public sealed class CSharpRoundTripTests {
     File.Copy(PrototypeFixture.PathOf("Adler32"), Path.Combine(this._directory, "Adler32.cs"));
     var (exitCode, output) = Toolchain.RunPolypiler(this._directory, ["translate", "Adler32.cs", "--from", "csharp", .. arguments]);
     Assert.That(exitCode, Is.EqualTo(2));
-    Assert.That(output, Does.Contain("error PLY0001: " + message));
+    Assert.That(output, Does.Contain("error PLY0003: " + message));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 

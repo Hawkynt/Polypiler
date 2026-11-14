@@ -29,11 +29,23 @@ public static class CSharpFrontend {
   /// <summary>The code for an error the C# compiler reports.</summary>
   public const string CompilerError = "PLY1000";
 
+  /// <summary>The registered diagnostic of <see cref="CompilerError"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor CompilerErrorDescriptor = new(CompilerError, DiagnosticSeverity.Error, ExitCode.InvalidSource, "{0}", "csharp.compiler");
+
   /// <summary>The code for a construct outside the supported subset.</summary>
   public const string Unsupported = "PLY1002";
 
+  /// <summary>The registered diagnostic of <see cref="Unsupported"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedDescriptor = new(Unsupported, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "csharp.subset");
+
   /// <summary>The code for a constant expression that overflows where overflow is checked.</summary>
   public const string ConstantOverflow = "PLY1003";
+
+  /// <summary>The registered diagnostic of <see cref="ConstantOverflow"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor ConstantOverflowDescriptor = new(ConstantOverflow, DiagnosticSeverity.Error, ExitCode.InvalidSource, "{0}", "csharp.constant-overflow");
 
   private static readonly Lazy<MetadataReference> _coreLibrary = new(LoadCoreLibrary);
 

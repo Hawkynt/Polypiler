@@ -74,7 +74,7 @@ public sealed class CSharpProfilesTests {
   public void UnknownProfile_IsAUsageError() {
     var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.PathOf("Adler32"), "--from", "csharp", "--to", "csharp", "--profile", "net1.1", "--output", "out");
     Assert.That(exitCode, Is.EqualTo(2), output);
-    Assert.That(output, Does.Contain("error PLY0001: unknown C# profile 'net1.1'").And.Contain("usage: polypiler translate"));
+    Assert.That(output, Does.Contain("error PLY0003: unknown C# profile 'net1.1'").And.Contain("usage: polypiler translate"));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 
@@ -83,7 +83,7 @@ public sealed class CSharpProfilesTests {
   public void LanguageVersion_CannotBeLoweredBelowTheProfiles() {
     var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.PathOf("Adler32"), "--from", "csharp", "--to", "csharp", "--profile", "net10.0", "--langversion", "7.3", "--output", "out");
     Assert.That(exitCode, Is.EqualTo(2), output);
-    Assert.That(output, Does.Contain("error PLY0001: the C# profile 'net10.0' is written in C# 14 or later, not in C# 7.3"));
+    Assert.That(output, Does.Contain("error PLY0003: the C# profile 'net10.0' is written in C# 14 or later, not in C# 7.3"));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 

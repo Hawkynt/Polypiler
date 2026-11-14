@@ -38,8 +38,8 @@ Feature: C# output for a concrete target framework
 
   Scenario: An unknown profile is a usage error
     When I run the translate command with "--to csharp --profile net1.1"
-    Then the exit code is 2 and the output contains "PLY0001"
+    Then the exit code is 2 and the output contains "PLY0003"
 
   Scenario: The language version cannot be lowered below the profile's
     When I run the translate command with "--profile net10.0 --langversion 7.3"
-    Then the exit code is 2 and the output contains "PLY0001"
+    Then the exit code is 2 and the output contains "PLY0003"

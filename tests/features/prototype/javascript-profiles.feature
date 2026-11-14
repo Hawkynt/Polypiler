@@ -35,7 +35,7 @@ Feature: JavaScript output for a concrete target
 
   Scenario: An ES module is not available at ES5
     When I run the translate command with "--profile es5 --module esm"
-    Then the exit code is 2 and the output contains "PLY0001"
+    Then the exit code is 2 and the output contains "PLY0003"
 
   Scenario: The profile is recorded in the output
     Given any fixture translated with "--profile es2017 --module cjs"

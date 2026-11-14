@@ -63,7 +63,7 @@ public sealed class JavaScriptProfileTests {
     string[] arguments = ["translate", "Adler32.cs", "--from", "csharp", "--to", "javascript", .. options, "--output", "out"];
     var (exitCode, output) = Toolchain.RunPolypiler(this._directory, arguments);
     Assert.That(exitCode, Is.EqualTo(2));
-    Assert.That(output, Does.Contain("PLY0001").And.Contain(message));
+    Assert.That(output, Does.Contain("PLY0003").And.Contain(message));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 

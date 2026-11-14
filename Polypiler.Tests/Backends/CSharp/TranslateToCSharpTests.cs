@@ -68,7 +68,7 @@ public sealed class TranslateToCSharpTests {
     Assert.That(GeneratedCSharp.Compile(text, false).ClassName, Is.EqualTo("Demo.Checksums.Crc32"));
   }
 
-  /// <summary>Test design 10: a command line that cannot be carried out is PLY0001, exit code 2, and writes nothing.</summary>
+  /// <summary>Test design 10: a command line that cannot be carried out is PLY0003, exit code 2, and writes nothing.</summary>
   [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript' and 'csharp'", TestName = "Misuse: unknown target")]
   [TestCase(new[] { "--to", "CSharp", "--output", "out" }, "unknown target language 'CSharp'", TestName = "Misuse: the target is case-sensitive")]
   [TestCase(new[] { "--to", "csharp" }, "the option '--output' is missing", TestName = "Misuse: missing output")]
@@ -93,7 +93,7 @@ public sealed class TranslateToCSharpTests {
     string[] all = ["translate", PrototypeFixture.PathOf("Adler32"), "--from", "csharp", .. arguments.Select(argument => argument == "out" ? this._out : argument)];
     var (exitCode, output, error) = Invoke(all);
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0001: " + message)
+    Assert.That(error, Does.StartWith("error PLY0003: " + message)
       .And.Contain("usage: polypiler translate <file> --from <csharp|javascript> --to <javascript|csharp> --output <directory> [--opt <none|default>] [--disable-opt <O####>[,<O####>...]] [--explain-opt] [--export <name>[,<name>...]] [--explain-types] [--profile <name>] [--module <esm|cjs|iife>] [--global <name>] [--typed-arrays] [--float <strict|accurate>] [--namespace <name>] [--langversion <version>]"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
@@ -199,7 +199,7 @@ public sealed class TranslateToCSharpTests {
     File.WriteAllText(blocked, PrototypeFixture.Wrap("public static int F() => 1;"));
     var (exitCode, output, error) = Invoke("translate", blocked, "--from", "csharp", "--to", "csharp", "--output", blocked);
     Assert.That((exitCode, output), Is.EqualTo((Program.UsageError, "")));
-    Assert.That(error, Does.StartWith("error PLY0001: the output directory '").And.Contain("cannot be written"));
+    Assert.That(error, Does.StartWith("error PLY0003: the output directory '").And.Contain("cannot be written"));
   }
 
   [Test]
