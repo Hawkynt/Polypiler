@@ -28,6 +28,9 @@ blocks:
   - { first: PLY0500, last: PLY0599, area: legalization }
   - { first: PLY0600, last: PLY0699, area: interop }
   - { first: PLY0700, last: PLY0799, area: objects }
+  # permutation is divided by concern (PERM-MODEL): model and hierarchy 0800-0809, networks and
+  # primitives 0810-0819, search and equivalence 0820-0829, recovery 0830-0839, target profiles
+  # 0840-0849, API and command line 0850-0859; 0860-0899 are unassigned.
   - { first: PLY0800, last: PLY0899, area: permutation }
   - { first: PLY0900, last: PLY0999, area: catalog }
   - { first: PLY1000, last: PLY2999, area: languages }
@@ -724,6 +727,78 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0800
+    severity: error
+    exit: UnsupportedConstruct
+    title: mapping width out of range
+    message: "mapping width <width> is outside 1..4096"
+    rule: permutation.model.width
+    area: permutation
+    owner: PERM-MODEL
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for an input width or an output count of a bit mapping below 1 or above 4096, from BitMapping.Create, its factories, the text notation and both JSON forms"
+  - code: PLY0801
+    severity: error
+    exit: UnsupportedConstruct
+    title: mapping reads outside its input
+    message: "output bit <output> reads input bit <input>, input width is <width>"
+    rule: permutation.model.source-index
+    area: permutation
+    owner: PERM-MODEL
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for a plain or inverted source whose index is negative or not below the input width"
+  - code: PLY0802
+    severity: error
+    exit: UnsupportedConstruct
+    title: malformed mapping text or document
+    message: "mapping <text|document> '<input>': <reason>"
+    rule: permutation.model.syntax
+    area: permutation
+    owner: PERM-MODEL
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Model, for a mapping text that is not '<inputWidth>:[<entry>,...]' (missing width, empty or unknown entry, constant other than =0 or =1) and for a BitPerm state or spec mapping document that is not JSON or lacks its width, its entries, an entry's type or value, or has an unknown type"
+  - code: PLY0803
+    severity: error
+    exit: UnsupportedConstruct
+    title: mapping has no inverse
+    message: "mapping is not a bijection (<reason>); it has no inverse"
+    rule: permutation.algebra.inverse
+    area: permutation
+    owner: PERM-ALGEBRA
+    surfaces: "the refusal of BitPermutationAlgebra.TryInverse in Polypiler.Permutation.Algebra, the only entry point that inverts an untyped bit mapping, when the mapping is not a bijection; the reason is that of rule H1, such as 'input bit 0 is used 2 times', 'output bit 1 is inverted', 'output bit 0 is a constant', 'output bit 4 is a don't-care' or 'widths differ (8 in, 4 out)'"
+  - code: PLY0804
+    severity: error
+    exit: UnsupportedConstruct
+    title: composed mappings do not meet
+    message: "cannot compose: the inner mapping has <inner> output bits, the outer mapping reads <outer> input bits"
+    rule: permutation.algebra.compose
+    area: permutation
+    owner: PERM-ALGEBRA
+    surfaces: "PermutationModelException from BitPermutationAlgebra.Compose and BitRoutingAlgebra.Compose in Polypiler.Permutation.Algebra when the output width of the inner operand, applied first, is not the input width of the outer one"
+  - code: PLY0805
+    severity: error
+    exit: UnsupportedConstruct
+    title: claimed bit-transform class does not hold
+    message: "<reason>"
+    rule: permutation.hierarchy.class
+    area: permutation
+    owner: PERM-HIERARCHY
+    surfaces: "PermutationModelException and the DiagnosticBag of Polypiler.Permutation.Semantics, from BitPermutation.From and TryFrom when the mapping is not a bijection (H1), and from BitSemanticsVerifier.Check for a contradictory or oversized condition (H2), a condition that disagrees with the mapping's don't-cares (H3), a Boolean transform that reads past its input (H4) and a lane size that does not divide a width (H5); the reasons read 'mapping is declared BitPermutation but input bit 0 is used 3 times', 'output bit 1 is don't-care in the mapping but required by the condition' and the like"
+  - code: PLY0806
+    severity: error
+    exit: UnsupportedConstruct
+    title: input outside the declared input domain
+    message: "input <hex> is outside the declared input domain"
+    rule: permutation.hierarchy.domain
+    area: permutation
+    owner: PERM-HIERARCHY
+    surfaces: "the DiagnosticBag given to BitCondition.Admits, which evaluators of a conditioned routing or Boolean transform call for each input, when the input has a 1 where the condition knows a 0 or a 0 where it knows a 1; PermutationModelException from MappingEvaluator.EvaluateChecked for such an input"
+  - code: PLY0807
+    severity: error
+    exit: UnsupportedConstruct
+    title: truth table too large
+    message: "truth table of <inputs> inputs exceeds the limit of 16"
+    rule: permutation.hierarchy.truth-table
+    area: permutation
+    owner: PERM-HIERARCHY
+    surfaces: "the DiagnosticBag given to BitBooleanTransform.TryGetTruthTable when the transform has more than 16 inputs, and PermutationModelException from MappingEvaluator.TruthTable for a mapping of more than 16 input bits; the structural cross-check of TryAsRouting is skipped silently above that limit instead"
   - code: PLY0950
     severity: error
     exit: LicenseBlocker

@@ -228,6 +228,17 @@ don't-care, every vector needs a `mask` of the compared bits. The rules (`PLY004
 A grammar's `target` names an existing `TARGETS.` document (`PLY0043`). The seed document is
 `permutations/mappings/reverse8.yaml`.
 
+Every `bitperm-*.yaml` document is generated from the BitPerm fixtures by
+`polypiler-tooling permutations import-bitperm --fixtures tests/fixtures/bitperm --out spec/permutations`
+and checked with `--check` in CI; change the fixtures or the importer, never the generated file. They are
+44 mappings (one per fixture mapping, its vectors BitPerm's own evaluation of inputs 0, all ones and the
+first two single-bit inputs), the four grammars of BitPerm's solutions (`composite`, `bmi2`,
+`byte-shuffle`, `lut`) and one cost table per CPU preset (25). A cost table copies the preset's
+latencies with the page's citation as `documented` evidence; an operation BitPerm marks unavailable
+(cost 999 or disabled) has no entry, and no `bytes` is given because BitPerm records none. What a
+network built from a grammar must prove before it is recorded is
+[`permutations/proof-requirements.md`](permutations/proof-requirements.md).
+
 ## Family `recognition`
 
 `spec/recognition/O<4 digits>.yaml`, ID `RECOGNITION.O<4 digits>`: one recognition rule of the block

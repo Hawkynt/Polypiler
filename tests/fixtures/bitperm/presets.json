@@ -2,6 +2,7 @@
   {
     "id": "modern",
     "name": "Intel Haswell+ (i5/i7/i9)",
+    "comment": "Modern x86/x64 - Source: Agner Fog instruction tables, uops.info; SHL/ROR: 1 cycle latency. IMUL r,r: 3 cycles. PEXT/PDEP: 3 cycles. PSHUFB: 1-2 cycles. BSWAP: 1 cycle. L1 load: 4-5 cycles",
     "allowedWidths": [8, 16, 32, 64, 128],
     "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 3, "pshufb": 2, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": true, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -9,6 +10,7 @@
   {
     "id": "zen1_2",
     "name": "AMD Zen1/2 (Ryzen 1000-2000)",
+    "comment": "AMD Zen1/2: PEXT/PDEP microcoded (~18 cycles) - Source: uops.info, chessprogramming.org/BMI2",
     "allowedWidths": [8, 16, 32, 64, 128],
     "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 18, "pshufb": 1, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": true, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -16,6 +18,7 @@
   {
     "id": "zen3",
     "name": "AMD Zen3+ (Ryzen 3000+)",
+    "comment": "AMD Zen3+: Native PEXT/PDEP (3 cycles) - Source: uops.info",
     "allowedWidths": [8, 16, 32, 64, 128],
     "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 3, "pshufb": 1, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": true, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -23,6 +26,7 @@
   {
     "id": "core2",
     "name": "Intel Core 2 / Nehalem",
+    "comment": "Core 2/Nehalem: IMUL latency 4 cycles. No BMI2. SSSE3 PSHUFB available. BSWAP: 1 cycle",
     "allowedWidths": [8, 16, 32, 64, 128],
     "costs": {"shift": 1, "rotate": 1, "mul": 4, "bmi": 999, "pshufb": 2, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -30,6 +34,7 @@
   {
     "id": "atom",
     "name": "Intel Atom (In-Order)",
+    "comment": "Intel Atom (Bonnell): In-order. IMUL ~5 cycles. PSHUFB ~4 cycles",
     "allowedWidths": [8, 16, 32, 64],
     "costs": {"shift": 1, "rotate": 1, "mul": 5, "bmi": 999, "pshufb": 4, "lut": 5, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -37,6 +42,7 @@
   {
     "id": "pentium4",
     "name": "Intel Pentium 4",
+    "comment": "Legacy x86 - Source: Intel 80x86 Programmer's Reference, Agner Fog, emulators.com/docs/pentium_1.htm; Pentium 4 NetBurst: NO barrel shifter! SHL/ROR: 4-6 cycles. MUL: 10-16 cycles",
     "allowedWidths": [8, 16, 32, 64],
     "costs": {"shift": 4, "rotate": 4, "mul": 14, "bmi": 999, "pshufb": 999, "lut": 6, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -44,6 +50,7 @@
   {
     "id": "pentium",
     "name": "Intel Pentium 1 (P5)",
+    "comment": "Pentium 1 (P5): SHL/ROR: 1 cycle. MUL r32: 10-11 cycles. L1 load: ~3 cycles. BSWAP: 1 cycle",
     "allowedWidths": [8, 16, 32, 64],
     "costs": {"shift": 1, "rotate": 1, "mul": 11, "bmi": 999, "pshufb": 999, "lut": 5, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -51,6 +58,7 @@
   {
     "id": "athlon",
     "name": "AMD Athlon / Duron",
+    "comment": "AMD Athlon K7: SHL/ROR: 1 cycle. IMUL r32,r32: 4-5 cycles. Good L1 cache",
     "allowedWidths": [8, 16, 32, 64],
     "costs": {"shift": 1, "rotate": 1, "mul": 5, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -58,6 +66,7 @@
   {
     "id": "i486",
     "name": "Intel 486",
+    "comment": "Intel 486: SHL reg,imm: 2 cycles. SHL reg,CL: 3 cycles. MUL: 13-42 cycles (avg ~18). BSWAP: 1 cycle (486+)",
     "allowedWidths": [8, 16, 32],
     "costs": {"shift": 2, "rotate": 2, "mul": 18, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -65,6 +74,7 @@
   {
     "id": "i386",
     "name": "Intel 386",
+    "comment": "Intel 386: SHL reg,imm: 3 cycles. MUL: 9-38 cycles (avg ~24). No cache on base 386. No BSWAP",
     "allowedWidths": [8, 16, 32],
     "costs": {"shift": 3, "rotate": 3, "mul": 24, "bmi": 999, "pshufb": 999, "lut": 8, "basic": 2, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
@@ -72,6 +82,7 @@
   {
     "id": "i8086",
     "name": "Intel 8086",
+    "comment": "Intel 8086: SHL reg,1: 2 cycles. SHL reg,CL: 8+4n cycles. MUL: 70-154 cycles. No cache, slow bus",
     "allowedWidths": [8, 16],
     "costs": {"shift": 8, "rotate": 8, "mul": 118, "bmi": 999, "pshufb": 999, "lut": 20, "basic": 4, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
@@ -79,6 +90,7 @@
   {
     "id": "arm_a64",
     "name": "ARM Cortex A64 (NEON)",
+    "comment": "ARM - Source: ARM Technical Reference Manuals, ARM Architecture Reference Manual; Cortex-A53/A64: SHL/ROR: 1 cycle. MUL: 3-4 cycles. TBL (NEON shuffle): 1-2 cycles. BFI/UBFX: 1 cycle. REV/RBIT: 1 cycle",
     "allowedWidths": [8, 16, 32, 64, 128],
     "costs": {"shift": 1, "rotate": 1, "mul": 4, "bmi": 999, "pshufb": 2, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 1, "rev": 1, "rbit": 1},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": false, "bfx": true, "rev": true, "rbit": true}
@@ -86,6 +98,7 @@
   {
     "id": "arm_m4",
     "name": "ARM Cortex M4",
+    "comment": "Cortex-M4: Single-cycle multiplier. LSL/ROR: 1 cycle. MUL: 1 cycle. BFI/UBFX: 1 cycle. REV/RBIT: 1 cycle",
     "allowedWidths": [8, 16, 32],
     "costs": {"shift": 1, "rotate": 1, "mul": 1, "bmi": 999, "pshufb": 999, "lut": 3, "basic": 1, "rlwinm": 999, "bfx": 1, "rev": 1, "rbit": 1},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": true, "rev": true, "rbit": true}
@@ -93,6 +106,7 @@
   {
     "id": "apple_m1",
     "name": "Apple M1/M2/M3",
+    "comment": "Apple M1/M2/M3: ARM64 + NEON. Dual-pipe multiply. TBL: 1 cycle. BFI/UBFX/REV/RBIT: 1 cycle",
     "allowedWidths": [8, 16, 32, 64, 128],
     "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 1, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 1, "rev": 1, "rbit": 1},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": false, "bfx": true, "rev": true, "rbit": true}
@@ -100,6 +114,7 @@
   {
     "id": "riscv",
     "name": "RISC-V (B extension)",
+    "comment": "RISC - Source: RISC-V Bitmanip Extension Specification; RISC-V with B extension: ROL/ROR native. No PDEP/PEXT equivalent",
     "allowedWidths": [32, 64],
     "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -107,6 +122,7 @@
   {
     "id": "motorola68k",
     "name": "Motorola 68000 (Amiga/Atari ST)",
+    "comment": "Classic Home Computers - Source: MC68000 Programmer's Reference Manual; M68000: ASL/LSL/ROL reg,#imm: 6+2n cycles. MULS/MULU: 70+ cycles",
     "allowedWidths": [8, 16, 32],
     "costs": {"shift": 6, "rotate": 6, "mul": 70, "bmi": 999, "pshufb": 999, "lut": 12, "basic": 4, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
@@ -114,6 +130,7 @@
   {
     "id": "z80",
     "name": "Zilog Z80",
+    "comment": "Z80: RLCA/RRA: 4 T-states. RLC r (CB-prefixed): 8 T-states. No MUL. LD A,(HL): 7 T-states",
     "allowedWidths": [8, 16],
     "costs": {"shift": 4, "rotate": 4, "mul": 999, "bmi": 999, "pshufb": 999, "lut": 11, "basic": 4, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": false, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
@@ -121,6 +138,7 @@
   {
     "id": "6502",
     "name": "MOS 6502",
+    "comment": "6502: ASL A/ROL A: 2 cycles (shifts only by 1 bit). No MUL. LDA abs,X: 4-5 cycles",
     "allowedWidths": [8],
     "costs": {"shift": 2, "rotate": 2, "mul": 999, "bmi": 999, "pshufb": 999, "lut": 5, "basic": 2, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": false, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
@@ -128,6 +146,7 @@
   {
     "id": "gamecube",
     "name": "GameCube/Wii (PowerPC 750)",
+    "comment": "Classic Consoles - Source: IBM PowerPC 750 User's Manual, Renesas SH-4 Hardware Manual; GameCube/Wii PowerPC 750: rlwinm (rotate+mask in 1 op): 1 cycle. MUL: 3 cycles",
     "allowedWidths": [8, 16, 32],
     "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 1, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": true, "bfx": false, "rev": false, "rbit": false}
@@ -135,6 +154,7 @@
   {
     "id": "dreamcast",
     "name": "Dreamcast (SH-4)",
+    "comment": "Dreamcast SH-4: 2-way dual-issue. SHL/ROT: 1 cycle. MUL: 2-4 cycles. 16KB caches",
     "allowedWidths": [8, 16, 32],
     "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 1, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": true, "rbit": false}
@@ -142,6 +162,7 @@
   {
     "id": "xbox360",
     "name": "Xbox 360 (Xenon)",
+    "comment": "Xbox 360 Xenon: PowerPC with VMX-128 SIMD. vperm: 1 cycle. rlwinm: 1 cycle",
     "allowedWidths": [8, 16, 32, 64, 128],
     "costs": {"shift": 1, "rotate": 1, "mul": 3, "bmi": 999, "pshufb": 1, "lut": 4, "basic": 1, "rlwinm": 1, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": true, "bfx": false, "rev": false, "rbit": false}
@@ -149,6 +170,7 @@
   {
     "id": "ps1",
     "name": "Sony PlayStation 1 (R3000)",
+    "comment": "Retro Consoles - Source: n64brew.dev, psxdev.net, psdevwiki.com; PS1 R3000: SLL/SRL: 1 cycle. MULT: ~10-36 cycles (writes HI/LO). 1KB scratchpad D$",
     "allowedWidths": [8, 16, 32],
     "costs": {"shift": 1, "rotate": 1, "mul": 20, "bmi": 999, "pshufb": 999, "lut": 5, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
@@ -156,6 +178,7 @@
   {
     "id": "n64",
     "name": "Nintendo 64 (VR4300)",
+    "comment": "N64 VR4300: SLL/SRL: 1 cycle. MULT: ~8 cycles (improved over R3000). 8KB D$",
     "allowedWidths": [8, 16, 32, 64],
     "costs": {"shift": 1, "rotate": 1, "mul": 8, "bmi": 999, "pshufb": 999, "lut": 4, "basic": 1, "rlwinm": 999, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": false, "rlwinm": false, "bfx": false, "rev": false, "rbit": false}
@@ -163,6 +186,7 @@
   {
     "id": "ps3",
     "name": "Sony PlayStation 3 (Cell)",
+    "comment": "PS3 Cell SPU: SHL: 2 cycles (even pipe). MPY 16x16: 7 cycles. Local store load: 6 cycles. rlwinm (PPE): 1 cycle",
     "allowedWidths": [8, 16, 32, 64, 128],
     "costs": {"shift": 2, "rotate": 2, "mul": 7, "bmi": 999, "pshufb": 2, "lut": 6, "basic": 2, "rlwinm": 1, "bfx": 999, "rev": 999, "rbit": 999},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": false, "pshufb": true, "rlwinm": true, "bfx": false, "rev": false, "rbit": false}
@@ -170,6 +194,7 @@
   {
     "id": "custom",
     "name": "Custom",
+    "comment": "Custom - user-defined values (all features enabled for maximum flexibility)",
     "allowedWidths": [8, 16, 32, 64, 128],
     "costs": {"shift": 1, "rotate": 1, "mul": 4, "bmi": 3, "pshufb": 2, "lut": 4, "basic": 1, "rlwinm": 1, "bfx": 1, "rev": 1, "rbit": 1},
     "enables": {"shift": true, "rotate": true, "mul": true, "bmi": true, "pshufb": true, "rlwinm": true, "bfx": true, "rev": true, "rbit": true}
