@@ -779,7 +779,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       case BinaryExpressionSyntax binary:
         return this.Binary(binary);
       case ConditionalExpressionSyntax choice:
-        return new IrConditional(this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse));
+        var (condition, whenTrue, whenFalse) = (this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse));
+        return whenTrue.Type == whenFalse.Type ? new IrConditional(condition, whenTrue, whenFalse)
+          : throw new UnsupportedException(choice, "a conditional expression whose branches are objects of two classes");
       case CastExpressionSyntax cast:
         return Convert(this.Value(cast.Expression), type, this.IsChecked(cast));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments: [{ Expression: RangeExpressionSyntax or PrefixUnaryExpressionSyntax { RawKind: (int)SyntaxKind.IndexExpression } }] } element when model.GetTypeInfo(element.Expression).Type?.SpecialType == SpecialType.System_String:

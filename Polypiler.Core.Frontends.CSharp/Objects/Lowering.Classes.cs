@@ -412,6 +412,9 @@ internal sealed partial class Lowering {
     switch (expression) {
       case ThisExpressionSyntax:
         return this._receiver is { } receiver ? new IrLocalRef(receiver) : null;
+      // A reference in parentheses is the reference, not the object the operator around it converts it to.
+      case ParenthesizedExpressionSyntax parenthesized when type.IsObject:
+        return this.Natural(parenthesized.Expression, type);
       case IdentifierNameSyntax or MemberAccessExpressionSyntax when model.GetSymbolInfo(expression).Symbol is { IsStatic: false } member
           && member.ContainingType is { } owner && this.IsFileType(owner):
         if (member is IPropertySymbol property && this._properties.TryGetValue(property, out var computed))

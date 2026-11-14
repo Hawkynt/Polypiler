@@ -246,9 +246,9 @@ internal sealed partial class Lowering {
       case CastExpressionSyntax cast when this.ReferenceOf(model.GetTypeInfo(cast.Type).Type) is { } target:
         var value = this.ObjectValue(cast.Expression);
         return value.Type.IsAssignableTo(target) ? value : new IrCast(target, value);
-      case IsPatternExpressionSyntax { Pattern: TypePatternSyntax pattern } test when this.ReferenceOf(model.GetTypeInfo(pattern.Type).Type) is { } tested:
+      case IsPatternExpressionSyntax { Pattern: var pattern } test when this.PatternType(pattern) is { } tested:
         return new IrTypeTest(this.ObjectValue(test.Expression), tested);
-      case IsPatternExpressionSyntax { Pattern: UnaryPatternSyntax { Pattern: TypePatternSyntax pattern } } test when this.ReferenceOf(model.GetTypeInfo(pattern.Type).Type) is { } tested:
+      case IsPatternExpressionSyntax { Pattern: UnaryPatternSyntax { Pattern: var pattern } } test when this.PatternType(pattern) is { } tested:
         return new IrUnary(IrUnaryOp.LogicalNot, new IrTypeTest(this.ObjectValue(test.Expression), tested));
       case IsPatternExpressionSyntax { Pattern: DeclarationPatternSyntax } pattern:
         throw new UnsupportedException(pattern, "a pattern declaration outside the condition of an if");
@@ -256,6 +256,13 @@ internal sealed partial class Lowering {
         return null;
     }
   }
+
+  /// <summary>The class or interface of the file a pattern tests for - <c>T</c>, which the parser may read as a constant - or <see langword="null"/>.</summary>
+  private IrType? PatternType(PatternSyntax pattern) => pattern switch {
+    TypePatternSyntax type => this.ReferenceOf(model.GetTypeInfo(type.Type).Type),
+    ConstantPatternSyntax constant when model.GetSymbolInfo(constant.Expression).Symbol is INamedTypeSymbol named => this.ReferenceOf(named),
+    _ => null
+  };
 
   /// <summary>
   /// <c>if (x is T t) …</c>: the test of <c>x</c>, and in the branch taken the variable <c>t</c>
