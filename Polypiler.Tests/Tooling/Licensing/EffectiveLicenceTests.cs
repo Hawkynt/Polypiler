@@ -63,8 +63,8 @@ public sealed class EffectiveLicenceTests {
       .Concat(LicenceClasses.WeakCopyleft.Select(identifier => new TestCaseData(identifier, "LGPL-3.0-or-later")));
 
   [Test]
-  public void TheListsOfTheClasses_AreAllowedByTheShippedPolicy_AndAreThreeAndFive()
-    => Assert.That((LicenceClasses.StrongCopyleft.Count, LicenceClasses.WeakCopyleft.Count, LicenceClasses.StrongCopyleft.Concat(LicenceClasses.WeakCopyleft).All(_shipped.Allowed.Contains)), Is.EqualTo((3, 5, true)));
+  public void TheListsOfTheClasses_AreAllowedByTheShippedPolicy_AndAreThreeAndSix()
+    => Assert.That((LicenceClasses.StrongCopyleft.Count, LicenceClasses.WeakCopyleft.Count, LicenceClasses.StrongCopyleft.Concat(LicenceClasses.WeakCopyleft).All(_shipped.Allowed.Contains)), Is.EqualTo((3, 6, true)));
 
   // Test design 5: OR is resolved to its weakest allowed operand, AND to its strongest.
   [TestCase("MIT OR GPL-3.0-only", "MIT")]
