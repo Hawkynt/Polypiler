@@ -90,6 +90,12 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0100](PLY0100.md) | error | 70 (InternalError) | `ill-typed IR in '<member>': <reason>` | PROTOTYPE |
 | [PLY0101](PLY0101.md) | error | 70 (InternalError) | `<reason>` | PROTOTYPE |
 
+## PLY0900–PLY0999 · catalog
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY0950](PLY0950.md) | error | 8 (LicenseBlocker) | `'<path>' has no licence audit record` | ADP-NCNN-LICENCE |
+
 ## PLY1000–PLY1099 · csharp
 
 | Code | Severity | Exit code | Message | Owner |

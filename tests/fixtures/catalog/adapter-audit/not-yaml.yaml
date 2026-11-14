@@ -1,0 +1,3 @@
+# Not YAML: a flow sequence that is never closed.
+schema: 1
+records: [
