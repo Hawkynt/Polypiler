@@ -70,6 +70,16 @@ public sealed class WorkerProcessExecutorTests {
     Assert.That(executor.Starts, Is.EqualTo(2));
   }
 
+  /// <summary>A worker that announced its end on standard error but outlives the budget is a crash, not a hang.</summary>
+  [Test]
+  public void AWorkerThatDiesSlowerThanTheBudget_IsACrashWithItsExitCode() {
+    using var executor = Worker(new DemoDyingTarget());
+    var death = executor.Execute("D"u8.ToArray(), _short);
+    Assert.That((death.Kind, death.Signature), Is.EqualTo(((FindingKind?)FindingKind.Crash, "process-exit:3")));
+    Assert.That(executor.Execute("A"u8.ToArray(), _short).IsFinding, Is.False);
+    Assert.That(executor.Starts, Is.EqualTo(2));
+  }
+
   /// <summary>Test design 10: half a second inside a 1 s budget passes; one and a half seconds is a hang.</summary>
   [Test]
   public void TheTimeBudget_JustInsideAndOutside() {

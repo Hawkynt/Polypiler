@@ -120,6 +120,28 @@ public sealed class DemoFailFastTarget : IFuzzTarget {
 
 }
 
+/// <summary>
+/// <c>demo-dying</c>: when the first byte is <c>68</c> ("D"), writes to standard error, waits a second
+/// and ends its process with exit code 3, as a runtime that announced a fail-fast and is held by an
+/// error report.
+/// </summary>
+public sealed class DemoDyingTarget : IFuzzTarget {
+
+  /// <inheritdoc />
+  public string Id => "demo-dying";
+
+  /// <inheritdoc />
+  public void Execute(ReadOnlySpan<byte> input) {
+    if (input.Length == 0 || input[0] != (byte)'D')
+      return;
+
+    Console.Error.WriteLine("demo-dying");
+    Thread.Sleep(1000);
+    Environment.Exit(3);
+  }
+
+}
+
 /// <summary><c>demo-sleep</c>: sleeps ten milliseconds for each unit of the first byte.</summary>
 public sealed class DemoSleepTarget : IFuzzTarget {
 

@@ -13,7 +13,10 @@ namespace Polypiler.Core.Verification.Fuzzing;
 /// input which never returns or brings the process down is a finding and not the end of the run. An
 /// input without a response within <see cref="FuzzBudget.PerInput"/> is a <see cref="FindingKind.Hang"/>:
 /// the worker is killed. A worker that dies is a <see cref="FindingKind.Crash"/> with the signature
-/// <c>process-exit:&lt;code&gt;</c>. Either way the next input starts a new worker.
+/// <c>process-exit:&lt;code&gt;</c>, and so is one that wrote to standard error and then failed to answer
+/// in time: the runtime announces an unhandled exception or a fail-fast there before it ends the
+/// process, and on Windows the error report can hold the dying process past the budget. Either way
+/// the next input starts a new worker.
 /// </summary>
 /// <param name="startInfo">Creates the command line of a worker; called for every start.</param>
 public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IFuzzExecutor {
@@ -26,6 +29,7 @@ public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IF
   private Process? _process;
   private readonly StringBuilder _error = new();
   private int _starts;
+  private int _errorLines;
 
   /// <inheritdoc />
   public int Starts => this._starts;
@@ -37,6 +41,7 @@ public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IF
     ArgumentNullException.ThrowIfNull(budget);
     var process = this._process ?? this.Start();
     var started = Stopwatch.GetTimestamp();
+    var errorLines = this.ErrorLines;
     Task<FuzzOutcome> response;
     try {
       FuzzWorker.WriteRequest(process.StandardInput.BaseStream, input);
@@ -54,6 +59,9 @@ public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IF
     }
 
     if (!finished) {
+      if (this.ErrorLines != errorLines)
+        return this.Died(process, Stopwatch.GetElapsedTime(started));
+
       this.Stop(process);
       return new(FindingKind.Hang, FuzzOutcome.HangSignature, 0, Stopwatch.GetElapsedTime(started));
     }
@@ -93,17 +101,22 @@ public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IF
       throw new FuzzWorkerException($"the worker '{info.FileName}' cannot be started: {exception.Message}");
     }
 
-    lock (this._error)
+    lock (this._error) {
       this._error.Clear();
-    process.ErrorDataReceived += (_, line) => {
-      if (line.Data is null)
-        return;
+      this._errorLines = 0;
+    }
 
-      lock (this._error)
-        if (this._error.Length < KeptErrorLength)
-          this._error.AppendLine(line.Data);
-    };
-    process.BeginErrorReadLine();
+    var errors = process.StandardError;
+    OnOwnThread(() => {
+      while (errors.ReadLine() is { } line)
+        lock (this._error) {
+          ++this._errorLines;
+          if (this._error.Length < KeptErrorLength)
+            this._error.AppendLine(line);
+        }
+
+      return 0;
+    });
     ++this._starts;
 
     var announcement = process.StandardOutput.BaseStream;
@@ -149,6 +162,13 @@ public sealed class WorkerProcessExecutor(Func<ProcessStartInfo> startInfo) : IF
     process.Dispose();
     if (ReferenceEquals(this._process, process))
       this._process = null;
+  }
+
+  private int ErrorLines {
+    get {
+      lock (this._error)
+        return this._errorLines;
+    }
   }
 
   private string ErrorText() {
