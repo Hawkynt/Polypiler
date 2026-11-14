@@ -582,19 +582,21 @@ codes:
   - code: PLY0072
     severity: error
     exit: EnvironmentError
-    title: benchmark environment differs
-    message: "benchmark '<id>/<variant>': environment differs from the baseline (<field>: <baseline> -> <current>)"
+    title: benchmark results not comparable
+    message: "benchmark '<id>/<variant>': <reason>"
+    rule: bench.comparable
     area: infrastructure
     owner: INFRA-BENCH
-    reserved: true
+    surfaces: "standard error of polypiler-tooling bench compare, one line per pair of results with different environment fingerprints, as 'environment differs from the baseline (<field>: '<baseline>' vs '<current>')' naming the first differing field, or as 'unstable, relative MAD <x> exceeds <limit>' when, with maxRelativeMad in the budget file, the wall time's MAD / median is above it; the pair's table row reads 'not compared'"
   - code: PLY0073
     severity: error
     exit: EnvironmentError
     title: performance budget exceeded
-    message: "benchmark '<id>/<variant>': <metric> <value> exceeds its budget <budget>"
+    message: "benchmark '<id>/<variant>': <metric> regressed by <p> % (baseline <b>, current <c>), budget <m> % from <budget file>"
+    rule: bench.budget
     area: infrastructure
     owner: INFRA-BENCH
-    reserved: true
+    surfaces: "standard error of polypiler-tooling bench compare --budgets, one line per metric whose median exceeds baseline * (1 + maxRegressionPercent / 100); the table row reads 'regressed'"
   - code: PLY0074
     severity: error
     exit: EnvironmentError
@@ -613,6 +615,24 @@ codes:
     area: infrastructure
     owner: INFRA-FUZZ
     surfaces: "standard error of polypiler-tooling fuzz, for a worker process that cannot be started or does not announce itself, and for afl-fuzz ending with an error"
+  - code: PLY0078
+    severity: error
+    exit: EnvironmentError
+    title: benchmark file invalid
+    message: "<file>(<line>,<column>): <reason naming the field>"
+    rule: bench.schema
+    area: infrastructure
+    owner: INFRA-BENCH
+    surfaces: "standard error of polypiler-tooling bench run and bench compare, for a definition (tests/benchmarks/<id>.bench.yaml), result or budget file that cannot be read or breaks its schema, a source or size path that does not exist, and a dotnet benchmark that wrote no BenchmarkDotNet export"
+  - code: PLY0079
+    severity: error
+    exit: EnvironmentError
+    title: benchmark program failed
+    message: "benchmark '<id>/<variant>': the program exited with <code>; nothing is recorded"
+    rule: bench.exit
+    area: infrastructure
+    owner: INFRA-BENCH
+    surfaces: "standard error of polypiler-tooling bench run, with the program's standard error as the cause"
   - code: PLY0080
     severity: error
     exit: UsageError

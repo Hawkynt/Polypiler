@@ -302,6 +302,18 @@ Once the bug is fixed, **promote the finding**: copy its `.bin` into
 every regression input against its target and fail on any finding. A regression file is never
 deleted to get a green run.
 
+### Benchmarks
+
+A benchmark is one file, `tests/benchmarks/<id>.bench.yaml`; `polypiler-tooling bench run --id <id>`
+(or `--all`) measures it in the sandbox and writes `artifacts/bench/<id>/<variant>.json` and
+`artifacts/bench/summary.md`, and `bench compare --baseline <dir> --current <dir>` sets two result sets
+side by side. Results are recorded, not judged: a metric fails (`PLY0073`) only under a budget that an
+ADR wrote into `tooling/bench/budgets.yaml`, and only against a baseline from the same environment
+(`PLY0072` otherwise). Never commit a budget with numbers of your own, never drop the slowest sample,
+and never assert on real elapsed time in a unit test: the harness's tests script the runner. The
+format, the metrics and how to add an in-process benchmark to `Polypiler.Benchmarks` are in
+[docs/benchmarks/README.md](docs/benchmarks/README.md).
+
 ## Commit conventions
 
 - One concern per commit, with a descriptive body.

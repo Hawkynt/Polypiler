@@ -39,6 +39,17 @@ public sealed record RunPlan(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> F
   /// <summary>The limits of each step.</summary>
   public RunLimits Limits { get; } = Limits ?? throw new ArgumentNullException(nameof(Limits));
 
+  /// <summary>
+  /// The files or directories, by name relative to the working directory, whose bytes the run hands
+  /// back in <see cref="RunResult.Collected"/> before the directory is removed: what the build wrote
+  /// and a size metric or an export needs. Empty unless given.
+  /// </summary>
+  /// <exception cref="ArgumentException">A name is empty, absolute, or contains a <c>..</c> segment.</exception>
+  public IReadOnlyList<string> Collect {
+    get;
+    init => field = CheckNames(value);
+  } = [];
+
   /// <summary>The steps in the order they run: the build steps, then the execute step.</summary>
   public IEnumerable<ProcessSpec> Steps => this.Build.Append(this.Execute);
 
@@ -49,6 +60,15 @@ public sealed record RunPlan(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> F
        && name[0] is not ('/' or '\\')
        && !(name.Length >= 2 && char.IsAsciiLetter(name[0]) && name[1] == ':')
        && !name.Split('/', '\\').Contains("..");
+
+  private static string[] CheckNames(IReadOnlyList<string> names) {
+    ArgumentNullException.ThrowIfNull(names);
+    foreach (var name in names)
+      if (!IsRelativeName(name))
+        throw new ArgumentException($"the name '{name}' leaves the working directory: only relative names without '..' are allowed", nameof(names));
+
+    return [.. names];
+  }
 
   private static Dictionary<string, ReadOnlyMemory<byte>> CheckFiles(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> files) {
     ArgumentNullException.ThrowIfNull(files);
