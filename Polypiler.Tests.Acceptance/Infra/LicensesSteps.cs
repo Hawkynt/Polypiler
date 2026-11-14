@@ -75,7 +75,9 @@ public sealed class LicensesSteps(ScenarioWorkspace workspace, CommandLog log) {
           profiles: []
 
       """);
-    var locked = CorpusLock.Load(Path.Combine(_root, CorpusLock.RepositoryPath)).Entries.Where(entry => entry.Repository == Repository);
+    // Only the files of this fixture: other fixtures of the repository (bitperm.page) are not in the workspace's manifest.
+    string[] files = [fixture.Path, .. fixture.Dependencies, .. repository.LicenceFiles];
+    var locked = CorpusLock.Load(Path.Combine(_root, CorpusLock.RepositoryPath)).Entries.Where(entry => entry.Repository == Repository && files.Contains(entry.Path));
     workspace.Write(CorpusLock.RepositoryPath, new CorpusLock(locked).ToJson());
     var import = Toolchain.Tooling(workspace.Path, "corpus", "import", "--source", checkout);
     Assert.That(import.ExitCode, Is.Zero, import.Output);
