@@ -34,7 +34,11 @@ internal enum JsKind {
   /// <summary>A reference to an object of a class of the file.</summary>
   Object,
 
-  /// <summary><c>null</c>, which joins with a reference to an object to that reference.</summary>
+  /// <summary>
+  /// An absent value only - <c>null</c>, <c>undefined</c> or both, which <see cref="JsType.MayBeNull"/>
+  /// and <see cref="JsType.MayBeUndefined"/> say. Joined with a value it is that value, which may then
+  /// be absent: an optional value of the IR for a scalar, <c>null</c> for a reference.
+  /// </summary>
   Null,
 
   /// <summary>Values of two kinds reach the place, which no type of the IR holds.</summary>
@@ -85,6 +89,21 @@ internal sealed record JsType {
   /// <summary>The class of a reference to an object.</summary>
   public ClassModel? Class { get; private init; }
 
+  /// <summary>Whether <c>null</c> reaches the place as well.</summary>
+  public bool MayBeNull { get; private init; }
+
+  /// <summary>Whether <c>undefined</c> reaches the place as well: <c>undefined</c>, <c>void 0</c>, <c>return;</c>, the end of a function, a missing argument.</summary>
+  public bool MayBeUndefined { get; private init; }
+
+  /// <summary>Whether an absent value reaches the place.</summary>
+  public bool IsAbsent => this.MayBeNull || this.MayBeUndefined;
+
+  /// <summary>The type without its absent values: what ToNumber or a test leaves of a value that is present.</summary>
+  public JsType Present => this with { MayBeNull = false, MayBeUndefined = false };
+
+  /// <summary>The type with the absent values that reach another place.</summary>
+  public JsType AbsentAs(JsType other) => this with { MayBeNull = other.MayBeNull, MayBeUndefined = other.MayBeUndefined };
+
   /// <summary>The two kinds of a conflict, as a diagnostic names them.</summary>
   public (string First, string Second) Kinds { get; private init; }
 
@@ -113,7 +132,10 @@ internal sealed record JsType {
   public static JsType String { get; } = new(JsKind.String);
 
   /// <summary><c>null</c>.</summary>
-  public static JsType Null { get; } = new(JsKind.Null);
+  public static JsType Null { get; } = new(JsKind.Null) { MayBeNull = true };
+
+  /// <summary><c>undefined</c> as a value: the literal, <c>void 0</c>, a <c>return;</c> or the end of a function that returns a value elsewhere.</summary>
+  public static JsType UndefinedValue { get; } = new(JsKind.Null) { MayBeUndefined = true };
 
   /// <summary>A reference to an object of a class.</summary>
   public static JsType Object(ClassModel type) => new(JsKind.Object) { Class = type };
@@ -123,6 +145,7 @@ internal sealed record JsType {
 
   /// <summary>The type of the values an IR type holds; an array of it is a typed array.</summary>
   public static JsType Of(IrType type) => type.Kind switch {
+    IrTypeKind.Optional => Of(type.Underlying!) with { MayBeNull = true },
     IrTypeKind.Void => Undefined,
     IrTypeKind.Bool => Boolean,
     IrTypeKind.F32 => F32,
@@ -163,8 +186,8 @@ internal sealed record JsType {
   /// <summary>Whether the type is a record or holds one, as an element or a value: such a type has its struct only once the shapes are named.</summary>
   public bool HasRecord => this.Kind == JsKind.Record || this.Element is { HasRecord: true };
 
-  /// <summary>Whether the values are proven integers.</summary>
-  public bool IsInteger => this.Kind == JsKind.Number && this.Float == 0;
+  /// <summary>Whether the values are proven integers. An absent value is no integer, but null is 0 to every operator that computes with it.</summary>
+  public bool IsInteger => this.Kind == JsKind.Number && this.Float == 0 && !this.MayBeUndefined;
 
   /// <summary>Whether the values are integers that one of the two 32-bit types holds.</summary>
   public bool IsWord => this.IsInteger && (this.Within(IrType.I32) || this.Within(IrType.U32));
@@ -176,7 +199,9 @@ internal sealed record JsType {
   /// The IR type that holds the values, or <see langword="null"/> when there is none: for an
   /// unbounded <c>BigInt</c>, a conflict, and a place nothing has reached.
   /// </summary>
-  public IrType? Ir => this.Kind switch {
+  public IrType? Ir => this.IsAbsent && this.Kind is JsKind.Number or JsKind.Boolean or JsKind.BigInt
+    ? (this.Present.Ir is { } present ? IrType.Optional(present) : null)
+    : this.Kind switch {
     JsKind.Undefined => IrType.Void,
     JsKind.Boolean => IrType.Bool,
     JsKind.Number when this.Float == 32 => IrType.F32,
@@ -192,7 +217,7 @@ internal sealed record JsType {
   };
 
   /// <summary>The type as a diagnostic names it: the kind, and for an array its elements.</summary>
-  public string Describe() => this.Kind switch {
+  public string Describe() => this.Kind != JsKind.Null && this.IsAbsent ? $"{this.Present.Describe()} or {Absence(this)}" : this.Kind switch {
     JsKind.Undefined => "undefined",
     JsKind.Boolean => "boolean",
     JsKind.Number => "number",
@@ -201,9 +226,12 @@ internal sealed record JsType {
     JsKind.Array => this.Element!.HasRecord ? $"{this.Element.Describe()}[]" : Spell(this.Ir!),
     JsKind.Record => this.Shape!.ToString(),
     JsKind.Object => this.Class!.Name,
-    JsKind.Null => "null",
+    JsKind.Null => Absence(this),
     _ => "nothing"
   };
+
+  /// <summary>The absent values that reach a place, as a diagnostic names them.</summary>
+  private static string Absence(JsType type) => type.MayBeNull && type.MayBeUndefined ? "null or undefined" : type.MayBeUndefined ? "undefined" : "null";
 
   /// <summary>The JSDoc spelling of an IR type.</summary>
   public static string Spell(IrType type) => type.Kind switch {
@@ -237,12 +265,11 @@ internal sealed record JsType {
     if (second.Kind == JsKind.Conflict || first.Kind == JsKind.Unknown)
       return second;
 
-    // null is a value of every reference type; of any other type the lowering refuses it where it stands.
-    if (first.Kind == JsKind.Null)
-      return second;
-
-    if (second.Kind == JsKind.Null)
-      return first;
+    // An absent value joins any value to that value, which may then be absent as well (#1322).
+    if (first.IsAbsent || second.IsAbsent) {
+      var present = first.Kind == JsKind.Null ? second.Present : second.Kind == JsKind.Null ? first.Present : Join(first.Present, second.Present);
+      return Absent(present, first.MayBeNull || second.MayBeNull, first.MayBeUndefined || second.MayBeUndefined);
+    }
 
     if (first.Kind != second.Kind)
       return Conflict(first, second);
@@ -273,6 +300,18 @@ internal sealed record JsType {
       default:
         return first;
     }
+  }
+
+  /// <summary>
+  /// A type that absent values reach as well. A number that <c>undefined</c> reaches is a double:
+  /// <c>ToNumber(undefined)</c> is a NaN, which no integer holds. A conflict stays one.
+  /// </summary>
+  private static JsType Absent(JsType present, bool isNull, bool isUndefined) {
+    if (present.Kind is JsKind.Conflict or JsKind.Unknown && present.Kind != JsKind.Null)
+      return present.Kind == JsKind.Unknown ? new(JsKind.Null) { MayBeNull = isNull, MayBeUndefined = isUndefined } : present;
+
+    var widened = isUndefined && present.Kind == JsKind.Number && present.Float == 0 ? F64 : present;
+    return widened with { MayBeNull = isNull, MayBeUndefined = isUndefined };
   }
 
   private static JsType Conflict(JsType first, JsType second)

@@ -117,16 +117,27 @@ internal sealed partial class TypeInference {
         return this._scope!.Bindings.GetValueOrDefault(identifier) switch {
           Variable variable => variable.Type,
           ModuleConstant constant => constant.Type,
-          _ => JsType.Unknown
+          _ => identifier.Name == "undefined" ? JsType.UndefinedValue : JsType.Unknown
         };
+      case ChainExpression chain:
+        // a?.b is undefined where a is null or undefined.
+        var chained = this.Of(chain.Expression);
+        return chained.Kind is JsKind.Unknown or JsKind.Conflict ? chained : JsType.Join(chained, JsType.UndefinedValue);
       case UpdateExpression step:
         var stepped = this.Of(step.Argument);
         return step.Argument is not Identifier ? stepped : stepped.Kind is JsKind.Number or JsKind.BigInt ? Stepped(stepped) : JsType.Unknown;
       case UnaryExpression unary:
         return this.Unary(unary, coercion);
       case LogicalExpression logical:
-        if (logical.Operator == Operator.NullishCoalescing)
-          return JsType.Unknown;
+        if (logical.Operator == Operator.NullishCoalescing) {
+          // The left value where it is present, the right one where it is absent.
+          var present = this.Of(logical.Left);
+          if (!present.IsAbsent && present.Kind is not (JsKind.Object or JsKind.Array))
+            return present;
+
+          var coalesced = JsType.Join(present.Present, this.Of(logical.Right));
+          return coalesced.Kind == JsKind.Conflict ? JsType.Unknown : coalesced;
+        }
 
         // Values of two kinds are no value of the IR: the expression has no type, and the lowering says why.
         var joined = JsType.Join(this.Of(logical.Left), this.Of(logical.Right));
@@ -182,6 +193,8 @@ internal sealed partial class TypeInference {
     switch (unary.Operator) {
       case Operator.LogicalNot:
         return JsType.Boolean;
+      case Operator.Void:
+        return JsType.UndefinedValue;
       case Operator.BitwiseNot:
         return this.IsBig(unary.Argument, coercion) ? Wide(coercion) ?? JsType.UnboundedBigInt : JsType.I32;
       case Operator.UnaryNegation when unary.Argument is NumericLiteral literal:

@@ -87,7 +87,7 @@ public sealed class TranslateCommandTests {
 
   [Test]
   public void UnsupportedMethods_AreTheOnesOfTheFrontendTests()
-    => Assert.That(UnsupportedMethods(), Has.Length.GreaterThan(80).And.Contain("public static decimal F(decimal a) => a + 1;")
+    => Assert.That(UnsupportedMethods(), Has.Length.GreaterThan(70).And.Contain("public static decimal F(decimal a) => a + 1;")
       .And.Contain("public static double F(double a) => System.Math.ReciprocalSqrtEstimate(a);"));
 
   /// <summary>Test design 12: invalid C# is exit code 4 and carries the compiler's message.</summary>
