@@ -30,9 +30,32 @@ internal sealed partial class Lowering {
     return (receiver, prologue);
   }
 
+  /// <summary>The source of every call of a method, by identity, which a diagnostic about the call points at.</summary>
+  public Dictionary<IrMethodCall, Node> Sites { get; } = new(ReferenceEqualityComparer.Instance);
+
+  /// <summary>A call of a method, its source noted.</summary>
+  private IrMethodCall Site(IrMethodCall call, Node node) {
+    this.Sites[call] = node;
+    return call;
+  }
+
+  /// <summary>How a call on an object reaches a method: by the class of the object where a class derived from the method's own overrides it.</summary>
+  private static IrMethodCallKind Dispatch(IrMethod method) => method.IsVirtual ? IrMethodCallKind.Virtual : IrMethodCallKind.Direct;
+
   /// <summary>An expression about objects, or <see langword="null"/> for any other.</summary>
   private IrExpr? Instance(Node node) {
+    if (Inheritance.Of(node, this._model.Candidate.Class, types.Names.ClassNamed) is { } inherited)
+      return this.Inherited(inherited, node);
+
     switch (node) {
+      case BinaryExpression { Operator: Operator.InstanceOf } test when types.Names.ClassNamed(test.Right) is { } tested:
+        var value = this.Expression(test.Left);
+        return value.Type.IsObject ? new IrTypeTest(value, IrType.Object(tested.Ir)) : throw this.Unsupported(test, $"instanceof of {types.Text(test.Left)}, which is no object of a class");
+      case MemberExpression { Object: Super } read:
+        var ancestor = this._model.Candidate.Class?.Base ?? throw this.Unsupported(read, "super outside a derived class");
+        return Binder.KeyOf(read) is { } name && ancestor.Member(MemberKind.Getter, name) is { } getter
+          ? new IrMethodCall(types.ModelOf(getter).ReturnType, ClassModel.MethodOf(getter), new IrLocalRef(this._receiver!), [])
+          : throw this.Unsupported(read, $"{types.Text(read)}, which reads no getter of the base class");
       case ThisExpression:
         // Outside a method or a constructor this is no object of a class.
         return this._receiver is { } receiver ? new IrLocalRef(receiver) : throw this.Unsupported(node, "this");
@@ -62,7 +85,8 @@ internal sealed partial class Lowering {
           throw this.Unsupported(callee, $"the method {types.Text(callee.Property)} of {owner.Name}, which it does not have");
 
         var target = this.Expression(callee.Object);
-        return new IrMethodCall(types.ModelOf(invoked).ReturnType, owner.Methods[invoked], target, this.Arguments(call, call.Arguments, invoked));
+        var reached = ClassModel.MethodOf(invoked);
+        return this.Site(new IrMethodCall(types.ModelOf(invoked).ReturnType, reached, target, this.Arguments(call, call.Arguments, invoked)) { Kind = Dispatch(reached) }, call);
       case MemberExpression { Object: MemberExpression { Property: Identifier { Name: "prototype" } } } member:
         throw this.Unsupported(member, "prototype mutation");
       case Identifier identifier when !this._model.Bindings.ContainsKey(identifier) && types.Names.ClassNamed(identifier) is not null:
@@ -94,7 +118,7 @@ internal sealed partial class Lowering {
       return Read(new IrFieldLoad(this.Expression(member.Object), field.Ir!));
 
     if (owner.Member(MemberKind.Getter, key) is { } getter)
-      return new IrMethodCall(types.ModelOf(getter).ReturnType, owner.Methods[getter], this.Expression(member.Object), []);
+      return new IrMethodCall(types.ModelOf(getter).ReturnType, ClassModel.MethodOf(getter), this.Expression(member.Object), []);
 
     throw this.Unsupported(member, owner.Member(MemberKind.Method, key) is not null
       ? "a method taken from its object"
@@ -139,8 +163,31 @@ internal sealed partial class Lowering {
       value = this.Value(assignment.Right, type);
     }
 
-    into.Add(field is not null ? new IrFieldStore(target, field.Ir!, value) : new IrExprStmt(new IrMethodCall(IrType.Void, owner.Methods[setter!], target, [value])));
+    into.Add(field is not null ? new IrFieldStore(target, field.Ir!, value) : new IrExprStmt(new IrMethodCall(IrType.Void, ClassModel.MethodOf(setter!), target, [value])));
     return true;
+  }
+
+  /// <summary>
+  /// A call of the constructor of the base class - the first statement of a constructor of a derived
+  /// class, which <see cref="Function"/> checks - or of a method of a base class on <c>this</c>, which
+  /// selects that very method.
+  /// </summary>
+  private IrExpr Inherited(BaseReference reference, Node node) {
+    var self = new IrLocalRef(this._receiver ?? throw this.Unsupported(node, "super outside a method"));
+    if (reference.IsConstructor) {
+      if (this._model.Candidate.Member != MemberKind.Constructor)
+        throw this.Unsupported(node, "a call of the constructor of the base class outside a constructor");
+
+      return new IrCall(reference.Owner.Creator!.Function, IrType.Void, [self, .. this.Arguments(node, reference.Arguments, reference.Member)]);
+    }
+
+    if (reference.Member is not { } method)
+      throw this.Unsupported(node, $"the method {reference.Key} of {reference.Owner.Name}, which it does not have");
+
+    var called = ClassModel.MethodOf(method);
+    return new IrMethodCall(types.ModelOf(method).ReturnType, called, self, this.Arguments(node, reference.Arguments, method)) {
+      Kind = called.IsVirtual ? IrMethodCallKind.Base : IrMethodCallKind.Direct
+    };
   }
 
   /// <summary><c>++</c> and <c>--</c> of a static field or of a field of an object, as statements, in doubles; says whether it was one.</summary>

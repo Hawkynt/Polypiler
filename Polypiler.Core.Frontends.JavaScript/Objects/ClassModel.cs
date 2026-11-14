@@ -82,15 +82,40 @@ internal sealed class ClassModel(string name, Node declaration) {
   /// <summary>Why the class cannot be imported whatever its members are, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }
 
-  /// <summary>The instance field of a key, or <see langword="null"/>.</summary>
-  public ClassField? Field(string key) => this.Fields.FirstOrDefault(field => field.Key == key);
+  /// <summary>The name of the class this one extends - <c>extends A</c>, or <c>Object.create(A.prototype)</c> - or <see langword="null"/>.</summary>
+  public string? BaseName { get; set; }
 
-  /// <summary>The member of a kind and a key, or <see langword="null"/>.</summary>
+  /// <summary>The class of the file this one derives from, once the file is read; <see langword="null"/> for none.</summary>
+  public ClassModel? Base { get; set; }
+
+  /// <summary>The class and the classes it derives from, the class first; a cycle ends at its first repetition.</summary>
+  public IEnumerable<ClassModel> Lineage {
+    get {
+      var seen = new HashSet<ClassModel>();
+      for (var type = this; type is not null && seen.Add(type); type = type.Base)
+        yield return type;
+    }
+  }
+
+  /// <summary>The instance field of a key, of the class or of a class it derives from, or <see langword="null"/>.</summary>
+  public ClassField? Field(string key) => this.Lineage.Select(type => type.OwnField(key)).FirstOrDefault(field => field is not null);
+
+  /// <summary>The instance field of a key the class declares itself, or <see langword="null"/>.</summary>
+  public ClassField? OwnField(string key) => this.Fields.FirstOrDefault(field => field.Key == key);
+
+  /// <summary>The member of a kind and a key, an instance member also of a class it derives from, or <see langword="null"/>.</summary>
   public Candidate? Member(MemberKind kind, string key, bool isStatic = false)
+    => (isStatic ? [this] : this.Lineage).Select(type => type.OwnMember(kind, key, isStatic)).FirstOrDefault(member => member is not null);
+
+  /// <summary>The member of a kind and a key the class declares itself, or <see langword="null"/>.</summary>
+  public Candidate? OwnMember(MemberKind kind, string key, bool isStatic = false)
     => this.Members.FirstOrDefault(member => member.Member == kind && member.Key == key && member.IsStatic == isStatic);
 
-  /// <summary>Whether a key names an instance member of any kind.</summary>
-  public bool HasInstanceMember(string key) => this.Field(key) is not null || this.Members.Any(member => member.Key == key && !member.IsStatic);
+  /// <summary>Whether a key names an instance member of any kind, of the class or of a class it derives from.</summary>
+  public bool HasInstanceMember(string key) => this.Field(key) is not null || this.Lineage.Any(type => type.Members.Any(member => member.Key == key && !member.IsStatic));
+
+  /// <summary>The method in the IR of a member of the class or of a class it derives from.</summary>
+  public static IrMethod MethodOf(Candidate member) => member.Class!.Methods[member];
 
   /// <summary>The name of a key in the IR: a private <c>#name</c> is <c>_name</c>, the convention of C#.</summary>
   public static string IrName(string key) => key.StartsWith('#') ? "_" + key[1..] : key;

@@ -554,7 +554,7 @@ internal sealed partial class Lowering {
       return type.IsObject ? new IrNull(type) : throw this.Unsupported(node, "null");
 
     var from = value.Expr.Type;
-    if (from == type)
+    if (from == type || from.IsAssignableTo(type))
       return value.Expr;
 
     if (type.IsStruct && this.Reshaped(value, type, node) is { } reshaped)

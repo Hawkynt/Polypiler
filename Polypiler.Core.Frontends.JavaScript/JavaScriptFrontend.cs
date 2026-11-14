@@ -220,6 +220,14 @@ public static class JavaScriptFrontend {
       Types = [.. lowering.Structs(lowered, inference.Shapes), .. classes.Select(owner => owner.Ir)],
       Globals = [.. state.Select(global => global.Global!)]
     };
+
+    // An overridden method called on the object a constructor is making would run before the fields of the derived class have their values in C#'s order and after it in JavaScript's.
+    foreach (var (_, call) in IrConstruction.VirtualCalls(module))
+      diagnostics.Add(inference.Diagnose(lowering.Sites[call], UnsupportedDescriptor, "'a call of an overridden method on 'this' during construction' is not supported yet"));
+
+    if (diagnostics.Count > 0)
+      return Refused(diagnostics);
+
     var caveats = new List<ImportCaveat>();
     if (lowering.AccessesElements)
       caveats.Add(_outOfRangeAccess);

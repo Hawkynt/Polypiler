@@ -106,6 +106,9 @@ internal sealed partial class TypeInference {
     if (this.StringType(node) is { } text)
       return text;
 
+    if (this.Inherited(node) is { } inherited)
+      return inherited;
+
     switch (node) {
       case NumericLiteral literal:
         return JsType.Literal(literal.Value);
