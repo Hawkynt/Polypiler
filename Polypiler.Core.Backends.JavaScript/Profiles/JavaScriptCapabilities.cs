@@ -79,7 +79,6 @@ public sealed class JavaScriptCapabilities {
     new("NaN", 5),
     new("Infinity", 5),
     new("RangeError", 5),
-    new("TypeError", 5),
     new("Math", 5),
     new("Math.abs", 5),
     new("Math.min", 5),
