@@ -1,2 +1,4 @@
 # Cipher's file is a pinned fixture: byte for byte what the commit has, on every platform.
 OpCodes.js -text
+# The node recordings are golden files: the golden lock hashes their bytes, which must be the same on every platform.
+recorded/** -text

@@ -1,0 +1,15 @@
+{
+  "name": "test-20-mul-findroutings-avoids-collision-prone-patterns",
+  "source": {"line": 1056},
+  "width": 8,
+  "mapping": [
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "src", "val": 0, "inv": false},
+    {"type": "empty"},
+    {"type": "empty"},
+    {"type": "empty"}
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "fixture": "cipher.checksum.adler32",
+  "provenance": {
+    "kind": "reference-run",
+    "source": "python",
+    "detail": "python3 -c \"import zlib; [print('%08X' % zlib.adler32(s)) for s in (b'', b'a', b'abc')]\" prints 00000001, 00620062 and 024D0127; RFC 1950 section 8.2 defines the algorithm",
+    "generatedBy": "python"
+  },
+  "vectors": [
+    { "name": "empty", "input": { "text": "" }, "expected": { "hex": "00000001" } },
+    { "name": "a", "input": { "text": "a" }, "expected": { "hex": "00620062" } },
+    { "name": "abc", "input": { "text": "abc" }, "expected": { "hex": "024D0127" } }
+  ]
+}

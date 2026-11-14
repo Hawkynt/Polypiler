@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/golden.lock.schema.json",
+  "title": "Polypiler golden lock",
+  "description": "tests/fixtures/golden.lock.json, written by 'polypiler-tooling integrity seal': the SHA-256 and length of every golden file below tests/fixtures and tests/vectors, sorted by path (ordinal), two-space indent, LF, trailing newline.",
+  "type": "object",
+  "required": ["schema", "files"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "bytes"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  }
+}
