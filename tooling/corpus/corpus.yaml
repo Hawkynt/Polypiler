@@ -73,3 +73,71 @@ fixtures:
     determinism: deterministic
     tolerance: exact
     profiles: []
+  # FMT-LLVM-AUDIT (docs/llvm/pb-emitter-audit.md): the BASIC programs `pbc --emit-llvm` is
+  # characterized on (tests/fixtures/formats/llvm/pb/characterization.yaml).
+  - id: pb.llvm.mini
+    repository: Hawkynt/PB-Compiler
+    path: tests/MINI.BAS
+    export: main
+    dependencies: [tests/TESTLIB.BI]
+    run: [pbc, --emit-llvm, '{file}']
+    vectors: { kind: embedded, source: "llvm-as and opt -passes=verify accept the emitted module" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: pb.llvm.arith
+    repository: Hawkynt/PB-Compiler
+    path: tests/ARITH.BAS
+    export: main
+    dependencies: []
+    run: [pbc, --emit-llvm, '{file}']
+    vectors: { kind: embedded, source: "llvm-as and opt -passes=verify accept the emitted module" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: pb.llvm.ctrl
+    repository: Hawkynt/PB-Compiler
+    path: tests/CTRL.BAS
+    export: main
+    dependencies: []
+    run: [pbc, --emit-llvm, '{file}']
+    vectors: { kind: embedded, source: "llvm-as and opt -passes=verify accept the emitted module" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: pb.llvm.array
+    repository: Hawkynt/PB-Compiler
+    path: tests/ARRAY.BAS
+    export: main
+    dependencies: []
+    run: [pbc, --emit-llvm, '{file}']
+    vectors: { kind: embedded, source: "llvm-as and opt -passes=verify accept the emitted module" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: pb.llvm.narrow
+    repository: Hawkynt/PB-Compiler
+    path: tests/diff/NARROW.BAS
+    export: main
+    dependencies: []
+    run: [pbc, --emit-llvm, '{file}']
+    vectors: { kind: embedded, source: "llvm-as rejects the emitted module: a block label holding a space is not quoted" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
+  - id: pb.llvm.diff36
+    repository: Hawkynt/PB-Compiler
+    path: tests/diff/DIFF36.BAS
+    export: main
+    dependencies: []
+    run: [pbc, --emit-llvm, '{file}']
+    vectors: { kind: embedded, source: "llvm-as rejects the emitted module: two values of one function are both named %i" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: []
