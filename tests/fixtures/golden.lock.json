@@ -2,6 +2,86 @@
   "schema": 1,
   "files": [
     {
+      "path": "tests/fixtures/backend/golden/state/Histogram.cs.csharp.golden",
+      "sha256": "bdd35500890dfe1aecaced5de41bb8a5bfc2f217645fd5220a88f66def82bff3",
+      "bytes": 15582
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/Histogram.cs.javascript.golden",
+      "sha256": "53e0b5999dec0c25c4750de08ae60ab63409cf890514b1b4bb4b73783d9edde8",
+      "bytes": 27216
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/Lazy.cs.csharp.golden",
+      "sha256": "16524fa8fba0d229e3b5ce878bc14cd19d5892dfd66852166c1528cdd362fcef",
+      "bytes": 39874
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/Lazy.cs.javascript.golden",
+      "sha256": "fb5a393976ce76a13e3bf88a8abbd08c1e256a610283d8f868df35c30916526b",
+      "bytes": 47528
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/Xorshift32.cs.csharp.golden",
+      "sha256": "d6583b62833a3b77ca298ba37437ccecfbd57b694155c34f5f600dfbe7a0c2e3",
+      "bytes": 19890
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/Xorshift32.cs.javascript.golden",
+      "sha256": "cd4d9880331fef62290bd22631577389a0bfb430d7f8f32a25f652c5f6aea110",
+      "bytes": 18188
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/Xorshift64.cs.csharp.golden",
+      "sha256": "47991ebc95b550292263a01a7902356d9253b1fa25bc21049562629c4fe520d0",
+      "bytes": 15770
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/Xorshift64.cs.javascript.golden",
+      "sha256": "4f1e4db4f58ac09c22cf95645c5b6b5d3ec85e28bcfc01f5362abb61a673cd02",
+      "bytes": 29452
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/histogram.js.csharp.golden",
+      "sha256": "01d3184bca4a123718353b74c352f38ce92ee17678fa005c441cb71bf94f9a3e",
+      "bytes": 15766
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/histogram.js.javascript.golden",
+      "sha256": "e3d179323f12bde079417daaa40fb707221607c2ae2004d5ba7f7abf5bd5d0d0",
+      "bytes": 27378
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/lazy.js.csharp.golden",
+      "sha256": "ed4052ab6acb42f7c5d78b593b1c72c104f00091e28d3f7c2fa82197f25393a8",
+      "bytes": 44806
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/lazy.js.javascript.golden",
+      "sha256": "a6a96a63bb42a7deaf740225b276c92460c9fb2d503d7bd717e172693e508067",
+      "bytes": 57568
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/xorshift32.js.csharp.golden",
+      "sha256": "e7e79c3e10074b24bc2469a5f050750f5701d5cebfb6a101f7b8ec5c9df9abf2",
+      "bytes": 21294
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/xorshift32.js.javascript.golden",
+      "sha256": "b6ec999b67b434c8350a501f0daf39e9d301fbc4591da17f71d79ced11f20269",
+      "bytes": 18348
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/xorshift64.js.csharp.golden",
+      "sha256": "ef68381edf9c11ae8a549d975c19b25d4e0be7baf1ba862ceb83a110130e5ee2",
+      "bytes": 14834
+    },
+    {
+      "path": "tests/fixtures/backend/golden/state/xorshift64.js.javascript.golden",
+      "sha256": "7bf1febd43be71584240cdfdc03816168de1a10446b05a8c6dfcf6bd5db65116",
+      "bytes": 28780
+    },
+    {
       "path": "tests/fixtures/prototype/js/recorded/adler32.txt",
       "sha256": "0b06b7203ec0c3e339e9e5698376add358f77ab70ef3ede33446a744c30e1717",
       "bytes": 5010
