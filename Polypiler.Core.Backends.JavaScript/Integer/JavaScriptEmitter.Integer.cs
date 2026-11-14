@@ -36,8 +36,8 @@ public static partial class JavaScriptEmitter {
     /// <summary>The width of the type that tells the signatures of an operation apart, as a literal.</summary>
     private static string Bits(IrType type) => type.Bits.ToString(CultureInfo.InvariantCulture);
 
-    /// <summary>The mask of the bits of a type of up to 32 bits, as a literal.</summary>
-    private static string Mask(IrType type) => type.Bits == 32 ? "0xFFFFFFFF" : $"0x{(1L << type.Bits) - 1:X}";
+    /// <summary>The mask of the bits of a type of 8 or 16 bits, as a literal.</summary>
+    private static string Mask(IrType type) => $"0x{(1 << type.Bits) - 1:X}";
 
     /// <summary>A number that holds the bits of a value of a type of up to 32 bits, cut to the type: masked, sign-extended or made a 32-bit integer.</summary>
     private static (string Text, bool Atomic) Cut(IrType type, string text) => (Narrow(type, $"({text})"), false);

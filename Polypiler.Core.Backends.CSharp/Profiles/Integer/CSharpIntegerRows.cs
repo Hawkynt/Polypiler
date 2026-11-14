@@ -41,14 +41,13 @@ internal static partial class CSharpIntegerRows {
     _ => "ulong"
   };
 
-  /// <summary>The keyword of the unsigned type of the width of an integer type.</summary>
-  private static string Unsigned(IrTypeKind kind) => Type(kind switch {
-    IrTypeKind.I8 => IrTypeKind.U8,
-    IrTypeKind.I16 => IrTypeKind.U16,
-    IrTypeKind.I32 => IrTypeKind.U32,
-    IrTypeKind.I64 => IrTypeKind.U64,
-    _ => kind
-  });
+  /// <summary>The keyword of the unsigned type of the width of a signed integer type.</summary>
+  private static string Unsigned(IrTypeKind kind) => kind switch {
+    IrTypeKind.I8 => "byte",
+    IrTypeKind.I16 => "ushort",
+    IrTypeKind.I32 => "uint",
+    _ => "ulong"
+  };
 
   private static bool IsSigned(IrTypeKind kind) => kind is IrTypeKind.I8 or IrTypeKind.I16 or IrTypeKind.I32 or IrTypeKind.I64;
 
