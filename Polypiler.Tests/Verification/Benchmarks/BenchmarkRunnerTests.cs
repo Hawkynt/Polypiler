@@ -153,7 +153,8 @@ public sealed class BenchmarkRunnerTests {
     Assert.That(Runner(runner).Run(Definition(), "default"), Is.Null);
     var diagnostic = this._bag.Items.Single();
     Assert.That((diagnostic.Code, diagnostic.ExitCode, this._bag.ExitCode), Is.EqualTo(("PLY0051", ExitCode.SemanticMismatch, ExitCode.SemanticMismatch)));
-    Assert.That(diagnostic.Message, Is.EqualTo("benchmark 'sum-loop/default': the program printed '0', expected '499999500000'; nothing is recorded"));
+    Assert.That(diagnostic.Message, Is.EqualTo("'sum-loop/default' vector 'stdout': expected 343939393939353030303030, actual 30, first difference at byte 0"));
+    Assert.That((diagnostic.Rule, diagnostic.Cause), Is.EqualTo(("verification.compare.exact", "the program printed '0', expected '499999500000'; nothing is recorded")));
     Assert.That(runner.Plans, Has.Count.EqualTo(2), "the measurement stops at the first wrong output");
   }
 

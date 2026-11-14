@@ -463,7 +463,7 @@ codes:
     rule: verification.compare.exact
     area: infrastructure
     owner: VER-ORACLE
-    surfaces: "the diagnostics of a verification, one per vector that differs under the exact policy, or whose outputs differ in length or are not whole elements of a tolerance's format"
+    surfaces: "the diagnostics of a verification, one per vector that differs under the exact policy, or whose outputs differ in length or are not whole elements of a tolerance's format; standard error of polypiler-tooling bench run for a run that prints other than its expectStdout, with '<id>/<variant>' as fixture and 'stdout' as vector"
   - code: PLY0052
     severity: error
     exit: SemanticMismatch

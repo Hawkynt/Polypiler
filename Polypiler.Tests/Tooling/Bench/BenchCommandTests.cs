@@ -126,7 +126,7 @@ public sealed class BenchCommandTests {
     this._runner = new ScriptedBenchRunner(Completed("0\n", 10));
     var (exitCode, _, error) = this.Run("run", "--id", "sum-loop");
     Assert.That(exitCode, Is.EqualTo(5));
-    Assert.That(error, Does.StartWith("polypiler-tooling: error PLY0051: benchmark 'sum-loop/default': the program printed '0'"));
+    Assert.That(error, Does.StartWith("polypiler-tooling: error PLY0051: 'sum-loop/default' vector 'stdout': expected 343939393939353030303030, actual 30, first difference at byte 0"));
     Assert.That(File.Exists(this.Path("artifacts/bench/sum-loop/default.json")), Is.False);
   }
 

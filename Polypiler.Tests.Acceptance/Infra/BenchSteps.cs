@@ -180,7 +180,7 @@ public sealed class BenchSteps(ScenarioWorkspace workspace, CommandLog log) {
   [Then(@"^diagnostic PLY0051 is reported and the tooling exit code is (\d+)$")]
   public void MismatchReported(int exitCode) {
     Assert.That(log.Last.ExitCode, Is.EqualTo(exitCode), log.Last.Output);
-    Assert.That(log.Last.Stderr, Does.Contain($"error PLY0051: benchmark '{Id}/default': the program printed '499999500000', expected '0'"));
+    Assert.That(log.Last.Stderr, Does.Contain($"error PLY0051: '{Id}/default' vector 'stdout': expected 30, actual 343939393939353030303030, first difference at byte 0"));
   }
 
 }
