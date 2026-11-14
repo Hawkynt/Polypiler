@@ -23,10 +23,13 @@ public sealed class IntegerOperationsTests {
   private static string Interpreted(string function, params object[] arguments)
     => PrototypeFixture.InterpretedOutcome(_module, new PrototypeCall(function, arguments));
 
-  /// <summary>Test design 13 for the IR: the operations and the widths of each are those the issue lists, no more and no fewer.</summary>
+  /// <summary>
+  /// Test design 13 for the IR: the operations and the widths of each are those the issue lists, no
+  /// more and no fewer - with the floating-point formats the endian loads and stores also take (#1313).
+  /// </summary>
   [Test]
   public void Signatures_AreThoseOfTheIssue() {
-    var expected = IntegerCases.All.GroupBy(@case => @case.Op).ToDictionary(group => group.Key, group => group.Select(@case => (@case.Result, string.Join(",", @case.Types.Select(type => type.ToString())))).ToList());
+    var expected = IntegerCases.All.Concat(FloatViewCases.All).GroupBy(@case => @case.Op).ToDictionary(group => group.Key, group => group.Select(@case => (@case.Result, string.Join(",", @case.Types.Select(type => type.ToString())))).ToList());
     Assert.That(IntegerOperations.Operations, Is.EquivalentTo(expected.Keys));
     foreach (var (op, signatures) in expected)
       Assert.That(IntegerOperations.Signatures(op).Select(signature => (signature.Result, string.Join(",", signature.Arguments.Select(type => type.ToString())))), Is.EquivalentTo(signatures), op.ToString());
@@ -50,7 +53,7 @@ public sealed class IntegerOperationsTests {
     IrFunction[] broken = [
       Built(@case.Result, @case.Types[..^1]),
       Built(@case.Result, [wrongFirst, .. @case.Types[1..]]),
-      Built(@case.Result == IrType.F64 ? IrType.Bool : IrType.F64, @case.Types)
+      Built(@case.Result == IrType.Bool ? IrType.F64 : IrType.Bool, @case.Types)
     ];
     foreach (var wrong in broken)
       Assert.That(IrVerifier.Verify(new IrModule("Broken", [wrong])).Select(diagnostic => diagnostic.Code), Has.Member(IrVerifier.Code), wrong.ToString());
