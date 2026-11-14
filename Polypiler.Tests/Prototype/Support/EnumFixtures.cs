@@ -146,4 +146,74 @@ internal static class EnumFixtures {
   /// </summary>
   public static string Normalized(string outcome) => outcome == PrototypeFixture.Trap(IrTrap.IndexOutOfRange) ? PrototypeFixture.Trap(IrTrap.InvalidFormat) : outcome;
 
+  /// <summary>The C# fixtures of <c>tests/fixtures/prototype/enums</c>: each class with the file it is in, without the extension.</summary>
+  public static readonly (string Class, string File)[] CSharp = [("Permissions", "Perm"), ("Colors", "Color"), ("SignedMembers", "Signed"), ("BigMembers", "Big")];
+
+  /// <summary>The JavaScript fixture of the folder, without the extension.</summary>
+  public const string JavaScript = "color";
+
+  /// <summary>The path of a fixture file of the folder, its extension included.</summary>
+  public static string PathOf(string file) => System.IO.Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "prototype", "enums", file);
+
+  /// <summary>A method of a C# fixture as the C# compiler built it into this assembly.</summary>
+  public static System.Reflection.MethodInfo Compiled(string className, string method)
+    => typeof(EnumFixtures).Assembly.GetType("Polypiler.Fixtures.Prototype." + className, true)!.GetMethod(method, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+      ?? throw new System.MissingMethodException(className, method);
+
+  /// <summary>
+  /// The calls of the C# fixtures, each with the class it calls and the type the method returns: every
+  /// value 0…255 of the flags enum, the boundaries of every underlying type, the wrap of the byte at 256
+  /// and every class of text. A parameter of an enum is given the value of its underlying type.
+  /// </summary>
+  public static IEnumerable<(string Class, PrototypeCall Call)> CSharpCalls() {
+    (string, PrototypeCall) Call(string className, string method, params object[] arguments)
+      => (className, new PrototypeCall(method, arguments) { Returns = Compiled(className, method).ReturnType });
+
+    for (var value = -2; value <= 256; ++value)
+      yield return Call("Permissions", "Describe", value);
+
+    foreach (var value in Numbers) {
+      yield return Call("Permissions", "Describe", (int)value);
+      yield return Call("Permissions", "Grant", (int)value);
+      yield return Call("Colors", "Cast", (int)value);
+      yield return Call("SignedMembers", "Text", (int)value);
+      yield return Call("BigMembers", "Text", unchecked((ulong)value));
+      yield return Call("BigMembers", "IsMax", unchecked((ulong)value));
+      yield return Call("BigMembers", "HasOne", unchecked((ulong)value));
+      foreach (var other in new long[] { 0, 1, 5, -1 }) {
+        yield return Call("Permissions", "Has", (int)value, (int)other);
+        yield return Call("SignedMembers", "Less", (int)value, (int)other);
+      }
+    }
+
+    foreach (var value in new byte[] { 0, 1, 5, 6, 7, 250, 255 }) {
+      yield return Call("Colors", "IsDefined", value);
+      yield return Call("Colors", "Shade", value);
+      foreach (var other in new byte[] { 0, 1, 250, 255 })
+        yield return Call("Colors", "Shift", value, other);
+    }
+
+    foreach (var text in Texts) {
+      yield return Call("Permissions", "F", text);
+      yield return Call("Colors", "Parse", text);
+      yield return Call("BigMembers", "Parse", text);
+    }
+
+    yield return Call("SignedMembers", "Names");
+    yield return Call("SignedMembers", "Values");
+    yield return Call("BigMembers", "Names");
+  }
+
+  /// <summary>The calls of the JavaScript fixture; the outcomes are what node prints.</summary>
+  public static IEnumerable<PrototypeCall> JavaScriptCalls() {
+    for (var value = -1; value <= 8; ++value) {
+      yield return new PrototypeCall("shade", [value]);
+      yield return new PrototypeCall("mix", [value]);
+    }
+
+    yield return new PrototypeCall("shade", [int.MinValue]);
+    yield return new PrototypeCall("mix", [int.MaxValue]);
+    yield return new PrototypeCall("total", []);
+  }
+
 }
