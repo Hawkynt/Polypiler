@@ -13,6 +13,7 @@ public static class SpecFamilies {
     new EffectsSpecFamily(),
     new IrSpecFamily(),
     new LanguagesSpecFamily(),
+    new PermutationsSpecFamily(),
   ];
 
 }

@@ -1,0 +1,13 @@
+id: TARGETS.mos6502
+title: MOS 6502
+version: 1
+status: draft
+owner: Hawkynt
+issue: SPEC-TARGETS
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  {}

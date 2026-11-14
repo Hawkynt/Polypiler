@@ -1,0 +1,16 @@
+id: PERMUTATIONS.cost.missing-cpu
+title: Without cpu
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: cost
+  costs:
+    - {primitive: shift, cycles: 8}
+  evidence: {kind: documented, reference: "Zilog, Z80 CPU User Manual UM0080"}

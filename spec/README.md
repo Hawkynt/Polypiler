@@ -166,3 +166,25 @@ the body; the rules (`PLY0046`) are `layout`, `unique-identifier` (backlog code,
 The seed holds C# with one profile per target framework the C# backend writes (`net2.0` … `net10.0`)
 and JavaScript with one per level the JavaScript backend writes (`es5` … `es2022`). Only the profiles
 the frontends read today, `csharp/net10.0` and `javascript/es2022`, carry constructs.
+
+## Family `permutations`
+
+Bit mappings, the grammars that synthesize them and the cost tables of a CPU (PRD §4.1, §23), body
+schema [`schemas/permutations.schema.json`](schemas/permutations.schema.json). A document of kind
+`mapping`, `grammar` or `cost` lives in `permutations/<kind>s/<name>.yaml` with the ID
+`PERMUTATIONS.<kind>.<name>`. A mapping is exactly its `outputs` list, least significant output bit
+first: an input bit index, `{not: <index>}`, `{const: 0|1}` or `{dontCare: true}`; when an output is a
+don't-care, every vector needs a `mask` of the compared bits. The rules (`PLY0046`):
+
+| Rule | What it checks |
+| --- | --- |
+| `layout` | the folder matches `kind`, the ID matches the path |
+| `index-in-range` | every source index, plain or under `not`, is below `inputWidth` |
+| `bijective-consistent` | `bijective: true` exactly when there are `inputWidth` plain outputs, each input bit once |
+| `vector-width` | `input` fits `inputWidth`; `output` and `mask` fit the number of outputs |
+| `vector-consistent` | every vector's `output` is the mapping applied to `input`, on the masked bits that are not don't-care |
+| `unique-primitive` | a cost table prices each primitive once |
+| `cost-evidence` | a `measured` cost names an existing file under `docs/benchmarks/`; a `documented` one a non-empty citation |
+
+A grammar's `target` names an existing `TARGETS.` document (`PLY0043`). The seed document is
+`permutations/mappings/reverse8.yaml`.

@@ -1,0 +1,16 @@
+id: PERMUTATIONS.cost.missing-evidence
+title: Without evidence
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: cost
+  cpu: z80
+  costs:
+    - {primitive: shift, cycles: 8}

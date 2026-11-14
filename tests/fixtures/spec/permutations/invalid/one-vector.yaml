@@ -1,0 +1,18 @@
+id: PERMUTATIONS.mapping.one-vector
+title: A mapping with a single vector
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: mapping
+  inputWidth: 8
+  outputs: [7, 6, 5, 4, 3, 2, 1, 0]
+  bijective: true
+  vectors:
+    - {input: "0xB4", output: "0x2D"}

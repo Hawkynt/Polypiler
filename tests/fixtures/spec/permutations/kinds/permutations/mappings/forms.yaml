@@ -1,0 +1,19 @@
+id: PERMUTATIONS.mapping.forms
+title: Every form of an output bit
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: mapping
+  inputWidth: 2
+  outputs: [0, {not: 0}, {const: 0}, {const: 1}, {dontCare: true}]
+  bijective: false
+  vectors:
+    - {input: "0x0", output: "0x0A", mask: "0x0F"}
+    - {input: "0x1", output: "0x19", mask: "0x0F"}

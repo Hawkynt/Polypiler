@@ -1,0 +1,19 @@
+id: PERMUTATIONS.mapping.past-the-input
+title: An output bit that reads past the input
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: mapping
+  inputWidth: 8
+  outputs: [0, 1, 2, 8, 4, 5, 6, 7]
+  bijective: false
+  vectors:
+    - {input: "0x00", output: "0x00"}
+    - {input: "0xFF", output: "0xFF"}

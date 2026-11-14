@@ -1,0 +1,18 @@
+id: PERMUTATIONS.cost.mos6502
+title: Measured 6502 costs
+version: 1
+status: draft
+owner: Hawkynt
+issue: PERM-MODEL
+tests: []
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: cost
+  cpu: mos6502
+  costs:
+    - {primitive: shift, cycles: 2, bytes: 1}
+    - {primitive: rotate, cycles: 2}
+  evidence: {kind: measured, reference: docs/benchmarks/mos6502-shift.json}
