@@ -142,6 +142,7 @@ public sealed class CSharpCapabilitiesTests {
     ("Array.prototype.pop of ECMA-262 on a List<T> of values", "net2.0"),
     ("Array.prototype.pop of ECMA-262 on a List<T> of references", "net2.0"),
     ("Array.prototype.includes of ECMA-262 on a List<T> of references", "net2.0"),
+    ("Array.prototype.indexOf of ECMA-262 on a List<T> of records", "net2.0"),
     ("Array.prototype.indexOf of ECMA-262 on a List<double>", "net2.0"),
     ("Array.prototype.indexOf of ECMA-262 on a List<float>", "net2.0"),
     ("Dictionary<TKey,TValue>", "net2.0"),
@@ -492,7 +493,7 @@ public sealed class CSharpCapabilitiesTests {
     // The helpers of the collections take the nested classes of the collections (#1328), which are C# 2 as well.
     string[] classes = [CSharpCollectionClasses.KeyedSlots, CSharpCollectionClasses.FloatKeys, CSharpCollectionClasses.SingleKeys];
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))).Concat(classes))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(123));
+    Assert.That(helpers, Has.Count.EqualTo(124));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);

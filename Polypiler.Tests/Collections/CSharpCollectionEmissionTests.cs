@@ -46,7 +46,7 @@ public sealed class CSharpCollectionEmissionTests {
 
   /// <summary>The interpreter's outcomes of the map module.</summary>
   [TestCase("InsertionRemoved", "2456"), TestCase("InsertionLive", "135"), TestCase("InsertionSet", "132"), TestCase("Lookups", "7544"), TestCase("ObjectKeys", "221")]
-  [TestCase("LongKeys", "21"), TestCase("SingleKeys", "124"), TestCase("StructValues", "11"), TestCase("ValuesOnly", "5612"), TestCase("SlotsLive", "123")]
+  [TestCase("LongKeys", "21"), TestCase("SingleKeys", "124"), TestCase("StructValues", "11"), TestCase("ValuesOnly", "5612"), TestCase("SlotsLive", "123"), TestCase("MadeMap", "78")]
   public void MapInterpreter_ComputesTheStatedValue(string function, string outcome)
     => Assert.That(PrototypeFixture.InterpretedOutcome(CollectionModules.Maps(), new PrototypeCall(function, []) { Returns = typeof(int) }), Is.EqualTo(outcome));
 
@@ -100,6 +100,7 @@ public sealed class CSharpCollectionEmissionTests {
   [TestCase("PopValues", "9500"), TestCase("PopObjects", "61"), TestCase("StrictSearch", "-88"), TestCase("StrictSingles", "1"), TestCase("Includes", "1101")]
   [TestCase("LivePush", "44"), TestCase("LiveTemporary", "50"), TestCase("CheckedThroughCall", "-1"), TestCase("CheckedLast", "110"), TestCase("CopyStructs", "15")]
   [TestCase("CopyStrings", "10"), TestCase("CopyLongs", "4"), TestCase("SearchStructs", "10"), TestCase("SearchRecords", "0"), TestCase("ChangesCounted", "29")]
+  [TestCase("StructLoop", "93"), TestCase("StrictReferences", "9")]
   public void Interpreter_ComputesTheStatedValue(string function, string outcome)
     => Assert.That(PrototypeFixture.InterpretedOutcome(CollectionModules.Lists(), new PrototypeCall(function, []) { Returns = typeof(int) }), Is.EqualTo(outcome));
 

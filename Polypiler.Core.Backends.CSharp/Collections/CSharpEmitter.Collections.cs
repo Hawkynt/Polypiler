@@ -42,6 +42,16 @@ public static partial class CSharpEmitter {
     "return false;"
   ], "<T>", "where T : class");
 
+  /// <summary>JavaScript's <c>indexOf</c> on a list of records: by identity, where <c>IndexOf</c> calls the <c>Equals</c> a record class has of its own.</summary>
+  internal static CSharpHelper IndexOfReference { get; } = new("IndexOfReference", "int", CollectionsNamespace + "List<T> list, T value", [
+    "for (int index = 0; index < list.Count; ++index) {",
+    "  if (object.ReferenceEquals(list[index], value)) {",
+    "    return index;",
+    "  }",
+    "}",
+    "return -1;"
+  ], "<T>", "where T : class");
+
   /// <summary>JavaScript's <c>indexOf</c> on a list of <c>double</c>: <c>==</c>, under which a NaN is never found and <c>-0</c> is <c>0</c>.</summary>
   internal static CSharpHelper IndexOfStrictDouble { get; } = IndexOfStrict("IndexOfStrictDouble", "double");
 
@@ -100,6 +110,9 @@ public static partial class CSharpEmitter {
         case IrCollectionOp.ListIncludesSameValueZero when arguments[0].Type.Element!.IsObject:
           var identity = this.Helper(ContainsReference);
           return (new CsInvocation(CSharpFragments.Name(identity), [this.Stored(arguments[0]), this.Stored(arguments[1])]), Primary);
+        case IrCollectionOp.ListIndexOfStrict when arguments[0].Type.Element!.ClassType is { IsRecord: true }:
+          var reference = this.Helper(IndexOfReference);
+          return (new CsInvocation(CSharpFragments.Name(reference), [this.Stored(arguments[0]), this.Stored(arguments[1])]), Primary);
         case IrCollectionOp.ListIndexOfStrict when arguments[0].Type.Element!.IsFloat:
           var strict = this.Helper(arguments[0].Type.Element == IrType.F32 ? IndexOfStrictSingle : IndexOfStrictDouble);
           return (new CsInvocation(CSharpFragments.Name(strict), [this.Stored(arguments[0]), this.Stored(arguments[1])]), Primary);

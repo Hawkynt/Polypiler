@@ -33,7 +33,7 @@ internal static class CollectionModules {
   /// <summary>The names of the functions of <see cref="Lists"/>.</summary>
   public static readonly string[] ListFunctions = [
     "PopValues", "PopObjects", "StrictSearch", "StrictSingles", "Includes", "LivePush", "LiveTemporary", "CheckedThroughCall",
-    "CheckedLast", "CopyStructs", "CopyStrings", "CopyLongs", "SearchStructs", "SearchRecords", "ChangesCounted"
+    "CheckedLast", "CopyStructs", "CopyStrings", "CopyLongs", "SearchStructs", "SearchRecords", "ChangesCounted", "StructLoop", "StrictReferences"
   ];
 
   /// <summary>
@@ -248,6 +248,30 @@ internal static class CollectionModules {
       new IrReturn(Plus(Times(new IrCoalesce(Op(IrCollectionOp.ListRemoveLast, optional, R(counting)), I(0)), 10),
         new IrCoalesce(Op(IrCollectionOp.ListRemoveLast, optional, R(counting)), I(9))))));
 
+    // A live loop over structs reads copies: a change of the variable changes no element.
+    var walked = new IrLocal("walked", points);
+    var spotted = new IrLocal("spotted", IrType.Struct(point));
+    var sumX = new IrLocal("sumX", IrType.I32);
+    functions.Add(F("StructLoop", [walked, spotted, sumX],
+      new IrDeclare(walked, Op(IrCollectionOp.ListNew, points)),
+      Do(IrCollectionOp.ListAdd, R(walked), new IrStructNew(IrType.Struct(point), [I(3)])),
+      new IrDeclare(sumX, I(0)),
+      new IrForEachCollection(R(walked), EnumerationMode.Live, spotted, null, new IrBlock([
+        new IrFieldStore(R(spotted), x, I(9)),
+        new IrAssign(sumX, Plus(R(sumX), new IrFieldLoad(R(spotted), x)))])),
+      new IrReturn(Plus(Times(R(sumX), 10), new IrFieldLoad(Op(IrCollectionOp.ListGet, IrType.Struct(point), R(walked), I(0)), x)))));
+
+    // JavaScript's indexOf of references: by identity, also of record classes; of structs by their fields.
+    var tagged = new IrLocal("tagged", tags);
+    var kept = new IrLocal("kept", IrType.Object(tag));
+    functions.Add(F("StrictReferences", [tagged, kept],
+      new IrDeclare(kept, new IrNew(IrType.Object(tag), makeTag, [I(1)])),
+      new IrDeclare(tagged, Op(IrCollectionOp.ListNew, tags)),
+      Do(IrCollectionOp.ListAdd, R(tagged), new IrNew(IrType.Object(tag), makeTag, [I(1)])),
+      Do(IrCollectionOp.ListAdd, R(tagged), R(kept)),
+      new IrReturn(Plus(Times(Op(IrCollectionOp.ListIndexOfStrict, IrType.I32, R(tagged), R(kept)), 10),
+        Op(IrCollectionOp.ListIndexOfStrict, IrType.I32, R(tagged), new IrNew(IrType.Object(tag), makeTag, [I(1)]))))));
+
     return new IrModule("Lists", functions) { Types = [box, point, tag] };
   }
 
@@ -256,7 +280,7 @@ internal static class CollectionModules {
 
   /// <summary>The names of the functions of <see cref="Maps"/>.</summary>
   public static readonly string[] MapFunctions = [
-    "InsertionRemoved", "InsertionLive", "InsertionSet", "Lookups", "ObjectKeys", "LongKeys", "SingleKeys", "StructValues", "ValuesOnly", "SlotsLive"
+    "InsertionRemoved", "InsertionLive", "InsertionSet", "Lookups", "ObjectKeys", "LongKeys", "SingleKeys", "StructValues", "ValuesOnly", "SlotsLive", "MadeMap"
   ];
 
   /// <summary>
@@ -423,6 +447,19 @@ internal static class CollectionModules {
         Digit(walked, R(at)),
         new IrIf(new IrBinary(IrBinaryOp.Equal, R(at), I(2)), new IrBlock([Remove(slotted, 1), Put(slotted, 9, 9)]), null)])),
       new IrReturn(R(walked))));
+
+    // A loop over a map that a call makes, which is no variable: the map is evaluated once.
+    var made = new IrLocal("made", slots);
+    functions.Add(new IrFunction("Make", false, slots, [], [made], new IrBlock([
+      new IrDeclare(made, Op(IrCollectionOp.MapNew, slots)), Put(made, 7, 8), new IrReturn(R(made))])));
+    var madeKey = new IrLocal("madeKey", IrType.I32);
+    var madeValue = new IrLocal("madeValue", IrType.I32);
+    var madeSum = new IrLocal("madeSum", IrType.I32);
+    functions.Add(F("MadeMap", [madeKey, madeValue, madeSum],
+      new IrDeclare(madeSum, I(0)),
+      new IrForEachCollection(new IrCall("Make", slots, []), EnumerationMode.Live, madeKey, madeValue, new IrBlock([
+        new IrAssign(madeSum, Plus(Times(R(madeKey), 10), R(madeValue)))])),
+      new IrReturn(R(madeSum))));
 
     return new IrModule("Maps", functions) { Types = [box, point] };
   }
