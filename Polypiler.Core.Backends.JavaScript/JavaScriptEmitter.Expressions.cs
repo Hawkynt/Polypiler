@@ -79,6 +79,10 @@ public static partial class JavaScriptEmitter {
           return this.Conversion(expression);
         case IrStructNew or IrStructDefault or IrFieldLoad or IrStructEquals:
           return this.Struct(expression);
+        case IrGenericEquals equality:
+          return this.GenericEquals(equality);
+        case IrGenericCompare order:
+          return this.GenericCompare(order);
         case IrCall chained when this._owners.ContainsKey(chained.Function):
           return (this.Chained(chained), true);
         default:

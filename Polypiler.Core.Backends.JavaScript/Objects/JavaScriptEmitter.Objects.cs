@@ -101,7 +101,7 @@ public static partial class JavaScriptEmitter {
     private List<JsStatement> Class(IrClassType type, IrModule module) {
       this._construct = $"the class '{type.Name}'";
       this._class = type;
-      var name = this.Name(type.Name);
+      var name = this.DeclaredName(type.Name);
       var functions = module.Functions.Where(function => this._owners.GetValueOrDefault(function.Name) == type).ToDictionary(function => function.Name);
       var classes = this.Native("class");
       var fields = classes && this.Native("class fields");
