@@ -28,12 +28,10 @@ internal sealed partial class FunctionLowering {
     return this.WithElse(statement, () => this.Loop(statement.Node("target")!, iterable, () => this.Statements(body)));
   }
 
-  /// <summary>A loop of a target over an iterable whose passes run the statements a body makes; the statements of the loop.</summary>
+  /// <summary>A loop of a target over an iterable other than <c>range(…)</c> whose passes run the statements a body makes; the statements of the loop.</summary>
   private List<IrStmt> Loop(PyNode target, PyNode iterable, System.Func<List<IrStmt>> body) {
     if (this.BuiltinCall(iterable) is { } builtin) {
       switch (builtin) {
-        case "range":
-          return this.Range(target, iterable, body, null);
         case "enumerate" when iterable.Nodes("args").FirstOrDefault() is { } source && this.TypeOf(source).Kind == PyKind.Dict:
           return this.EnumerateDict(target, iterable, body);
         case "enumerate":
@@ -214,8 +212,8 @@ internal sealed partial class FunctionLowering {
   /// the counter. The counter is an <c>int</c> as exact as the bounds, so no element is lost or added
   /// at any magnitude; a step of 1 or -1 tests the bound directly, any other step tests it by its sign.
   /// </summary>
-  private List<IrStmt> Range(PyNode targetNode, PyNode range, System.Func<List<IrStmt>> bodyOf, PyNode? statement) {
-    var body = statement?.Nodes("body") ?? [];
+  private List<IrStmt> Range(PyNode targetNode, PyNode range, System.Func<List<IrStmt>> bodyOf, PyNode statement) {
+    var body = statement.Nodes("body");
     if (!targetNode.Is("Name") || range.Nodes("args").Count is < 1 or > 3 || range.Nodes("keywords").Count > 0)
       throw this.Refuse(range, PythonFrontend.UnsupportedIterationDescriptor, $"iteration over '{this.Quote(range)}' is not supported");
 
@@ -249,7 +247,7 @@ internal sealed partial class FunctionLowering {
     var variable = this.Scope.Variable(targetNode)!;
     var loopLocal = this.Local(variable);
     // The variable is the counter where nothing but the loop reads or assigns it: a statement's own local, used nowhere after it.
-    var direct = statement is not null && this.Function.Locals.ContainsValue(variable) && variable.Type.Kind == PyKind.Int && !assigned.Contains(target)
+    var direct = this.Function.Locals.ContainsValue(variable) && variable.Type.Kind == PyKind.Int && !assigned.Contains(target)
       && !UsedOutside(this.Function.Body, statement, target) && !this.Function.Nested.Values.Any(nested => nested.Find(target) == variable);
     var counter = direct ? loopLocal : this.Fresh("k", IrType.BigInt);
     if (!direct)
