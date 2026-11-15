@@ -47,7 +47,9 @@ public sealed class GoldenSchemaTests {
     Assert.That(vectors, Is.Not.Empty);
     foreach (var file in vectors)
       Assert.That(Valid("vectors.schema.json", File.ReadAllText(Path.Combine(_root, file))), Is.True, file);
-    Assert.That(coverage.Markers, Has.Count.EqualTo(3));
+    Assert.That(coverage.Markers.Select(marker => marker.Path.Replace('\\', '/')).Order(StringComparer.Ordinal), Is.EqualTo(new[] {
+      "tests/fixtures/prototype/js/recorded/golden.provenance.json", "tests/fixtures/prototype/python/recorded/golden.provenance.json",
+      "tests/vectors/float/golden.provenance.json", "tests/vectors/numtext/golden.provenance.json" }));
     foreach (var marker in coverage.Markers)
       Assert.That(Valid("golden.provenance.schema.json", File.ReadAllText(Path.Combine(_root, marker.Path))), Is.True, marker.Path);
   }
