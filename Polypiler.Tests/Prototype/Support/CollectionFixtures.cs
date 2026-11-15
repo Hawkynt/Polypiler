@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
@@ -72,5 +73,13 @@ internal static class CollectionFixtures {
     for (var change = 0; change <= 4; ++change)
       yield return Call("Passes", change);
   }
+
+  /// <summary>The functions of the JavaScript fixture <c>collections.js</c>, which take nothing.</summary>
+  public static readonly string[] ScriptFunctions = [
+    "arrayOps", "pushWhileIterating", "popOfEmpty", "popped", "searches", "cleared", "words", "copied", "stepped", "passed", "fixedLoop"
+  ];
+
+  /// <summary>The calls of the JavaScript fixture every implementation is compared on.</summary>
+  public static IEnumerable<PrototypeCall> ScriptCalls() => ScriptFunctions.Select(function => new PrototypeCall(function, []));
 
 }

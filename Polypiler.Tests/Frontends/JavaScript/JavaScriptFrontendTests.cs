@@ -648,7 +648,7 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("throw new RangeError('r');", "new RangeError")]
   [TestCase("try { } finally { return a; } return a;", "return in finally")]
   [TestCase("for (const x in d) { } return a;", "for-in")]
-  [TestCase("for (const x of d) { } return a;", "a for...of over uint8[]")]
+  [TestCase("for (const [x] of d) { } return a;", "a for...of that does not declare one variable")]
   [TestCase("outer: while (t) { } return a;", "a label")]
   [TestCase("debugger; return a;", "debugger")]
   [TestCase("class X { } return a;", "class")]

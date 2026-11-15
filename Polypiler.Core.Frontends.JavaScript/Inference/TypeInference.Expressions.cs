@@ -188,7 +188,12 @@ internal sealed partial class TypeInference {
             : JsType.Unknown
           : JsType.Unknown;
       case ArrayExpression literal:
-        return JsType.ArrayOf(literal.Elements.Aggregate(JsType.Unknown, (type, element) => element is null or SpreadElement ? type : JsType.Join(type, this.Of(element))), true);
+        // A spread array adds its elements (#1328).
+        return JsType.ArrayOf(literal.Elements.Aggregate(JsType.Unknown, (type, element) => element switch {
+          null => type,
+          SpreadElement spread => this.Of(spread.Argument) is { Kind: JsKind.Array, Element: { } spreadElement } ? JsType.Join(type, spreadElement) : type,
+          _ => JsType.Join(type, this.Of(element))
+        }), true);
       case ObjectExpression literal:
         return this.Record(literal);
       default:
@@ -225,6 +230,9 @@ internal sealed partial class TypeInference {
   }
 
   private JsType Call(CallExpression call) {
+    if (this.ListCall(call) is { } listed)
+      return listed;
+
     var builtin = this.Names.Builtin(call);
     if (this.IntegerCall(call, builtin) is { } integer)
       return integer;

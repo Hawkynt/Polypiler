@@ -180,6 +180,19 @@ internal sealed record JsType {
   /// <summary>An array type.</summary>
   public static JsType ArrayOf(JsType element, bool plain) => new(JsKind.Array) { Element = element, IsPlain = plain };
 
+  /// <summary>
+  /// Whether a JavaScript <c>Array</c> changes its length - <c>push</c>, <c>pop</c>, <c>splice</c>, a
+  /// write of <c>length</c> or at <c>a[a.length]</c> - so that it is a list of the IR (#1328); an array
+  /// whose length never changes stays an array.
+  /// </summary>
+  public bool IsGrowable { get; private init; }
+
+  /// <summary>The type of a JavaScript <c>Array</c> that changes its length.</summary>
+  public static JsType ListOf(JsType element) => new(JsKind.Array) { Element = element, IsPlain = true, IsGrowable = true };
+
+  /// <summary>The same array as one that changes its length.</summary>
+  public JsType Grown => ListOf(this.Element!) with { MayBeNull = this.MayBeNull, MayBeUndefined = this.MayBeUndefined };
+
   /// <summary>The type of a record of a shape.</summary>
   public static JsType Record(RecordShape shape) => new(JsKind.Record) { Shape = shape };
 
@@ -210,6 +223,7 @@ internal sealed record JsType {
     JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
     JsKind.String => IrType.String,
     JsKind.Array when this.IsView => IrType.Span(this.Element!.Ir is { IsNumeric: true } viewed ? viewed : IrType.F64),
+    JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection) ? listed : IrType.F64),
     JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString) ? element : IrType.F64),
     JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
     JsKind.Object => IrType.Object(this.Class!.Ir),
@@ -223,6 +237,7 @@ internal sealed record JsType {
     JsKind.Number => "number",
     JsKind.BigInt => "bigint",
     JsKind.String => "string",
+    JsKind.Array when this.IsGrowable => $"a list of {this.Element!.Describe()}",
     JsKind.Array => this.Element!.HasRecord ? $"{this.Element.Describe()}[]" : Spell(this.Ir!),
     JsKind.Record => this.Shape!.ToString(),
     JsKind.Object => this.Class!.Name,
@@ -284,7 +299,11 @@ internal sealed record JsType {
         return first.IsUnbounded || second.IsUnbounded ? UnboundedBigInt : Hull(first, second, _longs) ?? UnboundedBigInt;
       case JsKind.Array:
         if (first.IsPlain && second.IsPlain)
-          return ArrayOf(Join(first.Element!, second.Element!), true);
+          return first.IsGrowable || second.IsGrowable ? ListOf(Join(first.Element!, second.Element!)) : ArrayOf(Join(first.Element!, second.Element!), true);
+
+        // A list and a typed array: no type of the IR is both.
+        if (first.IsGrowable || second.IsGrowable)
+          return Conflict(first, second);
 
         return first.IsPlain == second.IsPlain && first.Ir == second.Ir ? first : Conflict(first, second);
       case JsKind.Record:

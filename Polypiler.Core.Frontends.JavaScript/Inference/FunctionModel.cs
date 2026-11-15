@@ -154,7 +154,14 @@ internal enum FlowKind {
   FieldStep,
 
   /// <summary>The node is an argument of a call of a method on an object, whose class decides the method.</summary>
-  MethodArgument
+  MethodArgument,
+
+  /// <summary>
+  /// A change of the length of the array a variable holds - <c>push</c>, <c>pop</c>, <c>splice</c>, a
+  /// write of <c>length</c> or at <c>a[a.length]</c> - which makes it a list and adds what is pushed
+  /// or inserted to its elements (#1328).
+  /// </summary>
+  Grow
 
 }
 

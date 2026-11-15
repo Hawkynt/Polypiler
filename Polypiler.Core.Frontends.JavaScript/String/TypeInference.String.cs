@@ -15,7 +15,11 @@ internal sealed partial class TypeInference {
       case StringLiteral or TemplateLiteral:
         return JsType.String;
       case ForOfStatement loop:
-        return this.Of(loop.Right).Kind == JsKind.String ? JsType.String : JsType.Unknown;
+        // A for...of over an array yields its elements, a binary32 one as the double it is (#1328).
+        var iterated = this.Of(loop.Right);
+        return iterated.Kind == JsKind.String ? JsType.String
+          : iterated is { Kind: JsKind.Array, IsView: false, Element: { } element } ? (element.Float == 32 ? JsType.F64 : element)
+          : JsType.Unknown;
       case MemberExpression member when this.Of(member.Object).Kind == JsKind.String:
         return member.Computed ? JsType.String : member.Property is Identifier { Name: "length" } ? JsType.I32 : JsType.Unknown;
       case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } callee }:

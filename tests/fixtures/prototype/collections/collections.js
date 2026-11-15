@@ -1,0 +1,107 @@
+// Arrays that change their length: push, pop, splice, a write of length and at a[a.length],
+// indexOf and includes, a spread copy, and a for...of that sees what its body pushes. Written for
+// this repository.
+
+export function arrayOps() {
+  const a = [3, 2];
+  a.splice(0, 0, 7);
+  a.push(3, 4);
+  a.splice(1, 1);
+  a.push(9);
+  a.pop();
+  a[a.length] = 4;
+  a[3] = 3;
+  if (a.indexOf(3) !== 2 || !a.includes(4)) {
+    return -1;
+  }
+  let r = 0;
+  for (const d of a) {
+    r = r * 10 + d;
+  }
+  return r;
+}
+
+export function pushWhileIterating() {
+  const a = [1, 2];
+  let n = 0;
+  for (const x of a) {
+    n++;
+    if (a.length < 4) {
+      a.push(x);
+    }
+  }
+  return n;
+}
+
+export function popOfEmpty() {
+  const a = [];
+  a.push(1);
+  a.pop();
+  return a.pop() === undefined ? 1 : 0;
+}
+
+export function popped() {
+  const a = [4, 5];
+  const last = a.pop();
+  return last === undefined ? -1 : last * 10 + a.length;
+}
+
+export function searches() {
+  const nan = 0 / 0;
+  const a = [nan, -0];
+  return a.indexOf(nan) * 100 + a.indexOf(0) * 10 + (a.includes(nan) ? 1 : 0);
+}
+
+export function cleared() {
+  const a = [1, 2, 3];
+  a.length = 0;
+  a.push(5);
+  return a.length * 10 + a[0];
+}
+
+export function words() {
+  const w = [];
+  w.push("a");
+  w.push("b");
+  w.pop();
+  let s = "";
+  for (const x of w) {
+    s += x;
+  }
+  return s;
+}
+
+export function copied() {
+  const a = [1, 2];
+  const b = [...a];
+  b.push(3);
+  return a.length * 10 + b.length;
+}
+
+export function stepped() {
+  const c = [0, 0];
+  c[1]++;
+  c[1] += 2;
+  c.push(0);
+  return c[1] * 10 + c.length;
+}
+
+function append(list, value) {
+  list.push(value);
+}
+
+export function passed() {
+  const a = [1];
+  append(a, 2);
+  append(a, 3);
+  return a.length;
+}
+
+export function fixedLoop() {
+  const a = [1, 2, 3];
+  let s = 0;
+  for (const x of a) {
+    s = s * 10 + x;
+  }
+  return s;
+}

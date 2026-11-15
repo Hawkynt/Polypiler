@@ -84,4 +84,36 @@ public sealed class CollectionTests {
     Assert.That(outcomes, Is.EqualTo(calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call))), $"{profile}\n{text}");
   }
 
+  /// <summary>The calls of the JavaScript fixture and what node computes of the original.</summary>
+  private (List<PrototypeCall> Calls, IReadOnlyList<string> Expected) Original() {
+    var calls = CollectionFixtures.ScriptCalls().ToList();
+    var copy = Path.Combine(this._directory, "collections.mjs");
+    File.WriteAllText(copy, CollectionFixtures.SourceOf("collections.js"));
+    return (calls, Toolchain.NodeOutcomes(this._directory, Path.GetFileName(copy), calls, true));
+  }
+
+  /// <summary>Test design 1, 4, 5 and 6: the JavaScript fixture in every C# profile computes what node computes of the original.</summary>
+  [Test]
+  public void JavaScriptFixture_RunsInEveryCSharpProfileLikeNode() {
+    var (calls, expected) = this.Original();
+    foreach (var profile in CSharpProfile.All) {
+      var text = this.Translate(CollectionFixtures.PathOf("collections.js"), "csharp", "collections.cs", profile.Name, "--profile", profile.Name);
+      Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
+      Assert.That(calls.Select(GeneratedCSharp.Compile(text, false).Outcome), Is.EqualTo(expected), $"{profile.Name}\n{text}");
+    }
+  }
+
+  /// <summary>Test design 1 and 4: the JavaScript fixture at every JavaScript level computes in node what the original computes.</summary>
+  [Test]
+  public void JavaScriptFixture_RunsInEveryJavaScriptProfileLikeNode() {
+    var (calls, expected) = this.Original();
+    foreach (var profile in ProfileCase.All) {
+      var output = "js-" + Guid.NewGuid().ToString("N");
+      var text = this.Translate(CollectionFixtures.PathOf("collections.js"), "javascript", "collections" + profile.Parsed.Extension, output, profile.Arguments);
+      Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, text);
+      Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, output), "collections" + profile.Parsed.Extension, calls, true, profile.Mode, profile.Global),
+        Is.EqualTo(expected), $"{profile}\n{text}");
+    }
+  }
+
 }

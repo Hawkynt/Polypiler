@@ -192,7 +192,7 @@ internal sealed partial class Lowering(TypeInference types) {
         into.Add(this.For(loop));
         break;
       case ForOfStatement loop:
-        into.Add(this.ForOf(loop));
+        into.Add(this.ListForOf(loop) ?? this.ForOf(loop));
         break;
       case SwitchStatement choice:
         into.Add(this.Switch(choice, into));
@@ -415,6 +415,9 @@ internal sealed partial class Lowering(TypeInference types) {
 
   /// <summary>Lowers an expression that stands as a statement: an assignment, a step, a call, or several separated by commas.</summary>
   private void Effect(Expression expression, List<IrStmt> into) {
+    if (this.ListEffect(expression, into))
+      return;
+
     switch (expression) {
       case AssignmentExpression assignment:
         this.Assignment(assignment, into);
