@@ -1,0 +1,9 @@
+# The Kotlin/Java layer (PRD §7.3): Java and Kotlin sources compiled with the pinned JDK and Kotlin
+# compiler, warnings as errors, executed on the pinned JDK's java and their outputs compared. Run by
+# the job layer-jvm of .github/workflows/ci.yml. Format: spec/schemas/ci-layer.schema.json.
+schema: 1
+layer: jvm
+toolchains: [jdk, kotlinc]
+os: [ubuntu-latest]
+paths: ["Polypiler.Core.Frontends.Kotlin/**", "Polypiler.Core.Frontends.Java/**", "Polypiler.Core.Frontends.JVM/**", "Polypiler.Core.Backends.Kotlin/**", "Polypiler.Core.Backends.Java/**", "tests/fixtures/**/*.kt", "tests/fixtures/**/*.java", "tests/fixtures/infra/ci/jvm/**", "tests/features/infra/infra-ci-jvm.feature", "Polypiler.Tests.Acceptance/Infra/Ci/**", "Polypiler.Core.Verification/Running/**", "tooling/ci/layers/jvm.yaml"]
+always: false
