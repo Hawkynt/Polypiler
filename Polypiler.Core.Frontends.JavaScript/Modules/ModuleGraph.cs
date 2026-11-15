@@ -160,6 +160,17 @@ internal sealed class ModuleGraph {
 
   /// <summary>Rewrites a module's references to the modules it requires: <c>B.x</c> to the name <c>x</c> has in <c>B</c>.</summary>
   private void Rewrite(Module module) {
+    // A name taken of a module is the declaration of that name in it.
+    foreach (var (name, binding, at) in module.Taken) {
+      var required = module.Imports[binding];
+      if (required.Exports.TryGetValue(name, out var local)) {
+        if (local != name)
+          this._diagnostics.Add(module.Refuse(at, $"'{name}', which the module '{binding}' exports under another name"));
+      } else {
+        this._diagnostics.Add(required.Opaque is { } opaque ? required.Refuse(opaque, "an export that is no name of the module") : module.Refuse(at, $"'{name}', which the module '{binding}' does not export by name"));
+      }
+    }
+
     foreach (var statement in module.Kept)
       this.Rewrite(module, statement, null);
   }
@@ -172,6 +183,8 @@ internal sealed class ModuleGraph {
           this._diagnostics.Add(module.Refuse(access, $"a module bound to '{name}' whose export is the object '{whole}'"));
       } else if (required.Exports.TryGetValue(member, out var local)) {
         module.Replace(access.Start, access.End, local);
+      } else if (required.Opaque is { } opaque) {
+        this._diagnostics.Add(required.Refuse(opaque, "an export that is no name of the module"));
       } else {
         this._diagnostics.Add(module.Refuse(access, $"'{member}', which the module '{name}' does not export"));
       }
@@ -250,6 +263,16 @@ internal sealed class ModuleGraph {
 
     /// <summary>What the module exports by name: the name of each export and the name of its declaration.</summary>
     public Dictionary<string, string> Exports { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The first export that is no name of the module - a value computed in the export itself - or
+    /// <see langword="null"/>. Only a module that takes something of this one is refused for it: the
+    /// entry's own exports are not read.
+    /// </summary>
+    public Node? Opaque { get; private set; }
+
+    /// <summary>The names the module takes of required files under their own names - <c>const { x } = B</c>, <c>const x = B.x</c> - each with the binding of its file.</summary>
+    public List<(string Name, string Binding, Node At)> Taken { get; } = [];
 
     /// <summary>The name of the one object the module exports - <c>module.exports = OpCodes</c> - or <see langword="null"/>.</summary>
     public string? Object { get; private set; }
@@ -394,7 +417,7 @@ internal sealed class ModuleGraph {
             this.Export(value);
           this.Blank(statement.Start, statement.End);
           return;
-        case VariableDeclaration declaration when declaration.Declarations.All(declarator => Requires(declarator.Init) is not null || declarator is { Id: ObjectPattern, Init: Identifier { Name: var bound } } && modules.Contains(bound)):
+        case VariableDeclaration declaration when declaration.Declarations.All(declarator => Requires(declarator.Init) is not null || IsTaken(declarator, modules)):
           foreach (var declarator in declaration.Declarations)
             this.Bind(declarator);
           this.Blank(statement.Start, statement.End);
@@ -404,8 +427,29 @@ internal sealed class ModuleGraph {
       this.Kept.Add(statement);
     }
 
-    /// <summary>Binds what a declaration takes from a required file: the file itself, or the names it destructures.</summary>
+    /// <summary>
+    /// Whether a declaration only takes something of a required file: destructures it, gives it another
+    /// name (<c>const C = B;</c>) or takes one export under its own name (<c>const x = B.x;</c>).
+    /// </summary>
+    private static bool IsTaken(VariableDeclarator declarator, List<string> modules) => declarator switch {
+      { Id: ObjectPattern or Identifier, Init: Identifier { Name: var bound } } => modules.Contains(bound),
+      { Id: Identifier { Name: var name }, Init: MemberExpression { Computed: false, Object: Identifier { Name: var owner }, Property: Identifier { Name: var member } } } => member == name && modules.Contains(owner),
+      _ => false
+    };
+
+    /// <summary>Binds what a declaration takes from a required file: the file itself, another name of it, or the names it destructures.</summary>
     private void Bind(VariableDeclarator declarator) {
+      if (declarator is { Id: Identifier { Name: var alias }, Init: Identifier { Name: var bound } }) {
+        this.Requests.Add((alias, this.Requests.First(request => request.Binding == bound).Request));
+        return;
+      }
+
+      // const x = B.x is const { x } = B: the name it has in the module.
+      if (declarator is { Id: Identifier { Name: var taken }, Init: MemberExpression { Object: Identifier { Name: var owner } } }) {
+        this.Taken.Add((taken, owner, declarator));
+        return;
+      }
+
       if (Requires(declarator.Init) is { } specifier) {
         if (declarator.Id is Identifier { Name: var name })
           this.Requests.Add((name, new Request(declarator.Init!, specifier)));
@@ -418,6 +462,8 @@ internal sealed class ModuleGraph {
         // Every name a module destructures is the name it has in that module: the script has one scope.
         if (property is not Property { Computed: false, Key: Identifier { Name: var key }, Value: Identifier { Name: var local } } || key != local)
           this.Problem = this.Refuse(property, "a destructured export under another name");
+        else
+          this.Taken.Add((key, ((Identifier)declarator.Init!).Name, property));
       }
     }
 
@@ -435,12 +481,12 @@ internal sealed class ModuleGraph {
             if (member is Property { Computed: false, Key: Identifier { Name: var key }, Value: Identifier { Name: var local } })
               this.Exports[key] = local;
             else
-              this.Problem = this.Refuse(member, "an export that is no name of the module");
+              this.Opaque ??= member;
           }
 
           break;
         default:
-          this.Problem = this.Refuse(value, "an export that is no name of the module");
+          this.Opaque ??= value;
           break;
       }
     }

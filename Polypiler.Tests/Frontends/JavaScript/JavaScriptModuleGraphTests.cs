@@ -181,12 +181,15 @@ public sealed class JavaScriptModuleGraphTests {
   [TestCase("const L = require('./lib');\nconst { square: { x } } = L;\nmodule.exports = {};", "'a destructured export under another name' is not supported yet")]
   [TestCase("const L = require('./lib');\nconst { ...rest } = L;\nmodule.exports = {};", "'a destructured export under another name' is not supported yet")]
   [TestCase("const L = require('./lib');\nfunction square() { return 1; }\nmodule.exports = { square };", "'the name 'square', which 'lib.js' declares as well' is not supported yet")]
-  [TestCase("const L = require('./lib');\nmodule.exports = { f: 1 };", "'an export that is no name of the module' is not supported yet")]
-  [TestCase("const L = require('./lib');\nmodule.exports = 1;", "'an export that is no name of the module' is not supported yet")]
+  [TestCase("const L = require('./lib');\nconst { cube } = L;\nmodule.exports = {};", "''cube', which the module 'L' does not export by name' is not supported yet")]
+  [TestCase("const O = require('./ops');\nconst { Add } = O;\nmodule.exports = {};", "''Add', which the module 'O' does not export by name' is not supported yet")]
+  [TestCase("const R = require('./renamed');\nconst { sq } = R;\nmodule.exports = {};", "''sq', which the module 'R' exports under another name' is not supported yet")]
+  [TestCase("const R = require('./renamed');\nconst sq = R.sq;\nmodule.exports = {};", "''sq', which the module 'R' exports under another name' is not supported yet")]
   public void LinkThatIsNotSupported_IsRefusedByName(string main, string message) {
     var refusal = Refusal("self.js",
       ("self.js", main),
       ("plain.js", "function p() { return 1; }"),
+      ("renamed.js", "/** @param {int32} a @returns {int32} */\nfunction square(a) { return Math.imul(a, a); }\nmodule.exports = { sq: square };"),
       ("ops.js", Helpers),
       ("lib.js", Factory("", "", Library)));
     Assert.That(refusal.Message, Is.EqualTo(message));
@@ -196,10 +199,8 @@ public sealed class JavaScriptModuleGraphTests {
   [TestCase("A, B", "require('./x')", "'the factory parameter 'B', which the wrapper gives no required file' is not supported yet")]
   [TestCase("{ a }", "require('./x')", "'a factory parameter that is no name' is not supported yet")]
   [TestCase("A", "root.A", "'a factory that its wrapper does not call with the files it requires' is not supported yet")]
-  [TestCase("", "", "'an export that is no name of the module' is not supported yet")]
   public void FactoryThatIsNotSupported_IsRefusedByName(string parameters, string requires, string message) {
-    var body = parameters.Length == 0 ? "  return 1;" : "  return {};";
-    var refusal = Refusal("f.js", ("f.js", Factory(parameters, requires, body)), ("x.js", Factory("", "", "  return {};")));
+    var refusal = Refusal("f.js", ("f.js", Factory(parameters, requires, "  return {};")), ("x.js", Factory("", "", "  return {};")));
     Assert.That(refusal.Message, Is.EqualTo(message));
   }
 
@@ -216,9 +217,22 @@ public sealed class JavaScriptModuleGraphTests {
   }
 
   [Test]
-  public void ProblemOfARequiredFile_IsReportedThere() {
-    var refusal = Refusal("main.js", ("main.js", "const B = require('./bad');\nmodule.exports = {};"), ("bad.js", Factory("", "", "  return 1;")));
+  public void ExportThatIsNoName_IsRefusedWhereAModuleTakesSomethingOfIt_AndNotInTheEntry() {
+    var refusal = Refusal("main.js", ("main.js", "const B = require('./bad');\nfunction f() { return B.x; }\nmodule.exports = { f };"), ("bad.js", Factory("", "", "  return 1;")));
     Assert.That((refusal.File, refusal.Message), Is.EqualTo((At("bad.js"), "'an export that is no name of the module' is not supported yet")));
+    var taken = Refusal("main.js", ("main.js", "const B = require('./bad');\nconst { x } = B;\nmodule.exports = { x };"), ("bad.js", "module.exports = { x: 1 };"));
+    Assert.That((taken.File, taken.Message), Is.EqualTo((At("bad.js"), "'an export that is no name of the module' is not supported yet")));
+    var entry = Imported("main.js",
+      ("main.js", "/** @param {int32} a @returns {int32} */\nfunction f(a) { return a | 0; }\nmodule.exports = { f, PARAMETERS: { a: 1 }, g: function () { return 2; } };"));
+    Assert.That(entry.Functions.Select(function => function.Name), Has.Member("f"));
+  }
+
+  [Test]
+  public void RequiredFileUnderAnotherName_OrAnExportTakenUnderItsOwnName_IsThatModule() {
+    var module = Imported("main.js",
+      ("main.js", "const L = require('./lib');\nconst Other = L;\nconst square = Other.square;\n/** @param {int32} x @returns {int32} */\nfunction f(x) { return square(x) + Other.square(1); }\nmodule.exports = { f };"),
+      ("lib.js", Factory("", "", Library)));
+    Assert.That(IrInterpreter.Call(module, "f", [3]), Is.EqualTo(10));
   }
 
   [Test]
