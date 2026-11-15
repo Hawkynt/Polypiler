@@ -32,6 +32,9 @@ internal sealed partial class Lowering(TypeInference types) {
   /// <summary>Whether a lowered function divides integers, which traps where JavaScript does not.</summary>
   public bool Divides { get; private set; }
 
+  /// <summary>Whether a lowered function throws a string out to its caller, which receives an Error of that message instead (#1365).</summary>
+  public bool ThrowsText { get; private set; }
+
   /// <summary>The constants of the enclosing scope that the lowered functions use.</summary>
   public HashSet<ModuleConstant> Constants { get; } = [];
 

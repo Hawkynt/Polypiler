@@ -145,6 +145,13 @@ public static partial class JavaScriptFrontend {
   /// <summary>The caveat of a module whose sort comparator returns a double, which a NaN makes inconsistent.</summary>
   public const string SortOrder = "js-sort-order";
 
+  /// <summary>The caveat of a module that throws a string out of a function, which its caller receives as an Error of that message (#1365).</summary>
+  public const string ThrowsTextCaveat = "js-throw-string";
+
+  private static readonly ImportCaveat _throwsText = new(
+    ThrowsTextCaveat,
+    "a string thrown out of a function reaches its caller as the string itself in JavaScript; the imported code throws an Error, whose message is the string");
+
   private static readonly ImportCaveat _sortOrder = new(
     SortOrder,
     "a sort comparator returns a double: for inputs that make it inconsistent, such as a NaN, ECMA-262 leaves the order to the engine, the translation fixes the one of its stable merge sort");
@@ -319,6 +326,9 @@ public static partial class JavaScriptFrontend {
 
     if (lowering.SortsByDifference)
       caveats.Add(_sortOrder);
+
+    if (lowering.ThrowsText)
+      caveats.Add(_throwsText);
 
     var ordered = models.Where(model => !model.Candidate.IsNested).OrderBy(model => model.Candidate.Anchor.Start).ToList();
     var integers = Signatures(ordered, parameter => parameter.IsIntegerByUse && parameter.Parameter!.Type.IsWord);
