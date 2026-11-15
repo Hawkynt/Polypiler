@@ -69,6 +69,16 @@ internal static class BigIntCases {
         new IrAssign(power, new IrBinary(IrBinaryOp.Multiply, R(power), new IrBigConst(3))),
         new IrAssign(k, new IrBinary(IrBinaryOp.Subtract, R(k), new IrConst(IrType.I32, 1)))])),
       new IrReturn(R(power))])));
+    // Constant operands, which the targets may write with their own operators, and a count that is a constant.
+    functions.Add(F("ConstantQuotient", IrType.BigInt, [], new IrBinary(IrBinaryOp.Add, new IrBinary(IrBinaryOp.Divide, new IrBigConst(1000), new IrBigConst(7)),
+      new IrBinary(IrBinaryOp.Remainder, new IrBigConst(1000), new IrBigConst(7)))));
+    functions.Add(F("ShiftByThree", IrType.BigInt, [A], new IrBinary(IrBinaryOp.Xor, new IrBinary(IrBinaryOp.ShiftLeft, R(A), new IrConst(IrType.I32, 3)),
+      new IrBinary(IrBinaryOp.ShiftRight, R(A), new IrConst(IrType.I32, 3)))));
+    // A function whose signature has no arbitrary-precision integer: only a local of it.
+    var twice = new IrLocal("twice", IrType.BigInt);
+    functions.Add(new IrFunction("Twice", true, IrType.I32, [I], [twice], new IrBlock([
+      new IrDeclare(twice, new IrBinary(IrBinaryOp.Multiply, new IrConvert(IrType.BigInt, R(I)), new IrBigConst(2))),
+      new IrReturn(new IrConvert(IrType.I32, R(twice)))])));
     return new IrModule("BigInts", functions);
   }
 
@@ -96,6 +106,10 @@ internal static class BigIntCases {
       yield return ("FromInt", [i]);
 
     yield return ("FromULong", [ulong.MaxValue]);
+    yield return ("ConstantQuotient", []);
+    yield return ("Twice", [int.MaxValue]);
+    foreach (var a in Values)
+      yield return ("ShiftByThree", [a]);
     yield return ("Constants", []);
     yield return ("PowerOfThree", [0]);
     yield return ("PowerOfThree", [100]);
