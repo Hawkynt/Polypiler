@@ -142,7 +142,8 @@ public sealed class CipherKatTests {
     public ProcessResult Test { get; set; } = new(0, "", "", false);
 
     public ProcessResult Run(IReadOnlyList<string> argv, TimeSpan timeout) {
-      this.Calls.Add(argv);
+      lock (this.Calls)
+        this.Calls.Add(argv);
       if (argv.Contains("translate"))
         return this.Translate(argv);
 
@@ -368,6 +369,8 @@ public sealed class CipherKatTests {
   [TestCase(new[] { "kat", "a.js", "--all" }, "cipher kat needs the files to check or '--all', not both")]
   [TestCase(new[] { "kat", "--all", "--targets", "csharp,go" }, "unknown target 'go'")]
   [TestCase(new[] { "kat", "--all", "--targets", "csharp", "--require", "rust" }, "the required target 'rust' is not checked")]
+  [TestCase(new[] { "kat", "--all", "--jobs", "0" }, "--jobs needs a number of at least 1, not '0'")]
+  [TestCase(new[] { "kat", "--all", "--jobs", "many" }, "--jobs needs a number of at least 1, not 'many'")]
   public void CommandLine_ThatIsWrong_IsAUsageError(string[] args, string message) {
     var (exitCode, _, error) = this.Run(new FakeRunner(), args);
     Assert.That((exitCode, error.Trim()), Is.EqualTo((Program.UsageError, $"{Program.Name}: error {ToolchainsCommand.UsageCode}: {message}")));
@@ -390,7 +393,7 @@ public sealed class CipherKatTests {
   public void Command_OverAll_FailsWhereARequiredTargetDoesNotPassEveryVector() {
     this.Repository();
     var runner = new FakeRunner { Translate = argv => argv.Any(argument => argument.EndsWith("b.js", StringComparison.Ordinal)) ? new(4, "", "b.js(1,1): error PLY1102: no\n", false) : new(0, "", "", false), Trx = _ => Trx(("A #1", "Passed", "")) };
-    var (exitCode, output, error) = this.Run(runner, "kat", "--all", "--require", "csharp");
+    var (exitCode, output, error) = this.Run(runner, "kat", "--all", "--require", "csharp", "--jobs", "2");
     Assert.That(exitCode, Is.EqualTo(Program.Failure));
     Assert.That(output, Does.Contain("checksum/a.js: 1 / 1 KATs checkable; csharp 1 / 1 pass; rust translated; no test project for rust yet").And.Contain("hash/b.js: 1 / 1 KATs checkable; csharp refused: PLY1102: no"));
     Assert.That(error.Trim(), Is.EqualTo($"{Program.Name}: hash/b.js does not pass every checked KAT on csharp"));

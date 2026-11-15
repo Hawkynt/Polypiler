@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Polypiler.Tooling.Cipher;
 using Polypiler.Tooling.Corpus;
 using Polypiler.Tooling.Toolchains;
@@ -9,7 +11,7 @@ using Polypiler.Tooling.Toolchains;
 namespace Polypiler.Tooling.Commands;
 
 /// <summary>
-/// <c>polypiler-tooling cipher kat (&lt;file&gt;... | --all) [--targets csharp,rust] [--require &lt;target&gt;,...]
+/// <c>polypiler-tooling cipher kat (&lt;file&gt;... | --all) [--targets csharp,rust] [--require &lt;target&gt;,...] [--jobs &lt;n&gt;]
 /// [--polypiler &lt;path&gt;] [--report &lt;file.md&gt;] [--work &lt;dir&gt;]</c> checks the translations of
 /// Cipher algorithm files on their known-answer tests (#1365): a file is named below <c>algorithms/</c>
 /// (<c>checksum/adler.js</c>). The corpus is the one <c>corpus import --fixture cipher.algorithms</c>
@@ -51,7 +53,7 @@ public sealed class CipherCommand(IProcessRunner runner, string currentDirectory
       var name = args[index];
       if (name == "--all") {
         all = true;
-      } else if (name is "--targets" or "--require" or "--polypiler" or "--report" or "--work") {
+      } else if (name is "--targets" or "--require" or "--polypiler" or "--report" or "--work" or "--jobs") {
         if (index + 1 == args.Count)
           return Usage(error, $"option '{name}' requires a value");
         options[name] = args[++index];
@@ -71,6 +73,10 @@ public sealed class CipherCommand(IProcessRunner runner, string currentDirectory
         return Usage(error, $"unknown target '{name}'");
       targets.Add(target);
     }
+
+    var jobs = 1;
+    if (options.TryGetValue("--jobs", out var count) && (!int.TryParse(count, NumberStyles.None, CultureInfo.InvariantCulture, out jobs) || jobs < 1))
+      return Usage(error, $"--jobs needs a number of at least 1, not '{count}'");
 
     var required = Names(options.GetValueOrDefault("--require") ?? "").ToList();
     if (required.FirstOrDefault(name => targets.All(target => target.Name != name)) is { } missing)
@@ -109,19 +115,24 @@ public sealed class CipherCommand(IProcessRunner runner, string currentDirectory
 
     var polypiler = options.TryGetValue("--polypiler", out var given) ? Command(given) : Command(Path.Combine(root, "Polypiler.Cli", "bin", "Release", "net10.0", "polypiler.dll"));
     var harness = new KatHarness(runner, polypiler, corpus, Path.Combine(root, Goldens), Path.GetFullPath(options.GetValueOrDefault("--work") ?? Path.Combine(root, Work)));
-    var rows = new List<KatRow>();
+    // Every golden file is read before anything runs, so that a missing one stops the run at once.
     foreach (var file in files) {
-      KatRow row;
       try {
-        row = harness.Check(file, targets);
+        KatFile.Load(Path.Combine(root, Goldens), file);
       } catch (Exception exception) when (exception is IOException or FormatException or UnauthorizedAccessException) {
         error.WriteLine($"{Program.Name}: the golden file of '{file}' cannot be read: {exception.Message}");
         return Program.Failure;
       }
-
-      rows.Add(row);
-      output.WriteLine($"{file}: {row.Checkable} / {row.Vectors} KATs checkable; {string.Join("; ", row.Targets.Select(result => $"{result.Target} {KatReport.Status(result)}"))}");
     }
+
+    // The files are checked side by side; a row is printed as its file is done, and the table is in the order of the files.
+    var rows = new KatRow[files.Count];
+    var printing = new object();
+    Parallel.For(0, files.Count, new ParallelOptions { MaxDegreeOfParallelism = jobs }, index => {
+      var row = rows[index] = harness.Check(files[index], targets);
+      lock (printing)
+        output.WriteLine($"{row.File}: {row.Checkable} / {row.Vectors} KATs checkable; {string.Join("; ", row.Targets.Select(result => $"{result.Target} {KatReport.Status(result)}"))}");
+    });
 
     if (options.TryGetValue("--report", out var report)) {
       var header = $"""
