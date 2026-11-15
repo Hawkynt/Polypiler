@@ -63,7 +63,8 @@ internal sealed partial class FunctionLowering {
     return Binary(op, Widen(left, type), Widen(right, type));
   }
 
-  private static IrExpr Equal(IrExpr left, IrExpr right) => Compare(IrBinaryOp.Equal, left, right);
+  private static IrExpr Equal(IrExpr left, IrExpr right)
+    => left.Type.IsString ? new IrIntrinsic(IrIntrinsicOp.StrEquals, IrType.Bool, [left, right]) : Compare(IrBinaryOp.Equal, left, right);
 
   // ---------------------------------------------------------------- arithmetic
 

@@ -249,6 +249,9 @@ internal sealed partial class TypeChecker {
         && this._crate.Lookup(this._module, constructor, new(ReferenceEqualityComparer.Instance)) is null)
       return this.Constructor(call, constructor, expected);
 
+    if (path.Segments.Count == 1 && this.Intrinsic(call, path.Segments[0]) is { } intrinsic)
+      return intrinsic;
+
     // A variable: a closure or a function pointer.
     if (path.Segments.Count == 1 && this.Lookup(path.Segments[0]) is { } variable) {
       this._typed.Bindings[path] = variable;
@@ -285,8 +288,9 @@ internal sealed partial class TypeChecker {
     }
 
     // The associated functions of the standard library the subset has.
-    if (path.Segments.Count >= 2 && this.StandardCall(call, path, expected) is { } standard)
+    if (path.Segments.Count >= 2 && (this.TextCall(call, path) ?? this.StandardCall(call, path, expected)) is { } standard)
       return standard;
+
 
     foreach (var argument in call.Arguments)
       this.Expression(argument);
@@ -452,7 +456,12 @@ internal sealed partial class TypeChecker {
     if (this.IsError(container))
       return container;
 
-    if (container.Kind is not (RKind.Array or RKind.Slice or RKind.Vec))
+    if (container.Kind is RKind.String or RKind.Str && index.Index is not RangeExpr) {
+      this.Value(index.Index);
+      throw this.Invalid($"E0277: the type `str` cannot be indexed by `{this._typed.TypeOf(index.Index)}`", index.At);
+    }
+
+    if (container.Kind is not (RKind.Array or RKind.Slice or RKind.Vec or RKind.String or RKind.Str))
       throw this.Invalid($"E0608: cannot index into a value of type `{container}`", index.At);
 
     if (index.Index is RangeExpr range) {
@@ -466,7 +475,7 @@ internal sealed partial class TypeChecker {
         throw this.Invalid("E0586: inclusive range with no end", range.At);
 
       this._typed.Types[range] = RType.Unit;
-      return RType.Slice(container.Element!);
+      return container.Kind is RKind.String or RKind.Str ? RType.Str : RType.Slice(container.Element!);
     }
 
     this.Unify(RType.Usize, this.Value(index.Index, RType.Usize), index.Index.At);
@@ -635,6 +644,9 @@ internal sealed partial class TypeChecker {
 
   private RType Macro(MacroExpr macro, RType? expected) {
     switch (macro.Name) {
+      case "format":
+        this.Format(macro, 0);
+        return RType.String;
       case "vec": {
         var element = expected?.Resolved is { Kind: RKind.Vec } known ? known.Element! : this.Fresh(VariableKind.Any);
         if (macro.Repeat) {

@@ -54,6 +54,14 @@ internal sealed partial class TypeChecker {
         return this.ResultMethod(call, target);
       case RKind.Array or RKind.Slice or RKind.Vec:
         return this.SliceMethod(call, receiver, target, expected);
+      case RKind.String or RKind.Str:
+        return this.TextMethod(call, receiver, target, expected);
+      case RKind.Char:
+        return this.CharMethod(call);
+      case RKind.Integer or RKind.Bool when call.Name == "to_string":
+        this.Count(call, 0);
+        this._typed.Methods[call] = "to_string";
+        return RType.String;
       case RKind.Integer or RKind.Float or RKind.Bool:
         return this.PrimitiveMethod(call, target);
     }

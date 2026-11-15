@@ -55,7 +55,7 @@ internal sealed partial class FunctionLowering {
     }
 
     var source = iteration.Source!;
-    var container = this.IterationContainer(source);
+    var container = iteration.Kind == SourceKind.Text ? this.Stable(this.TextSource(source), "items") : this.IterationContainer(source);
     if (this._diverged)
       return null;
 

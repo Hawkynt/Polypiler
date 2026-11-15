@@ -60,7 +60,16 @@ internal enum RKind {
   Closure,
 
   /// <summary>An iterator of the subset: a source and its adapters, consumed where it is made.</summary>
-  Iterator
+  Iterator,
+
+  /// <summary><c>char</c>, a Unicode scalar value; a <c>u32</c> in the IR.</summary>
+  Char,
+
+  /// <summary><c>str</c>, only ever behind a reference; an IR string.</summary>
+  Str,
+
+  /// <summary><c>String</c>, owned text; an IR string, which is immutable, so the value is the text.</summary>
+  String
 
 }
 
@@ -153,6 +162,21 @@ internal sealed class RType {
 
   public static RType F64 { get; } = Primitive(RKind.Float, "f64", IrType.F64, 64);
 
+  /// <summary><c>char</c>.</summary>
+  public static RType Char { get; } = Primitive(RKind.Char, "char", IrType.U32, 32);
+
+  /// <summary><c>str</c>.</summary>
+  public static RType Str { get; } = Primitive(RKind.Str, "str", IrType.String, 0);
+
+  /// <summary><c>String</c>.</summary>
+  public static RType String { get; } = Primitive(RKind.String, "String", IrType.String, 0);
+
+  /// <summary><c>&amp;str</c>, the type of a string literal.</summary>
+  public static RType StrRef { get; } = Reference(Str, false);
+
+  /// <summary>Whether a type is text: <c>String</c> or <c>str</c>, behind any number of references.</summary>
+  public bool IsText => this.Dereferenced.Kind is RKind.String or RKind.Str;
+
   /// <summary>The numeric types the language has and the subset leaves out, which a diagnostic names.</summary>
   public static IReadOnlySet<string> Unsupported { get; } = new HashSet<string> { "i128", "u128", "f16", "f128" };
 
@@ -239,7 +263,7 @@ internal sealed class RType {
   public BigInteger Minimum => this.IsSigned ? -(BigInteger.One << (this.Bits - 1)) : BigInteger.Zero;
 
   /// <summary>The largest value of an integer type.</summary>
-  public BigInteger Maximum => this.IsSigned ? (BigInteger.One << (this.Bits - 1)) - 1 : (BigInteger.One << this.Bits) - 1;
+  public BigInteger Maximum => this.Resolved.Kind == RKind.Char ? 0x10FFFF : this.IsSigned ? (BigInteger.One << (this.Bits - 1)) - 1 : (BigInteger.One << this.Bits) - 1;
 
   /// <summary>The unsigned integer type of the same width: <c>abs_diff</c>'s result.</summary>
   public RType Unsigned => this.Resolved.Name switch {
@@ -279,7 +303,7 @@ internal sealed class RType {
     get {
       var type = this.Resolved;
       return type.Kind switch {
-        RKind.Integer or RKind.Float or RKind.Bool or RKind.Unit or RKind.Never or RKind.Function => true,
+        RKind.Integer or RKind.Float or RKind.Bool or RKind.Unit or RKind.Never or RKind.Function or RKind.Char => true,
         RKind.Reference => !type.Mutable,
         RKind.Array or RKind.Option => type.Element!.IsCopy,
         RKind.Tuple => type.Elements.All(element => element.IsCopy),

@@ -16,6 +16,8 @@ internal sealed partial class FunctionLowering {
     switch (macro.Name) {
       case "vec":
         return this.VecMacro(macro);
+      case "format":
+        return this.Format(macro);
       case "assert" or "debug_assert": {
         if (macro.Name.StartsWith("debug_", System.StringComparison.Ordinal) && !this._typed.DebugAssertions)
           return null;

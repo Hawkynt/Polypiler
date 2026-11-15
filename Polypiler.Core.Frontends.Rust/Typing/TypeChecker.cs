@@ -204,6 +204,10 @@ internal sealed partial class TypeChecker {
         return;
       }
 
+      // Deref coercion: &String is a &str, &&str too.
+      if (target.Kind == RKind.Str && (source.Kind == RKind.String || source.IsText))
+        return;
+
       if (a.Mutable != b.Mutable) {
         this.Unify(a.Element!, b.Element!, at);
         return;
@@ -337,6 +341,21 @@ internal sealed partial class TypeChecker {
     foreach (var (expression, type) in this._expressions)
       if (Undecided(type) && !this.HoldsError(type))
         throw this.Unresolved(Describe(expression), expression.At);
+
+    // The IR holds a string in a list or an array, never in an optional value or a struct.
+    if (this._expressions.FirstOrDefault(pair => HoldsText(pair.Type)) is ({ } held, { } holder))
+      this.Refuse(new Refusal(RustFrontend.Unsupported, $"'{holder}', a value holding text", held.At));
+  }
+
+  /// <summary>Whether an option, a result or a tuple holds text, which no IR optional and no IR struct can.</summary>
+  private static bool HoldsText(RType type) {
+    var resolved = type.Resolved;
+    return resolved.Kind switch {
+      RKind.Option => resolved.Element!.IsText || HoldsText(resolved.Element),
+      RKind.Result => resolved.Element!.IsText || resolved.Error.IsText || HoldsText(resolved.Element) || HoldsText(resolved.Error),
+      RKind.Tuple => resolved.Elements.Any(element => element.IsText || HoldsText(element)),
+      _ => false
+    };
   }
 
   /// <summary>Whether a type has a refused part, about which everything has been said.</summary>
@@ -554,7 +573,8 @@ internal sealed partial class TypeChecker {
     IntegerLiteral literal => this.Integer(literal, false),
     FloatLiteral literal => literal.Suffix is null ? this.Fresh(VariableKind.Float) : RType.Named(literal.Suffix)!,
     BoolLiteral => RType.Bool,
-    StringLiteral literal => this.Refused(RustFrontend.TextType, "&str", literal.At),
+    StringLiteral => RType.StrRef,
+    CharLiteral => RType.Char,
     ByteStringLiteral literal => RType.Reference(RType.Array(RType.U8, literal.Bytes.Count), false),
     PathExpr path => this.Path(path, expected),
     UnaryExpr unary => this.Unary(unary),
@@ -650,6 +670,12 @@ internal sealed partial class TypeChecker {
       return RType.Bool;
     }
 
+    if (this.TextOperator(binary, left, right) is { } text)
+      return text;
+
+    if (StripShared(left).Resolved.Kind == RKind.Char && !_comparisons.Contains(binary.Op))
+      throw this.Invalid($"E0369: cannot apply `{binary.Op}` to `char`", binary.At);
+
     this._deferred.Add(() => this.KnownOverflow(binary, StripShared(left)));
     if (_comparisons.Contains(binary.Op)) {
       this.Unify(left, right, binary.At);
@@ -675,7 +701,7 @@ internal sealed partial class TypeChecker {
   /// <summary>Whether the operands of a comparison may be compared: primitives, and for <c>==</c> and <c>!=</c> the types that derive <c>PartialEq</c>.</summary>
   private void Comparable(BinaryExpr binary, RType type) {
     var resolved = type.Dereferenced;
-    if (this.IsError(resolved) || resolved.Kind is RKind.Integer or RKind.Float or RKind.Bool or RKind.Never)
+    if (this.IsError(resolved) || resolved.Kind is RKind.Integer or RKind.Float or RKind.Bool or RKind.Never or RKind.Char or RKind.String or RKind.Str)
       return;
 
     if (binary.Op is "==" or "!=" && Equatable(resolved))
@@ -688,7 +714,7 @@ internal sealed partial class TypeChecker {
   private static bool Equatable(RType type) {
     var resolved = type.Dereferenced;
     return resolved.Kind switch {
-      RKind.Integer or RKind.Float or RKind.Bool or RKind.Unit => true,
+      RKind.Integer or RKind.Float or RKind.Bool or RKind.Unit or RKind.Char or RKind.String or RKind.Str => true,
       RKind.Tuple => resolved.Elements.All(Equatable),
       RKind.Option or RKind.Array => Equatable(resolved.Element!),
       RKind.Result => Equatable(resolved.Element!) && Equatable(resolved.Error),
@@ -760,6 +786,11 @@ internal sealed partial class TypeChecker {
 
     if (assign.Op == "=") {
       this.Coerce(place, value, assign.Value.At);
+      return RType.Unit;
+    }
+
+    if (assign.Op == "+" && place.Resolved.Kind == RKind.String) {
+      this.Coerce(RType.StrRef, value, assign.Value.At);
       return RType.Unit;
     }
 
@@ -863,8 +894,10 @@ internal sealed partial class TypeChecker {
 
     this._deferred.Add(() => {
       var from = operand.Resolved;
+      // A char casts to every integer type and only u8 to char (The Rust Reference, "Type cast expressions").
       var valid = target.Kind == RKind.Bool ? from.Kind == RKind.Bool
-        : target.Kind is RKind.Integer or RKind.Float && (from.Kind is RKind.Integer or RKind.Float or RKind.Bool || (from.Kind == RKind.Enum && target.Kind == RKind.Integer));
+        : target.Kind == RKind.Char ? from.Kind == RKind.Char || from == RType.U8
+        : target.Kind is RKind.Integer or RKind.Float && (from.Kind is RKind.Integer or RKind.Float or RKind.Bool || (from.Kind is RKind.Enum or RKind.Char && target.Kind == RKind.Integer));
       if (!valid && !this.IsError(from))
         throw this.Invalid($"E0054: cannot cast `{from}` as `{target}`", cast.At);
     });

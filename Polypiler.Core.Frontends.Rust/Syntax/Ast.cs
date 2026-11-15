@@ -429,6 +429,13 @@ internal sealed class StringLiteral(Span at, string value) : Expr(at) {
 
 }
 
+/// <summary>A <c>char</c> literal: its Unicode scalar value.</summary>
+internal sealed class CharLiteral(Span at, int value) : Expr(at) {
+
+  public int Value { get; } = value;
+
+}
+
 /// <summary><c>b"..."</c>: a reference to an array of bytes.</summary>
 internal sealed class ByteStringLiteral(Span at, IReadOnlyList<byte> bytes) : Expr(at) {
 

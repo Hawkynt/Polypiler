@@ -126,7 +126,9 @@ internal sealed partial class TypeChecker {
     var resolved = type.Resolved;
     // Look through references for a pattern that is not one and not a binding: a constant like `None` is looked through too.
     var isConstant = pattern is IdentifierPattern { Mutable: false } named && this.PatternConstant(named) is not null;
-    if (resolved.Kind == RKind.Reference && (isConstant || pattern is not (ReferencePattern or WildcardPattern or IdentifierPattern or RefusedPattern or OrPattern))) {
+    // A string literal is a &str itself: it matches a &str, not the str behind it.
+    var textLiteral = pattern is LiteralPattern { Value: StringLiteral } && resolved.Element?.Resolved.Kind == RKind.Str;
+    if (resolved.Kind == RKind.Reference && !textLiteral && (isConstant || pattern is not (ReferencePattern or WildcardPattern or IdentifierPattern or RefusedPattern or OrPattern))) {
       var mutable = resolved.Mutable && byReference != false;
       this.Pattern(pattern, resolved.Element!, inAlternative, mutable);
       return;
@@ -165,7 +167,7 @@ internal sealed partial class TypeChecker {
           this.Unify(type, this.PatternValue(range.High), range.High.At);
 
         this._deferred.Add(() => {
-          if (type.Resolved.Kind is not (RKind.Integer or RKind.Float) && !this.IsError(type))
+          if (type.Resolved.Kind is not (RKind.Integer or RKind.Float or RKind.Char) && !this.IsError(type))
             throw this.Invalid($"E0029: only `char` and numeric types are allowed in range patterns, not `{type}`", range.At);
         });
         return;

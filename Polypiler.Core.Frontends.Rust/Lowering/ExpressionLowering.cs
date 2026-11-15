@@ -131,7 +131,7 @@ internal sealed partial class FunctionLowering {
 
     var operandType = this._typed.TypeOf(binary.Left);
     var values = this.Operands(binary.Left, binary.Right);
-    if (binary.Op is "==" or "!=" && !operandType.Dereferenced.IsScalar)
+    if (binary.Op is "==" or "!=" && !operandType.Dereferenced.IsScalar && operandType.Dereferenced.Kind != RKind.Char && !operandType.IsText)
       return this.Equality(binary.Op == "==", values[0], values[1], operandType.Dereferenced);
 
     return this.Operator(binary.Op, values[0], values[1], operandType.Dereferenced);
@@ -139,6 +139,9 @@ internal sealed partial class FunctionLowering {
 
   /// <summary>A binary operator applied to two lowered operands of the type of the left one.</summary>
   private IrExpr Operator(string op, IrExpr left, IrExpr right, RType type) {
+    if (type.IsText)
+      return this.TextOperator(op, left, right);
+
     var ir = type.Ir;
     switch (op) {
       case "<<" or ">>":
@@ -276,6 +279,9 @@ internal sealed partial class FunctionLowering {
   }
 
   private IrExpr Index(IndexExpr index) {
+    if (index.Index is RangeExpr && this._typed.TypeOf(index.Target).IsText)
+      return this.TextSlice(index);
+
     if (index.Index is RangeExpr range)
       return this.RangeIndex(index, range);
 

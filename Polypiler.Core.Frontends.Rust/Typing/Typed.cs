@@ -162,6 +162,9 @@ internal sealed class Typed {
   /// <summary>Whether <c>debug_assert*!</c> asserts: <c>rustc</c>'s <c>-C debug-assertions</c>.</summary>
   public bool DebugAssertions { get; set; }
 
+  /// <summary>The pieces of each <c>format!</c>.</summary>
+  public Dictionary<MacroExpr, IReadOnlyList<FormatPiece>> Formats { get; } = new(ReferenceEqualityComparer.Instance);
+
   /// <summary>The type of an expression, resolved.</summary>
   public RType TypeOf(Expr expression) => this.Types[expression].Resolved;
 
@@ -177,7 +180,10 @@ internal enum SourceKind {
   Elements,
 
   /// <summary><c>chunks_exact(n)</c> and <c>chunks_exact_mut(n)</c>: views of <c>n</c> elements.</summary>
-  Chunks
+  Chunks,
+
+  /// <summary><c>chars()</c>, <c>bytes()</c> and <c>split(p)</c> of text: the elements of the array they make.</summary>
+  Text
 
 }
 
@@ -200,6 +206,12 @@ internal sealed record ElementSource(Expr Container, RType Element, ElementAcces
 
   /// <summary>The size of a chunk of <see cref="SourceKind.Chunks"/>.</summary>
   public Expr? ChunkSize { get; init; }
+
+  /// <summary>The method that makes a <see cref="SourceKind.Text"/> source: <c>chars</c>, <c>bytes</c>, <c>split</c>.</summary>
+  public string? TextMethod { get; init; }
+
+  /// <summary>The pattern of <c>split</c>.</summary>
+  public Expr? Separator { get; init; }
 
 }
 
@@ -227,5 +239,34 @@ internal sealed record Iteration(SourceKind Kind, RangeLoop? Range, ElementSourc
 
   /// <summary>The element type of a range source.</summary>
   public RType? RangeElement { get; init; }
+
+}
+
+/// <summary>
+/// A piece of a format string: literal text, or an argument with its format spec (The Rust
+/// Standard Library, <c>std::fmt</c>, "Syntax").
+/// </summary>
+internal sealed record FormatPiece(string? Text, Expr? Argument) {
+
+  /// <summary>The fill character, a space by default.</summary>
+  public int Fill { get; init; } = ' ';
+
+  /// <summary><c>&lt;</c>, <c>^</c> or <c>&gt;</c>; <c>\0</c> for the default of the type.</summary>
+  public char Align { get; init; }
+
+  /// <summary><c>+</c>: a sign for every number.</summary>
+  public bool Plus { get; init; }
+
+  /// <summary><c>#</c>: the radix prefix.</summary>
+  public bool Alternate { get; init; }
+
+  /// <summary><c>0</c>: zeros after the sign up to the width.</summary>
+  public bool Zero { get; init; }
+
+  /// <summary>The minimum width in chars.</summary>
+  public int Width { get; init; }
+
+  /// <summary>The trait: <c>\0</c> for Display, <c>?</c>, <c>x</c>, <c>X</c>, <c>o</c>, <c>b</c>.</summary>
+  public char Kind { get; init; }
 
 }

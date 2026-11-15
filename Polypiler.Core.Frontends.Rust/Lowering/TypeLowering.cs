@@ -82,6 +82,8 @@ internal sealed partial class FunctionLowering {
       }
       case "Vec::new" or "Vec::with_capacity":
         return this.NewVec(type, call.Arguments);
+      case string text when text.StartsWith("String::", StringComparison.Ordinal) || text.StartsWith("char::", StringComparison.Ordinal) || text.StartsWith("__", StringComparison.Ordinal):
+        return this.TextCall(call, text);
       case "from_bits": {
         var bits = this.Value(call.Arguments[0]);
         return new IrIntrinsic(IrIntrinsicOp.BitsFloat, type.Ir, [Cast(bits, type.Ir == IrType.F32 ? IrType.I32 : IrType.I64)]);
@@ -155,8 +157,10 @@ internal sealed partial class FunctionLowering {
   private IrExpr Equal(IrExpr left, IrExpr right, RType type) {
     var resolved = type.Dereferenced;
     switch (resolved.Kind) {
-      case RKind.Integer or RKind.Float or RKind.Bool:
+      case RKind.Integer or RKind.Float or RKind.Bool or RKind.Char:
         return Compare(IrBinaryOp.Equal, left, right);
+      case RKind.String or RKind.Str:
+        return new IrIntrinsic(IrIntrinsicOp.StrEquals, IrType.Bool, [left, right]);
       case RKind.Enum:
         return Compare(IrBinaryOp.Equal, new IrConvert(left.Type.Integral, left, IrConversion.Wrap), new IrConvert(right.Type.Integral, right, IrConversion.Wrap));
       case RKind.Unit:

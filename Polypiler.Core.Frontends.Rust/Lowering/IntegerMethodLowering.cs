@@ -34,6 +34,14 @@ internal sealed partial class FunctionLowering {
 
     var name = this._typed.Methods[call];
     var receiver = this._typed.TypeOf(call.Receiver).Dereferenced;
+    if (name.StartsWith("str::", StringComparison.Ordinal))
+      return this.TextMethod(call, name["str::".Length..]);
+
+    if (name.StartsWith("char::", StringComparison.Ordinal))
+      return this.CharMethod(call, name["char::".Length..]);
+
+    if (name == "to_string")
+      return this.Displayed(this.Value(call.Receiver), receiver);
     if (name.StartsWith("Option::", StringComparison.Ordinal))
       return this.OptionMethod(call, name["Option::".Length..]);
 

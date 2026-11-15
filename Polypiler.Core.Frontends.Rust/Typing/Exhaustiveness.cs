@@ -49,7 +49,7 @@ internal static class Exhaustiveness {
       case RKind.Result:
         return Exhaustive(Specialize(rows, "Ok", [type.Element!], typed), [type.Element!, .. rest], typed)
           && Exhaustive(Specialize(rows, "Err", [type.Error], typed), [type.Error, .. rest], typed);
-      case RKind.Integer or RKind.Bool or RKind.Enum:
+      case RKind.Integer or RKind.Bool or RKind.Enum or RKind.Char:
         return Values(rows, type, rest, typed);
       default:
         // Floats, arrays, slices, vectors: only a binding or `_` covers them.
@@ -193,6 +193,8 @@ internal static class Constants {
   public static BigInteger? Evaluate(Expr expression, Typed typed, Func<PathExpr, ConstItem?>? named = null) {
     switch (expression) {
       case IntegerLiteral literal:
+        return literal.Value;
+      case CharLiteral literal:
         return literal.Value;
       case BoolLiteral truth:
         return truth.Value ? 1 : 0;

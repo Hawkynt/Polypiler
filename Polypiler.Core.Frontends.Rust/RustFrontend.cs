@@ -60,6 +60,9 @@ public sealed record RustImportOptions(OverflowChecks OverflowChecks) {
   /// </summary>
   public Func<string, string?>? ReadFile { get; init; }
 
+  /// <summary>Whether the source is one of the frontend's own helpers, which may name the IR's string operations.</summary>
+  internal bool Internal { get; init; }
+
 }
 
 /// <summary>

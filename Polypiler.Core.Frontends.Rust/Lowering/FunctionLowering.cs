@@ -191,13 +191,16 @@ internal sealed partial class FunctionLowering {
     return local;
   }
 
-  /// <summary>The zero of a type: 0, false, none, the default struct, a new empty list or array.</summary>
+  /// <summary>The zero of a type: 0, false, none, the empty string, the default struct, a new empty list or array.</summary>
   private IrExpr Zero(IrType type) {
     if (type == IrType.Void)
       return new IrConst(IrType.I32, 0);
 
     if (type.IsOptional)
       return new IrNone(type);
+
+    if (type.IsString)
+      return new IrStrConst("");
 
     if (type.IsStruct)
       return type.StructType!.HasDefault ? new IrStructDefault(type) : new IrStructNew(type, [.. type.StructType.Fields.Select(field => this.Zero(field.Type))]);
@@ -444,6 +447,8 @@ internal sealed partial class FunctionLowering {
       IntegerLiteral literal => Integer(this._typed.TypeOf(literal), literal.Value),
       FloatLiteral literal => Float(this._typed.TypeOf(literal), literal.Text),
       BoolLiteral literal => new IrConst(IrType.Bool, literal.Value ? 1 : 0),
+      StringLiteral literal => new IrStrConst(literal.Value),
+      CharLiteral literal => new IrConst(IrType.U32, literal.Value),
       ByteStringLiteral literal => new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(IrType.U8), [.. literal.Bytes.Select(value => (IrExpr)new IrConst(IrType.U8, value))]),
       PathExpr path => this.Path(path),
       UnaryExpr unary => this.Unary(unary),

@@ -9,7 +9,6 @@ internal sealed partial class TypeChecker {
 
   /// <summary>The standard-library types the subset refuses, by the diagnostic that names them.</summary>
   private static readonly Dictionary<string, string> _refusedTypes = new() {
-    ["str"] = RustFrontend.TextType, ["String"] = RustFrontend.TextType, ["char"] = RustFrontend.TextType,
     ["Box"] = RustFrontend.SmartPointer, ["Rc"] = RustFrontend.SmartPointer, ["Arc"] = RustFrontend.SmartPointer,
     ["Cell"] = RustFrontend.SmartPointer, ["RefCell"] = RustFrontend.SmartPointer, ["Cow"] = RustFrontend.SmartPointer,
     ["Weak"] = RustFrontend.SmartPointer, ["Mutex"] = RustFrontend.SmartPointer, ["RwLock"] = RustFrontend.SmartPointer,
@@ -79,7 +78,7 @@ internal sealed partial class TypeChecker {
           return this.Unsupported(RustFrontend.UnsupportedLifetime, $"'{lifetime}", type.At);
 
         if (type.Element!.Shape == TypeShape.Path && type.Element.Name is "str" or "std::primitive::str" or "core::primitive::str")
-          return this.Unsupported(RustFrontend.TextType, type.Mutable ? "&mut str" : "&str", type.At);
+          return type.Mutable ? this.Unsupported(RustFrontend.TextType, "&mut str", type.At) : RType.StrRef;
 
         if (type.Element.Shape == TypeShape.Slice) {
           var element = this.ResolveShape(type.Element.Element!, false);
@@ -143,7 +142,10 @@ internal sealed partial class TypeChecker {
 
     var library = segments is ["std" or "core" or "alloc", .., var name] ? name : segments.Length == 1 ? last : null;
     if (library is not null && _refusedTypes.TryGetValue(library, out var code))
-      return this.Unsupported(code, library == "str" ? "str" : type.Text, type.At);
+      return this.Unsupported(code, type.Text, type.At);
+
+    if (library is "String" or "char" && type.Arguments.Count == 0 && segments is [_, "string" or "primitive", _])
+      return library == "String" ? RType.String : RType.Char;
 
     switch (library) {
       case "Vec" when type.Arguments.Count == 1 && (segments.Length == 1 || segments is [_, "vec", _]): {
@@ -184,14 +186,14 @@ internal sealed partial class TypeChecker {
         if (element.Kind == RKind.Array)
           return this.Unsupported(RustFrontend.UnsupportedElement, $"nested array '{at.Text}'", at.At) is not null;
 
-        if (!(element.IsNumber || element.Kind is RKind.Struct or RKind.Enum))
+        if (!(element.IsNumber || element.IsText || element.Kind is RKind.Struct or RKind.Enum or RKind.Char or RKind.Bool))
           return this.Unsupported(RustFrontend.UnsupportedElement, $"array of {element}", at.At) is not null;
 
         return this.Representable(element, at);
       }
       case RKind.Reference when resolved.Element!.Resolved.Kind == RKind.Slice: {
         var element = resolved.Element.Resolved.Element!.Resolved;
-        if (!element.IsNumber)
+        if (!(element.IsNumber || element.IsText || element.Kind is RKind.Char))
           return this.Unsupported(RustFrontend.UnsupportedElement, $"slice of {element}", at.At) is not null;
 
         return true;
@@ -200,17 +202,21 @@ internal sealed partial class TypeChecker {
         if (resolved.Element!.Resolved.Kind == RKind.Reference)
           return this.Unsupported(RustFrontend.UnsupportedElement, $"reference to a reference '{at.Text}'", at.At) is not null;
 
+        // The IR holds a string in no struct, so no function returns one through a copy-in/copy-out.
+        if (resolved.Element.Resolved.Kind == RKind.String && resolved.Mutable)
+          return this.Unsupported(RustFrontend.TextType, $"'{at.Text}'", at.At) is not null;
+
         return this.Representable(resolved.Element, at);
       case RKind.Vec: {
         var element = resolved.Element!.Resolved;
-        if (!(element.IsNumber || element.Kind is RKind.Struct or RKind.Enum || element.Kind == RKind.Bool))
+        if (!(element.IsNumber || element.IsText || element.Kind is RKind.Struct or RKind.Enum or RKind.Bool or RKind.Char))
           return this.Unsupported(RustFrontend.UnsupportedElement, $"Vec of {element}", at.At) is not null;
 
         return this.Representable(element, at);
       }
       case RKind.Option: {
         var value = resolved.Element!.Dereferenced;
-        if (!(value.IsScalar || value.Kind is RKind.Struct or RKind.Enum))
+        if (!(value.IsScalar || value.Kind is RKind.Struct or RKind.Enum or RKind.Char))
           return this.Unsupported(RustFrontend.UnsupportedOptionMethod, $"Option<{resolved.Element}>", at.At) is not null;
 
         return true;
@@ -218,7 +224,7 @@ internal sealed partial class TypeChecker {
       case RKind.Result: {
         foreach (var part in new[] { resolved.Element!, resolved.Error }) {
           var value = part.Resolved;
-          if (!(value.IsScalar || value.Kind is RKind.Enum or RKind.Unit || (value.Kind == RKind.Struct && this.HasDefault(value))))
+          if (!(value.IsScalar || value.Kind is RKind.Enum or RKind.Unit or RKind.Char || (value.Kind == RKind.Struct && this.HasDefault(value))))
             return this.Unsupported(RustFrontend.UnsupportedOptionMethod, $"Result<{resolved.Element}, {resolved.Error}>", at.At) is not null;
         }
 
@@ -227,7 +233,7 @@ internal sealed partial class TypeChecker {
       case RKind.Tuple:
         foreach (var element in resolved.Elements) {
           var part = element.Resolved;
-          if (part.Kind is RKind.Vec or RKind.Reference or RKind.Function || (part.Kind == RKind.Array && !part.Element!.IsNumber))
+          if (part.Kind is RKind.Vec or RKind.Function or RKind.Reference || part.IsText || (part.Kind == RKind.Array && !part.Element!.IsNumber))
             return this.Unsupported(RustFrontend.Unsupported, $"tuple holding {part}", at.At) is not null;
 
           if (!this.Representable(part, at))

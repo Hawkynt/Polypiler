@@ -22,6 +22,8 @@ internal sealed class ModuleLowering {
   private readonly OverflowChecks _mode;
   private readonly Typed _typed = new();
   private readonly SortedSet<(string Kind, string Type)> _helpers = [];
+  private readonly SortedSet<string> _textHelpers = new(StringComparer.Ordinal);
+  private string? _textPrefix;
   private readonly HashSet<string> _names = new(StringComparer.Ordinal);
   private readonly Action<string, string, Span> _report;
   private readonly Dictionary<StructInfo, IrStructType> _structs = new(ReferenceEqualityComparer.Instance);
@@ -47,7 +49,7 @@ internal sealed class ModuleLowering {
 
     var lowering = new ModuleLowering(options.OverflowChecks, Report);
     var crate = CrateScope.Build(file, path, Report, options.ReadFile);
-    var checker = new TypeChecker(lowering._typed, crate, Report) { DebugAssertions = options.DebugAssertions };
+    var checker = new TypeChecker(lowering._typed, crate, Report) { DebugAssertions = options.DebugAssertions, Internal = options.Internal };
     lowering._typed.DebugAssertions = options.DebugAssertions == true;
     lowering._typed.Modules.AddRange(crate.Modules);
     if (!checker.Declare() || failed)
@@ -203,7 +205,7 @@ internal sealed class ModuleLowering {
   public IrType Ir(RType type) {
     var resolved = type.Resolved;
     switch (resolved.Kind) {
-      case RKind.Integer or RKind.Float or RKind.Bool:
+      case RKind.Integer or RKind.Float or RKind.Bool or RKind.Char or RKind.Str or RKind.String:
         return resolved.Ir;
       case RKind.Reference: {
         var target = resolved.Element!.Resolved;
@@ -333,13 +335,37 @@ internal sealed class ModuleLowering {
   }
 
   private List<IrFunction>? Helpers(Action<string, string, Span> report) {
-    if (this._helpers.Count == 0)
+    if (this._helpers.Count == 0 && this._textHelpers.Count == 0)
       return [];
 
     var source = string.Concat(this._helpers.Select(helper => PowerSource(this.HelperName(helper.Kind, helper.Type), helper.Kind, helper.Type)));
+    if (this._textHelpers.Count > 0)
+      source += TextHelpers.Source(this._textHelpers, this.TextPrefix);
+
     var file = Parser.Parse(source);
-    var lowered = Run(file, "helpers.rs", new RustImportOptions(OverflowChecks.Wrap), report);
+    var lowered = Run(file, "helpers.rs", new RustImportOptions(OverflowChecks.Wrap) { Internal = true }, report);
     return lowered?.Functions.ToList();
+  }
+
+  /// <summary>The name of a text helper of the module (<see cref="TextHelpers"/>); the helper is lowered with the module.</summary>
+  public string Text(string helper) {
+    this._textHelpers.Add(helper);
+    return this.TextPrefix + helper;
+  }
+
+  /// <summary><c>rust_</c>, or with as many underscores in front as keep it the prefix of no function of the crate.</summary>
+  private string TextPrefix {
+    get {
+      if (this._textPrefix is null) {
+        var prefix = "rust_";
+        while (this._typed.Functions.Any(function => function.IrName.StartsWith(prefix, StringComparison.Ordinal) || function.Item.Name.StartsWith(prefix, StringComparison.Ordinal)))
+          prefix = "_" + prefix;
+
+        this._textPrefix = prefix;
+      }
+
+      return this._textPrefix;
+    }
   }
 
   /// <summary>

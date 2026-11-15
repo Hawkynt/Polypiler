@@ -21,7 +21,7 @@ internal sealed class Parser {
   /// <summary>The macros the frontend imports.</summary>
   private static readonly HashSet<string> _macros = [
     "assert", "assert_eq", "assert_ne", "debug_assert", "debug_assert_eq", "debug_assert_ne",
-    "panic", "unreachable", "unimplemented", "todo", "vec"
+    "panic", "unreachable", "unimplemented", "todo", "vec", "format"
   ];
 
   private readonly List<Token> _tokens;
@@ -1182,7 +1182,7 @@ internal sealed class Parser {
         return token.Byte ? new ByteStringLiteral(token.At, [.. token.Text.Select(unit => (byte)unit)]) : new StringLiteral(token.At, token.Text);
       case TokenKind.Character:
         this.Next();
-        return new RefusedExpr(new Refusal(RustFrontend.TextType, "char", token.At));
+        return new CharLiteral(token.At, char.ConvertToUtf32(token.Text, 0));
       case TokenKind.Lifetime:
         return this.Labelled();
       case TokenKind.Punctuation:
@@ -1697,7 +1697,7 @@ internal sealed class Parser {
 
   private Expr RangeBound() => this.Current.Kind == TokenKind.Identifier && this.Current.Text is not ("true" or "false") ? this.PathText() : this.LiteralBound();
 
-  /// <summary>A literal of a pattern: a number, possibly negative, a truth value; a character or a string is refused.</summary>
+  /// <summary>A literal of a pattern: a number, possibly negative, a truth value, a character or a string.</summary>
   private Expr LiteralBound() {
     var token = this.Current;
     if (token.Is("-")) {
@@ -1713,9 +1713,15 @@ internal sealed class Parser {
       case TokenKind.Float:
         this.Next();
         return new FloatLiteral(token.At, token.Text, token.Suffix);
-      case TokenKind.Character or TokenKind.String:
+      case TokenKind.Character:
         this.Next();
-        return new RefusedExpr(new Refusal(RustFrontend.TextType, token.Kind == TokenKind.Character ? "char" : "&str", token.At));
+        return new CharLiteral(token.At, char.ConvertToUtf32(token.Text, 0));
+      case TokenKind.String when !token.Byte:
+        this.Next();
+        return new StringLiteral(token.At, token.Text);
+      case TokenKind.String:
+        this.Next();
+        return new RefusedExpr(new Refusal(RustFrontend.UnsupportedPattern, "byte string pattern", token.At));
       default:
         if (token.Is("true") || token.Is("false"))
           return this.Literal(token);
