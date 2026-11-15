@@ -204,7 +204,15 @@ public sealed class JavaScriptCapabilities {
     new(".entries", 2015, "$Keyed"),
     new(".keys", 2015, "$Keyed"),
     new(".values", 2015, "$Keyed"),
-    new(".next", 2015, "$Keyed")
+    new(".next", 2015, "$Keyed"),
+
+    // Numbers to text and back (#1315): ECMAScript 5 has every rule of ECMA-262; the rules of .NET are helpers.
+    new(".toString", 5),
+    new(".toFixed", 5),
+    new(".toPrecision", 5),
+    new(".toUpperCase", 5),
+    new("parseFloat", 5),
+    new("parseInt", 5)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

@@ -824,7 +824,42 @@ public enum IrIntrinsicOp {
   StrCodePointAt,
 
   /// <summary><c>(str, i32) → i32</c>: the code units of the code point at an index, 2 for a pair of surrogates and 1 otherwise; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length)</c>.</summary>
-  StrNextCodePoint
+  StrNextCodePoint,
+
+  // The conversions between numbers and text of #1315: docs/reference/number-text.md.
+
+  /// <summary><c>f64 | integer → str</c>: ECMA-262's <c>Number::toString(x, 10)</c>, the shortest digits in the layout of JavaScript; a 64-bit integer as <c>BigInt</c> prints it.</summary>
+  FormatEcma,
+
+  /// <summary><c>f64 | f32 | integer → str</c>: .NET's <c>ToString(CultureInfo.InvariantCulture)</c> from .NET Core 3.0 on, the shortest digits in the layout of .NET.</summary>
+  FormatDotNet,
+
+  /// <summary><c>bool → str</c>: <c>"true"</c> or <c>"false"</c>, as JavaScript spells them.</summary>
+  FormatBoolEcma,
+
+  /// <summary><c>bool → str</c>: <c>"True"</c> or <c>"False"</c>, as .NET spells them.</summary>
+  FormatBoolDotNet,
+
+  /// <summary><c>(integer, i32 radix, i32 minDigits, bool upper, i32 mode) → str</c>: the digits of a radix, padded with zeros, in a <see cref="RadixMode"/>; every argument but the first a constant.</summary>
+  FormatRadix,
+
+  /// <summary><c>(f64, i32 digits) → str</c>: ECMA-262's <c>toFixed</c>, the exact value rounded to 0 to 100 digits, a tie to the larger magnitude.</summary>
+  FixedEcma,
+
+  /// <summary><c>(f64, i32 digits) → str</c>: .NET's <c>ToString("F&lt;n&gt;")</c>, the exact value rounded to 0 to 15 digits, a tie to the even digit.</summary>
+  FixedDotNet,
+
+  /// <summary><c>str → f64</c>: ECMA-262's <c>StringToNumber</c> (<c>Number(s)</c>, <c>+s</c>); a text of no number is a NaN.</summary>
+  ParseNumberEcma,
+
+  /// <summary><c>str → f64</c>: ECMA-262's <c>parseFloat</c>, the longest prefix that is a number; a NaN without one.</summary>
+  ParseFloatEcma,
+
+  /// <summary><c>(str) → f64</c> or <c>(str, i32 radix) → f64</c>: ECMA-262's <c>parseInt</c>.</summary>
+  ParseIntEcma,
+
+  /// <summary><c>str → integer | f64 | f32</c>: .NET's <c>Parse(s, CultureInfo.InvariantCulture)</c>; traps <see cref="IrTrap.InvalidFormat"/> on a malformed text and <see cref="IrTrap.IntegerOverflow"/> on an integer outside its type.</summary>
+  ParseDotNet
 
 }
 
@@ -993,5 +1028,11 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// global a function or an initializer names is one of them.
   /// </summary>
   public IReadOnlyList<IrGlobal> Globals { get; init; } = [];
+
+  /// <summary>
+  /// The stable names of the known differences between the module and the source it was imported
+  /// from, such as <c>cs-invariant-culture</c>, each once, which the header of a generated file names.
+  /// </summary>
+  public IReadOnlyList<string> Caveats { get; init; } = [];
 
 }

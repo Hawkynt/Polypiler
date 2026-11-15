@@ -358,6 +358,10 @@ public sealed class TranslateCommand : ICliCommand {
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
 
+    // What the imported code does differently from the source is a note, as it is for JavaScript.
+    if (imported.Module?.Caveats.Contains(CSharpFrontend.InvariantCulture) == true)
+      context.Note($"{file}: note {CSharpFrontend.InvariantCulture}: {CSharpFrontend.InvariantCultureDescription}");
+
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code is CSharpFrontend.CompilerError or CSharpFrontend.ConstantOverflow)
       ? InvalidSource
       : UnsupportedConstruct;

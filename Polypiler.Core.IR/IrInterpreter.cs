@@ -44,7 +44,10 @@ public enum IrTrap {
   DuplicateKey,
 
   /// <summary>The next step of a checked loop over a collection that changed during it (<see cref="EnumerationMode.Checked"/>).</summary>
-  CollectionModified
+  CollectionModified,
+
+  /// <summary>A text that is not a number of the grammar it is parsed by.</summary>
+  InvalidFormat
 
 }
 
@@ -101,6 +104,7 @@ public sealed class IrTrapException : IrException {
     IrTrap.KeyNotFound => "key not found",
     IrTrap.DuplicateKey => "duplicate key",
     IrTrap.CollectionModified => "collection modified",
+    IrTrap.InvalidFormat => "invalid format",
     _ => "integer overflow"
   };
 
@@ -526,6 +530,8 @@ public static partial class IrInterpreter {
         default:
           if (StringOperations.IsString(intrinsic.Op))
             return StringOperations.Evaluate(intrinsic, arguments);
+          if (NumberTextOperations.IsNumberText(intrinsic.Op))
+            return NumberTextOperations.Evaluate(intrinsic, arguments);
           if (IntegerOperations.Evaluates(intrinsic))
             return IntegerOperations.Evaluate(intrinsic, arguments);
           if (FloatOperationTable.TryEvaluate(intrinsic.Op, arguments, out var computed))

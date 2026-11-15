@@ -66,7 +66,7 @@ internal sealed partial class Lowering {
         pieces.Add(new IrStrConst(cooked));
 
       if (index < template.Expressions.Count)
-        pieces.Add(this.Text(template.Expressions[index], "a template hole"));
+        pieces.Add(this.Written(template.Expressions[index], "a template hole"));
     }
 
     return pieces.Count switch {
@@ -94,7 +94,7 @@ internal sealed partial class Lowering {
         Add(sum.Left);
         Add(sum.Right);
       } else {
-        pieces.Add(this.Expression(node));
+        pieces.Add(this.Written(node, "a part of a concatenation"));
       }
     }
 
@@ -216,7 +216,7 @@ internal sealed partial class Lowering {
         var op = method switch { "includes" => IrIntrinsicOp.StrContains, "startsWith" => IrIntrinsicOp.StrStartsWith, _ => IrIntrinsicOp.StrEndsWith };
         return Str(op, IrType.Bool, text, Needle(0));
       case "concat":
-        return arguments.Count == 0 ? text : Str(IrIntrinsicOp.StrConcat, _str, [text, .. arguments.Select(argument => this.Text(argument, "an argument of concat"))]);
+        return arguments.Count == 0 ? text : Str(IrIntrinsicOp.StrConcat, _str, [text, .. arguments.Select(argument => this.Written(argument, "an argument of concat"))]);
       case "replace" or "replaceAll":
         Takes(2, 2);
         return this.Replace(call, text, method);

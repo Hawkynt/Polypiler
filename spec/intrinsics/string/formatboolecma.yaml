@@ -1,0 +1,28 @@
+id: INTRINSICS.FormatBoolEcma
+title: A truth value as ECMA-262 writes it
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1315"
+tests: [Polypiler.Tests/String/IrNumberTextTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FormatBoolEcma
+  group: String
+  typeParameters: []
+  parameters: [{name: value, type: TYPES.bool}]
+  returns: [{name: text, type: TYPES.str}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "true or false"
+    source: "ECMA-262 2022 §7.1.17 (ToString of a Boolean)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [1], outputs: [[116, 114, 117, 101]]}
+    - {types: {}, inputs: [0], outputs: [[102, 97, 108, 115, 101]]}
+    - {types: {}, inputs: [1], outputs: [[116, 114, 117, 101]]}

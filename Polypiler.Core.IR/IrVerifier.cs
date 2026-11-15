@@ -432,6 +432,8 @@ public static partial class IrVerifier {
             this.Require(false, problem);
           if (StringOperations.Problem(intrinsic) is { } malformed)
             this.Require(false, malformed);
+          if (NumberTextOperations.Problem(intrinsic) is { } unformatted)
+            this.Require(false, unformatted);
 
           break;
         case IrStep step:

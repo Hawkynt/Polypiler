@@ -166,7 +166,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static bool F(int[] a, int[] b) => a == b;", "object", 43, TestName = "array identity")]
   [TestCase("public static bool F(int a) => a is > 1;", "IsPatternExpression", 32, TestName = "is pattern")]
   [TestCase("public static void F(int[] a) { (a) = a; }", "ParenthesizedExpression", 33, TestName = "parenthesized target")]
-  [TestCase("public static void F(int[] a) { a.Length.ToString(); }", "Int32.ToString", 33, TestName = "member call")]
+  [TestCase("public static void F(int[] a) { a.Length.ToString(\"N2\"); }", "Int32.ToString(String) with the format \"N2\"", 33, TestName = "member call")]
   public void UnsupportedConstruct_IsRefusedWithItsPosition(string method, string what, int column) {
     var diagnostic = Refusal(PrototypeFixture.Wrap(method));
     Assert.That(diagnostic, Is.EqualTo(CSharpFrontend.UnsupportedDescriptor.At(

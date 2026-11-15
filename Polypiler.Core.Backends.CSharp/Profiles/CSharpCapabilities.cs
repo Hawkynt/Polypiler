@@ -482,7 +482,10 @@ public sealed class CSharpCapabilities {
     .. CSharpCollectionRows.All,
 
     // The function values of #1326.
-    .. CSharpFunctionRows.All
+    .. CSharpFunctionRows.All,
+
+    // The conversions between numbers and text of #1315.
+    .. CSharpNumberTextRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>

@@ -16,8 +16,8 @@ public sealed record JavaScriptStringMember(string Construct, string Ir, string 
 /// </summary>
 public static class JavaScriptStringApi {
 
-  /// <summary>What a conversion between numbers and text is told until the IR has one.</summary>
-  public const string NumberText = "which converts a number to text, not supported until number-to-text conversion";
+  /// <summary>What a number is told where a method of a string takes a string, which JavaScript converts the number to first.</summary>
+  public const string NumberText = "which JavaScript converts to text first: pass String(n)";
 
   /// <summary>Every construct the table states.</summary>
   public static IReadOnlyList<JavaScriptStringMember> Members { get; } = [
@@ -65,9 +65,7 @@ public static class JavaScriptStringApi {
     new("s.replaceAll with a needle that may be empty", "", "JavaScript inserts between every two code units"),
     new("String.fromCodePoint", "", "code points"),
     new("new String", "", "a string object"),
-    new("\"x\" + number", "", NumberText),
-    new("String(n)", "", NumberText),
-    new("template literal with a number hole", "", NumberText)
+    new("s.indexOf(number) and the other methods given a number for a string", "", NumberText)
   ];
 
   /// <summary>The entries the frontend imports.</summary>

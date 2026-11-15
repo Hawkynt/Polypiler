@@ -501,7 +501,7 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("return 'text' - a;", "- on string and number")]
   [TestCase("return null;", "null")]
   [TestCase("return /x/.length;", "a regular expression")]
-  [TestCase("return `${a}`;", "number as a template hole, which converts a number to text, not supported until number-to-text conversion")]
+  [TestCase("return `${undefined}`;", "undefined")]
   [TestCase("return this;", "this")]
   [TestCase("const p = { ...d }; return 1;", "a spread in an object literal (...)")]
   [TestCase("({ x: 1 }); return 1;", "an object literal")]

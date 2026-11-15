@@ -43,12 +43,26 @@ internal sealed partial class Lowering {
     pieces.Add(this.Piece(expression, model.GetTypeInfo(expression).Type));
   }
 
-  /// <summary>One part of a concatenation or an interpolation: a string, or a code unit as its string.</summary>
-  private IrExpr Piece(ExpressionSyntax expression, ITypeSymbol? type) => type?.SpecialType switch {
-    SpecialType.System_String => this.Natural(expression, IrType.String),
-    SpecialType.System_Char => Text(this.Natural(expression, IrType.U16)),
-    _ => throw new UnsupportedException(expression, $"string + {type?.ToDisplayString() ?? "null"}, {CSharpStringApi.NumberText}")
-  };
+  /// <summary>
+  /// One part of a concatenation or an interpolation: a string, a code unit as its string, a number as
+  /// .NET writes it - by the culture of the thread, which the import fixes to the invariant one - and
+  /// a truth value as <c>True</c> or <c>False</c>.
+  /// </summary>
+  private IrExpr Piece(ExpressionSyntax expression, ITypeSymbol? type, string? format = null) {
+    switch (type?.SpecialType) {
+      case SpecialType.System_String when format is null:
+        return this.Natural(expression, IrType.String);
+      case SpecialType.System_Char when format is null:
+        return Text(this.Natural(expression, IrType.U16));
+      case SpecialType.System_Boolean:
+        return this.Text(this.Own(expression), format, expression, "string + bool");
+      case var _ when IsNumber(type):
+        this._cultureImplied |= !IsHexadecimal(format);
+        return this.Text(this.Own(expression), format, expression, $"string + {type!.ToDisplayString()}");
+      default:
+        throw new UnsupportedException(expression, $"string + {type?.ToDisplayString() ?? "null"}{(format is null ? "" : " with a format")}");
+    }
+  }
 
   /// <summary>Strings joined, as one operation: two parts at least; one is itself.</summary>
   private static IrExpr Concatenated(List<IrExpr> pieces)
@@ -60,10 +74,10 @@ internal sealed partial class Lowering {
     foreach (var content in interpolated.Contents)
       if (content is InterpolatedStringTextSyntax text)
         pieces.Add(new IrStrConst(text.TextToken.ValueText));
-      else if (content is InterpolationSyntax { AlignmentClause: null, FormatClause: null } hole)
-        pieces.Add(this.Piece(hole.Expression, model.GetTypeInfo(hole.Expression).Type));
+      else if (content is InterpolationSyntax { AlignmentClause: null } hole)
+        pieces.Add(this.Piece(hole.Expression, model.GetTypeInfo(hole.Expression).Type, hole.FormatClause?.FormatStringToken.ValueText));
       else
-        throw new UnsupportedException(content, "an interpolation with an alignment or a format");
+        throw new UnsupportedException(content, "an interpolation with an alignment");
 
     return pieces.Count == 0 ? new IrStrConst("") : Concatenated(pieces);
   }

@@ -168,6 +168,12 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase(".keys", 2015, "$Keyed")]
   [TestCase(".values", 2015, "$Keyed")]
   [TestCase(".next", 2015, "$Keyed")]
+  [TestCase(".toString", 5, null)]
+  [TestCase(".toFixed", 5, null)]
+  [TestCase(".toPrecision", 5, null)]
+  [TestCase(".toUpperCase", 5, null)]
+  [TestCase("parseFloat", 5, null)]
+  [TestCase("parseInt", 5, null)]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
     Assert.That((entry.Name, entry.Since, entry.Replacement), Is.EqualTo((name, since, replacement)));
@@ -277,7 +283,8 @@ public sealed class JavaScriptCapabilitiesTests {
   public void Globals_AreTheIdentifiersTheEntriesStartWith()
     => Assert.That(_table.Globals(), Is.EquivalentTo(new[] {
       "NaN", "Infinity", "RangeError", "Error", "TypeError", "Math", "Number", "globalThis", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array",
-      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String", "Object", "Array", "Map", "Set"
+      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String", "Object", "Array", "Map", "Set",
+      "parseFloat", "parseInt"
     }));
 
   [Test]

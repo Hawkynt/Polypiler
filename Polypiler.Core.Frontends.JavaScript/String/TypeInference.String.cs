@@ -59,8 +59,10 @@ internal sealed partial class TypeInference {
       return null;
 
     var both = first.Kind == JsKind.String && second.Kind == JsKind.String;
+    // A number, a BigInt or a truth value joined to text is written as JavaScript writes it (#1315).
+    var written = first.Kind is JsKind.String or JsKind.Number or JsKind.BigInt or JsKind.Boolean && second.Kind is JsKind.String or JsKind.Number or JsKind.BigInt or JsKind.Boolean;
     return op switch {
-      Operator.Addition => both ? new(Plan.Concat, JsType.String, Polypiler.Core.IR.IrType.String) : new(Plan.Invalid, JsType.Unknown),
+      Operator.Addition => written ? new(Plan.Concat, JsType.String, Polypiler.Core.IR.IrType.String) : new(Plan.Invalid, JsType.Unknown),
       Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality
         or Operator.LessThan or Operator.LessThanOrEqual or Operator.GreaterThan or Operator.GreaterThanOrEqual
         => both ? new(Plan.CompareString, JsType.Boolean, Polypiler.Core.IR.IrType.String) : new(Plan.Invalid, JsType.Boolean),

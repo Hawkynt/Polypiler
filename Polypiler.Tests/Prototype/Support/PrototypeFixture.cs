@@ -217,6 +217,7 @@ internal static class PrototypeFixture {
     OverflowException => IrTrap.IntegerOverflow,
     ArithmeticException => IrTrap.InvalidOperation,
     InvalidOperationException => IrTrap.MissingValue,
+    FormatException => IrTrap.InvalidFormat,
     _ => null
   };
 

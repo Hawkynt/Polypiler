@@ -1,0 +1,29 @@
+id: INTRINSICS.ParseDotNet
+title: Text as .NET Parse reads it with the invariant culture
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1315"
+tests: [Polypiler.Tests/String/IrNumberTextTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ParseDotNet
+  group: String
+  typeParameters: [{name: N, constraint: any}]
+  parameters: [{name: text, type: TYPES.str}]
+  returns: [{name: number, type: N}]
+  legality:
+    - {id: well-formed, text: "a malformed text traps InvalidFormat, an integer out of the range of N traps IntegerOverflow", fact: none}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "T.Parse(text, CultureInfo.InvariantCulture): an integer by NumberStyles.Integer, a float by NumberStyles.Float and AllowThousands with Infinity and NaN in any case, correctly rounded and infinite beyond the range; a malformed text traps InvalidFormat before an integer out of range traps IntegerOverflow"
+    source: ".NET API reference, Int32.Parse(String, IFormatProvider), Double.Parse(String, IFormatProvider)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {N: TYPES.f64}, inputs: [[49, 44, 48, 48, 48]], outputs: ["0x408F400000000000"]}
+    - {types: {N: TYPES.f64}, inputs: [[105, 110, 102, 105, 110, 105, 116, 121]], outputs: ["0x7FF0000000000000"]}
+    - {types: {N: TYPES.i32}, inputs: [[50, 49, 52, 55, 52, 56, 51, 54, 52, 55]], outputs: [2147483647]}

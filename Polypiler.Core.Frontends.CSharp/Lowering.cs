@@ -121,7 +121,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     if (this._diagnostics.Count == 0)
       this.CheckInitializers(name, functions);
 
-    var module = new IrModule(name, functions, this._constants.Values.ToList()) { Types = [.. this._types], Globals = [.. this._initialized.Select(entry => entry.Global)] };
+    var module = new IrModule(name, functions, this._constants.Values.ToList()) { Types = [.. this._types], Globals = [.. this._initialized.Select(entry => entry.Global)],
+      Caveats = this._cultureImplied ? [CSharpFrontend.InvariantCulture] : []
+    };
     if (this._diagnostics.Count == 0)
       this.Constructed(module);
 
@@ -1054,6 +1056,8 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       throw new UnsupportedException(invocation, invocation.Kind().ToString());
 
     var operands = arguments.Select(argument => argument.Expression).ToList();
+    if (this.NumberTextCall(invocation, method, operands) is { } number)
+      return number;
     if (this.StringCall(invocation, method, operands) is { } text)
       return text;
 

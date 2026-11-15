@@ -47,6 +47,17 @@ public static class CSharpFrontend {
   [Diagnostic]
   public static readonly DiagnosticDescriptor ConstantOverflowDescriptor = new(ConstantOverflow, DiagnosticSeverity.Error, ExitCode.InvalidSource, "{0}", "csharp.constant-overflow");
 
+  /// <summary>
+  /// The caveat of a module that converts a number to text or back without a format provider, which
+  /// .NET does by the culture of the thread (<c>"a" + 2.5</c> is <c>a2,5</c> under de-DE): the import
+  /// fixes it to the invariant culture.
+  /// </summary>
+  public const string InvariantCulture = "cs-invariant-culture";
+
+  /// <summary>What <see cref="InvariantCulture"/> says.</summary>
+  public const string InvariantCultureDescription =
+    "a number converted to text or back without a format provider uses the culture of the thread in .NET; the imported code uses the invariant culture";
+
   private static readonly Lazy<MetadataReference> _coreLibrary = new(() => Loaded(typeof(object).Assembly));
 
   /// <summary>

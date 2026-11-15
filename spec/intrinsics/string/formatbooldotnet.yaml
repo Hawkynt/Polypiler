@@ -1,0 +1,28 @@
+id: INTRINSICS.FormatBoolDotNet
+title: A truth value as .NET writes it
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1315"
+tests: [Polypiler.Tests/String/IrNumberTextTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FormatBoolDotNet
+  group: String
+  typeParameters: []
+  parameters: [{name: value, type: TYPES.bool}]
+  returns: [{name: text, type: TYPES.str}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "True or False"
+    source: ".NET API reference, Boolean.ToString()"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [1], outputs: [[84, 114, 117, 101]]}
+    - {types: {}, inputs: [0], outputs: [[70, 97, 108, 115, 101]]}
+    - {types: {}, inputs: [1], outputs: [[84, 114, 117, 101]]}

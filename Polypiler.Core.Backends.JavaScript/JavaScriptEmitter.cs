@@ -327,6 +327,7 @@ public static partial class JavaScriptEmitter {
         $"JavaScript profile: {this._profile}."
       };
       header.AddRange(FloatManifest.Lines(module, this._mode, NativeAccuracy.Node));
+      header.AddRange(Caveats(module));
       if (this._halves)
         header.Add("A 64-bit integer is an object { hi, lo }: its upper and its lower 32 bits, each as an unsigned number.");
 

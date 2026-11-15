@@ -982,6 +982,86 @@
       "bytes": 139476
     },
     {
+      "path": "tests/fixtures/backend/golden/numtext/Fixed.cs.csharp.golden",
+      "sha256": "d4fe1d542f321fed80b9cc9c75bebab468626034e0790f7d3b9918ad08663d36",
+      "bytes": 353194
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/Fixed.cs.javascript.golden",
+      "sha256": "58ab07190915dfde4b347bed7e8ec871a4ecfe689623430afc729e0a5ce2c421",
+      "bytes": 97232
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/Hex.cs.csharp.golden",
+      "sha256": "76ecb7f0c29340f6316fdc82ea9484097653d1a78b2737c7daceb78fd363a1b5",
+      "bytes": 57450
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/Hex.cs.javascript.golden",
+      "sha256": "90a1db8c3fa77ecf8ad4dbc959a5cd3e6b5651b97e5b2872679c4978b94ff310",
+      "bytes": 62408
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/Parse.cs.csharp.golden",
+      "sha256": "c5580e6e2018d064d9c998f1d0291247037e1e75eb5db333bd23060c42405b6c",
+      "bytes": 298858
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/Parse.cs.javascript.golden",
+      "sha256": "65bb9f16e8d50dddfa8957706717d782a5c9af2292455bf010bf18441c02c517",
+      "bytes": 225244
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/Report.cs.csharp.golden",
+      "sha256": "7c667855a7d0b352478a3bbba8efdad9643fa61a109a049640d63237b2b2b6d2",
+      "bytes": 361132
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/Report.cs.javascript.golden",
+      "sha256": "225f9ebe946aa15a021111de9375b8cf0e942feb4ab1bb40d51f654c6974ebd2",
+      "bytes": 125956
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/fixed.js.csharp.golden",
+      "sha256": "9c25d977009cfc5e5b54c1ce4f93de6d9546adfed5ef9b55d3d65a3854841107",
+      "bytes": 504482
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/fixed.js.javascript.golden",
+      "sha256": "dc067b1525a85e4331d44d8a1e26b604ae1fe1fb29e08c469bea5641fcbb8885",
+      "bytes": 16592
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/hex.js.csharp.golden",
+      "sha256": "e61ccb4f74687f421d71578dc3a98dceea5b4cac8e9cbf4ef1dee68d921d00a8",
+      "bytes": 49962
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/hex.js.javascript.golden",
+      "sha256": "8237d989c9a51d6d3a55720bdd82f9966a0f614392ebca580830d58a5c2ed2b6",
+      "bytes": 43704
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/parse.js.csharp.golden",
+      "sha256": "6159f0eabe26c86d59e97522df87595635288116f9d9f7ae85f498bd00bd0a61",
+      "bytes": 394606
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/parse.js.javascript.golden",
+      "sha256": "147a3b1a4d664422f508e9fe2acefda586bb7f240f9d36db00752fa33a373fd3",
+      "bytes": 26124
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/report.js.csharp.golden",
+      "sha256": "9a1b03acd9e168aafc7fbc02f9ee0e4283c44a4beeb634b3d897ffcf67847531",
+      "bytes": 518390
+    },
+    {
+      "path": "tests/fixtures/backend/golden/numtext/report.js.javascript.golden",
+      "sha256": "38dc1de9bee7850f24249da116e7c9a6942030ec2d70d6def27ef55c4ca88cd8",
+      "bytes": 43324
+    },
+    {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeAbs.cs.csharp.golden",
       "sha256": "3187215bb94ac5aa73099a24d9d8b83ad3b7c15b17d7c6264a38d2cb42e23af0",
       "bytes": 45470
@@ -2325,6 +2405,36 @@
       "path": "tests/vectors/float/tanh.f64.txt",
       "sha256": "0a4fa57e8a8c3504f45fd29dc97940c37d3a979c5c69fdb8527552f651cbfe1e",
       "bytes": 213432
+    },
+    {
+      "path": "tests/vectors/numtext/generate/Generate.cs",
+      "sha256": "bbe5410502e331c419d0163ccfcc9d80677b6b93dfb6a40f1b32e6b3cbca6a49",
+      "bytes": 851
+    },
+    {
+      "path": "tests/vectors/numtext/generate/ecma.mjs",
+      "sha256": "d80dc46036181db47aa23220f9572d1fc09b26a993d6babb1d918f7e5c57622e",
+      "bytes": 1176
+    },
+    {
+      "path": "tests/vectors/numtext/generate/regenerate.sh",
+      "sha256": "0c92af9a51ffbcedab8677c1e58b2acfa38b2b949cdcee45af28209b23c39524",
+      "bytes": 723
+    },
+    {
+      "path": "tests/vectors/numtext/generate/versions.txt",
+      "sha256": "f7f6e340d043ebadac4264919616686e04a7c3395e09b1583c387f993a92a8cd",
+      "bytes": 30
+    },
+    {
+      "path": "tests/vectors/numtext/golden.provenance.json",
+      "sha256": "04ae6c0f931c32e0c29af549e055e8e5215b89d2053b547ab0014276ed01c306",
+      "bytes": 359
+    },
+    {
+      "path": "tests/vectors/numtext/shortest.txt",
+      "sha256": "cc6df690b1d0e2306e6fe56d0c48bdd0f6f31fb6cd6273338003e80578a01cbd",
+      "bytes": 1623878
     }
   ]
 }
