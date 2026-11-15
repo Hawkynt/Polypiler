@@ -115,7 +115,9 @@ public sealed class JavaScriptImportTests {
     this._inProcess = true;
     var imported = JavaScriptFixture.OpCodesExpectation().Where(line => line.Status == JavaScriptFixture.Imported).Select(line => line.Function).ToList();
     var module = JavaScriptFixture.Import("OpCodes.js", File.ReadAllText(JavaScriptFixture.OpCodesPath), imported);
-    var scalar = module.Functions.Where(function => function.Parameters.Count > 0 && function.Parameters.All(parameter => !parameter.Type.IsArray)).ToList();
+    // A function that grows a list (#1328) - GetPooledArray(size) - is no scalar function: a drawn size allocates without bound.
+    var scalar = module.Functions.Where(function => function.Parameters.Count > 0 && function.Parameters.All(parameter => !parameter.Type.IsArray)
+      && !Core.IR.IrTree.Nodes(function.Body).Any(node => node is Core.IR.IrCollection { Op: Core.IR.IrCollectionOp.ListAdd })).ToList();
     var calls = JavaScriptCases.BoundaryCalls(scalar).Concat(JavaScriptCases.RandomCalls(scalar, 200)).ToList();
 
     var output = Path.Combine(this._directory, "out");

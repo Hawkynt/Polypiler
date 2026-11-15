@@ -194,12 +194,10 @@ internal sealed partial class Lowering {
     var adds = elements.Select(element => (IrStmt)new IrExprStmt(type.Kind switch {
       IrTypeKind.List => CollectionOp(IrCollectionOp.ListAdd, type, reference, this.Value(element)),
       IrTypeKind.Set => CollectionOp(IrCollectionOp.SetAdd, type, reference, this.Value(element)),
-      _ => element switch {
-        InitializerExpressionSyntax { Expressions: [var key, var entry] } => CollectionOp(IrCollectionOp.MapAdd, type, reference, this.Value(key), this.Value(entry)),
-        AssignmentExpressionSyntax { Left: ImplicitElementAccessSyntax { ArgumentList.Arguments: [var key] } } entry when entry.IsKind(SyntaxKind.SimpleAssignmentExpression)
-          => CollectionOp(IrCollectionOp.MapPut, type, reference, this.Value(key.Expression), this.Value(entry.Right)),
-        _ => throw new UnsupportedException(element, "a dictionary initializer entry other than { key, value } and [key] = value")
-      }
+      // The compiler takes nothing else in the initializer of a dictionary: { k, v } calls Add, [k] = v sets the indexer.
+      _ => element is InitializerExpressionSyntax { Expressions: [var key, var entry] }
+        ? CollectionOp(IrCollectionOp.MapAdd, type, reference, this.Value(key), this.Value(entry))
+        : this.IndexerEntry((AssignmentExpressionSyntax)element, type, reference)
     })).ToList();
     if (declared is not null)
       return (start, adds);
@@ -208,6 +206,10 @@ internal sealed partial class Lowering {
     into.AddRange(adds);
     return (new IrLocalRef(target), []);
   }
+
+  /// <summary>An entry <c>[k] = v</c> of the initializer of a dictionary: the indexer set.</summary>
+  private IrCollection IndexerEntry(AssignmentExpressionSyntax entry, IrType type, IrExpr map)
+    => CollectionOp(IrCollectionOp.MapPut, type, map, this.Value(((ImplicitElementAccessSyntax)entry.Left).ArgumentList.Arguments[0].Expression), this.Value(entry.Right));
 
   /// <summary>
   /// The element of a list or the value of a key of a dictionary as the target of an assignment or a
@@ -326,7 +328,10 @@ internal sealed partial class Lowering {
         default:
           throw new UnsupportedException(loop, "a foreach over a dictionary that deconstructs its entry into anything but two new variables");
       }
-    } else if (loop is ForEachStatementSyntax single) {
+    } else if (loop is not ForEachStatementSyntax single) {
+      // A deconstruction of an element, which no element type of the IR has, is refused as the statement it is.
+      return null;
+    } else {
       var symbol = model.GetDeclaredSymbol(single)!;
       var held = part == "Values" ? type.Element! : type.Key ?? type.Element!;
       // The variable is the local of the loop where it has the element type.
@@ -340,8 +345,6 @@ internal sealed partial class Lowering {
         this._variables[symbol] = item;
       else
         this.Bound(symbol, item, body, loop, single.Type);
-    } else {
-      throw new UnsupportedException(loop, "a foreach that deconstructs an element");
     }
 
     body.AddRange(this.Body(loop.Statement).Statements);

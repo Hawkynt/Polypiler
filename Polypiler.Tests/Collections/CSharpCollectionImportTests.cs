@@ -40,6 +40,7 @@ public sealed class CSharpCollectionImportTests {
   [TestCase("public static int F() { var d = new " + Dictionary + "<string, int>(); d[\"a\"] = 1; d[\"a\"] += 2; return d[\"a\"] + d.Count * 10; }", "13")]
   [TestCase("public static int F() { var s = new System.Collections.Generic.HashSet<string> { \"a\", \"a\" }; int n = 0; foreach (var w in s) n += w.Length; return n * 10 + s.Count; }", "11")]
   [TestCase("public static int F() { var l = new System.Collections.Generic.List<long> { 1 }; int n = 0; foreach (int x in l) n += x; return n; }", "1")]
+  [TestCase("public static int F() => G().Count; static System.Collections.Generic.List<int> G() { return new System.Collections.Generic.List<int> { 1, 2 }; }", "2")]
   public void Method_ComputesWhatDotNetComputes(string method, string outcome)
     => Assert.That(PrototypeFixture.InterpretedOutcome(Imported(method), new PrototypeCall("F", [])), Is.EqualTo(outcome));
 
@@ -68,7 +69,8 @@ public sealed class CSharpCollectionImportTests {
   [TestCase("public static int F() { var l = new System.Collections.Generic.List<B>(); return l.ToArray().Length; } public sealed class B { }", "B[]")]
   [TestCase("public static int F() { return Make(new System.Collections.Generic.List<int> { 1 }); } static int Make(System.Collections.Generic.List<int> l) => l.Count;", "a collection initializer other than the value of a variable or a return")]
   [TestCase("public static int F() { System.Collections.Generic.List<int> l = [.. new int[1]]; return l.Count; }", "a spread in a collection expression")]
-  [TestCase("public static int F() { var d = new " + Dictionary + "<int, int> { { 1, 2, 3 } }; return d.Count; }", "")]
+  [TestCase("public static int F() { var d = new " + Dictionary + "<int, B> { [1] = { V = 2 } }; return d.Count; } public sealed class B { public int V; }", "ObjectInitializerExpression")]
+  [TestCase("public static int F() { var l = new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<int, int>>(); foreach (var (k, v) in l) { } return 0; }", "KeyValuePair<int, int>")]
   [TestCase("public static int F() { var l = new System.Collections.Generic.List<int> { 1 }; return l[0]++; }", "a step of a list element whose value is used")]
   public void Construct_IsRefusedByName(string method, string named) {
     var problems = Problems(method);

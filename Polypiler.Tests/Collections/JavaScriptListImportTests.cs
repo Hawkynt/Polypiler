@@ -66,6 +66,13 @@ public sealed class JavaScriptListImportTests {
     Assert.That(PrototypeFixture.InterpretedOutcome(module, new PrototypeCall("f", [])), Is.EqualTo("20"));
   }
 
+  /// <summary>A copy of a list, a for...of whose variable is wider than the element, a list of records walked live.</summary>
+  [TestCase("export function f() { const a = [1, 2]; a.push(3); const b = [...a]; b.push(4); return a.length * 10 + b.length; }", "34")]
+  [TestCase("export function f() { const a = [1, 2]; a.push(3); let s = 0; for (let x of a) { x = x / 2; s += x; } return s; }", "3")]
+  [TestCase("export function f() { const a = [{ x: 1 }]; a.push({ x: 2 }); let s = 0; for (const p of a) { s = s * 10 + p.x; } return s; }", "12")]
+  public void Construct_ComputesWhatNodeComputes(string source, string outcome)
+    => Assert.That(PrototypeFixture.InterpretedOutcome(Imported(source), new PrototypeCall("f", [])), Is.EqualTo(outcome));
+
   /// <summary>Test design 7: a write at the length appends, one beyond it traps, a read beyond it traps under the caveat of the reads of arrays.</summary>
   [TestCase("a[a.length] = 4; return a.length;", "3")]
   [TestCase("a[1] = 4; return a[1];", "4")]
@@ -93,6 +100,12 @@ public sealed class JavaScriptListImportTests {
   [TestCase("export function f() { const a = [1]; a.push(2); a.y = 3; return 0; }", "a.y")]
   [TestCase("export function f() { const a = new Int32Array(2); let b = [1]; b.push(2); b = a; return 0; }", "'b' holds both")]
   [TestCase("export function f() { const a = [1]; a.push(2); const b = [...a, 3]; return b.length; }", "an array literal with a hole or a spread element")]
+  [TestCase("export function f() { const a = []; a.push(new Map()); const m = a.pop(); return 0; }", "the value of pop of a list of Map<float64, float64>")]
+  [TestCase("class K { constructor() { this.v = 1; } } export function f() { const a = []; a.push(new K()); const b = [...a]; b.push(new K()); return b.length; }", "of which the IR has no array")]
+  [TestCase("export function f() { const b = [...\"ab\"]; b.push(\"c\"); return b.length; }", "a spread of string")]
+  [TestCase("class K { constructor() { this.v = 1; } } export function f() { const a = [new K()]; a.push(new K()); return a.length; }", "a literal of a list of K")]
+  [TestCase("export function f() { const a = [1]; a.length += 1; return 0; }", "a length other than 0")]
+  [TestCase("export function f() { const a = [1]; a.push(2); a[0] ||= 3; return a[0]; }", "a[0] ||= 3")]
   public void Construct_IsRefused(string source, string named)
     => Assert.That(Problems(source), Has.Some.Contains(named));
 

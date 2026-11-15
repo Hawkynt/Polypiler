@@ -56,6 +56,8 @@ public sealed class JavaScriptKeyedImportTests {
   [TestCase("class K { constructor(v) { this.v = v; } } export function f() { const m = new Map(); m.set(1, new K(5)); const k = m.get(1); return k === null ? 0 : k.v; }", "5")]
   [TestCase("export function f() { const m = new Map(); m.set(1, 0.5); let s = 0; for (const [k, v] of m) { s = v; } return s * 10; }", "5")]
   [TestCase("export function f() { const s = new Set(); s.add(1); s.clear(); s.delete(1); return s.size; }", "0")]
+  [TestCase("export function f() { const m = new Map(); m.set(1, 2); m.clear(); return new Map().size + m.size; }", "0")]
+  [TestCase("export function f() { const m = new Map(); m.set(1, 2); let s = 0; for (let [k, v] of m) { k = k / 4; s = k + v; } return s * 4; }", "9")]
   public void Construct_ComputesWhatNodeComputes(string source, string outcome) => Assert.That(Outcome(source), Is.EqualTo(outcome));
 
   /// <summary>Test design 11: what maps and sets do not take is refused by name.</summary>
@@ -70,6 +72,7 @@ public sealed class JavaScriptKeyedImportTests {
   [TestCase("export function f() { const m = new Map([1, 2]); return m.size; }", "an entry of a Map other than [key, value]")]
   [TestCase("export function f() { const s = new Set(\"ab\"); return s.size; }", "new Set of string")]
   [TestCase("export function f() { const m = new WeakMap(); return 0; }", "new WeakMap")]
+  [TestCase("export function f() { const m = new Map(); m.set(1, new Set()); const s = m.get(1); return 0; }", "the value of get of a Map of Set<float64>")]
   public void Construct_IsRefusedByName(string source, string named)
     => Assert.That(Problems(source), Has.Some.Contains(named));
 

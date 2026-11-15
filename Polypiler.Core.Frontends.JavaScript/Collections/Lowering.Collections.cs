@@ -24,7 +24,8 @@ internal sealed partial class Lowering {
 
   /// <summary>
   /// What a list gives as a value - an element, its length, the value of <c>pop</c>, <c>indexOf</c> or
-  /// <c>includes</c>, a new list - or <see langword="null"/> where the expression is about no list.
+  /// <c>includes</c> - or <see langword="null"/> where the expression is about no list. A literal and
+  /// <c>new Array()</c> are lists where the place they go to is one (<see cref="Value"/>).
   /// </summary>
   private IrExpr? ListExpression(Node node) {
     if (this.KeyedExpression(node) is { } keyed)
@@ -38,10 +39,6 @@ internal sealed partial class Lowering {
         return ListOp(IrCollectionOp.ListCount, list, this.Expression(length.Object));
       case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } member } call when this.ListOf(member.Object) is { } list:
         return this.ListCall(call, method, member, list);
-      case ArrayExpression literal when this.ListOf(literal) is { } list:
-        return this.ListLiteral(literal, list);
-      case NewExpression { Callee: Identifier { Name: "Array" } constructor, Arguments.Count: 0 } when !this._model.Bindings.ContainsKey(constructor) && this.ListOf(node) is { } list:
-        return ListOp(IrCollectionOp.ListNew, list);
       default:
         return null;
     }
@@ -223,7 +220,7 @@ internal sealed partial class Lowering {
     var body = this.Body(loop.Body).Statements;
     this._assigned = before;
     if (item != local)
-      body = [new IrDeclare(local, Read(new IrLocalRef(item))), .. body];
+      body = [new IrDeclare(local, this.To(new Typed(Read(new IrLocalRef(item)), JsType.Of(element)), local.Type, id)), .. body];
 
     if (iterated.IsGrowable) {
       statements.Add(new IrForEachCollection(collection, EnumerationMode.Live, item, null, new IrBlock(body)));
