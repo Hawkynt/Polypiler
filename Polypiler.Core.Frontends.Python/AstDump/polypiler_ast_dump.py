@@ -5,7 +5,10 @@ executed. Wire format 1: one JSON object with "format", "python" and either "mod
 "error" (the syntax error). A node is an object whose "_" names its class; "line", "col", "endLine"
 and "endCol" give its range, columns counted in characters from 1. Every field of the node follows
 under its own name. A constant carries "kind" (int, float, bool, none, str, bytes, complex,
-ellipsis) and "value" as text: an int in decimal digits of any size, a float as float.hex().
+ellipsis) and "value" as text: an int in decimal digits of any size, a float as float.hex(). A str
+that holds a surrogate code point carries "codePoints", every code point in order, and its "value" has
+U+FFFD in the place of each surrogate, which not every JSON reader accepts alone; one that holds a lone
+high surrogate right before a lone low one also carries "surrogatePair": true.
 """
 
 import ast
@@ -44,6 +47,14 @@ def constant(value):
     return "ellipsis", None
 
 
+def surrogate(character):
+    return 0xD800 <= ord(character) <= 0xDFFF
+
+
+def surrogate_pair(text):
+    return any(0xD800 <= ord(high) <= 0xDBFF and 0xDC00 <= ord(low) <= 0xDFFF for high, low in zip(text, text[1:]))
+
+
 def node(value, lines):
     if isinstance(value, list):
         return [node(item, lines) for item in value]
@@ -58,6 +69,11 @@ def node(value, lines):
     for name, field in ast.iter_fields(value):
         if isinstance(value, CONSTANTS) and name == "value":
             result["kind"], result["value"] = constant(field)
+            if isinstance(field, str) and any(surrogate(character) for character in field):
+                result["value"] = "".join("\ufffd" if surrogate(character) else character for character in field)
+                result["codePoints"] = [ord(character) for character in field]
+                if surrogate_pair(field):
+                    result["surrogatePair"] = True
         elif name not in ("type_comment", "kind"):
             result[name] = node(field, lines)
     return result

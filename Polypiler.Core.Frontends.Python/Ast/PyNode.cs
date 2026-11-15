@@ -68,6 +68,15 @@ internal sealed class PyNode {
   public string? Text(string field)
     => this._element.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 
+  /// <summary>A field that holds a list of numbers, such as the code points of a str; empty where it is missing.</summary>
+  public IReadOnlyList<int> Numbers(string field)
+    => this._element.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.Array
+      ? [.. value.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.Number).Select(item => item.GetInt32())]
+      : [];
+
+  /// <summary>Whether a field holds <c>true</c>.</summary>
+  public bool Flag(string field) => this._element.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.True;
+
   /// <summary>The class of the operator a field holds, for example <c>Add</c> of a <c>BinOp</c>.</summary>
   public string Operator(string field = "op") => this.Node(field)!.Kind;
 

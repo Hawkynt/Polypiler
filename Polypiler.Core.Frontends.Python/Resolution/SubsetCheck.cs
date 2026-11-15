@@ -377,6 +377,9 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
         var kind = expression.Text("kind");
         if (kind is not ("int" or "float" or "bool" or "none" or "str" or "bytes"))
           this.Refuse(expression, PythonFrontend.UnsupportedDescriptor, $"'{this.Quote(expression)}' is not supported by the Python frontend");
+        else if (expression.Flag("surrogatePair"))
+          this.Refuse(expression, PythonFrontend.UnsupportedStringDescriptor,
+            "string operation 'a str of a lone high surrogate before a lone low one, which the UTF-16 of the IR holds as one code point,' is not supported by the Python frontend");
 
         break;
       case "Name":

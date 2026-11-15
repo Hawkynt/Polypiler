@@ -93,7 +93,7 @@ internal sealed partial class FunctionLowering {
       case "float":
         return (Float(Constants.Float(node.Text("value")!)), PyType.Float);
       case "str":
-        return (new IrStrConst(node.Text("value")!), PyType.Str);
+        return (new IrStrConst(Constants.Text(node)), PyType.Str);
       case "bytes":
         return (this.BytesConstant(System.Convert.FromHexString(node.Text("value")!)), PyType.Bytes);
       case "none":
