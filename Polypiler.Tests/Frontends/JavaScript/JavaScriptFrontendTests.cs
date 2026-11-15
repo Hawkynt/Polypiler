@@ -626,7 +626,7 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("a.x = 1; return a;", "a.x")]
   [TestCase("d.length = 1; return a;", "d.length")]
   [TestCase("const p = new Proxy(d, d); return a;", "new Proxy")]
-  [TestCase("function* g() { yield 1; } return a;", "a generator")]
+  [TestCase("function* g() { yield 1; } return a;", "a nested generator")]
   [TestCase("try { a = 1; } catch ({ m }) { a = 2; } return a;", "a destructuring catch binding")]
   [TestCase("[a, u] = [u, a]; return a;", "[a, u]")]
   [TestCase("t **= 2; return a;", "** on boolean and number")]
@@ -676,7 +676,7 @@ public sealed class JavaScriptFrontendTests {
   }
 
   /// <summary>Test design 11: what makes a whole function unsupported, reported at the function or the parameter.</summary>
-  [TestCase("function* f() { }", "a generator", 1)]
+  [TestCase("async function* f() { }", "an async generator", 1)]
   [TestCase("async function f() { }", "an async function", 1)]
   [TestCase("function f(a = 1) { }", "a default parameter value", 12)]
   [TestCase("function f(...a) { }", "a rest parameter", 12)]
