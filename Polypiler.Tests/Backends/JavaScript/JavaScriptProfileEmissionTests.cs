@@ -118,8 +118,15 @@ public sealed class JavaScriptProfileEmissionTests {
       "// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.",
       "\"use strict\";",
       "",
+      "class IndexOutOfRangeError extends RangeError {",
+      "  constructor(message) {",
+      "    super(message);",
+      "    this.name = \"IndexOutOfRangeError\";",
+      "  }",
+      "}",
+      "",
       "function $get(array, index) {",
-      "  if (index < 0 || index >= array.length) throw new RangeError(\"index out of range\");",
+      "  if (index < 0 || index >= array.length) throw new IndexOutOfRangeError(\"index out of range\");",
       "  return array[index];",
       "}",
       "",
@@ -163,8 +170,16 @@ public sealed class JavaScriptProfileEmissionTests {
       "var Checksums = (function () {",
       "  \"use strict\";",
       "",
+      "  function IndexOutOfRangeError(message) {",
+      "    this.name = \"IndexOutOfRangeError\";",
+      "    this.message = message;",
+      "    this.stack = new RangeError(message).stack;",
+      "  }",
+      "  IndexOutOfRangeError.prototype = Object.create(RangeError.prototype);",
+      "  IndexOutOfRangeError.prototype.constructor = IndexOutOfRangeError;",
+      "",
       "  function $get(array, index) {",
-      "    if (index < 0 || index >= array.length) throw new RangeError(\"index out of range\");",
+      "    if (index < 0 || index >= array.length) throw new IndexOutOfRangeError(\"index out of range\");",
       "    return array[index];",
       "  }",
       "",
@@ -560,8 +575,8 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(text, Does.Contain("const $view = new DataView(new ArrayBuffer(8));")
       .And.Contain("  return { hi: $view.getUint32(0), lo: $view.getUint32(4) };")
       .And.Contain("  $view.setUint32(0, value.hi);\n  $view.setUint32(4, value.lo);\n  return $view.getFloat64(0);")
-      .And.Contain("  if (n === 0) throw new RangeError(\"divide by zero\");")
-      .And.Contain("  if (a.hi === 2147483648 && a.lo === 0 && b.hi === 4294967295 && b.lo === 4294967295) throw new RangeError(\"integer overflow\");")
+      .And.Contain("  if (n === 0) throw new DivideByZeroError(\"divide by zero\");")
+      .And.Contain("  if (a.hi === 2147483648 && a.lo === 0 && b.hi === 4294967295 && b.lo === 4294967295) throw new OverflowError(\"integer overflow\");")
       .And.Contain("  return Math.fround((value.hi >>> 11) * 4294967296 + lo) * 2048;")
       .And.Not.Contain("BigInt").And.Not.Contain("var "));
     Assert.That(text.Split('\n').Count(line => line.StartsWith("function $", StringComparison.Ordinal)), Is.EqualTo(Helpers(text).Distinct().Count()));
@@ -605,6 +620,8 @@ public sealed class JavaScriptProfileEmissionTests {
       ["let"] = ("public static int F(int a) { int b = a; return b; }", "let b = a;", "var b = a;"),
       ["const"] = ("const int K = 2; public static int F() => K;", "const K = 2;", "var K = 2;"),
       ["export"] = ("public static int F() => 1;", "export function F() {", "exports.F = F;"),
+      ["=>"] = ("public static int F(int a) { System.Func<int, int> f = null; f = v => v + a; return f(a); }", "f = (v) => ", "f = function (v) {"),
+      ["let per-iteration binding"] = ("public static int F(int[] a) { System.Func<int> g = null; foreach (var v in a) g = () => v; return g(); }", "let v = ", "$c1.v = "),
       ["Math.imul"] = ("public static int F(int a) => a * a;", "Math.imul(a, a)", "$imul(a, a)"),
       ["Math.log2"] = ("public static float F(float a) => System.MathF.Log2(a);", "Math.log2(", "Float"),
       ["Math.log10"] = ("public static float F(float a) => System.MathF.Log10(a);", "Math.log10(", "Float"),
@@ -638,6 +655,14 @@ public sealed class JavaScriptProfileEmissionTests {
       [".setUint32"] = (bits, "$view.setUint32(0, value.hi);", "function $float64(value) {\n  var exponent"),
       [".getUint32"] = (bits, "hi: $view.getUint32(0)", "function $bits64(value) {\n  if (value !== value)"),
       [".fill"] = ("public static void F(int[] a) { System.Array.Fill(a, 7); }", "a.fill(7)", "$fill(a, 7)"),
+      ["class"] = ("public sealed class K { public int V; } public static int F() => new K().V;", "class K {", "function K("),
+      ["class accessor"] = ("public sealed class K { public int V => 1; } public static int F() => new K().V;", "get V() {", "Object.defineProperty(K.prototype, \"V\""),
+      ["class fields"] = ("public sealed class K { public int V; } public static int F() => new K().V;", "\n  V = 0;", "this.V = 0;"),
+      ["#private"] = ("public sealed class K { private int _v; public int Get() => _v; } public static int F() => new K().Get();", "this.#v", "this._v"),
+      ["static fields"] = ("public sealed class K { public static int S = 2; } public static int F() => K.S;", "static S = 2;", "K.S = 2;"),
+      ["extends"] = ("public class B { } public sealed class K : B { } public static bool F() => new K() is K;", "class K extends B {", "K.prototype = Object.create(B.prototype);"),
+      ["super"] = ("public class B { public virtual int M() => 1; } public sealed class K : B { public override int M() => base.M() + 1; } public static int F() => new K().M();",
+        "super.M()", "B.prototype.M.call(this)"),
       ["shorthand property"] = ("public struct V { public double X; public V(double x) { X = x; } } public static V F(double X) => new V(X);", "return { X };", "return { X: X };"),
       ["BigInt"] = ("public static long F(int a) => a;", "BigInt(a)", "$sx64(a)"),
       ["BigInt.asIntN"] = ("public static long F(long a) => a + a;", "BigInt.asIntN(64, a + a)", "$add64(a, a)"),
@@ -652,18 +677,33 @@ public sealed class JavaScriptProfileEmissionTests {
       [".setInt16"] = (Write("Int16", "short"), "\"setInt16\"", "$vat(s, 0, 2)"),
       [".setUint16"] = (Write("UInt16", "ushort"), "\"setUint16\"", "$vat(s, 0, 2)"),
       [".getBigUint64"] = (Read("UInt64", "ulong"), ".getBigUint64(0, true)", "$load64("),
-      [".setBigUint64"] = (Write("UInt64", "ulong"), "\"setBigUint64\"", "$store64(")
+      [".setBigUint64"] = (Write("UInt64", "ulong"), "\"setBigUint64\"", "$store64("),
+      ["??"] = ("public static int F(int? a) => a ?? 5;", "a ?? 5", "a != null ? a : 5"),
+      ["?."] = ("public static int F(int[] a) => a?.Length ?? -1;", "a?.length", "(a == null) ? null : a.length"),
+      ["??="] = ("public static int F(int? a) { a ??= 3; return a.Value; }", "a ??= 3;", "if (a == null) {"),
+      ["optional catch binding"] = ("public static int F() { try { return 1; } catch { return 2; } }", "} catch {", "} catch ($e) {"),
+      ["Map"] = ("public static int F() { var d = new System.Collections.Generic.Dictionary<int, int>(); d[1] = 2; return d.Count; }", "new Map()", "new $Keyed(true, 0)"),
+      ["Set"] = ("public static int F() { var s = new System.Collections.Generic.HashSet<int>(); s.Add(1); return s.Count; }", "new Set()", "new $Keyed(true, 0)"),
+      [".entries"] = ("public static int F() { var d = new System.Collections.Generic.Dictionary<int, int>(); int s = 0; foreach (var e in d) s += e.Key + e.Value; return s; }",
+        "d.entries()", "d.$u.length"),
+      [".keys"] = ("public static int F() { var d = new System.Collections.Generic.Dictionary<int, int>(); int s = 0; foreach (var k in d.Keys) s += k; return s; }", "d.keys()", "d.$u.length"),
+      [".values"] = ("public static int F() { var d = new System.Collections.Generic.HashSet<int>(); int s = 0; foreach (var k in d) s += k; return s; }", "d.values()", "d.$u.length"),
+      [".next"] = ("public static int F() { var d = new System.Collections.Generic.HashSet<int>(); int s = 0; foreach (var k in d) s += k; return s; }", "iterator.next()", "d.$u.length"),
+      ["Error cause"] = ("public class X : System.Exception { public X(string m, System.Exception i) : base(m, i) { } } public static string F() => new X(\"a\", null).Message;",
+        "super(m, { cause: i });", "this.cause = i;")
     };
     // The methods of strings begin at levels this test does not compare; JavaScriptStringEmissionTests checks each at its first level and the one before.
+    // The collections of JavaScript have no C# source; JavaScriptCollectionEmissionTests checks them at their first level and the one before.
     var replaceable = JavaScriptCapabilities.Standard.Entries
-      .Where(entry => entry is { Emitted: true, Replacement: not null } && !Polypiler.Tests.String.JavaScriptStringEmissionTests.Methods.Contains(entry.Name)).ToList();
+      .Where(entry => entry is { Emitted: true, Replacement: not null } && !Polypiler.Tests.String.JavaScriptStringEmissionTests.Methods.Contains(entry.Name)
+        && !Polypiler.Tests.Collections.JavaScriptCollectionEmissionTests.Capabilities.Contains(entry.Name)).ToList();
     Assert.That(cases.Keys, Is.EquivalentTo(replaceable.Select(entry => entry.Name)));
     foreach (var entry in replaceable) {
       var (source, native, replacement) = cases[entry.Name];
       // The pair of halves has two forms itself: a typed array of 32-bit halves needs the level that brought the
       // typed arrays, so what is native from ECMAScript 2020 is compared with ECMAScript 2017, the rest with ECMAScript 5.
-      var first = entry.Since == 2020 ? _es2020 : entry.Name is ".setUint32" or ".getUint32" ? _es2017 : _es2015;
-      var last = entry.Since == 2020 ? _es2017 : _es5;
+      var first = entry.Since >= 2021 ? JavaScriptProfile.Default : entry.Since is 2019 or 2020 ? _es2020 : entry.Name is ".setUint32" or ".getUint32" ? _es2017 : _es2015;
+      var last = entry.Since >= 2021 ? _es2020 : entry.Since is 2019 or 2020 ? _es2017 : _es5;
       Assert.That(Emit(source, first), Does.Contain(native), $"{entry.Name} is native in {first}");
       Assert.That(Emit(source, last), Does.Not.Contain(native).And.Contain(replacement), $"{entry.Name} is replaced in {last}");
       if (entry.TypedArray)
@@ -675,7 +715,7 @@ public sealed class JavaScriptProfileEmissionTests {
   [Test, Category("Slow")]
   public void NeverEmittedCapabilities_AreInNoFile() {
     var never = JavaScriptCapabilities.Standard.Entries.Where(entry => !entry.Emitted).Select(entry => entry.Name).Where(name => name != "numeric separators").ToList();
-    Assert.That(never, Has.Count.EqualTo(12));
+    Assert.That(never, Has.Count.EqualTo(11));
     foreach (var fixture in PrototypeFixture.Names)
       foreach (var profile in new[] { _es5, _es2017, JavaScriptProfile.Default }) {
         var text = JavaScriptEmitter.Emit(PrototypeFixture.Imported(fixture), profile).Single().Content;

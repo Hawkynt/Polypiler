@@ -28,16 +28,30 @@ public static partial class CSharpEmitter {
     /// <summary>Whether an expression is a view the profile writes as an <c>ArraySegment&lt;T&gt;</c>.</summary>
     private bool Segmented(IrExpr expression) => expression.Type.IsView && !this.Spans;
 
-    /// <summary>The C# type of a view in the profile.</summary>
+    /// <summary>The C# type of a view or a memory in the profile.</summary>
     private string ViewTypeName(IrType type) {
       var element = this.TypeName(type.Element!);
       return !this.Spans ? $"global::System.ArraySegment<{element}>"
-        : type.Kind == IrTypeKind.Span ? $"global::System.Span<{element}>"
-        : $"global::System.ReadOnlySpan<{element}>";
+        : type.Kind switch {
+          IrTypeKind.Span => $"global::System.Span<{element}>",
+          IrTypeKind.ReadOnlySpan => $"global::System.ReadOnlySpan<{element}>",
+          IrTypeKind.Memory => $"global::System.Memory<{element}>",
+          _ => $"global::System.ReadOnlyMemory<{element}>"
+        };
     }
 
+    /// <summary>
+    /// The first value of a field of a memory type where the profile has no spans: the segment of an empty
+    /// array, which slices and copies as an empty <c>Memory&lt;T&gt;</c> does; the default segment has no
+    /// array, and the helpers would throw on it. <see langword="null"/> for any other field and profile.
+    /// </summary>
+    private CsExpression? EmptyMemory(IrType type)
+      => type.IsMemory && !this.Spans
+        ? new CsObjectCreation(new CsType(this.ViewTypeName(type)), [new CsArrayCreation(new CsType(this.TypeName(type.Element!)), Integer(0), null)])
+        : null;
+
     /// <summary>A call of a helper of the views, with the arguments as they stand.</summary>
-    private CsInvocation ViewHelper(CSharpHelper helper, params CsExpression[] arguments) => new(new CsName(this.Helper(helper)), arguments);
+    private CsInvocation ViewHelper(CSharpHelper helper, params CsExpression[] arguments) => new(CSharpFragments.Name(this.Helper(helper)), arguments);
 
     /// <summary>A call of a member of a value: <c>value.Member(arguments)</c>.</summary>
     private CsInvocation Member(IrExpr target, string member, params CsExpression[] arguments)
@@ -55,7 +69,7 @@ public static partial class CSharpEmitter {
     /// as an <c>int</c> C# made of a narrow integer would not tell the compiler what <c>T</c> is.
     /// </summary>
     private CsInvocation Typed(CSharpHelper helper, IrType element, params CsExpression[] arguments)
-      => new(new CsName($"{this.Helper(helper)}<{this.TypeName(element)}>"), arguments);
+      => new(CSharpFragments.Name($"{this.Helper(helper)}<{this.TypeName(element)}>"), arguments);
 
     /// <summary>An element of a view of a profile without spans, written through its helper.</summary>
     private CsExpression SegmentStore(IrStore store)
@@ -90,9 +104,13 @@ public static partial class CSharpEmitter {
       var rest = arguments.Skip(1).Select(argument => this.Text(Promoted(argument))).ToArray();
       switch (intrinsic.Op) {
         case IrIntrinsicOp.ViewOf when first.Type.IsArray:
-          return Static("global::System.MemoryExtensions.AsSpan", [this.Text(first), .. rest]);
+          return Static(intrinsic.Type.IsMemory ? "global::System.MemoryExtensions.AsMemory" : "global::System.MemoryExtensions.AsSpan", [this.Text(first), .. rest]);
+        case IrIntrinsicOp.ViewOf when first.Type.IsMemory && intrinsic.Type.IsView:
+          // The span of a memory, then the part of it.
+          var span = new CsMemberAccess(this.Operand(first, Primary), "Span");
+          return arguments.Count == 1 ? span : new CsInvocation(new CsMemberAccess(span, "Slice"), rest);
         case IrIntrinsicOp.ViewOf when arguments.Count == 1:
-          // A writable view is a read-only one by the conversion C# applies itself.
+          // A writable view or memory is a read-only one by the conversion C# applies itself.
           return this.Text(first);
         case IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice:
           return this.Member(first, "Slice", rest);

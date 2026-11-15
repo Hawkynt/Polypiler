@@ -24,7 +24,7 @@ internal sealed partial class Lowering {
   private readonly Dictionary<ISymbol, IrGlobal> _globals = new(SymbolEqualityComparer.Default);
 
   /// <summary>The fields that become globals, in source order, with the file and the model they are read with.</summary>
-  private readonly List<(string Path, SemanticModel Model, VariableDeclaratorSyntax Variable, IFieldSymbol Symbol, IrType Type)> _state = [];
+  private readonly List<(string Path, BoundModel Model, VariableDeclaratorSyntax Variable, IFieldSymbol Symbol, IrType Type)> _state = [];
 
   /// <summary>The globals in source order, each with the declaration its initializer stands in.</summary>
   private readonly List<(IrGlobal Global, string Path, VariableDeclaratorSyntax Variable)> _initialized = [];
@@ -37,14 +37,14 @@ internal sealed partial class Lowering {
   /// assignment, <c>++</c> or <c>--</c> of an element, or as the array <c>Array.Fill</c> or
   /// <c>Array.Clear</c> fill or <c>Array.Copy</c> copies into. Such an array is state, not a table.
   /// </summary>
-  private void FindWrittenArrays(IEnumerable<(string Path, SemanticModel Model, ClassDeclarationSyntax Type)> classes) {
+  private void FindWrittenArrays(IEnumerable<(string Path, BoundModel Model, ClassDeclarationSyntax Type)> classes) {
     foreach (var (_, semantics, type) in classes)
       foreach (var name in type.DescendantNodes().OfType<IdentifierNameSyntax>())
         if (semantics.GetSymbolInfo(name).Symbol is IFieldSymbol { IsStatic: true, Type: IArrayTypeSymbol } field && IsElementWrite(semantics, name))
           this._writtenArrays.Add(field);
   }
 
-  private static bool IsElementWrite(SemanticModel semantics, IdentifierNameSyntax name) {
+  private static bool IsElementWrite(BoundModel semantics, IdentifierNameSyntax name) {
     ExpressionSyntax array = name.Parent is MemberAccessExpressionSyntax member && member.Name == name ? member : name;
     switch (array.Parent) {
       case ElementAccessExpressionSyntax element when element.Expression == array:
@@ -98,9 +98,9 @@ internal sealed partial class Lowering {
   /// module cannot assign what it exports, and the field made private would no longer be what the
   /// class shows. A struct is not state yet.
   /// </summary>
-  private void State(FieldDeclarationSyntax field, VariableDeclaratorSyntax variable, IFieldSymbol symbol, IrType type) {
+  private void State(FieldDeclarationSyntax field, VariableDeclaratorSyntax variable, IFieldSymbol symbol, IrType type, bool owned = false) {
     var readOnly = field.Modifiers.Any(SyntaxKind.ReadOnlyKeyword);
-    if (symbol.DeclaredAccessibility is Accessibility.Public or Accessibility.Protected or Accessibility.ProtectedOrInternal && (!readOnly || type.IsArray))
+    if (!owned && symbol.DeclaredAccessibility is Accessibility.Public or Accessibility.Protected or Accessibility.ProtectedOrInternal && (!readOnly || type.IsArray))
       throw new UnsupportedException(variable, $"a public mutable static field {symbol.Name}");
 
     if ((type.Element ?? type).IsStruct)
@@ -128,7 +128,8 @@ internal sealed partial class Lowering {
           InitializerExpressionSyntax list => this.ArrayOf(type, list),
           { } value => this.Value(value)
         };
-        var global = new IrGlobal(symbol.Name, type, initializer);
+        // A static field of a class is named after its class, so that two classes may each have one of a name.
+        var global = new IrGlobal(this._staticOwners.TryGetValue(symbol, out var owner) ? $"{owner.Name}.{symbol.Name}" : symbol.Name, type, initializer);
         this._globals[symbol] = global;
         this._initialized.Add((global, file, variable));
       } catch (UnsupportedException unsupported) {

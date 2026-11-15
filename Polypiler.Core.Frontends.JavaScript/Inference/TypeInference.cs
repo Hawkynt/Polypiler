@@ -19,11 +19,17 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// <summary>The shapes of the object literals of the file, which become its structs.</summary>
   public Shapes Shapes { get; } = new();
 
+  /// <summary>The enum objects of the file by name, which every function sees wherever no local, constant or variable of the module hides them.</summary>
+  public IReadOnlyDictionary<string, EnumObject> Enums { get; init; } = new Dictionary<string, EnumObject>();
+
   private static readonly Regex _whiteSpace = new(@"\s+", RegexOptions.CultureInvariant);
 
   private readonly Dictionary<Candidate, FunctionModel> _models = [];
   private readonly Dictionary<FunctionModel, Binder> _binders = [];
-  private readonly Dictionary<(Node, Coercion), JsType> _known = [];
+  private readonly Dictionary<(FunctionModel?, Node, Coercion), JsType> _known = [];
+
+  /// <summary>The copy of a function each call that the import gave one calls instead of the function, by the callee of the call.</summary>
+  public IReadOnlyDictionary<Node, Candidate> Redirects { get; init; } = new Dictionary<Node, Candidate>();
   private FunctionModel? _scope;
 
   /// <summary>Makes a function the one whose expressions are typed.</summary>
@@ -53,9 +59,12 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     if (model.Problem is null)
       this._binders[model].Bind();
 
-    // A function without a return returns nothing, which is known before any type is.
+    // A function without a return returns nothing, which is known before any type is; one that
+    // returns a value and can also end without one returns undefined there.
     if (!model.Flows.Exists(flow => flow.Kind == FlowKind.Return))
       model.Result = JsType.Undefined;
+    else if (model.Problem is null && candidate.Function.Body is FunctionBody block && Completes.MayComplete(block.Body))
+      model.Result = JsType.UndefinedValue;
 
     return model;
   }
@@ -113,16 +122,17 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       if (models.Contains(model))
         continue;
 
-      model.IsPublic = isPublic(candidate);
+      model.IsPublic = !candidate.IsNested && isPublic(candidate);
       models.Add(model);
-      foreach (var callee in model.Callees)
+      foreach (var callee in model.Callees.Concat(model.Nested.Values))
         pending.Enqueue(callee);
     }
 
     var called = this.Flowing(models).SelectMany(model => model.Flows).Where(flow => flow.Kind == FlowKind.Argument).Select(flow => flow.Callee).ToHashSet();
+    // A nested function is called through its values only: its parameters take what those calls pass.
     foreach (var model in models)
       foreach (var parameter in model.Parameters)
-        this.Seed(model, parameter, model.IsPublic || !called.Contains(model.Candidate));
+        this.Seed(model, parameter, !model.Candidate.IsNested && (model.IsPublic || !called.Contains(model.Candidate)));
 
     do {
       for (var changed = true; changed;) {
@@ -132,14 +142,21 @@ internal sealed partial class TypeInference(string path, string source, List<Can
           foreach (var flow in model.Flows)
             changed |= this.Apply(model, flow);
         }
+
+        changed |= this.Unify();
       }
     } while (this.Promote([.. this.Flowing(models)]));
 
-    // Nothing in the file says what array a parameter is that no call passes one to.
+    this.Sign(models);
+
+    // Nothing in the file says what array a parameter is that no call passes one to; calls that pass arrays of two kinds say two.
     foreach (var model in models)
       foreach (var parameter in model.Parameters.Where(parameter => parameter.IsArrayByCall && parameter.Entry.Kind != JsKind.Array))
-        model.Problem ??= this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingTypeDescriptor,
-          $"parameter '{parameter.Name}' of '{model.Candidate.Name}' is used as an array and needs a JSDoc type");
+        model.Problem ??= parameter.Entry.Kind == JsKind.Conflict
+          ? this.Diagnose(parameter.EntryEvidence ?? parameter.Declaration, JavaScriptFrontend.MixedKindsDescriptor,
+            $"'{parameter.Name}' holds both {parameter.Entry.Kinds.First} and {parameter.Entry.Kinds.Second}")
+          : this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingTypeDescriptor,
+            $"parameter '{parameter.Name}' of '{model.Candidate.Name}' is used as an array and needs a JSDoc type");
 
     return models;
   }
@@ -181,13 +198,24 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       parameter.Type = parameter.Entry = JsType.F64;
       parameter.Reason = "no JSDoc type";
     }
+
+    // A parameter the function compares with null or undefined is one a caller may pass them as (#1322).
+    if (parameter.ComparedWithNull)
+      parameter.Type = parameter.Entry = JsType.Join(parameter.Type, JsType.Null);
+
+    if (parameter.ComparedWithUndefined)
+      parameter.Type = parameter.Entry = JsType.Join(parameter.Type, JsType.UndefinedValue);
   }
 
   /// <summary>Lets the value of one flow reach its place; says whether the type of the place changed.</summary>
   private bool Apply(FunctionModel model, Flow flow) {
     switch (flow.Kind) {
       case FlowKind.Assign:
-        return this.Reach(flow.Target!, this.Of(flow.Node), flow.Node);
+        return this.Reach(flow.Target!, this.Of(flow.Node), flow.Node) | this.Alias(model, flow.Node, flow.Target!.Type);
+      case FlowKind.Grow:
+        return this.Grow(flow);
+      case FlowKind.Entry:
+        return this.Entry(flow);
       case FlowKind.Compound:
         return this.Reach(flow.Target!, this.Combined((AssignmentExpression)flow.Node), flow.Node);
       case FlowKind.Step:
@@ -200,10 +228,12 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         return flow.Target!.Type is { Kind: JsKind.Array, IsPlain: true } stepped
           && this.Reach(flow.Target, JsType.ArrayOf(Stepped(stepped.Element!), true), flow.Node);
       case FlowKind.Return:
-        var argument = ((ReturnStatement)flow.Node).Argument;
-        var result = JsType.Join(model.Result, argument is null ? JsType.Undefined : this.Of(argument));
+        var argument = Returned(flow);
+        var result = JsType.Join(model.Result, argument is null ? JsType.UndefinedValue : this.Of(argument));
+        // A returned variable is the list the result is (#1328).
+        var aliased = argument is not null && this.Alias(model, argument, result);
         if (result == model.Result)
-          return false;
+          return aliased;
 
         if (Decides(model.Result, result))
           model.ResultEvidence = argument ?? flow.Node;
@@ -214,8 +244,14 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       case FlowKind.Field:
         var key = ((Identifier)((Property)flow.Node).Key).Name;
         return this.Of(flow.Source!).Shape?.TypeOf(key) is { } value && this.Reach(flow.Target!, value, flow.Node);
+      case FlowKind.FieldStore or FlowKind.FieldStep or FlowKind.MethodArgument:
+        return this.ApplyMember(model, flow);
+      case FlowKind.Invoke:
+        return this.Invoke((CallExpression)flow.Node);
       default:
-        return this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Declared: null } parameter && this.Pass(parameter, this.Of(flow.Node), flow.Node);
+        var called = this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index);
+        return (called is { Declared: null } parameter && this.Pass(parameter, flow.Missing ? JsType.UndefinedValue : this.Of(flow.Node), flow.Node))
+          | (called is not null && !flow.Missing && this.Alias(model, flow.Node, called.Type));
     }
   }
 
@@ -274,7 +310,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
           promoted |= this.Pass(parameter, JsType.F64, flow.Node);
         else if (flow.Kind is FlowKind.Assign or FlowKind.Compound or FlowKind.Step && flow.Target!.Type.Kind == JsKind.Unknown)
           promoted |= this.Reach(flow.Target, JsType.F64, flow.Node);
-        else if (flow.Kind == FlowKind.Return && model.Result.Kind == JsKind.Unknown && ((ReturnStatement)flow.Node).Argument is { } argument) {
+        else if (flow.Kind == FlowKind.Return && model.Result.Kind == JsKind.Unknown && Returned(flow) is { } argument) {
           model.Result = JsType.F64;
           model.ResultEvidence = argument;
           this._known.Clear();

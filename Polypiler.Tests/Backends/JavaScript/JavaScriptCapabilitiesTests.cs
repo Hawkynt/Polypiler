@@ -23,15 +23,38 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("const", 2015, "var")]
   [TestCase("export", 2015, "exports")]
   [TestCase("=>", 2015, "function")]
+  [TestCase("let per-iteration binding", 2015, "environment object")]
   [TestCase("**", 2016, "Math.pow")]
   [TestCase("numeric separators", 2021, "digits")]
   [TestCase("| 0", 5, null)]
   [TestCase(">>> 0", 5, null)]
   [TestCase("object literal", 5, null)]
   [TestCase("shorthand property", 2015, "key: key")]
+  [TestCase("class", 2015, "function")]
+  [TestCase("class accessor", 2015, "Object.defineProperty")]
+  [TestCase("class fields", 2022, "constructor assignments")]
+  [TestCase("#private", 2022, "_name")]
+  [TestCase("static fields", 2022, "assignment after the class")]
+  [TestCase("Object", 5, null)]
+  [TestCase("Object.defineProperty", 5, null)]
+  [TestCase("extends", 2015, "Object.create chain")]
+  [TestCase("super", 2015, "Base.prototype.m.call(this, …)")]
+  [TestCase("Object.create", 5, null)]
+  [TestCase("instanceof", 5, null)]
+  [TestCase(".call", 5, null)]
+  [TestCase("TypeError", 5, null)]
+  [TestCase("??", 2020, "!= null ?")]
+  [TestCase("?.", 2020, "== null ?")]
+  [TestCase("??=", 2021, "!= null ?")]
   [TestCase("NaN", 5, null)]
   [TestCase("Infinity", 5, null)]
   [TestCase("RangeError", 5, null)]
+  [TestCase("Error", 5, null)]
+  [TestCase("Error.prototype", 5, null)]
+  [TestCase("RangeError.prototype", 5, null)]
+  [TestCase("TypeError.prototype", 5, null)]
+  [TestCase("optional catch binding", 2019, "catch (e)")]
+  [TestCase("Error cause", 2022, ".cause =")]
   [TestCase("Math", 5, null)]
   [TestCase("Math.abs", 5, null)]
   [TestCase("Math.min", 5, null)]
@@ -126,6 +149,32 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase(".trimStart", 2019, "$trimEcma")]
   [TestCase(".trimEnd", 2019, "$trimEcma")]
   [TestCase(".replaceAll", 2021, ".split")]
+  [TestCase("Array", 5, null)]
+  [TestCase("Array.prototype", 5, null)]
+  [TestCase(".slice", 5, null)]
+  [TestCase(".map", 5, null)]
+  [TestCase(".push", 5, null)]
+  [TestCase(".pop", 5, null)]
+  [TestCase(".splice", 5, null)]
+  [TestCase(".includes of an array", 2016, "$lincludes")]
+  [TestCase("Map", 2015, "$Keyed")]
+  [TestCase("Set", 2015, "$Keyed")]
+  [TestCase(".get", 5, null)]
+  [TestCase(".has", 5, null)]
+  [TestCase(".delete", 5, null)]
+  [TestCase(".clear", 5, null)]
+  [TestCase(".add", 5, null)]
+  [TestCase(".entries", 2015, "$Keyed")]
+  [TestCase(".keys", 2015, "$Keyed")]
+  [TestCase(".values", 2015, "$Keyed")]
+  [TestCase(".next", 2015, "$Keyed")]
+  [TestCase(".toString", 5, null)]
+  [TestCase(".toFixed", 5, null)]
+  [TestCase(".toPrecision", 5, null)]
+  [TestCase(".toUpperCase", 5, null)]
+  [TestCase("parseFloat", 5, null)]
+  [TestCase("parseInt", 5, null)]
+  [TestCase("Object.freeze", 5, null)]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
     Assert.That((entry.Name, entry.Since, entry.Replacement), Is.EqualTo((name, since, replacement)));
@@ -157,7 +206,7 @@ public sealed class JavaScriptCapabilitiesTests {
   [Test]
   public void Standard_NamesWhatIsNeverEmitted()
     => Assert.That(_table.Entries.Where(entry => !entry.Emitted).Select(entry => entry.Name),
-      Is.EquivalentTo(new[] { "=>", "**", "numeric separators", "Number.isNaN", "globalThis", "Math.asin", "Math.acos", "Math.atan", "Math.asinh", "Math.acosh", "Math.atanh", "Math.expm1", "Math.log1p" }));
+      Is.EquivalentTo(new[] { "**", "numeric separators", "Number.isNaN", "globalThis", "Math.asin", "Math.acos", "Math.atan", "Math.asinh", "Math.acosh", "Math.atanh", "Math.expm1", "Math.log1p" }));
 
   /// <summary>Everything above ECMAScript 5 that the emitter writes has a replacement, so no module is refused today.</summary>
   [Test]
@@ -183,6 +232,12 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("numeric separators", "es2022", true)]
   [TestCase(".fill", "es5", false)]
   [TestCase(".fill", "es2015", true)]
+  [TestCase("??", "es2017", false)]
+  [TestCase("??", "es2020", true)]
+  [TestCase("?.", "es2017", false)]
+  [TestCase("?.", "es2020", true)]
+  [TestCase("??=", "es2020", false)]
+  [TestCase("??=", "es2022", true)]
   public void Has_FollowsTheLevel(string name, string level, bool expected)
     => Assert.That(_table.Has(name, Profile(level)), Is.EqualTo(expected));
 
@@ -228,8 +283,9 @@ public sealed class JavaScriptCapabilitiesTests {
   [Test]
   public void Globals_AreTheIdentifiersTheEntriesStartWith()
     => Assert.That(_table.Globals(), Is.EquivalentTo(new[] {
-      "NaN", "Infinity", "RangeError", "Math", "Number", "globalThis", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array",
-      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String"
+      "NaN", "Infinity", "RangeError", "Error", "TypeError", "Math", "Number", "globalThis", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array",
+      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String", "Object", "Array", "Map", "Set",
+      "parseFloat", "parseInt"
     }));
 
   [Test]

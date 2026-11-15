@@ -117,8 +117,16 @@ public sealed class JavaScriptImportTests {
     this._inProcess = true;
     var imported = JavaScriptFixture.OpCodesExpectation().Where(line => line.Status == JavaScriptFixture.Imported).Select(line => line.Function).ToList();
     var module = JavaScriptFixture.Import("OpCodes.js", File.ReadAllText(JavaScriptFixture.OpCodesPath), imported);
-    var scalar = module.Functions.Where(function => function.Parameters.Count > 0 && function.Parameters.All(parameter => !parameter.Type.IsArray)).ToList();
-    var calls = JavaScriptCases.BoundaryCalls(scalar).Concat(JavaScriptCases.RandomCalls(scalar, 200)).ToList();
+    // A function that grows a list (#1328) - GetPooledArray(size) - is no scalar function: a drawn size allocates without bound.
+    var scalar = module.Functions.Where(function => function.Parameters.Count > 0 && function.Parameters.All(parameter => !parameter.Type.IsArray)
+      && !Core.IR.IrTree.Nodes(function.Body).Any(node => node is Core.IR.IrCollection { Op: Core.IR.IrCollectionOp.ListAdd })).ToList();
+    // A function that allocates an array of a length it is given - CreateArray(length, value) - makes
+    // the original exhaust node's heap at the boundary of its parameter (new Array(4294967295) filled
+    // element by element): such a call is no test of the import, so its sizes stay below 2^16.
+    var allocating = scalar.Where(function => Core.IR.IrTree.Nodes(function.Body).Any(node => node is Core.IR.IrNewArray)).Select(function => function.Name).ToHashSet();
+    var calls = JavaScriptCases.BoundaryCalls(scalar).Concat(JavaScriptCases.RandomCalls(scalar, 200))
+      .Where(call => !allocating.Contains(call.Method) || call.Arguments.All(argument => argument is not IConvertible number || argument is bool or string or char || Math.Abs(number.ToDouble(System.Globalization.CultureInfo.InvariantCulture)) < 65536))
+      .ToList();
 
     var output = Path.Combine(this._directory, "out");
     var (exitCode, text) = Toolchain.Polypiler(this._inProcess, this._directory, "translate", JavaScriptFixture.OpCodesPath, "--from", "javascript", "--to", "javascript", "--output", output, "--export", string.Join(',', imported));

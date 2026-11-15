@@ -30,6 +30,7 @@ public static class JavaScriptSyntaxRewriter {
     JsObject literal => literal.Properties,
     JsProperty property => [property.Value],
     JsFunctionExpression function => [function.Body],
+    JsArrowFunction arrow => [.. Optional(arrow.Body), .. Optional(arrow.ExpressionBody)],
     JsBlock block => block.Statements,
     JsDeclarator declarator => Optional(declarator.Initializer),
     JsVariableDeclaration declaration => declaration.Declarators,
@@ -42,8 +43,11 @@ public static class JavaScriptSyntaxRewriter {
     JsSwitch choice => [choice.Discriminant, .. choice.Cases],
     JsReturn result => Optional(result.Value),
     JsThrow exception => [exception.Value],
+    JsTry attempt => [attempt.Block, .. Optional(attempt.Handler), .. Optional(attempt.Finalizer)],
     JsFunctionDeclaration function => [function.Body],
     JsExport export => [export.Declaration],
+    JsClassMember member => [.. Optional(member.Body), .. Optional(member.Value)],
+    JsClass type => type.Members,
     JsProgram program => program.Body,
     _ => []
   };
@@ -104,6 +108,7 @@ public static class JavaScriptSyntaxRewriter {
       JsObject literal => literal with { Properties = Many<JsProperty>(literal.Properties.Count) },
       JsProperty property => property with { Value = Next<JsExpression>() },
       JsFunctionExpression function => function with { Body = Next<JsBlock>() },
+      JsArrowFunction arrow => arrow with { Body = Maybe(arrow.Body), ExpressionBody = Maybe(arrow.ExpressionBody) },
       JsBlock block => block with { Statements = Many<JsStatement>(block.Statements.Count) },
       JsDeclarator declarator => declarator with { Initializer = Next<JsExpression>() },
       JsVariableDeclaration declaration => declaration with { Declarators = Many<JsDeclarator>(declaration.Declarators.Count) },
@@ -116,8 +121,11 @@ public static class JavaScriptSyntaxRewriter {
       JsSwitch choice => choice with { Discriminant = Next<JsExpression>(), Cases = Many<JsSwitchCase>(choice.Cases.Count) },
       JsReturn result => result with { Value = Next<JsExpression>() },
       JsThrow exception => exception with { Value = Next<JsExpression>() },
+      JsTry attempt => attempt with { Block = Next<JsBlock>(), Handler = Maybe(attempt.Handler), Finalizer = Maybe(attempt.Finalizer) },
       JsFunctionDeclaration function => function with { Body = Next<JsBlock>() },
       JsExport export => export with { Declaration = Next<JsStatement>() },
+      JsClassMember member => member with { Body = Maybe(member.Body), Value = Maybe(member.Value) },
+      JsClass type => type with { Members = Many<JsClassMember>(type.Members.Count) },
       _ => ((JsProgram)node) with { Body = Many<JsStatement>(((JsProgram)node).Body.Count) }
     };
   }

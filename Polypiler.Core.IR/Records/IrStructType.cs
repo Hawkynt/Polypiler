@@ -8,7 +8,12 @@ namespace Polypiler.Core.IR;
 /// <param name="Name">The name, unique among the fields of its declaration.</param>
 /// <param name="Type">The type of the value the field holds: a truth value, a number, a struct, or an array of numbers.</param>
 /// <param name="IsReadOnly">Whether the field is written only when its value is built, never through a place afterwards.</param>
-public sealed record IrField(string Name, IrType Type, bool IsReadOnly);
+public sealed record IrField(string Name, IrType Type, bool IsReadOnly) {
+
+  /// <summary>Who may name the field: everybody, the assembly, or only the members of its own declaration.</summary>
+  public IrVisibility Visibility { get; init; } = IrVisibility.Public;
+
+}
 
 /// <summary>
 /// A type a module declares: a name and the fields its values consist of. Types are nominal: two

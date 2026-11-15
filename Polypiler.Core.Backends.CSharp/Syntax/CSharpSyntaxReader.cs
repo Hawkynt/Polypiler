@@ -84,7 +84,7 @@ public static class CSharpSyntaxReader {
   private static IReadOnlyList<string> Modifiers(SyntaxTokenList modifiers) => [.. modifiers.Select(modifier => modifier.Text)];
 
   private static CsParameter Read(ParameterSyntax parameter)
-    => new(new CsType(parameter.Type!.ToString()), parameter.Identifier.Text, parameter.Modifiers.Count == 0 ? null : string.Join(' ', parameter.Modifiers.Select(modifier => modifier.Text)));
+    => new(new CsType(parameter.Type?.ToString() ?? ""), parameter.Identifier.Text, parameter.Modifiers.Count == 0 ? null : string.Join(' ', parameter.Modifiers.Select(modifier => modifier.Text)));
 
   private static IReadOnlyList<CsParameter> Read(ParameterListSyntax parameters) => [.. parameters.Parameters.Select(Read)];
 
@@ -93,22 +93,42 @@ public static class CSharpSyntaxReader {
       MethodDeclarationSyntax method => new CsMethod(
         Modifiers(method.Modifiers), new CsType(method.ReturnType.ToString()), method.Identifier.Text,
         method.TypeParameterList is null ? [] : [.. method.TypeParameterList.Parameters.Select(parameter => parameter.Identifier.Text)],
-        Read(method.ParameterList), method.Body is null ? null : Block(method.Body), method.ExpressionBody is null ? null : Read(method.ExpressionBody.Expression)),
+        Read(method.ParameterList), method.Body is null ? null : Block(method.Body), method.ExpressionBody is null ? null : Read(method.ExpressionBody.Expression)) {
+        Constraints = [.. method.ConstraintClauses.Select(clause => $"{clause.Name} : {string.Join(", ", clause.Constraints)}")]
+      },
       OperatorDeclarationSyntax @operator => new CsMethod(
         Modifiers(@operator.Modifiers), new CsType(@operator.ReturnType.ToString()), "operator " + @operator.OperatorToken.Text, [],
         Read(@operator.ParameterList), @operator.Body is null ? null : Block(@operator.Body), @operator.ExpressionBody is null ? null : Read(@operator.ExpressionBody.Expression)),
-      ConstructorDeclarationSyntax constructor => new CsConstructor(Modifiers(constructor.Modifiers), constructor.Identifier.Text, Read(constructor.ParameterList), Block(constructor.Body!)),
+      ConstructorDeclarationSyntax constructor => new CsConstructor(Modifiers(constructor.Modifiers), constructor.Identifier.Text, Read(constructor.ParameterList), Block(constructor.Body!)) {
+        Chained = constructor.Initializer is { } chain ? [.. chain.ArgumentList.Arguments.Select(argument => Read(argument.Expression))] : null,
+        ChainsToBase = constructor.Initializer?.IsKind(SyntaxKind.BaseConstructorInitializer) == true
+      },
+      PropertyDeclarationSyntax property => new CsProperty(
+        Modifiers(property.Modifiers), new CsType(property.Type.ToString()), property.Identifier.Text,
+        property.AccessorList is null ? null : [.. property.AccessorList.Accessors.Select(accessor => new CsAccessor(
+          string.Join(' ', [.. accessor.Modifiers.Select(modifier => modifier.Text), accessor.Keyword.Text]),
+          accessor.Body is null ? null : Block(accessor.Body), accessor.ExpressionBody is null ? null : Read(accessor.ExpressionBody.Expression)))],
+        property.ExpressionBody is null ? null : Read(property.ExpressionBody.Expression)),
       FieldDeclarationSyntax { Declaration.Variables: [var variable] } field => new CsField(
         Modifiers(field.Modifiers), new CsType(field.Declaration.Type.ToString()), variable.Identifier.Text, variable.Initializer is null ? null : Read(variable.Initializer.Value)),
       TypeDeclarationSyntax type => new CsTypeDeclaration(
         Modifiers(type.Modifiers),
-        type is RecordDeclarationSyntax record ? "record " + record.ClassOrStructKeyword.Text : type.Keyword.Text,
+        type is RecordDeclarationSyntax record ? record.ClassOrStructKeyword.IsKind(SyntaxKind.None) ? "record" : "record " + record.ClassOrStructKeyword.Text : type.Keyword.Text,
         type.Identifier.Text,
         type.ParameterList is null ? null : Read(type.ParameterList),
         type.BaseList is null ? [] : [.. type.BaseList.Types.Select(baseType => new CsType(baseType.Type.ToString()))],
-        type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]),
+        type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]) {
+        TypeParameters = type.TypeParameterList is null ? [] : [.. type.TypeParameterList.Parameters.Select(parameter => parameter.Identifier.Text)]
+      },
+      EnumDeclarationSyntax declared => new CsEnumDeclaration(
+        [.. declared.AttributeLists.SelectMany(list => list.Attributes).Select(attribute => attribute.ToString())],
+        Modifiers(declared.Modifiers),
+        declared.Identifier.Text,
+        new CsType(declared.BaseList!.Types[0].Type.ToString()),
+        [.. declared.Members.Select(member => new CsEnumMember(member.Identifier.Text, Read(member.EqualsValue!.Value)))]),
       FileScopedNamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), true, [.. scope.Members.Select(Read)]),
       NamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), false, [.. scope.Members.Select(Read)]),
+      DelegateDeclarationSyntax type => new CsDelegateDeclaration(Modifiers(type.Modifiers), new CsType(type.ReturnType.ToString()), type.Identifier.Text + type.TypeParameterList, Read(type.ParameterList)),
       _ => throw Unknown(member)
     };
     return read with { Leading = Trivia(member) };
@@ -127,10 +147,13 @@ public static class CSharpSyntaxReader {
   private static CsStatement Read(StatementSyntax statement) {
     CsStatement read = statement switch {
       BlockSyntax block => Block(block),
-      LocalDeclarationStatementSyntax { Modifiers.Count: 0 } declaration => Declaration(declaration.Declaration),
+      LocalDeclarationStatementSyntax { Modifiers.Count: 0, AwaitKeyword.RawKind: 0 } declaration
+        => Declaration(declaration.Declaration) with { IsUsing = declaration.UsingKeyword.IsKind(SyntaxKind.UsingKeyword) },
+      UsingStatementSyntax { Declaration: { } resource, AwaitKeyword.RawKind: 0 } scope => new CsUsing(Declaration(resource), Read(scope.Statement)),
       ExpressionStatementSyntax expression => new CsExpressionStatement(Read(expression.Expression)),
       IfStatementSyntax conditional => new CsIf(Read(conditional.Condition), Read(conditional.Statement), conditional.Else is null ? null : Read(conditional.Else.Statement)),
       WhileStatementSyntax loop => new CsWhile(Read(loop.Condition), Read(loop.Statement)),
+      ForEachStatementSyntax loop => new CsForEach(new CsType(loop.Type.ToString()), loop.Identifier.Text, Read(loop.Expression), Read(loop.Statement)),
       DoStatementSyntax loop => new CsDo(Read(loop.Statement), Read(loop.Condition)),
       ForStatementSyntax { Initializers.Count: 0 } loop => new CsFor(
         loop.Declaration is null ? null : Declaration(loop.Declaration), loop.Condition is null ? null : Read(loop.Condition),
@@ -145,8 +168,16 @@ public static class CSharpSyntaxReader {
       BreakStatementSyntax => new CsBreak(),
       ContinueStatementSyntax => new CsContinue(),
       ReturnStatementSyntax result => new CsReturn(result.Expression is null ? null : Read(result.Expression)),
-      ThrowStatementSyntax { Expression: not null } exception => new CsThrow(Read(exception.Expression)),
+      ThrowStatementSyntax exception => new CsThrow(exception.Expression is null ? null : Read(exception.Expression)),
+      TryStatementSyntax attempt => new CsTry(Block(attempt.Block), [.. attempt.Catches.Select(clause => new CsCatch(
+        clause.Declaration is null ? null : new CsType(clause.Declaration.Type.ToString()),
+        clause.Declaration is { Identifier.Text: { Length: > 0 } name } ? name : null,
+        clause.Filter is null ? null : Read(clause.Filter.FilterExpression), Block(clause.Block)))],
+        attempt.Finally is null ? null : Block(attempt.Finally.Block)),
       CheckedStatementSyntax context => new CsCheckedStatement(context.IsKind(SyntaxKind.CheckedStatement), Block(context.Block)),
+      LocalFunctionStatementSyntax function => new CsLocalFunction(
+        Modifiers(function.Modifiers), new CsType(function.ReturnType.ToString()), function.Identifier.Text, Read(function.ParameterList),
+        function.Body is null ? null : Block(function.Body), function.ExpressionBody is null ? null : Read(function.ExpressionBody.Expression)),
       _ => throw Unknown(statement)
     };
     return read with { Leading = Trivia(statement) };
@@ -159,10 +190,17 @@ public static class CSharpSyntaxReader {
     MemberAccessExpressionSyntax { RawKind: (int)SyntaxKind.SimpleMemberAccessExpression } access => new CsMemberAccess(Read(access.Expression), access.Name.ToString()),
     InvocationExpressionSyntax call => new CsInvocation(Read(call.Expression), Arguments(call.ArgumentList)),
     ElementAccessExpressionSyntax { ArgumentList.Arguments: [var index] } element => new CsElementAccess(Read(element.Expression), Read(index.Expression)),
+    ConditionalAccessExpressionSyntax { WhenNotNull: MemberBindingExpressionSyntax member } access
+      => new CsMemberAccess(Read(access.Expression), member.Name.ToString()) { Conditional = true },
+    ConditionalAccessExpressionSyntax { WhenNotNull: ElementBindingExpressionSyntax { ArgumentList.Arguments: [var at] } } access
+      => new CsElementAccess(Read(access.Expression), Read(at.Expression)) { Conditional = true },
     CastExpressionSyntax cast => new CsCast(new CsType(cast.Type.ToString()), Read(cast.Expression)),
     PrefixUnaryExpressionSyntax unary => new CsPrefixUnary(unary.OperatorToken.Text, Read(unary.Operand)),
     PostfixUnaryExpressionSyntax unary => new CsPostfixUnary(Read(unary.Operand), unary.OperatorToken.Text),
     BinaryExpressionSyntax { RawKind: (int)SyntaxKind.IsExpression } test => new CsIsType(Read(test.Left), new CsType(test.Right.ToString())),
+    IsPatternExpressionSyntax { Pattern: DeclarationPatternSyntax { Designation: SingleVariableDesignationSyntax name } declaration } test
+      => new CsIsType(Read(test.Expression), new CsType(declaration.Type.ToString())) { Designation = name.Identifier.Text },
+    BaseExpressionSyntax => new CsName("base"),
     BinaryExpressionSyntax binary => new CsBinary(Read(binary.Left), binary.OperatorToken.Text, Read(binary.Right)) { BreakBefore = Apart(binary.Left.GetLastToken(), binary.OperatorToken) },
     AssignmentExpressionSyntax assignment => new CsAssignment(Read(assignment.Left), assignment.OperatorToken.Text, Read(assignment.Right)),
     ConditionalExpressionSyntax choice => new CsConditional(Read(choice.Condition), Read(choice.WhenTrue), Read(choice.WhenFalse)) {
@@ -179,9 +217,21 @@ public static class CSharpSyntaxReader {
       => new CsArrayCreation(new CsType(array.ElementType.ToString()), Read(size), null) { OnStack = true },
     InitializerExpressionSyntax { RawKind: (int)SyntaxKind.ArrayInitializerExpression } initializer => Initializer(initializer),
     DefaultExpressionSyntax value => new CsDefaultExpression(new CsType(value.Type.ToString())),
+    TypeOfExpressionSyntax typeOf => new CsTypeOf(new CsType(typeOf.Type.ToString())),
     DeclarationExpressionSyntax { Designation: DiscardDesignationSyntax } => new CsName("_"),
+    ThrowExpressionSyntax thrown => new CsThrowExpression(Read(thrown.Expression)),
+    AnonymousMethodExpressionSyntax method => new CsLambda(method.ParameterList is null ? [] : Read(method.ParameterList), Block(method.Block), null) {
+      IsAnonymousMethod = true, IsStatic = method.Modifiers.Any(SyntaxKind.StaticKeyword)
+    },
+    SimpleLambdaExpressionSyntax lambda => Lambda([Read(lambda.Parameter)], lambda),
+    ParenthesizedLambdaExpressionSyntax lambda => Lambda(Read(lambda.ParameterList), lambda),
     _ => throw Unknown(expression)
   };
+
+  private static CsLambda Lambda(IReadOnlyList<CsParameter> parameters, LambdaExpressionSyntax lambda)
+    => new(parameters, lambda.Block is null ? null : Block(lambda.Block), lambda.ExpressionBody is null ? null : Read(lambda.ExpressionBody)) {
+      IsStatic = lambda.Modifiers.Any(SyntaxKind.StaticKeyword)
+    };
 
   private static CsArrayInitializer Initializer(InitializerExpressionSyntax initializer)
     => new([.. initializer.Expressions.Select(Read)]) { Tabulated = Apart(initializer.OpenBraceToken, initializer.CloseBraceToken) };
@@ -198,6 +248,8 @@ public static class CSharpSyntaxReader {
         return new CsBooleanLiteral(false);
       case SyntaxKind.DefaultLiteralExpression:
         return new CsDefaultLiteral();
+      case SyntaxKind.NullLiteralExpression:
+        return new CsNullLiteral();
       case SyntaxKind.StringLiteralExpression:
         return new CsStringLiteral((string)token.Value!);
       case SyntaxKind.NumericLiteralExpression when token.Value is float or double or decimal:

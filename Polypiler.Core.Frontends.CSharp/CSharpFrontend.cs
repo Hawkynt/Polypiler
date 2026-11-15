@@ -47,7 +47,24 @@ public static class CSharpFrontend {
   [Diagnostic]
   public static readonly DiagnosticDescriptor ConstantOverflowDescriptor = new(ConstantOverflow, DiagnosticSeverity.Error, ExitCode.InvalidSource, "{0}", "csharp.constant-overflow");
 
-  private static readonly Lazy<MetadataReference> _coreLibrary = new(LoadCoreLibrary);
+  /// <summary>
+  /// The caveat of a module that converts a number to text or back without a format provider, which
+  /// .NET does by the culture of the thread (<c>"a" + 2.5</c> is <c>a2,5</c> under de-DE): the import
+  /// fixes it to the invariant culture.
+  /// </summary>
+  public const string InvariantCulture = "cs-invariant-culture";
+
+  /// <summary>What <see cref="InvariantCulture"/> says.</summary>
+  public const string InvariantCultureDescription =
+    "a number converted to text or back without a format provider uses the culture of the thread in .NET; the imported code uses the invariant culture";
+
+  private static readonly Lazy<MetadataReference> _coreLibrary = new(() => Loaded(typeof(object).Assembly));
+
+  /// <summary>
+  /// The collections of .NET outside the core library - <c>SortedDictionary</c>, <c>SortedSet</c>,
+  /// <c>LinkedList</c> - which a source may name and the import refuses by name.
+  /// </summary>
+  private static readonly Lazy<MetadataReference> _collections = new(() => Loaded(typeof(System.Collections.Generic.SortedSet<>).Assembly));
 
   /// <summary>Imports one C# source file.</summary>
   /// <param name="path">The name of the file, used in diagnostics.</param>
@@ -73,14 +90,28 @@ public static class CSharpFrontend {
   /// <param name="files">The files, at least one; the functions of the module follow their order.</param>
   /// <param name="checkedByDefault">Whether arithmetic outside any <c>checked</c> or <c>unchecked</c> traps on overflow.</param>
   /// <returns>The module, or the diagnostics that explain why there is none.</returns>
-  public static ImportResult Import(IReadOnlyList<CSharpSource> files, bool checkedByDefault = false) {
+  public static ImportResult Import(IReadOnlyList<CSharpSource> files, bool checkedByDefault = false) => Import(files, checkedByDefault, []);
+
+  /// <summary>
+  /// Imports one static class as <see cref="Import(IReadOnlyList{CSharpSource}, bool)"/> does, with
+  /// instantiations of its public generic methods that the class itself does not use: a generic
+  /// method is otherwise instantiated only for the type arguments the module uses, and a public one
+  /// that nothing instantiates is refused.
+  /// </summary>
+  /// <param name="files">The files, at least one; the functions of the module follow their order.</param>
+  /// <param name="checkedByDefault">Whether arithmetic outside any <c>checked</c> or <c>unchecked</c> traps on overflow.</param>
+  /// <param name="instantiations">The instantiations to lower besides those the module uses.</param>
+  /// <returns>The module, or the diagnostics that explain why there is none.</returns>
+  /// <exception cref="ArgumentException">An instantiation names no generic method of the class, a type that is no type, or another number of type arguments.</exception>
+  public static ImportResult Import(IReadOnlyList<CSharpSource> files, bool checkedByDefault, IReadOnlyList<CSharpInstantiation> instantiations) {
+    ArgumentNullException.ThrowIfNull(instantiations);
     var trees = files
       .Select(file => CSharpSyntaxTree.ParseText(file.Text, new CSharpParseOptions(LanguageVersion.Latest), file.Path))
       .ToList();
     var compilation = CSharpCompilation.Create(
       "Imported",
       trees,
-      [_coreLibrary.Value],
+      [_coreLibrary.Value, _collections.Value],
       new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, checkOverflow: checkedByDefault));
 
     var errors = compilation.GetDiagnostics()
@@ -97,16 +128,16 @@ public static class CSharpFrontend {
     if (errors.Count > 0)
       return new(null, errors);
 
-    var parts = trees.Select(tree => (tree.FilePath, compilation.GetSemanticModel(tree), tree.GetCompilationUnitRoot())).ToList();
-    return new Lowering(parts[0].FilePath, parts[0].Item2).Run(parts);
+    var parts = trees.Select(tree => (tree.FilePath, new BoundModel(compilation.GetSemanticModel(tree)), tree.GetCompilationUnitRoot())).ToList();
+    return new Lowering(parts[0].FilePath, parts[0].Item2) { Requested = instantiations }.Run(parts);
   }
 
   /// <summary>
-  /// The core library of the running process as a compiler reference. It is read from memory rather
-  /// than from a file, so it is also there in a single-file executable.
+  /// An assembly of the running process as a compiler reference. It is read from memory rather than
+  /// from a file, so it is also there in a single-file executable.
   /// </summary>
-  private static unsafe MetadataReference LoadCoreLibrary() {
-    typeof(object).Assembly.TryGetRawMetadata(out var blob, out var length);
+  private static unsafe MetadataReference Loaded(System.Reflection.Assembly assembly) {
+    assembly.TryGetRawMetadata(out var blob, out var length);
     return AssemblyMetadata.Create(ModuleMetadata.CreateFromMetadata((nint)blob, length)).GetReference();
   }
 

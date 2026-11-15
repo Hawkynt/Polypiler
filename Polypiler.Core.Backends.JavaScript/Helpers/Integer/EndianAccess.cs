@@ -6,8 +6,8 @@ namespace Polypiler.Core.Backends.JavaScript;
 
 internal static partial class JavaScriptHelpers {
 
-  private const string OutsideBytes = "  if (index < 0 || index + size > array.length) throw new RangeError(\"index out of range\");";
-  private const string OutsideBytes64 = "  if (index < 0 || index + 8 > array.length) throw new RangeError(\"index out of range\");";
+  private const string OutsideBytes = "  if (index < 0 || index + size > array.length) throw new IndexOutOfRangeError(\"index out of range\");";
+  private const string OutsideBytes64 = "  if (index < 0 || index + 8 > array.length) throw new IndexOutOfRangeError(\"index out of range\");";
 
   /// <summary>
   /// Loads and stores of the bytes of an integer, typed array or plain, the whole range checked
@@ -74,6 +74,6 @@ internal static partial class JavaScriptHelpers {
 
   /// <summary>A helper on a floating-point number in the bytes of an array: the range checked, then the access.</summary>
   private static string Float(string declaration, int size, string access)
-    => Lines(declaration, $"  if (index < 0 || index + {size} > array.length) throw new RangeError(\"index out of range\");", "  " + access, "}");
+    => Lines(declaration, $"  if (index < 0 || index + {size} > array.length) throw new IndexOutOfRangeError(\"index out of range\");", "  " + access, "}");
 
 }

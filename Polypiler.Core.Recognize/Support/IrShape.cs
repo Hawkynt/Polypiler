@@ -43,6 +43,18 @@ public static class IrShape {
       (IrStructDefault, IrStructDefault) => true,
       (IrFieldLoad a, IrFieldLoad b) => ReferenceEquals(a.Field, b.Field) && Same(a.Target, b.Target),
       (IrStructEquals a, IrStructEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
+      (IrNull, IrNull) => true,
+      (IrReferenceEquals a, IrReferenceEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
+      (IrNone a, IrNone b) => a.Type == b.Type,
+      (IrSome a, IrSome b) => Same(a.Value, b.Value),
+      (IrIsNone a, IrIsNone b) => Same(a.Value, b.Value),
+      (IrUnwrap a, IrUnwrap b) => a.IsTested == b.IsTested && Same(a.Value, b.Value),
+      (IrCoalesce a, IrCoalesce b) => Same(a.Value, b.Value) && Same(a.Fallback, b.Fallback),
+      (IrIsNull a, IrIsNull b) => Same(a.Value, b.Value),
+      (IrBind a, IrBind b) => a.Local == b.Local && Same(a.Value, b.Value),
+      (IrGenericEquals a, IrGenericEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
+      (IrGenericCompare a, IrGenericCompare b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
+      (IrCollection a, IrCollection b) => a.Op == b.Op && a.Type == b.Type && All(a.Arguments, b.Arguments),
       _ => false
     };
   }
@@ -67,6 +79,25 @@ public static class IrShape {
     IrStructNew creation => creation.Arguments,
     IrFieldLoad load => [load.Target],
     IrStructEquals equality => [equality.Left, equality.Right],
+    IrNew creation => creation.Arguments,
+    IrMethodCall { Target: { } target } call => [target, .. call.Arguments],
+    IrMethodCall call => call.Arguments,
+    IrReferenceEquals equality => [equality.Left, equality.Right],
+    IrTypeTest test => [test.Value],
+    IrCast cast => [cast.Value],
+    IrAsCast cast => [cast.Value],
+    IrSome some => [some.Value],
+    IrIsNone test => [test.Value],
+    IrUnwrap unwrap => [unwrap.Value],
+    IrCoalesce coalesce => [coalesce.Value, coalesce.Fallback],
+    IrIsNull test => [test.Value],
+    IrBind bind => [bind.Value],
+    IrGenericEquals equality => [equality.Left, equality.Right],
+    IrGenericCompare order => [order.Left, order.Right],
+    IrThrowExpression thrown => [thrown.Exception],
+    IrCollection operation => operation.Arguments,
+    IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
+    IrBoundMethod { Receiver: { } receiver } => [receiver],
     _ => []
   };
 
@@ -84,12 +115,14 @@ public static class IrShape {
   /// variable, allocates nothing and writes no array. Evaluated twice it yields the same value or the
   /// same trap, and evaluated once fewer it is missed by nobody. A read of a global of the module
   /// counts as an effect: what it yields depends on where it stands among the calls and the
-  /// assignments of the function, so no rule may move, merge or drop it.
+  /// assignments of the function, so no rule may move, merge or drop it. So does a read of a field of
+  /// an object, which a write through another reference to the object changes.
   /// </summary>
   /// <param name="expression">The expression.</param>
   /// <returns><see langword="true"/> when it has no effect.</returns>
   public static bool IsSideEffectFree(IrExpr expression) => Nodes(expression).All(node => node switch {
-    IrCall or IrStep or IrNewArray or IrGlobalRef => false,
+    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod => false,
+    IrFieldLoad load => !load.Target.Type.IsObject,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
   });
@@ -172,6 +205,25 @@ public static class IrShape {
     IrStructNew creation => creation with { Arguments = operands },
     IrFieldLoad load => load with { Target = operands[0] },
     IrStructEquals => new IrStructEquals(operands[0], operands[1]),
+    IrNew creation => creation with { Arguments = operands },
+    IrMethodCall { Target: not null } call => call with { Target = operands[0], Arguments = [.. operands.Skip(1)] },
+    IrMethodCall call => call with { Arguments = operands },
+    IrReferenceEquals => new IrReferenceEquals(operands[0], operands[1]),
+    IrTypeTest test => test with { Value = operands[0] },
+    IrCast cast => cast with { Value = operands[0] },
+    IrAsCast cast => cast with { Value = operands[0] },
+    IrSome => new IrSome(operands[0]),
+    IrIsNone => new IrIsNone(operands[0]),
+    IrUnwrap unwrap => unwrap with { Value = operands[0] },
+    IrCoalesce => new IrCoalesce(operands[0], operands[1]),
+    IrIsNull => new IrIsNull(operands[0]),
+    IrBind bind => bind with { Value = operands[0] },
+    IrGenericEquals => new IrGenericEquals(operands[0], operands[1]),
+    IrGenericCompare => new IrGenericCompare(operands[0], operands[1]),
+    IrThrowExpression thrown => thrown with { Exception = operands[0] },
+    IrCollection operation => operation with { Arguments = operands },
+    IrInvoke invocation => invocation with { Callee = operands[0], Arguments = [.. operands.Skip(1)] },
+    IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
     _ => expression
   };
 

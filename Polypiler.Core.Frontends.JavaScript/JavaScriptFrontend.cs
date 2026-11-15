@@ -49,7 +49,7 @@ public sealed record ImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Di
 /// file is refused.
 /// </para>
 /// </summary>
-public static class JavaScriptFrontend {
+public static partial class JavaScriptFrontend {
 
   /// <summary>The code for a syntax error the parser reports.</summary>
   public const string SyntaxError = "PLY1100";
@@ -99,6 +99,16 @@ public static class JavaScriptFrontend {
   /// <summary>The registered diagnostic of <see cref="ReadBeforeAssignment"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
   [Diagnostic]
   public static readonly DiagnosticDescriptor ReadBeforeAssignmentDescriptor = new(ReadBeforeAssignment, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.definite-assignment");
+
+  /// <summary>
+  /// The code for a thrown value that is no <c>Error</c> where something observes it: a catch that reads
+  /// it, or the caller it can leave the function to. A property of the data flow, not of a construct.
+  /// </summary>
+  public const string NonErrorThrow = "PLY1107";
+
+  /// <summary>The registered diagnostic of <see cref="NonErrorThrow"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor NonErrorThrowDescriptor = new(NonErrorThrow, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.non-error-throw");
 
   /// <summary>
   /// The caveat of a module that accesses array elements: at anything but the index of an element
@@ -154,10 +164,34 @@ public static class JavaScriptFrontend {
     if (exports is { Count: 0 })
       exports = null;
 
-    var collector = new FunctionCollector(source, comments);
+    // A function the file does not export that its calls pass values of two kinds is imported once more with a copy per kind.
+    var result = Imported(path, source, program, comments, exports, [], out var copies);
+    return copies.Count == 0 ? result : Imported(path, source, program, comments, exports, copies, out _);
+  }
+
+  /// <summary>
+  /// Imports a parsed file, with a copy of a function for every call <paramref name="copies"/> names;
+  /// without copies, says which calls of a function that is no member of a class and that the file
+  /// does not export pass values of other kinds than its other calls - each kind then gets a copy,
+  /// and the file has to be imported again.
+  /// </summary>
+  private static ImportResult Imported(string path, string source, Program program, List<Comment> comments, IReadOnlyCollection<string>? exports,
+      Dictionary<Node, (IFunction Function, int Copy)> copies, out Dictionary<Node, (IFunction Function, int Copy)> wanted) {
+    wanted = [];
+    var errors = new ErrorLibrary(program);
+    var collector = new FunctionCollector(source, comments) { Errors = errors };
     var candidates = collector.Collect(program);
+    var redirects = Copies(candidates, copies);
     var constants = collector.Constants;
-    var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name));
+    var classes = collector.Classes;
+    var enums = collector.EnumObjects;
+    var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name)) {
+      // A native error is a class wherever no class of the file has its name.
+      Classes = classes.GroupBy(owner => owner.Name).Select(group => group.First())
+        .Concat(errors.ByName.Values.Where(error => classes.All(owner => owner.Name != error.Name))).ToDictionary(owner => owner.Name),
+      Redirects = redirects,
+      Enums = enums.ToDictionary(named => named.Name)
+    };
     var globals = collector.Globals;
     inference.DeclareGlobals(globals, program);
     var diagnostics = new List<Diagnostic>();
@@ -174,10 +208,17 @@ public static class JavaScriptFrontend {
         else
           diagnostics.Add(UnknownExportDescriptor.At($"the file has no function '{name}' to export", path, 1, 1));
       }
+
+      // A class is imported whole, whichever of its members the functions exported use.
+      chosen.AddRange(candidates.Where(candidate => candidate.Class is not null && !chosen.Contains(candidate)));
     }
 
     // With an export list the functions the named ones call are imported too; the types are found for all of them together.
     var models = inference.Solve(chosen, candidate => exports is null ? candidate.IsPublic : exports.Contains(candidate.Name));
+    if (copies.Count == 0 && Wanted(inference, models) is { Count: > 0 } split) {
+      wanted = split;
+      return Refused([]);
+    }
 
     // A struct is named after the first variable, in source order, that holds a value of it, and
     // only where none does after the first array of it.
@@ -187,13 +228,15 @@ public static class JavaScriptFrontend {
         inference.Shapes.Prefer(variable.Type, variable.Name, elements);
 
     inference.Shapes.Seal();
+    Classes.Declare(classes, inference, diagnostics);
     var lowering = new Lowering(inference);
-    var state = ModuleState.Lower(program, globals, models, inference.Initializers, lowering, diagnostics);
+    var state = ModuleState.Lower(program, globals, models, inference.Initializers, lowering, diagnostics, classes.SelectMany(owner => owner.Statics.Values), collector.ClassStatements);
     if (diagnostics.Count > 0)
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
     var functions = new Dictionary<Candidate, IrFunction>();
-    foreach (var model in models)
+    // A nested function is lowered inside the function it stands in.
+    foreach (var model in models.Where(model => !model.Candidate.IsNested))
       if (lowering.Function(model, diagnostics) is { } function)
         functions[model.Candidate] = function;
 
@@ -201,6 +244,7 @@ public static class JavaScriptFrontend {
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
     var lowered = candidates.Where(functions.ContainsKey).Select(candidate => functions[candidate]).ToList();
+    lowered.AddRange(Classes.Define(classes, inference));
     ModuleState.CheckInitializers(state, lowered, lowering, diagnostics);
     if (diagnostics.Count > 0)
       return Refused(diagnostics);
@@ -209,9 +253,19 @@ public static class JavaScriptFrontend {
       Path.GetFileNameWithoutExtension(path),
       lowered,
       constants.Where(lowering.Constants.Contains).Select(constant => constant.Constant).ToList()) {
-      Types = lowering.Structs(lowered, inference.Shapes),
+      Types = [.. enums.Select(named => named.Type).OfType<IrEnumType>(), .. lowering.Structs(lowered, inference.Shapes), .. classes.Select(owner => owner.Ir)],
       Globals = [.. state.Select(global => global.Global!)]
     };
+
+    // An overridden method called on the object a constructor is making would run before the fields of the derived class have their values in C#'s order and after it in JavaScript's.
+    foreach (var (_, call) in IrConstruction.VirtualCalls(module))
+      diagnostics.Add(inference.Diagnose(lowering.Sites[call], UnsupportedDescriptor, "'a call of an overridden method on 'this' during construction' is not supported yet"));
+
+    if (diagnostics.Count > 0)
+      return Refused(diagnostics);
+
+    // The copies are named after their types last: the checks above find their calls in the module as lowered.
+    module = Named(module, redirects.Values);
     var caveats = new List<ImportCaveat>();
     if (lowering.AccessesElements)
       caveats.Add(_outOfRangeAccess);
@@ -219,7 +273,7 @@ public static class JavaScriptFrontend {
     if (lowering.Divides)
       caveats.Add(_divisionByZero);
 
-    var ordered = models.OrderBy(model => model.Candidate.Anchor.Start).ToList();
+    var ordered = models.Where(model => !model.Candidate.IsNested).OrderBy(model => model.Candidate.Anchor.Start).ToList();
     var integers = Signatures(ordered, parameter => parameter.IsIntegerByUse && parameter.Parameter!.Type.IsWord);
     if (integers.Length > 0)
       caveats.Add(new ImportCaveat(

@@ -30,7 +30,8 @@ internal static class GeneratedJavaScript {
     }
 
     var problems = new List<string>();
-    var declared = new HashSet<string>();
+    // The object of the arguments of a function is part of the language.
+    var declared = new HashSet<string> { "arguments" };
     Declarations(program, declared);
     if (profile.Module == JavaScriptModuleFormat.Cjs)
       declared.Add("exports");
@@ -70,6 +71,19 @@ internal static class GeneratedJavaScript {
       case VariableDeclarator { Id: Identifier variable }:
         declared.Add(variable.Name);
         break;
+      case ClassDeclaration { Id: { } type }:
+        declared.Add(type.Name);
+        break;
+      case CatchClause { Param: Identifier caught }:
+        declared.Add(caught.Name);
+        break;
+      // A method of a class of the file, also one put on a prototype or a constructor function, is no method of the library.
+      case MethodDefinition { Key: Identifier method }:
+        declared.Add("." + method.Name);
+        break;
+      case AssignmentExpression { Left: MemberExpression { Computed: false, Property: Identifier method }, Right: FunctionExpression }:
+        declared.Add("." + method.Name);
+        break;
     }
 
     foreach (var child in node.ChildNodes)
@@ -89,7 +103,7 @@ internal static class GeneratedJavaScript {
       case MemberExpression { Computed: false, Property: Identifier member } access:
         if (access.Object is Identifier global && !declared.Contains(global.Name))
           report($"{global.Name}.{member.Name}");
-        else if (parent is CallExpression call && call.Callee == node)
+        else if (parent is CallExpression call && call.Callee == node && !declared.Contains("." + member.Name))
           report("." + member.Name);
 
         break;
@@ -108,6 +122,21 @@ internal static class GeneratedJavaScript {
       case Property { Shorthand: true } when parent is ObjectExpression:
         report("shorthand property");
         break;
+      case ClassDeclaration:
+        report("class");
+        break;
+      case CatchClause { Param: null }:
+        report("optional catch binding");
+        break;
+      case MethodDefinition { Kind: PropertyKind.Get or PropertyKind.Set }:
+        report("class accessor");
+        break;
+      case PropertyDefinition field:
+        report(field.Static ? "static fields" : "class fields");
+        break;
+      case PrivateIdentifier:
+        report("#private");
+        break;
     }
 
     foreach (var child in node.ChildNodes)
@@ -118,6 +147,8 @@ internal static class GeneratedJavaScript {
   private static bool IsReference(Identifier identifier, Node? parent) => parent switch {
     MemberExpression { Computed: false } access => access.Object == identifier,
     Property { Computed: false } property => property.Value == identifier,
+    MethodDefinition { Computed: false } => false,
+    PropertyDefinition { Computed: false } field => field.Value == identifier,
     _ => true
   };
 

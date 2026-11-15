@@ -37,6 +37,49 @@ internal sealed class Candidate(string name, Node anchor, IFunction function) {
   /// <summary>Why the function cannot be imported whatever its body is, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }
 
+  /// <summary>The class the function is a member of, or <see langword="null"/> for a function of the module.</summary>
+  public ClassModel? Class { get; init; }
+
+  /// <summary>What the function is to its class.</summary>
+  public MemberKind Member { get; init; }
+
+  /// <summary>Whether a member is static: called on the class, without <c>this</c>.</summary>
+  public bool IsStatic { get; init; }
+
+  /// <summary>The method of a base class this method replaces, or <see langword="null"/>.</summary>
+  public Candidate? Overrides { get; set; }
+
+  /// <summary>Whether a method of a class derived from this one's replaces it.</summary>
+  public bool IsOverridden { get; set; }
+
+  /// <summary>The key of a member as the source spells it, with <c>#</c> when it is private.</summary>
+  public string Key { get; init; } = "";
+
+  /// <summary>The function a nested function stands in - an arrow, a function expression or a function declaration inside a function - or <see langword="null"/>.</summary>
+  public FunctionModel? Parent { get; init; }
+
+  /// <summary>Whether the function stands inside another one: it is lowered as a lambda of that one.</summary>
+  public bool IsNested => this.Parent is not null;
+
+  /// <summary>The variables of the functions around a nested function that its body sees, by name.</summary>
+  public IReadOnlyDictionary<string, Variable>? Scope { get; init; }
+
+  /// <summary>
+  /// The class whose object <c>this</c> is in the body: that of a method or a constructor, and of the
+  /// function an arrow stands in; <see langword="null"/> where <c>this</c> is no object of a class.
+  /// </summary>
+  public ClassModel? ThisClass => this.Parent is { } parent
+    ? this.Function is ArrowFunctionExpression ? parent.Candidate.ThisClass : null
+    : this.IsStatic ? null : this.Class;
+
+  /// <summary>Whether a value of this function has been made: its shape exists.</summary>
+  public bool HasShape => this._shape is not null;
+
+  private FunctionShape? _shape;
+
+  /// <summary>The shape of the function values that are this function.</summary>
+  public FunctionShape Shape => this._shape ??= new FunctionShape(this);
+
 }
 
 /// <summary>
@@ -45,12 +88,20 @@ internal sealed class Candidate(string name, Node anchor, IFunction function) {
 /// properties of an object literal that stands in either place, also of a literal inside it - and the
 /// constants that enclose them: a <c>const</c> of a number or of a table of numbers.
 /// </summary>
-internal sealed class FunctionCollector(string source, List<Comment> comments) {
+internal sealed partial class FunctionCollector(string source, List<Comment> comments) {
 
   private readonly List<Candidate> _candidates = [];
   private readonly List<ModuleConstant> _constants = [];
   private readonly HashSet<string> _escaped = [];
   private readonly List<Variable> _globals = [];
+  private readonly List<EnumObject> _enums = [];
+
+  /// <summary>
+  /// The enum objects of the scope that encloses the functions, in source order, and the objects of
+  /// numbers that are not ones. A name that two of them share, or one of them and a function, names none.
+  /// </summary>
+  public IReadOnlyList<EnumObject> EnumObjects
+    => this._enums.Where(named => this._enums.Count(other => other.Name == named.Name) == 1 && !this._candidates.Exists(candidate => candidate.Name == named.Name)).ToList();
 
   /// <summary>
   /// The variables of the module, in source order: every <c>let</c> and <c>var</c> at the top level of
@@ -106,7 +157,11 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
     this.Escapes(program, null, null);
     // A file that exports nothing is a script, whose declarations are all visible to whoever loads it.
     var isScript = !program.Body.Any(statement => statement is ExportNamedDeclaration or ExportDefaultDeclaration or ExportAllDeclaration);
+    var constructors = ConstructorFunctions(program);
     foreach (var statement in program.Body) {
+      if (this.ClassOf(statement, isScript, constructors))
+        continue;
+
       switch (statement) {
         case FunctionDeclaration declaration:
           this.Add(new Candidate(declaration.Id!.Name, declaration, declaration) { IsPublic = isScript, Documentation = this.Documentation(declaration) });
@@ -119,6 +174,7 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
           this.Objects(statement);
           this.Constant(statement);
           this.Global(statement);
+          this.Enum(statement, isScript);
           break;
       }
     }
@@ -131,6 +187,11 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
     foreach (var global in this._globals.Where(global => exported.Contains(global.Name)))
       global.Problem = $"the exported variable {global.Name}";
 
+    this.Prototypes(program);
+    for (var index = 0; index < this._enums.Count; ++index)
+      if (exported.Contains(this._enums[index].Name) && this._enums[index].Declaration is VariableDeclarator { Init: { } value })
+        this._enums[index] = EnumObject.Of(this._enums[index].Name, this._enums[index].Declaration, value, true)!;
+
     var wrappers = program.Body.Select(Wrapped).OfType<FunctionBody>().ToList();
     if (wrappers.Count == 1) {
       foreach (var statement in wrappers[0].Body) {
@@ -140,10 +201,23 @@ internal sealed class FunctionCollector(string source, List<Comment> comments) {
 
         this.Objects(statement);
         this.Constant(statement);
+        this.Enum(statement, false);
       }
     }
 
     return this._candidates.OrderBy(candidate => candidate.Anchor.Start).ToList();
+  }
+
+  /// <summary>Takes the enum objects a <c>const</c> declares, exported where the file exports the declaration or is a script.</summary>
+  private void Enum(Statement statement, bool isScript) {
+    var exported = statement is ExportNamedDeclaration;
+    var declaration = statement is ExportNamedDeclaration { Declaration: VariableDeclaration inner } ? inner : statement as VariableDeclaration;
+    if (declaration is not { Kind: VariableDeclarationKind.Const })
+      return;
+
+    foreach (var declarator in declaration.Declarations)
+      if (declarator is { Id: Identifier { Name: var name }, Init: { } value } && !name.Contains('$') && EnumObject.Of(name, declarator, value, exported || isScript) is { } named)
+        this._enums.Add(named);
   }
 
   /// <summary>Takes the constants a <c>const</c> declares with a number, a list of numbers or a typed array of listed numbers.</summary>

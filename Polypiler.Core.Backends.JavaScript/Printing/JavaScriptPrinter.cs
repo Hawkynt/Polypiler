@@ -70,7 +70,7 @@ public static class JavaScriptPrinter {
     JsUpdate { Prefix: false } => Postfix,
     JsUnary or JsUpdate => Prefix,
     JsBinary binary => Of(binary.Operator),
-    JsConditional or JsAssignment => Conditional,
+    JsConditional or JsAssignment or JsArrowFunction => Conditional,
     JsSequence => Sequence,
     _ => Primary
   };
@@ -249,14 +249,67 @@ public static class JavaScriptPrinter {
           this.Expression(exception.Value, depth);
           this._text.Append(';');
           break;
+        case JsTry attempt:
+          this._text.Append("try ");
+          this.Bare(attempt.Block, depth);
+          if (attempt.Handler is { } handler) {
+            this._text.Append(attempt.Parameter is null ? " catch " : $" catch ({attempt.Parameter}) ");
+            this.Bare(handler, depth);
+          }
+
+          if (attempt.Finalizer is { } final) {
+            this._text.Append(" finally ");
+            this.Bare(final, depth);
+          }
+
+          break;
         case JsFunctionDeclaration function:
           this.Function(function.Name, function.Parameters, function.Body, depth);
+          break;
+        case JsClass type:
+          this.Class(type, depth);
           break;
         default:
           this._text.Append("export ");
           this.Bare(((JsExport)statement).Declaration, depth);
           break;
       }
+    }
+
+    /// <summary>A class, each member on a line of its own.</summary>
+    private void Class(JsClass type, int depth) {
+      this._text.Append("class ").Append(type.Name);
+      if (type.Base is { } inherited)
+        this._text.Append(" extends ").Append(inherited);
+
+      this._text.Append(" {\n");
+      foreach (var member in type.Members) {
+        this._text.Append('\n', member.Leading.BlankLines);
+        foreach (var comment in member.Leading.Comments)
+          this.Comment(comment, depth + 1);
+
+        this.Line(depth + 1);
+        if (member.IsStatic)
+          this._text.Append("static ");
+
+        if (member.Kind == JsClassMemberKind.Field) {
+          this._text.Append(member.Name);
+          if (member.Value is not null) {
+            this._text.Append(" = ");
+            this.Operand(member.Value, Precedence(member.Value) > Sequence, depth + 1);
+          }
+
+          this._text.Append(";\n");
+          continue;
+        }
+
+        this._text.Append(member.Kind switch { JsClassMemberKind.Getter => "get ", JsClassMemberKind.Setter => "set ", _ => "" })
+          .Append(member.Name).Append('(').AppendJoin(", ", member.Parameters).Append(") ");
+        this.Braces(member.Body!, depth + 1);
+        this._text.Append('\n');
+      }
+
+      this.Line(depth).Append('}');
     }
 
     private void Function(string? name, IReadOnlyList<string> parameters, JsBlock body, int depth) {
@@ -326,7 +379,11 @@ public static class JavaScriptPrinter {
     }
 
     /// <summary>Whether an expression may stand where a member is read from it: a primary expression, but no number whose dot would be its fraction.</summary>
-    private static bool IsTarget(JsExpression target) => Precedence(target) == Primary && target is not JsNumber;
+    /// <summary>Whether an operand would mix <c>??</c> with <c>&amp;&amp;</c> or <c>||</c> without parentheses, which ECMA-262 (§13.13) does not allow.</summary>
+    private static bool Mixes(string op, JsExpression operand)
+      => operand is JsBinary { Operator: var inner } && (op == "??" ? inner is "&&" or "||" : op is "&&" or "||" && inner == "??");
+
+    private static bool IsTarget(JsExpression target) => Precedence(target) == Primary && target is not JsNumber && target is not JsMember { Optional: true };
 
     public void Expression(JsExpression expression, int depth) {
       switch (expression) {
@@ -342,21 +399,27 @@ public static class JavaScriptPrinter {
         case JsBoolean truth:
           this._text.Append(truth.Value ? "true" : "false");
           break;
+        case JsThis:
+          this._text.Append("this");
+          break;
+        case JsNull:
+          this._text.Append("null");
+          break;
         case JsIdentifier identifier:
           this._text.Append(identifier.Name);
           break;
         case JsMember member:
           this.Operand(member.Target, IsTarget(member.Target), depth);
-          this._text.Append('.').Append(member.Property);
+          this._text.Append(member.Optional ? "?." : ".").Append(member.Property);
           break;
         case JsIndex index:
-          this.Operand(index.Target, Precedence(index.Target) == Primary, depth);
+          this.Operand(index.Target, Precedence(index.Target) == Primary && index.Target is not JsMember { Optional: true }, depth);
           this._text.Append('[');
           this.Expression(index.Index, depth);
           this._text.Append(']');
           break;
         case JsCall call:
-          this.Operand(call.Callee, Precedence(call.Callee) == Primary, depth);
+          this.Operand(call.Callee, Precedence(call.Callee) == Primary && call.Callee is not JsMember { Optional: true }, depth);
           this.Arguments(call.Arguments, depth);
           break;
         case JsNew creation:
@@ -382,9 +445,9 @@ public static class JavaScriptPrinter {
         case JsBinary binary:
           var precedence = Of(binary.Operator);
           var rightAssociative = binary.Operator == "**";
-          this.Operand(binary.Left, rightAssociative ? Precedence(binary.Left) > precedence : Precedence(binary.Left) >= precedence, depth);
+          this.Operand(binary.Left, (rightAssociative ? Precedence(binary.Left) > precedence : Precedence(binary.Left) >= precedence) && !Mixes(binary.Operator, binary.Left), depth);
           this._text.Append(' ').Append(binary.Operator).Append(' ');
-          this.Operand(binary.Right, rightAssociative ? Precedence(binary.Right) >= precedence : Precedence(binary.Right) > precedence, depth);
+          this.Operand(binary.Right, (rightAssociative ? Precedence(binary.Right) >= precedence : Precedence(binary.Right) > precedence) && !Mixes(binary.Operator, binary.Right), depth);
           break;
         case JsAssignment assignment:
           this.Operand(assignment.Left, Precedence(assignment.Left) == Primary, depth);
@@ -427,6 +490,15 @@ public static class JavaScriptPrinter {
           break;
         case JsObject literal:
           this.Object(literal, depth);
+          break;
+        case JsArrowFunction arrow:
+          this._text.Append('(').AppendJoin(", ", arrow.Parameters).Append(") => ");
+          if (arrow.Body is not null)
+            this.Braces(arrow.Body, depth);
+          else
+            // An object literal as the body would be read as a block, a sequence as more parameters of an outer call.
+            this.Operand(arrow.ExpressionBody!, Precedence(arrow.ExpressionBody!) > Sequence && arrow.ExpressionBody is not JsObject, depth);
+
           break;
         default:
           var function = (JsFunctionExpression)expression;

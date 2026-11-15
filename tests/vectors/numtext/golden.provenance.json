@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "provenance": {
+    "kind": "reference-run",
+    "source": "node",
+    "detail": "tests/vectors/numtext/generate/regenerate.sh: node writes the bit patterns of xorshift64 from the seed 0x2026 with String(x), .NET writes ToString(CultureInfo.InvariantCulture), at the versions generate/versions.txt records",
+    "generatedBy": "node"
+  }
+}

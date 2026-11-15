@@ -21,8 +21,11 @@ internal static class ModuleState {
   /// </summary>
   /// <returns>The variables lowered, in source order.</returns>
   public static IReadOnlyList<Variable> Lower(
-    Program program, IReadOnlyList<Variable> globals, IReadOnlyList<FunctionModel> models, FunctionModel initializers, Lowering lowering, List<Diagnostic> diagnostics) {
+    Program program, IReadOnlyList<Variable> globals, IReadOnlyList<FunctionModel> models, FunctionModel initializers, Lowering lowering, List<Diagnostic> diagnostics,
+    IEnumerable<Variable> owned, IReadOnlySet<Node> declarations) {
     var used = models.SelectMany(model => model.Bindings.Values).OfType<Variable>().Where(variable => variable.IsGlobal).ToHashSet();
+    // A static field is a member of its class, whoever uses it.
+    used.UnionWith(owned);
     // An initializer reads only variables declared before it, so one pass from the last to the first finds them all.
     for (var index = globals.Count - 1; index >= 0; --index)
       if (used.Contains(globals[index]) && globals[index].Initializer is { } initializer)
@@ -34,7 +37,7 @@ internal static class ModuleState {
     if (state.Count == 0)
       return state;
 
-    foreach (var statement in program.Body.Where(statement => !IsDeclaration(statement)))
+    foreach (var statement in program.Body.Where(statement => !IsDeclaration(statement) && !declarations.Contains(statement)))
       diagnostics.Add(lowering.TopLevel(statement));
 
     foreach (var global in state)

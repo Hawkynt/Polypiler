@@ -1,0 +1,29 @@
+id: INTRINSICS.FormatEcma
+title: A number as ECMA-262 writes it
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1315"
+tests: [Polypiler.Tests/String/IrNumberTextTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FormatEcma
+  group: String
+  typeParameters: [{name: N, constraint: any}]
+  parameters: [{name: value, type: N}]
+  returns: [{name: text, type: TYPES.str}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "Number::toString(value, 10): the shortest digits that read back, the nearer of two; fixed notation while the exponent e of the first digit satisfies -7 < e < 21, otherwise d.ddde+n or d.ddde-n; -0 is 0; an integer as its decimal digits"
+    source: "ECMA-262 2022 §6.1.6.1.20 (Number::toString), §6.1.6.2.20 (BigInt::toString)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {N: TYPES.f64}, inputs: ["0x444B1AE4D6E2EF50"], outputs: [[49, 101, 43, 50, 49]]}
+    - {types: {N: TYPES.f64}, inputs: ["0x3EB92A737110E454"], outputs: [[48, 46, 48, 48, 48, 48, 48, 49, 53]]}
+    - {types: {N: TYPES.f64}, inputs: ["0x8000000000000000"], outputs: [[48]]}
+    - {types: {N: TYPES.i32}, inputs: [-7], outputs: [[45, 55]]}

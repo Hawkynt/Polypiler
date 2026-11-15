@@ -20,9 +20,6 @@ public static class CSharpStringApi {
   /// <summary>What every member that compares by culture is told.</summary>
   public const string Culture = "which compares by culture: pass StringComparison.Ordinal";
 
-  /// <summary>What a conversion between numbers and text is told until the IR has one.</summary>
-  public const string NumberText = "which converts a number to text, not supported until number-to-text conversion";
-
   /// <summary>Every construct the table states.</summary>
   public static IReadOnlyList<CSharpStringMember> Members { get; } = [
     new("string local, parameter, result, const, static readonly, string[]", "str"),
@@ -90,9 +87,7 @@ public static class CSharpStringApi {
     new("string.Format", "", "string formatting"),
     new("StringBuilder", "", "a mutable string"),
     new("null of the type string", "", "a string that is no string"),
-    new("new string[n]", "", "an array of strings without its elements, which .NET fills with null"),
-    new("string + number", "", NumberText),
-    new("interpolated string with a number", "", NumberText)
+    new("new string[n]", "", "an array of strings without its elements, which .NET fills with null")
   ];
 
   /// <summary>The entries the frontend imports.</summary>

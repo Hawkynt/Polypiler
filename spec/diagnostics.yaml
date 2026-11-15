@@ -948,6 +948,15 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --from javascript
+  - code: PLY1107
+    severity: error
+    exit: UnsupportedConstruct
+    title: thrown value that is not an Error observed
+    message: "a thrown value that is not an Error reaches <place>, which observes it"
+    rule: javascript.non-error-throw
+    area: javascript
+    owner: "#1323"
+    surfaces: standard error of polypiler translate --from javascript
   - code: PLY1152
     severity: error
     exit: UnsupportedConstruct

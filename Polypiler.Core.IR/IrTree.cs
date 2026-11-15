@@ -23,6 +23,25 @@ public static class IrTree {
     IrStructNew creation => creation.Arguments,
     IrFieldLoad load => [load.Target],
     IrStructEquals equality => [equality.Left, equality.Right],
+    IrNew creation => creation.Arguments,
+    IrMethodCall { Target: { } target } call => [target, .. call.Arguments],
+    IrMethodCall call => call.Arguments,
+    IrReferenceEquals equality => [equality.Left, equality.Right],
+    IrTypeTest test => [test.Value],
+    IrCast cast => [cast.Value],
+    IrAsCast cast => [cast.Value],
+    IrSome some => [some.Value],
+    IrIsNone test => [test.Value],
+    IrUnwrap unwrap => [unwrap.Value],
+    IrCoalesce coalesce => [coalesce.Value, coalesce.Fallback],
+    IrIsNull test => [test.Value],
+    IrBind bind => [bind.Value],
+    IrGenericEquals equality => [equality.Left, equality.Right],
+    IrGenericCompare order => [order.Left, order.Right],
+    IrThrowExpression thrown => [thrown.Exception],
+    IrCollection operation => operation.Arguments,
+    IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
+    IrBoundMethod { Receiver: { } receiver } => [receiver],
     _ => []
   };
 
@@ -42,6 +61,10 @@ public static class IrTree {
     IrFor loop => [loop.Condition],
     IrSwitch choice => [choice.Value],
     IrReturn { Value: { } value } => [value],
+    IrThrow thrown => [thrown.Exception],
+    IrTry attempt => [.. attempt.Catches.Select(clause => clause.Filter).OfType<IrExpr>()],
+    IrUsing scope => [scope.Initializer],
+    IrForEachCollection loop => [loop.Collection],
     _ => []
   };
 
@@ -56,13 +79,17 @@ public static class IrTree {
     IrDoWhile loop => [loop.Body],
     IrFor loop => [loop.Body, loop.Step],
     IrSwitch choice => [.. choice.Sections.Select(section => section.Body)],
+    IrTry attempt => [attempt.Body, .. attempt.Catches.Select(clause => clause.Body), .. attempt.Finally is { } final ? [final] : (IrBlock[])[]],
+    IrUsing scope => [scope.Body],
+    IrForEachCollection loop => [loop.Body],
     _ => []
   };
 
-  /// <summary>Every node of an expression, the expression first.</summary>
+  /// <summary>Every node of an expression, the expression first; the nodes of the body of a lambda are among them.</summary>
   /// <param name="expression">The expression.</param>
   /// <returns>The nodes in pre-order.</returns>
-  public static IEnumerable<IrExpr> Nodes(IrExpr expression) => Operands(expression).SelectMany(Nodes).Prepend(expression);
+  public static IEnumerable<IrExpr> Nodes(IrExpr expression)
+    => (expression is IrLambda lambda ? Nodes(lambda.Body) : Operands(expression).SelectMany(Nodes)).Prepend(expression);
 
   /// <summary>Every expression node within a statement, those of its blocks included.</summary>
   /// <param name="statement">The statement.</param>

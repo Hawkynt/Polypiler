@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Polypiler.Core.IR;
 
 /// <summary>The shapes a value of the prototype IR can have.</summary>
@@ -55,7 +57,53 @@ public enum IrTypeKind {
   ReadOnlySpan,
 
   /// <summary>An immutable sequence of UTF-16 code units, never null; compared and searched by code unit.</summary>
-  String
+  String,
+
+  /// <summary>
+  /// A reference to an object of a class, an <see cref="IrClassType"/>, or of a class that implements an
+  /// <see cref="IrInterfaceType"/>, or <c>null</c>: the object has an identity, and every copy of the
+  /// reference names the same object.
+  /// </summary>
+  Object,
+
+  /// <summary>
+  /// An optional value <c>T?</c>: a value of its <see cref="IrType.Underlying"/> type, or none. Lifted
+  /// operations are no part of the type: the IR spells them out with <see cref="IrIsNone"/>,
+  /// <see cref="IrUnwrap"/> and <see cref="IrSome"/>.
+  /// </summary>
+  Optional,
+
+  /// <summary>
+  /// A growable list of elements with an identity: <c>List&lt;T&gt;</c> of C#, an <c>Array</c> of
+  /// JavaScript that changes its length. What its operations mean is stated at <see cref="IrCollectionOp"/>.
+  /// </summary>
+  List,
+
+  /// <summary>
+  /// A map from keys to values with an identity and an order of enumeration (<see cref="IrType.Order"/>):
+  /// <c>Dictionary&lt;TKey, TValue&gt;</c> of C#, <c>Map</c> of JavaScript.
+  /// </summary>
+  Map,
+
+  /// <summary>A set of keys with an identity and an order of enumeration: <c>HashSet&lt;T&gt;</c> of C#, <c>Set</c> of JavaScript.</summary>
+  Set,
+
+  /// <summary>
+  /// A function value: a closure over variables, a function of the module or a method bound to its
+  /// receiver, of an <see cref="IrFunctionType"/>; or <c>null</c>. It is a reference: every copy names
+  /// the same function and the same captured variables.
+  /// </summary>
+  Function,
+
+  /// <summary>
+  /// A writable view of a run of elements of numbers, like <see cref="Span"/>, that may be stored: in a field
+  /// of a class, as well as in a local, a parameter or a result. Its elements are reached through the
+  /// <see cref="Span"/> it gives (#1325).
+  /// </summary>
+  Memory,
+
+  /// <summary>A view like <see cref="Memory"/> whose elements are only read.</summary>
+  ReadOnlyMemory
 
 }
 
@@ -71,6 +119,13 @@ public sealed record IrType {
     this.Kind = kind;
     this.Element = element;
     this.Declaration = declaration;
+  }
+
+  private IrType(IrType underlying, IrTypeKind kind) : this(kind, null, null) => this.Underlying = underlying;
+
+  private IrType(IrTypeKind kind, IrType? key, IrType element, MapOrder order) : this(kind, element, null) {
+    this.Key = key;
+    this.Order = order;
   }
 
   /// <summary>The shape of the type.</summary>
@@ -136,6 +191,19 @@ public sealed record IrType {
   /// <returns>The view type.</returns>
   public static IrType ReadOnlySpan(IrType element) => new(IrTypeKind.ReadOnlySpan, element);
 
+  /// <summary>The type of a writable view of elements of a number type that may be stored in a field.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <returns>The memory type.</returns>
+  public static IrType Memory(IrType element) => new(IrTypeKind.Memory, element);
+
+  /// <summary>The type of a read-only view of elements of a number type that may be stored in a field.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <returns>The memory type.</returns>
+  public static IrType ReadOnlyMemory(IrType element) => new(IrTypeKind.ReadOnlyMemory, element);
+
+  /// <summary>Whether the type is a memory, a view that may be stored, writable or read-only.</summary>
+  public bool IsMemory => this.Kind is IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory;
+
   /// <summary>Whether the type is a view of elements, writable or read-only.</summary>
   public bool IsView => this.Kind is IrTypeKind.Span or IrTypeKind.ReadOnlySpan;
 
@@ -152,6 +220,129 @@ public sealed record IrType {
 
   /// <summary>The struct of a struct type, otherwise <see langword="null"/>.</summary>
   public IrStructType? StructType => this.Declaration as IrStructType;
+
+  /// <summary>The type of the references to objects of a class.</summary>
+  /// <param name="declaration">The class.</param>
+  /// <returns>The reference type.</returns>
+  public static IrType Object(IrClassType declaration) => new(IrTypeKind.Object, null, declaration);
+
+  /// <summary>The class of a reference type, otherwise <see langword="null"/>.</summary>
+  public IrClassType? ClassType => this.Declaration as IrClassType;
+
+  /// <summary>The type of the references to objects of the classes that implement an interface.</summary>
+  /// <param name="declaration">The interface.</param>
+  /// <returns>The reference type.</returns>
+  public static IrType Object(IrInterfaceType declaration) => new(IrTypeKind.Object, null, declaration);
+
+  /// <summary>The interface of a reference type, otherwise <see langword="null"/>.</summary>
+  public IrInterfaceType? InterfaceType => this.Declaration as IrInterfaceType;
+
+  /// <summary>
+  /// Whether a value of this type is a value of another without a conversion: the same type, or a
+  /// reference to a class that converts to its base class or an interface it implements (an upcast,
+  /// which has no effect).
+  /// </summary>
+  /// <param name="target">The type the value goes to.</param>
+  /// <returns><see langword="true"/> when the value can stand where the target type is expected.</returns>
+  public bool IsAssignableTo(IrType? target) {
+    if (this == target)
+      return true;
+
+    if (!this.IsObject || target is not { IsObject: true })
+      return false;
+
+    if (this.ClassType is { } type)
+      return target.ClassType is { } ancestor ? type.DerivesFrom(ancestor) : type.AllInterfaces.Contains(target.InterfaceType!);
+
+    return target.InterfaceType is { } other && this.InterfaceType!.Closure.Contains(other);
+  }
+
+  /// <summary>Whether the type is a reference to an object of a class, which may be <c>null</c>.</summary>
+  public bool IsObject => this.Kind == IrTypeKind.Object;
+
+  /// <summary>The type of the value an optional type holds when it holds one, otherwise <see langword="null"/>.</summary>
+  public IrType? Underlying { get; }
+
+  /// <summary>
+  /// The optional type over a type: a scalar - a truth value or a number - or a struct. References
+  /// have no optional type: they are <c>null</c> already (<see cref="IrNull"/>).
+  /// </summary>
+  /// <param name="underlying">The type of the value it holds when it holds one.</param>
+  /// <returns>The optional type <c>T?</c>.</returns>
+  public static IrType Optional(IrType underlying) => new(underlying, IrTypeKind.Optional);
+
+  /// <summary>Whether the type is an optional value <c>T?</c>.</summary>
+  public bool IsOptional => this.Kind == IrTypeKind.Optional;
+
+  /// <summary>Whether a type may be the underlying type of an optional one: a truth value, a number or a struct.</summary>
+  public bool IsOptionalValue => this == Bool || this.IsNumeric || this.IsStruct;
+
+  /// <summary>The list type with the given element type.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <returns>The list type.</returns>
+  public static IrType List(IrType element) => new(IrTypeKind.List, null, element, MapOrder.Insertion);
+
+  /// <summary>The map type with the given key and value types and order of enumeration.</summary>
+  /// <param name="key">The type of the keys.</param>
+  /// <param name="value">The type of the values, which <see cref="Element"/> gives.</param>
+  /// <param name="order">The order the entries are enumerated in.</param>
+  /// <returns>The map type.</returns>
+  public static IrType Map(IrType key, IrType value, MapOrder order) => new(IrTypeKind.Map, key, value, order);
+
+  /// <summary>The set type with the given element type and order of enumeration.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <param name="order">The order the elements are enumerated in.</param>
+  /// <returns>The set type.</returns>
+  public static IrType Set(IrType element, MapOrder order) => new(IrTypeKind.Set, null, element, order);
+
+  /// <summary>The type of the keys of a map, otherwise <see langword="null"/>.</summary>
+  public IrType? Key { get; }
+
+  /// <summary>The order a map or a set enumerates in; <see cref="MapOrder.Insertion"/> for every other type.</summary>
+  public MapOrder Order { get; }
+
+  /// <summary>Whether the type is a list, a map or a set.</summary>
+  public bool IsCollection => this.Kind is IrTypeKind.List or IrTypeKind.Map or IrTypeKind.Set;
+
+  /// <summary>Whether the type is a list.</summary>
+  public bool IsList => this.Kind == IrTypeKind.List;
+
+  /// <summary>Whether a value of the type is a reference that may be <c>null</c>: an object, an array or a function value.</summary>
+  public bool IsNullable => this.IsObject || this.IsArray || this.IsFunction;
+
+  /// <summary>The type of the function values of a signature.</summary>
+  /// <param name="signature">The parameters and the result.</param>
+  /// <returns>The function type.</returns>
+  public static IrType Function(IrFunctionType signature) => new(IrTypeKind.Function, null) { Signature = signature };
+
+  /// <summary>The type of the function values that take parameters of the given types and return a value of another.</summary>
+  /// <param name="result">The type of the result, or <see cref="Void"/>.</param>
+  /// <param name="parameters">The types of the parameters, in call order.</param>
+  /// <returns>The function type.</returns>
+  public static IrType Function(IrType result, params IrType[] parameters) => Function(new IrFunctionType(parameters, result));
+
+  /// <summary>The signature of a function type, otherwise <see langword="null"/>.</summary>
+  public IrFunctionType? Signature { get; private init; }
+
+  /// <summary>Whether the type is a function type, whose values may be <c>null</c>.</summary>
+  public bool IsFunction => this.Kind == IrTypeKind.Function;
+
+  /// <summary>
+  /// The type of the values of an enum: of the kind of its underlying integer type, whose width, sign
+  /// and arithmetic it has, and with the enum as its declaration, which makes it a type of its own.
+  /// </summary>
+  /// <param name="declaration">The enum.</param>
+  /// <returns>The enum type.</returns>
+  public static IrType Enum(IrEnumType declaration) => new(declaration.Underlying.Kind, null, declaration);
+
+  /// <summary>The enum of an enum type, otherwise <see langword="null"/>.</summary>
+  public IrEnumType? EnumType => this.Declaration as IrEnumType;
+
+  /// <summary>Whether the type is an enum, an integer type with names.</summary>
+  public bool IsEnum => this.Declaration is IrEnumType;
+
+  /// <summary>The integer type of the values of an enum type; any other type itself.</summary>
+  public IrType Integral => this.Declaration is IrEnumType declared ? declared.Underlying : this;
 
   /// <summary>Whether the type is the string type <c>str</c>.</summary>
   public bool IsString => this.Kind == IrTypeKind.String;
@@ -204,17 +395,26 @@ public sealed record IrType {
 
   /// <summary>
   /// Whether the type can be the type of a local: not void, an array only of numbers, of structs or of
-  /// strings, and a view only of numbers.
+  /// strings, and a view or a memory only of numbers.
   /// </summary>
-  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && (this.Element.IsStruct || this.Element.IsString)));
+  public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue
+    : this.IsCollection ? IrCollections.IsElement(this)
+    : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && !this.IsMemory && (this.Element.IsStruct || this.Element.IsString || this.Element.IsFunction)));
 
-  /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c> or the name of a struct.</summary>
+  /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c>, <c>i32?</c> or the name of a struct.</summary>
   public override string ToString()
-    => this.Declaration is { } declaration ? declaration.Name
+    => this.Underlying is { } underlying ? $"{underlying}?"
+      : this.Declaration is { } declaration ? declaration.Name
+      : this.Signature is { } signature ? signature.ToString()
       : this.IsString ? "str"
       : this.Element is null ? this.Kind.ToString().ToLowerInvariant()
       : this.Kind == IrTypeKind.Span ? $"span<{this.Element}>"
       : this.Kind == IrTypeKind.ReadOnlySpan ? $"readonly span<{this.Element}>"
+      : this.Kind == IrTypeKind.List ? $"list<{this.Element}>"
+      : this.Kind == IrTypeKind.Map ? $"map<{this.Key}, {this.Element}, {this.Order.ToString().ToLowerInvariant()}>"
+      : this.Kind == IrTypeKind.Set ? $"set<{this.Element}, {this.Order.ToString().ToLowerInvariant()}>"
+      : this.Kind == IrTypeKind.Memory ? $"memory<{this.Element}>"
+      : this.Kind == IrTypeKind.ReadOnlyMemory ? $"readonly memory<{this.Element}>"
       : $"{this.Element}[]";
 
 }

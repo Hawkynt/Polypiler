@@ -22,6 +22,8 @@ public static partial class IrVerifier {
     List<Diagnostic> diagnostics) {
     var earlier = new HashSet<IrGlobal>(ReferenceEqualityComparer.Instance);
     var impure = Impure(module);
+    // The body of a member is reached through its class, never by a call of an initializer.
+    impure.UnionWith(module.Types.OfType<IrClassType>().SelectMany(type => type.Functions));
     foreach (var global in module.Globals) {
       void Require(bool holds, string message) {
         if (!holds)
@@ -30,7 +32,8 @@ public static partial class IrVerifier {
 
       Require(names.Add(global.Name), "the module declares the name twice");
       var element = global.Type.Element ?? global.Type;
-      Require(global.Type.IsStorable && !element.IsStruct && !global.Type.IsView, $"a global of the type {global.Type}");
+      Require(global.Type.IsStorable && !element.IsStruct && !element.IsObject && !global.Type.IsView && !global.Type.IsMemory, $"a global of the type {global.Type}");
+      Require(element.EnumType is not { } named || types.Declares(named), $"the type {element} is not among the types of the module");
       if (global.Initializer is not { } initializer) {
         Require(!global.Type.IsArray && !global.Type.IsString, $"{(global.Type.IsArray ? "an array" : "a string")} global without an initializer");
       } else {
@@ -53,7 +56,7 @@ public static partial class IrVerifier {
   /// <summary>Whether a node may stand in the initializer of a global.</summary>
   private static bool IsStatic(IrExpr node, HashSet<string> impure) => node switch {
     IrConst or IrStrConst or IrConstRef or IrGlobalRef or IrUnary or IrBinary or IrConvert or IrConditional or IrNewArray => true,
-    IrIntrinsic intrinsic => intrinsic.Op == IrIntrinsicOp.ArrayOf || StringOperations.IsString(intrinsic.Op),
+    IrIntrinsic intrinsic => intrinsic.Op == IrIntrinsicOp.ArrayOf || StringOperations.IsString(intrinsic.Op) || NumberTextOperations.IsNumberText(intrinsic.Op) || EnumOperations.IsEnum(intrinsic.Op),
     IrCall call => !impure.Contains(call.Function),
     _ => false
   };
@@ -66,7 +69,7 @@ public static partial class IrVerifier {
   /// <returns>The names of those functions.</returns>
   public static HashSet<string> Impure(IrModule module) {
     var impure = new HashSet<string>();
-    var calls = module.Functions.Select(function => (function.Name, Callees: IrTree.Nodes(function.Body).OfType<IrCall>().Select(call => call.Function).ToList())).ToList();
+    var calls = module.Functions.Select(function => (function.Name, Callees: IrTree.Nodes(function.Body).Select(Callee).OfType<string>().ToList())).ToList();
     foreach (var function in module.Functions)
       if (IrTree.Nodes(function.Body).Any(node => node is IrGlobalRef) || Statements(function.Body).Any(statement => statement is IrGlobalAssign))
         impure.Add(function.Name);
@@ -79,6 +82,14 @@ public static partial class IrVerifier {
 
     return impure;
   }
+
+  /// <summary>The function a node calls: of a call, a method call or a new object; <see langword="null"/> for any other node.</summary>
+  private static string? Callee(IrExpr node) => node switch {
+    IrCall call => call.Function,
+    IrMethodCall call => call.Method.Function,
+    IrNew creation => creation.Constructor.Function,
+    _ => null
+  };
 
   /// <summary>Every statement within a statement, the statement first.</summary>
   private static IEnumerable<IrStmt> Statements(IrStmt statement)

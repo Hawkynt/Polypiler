@@ -112,6 +112,15 @@ public static partial class JavaScriptEmitter {
         case IrReturn result:
           this.Expression(result.Value);
           break;
+        case IrThrow or IrTry:
+          // A catch clause or a finally block runs after any statement of the try: as a loop, nothing in it is the last use.
+          this.Loop([.. IrTree.Expressions(statement)], [.. IrTree.Blocks(statement)]);
+          break;
+        case IrUsing scope:
+          // The resource is acquired before the try its scope is.
+          this.Expression(scope.Initializer);
+          this.Loop([], [scope.Body]);
+          break;
       }
     }
 
@@ -173,12 +182,12 @@ public static partial class JavaScriptEmitter {
 
   private sealed partial class Writer {
 
-    private readonly List<(string Kind, IrStructType Type)> _structHelpers = [];
+    private readonly List<(string Kind, IrTypeDeclaration Type)> _structHelpers = [];
     private Liveness _liveness = new([], []);
     private bool _structs;
 
     /// <summary>The name of the helper of a kind for a struct, which the module declares once it is asked for.</summary>
-    private string StructHelper(string kind, IrStructType type) {
+    private string StructHelper(string kind, IrTypeDeclaration type) {
       if (!this._structHelpers.Contains((kind, type)))
         this._structHelpers.Add((kind, type));
 
@@ -209,8 +218,8 @@ public static partial class JavaScriptEmitter {
     /// <summary>Whether a struct is read from a place that can be used again: a live variable or a part of one, or an array element.</summary>
     private bool NeedsCopy(IrExpr expression) => expression switch {
       IrLocalRef reference => this._liveness.Live.Contains(reference),
-      IrArrayLoad => true,
-      IrFieldLoad load => this.NeedsCopy(load.Target),
+      IrArrayLoad or IrCollection { Op: IrCollectionOp.ListGet or IrCollectionOp.MapGet } => true,
+      IrFieldLoad load => load.Target.Type.IsObject || this.NeedsCopy(load.Target),
       _ => false
     };
 
@@ -261,7 +270,7 @@ public static partial class JavaScriptEmitter {
 
     /// <summary>A write of a field through a place, which is named without a copy: the write is meant to change it.</summary>
     private JsAssignment FieldStore(IrFieldStore store) {
-      var place = new JsMember(this.Operand(store.Target), store.Field.Name);
+      var place = new JsMember(this.Operand(store.Target), store.Target.Type.IsObject ? this.MemberName(store.Field) : store.Field.Name);
       return new JsAssignment(place, "=", this.Value(store.Value));
     }
 
@@ -272,8 +281,19 @@ public static partial class JavaScriptEmitter {
     private List<JsStatement> StructHelpers() {
       var helpers = new List<JsStatement>();
       for (var index = 0; index < this._structHelpers.Count; ++index) {
-        var (kind, type) = this._structHelpers[index];
-        var name = $"${kind}_{type.Name}";
+        var (kind, declared) = this._structHelpers[index];
+        var name = $"${kind}_{declared.Name}";
+        if (kind is "is" or "as" or "cast") {
+          helpers.Add(this.ConversionHelper(name, kind, declared) with { Leading = JsTrivia.Blank, IsHelper = true });
+          continue;
+        }
+
+        if (declared is IrClassType record) {
+          helpers.Add(this.RecordEquals(name, record) with { Leading = JsTrivia.Blank, IsHelper = true });
+          continue;
+        }
+
+        var type = (IrStructType)declared;
         JsFunctionDeclaration function;
         switch (kind) {
           case "copy":
@@ -283,7 +303,7 @@ public static partial class JavaScriptEmitter {
             function = new JsFunctionDeclaration(name, ["value"], new JsBlock([new JsReturn(this.Literal(copied))]));
             break;
           case "equals":
-            var compared = type.Fields.Select(this.FieldEquals).ToList();
+            var compared = type.Fields.Select(field => this.FieldEquals(field, field.Name)).ToList();
             function = new JsFunctionDeclaration(name, ["a", "b"], new JsBlock([
               new JsReturn(compared.Count == 0 ? new JsBoolean(true) : compared.Aggregate((left, right) => Infix(left, "&&", right)))
             ]));
@@ -311,10 +331,13 @@ public static partial class JavaScriptEmitter {
     /// <c>===</c> says of the zeros and the inequality of each NaN with itself of the NaNs; a pair of
     /// halves by its helper; a struct by its own equality; anything else by <c>===</c>.
     /// </summary>
-    private JsExpression FieldEquals(IrField field) {
-      var (a, b) = (new JsMember(Id("a"), field.Name), new JsMember(Id("b"), field.Name));
+    private JsExpression FieldEquals(IrField field, string name) {
+      var (a, b) = (new JsMember(Id("a"), name), new JsMember(Id("b"), name));
       if (field.Type.StructType is { } nested)
         return Invoke(this.StructHelper("equals", nested), a, b);
+
+      if (field.Type.ClassType is { IsRecord: true } record)
+        return Invoke(this.StructHelper("equals", record), a, b);
 
       if (field.Type.IsFloat)
         return Parenthesized(Infix(Infix(a, "===", b), "||", Parenthesized(Infix(Infix(a, "!==", a), "&&", Infix(b, "!==", b)))));

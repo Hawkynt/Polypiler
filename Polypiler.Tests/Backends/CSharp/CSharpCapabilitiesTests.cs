@@ -39,6 +39,19 @@ public sealed class CSharpCapabilitiesTests {
     ("object initializer", "C# 3"),
     ("readonly struct", "C# 7.2"),
     ("record struct", "C# 10"),
+    ("auto-implemented property", "C# 3"),
+    ("get-only auto-property", "C# 6"),
+    ("init accessor", "C# 9"),
+    ("record class", "C# 9"),
+    ("pattern declaration", "C# 7"),
+    ("null-conditional operator", "C# 6"),
+    ("null-coalescing assignment", "C# 8"),
+    ("nullable reference types", "C# 8"),
+    ("generic constraint unmanaged", "C# 7.3"),
+    ("generic constraint notnull", "C# 8"),
+    ("exception filter", "C# 6"),
+    ("throw expression", "C# 7"),
+    ("using declaration", "C# 8"),
     ("IEquatable<T>", "net2.0"),
     ("EqualityComparer<T>.Default", "net2.0"),
     ("HashCode.Combine", "netstandard2.1"),
@@ -125,7 +138,36 @@ public sealed class CSharpCapabilitiesTests {
     ("ArraySegment<T> element place", "net2.0"),
     ("BinaryPrimitives.Read… on an ArraySegment<byte>", "net2.0"),
     ("BinaryPrimitives.Write… on an ArraySegment<byte>", "net2.0"),
-    ("BinaryPrimitives.Write… on a span, the value evaluated first", "netstandard2.1")
+    ("BinaryPrimitives.Write… on a span, the value evaluated first", "netstandard2.1"),
+    ("List<T>", "net2.0"),
+    ("Array.prototype.pop of ECMA-262 on a List<T> of values", "net2.0"),
+    ("Array.prototype.pop of ECMA-262 on a List<T> of references", "net2.0"),
+    ("Array.prototype.includes of ECMA-262 on a List<T> of references", "net2.0"),
+    ("Array.prototype.indexOf of ECMA-262 on a List<T> of records", "net2.0"),
+    ("Array.prototype.indexOf of ECMA-262 on a List<double>", "net2.0"),
+    ("Array.prototype.indexOf of ECMA-262 on a List<float>", "net2.0"),
+    ("Dictionary<TKey,TValue>", "net2.0"),
+    ("HashSet<T>", "net3.5"),
+    ("Dictionary<TKey,TValue>.TryAdd", "netstandard2.1"),
+    ("Dictionary<TKey,TValue>.TryGetValue as an optional value", "net2.0"),
+    ("Dictionary<TKey,TValue>.TryGetValue as a reference or null", "net2.0"),
+    ("TryGetValue of the slots as an optional value", "net2.0"),
+    ("TryGetValue of the slots as a reference or null", "net2.0"),
+    ("Dictionary<TKey,TValue> enumeration of .NET Core 3.0", "netstandard2.1"),
+    ("EqualityComparer<double>.Default normalising NaN and -0", "netstandard2.1"),
+    ("OrderedDictionary<TKey,TValue>", "net10.0"),
+    ("anonymous method", "C# 2"),
+    ("lambda expression", "C# 3"),
+    ("foreach iteration variable of its own per pass", "C# 5"),
+    ("static anonymous function", "C# 9"),
+    ("System.Action<T>", "net2.0"),
+    ("System.Action", "net3.5"),
+    ("System.Func<T1…T4, TResult>", "net3.5"),
+    ("System.Action<T1…T4>", "net3.5"),
+    ("System.Func<T1…T16, TResult>", "net4.6"),
+    ("System.Action<T1…T16>", "net4.6"),
+    ("enum declaration with [Flags] (FlagsAttribute)", "net2.0"),
+    ("Enum.HasFlag(Enum)", "net4.6")
   ];
 
   /// <summary>
@@ -303,8 +345,8 @@ public sealed class CSharpCapabilitiesTests {
   internal static bool IsFloating(CSharpCapability row)
     => row.Operation is { } op && FloatOperationTable.Of(op) is { DoubleName: not null } && row.Operands.All(kind => kind is IrTypeKind.F32 or IrTypeKind.F64);
 
-  /// <summary>Whether a row writes a string operation, which CSharpStringEmissionTests test.</summary>
-  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && StringOperations.IsString(op);
+  /// <summary>Whether a row writes a string operation, a conversion between numbers and text or an operation on enums, which their own emission tests test.</summary>
+  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && (StringOperations.IsString(op) || NumberTextOperations.IsNumberText(op) || EnumOperations.IsEnum(op));
 
   /// <summary>The table names every API and every feature of the language the issue lists, each with the first profile or version that has it.</summary>
   [Test]
@@ -374,6 +416,9 @@ public sealed class CSharpCapabilitiesTests {
   [TestCase(CSharpFeature.NativeInteger, "static class C { static long F(int x) { nint y = x; return y; } }")]
   [TestCase(CSharpFeature.FileScopedNamespace, "namespace N; static class C { }")]
   [TestCase(CSharpFeature.UnsignedRightShift, "static class C { static int F(int x) { return x >>> 1; } }")]
+  [TestCase(CSharpFeature.NullConditional, "static class C { static int? F(int[] a) { return a?.Length; } }")]
+  [TestCase(CSharpFeature.NullCoalescingAssignment, "static class C { static int F(int? a) { a ??= 1; return a.Value; } }")]
+  [TestCase(CSharpFeature.NullableReferenceTypes, "#nullable enable\nstatic class C { static int F(string? s) { return 1; } }")]
   public void LanguageRow_IsTheCompilersVersion(CSharpFeature feature, string source) {
     var version = CSharpCapabilities.Default.Of(feature)!.Language!;
     var before = CSharpProfile.LanguageVersions.TakeWhile(candidate => candidate < version).Last();
@@ -388,6 +433,7 @@ public sealed class CSharpCapabilitiesTests {
   [TestCase("Array.Empty<T>()", "static class C { static int[] F() { return System.Array.Empty<int>(); } }")]
   [TestCase("Math.Clamp", "static class C { static int F(int x) { return System.Math.Clamp(x, 0, 9); } }")]
   [TestCase("Math.BigMul(ulong, ulong, out ulong)", "static class C { static ulong F(ulong x, out ulong low) { return System.Math.BigMul(x, x, out low); } }")]
+  [TestCase("Enum.HasFlag(Enum)", "static class C { enum E { A = 1 } static bool F(E e) { return e.HasFlag(E.A); } }")]
   public void ApiRow_IsTheFrameworksFirstProfile(string name, string source) {
     var row = CSharpCapabilities.Default.Rows.Single(candidate => candidate.Name == name);
     Assert.That((row.Operation, row.Feature, row.Saturates, row.Native), Is.EqualTo(((IrIntrinsicOp?)null, (CSharpFeature?)null, (IrTypeKind?)null, (CSharpForm?)null)));
@@ -458,8 +504,10 @@ public sealed class CSharpCapabilitiesTests {
   public void EveryHelper_IsCSharp2ForNetFramework20() {
     // The store on a span is the one helper only a profile with spans calls; it is C# 8 for .NET Standard 2.1.
     var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(helper => helper != CSharpViewHelpers.StoreSpan).ToList();
-    var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(112));
+    // The helpers of the collections take the nested classes of the collections (#1328), which are C# 2 as well.
+    string[] classes = [CSharpCollectionClasses.KeyedSlots, CSharpCollectionClasses.FloatKeys, CSharpCollectionClasses.SingleKeys];
+    var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))).Concat(classes))}\n\n}}\n";
+    Assert.That(helpers, Has.Count.EqualTo(127));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);

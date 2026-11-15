@@ -1,0 +1,28 @@
+id: INTRINSICS.EnumHasFlag
+title: Whether a value of an enum has every bit of a flag
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1318"
+tests: [Polypiler.Tests/Enums/IrEnumTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: EnumHasFlag
+  group: Enum
+  typeParameters: [{name: E, constraint: integer}]
+  parameters: [{name: value, type: E}, {name: flag, type: E}]
+  returns: [{name: has, type: TYPES.bool}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "Enum.HasFlag: (value & flag) == flag. The vectors are of [Flags] enum Perm { None = 0, Read = 1, Write = 2, Exec = 4, ReadWrite = 3 }"
+    source: ".NET API reference, System.Enum.HasFlag(Enum)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {E: TYPES.i32}, inputs: [7, 5], outputs: [1]}
+    - {types: {E: TYPES.i32}, inputs: [6, 5], outputs: [0]}
+    - {types: {E: TYPES.i32}, inputs: [0, 0], outputs: [1]}

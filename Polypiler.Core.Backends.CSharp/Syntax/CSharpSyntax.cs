@@ -98,6 +98,9 @@ public sealed record CsStringLiteral(string Value) : CsExpression;
 /// <summary>The literal <c>default</c>, which takes the type of the place it goes to.</summary>
 public sealed record CsDefaultLiteral : CsExpression;
 
+/// <summary>The literal <c>null</c>.</summary>
+public sealed record CsNullLiteral : CsExpression;
+
 /// <summary>
 /// A name: of a variable, a member, a type in an expression (<c>int</c>, <c>EqualityComparer&lt;T&gt;</c>),
 /// the alias <c>global::System</c>, <c>this</c> or the discard <c>_</c>; spelled with its <c>@</c> where it needs one.
@@ -105,10 +108,15 @@ public sealed record CsDefaultLiteral : CsExpression;
 /// <param name="Identifier">The spelling.</param>
 public sealed record CsName(string Identifier) : CsExpression;
 
-/// <summary><c>target.Member</c>.</summary>
+/// <summary><c>target.Member</c>, or <c>target?.Member</c>.</summary>
 /// <param name="Target">What the member is read from.</param>
 /// <param name="Member">The name of the member.</param>
-public sealed record CsMemberAccess(CsExpression Target, string Member) : CsExpression;
+public sealed record CsMemberAccess(CsExpression Target, string Member) : CsExpression {
+
+  /// <summary>Whether the access is null-conditional, <c>target?.Member</c> (C# 6).</summary>
+  public bool Conditional { get; init; }
+
+}
 
 /// <summary><c>target(arguments)</c>.</summary>
 /// <param name="Target">What is called.</param>
@@ -119,10 +127,15 @@ public sealed record CsInvocation(CsExpression Target, IReadOnlyList<CsExpressio
 /// <param name="Value">The variable, or the discard.</param>
 public sealed record CsOutArgument(CsExpression Value) : CsExpression;
 
-/// <summary><c>target[index]</c>.</summary>
+/// <summary><c>target[index]</c>, or <c>target?[index]</c>.</summary>
 /// <param name="Target">The array.</param>
 /// <param name="Index">The index.</param>
-public sealed record CsElementAccess(CsExpression Target, CsExpression Index) : CsExpression;
+public sealed record CsElementAccess(CsExpression Target, CsExpression Index) : CsExpression {
+
+  /// <summary>Whether the access is null-conditional, <c>target?[index]</c> (C# 6).</summary>
+  public bool Conditional { get; init; }
+
+}
 
 /// <summary><c>(T)operand</c>.</summary>
 /// <param name="TargetType">The type cast to.</param>
@@ -153,7 +166,12 @@ public sealed record CsBinary(CsExpression Left, string Operator, CsExpression R
 /// <summary><c>operand is T</c>.</summary>
 /// <param name="Operand">What is tested.</param>
 /// <param name="TestedType">The type.</param>
-public sealed record CsIsType(CsExpression Operand, CsType TestedType) : CsExpression;
+public sealed record CsIsType(CsExpression Operand, CsType TestedType) : CsExpression {
+
+  /// <summary>The variable a pattern declares, <c>x is T t</c> of C# 7, or <see langword="null"/>.</summary>
+  public string? Designation { get; init; }
+
+}
 
 /// <summary>An assignment, simple or compound: <c>=</c>, <c>+=</c>, <c>&lt;&lt;=</c> and so on.</summary>
 /// <param name="Left">The variable assigned to.</param>
@@ -213,6 +231,32 @@ public sealed record CsArrayInitializer(IReadOnlyList<CsExpression> Elements) : 
 /// <param name="DefaultType">The type.</param>
 public sealed record CsDefaultExpression(CsType DefaultType) : CsExpression;
 
+/// <summary><c>throw value</c> where a value stands (C# 7): the right operand of <c>??</c> or a branch of <c>?:</c>, never in parentheses.</summary>
+/// <param name="Value">The exception.</param>
+public sealed record CsThrowExpression(CsExpression Value) : CsExpression;
+
+/// <summary>
+/// A lambda, <c>(a, b) =&gt; body</c>, or an anonymous method, <c>delegate (int a) { … }</c>: a block
+/// body, or for a lambda an expression body. A parameter whose type is empty is typed by the delegate
+/// the lambda converts to.
+/// </summary>
+/// <param name="Parameters">The parameters.</param>
+/// <param name="Body">The block body, or <see langword="null"/>.</param>
+/// <param name="ExpressionBody">The expression body of a lambda, or <see langword="null"/>.</param>
+public sealed record CsLambda(IReadOnlyList<CsParameter> Parameters, CsBlock? Body, CsExpression? ExpressionBody) : CsExpression {
+
+  /// <summary>Whether the lambda is <c>static</c>: it captures nothing (C# 9).</summary>
+  public bool IsStatic { get; init; }
+
+  /// <summary>Whether it is an anonymous method of C# 2, <c>delegate (…) { … }</c>, rather than a lambda.</summary>
+  public bool IsAnonymousMethod { get; init; }
+
+}
+
+/// <summary><c>typeof(T)</c>.</summary>
+/// <param name="Operand">The type.</param>
+public sealed record CsTypeOf(CsType Operand) : CsExpression;
+
 #endregion
 
 #region Statements
@@ -238,7 +282,17 @@ public sealed record CsBlock(IReadOnlyList<CsStatement> Statements) : CsStatemen
 /// <param name="LocalType">The type, or <see cref="CsType.Var"/>.</param>
 /// <param name="Name">The name.</param>
 /// <param name="Initializer">The initial value, or <see langword="null"/>.</param>
-public sealed record CsLocalDeclaration(CsType LocalType, string Name, CsExpression? Initializer) : CsStatement;
+public sealed record CsLocalDeclaration(CsType LocalType, string Name, CsExpression? Initializer) : CsStatement {
+
+  /// <summary>Whether it is a using declaration, <c>using T name = initializer;</c> (C# 8), which disposes the local at the end of its block.</summary>
+  public bool IsUsing { get; init; }
+
+}
+
+/// <summary><c>using (T name = initializer) body</c>; a body that is itself a using statement stands on the next line, stacked.</summary>
+/// <param name="Resource">The resource the statement declares.</param>
+/// <param name="Body">The statement it holds the resource for.</param>
+public sealed record CsUsing(CsLocalDeclaration Resource, CsStatement Body) : CsStatement;
 
 /// <summary>An expression evaluated as a statement.</summary>
 /// <param name="Expression">The expression.</param>
@@ -267,6 +321,13 @@ public sealed record CsDo(CsStatement Body, CsExpression Condition) : CsStatemen
 /// <param name="Body">The body.</param>
 public sealed record CsFor(CsLocalDeclaration? Declaration, CsExpression? Condition, IReadOnlyList<CsExpression> Incrementors, CsStatement Body) : CsStatement;
 
+/// <summary><c>foreach (type name in collection) body</c>.</summary>
+/// <param name="LocalType">The type of the iteration variable, or <c>var</c>.</param>
+/// <param name="Name">The name of the iteration variable.</param>
+/// <param name="Collection">What the loop enumerates.</param>
+/// <param name="Body">The body.</param>
+public sealed record CsForEach(CsType LocalType, string Name, CsExpression Collection, CsStatement Body) : CsStatement;
+
 /// <summary><c>switch (value) { sections }</c>.</summary>
 /// <param name="Value">The value.</param>
 /// <param name="Sections">The sections.</param>
@@ -287,9 +348,31 @@ public sealed record CsContinue : CsStatement;
 /// <param name="Value">The value, or <see langword="null"/>.</param>
 public sealed record CsReturn(CsExpression? Value) : CsStatement;
 
-/// <summary><c>throw value;</c>.</summary>
-/// <param name="Value">The exception.</param>
-public sealed record CsThrow(CsExpression Value) : CsStatement;
+/// <summary><c>throw value;</c>, or <c>throw;</c> in a catch clause.</summary>
+/// <param name="Value">The exception, or <see langword="null"/> to throw again the one caught.</param>
+public sealed record CsThrow(CsExpression? Value) : CsStatement;
+
+/// <summary><c>try { } catch (T e) when (c) { } finally { }</c>.</summary>
+/// <param name="Body">The protected block.</param>
+/// <param name="Catches">The catch clauses, in order.</param>
+/// <param name="Finally">The finally block, or <see langword="null"/>.</param>
+public sealed record CsTry(CsBlock Body, IReadOnlyList<CsCatch> Catches, CsBlock? Finally) : CsStatement;
+
+/// <summary>A catch clause: <c>catch</c>, <c>catch (T)</c> or <c>catch (T e)</c>, with an exception filter <c>when (c)</c> or without.</summary>
+/// <param name="Type">The class caught, or <see langword="null"/> for every exception.</param>
+/// <param name="Name">The variable that holds the exception, or <see langword="null"/>.</param>
+/// <param name="Filter">The filter, or <see langword="null"/>.</param>
+/// <param name="Body">The block.</param>
+public sealed record CsCatch(CsType? Type, string? Name, CsExpression? Filter, CsBlock Body) : CsNode;
+
+/// <summary>A local function: <c>modifiers T Name(parameters) { … }</c> or <c>… =&gt; expression;</c> (C# 7).</summary>
+/// <param name="Modifiers">The modifiers, such as <c>static</c>.</param>
+/// <param name="ReturnType">The return type.</param>
+/// <param name="Name">The name.</param>
+/// <param name="Parameters">The parameters.</param>
+/// <param name="Body">The block body, or <see langword="null"/>.</param>
+/// <param name="ExpressionBody">The expression body, or <see langword="null"/>.</param>
+public sealed record CsLocalFunction(IReadOnlyList<string> Modifiers, CsType ReturnType, string Name, IReadOnlyList<CsParameter> Parameters, CsBlock? Body, CsExpression? ExpressionBody) : CsStatement;
 
 /// <summary><c>checked { }</c> or <c>unchecked { }</c>.</summary>
 /// <param name="Checked">Whether overflow is checked.</param>
@@ -339,14 +422,49 @@ public sealed record CsMethod(
   /// <summary>Whether the backend declares the method in support of the module's code: a helper, which a target pass may inline or remove.</summary>
   public bool IsHelper { get; init; }
 
+  /// <summary>The constraint clauses of the type parameters, each as it follows <c>where</c>: <c>T : global::System.IEquatable&lt;T&gt;</c>; empty for none.</summary>
+  public IReadOnlyList<string> Constraints { get; init; } = [];
+
 }
 
-/// <summary>A constructor.</summary>
+/// <summary>A delegate type: <c>modifiers delegate T Name(parameters);</c>.</summary>
+/// <param name="Modifiers">The modifiers.</param>
+/// <param name="ReturnType">The return type.</param>
+/// <param name="Name">The name, with the list of its type parameters for a generic one: <c>TToT&lt;T&gt;</c>.</param>
+/// <param name="Parameters">The parameters.</param>
+public sealed record CsDelegateDeclaration(IReadOnlyList<string> Modifiers, CsType ReturnType, string Name, IReadOnlyList<CsParameter> Parameters) : CsMember;
+
+/// <summary>A constructor, which may chain to another of its type: <c>: this(arguments)</c>.</summary>
 /// <param name="Modifiers">The modifiers.</param>
 /// <param name="Name">The name of the type.</param>
 /// <param name="Parameters">The parameters.</param>
 /// <param name="Body">The body.</param>
-public sealed record CsConstructor(IReadOnlyList<string> Modifiers, string Name, IReadOnlyList<CsParameter> Parameters, CsBlock Body) : CsMember;
+public sealed record CsConstructor(IReadOnlyList<string> Modifiers, string Name, IReadOnlyList<CsParameter> Parameters, CsBlock Body) : CsMember {
+
+  /// <summary>The arguments of <c>: this(…)</c>, or <see langword="null"/> for a constructor that does not chain.</summary>
+  public IReadOnlyList<CsExpression>? Chained { get; init; }
+
+  /// <summary>Whether <see cref="Chained"/> calls a constructor of the base class, <c>: base(…)</c>, rather than another of the type.</summary>
+  public bool ChainsToBase { get; init; }
+
+}
+
+/// <summary>An accessor of a property: <c>get;</c>, <c>set { … }</c>, <c>init;</c> or <c>get =&gt; …;</c>.</summary>
+/// <param name="Keyword">The kind, with any modifier in front of it: <c>get</c>, <c>set</c>, <c>init</c>, <c>private set</c>.</param>
+/// <param name="Body">The body, or <see langword="null"/>.</param>
+/// <param name="ExpressionBody">The expression body, or <see langword="null"/>; neither for an automatic accessor.</param>
+public sealed record CsAccessor(string Keyword, CsBlock? Body, CsExpression? ExpressionBody) : CsNode;
+
+/// <summary>
+/// A property: <c>modifiers T Name { accessors } = initializer;</c>, or one with an expression body,
+/// <c>modifiers T Name =&gt; expression;</c>.
+/// </summary>
+/// <param name="Modifiers">The modifiers.</param>
+/// <param name="PropertyType">The type.</param>
+/// <param name="Name">The name.</param>
+/// <param name="Accessors">The accessors, or <see langword="null"/> for an expression body.</param>
+/// <param name="ExpressionBody">The expression body, or <see langword="null"/>.</param>
+public sealed record CsProperty(IReadOnlyList<string> Modifiers, CsType PropertyType, string Name, IReadOnlyList<CsAccessor>? Accessors, CsExpression? ExpressionBody) : CsMember;
 
 /// <summary>
 /// A type: a <c>class</c>, a <c>struct</c> or a <c>record struct</c>, with the parameters of a record
@@ -365,7 +483,23 @@ public sealed record CsTypeDeclaration(
   /// <summary>Layout: an empty line follows the opening brace whatever the first member asks for.</summary>
   public bool OpenBlank { get; init; }
 
+  /// <summary>The type parameters of a generic type, such as <c>TKey</c>; empty for none.</summary>
+  public IReadOnlyList<string> TypeParameters { get; init; } = [];
+
 }
+
+/// <summary>A member of an enum: <c>Name = value</c>.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Value">The value, a constant of the underlying type.</param>
+public sealed record CsEnumMember(string Name, CsExpression Value) : CsNode;
+
+/// <summary>An enum: <c>[attributes] modifiers enum Name : underlying { A = 0, B = 1 }</c>, one member to a line.</summary>
+/// <param name="Attributes">The attributes, each as it stands between its brackets, such as <c>global::System.Flags</c>.</param>
+/// <param name="Modifiers">The modifiers.</param>
+/// <param name="Name">The name.</param>
+/// <param name="Underlying">The underlying integer type.</param>
+/// <param name="Members">The members, in their order.</param>
+public sealed record CsEnumDeclaration(IReadOnlyList<string> Attributes, IReadOnlyList<string> Modifiers, string Name, CsType Underlying, IReadOnlyList<CsEnumMember> Members) : CsMember;
 
 /// <summary>A namespace: one that holds the rest of the file, <c>namespace N;</c>, or a block.</summary>
 /// <param name="Name">The name.</param>

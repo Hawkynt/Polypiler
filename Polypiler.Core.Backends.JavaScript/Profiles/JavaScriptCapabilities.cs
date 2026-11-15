@@ -56,18 +56,44 @@ public sealed class JavaScriptCapabilities {
     new("let", 2015, "var"),
     new("const", 2015, "var"),
     new("export", 2015, "exports"),
-    new("=>", 2015, "function", Emitted: false),
+    new("=>", 2015, "function"),
+    new("let per-iteration binding", 2015, "environment object"),
     new("**", 2016, "Math.pow", Emitted: false),
     new("numeric separators", 2021, "digits", Emitted: false),
     new("| 0", 5),
     new(">>> 0", 5),
     new("object literal", 5),
     new("shorthand property", 2015, "key: key"),
+    new("class", 2015, "function"),
+    new("class accessor", 2015, "Object.defineProperty"),
+    new("class fields", 2022, "constructor assignments"),
+    new("#private", 2022, "_name"),
+    new("static fields", 2022, "assignment after the class"),
+    new("Object", 5),
+    new("Object.defineProperty", 5),
+    new("extends", 2015, "Object.create chain"),
+    new("super", 2015, "Base.prototype.m.call(this, …)"),
+    new("Object.create", 5),
+    new("instanceof", 5),
+    new(".call", 5),
+    new("TypeError", 5),
+    // Optional values (#1322): below its level each is a conditional on a test with == null, never ||.
+    new("??", 2020, "!= null ?"),
+    new("?.", 2020, "== null ?"),
+    new("??=", 2021, "!= null ?"),
 
     // Globals and the functions of Math.
     new("NaN", 5),
     new("Infinity", 5),
     new("RangeError", 5),
+    new("Error", 5),
+    // The prototypes of the native errors the generated error classes of ECMAScript 5 chain to (#1323).
+    new("Error.prototype", 5),
+    new("RangeError.prototype", 5),
+    new("TypeError.prototype", 5),
+    // Exceptions (#1323).
+    new("optional catch binding", 2019, "catch (e)"),
+    new("Error cause", 2022, ".cause ="),
     new("Math", 5),
     new("Math.abs", 5),
     new("Math.min", 5),
@@ -157,7 +183,39 @@ public sealed class JavaScriptCapabilities {
     new(".padEnd", 2017, "$pad"),
     new(".trimStart", 2019, "$trimEcma"),
     new(".trimEnd", 2019, "$trimEcma"),
-    new(".replaceAll", 2021, ".split")
+    new(".replaceAll", 2021, ".split"),
+    // The lists of #1328, which are arrays.
+    new("Array", 5),
+    new("Array.prototype", 5),
+    new(".slice", 5),
+    new(".map", 5),
+    new(".push", 5),
+    new(".pop", 5),
+    new(".splice", 5),
+    new(".includes of an array", 2016, "$lincludes"),
+    // The maps and sets of #1328: Map and Set, or the slots of $Keyed, which share these methods.
+    new("Map", 2015, "$Keyed"),
+    new("Set", 2015, "$Keyed"),
+    new(".get", 5),
+    new(".has", 5),
+    new(".delete", 5),
+    new(".clear", 5),
+    new(".add", 5),
+    new(".entries", 2015, "$Keyed"),
+    new(".keys", 2015, "$Keyed"),
+    new(".values", 2015, "$Keyed"),
+    new(".next", 2015, "$Keyed"),
+
+    // Numbers to text and back (#1315): ECMAScript 5 has every rule of ECMA-262; the rules of .NET are helpers.
+    new(".toString", 5),
+    new(".toFixed", 5),
+    new(".toPrecision", 5),
+    new(".toUpperCase", 5),
+    new("parseFloat", 5),
+    new("parseInt", 5),
+
+    // Enums (#1318): a frozen object of named numbers (Object itself is listed with the classes), ECMA-262 5.1 §15.2.3.9.
+    new("Object.freeze", 5)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

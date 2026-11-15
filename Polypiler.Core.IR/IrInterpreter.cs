@@ -26,16 +26,69 @@ public enum IrTrap {
   InvalidOperation,
 
   /// <summary>A range outside its source: a view or a slice that does not lie in it, or a copy into a view too short.</summary>
-  ArgumentOutOfRange
+  ArgumentOutOfRange,
+
+  /// <summary>A field, a method or an array field reached through a reference that names no object.</summary>
+  NullReference,
+
+  /// <summary>A reference converted to a class or an interface it names no object of.</summary>
+  InvalidCast,
+
+  /// <summary>The value of an optional value that holds none (<see cref="IrUnwrap"/>).</summary>
+  MissingValue,
+
+  /// <summary>The value of a key a map does not hold (<see cref="IrCollectionOp.MapGet"/>).</summary>
+  KeyNotFound,
+
+  /// <summary>A key added to a map that holds it already (<see cref="IrCollectionOp.MapAdd"/>).</summary>
+  DuplicateKey,
+
+  /// <summary>The next step of a checked loop over a collection that changed during it (<see cref="EnumerationMode.Checked"/>).</summary>
+  CollectionModified,
+
+  /// <summary>A text that is not a number of the grammar it is parsed by.</summary>
+  InvalidFormat,
+
+  /// <summary>A text that names no member of an enum (<see cref="IrIntrinsicOp.EnumParse"/>), for which .NET throws an <c>ArgumentException</c>.</summary>
+  UnknownName
 
 }
 
-/// <summary>Thrown by <see cref="IrInterpreter"/> when an operation traps.</summary>
-public sealed class IrTrapException : Exception {
+/// <summary>
+/// Thrown by <see cref="IrInterpreter"/> when an exception of the IR leaves the function called: it
+/// carries the object thrown, an object of an exception class (<see cref="IrExceptionClass"/>).
+/// </summary>
+public class IrException : System.Exception {
+
+  /// <summary>Makes the exception for an object thrown.</summary>
+  /// <param name="exception">The object, as the interpreter carries it.</param>
+  /// <param name="type">Its class.</param>
+  /// <param name="message">Its message.</param>
+  private protected IrException(object exception, IrClassType type, string message) : base(message) {
+    this.Exception = exception;
+    this.Class = type;
+  }
+
+  /// <summary>The object thrown: an opaque value of the interpreter, as an object crosses the boundary.</summary>
+  public object Exception { get; }
+
+  /// <summary>The class of the object thrown.</summary>
+  public IrClassType Class { get; }
+
+  /// <summary>Makes the exception for an object the IR throws, which is no trap.</summary>
+  internal static IrException Thrown(object exception, IrClassType type, string message) => new(exception, type, message);
+
+}
+
+/// <summary>
+/// Thrown by <see cref="IrInterpreter"/> when an operation traps: the throw of an object of the trap's
+/// class (<see cref="IrExceptionClass.Of(IrTrap)"/>) whose message is the trap's (<see cref="Describe"/>).
+/// </summary>
+public sealed class IrTrapException : IrException {
 
   /// <summary>Creates the exception for a trap.</summary>
   /// <param name="trap">What went wrong.</param>
-  public IrTrapException(IrTrap trap) : base(Describe(trap)) => this.Trap = trap;
+  public IrTrapException(IrTrap trap) : base(IrInterpreter.NewException(IrExceptionClass.Of(trap), Describe(trap)), IrExceptionClass.Of(trap), Describe(trap)) => this.Trap = trap;
 
   /// <summary>What went wrong.</summary>
   public IrTrap Trap { get; }
@@ -48,6 +101,14 @@ public sealed class IrTrapException : Exception {
     IrTrap.IndexOutOfRange => "index out of range",
     IrTrap.InvalidOperation => "invalid operation",
     IrTrap.ArgumentOutOfRange => "argument out of range",
+    IrTrap.NullReference => "null reference",
+    IrTrap.InvalidCast => "invalid cast",
+    IrTrap.MissingValue => "missing value",
+    IrTrap.KeyNotFound => "key not found",
+    IrTrap.DuplicateKey => "duplicate key",
+    IrTrap.CollectionModified => "collection modified",
+    IrTrap.InvalidFormat => "invalid format",
+    IrTrap.UnknownName => "unknown name",
     _ => "integer overflow"
   };
 
@@ -116,6 +177,8 @@ public static partial class IrInterpreter {
 
   /// <summary>A constant as the interpreter carries a value of its type.</summary>
   private static object Constant(IrType type, long value) => type.Kind switch {
+    // The default of an optional field: none.
+    IrTypeKind.Optional => Absent.Value,
     IrTypeKind.Bool => value != 0,
     IrTypeKind.F32 => (float)IrOperators.Float(type, value),
     IrTypeKind.F64 => IrOperators.Float(type, value),
@@ -139,13 +202,22 @@ public static partial class IrInterpreter {
 
   /// <summary>A value of a type taken across the boundary, or <see langword="null"/> when it is none.</summary>
   private static object? Accepted(IrType type, object? value) {
-    if (type.IsView)
+    if (type.IsView || type.IsMemory)
       return AcceptedView(type, value);
+
+    if (type.IsOptional)
+      return AcceptedOptional(type, value);
+
+    if (type.IsArray && value is null)
+      return NullReference.Value;
+
+    if (type.IsObject)
+      return value is null ? NullReference.Value : value is Instance instance && ReferenceEquals(instance.Type, type.ClassType) ? instance : null;
 
     if (type.StructType is { } declared)
       return value is object?[] fields && fields.Length == declared.Fields.Count && Fields(declared, fields) is { } accepted ? new Record(accepted) : null;
 
-    return value is not null && TypeOf(value.GetType()) == type ? Internal(value) : null;
+    return value is not null && TypeOf(value.GetType()) == Plain(type) ? Internal(value) : null;
   }
 
   /// <summary>The fields of a struct taken across the boundary, or <see langword="null"/> when one is not a value of its field.</summary>
@@ -159,6 +231,9 @@ public static partial class IrInterpreter {
 
     return fields;
   }
+
+  /// <summary>A type with every enum in it replaced by its underlying type: the value of an enum crosses the boundary as that of its underlying type.</summary>
+  private static IrType Plain(IrType type) => type.IsArray ? IrType.Array(Plain(type.Element!)) : type.Integral;
 
   /// <summary>The IR type a .NET type crosses the boundary as, or <see langword="null"/> when it does not.</summary>
   private static IrType? TypeOf(Type host) {
@@ -199,7 +274,7 @@ public static partial class IrInterpreter {
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool or float or double or Record or string => value,
+    Array or bool or float or double or Record or string or Instance or Closure or FunctionReference or BoundMethod or NullReference => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -219,9 +294,11 @@ public static partial class IrInterpreter {
   };
 
   private static object? ToHost(IrType type, object? value) => value switch {
+    not null when type.IsOptional => OptionalToHost(type, value),
     View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
-    null or Array or bool => value,
+    NullReference => null,
+    null or Array or bool or Instance => value,
     _ => External(HostType(type), value)
   };
 
@@ -232,7 +309,7 @@ public static partial class IrInterpreter {
     public object? Invoke(IrFunction function, object[] arguments) {
       var frame = new Frame();
       for (var index = 0; index < arguments.Length; ++index)
-        frame.Locals[function.Parameters[index]] = arguments[index];
+        frame.Declare(function.Parameters[index], arguments[index]);
 
       if (this.Run(function.Body, frame) != Flow.Return && function.ReturnType != IrType.Void)
         throw new InvalidOperationException($"'{function.Name}' ended without returning a value.");
@@ -252,12 +329,11 @@ public static partial class IrInterpreter {
 
           return Flow.Next;
         case IrDeclare declare:
-          if (declare.Initializer is not null)
-            frame.Locals[declare.Local] = this.Evaluate(declare.Initializer, frame);
-
+          // Every run of a declaration makes a new variable, which a closure made before keeps apart.
+          frame.Declare(declare.Local, declare.Initializer is null ? frame.Locals.GetValueOrDefault(declare.Local)?.Value : this.Evaluate(declare.Initializer, frame));
           return Flow.Next;
         case IrAssign assign:
-          frame.Locals[assign.Local] = this.Evaluate(assign.Value, frame);
+          frame.Set(assign.Local, this.Evaluate(assign.Value, frame));
           return Flow.Next;
         case IrGlobalAssign assign:
           globals[assign.Global] = this.Evaluate(assign.Value, frame);
@@ -270,6 +346,9 @@ public static partial class IrInterpreter {
           return Flow.Next;
         case IrExprStmt expression:
           this.Evaluate(expression.Expression, frame);
+          return Flow.Next;
+        case IrFieldStore store when store.Target.Type.IsObject:
+          this.StoreObjectField(store, frame);
           return Flow.Next;
         case IrFieldStore store:
           var place = (Record)this.Place(store.Target, frame);
@@ -297,11 +376,13 @@ public static partial class IrInterpreter {
 
           return Flow.Next;
         case IrFor loop:
+          frame.Renew(loop.PerIteration);
           while ((bool)this.Evaluate(loop.Condition, frame)) {
             var pass = this.Run(loop.Body, frame);
             if (pass is Flow.Break or Flow.Return)
               return pass & Flow.Return;
 
+            frame.Renew(loop.PerIteration);
             this.Run(loop.Step, frame);
           }
 
@@ -315,6 +396,8 @@ public static partial class IrInterpreter {
 
           var chosen = this.Run(section.Body, frame);
           return chosen == Flow.Break ? Flow.Next : chosen;
+        case IrForEachCollection loop:
+          return this.ForEachCollection(loop, frame);
         case IrBreak:
           return Flow.Break;
         case IrContinue:
@@ -322,8 +405,10 @@ public static partial class IrInterpreter {
         case IrReturn result:
           frame.Result = result.Value is null ? null : this.Evaluate(result.Value, frame);
           return Flow.Return;
+        case IrUsing scope:
+          return this.Using(scope, frame);
         default:
-          throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
+          return this.ExceptionStatement(statement, frame) ?? throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
       }
     }
 
@@ -336,7 +421,7 @@ public static partial class IrInterpreter {
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
-          return Copied(frame.Locals[reference.Local]);
+          return Copied(frame.Get(reference.Local));
         case IrGlobalRef reference:
           return Copied(globals[reference.Global]);
         case IrStrConst text:
@@ -362,7 +447,7 @@ public static partial class IrInterpreter {
           var array = this.Evaluate(load.Array, frame);
           return Copied(LoadElement(array, (long)this.Evaluate(load.Index, frame)));
         case IrArrayLength length:
-          return (long)((Array)this.Evaluate(length.Array, frame)).Length;
+          return (long)((Array)NotNull(this.Evaluate(length.Array, frame))).Length;
         case IrNewArray creation:
           var count = (long)this.Evaluate(creation.Length, frame);
           if (count < 0)
@@ -372,22 +457,54 @@ public static partial class IrInterpreter {
           if (creation.Type.Element!.StructType is { } element)
             for (var index = 0; index < count; ++index)
               created.SetValue(Default(element), index);
+          else if (creation.Type.Element.IsFunction)
+            Array.Fill((object[])created, NullReference.Value);
 
           return created;
         case IrStructNew creation:
           return new Record([.. creation.Arguments.Select(argument => this.Evaluate(argument, frame))]);
         case IrStructDefault value:
           return Default(value.Type.StructType!);
+        case IrFieldLoad load when load.Target.Type.IsObject:
+          return this.ObjectField(load, frame);
         case IrFieldLoad load:
           return Copied(((Record)this.Place(load.Target, frame)).Fields[Position(load.Field, load.Target.Type)]);
         case IrStructEquals equality:
           var left = this.Evaluate(equality.Left, frame);
-          return Same(left, this.Evaluate(equality.Right, frame));
+          var right = this.Evaluate(equality.Right, frame);
+          return equality.Left.Type.IsObject ? SameObject(left, right) : Same(left, right);
+        case IrNew creation:
+          return creation.Type.ClassType!.IsLibrary ? this.NewLibraryException(creation, frame) : this.New(creation, frame);
+        case IrThrowExpression thrown:
+          throw this.Throw(thrown.Exception, frame);
+        case IrNull:
+          return NullReference.Value;
+        case IrMethodCall call:
+          return this.MethodCall(call, frame);
+        case IrTypeTest or IrCast or IrAsCast:
+          return this.Conversion(expression, frame);
+        case IrReferenceEquals identity:
+          var first = this.Evaluate(identity.Left, frame);
+          return ReferenceEquals(first, this.Evaluate(identity.Right, frame));
+        case IrGenericEquals equality:
+          var compared = this.Evaluate(equality.Left, frame);
+          return GenericEquals(equality.Left.Type, compared, this.Evaluate(equality.Right, frame));
+        case IrGenericCompare order:
+          var ordered = this.Evaluate(order.Left, frame);
+          return GenericCompare(order.Left.Type, ordered, this.Evaluate(order.Right, frame));
+        case IrCall call when this.LibraryConstructor(call, frame):
+          return null!;
         case IrCall call:
           var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
           return this.Invoke(program.Functions[call.Function], arguments)!;
         case IrStep step:
           return this.Step(step, frame);
+        case IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind:
+          return this.Optional(expression, frame);
+        case IrCollection operation:
+          return this.Collection(operation, frame);
+        case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
+          return this.FunctionValue(expression, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }
@@ -395,6 +512,9 @@ public static partial class IrInterpreter {
 
     private object? Intrinsic(IrIntrinsic intrinsic, Frame frame) {
       var arguments = intrinsic.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
+      // Only an array field of an object that holds no array yet is null here; an element of a new array of function values may be null.
+      if (intrinsic.Op != IrIntrinsicOp.ArrayOf)
+        Array.ForEach(arguments, argument => NotNull(argument));
       if (IsView(intrinsic))
         return Views(intrinsic, arguments);
 
@@ -417,6 +537,12 @@ public static partial class IrInterpreter {
         default:
           if (StringOperations.IsString(intrinsic.Op))
             return StringOperations.Evaluate(intrinsic, arguments);
+          if (NumberTextOperations.IsNumberText(intrinsic.Op))
+            return NumberTextOperations.Evaluate(intrinsic, arguments);
+          if (intrinsic.Op == IrIntrinsicOp.EnumValues)
+            return ArrayOf(intrinsic.Type.Element!, [.. EnumOperations.Values(EnumOperations.Of(intrinsic)).Select(value => (object)value)]);
+          if (EnumOperations.IsEnum(intrinsic.Op))
+            return EnumOperations.Evaluate(intrinsic, arguments);
           if (IntegerOperations.Evaluates(intrinsic))
             return IntegerOperations.Evaluate(intrinsic, arguments);
           if (FloatOperationTable.TryEvaluate(intrinsic.Op, arguments, out var computed))
@@ -502,9 +628,9 @@ public static partial class IrInterpreter {
         globals[reference.Global] = after;
       } else {
         var local = ((IrLocalRef)step.Target).Local;
-        before = frame.Locals[local];
+        before = frame.Get(local);
         after = Stepped(step, before);
-        frame.Locals[local] = after;
+        frame.Set(local, after);
       }
 
       return step.Postfix ? before : after;
@@ -712,11 +838,41 @@ public static partial class IrInterpreter {
     Continue = 4
   }
 
+  /// <summary>
+  /// The variables of one call of a function or a closure. A variable is a cell: a closure shares the
+  /// cells it captures with the frame it was made in, so a write through either is seen by both.
+  /// </summary>
   private sealed class Frame {
 
-    public Dictionary<IrLocal, object> Locals { get; } = [];
+    public Dictionary<IrLocal, Cell> Locals { get; } = [];
 
     public object? Result { get; set; }
+
+    public object Get(IrLocal local) => this.Locals[local].Value!;
+
+    /// <summary>Writes a variable: the cell it has, or a new one for a variable that has none yet.</summary>
+    public void Set(IrLocal local, object value) {
+      if (this.Locals.TryGetValue(local, out var cell))
+        cell.Value = value;
+      else
+        this.Locals[local] = new Cell(value);
+    }
+
+    /// <summary>A new variable, in a cell of its own.</summary>
+    public void Declare(IrLocal local, object? value) => this.Locals[local] = new Cell(value);
+
+    /// <summary>Gives each variable a new cell that starts with the value of its old one, which a closure made before keeps.</summary>
+    public void Renew(IReadOnlyList<IrLocal> variables) {
+      foreach (var variable in variables)
+        this.Locals[variable] = new Cell(this.Locals[variable].Value);
+    }
+
+  }
+
+  /// <summary>The storage of one variable.</summary>
+  private sealed class Cell(object? value) {
+
+    public object? Value { get; set; } = value;
 
   }
 

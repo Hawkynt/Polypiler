@@ -16,7 +16,10 @@ internal sealed partial class Lowering {
 
   private const string Marshal = "System.Runtime.InteropServices.MemoryMarshal";
 
-  /// <summary>The view type of <c>Span&lt;T&gt;</c> or <c>ReadOnlySpan&lt;T&gt;</c> of a number type other than <c>char</c>; <see langword="null"/> for any other type.</summary>
+  /// <summary>
+  /// The view type of <c>Span&lt;T&gt;</c> or <c>ReadOnlySpan&lt;T&gt;</c>, or the memory type of <c>Memory&lt;T&gt;</c>
+  /// or <c>ReadOnlyMemory&lt;T&gt;</c>, of a number type other than <c>char</c>; <see langword="null"/> for any other type.
+  /// </summary>
   private IrType? ViewType(ITypeSymbol? type, SyntaxNode node) {
     if (type is not INamedTypeSymbol { TypeArguments: [var argument] } named || ViewKind(named) is not { } kind)
       return null;
@@ -28,13 +31,20 @@ internal sealed partial class Lowering {
     if (!element.IsNumeric)
       throw new UnsupportedException(node, named.ToDisplayString());
 
-    return kind == IrTypeKind.Span ? IrType.Span(element) : IrType.ReadOnlySpan(element);
+    return kind switch {
+      IrTypeKind.Span => IrType.Span(element),
+      IrTypeKind.ReadOnlySpan => IrType.ReadOnlySpan(element),
+      IrTypeKind.Memory => IrType.Memory(element),
+      _ => IrType.ReadOnlyMemory(element)
+    };
   }
 
-  /// <summary>The kind of view a constructed <c>Span&lt;T&gt;</c> or <c>ReadOnlySpan&lt;T&gt;</c> is.</summary>
+  /// <summary>The kind of view a constructed <c>Span&lt;T&gt;</c>, <c>ReadOnlySpan&lt;T&gt;</c>, <c>Memory&lt;T&gt;</c> or <c>ReadOnlyMemory&lt;T&gt;</c> is.</summary>
   private static IrTypeKind? ViewKind(INamedTypeSymbol type) => type.ConstructedFrom.ToDisplayString() switch {
     "System.Span<T>" => IrTypeKind.Span,
     "System.ReadOnlySpan<T>" => IrTypeKind.ReadOnlySpan,
+    "System.Memory<T>" => IrTypeKind.Memory,
+    "System.ReadOnlyMemory<T>" => IrTypeKind.ReadOnlyMemory,
     _ => null
   };
 
@@ -122,13 +132,14 @@ internal sealed partial class Lowering {
   }
 
   /// <summary>
-  /// A call of a member of <c>Span&lt;T&gt;</c>, <c>ReadOnlySpan&lt;T&gt;</c>, <c>MemoryExtensions</c> or
+  /// A call of a member of <c>Span&lt;T&gt;</c>, <c>ReadOnlySpan&lt;T&gt;</c>, <c>Memory&lt;T&gt;</c>,
+  /// <c>ReadOnlyMemory&lt;T&gt;</c>, <c>MemoryExtensions</c> or
   /// <c>MemoryMarshal</c>, as the operation on views it means; <see langword="null"/> for a method of any
   /// other type. A member of these types that <see cref="CSharpViewApi"/> does not list is refused by name.
   /// </summary>
   private IrExpr? ViewCall(InvocationExpressionSyntax invocation, IMethodSymbol method, IrType type) {
     var declaring = method.ContainingType.OriginalDefinition.ToDisplayString();
-    if (declaring is not ("System.Span<T>" or "System.ReadOnlySpan<T>" or "System.MemoryExtensions" or Marshal))
+    if (declaring is not ("System.Span<T>" or "System.ReadOnlySpan<T>" or "System.Memory<T>" or "System.ReadOnlyMemory<T>" or "System.MemoryExtensions" or Marshal))
       return null;
 
     var name = $"{method.ContainingType.Name}.{method.Name}";
@@ -142,7 +153,7 @@ internal sealed partial class Lowering {
 
     IrIntrinsic Node(IrIntrinsicOp op, IrType result, params IrExpr[] operands) => new(op, result, operands);
     switch (method.Name) {
-      case "AsSpan":
+      case "AsSpan" or "AsMemory":
         if (model.GetTypeInfo(arguments[0]).Type is not IArrayTypeSymbol || method.Parameters.Skip(method.ReducedFrom is null ? 1 : 0).Any(parameter => parameter.Type.SpecialType != SpecialType.System_Int32))
           throw new UnsupportedException(invocation, $"{name} of anything but an array, at an int");
 

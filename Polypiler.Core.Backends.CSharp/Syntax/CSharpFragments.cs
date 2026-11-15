@@ -48,11 +48,16 @@ public static class CSharpFragments {
   /// <param name="arguments">The arguments.</param>
   /// <param name="helper">Gives the name of the helper; asked only when the template has the place <c>{h}</c>.</param>
   /// <returns>The expression.</returns>
+  /// <summary>A name, or a member of a type where the name is qualified by it: <c>Module.Helper</c>.</summary>
+  /// <param name="name">The name.</param>
+  /// <returns>The expression.</returns>
+  public static CsExpression Name(string name) => name.Contains('.', StringComparison.Ordinal) ? Expression(name) : new CsName(name);
+
   public static CsExpression Fill(string template, IReadOnlyList<CsExpression> arguments, Func<string> helper) {
     var parsed = Expression(_placeholder.Replace(template, match => Place + match.Groups[1].Value));
     string? name = null;
     return CSharpSyntaxRewriter.Rewrite(parsed, node => node is CsName { Identifier: var identifier } && identifier.StartsWith(Place, StringComparison.Ordinal)
-      ? identifier[^1] == 'h' ? new CsName(name ??= helper()) : arguments[identifier[^1] - '0']
+      ? identifier[^1] == 'h' ? Name(name ??= helper()) : arguments[identifier[^1] - '0']
       : node);
   }
 

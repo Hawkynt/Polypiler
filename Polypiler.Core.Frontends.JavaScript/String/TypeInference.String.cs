@@ -7,7 +7,8 @@ internal sealed partial class TypeInference {
 
   /// <summary>
   /// The type of an expression on strings, or <see langword="null"/> for one that is not: a string
-  /// literal or template, the code point a <c>for…of</c> over a string yields, an element and the
+  /// literal or template, the code point a <c>for…of</c> over a string yields - or the element one over a
+  /// typed array yields -, an element and the
   /// length of a string, and the result of a method of a string or of <c>String.fromCharCode</c>.
   /// </summary>
   private JsType? StringType(Node node) {
@@ -15,7 +16,11 @@ internal sealed partial class TypeInference {
       case StringLiteral or TemplateLiteral:
         return JsType.String;
       case ForOfStatement loop:
-        return this.Of(loop.Right).Kind == JsKind.String ? JsType.String : JsType.Unknown;
+        // A for...of over an array, a typed array or a view yields its elements, a binary32 one as the double it is (#1328, #1325).
+        var iterated = this.Of(loop.Right);
+        return iterated.Kind == JsKind.String ? JsType.String
+          : iterated is { Kind: JsKind.Array, Element: { } element } ? (element.Float == 32 ? JsType.F64 : element)
+          : this.Iterated(loop.Right) ?? JsType.Unknown;
       case MemberExpression member when this.Of(member.Object).Kind == JsKind.String:
         return member.Computed ? JsType.String : member.Property is Identifier { Name: "length" } ? JsType.I32 : JsType.Unknown;
       case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } callee }:
@@ -54,8 +59,10 @@ internal sealed partial class TypeInference {
       return null;
 
     var both = first.Kind == JsKind.String && second.Kind == JsKind.String;
+    // A number, a BigInt or a truth value joined to text is written as JavaScript writes it (#1315).
+    var written = first.Kind is JsKind.String or JsKind.Number or JsKind.BigInt or JsKind.Boolean && second.Kind is JsKind.String or JsKind.Number or JsKind.BigInt or JsKind.Boolean;
     return op switch {
-      Operator.Addition => both ? new(Plan.Concat, JsType.String, Polypiler.Core.IR.IrType.String) : new(Plan.Invalid, JsType.Unknown),
+      Operator.Addition => written ? new(Plan.Concat, JsType.String, Polypiler.Core.IR.IrType.String) : new(Plan.Invalid, JsType.Unknown),
       Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality
         or Operator.LessThan or Operator.LessThanOrEqual or Operator.GreaterThan or Operator.GreaterThanOrEqual
         => both ? new(Plan.CompareString, JsType.Boolean, Polypiler.Core.IR.IrType.String) : new(Plan.Invalid, JsType.Boolean),

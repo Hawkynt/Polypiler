@@ -36,7 +36,8 @@ public static partial class IrVerifier {
 
       Require(names.Add(constant.Name), "the module declares the name twice");
       Require(!OnHeap(constant.Type), Stored);
-      Require(constant.Type.IsStorable && !element.IsStruct && !constant.Type.IsView, $"a constant of the type {constant.Type}");
+      Require(constant.Type.IsStorable && !element.IsStruct && !constant.Type.IsView && !constant.Type.IsOptional && !constant.Type.IsMemory, $"a constant of the type {constant.Type}");
+      Require(element.EnumType is not { } named || types.Declares(named), $"the type {element} is not among the types of the module");
       var count = element.IsString ? constant.Strings.Count : constant.Values.Count;
       Require(constant.Type.IsArray || count == 1, $"a constant of the type {constant.Type} with {count} values");
       Require(element.IsString ? constant.Values.Count == 0 : constant.Strings.Count == 0, $"a constant of the type {constant.Type} with values of another type");
@@ -45,8 +46,16 @@ public static partial class IrVerifier {
     }
 
     var globals = Globals(module, names, functions, constants, types, diagnostics);
+    var members = Members(module, types, functions, diagnostics);
+    var signatures = Hierarchy(types, functions, diagnostics);
+    Generics(module, diagnostics);
+    Disposables(types, functions, diagnostics);
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals }.Run();
+      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures }.Run();
+
+    if (diagnostics.Count == 0)
+      foreach (var (constructor, call) in IrConstruction.VirtualCalls(module))
+        diagnostics.Add(Error(constructor, $"a virtual call of '{call.Method.Name}' on 'this' during construction"));
 
     return diagnostics;
   }
@@ -70,6 +79,12 @@ public static partial class IrVerifier {
     private readonly HashSet<IrLocal> _visible = [];
     private int _loops;
 
+    /// <summary>The locals of the function or lambda whose body is being checked.</summary>
+    private IReadOnlyList<IrLocal> _locals = function.Locals;
+
+    /// <summary>The result type of the function or lambda whose body is being checked.</summary>
+    private IrType _returnType = function.ReturnType;
+
     /// <summary>The globals the code checked may name: every one of the module in a function, the earlier ones in an initializer.</summary>
     public IReadOnlySet<IrGlobal> Globals { get; init; } = new HashSet<IrGlobal>();
     private int _breakable;
@@ -92,6 +107,7 @@ public static partial class IrVerifier {
       }
 
       this.Block(function.Body);
+      this.Constructed();
     }
 
     private void Require(bool holds, string message) {
@@ -99,9 +115,20 @@ public static partial class IrVerifier {
         diagnostics.Add(Error(function.Name, message));
     }
 
-    /// <summary>A struct type, or an array of one, is one the module declares.</summary>
+    /// <summary>A declared type - a struct, an enum, a class, or an array of one - is one the module declares.</summary>
     private void Declared(IrType type) {
-      var named = (type.Element ?? type).StructType;
+      if (type.IsCollection) {
+        this.Declared(type.Element!);
+        if (type.Key is { } key)
+          this.Declared(key);
+
+        return;
+      }
+
+      if ((type.Element ?? type).Signature is { } signature)
+        this.Signature(signature);
+
+      var named = (type.Underlying ?? type.Element ?? type).Declaration;
       this.Require(named is null || types.Declares(named), $"the type {named} is not among the types of the module");
     }
 
@@ -119,7 +146,7 @@ public static partial class IrVerifier {
           this.Block(block);
           break;
         case IrDeclare declare:
-          this.Require(function.Locals.Contains(declare.Local),
+          this.Require(this._locals.Contains(declare.Local),
             $"local '{declare.Local.Name}' is not among the locals of the function");
           if (declare.Initializer is not null)
             this.Value(declare.Initializer, declare.Local.Type, $"the initializer of '{declare.Local.Name}'");
@@ -131,6 +158,7 @@ public static partial class IrVerifier {
 
           break;
         case IrAssign assign:
+          this.Require(assign.Local != this.Receiver, "the receiver of a method is assigned");
           this.InScope(assign.Local);
           this.Value(assign.Value, assign.Local.Type, $"the value assigned to '{assign.Local.Name}'");
           break;
@@ -149,9 +177,9 @@ public static partial class IrVerifier {
           break;
         case IrFieldStore store:
           this.Expression(store.Target);
-          this.Require(IsPlace(store.Target), $"a field is written of a {store.Target.GetType().Name}, which is no place");
+          this.Require(store.Target.Type.IsObject || IsPlace(store.Target), $"a field is written of a {store.Target.GetType().Name}, which is no place");
           this.Member(store.Target, store.Field);
-          this.Require(!store.Field.IsReadOnly, $"the read-only field '{store.Field.Name}' is written");
+          this.Require(this.MayWrite(store.Target, store.Field), $"the read-only field '{store.Field.Name}' is written");
           this.Value(store.Value, store.Field.Type, $"the value stored in the field '{store.Field.Name}'");
           break;
         case IrIf conditional:
@@ -170,6 +198,7 @@ public static partial class IrVerifier {
           this.Value(loop.Condition, IrType.Bool, "the condition of a do");
           break;
         case IrFor loop:
+          this.PerIteration(loop);
           this.Value(loop.Condition, IrType.Bool, "the condition of a for");
           this.Loop(loop.Body);
           foreach (var step in loop.Step.Statements)
@@ -180,6 +209,9 @@ public static partial class IrVerifier {
         case IrSwitch choice:
           this.Switch(choice);
           break;
+        case IrForEachCollection loop:
+          this.ForEachCollection(loop);
+          break;
         case IrBreak:
           this.Require(this._breakable > 0, "a break outside a loop and outside a switch");
           break;
@@ -187,14 +219,20 @@ public static partial class IrVerifier {
           this.Require(this._loops > 0, "a continue outside a loop");
           break;
         case IrReturn result:
+          this.Require(this._finally == 0, "a return inside a finally block");
           if (result.Value is null)
-            this.Require(function.ReturnType == IrType.Void, "a return without a value in a function that returns one");
+            this.Require(this._returnType == IrType.Void, "a return without a value in a function that returns one");
           else
-            this.Value(result.Value, function.ReturnType, "the value returned");
+            this.Value(result.Value, this._returnType, "the value returned");
 
           break;
+        case IrUsing scope:
+          this.Using(scope);
+          break;
         default:
-          this.Require(false, $"unknown statement {statement.GetType().Name}");
+          if (!this.ExceptionStatement(statement))
+            this.Require(false, $"unknown statement {statement.GetType().Name}");
+
           break;
       }
     }
@@ -236,7 +274,7 @@ public static partial class IrVerifier {
 
     private void Value(IrExpr expression, IrType? expected, string what) {
       this.Expression(expression);
-      this.Require(expression.Type == expected, $"{what} has the type {expression.Type}, expected {expected}");
+      this.Require(expression.Type.IsAssignableTo(expected), $"{what} has the type {expression.Type}, expected {expected}");
     }
 
     /// <summary>
@@ -272,6 +310,7 @@ public static partial class IrVerifier {
       switch (expression) {
         case IrConst constant:
           this.Require(InRange(constant), $"the constant {constant.Value} is not a value of {constant.Type}");
+          this.Declared(constant.Type);
           break;
         case IrLocalRef reference:
           this.InScope(reference.Local);
@@ -297,6 +336,7 @@ public static partial class IrVerifier {
           break;
         case IrConvert conversion:
           this.Expression(conversion.Operand);
+          this.Declared(conversion.Type);
           this.Require(Converts(conversion),
             $"a conversion from {conversion.Operand.Type} to {conversion.Type} with the contract {conversion.Contract}");
           break;
@@ -343,15 +383,48 @@ public static partial class IrVerifier {
         case IrStructEquals equality:
           this.Expression(equality.Left);
           this.Expression(equality.Right);
-          this.Struct(equality.Left.Type);
+          if (equality.Left.Type.IsObject)
+            this.Require(this.Class(equality.Left.Type) is not { IsRecord: false }, $"the objects of {equality.Left.Type}, which is no record, are compared field by field");
+          else
+            this.Struct(equality.Left.Type);
+
           this.Require(equality.Right.Type == equality.Left.Type, $"a struct of the type {equality.Left.Type} is compared with one of the type {equality.Right.Type}");
           break;
         case IrCall call:
+          var chains = function.Body.Statements is [IrExprStmt { Expression: var first }, ..] && ReferenceEquals(first, call);
+          if (this.LibraryCall(call, chains))
+            break;
+
           this.Call(call);
+          this.CallOfMember(call, chains);
+          break;
+        case IrThrowExpression thrown:
+          this.ThrowExpression(thrown);
+          break;
+        case IrNull { Type.IsArray: true } value:
+          this.Require(value.Type.IsStorable, $"null of the type {value.Type}");
+          break;
+        case IrNew or IrNull or IrMethodCall or IrReferenceEquals:
+          this.Object(expression);
+          break;
+        case IrTypeTest or IrCast or IrAsCast:
+          this.Conversion(expression);
+          break;
+        case IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind:
+          this.Optional(expression);
+          break;
+        case IrGenericEquals or IrGenericCompare:
+          this.Generic(expression);
+          break;
+        case IrCollection operation:
+          this.Collection(operation);
+          break;
+        case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
+          this.FunctionValue(expression);
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
-            if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind == IrTypeKind.ReadOnlySpan)))
+            if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind is IrTypeKind.ReadOnlySpan or IrTypeKind.ReadOnlyMemory)))
               this.Readable(intrinsic.Arguments[index]);
             else
               this.Expression(intrinsic.Arguments[index]);
@@ -362,6 +435,12 @@ public static partial class IrVerifier {
             this.Require(false, problem);
           if (StringOperations.Problem(intrinsic) is { } malformed)
             this.Require(false, malformed);
+          if (NumberTextOperations.Problem(intrinsic) is { } unformatted)
+            this.Require(false, unformatted);
+          if (EnumOperations.Problem(intrinsic) is { } unnamed)
+            this.Require(false, unnamed);
+
+          this.Declared(intrinsic.Type);
 
           break;
         case IrStep step:
@@ -392,10 +471,17 @@ public static partial class IrVerifier {
         this.Require(types.HasDefault(named), $"the struct {named.Name} has a field of an array type and so no default value");
     }
 
-    /// <summary>A field is one of the target type's own.</summary>
+    /// <summary>A field is one of the target type's own, or of a base class of its class.</summary>
     private void Member(IrExpr target, IrField field) {
-      if (this.Struct(target.Type) is { } owner)
-        this.Require(owner.Owns(field), $"the field '{field.Name}' is not a field of {owner.Name}");
+      if (target.Type.IsObject) {
+        if (this.Class(target.Type) is { } owner)
+          this.Require(owner.OwnerOf(field) is not null, $"the field '{field.Name}' is not a field of {owner.Name}");
+
+        return;
+      }
+
+      if (this.Struct(target.Type) is { } structure)
+        this.Require(structure.Owns(field), $"the field '{field.Name}' is not a field of {structure.Name}");
     }
 
     /// <summary>Whether an expression names a place a field can be written in: a variable, an array element, or a field of a place.</summary>
@@ -417,14 +503,18 @@ public static partial class IrVerifier {
 
       this.Require(call.Type == target.ReturnType,
         $"the call of '{call.Function}' has the type {call.Type}, the function returns {target.ReturnType}");
-      this.Require(call.Arguments.Select(argument => argument.Type).SequenceEqual(target.Parameters.Select(parameter => parameter.Type)),
-        $"the arguments of the call of '{call.Function}' do not match its parameters");
+      this.Require(Assignable(call.Arguments, target.Parameters), $"the arguments of the call of '{call.Function}' do not match its parameters");
+      this.Require(!this.Signatures.Contains(call.Function), $"the signature '{call.Function}' of an abstract method is called");
     }
 
+    /// <remarks>An enum converts to its underlying type and back, which changes no bit and so wraps.</remarks>
     private static bool Converts(IrConvert conversion) {
       var from = conversion.Operand.Type;
       if (!from.IsNumeric || !conversion.Type.IsNumeric)
         return false;
+
+      if (from.IsEnum || conversion.Type.IsEnum)
+        return from.Integral == conversion.Type.Integral && from != conversion.Type && (from.IsEnum != conversion.Type.IsEnum) && conversion.Contract == IrConversion.Wrap;
 
       if (conversion.Type.IsFloat)
         return conversion.Contract == IrConversion.Wrap;
@@ -434,7 +524,7 @@ public static partial class IrVerifier {
 
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan => false,
+      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

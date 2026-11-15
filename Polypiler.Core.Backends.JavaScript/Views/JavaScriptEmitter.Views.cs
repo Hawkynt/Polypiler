@@ -36,6 +36,13 @@ public static partial class JavaScriptEmitter {
         ? (new JsMember(this.Operand(element.Array), "a"), this.Helper("$vix", element.Array, element.Index))
         : (this.Text(element.Array), this.Text(element.Index));
 
+    /// <summary>
+    /// The value a field of a memory type has before anything is stored into it: a view of no elements, as
+    /// <c>default(Memory&lt;T&gt;)</c> is - an empty typed array, or the object over an empty plain array.
+    /// </summary>
+    private JsExpression EmptyView(IrType memory)
+      => this.Typed(memory) ? new JsNew(Id(Storage(memory.Element!)), [Number("0")]) : this.Helper("$vobj", [new JsArray([])]);
+
     /// <summary>A view as a value of the type the header of a function names.</summary>
     private string DescribeView(IrType view) => this.Typed(view) ? Storage(view.Element!) : $"{{ a: Array<{this.Describe(view.Element!)}>, o, n }}";
 
@@ -56,13 +63,15 @@ public static partial class JavaScriptEmitter {
       var arguments = intrinsic.Arguments;
       var first = arguments[0];
       var all = arguments.Select(this.Text).ToList();
-      var typed = this.Typed(intrinsic.Op == IrIntrinsicOp.StackAlloc ? intrinsic.Type : first.Type.IsView ? first.Type : intrinsic.Type);
+      // A memory is written as a view is: JavaScript has no stack to keep a view on.
+      var viewed = first.Type.IsView || first.Type.IsMemory;
+      var typed = this.Typed(intrinsic.Op == IrIntrinsicOp.StackAlloc ? intrinsic.Type : viewed ? first.Type : intrinsic.Type);
       switch (intrinsic.Op) {
-        case IrIntrinsicOp.ViewOf when arguments.Count == 1 && (typed || first.Type.IsView):
+        case IrIntrinsicOp.ViewOf when arguments.Count == 1 && (typed || viewed):
           // A typed array is a view of the whole of itself; a view is one of any view it is made of.
           return (all[0], this.Expression(first).Atomic);
         case IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice:
-          return (this.Helper(typed ? "$slice" : first.Type.IsView ? "$vsub" : "$vobj", all), true);
+          return (this.Helper(typed ? "$slice" : viewed ? "$vsub" : "$vobj", all), true);
         case IrIntrinsicOp.ViewLength:
           return (new JsMember(this.Operand(first), typed ? "length" : "n"), true);
         case IrIntrinsicOp.StackAlloc:

@@ -13,7 +13,7 @@ namespace Polypiler.Core.Backends.JavaScript;
 /// </summary>
 internal static partial class JavaScriptHelpers {
 
-  private const string Invalid = "throw new RangeError(\"invalid operation\");";
+  private const string Invalid = "throw new ArithmeticError(\"invalid operation\");";
   private const string Smallest64 = "{ hi: 2147483648, lo: 0 }";
   private const string Largest64 = "{ hi: 2147483647, lo: 4294967295 }";
   private const string AllOnes64 = "{ hi: 4294967295, lo: 4294967295 }";

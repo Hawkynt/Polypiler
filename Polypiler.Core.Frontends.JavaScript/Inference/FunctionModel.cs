@@ -97,6 +97,12 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// </summary>
   public bool IsArrayByCall { get; set; }
 
+  /// <summary>Whether the function compares the variable with <c>null</c>, or reads it through <c>??</c>: a parameter is then one null may reach.</summary>
+  public bool ComparedWithNull { get; set; }
+
+  /// <summary>Whether the function compares the variable with <c>undefined</c>: a parameter is then one undefined may reach.</summary>
+  public bool ComparedWithUndefined { get; set; }
+
   /// <summary>The variable in the IR, once the function is lowered.</summary>
   public IrLocal? Local { get; set; }
 
@@ -139,7 +145,32 @@ internal enum FlowKind {
   Argument,
 
   /// <summary>The node is a property of a destructuring declaration: the variable gets the value of that key of the record the source holds.</summary>
-  Field
+  Field,
+
+  /// <summary>The node is an assignment to a property of an object: a field, or the value of a setter.</summary>
+  FieldStore,
+
+  /// <summary>The node steps a field of an object.</summary>
+  FieldStep,
+
+  /// <summary>The node is an argument of a call of a method on an object, whose class decides the method.</summary>
+  MethodArgument,
+
+  /// <summary>
+  /// A change of the length of the array a variable holds - <c>push</c>, <c>pop</c>, <c>splice</c>, a
+  /// write of <c>length</c> or at <c>a[a.length]</c> - which makes it a list and adds what is pushed
+  /// or inserted to its elements (#1328).
+  /// </summary>
+  Grow,
+
+  /// <summary>
+  /// The key (<see cref="Flow.Index"/> 0) or the value (1) of an entry of a <c>Map</c> that a
+  /// <c>for…of</c> destructures into a variable (#1328).
+  /// </summary>
+  Entry,
+
+  /// <summary>The node is a call of a function value, whose arguments reach the parameters of every function the value may be.</summary>
+  Invoke
 
 }
 
@@ -150,7 +181,12 @@ internal enum FlowKind {
 /// <param name="Callee">The function called, for an argument.</param>
 /// <param name="Index">The position of an argument.</param>
 /// <param name="Source">The record a destructuring declaration takes the value of a key of.</param>
-internal sealed record Flow(FlowKind Kind, Node Node, Variable? Target = null, Candidate? Callee = null, int Index = 0, Node? Source = null);
+internal sealed record Flow(FlowKind Kind, Node Node, Variable? Target = null, Candidate? Callee = null, int Index = 0, Node? Source = null) {
+
+  /// <summary>Whether an argument is missing from the call, so that the parameter is <c>undefined</c> (#1322).</summary>
+  public bool Missing { get; init; }
+
+}
 
 /// <summary>A constant of the scope that encloses the functions: a number, or a table of numbers.</summary>
 /// <param name="Name">The name.</param>
@@ -185,6 +221,12 @@ internal sealed class FunctionModel(Candidate candidate) {
 
   /// <summary>The functions of the file the body calls, each once.</summary>
   public List<Candidate> Callees { get; } = [];
+
+  /// <summary>The functions nested in the body - arrows, function expressions, function declarations - by their node.</summary>
+  public Dictionary<Node, Candidate> Nested { get; } = [];
+
+  /// <summary>The names of functions of the file the body uses as values, by the identifier.</summary>
+  public Dictionary<Node, Candidate> FunctionValues { get; } = [];
 
   /// <summary>The type JSDoc states for the result, or <see langword="null"/>.</summary>
   public IrType? DeclaredResult { get; set; }

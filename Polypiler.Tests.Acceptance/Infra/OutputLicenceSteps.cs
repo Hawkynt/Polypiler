@@ -27,7 +27,8 @@ public sealed class OutputLicenceSteps(ScenarioWorkspace workspace, CommandLog l
   private const string Output = "out";
 
   private static readonly string _root = PrototypeFixture.RepositoryRoot;
-  private static readonly Regex _helperFunction = new(@"^function (\$[a-z0-9]+)\(", RegexOptions.CultureInvariant | RegexOptions.Multiline);
+  // A helper is a function, or a generated error class a trap throws (#1323).
+  private static readonly Regex _helperFunction = new(@"^(?:function (\$[a-z0-9]+)\(|class ([A-Za-z]+Error) extends )", RegexOptions.CultureInvariant | RegexOptions.Multiline);
 
   private string _file = "";
   private Manifest? _manifest;
@@ -58,7 +59,7 @@ public sealed class OutputLicenceSteps(ScenarioWorkspace workspace, CommandLog l
   /// <summary>Checks that every helper function of the generated file is listed, each with an origin in the repository and the MIT licence.</summary>
   [Then("^the manifest lists every emitted helper with its origin and licence$")]
   public void EveryHelperIsListed() {
-    var emitted = _helperFunction.Matches(File.ReadAllText(workspace.Resolve(Path.Combine(Output, "Calc.mjs")))).Select(match => match.Groups[1].Value);
+    var emitted = _helperFunction.Matches(File.ReadAllText(workspace.Resolve(Path.Combine(Output, "Calc.mjs")))).Select(match => match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value);
     Assert.That(this._manifest!.Helpers.Select(helper => helper.Symbol), Is.EquivalentTo(emitted));
     Assert.That(this._manifest.Helpers.Select(helper => (helper.License, helper.Origin)).Distinct(), Is.EqualTo(new[] { ("MIT", "Hawkynt/Polypiler:Polypiler.Core.Backends.JavaScript/Helpers") }));
   }

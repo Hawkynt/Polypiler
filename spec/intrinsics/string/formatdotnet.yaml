@@ -1,0 +1,30 @@
+id: INTRINSICS.FormatDotNet
+title: A number as .NET writes it with the invariant culture
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1315"
+tests: [Polypiler.Tests/String/IrNumberTextTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FormatDotNet
+  group: String
+  typeParameters: [{name: N, constraint: any}]
+  parameters: [{name: value, type: N}]
+  returns: [{name: text, type: TYPES.str}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "ToString(CultureInfo.InvariantCulture) of .NET Core 3.0 and later: the shortest digits that read back (of binary32 for f32); fixed notation while -5 < e < 17 (f64) or -5 < e < 9 (f32), otherwise d.dddE+nn or d.dddE-nn with two exponent digits at least; -0 is -0"
+    source: ".NET API reference, Double.ToString(IFormatProvider), Single.ToString(IFormatProvider), Standard numeric format strings"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {N: TYPES.f64}, inputs: ["0x444B1AE4D6E2EF50"], outputs: [[49, 69, 43, 50, 49]]}
+    - {types: {N: TYPES.f64}, inputs: ["0x4341C37937E08000"], outputs: [[49, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48]]}
+    - {types: {N: TYPES.f64}, inputs: ["0x8000000000000000"], outputs: [[45, 48]]}
+    - {types: {N: TYPES.f32}, inputs: ["0x4E6E6B28"], outputs: [[49, 69, 43, 48, 57]]}
+    - {types: {N: TYPES.u32}, inputs: ["0xFFFFFFFF"], outputs: [[52, 50, 57, 52, 57, 54, 55, 50, 57, 53]]}

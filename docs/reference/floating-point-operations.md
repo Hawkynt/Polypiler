@@ -52,7 +52,7 @@ to `tests/fixtures/golden.lock.json`, and a regeneration is recorded with `integ
 | --- | --- |
 | `Floor`, `Ceiling`, `Truncate` | the integral number below, above, towards zero |
 | `RoundEven`, `RoundAway`, `RoundHalfUp` | nearest integral number; a tie to even, away from zero, towards +∞ (ECMA-262 `Math.round`, -0 for -0.5 ≤ x < 0) |
-| `RoundDigits(x, digits, mode)` | .NET's `Math.Round(x, digits, mode)`: for \|x\| < 10^16 (10^8 for `f32`) `round(x * 10^d, mode) / 10^d`, else `x`; `mode` a constant of `MidpointRounding`; `digits` outside 0..15 (0..6) traps |
+| `RoundDigits(x, digits, mode)` | .NET's `Math.Round(x, digits, mode)`: for \|x\| < 10^16 (10^8 for `f32`) `round(x * 10^d, mode) / 10^d`, else `x`; `mode` a constant of `MidpointRounding`; `digits` outside 0..15 (0..6) traps with an argument out of range (`ArgumentOutOfRangeException`, as .NET throws) |
 
 ## Sign and magnitude
 
@@ -160,7 +160,7 @@ C#: `Math.FusedMultiplyAdd`, `CopySign`, `MinMagnitude`, `MaxMagnitude`, `ScaleB
 `net8.0`, `double.IsNaN`, `IsInfinity` from `net2.0`, `IsFinite`, `IsNegative`, `IsNormal`,
 `IsSubnormal` from `netstandard2.1`, `Math.Clamp` from `netstandard2.1` (a helper that throws as it
 does before); `RoundDigits` is a helper in every profile. JavaScript has none of these: each is the
-portable implementation, `Clamp` and `RoundDigits` helpers that throw a `RangeError`.
+portable implementation, `Clamp` and `RoundDigits` helpers that throw a `RangeError` - the generated `ArithmeticError` and `ArgumentOutOfRangeError` of [exceptions](exceptions.md), both in its chain.
 
 ## Portable implementations in generated code
 

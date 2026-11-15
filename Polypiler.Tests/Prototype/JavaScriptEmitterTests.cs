@@ -41,8 +41,15 @@ public sealed class JavaScriptEmitterTests {
       "// JavaScript profile: es2022, esm.",
       "// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.",
       "",
+      "class IndexOutOfRangeError extends RangeError {",
+      "  constructor(message) {",
+      "    super(message);",
+      "    this.name = \"IndexOutOfRangeError\";",
+      "  }",
+      "}",
+      "",
       "function $get(array, index) {",
-      "  if (index < 0 || index >= array.length) throw new RangeError(\"index out of range\");",
+      "  if (index < 0 || index >= array.length) throw new IndexOutOfRangeError(\"index out of range\");",
       "  return array[index];",
       "}",
       "",
@@ -467,9 +474,9 @@ public sealed class JavaScriptEmitterTests {
     var text = Emit("public static int F(int[] a, uint u) { a[0] = a[1] / a[2] % a[3]; return (int)(u / 2 % 3) + new int[2].Length; }");
     var helpers = text.Split('\n').Where(line => line.StartsWith("function $")).Select(line => line[..line.IndexOf('(')]);
     Assert.That(helpers, Is.EqualTo(new[] { "function $div", "function $rem", "function $udiv", "function $urem", "function $get", "function $set", "function $len" }));
-    Assert.That(text, Does.Contain("throw new RangeError(\"divide by zero\")")
-      .And.Contain("throw new RangeError(\"index out of range\")")
-      .And.Contain("throw new RangeError(\"integer overflow\")"));
+    Assert.That(text, Does.Contain("throw new DivideByZeroError(\"divide by zero\")")
+      .And.Contain("throw new IndexOutOfRangeError(\"index out of range\")")
+      .And.Contain("throw new OverflowError(\"integer overflow\")"));
   }
 
   /// <summary>The helpers of the 64-bit and of the checked operations, in their order.</summary>
@@ -478,9 +485,9 @@ public sealed class JavaScriptEmitterTests {
     var text = Emit("public static long F(long a, ulong u) => checked(a / a % a + (long)(u / u % u) + a);");
     var helpers = text.Split('\n').Where(line => line.StartsWith("function $")).Select(line => line[..line.IndexOf('(')]);
     Assert.That(helpers, Is.EqualTo(new[] { "function $div64", "function $rem64", "function $udiv64", "function $urem64", "function $ck" }));
-    Assert.That(text, Does.Contain("if (b === 0n) throw new RangeError(\"divide by zero\");")
-      .And.Contain("if (a === -9223372036854775808n && b === -1n) throw new RangeError(\"integer overflow\");")
-      .And.Contain("if (value < low || value > high) throw new RangeError(\"integer overflow\");"));
+    Assert.That(text, Does.Contain("if (b === 0n) throw new DivideByZeroError(\"divide by zero\");")
+      .And.Contain("if (a === -9223372036854775808n && b === -1n) throw new OverflowError(\"integer overflow\");")
+      .And.Contain("if (value < low || value > high) throw new OverflowError(\"integer overflow\");"));
   }
 
   /// <summary>The helpers of the conversions from and to floating point, in their order.</summary>
@@ -491,8 +498,8 @@ public sealed class JavaScriptEmitterTests {
     var helpers = text.Split('\n').Where(line => line.StartsWith("function $")).Select(line => line[..line.IndexOf('(')]);
     Assert.That(helpers, Is.EqualTo(new[] { "function $f2i", "function $f2l", "function $f2ic", "function $f2lc", "function $f32" }));
     Assert.That(text, Does.Contain("if (value !== value) return 0;").And.Contain("if (value !== value) return 0n;")
-      .And.Contain("if (!(whole >= low && whole <= high)) throw new RangeError(\"integer overflow\");")
-      .And.Contain("if (!(whole >= low && whole < limit)) throw new RangeError(\"integer overflow\");")
+      .And.Contain("if (!(whole >= low && whole <= high)) throw new OverflowError(\"integer overflow\");")
+      .And.Contain("if (!(whole >= low && whole < limit)) throw new OverflowError(\"integer overflow\");")
       .And.Contain("magnitude = (magnitude >> 11n) | (magnitude & 2047n ? 1n : 0n);"));
   }
 
@@ -509,8 +516,15 @@ public sealed class JavaScriptEmitterTests {
       "// JavaScript profile: es2022, esm.",
       "// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.",
       "",
+      "class IndexOutOfRangeError extends RangeError {",
+      "  constructor(message) {",
+      "    super(message);",
+      "    this.name = \"IndexOutOfRangeError\";",
+      "  }",
+      "}",
+      "",
       "function $get(array, index) {",
-      "  if (index < 0 || index >= array.length) throw new RangeError(\"index out of range\");",
+      "  if (index < 0 || index >= array.length) throw new IndexOutOfRangeError(\"index out of range\");",
       "  return array[index];",
       "}",
       "",
@@ -550,7 +564,7 @@ public sealed class JavaScriptEmitterTests {
       "return new Int32Array([n, (c.length + d.length) | 0]);"
     }));
     Assert.That(Emit("public static void F(int[] a) { System.Array.Copy(a, 0, a, 1, 2); }"),
-      Does.Contain("function $copy(source, from, target, to, length) {\n  if (from < 0 || to < 0 || length < 0 || from + length > source.length || to + length > target.length) throw new RangeError(\"index out of range\");\n  target.set(source.subarray(from, from + length), to);\n}\n"));
+      Does.Contain("function $copy(source, from, target, to, length) {\n  if (from < 0 || to < 0 || length < 0 || from + length > source.length || to + length > target.length) throw new IndexOutOfRangeError(\"index out of range\");\n  target.set(source.subarray(from, from + length), to);\n}\n"));
   }
 
   /// <summary>Each operation of the base library: what JavaScript has for it, or the helper that computes it.</summary>
@@ -616,7 +630,7 @@ public sealed class JavaScriptEmitterTests {
       "function $rotl", "function $rotr", "function $rotl64", "function $rotr64", "function $pop", "function $pop64", "function $clz64",
       "function $ctz", "function $ctz64", "const $view", "function $bits64", "function $bits32", "function $float64", "function $float32"
     }));
-    Assert.That(text, Does.Contain("if (value !== value) throw new RangeError(\"invalid operation\");")
+    Assert.That(text, Does.Contain("if (value !== value) throw new ArithmeticError(\"invalid operation\");")
       .And.Contain("const $view = new DataView(new ArrayBuffer(8));")
       .And.Contain("return rounded - value === 0.5 && rounded % 2 !== 0 ? rounded - 1 : rounded;"));
     Assert.That(Emit("public static int F(uint a) => System.Numerics.BitOperations.PopCount(a);"), Does.Not.Contain("$pop64").And.Not.Contain("$view"));

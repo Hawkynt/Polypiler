@@ -31,22 +31,34 @@ public static class CSharpSyntaxRewriter {
     CsObjectCreation creation => creation.Arguments,
     CsArrayCreation creation => [.. Optional(creation.Size), .. Optional(creation.Initializer)],
     CsArrayInitializer initializer => initializer.Elements,
+    CsLambda lambda => [.. lambda.Parameters, .. Optional(lambda.Body), .. Optional(lambda.ExpressionBody)],
+    CsLocalFunction function => [.. function.Parameters, .. Optional(function.Body), .. Optional(function.ExpressionBody)],
+    CsDelegateDeclaration type => type.Parameters,
     CsBlock block => block.Statements,
     CsLocalDeclaration declaration => Optional(declaration.Initializer),
     CsExpressionStatement statement => [statement.Expression],
     CsIf conditional => [conditional.Condition, conditional.Then, .. Optional(conditional.Else)],
     CsWhile loop => [loop.Condition, loop.Body],
+    CsForEach loop => [loop.Collection, loop.Body],
     CsDo loop => [loop.Body, loop.Condition],
     CsFor loop => [.. Optional(loop.Declaration), .. Optional(loop.Condition), .. loop.Incrementors, loop.Body],
     CsSwitch choice => [choice.Value, .. choice.Sections],
     CsSwitchSection section => [.. section.Labels.OfType<CsExpression>(), .. section.Statements],
     CsReturn result => Optional(result.Value),
-    CsThrow exception => [exception.Value],
+    CsThrow exception => Optional(exception.Value),
+    CsTry attempt => [attempt.Body, .. attempt.Catches, .. Optional(attempt.Finally)],
+    CsUsing scope => [scope.Resource, scope.Body],
+    CsCatch clause => [.. Optional(clause.Filter), clause.Body],
+    CsThrowExpression thrown => [thrown.Value],
     CsCheckedStatement context => [context.Block],
     CsField field => Optional(field.Initializer),
     CsMethod method => [.. Optional(method.Body), .. Optional(method.ExpressionBody)],
-    CsConstructor constructor => [constructor.Body],
+    CsConstructor constructor => [.. constructor.Chained ?? [], constructor.Body],
+    CsAccessor accessor => [.. Optional(accessor.Body), .. Optional(accessor.ExpressionBody)],
+    CsProperty property => [.. property.Accessors ?? [], .. Optional(property.ExpressionBody)],
     CsTypeDeclaration type => type.Members ?? [],
+    CsEnumDeclaration declared => declared.Members,
+    CsEnumMember member => [member.Value],
     CsNamespace scope => scope.Members,
     CsCompilationUnit unit => unit.Members,
     _ => []
@@ -96,21 +108,32 @@ public static class CSharpSyntaxRewriter {
     CsArrayCreation creation => ArrayCreation(creation, rewrite),
     CsArrayInitializer initializer => List(initializer.Elements, rewrite) is var elements && !ReferenceEquals(elements, initializer.Elements) ? initializer with { Elements = elements } : initializer,
     CsBlock block => List(block.Statements, rewrite) is var statements && !ReferenceEquals(statements, block.Statements) ? block with { Statements = statements } : block,
+    CsLambda lambda => Lambda(lambda, rewrite),
+    CsLocalFunction function => LocalFunction(function, rewrite),
     CsLocalDeclaration declaration => declaration.Initializer is null ? declaration : Same(declaration, declaration.Initializer, rewrite, value => declaration with { Initializer = value }),
     CsExpressionStatement statement => Same(statement, statement.Expression, rewrite, expression => statement with { Expression = expression }),
     CsIf conditional => If(conditional, rewrite),
     CsWhile loop => Pair(loop, loop.Condition, loop.Body, rewrite, (condition, body) => loop with { Condition = condition, Body = body }),
+    CsForEach loop => Pair(loop, loop.Collection, loop.Body, rewrite, (collection, body) => loop with { Collection = collection, Body = body }),
     CsDo loop => Pair(loop, loop.Body, loop.Condition, rewrite, (body, condition) => loop with { Body = body, Condition = condition }),
     CsFor loop => For(loop, rewrite),
     CsSwitch choice => Switch(choice, rewrite),
     CsSwitchSection section => Section(section, rewrite),
     CsReturn { Value: { } value } result => Same(result, value, rewrite, rewritten => result with { Value = rewritten }),
-    CsThrow exception => Same(exception, exception.Value, rewrite, value => exception with { Value = value }),
+    CsThrow { Value: { } value } exception => Same(exception, value, rewrite, rewritten => exception with { Value = rewritten }),
+    CsThrowExpression thrown => Same(thrown, thrown.Value, rewrite, value => thrown with { Value = value }),
+    CsTry attempt => Try(attempt, rewrite),
+    CsUsing scope => Pair(scope, scope.Resource, scope.Body, rewrite, (resource, body) => scope with { Resource = resource, Body = body }),
+    CsCatch clause => Catch(clause, rewrite),
     CsCheckedStatement context => Same(context, context.Block, rewrite, block => context with { Block = block }),
     CsField { Initializer: { } initializer } field => Same(field, initializer, rewrite, value => field with { Initializer = value }),
     CsMethod method => Method(method, rewrite),
-    CsConstructor constructor => Same(constructor, constructor.Body, rewrite, body => constructor with { Body = body }),
+    CsConstructor constructor => Constructor(constructor, rewrite),
+    CsAccessor accessor => Accessor(accessor, rewrite),
+    CsProperty property => Property(property, rewrite),
     CsTypeDeclaration { Members: { } members } type => List(members, rewrite) is var rewritten && !ReferenceEquals(rewritten, members) ? type with { Members = rewritten } : type,
+    CsEnumDeclaration declared => List(declared.Members, rewrite) is var named && !ReferenceEquals(named, declared.Members) ? declared with { Members = named } : declared,
+    CsEnumMember member => Same(member, member.Value, rewrite, value => member with { Value = value }),
     CsNamespace scope => List(scope.Members, rewrite) is var members && !ReferenceEquals(members, scope.Members) ? scope with { Members = members } : scope,
     CsCompilationUnit unit => List(unit.Members, rewrite) is var members && !ReferenceEquals(members, unit.Members) ? unit with { Members = members } : unit,
     _ => node
@@ -148,6 +171,20 @@ public static class CSharpSyntaxRewriter {
     var target = (CsExpression)Visit(call.Target, rewrite);
     var arguments = List(call.Arguments, rewrite);
     return ReferenceEquals(target, call.Target) && ReferenceEquals(arguments, call.Arguments) ? call : call with { Target = target, Arguments = arguments };
+  }
+
+  private static CsTry Try(CsTry attempt, Func<CsNode, CsNode> rewrite) {
+    var body = (CsBlock)Visit(attempt.Body, rewrite);
+    var catches = List(attempt.Catches, rewrite);
+    var final = Optional(attempt.Finally, rewrite);
+    return ReferenceEquals(body, attempt.Body) && ReferenceEquals(catches, attempt.Catches) && ReferenceEquals(final, attempt.Finally)
+      ? attempt : attempt with { Body = body, Catches = catches, Finally = final };
+  }
+
+  private static CsCatch Catch(CsCatch clause, Func<CsNode, CsNode> rewrite) {
+    var filter = Optional(clause.Filter, rewrite);
+    var body = (CsBlock)Visit(clause.Body, rewrite);
+    return ReferenceEquals(filter, clause.Filter) && ReferenceEquals(body, clause.Body) ? clause : clause with { Filter = filter, Body = body };
   }
 
   private static CsConditional Conditional(CsConditional choice, Func<CsNode, CsNode> rewrite) {
@@ -196,6 +233,36 @@ public static class CSharpSyntaxRewriter {
     return labels.SequenceEqual(section.Labels, ReferenceEqualityComparer.Instance) && ReferenceEquals(statements, section.Statements)
       ? section
       : section with { Labels = labels, Statements = statements };
+  }
+
+  private static CsConstructor Constructor(CsConstructor constructor, Func<CsNode, CsNode> rewrite) {
+    var chained = constructor.Chained is null ? null : List(constructor.Chained, rewrite);
+    var body = (CsBlock)Visit(constructor.Body, rewrite);
+    return ReferenceEquals(chained, constructor.Chained) && ReferenceEquals(body, constructor.Body) ? constructor : constructor with { Chained = chained, Body = body };
+  }
+
+  private static CsAccessor Accessor(CsAccessor accessor, Func<CsNode, CsNode> rewrite) {
+    var body = Optional(accessor.Body, rewrite);
+    var expression = Optional(accessor.ExpressionBody, rewrite);
+    return ReferenceEquals(body, accessor.Body) && ReferenceEquals(expression, accessor.ExpressionBody) ? accessor : accessor with { Body = body, ExpressionBody = expression };
+  }
+
+  private static CsProperty Property(CsProperty property, Func<CsNode, CsNode> rewrite) {
+    var accessors = property.Accessors is null ? null : List(property.Accessors, rewrite);
+    var expression = Optional(property.ExpressionBody, rewrite);
+    return ReferenceEquals(accessors, property.Accessors) && ReferenceEquals(expression, property.ExpressionBody) ? property : property with { Accessors = accessors, ExpressionBody = expression };
+  }
+
+  private static CsLambda Lambda(CsLambda lambda, Func<CsNode, CsNode> rewrite) {
+    var body = Optional(lambda.Body, rewrite);
+    var expression = Optional(lambda.ExpressionBody, rewrite);
+    return ReferenceEquals(body, lambda.Body) && ReferenceEquals(expression, lambda.ExpressionBody) ? lambda : lambda with { Body = body, ExpressionBody = expression };
+  }
+
+  private static CsLocalFunction LocalFunction(CsLocalFunction function, Func<CsNode, CsNode> rewrite) {
+    var body = Optional(function.Body, rewrite);
+    var expression = Optional(function.ExpressionBody, rewrite);
+    return ReferenceEquals(body, function.Body) && ReferenceEquals(expression, function.ExpressionBody) ? function : function with { Body = body, ExpressionBody = expression };
   }
 
   private static CsMethod Method(CsMethod method, Func<CsNode, CsNode> rewrite) {

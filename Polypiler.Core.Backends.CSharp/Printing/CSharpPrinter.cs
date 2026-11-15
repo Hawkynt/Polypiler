@@ -67,6 +67,12 @@ public static class CSharpPrinter {
     return printer.Text;
   }
 
+  /// <summary>
+  /// Whether an expression is a null-conditional access, which a member access, an element access or
+  /// a call behind it would join: <c>a?.Length.Value</c> reads <c>Value</c> of <c>Length</c>, not of the result.
+  /// </summary>
+  private static bool IsConditional(CsExpression expression) => expression is CsMemberAccess { Conditional: true } or CsElementAccess { Conditional: true };
+
   /// <summary>How tightly an expression binds, by the precedence of its operator; higher binds tighter.</summary>
   /// <param name="expression">The expression.</param>
   /// <returns>The precedence: 15 for a primary expression down to 1 for an assignment.</returns>
@@ -77,7 +83,7 @@ public static class CSharpPrinter {
     CsBinary binary => Of(binary.Operator),
     CsIsType => Relational,
     CsConditional => Conditional,
-    CsAssignment => Assignment,
+    CsAssignment or CsLambda => Assignment,
     _ => Primary
   };
 
@@ -88,7 +94,7 @@ public static class CSharpPrinter {
     "*" or "/" or "%" => 13,
     "+" or "-" => 12,
     "<<" or ">>" or ">>>" => 11,
-    "<" or ">" or "<=" or ">=" => Relational,
+    "<" or ">" or "<=" or ">=" or "as" => Relational,
     "==" or "!=" => 9,
     "&" => 8,
     "^" => 7,
@@ -163,6 +169,9 @@ public static class CSharpPrinter {
         case CsTypeDeclaration type:
           this.Type(type, depth);
           break;
+        case CsEnumDeclaration declared:
+          this.Enum(declared, depth);
+          break;
         case CsField field:
           this.Modifiers(field.Modifiers, depth).Append(field.FieldType.Name).Append(' ').Append(field.Name);
           if (field.Initializer is not null) {
@@ -178,15 +187,63 @@ public static class CSharpPrinter {
             this._text.Append('<').AppendJoin(", ", method.TypeParameters).Append('>');
 
           this.Parameters(method.Parameters);
+          foreach (var constraint in method.Constraints)
+            this._text.Append(" where ").Append(constraint);
+
           this.Body(method.Body, method.ExpressionBody, depth);
+          break;
+        case CsProperty property:
+          this.Property(property, depth);
+          break;
+        case CsDelegateDeclaration type:
+          this.Modifiers(type.Modifiers, depth).Append("delegate ").Append(type.ReturnType.Name).Append(' ').Append(type.Name);
+          this.Parameters(type.Parameters);
+          this._text.Append(";\n");
           break;
         default:
           var constructor = (CsConstructor)member;
           this.Modifiers(constructor.Modifiers, depth).Append(constructor.Name);
           this.Parameters(constructor.Parameters);
+          if (constructor.Chained is { } chained) {
+            this._text.Append(constructor.ChainsToBase ? " : base(" : " : this(");
+            for (var index = 0; index < chained.Count; ++index) {
+              if (index > 0)
+                this._text.Append(", ");
+
+              this.Expression(chained[index], depth);
+            }
+
+            this._text.Append(')');
+          }
+
           this.Body(constructor.Body, null, depth);
           break;
       }
+    }
+
+    /// <summary>A property: automatic accessors on its line, written ones each on a line of their own, or an expression body.</summary>
+    private void Property(CsProperty property, int depth) {
+      this.Modifiers(property.Modifiers, depth).Append(property.PropertyType.Name).Append(' ').Append(property.Name);
+      if (property.Accessors is not { } accessors) {
+        this.Body(null, property.ExpressionBody, depth);
+        return;
+      }
+
+      if (accessors.All(accessor => accessor.Body is null && accessor.ExpressionBody is null)) {
+        this._text.Append(" { ").AppendJoin(" ", accessors.Select(accessor => accessor.Keyword + ";")).Append(" }\n");
+        return;
+      }
+
+      this._text.Append(" {\n");
+      foreach (var accessor in accessors) {
+        this.Line(depth + 1).Append(accessor.Keyword);
+        if (accessor.Body is null && accessor.ExpressionBody is null)
+          this._text.Append(";\n");
+        else
+          this.Body(accessor.Body, accessor.ExpressionBody, depth + 1);
+      }
+
+      this.Line(depth).Append("}\n");
     }
 
     private StringBuilder Modifiers(IReadOnlyList<string> modifiers, int depth) {
@@ -207,13 +264,21 @@ public static class CSharpPrinter {
         if (parameter.Modifier is not null)
           this._text.Append(parameter.Modifier).Append(' ');
 
-        this._text.Append(parameter.ParameterType.Name).Append(' ').Append(parameter.Name);
+        if (parameter.ParameterType.Name.Length > 0)
+          this._text.Append(parameter.ParameterType.Name).Append(' ');
+
+        this._text.Append(parameter.Name);
       }
 
       this._text.Append(')');
     }
 
     private void Body(CsBlock? body, CsExpression? expression, int depth) {
+      if (body is null && expression is null) {
+        this._text.Append(";\n");
+        return;
+      }
+
       if (body is null) {
         this._text.Append(" => ");
         this.Expression(expression!, depth);
@@ -226,8 +291,32 @@ public static class CSharpPrinter {
       this._text.Append('\n');
     }
 
+    private void Enum(CsEnumDeclaration declared, int depth) {
+      foreach (var attribute in declared.Attributes)
+        this.Line(depth).Append('[').Append(attribute).Append("]\n");
+
+      this.Modifiers(declared.Modifiers, depth).Append("enum ").Append(declared.Name).Append(" : ").Append(declared.Underlying.Name);
+      if (declared.Members.Count == 0) {
+        this._text.Append(" { }\n");
+        return;
+      }
+
+      this._text.Append(" {\n");
+      for (var index = 0; index < declared.Members.Count; ++index) {
+        var member = declared.Members[index];
+        this.Line(depth + 1).Append(member.Name).Append(" = ");
+        this.Expression(member.Value, depth + 1);
+        this._text.Append(index + 1 < declared.Members.Count ? ",\n" : "\n");
+      }
+
+      this.Line(depth).Append("}\n");
+    }
+
     private void Type(CsTypeDeclaration type, int depth) {
       this.Modifiers(type.Modifiers, depth).Append(type.Keyword).Append(' ').Append(type.Name);
+      if (type.TypeParameters.Count > 0)
+        this._text.Append('<').AppendJoin(", ", type.TypeParameters).Append('>');
+
       if (type.Parameters is not null)
         this.Parameters(type.Parameters);
 
@@ -270,6 +359,30 @@ public static class CSharpPrinter {
       this.Line(depth).Append('}');
     }
 
+    /// <summary>A try with its catch clauses and its finally block, each block after a space as K&amp;R has it: <c>} catch (T e) when (c) {</c>.</summary>
+    private void Try(CsTry attempt, int depth) {
+      this._text.Append("try ");
+      this.Braces(attempt.Body, depth);
+      foreach (var clause in attempt.Catches) {
+        this._text.Append(" catch ");
+        if (clause.Type is { } type)
+          this._text.Append('(').Append(type.Name).Append(clause.Name is null ? "" : " " + clause.Name).Append(") ");
+
+        if (clause.Filter is { } filter) {
+          this._text.Append("when (");
+          this.Expression(filter, depth);
+          this._text.Append(") ");
+        }
+
+        this.Braces(clause.Body, depth);
+      }
+
+      if (attempt.Finally is { } final) {
+        this._text.Append(" finally ");
+        this.Braces(final, depth);
+      }
+    }
+
     /// <summary>A statement where another one stands - the body of a loop, a branch of an if - after a space, without a line break at its end.</summary>
     private void Embedded(CsStatement statement, int depth) {
       if (statement is CsBlock block)
@@ -302,6 +415,12 @@ public static class CSharpPrinter {
           break;
         case CsIf conditional:
           this.If(conditional, depth);
+          break;
+        case CsForEach loop:
+          this._text.Append("foreach (").Append(loop.LocalType.Name).Append(' ').Append(loop.Name).Append(" in ");
+          this.Expression(loop.Collection, depth);
+          this._text.Append(") ");
+          this.Embedded(loop.Body, depth);
           break;
         case CsWhile loop:
           this._text.Append("while (");
@@ -359,10 +478,39 @@ public static class CSharpPrinter {
 
           this._text.Append(';');
           break;
+        case CsThrow { Value: null }:
+          this._text.Append("throw;");
+          break;
         case CsThrow exception:
           this._text.Append("throw ");
-          this.Expression(exception.Value, depth);
+          this.Expression(exception.Value!, depth);
           this._text.Append(';');
+          break;
+        case CsTry attempt:
+          this.Try(attempt, depth);
+          break;
+        case CsUsing scope:
+          this._text.Append("using (");
+          this.Declaration(scope.Resource, depth);
+          this._text.Append(") ");
+          if (scope.Body is CsUsing stacked) {
+            this._text.Length -= 1;
+            this.NewLine(depth);
+            this.Bare(stacked, depth);
+          } else {
+            this.Embedded(scope.Body, depth);
+          }
+          break;
+        case CsLocalFunction function:
+          foreach (var modifier in function.Modifiers)
+            this._text.Append(modifier).Append(' ');
+
+          this._text.Append(function.ReturnType.Name).Append(' ').Append(function.Name);
+          this.Parameters(function.Parameters);
+          this.Inner(function.Body, function.ExpressionBody, depth, " =>");
+          if (function.Body is null)
+            this._text.Append(';');
+
           break;
         default:
           var context = (CsCheckedStatement)statement;
@@ -379,6 +527,9 @@ public static class CSharpPrinter {
     }
 
     private void Declaration(CsLocalDeclaration declaration, int depth) {
+      if (declaration.IsUsing)
+        this._text.Append("using ");
+
       this._text.Append(declaration.LocalType.Name).Append(' ').Append(declaration.Name);
       if (declaration.Initializer is null)
         return;
@@ -471,15 +622,18 @@ public static class CSharpPrinter {
         case CsDefaultLiteral:
           this._text.Append("default");
           break;
+        case CsNullLiteral:
+          this._text.Append("null");
+          break;
         case CsName name:
           this._text.Append(name.Identifier);
           break;
         case CsMemberAccess access:
-          this.Operand(access.Target, Precedence(access.Target) == Primary, depth);
-          this._text.Append('.').Append(access.Member);
+          this.Operand(access.Target, Precedence(access.Target) == Primary && !IsConditional(access.Target), depth);
+          this._text.Append(access.Conditional ? "?." : ".").Append(access.Member);
           break;
         case CsInvocation call:
-          this.Operand(call.Target, Precedence(call.Target) == Primary, depth);
+          this.Operand(call.Target, Precedence(call.Target) == Primary && !IsConditional(call.Target), depth);
           this.Arguments(call.Arguments, depth);
           break;
         case CsOutArgument argument:
@@ -487,8 +641,8 @@ public static class CSharpPrinter {
           this.Expression(argument.Value, depth);
           break;
         case CsElementAccess element:
-          this.Operand(element.Target, Precedence(element.Target) == Primary, depth);
-          this._text.Append('[');
+          this.Operand(element.Target, Precedence(element.Target) == Primary && !IsConditional(element.Target), depth);
+          this._text.Append(element.Conditional ? "?[" : "[");
           this.Expression(element.Index, depth);
           this._text.Append(']');
           break;
@@ -520,11 +674,17 @@ public static class CSharpPrinter {
         case CsIsType test:
           this.Operand(test.Operand, Precedence(test.Operand) >= Relational, depth);
           this._text.Append(" is ").Append(test.TestedType.Name);
+          if (test.Designation is { } designation)
+            this._text.Append(' ').Append(designation);
           break;
         case CsAssignment assignment:
           this.Operand(assignment.Left, Precedence(assignment.Left) > Assignment, depth);
           this._text.Append(' ').Append(assignment.Operator).Append(' ');
           this.Operand(assignment.Right, true, depth);
+          break;
+        case CsThrowExpression thrown:
+          this._text.Append("throw ");
+          this.Expression(thrown.Value, depth);
           break;
         case CsConditional choice:
           this.Operand(choice.Condition, Precedence(choice.Condition) > Conditional, depth);
@@ -572,10 +732,51 @@ public static class CSharpPrinter {
         case CsArrayInitializer initializer:
           this.Initializer(initializer, depth);
           break;
+        case CsLambda lambda:
+          this.Lambda(lambda, depth);
+          break;
+        case CsTypeOf typeOf:
+          this._text.Append("typeof(").Append(typeOf.Operand.Name).Append(')');
+          break;
         default:
           this._text.Append("default(").Append(((CsDefaultExpression)expression).DefaultType.Name).Append(')');
           break;
       }
+    }
+
+    /// <summary>
+    /// A lambda - one parameter without a type bare, any other list in parentheses - or an anonymous
+    /// method, whose parameters always have their types; its block is indented like a statement's.
+    /// </summary>
+    private void Lambda(CsLambda lambda, int depth) {
+      if (lambda.IsStatic)
+        this._text.Append("static ");
+
+      if (lambda.IsAnonymousMethod) {
+        this._text.Append("delegate ");
+        this.Parameters(lambda.Parameters);
+      } else if (lambda.Parameters is [{ ParameterType.Name: "", Modifier: null } single]) {
+        this._text.Append(single.Name);
+      } else {
+        this.Parameters(lambda.Parameters);
+      }
+
+      if (!lambda.IsAnonymousMethod)
+        this._text.Append(" =>");
+
+      this.Inner(lambda.Body, lambda.ExpressionBody, depth, "");
+    }
+
+    /// <summary>The body of a function inside a statement: a block after a space, or the arrow and the expression; nothing follows it.</summary>
+    private void Inner(CsBlock? body, CsExpression? expression, int depth, string arrow) {
+      if (body is null) {
+        this._text.Append(arrow).Append(' ');
+        this.Expression(expression!, depth);
+        return;
+      }
+
+      this._text.Append(' ');
+      this.Braces(body, depth);
     }
 
     private void Arguments(IReadOnlyList<CsExpression> arguments, int depth) {

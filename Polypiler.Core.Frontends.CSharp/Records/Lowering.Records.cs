@@ -35,7 +35,7 @@ internal sealed partial class Lowering {
   /// Declares the structs of every file: first a type for each, so that a field may have the type of
   /// a struct declared later, then their fields and constructors.
   /// </summary>
-  private void DeclareStructs(IReadOnlyList<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)> structs) {
+  private void DeclareStructs(IReadOnlyList<(string Path, BoundModel Model, TypeDeclarationSyntax Type)> structs) {
     var names = new HashSet<string>();
     foreach (var (file, semantics, type) in structs) {
       path = file;
@@ -46,6 +46,8 @@ internal sealed partial class Lowering {
       this._types.Add(declared);
       if (!names.Add(symbol.Name))
         this.Report(new UnsupportedException(type, $"a second struct named {symbol.Name}"));
+      else if (this._enums.Values.Any(named => named.Name == symbol.Name))
+        this.Report(new UnsupportedException(type, $"a second type named {symbol.Name}"));
     }
 
     foreach (var (file, semantics, type) in structs) {
@@ -263,13 +265,19 @@ internal sealed partial class Lowering {
   /// otherwise into a temporary declared in front of the statement.
   /// </summary>
   private (IrExpr Value, List<IrStmt> After) Initialized(ExpressionSyntax value, List<IrStmt> into, IrLocal? declared = null) {
+    if (this.CollectionInitialized(value, into, declared) is { } collection)
+      return collection;
+
+    if (value is BaseObjectCreationExpressionSyntax { Initializer: { } entries } made && this.ClassOf(model.GetTypeInfo(made).Type) is { } owner)
+      return this.ObjectInitialized(made, entries, IrType.Object(owner), into, declared);
+
     if (value is not BaseObjectCreationExpressionSyntax { Initializer: { } initializer } creation
         || creation.ArgumentList is { Arguments.Count: > 0 }
         || this.Map(model.GetTypeInfo(creation).Type, creation) is not { IsStruct: true } type)
       return (this.Value(value), []);
 
     var start = this.Default(type, creation);
-    var target = declared ?? this.Local($"$t{this._locals.Count}", type);
+    var target = declared ?? this.Local($"$t{this._localBase + this._locals.Count}", type);
     var stores = this.Entries(initializer)
       .Select(entry => (IrStmt)new IrFieldStore(new IrLocalRef(target), entry.Field, Convert(this.Value(entry.Value), entry.Field.Type)))
       .ToList();
@@ -292,7 +300,7 @@ internal sealed partial class Lowering {
   /// <summary>Whether an expression can be evaluated in another order without a difference: a constant, a variable or a field of one.</summary>
   private static bool Simple(IrExpr expression) => expression switch {
     IrConst or IrConstRef or IrLocalRef or IrStructDefault => true,
-    IrFieldLoad load => Simple(load.Target),
+    IrFieldLoad load => !load.Target.Type.IsObject && Simple(load.Target),
     IrConvert conversion => conversion.Contract == IrConversion.Wrap && Simple(conversion.Operand),
     _ => false
   };
@@ -303,6 +311,10 @@ internal sealed partial class Lowering {
   /// evaluated once.
   /// </summary>
   private IrExpr Place(ExpressionSyntax expression, List<IrStmt> into, bool alsoRead) {
+    // A struct field of an object is a place in the object, which the reference reaches.
+    if (this.ClassOf(model.GetTypeInfo(expression).Type) is not null)
+      return alsoRead ? this.Once(this.Value(expression), into) : this.Value(expression);
+
     switch (expression) {
       case ParenthesizedExpressionSyntax parenthesized:
         return this.Place(parenthesized.Expression, into, alsoRead);

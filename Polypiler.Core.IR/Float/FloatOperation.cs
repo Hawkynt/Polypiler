@@ -121,6 +121,13 @@ public sealed class FloatOperation {
   /// <summary>Whether operands make the operation trap with an invalid operation before it computes anything.</summary>
   public Func<object[], bool>? Traps { get; private init; }
 
+  /// <summary>
+  /// The trap <see cref="Traps"/> raises: <see cref="IrTrap.InvalidOperation"/> unless the operation
+  /// says otherwise, as rounding to a number of digits outside its range throws .NET's
+  /// <c>ArgumentOutOfRangeException</c> (<see cref="IrTrap.ArgumentOutOfRange"/>).
+  /// </summary>
+  public IrTrap Trap { get; private init; } = IrTrap.InvalidOperation;
+
   /// <summary>The special values of the operation, compared exactly in every mode.</summary>
   public IReadOnlyList<FloatSpecialValue> SpecialValues { get; private init; } = [];
 
@@ -133,11 +140,12 @@ public sealed class FloatOperation {
   /// <param name="single">The implementation of <c>float</c>.</param>
   /// <param name="double">The implementation of <c>double</c>.</param>
   /// <param name="traps">When the operation traps, or <see langword="null"/> when it never does.</param>
+  /// <param name="trap">The trap it raises then.</param>
   /// <returns>The operation.</returns>
   public static FloatOperation Of(
     IrIntrinsicOp op, string family, FloatShape shape, FloatContract contract, string name,
-    Func<object[], object> single, Func<object[], object> @double, Func<object[], bool>? traps = null)
-    => new(op, family, shape, contract) { DoubleName = name, SingleName = name + "F", Single = single, Double = @double, Traps = traps };
+    Func<object[], object> single, Func<object[], object> @double, Func<object[], bool>? traps = null, IrTrap trap = IrTrap.InvalidOperation)
+    => new(op, family, shape, contract) { DoubleName = name, SingleName = name + "F", Single = single, Double = @double, Traps = traps, Trap = trap };
 
   /// <summary>An operation of the shape <see cref="FloatShape.Unary"/>.</summary>
   /// <param name="op">The operation.</param>
@@ -225,7 +233,7 @@ public sealed class FloatOperation {
   /// <returns>A copy that carries them.</returns>
   public FloatOperation With(params FloatSpecialValue[][] groups)
     => new(this.Op, this.Family, this.Shape, this.Contract) {
-      DoubleName = this.DoubleName, SingleName = this.SingleName, Single = this.Single, Double = this.Double, Traps = this.Traps,
+      DoubleName = this.DoubleName, SingleName = this.SingleName, Single = this.Single, Double = this.Double, Traps = this.Traps, Trap = this.Trap,
       SpecialValues = [.. this.SpecialValues, .. groups.SelectMany(group => group)]
     };
 

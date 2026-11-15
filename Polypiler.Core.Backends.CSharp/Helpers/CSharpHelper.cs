@@ -18,12 +18,14 @@ public sealed class CSharpHelper {
   /// <param name="parameters">The parameter list, without its parentheses.</param>
   /// <param name="body">The lines of the body, indented from the method by nothing.</param>
   /// <param name="typeParameters">The type parameter list with its angle brackets, or nothing.</param>
-  public CSharpHelper(string name, string returns, string parameters, IReadOnlyList<string> body, string typeParameters = "") {
+  /// <param name="constraints">The constraint clause of the type parameters, such as <c>where T : struct</c>, or nothing.</param>
+  public CSharpHelper(string name, string returns, string parameters, IReadOnlyList<string> body, string typeParameters = "", string constraints = "") {
     this.Name = name;
     this.Returns = returns;
     this.Parameters = parameters;
     this.Body = body;
     this.TypeParameters = typeParameters;
+    this.Constraints = constraints;
   }
 
   /// <summary>The name the method has unless a member of the class already has it.</summary>
@@ -41,11 +43,14 @@ public sealed class CSharpHelper {
   /// <summary>The type parameter list with its angle brackets, or nothing.</summary>
   public string TypeParameters { get; }
 
+  /// <summary>The constraint clause of the type parameters, or nothing.</summary>
+  public string Constraints { get; }
+
   /// <summary>The lines of the method under a name.</summary>
   /// <param name="name">The name the class gives the method.</param>
   /// <returns>The declaration, the body indented by two spaces, and the closing brace.</returns>
   public IReadOnlyList<string> Lines(string name) => [
-    $"private static {this.Returns} {name}{this.TypeParameters}({this.Parameters}) {{",
+    $"private static {this.Returns} {name}{this.TypeParameters}({this.Parameters}) {(this.Constraints.Length == 0 ? "" : this.Constraints + " ")}{{",
     .. this.Body.Select(line => "  " + line),
     "}"
   ];

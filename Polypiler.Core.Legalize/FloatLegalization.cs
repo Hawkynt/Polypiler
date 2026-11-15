@@ -140,9 +140,15 @@ public static class FloatLegalization {
       IrIf conditional => new IrIf(this.Expression(conditional.Condition), this.Block(conditional.Then), conditional.Else is null ? null : this.Block(conditional.Else)),
       IrWhile loop => new IrWhile(this.Expression(loop.Condition), this.Block(loop.Body)),
       IrDoWhile loop => new IrDoWhile(this.Block(loop.Body), this.Expression(loop.Condition)),
-      IrFor loop => new IrFor(this.Expression(loop.Condition), this.Block(loop.Body), this.Block(loop.Step)),
+      IrFor loop => new IrFor(this.Expression(loop.Condition), this.Block(loop.Body), this.Block(loop.Step)) { PerIteration = loop.PerIteration },
       IrSwitch choice => new IrSwitch(this.Expression(choice.Value), choice.Sections.Select(section => section with { Body = this.Block(section.Body) }).ToList()),
       IrReturn result => new IrReturn(result.Value is null ? null : this.Expression(result.Value)),
+      IrThrow thrown => new IrThrow(this.Expression(thrown.Exception)),
+      IrTry attempt => new IrTry(this.Block(attempt.Body),
+        [.. attempt.Catches.Select(clause => clause with { Filter = clause.Filter is null ? null : this.Expression(clause.Filter), Body = this.Block(clause.Body) })],
+        attempt.Finally is null ? null : this.Block(attempt.Finally)),
+      IrUsing scope => scope with { Initializer = this.Expression(scope.Initializer), Body = this.Block(scope.Body) },
+      IrForEachCollection loop => loop with { Collection = this.Expression(loop.Collection), Body = this.Block(loop.Body) },
       _ => statement
     };
 
@@ -172,6 +178,44 @@ public static class FloatLegalization {
           return load with { Target = this.Expression(load.Target) };
         case IrStructEquals equality:
           return new IrStructEquals(this.Expression(equality.Left), this.Expression(equality.Right));
+        case IrNew creation:
+          return creation with { Arguments = [.. creation.Arguments.Select(this.Expression)] };
+        case IrMethodCall call:
+          return call with { Target = call.Target is null ? null : this.Expression(call.Target), Arguments = [.. call.Arguments.Select(this.Expression)] };
+        case IrReferenceEquals identity:
+          return new IrReferenceEquals(this.Expression(identity.Left), this.Expression(identity.Right));
+        case IrGenericEquals equality:
+          return new IrGenericEquals(this.Expression(equality.Left), this.Expression(equality.Right));
+        case IrGenericCompare order:
+          return new IrGenericCompare(this.Expression(order.Left), this.Expression(order.Right));
+        case IrLambda lambda:
+          return lambda with { Body = this.Block(lambda.Body) };
+        case IrBoundMethod { Receiver: { } receiver } bound:
+          return bound with { Receiver = this.Expression(receiver) };
+        case IrInvoke invocation:
+          return invocation with { Callee = this.Expression(invocation.Callee), Arguments = [.. invocation.Arguments.Select(this.Expression)] };
+        case IrTypeTest test:
+          return test with { Value = this.Expression(test.Value) };
+        case IrCast cast:
+          return cast with { Value = this.Expression(cast.Value) };
+        case IrAsCast cast:
+          return cast with { Value = this.Expression(cast.Value) };
+        case IrSome some:
+          return new IrSome(this.Expression(some.Value));
+        case IrIsNone test:
+          return new IrIsNone(this.Expression(test.Value));
+        case IrUnwrap unwrap:
+          return unwrap with { Value = this.Expression(unwrap.Value) };
+        case IrCoalesce coalesce:
+          return new IrCoalesce(this.Expression(coalesce.Value), this.Expression(coalesce.Fallback));
+        case IrIsNull test:
+          return new IrIsNull(this.Expression(test.Value));
+        case IrBind bind:
+          return bind with { Value = this.Expression(bind.Value) };
+        case IrThrowExpression thrown:
+          return thrown with { Exception = this.Expression(thrown.Exception) };
+        case IrCollection operation:
+          return operation with { Arguments = [.. operation.Arguments.Select(this.Expression)] };
         case IrCall call:
           var arguments = call.Arguments.Select(this.Expression).ToList();
           return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);

@@ -58,7 +58,68 @@ public enum CSharpFeature {
   StackAllocExpression,
 
   /// <summary>The ranges and indices <c>v[a..b]</c> and <c>v[^n]</c> (C# 8).</summary>
-  Ranges
+  Ranges,
+
+  /// <summary>An auto-implemented property <c>{ get; set; }</c>, whose field the compiler declares (C# 3).</summary>
+  AutoProperty,
+
+  /// <summary>A get-only auto-property <c>{ get; }</c>, assigned in a constructor (C# 6).</summary>
+  GetOnlyAutoProperty,
+
+  /// <summary>An <c>init</c> accessor, for constructors and object initializers only (C# 9); it needs the type <c>IsExternalInit</c> of the framework.</summary>
+  InitAccessor,
+
+  /// <summary>A <c>record</c> class with its positional parameters and the value equality the compiler gives it (C# 9); its init accessors need <c>IsExternalInit</c>.</summary>
+  Record,
+
+  /// <summary>A type pattern that declares a variable, <c>x is T t</c> (C# 7).</summary>
+  PatternDeclaration,
+
+  /// <summary>The null-conditional operators <c>r?.m</c> and <c>r?[i]</c> (C# 6); below, a temporary and a conditional.</summary>
+  NullConditional,
+
+  /// <summary>The null-coalescing assignment <c>x ??= v</c> (C# 8); below, <c>if (x == null) x = v;</c>.</summary>
+  NullCoalescingAssignment,
+
+  /// <summary>
+  /// Nullable reference types, <c>#nullable enable</c> and <c>T?</c> on a reference (C# 8). Recorded for
+  /// the table: the IR carries no annotation of a reference, so the emitter writes none in any profile.
+  /// </summary>
+  NullableReferenceTypes,
+
+  /// <summary>The constraint <c>where T : unmanaged</c> of a type parameter (C# 7.3).</summary>
+  UnmanagedConstraint,
+
+  /// <summary>The constraint <c>where T : notnull</c> of a type parameter (C# 8).</summary>
+  NotNullConstraint,
+
+  /// <summary>
+  /// An exception filter <c>catch (T e) when (c)</c> (C# 6; CS8026 at C# 5); below, the test at the
+  /// start of the catch block where the filter may run late (<see cref="IrExceptionFilter.MayRunLate"/>).
+  /// </summary>
+  ExceptionFilter,
+
+  /// <summary>A throw expression <c>x ?? throw e</c>, <c>c ? v : throw e</c> (C# 7; CS8059 at C# 6); below, the helper <c>Throw&lt;T&gt;(e)</c>.</summary>
+  ThrowExpression,
+
+  /// <summary>A using declaration <c>using var r = e;</c> (C# 8; CS8370 at C# 7.3); below, a using statement around the rest of the block.</summary>
+  UsingDeclaration,
+
+  /// <summary>An anonymous method, <c>delegate (int x) { … }</c> (C# 2).</summary>
+  AnonymousMethod,
+
+  /// <summary>A lambda expression, <c>x =&gt; …</c> (C# 3).</summary>
+  LambdaExpression,
+
+  /// <summary>
+  /// The iteration variable of a <c>foreach</c> is a new variable every pass (C# 5); a closure made
+  /// in a pass of a C# 2 to 4 compiler's foreach shares one. Recorded for the table: the emitter reads
+  /// an element into a local of the loop body, which is a variable of its own every pass in every version.
+  /// </summary>
+  ForEachIterationVariable,
+
+  /// <summary>A lambda that captures nothing, marked <c>static</c> (C# 9).</summary>
+  StaticAnonymousFunction
 
 }
 
@@ -101,7 +162,7 @@ public sealed record CSharpForm(string? Method, string? Cast = null, string? Fur
     if (this.Template is not null)
       return CSharpFragments.Fill(this.Template, arguments, helper);
 
-    var target = this.Method is null ? new CsName(helper()) : CSharpFragments.Expression(this.Method);
+    var target = this.Method is null ? CSharpFragments.Name(helper()) : CSharpFragments.Expression(this.Method);
     var call = new CsInvocation(target, this.Further is null ? arguments : [.. arguments, .. CSharpFragments.Arguments(this.Further)]);
     return this.Cast is null ? call : new CsCast(new CsType(this.Cast), call);
   }
@@ -308,6 +369,19 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfLanguage("object initializer", CSharpFeature.ObjectInitializer, new Version(3, 0)),
     CSharpCapability.OfLanguage("readonly struct", CSharpFeature.ReadOnlyStruct, new Version(7, 2)),
     CSharpCapability.OfLanguage("record struct", CSharpFeature.RecordStruct, new Version(10, 0)),
+    CSharpCapability.OfLanguage("auto-implemented property", CSharpFeature.AutoProperty, new Version(3, 0)),
+    CSharpCapability.OfLanguage("get-only auto-property", CSharpFeature.GetOnlyAutoProperty, new Version(6, 0)),
+    CSharpCapability.OfLanguage("init accessor", CSharpFeature.InitAccessor, new Version(9, 0)),
+    CSharpCapability.OfLanguage("record class", CSharpFeature.Record, new Version(9, 0)),
+    CSharpCapability.OfLanguage("pattern declaration", CSharpFeature.PatternDeclaration, new Version(7, 0)),
+    CSharpCapability.OfLanguage("null-conditional operator", CSharpFeature.NullConditional, new Version(6, 0)),
+    CSharpCapability.OfLanguage("null-coalescing assignment", CSharpFeature.NullCoalescingAssignment, new Version(8, 0)),
+    CSharpCapability.OfLanguage("nullable reference types", CSharpFeature.NullableReferenceTypes, new Version(8, 0)),
+    CSharpCapability.OfLanguage("generic constraint unmanaged", CSharpFeature.UnmanagedConstraint, new Version(7, 3)),
+    CSharpCapability.OfLanguage("generic constraint notnull", CSharpFeature.NotNullConstraint, new Version(8, 0)),
+    CSharpCapability.OfLanguage("exception filter", CSharpFeature.ExceptionFilter, new Version(6, 0)),
+    CSharpCapability.OfLanguage("throw expression", CSharpFeature.ThrowExpression, new Version(7, 0), CSharpEmitter.ThrowHelper),
+    CSharpCapability.OfLanguage("using declaration", CSharpFeature.UsingDeclaration, new Version(8, 0)),
 
     // The equality members of a struct written out where the language has no record struct.
     CSharpCapability.OfApi("IEquatable<T>", CSharpProfile.Net20),
@@ -402,7 +476,19 @@ public sealed class CSharpCapabilities {
     .. CSharpViewRows.Helpers,
 
     // The string operations of #1314.
-    .. CSharpStringRows.All
+    .. CSharpStringRows.All,
+
+    // The collections of #1328.
+    .. CSharpCollectionRows.All,
+
+    // The function values of #1326.
+    .. CSharpFunctionRows.All,
+
+    // The conversions between numbers and text of #1315.
+    .. CSharpNumberTextRows.All,
+
+    // The enums of #1318.
+    .. CSharpEnumRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>

@@ -52,7 +52,10 @@ internal enum Plan {
   Concat,
 
   /// <summary>Two strings compared by code unit.</summary>
-  CompareString
+  CompareString,
+
+  /// <summary><c>===</c> or <c>!==</c> of references to objects of one class, or of one and <c>null</c>: identity.</summary>
+  Identity
 
 }
 
@@ -93,8 +96,9 @@ internal sealed partial class TypeInference {
   /// value modulo 2^32 or 2^64 matters, which is what lets <c>+</c> and <c>-</c> be integer operations.
   /// </summary>
   public JsType Of(Node node, Coercion coercion = Coercion.None) {
-    if (!this._known.TryGetValue((node, coercion), out var type))
-      this._known[(node, coercion)] = type = this.Compute(node, coercion);
+    // A copy of a function shares its nodes with the function, so a type is known per function.
+    if (!this._known.TryGetValue((this._scope, node, coercion), out var type))
+      this._known[(this._scope, node, coercion)] = type = this.Compute(node, coercion);
 
     return type;
   }
@@ -102,6 +106,14 @@ internal sealed partial class TypeInference {
   private JsType Compute(Node node, Coercion coercion) {
     if (this.StringType(node) is { } text)
       return text;
+    if (this.NumberTextType(node) is { } converted)
+      return converted;
+
+    if (this.KeyedType(node) is { } keyed)
+      return keyed;
+
+    if (this.Inherited(node) is { } inherited)
+      return inherited;
 
     switch (node) {
       case NumericLiteral literal:
@@ -114,16 +126,31 @@ internal sealed partial class TypeInference {
         return this._scope!.Bindings.GetValueOrDefault(identifier) switch {
           Variable variable => variable.Type,
           ModuleConstant constant => constant.Type,
-          _ => JsType.Unknown
+          _ => identifier.Name == "undefined" ? JsType.UndefinedValue
+            : this._scope.FunctionValues.TryGetValue(identifier, out var function) ? JsType.Function(function.Shape) : JsType.Unknown
         };
+      case ChainExpression chain:
+        // a?.b is undefined where a is null or undefined.
+        var chained = this.Of(chain.Expression);
+        return chained.Kind is JsKind.Unknown or JsKind.Conflict ? chained : JsType.Join(chained, JsType.UndefinedValue);
       case UpdateExpression step:
         var stepped = this.Of(step.Argument);
         return step.Argument is not Identifier ? stepped : stepped.Kind is JsKind.Number or JsKind.BigInt ? Stepped(stepped) : JsType.Unknown;
       case UnaryExpression unary:
         return this.Unary(unary, coercion);
       case LogicalExpression logical:
-        if (logical.Operator == Operator.NullishCoalescing)
-          return JsType.Unknown;
+        if (logical.Operator == Operator.NullishCoalescing) {
+          // The left value where it is present, the right one where it is absent.
+          var present = this.Of(logical.Left);
+          if (present.Kind == JsKind.Null)
+            return this.Of(logical.Right);
+
+          if (!present.IsAbsent && present.Kind is not (JsKind.Object or JsKind.Array))
+            return present;
+
+          var coalesced = JsType.Join(present.Present, this.Of(logical.Right));
+          return coalesced.Kind == JsKind.Conflict ? JsType.Unknown : coalesced;
+        }
 
         // Values of two kinds are no value of the IR: the expression has no type, and the lowering says why.
         var joined = JsType.Join(this.Of(logical.Left), this.Of(logical.Right));
@@ -133,9 +160,24 @@ internal sealed partial class TypeInference {
       case ConditionalExpression choice:
         var either = JsType.Join(this.Of(choice.Consequent), this.Of(choice.Alternate));
         return either.Kind == JsKind.Conflict ? JsType.Unknown : either;
+      case ThisExpression:
+        return this._scope!.Candidate.ThisClass is { } owner ? JsType.Object(owner) : JsType.Unknown;
+      case ArrowFunctionExpression or FunctionExpression or FunctionDeclaration when this._scope!.Nested.TryGetValue(node, out var nested):
+        return JsType.Function(nested.Shape);
+      case NullLiteral:
+        return JsType.Null;
+      case NewExpression creation when this.Names.ClassNamed(creation.Callee) is { } created:
+        return JsType.Object(created);
+      case MemberExpression member when this._scope!.Bindings.GetValueOrDefault(member) is Variable field:
+        return field.Type;
+      case MemberExpression { Computed: false } member when this.Of(member.Object).Class is { } holder:
+        return this.MemberType(holder, member);
       case MemberExpression member when this.Names.Library(member) is { } library:
         // A constant of the library is typed as the literal of its value would be.
         return JavaScriptFloatApi.FindConstant(library) is { } value ? JsType.Literal(value.Value) : JsType.Unknown;
+      case MemberExpression { Computed: false, Object: Identifier enumerated, Property: Identifier { Name: var label } } when this._scope!.Bindings.GetValueOrDefault(enumerated) is EnumObject named:
+        // A member of an enum object is the literal of its value, which stays the enum's while only members join it.
+        return named.Type?.Member(label) is { } found ? JsType.Member(named.Type, found.Value) : JsType.Unknown;
       case MemberExpression { Computed: false, Property: Identifier { Name: var key } } member when this.Of(member.Object).Shape is { } shape:
         return shape.TypeOf(key) ?? JsType.Unknown;
       case MemberExpression member:
@@ -157,7 +199,12 @@ internal sealed partial class TypeInference {
             : JsType.Unknown
           : JsType.Unknown;
       case ArrayExpression literal:
-        return JsType.ArrayOf(literal.Elements.Aggregate(JsType.Unknown, (type, element) => element is null or SpreadElement ? type : JsType.Join(type, this.Of(element))), true);
+        // A spread array adds its elements (#1328).
+        return JsType.ArrayOf(literal.Elements.Aggregate(JsType.Unknown, (type, element) => element switch {
+          null => type,
+          SpreadElement spread => this.Of(spread.Argument) is { Kind: JsKind.Array, Element: { } spreadElement } ? JsType.Join(type, spreadElement) : type,
+          _ => JsType.Join(type, this.Of(element))
+        }), true);
       case ObjectExpression literal:
         return this.Record(literal);
       default:
@@ -169,6 +216,8 @@ internal sealed partial class TypeInference {
     switch (unary.Operator) {
       case Operator.LogicalNot:
         return JsType.Boolean;
+      case Operator.Void:
+        return JsType.UndefinedValue;
       case Operator.BitwiseNot:
         return this.IsBig(unary.Argument, coercion) ? Wide(coercion) ?? JsType.UnboundedBigInt : JsType.I32;
       case Operator.UnaryNegation when unary.Argument is NumericLiteral literal:
@@ -192,6 +241,9 @@ internal sealed partial class TypeInference {
   }
 
   private JsType Call(CallExpression call) {
+    if (this.ListCall(call) is { } listed)
+      return listed;
+
     var builtin = this.Names.Builtin(call);
     if (this.IntegerCall(call, builtin) is { } integer)
       return integer;
@@ -213,9 +265,13 @@ internal sealed partial class TypeInference {
       case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "subarray" or "slice" } method } member
         && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: false } source:
         return method.Name == "subarray" ? JsType.ViewOf(source.Element!) : JsType.ArrayOf(source.Element!, false);
+      case null when call.Callee is MemberExpression { Computed: false } invoked && this.Of(invoked.Object).Class is { } owner:
+        return Binder.KeyOf(invoked) is { } key && owner.Member(MemberKind.Method, key) is { } called ? this.ResultOf(this.ModelOf(called)) : JsType.Unknown;
       case null when this.Names.Callee(call.Callee) is { } callee:
         var model = this.ModelOf(callee);
-        return model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType);
+        return this.ResultOf(model);
+      case null when this.Of(call.Callee) is { Kind: JsKind.Function } function:
+        return function.Callable!.Members.Select(member => this.ResultOf(this.ModelOf(member))).Aggregate(JsType.Join);
       default:
         return JsType.Unknown;
     }
@@ -290,8 +346,13 @@ internal sealed partial class TypeInference {
         return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Float, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
       case Operator.Exponentiation:
         return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Power, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
+      case Operator.StrictEquality or Operator.StrictInequality when a.Kind is JsKind.Object or JsKind.Null && b.Kind is JsKind.Object or JsKind.Null:
+        return JsType.Join(a, b).Kind == JsKind.Conflict || a.Kind == b.Kind && a.Kind == JsKind.Null ? new(Plan.Invalid, JsType.Boolean) : new(Plan.Identity, JsType.Boolean);
       case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality when a.Kind == JsKind.Boolean && b.Kind == JsKind.Boolean:
         return new(Plan.Compare, JsType.Boolean, IrType.Bool);
+      // Two values of one enum - members, and literals that are members - are compared as the enum.
+      case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality when JsType.Join(a, b).Enum is { } named:
+        return new(Plan.Compare, JsType.Boolean, named.Type);
       case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality
         or Operator.LessThan or Operator.LessThanOrEqual or Operator.GreaterThan or Operator.GreaterThanOrEqual:
         if (Unify(a, b, IrType.I32, IrType.U32) is { } compared)

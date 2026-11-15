@@ -119,6 +119,9 @@ internal sealed class GeneratedCSharp {
       .Select(diagnostic => diagnostic.ToString())];
   }
 
+  /// <summary>A type the file declares beside the class: a struct or a class of the module.</summary>
+  public Type Type(string name) => this._class.Assembly.GetType(name, true)!;
+
   /// <summary>A method of the class, public or private.</summary>
   public MethodInfo Method(string name)
     => this._class.GetMethod(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)

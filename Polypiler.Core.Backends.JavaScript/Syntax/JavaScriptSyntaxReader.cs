@@ -131,8 +131,14 @@ public static class JavaScriptSyntaxReader {
           return new JsReturn(result.Argument is null ? null : this.Expression(result.Argument));
         case ThrowStatement exception:
           return new JsThrow(this.Expression(exception.Argument));
+        case TryStatement { Handler: null or { Param: null or Identifier } } attempt:
+          return new JsTry(this.Block(attempt.Block, attempt.Block.Body), (attempt.Handler?.Param as Identifier)?.Name,
+            attempt.Handler is null ? null : this.Block(attempt.Handler.Body, attempt.Handler.Body.Body),
+            attempt.Finalizer is null ? null : this.Block(attempt.Finalizer, attempt.Finalizer.Body));
         case FunctionDeclaration function:
           return new JsFunctionDeclaration(function.Id!.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body));
+        case ClassDeclaration { SuperClass: null or Identifier } type:
+          return new JsClass(type.Id!.Name, [.. type.Body.Body.Select(this.ClassMember)]) { Base = (type.SuperClass as Identifier)?.Name };
         case ExportNamedDeclaration { Declaration: Statement declared }:
           return new JsExport(this.Statement(declared));
         default:
@@ -154,10 +160,20 @@ public static class JavaScriptSyntaxReader {
           return new JsBoolean(truth.Value);
         case Identifier identifier:
           return new JsIdentifier(identifier.Name);
+        case ThisExpression:
+          return new JsThis();
+        case Super:
+          return new JsIdentifier("super");
+        case NullLiteral:
+          return new JsNull();
         case MemberExpression { Computed: true } member:
           return new JsIndex(this.Expression(member.Object), this.Expression(member.Property));
+        case MemberExpression { Property: PrivateIdentifier hidden } member:
+          return new JsMember(this.Expression(member.Object), "#" + hidden.Name);
         case MemberExpression member:
-          return new JsMember(this.Expression(member.Object), ((Identifier)member.Property).Name);
+          return new JsMember(this.Expression(member.Object), ((Identifier)member.Property).Name) { Optional = member.Optional };
+        case ChainExpression chain:
+          return this.Expression(chain.Expression);
         case CallExpression { Optional: false } call:
           return new JsCall(this.Expression(call.Callee), this.Expressions(call.Arguments));
         case NewExpression creation:
@@ -187,8 +203,32 @@ public static class JavaScriptSyntaxReader {
           return new JsObject([.. literal.Properties.Select(this.Property)]) { Multiline = this.Text(literal).Contains('\n') };
         case FunctionExpression function:
           return new JsFunctionExpression(function.Id?.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body));
+        case ArrowFunctionExpression arrow:
+          return arrow.Body is FunctionBody body
+            ? new JsArrowFunction(this.Parameters(arrow), this.Block(body, body.Body), null)
+            : new JsArrowFunction(this.Parameters(arrow), null, this.Expression(arrow.Body));
         default:
           throw Unknown(expression);
+      }
+    }
+
+    /// <summary>A member of a class: a method, an accessor, the constructor or a field, its name with <c>#</c> when it is private.</summary>
+    private JsClassMember ClassMember(Node node) {
+      static string Name(Expression key) => key is PrivateIdentifier hidden ? "#" + hidden.Name : ((Identifier)key).Name;
+      switch (node) {
+        case MethodDefinition { Computed: false } method:
+          var kind = method.Kind switch {
+            PropertyKind.Constructor => JsClassMemberKind.Constructor,
+            PropertyKind.Get => JsClassMemberKind.Getter,
+            PropertyKind.Set => JsClassMemberKind.Setter,
+            _ => JsClassMemberKind.Method
+          };
+          var function = (FunctionExpression)method.Value;
+          return new JsClassMember(kind, Name(method.Key), method.Static, this.Parameters(function), this.Block(function.Body, function.Body.Body), null);
+        case PropertyDefinition { Computed: false } field:
+          return new JsClassMember(JsClassMemberKind.Field, Name(field.Key), field.Static, [], null, field.Value is null ? null : this.Expression(field.Value));
+        default:
+          throw Unknown(node);
       }
     }
 

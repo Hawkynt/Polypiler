@@ -56,3 +56,23 @@ Feature: Views of arrays in both languages and every profile
     Given the JavaScript function "export function f(b) { return new Uint32Array(b.buffer, 4, 1)[0]; }" with b a Uint8Array
     When I run the translate command
     Then the exit code is 3 and the output contains "PLY1102" and "Uint32Array"
+
+  Scenario: A class keeps a ReadOnlyMemory window and sums it later in every profile
+    Given the fixture "spans/MemoryHolder.cs"
+    Then Window(d, 4, 4) returns 22 in .NET, in the interpreter and in every profile of both backends
+    And every call of the memory fixture computes what .NET computes in every profile of both backends
+
+  Scenario Outline: A JavaScript view kept in a field becomes a Memory
+    Given the fixture "spans/window.mjs"
+    When it is translated with "--to csharp --profile <profile>"
+    Then the output declares "<field>"
+    And windowSum(d, 4, 4) returns 22 and every call of the window fixture computes what node computes
+
+    Examples:
+      | profile | field                                                                                                |
+      | net10.0 | public global::System.Memory<byte> bytes;                                                            |
+      | net4.8  | public global::System.ArraySegment<byte> bytes = new global::System.ArraySegment<byte>(new byte[0]); |
+
+  Scenario: A view kept in a field translates back to JavaScript in every level
+    Given the fixture "spans/window.mjs"
+    Then every call of the window fixture computes what node computes, translated to JavaScript at every level

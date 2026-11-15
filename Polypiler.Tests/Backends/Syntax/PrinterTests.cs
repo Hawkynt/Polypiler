@@ -235,12 +235,12 @@ public sealed class PrinterTests {
 
   [Test]
   public void Readers_RefuseWhatTheTreeDoesNotHave() {
-    Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Expression("x => x"));
+    Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Expression("x switch { _ => 1 }"));
     Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Expression("a +"));
-    Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Member("int X { get; }"));
+    Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Member("event System.Action E;"));
     Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Member("void M( {"));
     Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.CompilationUnit("", "no version", out _));
-    Assert.Throws<System.ArgumentException>(() => JavaScriptSyntaxReader.Statements("class A {}"));
+    Assert.Throws<System.ArgumentException>(() => JavaScriptSyntaxReader.Statements("class A extends f() {}"));
     Assert.Throws<System.ArgumentException>(() => JavaScriptSyntaxReader.Statements("let = ;"));
     Assert.Throws<System.ArgumentException>(() => JavaScriptSyntaxReader.Statements("x = { get y() { return 1; } };"));
   }

@@ -40,6 +40,7 @@ internal sealed partial class Lowering(TypeInference types) {
     this._model = model;
     this._locals.Clear();
     this._assigned = [];
+    this._receiver = null;
     types.Enter(model);
     try {
       if (model.Problem is { } problem)
@@ -65,11 +66,30 @@ internal sealed partial class Lowering(TypeInference types) {
       }
 
       this._returnType = model.ReturnType;
-      var body = new IrBlock([.. entry, .. this.Block(((FunctionBody)model.Candidate.Function.Body).Body).Statements]);
-      if (this._returnType != IrType.Void && !AlwaysReturns(body))
-        throw this.Unsupported(model.Candidate.Anchor, "a function that can end without returning its value");
+      var (receiver, prologue) = this.Member(model);
+      this._bound.Clear();
+      var statements = this.Block(((FunctionBody)model.Candidate.Function.Body).Body).Statements;
+      var inherited = model.Candidate is { Member: MemberKind.Constructor, Class.Base: { } @base } ? @base : null;
+      // A constructor of a derived class calls that of its base class first; the fields of its own class get their values after it.
+      if (inherited is not null && !(statements is [IrExprStmt { Expression: IrCall { Function: var first } }, ..]
+          && (inherited.IsLibrary ? IrExceptionClass.ConstructorOf(first) is { } library && inherited.Ir.Constructors.Contains(library) : first == inherited.Creator!.Function)))
+        throw this.Unsupported(model.Candidate.Anchor, "a constructor of a derived class that does not begin with the call of the constructor of its base class");
 
-      return new IrFunction(model.Candidate.Name, model.IsPublic, this._returnType, model.Parameters.Select(parameter => parameter.Parameter!).ToList(), this._locals.ToList(), body);
+      var bound = this.TakeBound();
+      var body = new IrBlock(inherited is null ? [.. entry, .. bound, .. prologue, .. statements] : [.. entry, statements[0], .. bound, .. prologue, .. statements.Skip(1)]);
+      if (this._returnType != IrType.Void && !AlwaysReturns(body)) {
+        // A function that can end without its value returns undefined there (#1322).
+        if (!this._returnType.IsOptional && !this._returnType.IsNullable)
+          throw this.Unsupported(model.Candidate.Anchor, "a function that can end without returning its value");
+
+        body = new IrBlock([.. body.Statements, new IrReturn(this._returnType.IsOptional ? new IrNone(this._returnType) : new IrNull(this._returnType))]);
+      }
+
+      // A member is reached through its class, never by its name from outside the module.
+      List<IrLocal> parameters = [.. receiver is null ? [] : (IrLocal[])[receiver], .. model.Parameters.Select(parameter => parameter.Parameter!)];
+      return new IrFunction(model.Candidate.Name, model.IsPublic && model.Candidate.Class is null, this._returnType, parameters, this._locals.ToList(), body) {
+        Absent = this._returnType.IsOptional ? AbsentResult(model) : IrAbsent.Null
+      };
     } catch (Refusal refusal) {
       diagnostics.Add(refusal.Diagnostic);
       return null;
@@ -78,15 +98,23 @@ internal sealed partial class Lowering(TypeInference types) {
 
   /// <summary>Refuses a place that values of two kinds reach, and a <c>BigInt</c> that nothing bounds.</summary>
   private void CheckType(JsType type, string name, Node evidence) {
+
     if (type.Kind == JsKind.Conflict)
       throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"'{name}' holds both {type.Kinds.First} and {type.Kinds.Second}");
 
     if (type.Kind == JsKind.BigInt && type.Ir is null)
       throw this.Unbounded(evidence);
+
+    // A string or an object literal that may be absent has no type of the IR: neither is ever null there.
+    if (type.IsAbsent && type.Kind is JsKind.String or JsKind.Record)
+      throw this.Unsupported(evidence, $"'{name}', a {type.Present.Describe()} that may be {(type.MayBeNull && type.MayBeUndefined ? "null or undefined" : type.MayBeNull ? "null" : "undefined")}");
   }
 
   /// <summary>The IR type of a variable; a place nothing reached is a number.</summary>
   private IrType Storable(JsType type, Node node) {
+    if (type is { Kind: JsKind.Map, Key.Kind: JsKind.Record } or { Kind: JsKind.Set, Element.Kind: JsKind.Record })
+      throw this.Unsupported(node, $"a {(type.Kind == JsKind.Map ? "Map keyed" : "Set")} by objects of an object literal");
+
     var storable = type.Ir ?? IrType.F64;
     return storable.IsStorable ? storable : throw this.Unsupported(node, $"{JsType.Spell(storable)} as the value of a variable");
   }
@@ -96,7 +124,8 @@ internal sealed partial class Lowering(TypeInference types) {
   /// nothing breaks out of. Then no call ends without its value.
   /// </summary>
   private static bool AlwaysReturns(IrBlock block) => block.Statements.Any(statement => statement switch {
-    IrReturn => true,
+    IrReturn or IrThrow or IrRethrow => true,
+    IrTry attempt => (AlwaysReturns(attempt.Body) && attempt.Catches.All(clause => AlwaysReturns(clause.Body))) || (attempt.Finally is { } final && AlwaysReturns(final)),
     IrBlock inner => AlwaysReturns(inner),
     IrIf { Else: not null } choice => AlwaysReturns(choice.Then) && AlwaysReturns(choice.Else),
     IrSwitch choice => choice.Sections.Any(section => section.IsDefault) && choice.Sections.All(section => AlwaysReturns(section.Body)),
@@ -119,9 +148,13 @@ internal sealed partial class Lowering(TypeInference types) {
 
   private IrBlock Block(IEnumerable<Statement> statements) {
     var into = new List<IrStmt>();
-    foreach (var statement in statements)
+    var list = statements.ToList();
+    var hoisted = this.Hoisted(list, into);
+    var start = into.Count;
+    foreach (var statement in list.Where(statement => statement is not FunctionDeclaration))
       this.Statement(statement, into);
 
+    this.Assign(hoisted, into, start);
     return new IrBlock(into);
   }
 
@@ -137,6 +170,8 @@ internal sealed partial class Lowering(TypeInference types) {
         break;
       case VariableDeclaration declaration:
         this.Declaration(declaration, into);
+        break;
+      case ExpressionStatement { Expression: AssignmentExpression named } when this.NamesError(named):
         break;
       case ExpressionStatement expression:
         this.Effect(expression.Expression, into);
@@ -164,7 +199,7 @@ internal sealed partial class Lowering(TypeInference types) {
         into.Add(this.For(loop));
         break;
       case ForOfStatement loop:
-        into.Add(this.ForOf(loop));
+        into.Add(this.KeyedForOf(loop) ?? this.ListForOf(loop) ?? this.ForOf(loop));
         break;
       case SwitchStatement choice:
         into.Add(this.Switch(choice, into));
@@ -180,6 +215,9 @@ internal sealed partial class Lowering(TypeInference types) {
         into.Add(this.Return(result));
         break;
       default:
+        if (this.ExceptionStatement(statement, into))
+          break;
+
         // Every other statement that can stand in a function has a name of its own.
         throw this.Unsupported(statement, Describe(statement)!);
     }
@@ -191,14 +229,15 @@ internal sealed partial class Lowering(TypeInference types) {
   /// </summary>
   private IrIf If(IfStatement conditional) {
     var condition = this.Condition(conditional.Test);
+    var (whenTrue, whenFalse) = this.Narrowed(conditional.Test);
     var before = this._assigned;
-    var then = this.Body(conditional.Consequent);
+    var then = this.Within(whenTrue, conditional.Consequent, () => this.Body(conditional.Consequent));
     var afterThen = Leaves(conditional.Consequent) ? null : this._assigned;
     this._assigned = before;
     IrBlock? otherwise = null;
     var afterElse = before;
     if (conditional.Alternate is not null) {
-      otherwise = this.Body(conditional.Alternate);
+      otherwise = this.Within(whenFalse, conditional.Alternate, () => this.Body(conditional.Alternate));
       afterElse = Leaves(conditional.Alternate) ? null : this._assigned;
     }
 
@@ -221,14 +260,16 @@ internal sealed partial class Lowering(TypeInference types) {
     => matches(node) || (node is not IFunction && node.ChildNodes.Any(child => Contains(child, matches)));
 
   private IrReturn Return(ReturnStatement result) {
-    if (result.Argument is null)
-      return new IrReturn(null);
+    if (result.Argument is null || (this._returnType == IrType.Void && types.Names.IsAbsentLiteral(result.Argument) && result.Argument is not NullLiteral))
+      return new IrReturn(this._returnType.IsOptional ? new IrNone(this._returnType) : this._returnType.IsNullable ? new IrNull(this._returnType) : null);
 
     if (this._returnType != IrType.Void)
       return new IrReturn(this.Value(result.Argument, this._returnType));
 
     // The value has no type: the expression is refused for what it is, or it is a call that returns nothing.
-    this.Expression(result.Argument);
+    if (this.Expression(result.Argument) is IrNull)
+      throw this.Unsupported(result.Argument, "null");
+
     throw this.Unsupported(result.Argument, "void as the value returned");
   }
 
@@ -244,6 +285,10 @@ internal sealed partial class Lowering(TypeInference types) {
     else if (loop.Init is Expression initializer)
       this.Effect(initializer, statements);
 
+    // A let or a const of the header is a variable of every pass; a var is one variable of the loop.
+    var perPass = loop.Init is VariableDeclaration { Kind: VariableDeclarationKind.Let or VariableDeclarationKind.Const }
+      ? statements.OfType<IrDeclare>().Select(declare => declare.Local).ToList() : [];
+
     var before = this._assigned;
     var condition = loop.Test is null ? new IrConst(IrType.Bool, 1) : this.Condition(loop.Test);
     var body = this.Body(loop.Body);
@@ -253,8 +298,9 @@ internal sealed partial class Lowering(TypeInference types) {
       this.Effect(loop.Update, step);
 
     this._assigned = before;
-    statements.Add(Contains(loop.Body, node => node is ContinueStatement)
-      ? new IrFor(condition, body, new IrBlock(step))
+    var renewed = PerIteration(perPass, condition, body, step);
+    statements.Add(renewed.Count > 0 ? new IrFor(condition, body, new IrBlock(step)) { PerIteration = renewed }
+      : Contains(loop.Body, node => node is ContinueStatement) ? new IrFor(condition, body, new IrBlock(step))
       : new IrWhile(condition, new IrBlock([.. body.Statements, .. step])));
     return new IrBlock(statements);
   }
@@ -277,7 +323,8 @@ internal sealed partial class Lowering(TypeInference types) {
     if (text is null && !selector.Type.IsWord)
       throw this.Unsupported(choice.Discriminant, $"a switch on {selector.Type.Describe()}");
 
-    var type = text is not null || selector.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32;
+    // A switch on a value of an enum chooses by its members.
+    var type = selector.Type.Enum is { } named ? named.Type : text is not null || selector.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32;
     var before = this._assigned;
     var sections = new List<IrSwitchSection>();
     var seen = new HashSet<long>();
@@ -372,6 +419,12 @@ internal sealed partial class Lowering(TypeInference types) {
         continue;
 
       var local = new IrLocal(name, this.Storable(variable.Type, declarator.Init ?? id));
+      if (this.KeyedDeclaration(declarator.Init, local, into)) {
+        variable.Local = local;
+        this._locals.Add(local);
+        continue;
+      }
+
       var value = declarator.Init is null ? null : this.Value(declarator.Init, local.Type);
       variable.Local = local;
       this._locals.Add(local);
@@ -381,6 +434,9 @@ internal sealed partial class Lowering(TypeInference types) {
 
   /// <summary>Lowers an expression that stands as a statement: an assignment, a step, a call, or several separated by commas.</summary>
   private void Effect(Expression expression, List<IrStmt> into) {
+    if (this.ListEffect(expression, into))
+      return;
+
     switch (expression) {
       case AssignmentExpression assignment:
         this.Assignment(assignment, into);
@@ -405,9 +461,15 @@ internal sealed partial class Lowering(TypeInference types) {
   }
 
   private void Assignment(AssignmentExpression assignment, List<IrStmt> into) {
+    if (this.CoalescingAssignment(assignment, into))
+      return;
+
     var compound = Binder.Compound(assignment.Operator);
     if (compound is null && assignment.Operator != Operator.Assignment)
       throw this.Unsupported(assignment, OperatorText(assignment.Operator));
+
+    if (this.ObjectAssignment(assignment, compound, into))
+      return;
 
     switch (assignment.Left) {
       case Identifier { Name: var name } target when this._model.Bindings.GetValueOrDefault(target) is Variable variable:
@@ -479,6 +541,9 @@ internal sealed partial class Lowering(TypeInference types) {
   /// store into that array does, which is the step of the IR.
   /// </summary>
   private void Step(UpdateExpression step, List<IrStmt> into) {
+    if (this.ObjectStep(step, into))
+      return;
+
     if (step.Argument is not Identifier { Name: var name } target) {
       into.Add(new IrExprStmt(this.StepElement(step)));
       return;

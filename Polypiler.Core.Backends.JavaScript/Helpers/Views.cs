@@ -7,8 +7,8 @@ namespace Polypiler.Core.Backends.JavaScript;
 
 internal static partial class JavaScriptHelpers {
 
-  private const string ArgumentOutOfRange = "throw new RangeError(\"argument out of range\");";
-  private const string IndexOutOfRange = "throw new RangeError(\"index out of range\");";
+  private const string ArgumentOutOfRange = "throw new ArgumentOutOfRangeError(\"argument out of range\");";
+  private const string IndexOutOfRange = "throw new IndexOutOfRangeError(\"index out of range\");";
 
   /// <summary>
   /// The helpers of the views (#1325). Where the profile has typed arrays a view is the

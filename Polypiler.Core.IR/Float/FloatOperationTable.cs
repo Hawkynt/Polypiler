@@ -72,7 +72,7 @@ public static class FloatOperationTable {
       return false;
 
     if (operation.Traps is { } traps && traps(arguments))
-      throw new IrTrapException(IrTrap.InvalidOperation);
+      throw new IrTrapException(operation.Trap);
 
     result = arguments[0] is float ? evaluate32(arguments) : evaluate64(arguments);
     return true;

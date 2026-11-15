@@ -276,9 +276,10 @@ public sealed record IrStructDefault(IrType Type) : IrExpr(Type);
 /// <summary>
 /// The value of a field. The target is evaluated first; when it is a place - a variable, a
 /// parameter, an array element or a field of a place - the field is read there, and only the field
-/// is copied, as every read of a struct value is.
+/// is copied, as every read of a struct value is. The target may also be a reference to an object,
+/// whose field is read in the object; a <c>null</c> reference traps (see <see cref="IrNew"/>).
 /// </summary>
-/// <param name="Target">A value of a struct type that has the field.</param>
+/// <param name="Target">A value of a struct type or a reference to a class that has the field.</param>
 /// <param name="Field">The field, one of the target type's own.</param>
 public sealed record IrFieldLoad(IrExpr Target, IrField Field) : IrExpr(Field.Type);
 
@@ -287,6 +288,9 @@ public sealed record IrFieldLoad(IrExpr Target, IrField Field) : IrExpr(Field.Ty
 /// numbers of an integer type and truth values by value, floating-point numbers as
 /// <c>double.Equals</c> compares them - a NaN equals a NaN, and <c>+0.0</c> equals <c>-0.0</c> -
 /// a struct field recursively, and an array field by identity. Both operands are evaluated, left first.
+/// Of a record class (<see cref="IrClassType.IsRecord"/>) two references are compared: two <c>null</c>s
+/// are equal, <c>null</c> and an object are not, and two objects are when their fields are, an object
+/// field by this same equality.
 /// </summary>
 /// <param name="Left">The value evaluated first.</param>
 /// <param name="Right">The value evaluated second.</param>
@@ -820,7 +824,62 @@ public enum IrIntrinsicOp {
   StrCodePointAt,
 
   /// <summary><c>(str, i32) → i32</c>: the code units of the code point at an index, 2 for a pair of surrogates and 1 otherwise; traps <see cref="IrTrap.IndexOutOfRange"/> outside <c>[0, length)</c>.</summary>
-  StrNextCodePoint
+  StrNextCodePoint,
+
+  // The conversions between numbers and text of #1315: docs/reference/number-text.md.
+
+  /// <summary><c>f64 | integer → str</c>: ECMA-262's <c>Number::toString(x, 10)</c>, the shortest digits in the layout of JavaScript; a 64-bit integer as <c>BigInt</c> prints it.</summary>
+  FormatEcma,
+
+  /// <summary><c>f64 | f32 | integer → str</c>: .NET's <c>ToString(CultureInfo.InvariantCulture)</c> from .NET Core 3.0 on, the shortest digits in the layout of .NET.</summary>
+  FormatDotNet,
+
+  /// <summary><c>bool → str</c>: <c>"true"</c> or <c>"false"</c>, as JavaScript spells them.</summary>
+  FormatBoolEcma,
+
+  /// <summary><c>bool → str</c>: <c>"True"</c> or <c>"False"</c>, as .NET spells them.</summary>
+  FormatBoolDotNet,
+
+  /// <summary><c>(integer, i32 radix, i32 minDigits, bool upper, i32 mode) → str</c>: the digits of a radix, padded with zeros, in a <see cref="RadixMode"/>; every argument but the first a constant.</summary>
+  FormatRadix,
+
+  /// <summary><c>(f64, i32 digits) → str</c>: ECMA-262's <c>toFixed</c>, the exact value rounded to 0 to 100 digits, a tie to the larger magnitude.</summary>
+  FixedEcma,
+
+  /// <summary><c>(f64, i32 digits) → str</c>: .NET's <c>ToString("F&lt;n&gt;")</c>, the exact value rounded to 0 to 15 digits, a tie to the even digit.</summary>
+  FixedDotNet,
+
+  /// <summary><c>str → f64</c>: ECMA-262's <c>StringToNumber</c> (<c>Number(s)</c>, <c>+s</c>); a text of no number is a NaN.</summary>
+  ParseNumberEcma,
+
+  /// <summary><c>str → f64</c>: ECMA-262's <c>parseFloat</c>, the longest prefix that is a number; a NaN without one.</summary>
+  ParseFloatEcma,
+
+  /// <summary><c>(str) → f64</c> or <c>(str, i32 radix) → f64</c>: ECMA-262's <c>parseInt</c>.</summary>
+  ParseIntEcma,
+
+  /// <summary><c>str → integer | f64 | f32</c>: .NET's <c>Parse(s, CultureInfo.InvariantCulture)</c>; traps <see cref="IrTrap.InvalidFormat"/> on a malformed text and <see cref="IrTrap.IntegerOverflow"/> on an integer outside its type.</summary>
+  ParseDotNet,
+
+  // The enums of #1318: docs/reference/enums.md.
+
+  /// <summary><c>E → str</c>: .NET's <c>Enum.ToString()</c>, the name of the value, for <c>[Flags]</c> the names of the flags it consists of, else its decimal digits.</summary>
+  EnumToString,
+
+  /// <summary><c>E → bool</c>: .NET's <c>Enum.IsDefined</c>, whether a member has exactly the value.</summary>
+  EnumIsDefined,
+
+  /// <summary><c>(str, bool ignoreCase) → E</c>: .NET's <c>Enum.Parse</c>; traps <see cref="IrTrap.InvalidFormat"/> for a text of no member and <see cref="IrTrap.IntegerOverflow"/> for a number outside the underlying type.</summary>
+  EnumParse,
+
+  /// <summary><c>(E, E) → bool</c>: .NET's <c>Enum.HasFlag</c>, <c>(x &amp; f) == f</c>.</summary>
+  EnumHasFlag,
+
+  /// <summary><c>E → str[]</c>: .NET's <c>Enum.GetNames</c> of the enum of the argument, whose value is not read.</summary>
+  EnumNames,
+
+  /// <summary><c>E → E[]</c>: .NET's <c>Enum.GetValues</c> of the enum of the argument, whose value is not read.</summary>
+  EnumValues
 
 }
 
@@ -862,7 +921,9 @@ public sealed record IrStore(IrExpr Array, IrExpr Index, IrExpr Value) : IrStmt;
 
 /// <summary>
 /// A write to a field of a place: of a variable or parameter, of an array element, or of a field of
-/// such a place. The target place is evaluated first - for an array element its array and index,
+/// such a place - or to a field of the object a reference names, which every copy of the reference
+/// sees; there the value is evaluated before a <c>null</c> reference traps (see <see cref="IrNew"/>),
+/// and a read-only field is written only by a constructor of its class through its new object. The target place is evaluated first - for an array element its array and index,
 /// which are checked - then the value; the write changes that place alone (see <see cref="IrStructNew"/>).
 /// A read-only field is never written this way.
 /// </summary>
@@ -899,7 +960,19 @@ public sealed record IrDoWhile(IrBlock Body, IrExpr Condition) : IrStmt;
 /// <param name="Condition">The truth value that keeps the loop running.</param>
 /// <param name="Body">The statements of one pass.</param>
 /// <param name="Step">What follows every pass: declarations, assignments, stores into arrays and fields, and expressions only.</param>
-public sealed record IrFor(IrExpr Condition, IrBlock Body, IrBlock Step) : IrStmt;
+public sealed record IrFor(IrExpr Condition, IrBlock Body, IrBlock Step) : IrStmt {
+
+  /// <summary>
+  /// The loop variables, declared before the loop, of which every pass has a variable of its own:
+  /// before the condition is tested the first time, and again after every pass before the step, each
+  /// is replaced by a new variable that starts with the value the old one ended with (ECMA-262
+  /// §14.7.4.4, CreatePerIterationEnvironment). A closure made in a pass keeps the variable of that
+  /// pass. A JavaScript <c>for (let …)</c> lists its <c>let</c> variables; a C# <c>for</c> and a
+  /// JavaScript <c>for (var …)</c> list none, and every pass shares the one variable. Empty by default.
+  /// </summary>
+  public IReadOnlyList<IrLocal> PerIteration { get; init; } = [];
+
+}
 
 /// <summary>One section of a <see cref="IrSwitch"/>.</summary>
 /// <param name="Labels">The constants that select the section, as an <see cref="IrConst"/> carries them.</param>
@@ -939,7 +1012,19 @@ public sealed record IrFunction(
   IrType ReturnType,
   IReadOnlyList<IrLocal> Parameters,
   IReadOnlyList<IrLocal> Locals,
-  IrBlock Body);
+  IrBlock Body) {
+
+  /// <summary>
+  /// How an optional result that holds none is spelled at the boundary of JavaScript: metadata, which
+  /// the JavaScript frontend records from the source and the JavaScript backend writes; inside the
+  /// module the result holds none either way.
+  /// </summary>
+  public IrAbsent Absent { get; init; }
+
+  /// <summary>The generic definition the function is one instantiation of; <see langword="null"/> for a function of its own.</summary>
+  public IrGenericOrigin? Origin { get; init; }
+
+}
 
 /// <summary>A module: the functions, constants and globals of one source class, and the types they use.</summary>
 /// <param name="Name">The name of the module.</param>
@@ -970,5 +1055,11 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// global a function or an initializer names is one of them.
   /// </summary>
   public IReadOnlyList<IrGlobal> Globals { get; init; } = [];
+
+  /// <summary>
+  /// The stable names of the known differences between the module and the source it was imported
+  /// from, such as <c>cs-invariant-culture</c>, each once, which the header of a generated file names.
+  /// </summary>
+  public IReadOnlyList<string> Caveats { get; init; } = [];
 
 }

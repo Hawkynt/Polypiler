@@ -35,6 +35,12 @@ public static partial class JavaScriptEmitter {
           return (new JsString(text.Value), true);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
+        case IrLocalRef reference when reference.Local == this._receiver && this._functionDepth > 0 && !this.Arrows:
+          // A function expression has a this of its own; the method's is kept in a variable.
+          this._self = true;
+          return (Id(Self), true);
+        case IrLocalRef reference when reference.Local == this._receiver:
+          return (new JsThis(), true);
         case IrLocalRef reference:
           return (this.Variable(reference.Local), true);
         case IrGlobalRef reference:
@@ -68,11 +74,36 @@ public static partial class JavaScriptEmitter {
           if (element.StructType is { } elements)
             return (Invoke(this.StructHelper("newArray", elements), count), true);
 
+          if (element.IsFunction)
+            return (this.Helper("$new", [count, new JsNull()]), true);
+
           return (this.Native(Storage(element)) ? new JsNew(Id(Storage(element)), [count]) : this.Helper("$new", [count, this.Zero(element)]), true);
         case IrStep step:
           return this.Step(step);
+        case IrNull { Type.IsArray: true } or IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind:
+          return this.Optional(expression);
+        case IrNew { Type.ClassType.IsLibrary: true } creation:
+          return this.NewLibraryException(creation);
+        case IrFieldLoad { Target.Type.IsObject: true } load when ReferenceEquals(load.Field, IrExceptionClass.InnerException):
+          return this.InnerException(load);
+        case IrThrowExpression thrown:
+          return this.ThrowExpression(thrown);
+        case IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrFieldLoad { Target.Type.IsObject: true } or IrStructEquals { Left.Type.IsObject: true }:
+          return this.Object(expression);
+        case IrTypeTest or IrCast or IrAsCast:
+          return this.Conversion(expression);
         case IrStructNew or IrStructDefault or IrFieldLoad or IrStructEquals:
           return this.Struct(expression);
+        case IrGenericEquals equality:
+          return this.GenericEquals(equality);
+        case IrGenericCompare order:
+          return this.GenericCompare(order);
+        case IrCollection operation:
+          return this.Collection(operation);
+        case IrCall chained when this._owners.ContainsKey(chained.Function):
+          return (this.Chained(chained), true);
+        case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
+          return this.FunctionValue(expression);
         default:
           var call = (IrCall)expression;
           return (new JsCall(Id(this.Name(call.Function)), [.. call.Arguments.Select(this.Value)]), true);
@@ -85,7 +116,7 @@ public static partial class JavaScriptEmitter {
 
       var arguments = intrinsic.Arguments;
       switch (intrinsic.Op) {
-        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct || intrinsic.Type.Element.IsString:
+        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct || intrinsic.Type.Element.IsString || intrinsic.Type.Element.IsFunction:
           // Typed arrays hold numbers: an array of structs or of strings is an Array of objects.
           return (new JsArray([.. arguments.Select(this.Value)]), true);
         case IrIntrinsicOp.ArrayOf:
@@ -101,6 +132,10 @@ public static partial class JavaScriptEmitter {
 
       if (StringOperations.IsString(intrinsic.Op))
         return this.StringOperation(intrinsic);
+      if (NumberTextOperations.IsNumberText(intrinsic.Op))
+        return this.NumberText(intrinsic);
+      if (EnumOperations.IsEnum(intrinsic.Op))
+        return this.EnumOperation(intrinsic);
 
       // The integer and bit operations, also those defined on floating-point numbers as well, are written by their families.
       if (this.Integer(intrinsic) is { } integer)
@@ -194,21 +229,21 @@ public static partial class JavaScriptEmitter {
         return (this.Helper("$stepi", arguments), true);
       }
 
-      var name = step.Target is IrGlobalRef global ? this.GlobalName(global.Global).Name : this.Local(((IrLocalRef)step.Target).Local);
+      var name = step.Target is IrGlobalRef global ? this._globals[global.Global] : this.Local(((IrLocalRef)step.Target).Local);
       var current = step.Postfix ? Previous : name;
       JsExpression One() => type.IsLong ? new JsBigInt(1) : Number("1");
-      JsExpression Moved() => Infix(Id(current), step.Increment ? "+" : "-", One());
-      var stepped = halves ? this.Helper(HalvesStep(step), [Id(current), One64])
+      JsExpression Moved() => Infix(Dotted(current), step.Increment ? "+" : "-", One());
+      var stepped = halves ? this.Helper(HalvesStep(step), [Dotted(current), One64])
         : step.Trap ? this.Check(type, Moved()).Node
         : type == IrType.F64 ? Moved()
         : type == IrType.F32 ? this.Fround(Moved())
         : type.IsWideInteger ? Wrap(type, Moved()).Node
         : Narrow(type, Parenthesized(Moved()));
       if (!step.Postfix)
-        return (new JsAssignment(Id(name), "=", stepped), false);
+        return (new JsAssignment(Dotted(name), "=", stepped), false);
 
       this._previous = true;
-      return (Parenthesized(new JsSequence([new JsAssignment(Id(Previous), "=", Id(name)), new JsAssignment(Id(name), "=", stepped), Id(Previous)])), true);
+      return (Parenthesized(new JsSequence([new JsAssignment(Id(Previous), "=", Dotted(name)), new JsAssignment(Dotted(name), "=", stepped), Id(Previous)])), true);
     }
 
     /// <summary>The helper that adds one to a pair of halves or subtracts it, wrapping around or trapping.</summary>
@@ -273,7 +308,7 @@ public static partial class JavaScriptEmitter {
     /// <summary>An operator on numbers: 32-bit integers and truth values.</summary>
     private (JsExpression Node, bool Atomic) Binary(IrBinary binary) {
       var type = binary.Left.Type;
-      var signed = type == IrType.I32;
+      var signed = type.Integral == IrType.I32;
       switch (binary.Op) {
         case IrBinaryOp.Multiply:
           var left = this.Text(binary.Left);
@@ -319,7 +354,7 @@ public static partial class JavaScriptEmitter {
     /// </summary>
     private (JsExpression Node, bool Atomic) Binary64(IrBinary binary) {
       var type = binary.Left.Type;
-      var signed = type == IrType.I64;
+      var signed = type.Integral == IrType.I64;
       switch (binary.Op) {
         case IrBinaryOp.Divide:
           return (this.Helper(signed ? "$div64" : "$udiv64", binary.Left, binary.Right), true);
@@ -356,7 +391,7 @@ public static partial class JavaScriptEmitter {
     /// the count of a shift is a number, which the helper masks to 6 bits as C# masks it.
     /// </summary>
     private (JsExpression Node, bool Atomic) BinaryHalves(IrBinary binary) {
-      var signed = binary.Left.Type == IrType.I64;
+      var signed = binary.Left.Type.Integral == IrType.I64;
       var suffix = signed ? "s" : "u";
       switch (binary.Op) {
         case IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical:
