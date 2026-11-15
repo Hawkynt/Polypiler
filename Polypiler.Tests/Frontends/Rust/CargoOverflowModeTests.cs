@@ -99,6 +99,13 @@ public sealed class CargoOverflowModeTests {
   }
 
   [Test]
+  public void PackageAboveAPackage_IsNoWorkspaceRoot() {
+    this.Write("Cargo.toml", "[package]\nname = \"outer\"\n[profile.dev]\noverflow-checks = true\n");
+    this.Write("inner/Cargo.toml", "[package]\nname = \"inner\"\n[profile.dev]\noverflow-checks = false\n");
+    Assert.That(CargoOverflowMode.ForSource(this.Write("inner/lib.rs", "")), Is.EqualTo(new OverflowModeChoice(OverflowChecks.Wrap, "Cargo profile 'dev' of Cargo.toml")));
+  }
+
+  [Test]
   public void ManifestWithWorkspace_IsItsOwnRoot() {
     this.Write("Cargo.toml", "[workspace]\n[profile.dev]\noverflow-checks = true\n");
     this.Write("inner/Cargo.toml", "[package]\nname = \"i\"\n[workspace]\n[profile.dev]\noverflow-checks = false\n");
@@ -207,6 +214,7 @@ public sealed class CargoOverflowModeTests {
   [Test]
   public void Toml_ReadsWindowsLineEndingsAndAnEmptyDocument() {
     Assert.That(TomlReader.Read("a = '''\r\nx'''\r\nb = \"\"\"\r\ny \\\r\n z\"\"\"\r\n# end\r\n"), Is.EqualTo(new Dictionary<string, object> { ["a"] = "x", ["b"] = "y z" }));
+    Assert.That(TomlReader.Read("a = \"\"\"x \\  \t\n  y\"\"\""), Is.EqualTo(new Dictionary<string, object> { ["a"] = "x y" }));
     Assert.That(TomlReader.Read(""), Is.Empty);
     Assert.That(TomlReader.Read("a = 1"), Is.EqualTo(new Dictionary<string, object> { ["a"] = new TomlRaw("1") }));
   }
