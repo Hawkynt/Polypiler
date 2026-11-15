@@ -672,6 +672,46 @@
       "bytes": 26401
     },
     {
+      "path": "tests/fixtures/backend/golden/interop/LibC.Linux.cs.csharp.golden",
+      "sha256": "2c2ea1db98d8f58475c14be645615d28d2a0047414c601543165df94cc53047b",
+      "bytes": 92362
+    },
+    {
+      "path": "tests/fixtures/backend/golden/interop/LibC.Linux.cs.javascript.golden",
+      "sha256": "d4b992c07d8b9db50ba717fa9b6e3dd02cb96c19738b578278d9d469c46f8dc3",
+      "bytes": 1004
+    },
+    {
+      "path": "tests/fixtures/backend/golden/interop/LibC.Windows.cs.csharp.golden",
+      "sha256": "baeec7a8b8f54151b4de067d37b61217549a6b5437f4a18f04d48809434b4da8",
+      "bytes": 91570
+    },
+    {
+      "path": "tests/fixtures/backend/golden/interop/LibC.Windows.cs.javascript.golden",
+      "sha256": "d4b992c07d8b9db50ba717fa9b6e3dd02cb96c19738b578278d9d469c46f8dc3",
+      "bytes": 1004
+    },
+    {
+      "path": "tests/fixtures/backend/golden/interop/Missing.cs.csharp.golden",
+      "sha256": "9255f4015e96f348c90fab5dddfdeb2cdfb13d219171d4b3ed5d1b3a1809b04b",
+      "bytes": 27046
+    },
+    {
+      "path": "tests/fixtures/backend/golden/interop/Missing.cs.javascript.golden",
+      "sha256": "d4b992c07d8b9db50ba717fa9b6e3dd02cb96c19738b578278d9d469c46f8dc3",
+      "bytes": 1004
+    },
+    {
+      "path": "tests/fixtures/backend/golden/interop/libc-bindings.mjs.csharp.golden",
+      "sha256": "5c0ab9627d410fee69e954ab399786bcf3ce260b6de469e3e6d69152e655b7e4",
+      "bytes": 1122
+    },
+    {
+      "path": "tests/fixtures/backend/golden/interop/libc-bindings.mjs.javascript.golden",
+      "sha256": "d4b992c07d8b9db50ba717fa9b6e3dd02cb96c19738b578278d9d469c46f8dc3",
+      "bytes": 1004
+    },
+    {
       "path": "tests/fixtures/backend/golden/js/FloatView.js.csharp.golden",
       "sha256": "f4f3e2a6bd6528c4f678dba668cc447e18e964abf7c64cac468446fcc5bfc2d1",
       "bytes": 168470
