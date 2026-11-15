@@ -60,12 +60,10 @@ public sealed class TranslateLicenceTests {
   [Test]
   public void AnMitProgram_ListsEveryHelperWithItsOriginAndLicence_AndStaysMit() {
     var manifest = this.Translate("MIT", Division, "--to", "javascript");
-    // The division traps with the generated error classes of #1323, which are helpers as well.
-    Assert.That(manifest.Helpers.Select(helper => helper.Symbol), Is.EquivalentTo(new[] { "$div", "ArithmeticError", "DivideByZeroError", "OverflowError" }));
+    // The division traps with the generated error classes of #1323, which are helpers as well; its check is the library's, inlined.
+    Assert.That(manifest.Helpers.Select(helper => helper.Symbol), Is.EquivalentTo(new[] { "ArithmeticError", "DivideByZeroError", "OverflowError" }));
     Assert.That(manifest.Helpers.Select(helper => (helper.License, helper.Origin)).Distinct(), Is.EqualTo(new[] { ("MIT", JavaScriptHelpers) }));
-    var division = manifest.Helpers.Single(helper => helper.Symbol == "$div");
-    Assert.That((division.CallSites, division.Size), Is.EqualTo((1, division.Size)));
-    Assert.That(division.Size, Is.GreaterThan(50));
+    Assert.That(File.ReadAllText(Path.Combine(this._out, "Snippet.mjs")), Does.Contain("throw new DivideByZeroError(\"divide by zero\");").And.Contain("return (a / b) | 0;"));
     Assert.That((manifest.Licensing.OutputLicence, manifest.Licensing.Obligations.Single()), Is.EqualTo(("MIT",
       "MIT: keep the copyright and licence notice of the helpers under it (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md and the notices of their origins)")));
     Assert.That(File.ReadAllLines(Path.Combine(this._out, "Snippet.mjs")).Take(4), Has.Member(HeaderLine));

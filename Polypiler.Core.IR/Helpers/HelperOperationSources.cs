@@ -22,7 +22,11 @@ public static class HelperOperationSources {
   /// names: the C# frontend imports a call of one as the operation, and the method as no function.
   /// </summary>
   public static IReadOnlyDictionary<string, IrIntrinsicOp> Intrinsics { get; } = new Dictionary<string, IrIntrinsicOp>(StringComparer.Ordinal) {
-    [nameof(HelperOperations.IntrinsicRoundHalfUp)] = IrIntrinsicOp.RoundHalfUp
+    [nameof(HelperOperations.IntrinsicRoundHalfUp)] = IrIntrinsicOp.RoundHalfUp,
+    [nameof(HelperOperations.IntrinsicToInt32)] = IrIntrinsicOp.ToInt32,
+    [nameof(HelperOperations.IntrinsicToUint32)] = IrIntrinsicOp.ToUint32,
+    [nameof(HelperOperations.IntrinsicHighWord)] = IrIntrinsicOp.HighWord,
+    [nameof(HelperOperations.IntrinsicJoinWords)] = IrIntrinsicOp.JoinWords
   };
 
   /// <summary>Every file as its name and its text, in the order of the names.</summary>

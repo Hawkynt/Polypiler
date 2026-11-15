@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
+using Polypiler.Backends.Testing;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
@@ -82,7 +83,7 @@ public sealed class CollectionTests {
   public void MapModule_RunsInNodeLikeTheInterpreter(ProfileCase profile) => this.ModuleRunsInNode(profile, CollectionModules.Maps(), [.. CollectionModules.MapCalls()]);
 
   private void ModuleRunsInNode(ProfileCase profile, Core.IR.IrModule module, List<PrototypeCall> calls) {
-    var text = Core.Backends.JavaScript.JavaScriptEmitter.Emit(module, profile.Parsed).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, profile.Parsed).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, text);
     File.WriteAllText(Path.Combine(this._directory, module.Name + profile.Parsed.Extension), text);
     var outcomes = Toolchain.NodeOutcomes(this._directory, module.Name + profile.Parsed.Extension, calls, true, profile.Mode, profile.Global);

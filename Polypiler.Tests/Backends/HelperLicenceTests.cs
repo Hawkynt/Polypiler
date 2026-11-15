@@ -45,7 +45,7 @@ public sealed class HelperLicenceTests {
   [Test]
   public void EveryJavaScriptHelper_HasItsOriginAndLicence() {
     Assert.That(JavaScriptEmitter.HelperOrigins, Has.Count.GreaterThan(100));
-    Assert.That(JavaScriptEmitter.HelperOrigins.Keys, Has.Member("$div").And.Member("$view").And.Not.Member("$clamp").And.Not.Member("$rotl"));
+    Assert.That(JavaScriptEmitter.HelperOrigins.Keys, Has.Member("$get").And.Member("$view").And.Not.Member("$div").And.Not.Member("$clamp").And.Not.Member("$rotl"));
     Assert.That(JavaScriptEmitter.HelperOrigins.Values.Distinct(), Is.EqualTo(new[] { ("MIT", "Hawkynt/Polypiler:Polypiler.Core.Backends.JavaScript/Helpers") }));
   }
 

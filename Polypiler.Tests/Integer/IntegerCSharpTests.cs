@@ -38,6 +38,8 @@ public sealed class IntegerCSharpTests {
       IrIntrinsicOp.BigMul => unsigned ? "net10.0" : "net2.0",
       IrIntrinsicOp.MulHigh => width == 64 ? "net8.0" : "net2.0",
       IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Abs or IrIntrinsicOp.Sign or IrIntrinsicOp.AddCarry or IrIntrinsicOp.SubBorrow => "net2.0",
+      // The limbs are a shift and casts, which every profile writes.
+      IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords => "net2.0",
       IrIntrinsicOp.AbsWrap => unsigned ? "net2.0" : "never",
       IrIntrinsicOp.CarryOut or IrIntrinsicOp.BorrowOut => width == 64 ? "never" : "net2.0",
       IrIntrinsicOp.SubOverflows => unsigned ? "net2.0" : "never",

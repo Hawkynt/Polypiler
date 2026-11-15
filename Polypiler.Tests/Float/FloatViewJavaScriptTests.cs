@@ -65,11 +65,11 @@ public sealed class FloatViewJavaScriptTests {
   /// <summary>Test design 7: a module carries the helpers its one operation needs in its profile, and no other.</summary>
   [TestCase("LoadLittle_f32", "es5", false, new[] { "$get", "$float32" })]
   [TestCase("LoadLittle_f32", "es5", true, new[] { "$get", "$float32" })]
-  [TestCase("LoadBig_f64", "es5", false, new[] { "$or64", "$shl64", "$get", "$float64" })]
-  [TestCase("LoadBig_f64", "es2015", false, new[] { "$or64", "$shl64", "$get", "$float64" })]
+  [TestCase("LoadBig_f64", "es5", false, new[] { "$get", "$float64" })]
+  [TestCase("LoadBig_f64", "es2015", false, new[] { "$get", "$float64" })]
   [TestCase("StoreBig_f32", "es5", false, new[] { "$imul", "$set", "$bits32" })]
   [TestCase("StoreBig_f32", "es2017", false, new[] { "$set", "$bits32" })]
-  [TestCase("StoreLittle_f64", "es5", false, new[] { "$imul", "$shr64", "$set", "$bits64" })]
+  [TestCase("StoreLittle_f64", "es5", false, new[] { "$imul", "$set", "$bits64" })]
   [TestCase("StoreLittle_f64", "es2022", false, new[] { "$set", "$bits64" })]
   public void Module_CarriesTheHelpersItCalls(string function, string level, bool typed, string[] helpers)
     => Assert.That(Helpers(Emit(function, Profile(level, typed))), Is.EqualTo(helpers));
