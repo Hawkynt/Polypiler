@@ -96,7 +96,18 @@ public static class RustDriverGenerator {
 
   /// <summary>Whether a signature passes or gives a <c>seq</c>, whose width is known only from its image.</summary>
   private static bool Sequences(CallSignature signature)
-    => signature.Parameters.Any(parameter => parameter.Type.Kind == ImageKind.Sequence) || signature.Result?.Kind == ImageKind.Sequence;
+    => signature.Parameters.Any(parameter => Counted(parameter.Type) is not null) || signature.Result is { } result && Counted(result) is not null;
+
+  /// <summary>
+  /// The <c>seq</c> an image type is laid out as, or <see langword="null"/> for a scalar: a <c>seq</c>
+  /// itself, a <c>utf16</c> text as the <c>seq&lt;u16&gt;</c> of its code units, which is how the Rust
+  /// code holds a string.
+  /// </summary>
+  private static ImageType? Counted(ImageType type) => type.Kind switch {
+    ImageKind.Sequence => type,
+    ImageKind.Utf16 => ImageType.Seq(ImageType.U16),
+    _ => null
+  };
 
   /// <summary>
   /// The arm of an export with a <c>seq</c>: every argument read from a cursor into the input image,
@@ -110,7 +121,7 @@ public static class RustDriverGenerator {
     var outputs = new List<(string Name, ImageType Type)>();
     foreach (var parameter in export.Signature.Parameters) {
       var name = "a" + arguments.Count.ToString(CultureInfo.InvariantCulture);
-      if (parameter.Type.Kind != ImageKind.Sequence) {
+      if (Counted(parameter.Type) is not { } counted) {
         Width(parameter);
         text.Append(CultureInfo.InvariantCulture, $"{Pad}let {name}: {RustType(parameter.Type)} = {Taken(parameter.Type)};\n");
         arguments.Add(name);
@@ -120,20 +131,20 @@ public static class RustDriverGenerator {
       if (parameter.Mode == ParameterMode.Out)
         throw new ArgumentException($"The parameter '{parameter.Name}' has mode {parameter.Mode}; the Rust driver passes 'in' and 'inout' parameters.", nameof(export));
 
-      var element = parameter.Type.Element!;
+      var element = counted.Element!;
       var mutable = parameter.Mode == ParameterMode.InOut;
       text.Append(CultureInfo.InvariantCulture, $"{Pad}let count = u32::from_le_bytes(take(input, &mut at, 4).try_into().unwrap());\n");
       text.Append(CultureInfo.InvariantCulture, $"{Pad}let {(mutable ? "mut " : "")}{name}: Vec<{RustType(element)}> = (0..count).map(|_| {Taken(element)}).collect();\n");
       arguments.Add((mutable ? "&mut " : "&") + name);
       if (mutable)
-        outputs.Add((name, parameter.Type));
+        outputs.Add((name, counted));
     }
 
     text.Append(Pad).Append("if at != input.len() {\n").Append(Pad).Append("    std::process::exit(2);\n").Append(Pad).Append("}\n");
     text.Append(CultureInfo.InvariantCulture, $"{Pad}let result = {crate}::{export.Path}({string.Join(", ", arguments)});\n");
     text.Append(Pad).Append("let mut image: Vec<u8> = Vec::new();\n");
     if (export.Signature.Result is { } result)
-      Written(text, Pad, "result", result);
+      Written(text, Pad, "result", Counted(result) ?? result);
     else
       text.Append(Pad).Append("let () = result;\n");
 

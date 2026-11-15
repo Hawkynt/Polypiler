@@ -43,14 +43,31 @@ public static partial class RustEmitter {
           return into.Count > before && Diverges(into[^1]);
         }
         case IrDeclare declare:
-          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local), this.LocalType(declare.Local),
-            declare.Initializer is null ? null : declare.Local.Type.IsArray ? this.ArrayInitial(declare.Local, declare.Initializer) : this.Expression(declare.Initializer)));
+          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local), this.LocalType(declare.Local),
+            declare.Initializer switch {
+              null => null,
+              var value when declare.Local.Type.IsArray => this.ArrayInitial(declare.Local, value),
+              var value when declare.Local.Type.IsString => this.StringValue(value),
+              var value => this.Expression(value)
+            }));
           return false;
         case IrStore store:
           this.Store(store, into);
           return false;
+        case IrFieldStore store when store.Target.Type.IsStruct:
+          this.FieldStore(store, into);
+          return false;
+        case IrExprStmt { Expression: IrStep { Target: IrFieldLoad load } step } when load.Target.Type.IsStruct:
+          into.AddRange(((RsBlockExpression)this.FieldStep(load, step, true)).Block.Statements);
+          return false;
         case IrExprStmt { Expression: IrStep { Target: IrArrayLoad load } step }:
           into.AddRange(((RsBlockExpression)this.ElementStep(load, step, true)).Block.Statements);
+          return false;
+        case IrExprStmt { Expression: IrIntrinsic { Op: IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig } store }:
+          into.AddRange(((RsBlockExpression)this.EndianStore(store)).Block.Statements);
+          return false;
+        case IrAssign { Local.Type.IsString: true } assign when this.Appended(assign.Local, assign.Value) is { } appended:
+          into.AddRange(appended);
           return false;
         case IrAssign assign:
           into.Add(new RsExpressionStatement(this.Assignment(assign.Local, assign.Value)));
@@ -88,6 +105,7 @@ public static partial class RustEmitter {
           into.Add(new RsExpressionStatement(new RsReturn(result.Value switch {
             null => null,
             { Type.IsArray: true } value => this.ArrayResult(this._function, value),
+            { Type.IsString: true } value => this.StringValue(value, true),
             var value => this.Expression(value)
           })));
           return true;
@@ -117,6 +135,8 @@ public static partial class RustEmitter {
       var place = new RsPath(this._locals[local]) { Type = local.Type };
       if (local.Type.IsArray)
         return new RsAssign(place, "=", this.ArrayInitial(local, value));
+      if (local.Type.IsString)
+        return new RsAssign(place, "=", this.StringValue(value));
       if (value is IrBinary { Left: IrLocalRef self } binary && self.Local == local && Compound(binary) is { } op)
         return new RsAssign(place, op + "=", this.Operand(this.Expression(binary.Right), 2));
       if (value is IrBinary { Right: IrLocalRef other } swapped && other.Local == local && Compound(swapped) is { } bitwise && bitwise is "&" or "|" or "^")
@@ -415,12 +435,18 @@ public static partial class RustEmitter {
       var nodes = body.SelectMany(IrTree.Nodes).ToList();
       var loads = nodes.Count(node => node is IrArrayLoad { Index: IrLocalRef index } load && index.Local == counter && SameArray(load.Array, array));
       var uses = nodes.Count(node => node is IrLocalRef reference && reference.Local == counter);
-      if (loads == 0 || loads != uses || body.SelectMany(Walk).Any(statement => statement is IrStore store && SameArray(store.Array, array))
+      if (loads == 0 || loads != uses || body.SelectMany(Walk).Any(statement => statement is IrStore store && SameArray(store.Array, array)
+          || statement is IrFieldStore field && ElementArray(field.Target) is { } written && SameArray(written, array))
+        || nodes.Any(node => node is IrStep { Target: IrFieldLoad stepped } && ElementArray(stepped) is { } steppedArray && SameArray(steppedArray, array))
         || nodes.Any(node => node is IrStep { Target: IrArrayLoad stepped } && SameArray(stepped.Array, array)
           || node is IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy && SameArray(copy.Arguments[2], array)
           || node is IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear } fill && SameArray(fill.Arguments[0], array)
           || node is IrCall call && this._arrays.TryGetValue(call.Function, out var callee) && callee.MutableParameters.Any(position => SameArray(call.Arguments[position], array)))
         || array is IrLocalRef { Local: var variable } && Assigns(body, variable))
+        return null;
+
+      // Only an element that is a value is copied out of the array by the loop's pattern.
+      if (array.Type.Element is not { } elementType || !IsValue(elementType))
         return null;
 
       string element;
@@ -470,36 +496,17 @@ public static partial class RustEmitter {
     /// <summary>A statement and every statement inside it.</summary>
     private static IEnumerable<IrStmt> Walk(IrStmt statement) {
       yield return statement;
-      IEnumerable<IrStmt> children = statement switch {
-        IrBlock block => block.Statements,
-        IrIf choice => [choice.Then, .. choice.Else is null ? [] : new IrStmt[] { choice.Else }],
-        IrWhile loop => [loop.Body],
-        IrDoWhile loop => [loop.Body],
-        IrFor loop => [loop.Body, loop.Step],
-        IrSwitch choice => choice.Sections.Select(section => (IrStmt)section.Body),
-        IrTry attempt => [attempt.Body, .. attempt.Catches.Select(clause => (IrStmt)clause.Body), .. attempt.Finally is null ? [] : new IrStmt[] { attempt.Finally }],
-        _ => []
-      };
-      foreach (var child in children)
-        foreach (var item in Walk(child))
-          yield return item;
+      foreach (var block in IrTree.Blocks(statement).Where(block => !ReferenceEquals(block, statement)))
+        foreach (var inner in block.Statements.SelectMany(Walk))
+          yield return inner;
+
+      if (statement is IrBlock own)
+        foreach (var inner in own.Statements.SelectMany(Walk))
+          yield return inner;
     }
 
     /// <summary>The expressions a statement holds directly.</summary>
-    private static IEnumerable<IrExpr> ExpressionsOf(IrStmt statement) => statement switch {
-      IrDeclare { Initializer: { } initializer } => [initializer],
-      IrAssign assign => [assign.Value],
-      IrStore store => [store.Array, store.Index, store.Value],
-      IrExprStmt expression => [expression.Expression],
-      IrIf choice => [choice.Condition],
-      IrWhile loop => [loop.Condition],
-      IrDoWhile loop => [loop.Condition],
-      IrFor loop => [loop.Condition],
-      IrSwitch choice => [choice.Value],
-      IrReturn { Value: { } value } => [value],
-      IrThrow thrown => [thrown.Exception],
-      _ => []
-    };
+    private static IEnumerable<IrExpr> ExpressionsOf(IrStmt statement) => IrTree.Expressions(statement);
 
     /// <summary>
     /// A throw of a new exception of the IR's library as the panic of its trap; a panic carries no

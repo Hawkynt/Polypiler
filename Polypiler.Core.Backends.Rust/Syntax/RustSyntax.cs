@@ -237,6 +237,16 @@ public sealed record RsConst(string Name, string Visibility, string TypeName, Rs
 
 }
 
+/// <summary><c>Name { a: x, b }</c>: a struct built from the values of its fields, a field named like its value's variable written once.</summary>
+/// <param name="TypeName">The struct.</param>
+/// <param name="Fields">Each field with its value, in the order they are evaluated.</param>
+public sealed record RsStructLiteral(string TypeName, IReadOnlyList<RsFieldValue> Fields) : RsExpression;
+
+/// <summary>A field of a <see cref="RsStructLiteral"/> and its value.</summary>
+/// <param name="Name">The field.</param>
+/// <param name="Value">The value.</param>
+public sealed record RsFieldValue(string Name, RsExpression Value) : RsNode;
+
 /// <summary><c>[a, b, c]</c>, the value of a table; with a <see cref="Count"/>, <c>[value; count]</c>.</summary>
 /// <param name="Elements">The elements; the one value repeated where there is a count.</param>
 public sealed record RsArray(IReadOnlyList<RsExpression> Elements) : RsExpression {
@@ -245,6 +255,27 @@ public sealed record RsArray(IReadOnlyList<RsExpression> Elements) : RsExpressio
   public RsExpression? Count { get; init; }
 
 }
+
+/// <summary>A field of a struct: <c>pub name: T</c>, or of a tuple struct <c>pub T</c> where the name is empty.</summary>
+/// <param name="Name">The name, empty for a field of a tuple struct.</param>
+/// <param name="Visibility">The visibility as written, or empty.</param>
+/// <param name="TypeName">The type.</param>
+public sealed record RsFieldDeclaration(string Name, string Visibility, string TypeName) : RsNode;
+
+/// <summary>
+/// <c>pub struct Name { fields }</c>; a tuple struct <c>pub struct Name(pub T);</c> where its fields
+/// have no names, a unit struct <c>pub struct Name;</c> where it has none.
+/// </summary>
+/// <param name="Name">The name.</param>
+/// <param name="Visibility">The visibility as written, or empty.</param>
+/// <param name="Fields">The fields, in declaration order.</param>
+public sealed record RsStruct(string Name, string Visibility, IReadOnlyList<RsFieldDeclaration> Fields) : RsItem;
+
+/// <summary><c>impl Type { items }</c>, or <c>impl Trait for Type { items }</c>.</summary>
+/// <param name="Trait">The trait implemented, or <see langword="null"/> for an inherent implementation.</param>
+/// <param name="TypeName">The type the items belong to.</param>
+/// <param name="Items">The items: functions and constants.</param>
+public sealed record RsImpl(string? Trait, string TypeName, IReadOnlyList<RsItem> Items) : RsItem;
 
 /// <summary><c>pub mod name;</c>, the declaration of a module whose items are in a file of its own.</summary>
 /// <param name="Name">The module.</param>

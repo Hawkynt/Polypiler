@@ -43,23 +43,28 @@ public static partial class RustEmitter {
 
     /// <summary>The crate: manifest, root and module.</summary>
     public RustCrate Crate(IrModule module) {
+      module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(module);
       this._module = module;
       var moduleName = ModuleName(module.Name, this._profile);
       var package = this._options.PackageName ?? moduleName;
       if (module.Globals.Count > 0)
         this.Refuse("module state (globals)");
-      if (module.Types.Count > 0)
-        this.Refuse("declared types (structs, classes, enums)");
+      foreach (var type in module.Types.Where(type => type is not IrStructType))
+        this.Refuse($"declared types ({Kind(type)})");
 
       this.NameItems(module);
+      this.NameTypes(module);
       this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
       var items = new List<RsItem>();
       foreach (var constant in module.Constants)
         items.Add(this.Constant(constant));
+      foreach (var type in module.Types.OfType<IrStructType>())
+        items.AddRange(this.Struct(type));
 
       var functions = module.Functions.Select(function => this.Function(function) with { IsHelper = copied.Contains(function.Name) }).ToList();
       this._construct = "the module";
+      items.AddRange(this._whitespace.Values);
       items.AddRange(this._spellings.Values);
       items.AddRange(functions);
       if (this._options.Tests.Count > 0)
@@ -124,12 +129,29 @@ public static partial class RustEmitter {
       if (TypeName(constant.Type) is { } typeName && constant.Strings.Count == 0 && constant.Values.Count == 1)
         return new RsConst(name, "", typeName, Literal(new IrConst(constant.Type, constant.Values[0])));
 
+      // Text the crate keeps as Rust's own: its code units are taken where it is read.
+      if (constant.Type.IsString && constant.Strings.Count == 1 && !HasLoneSurrogate(constant.Strings[0]))
+        return new RsConst(name, "", "&str", new RsString(constant.Strings[0])) { IsStatic = true };
+      if (constant.Type is { IsArray: true, Element.IsString: true } && !constant.Strings.Any(HasLoneSurrogate))
+        return new RsConst(name, "", $"[&str; {constant.Strings.Count}]", new RsArray([.. constant.Strings.Select(text => (RsExpression)new RsString(text))])) { IsStatic = true };
+
       this.Refuse($"constant of type {constant.Type}");
       return new RsConst(name, "", "()", new RsPath("()"));
     }
 
-    /// <summary>The Rust type of an IR type a parameter, a local or a result has; refused for any but a scalar.</summary>
-    private string Type(IrType type) => TypeName(type) ?? ((RsPath)this.Refuse($"the type {type}")).Name;
+    /// <summary>The Rust type of an IR type a parameter, a local or a result has: a scalar or a struct; refused for any other.</summary>
+    private string Type(IrType type)
+      => TypeName(type) ?? (type.IsString ? OwnedString
+        : type.StructType is { } declared && this._types.TryGetValue(declared, out var name) ? name
+        : ((RsPath)this.Refuse($"the type {type}")).Name);
+
+    /// <summary>What kind of type a declaration is, as a refusal names it.</summary>
+    private static string Kind(IrTypeDeclaration type) => type switch {
+      IrClassType => "classes",
+      IrInterfaceType => "interfaces",
+      IrEnumType => "enums",
+      _ => type.GetType().Name
+    };
 
     /// <summary>A spelling function the crate carries once: an operation of the IR Rust has no method for.</summary>
     private void Spell(string name, Func<RsFunction> build) {

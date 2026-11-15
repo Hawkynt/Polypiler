@@ -25,6 +25,9 @@ internal sealed class FunctionArrays {
   /// <summary>The indices of the array parameters the function writes, directly or through a callee: <c>&amp;mut [T]</c>.</summary>
   public SortedSet<int> MutableParameters { get; } = [];
 
+  /// <summary>The indices of the array parameters the function assigns a new array to: never written, they are copied into a vector of their own.</summary>
+  public SortedSet<int> CopiedParameters { get; } = [];
+
   /// <summary>Who holds the array the function returns.</summary>
   public ArrayHolder Result { get; set; }
 
@@ -51,15 +54,14 @@ internal sealed class FunctionArrays {
 /// others borrow it. The variables of a function that one array may flow into are grouped (an
 /// assignment, a declaration, a return, a call that gives back a borrowed parameter join their
 /// groups); a group holds a new array (<c>Vec&lt;T&gt;</c>), a parameter's (<c>&amp;[T]</c>, or
-/// <c>&amp;mut [T]</c> where any variable of the group is written), never both. A group with more than
-/// one owner, or with an owned and a borrowed array, is refused: safe Rust has no shared mutable
-/// array. A constant table is never in a group: the IR reads its elements only, and lets no variable
+/// <c>&amp;mut [T]</c> where any variable of the group is written), never both. A group that is
+/// written and has more than one owner, or an owned and a borrowed array, is refused: safe Rust has
+/// no shared mutable array; one nothing writes is a value, copied where it changes hands. A constant table is never in a group: the IR reads its elements only, and lets no variable
 /// hold it. Parameters written by a callee are written by the caller, and a borrowed result a caller
 /// writes through is exclusive; the facts of the functions are computed to their fixed point.
 /// </summary>
 internal static class ArrayOwnership {
 
-  private static readonly object _owned = new();
   private static readonly object _result = new();
 
   /// <summary>The facts of every function of a module, by name.</summary>
@@ -98,6 +100,7 @@ internal static class ArrayOwnership {
     var result = new FunctionArrays();
     var groups = new Groups();
     var written = new List<object>();
+    var created = new List<object>();
     var problems = new List<string>();
 
     void Link(object node, IrExpr value) {
@@ -106,15 +109,15 @@ internal static class ArrayOwnership {
           groups.Union(node, reference.Local);
           break;
         case IrNewArray:
-        case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.ViewToArray }:
-          groups.Union(node, _owned);
+        case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.StrSplit or IrIntrinsicOp.ViewToArray }:
+          created.Add(node);
           break;
         case IrCall call when facts.TryGetValue(call.Function, out var callee):
           if (callee.Result == ArrayHolder.Borrowed)
             foreach (var index in callee.ResultParameters)
               Link(node, call.Arguments[index]);
           else
-            groups.Union(node, _owned);
+            created.Add(node);
           break;
         case IrConditional choice:
           Link(node, choice.WhenTrue);
@@ -160,6 +163,9 @@ internal static class ArrayOwnership {
         case IrStore store:
           Write(store.Array);
           break;
+        case IrFieldStore store when RustEmitter.ElementOf(store.Target) is { } array:
+          Write(array);
+          break;
       }
 
       foreach (var node in IrTree.Expressions(statement).SelectMany(IrTree.Nodes)) {
@@ -167,10 +173,13 @@ internal static class ArrayOwnership {
           case IrStep { Target: IrArrayLoad load }:
             Write(load.Array);
             break;
+          case IrStep { Target: IrFieldLoad field } when RustEmitter.ElementOf(field) is { } stepped:
+            Write(stepped);
+            break;
           case IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy:
             Write(copy.Arguments[2]);
             break;
-          case IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear } fill:
+          case IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig } fill:
             Write(fill.Arguments[0]);
             break;
           case IrCall call when facts.TryGetValue(call.Function, out var callee):
@@ -184,8 +193,10 @@ internal static class ArrayOwnership {
     if (writtenResults.Contains(function.Name))
       written.Add(_result);
 
-    // A sentinel nothing was joined with stands for no group at all.
-    var owned = groups.Contains(_owned) ? groups.Find(_owned) : new object();
+    // A group that holds an array the function made: each new array is one group of its own. An
+    // array nothing writes is a value: who holds it cannot be told apart, so a group of a parameter
+    // and a new array, or of two owners, copies it where it changes hands.
+    var owned = created.Select(groups.Find).ToHashSet(ReferenceEqualityComparer.Instance);
     var writtenRoots = written.Select(groups.Find).ToHashSet(ReferenceEqualityComparer.Instance);
     for (var index = 0; index < function.Parameters.Count; ++index) {
       var parameter = function.Parameters[index];
@@ -193,38 +204,42 @@ internal static class ArrayOwnership {
         continue;
 
       var root = groups.Find(parameter);
-      if (root == owned)
+      if (owned.Contains(root) && writtenRoots.Contains(root))
         problems.Add($"the parameter '{parameter.Name}' and a new array in one variable");
+      else if (owned.Contains(root))
+        result.CopiedParameters.Add(index);
       if (writtenRoots.Contains(root))
         result.MutableParameters.Add(index);
     }
 
     foreach (var local in function.Locals.Where(local => local.Type.IsArray)) {
       var root = groups.Find(local);
-      var holder = root != owned && function.Parameters.Any(parameter => groups.Find(parameter) == root) ? ArrayHolder.Borrowed : ArrayHolder.Owned;
+      var holder = !owned.Contains(root) && function.Parameters.Any(parameter => groups.Find(parameter) == root) ? ArrayHolder.Borrowed : ArrayHolder.Owned;
       result.Locals[local] = holder;
       if (writtenRoots.Contains(root))
         result.MutableLocals.Add(local);
     }
 
     // Two owners of one array: Rust moves a vector, where the IR shares it.
-    var owners = function.Locals.Where(local => result.Locals.GetValueOrDefault(local) == ArrayHolder.Owned).GroupBy(groups.Find).FirstOrDefault(group => group.Count() > 1);
+    var owners = function.Locals.Where(local => result.Locals.GetValueOrDefault(local) == ArrayHolder.Owned).GroupBy(groups.Find)
+      .FirstOrDefault(group => group.Count() > 1 && writtenRoots.Contains(group.Key));
     if (owners is not null)
       problems.Add($"one array shared by the variables {string.Join(" and ", owners.Select(local => $"'{local.Name}'"))}");
 
     if (function.ReturnType.IsArray) {
       var root = groups.Find(_result);
       var borrowed = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsArray && groups.Find(pair.parameter) == root).ToList();
-      result.Result = root != owned && borrowed.Count > 0 ? ArrayHolder.Borrowed : ArrayHolder.Owned;
-      foreach (var (_, index) in borrowed)
-        result.ResultParameters.Add(index);
+      result.Result = !owned.Contains(root) && borrowed.Count > 0 ? ArrayHolder.Borrowed : ArrayHolder.Owned;
+      if (result.Result == ArrayHolder.Borrowed)
+        foreach (var (_, index) in borrowed)
+          result.ResultParameters.Add(index);
     }
 
     result.Problem = problems.FirstOrDefault();
     return result;
   }
 
-  /// <summary>Unions of the variables of a function, the sentinels of owned arrays and of the result among them.</summary>
+  /// <summary>Unions of the variables of a function and of the sentinel of its result.</summary>
   private sealed class Groups {
 
     private readonly Dictionary<object, object> _parents = new(ReferenceEqualityComparer.Instance);

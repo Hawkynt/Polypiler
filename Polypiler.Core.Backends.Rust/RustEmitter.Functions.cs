@@ -63,8 +63,13 @@ public static partial class RustEmitter {
       var parameters = function.Parameters.Select((parameter, index) => new RsParameter(this._locals[parameter], this.ParameterType(function, index))).ToList();
       var returns = this.ResultType(function);
       var statements = new List<RsStatement>();
-      foreach (var parameter in function.Parameters.Where(this._reassigned.Contains))
-        statements.Add(new RsLet(this._locals[parameter], true, null, new RsPath(this._locals[parameter])));
+      foreach (var parameter in function.Parameters.Where(this._reassigned.Contains)) {
+        // A parameter given a string or a new array of its own holds a copy it owns from the start.
+        var copied = parameter.Type.IsString || parameter.Type.IsArray && !this.IsReference(parameter);
+        var type = parameter.Type.IsString ? OwnedString : parameter.Type.IsArray && copied ? $"Vec<{this.ElementType(parameter.Type)}>" : null;
+        statements.Add(new RsLet(this._locals[parameter], true, type,
+          copied ? new RsMethodCall(new RsPath(this._locals[parameter]), "to_vec", []) : new RsPath(this._locals[parameter])));
+      }
 
       this.Statements(function.Body.Statements, statements);
       var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void);
@@ -96,6 +101,11 @@ public static partial class RustEmitter {
       foreach (var (parameter, binding) in parameterBindings)
         if (binding.Count > 1 || binding.Looped)
           this._reassigned.Add(parameter);
+
+      this._ownedStringParameters = [.. this._reassigned.Where(parameter => parameter.Type.IsString)];
+      this._fieldWritten = FieldWrites(function);
+      foreach (var parameter in function.Parameters.Where(this._fieldWritten.Contains))
+        this._reassigned.Add(parameter);
 
       var taken = new HashSet<string>(StringComparer.Ordinal);
       this._locals = [];
@@ -148,6 +158,10 @@ public static partial class RustEmitter {
         case IrStore store:
           this.CountIn(store.Array, bindings, depth);
           this.CountIn(store.Index, bindings, depth);
+          this.CountIn(store.Value, bindings, depth);
+          break;
+        case IrFieldStore store:
+          this.CountIn(store.Target, bindings, depth);
           this.CountIn(store.Value, bindings, depth);
           break;
         case IrIf choice: {
@@ -245,25 +259,7 @@ public static partial class RustEmitter {
     }
 
     /// <summary>Every expression below an expression and the expression itself.</summary>
-    private static IEnumerable<IrExpr> Nodes(IrExpr expression) {
-      yield return expression;
-      IEnumerable<IrExpr> children = expression switch {
-        IrUnary unary => [unary.Operand],
-        IrBinary binary => [binary.Left, binary.Right],
-        IrConvert convert => [convert.Operand],
-        IrConditional choice => [choice.Condition, choice.WhenTrue, choice.WhenFalse],
-        IrArrayLoad load => [load.Array, load.Index],
-        IrArrayLength length => [length.Array],
-        IrNewArray array => [array.Length],
-        IrCall call => call.Arguments,
-        IrStep step => [step.Target],
-        IrIntrinsic intrinsic => intrinsic.Arguments,
-        _ => []
-      };
-      foreach (var child in children)
-        foreach (var node in Nodes(child))
-          yield return node;
-    }
+    private static IEnumerable<IrExpr> Nodes(IrExpr expression) => IrTree.Nodes(expression);
 
     /// <summary>A new label of the function, <c>l0</c>, <c>s1</c>, …</summary>
     private string NewLabel(string prefix) => prefix + this._labels++;

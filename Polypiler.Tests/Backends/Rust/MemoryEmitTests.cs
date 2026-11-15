@@ -122,8 +122,16 @@ public sealed class MemoryEmitTests {
   }
 
   [Test]
-  public void OneArrayPassedTwiceWhereItIsWritten_IsRefusedAsAliasing() {
-    var problems = Problems("public static void F(int[] a) { Copy(a, a); } private static void Copy(int[] s, int[] d) { d[0] = s[0]; }");
+  public void OneArrayPassedTwiceWhereItIsWritten_CallsACopyOfTheCalleeWithOneParameter() {
+    var text = Emitted("public static void F(int[] a) { Copy(a, a); } private static void Copy(int[] s, int[] d) { d[0] = s[1]; }");
+    Assert.That(text, Does.Contain("pub fn f(a: &mut [i32]) {\n    copy_aliased01(a);\n}"));
+    Assert.That(text, Does.Contain("fn copy_aliased01(s: &mut [i32]) {\n    s[0] = s[1];\n}"));
+    Assert.That(text, Does.Not.Contain("fn copy("));
+  }
+
+  [Test]
+  public void OneArrayPassedTwiceToACalleeThatSwapsItsParameters_IsRefusedAsAliasing() {
+    var problems = Problems("public static void F(int[] a) { Copy(a, a); } private static void Copy(int[] s, int[] d) { if (s.Length > 9) { var t = s; s = d; d = t; } d[0] = s[1]; }");
     Assert.That(problems, Has.Some.StartsWith(RustEmitter.MayAlias).And.Contain("views 'a' and 'a' may alias and 'a' is written"));
   }
 
@@ -132,10 +140,17 @@ public sealed class MemoryEmitTests {
     => Assert.That(Emitted("public static int F(int[] a) => Sum(a, a); private static int Sum(int[] s, int[] d) => s[0] + d[0];"), Does.Contain("sum(a, a)"));
 
   [Test]
+  public void ArrayNothingWrites_IsCopiedWhereItChangesHands() {
+    var text = Emitted("public static int[] F(int[] a, int n) { if (n > 0) a = new int[n]; var b = a; return b; }");
+    Assert.That(text, Does.Contain("pub fn f(a: &[i32], n: i32) -> Vec<i32> {\n    let mut a: Vec<i32> = a.to_vec();"));
+    Assert.That(text, Does.Contain("    if n > 0 {\n        a = vec![0; usize::try_from(n).expect(\"IntegerOverflow\")];\n    }"));
+    Assert.That(Emitted("public static int[] F(int[] a, bool c) => c ? a : new int[1];"), Does.Contain("if c { a.to_vec() } else { vec![0; 1] }"));
+  }
+
+  [Test]
   public void ArraysWithoutASafeOwner_AreRefusedByName() {
-    Assert.That(Problems("public static int F(int[] a) { a = new int[1]; return a[0]; }"), Has.Some.Contain("the parameter 'a' and a new array in one variable"));
+    Assert.That(Problems("public static int F(int[] a) { a = new int[1]; a[0] = 2; return a[0]; }"), Has.Some.Contain("the parameter 'a' and a new array in one variable"));
     Assert.That(Problems("public static int F() { var a = new int[1]; var b = a; b[0] = 1; return a[0]; }"), Has.Some.Contain("one array shared by the variables 'a' and 'b'"));
-    Assert.That(Problems("public static int[] F(int[] a, bool c) => c ? a : new int[1];"), Has.Some.Contain("PLY1550"));
   }
 
   [Test]
@@ -185,6 +200,14 @@ public sealed class MemoryEmitTests {
     Assert.That(text, Does.Contain("fn ply_copy<T: Copy>(source: &[T], from: i32, target: &mut [T], to: i32, length: i32) {"));
     Assert.That(text, Does.Contain("fn ply_copy_within<T: Copy>(data: &mut [T], from: i32, to: i32, length: i32) {"));
     Assert.That(text, Does.Contain("fn ply_range(start: i32, length: i32, size: usize) -> std::ops::Range<usize> {\n    let start = usize::try_from(start).expect(\"IndexOutOfRange\");"));
+  }
+
+  [Test]
+  public void EndianAccess_ConvertsBytesOfARangeCheckedFirst() {
+    var text = Emitted("public static uint F(byte[] b, int i) => System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(System.MemoryExtensions.AsSpan(b, i)); public static void G(byte[] b, int i, double x) => System.Buffers.Binary.BinaryPrimitives.WriteDoubleBigEndian(System.MemoryExtensions.AsSpan(b, i, 8), x * 2); public static void H(byte[] b, float x) => System.Buffers.Binary.BinaryPrimitives.WriteSingleLittleEndian(System.MemoryExtensions.AsSpan(b, 0), x);");
+    Assert.That(text, Does.Contain("u32::from_le_bytes(b[ply_range(i, 4, b.len())].try_into().expect(\"4 bytes\"))"));
+    Assert.That(text, Does.Contain("pub fn g(b: &mut [u8], i: i32, x: f64) {\n    let value = x * 2.0;\n    let at = ply_range(i, 8, b.len());\n    b[at].copy_from_slice(&value.to_be_bytes());\n}"));
+    Assert.That(text, Does.Contain("let at = ply_range(0, 4, b.len());\n    b[at].copy_from_slice(&x.to_le_bytes());"));
   }
 
   [Test]

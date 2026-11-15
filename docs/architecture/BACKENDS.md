@@ -114,6 +114,7 @@ and why:
 | `Polypiler.Core.Backends.JavaScript/Helpers/Enum/Enums.cs` | The frozen object an enum is, looked up by name and value: a representation. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/String/Strings.cs` | The string operations of .NET and of the later levels in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
 | `Polypiler.Core.Backends.JavaScript/Helpers/String/NumberText.cs` | The numbers to text and back of .NET in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
+| `Polypiler.Core.Backends.Rust/Helpers/Strings.cs` | A string of Rust is its UTF-16 code units, `Vec<u16>` or `&[u16]`, since `str` is UTF-8 and holds no lone surrogate: the searches, the split, the trim with the IR's white-space tables, the padding and the replacements work on that representation, which the IR has no type for (`ply_utf16`, `ply_position`, `ply_index_of`, `ply_last_index_of`, `ply_replace`, `ply_replace_first`, `ply_split`, `ply_trim`, `ply_pad`). |
 
 Outside the folders the emitters keep a few more of the same kind: the C# `Throw<T>` of a throw
 expression before C# 7, the C# `SinglePass<T>` that makes the one cursor of an iterator a sequence
@@ -121,7 +122,9 @@ enumerated once (a `yield return` over an `IEnumerator<T>`, which the IR has no 
 JavaScript `$sameValueZero` and `$compare` of the generic equality and order, and the Rust spelling
 functions, built as trees by the emitter: `ply_div_<t>` and `ply_rem_<t>`, the IR's division with its
 traps named as every generated panic is, `ply_f2i_trap_<t>`, the checked conversion from floating
-point Rust has no method for, and `ply_i2i_trap_<from>_<to>`, the checked narrowing below Rust 1.34.
+point Rust has no method for, `ply_i2i_trap_<from>_<to>`, the checked narrowing below Rust 1.34, and
+`ply_range`, `ply_copy` and `ply_copy_within`, the range of a copy or an endian access checked before
+anything is read or written, which a slice's own panics would report as an overflow or not at all.
 
 ## Target passes
 

@@ -188,6 +188,8 @@ public static partial class RustEmitter {
   public static bool Writes(IrIntrinsic intrinsic, RustProfile profile, RustCapabilities? capabilities = null) {
     ArgumentNullException.ThrowIfNull(intrinsic);
     var table = capabilities ?? RustCapabilities.Default;
+    if (intrinsic.Op is IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig)
+      return true;
     if (intrinsic.Arguments.Count == 0)
       return false;
 

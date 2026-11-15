@@ -33,7 +33,7 @@ public static partial class RustEmitter {
       => facts.Result == ArrayHolder.Borrowed && facts.ResultParameters.All(facts.MutableParameters.Contains);
 
     /// <summary>The Rust type of the elements of an array type; refused for any but a scalar.</summary>
-    private string ElementType(IrType array) => array.Element is { } element && TypeName(element) is { } name ? name : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
+    private string ElementType(IrType array) => array.Element is { } element && (TypeName(element) is not null || element.IsStruct || element.IsString) ? this.Type(element) : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
 
     /// <summary>The lifetime the result of a function borrows with, where Rust cannot elide it: <c>'a</c>, or empty.</summary>
     private static string Lifetime(IrFunction function, FunctionArrays facts)
@@ -42,6 +42,8 @@ public static partial class RustEmitter {
     /// <summary>The type of a parameter: an array borrowed shared or exclusive, with the result's lifetime where it borrows from it.</summary>
     private string ParameterType(IrFunction function, int index) {
       var parameter = function.Parameters[index];
+      if (parameter.Type.IsString)
+        return BorrowedString;
       if (!parameter.Type.IsArray)
         return this.Type(parameter.Type);
 
@@ -79,31 +81,43 @@ public static partial class RustEmitter {
 
     /// <summary>Whether an array variable is a reference already: a parameter, or a local that borrows.</summary>
     private bool IsReference(IrLocal local)
-      => this._arrayParameters.ContainsKey(local) || this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Borrowed;
+      => this._arrayParameters.TryGetValue(local, out var position) ? !(this._reassigned.Contains(local) && this._arrayFacts.CopiedParameters.Contains(position))
+        : this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Borrowed;
 
     /// <summary>The value a local of an array type is given: the vector itself, or a borrow.</summary>
     private RsExpression ArrayInitial(IrLocal local, IrExpr value)
-      => this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Owned ? this.Vector(value) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
+      => !this.IsReference(local) ? this.Vector(value, false) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
 
     /// <summary>The array a function returns: a vector it owns, or the borrow of a parameter.</summary>
     private RsExpression ArrayResult(IrFunction function, IrExpr value)
-      => this._arrayFacts.Result == ArrayHolder.Owned ? this.Vector(value) : this.Borrow(value, ResultIsMutable(function, this._arrayFacts));
+      => this._arrayFacts.Result == ArrayHolder.Owned ? this.Vector(value, true) : this.Borrow(value, ResultIsMutable(function, this._arrayFacts));
 
-    /// <summary>An array as a vector the receiving place owns: a new one, the result of a call that makes one, an owned local moved.</summary>
-    private RsExpression Vector(IrExpr array) {
+    /// <summary>
+    /// An array as a vector the receiving place owns: a new one, the result of a call that makes one,
+    /// an owned local - moved where it is returned, cloned where it changes hands - or a borrowed one
+    /// copied, which the ownership analysis allows only for an array nothing writes.
+    /// </summary>
+    private RsExpression Vector(IrExpr array, bool move = true) {
       switch (array) {
         case IrNewArray creation:
           return new RsMacro("vec", [new RsArray([this.Zero(creation.Type.Element!)]) { Count = this.Length(creation.Length) }]) { Bracketed = true, Type = array.Type };
         case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf, Arguments.Count: 0 }:
           return new RsCall(new RsPath("Vec::new"), []) { Type = array.Type };
         case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal:
-          return new RsMacro("vec", [new RsArray([.. literal.Arguments.Select(this.Expression)])]) { Bracketed = true, Type = array.Type };
+          return new RsMacro("vec", [new RsArray([.. literal.Arguments.Select(this.ElementValue)])]) { Bracketed = true, Type = array.Type };
         case IrLocalRef { Local: var local } when !this.IsReference(local):
-          return new RsPath(this._locals[local]) { Type = array.Type };
+          var vector = new RsPath(this._locals[local]) { Type = array.Type };
+          return move ? vector : new RsMethodCall(vector, "clone", []) { Type = array.Type };
+        case IrLocalRef { Local: var local }:
+          return new RsMethodCall(new RsPath(this._locals[local]), "to_vec", []) { Type = array.Type };
         case IrCall call when this._arrays.TryGetValue(call.Function, out var callee) && callee.Result == ArrayHolder.Owned:
           return this.Expression(call);
+        case IrIntrinsic { Op: IrIntrinsicOp.StrSplit or IrIntrinsicOp.StrToCodeUnits }:
+          return this.Expression(array);
+        case IrCall call:
+          return new RsMethodCall(this.Expression(call), "to_vec", []) { Type = array.Type };
         case IrConditional choice:
-          return this.Choice(choice, this.Vector);
+          return this.Choice(choice, branch => this.Vector(branch, move));
         default:
           return this.Refuse("an array that is both owned and borrowed");
       }
@@ -126,6 +140,11 @@ public static partial class RustEmitter {
           return new RsReference(mutable, new RsArray([.. literal.Arguments.Select(argument => Suffixed(this.Expression(argument)))]) { Type = array.Type }) { Type = array.Type };
         case IrCall call when this._arrays.TryGetValue(call.Function, out var callee) && callee.Result != ArrayHolder.Owned:
           return this.Expression(call);
+        case IrConditional choice when this.HoldsNew(choice) && mutable:
+          return this.Refuse("an exclusive borrow of a choice between a new array and another one");
+        case IrConditional choice when this.HoldsNew(choice):
+          // A temporary borrowed in a branch would not outlive the branch: the choice owns the vector, the borrow takes it all.
+          return new RsReference(false, new RsParenthesized(this.Choice(choice, branch => this.Vector(branch, false)))) { Type = array.Type };
         case IrConditional choice:
           return this.Choice(choice, branch => this.Borrow(branch, mutable));
         default:
@@ -140,6 +159,7 @@ public static partial class RustEmitter {
       IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal when !mutable => new RsArray([.. literal.Arguments.Select(argument => Suffixed(this.Expression(argument)))]) { Type = array.Type },
       IrCall => this.Expression(array),
       IrNewArray => this.Vector(array),
+      IrConditional choice when this.HoldsNew(choice) && !mutable => new RsParenthesized(this.Choice(choice, branch => this.Vector(branch, false))) { Type = array.Type },
       _ => new RsParenthesized(this.Borrow(array, mutable)) { Type = array.Type }
     };
 
@@ -154,6 +174,14 @@ public static partial class RustEmitter {
       _ => this.Borrow(array, false)
     };
 
+    /// <summary>Whether an array expression may give a new array: a new one, a literal, a call that makes one, a choice of such.</summary>
+    private bool HoldsNew(IrExpr array) => array switch {
+      IrNewArray or IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } => true,
+      IrCall call => this._arrays.TryGetValue(call.Function, out var callee) && callee.Result == ArrayHolder.Owned,
+      IrConditional choice => this.HoldsNew(choice.WhenTrue) || this.HoldsNew(choice.WhenFalse),
+      _ => false
+    };
+
     /// <summary><c>if c { a } else { b }</c> of two arrays written the same way.</summary>
     private RsIf Choice(IrConditional choice, Func<IrExpr, RsExpression> branch) {
       var otherwise = branch(choice.WhenFalse);
@@ -162,7 +190,9 @@ public static partial class RustEmitter {
     }
 
     /// <summary>The zero of an element type: <c>0</c>, <c>0.0</c>, <c>false</c>.</summary>
-    private RsExpression Zero(IrType element) => TypeName(element) is null ? this.Refuse($"an array of {element}") : Literal(new IrConst(element, 0)) with { Type = null };
+    private RsExpression Zero(IrType element) => element.IsStruct
+      ? new RsCall(new RsPath(this.Type(element) + "::default"), []) { Type = element }
+      : TypeName(element) is null ? this.Refuse($"an array of {element}") : Literal(new IrConst(element, 0)) with { Type = null };
 
     /// <summary>A length as a <c>usize</c>: a constant as it is, the length of an array as <c>len()</c>, a negative one trapping with an overflow, as a new array's does.</summary>
     private RsExpression Length(IrExpr length) {
@@ -215,7 +245,7 @@ public static partial class RustEmitter {
         return;
       }
 
-      into.Add(new RsExpressionStatement(new RsAssign(element, "=", this.Expression(store.Value))));
+      into.Add(new RsExpressionStatement(new RsAssign(element, "=", this.ElementValue(store.Value))));
     }
 
     /// <summary>
@@ -249,6 +279,9 @@ public static partial class RustEmitter {
       statements.Add(new RsExpressionStatement(new RsAssign(element, "=", stepped)));
       return new RsBlockExpression(new RsBlock(statements, step.Postfix ? oldValue : element)) { Type = load.Type };
     }
+
+    /// <summary>The value an element of an array is given: a string as a vector of its own.</summary>
+    private RsExpression ElementValue(IrExpr value) => value.Type.IsString ? this.StringValue(value) : this.Expression(value);
 
     /// <summary>Whether two expressions are the same variable, table or constant.</summary>
     private static bool Same(IrExpr first, IrExpr second) => (first, second) switch {
@@ -338,6 +371,50 @@ public static partial class RustEmitter {
       return new RsPath("_refused");
     }
 
+    /// <summary>The bytes an endian access reads or writes: the width of its number.</summary>
+    private static int Width(IrType type) => type.Kind switch {
+      IrTypeKind.F32 => 4,
+      IrTypeKind.F64 => 8,
+      _ => type.Bits / 8
+    };
+
+    /// <summary>
+    /// <c>u32::from_le_bytes(d[ply_range(i, 4, d.len())].try_into().expect("4 bytes"))</c>: a number
+    /// from the bytes of a <c>u8[]</c>, the lowest or the highest first, the range checked by
+    /// <c>ply_range</c>, which traps with an index out of range as the IR does.
+    /// </summary>
+    private RsExpression EndianLoad(IrIntrinsic load) {
+      var width = Width(load.Type);
+      var array = this.ArrayTarget(load.Arguments[0]);
+      var range = new RsCall(new RsPath(this.RangeHelper()), [this.Expression(load.Arguments[1]), new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])]);
+      var bytes = new RsMethodCall(new RsMethodCall(new RsIndex(array, range), "try_into", []), "expect", [new RsString($"{width} bytes")]);
+      return new RsCall(new RsPath($"{TypeName(load.Type)}::{(load.Op == IrIntrinsicOp.LoadLittle ? "from_le_bytes" : "from_be_bytes")}"), [bytes]) { Type = load.Type };
+    }
+
+    /// <summary>
+    /// <c>let at = ply_range(i, 4, d.len()); d[at].copy_from_slice(&amp;v.to_le_bytes());</c>: the value
+    /// evaluated first, the range checked before any byte is written.
+    /// </summary>
+    private RsExpression EndianStore(IrIntrinsic store) {
+      var statements = new List<RsStatement>();
+      var type = store.Arguments[2].Type;
+      var width = Width(type);
+      var array = this.ArrayTarget(store.Arguments[0], true);
+      var index = this.Expression(store.Arguments[1]);
+      var value = this.Expression(store.Arguments[2]);
+      if (store.Arguments[2] is not (IrLocalRef or IrConst)) {
+        var bound = this.Temporary("value");
+        statements.Add(new RsLet(bound, false, null, value));
+        value = new RsPath(bound) { Type = type };
+      }
+
+      var at = this.Temporary("at");
+      statements.Add(new RsLet(at, false, null, new RsCall(new RsPath(this.RangeHelper()), [index, new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])])));
+      var bytes = new RsMethodCall(this.Receiver(value), store.Op == IrIntrinsicOp.StoreLittle ? "to_le_bytes" : "to_be_bytes", []);
+      statements.Add(new RsExpressionStatement(new RsMethodCall(new RsIndex(array, new RsPath(at)), "copy_from_slice", [new RsReference(false, bytes)])));
+      return new RsBlockExpression(new RsBlock(statements, null));
+    }
+
     /// <summary><c>Array.Fill</c> and <c>Array.Clear</c>: <c>fill</c> with the value or the zero.</summary>
     private RsExpression ArrayFill(IrIntrinsic fill) {
       var array = fill.Arguments[0];
@@ -353,8 +430,13 @@ public static partial class RustEmitter {
       var arguments = new List<RsExpression>();
       for (var index = 0; index < call.Arguments.Count; ++index) {
         var argument = call.Arguments[index];
-        if (!argument.Type.IsArray) {
+        if (!argument.Type.IsArray && !argument.Type.IsString) {
           arguments.Add(this.Expression(argument));
+          continue;
+        }
+
+        if (argument.Type.IsString) {
+          arguments.Add(this.StringArgument(argument));
           continue;
         }
 

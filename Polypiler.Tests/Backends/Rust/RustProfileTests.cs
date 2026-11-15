@@ -136,8 +136,6 @@ public sealed class RustProfileTests {
   public void ModuleState_AndTypes_AreRefusedByName() {
     var problems = RustCrates.Check(RustCrates.Import("static int counter; public static int F() => ++counter;"));
     Assert.That(problems.Select(problem => problem.Message), Has.Some.Contain("'module state (globals)'"));
-    var strings = RustCrates.Check(RustCrates.Import("public static int F(string a) => a.Length;"));
-    Assert.That(strings.Select(problem => problem.Message), Has.Some.Contain("'the type str'"));
   }
 
   [Test]

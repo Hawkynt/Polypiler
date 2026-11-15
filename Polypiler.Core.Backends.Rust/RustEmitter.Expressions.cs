@@ -23,7 +23,7 @@ public static partial class RustEmitter {
   /// </summary>
   public static int Precedence(RsExpression expression) => expression switch {
     RsLiteral literal when literal.Text.StartsWith('-') => 13,
-    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField => 15,
+    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField or RsStructLiteral => 15,
     RsUnary or RsReference => 13,
     RsCast => 12,
     RsBinary binary => RustPrinter.Precedence(binary.Operator),
@@ -91,6 +91,9 @@ public static partial class RustEmitter {
     /// <summary>An IR expression.</summary>
     private RsExpression Expression(IrExpr expression) => expression switch {
       IrConst constant when TypeName(constant.Type) is not null => Literal(constant),
+      IrStrConst or IrConstRef { Type.IsString: true } or IrConditional { Type.IsString: true } => this.StringValue(expression),
+      IrArrayLoad { Array: IrConstRef table, Type.IsString: true } load => this.TableText(table, load.Index),
+      IrIntrinsic operation when StringOperations.IsString(operation.Op) => this.StringOperation(operation),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
       IrConstRef constant when !constant.Type.IsArray && this._constants.TryGetValue(constant.Constant.Name, out var name) => new RsPath(name) { Type = constant.Type },
       IrUnary unary => this.Unary(unary),
@@ -107,9 +110,15 @@ public static partial class RustEmitter {
       IrNewArray or IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } => this.Vector(expression),
       IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy => this.ArrayCopy(copy),
       IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear } fill => this.ArrayFill(fill),
+      IrIntrinsic { Op: IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig } load => this.EndianLoad(load),
+      IrIntrinsic { Op: IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig } store => this.EndianStore(store),
       IrIntrinsic intrinsic => this.Intrinsic(intrinsic),
+      IrStructNew creation when creation.Type.StructType is not null => this.StructNew(creation),
+      IrStructDefault creation when creation.Type.StructType is not null => new RsCall(new RsPath(this.Type(creation.Type) + "::default"), []) { Type = creation.Type },
+      IrFieldLoad load when load.Target.Type.IsStruct => new RsField(this.Place(load.Target, false), this.FieldName(load.Field)) { Type = load.Type },
+      IrStructEquals equality when equality.Left.Type.IsStruct => this.Binary(this.Expression(equality.Left), "==", this.Expression(equality.Right), IrType.Bool),
+      IrStep { Target: IrFieldLoad load } step when load.Target.Type.IsStruct => this.FieldStep(load, step, false),
       IrThrowExpression thrown => this.Throw(thrown.Exception),
-      IrStrConst => this.Refuse("strings"),
       _ => this.Refuse(expression.GetType().Name[2..])
     };
 
@@ -272,10 +281,16 @@ public static partial class RustEmitter {
         return this.Expression(convert.Operand);
 
       // A constant integer is converted here: a cast of a literal is what clippy's unnecessary_cast warns about.
-      if (convert.Operand is IrConst constant && source.IsInteger && target.IsInteger && convert.Contract == IrConversion.Wrap)
+      if (convert.Operand is IrConst constant && source.IsInteger && target.IsInteger
+        && (convert.Contract == IrConversion.Wrap || IrOperators.Number(source, constant.Value) is var number && number >= IrOperators.Minimum(target) && number <= IrOperators.Maximum(target)))
         return Literal(new IrConst(target, IrOperators.Wrap(target, (long)(ulong)IrOperators.Number(source, constant.Value))));
 
       var operand = this.Expression(convert.Operand);
+      // A literal the conversions before made of a constant: the literal of the target type where it fits.
+      if (operand is RsLiteral { Text: var digits } && source.IsInteger && target.IsInteger && Int128.TryParse(digits, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value)
+        && value >= IrOperators.Minimum(target) && value <= IrOperators.Maximum(target))
+        return new RsLiteral(digits) { Type = target };
+
       if (source.IsInteger && target.IsInteger) {
         if (IrOperators.Contains(target, source))
           return new RsCall(new RsPath(TypeName(target)! + "::from"), [Suffixed(operand)]) { Type = target };

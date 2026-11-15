@@ -77,9 +77,21 @@ public static class RustSyntaxReader {
         var value = new StringBuilder();
         ++index;
         while (text[index] != '"') {
-          if (text[index] == '\\')
-            ++index;
-          value.Append(text[index++]);
+          if (text[index] != '\\') {
+            value.Append(text[index++]);
+            continue;
+          }
+
+          var escape = text[++index];
+          if (escape == 'u') {
+            var close = text.IndexOf('}', index);
+            value.Append((char)Convert.ToInt32(text[(index + 2)..close], 16));
+            index = close + 1;
+            continue;
+          }
+
+          value.Append(escape switch { 'n' => '\n', 'r' => '\r', 't' => '\t', '0' => '\0', _ => escape });
+          ++index;
         }
 
         ++index;
@@ -209,6 +221,21 @@ public static class RustSyntaxReader {
             items.Add(this.Item());
           item = new RsInlineModule(name, items);
         }
+      } else if (this.Accept("struct")) {
+        item = this.Struct(visibility);
+      } else if (this.Accept("impl")) {
+        var first = this.TypeText(true);
+        string? trait = null;
+        if (this.Accept("for")) {
+          trait = first;
+          first = this.TypeText();
+        }
+
+        this.Expect("{");
+        var items = new List<RsItem>();
+        while (!this.Accept("}"))
+          items.Add(this.Item());
+        item = new RsImpl(trait, first, items);
       } else if (this.Accept("use")) {
         var path = new StringBuilder();
         while (!this.Is(";"))
@@ -222,12 +249,52 @@ public static class RustSyntaxReader {
       return item with { Docs = docs, Attributes = attributes };
     }
 
+    /// <summary><c>struct Name { fields }</c>, <c>struct Name(fields);</c> or <c>struct Name;</c>.</summary>
+    private RsStruct Struct(string visibility) {
+      var name = this.Identifier();
+      var fields = new List<RsFieldDeclaration>();
+      if (this.Accept(";"))
+        return new RsStruct(name, visibility, fields);
+
+      var tuple = this.Accept("(");
+      if (!tuple)
+        this.Expect("{");
+
+      while (!this.Accept(tuple ? ")" : "}")) {
+        var fieldVisibility = this.Accept("pub") ? "pub" : "";
+        var fieldName = "";
+        if (!tuple) {
+          fieldName = this.Identifier();
+          this.Expect(":");
+        }
+
+        fields.Add(new RsFieldDeclaration(fieldName, fieldVisibility, this.TypeText()));
+        this.Accept(",");
+      }
+
+      if (tuple)
+        this.Expect(";");
+      return new RsStruct(name, visibility, fields);
+    }
+
     private RsFunction Function(string visibility) {
       var name = this.Identifier();
       var generics = this.Is("<") ? this.TypeText() : "";
       this.Expect("(");
       var parameters = new List<RsParameter>();
       while (!this.Accept(")")) {
+        if (this.Is("&") || this.Is("self") || (this.Is("mut") && this.Is("self", 1))) {
+          var receiver = new StringBuilder();
+          if (this.Accept("&"))
+            receiver.Append('&');
+          if (this.Accept("mut"))
+            receiver.Append("mut ");
+          this.Expect("self");
+          parameters.Add(new RsParameter(receiver.Append("self").ToString(), ""));
+          this.Accept(",");
+          continue;
+        }
+
         var parameter = this.Identifier();
         this.Expect(":");
         parameters.Add(new RsParameter(parameter, this.TypeText()));
@@ -246,13 +313,13 @@ public static class RustSyntaxReader {
     /// after <c>;</c>, <c>,</c>, <c>mut</c>, <c>dyn</c>, <c>impl</c>, a lifetime and around <c>-&gt;</c>;
     /// a list of generic parameters, <c>&lt;'a&gt;</c>, ends at its closing bracket.
     /// </summary>
-    private string TypeText() {
+    private string TypeText(bool beforeFor = false) {
       var text = new StringBuilder();
       var depth = 0;
       var generics = this.Is("<");
       while (true) {
         var token = this.Peek();
-        if (depth == 0 && token.Text is "," or ")" or "=" or "{" or ";" or ">" && token.Kind == Kind.Punctuation)
+        if (depth == 0 && (token.Text is "," or ")" or "=" or "{" or ";" or ">" && token.Kind == Kind.Punctuation || beforeFor && token.Text == "for"))
           return text.ToString();
 
         depth += token.Text switch { "[" or "(" or "<" => 1, "]" or ")" or ">" => -1, ">>" => -2, _ => 0 };
@@ -454,7 +521,7 @@ public static class RustSyntaxReader {
       if (this.Is("while") || this.Is("loop") || this.Is("for"))
         return this.Loop(null);
       if (this.Accept("match")) {
-        var scrutinee = this.Expression();
+        var scrutinee = this.Header();
         this.Expect("{");
         var arms = new List<RsMatchArm>();
         while (!this.Accept("}")) {
@@ -496,6 +563,18 @@ public static class RustSyntaxReader {
         var path = new StringBuilder(this.Next().Text);
         while (this.Accept("::"))
           path.Append("::").Append(this.Identifier());
+        if (this.Is("{") && !this._noStruct) {
+          this.Expect("{");
+          var fields = new List<RsFieldValue>();
+          while (!this.Accept("}")) {
+            var field = this.Identifier();
+            fields.Add(new RsFieldValue(field, this.Accept(":") ? this.Expression() : new RsPath(field)));
+            this.Accept(",");
+          }
+
+          return new RsStructLiteral(path.ToString(), fields);
+        }
+
         if (this.Is("!") && this.Is("(", 1)) {
           this.Next();
           return new RsMacro(path.ToString(), this.Arguments(")"));
@@ -535,9 +614,23 @@ public static class RustSyntaxReader {
       return new RsArray(elements);
     }
 
+    /// <summary>Whether a struct literal cannot stand here: in the condition of an <c>if</c> or a <c>while</c>, a scrutinee, an iterator.</summary>
+    private bool _noStruct;
+
+    /// <summary>An expression where a struct literal cannot stand, as The Rust Reference forbids one before a block.</summary>
+    private RsExpression Header() {
+      var outer = this._noStruct;
+      this._noStruct = true;
+      try {
+        return this.Expression();
+      } finally {
+        this._noStruct = outer;
+      }
+    }
+
     private RsIf If() {
       this.Expect("if");
-      var condition = this.Expression();
+      var condition = this.Header();
       var then = this.Block();
       RsExpression? otherwise = null;
       if (this.Accept("else"))
@@ -549,14 +642,14 @@ public static class RustSyntaxReader {
       if (this.Accept("loop"))
         return new RsLoop(label, this.Block());
       if (this.Accept("while")) {
-        var condition = this.Expression();
+        var condition = this.Header();
         return new RsWhile(label, condition, this.Block());
       }
 
       this.Expect("for");
       var pattern = (this.Accept("&") ? "&" : "") + this.Identifier();
       this.Expect("in");
-      var iterator = this.Expression();
+      var iterator = this.Header();
       return new RsFor(label, pattern, iterator, this.Block());
     }
 

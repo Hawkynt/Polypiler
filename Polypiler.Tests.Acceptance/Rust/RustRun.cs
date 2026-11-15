@@ -39,6 +39,7 @@ internal static class RustRun {
   /// <summary>The image type of an IR scalar, or of an array of scalars as a <c>seq</c>.</summary>
   public static ImageType ImageOf(IrType type) => type.Kind switch {
     IrTypeKind.Array => ImageType.Seq(ImageOf(type.Element!)),
+    IrTypeKind.String => ImageType.Utf16,
     IrTypeKind.Bool => ImageType.Bool,
     IrTypeKind.I8 => ImageType.I8,
     IrTypeKind.U8 => ImageType.U8,
@@ -64,6 +65,7 @@ internal static class RustRun {
   /// <summary>An argument as the little-endian bytes of its image; an array as its count and its elements.</summary>
   public static byte[] Bytes(object value) => value switch {
     Array array => [.. BitConverter.GetBytes((uint)array.Length), .. array.Cast<object>().SelectMany(Bytes)],
+    string text => [.. BitConverter.GetBytes((uint)text.Length), .. text.SelectMany(BitConverter.GetBytes)],
     bool truth => [truth ? (byte)1 : (byte)0],
     sbyte number => [unchecked((byte)number)],
     byte number => [number],
@@ -90,6 +92,16 @@ internal static class RustRun {
 
   /// <summary>The value at a position of an image, which moves past it.</summary>
   private static object? Read(IrType type, byte[] image, ref int at) {
+    if (type.IsString) {
+      var length = BitConverter.ToInt32(image, at);
+      var units = new char[length];
+      for (var index = 0; index < length; ++index)
+        units[index] = (char)BitConverter.ToUInt16(image, at + 4 + 2 * index);
+
+      at += 4 + 2 * length;
+      return new string(units);
+    }
+
     if (type.IsArray) {
       var count = BitConverter.ToInt32(image, at);
       at += 4;
@@ -145,7 +157,8 @@ internal static class RustRun {
     var prepared = RustCrates.Prepared(module, profile);
     var files = RustCrates.Emit(module, profile);
     var exports = RustEmitter.Exports(prepared, profile);
-    var functions = prepared.Functions.Where(function => exports.ContainsKey(function.Name)).ToList();
+    var called = calls.Select(call => call.Method).ToHashSet(StringComparer.Ordinal);
+    var functions = prepared.Functions.Where(function => exports.ContainsKey(function.Name) && called.Contains(function.Name)).ToList();
     var index = functions.Select((function, position) => (function.Name, position)).ToDictionary(pair => pair.Name, pair => pair.position, StringComparer.Ordinal);
     var crate = RustEmitter.ModuleName(module.Name, profile);
     var execution = await Runner(checks).ExecuteAsync(RustCrates.Package(files), crate,

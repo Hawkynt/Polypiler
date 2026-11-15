@@ -132,11 +132,35 @@ public sealed class RustHelperInlining : ITargetPass<RustCrate, RustProfile> {
       replacements[parameters[index]] = Precedence(argument) >= 15 ? argument : new RsParenthesized(argument) { Type = argument.Type };
     }
 
-    var substituted = RustSyntaxRewriter.Rewrite(body, node => node is RsPath { Name: var name } && replacements.TryGetValue(name, out var argument) ? argument : node);
+    var substituted = RustSyntaxRewriter.Rewrite(body, node => node switch {
+      RsPath { Name: var name } when replacements.TryGetValue(name, out var argument) => argument,
+      // A literal put in for a parameter that is cast: the literal of the type, which clippy's unnecessary_cast asks for.
+      RsCast { Operand: RsLiteral { Text: var digits } literal, Target: var target } when Fits(digits, target) => literal with { Text = digits },
+      _ => node
+    });
     return RustEmitter.Precedence(substituted) >= 15 ? substituted : new RsParenthesized(substituted) { Type = call.Type };
   }
 
   private static int Precedence(RsExpression expression) => RustEmitter.Precedence(expression);
+
+  /// <summary>Whether an integer literal is a value of an integer type, so that it may stand for its cast.</summary>
+  private static bool Fits(string digits, string type) {
+    if (!System.Int128.TryParse(digits, System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out var value))
+      return false;
+
+    var (low, high) = type switch {
+      "i8" => (sbyte.MinValue, sbyte.MaxValue),
+      "u8" => (byte.MinValue, byte.MaxValue),
+      "i16" => (short.MinValue, short.MaxValue),
+      "u16" => (ushort.MinValue, ushort.MaxValue),
+      "i32" => (int.MinValue, int.MaxValue),
+      "u32" => (uint.MinValue, uint.MaxValue),
+      "i64" => (long.MinValue, long.MaxValue),
+      "u64" or "usize" => ((System.Int128)ulong.MinValue, (System.Int128)ulong.MaxValue),
+      _ => ((System.Int128)1, (System.Int128)0)
+    };
+    return value >= low && value <= high;
+  }
 
 }
 

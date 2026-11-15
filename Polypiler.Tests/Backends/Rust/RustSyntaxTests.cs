@@ -154,7 +154,7 @@ public sealed class RustSyntaxTests {
   }
 
   [TestCase("fn f( {}")]
-  [TestCase("struct S;")]
+  [TestCase("trait T {}")]
   [TestCase("fn f() { a b }")]
   [TestCase("fn f() { @ }")]
   public void TextOutsideTheSubset_IsRefused(string text) => Assert.Throws<FormatException>(() => RustSyntaxReader.Read(text));

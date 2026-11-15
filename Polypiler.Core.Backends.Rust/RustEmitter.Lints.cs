@@ -19,7 +19,8 @@ public static partial class RustEmitter {
   /// comparison of an unsigned value with zero (<c>absurd_extreme_comparisons</c> of clippy and
   /// <c>unused_comparisons</c> of rustc), a range test written out (<c>manual_range_contains</c>), an
   /// ordering of floating-point numbers negated (<c>neg_cmp_op_on_partial_ord</c>, <c>nonminimal_bool</c>),
-  /// a constant close to π or e (<c>approx_constant</c>), a loop that never ends (<c>empty_loop</c>) and
+  /// a constant close to π or e (<c>approx_constant</c>), a loop that never ends (<c>empty_loop</c>), a
+  /// value copied to a variable and straight back (<c>almost_swapped</c>) and
   /// a signature of the source with more than seven parameters (<c>too_many_arguments</c>). The list is
   /// closed; no group and no <c>clippy::all</c> is ever allowed.
   /// </summary>
