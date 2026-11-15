@@ -1,0 +1,1 @@
+{"source":"\u0022\u0022\u0022Only a docstring.\u0022\u0022\u0022\n","dump":{"format":1,"module":{"_":"Module","body":[{"_":"Expr","line":1,"col":1,"endLine":1,"endCol":24,"value":{"_":"Constant","line":1,"col":1,"endLine":1,"endCol":24,"kind":"str","value":"Only a docstring."}}],"type_ignores":[]}}}
