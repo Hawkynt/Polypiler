@@ -1019,7 +1019,7 @@ codes:
     rule: rust.conditional-binding
     area: rust
     owner: "#463"
-    surfaces: standard error of polypiler translate --from rust, for if let, while let and let ... else
+    surfaces: standard error of polypiler translate --from rust, for let chains (if let ... && ...)
   - code: PLY1511
     severity: error
     exit: UnsupportedConstruct
@@ -1028,7 +1028,7 @@ codes:
     rule: rust.patterns
     area: rust
     owner: "#463"
-    surfaces: standard error of polypiler translate --from rust, for @ bindings, slice, struct, enum, reference and const block patterns and a match on a float
+    surfaces: standard error of polypiler translate --from rust, for @ and ref bindings, const block patterns, a binding in an or-pattern, a variable in a range pattern, a &mut binding into an Option or a Result and a match on a float
   - code: PLY1512
     severity: error
     exit: UnsupportedConstruct
@@ -1109,7 +1109,7 @@ codes:
     rule: rust.functions
     area: rust
     owner: "#464"
-    surfaces: standard error of polypiler translate --from rust, for generic, unsafe and extern functions, where clauses, parameter patterns and nested items
+    surfaces: standard error of polypiler translate --from rust, for generic, unsafe, extern and variadic functions, where clauses, impl Trait, a typed self, a function without a body and nested items
   - code: PLY1531
     severity: error
     exit: UnsupportedConstruct

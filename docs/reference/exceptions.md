@@ -185,8 +185,11 @@ No JavaScript level a profile targets has Explicit Resource Management, so `try`
 
 **Frontend.** A Rust panic has no type and no handler in the imported subset; it becomes the throw of the class of
 its kind: an arithmetic overflow, a shift amount out of range, `MIN / -1` and `MIN % -1`
-`OverflowException`; a zero divisor `DivideByZeroException`; `unwrap()` of a `None`, `expect("msg")`
-and `step_by(0)` `InvalidOperationException` with Rust's message; `clamp` with `min > max` the
+`OverflowException`; a zero divisor `DivideByZeroException`; an index or a range outside a slice, an
+array or a `Vec` `IndexOutOfRangeException`; `unwrap()` of a `None` or an `Err`, `expect("msg")`,
+`step_by(0)`, `assert!` and its relatives, `panic!`, `todo!`, `unimplemented!`, `unreachable!` and
+unequal lengths of `copy_from_slice` `InvalidOperationException` with Rust's message; `clamp` with
+`min > max` the
 `Clamp` trap (`ArithmeticException`). The class is compared with rustc's panic, the message is not
 ([the Rust frontend](../architecture/RUST-FRONTEND.md)).
 
