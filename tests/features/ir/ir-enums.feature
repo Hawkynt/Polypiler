@@ -36,7 +36,7 @@ Feature: Enums as named integer types
   Scenario: An unknown name traps as in .NET
     Given the C# method "public static int F(string s) => (int)(Perm)System.Enum.Parse(typeof(Perm), s);" of "enums/Perm.cs"
     When it is translated to JavaScript
-    Then F(" Read ") returns 1, F("Read, Write") returns 3 and F("read") traps with "invalid format"
+    Then F(" Read ") returns 1, F("Read, Write") returns 3 and F("read") traps with "unknown name"
 
   Scenario: An enum object with a computed key is refused
     Given the JavaScript module "const C = Object.freeze({ A: 0, B: 1 }); export function f(k) { return C[k]; }"
