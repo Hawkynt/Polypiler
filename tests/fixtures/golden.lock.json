@@ -2217,6 +2217,16 @@
       "bytes": 144194
     },
     {
+      "path": "tests/fixtures/prototype/rust/recorded/edges.panic.txt",
+      "sha256": "8e6cd92e25b9851b776e0e2ce802e463e52cfae0019a667db411a91375bd0e70",
+      "bytes": 1625
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/edges.wrap.txt",
+      "sha256": "a4fb62b84ef14cee7f8dd2dff5051799b61a17fbad3d557d1255b834491489fd",
+      "bytes": 1569
+    },
+    {
       "path": "tests/fixtures/prototype/rust/recorded/functions.panic.txt",
       "sha256": "55762fa4d0d85d6365d6c266e86dbcd42cd0df31de433f0238b0e381db34e9d3",
       "bytes": 1161
