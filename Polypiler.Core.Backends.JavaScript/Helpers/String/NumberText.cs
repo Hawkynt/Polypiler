@@ -9,7 +9,7 @@ namespace Polypiler.Core.Backends.JavaScript;
 /// <c>String</c> laid out as .NET lays them out, the shortest digits of a binary32 by <c>toPrecision</c>
 /// (a tie to the even digit, as .NET's shortest digits have it), the exact decimal digits of a double
 /// for <c>"F&lt;n&gt;"</c> (a tie to the even digit), and the grammar of <c>Parse</c> with the
-/// invariant culture, which throws the <c>RangeError</c> of the IR's traps; the digits of a radix,
+/// invariant culture, which throws the <c>FormatError</c> and <c>OverflowError</c> of the IR's traps (both <c>RangeError</c>s); the digits of a radix,
 /// also of the halves of a 64-bit integer below ECMAScript 2020.
 /// </summary>
 internal static partial class JavaScriptHelpers {
@@ -179,8 +179,8 @@ internal static partial class JavaScriptHelpers {
         while (end > at && white.indexOf(s.charAt(end - 1)) >= 0) --end;
         @const negative = at < end && s.charAt(at) === "-";
         if (at < end && (negative || s.charAt(at) === "+")) ++at;
-        if (at === end) throw new RangeError("invalid format");
-        for (@let k = at; k < end; ++k) if (s.charAt(k) < "0" || s.charAt(k) > "9") throw new RangeError("invalid format");
+        if (at === end) throw new FormatError("invalid format");
+        for (@let k = at; k < end; ++k) if (s.charAt(k) < "0" || s.charAt(k) > "9") throw new FormatError("invalid format");
         return (negative ? "-" : "") + s.substring(at, end);
       }
       """),
@@ -226,7 +226,7 @@ internal static partial class JavaScriptHelpers {
             at = mark;
           }
         }
-        if (count === 0 || at < end) throw new RangeError("invalid format");
+        if (count === 0 || at < end) throw new FormatError("invalid format");
         @const value = +((negative ? "-" : "") + (digits === "" ? "0" : digits) + "e" + scale);
         if (!single) return value;
         @const near = @fround(value);
@@ -245,7 +245,7 @@ internal static partial class JavaScriptHelpers {
       function $parseNetInt(s, low, high) {
         @const digits = $netDigits(s);
         @const value = +digits + 0;
-        if (value < low || value > high) throw new RangeError("integer overflow");
+        if (value < low || value > high) throw new OverflowError("integer overflow");
         return value;
       }
       """),
@@ -253,7 +253,7 @@ internal static partial class JavaScriptHelpers {
       ? """
         function $parseNet64(s, signed) {
           @const value = BigInt($netDigits(s));
-          if (signed ? value < -9223372036854775808n || value > 9223372036854775807n : value < 0n || value > 18446744073709551615n) throw new RangeError("integer overflow");
+          if (signed ? value < -9223372036854775808n || value > 9223372036854775807n : value < 0n || value > 18446744073709551615n) throw new OverflowError("integer overflow");
           return value;
         }
         """
@@ -273,7 +273,7 @@ internal static partial class JavaScriptHelpers {
             if (carry !== 0) overflow = true;
           }
           @const magnitude = { hi: w[3] * 65536 + w[2], lo: w[1] * 65536 + w[0] };
-          if (overflow || (signed ? magnitude.hi > 2147483648 || magnitude.hi === 2147483648 && (magnitude.lo !== 0 || !negative) : negative && (magnitude.hi !== 0 || magnitude.lo !== 0))) throw new RangeError("integer overflow");
+          if (overflow || (signed ? magnitude.hi > 2147483648 || magnitude.hi === 2147483648 && (magnitude.lo !== 0 || !negative) : negative && (magnitude.hi !== 0 || magnitude.lo !== 0))) throw new OverflowError("integer overflow");
           return negative ? $neg64(magnitude) : magnitude;
         }
         """)

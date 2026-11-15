@@ -10,7 +10,7 @@ namespace Polypiler.Core.IR;
 /// <c>Exception</c> ← <c>IndexOutOfRangeException</c>, <c>NullReferenceException</c>,
 /// <c>InvalidCastException</c>, <c>InvalidOperationException</c>;
 /// <c>Exception</c> ← <c>ArgumentException</c> ← <c>ArgumentOutOfRangeException</c>;
-/// <c>Exception</c> ← <c>KeyNotFoundException</c>.
+/// <c>Exception</c> ← <c>KeyNotFoundException</c>, <c>FormatException</c>.
 /// <para>
 /// They are classes (<see cref="IrClassType"/>) that no module declares and every module may name: a
 /// class of a module derives from one of them, a catch clause names one, and every trap of the IR is
@@ -40,9 +40,10 @@ public static class IrExceptionClass {
     ArgumentException = Library("ArgumentException", Exception, "Value does not fall within the expected range.");
     ArgumentOutOfRangeException = Library("ArgumentOutOfRangeException", ArgumentException, "Specified argument was out of the range of valid values.");
     KeyNotFoundException = Library("KeyNotFoundException", Exception, "The given key was not present in the dictionary.");
+    FormatException = Library("FormatException", Exception, "One of the identified items was in an invalid format.");
     All = [
       Exception, ArithmeticException, DivideByZeroException, OverflowException, IndexOutOfRangeException, NullReferenceException,
-      InvalidCastException, InvalidOperationException, ArgumentException, ArgumentOutOfRangeException, KeyNotFoundException
+      InvalidCastException, InvalidOperationException, ArgumentException, ArgumentOutOfRangeException, KeyNotFoundException, FormatException
     ];
   }
 
@@ -72,6 +73,9 @@ public static class IrExceptionClass {
 
   /// <summary>The class of <see cref="IrTrap.KeyNotFound"/>.</summary>
   public static IrClassType KeyNotFoundException { get; }
+
+  /// <summary>The class of <see cref="IrTrap.InvalidFormat"/>: a text that is no number of the grammar it is parsed by.</summary>
+  public static IrClassType FormatException { get; }
 
   /// <summary>An argument a method does not accept; the class of <see cref="IrTrap.DuplicateKey"/>.</summary>
   public static IrClassType ArgumentException { get; }
@@ -105,6 +109,7 @@ public static class IrExceptionClass {
     IrTrap.MissingValue or IrTrap.CollectionModified => InvalidOperationException,
     IrTrap.KeyNotFound => KeyNotFoundException,
     IrTrap.DuplicateKey => ArgumentException,
+    IrTrap.InvalidFormat => FormatException,
     _ => throw new ArgumentOutOfRangeException(nameof(trap), trap, "The trap has no exception class.")
   };
 

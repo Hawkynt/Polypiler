@@ -56,8 +56,8 @@ internal sealed class ExceptionImportTests {
   }
 
   /// <summary>Test design 10: a library exception class outside the table, a constructor that takes no message, a member other than Message and InnerException.</summary>
-  [TestCase("public static class C { public static int F() { try { return 1; } catch (System.FormatException) { return 2; } } }", "the library exception class FormatException")]
-  [TestCase("public static class C { public static void F() { throw new System.FormatException(); } }", "the library exception class FormatException")]
+  [TestCase("public static class C { public static int F() { try { return 1; } catch (System.TimeoutException) { return 2; } } }", "the library exception class TimeoutException")]
+  [TestCase("public static class C { public static void F() { throw new System.TimeoutException(); } }", "the library exception class TimeoutException")]
   [TestCase("public static class C { public static void F() { throw new System.ArgumentOutOfRangeException(\"p\"); } }", "the constructor ArgumentOutOfRangeException(String)")]
   [TestCase("public static class C { public static string F(System.Exception e) => e.StackTrace; }", "Exception.StackTrace")]
   [TestCase("public sealed class X : System.Exception { public string F() => this.Source; } public static class C { }", "Exception.Source")]

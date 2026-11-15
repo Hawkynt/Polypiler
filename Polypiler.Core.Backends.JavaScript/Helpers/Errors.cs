@@ -26,7 +26,8 @@ internal static partial class JavaScriptHelpers {
     ("ArgumentOutOfRangeError", "RangeError"),
     ("InvalidCastError", "TypeError"),
     ("InvalidOperationError", "Error"),
-    ("KeyNotFoundError", "Error")
+    ("KeyNotFoundError", "Error"),
+    ("FormatError", "RangeError")
   ];
 
   /// <summary>The names of the error classes, in the order a module declares them; no name of the module may take one.</summary>
