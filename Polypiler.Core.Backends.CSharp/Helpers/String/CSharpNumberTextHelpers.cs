@@ -520,6 +520,7 @@ internal static class CSharpNumberTextHelpers {
     }
     """));
 
-  private static string[] Lines(string text) => text.Split('\n');
+  // A raw string literal has the line ends of the working copy, CR LF on Windows: a helper is written with LF everywhere.
+  private static string[] Lines(string text) => text.Replace("\r\n", "\n").Split('\n');
 
 }
