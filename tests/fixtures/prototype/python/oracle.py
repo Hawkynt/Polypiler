@@ -37,6 +37,8 @@ def main():
     sys.path.insert(0, os.path.dirname(os.path.abspath(request["module"])))
     spec = importlib.util.spec_from_file_location("fixture", request["module"])
     module = importlib.util.module_from_spec(spec)
+    # A dataclass of a module with postponed annotations looks its module up by name, as an import registers it.
+    sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     for name, arguments in request["calls"]:
         try:
