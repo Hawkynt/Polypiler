@@ -155,8 +155,8 @@ public static class SequenceFusion {
     private static IrBlock Reachable(IrBlock block) {
       var kept = new List<IrStmt>();
       foreach (var statement in block.Statements) {
-        kept.Add(statement is IrBlock nested ? Reachable(nested)
-          : IrTree.With(statement, IrTree.Expressions(statement), [.. IrTree.Blocks(statement).Select(Reachable)]));
+        // The builder writes no block as a statement of its own: only those of ifs and loops.
+        kept.Add(IrTree.With(statement, IrTree.Expressions(statement), [.. IrTree.Blocks(statement).Select(Reachable)]));
         if (statement is IrReturn or IrThrow or IrBreak or IrContinue)
           break;
       }

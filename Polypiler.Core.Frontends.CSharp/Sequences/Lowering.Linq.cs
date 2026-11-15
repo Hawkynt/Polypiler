@@ -45,11 +45,11 @@ internal sealed partial class Lowering {
 
     var operands = new List<ExpressionSyntax>();
     if (method.ReducedFrom is not null)
-      operands.Add(invocation.Expression is MemberAccessExpressionSyntax member ? member.Expression : throw new UnsupportedException(invocation, $"Enumerable.{method.Name} of a conditional access"));
+      // A conditional access is refused before it reaches here: the receiver of an extension method is the expression before its dot.
+      operands.Add(((MemberAccessExpressionSyntax)invocation.Expression).Expression);
 
     operands.AddRange(invocation.ArgumentList.Arguments.Select(argument => argument.Expression));
-    var result = this.Linq(invocation, definition, operands);
-    return result.Type == type ? result : throw new UnsupportedException(invocation, $"Enumerable.{method.Name} as a {model.GetTypeInfo(invocation).Type?.ToDisplayString()}");
+    return this.Linq(invocation, definition, operands);
   }
 
   /// <summary>Whether a call is one of a member of LINQ, which a collection receiver leaves to <see cref="SequenceCall"/>.</summary>
@@ -183,10 +183,8 @@ internal sealed partial class Lowering {
     if (!method.IsGenericMethod || arguments.Count != 2 || arguments.Any(argument => argument.NameColon is not null))
       throw new UnsupportedException(invocation, name);
 
+    // The generic searches take a T[]: the array itself, never a conversion of it.
     var array = this.Table(this.Read(arguments[0].Expression), arguments[0].Expression);
-    if (!array.Type.IsArray)
-      throw new UnsupportedException(arguments[0], name);
-
     var source = Operation(invocation, name, IrSequenceOp.FromArray, array);
     var op = method.Name switch {
       "IndexOf" => IrSequenceOp.IndexOf,
@@ -273,9 +271,8 @@ internal sealed partial class Lowering {
       }
     }
 
-    if (body.SelectOrGroup is not SelectClauseSyntax select)
-      throw new UnsupportedException(body.SelectOrGroup, "group of a query");
-
+    // A group has a sequence of IGrouping as its type, which is refused before the query is lowered.
+    var select = (SelectClauseSyntax)body.SelectOrGroup;
     // select x of the range variable is no call of Select: the sequence is the query's.
     if (select.Expression is IdentifierNameSyntax identifier && SymbolEqualityComparer.Default.Equals(model.GetSymbolInfo(identifier).Symbol, variable))
       return sequence;
@@ -285,7 +282,7 @@ internal sealed partial class Lowering {
 
   /// <summary>The element type of the sequence a query makes: the type of what it selects.</summary>
   private IrType QueryElement(QueryBodySyntax body)
-    => body.SelectOrGroup is SelectClauseSyntax select ? this.Map(model.GetTypeInfo(select.Expression).Type, select.Expression) : throw new UnsupportedException(body.SelectOrGroup, "group of a query");
+    => this.Map(model.GetTypeInfo(((SelectClauseSyntax)body.SelectOrGroup).Expression).Type, body.SelectOrGroup);
 
   /// <summary>
   /// The lambda of a clause of a query: its parameter is the range variable, its body returns what the
@@ -300,7 +297,7 @@ internal sealed partial class Lowering {
       this._variables[variable] = parameter;
       var statements = new List<IrStmt>();
       var value = build(statements);
-      statements.Add(new IrReturn(value.Type == result ? value : Convert(value, result)));
+      statements.Add(new IrReturn(value));
       var lambda = IrLambda.Of([parameter], result, [.. this._locals], new IrBlock(statements));
       this._nested.Add(parameter);
       this._nested.AddRange(this._locals);

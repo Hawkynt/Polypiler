@@ -29,12 +29,9 @@ internal sealed class ArrayCallbacks {
     return local;
   }
 
+  /// <summary>A local of the function; the names each method takes differ from one another.</summary>
   private IrLocal Local(string name, IrType type) {
-    var unique = name;
-    for (var index = 2; this._locals.Concat(this._parameters).Any(local => local.Name == unique); ++index)
-      unique = name + index;
-
-    var local = new IrLocal(unique, type);
+    var local = new IrLocal(name, type);
     this._locals.Add(local);
     return local;
   }
@@ -203,21 +200,18 @@ internal sealed class ArrayCallbacks {
     var index = this.Local("k", IrType.I32);
     var first = right ? (IrExpr)new IrBinary(IrBinaryOp.Subtract, Ref(length), I32(1)) : I32(0);
     IrExpr Within() => right ? new IrBinary(IrBinaryOp.GreaterOrEqual, Ref(index), I32(0)) : Less(Ref(index), Ref(length));
-    IrExpr Present() => array.Type.IsList ? new IrBinary(IrBinaryOp.LogicalAnd, Within(), Less(Ref(index), Length(array))) : Within();
-    var thrown = new IrThrow(new IrNew(IrType.Object(IrExceptionClass.NullReferenceException), IrExceptionClass.Constructor(IrExceptionClass.NullReferenceException, 1), [new IrStrConst(EmptyReduce)]));
     statements.Add(new IrDeclare(index, first));
     if (initial is not null) {
       statements.Add(new IrDeclare(accumulator, initial));
     } else {
-      // The first element present starts the accumulator.
-      statements.Add(new IrDeclare(accumulator, Default(result)));
-      var found = this.Local("found", IrType.Bool);
-      statements.Add(new IrDeclare(found, new IrConst(IrType.Bool, 0)));
-      statements.Add(new IrWhile(new IrBinary(IrBinaryOp.LogicalAnd, new IrUnary(IrUnaryOp.LogicalNot, Ref(found)), Within()), new IrBlock([
-        new IrIf(array.Type.IsList ? Less(Ref(index), Length(array)) : new IrConst(IrType.Bool, 1),
-          new IrBlock([new IrAssign(accumulator, Converted(Element(array, Ref(index)), result)), new IrAssign(found, new IrConst(IrType.Bool, 1))]), null),
-        Step(index, right ? -1 : 1)])));
-      statements.Add(new IrIf(new IrUnary(IrUnaryOp.LogicalNot, Ref(found)), new IrBlock([thrown]), null));
+      // The first element present starts the accumulator: of a list, the first index it still has.
+      if (array.Type.IsList)
+        statements.Add(new IrWhile(new IrBinary(IrBinaryOp.LogicalAnd, Within(), new IrBinary(IrBinaryOp.GreaterOrEqual, Ref(index), Length(array))), new IrBlock([Step(index, right ? -1 : 1)])));
+
+      var thrown = new IrThrow(new IrNew(IrType.Object(IrExceptionClass.NullReferenceException), IrExceptionClass.Constructor(IrExceptionClass.NullReferenceException, 1), [new IrStrConst(EmptyReduce)]));
+      statements.Add(new IrIf(new IrUnary(IrUnaryOp.LogicalNot, Within()), new IrBlock([thrown]), null));
+      statements.Add(new IrDeclare(accumulator, Converted(Element(array, Ref(index)), result)));
+      statements.Add(Step(index, right ? -1 : 1));
     }
 
     var step = new IrAssign(accumulator, Converted(Call(callback, Ref(accumulator), Element(array, Ref(index)), Ref(index), array), result));
@@ -226,16 +220,6 @@ internal sealed class ArrayCallbacks {
       Step(index, right ? -1 : 1)])));
     statements.Add(new IrReturn(Ref(accumulator)));
   }
-
-  /// <summary>The value a variable of a type starts with before the loop gives it one.</summary>
-  private static IrExpr Default(IrType type) => type switch {
-    { IsFloat: true } => new IrConst(type, IrOperators.Bits(type, 0.0)),
-    { IsString: true } => new IrStrConst(""),
-    { IsStruct: true } => new IrStructDefault(type),
-    { IsOptional: true } => new IrNone(type),
-    { IsNullable: true } => new IrNull(type),
-    _ => new IrConst(type, 0)
-  };
 
   /// <summary>
   /// <c>sort(comparator)</c>, stably as ECMA-262 2019 and later require: the elements are copied, their

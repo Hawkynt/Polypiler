@@ -75,7 +75,11 @@ internal sealed partial class Lowering {
     if (signature.Parameters.Count > maximum)
       throw this.Unsupported(given, $"a callback of {method} with more than {maximum} parameters");
 
-    var result = method == "forEach" ? IrType.Void : types.Of(call).Ir is { IsStorable: true } ir ? ir : throw this.Unsupported(call, $"the value of {types.Text(call)}");
+    var result = method == "forEach" ? IrType.Void : this.Storable(types.Of(call), call);
+    // find yields undefined where nothing matches, which the IR has for a number and a reference only.
+    if (method == "find" && !result.IsOptional && !result.IsNullable)
+      throw this.Unsupported(call, $"find of {receiver.Describe()}, whose undefined the IR has no value for");
+
     this.CheckCallback(method, given, source.Type, signature, result);
     if (method == "sort") {
       this.CheckComparator(callback, given);

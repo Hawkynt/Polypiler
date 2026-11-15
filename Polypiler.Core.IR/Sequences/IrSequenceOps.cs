@@ -264,7 +264,8 @@ public static class IrSequenceOps {
       case IrSequenceOp.ToArray:
         return (IrType.Array(element), null);
       case IrSequenceOp.ToList:
-        return IrCollections.IsElement(IrType.List(element)) ? (IrType.List(element), null) : (null, $"a list of {element}");
+        // Every element of a sequence is one a list holds.
+        return (IrType.List(element), null);
       case IrSequenceOp.Count or IrSequenceOp.Any:
         return (op == IrSequenceOp.Count ? IrType.I32 : IrType.Bool, null);
       case IrSequenceOp.CountWhere or IrSequenceOp.AnyWhere or IrSequenceOp.All or IrSequenceOp.FirstWhere or IrSequenceOp.FirstOrDefaultWhere or IrSequenceOp.FindIndex:

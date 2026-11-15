@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Acornima.Ast;
 
@@ -11,6 +12,22 @@ namespace Polypiler.Core.Frontends.JavaScript.Inference;
 /// result of its callback.
 /// </summary>
 internal sealed partial class TypeInference {
+
+  /// <summary>The calls of map, filter and flatMap whose new array changes its length: each is a list (#1328).</summary>
+  private readonly HashSet<CallExpression> _grownCalls = [];
+
+  /// <summary>The new array of a call of map, filter or flatMap: a list where the place it goes to is one.</summary>
+  private JsType Made(CallExpression call, JsType element) => this._grownCalls.Contains(call) ? JsType.ListOf(element) : JsType.ArrayOf(element, true);
+
+  /// <summary>Makes the new array of a call of map, filter or flatMap a list; says whether it was not one yet.</summary>
+  private bool GrowCall(Node source)
+    => source is CallExpression call && this.CallbackCall(call) is (_, "map" or "filter" or "flatMap") && this._grownCalls.Add(call) && this.Forget();
+
+  /// <summary>Forgets every type computed from the old types; always true.</summary>
+  private bool Forget() {
+    this._known.Clear();
+    return true;
+  }
 
   /// <summary>The methods of an array that call a function given as their first argument.</summary>
   public static bool IsCallbackMethod(string method)
@@ -41,9 +58,9 @@ internal sealed partial class TypeInference {
       return null;
 
     return method switch {
-      "map" => JsType.ArrayOf(this.CallbackResult(call), true),
-      "filter" => JsType.ArrayOf(array.Element!, true),
-      "flatMap" => JsType.ArrayOf(this.CallbackResult(call) is { Kind: JsKind.Array, Element: { } inner } ? inner : JsType.Unknown, true),
+      "map" => this.Made(call, this.CallbackResult(call)),
+      "filter" => this.Made(call, array.Element!),
+      "flatMap" => this.Made(call, this.CallbackResult(call) is { Kind: JsKind.Array, Element: { } inner } ? inner : JsType.Unknown),
       "forEach" => JsType.UndefinedValue,
       "some" or "every" => JsType.Boolean,
       "find" => JsType.Join(Read(array), JsType.UndefinedValue),

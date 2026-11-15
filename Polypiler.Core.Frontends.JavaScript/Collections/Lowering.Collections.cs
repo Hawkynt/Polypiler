@@ -100,7 +100,9 @@ internal sealed partial class Lowering {
       return true;
 
     switch (expression) {
-      case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } member } call when this.ListOf(member.Object) is { } list:
+      // A method with a callback stands as a statement as any call does (#1329).
+      case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } member } call when this.ListOf(member.Object) is { } list
+          && !TypeInference.IsCallbackMethod(method):
         this.ListChange(call, method, member, list, into);
         return true;
       case AssignmentExpression { Left: MemberExpression { Computed: false, Property: Identifier { Name: "length" } } length } assignment when this.ListOf(length.Object) is { } list:

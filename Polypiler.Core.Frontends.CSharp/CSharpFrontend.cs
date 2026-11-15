@@ -75,6 +75,7 @@ public static class CSharpFrontend {
     Loaded(typeof(System.Linq.ParallelEnumerable).Assembly),
     Loaded(typeof(System.Linq.Queryable).Assembly),
     Loaded(typeof(System.Linq.Expressions.Expression).Assembly),
+    Loaded(typeof(System.Collections.Concurrent.Partitioner).Assembly),
     Loaded(System.Reflection.Assembly.Load("System.Runtime"))
   ]);
 

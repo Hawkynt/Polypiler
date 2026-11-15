@@ -67,7 +67,7 @@ internal static class LinqFixtures {
     yield return Call("Stable", new[] { 2, 1, 2, 1 }, new[] { 10, 20, 30, 40 });
     yield return Call("SortedDoubles", new[] { 3, double.NaN, 1, -0.0, 0.0 });
     yield return Call("Descending", new[] { 12, 21, 11, 22, 3 });
-    foreach (var a in new[] { new[] { 1, 2, 3, 4 }, [], new[] { 5 }, new[] { 2, 4 } }) {
+    foreach (var a in new[] { new[] { 1, 2, 3, 4 }, [], new[] { 5 }, new[] { 2, 4 }, new[] { -1, 2 } }) {
       yield return Call("FirstOf", a);
       yield return Call("FirstEven", a);
       yield return Call("Terminals", a);
