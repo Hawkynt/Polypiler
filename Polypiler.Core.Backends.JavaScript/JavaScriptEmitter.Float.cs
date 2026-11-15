@@ -53,7 +53,7 @@ public static partial class JavaScriptEmitter {
   /// <param name="capabilities">The capability table; the standard one when <see langword="null"/>.</param>
   /// <returns>The module to emit.</returns>
   public static IrModule Legalize(IrModule module, System.Func<IrModule> implementations, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities = null)
-    => FloatLegalization.Lower(module, implementations, intrinsic => Writes(intrinsic, profile, mode, capabilities));
+    => FloatLegalization.Lower(SequenceFusion.Run(module), implementations, intrinsic => Writes(intrinsic, profile, mode, capabilities));
 
   private sealed partial class Writer {
 

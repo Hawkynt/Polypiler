@@ -115,6 +115,7 @@ public static partial class JavaScriptEmitter {
   private static (TargetPipelineResult<JsProgram> Result, IReadOnlyList<HelperText> Helpers) Built(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes) {
     ArgumentNullException.ThrowIfNull(passes);
     var table = capabilities ?? JavaScriptCapabilities.Standard;
+    module = SequenceFusion.Run(module);
     var problems = IrVerifier.Verify(module);
     var writer = new Writer(profile, table, mode) { Naming = problems.Count > 0 ? new([], new HashSet<string>(), true) : Named(module, profile, table, mode) };
     var program = problems.Count > 0 ? null : writer.Module(module);
@@ -153,6 +154,7 @@ public static partial class JavaScriptEmitter {
   /// Empty when the module can be emitted.
   /// </returns>
   public static IReadOnlyList<Diagnostic> Check(IrModule module, JavaScriptProfile profile, JavaScriptCapabilities? capabilities = null) {
+    module = SequenceFusion.Run(module);
     var problems = IrVerifier.Verify(module);
     if (problems.Count > 0)
       return problems;
