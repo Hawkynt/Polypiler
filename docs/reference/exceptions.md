@@ -107,6 +107,8 @@ The interpreter tests the clauses in a .NET exception filter, which gives the CL
   of an `Error`; where a catch reads it or it can leave the function it is refused with `PLY1107`
   ("a thrown value that is not an Error reaches {place}, which observes it").
 
+- **Rust:** see [Rust](#rust), which covers both directions.
+
 ## Forms per profile
 
 | Construct | C# below 6 (`net2.0`, `net3.5`) | C# 6 (`net4.6`) | C# 7 and later |
@@ -181,7 +183,14 @@ No JavaScript level a profile targets has Explicit Resource Management, so `try`
 
 ## Rust
 
-Generated Rust has no exception objects: a trap is a panic whose message is the name of the IR trap,
+**Frontend.** A Rust panic has no type and no handler in the imported subset; it becomes the throw of the class of
+its kind: an arithmetic overflow, a shift amount out of range, `MIN / -1` and `MIN % -1`
+`OverflowException`; a zero divisor `DivideByZeroException`; `unwrap()` of a `None`, `expect("msg")`
+and `step_by(0)` `InvalidOperationException` with Rust's message; `clamp` with `min > max` the
+`Clamp` trap (`ArithmeticException`). The class is compared with rustc's panic, the message is not
+([the Rust frontend](../architecture/RUST-FRONTEND.md)).
+
+**Backend.** Generated Rust has no exception objects: a trap is a panic whose message is the name of the IR trap,
 in every build mode, and a crate has no handler for it. The verification classifies the panic by its
 first line (`RustTraps`), which also reads the messages of Rust's own panics.
 

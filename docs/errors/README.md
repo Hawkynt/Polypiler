@@ -136,6 +136,29 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1107](PLY1107.md) | error | 3 (UnsupportedConstruct) | `a thrown value that is not an Error reaches <place>, which observes it` | #1323 |
 | [PLY1152](PLY1152.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in JavaScript profile '<profile>'` | PROTOTYPE |
 
+## PLY1500–PLY1599 · rust
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY1500](PLY1500.md) | error | 4 (InvalidSource) | `<E####: the error, or the denied lint and its name>` | #466 |
+| [PLY1501](PLY1501.md) | error | 3 (UnsupportedConstruct) | `type '<type>' is not supported by the Rust frontend` | #466 |
+| [PLY1502](PLY1502.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Rust frontend` | #466 |
+| [PLY1503](PLY1503.md) | error | 2 (UsageError) | `the source profile does not set 'overflowChecks' (panic or wrap)` | #466 |
+| [PLY1504](PLY1504.md) | error | 4 (InvalidSource) | `the type of '<name>' could not be resolved` | #466 |
+| [PLY1510](PLY1510.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Rust frontend` | #463 |
+| [PLY1511](PLY1511.md) | error | 3 (UnsupportedConstruct) | `pattern '<pattern>' is not supported` | #463 |
+| [PLY1512](PLY1512.md) | error | 3 (UnsupportedConstruct) | `iterating over '<iterable>' is not supported; only integer ranges with rev() and step_by() are` | #463 |
+| [PLY1513](PLY1513.md) | error | 3 (UnsupportedConstruct) | `'<construct>' requires coroutine lowering, which the Rust frontend does not provide` | #463 |
+| [PLY1530](PLY1530.md) | error | 3 (UnsupportedConstruct) | `function form '<form>' is not supported` | #464 |
+| [PLY1531](PLY1531.md) | error | 3 (UnsupportedConstruct) | `macro '<name>!' is not supported` | #464 |
+| [PLY1533](PLY1533.md) | error | 3 (UnsupportedConstruct) | `attribute '<name>' is not supported` | #464 |
+| [PLY1550](PLY1550.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be expressed in Rust profile '<profile>' (in <place>)` | #461 |
+| [PLY1560](PLY1560.md) | error | 3 (UnsupportedConstruct) | `exception region in <function> cannot be emitted under the trap policy 'panic': 'exception handling' is not supported by the Rust backend` | #458 |
+| [PLY1574](PLY1574.md) | error | 3 (UnsupportedConstruct) | `exported names '<first>' and '<second>' both map to '<rust name>'` | #459 |
+| [PLY1591](PLY1591.md) | error | 6 (TargetBuildFailure) | `the Rust compiler rejected the input: <every error with its code, text and location>` | #468 |
+| [PLY1592](PLY1592.md) | error | 7 (OracleFailure) | `the Rust driver died with exit code <code>: <standard error>` | #468 |
+| [PLY1595](PLY1595.md) | error | 7 (OracleFailure) | `<reason>` | #468 |
+
 ## PLY3900–PLY3999 · tokenized-basic
 
 | Code | Severity | Exit code | Message | Owner |

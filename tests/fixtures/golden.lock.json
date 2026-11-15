@@ -2197,6 +2197,41 @@
       "bytes": 319
     },
     {
+      "path": "tests/fixtures/prototype/rust/recorded/control.panic.txt",
+      "sha256": "149784801982af7ed24a089609da5953310e0ac45fbb371dde0fa0b85e0b5432",
+      "bytes": 144241
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/control.wrap.txt",
+      "sha256": "bf0c3c0712f0b8e8d4c29701ca1e6f43d4636c366ca43c91e8fea75dda0ffcc8",
+      "bytes": 144194
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/functions.panic.txt",
+      "sha256": "55762fa4d0d85d6365d6c266e86dbcd42cd0df31de433f0238b0e381db34e9d3",
+      "bytes": 1161
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/functions.wrap.txt",
+      "sha256": "c65d8c5651147d2e6f54e23ce79eddb2b2b8e542da035ed99f6783d5b382c934",
+      "bytes": 1138
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/golden.provenance.json",
+      "sha256": "283ebdab97bfaf6cc390369699f2eff24b7201c18307e2cc88a41885bbf0f5cf",
+      "bytes": 415
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/scalars.panic.txt",
+      "sha256": "103cf28817e576a1394bcb708587e876bcd0ddb2395afd8e9233038d2183a007",
+      "bytes": 2497185
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/scalars.wrap.txt",
+      "sha256": "496f29054d5894898fe4b85fca592b8d50a1843a4bbcedcacd046fdb66acd548",
+      "bytes": 2478752
+    },
+    {
       "path": "tests/fixtures/verify/adler32.vectors.json",
       "sha256": "f0bb9ef0d19281add39928d0953daf2b93bb9496957ee5b97d7e59af07548640",
       "bytes": 625
