@@ -107,7 +107,10 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 
 - `RustScalarEmitTests`, `RustControlEmitTests`, `RustPackageEmitTests`, `RustSyntaxTests`,
   `RustProfileTests`: the emitted text per row, the printer's layout rules, the parse-back sweep over
-  every prototype fixture.
+  every prototype fixture and every Rust fixture in both overflow modes.
+- `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
+  the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
+  fixtures do not reach, rule by rule.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture the backend writes is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome equals the C# compiler's and the interpreter's. The others are refused by name.

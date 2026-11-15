@@ -65,7 +65,9 @@ tables, arrays of tables, the four kinds of string). Profile overrides for singl
 (`[profile.dev.package.<name>]`), `.cargo/config.toml` and `CARGO_PROFILE_*` variables are not
 read. A profile the manifest does not define, a custom profile without `inherits` or without a
 manifest, an `inherits` circle, an `overflow-checks` that is no boolean and a manifest that is no
-TOML are `PLY1503`, a usage error. The chosen mode and where it came from are a note on standard
+TOML are `PLY1503`, a usage error. `CargoOverflowModeTests` holds the rules and the reader;
+`CargoOverflowModeOracleTests` (layer `rust`) holds the result to `cargo run --profile` for each
+manifest form. The chosen mode and where it came from are a note on standard
 error and the caveat `rs-overflow-checks` of the translation's manifest:
 `overflow checks on, an overflowing operator panics (Cargo profile 'dev' of ../Cargo.toml)`.
 
