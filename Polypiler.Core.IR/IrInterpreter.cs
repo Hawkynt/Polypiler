@@ -435,8 +435,9 @@ public static partial class IrInterpreter {
 
     private object? Intrinsic(IrIntrinsic intrinsic, Frame frame) {
       var arguments = intrinsic.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
-      // Only an array field of an object that holds no array yet is null here.
-      Array.ForEach(arguments, argument => NotNull(argument));
+      // Only an array field of an object that holds no array yet is null here; an element of a new array of function values may be null.
+      if (intrinsic.Op != IrIntrinsicOp.ArrayOf)
+        Array.ForEach(arguments, argument => NotNull(argument));
       if (IsView(intrinsic))
         return Views(intrinsic, arguments);
 
