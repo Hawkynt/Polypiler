@@ -287,6 +287,7 @@ public static partial class JavaScriptEmitter {
       this.NameGlobals(module);
       this.NameClasses(module);
       this.NameExceptions(module);
+      this.NameEnums(module);
       var functions = new List<JsStatement>();
       this._members.UnionWith(module.Functions.Select(function => this.Name(function.Name)).Concat(module.Constants.Select(constant => this.Name(constant.Name))));
       this._members.UnionWith(module.Types.OfType<IrClassType>().Select(type => this.Name(type.Name)));
@@ -312,6 +313,8 @@ public static partial class JavaScriptEmitter {
         body.AddRange(statements.Select((statement, index) => AsHelper(index == 0 ? statement with { Leading = JsTrivia.Blank } : statement)));
 
       body.AddRange(structs);
+      body.AddRange(this.Tables());
+      body.AddRange(this.Enums(module));
       foreach (var constant in module.Constants) {
         var keyword = this.Native("const") ? "const" : "var";
         body.Add(new JsVariableDeclaration(keyword, [new JsDeclarator(this.Name(constant.Name), this.Value(constant))]) {
@@ -432,6 +435,9 @@ public static partial class JavaScriptEmitter {
 
     /// <summary>A constant as a literal of its type; it is an operand as it stands unless it is negative.</summary>
     private (JsExpression Node, bool Atomic) Constant(IrType type, long value) {
+      if (this.Member(type, value) is { } member)
+        return (member, true);
+
       if (type == IrType.Bool)
         return (new JsBoolean(value != 0), true);
 
@@ -696,7 +702,7 @@ public static partial class JavaScriptEmitter {
       var cases = new List<JsSwitchCase>();
       foreach (var section in choice.Sections) {
         var labels = section.Labels
-          .Select(label => halves ? (JsExpression?)new JsString($"{(ulong)label >> 32}:{(ulong)label & 0xFFFFFFFF}") : this.Literal(type, IrOperators.Number(type, label)))
+          .Select(label => halves ? (JsExpression?)new JsString($"{(ulong)label >> 32}:{(ulong)label & 0xFFFFFFFF}") : this.Constant(type, label).Node)
           .ToList();
         if (section.IsDefault)
           labels.Add(null);

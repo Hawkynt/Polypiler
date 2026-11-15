@@ -647,6 +647,8 @@ public static partial class CSharpEmitter {
       IrStep step => !step.Trap && step.Type.IsInteger,
       // A string operation casts between char and ushort, which loses nothing, and computes nothing that overflows.
       IrIntrinsic intrinsic when StringOperations.IsString(intrinsic.Op) => false,
+      // An operation on enums computes nothing that overflows.
+      IrIntrinsic intrinsic when EnumOperations.IsEnum(intrinsic.Op) => false,
       // A conversion between numbers and text computes nothing that overflows; only the digits of a radix cast the value to its bits.
       IrIntrinsic intrinsic when NumberTextOperations.IsNumberText(intrinsic.Op) && intrinsic.Op != IrIntrinsicOp.FormatRadix => false,
       IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic => this.Rewritten(intrinsic) is { } rewritten ? Expressions(rewritten).Any(this.Wraps) : this.Form(intrinsic).Template is not null,
@@ -710,7 +712,8 @@ public static partial class CSharpEmitter {
       if (classes.Count > 0)
         members = [.. members.Select(Exposed)];
 
-      var types = this.Structs();
+      var types = this.Enums();
+      types.AddRange(this.Structs());
       types.AddRange(classes);
       types.Add(new CsTypeDeclaration(["public", "static"], "class", this._class, null, [], [.. members.Select(member => member with { Leading = CsTrivia.Blank })]));
       List<string> header = [
@@ -733,6 +736,9 @@ public static partial class CSharpEmitter {
     /// </summary>
     private CsField Constant(IrModuleConst constant) {
       var name = this._members[constant.Name];
+      if ((constant.Type.Element ?? constant.Type).IsEnum)
+        return this.EnumConstant(constant, name);
+
       if (constant.Type == IrType.String)
         return new CsField(["private", "const"], new CsType("string"), name, new CsStringLiteral(constant.Strings[0]) { Type = IrType.String });
 
@@ -991,7 +997,7 @@ public static partial class CSharpEmitter {
       var value = this.Text(choice.Value);
       var sections = new List<CsSwitchSection>();
       foreach (var section in choice.Sections) {
-        var labels = section.Labels.Select(label => (CsExpression?)Bare(type, label)).ToList();
+        var labels = section.Labels.Select(label => (CsExpression?)(type.IsEnum ? this.EnumLiteral(type, label).Node : Bare(type, label))).ToList();
         if (section.IsDefault)
           labels.Add(null);
 
@@ -1027,6 +1033,7 @@ public static partial class CSharpEmitter {
     /// <c>int</c> unasked.
     /// </summary>
     private CsExpression Stored(IrExpr expression) => expression switch {
+      IrConst { Type.IsEnum: true } constant => this.EnumLiteral(constant.Type, constant.Value).Node,
       IrConst constant => Bare(constant.Type, constant.Value),
       // Where the type is given, none is null and a value converts to the optional type by itself; the default of a type parameter is default(T).
       IrNone or IrNull when this.GenericNode(expression) is null => new CsNullLiteral { Type = expression.Type },
@@ -1121,6 +1128,8 @@ public static partial class CSharpEmitter {
 
     private (CsExpression Node, int Binding) Plain(IrExpr expression) {
       switch (expression) {
+        case IrConst { Type.IsEnum: true } constant:
+          return this.EnumLiteral(constant.Type, constant.Value);
         case IrConst constant:
           return Literal(constant.Type, constant.Value);
         case IrConstRef reference:
@@ -1270,21 +1279,27 @@ public static partial class CSharpEmitter {
       if (this.Rewritten(intrinsic) is { } rewritten)
         return this.Expression(rewritten);
 
-      return this.View(intrinsic) ?? this.Call(Row(intrinsic, this._table)!, intrinsic.Arguments);
+      return this.View(intrinsic) ?? this.Call(Row(intrinsic, this._table)!, intrinsic.Arguments, EnumOperations.IsEnum(intrinsic.Op) ? this.TypeName(EnumOperations.Of(intrinsic).Type) : null);
     }
 
     /// <summary>
     /// A row of the capability table as a call: the framework's own method where the profile has it,
     /// otherwise the replacement — a method of the older base library or the helper of the row.
     /// </summary>
-    private (CsExpression Node, int Binding) Call(CSharpCapability row, IReadOnlyList<IrExpr> arguments) {
+    /// <param name="row">The row.</param>
+    /// <param name="arguments">The arguments of the IR.</param>
+    /// <param name="type">The name of the enum an operation on enums is about, which a template's <c>{t}</c> stands for; otherwise <see langword="null"/>.</param>
+    private (CsExpression Node, int Binding) Call(CSharpCapability row, IReadOnlyList<IrExpr> arguments, string? type = null) {
       var form = this.Form(row, arguments);
+      if (type is not null && form.Template is { } template)
+        form = form with { Template = template.Replace("{t}", type, StringComparison.Ordinal) };
+
       if (form.Template is not null) {
         // The arguments are written in their order, which is the order of the IR; {h} is the helper of the row.
         var written = arguments.Select(argument => this.Operand(argument, Primary)).ToList();
         var built = form.Build(written, () => this.Helper(row.Helper!));
         // A template may be a cast, so it binds like one; a string operation's binds as tightly as the expression it is.
-        return (built, row.Operation is { } op && (StringOperations.IsString(op) || NumberTextOperations.IsNumberText(op)) && CSharpPrinter.Precedence(built) == 15 ? Primary : Cast);
+        return (built, row.Operation is { } op && (StringOperations.IsString(op) || NumberTextOperations.IsNumberText(op) || EnumOperations.IsEnum(op)) && CSharpPrinter.Precedence(built) == 15 ? Primary : Cast);
       }
 
       var call = form.Build([.. arguments.Select(this.Text)], () => this.Helper(row.Helper!));

@@ -165,7 +165,9 @@ public sealed class CSharpCapabilitiesTests {
     ("System.Func<T1…T4, TResult>", "net3.5"),
     ("System.Action<T1…T4>", "net3.5"),
     ("System.Func<T1…T16, TResult>", "net4.6"),
-    ("System.Action<T1…T16>", "net4.6")
+    ("System.Action<T1…T16>", "net4.6"),
+    ("enum declaration with [Flags] (FlagsAttribute)", "net2.0"),
+    ("Enum.HasFlag(Enum)", "net4.6")
   ];
 
   /// <summary>
@@ -343,8 +345,8 @@ public sealed class CSharpCapabilitiesTests {
   internal static bool IsFloating(CSharpCapability row)
     => row.Operation is { } op && FloatOperationTable.Of(op) is { DoubleName: not null } && row.Operands.All(kind => kind is IrTypeKind.F32 or IrTypeKind.F64);
 
-  /// <summary>Whether a row writes a string operation, which CSharpStringEmissionTests test.</summary>
-  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && (StringOperations.IsString(op) || NumberTextOperations.IsNumberText(op));
+  /// <summary>Whether a row writes a string operation, a conversion between numbers and text or an operation on enums, which their own emission tests test.</summary>
+  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && (StringOperations.IsString(op) || NumberTextOperations.IsNumberText(op) || EnumOperations.IsEnum(op));
 
   /// <summary>The table names every API and every feature of the language the issue lists, each with the first profile or version that has it.</summary>
   [Test]
@@ -431,6 +433,7 @@ public sealed class CSharpCapabilitiesTests {
   [TestCase("Array.Empty<T>()", "static class C { static int[] F() { return System.Array.Empty<int>(); } }")]
   [TestCase("Math.Clamp", "static class C { static int F(int x) { return System.Math.Clamp(x, 0, 9); } }")]
   [TestCase("Math.BigMul(ulong, ulong, out ulong)", "static class C { static ulong F(ulong x, out ulong low) { return System.Math.BigMul(x, x, out low); } }")]
+  [TestCase("Enum.HasFlag(Enum)", "static class C { enum E { A = 1 } static bool F(E e) { return e.HasFlag(E.A); } }")]
   public void ApiRow_IsTheFrameworksFirstProfile(string name, string source) {
     var row = CSharpCapabilities.Default.Rows.Single(candidate => candidate.Name == name);
     Assert.That((row.Operation, row.Feature, row.Saturates, row.Native), Is.EqualTo(((IrIntrinsicOp?)null, (CSharpFeature?)null, (IrTypeKind?)null, (CSharpForm?)null)));

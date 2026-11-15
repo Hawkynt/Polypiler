@@ -327,6 +327,23 @@ public sealed record IrType {
   /// <summary>Whether the type is a function type, whose values may be <c>null</c>.</summary>
   public bool IsFunction => this.Kind == IrTypeKind.Function;
 
+  /// <summary>
+  /// The type of the values of an enum: of the kind of its underlying integer type, whose width, sign
+  /// and arithmetic it has, and with the enum as its declaration, which makes it a type of its own.
+  /// </summary>
+  /// <param name="declaration">The enum.</param>
+  /// <returns>The enum type.</returns>
+  public static IrType Enum(IrEnumType declaration) => new(declaration.Underlying.Kind, null, declaration);
+
+  /// <summary>The enum of an enum type, otherwise <see langword="null"/>.</summary>
+  public IrEnumType? EnumType => this.Declaration as IrEnumType;
+
+  /// <summary>Whether the type is an enum, an integer type with names.</summary>
+  public bool IsEnum => this.Declaration is IrEnumType;
+
+  /// <summary>The integer type of the values of an enum type; any other type itself.</summary>
+  public IrType Integral => this.Declaration is IrEnumType declared ? declared.Underlying : this;
+
   /// <summary>Whether the type is the string type <c>str</c>.</summary>
   public bool IsString => this.Kind == IrTypeKind.String;
 

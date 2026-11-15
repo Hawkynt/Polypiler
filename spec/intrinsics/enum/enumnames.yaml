@@ -1,0 +1,28 @@
+id: INTRINSICS.EnumNames
+title: The names of the members of an enum in .NET's order
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1318"
+tests: [Polypiler.Tests/Enums/IrEnumTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: EnumNames
+  group: Enum
+  typeParameters: [{name: E, constraint: integer}]
+  parameters: [{name: any, type: E}]
+  returns: [{name: names, type: "TYPES.str[]"}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "Enum.GetNames: the names of the members ordered by their values read as unsigned numbers of the underlying type, two members of one value in declaration order; the argument only names the enum. The vectors are of enum S { B = 2, Neg = -1, A = 0, C = 1 }"
+    source: ".NET API reference, System.Enum.GetNames(Type)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {E: TYPES.i32}, inputs: [0], outputs: [[[65], [67], [66], [78, 101, 103]]]}
+    - {types: {E: TYPES.i32}, inputs: [1], outputs: [[[65], [67], [66], [78, 101, 103]]]}
+    - {types: {E: TYPES.i32}, inputs: [-1], outputs: [[[65], [67], [66], [78, 101, 103]]]}

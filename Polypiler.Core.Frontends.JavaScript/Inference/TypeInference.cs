@@ -19,6 +19,9 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// <summary>The shapes of the object literals of the file, which become its structs.</summary>
   public Shapes Shapes { get; } = new();
 
+  /// <summary>The enum objects of the file by name, which every function sees wherever no local, constant or variable of the module hides them.</summary>
+  public IReadOnlyDictionary<string, EnumObject> Enums { get; init; } = new Dictionary<string, EnumObject>();
+
   private static readonly Regex _whiteSpace = new(@"\s+", RegexOptions.CultureInvariant);
 
   private readonly Dictionary<Candidate, FunctionModel> _models = [];

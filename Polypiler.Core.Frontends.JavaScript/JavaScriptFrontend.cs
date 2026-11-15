@@ -184,11 +184,13 @@ public static partial class JavaScriptFrontend {
     var redirects = Copies(candidates, copies);
     var constants = collector.Constants;
     var classes = collector.Classes;
+    var enums = collector.EnumObjects;
     var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name)) {
       // A native error is a class wherever no class of the file has its name.
       Classes = classes.GroupBy(owner => owner.Name).Select(group => group.First())
         .Concat(errors.ByName.Values.Where(error => classes.All(owner => owner.Name != error.Name))).ToDictionary(owner => owner.Name),
-      Redirects = redirects
+      Redirects = redirects,
+      Enums = enums.ToDictionary(named => named.Name)
     };
     var globals = collector.Globals;
     inference.DeclareGlobals(globals, program);
@@ -251,7 +253,7 @@ public static partial class JavaScriptFrontend {
       Path.GetFileNameWithoutExtension(path),
       lowered,
       constants.Where(lowering.Constants.Contains).Select(constant => constant.Constant).ToList()) {
-      Types = [.. lowering.Structs(lowered, inference.Shapes), .. classes.Select(owner => owner.Ir)],
+      Types = [.. enums.Select(named => named.Type).OfType<IrEnumType>(), .. lowering.Structs(lowered, inference.Shapes), .. classes.Select(owner => owner.Ir)],
       Globals = [.. state.Select(global => global.Global!)]
     };
 

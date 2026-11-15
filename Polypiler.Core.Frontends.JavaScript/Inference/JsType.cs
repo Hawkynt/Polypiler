@@ -119,6 +119,21 @@ internal sealed record JsType {
   /// <summary>The type of the values of a shape of functions.</summary>
   public static JsType Function(FunctionShape shape) => new(JsKind.Function) { Callable = shape.Root };
 
+  /// <summary>
+  /// The enum every value is a member of, for an integer that only members of one enum object reach
+  /// (and literals equal to a member); otherwise <see langword="null"/>.
+  /// </summary>
+  public IrEnumType? Enum { get; private init; }
+
+  /// <summary>The type of a member of an enum object: the literal of its value, which stays the enum's while only members join it.</summary>
+  /// <param name="type">The enum.</param>
+  /// <param name="value">The value of the member.</param>
+  /// <returns>The type.</returns>
+  public static JsType Member(IrEnumType type, long value) => new(JsKind.Number) { Low = value, High = value, IsLiteral = true, Enum = type };
+
+  /// <summary>The type without the enum: the integers it holds.</summary>
+  public JsType Plain => this.Enum is null ? this : this with { Enum = null };
+
   /// <summary>The two kinds of a conflict, as a diagnostic names them.</summary>
   public (string First, string Second) Kinds { get; private init; }
 
@@ -158,8 +173,8 @@ internal sealed record JsType {
   /// <summary>A <c>BigInt</c> without a bound.</summary>
   public static JsType UnboundedBigInt { get; } = new(JsKind.BigInt) { IsUnbounded = true };
 
-  /// <summary>The type of the values an IR type holds; an array of it is a typed array.</summary>
-  public static JsType Of(IrType type) => type.Kind switch {
+  /// <summary>The type of the values an IR type holds; an array of it is a typed array, and a value of an enum is one of its members' type.</summary>
+  public static JsType Of(IrType type) => type.EnumType is { } named ? new(JsKind.Number) { Low = IrOperators.Minimum(type), High = IrOperators.Maximum(type), Enum = named } : type.Kind switch {
     IrTypeKind.Optional => Of(type.Underlying!) with { MayBeNull = true },
     IrTypeKind.Void => Undefined,
     IrTypeKind.Bool => Boolean,
@@ -255,6 +270,7 @@ internal sealed record JsType {
     JsKind.Boolean => IrType.Bool,
     JsKind.Number when this.Float == 32 => IrType.F32,
     JsKind.Number when this.Float == 64 => IrType.F64,
+    JsKind.Number when this.Enum is { } named => named.Type,
     JsKind.Number => (this.IsLiteral ? _words.Skip(4) : _words).First(this.Within),
     JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
     JsKind.String => IrType.String,
@@ -339,6 +355,12 @@ internal sealed record JsType {
       return Conflict(first, second);
 
     switch (first.Kind) {
+      case JsKind.Number when (first.Enum ?? second.Enum) is { } named:
+        // Members of one enum, and literals that are members, stay the enum's; anything else joins as the numbers they are.
+        bool Fits(JsType type) => type.Enum == named || (type.Enum is null && type.IsLiteral && type.Low == type.High && named.MemberOf((long)type.Low) is not null);
+        return Fits(first) && Fits(second)
+          ? new(JsKind.Number) { Low = Int128.Min(first.Low, second.Low), High = Int128.Max(first.High, second.High), IsLiteral = first.IsLiteral && second.IsLiteral, Enum = named }
+          : Join(first.Plain, second.Plain);
       case JsKind.Number:
         if (first.Float != 0 || second.Float != 0)
           return first.Float == 32 && second.Float == 32 ? F32 : F64;

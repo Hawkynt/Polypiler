@@ -57,6 +57,8 @@ public static class CSharpSyntaxRewriter {
     CsAccessor accessor => [.. Optional(accessor.Body), .. Optional(accessor.ExpressionBody)],
     CsProperty property => [.. property.Accessors ?? [], .. Optional(property.ExpressionBody)],
     CsTypeDeclaration type => type.Members ?? [],
+    CsEnumDeclaration declared => declared.Members,
+    CsEnumMember member => [member.Value],
     CsNamespace scope => scope.Members,
     CsCompilationUnit unit => unit.Members,
     _ => []
@@ -130,6 +132,8 @@ public static class CSharpSyntaxRewriter {
     CsAccessor accessor => Accessor(accessor, rewrite),
     CsProperty property => Property(property, rewrite),
     CsTypeDeclaration { Members: { } members } type => List(members, rewrite) is var rewritten && !ReferenceEquals(rewritten, members) ? type with { Members = rewritten } : type,
+    CsEnumDeclaration declared => List(declared.Members, rewrite) is var named && !ReferenceEquals(named, declared.Members) ? declared with { Members = named } : declared,
+    CsEnumMember member => Same(member, member.Value, rewrite, value => member with { Value = value }),
     CsNamespace scope => List(scope.Members, rewrite) is var members && !ReferenceEquals(members, scope.Members) ? scope with { Members = members } : scope,
     CsCompilationUnit unit => List(unit.Members, rewrite) is var members && !ReferenceEquals(members, unit.Members) ? unit with { Members = members } : unit,
     _ => node

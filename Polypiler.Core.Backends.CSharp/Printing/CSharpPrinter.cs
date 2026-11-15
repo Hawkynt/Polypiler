@@ -169,6 +169,9 @@ public static class CSharpPrinter {
         case CsTypeDeclaration type:
           this.Type(type, depth);
           break;
+        case CsEnumDeclaration declared:
+          this.Enum(declared, depth);
+          break;
         case CsField field:
           this.Modifiers(field.Modifiers, depth).Append(field.FieldType.Name).Append(' ').Append(field.Name);
           if (field.Initializer is not null) {
@@ -286,6 +289,27 @@ public static class CSharpPrinter {
       this._text.Append(' ');
       this.Braces(body, depth);
       this._text.Append('\n');
+    }
+
+    private void Enum(CsEnumDeclaration declared, int depth) {
+      foreach (var attribute in declared.Attributes)
+        this.Line(depth).Append('[').Append(attribute).Append("]\n");
+
+      this.Modifiers(declared.Modifiers, depth).Append("enum ").Append(declared.Name).Append(" : ").Append(declared.Underlying.Name);
+      if (declared.Members.Count == 0) {
+        this._text.Append(" { }\n");
+        return;
+      }
+
+      this._text.Append(" {\n");
+      for (var index = 0; index < declared.Members.Count; ++index) {
+        var member = declared.Members[index];
+        this.Line(depth + 1).Append(member.Name).Append(" = ");
+        this.Expression(member.Value, depth + 1);
+        this._text.Append(index + 1 < declared.Members.Count ? ",\n" : "\n");
+      }
+
+      this.Line(depth).Append("}\n");
     }
 
     private void Type(CsTypeDeclaration type, int depth) {
@@ -710,6 +734,9 @@ public static class CSharpPrinter {
           break;
         case CsLambda lambda:
           this.Lambda(lambda, depth);
+          break;
+        case CsTypeOf typeOf:
+          this._text.Append("typeof(").Append(typeOf.Operand.Name).Append(')');
           break;
         default:
           this._text.Append("default(").Append(((CsDefaultExpression)expression).DefaultType.Name).Append(')');

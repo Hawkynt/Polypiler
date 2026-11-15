@@ -46,6 +46,8 @@ internal sealed partial class Lowering {
       this._types.Add(declared);
       if (!names.Add(symbol.Name))
         this.Report(new UnsupportedException(type, $"a second struct named {symbol.Name}"));
+      else if (this._enums.Values.Any(named => named.Name == symbol.Name))
+        this.Report(new UnsupportedException(type, $"a second type named {symbol.Name}"));
     }
 
     foreach (var (file, semantics, type) in structs) {

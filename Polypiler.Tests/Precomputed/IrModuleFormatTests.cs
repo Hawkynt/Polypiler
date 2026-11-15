@@ -146,7 +146,7 @@ public sealed class IrModuleFormatTests {
 
   [Test]
   public void ADeclarationThatIsNoStruct_IsRefused()
-    => Assert.That(() => IrModuleFormat.Write(new IrModule("M", []) { Types = [new Alias()] }), Throws.ArgumentException.With.Message.Contains("'Alias' is no struct"));
+    => Assert.That(() => IrModuleFormat.Write(new IrModule("M", []) { Types = [new Alias()] }), Throws.ArgumentException.With.Message.Contains("'Alias' is neither a struct nor an enum"));
 
   [Test]
   public void AStructThatIsNotTheModules_IsRefused() {
@@ -302,6 +302,7 @@ public sealed class IrModuleFormatTests {
       writer.Write("M");
       writer.Write7BitEncodedInt(1);
       writer.Write("Opaque");
+      writer.Write((byte)0);
       writer.Write(false);
       writer.Write(false);
       writer.Write7BitEncodedInt(0);
@@ -320,7 +321,44 @@ public sealed class IrModuleFormatTests {
       writer.Write7BitEncodedInt(0);
       writer.Write7BitEncodedInt(0);
     }), "malformed").SetName("A field of a struct whose fields are not defined"),
+    new TestCaseData(Declared(writer => writer.Write((byte)2), writer => writer.Write((byte)IrTypeKind.Void)), "of no known kind").SetName("A declaration of no known kind"),
+    new TestCaseData(Declared(Opaque, writer => { writer.Write((byte)0xFF); writer.Write7BitEncodedInt(0); }), "An enum type names a struct").SetName("An enum type that names a struct"),
+    new TestCaseData(Declared(Named, writer => { writer.Write((byte)IrTypeKind.Struct); writer.Write7BitEncodedInt(0); }), "A struct type names an enum").SetName("A struct type that names an enum"),
   ];
+
+  /// <summary>A struct declared without fields.</summary>
+  private static void Opaque(BinaryWriter writer) {
+    writer.Write((byte)0);
+    writer.Write(false);
+    writer.Write(false);
+  }
+
+  /// <summary>An enum over i32 without members.</summary>
+  private static void Named(BinaryWriter writer) {
+    writer.Write((byte)1);
+    writer.Write(I32);
+    writer.Write(false);
+    writer.Write(false);
+    writer.Write7BitEncodedInt(0);
+  }
+
+  /// <summary>A module of one declaration "D", written by hand after its name, and one function <c>F()</c> whose result type is written by hand.</summary>
+  private static byte[] Declared(Action<BinaryWriter> declaration, Action<BinaryWriter> result) => Sealed(writer => {
+    writer.Write("M");
+    writer.Write7BitEncodedInt(1);
+    writer.Write("D");
+    declaration(writer);
+    writer.Write7BitEncodedInt(0);
+    writer.Write7BitEncodedInt(0);
+    writer.Write7BitEncodedInt(1);
+    writer.Write("F");
+    writer.Write(true);
+    result(writer);
+    writer.Write7BitEncodedInt(0);
+    writer.Write7BitEncodedInt(0);
+    writer.Write(Block);
+    writer.Write7BitEncodedInt(0);
+  });
 
   [TestCaseSource(nameof(Malformed))]
   public void MalformedContent_IsRefused(byte[] bytes, string message)

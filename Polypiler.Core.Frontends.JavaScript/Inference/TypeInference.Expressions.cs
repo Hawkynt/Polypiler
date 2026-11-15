@@ -175,6 +175,9 @@ internal sealed partial class TypeInference {
       case MemberExpression member when this.Names.Library(member) is { } library:
         // A constant of the library is typed as the literal of its value would be.
         return JavaScriptFloatApi.FindConstant(library) is { } value ? JsType.Literal(value.Value) : JsType.Unknown;
+      case MemberExpression { Computed: false, Object: Identifier enumerated, Property: Identifier { Name: var label } } when this._scope!.Bindings.GetValueOrDefault(enumerated) is EnumObject named:
+        // A member of an enum object is the literal of its value, which stays the enum's while only members join it.
+        return named.Type?.Member(label) is { } found ? JsType.Member(named.Type, found.Value) : JsType.Unknown;
       case MemberExpression { Computed: false, Property: Identifier { Name: var key } } member when this.Of(member.Object).Shape is { } shape:
         return shape.TypeOf(key) ?? JsType.Unknown;
       case MemberExpression member:
@@ -347,6 +350,9 @@ internal sealed partial class TypeInference {
         return JsType.Join(a, b).Kind == JsKind.Conflict || a.Kind == b.Kind && a.Kind == JsKind.Null ? new(Plan.Invalid, JsType.Boolean) : new(Plan.Identity, JsType.Boolean);
       case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality when a.Kind == JsKind.Boolean && b.Kind == JsKind.Boolean:
         return new(Plan.Compare, JsType.Boolean, IrType.Bool);
+      // Two values of one enum - members, and literals that are members - are compared as the enum.
+      case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality when JsType.Join(a, b).Enum is { } named:
+        return new(Plan.Compare, JsType.Boolean, named.Type);
       case Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality
         or Operator.LessThan or Operator.LessThanOrEqual or Operator.GreaterThan or Operator.GreaterThanOrEqual:
         if (Unify(a, b, IrType.I32, IrType.U32) is { } compared)

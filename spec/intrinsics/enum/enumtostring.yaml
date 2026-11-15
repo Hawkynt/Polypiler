@@ -1,0 +1,30 @@
+id: INTRINSICS.EnumToString
+title: The text of a value of an enum as .NET writes it
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1318"
+tests: [Polypiler.Tests/Enums/IrEnumTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: EnumToString
+  group: Enum
+  typeParameters: [{name: E, constraint: integer}]
+  parameters: [{name: value, type: E}]
+  returns: [{name: text, type: TYPES.str}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "Enum.ToString(): the name of the member with the value; of a [Flags] enum the name of the zero member for 0, a member with exactly the value, or else the names of the members taken greedily from the largest unsigned value down while all of a member's bits are set, joined by ', ' in ascending order, when they cover every set bit; otherwise the decimal digits of the value. The vectors are of [Flags] enum Perm { None = 0, Read = 1, Write = 2, Exec = 4, ReadWrite = 3 }"
+    source: ".NET API reference, System.Enum.ToString(), and the order of Enum.ToString in dotnet/runtime (MIT)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {E: TYPES.i32}, inputs: [5], outputs: [[82, 101, 97, 100, 44, 32, 69, 120, 101, 99]]}
+    - {types: {E: TYPES.i32}, inputs: [7], outputs: [[82, 101, 97, 100, 87, 114, 105, 116, 101, 44, 32, 69, 120, 101, 99]]}
+    - {types: {E: TYPES.i32}, inputs: [8], outputs: [[56]]}
+    - {types: {E: TYPES.i32}, inputs: [0], outputs: [[78, 111, 110, 101]]}
+    - {types: {E: TYPES.i32}, inputs: [-1], outputs: [[45, 49]]}

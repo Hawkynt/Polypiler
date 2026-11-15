@@ -11,7 +11,8 @@ public static class IrOperators {
   /// <param name="op">The operator.</param>
   /// <param name="operand">The type of the operand.</param>
   /// <returns><see langword="true"/> when the operator applies.</returns>
-  public static bool Accepts(IrUnaryOp op, IrType operand) => op switch {
+  /// <remarks>Of the operators on one operand only the complement applies to an enum, of 32 or 64 bits.</remarks>
+  public static bool Accepts(IrUnaryOp op, IrType operand) => (!operand.IsEnum || op == IrUnaryOp.BitNot) && op switch {
     IrUnaryOp.Negate => operand.IsFloat || operand == IrType.I32 || operand == IrType.I64,
     IrUnaryOp.NegateChecked => operand == IrType.I32 || operand == IrType.I64,
     IrUnaryOp.BitNot => operand.IsWideInteger,
@@ -23,14 +24,21 @@ public static class IrOperators {
   /// <param name="left">The type of the left operand.</param>
   /// <param name="right">The type of the right operand.</param>
   /// <returns><see langword="true"/> when the operator applies.</returns>
-  public static bool Accepts(IrBinaryOp op, IrType left, IrType right) => op switch {
-    IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr => left == IrType.Bool && right == IrType.Bool,
-    IrBinaryOp.Equal or IrBinaryOp.NotEqual => (left.IsArithmetic || left == IrType.Bool) && right == left,
-    IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical => left.IsWideInteger && right == IrType.I32,
-    IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked
-      or IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor => left.IsWideInteger && right == left,
-    _ => left.IsArithmetic && right == left
-  };
+  /// <remarks>
+  /// Two values of one enum are compared for equality and, of an enum of 32 or 64 bits, combined bit
+  /// by bit, as their underlying values are; anything else is computed on the underlying type, which an
+  /// enum converts to and from without a change.
+  /// </remarks>
+  public static bool Accepts(IrBinaryOp op, IrType left, IrType right) => left.IsEnum || right.IsEnum
+    ? right == left && (op is IrBinaryOp.Equal or IrBinaryOp.NotEqual || (op is IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor && left.IsWideInteger))
+    : op switch {
+      IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr => left == IrType.Bool && right == IrType.Bool,
+      IrBinaryOp.Equal or IrBinaryOp.NotEqual => (left.IsArithmetic || left == IrType.Bool) && right == left,
+      IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical => left.IsWideInteger && right == IrType.I32,
+      IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked
+        or IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor => left.IsWideInteger && right == left,
+      _ => left.IsArithmetic && right == left
+    };
 
   /// <summary>Whether an intrinsic operation is defined on its argument types with a given result type.</summary>
   /// <param name="op">The operation.</param>
@@ -53,6 +61,8 @@ public static class IrOperators {
       return text;
     if (NumberTextOperations.Accepts(op, result, arguments) is { } number)
       return number;
+    if (EnumOperations.Accepts(op, result, arguments) is { } named)
+      return named;
 
     bool Are(params Func<IrType, bool>[] rules) => arguments.Count == rules.Length && !rules.Where((rule, index) => !rule(arguments[index])).Any();
     bool Table(IrType type) => type.IsArray && type.IsStorable;
@@ -114,7 +124,7 @@ public static class IrOperators {
   /// <param name="type">The integer type of the value.</param>
   /// <param name="value">The value as the IR carries it.</param>
   /// <returns>The mathematical value.</returns>
-  public static Int128 Number(IrType type, long value) => type == IrType.U64 ? (ulong)value : value;
+  public static Int128 Number(IrType type, long value) => type.Kind == IrTypeKind.U64 ? (ulong)value : value;
 
   /// <summary>A floating-point number as a constant of its type carries it: its IEEE 754 bits.</summary>
   /// <param name="type"><see cref="IrType.F32"/> or <see cref="IrType.F64"/>.</param>

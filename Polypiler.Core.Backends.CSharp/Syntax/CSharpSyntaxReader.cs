@@ -120,6 +120,12 @@ public static class CSharpSyntaxReader {
         type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]) {
         TypeParameters = type.TypeParameterList is null ? [] : [.. type.TypeParameterList.Parameters.Select(parameter => parameter.Identifier.Text)]
       },
+      EnumDeclarationSyntax declared => new CsEnumDeclaration(
+        [.. declared.AttributeLists.SelectMany(list => list.Attributes).Select(attribute => attribute.ToString())],
+        Modifiers(declared.Modifiers),
+        declared.Identifier.Text,
+        new CsType(declared.BaseList!.Types[0].Type.ToString()),
+        [.. declared.Members.Select(member => new CsEnumMember(member.Identifier.Text, Read(member.EqualsValue!.Value)))]),
       FileScopedNamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), true, [.. scope.Members.Select(Read)]),
       NamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), false, [.. scope.Members.Select(Read)]),
       DelegateDeclarationSyntax type => new CsDelegateDeclaration(Modifiers(type.Modifiers), new CsType(type.ReturnType.ToString()), type.Identifier.Text + type.TypeParameterList, Read(type.ParameterList)),
@@ -211,6 +217,7 @@ public static class CSharpSyntaxReader {
       => new CsArrayCreation(new CsType(array.ElementType.ToString()), Read(size), null) { OnStack = true },
     InitializerExpressionSyntax { RawKind: (int)SyntaxKind.ArrayInitializerExpression } initializer => Initializer(initializer),
     DefaultExpressionSyntax value => new CsDefaultExpression(new CsType(value.Type.ToString())),
+    TypeOfExpressionSyntax typeOf => new CsTypeOf(new CsType(typeOf.Type.ToString())),
     DeclarationExpressionSyntax { Designation: DiscardDesignationSyntax } => new CsName("_"),
     ThrowExpressionSyntax thrown => new CsThrowExpression(Read(thrown.Expression)),
     AnonymousMethodExpressionSyntax method => new CsLambda(method.ParameterList is null ? [] : Read(method.ParameterList), Block(method.Block), null) {

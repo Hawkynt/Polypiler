@@ -253,6 +253,10 @@ public sealed record CsLambda(IReadOnlyList<CsParameter> Parameters, CsBlock? Bo
 
 }
 
+/// <summary><c>typeof(T)</c>.</summary>
+/// <param name="Operand">The type.</param>
+public sealed record CsTypeOf(CsType Operand) : CsExpression;
+
 #endregion
 
 #region Statements
@@ -483,6 +487,19 @@ public sealed record CsTypeDeclaration(
   public IReadOnlyList<string> TypeParameters { get; init; } = [];
 
 }
+
+/// <summary>A member of an enum: <c>Name = value</c>.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Value">The value, a constant of the underlying type.</param>
+public sealed record CsEnumMember(string Name, CsExpression Value) : CsNode;
+
+/// <summary>An enum: <c>[attributes] modifiers enum Name : underlying { A = 0, B = 1 }</c>, one member to a line.</summary>
+/// <param name="Attributes">The attributes, each as it stands between its brackets, such as <c>global::System.Flags</c>.</param>
+/// <param name="Modifiers">The modifiers.</param>
+/// <param name="Name">The name.</param>
+/// <param name="Underlying">The underlying integer type.</param>
+/// <param name="Members">The members, in their order.</param>
+public sealed record CsEnumDeclaration(IReadOnlyList<string> Attributes, IReadOnlyList<string> Modifiers, string Name, CsType Underlying, IReadOnlyList<CsEnumMember> Members) : CsMember;
 
 /// <summary>A namespace: one that holds the rest of the file, <c>namespace N;</c>, or a block.</summary>
 /// <param name="Name">The name.</param>

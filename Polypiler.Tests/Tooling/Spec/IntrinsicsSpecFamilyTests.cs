@@ -29,7 +29,7 @@ public sealed class IntrinsicsSpecFamilyTests {
 
   private static readonly string[] _rules = ["layout", "vector-arity", "vector-width", "unique-name", "integer-is-exact", "type-bound"];
 
-  private static readonly string[] _groups = ["IntMath", "FloatMath", "Boolean", "Bitfield", "BitCount", "Shuffle", "Saturation", "Carry", "Endian", "Trig", "Sequence", "Matrix", "Tensor", "CopyFill", "String"];
+  private static readonly string[] _groups = ["IntMath", "FloatMath", "Boolean", "Bitfield", "BitCount", "Shuffle", "Saturation", "Carry", "Endian", "Trig", "Sequence", "Matrix", "Tensor", "CopyFill", "String", "Enum"];
 
   /// <summary>A fixture file: where it goes in the tree (<c># at:</c>), what it must produce (<c># expect:</c>) and its ID.</summary>
   public sealed record Fixture(string Name, string At, string Expect, string Id, string Text) {
@@ -132,7 +132,7 @@ public sealed class IntrinsicsSpecFamilyTests {
     var tree = SpecTree.Load(Path.Combine(PrototypeFixture.RepositoryRoot, "spec"), PrototypeFixture.RepositoryRoot);
     var validation = new SpecValidator(SpecFamilies.All).Run(tree, "intrinsics");
     Assert.That(validation.Diagnostics, Is.Empty);
-    Assert.That(validation.Documents, Is.EqualTo(122));
+    Assert.That(validation.Documents, Is.EqualTo(128));
   }
 
   /// <summary>

@@ -22,7 +22,10 @@ namespace Polypiler.Core.IR;
 public static class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 3;
+  public const int Version = 4;
+
+  /// <summary>The byte that stands for the kind of an enum type, followed by the number of its declaration: the kind of an enum type is that of its underlying type.</summary>
+  private const byte EnumType = 0xFF;
 
   private static readonly byte[] _magic = "PLYIRMOD"u8.ToArray();
 
@@ -101,17 +104,34 @@ public static class IrModuleFormat {
     public void Module() {
       writer.Write(module.Name);
       this.Count(module.Types.Count);
+      // An enum names no other declaration, so it is written whole where it stands.
       foreach (var declaration in module.Types) {
-        if (declaration is not IrStructType structure)
-          throw new ArgumentException($"The declared type '{declaration.Name}' is no struct.", nameof(module));
-
         this._declarations.Add(declaration, this._declarations.Count);
-        writer.Write(structure.Name);
-        writer.Write(structure.IsEquatable);
-        writer.Write(structure.IsDefined);
+        writer.Write(declaration.Name);
+        switch (declaration) {
+          case IrStructType structure:
+            writer.Write((byte)0);
+            writer.Write(structure.IsEquatable);
+            writer.Write(structure.IsDefined);
+            break;
+          case IrEnumType named:
+            writer.Write((byte)1);
+            this.Type(named.Underlying);
+            writer.Write(named.IsFlags);
+            writer.Write(named.IsPublic);
+            this.Count(named.Members.Count);
+            foreach (var member in named.Members) {
+              writer.Write(member.Name);
+              writer.Write(member.Value);
+            }
+
+            break;
+          default:
+            throw new ArgumentException($"The declared type '{declaration.Name}' is neither a struct nor an enum.", nameof(module));
+        }
       }
 
-      foreach (var declaration in module.Types.Where(declaration => declaration.IsDefined)) {
+      foreach (var declaration in module.Types.Where(declaration => declaration is IrStructType { IsDefined: true })) {
         this.Count(declaration.Fields.Count);
         for (var index = 0; index < declaration.Fields.Count; ++index) {
           var field = declaration.Fields[index];
@@ -169,6 +189,12 @@ public static class IrModuleFormat {
     }
 
     private void Type(IrType type) {
+      if (type.IsEnum) {
+        writer.Write(EnumType);
+        this.Count(this._declarations.TryGetValue(type.Declaration!, out var named) ? named : throw new ArgumentException($"The enum '{type.Declaration}' is not one of the module's types.", nameof(module)));
+        return;
+      }
+
       writer.Write((byte)type.Kind);
       if (type.Kind is IrTypeKind.Array or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory)
         this.Type(type.Element!);
@@ -430,7 +456,7 @@ public static class IrModuleFormat {
       IrType.I64, IrType.U64, IrType.F32, IrType.F64
     ];
 
-    private readonly List<IrStructType> _declarations = [];
+    private readonly List<IrTypeDeclaration> _declarations = [];
     private readonly List<IrModuleConst> _constants = [];
     private readonly List<IrGlobal> _globals = [];
     private readonly List<IrLocal> _locals = [];
@@ -440,10 +466,24 @@ public static class IrModuleFormat {
       var name = reader.ReadString();
       var defined = new List<IrStructType>();
       for (var count = this.Count(); count > 0; --count) {
-        var structure = new IrStructType(reader.ReadString()) { IsEquatable = reader.ReadBoolean() };
-        this._declarations.Add(structure);
-        if (reader.ReadBoolean())
-          defined.Add(structure);
+        var declared = reader.ReadString();
+        switch (reader.ReadByte()) {
+          case 0:
+            var structure = new IrStructType(declared) { IsEquatable = reader.ReadBoolean() };
+            this._declarations.Add(structure);
+            if (reader.ReadBoolean())
+              defined.Add(structure);
+
+            break;
+          case 1:
+            var underlying = this.Type();
+            var flags = reader.ReadBoolean();
+            var visible = reader.ReadBoolean();
+            this._declarations.Add(new IrEnumType(declared, underlying, this.List(() => new IrEnumMember(reader.ReadString(), reader.ReadInt64())), flags) { IsPublic = visible });
+            break;
+          default:
+            throw new InvalidDataException($"The declaration '{declared}' is of no known kind.");
+        }
       }
 
       foreach (var structure in defined)
@@ -496,10 +536,14 @@ public static class IrModuleFormat {
     }
 
     private IrType Type() {
-      var kind = (IrTypeKind)reader.ReadByte();
+      var marker = reader.ReadByte();
+      if (marker == EnumType)
+        return Of(this._declarations, this.Count(), "type") is IrEnumType named ? named.Type : throw new InvalidDataException("An enum type names a struct.");
+
+      var kind = (IrTypeKind)marker;
       return kind switch {
         IrTypeKind.Array => IrType.Array(this.Type()),
-        IrTypeKind.Struct => IrType.Struct(Of(this._declarations, this.Count(), "struct")),
+        IrTypeKind.Struct => IrType.Struct(this.Struct()),
         IrTypeKind.Span => IrType.Span(this.Type()),
         IrTypeKind.ReadOnlySpan => IrType.ReadOnlySpan(this.Type()),
         IrTypeKind.Memory => IrType.Memory(this.Type()),
@@ -510,8 +554,11 @@ public static class IrModuleFormat {
       };
     }
 
+    private IrStructType Struct()
+      => Of(this._declarations, this.Count(), "struct") as IrStructType ?? throw new InvalidDataException("A struct type names an enum.");
+
     private IrField Field() {
-      var structure = Of(this._declarations, this.Count(), "struct");
+      var structure = this.Struct();
       return Of(structure.Fields, this.Count(), $"field of '{structure.Name}'");
     }
 

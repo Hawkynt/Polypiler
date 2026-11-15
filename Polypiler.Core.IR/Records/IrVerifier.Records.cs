@@ -20,6 +20,12 @@ public static partial class IrVerifier {
       }
 
       Require(names.Add(declaration.Name), "the module declares the type twice");
+      if (declaration is IrEnumType named) {
+        table.Add(named);
+        Enum(named, Require);
+        continue;
+      }
+
       if (declaration is IrInterfaceType { HasMembers: true } contract) {
         table.Add(contract);
         continue;
@@ -45,7 +51,7 @@ public static partial class IrVerifier {
         diagnostics.Add(Error(type.Name, $"the field '{field.Name}' has the type {field.Type}, which is not among the types of the module"));
 
     foreach (var type in table.Structs) {
-      foreach (var field in type.Fields.Where(field => field.Type.Declaration is { } nested && !table.Declares(nested)))
+      foreach (var field in type.Fields.Where(field => (field.Type.Element ?? field.Type).Declaration is { } nested && !table.Declares(nested)))
         diagnostics.Add(Error(type.Name, $"the field '{field.Name}' has the type {field.Type}, which is not among the types of the module"));
 
       if (table.Contains(type, type))
@@ -72,19 +78,36 @@ public static partial class IrVerifier {
     }
   }
 
-  /// <summary>The structs of a module and what the verifier asks about them.</summary>
+  /// <summary>
+  /// Checks an enum: its underlying type is one of the integers, its members are named once and each
+  /// value is one of the underlying type, as the IR carries it.
+  /// </summary>
+  private static void Enum(IrEnumType type, System.Action<bool, string> require) {
+    require(type.Underlying.IsInteger && !type.Underlying.IsEnum, $"an enum over the type {type.Underlying}");
+    var members = new HashSet<string>();
+    foreach (var member in type.Members) {
+      require(member.Name.Length > 0 && members.Add(member.Name), $"the member '{member.Name}' is declared twice");
+      require(!type.Underlying.IsInteger || FunctionCheck.InRange(new IrConst(type.Underlying, member.Value)), $"the member '{member.Name}' has the value {member.Value}, which is not one of {type.Underlying}");
+    }
+  }
+
+  /// <summary>The structs and enums of a module and what the verifier asks about them.</summary>
   private sealed partial class TypeTable {
 
     private readonly HashSet<IrStructType> _structs = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<IrEnumType> _enums = new(ReferenceEqualityComparer.Instance);
 
     public IEnumerable<IrStructType> Structs => this._structs;
 
     public void Add(IrStructType type) => this._structs.Add(type);
 
+    public void Add(IrEnumType type) => this._enums.Add(type);
+
     public bool Declares(IrStructType type) => this._structs.Contains(type);
 
     public bool Declares(IrTypeDeclaration type) => type switch {
       IrStructType structure => this.Declares(structure),
+      IrEnumType named => this._enums.Contains(named),
       IrInterfaceType contract => this.Declares(contract),
       _ => this.Declares((IrClassType)type)
     };

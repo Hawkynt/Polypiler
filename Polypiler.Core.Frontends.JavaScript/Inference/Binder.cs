@@ -57,6 +57,9 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   private Variable? StaticField(Node node)
     => node is MemberExpression member && this.ClassNamed(member.Object) is { } owner && KeyOf(member) is { } key && owner.Statics.TryGetValue(key, out var field) ? field : null;
 
+  /// <summary>The enum objects of the file, which a name names that nothing else of its name hides.</summary>
+  public IReadOnlyDictionary<string, EnumObject> Enums { get; init; } = new Dictionary<string, EnumObject>();
+
   /// <summary>
   /// Binds the initializers of the variables of the module, in source order. Each sees the variables
   /// declared before it and the constants; a later variable it names is in its temporal dead zone.
@@ -504,6 +507,8 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       model.FunctionValues[identifier] = function;
       if (!model.Callees.Contains(function))
         model.Callees.Add(function);
+    } else if (this.Enums.TryGetValue(identifier.Name, out var named)) {
+      model.Bindings[identifier] = named;
     }
   }
 

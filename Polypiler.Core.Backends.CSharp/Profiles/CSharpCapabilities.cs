@@ -485,7 +485,10 @@ public sealed class CSharpCapabilities {
     .. CSharpFunctionRows.All,
 
     // The conversions between numbers and text of #1315.
-    .. CSharpNumberTextRows.All
+    .. CSharpNumberTextRows.All,
+
+    // The enums of #1318.
+    .. CSharpEnumRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>

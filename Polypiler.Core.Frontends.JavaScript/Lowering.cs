@@ -323,7 +323,8 @@ internal sealed partial class Lowering(TypeInference types) {
     if (text is null && !selector.Type.IsWord)
       throw this.Unsupported(choice.Discriminant, $"a switch on {selector.Type.Describe()}");
 
-    var type = text is not null || selector.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32;
+    // A switch on a value of an enum chooses by its members.
+    var type = selector.Type.Enum is { } named ? named.Type : text is not null || selector.Type.Within(IrType.I32) ? IrType.I32 : IrType.U32;
     var before = this._assigned;
     var sections = new List<IrSwitchSection>();
     var seen = new HashSet<long>();
