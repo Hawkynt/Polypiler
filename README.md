@@ -70,7 +70,7 @@ generated code — a row changes only in the pull request that makes it true.
 | PowerBASIC | DOS 3.5 (`pb35`), `pb36` | — | — | |
 | C | C11 / C17 / C23 | — | — | |
 | C++ | C++17 / 20 / 23 | — | — | |
-| Rust | 2024 edition | — | — | |
+| Rust | 2024 edition; `--overflow-checks panic` (debug) or `wrap` (release), required | ⚠️ | — | Frontend: free functions over `i8`…`i64`, `u8`…`u64`, `isize`/`usize` (64-bit), `f32`, `f64`, `bool`, with literals of every base and suffix, the operators, `as` casts (float to integer saturating), `MIN`/`MAX`/`BITS`, the `wrapping_*`, `checked_*` (consumed by `unwrap`, `expect`, `unwrap_or`, `is_some`, `is_none`), `overflowing_*` (`.0`, `.1`, tuple `let`) and `saturating_*` methods, `abs`, `signum`, `pow`, `abs_diff`, `min`, `max`, `clamp`, `div_euclid`, `rem_euclid`, rotations, byte and bit reversal, bit counts, float `abs`, `sqrt`, `to_bits`, `from_bits`, `is_nan`; `let`, shadowing, `const`, blocks, `if`, `match` (literal, range, or, tuple, binding and guard patterns, exhaustiveness checked), `while`, `loop` with `break` value, `for` over integer ranges with `rev()`/`step_by()` in either order, labelled `break`/`continue` and blocks, calls and recursion, `pub` as the exported surface. Parsed and typed by the frontend itself; refusals PLY1500–PLY1533 name the construct. See [the Rust frontend](docs/architecture/RUST-FRONTEND.md) |
 | Kotlin | JVM | — | — | |
 | Perl | Perl 5 | — | — | |
 | Python | 3.x | — | — | |
