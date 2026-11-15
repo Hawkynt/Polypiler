@@ -28,7 +28,7 @@ internal static partial class JavaScriptHelpers {
     Same("$radix64", """
       function $radix64(x, radix, min, upper, signed) {
         @const negative = signed && x.hi >= 2147483648;
-        @const v = negative ? $neg64(x) : x;
+        @const v = negative ? { hi: (~x.hi + (x.lo === 0 ? 1 : 0)) >>> 0, lo: (0 - x.lo) >>> 0 } : x;
         @const w = [v.lo & 0xFFFF, v.lo >>> 16, v.hi & 0xFFFF, v.hi >>> 16];
         @let s = "";
         do {
@@ -275,7 +275,7 @@ internal static partial class JavaScriptHelpers {
           }
           @const magnitude = { hi: w[3] * 65536 + w[2], lo: w[1] * 65536 + w[0] };
           if (overflow || (signed ? magnitude.hi > 2147483648 || magnitude.hi === 2147483648 && (magnitude.lo !== 0 || !negative) : negative && (magnitude.hi !== 0 || magnitude.lo !== 0))) throw new OverflowError("integer overflow");
-          return negative ? $neg64(magnitude) : magnitude;
+          return negative ? { hi: (~magnitude.hi + (magnitude.lo === 0 ? 1 : 0)) >>> 0, lo: (0 - magnitude.lo) >>> 0 } : magnitude;
         }
         """)
   ];

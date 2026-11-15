@@ -945,7 +945,17 @@ public enum IrIntrinsicOp {
   /// negative count, or a last number above the largest <c>i32</c>, traps with
   /// <see cref="IrTrap.ArgumentOutOfRange"/> (#1329).
   /// </summary>
-  RangeCount
+  RangeCount,
+
+  /// <summary>
+  /// <c>(i64) → u32</c>: the upper 32 bits of a 64-bit integer, its high limb. The low limb is the
+  /// conversion to <c>u32</c>. A profile without a 64-bit integer of its own builds every operation on
+  /// one of the two limbs (optimization O0075).
+  /// </summary>
+  HighWord,
+
+  /// <summary><c>(u32 high, u32 low) → i64</c>: the 64-bit integer of two limbs, the inverse of <see cref="HighWord"/> and the conversion to <c>u32</c>.</summary>
+  JoinWords
 
 }
 

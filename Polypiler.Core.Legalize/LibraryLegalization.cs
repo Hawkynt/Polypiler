@@ -224,6 +224,7 @@ public static class LibraryLegalization {
       IrGlobalAssign assign => assign with { Global = this.Global(assign.Global), Value = this.Expression(assign.Value) },
       IrStore store => new IrStore(this.Expression(store.Array), this.Expression(store.Index), this.Expression(store.Value)),
       IrFieldStore store => store with { Target = this.Expression(store.Target), Value = this.Expression(store.Value) },
+      IrExprStmt { Expression: IrStep { Target: IrLocalRef or IrGlobalRef } step } => this.Stepped(step),
       IrExprStmt expression => new IrExprStmt(this.Expression(expression.Expression)),
       IrIf conditional => new IrIf(this.Expression(conditional.Condition), this.Block(conditional.Then), conditional.Else is null ? null : this.Block(conditional.Else)),
       IrWhile loop => new IrWhile(this.Expression(loop.Condition), this.Block(loop.Body)),
@@ -242,6 +243,26 @@ public static class LibraryLegalization {
       IrForEachSequence loop => loop with { Sequence = this.Expression(loop.Sequence), Body = this.Block(loop.Body) },
       _ => statement
     };
+
+    /// <summary>
+    /// A step of a variable as a statement: where its legalization is the call of a lambda that stores
+    /// the value - the form of a step whose value is used - it is the assignment of that value instead,
+    /// which reads no variable from a lambda, also one whose address is taken.
+    /// </summary>
+    private IrStmt Stepped(IrStep step) {
+      var legalized = this.Expression(step);
+      if (legalized is not IrInvoke { Callee: IrLambda })
+        return new IrExprStmt(legalized);
+
+      var op = (step.Increment, step.Trap) switch {
+        (true, false) => IrBinaryOp.Add,
+        (false, false) => IrBinaryOp.Subtract,
+        (true, true) => IrBinaryOp.AddChecked,
+        _ => IrBinaryOp.SubtractChecked
+      };
+      var value = this.Expression(new IrBinary(op, step.Target, new IrConst(step.Type, 1)));
+      return step.Target is IrLocalRef local ? new IrAssign(local.Local, value) : new IrGlobalAssign(((IrGlobalRef)step.Target).Global, value);
+    }
 
     private IrExpr Expression(IrExpr expression) {
       var operands = this.Operands(expression);

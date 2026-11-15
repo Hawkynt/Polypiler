@@ -62,6 +62,12 @@ public sealed class HelperSourceTests {
     if (type == typeof(byte[]))
       return [.. new[] { 0, 1, 4, 8, 12 }.Select(length => (object)Enumerable.Range(0, length).Select(_ => (byte)random.Next(256)).ToArray())];
 
+    if (type == typeof(long[]))
+      return [.. new[] { 0, 1, 3 }.Select(length => (object)Enumerable.Range(0, length).Select(_ => random.NextInt64(long.MinValue, long.MaxValue)).Append(long.MaxValue).Append(long.MinValue).ToArray())];
+
+    if (type == typeof(ulong[]))
+      return [.. new[] { 0, 1, 3 }.Select(length => (object)Enumerable.Range(0, length).Select(_ => (ulong)random.NextInt64(long.MinValue, long.MaxValue)).Append(ulong.MaxValue).Append(0UL).ToArray())];
+
     if (type == typeof(double))
       return [.. _numbers.Select(number => (object)number)];
 
@@ -113,8 +119,8 @@ public sealed class HelperSourceTests {
   };
 
   /// <summary>An argument as a new object: a store writes into an array, which must not reach the next call.</summary>
-  private static object Copy(object argument) => argument is byte[] bytes ? bytes.Clone() : argument;
+  private static object Copy(object argument) => argument is Array array ? array.Clone() : argument;
 
-  private static string Show(object value) => value is byte[] bytes ? "[" + string.Join(",", bytes) + "]" : Text(value);
+  private static string Show(object value) => value is Array array ? "[" + string.Join(",", array.Cast<object>().Select(Text)) + "]" : Text(value);
 
 }

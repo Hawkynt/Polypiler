@@ -119,11 +119,12 @@ internal sealed class JavaScriptGenericsEmissionTests {
     Assert.That(halves, Does.Not.Contain("$compare("), halves);
   }
 
-  /// <summary>The order of a 64-bit value that is no variable, below ECMAScript 2020, has no form: it is reported, not miswritten.</summary>
+  /// <summary>The order of a 64-bit value that is no variable, below ECMAScript 2020, is the library's comparison of the two limbs (O0075), which reads each operand once.</summary>
   [Test]
-  public void OrderOfAComputed64BitValue_IsInexpressibleBelowBigInt() {
+  public void OrderOfAComputed64BitValue_IsTheLibrarysComparisonBelowBigInt() {
     var module = PrototypeFixture.Import("Snippet.cs", "public static class Snippet { public static int F(long a, long b) => (a + b).CompareTo(b); }");
-    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Parse("es5", "cjs")).Single().Message, Does.Contain("the order of a 64-bit value that is no variable"));
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Parse("es5", "cjs")), Is.Empty);
+    Assert.That(LegalizedJavaScript.Emit(module, JavaScriptProfile.Parse("es5", "cjs")).Single().Content, Does.Contain("return CompareSigned64(Add64(a, b), b);"));
     Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Parse("es2020", "esm")), Is.Empty);
   }
 

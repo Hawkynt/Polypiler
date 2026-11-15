@@ -8,8 +8,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/Adler32.cs.javascript.golden",
-      "sha256": "9b3640482fd9a8b86720fbe673559cfcd9a42fffcd9558ee98764c96df846782",
-      "bytes": 42036
+      "sha256": "69ae4cbae754ac7f4bcf620857b0dbc23f133bf3b89e5064293d07bd48275a2f",
+      "bytes": 47164
     },
     {
       "path": "tests/fixtures/backend/golden/Arrays.cs.csharp.golden",
@@ -18,8 +18,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/Arrays.cs.javascript.golden",
-      "sha256": "64c9075d110e238e2b8000e611a8ff365f0ad5a2b6099314939bf1b02fca7cd7",
-      "bytes": 192284
+      "sha256": "447386c806a19a84c66f0e12952cc0ac376e84c6e368d28add9d8ebf5b4e2fc8",
+      "bytes": 196420
     },
     {
       "path": "tests/fixtures/backend/golden/Crc32.cs.csharp.golden",
@@ -48,8 +48,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/Numbers.cs.javascript.golden",
-      "sha256": "978138fdac44754937cd725978a3926f71c74bf52823b7a18d32fd36dacbd956",
-      "bytes": 50272
+      "sha256": "19f9b9588efaf669b003b75bba0d599f09399dea47f316b58f0011210d321bd8",
+      "bytes": 62200
     },
     {
       "path": "tests/fixtures/backend/golden/Operators.cs.csharp.golden",
@@ -58,8 +58,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/Operators.cs.javascript.golden",
-      "sha256": "649e09c829d6c6ecf2f76e2a7d3bdeb9da1c80aa938548ed226d94749835fe5b",
-      "bytes": 559828
+      "sha256": "0c74bf41f4e1dbf23652b9cf8c06455a73fcc0604929841a22927e25632bfde6",
+      "bytes": 586012
     },
     {
       "path": "tests/fixtures/backend/golden/Statements.cs.csharp.golden",
@@ -68,8 +68,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/Statements.cs.javascript.golden",
-      "sha256": "24e1f7a469a6cf6af4139dd8688ccfe606dfca7261228d884f149e8d5ececfbb",
-      "bytes": 162084
+      "sha256": "e202f8f6dd2dca45a3c2e62bd211a3d86206f540752d312ee96fdc60832dc624",
+      "bytes": 173724
     },
     {
       "path": "tests/fixtures/backend/golden/async/Pipeline.cs.csharp.golden",
@@ -98,8 +98,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsBounds.cs.javascript.golden",
-      "sha256": "5a44fed61aa892e2b74d87ed862016bed05c18e6453cb37fa9b6766335466b57",
-      "bytes": 92908
+      "sha256": "9343c07791c7338d0be76d14cf391a8a434be85c7da0949fbd9f6b7a88bad846",
+      "bytes": 112344
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsConversions.cs.csharp.golden",
@@ -108,8 +108,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsConversions.cs.javascript.golden",
-      "sha256": "40b77bf7af3788f17c24922624c2a8952ea5ba0ca8d3db64c510ed1f6adbcfbf",
-      "bytes": 74668
+      "sha256": "e54eb0fbdb7693e63ed9a6e8aeb81776e2634624808940974e666be0335eda32",
+      "bytes": 98232
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsCounts.cs.csharp.golden",
@@ -118,8 +118,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsCounts.cs.javascript.golden",
-      "sha256": "64b2bb4738df1583c3ca5730227cfd4366cab88a0ec559b39518ac11695254d6",
-      "bytes": 125712
+      "sha256": "8163783d83bcc0470afa05c1509aa175977a381682e31c5af46396214157c532",
+      "bytes": 130664
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsDivision.cs.csharp.golden",
@@ -128,8 +128,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsDivision.cs.javascript.golden",
-      "sha256": "b9be6b579d65416fcbe06c9b9bcd3436be2c8b20cd0d93819562c0fda8907478",
-      "bytes": 140560
+      "sha256": "e7a9625b32be64df06ac499486817f13973d31d966b0e54753df8adbd89d794a",
+      "bytes": 161368
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsEndianAccess.cs.csharp.golden",
@@ -138,8 +138,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsEndianAccess.cs.javascript.golden",
-      "sha256": "bb09598e8aeb6915c51b02d19b25d7434d568c2c854476274dca5c9c08c86715",
-      "bytes": 133408
+      "sha256": "a3eca1bfc9f1e3d27f559200be1c001c8fba856e19fb9a6d95ac780af4952d2d",
+      "bytes": 140696
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsPowersOfTwo.cs.csharp.golden",
@@ -148,8 +148,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsPowersOfTwo.cs.javascript.golden",
-      "sha256": "11dda70e5469e47c60e94fce881c194f9295654f28d8301e4d5822f5a43a803e",
-      "bytes": 56964
+      "sha256": "0d7e8186193d11b1e5b2bc7ff1138555ff30a7210d6d3c2a784367042d2120ff",
+      "bytes": 67996
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsReordering.cs.csharp.golden",
@@ -158,8 +158,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsReordering.cs.javascript.golden",
-      "sha256": "e3817115a228a3d90c9ad7c3f0a21d25e8690e444245f98f8ed9074d4093ad6f",
-      "bytes": 52608
+      "sha256": "124097f60051928a03b9e16224b4fb1725963283ed53d94ff18c2e53c79841d5",
+      "bytes": 59896
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsRotate.cs.csharp.golden",
@@ -168,8 +168,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsRotate.cs.javascript.golden",
-      "sha256": "4d9415a17c160ae541e26627f8a294a7670ac6692829b7e910625546d5698514",
-      "bytes": 81720
+      "sha256": "a6a59715f8c5ed7ce930d8f6cf3a879512b07c6081ebe8d1adc16519d6b5da11",
+      "bytes": 89348
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsWideMultiply.cs.csharp.golden",
@@ -178,8 +178,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/BitsWideMultiply.cs.javascript.golden",
-      "sha256": "56f45ae69b2cb4412c392b44f5ea62fcc4505d33fd4b8f75700cabb47b941d97",
-      "bytes": 82120
+      "sha256": "8641c5cb7e55dd8a83010b0ebb39bdf8825eca5c757bad49da766f8f3e9a3e7a",
+      "bytes": 110420
     },
     {
       "path": "tests/fixtures/backend/golden/bits/SipHash24.cs.csharp.golden",
@@ -188,8 +188,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/SipHash24.cs.javascript.golden",
-      "sha256": "8fefb532de116d3ec2f56c174daefe5db1bc139c69ac6ca0368af30bf9462f03",
-      "bytes": 173124
+      "sha256": "1c05f7dbc56bc203eedf3c45b2ee4418257f0592f006d3f632b8caece2976802",
+      "bytes": 196580
     },
     {
       "path": "tests/fixtures/backend/golden/bits/XxHash32.cs.csharp.golden",
@@ -238,8 +238,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/endianaccess.js.javascript.golden",
-      "sha256": "6295f73f6e42c998f11abf587e17e0de9471aff76ffef54262d8729ae42f97df",
-      "bytes": 113568
+      "sha256": "8af3342abdf89a3223f2a2974ab5b0d37acd0abfbc4c528fda874620570cf078",
+      "bytes": 117700
     },
     {
       "path": "tests/fixtures/backend/golden/bits/masks.js.csharp.golden",
@@ -248,8 +248,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/bits/masks.js.javascript.golden",
-      "sha256": "8a5a386fd84545bd7d2efa5e5b3dd0d3c9e927f4c7dcc1c092879958f5415502",
-      "bytes": 70644
+      "sha256": "268930832c56f8dba8511c34e8ae7d8355b6254ea460a4a753c00e9eb1108d15",
+      "bytes": 89140
     },
     {
       "path": "tests/fixtures/backend/golden/bits/widemultiply.js.csharp.golden",
@@ -268,8 +268,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/classes/Adler32.cs.javascript.golden",
-      "sha256": "34cab230c5f88d380713e692494978204347add898c3698577888c5ffca4eaf6",
-      "bytes": 70452
+      "sha256": "c2d3e99b1c456fa4d901a69211dfb52a9790490a5ed3c71cd6db9b33e6bf6a11",
+      "bytes": 75580
     },
     {
       "path": "tests/fixtures/backend/golden/classes/Counter.cs.csharp.golden",
@@ -308,8 +308,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/classes/adler32.js.javascript.golden",
-      "sha256": "b502cdbeedf84e7fe6ef8fa3e2f0fb11a40aee12e985dec3b749e7e0fa5d9392",
-      "bytes": 66120
+      "sha256": "82b082988f855285da8bda62855e29b1c63f1552e970c21cb905f71d2b2d344f",
+      "bytes": 70160
     },
     {
       "path": "tests/fixtures/backend/golden/classes/counter.js.csharp.golden",
@@ -338,8 +338,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/collections/Collections.cs.javascript.golden",
-      "sha256": "75bc33f6ed5386cd85212e93f79b30bbe779901b699358328516cba535ca60e8",
-      "bytes": 646586
+      "sha256": "29e197fe20222286f95dfd6e16f6850140160edff98c6484d82fdcfa464051ca",
+      "bytes": 681878
     },
     {
       "path": "tests/fixtures/backend/golden/collections/WordFrequency.cs.csharp.golden",
@@ -348,8 +348,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/collections/WordFrequency.cs.javascript.golden",
-      "sha256": "dcc176109a38652f2866a1a4fae340818b7f2bc93798745a78ff0216e3374a6b",
-      "bytes": 180536
+      "sha256": "6302ee3710b6769f80a1572f572ebedb8d09dec677a614d31314e82980d2debd",
+      "bytes": 199320
     },
     {
       "path": "tests/fixtures/backend/golden/collections/collections.js.csharp.golden",
@@ -368,8 +368,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.javascript.golden",
-      "sha256": "9f2d339ad02f8b3ee7f1573d48d93d3e583544590af6f2f8647b4646f099ea8b",
-      "bytes": 99548
+      "sha256": "54724d10dae77332c7e62e019ee3be109bcd045877cf46d6b358bc5466313661",
+      "bytes": 104036
     },
     {
       "path": "tests/fixtures/backend/golden/dispatch/Animals.cs.csharp.golden",
@@ -448,8 +448,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/enums/Big.cs.javascript.golden",
-      "sha256": "2a61ad35d75611359cc17bc462cc89b0f3d13c80be090fc2f040545c1e51a48f",
-      "bytes": 216968
+      "sha256": "178d338147c620b2b1989be9a97962888d076c1bee3ea8718ddf37b66a8623ae",
+      "bytes": 221328
     },
     {
       "path": "tests/fixtures/backend/golden/enums/Color.cs.csharp.golden",
@@ -508,8 +508,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/exceptions/Traps.cs.javascript.golden",
-      "sha256": "90ecfcb96b860f53f9bef778852e83a5cdd3382c5c4624c581a8acc151d35059",
-      "bytes": 137384
+      "sha256": "ca68e9c4bee2a96a0579ab1c4dadfdd194f7ce726ebcd0a55e6b662fb5205b29",
+      "bytes": 157864
     },
     {
       "path": "tests/fixtures/backend/golden/exceptions/errors.js.csharp.golden",
@@ -518,8 +518,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/exceptions/errors.js.javascript.golden",
-      "sha256": "aa28607c19b698cd7e79130dba7686b87b8886d76e6f317ebb8ca41d8902cb87",
-      "bytes": 132428
+      "sha256": "7ef7fb8e6d59ea9c2a224f3874512b63ed8f9e821f23cadad8892336ae9495bf",
+      "bytes": 146132
     },
     {
       "path": "tests/fixtures/backend/golden/exceptions/finally-return.js.csharp.golden",
@@ -558,8 +558,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/float/BoxMuller.cs.javascript.golden",
-      "sha256": "305df97fc849748670e13bbebadac3dc4dc87ca9fdc9cfa20a4ace456fa36940",
-      "bytes": 2407360
+      "sha256": "1dcb15dac841776c01bf693031cdd66246fdaec84c4b36d84b57c5fba05b9b6a",
+      "bytes": 2468074
     },
     {
       "path": "tests/fixtures/backend/golden/float/Dct8.cs.csharp.golden",
@@ -568,8 +568,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/float/Dct8.cs.javascript.golden",
-      "sha256": "302f9f44c60dc9cce76b50452951d3312a4eef7b5f00c7e0fcec1ad899531e62",
-      "bytes": 1122024
+      "sha256": "4ff81942a493685a0b4c803dce927102c50e0bdefd2b986d70c7fb78a8e6dc2f",
+      "bytes": 1175200
     },
     {
       "path": "tests/fixtures/backend/golden/float/FloatView.cs.csharp.golden",
@@ -578,8 +578,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/float/FloatView.cs.javascript.golden",
-      "sha256": "afcd3f92bb4474468b43cc847f97ebe82775ccd7a5db4f18e176aa4abc84b93e",
-      "bytes": 206512
+      "sha256": "a118b6c871c6b7579f8983eb69c5fb9cb4650794c55e935528ae1c9daa86dbc3",
+      "bytes": 213800
     },
     {
       "path": "tests/fixtures/backend/golden/float/Haversine.cs.csharp.golden",
@@ -588,8 +588,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/float/Haversine.cs.javascript.golden",
-      "sha256": "8769326edc68d5d8d145ba1d46e8216d0315d88e2063b9ac7991f5adeaac1696",
-      "bytes": 2585718
+      "sha256": "d1d60c99b876ad93294f557ee180fb18820f17c842f9a36a4ce77a953bdb8bed",
+      "bytes": 2685364
     },
     {
       "path": "tests/fixtures/backend/golden/functions/Accumulate.cs.csharp.golden",
@@ -628,8 +628,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/functions/accumulate.js.javascript.golden",
-      "sha256": "9693a2fcdb4a3c527b00c658d0eb42dcf6ec85894c1f11f3ce4cf80f57a4d296",
-      "bytes": 60192
+      "sha256": "d74a8b4fefe8a6ddfc621efeb90d804240a748fac76a84ab6c3645093cb80e2b",
+      "bytes": 64232
     },
     {
       "path": "tests/fixtures/backend/golden/functions/closures.js.csharp.golden",
@@ -638,8 +638,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/functions/closures.js.javascript.golden",
-      "sha256": "7e16b3854a93639b68ad6af451b0ea61e834c842fc45133f7e7dc5afc1e935c2",
-      "bytes": 107536
+      "sha256": "e5d07f38534900cf867df3a9d5b598ae0901c013660882fb887355cfdbaf3f32",
+      "bytes": 112472
     },
     {
       "path": "tests/fixtures/backend/golden/functions/sort.js.csharp.golden",
@@ -648,8 +648,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/functions/sort.js.javascript.golden",
-      "sha256": "bbfddb1f66ab9d00868826846557b1e0776c96fcdce865c02e1fc7ff25ac5e16",
-      "bytes": 70800
+      "sha256": "94aa6fad7c3bc543b85270eaf40efd714017cb0bf76eba39638f26b65c82622b",
+      "bytes": 76632
     },
     {
       "path": "tests/fixtures/backend/golden/generics/Recursion.cs.csharp.golden",
@@ -668,8 +668,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/generics/Ring.cs.javascript.golden",
-      "sha256": "6b77c52d9c0bbe068cf5b3cc07433dd145efbf49f8f98470137b8882b629ee91",
-      "bytes": 109588
+      "sha256": "dd19c4d56d725075829cce36c4bb97d6e0efdaf24c67f64206576e07e0181b5e",
+      "bytes": 123436
     },
     {
       "path": "tests/fixtures/backend/golden/generics/Search.cs.csharp.golden",
@@ -738,8 +738,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/FloatView.js.javascript.golden",
-      "sha256": "2acd583a307e22d23ebf4d453d2753de01d7f8c13cfbf3cc17fa8ca518edec91",
-      "bytes": 205636
+      "sha256": "15fb1d2f3a8eecf2f58293b638338909d5083d1007514fa61155e464843aadd5",
+      "bytes": 212924
     },
     {
       "path": "tests/fixtures/backend/golden/js/OpCodes.js.csharp.golden",
@@ -758,8 +758,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/adler32.mjs.javascript.golden",
-      "sha256": "461ffe361585178904c3b3bd347f2602e6997ea040da2a5faf0ca8db12ccd2be",
-      "bytes": 47436
+      "sha256": "43ad95c8e1d8f0035ec97decd7a1e5b6e38fa7e98f51f10c5a75e072a1ee6cc9",
+      "bytes": 51476
     },
     {
       "path": "tests/fixtures/backend/golden/js/arrays.mjs.csharp.golden",
@@ -768,8 +768,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/arrays.mjs.javascript.golden",
-      "sha256": "82df78b21b6de2ee07c25e532f674b0dc1b0d3c2784ff229e53e4631e407ccfb",
-      "bytes": 208472
+      "sha256": "074d43f5d3f7dc0e51c248124639f27f0a599e44a967d56d7294bb32aec26825",
+      "bytes": 218336
     },
     {
       "path": "tests/fixtures/backend/golden/js/crc32.mjs.csharp.golden",
@@ -778,8 +778,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/crc32.mjs.javascript.golden",
-      "sha256": "8795f605148d0cbae2d8c1d8a6dd3b6670253cddfa34199a7843f4cf9ea693af",
-      "bytes": 52420
+      "sha256": "b674e29979bb4792a31f756254f7576bda1a75d46ef5c1d928f910be08b272b1",
+      "bytes": 56460
     },
     {
       "path": "tests/fixtures/backend/golden/js/fnv1a.mjs.csharp.golden",
@@ -788,8 +788,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/fnv1a.mjs.javascript.golden",
-      "sha256": "c9d86dda44acbdae2900779f2baff93b29f4ab5f725dc92d315edc6f029b5fc6",
-      "bytes": 47292
+      "sha256": "030bfd4b567772850113640b2d5a414ec9dbf49c0cf4388052d431118a01f310",
+      "bytes": 51332
     },
     {
       "path": "tests/fixtures/backend/golden/js/gcd.mjs.csharp.golden",
@@ -808,8 +808,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/inference/arrays.mjs.javascript.golden",
-      "sha256": "ca939bd67ebcaf732e65a640103a3c4ef17ebaf648126078fa5ba91421aca8fa",
-      "bytes": 400128
+      "sha256": "9dcbff1cd9a3f253cc987317e4cb1646a2d63b4a71694a25a1f8f5185953e9f8",
+      "bytes": 437920
     },
     {
       "path": "tests/fixtures/backend/golden/js/inference/bigint.mjs.csharp.golden",
@@ -818,8 +818,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/inference/bigint.mjs.javascript.golden",
-      "sha256": "7972ac4ce33032457349964ee736aa8c8d0c5ab2ab1b77ae0f61ca94d5e0e7f5",
-      "bytes": 289912
+      "sha256": "900f47cca879ea351c44d17a69b596fd774fedb6d4c04409caa4eef066aefaf7",
+      "bytes": 345428
     },
     {
       "path": "tests/fixtures/backend/golden/js/inference/conversions.mjs.csharp.golden",
@@ -828,8 +828,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/inference/conversions.mjs.javascript.golden",
-      "sha256": "e7748289f1cc0f61e3e32be7fa50060bcdc1b9a32263ca56aac4bb9163e9367b",
-      "bytes": 209324
+      "sha256": "36a769ebc30a74ddcca5f355daa0c2d986ebe3e333578a1935f0bd3285c7fc27",
+      "bytes": 232244
     },
     {
       "path": "tests/fixtures/backend/golden/js/inference/math.mjs.csharp.golden",
@@ -868,8 +868,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/inference/rules.mjs.javascript.golden",
-      "sha256": "39b77d12806c7fa938555b0b880ff6d471ae6f156729e9469a437ba1e3c9d34e",
-      "bytes": 270526
+      "sha256": "9b01fe731921056741005323fdc1fd822b078513838e7fae0fdcdf933647f9f4",
+      "bytes": 278268
     },
     {
       "path": "tests/fixtures/backend/golden/js/inference/statements.mjs.csharp.golden",
@@ -878,8 +878,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/inference/statements.mjs.javascript.golden",
-      "sha256": "37b712875d1937c7abe25abd143fa55b18189ef1563d7737e6452c18774ce489",
-      "bytes": 241280
+      "sha256": "3f582696c04e6664073a6523df061b579d94c1b4b184faf7adcb0ebe7b61a769",
+      "bytes": 257856
     },
     {
       "path": "tests/fixtures/backend/golden/js/operators.mjs.csharp.golden",
@@ -888,8 +888,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/operators.mjs.javascript.golden",
-      "sha256": "2f78cfeea6146f9305b5ee2b683a16021e8729d688eccf7cbd79c2969ba9a186",
-      "bytes": 367016
+      "sha256": "6450891562fe4896af5f55caffbd3449c3be731342816f68712d5bb3386f7302",
+      "bytes": 385616
     },
     {
       "path": "tests/fixtures/backend/golden/js/rotate.mjs.csharp.golden",
@@ -958,8 +958,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/statements.mjs.javascript.golden",
-      "sha256": "91dec3c8a2586e4419a184709c4352cdea929cd102636e97f771a03f048446f3",
-      "bytes": 170264
+      "sha256": "92974af32f653803cde6124d62845fdb8eece2383a2bdb0f50b172b7d80f03b0",
+      "bytes": 174752
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/adler32.mjs.csharp.golden",
@@ -968,8 +968,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/adler32.mjs.javascript.golden",
-      "sha256": "39539b7d413c67d567b18fe28d742827bb71efcd43389d66127e00cd773c0758",
-      "bytes": 52464
+      "sha256": "c4689c5dec4805a0ded4ccb6c7ccb4ea57625c271935e14c9dd184391e467175",
+      "bytes": 56504
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/binarysearch.mjs.csharp.golden",
@@ -988,8 +988,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/crc32.mjs.javascript.golden",
-      "sha256": "427c5da98f915c5048fab1dcbe8554e7f22b51628d46318203543ab513fba4d1",
-      "bytes": 56808
+      "sha256": "d07b4a32fd208d071e36fc6cf586a6646969eb7f51a5e6df5e4cba07b4958aca",
+      "bytes": 60848
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/crc32table.mjs.csharp.golden",
@@ -998,8 +998,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/crc32table.mjs.javascript.golden",
-      "sha256": "96c17f8bf4e8afac56a147d92510c58754cda9fca15f9e55d4ba8bb189a9faec",
-      "bytes": 153244
+      "sha256": "ff6855fc51b1a0373a2e21f2f81f1de4b9fd020345d5c07fffe948eaa370cc24",
+      "bytes": 157284
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/fnv1a.mjs.csharp.golden",
@@ -1008,8 +1008,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/fnv1a.mjs.javascript.golden",
-      "sha256": "9e4e6f7d2f4d6fc0baefc2e529608b0d895c3a9b21bdeef4656b6b34c76813fa",
-      "bytes": 51192
+      "sha256": "b2f2774cd4aa61d79ca38c57b3fce45b635f4b623e13c419a3cb22f455f86277",
+      "bytes": 55232
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/fnv1a64.mjs.csharp.golden",
@@ -1018,8 +1018,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/fnv1a64.mjs.javascript.golden",
-      "sha256": "6cd3ad835ebe23065879fbe34d48804688ef43e0f19ed641d93016a1ec68aad1",
-      "bytes": 68028
+      "sha256": "654f4cad44a9a325971b4ee879fd7bd398b2651d13816347a315be80e61cd8b6",
+      "bytes": 83636
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/horner.mjs.csharp.golden",
@@ -1028,8 +1028,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/horner.mjs.javascript.golden",
-      "sha256": "33db354817b289a2a83f34c8ed986c64f81ed8139c1278f093e7bd98a857afd5",
-      "bytes": 50688
+      "sha256": "4dfc84a1eba1fa314fa664433f62602667bc912f8b635358c4ce3d31581e3220",
+      "bytes": 54728
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/runlength.mjs.csharp.golden",
@@ -1038,8 +1038,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/runlength.mjs.javascript.golden",
-      "sha256": "fddb33e7fb140a8fc1b2d1d09342603fde14881901d5435b6b95ed2a4d642ede",
-      "bytes": 69224
+      "sha256": "85e9b7607771b6cecd5513a33a6abf8e1aaaa1d28ece307251daeead580b7580",
+      "bytes": 73264
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/stats.mjs.csharp.golden",
@@ -1048,8 +1048,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/stats.mjs.javascript.golden",
-      "sha256": "ab7df395118cfbb187b7bcabc57cc256425b07179a1377c16f1d12690a39d274",
-      "bytes": 62784
+      "sha256": "53c6d08bb495ab139f82ade244cabb4c2b84ee23179b3cf1439d5474c35977d7",
+      "bytes": 67272
     },
     {
       "path": "tests/fixtures/backend/golden/js/untyped/xorshift32.mjs.csharp.golden",
@@ -1078,8 +1078,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/numtext/Hex.cs.javascript.golden",
-      "sha256": "90a1db8c3fa77ecf8ad4dbc959a5cd3e6b5651b97e5b2872679c4978b94ff310",
-      "bytes": 62408
+      "sha256": "8113fa76f709cf16791f31e0f76cfed71ea6a2cb9a947c4a594f26b2d297558a",
+      "bytes": 59572
     },
     {
       "path": "tests/fixtures/backend/golden/numtext/Parse.cs.csharp.golden",
@@ -1088,8 +1088,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/numtext/Parse.cs.javascript.golden",
-      "sha256": "524e8b6f2051975f81db0ca817c4ff5f1007ccfdfac54eef739f1122a2eea72f",
-      "bytes": 241364
+      "sha256": "24bcdd1e82805aa221a05ad0d255442da3b3fcee0a7ba0997a0ae1a45ae612e4",
+      "bytes": 238848
     },
     {
       "path": "tests/fixtures/backend/golden/numtext/Report.cs.csharp.golden",
@@ -1098,8 +1098,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/numtext/Report.cs.javascript.golden",
-      "sha256": "225f9ebe946aa15a021111de9375b8cf0e942feb4ab1bb40d51f654c6974ebd2",
-      "bytes": 125956
+      "sha256": "ef38669ebcd26d5b3afbe80370ef1b4c120ada7a684c392fd916f3cf22b8cf94",
+      "bytes": 123120
     },
     {
       "path": "tests/fixtures/backend/golden/numtext/fixed.js.csharp.golden",
@@ -1118,8 +1118,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/numtext/hex.js.javascript.golden",
-      "sha256": "8237d989c9a51d6d3a55720bdd82f9966a0f614392ebca580830d58a5c2ed2b6",
-      "bytes": 43704
+      "sha256": "1b1c9d2a2ff18d7926ac1462479976f9c21785aad22b2c5f6ac533f172efe7bc",
+      "bytes": 40868
     },
     {
       "path": "tests/fixtures/backend/golden/numtext/parse.js.csharp.golden",
@@ -1138,8 +1138,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/numtext/report.js.javascript.golden",
-      "sha256": "38dc1de9bee7850f24249da116e7c9a6942030ec2d70d6def27ef55c4ca88cd8",
-      "bytes": 43324
+      "sha256": "89389dcfb94756644864d2fb2072bb182fd8ac4432a59f3f4f98a1ca93d7f1f9",
+      "bytes": 40488
     },
     {
       "path": "tests/fixtures/backend/golden/optional/Find.cs.csharp.golden",
@@ -1148,8 +1148,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/optional/Find.cs.javascript.golden",
-      "sha256": "167d0733acb8808206e2902c414714c5654e34aa66fe4061d6698c6f7862cc7a",
-      "bytes": 358636
+      "sha256": "334bb5b8d75cd7c4e569480a2a07c306eb6c5d81ee091241453923d4b0af8bf1",
+      "bytes": 373668
     },
     {
       "path": "tests/fixtures/backend/golden/optional/absent.js.csharp.golden",
@@ -1168,8 +1168,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/optional/find.js.javascript.golden",
-      "sha256": "6ba959ef4d4d0e49fb8ebe80d8cb9389aeaed0b016728060427338e7d06807c8",
-      "bytes": 139476
+      "sha256": "0d22f3f97abf16d782d91eccb21700eaea5c52a7b93e4cfed5136dab1e404df3",
+      "bytes": 143516
     },
     {
       "path": "tests/fixtures/backend/golden/pointers/Fnv1aPointer.cs.csharp.golden",
@@ -1188,8 +1188,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/pointers/Pointers.cs.javascript.golden",
-      "sha256": "73689293da96bc24feb823132f0fb7d91f04ae9b8f52edfd2444fd6185835e87",
-      "bytes": 385232
+      "sha256": "ee83b3c945258e278b6fe04df6465897fd8b425fb55b33657c418f3cc3a344bc",
+      "bytes": 393332
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeAbs.cs.csharp.golden",
@@ -1198,8 +1198,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeAbs.cs.javascript.golden",
-      "sha256": "5e72ad464e49a3c319f2ea3a5c28ff28a5e38cc3b0c4882314ffb2fd9a32f729",
-      "bytes": 94904
+      "sha256": "33ff0226f0d0a7091c6ce0a262a9c6b77fb02d10647289785e0ffd680537c508",
+      "bytes": 119704
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeBitReverse.cs.csharp.golden",
@@ -1208,8 +1208,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeBitReverse.cs.javascript.golden",
-      "sha256": "7a491b886891019cc3a97568976e490b47e1007f5e5195b972f2be01dc4b5e34",
-      "bytes": 131124
+      "sha256": "20c78ebb739e9521aa8d4af61cf0ec94969bc151b518db918a7ca0ff42c6d46b",
+      "bytes": 141488
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeByteSwap.cs.csharp.golden",
@@ -1218,8 +1218,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeByteSwap.cs.javascript.golden",
-      "sha256": "4c5abb07899ffc806fb8c4765802971cf5c6a37a2807720264c2a56d67dcfd47",
-      "bytes": 98508
+      "sha256": "9ef3f12ab5c3fc768a794726e96a87bbd2ebab7cde74b0c4caddb2392547cab0",
+      "bytes": 108212
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeClamp.cs.csharp.golden",
@@ -1228,8 +1228,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeClamp.cs.javascript.golden",
-      "sha256": "eb8782e5763fb395cc1225c328707c391eb5a445f2fb696104e936d89cf141bc",
-      "bytes": 70856
+      "sha256": "5d45c807967ddf8398c2e2bcfb4536bac8143dd14c54e79fa6d88d5a798a2839",
+      "bytes": 77076
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeEndianLoad.cs.csharp.golden",
@@ -1238,8 +1238,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeEndianLoad.cs.javascript.golden",
-      "sha256": "7bbe3b56bf797c7e65ff83fdefb85c16a67ad9c6232b43c40bb7e95352f570c7",
-      "bytes": 153768
+      "sha256": "ee5a481465789b76c257053949f187331625a960b14a3f7c41dca7754f6a8300",
+      "bytes": 158940
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeEndianStore.cs.csharp.golden",
@@ -1248,8 +1248,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeEndianStore.cs.javascript.golden",
-      "sha256": "85e0fd03cacbf0e9d1679389b519e1643913c6d7dcfaedd3ffdb5d1d32c3c8a3",
-      "bytes": 121500
+      "sha256": "9f130f1ef1fc1d8d4b2b73c32b2eb7d5c8a8a7953cb6315fdb89063f6753cca3",
+      "bytes": 126996
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeMinMax.cs.csharp.golden",
@@ -1258,8 +1258,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeMinMax.cs.javascript.golden",
-      "sha256": "2678bbae54e1100b9daa66f86b5a5db16654ad528d5c5bdf322e04c5aa3c23ee",
-      "bytes": 94356
+      "sha256": "995fef6db6f807cd8891e9778f31e56861ba7526a52884b6b9d04f0cc5113c3f",
+      "bytes": 104012
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeMultiply.cs.csharp.golden",
@@ -1268,8 +1268,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeMultiply.cs.javascript.golden",
-      "sha256": "a9ae9aec82a4f9e06641f2c3990fc6a88834854d575fbd6a7a24d619bb883ba4",
-      "bytes": 79456
+      "sha256": "d04a6fa82ec22b99c75d460d719695fe718627ff93efaf3eba0b096782fb715c",
+      "bytes": 97736
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeParity.cs.csharp.golden",
@@ -1278,8 +1278,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeParity.cs.javascript.golden",
-      "sha256": "d734f6c2e7db13bb2c99db8e83cc82ae2291a193bf9fcb384cd6758b432249ef",
-      "bytes": 87948
+      "sha256": "68d72f791e5348751d78e0d152d9e1bab002fe709fc7c3fc550ac705e92ae1f6",
+      "bytes": 95416
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizePopCountLoop.cs.csharp.golden",
@@ -1288,8 +1288,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizePopCountLoop.cs.javascript.golden",
-      "sha256": "102375de8744223f49544e15a1242537dbcd0012bfb6abff0f06bb035b4d7239",
-      "bytes": 124944
+      "sha256": "d9e16f0b9480a4536775f77c124a72dfb60f859bcb2b4886c0d47a9f5eafa0e4",
+      "bytes": 147044
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizePopCountSwar.cs.csharp.golden",
@@ -1298,8 +1298,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizePopCountSwar.cs.javascript.golden",
-      "sha256": "53d0f9e8f823e9b2ea1f9eca54b9c4d3d450b4970a5a812095f55b3f3025f969",
-      "bytes": 145548
+      "sha256": "8828701a125e631d4f18822c55f0a6f23a18169b45888b182318f07373b11836",
+      "bytes": 163864
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeQuotient.cs.csharp.golden",
@@ -1308,8 +1308,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeQuotient.cs.javascript.golden",
-      "sha256": "cb20b11522f33e7c0b61a81334cf6d3180c83a7d7de22c4417e461f2dcf10d8d",
-      "bytes": 150144
+      "sha256": "b8c5e559e23ab0aae2aaeb822ec24bb7c697b92362dbb633a53d0882103f5c82",
+      "bytes": 186116
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeRotate.cs.csharp.golden",
@@ -1318,8 +1318,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeRotate.cs.javascript.golden",
-      "sha256": "ea538755fa4186654e8988736c1713f8a27c7f255e3e4c497b2c8ac859aa6727",
-      "bytes": 152092
+      "sha256": "7aff1f2330c56f68dfd09e2b01dea0d91ab88f4b33fac3da4f48f19fbc919a24",
+      "bytes": 164208
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeSign.cs.csharp.golden",
@@ -1328,8 +1328,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeSign.cs.javascript.golden",
-      "sha256": "f36797d6e5925bfabb2d094441a234cedec7d3283bfc30e68792bfacc1864ef1",
-      "bytes": 69956
+      "sha256": "6f139a1fa0dce94272cc1a63724527a9eb9040161a35758b495bef9b85b625ec",
+      "bytes": 84188
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeSignExtend.cs.csharp.golden",
@@ -1338,8 +1338,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeSignExtend.cs.javascript.golden",
-      "sha256": "eee5ce0486536045cef49abf1454e2b9c383562f38efc477f5ba45c80a1cb8d5",
-      "bytes": 63160
+      "sha256": "9122f4d46991f3184ca7e58980905a045ffd688bb55e516d401bd9b28f518b9c",
+      "bytes": 74836
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeSingleBit.cs.csharp.golden",
@@ -1348,8 +1348,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeSingleBit.cs.javascript.golden",
-      "sha256": "267585762d227be57629de15e3431eadd1155887ce07722e584663b442e56163",
-      "bytes": 109688
+      "sha256": "a6ecc0446e8d15c762e9bbbaef118bfe44b67e1ff21ece97b0abe6821abbace3",
+      "bytes": 121484
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeZeroCount.cs.csharp.golden",
@@ -1358,8 +1358,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeZeroCount.cs.javascript.golden",
-      "sha256": "659330a4d83ca53e874c0577a9a5d96d6c72715ec2873f4165d2919d83c04510",
-      "bytes": 97580
+      "sha256": "50df2c8c92b58123e13822a25c52324608d7d8f5af4f3b22e24ed72326d61bee",
+      "bytes": 104308
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/SipHash24Spelled.cs.csharp.golden",
@@ -1368,8 +1368,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/SipHash24Spelled.cs.javascript.golden",
-      "sha256": "bd1c9e69484e4620a49a56b4c41644f14cd1a177562e7eafcac127e1d4a8c234",
-      "bytes": 193920
+      "sha256": "96f6b6ca37e7a914eb353be5ab2ac820e58d0aa5fc5a3144ac55a85a4d6ea05b",
+      "bytes": 224756
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/XxHash32Spelled.cs.csharp.golden",
@@ -1428,8 +1428,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/endianload.js.javascript.golden",
-      "sha256": "45d5cfc2394f0433574cc24c2c2b02d89146c30fc0ce344f937d6ae5066c73e8",
-      "bytes": 71740
+      "sha256": "4a6908c5737b5eaa8edbef3707a8a2a533dc80c6a5ae83f0c6d86ddb42c2bd70",
+      "bytes": 82820
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/endianstore.js.csharp.golden",
@@ -1438,8 +1438,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/endianstore.js.javascript.golden",
-      "sha256": "e11f634f82eec23fdc6bd6c5a33db96e2f08c183f95daad0e654c4f54422daf9",
-      "bytes": 50148
+      "sha256": "cac4bfdf3c5f4b3745e2c19ad58e705f18238732d022d5546e7a0b47c5930944",
+      "bytes": 56300
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/minmax.js.csharp.golden",
@@ -1498,8 +1498,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/quotient.js.javascript.golden",
-      "sha256": "3a91229a123fcfd7ce6a2a6a7357afeea8a37ce7d585c147cd705f5f6210d179",
-      "bytes": 45140
+      "sha256": "e7cd9121ca42e34a058dcd01ee302166776ac0b8f603f33ab98ae7fa6aaed22a",
+      "bytes": 59340
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/rotate.js.csharp.golden",
@@ -1568,8 +1568,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/records/Money.cs.javascript.golden",
-      "sha256": "d5ae96874e8ce1cc3f59d8f35d637144311be942fc30fbf7d586832627448aa4",
-      "bytes": 65396
+      "sha256": "8dfec5f4e2d8224ea692ba0050cd89ea68215485631b45eaa2592f4d64458d20",
+      "bytes": 66856
     },
     {
       "path": "tests/fixtures/backend/golden/records/U128.cs.csharp.golden",
@@ -1578,8 +1578,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/records/U128.cs.javascript.golden",
-      "sha256": "d9b4dc84794c5a4cf3db6d1c2b02705cf09345f047dd22ab4c2b79817b39e320",
-      "bytes": 38300
+      "sha256": "1a4965ad4457edce418bbff5462ef03134ba7a702f65e502a6c7d291d89e8261",
+      "bytes": 47128
     },
     {
       "path": "tests/fixtures/backend/golden/records/aliasing.js.csharp.golden",
@@ -1598,8 +1598,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/records/geometry.js.javascript.golden",
-      "sha256": "5d98bc83529bf9b69279af30b3ace32cfaf71f90e77e32c73e19e4870e5b5b3c",
-      "bytes": 88420
+      "sha256": "7fce331aa25693fd285b8b4d18e8c4d29dfe28ebdc9213154221d4a9326b6733",
+      "bytes": 92908
     },
     {
       "path": "tests/fixtures/backend/golden/resources/AsyncScope.cs.csharp.golden",
@@ -1638,8 +1638,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/resources/scopes.js.javascript.golden",
-      "sha256": "e2b02a8baebbdc6ced5c9a7638f458ab801cae5388b4aebd504882172834b5e1",
-      "bytes": 149814
+      "sha256": "8e3d530b0c3d1bafa389bdb35fe1a8fd17ccc22dcee196ec835e136f4050fc55",
+      "bytes": 153854
     },
     {
       "path": "tests/fixtures/backend/golden/scopes/Sibling.cs.csharp.golden",
@@ -1658,8 +1658,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/ByteMedian.cs.javascript.golden",
-      "sha256": "43a876e52f655caf6708342e9975f6cb8c1ae6ca447f2119227c096dcd29cca8",
-      "bytes": 181324
+      "sha256": "866e4ee220feec1e516b1049383dcde91a32709039c6a77f4596614c3512c984",
+      "bytes": 219312
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.csharp.golden",
@@ -1668,8 +1668,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.javascript.golden",
-      "sha256": "b1e06661bea58971eb76d930ea630db36fe3d85d3512640ce426d894fbdd3337",
-      "bytes": 599042
+      "sha256": "812bc5a8de817ce1e2a4ad2255d347590ef7bffce60e426d08759fb954a8832d",
+      "bytes": 621954
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Pipelines.cs.csharp.golden",
@@ -1678,8 +1678,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Pipelines.cs.javascript.golden",
-      "sha256": "cbf7bb22752c66efd6a880e1400047c7d0068a4deaa987b8297881eaaf868545",
-      "bytes": 1447724
+      "sha256": "2a50fde1ac1c3b61df136b977094914b27db3ddd12a1e4909f235a7c01b5665e",
+      "bytes": 1495752
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/iterators.js.csharp.golden",
@@ -1708,8 +1708,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/runLength.mjs.javascript.golden",
-      "sha256": "b6fa1aed9b0f2c49f442a57b0a9f3f674b18000ff1828b06f851e58f6301e93d",
-      "bytes": 107096
+      "sha256": "bee5c93e1a807a8c0d69b98b906fce22e45d5f7915aae6dbee33df9c75c75886",
+      "bytes": 112032
     },
     {
       "path": "tests/fixtures/backend/golden/spans/Adler32Span.cs.csharp.golden",
@@ -1718,8 +1718,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/Adler32Span.cs.javascript.golden",
-      "sha256": "bc9e61609a26f6700fcf2fcc5b98c2b11d3adcf8f769f548e2f011a7bd3d9dc9",
-      "bytes": 64356
+      "sha256": "e76f06f055dd70b0a48e24cc6e06ead66c0886d247a30a378837ca1f2b4385b4",
+      "bytes": 69484
     },
     {
       "path": "tests/fixtures/backend/golden/spans/MemoryHolder.cs.csharp.golden",
@@ -1738,8 +1738,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/Spans.cs.javascript.golden",
-      "sha256": "d3a6f45f97ce6dc028cf8e7f61a800b7e1bc95a207b9e72104767bd244c76ee8",
-      "bytes": 380428
+      "sha256": "3dfe057bba1b5057901c095c0d3e5420160ca754634f8677cd93179222a49820",
+      "bytes": 383592
     },
     {
       "path": "tests/fixtures/backend/golden/spans/adler32-view.mjs.csharp.golden",
@@ -1748,8 +1748,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/adler32-view.mjs.javascript.golden",
-      "sha256": "5879679623d60e58816825e316a4db752f27c41fe17fe751e5585c6be5b99dc8",
-      "bytes": 84348
+      "sha256": "02e252419bf30882b25d949ab49c96e70960688ac31133bd12f1c51b53240c6c",
+      "bytes": 91092
     },
     {
       "path": "tests/fixtures/backend/golden/spans/views.mjs.csharp.golden",
@@ -1758,8 +1758,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/views.mjs.javascript.golden",
-      "sha256": "86c0dddf79421ea4a3f7aa8470d119ea3cf4a94dce67fa9678d6df7721ec03aa",
-      "bytes": 162040
+      "sha256": "04b27849cb62133fe9b05d722aa31516cfbad7e68cf6dd9fdc76280604441659",
+      "bytes": 169232
     },
     {
       "path": "tests/fixtures/backend/golden/spans/window.mjs.csharp.golden",
@@ -1768,8 +1768,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/window.mjs.javascript.golden",
-      "sha256": "d3bf19a93b0da82bea3f615c0e5ea01605f342a8e8ba404576cead33e30c0e2e",
-      "bytes": 139064
+      "sha256": "5358edd9f99c8dd2576a2c7f81d8862e232ab29a54c06586e20f40fd7cb74991",
+      "bytes": 162264
     },
     {
       "path": "tests/fixtures/backend/golden/state/Histogram.cs.csharp.golden",
@@ -1818,8 +1818,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/state/Xorshift64.cs.javascript.golden",
-      "sha256": "4f1e4db4f58ac09c22cf95645c5b6b5d3ec85e28bcfc01f5362abb61a673cd02",
-      "bytes": 29452
+      "sha256": "82351dc51b6ba0982f2444334451081c5d4a67d5ab4d6fdcb2d5fe5d62ce50a6",
+      "bytes": 36820
     },
     {
       "path": "tests/fixtures/backend/golden/state/histogram.js.csharp.golden",
@@ -1848,8 +1848,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/state/lazy.js.javascript.golden",
-      "sha256": "89b4ddf375fec287f86051a17e48f1c63374fa8a80b58ea44b17f2c037fb1e9e",
-      "bytes": 75024
+      "sha256": "251460a0598eecfb7afa034f18763255fc2304cd11d997547465aa5e76cca8e2",
+      "bytes": 79064
     },
     {
       "path": "tests/fixtures/backend/golden/state/xorshift32.js.csharp.golden",
@@ -1868,8 +1868,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/state/xorshift64.js.javascript.golden",
-      "sha256": "7bf1febd43be71584240cdfdc03816168de1a10446b05a8c6dfcf6bd5db65116",
-      "bytes": 28780
+      "sha256": "2a69e2312f98d27fed32449e3c2a1d31e66509a107c760e696d29b8339c44d0d",
+      "bytes": 36148
     },
     {
       "path": "tests/fixtures/backend/golden/strings/Fnv1aText.cs.csharp.golden",
@@ -1888,8 +1888,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/strings/Hex.cs.javascript.golden",
-      "sha256": "7b1a32a082f2b64724d0ae6983478cdf1d297b6f41539c74feedcdd67259d648",
-      "bytes": 84400
+      "sha256": "9257b09cf56a38d8e5420cf9c1de483f4a80824d4c3e1501be79c6343b8d3baf",
+      "bytes": 96040
     },
     {
       "path": "tests/fixtures/backend/golden/strings/Tokens.cs.csharp.golden",
@@ -1918,8 +1918,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/strings/fnv1a-text.js.javascript.golden",
-      "sha256": "0474c35e74a51ec87350c10e1a7fc73ae7a693a0fc520e39514367fc6a6c10e6",
-      "bytes": 50760
+      "sha256": "ab1bbfdfba4249ed9ba103ed6ed822bfdd3e6f4e3d55a8886d1295b3802d63d6",
+      "bytes": 55696
     },
     {
       "path": "tests/fixtures/backend/golden/strings/hex.js.csharp.golden",
@@ -1928,8 +1928,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/strings/hex.js.javascript.golden",
-      "sha256": "374ce5f07c7f405a65b9b4e8bca4934c854a5f1727e3b5589136d9cf95a95bdc",
-      "bytes": 96200
+      "sha256": "034d8b45de83d694b0939580382906d73accc34da1b2968852001da607b93ef3",
+      "bytes": 105616
     },
     {
       "path": "tests/fixtures/backend/golden/strings/tokens.js.csharp.golden",
@@ -1938,8 +1938,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/strings/tokens.js.javascript.golden",
-      "sha256": "b294cacd2c8fe5dd9956c7d208abef085131f693e0686a8277f13ead805ed890",
-      "bytes": 75840
+      "sha256": "84271db2f8159241fa9e387240cb44ab7c825d19be36333d65dea7f934754add",
+      "bytes": 80328
     },
     {
       "path": "tests/fixtures/backend/golden/strings/traps.js.csharp.golden",
@@ -1958,8 +1958,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/BinarySearch.cs.javascript.golden",
-      "sha256": "40774fb821d21d687d02a2658e36f3407ad3b6d849b9dcb48ed36399dc5efd15",
-      "bytes": 70224
+      "sha256": "5aa433b3bcacd7509054a292c26d9bfe184b07025c67cc3295cf21472d448c56",
+      "bytes": 76284
     },
     {
       "path": "tests/fixtures/backend/golden/wide/BubbleSort.cs.csharp.golden",
@@ -1978,8 +1978,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Conversions.cs.javascript.golden",
-      "sha256": "071d9e405647fb8b2f628c0f7c60ae073af9c9a753eaa7f9c54e66656432a5ca",
-      "bytes": 1031116
+      "sha256": "d0d66b3430e42045e155d84006508c4fa33624fdb632eef3ce5409b7953db6a4",
+      "bytes": 1160636
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Crc16.cs.csharp.golden",
@@ -2008,8 +2008,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/DigitSum.cs.javascript.golden",
-      "sha256": "6964759e69a623a24da90074c6871bcbcce7efdcefc6019a5d69ce38af368067",
-      "bytes": 145352
+      "sha256": "9ed2ec30e7f67af043680db62abc531764b596d97c92eaaed17258ff1051beac",
+      "bytes": 163372
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Fir.cs.csharp.golden",
@@ -2028,8 +2028,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Fletcher16.cs.javascript.golden",
-      "sha256": "ddc04f39e60db35ddccada569b99f29493b7da19da640ee743aa0b6db59ec44f",
-      "bytes": 51348
+      "sha256": "8c589495daca5e55a5fb608a5ca5835ee12aa7e9ce960b7cea10def6d9303b16",
+      "bytes": 63916
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Fnv1a64.cs.csharp.golden",
@@ -2038,8 +2038,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Fnv1a64.cs.javascript.golden",
-      "sha256": "a6a1dc545d1a77fb2095669aa0f7bf0364278787d837fc9e9df10e620a2e75b2",
-      "bytes": 42884
+      "sha256": "757b9e3281b1c1bc85d249dccfbbaecbdba72f209bf2716c9c4bb585dedc1cb3",
+      "bytes": 52716
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Horner.cs.csharp.golden",
@@ -2058,8 +2058,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Library.cs.javascript.golden",
-      "sha256": "eefdb44c2719a8859b2ed3f726a50d89b070baa6ca76295de818bea51c5cba3e",
-      "bytes": 597320
+      "sha256": "aba5d69a02577566488008c7fb2b5a451dda2434366291a16e3fa25c707b031d",
+      "bytes": 638964
     },
     {
       "path": "tests/fixtures/backend/golden/wide/OperatorsWide.cs.csharp.golden",
@@ -2068,8 +2068,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/OperatorsWide.cs.javascript.golden",
-      "sha256": "2ba8b814bd517b27af9068be5968d2160d36c8515eaf33b3f038e89522c58167",
-      "bytes": 2271728
+      "sha256": "0b2855f53d0f2c31b8056052b345470e00342a38a8c5396d2c75435eeb0fe7b1",
+      "bytes": 2529412
     },
     {
       "path": "tests/fixtures/backend/golden/wide/RunLength.cs.csharp.golden",
@@ -2088,8 +2088,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/SplitMix64.cs.javascript.golden",
-      "sha256": "540f0c9755e905d172abfe75a1f91827a3abb73b803145365b338ef8fe57cca2",
-      "bytes": 52012
+      "sha256": "181aac6d6a71c2fea448bea2766a17efb073b69a6c1e5b22b442ac285bb05e3d",
+      "bytes": 67748
     },
     {
       "path": "tests/fixtures/backend/golden/wide/StatementsWide.cs.csharp.golden",
@@ -2098,8 +2098,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/StatementsWide.cs.javascript.golden",
-      "sha256": "28cdd4f340ad9a57bc94c9f07a3431463e9c860705e8d0a74e914b046f642487",
-      "bytes": 598936
+      "sha256": "c11ec100503a740adca2954cdafbebe2b2c1b6966cfd3324183318919e5c0457",
+      "bytes": 692932
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Tables.cs.csharp.golden",
@@ -2108,8 +2108,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Tables.cs.javascript.golden",
-      "sha256": "e97b79169cc31bc8008bae35bc36f904fd259ccb8bcdc569261fd6d1e055df86",
-      "bytes": 381968
+      "sha256": "894e33e96175e36c506938c2ad78cb771fdfbfe937714c180414b78299e2a2c9",
+      "bytes": 386792
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Xorshift64.cs.csharp.golden",
@@ -2118,8 +2118,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Xorshift64.cs.javascript.golden",
-      "sha256": "64b6ac3e9af9e862c94dc50d9e7fb45067e5cc7a7fa5030f26ed067edac096bd",
-      "bytes": 59204
+      "sha256": "94c0d1b3f664cdbe64f120dd23794af2fdfd33ce391c5683afdf419f112e3b2d",
+      "bytes": 75808
     },
     {
       "path": "tests/fixtures/prototype/js/recorded/adler32.txt",

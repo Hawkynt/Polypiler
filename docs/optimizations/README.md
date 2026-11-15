@@ -7,7 +7,7 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**24 of 292 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
+**25 of 292 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), in legalization (#1358) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
 
 ## General passes
 
@@ -59,7 +59,7 @@ maps every one of its optimization documents to the page here that covers it.
 - [ ] [O0072](O0072-bitcast-and-packed-fields.md) — Legalize BitCast, Reinterpret, subvector access and PackedField (P3)
 - [ ] [O0073](O0073-endian-load-store-legalization.md) — Legalize LoadLE/LoadBE and StoreLE/StoreBE per target byte order and alignment (P2)
 - [ ] [O0074](O0074-logical-vector-legalization.md) — Legalize logical vectors of 16 to 4096 bits to native SIMD, polyfill, SWAR or scalar code (P3)
-- [ ] [O0075](O0075-wide-integer-legalization.md) — Legalize integers wider than the target's native width into limbs (P2)
+- [x] [O0075](O0075-wide-integer-legalization.md) — Legalize integers wider than the target's native width into limbs (P2)
 - [ ] [O0076](O0076-segmented-16-bit-indexing.md) — Legalize object sizes, indices and pointers to 16-bit segment constraints (P2)
 - [ ] [O0077](O0077-target-semantics-lowering.md) — Lower division, float and bounds semantics that differ on the target (P2)
 - [ ] [O0078](O0078-exception-lowering.md) — Lower exceptions and traps for targets without exception handling (P3)

@@ -199,7 +199,8 @@ public sealed class O0006Inlining : IIrPass {
           continue;
         }
 
-        statements.Add(IrPassSupport.Map(statement, expression => expression, this.Block));
+        // The step of a for holds simple statements only: a call there is not expanded into the statements of its helper.
+        statements.Add(statement is IrFor loop ? loop with { Body = this.Block(loop.Body) } : IrPassSupport.Map(statement, expression => expression, this.Block));
         this._position.RemoveAt(this._position.Count - 1);
       }
 

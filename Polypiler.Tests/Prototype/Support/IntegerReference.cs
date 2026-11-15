@@ -131,6 +131,10 @@ internal static class IntegerReference {
         Require(Int(1) >= 1 && Int(1) <= width);
         var source = A();
         return Host(type, Enumerable.Range(0, width).Select(index => index < Int(1) ? source[index] : op == IrIntrinsicOp.SignExtend && source[Int(1) - 1]).ToArray());
+      case IrIntrinsicOp.HighWord:
+        return Host(result, A()[32..]);
+      case IrIntrinsicOp.JoinWords:
+        return Host(result, [.. B(), .. A()]);
       case IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig:
         var bytes = (byte[])arguments[0];
         var size = Bytes(result, bytes, Int(1));

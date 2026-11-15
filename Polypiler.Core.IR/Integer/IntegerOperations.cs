@@ -35,7 +35,7 @@ public static partial class IntegerOperations {
   /// type lists, which the families read while they are registered.
   /// </summary>
   private static readonly IReadOnlyDictionary<IrIntrinsicOp, IntegerOperation> _families = Register(
-    Rotate, Counts, Reordering, PowersOfTwo, WideMultiply, Division, Bounds, Saturating, Carry, Overflow, BitFields, Masks, EndianAccess);
+    Rotate, Counts, Reordering, PowersOfTwo, WideMultiply, Division, Bounds, Saturating, Carry, Overflow, BitFields, Masks, EndianAccess, Limbs);
 
   /// <summary>The operations of this class.</summary>
   public static IReadOnlyCollection<IrIntrinsicOp> Operations => (IReadOnlyCollection<IrIntrinsicOp>)_families.Keys;
