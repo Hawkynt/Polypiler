@@ -230,7 +230,7 @@ public sealed class RustFunctionTests {
   [TestCase("#[ignore] #[test] fn t() {} pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedAttribute)]
   [TestCase("#[no_mangle] pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedAttribute)]
   [TestCase("pub fn f() -> u32 { std::fs::read(1); 1 }", RustFrontend.ForeignPath)]
-  [TestCase("use std::collections::HashMap; pub fn f() -> u32 { 1 }", RustFrontend.ForeignPath)]
+  [TestCase("use std::collections::VecDeque; pub fn f() -> u32 { 1 }", RustFrontend.ForeignPath)]
   [TestCase("pub fn f(a: &[u32]) -> u32 { *a.iter().max().unwrap() }", RustFrontend.UnsupportedIteratorMethod)]
   [TestCase("pub fn f(a: &[u32]) -> usize { a.iter().collect::<Vec<_>>().len() }", RustFrontend.UnsupportedIteratorMethod)]
   [TestCase("pub fn f() -> u32 { (0..3u32).map(|x| x + 1).enumerate().rev().count() as u32 }", RustFrontend.UnsupportedIteratorMethod)]
