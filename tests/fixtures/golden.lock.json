@@ -1113,7 +1113,7 @@
     },
     {
       "path": "tests/fixtures/backend/golden/pointers/Fnv1aPointer.cs.csharp.golden",
-      "sha256": "2199131241b9dc42336cfc622f413206ce7fe2c46bb4280e8957b9b27d5e7008",
+      "sha256": "145f2d141dc3d854dd4527f2c4489a24f2c8ff27ff2ab9eaaf281b93942f9424",
       "bytes": 24562
     },
     {
@@ -1123,8 +1123,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/pointers/Pointers.cs.csharp.golden",
-      "sha256": "5e339db1ac763a8f4bdd09c643db0e5b337255fa5a7e9f663be84f6317d70851",
-      "bytes": 173766
+      "sha256": "470414b432d80b802b65048e28f33b0b7b041a45a03881c8ee9c43594427a298",
+      "bytes": 179562
     },
     {
       "path": "tests/fixtures/backend/golden/pointers/Pointers.cs.javascript.golden",

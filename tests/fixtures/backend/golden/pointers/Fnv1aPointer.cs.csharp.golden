@@ -3,9 +3,9 @@
 // Profile: net2.0, C# 2.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -27,9 +27,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: net2.0, C# 2.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -53,9 +53,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -81,9 +81,9 @@ namespace Golden.Output {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -107,9 +107,9 @@ namespace Golden.Output {
 // Profile: net3.5, C# 3.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -131,9 +131,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: net3.5, C# 3.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -157,9 +157,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -185,9 +185,9 @@ namespace Golden.Output {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -211,9 +211,9 @@ namespace Golden.Output {
 // Profile: net4.6, C# 6.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -235,9 +235,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: net4.6, C# 6.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -261,9 +261,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -289,9 +289,9 @@ namespace Golden.Output {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -315,9 +315,9 @@ namespace Golden.Output {
 // Profile: net4.8, C# 7.3.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -339,9 +339,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: net4.8, C# 7.3.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -365,9 +365,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -393,9 +393,9 @@ namespace Golden.Output {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -419,9 +419,9 @@ namespace Golden.Output {
 // Profile: netstandard2.0, C# 7.3.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -443,9 +443,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: netstandard2.0, C# 7.3.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -469,9 +469,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -497,9 +497,9 @@ namespace Golden.Output {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -523,9 +523,9 @@ namespace Golden.Output {
 // Profile: netstandard2.1, C# 8.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -547,9 +547,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: netstandard2.1, C# 8.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -573,9 +573,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -601,9 +601,9 @@ namespace Golden.Output {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -627,9 +627,9 @@ namespace Golden.Output {
 // Profile: netcoreapp3.1, C# 8.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -651,9 +651,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: netcoreapp3.1, C# 8.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -677,9 +677,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -705,9 +705,9 @@ namespace Golden.Output {
 
 namespace Golden.Output {
 
-  public static unsafe class Fnv1aPointer {
+  public static class Fnv1aPointer {
 
-    public static uint Hash(byte[] data) {
+    public static unsafe uint Hash(byte[] data) {
       unchecked {
         uint hash = 2166136261;
         fixed (byte* start = data) {
@@ -731,9 +731,9 @@ namespace Golden.Output {
 // Profile: net8.0, C# 12.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -755,9 +755,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: net8.0, C# 12.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -781,9 +781,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output;
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -807,9 +807,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output;
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -831,9 +831,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: net10.0, C# 14.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -855,9 +855,9 @@ public static unsafe class Fnv1aPointer {
 // Profile: net10.0, C# 14.
 // Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe).
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -881,9 +881,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output;
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
@@ -907,9 +907,9 @@ public static unsafe class Fnv1aPointer {
 
 namespace Golden.Output;
 
-public static unsafe class Fnv1aPointer {
+public static class Fnv1aPointer {
 
-  public static uint Hash(byte[] data) {
+  public static unsafe uint Hash(byte[] data) {
     unchecked {
       uint hash = 2166136261;
       fixed (byte* start = data) {
