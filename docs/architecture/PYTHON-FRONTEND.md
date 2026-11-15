@@ -119,7 +119,7 @@ than 64 bits hold, a `struct` `Q` of 2^63 or more, `math.floor` of `1e300`: all 
 | `//`, `%` | `DivFloor`, `ModFloor`, `PyFloorDivideFloat`, `PyModuloFloat`; `ZeroDivisionError` |
 | `**`, `pow(a, b)` | `PyPowerInt`, `PyPowerFloat` (`py-int-power-sign`, `py-complex-power`) |
 | `<<`, `>>`, `& \| ^ ~` | `PyShiftLeft`, `PyShiftRight`, `And`, `Or`, `Xor`, `BitNot` |
-| `< <= > >= == !=` | of numbers the comparison, an `int` with a `float` exactly; of strs and bytes their contents; of lists and tuples element by element; of objects the class's `__eq__`, else identity |
+| `< <= > >= == !=` | of numbers the comparison, an `int` with a `float` exactly; of strs and bytes their contents; of lists and tuples element by element; of objects the class's `__eq__`, else identity; of two optional objects of one class `None` equal only to `None`; an optional against another type refused (`PLY1802`) |
 | `is`, `is not` | `None` against an optional, identity of objects and bytes, members of an enum by value; lists, numbers and strs refused (`PLY1820`, `PLY1802`) |
 | `in`, `not in` | a substring of a str; an element of a list, tuple, table or bytes by Python's `==` from the start (`py-float-identity`) |
 | `and`, `or`, `not`, `x if c else y` | the short-circuit operators, a choice that gives an operand, the truth of the value (zero, empty and `None` are false) |
