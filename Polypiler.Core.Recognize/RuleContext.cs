@@ -79,6 +79,12 @@ public sealed class RuleContext {
     // An assignment inside an expression writes its variable as well.
     foreach (var bind in IrStatements.AllExpressions(function.Body).SelectMany(IrShape.Nodes).OfType<IrBind>())
       this.Count(bind.Local);
+
+    // A variable a closure captures may be written by the closure whenever it is called: it holds no one value.
+    foreach (var captured in IrClosures.Captured(function.Body)) {
+      this.Count(captured);
+      this.Count(captured);
+    }
   }
 
   /// <summary>The function.</summary>
