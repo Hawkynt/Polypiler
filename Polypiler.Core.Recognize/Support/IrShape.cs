@@ -98,6 +98,7 @@ public static class IrShape {
     IrCollection operation => operation.Arguments,
     IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
     IrBoundMethod { Receiver: { } receiver } => [receiver],
+    IrArraySequence sequence => [sequence.Array],
     _ => []
   };
 
@@ -224,6 +225,7 @@ public static class IrShape {
     IrCollection operation => operation with { Arguments = operands },
     IrInvoke invocation => invocation with { Callee = operands[0], Arguments = [.. operands.Skip(1)] },
     IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
+    IrArraySequence => new IrArraySequence(operands[0]),
     _ => expression
   };
 

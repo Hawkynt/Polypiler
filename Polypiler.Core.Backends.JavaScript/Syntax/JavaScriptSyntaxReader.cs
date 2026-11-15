@@ -127,6 +127,10 @@ public static class JavaScriptSyntaxReader {
           return new JsBreak();
         case ContinueStatement { Label: null }:
           return new JsContinue();
+        case ContinueStatement { Label: { } label }:
+          return new JsLabeledContinue(label.Name);
+        case LabeledStatement labeled:
+          return new JsLabeled(labeled.Label.Name, this.Statement(labeled.Body));
         case ReturnStatement result:
           return new JsReturn(result.Argument is null ? null : this.Expression(result.Argument));
         case ThrowStatement exception:
@@ -136,7 +140,9 @@ public static class JavaScriptSyntaxReader {
             attempt.Handler is null ? null : this.Block(attempt.Handler.Body, attempt.Handler.Body.Body),
             attempt.Finalizer is null ? null : this.Block(attempt.Finalizer, attempt.Finalizer.Body));
         case FunctionDeclaration function:
-          return new JsFunctionDeclaration(function.Id!.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body));
+          return new JsFunctionDeclaration(function.Id!.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body)) { IsGenerator = function.Generator };
+        case ForOfStatement { Left: VariableDeclaration { Declarations: [{ Id: Identifier element }] } declared } loop:
+          return new JsForOf(this.Text(declared).Split(' ')[0], element.Name, this.Expression(loop.Right), this.Statement(loop.Body));
         case ClassDeclaration { SuperClass: null or Identifier } type:
           return new JsClass(type.Id!.Name, [.. type.Body.Body.Select(this.ClassMember)]) { Base = (type.SuperClass as Identifier)?.Name };
         case ExportNamedDeclaration { Declaration: Statement declared }:
@@ -202,7 +208,9 @@ public static class JavaScriptSyntaxReader {
         case ObjectExpression literal:
           return new JsObject([.. literal.Properties.Select(this.Property)]) { Multiline = this.Text(literal).Contains('\n') };
         case FunctionExpression function:
-          return new JsFunctionExpression(function.Id?.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body));
+          return new JsFunctionExpression(function.Id?.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body)) { IsGenerator = function.Generator };
+        case YieldExpression produced:
+          return new JsYield(produced.Argument is null ? null : this.Expression(produced.Argument), produced.Delegate);
         case ArrowFunctionExpression arrow:
           return arrow.Body is FunctionBody body
             ? new JsArrowFunction(this.Parameters(arrow), this.Block(body, body.Body), null)
@@ -233,10 +241,11 @@ public static class JavaScriptSyntaxReader {
     }
 
     private JsProperty Property(Node node) {
-      if (node is not ObjectProperty { Computed: false, Kind: PropertyKind.Init } property)
+      if (node is not ObjectProperty { Kind: PropertyKind.Init } property)
         throw Unknown(node);
 
-      var key = property.Key is Identifier identifier ? identifier.Name : this.Text(property.Key);
+      // A computed key keeps its brackets: the key of a property is the text written before its colon.
+      var key = property.Computed ? $"[{this.Text(property.Key)}]" : property.Key is Identifier identifier ? identifier.Name : this.Text(property.Key);
       return new JsProperty(key, this.Expression(property.Value), property.Shorthand);
     }
 

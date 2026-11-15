@@ -105,6 +105,6 @@ internal sealed partial class TypeInference {
 
   /// <summary>The type of what a call of a function yields, as its result type in the IR says once it has one.</summary>
   private JsType ResultOf(FunctionModel model)
-    => model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict or JsKind.Object or JsKind.Function || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType).AbsentAs(model.Result);
+    => model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict or JsKind.Object or JsKind.Function or JsKind.Sequence || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType).AbsentAs(model.Result);
 
 }

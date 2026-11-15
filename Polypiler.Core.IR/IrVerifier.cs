@@ -107,6 +107,7 @@ public static partial class IrVerifier {
       }
 
       this.Block(function.Body);
+      this.Iterator();
       this.Constructed();
     }
 
@@ -221,7 +222,7 @@ public static partial class IrVerifier {
         case IrReturn result:
           this.Require(this._finally == 0, "a return inside a finally block");
           if (result.Value is null)
-            this.Require(this._returnType == IrType.Void, "a return without a value in a function that returns one");
+            this.Require(this._returnType == IrType.Void || this._returnType.IsLazySequence, "a return without a value in a function that returns one");
           else
             this.Value(result.Value, this._returnType, "the value returned");
 
@@ -230,7 +231,7 @@ public static partial class IrVerifier {
           this.Using(scope);
           break;
         default:
-          if (!this.ExceptionStatement(statement))
+          if (!this.ExceptionStatement(statement) && !this.SequenceStatement(statement))
             this.Require(false, $"unknown statement {statement.GetType().Name}");
 
           break;
@@ -421,6 +422,9 @@ public static partial class IrVerifier {
           break;
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
           this.FunctionValue(expression);
+          break;
+        case IrArraySequence sequence:
+          this.ArraySequence(sequence);
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)

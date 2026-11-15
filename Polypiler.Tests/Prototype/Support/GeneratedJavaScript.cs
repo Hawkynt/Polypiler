@@ -84,6 +84,13 @@ internal static class GeneratedJavaScript {
       case AssignmentExpression { Left: MemberExpression { Computed: false, Property: Identifier method }, Right: FunctionExpression }:
         declared.Add("." + method.Name);
         break;
+      // So is a method of an object literal of the file, and a label names a statement of the file (#1327).
+      case Property { Computed: false, Key: Identifier method, Value: FunctionExpression }:
+        declared.Add("." + method.Name);
+        break;
+      case LabeledStatement labeled:
+        declared.Add(labeled.Label.Name);
+        break;
     }
 
     foreach (var child in node.ChildNodes)

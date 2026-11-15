@@ -428,6 +428,7 @@ public static partial class CSharpEmitter {
     IrReturn result => (result.Value is null ? [] : [result.Value], []),
     IrThrow or IrRethrow or IrTry or IrForEachCollection => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
     IrUsing scope => ([scope.Initializer], [scope.Body]),
+    IrYield or IrYieldBreak or IrYieldFrom or IrForEachSequence => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
     _ => null
   };
 
@@ -452,6 +453,7 @@ public static partial class CSharpEmitter {
     IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrThrowExpression => IrTree.Operands(expression),
     IrCollection => IrTree.Operands(expression),
     IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke => IrTree.Operands(expression),
+    IrArraySequence => IrTree.Operands(expression),
     _ => null
   };
 
@@ -815,6 +817,7 @@ public static partial class CSharpEmitter {
       this._localFunctions = this.LocalFunctions(statements);
       this._names = [.. this._taken.Concat(this._spellings.Values).Select(name => name.TrimStart('@'))];
       this._complements = Complements(function);
+      this._iterator = IrSequences.IsIterator(function);
       this._scopes.Clear();
       this._scopes.Add(new Scope());
       var parameters = function.Parameters.Skip(skipped).Select(parameter => new CsParameter(new CsType(this.TypeName(parameter.Type)), this.Declare(parameter))).ToList();
@@ -826,6 +829,7 @@ public static partial class CSharpEmitter {
       }
 
       var body = this.Statements(statements);
+      this.Ended(body);
       return (parameters, new CsBlock(wraps ? [new CsCheckedStatement(false, new CsBlock(body))] : body), null);
     }
 
@@ -835,6 +839,7 @@ public static partial class CSharpEmitter {
         : type.Declaration is { } declared ? this._generics.Parameters.ContainsKey(declared) ? declared.Name : this._typeNames[declared.Name] : type.IsView || type.IsMemory ? this.ViewTypeName(type)
         : type.IsCollection ? this.CollectionTypeName(type)
         : type.IsFunction ? this.FunctionTypeName(type)
+        : type.IsLazySequence ? this.SequenceTypeName(type)
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
@@ -932,6 +937,9 @@ public static partial class CSharpEmitter {
 
           statements.Add(new CsContinue());
           break;
+        case IrReturn { Value: null } when this._iterator:
+          statements.Add(new CsYield(null));
+          break;
         case IrReturn result:
           statements.Add(new CsReturn(result.Value is null ? null : this.Stored(result.Value)));
           break;
@@ -939,7 +947,9 @@ public static partial class CSharpEmitter {
           statements.Add(this.Using(scope));
           break;
         default:
-          this.ExceptionStatement(statement, statements);
+          if (!this.SequenceStatement(statement, statements))
+            this.ExceptionStatement(statement, statements);
+
           break;
       }
     }
@@ -1171,6 +1181,9 @@ public static partial class CSharpEmitter {
     }
 
     private (CsExpression Node, int Binding) Plain(IrExpr expression) {
+      if (this.SequenceNode(expression) is { } sequence)
+        return sequence;
+
       switch (expression) {
         case IrConst { Type.IsEnum: true } constant:
           return this.EnumLiteral(constant.Type, constant.Value);

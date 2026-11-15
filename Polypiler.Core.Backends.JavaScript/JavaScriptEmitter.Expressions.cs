@@ -104,6 +104,8 @@ public static partial class JavaScriptEmitter {
           return (this.Chained(chained), true);
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
           return this.FunctionValue(expression);
+        case IrArraySequence sequence:
+          return this.ArraySequence(sequence);
         default:
           var call = (IrCall)expression;
           return (new JsCall(Id(this.Name(call.Function)), [.. call.Arguments.Select(this.Value)]), true);

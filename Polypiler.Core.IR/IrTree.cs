@@ -42,6 +42,7 @@ public static class IrTree {
     IrCollection operation => operation.Arguments,
     IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
     IrBoundMethod { Receiver: { } receiver } => [receiver],
+    IrArraySequence sequence => [sequence.Array],
     _ => []
   };
 
@@ -65,6 +66,9 @@ public static class IrTree {
     IrTry attempt => [.. attempt.Catches.Select(clause => clause.Filter).OfType<IrExpr>()],
     IrUsing scope => [scope.Initializer],
     IrForEachCollection loop => [loop.Collection],
+    IrYield produced => [produced.Value],
+    IrYieldFrom delegated => [delegated.Sequence],
+    IrForEachSequence loop => [loop.Sequence],
     _ => []
   };
 
@@ -82,6 +86,7 @@ public static class IrTree {
     IrTry attempt => [attempt.Body, .. attempt.Catches.Select(clause => clause.Body), .. attempt.Finally is { } final ? [final] : (IrBlock[])[]],
     IrUsing scope => [scope.Body],
     IrForEachCollection loop => [loop.Body],
+    IrForEachSequence loop => [loop.Body],
     _ => []
   };
 

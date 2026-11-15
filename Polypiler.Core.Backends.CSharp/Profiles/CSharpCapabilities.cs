@@ -119,7 +119,10 @@ public enum CSharpFeature {
   ForEachIterationVariable,
 
   /// <summary>A lambda that captures nothing, marked <c>static</c> (C# 9).</summary>
-  StaticAnonymousFunction
+  StaticAnonymousFunction,
+
+  /// <summary>An iterator method, <c>yield return</c> and <c>yield break</c> (C# 2).</summary>
+  Iterator
 
 }
 
@@ -488,7 +491,10 @@ public sealed class CSharpCapabilities {
     .. CSharpNumberTextRows.All,
 
     // The enums of #1318.
-    .. CSharpEnumRows.All
+    .. CSharpEnumRows.All,
+
+    // The lazy sequences of #1327.
+    .. CSharpSequenceRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>

@@ -51,7 +51,10 @@ internal enum JsKind {
   Set,
 
   /// <summary>A function value: one of the functions of a <see cref="FunctionShape"/>.</summary>
-  Function
+  Function,
+
+  /// <summary>A generator object, which yields values of <see cref="JsType.Element"/> once (#1327).</summary>
+  Sequence
 
 }
 
@@ -184,6 +187,7 @@ internal sealed record JsType {
     // An array of strings is a JavaScript Array: no typed array holds a string.
     IrTypeKind.Array => ArrayOf(Of(type.Element!), type.Element!.IsString),
     IrTypeKind.Span or IrTypeKind.ReadOnlySpan => ViewOf(Of(type.Element!)),
+    IrTypeKind.Sequence => SequenceOf(Of(type.Element!)),
     _ => new(type.IsLong ? JsKind.BigInt : JsKind.Number) { Low = IrOperators.Minimum(type), High = IrOperators.Maximum(type) }
   };
 
@@ -235,6 +239,9 @@ internal sealed record JsType {
   /// <summary>A <c>Set</c> type.</summary>
   public static JsType SetOf(JsType element) => new(JsKind.Set) { Element = element };
 
+  /// <summary>The type of a generator object that yields values of a type.</summary>
+  public static JsType SequenceOf(JsType element) => new(JsKind.Sequence) { Element = element };
+
   /// <summary>The IR type of a key, a value or an element of a map or a set: what the values reaching it are, a double where nothing reached it.</summary>
   private static IrType Held(JsType type) => type.Ir is { } held && (held.IsNumeric || held == IrType.Bool || held.IsString || held.IsObject || held.IsStruct || held.IsCollection) ? held : IrType.F64;
 
@@ -282,6 +289,7 @@ internal sealed record JsType {
       JsKind.Map => IrType.Map(Held(this.Key!), Held(this.Element!), MapOrder.Insertion),
       JsKind.Set => IrType.Set(Held(this.Element!), MapOrder.Insertion),
       JsKind.Object => IrType.Object(this.Class!.Ir),
+      JsKind.Sequence => this.Element!.Ir is { } produced ? (IrSequences.IsElement(produced) ? IrType.Sequence(produced, false) : null) : this.Element.Kind == JsKind.Unknown ? IrType.Sequence(IrType.F64, false) : null,
       _ => null
     };
 
@@ -303,6 +311,7 @@ internal sealed record JsType {
     JsKind.Object => this.Class!.Name,
     JsKind.Null => Absence(this),
     JsKind.Function => "a function",
+    JsKind.Sequence => $"a generator of {this.Element!.Describe()}",
     _ => "nothing"
   };
 
@@ -330,6 +339,7 @@ internal sealed record JsType {
     IrTypeKind.Map => $"Map<{Spell(type.Key!)}, {Spell(type.Element!)}>",
     IrTypeKind.Set => $"Set<{Spell(type.Element!)}>",
     IrTypeKind.Object => type.Declaration!.Name,
+    IrTypeKind.Sequence => $"Generator<{Spell(type.Element!)}>",
     _ => Spell(type.Element!) + "[]"
   };
 
@@ -393,6 +403,8 @@ internal sealed record JsType {
         return MapOf(Join(first.Key!, second.Key!), Join(first.Element!, second.Element!));
       case JsKind.Set:
         return SetOf(Join(first.Element!, second.Element!));
+      case JsKind.Sequence:
+        return SequenceOf(Join(first.Element!, second.Element!));
       case JsKind.Function:
         // A value that reaches both places is a member of either shape: they are one.
         return Function(FunctionShape.Merge(first.Callable!, second.Callable!));
