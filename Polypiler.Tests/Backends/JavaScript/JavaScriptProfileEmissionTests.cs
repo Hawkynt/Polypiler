@@ -604,6 +604,11 @@ public sealed class JavaScriptProfileEmissionTests {
   /// written natively by the first profile that has it and as its replacement by the last one that
   /// has not. A new entry needs a case here before this test passes.
   /// </summary>
+  /// <summary>Iterators of C# (#1327): a restartable sequence, a loop over one and a delegation.</summary>
+  private const string Iterators = "static System.Collections.Generic.IEnumerable<int> G() { yield return 1; } "
+    + "static System.Collections.Generic.IEnumerable<int> H() { foreach (var v in G()) yield return v; } "
+    + "public static int F() { int s = 0; foreach (var v in H()) s += v; return s; }";
+
   [Test]
   public void EveryReplaceableCapability_IsNativeAtItsLevelAndReplacedBelow() {
     const string bits = "public static long F(double d, float f, long l, int i) => System.BitConverter.DoubleToInt64Bits(d) + System.BitConverter.SingleToInt32Bits(f) "
@@ -686,6 +691,11 @@ public sealed class JavaScriptProfileEmissionTests {
       [".keys"] = ("public static int F() { var d = new System.Collections.Generic.Dictionary<int, int>(); int s = 0; foreach (var k in d.Keys) s += k; return s; }", "d.keys()", "d.$u.length"),
       [".values"] = ("public static int F() { var d = new System.Collections.Generic.HashSet<int>(); int s = 0; foreach (var k in d) s += k; return s; }", "d.values()", "d.$u.length"),
       [".next"] = ("public static int F() { var d = new System.Collections.Generic.HashSet<int>(); int s = 0; foreach (var k in d) s += k; return s; }", "iterator.next()", "d.$u.length"),
+      ["function*"] = (Iterators, "$make = function* () {", "return $generator(function ($g) {"),
+      ["Symbol"] = (Iterators, "[Symbol.iterator]: ", "{ $iterator: function () {"),
+      ["Symbol.iterator"] = (Iterators, "[Symbol.iterator]: () => $make()", "{ $iterator: function () {"),
+      ["for-of"] = (Iterators, "for (const v of H()) {", "!($r = $it.next()).done"),
+      ["yield*"] = (Iterators, "yield* G();", "$it = $iterate(G());"),
       ["Error cause"] = ("public class X : System.Exception { public X(string m, System.Exception i) : base(m, i) { } } public static string F() => new X(\"a\", null).Message;",
         "super(m, { cause: i });", "this.cause = i;")
     };
@@ -712,7 +722,7 @@ public sealed class JavaScriptProfileEmissionTests {
   [Test, Category("Slow")]
   public void NeverEmittedCapabilities_AreInNoFile() {
     var never = JavaScriptCapabilities.Standard.Entries.Where(entry => !entry.Emitted).Select(entry => entry.Name).Where(name => name != "numeric separators").ToList();
-    Assert.That(never, Has.Count.EqualTo(11));
+    Assert.That(never, Has.Count.EqualTo(12));
     foreach (var fixture in PrototypeFixture.Names)
       foreach (var profile in new[] { _es5, _es2017, JavaScriptProfile.Default }) {
         var text = LegalizedJavaScript.Emit(PrototypeFixture.Imported(fixture), profile).Single().Content;

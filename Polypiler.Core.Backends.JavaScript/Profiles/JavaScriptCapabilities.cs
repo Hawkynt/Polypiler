@@ -215,7 +215,16 @@ public sealed class JavaScriptCapabilities {
     new("parseInt", 5),
 
     // Enums (#1318): a frozen object of named numbers (Object itself is listed with the classes), ECMA-262 5.1 §15.2.3.9.
-    new("Object.freeze", 5)
+    new("Object.freeze", 5),
+
+    // Lazy sequences (#1327): generators and the iterator protocol; below ECMAScript 2015 a state machine on $generator.
+    new("function*", 2015, "state machine"),
+    new("Symbol", 2015, "$iterator"),
+    new("for-of", 2015, "next loop"),
+    new("Symbol.iterator", 2015, "$iterator"),
+    new("yield*", 2015, "nested resume point"),
+    // The bounded pointers of #1331: no level of ECMAScript has pointers; a pointer is a region and a byte offset in it.
+    new("*p, a pointer", int.MaxValue, "view and index", Emitted: false)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

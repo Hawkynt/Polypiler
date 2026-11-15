@@ -71,15 +71,13 @@ public sealed class ViewFrontendTests {
   }
 
   /// <summary>
-  /// <c>[SkipLocalsInit]</c> needs unsafe code, which the subset does not compile: the compiler refuses the
-  /// method before anything could read a stackalloc's unspecified contents.
+  /// <c>[SkipLocalsInit]</c> would leave a stackalloc's contents unspecified, which the IR fixes as zeros: the
+  /// frontend refuses it by name, now that unsafe code compiles (#1331).
   /// </summary>
   [Test]
-  public void SkipLocalsInit_IsRefusedByTheCompiler() {
-    var source = Usings + PrototypeFixture.Wrap("[System.Runtime.CompilerServices.SkipLocalsInit] public static int F() { Span<int> s = stackalloc int[4]; return s[3]; }");
-    var result = CSharpFrontend.Import("Snippet.cs", source);
-    Assert.That((result.Module, result.Diagnostics.Single().Message), Is.EqualTo(((IrModule?)null, result.Diagnostics.Single().Message)));
-    Assert.That(result.Diagnostics.Single().ToString(), Does.Contain(CSharpFrontend.CompilerError).And.Contain("CS0227"));
+  public void SkipLocalsInit_IsRefused() {
+    var refused = Refused("[System.Runtime.CompilerServices.SkipLocalsInit] public static int F() { Span<int> s = stackalloc int[4]; return s[3]; }");
+    Assert.That(refused, Does.Contain(CSharpFrontend.Unsupported).And.Contain("[SkipLocalsInit]"));
   }
 
   // ---------------------------------------------------------------- JavaScript

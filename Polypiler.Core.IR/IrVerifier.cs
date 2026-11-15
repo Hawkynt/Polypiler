@@ -50,6 +50,7 @@ public static partial class IrVerifier {
     var signatures = Hierarchy(types, functions, diagnostics);
     Generics(module, diagnostics);
     Disposables(types, functions, diagnostics);
+    Pointers(module, diagnostics);
     foreach (var function in module.Functions)
       new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures }.Run();
 
@@ -107,7 +108,9 @@ public static partial class IrVerifier {
       }
 
       this.Block(function.Body);
+      this.Iterator();
       this.Constructed();
+      this.Pointers();
     }
 
     private void Require(bool holds, string message) {
@@ -221,7 +224,7 @@ public static partial class IrVerifier {
         case IrReturn result:
           this.Require(this._finally == 0, "a return inside a finally block");
           if (result.Value is null)
-            this.Require(this._returnType == IrType.Void, "a return without a value in a function that returns one");
+            this.Require(this._returnType == IrType.Void || this._returnType.IsLazySequence, "a return without a value in a function that returns one");
           else
             this.Value(result.Value, this._returnType, "the value returned");
 
@@ -230,7 +233,7 @@ public static partial class IrVerifier {
           this.Using(scope);
           break;
         default:
-          if (!this.ExceptionStatement(statement))
+          if (!this.ExceptionStatement(statement) && !this.SequenceStatement(statement))
             this.Require(false, $"unknown statement {statement.GetType().Name}");
 
           break;
@@ -401,8 +404,8 @@ public static partial class IrVerifier {
         case IrThrowExpression thrown:
           this.ThrowExpression(thrown);
           break;
-        case IrNull { Type.IsArray: true } value:
-          this.Require(value.Type.IsStorable, $"null of the type {value.Type}");
+        case IrNull { Type.IsArray: true } or IrNull { Type.IsPointer: true }:
+          this.Require(expression.Type.IsStorable, $"null of the type {expression.Type}");
           break;
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals:
           this.Object(expression);
@@ -421,6 +424,9 @@ public static partial class IrVerifier {
           break;
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
           this.FunctionValue(expression);
+          break;
+        case IrArraySequence sequence:
+          this.ArraySequence(sequence);
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)

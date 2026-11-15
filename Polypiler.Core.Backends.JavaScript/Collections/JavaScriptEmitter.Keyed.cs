@@ -35,7 +35,7 @@ public static partial class JavaScriptEmitter {
       var loops = functions.SelectMany(function => IrTree.Blocks(function.Body).SelectMany(Loops)).ToList();
       // A checked loop that may change what it walks, whose count of insertions a Map does not keep.
       bool Changing(MapOrder order) => loops.Any(loop => loop is { Mode: EnumerationMode.Checked, Collection.Type.Kind: IrTypeKind.Map or IrTypeKind.Set }
-        && loop.Collection.Type.Order == order && MayChangeKeyed(loop.Body));
+        && loop.Collection.Type.Order == order && (MayChangeKeyed(loop.Body) || IrSequences.Suspends(loop.Body)));
       return new() { [MapOrder.SlotReuse] = removes || Changing(MapOrder.SlotReuse), [MapOrder.Insertion] = Changing(MapOrder.Insertion) };
     }
 

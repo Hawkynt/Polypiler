@@ -294,6 +294,11 @@ public sealed record CsLocalDeclaration(CsType LocalType, string Name, CsExpress
 /// <param name="Body">The statement it holds the resource for.</param>
 public sealed record CsUsing(CsLocalDeclaration Resource, CsStatement Body) : CsStatement;
 
+/// <summary><c>fixed (T* p = source) body</c>: the pointer of a pinned array, span or element for the body (#1331).</summary>
+/// <param name="Pointer">The pointer, with the source as its initializer.</param>
+/// <param name="Body">What runs while the source is pinned.</param>
+public sealed record CsFixed(CsLocalDeclaration Pointer, CsStatement Body) : CsStatement;
+
 /// <summary>An expression evaluated as a statement.</summary>
 /// <param name="Expression">The expression.</param>
 public sealed record CsExpressionStatement(CsExpression Expression) : CsStatement;

@@ -74,7 +74,9 @@ internal sealed class GeneratedCSharp {
         OutputKind.DynamicallyLinkedLibrary,
         optimizationLevel: OptimizationLevel.Release,
         checkOverflow: checkOverflow,
-        warningLevel: 9999));
+        warningLevel: 9999,
+        // Pointer code (#1331) is unsafe; its header asks the consuming project for AllowUnsafeBlocks.
+        allowUnsafe: true));
     using var image = new MemoryStream();
     var complaints = compilation.Emit(image).Diagnostics
       .Where(diagnostic => diagnostic.Severity >= DiagnosticSeverity.Warning)
@@ -112,7 +114,8 @@ internal sealed class GeneratedCSharp {
         OutputKind.DynamicallyLinkedLibrary,
         optimizationLevel: OptimizationLevel.Release,
         generalDiagnosticOption: ReportDiagnostic.Error,
-        warningLevel: 9999));
+        warningLevel: 9999,
+        allowUnsafe: true));
     using var image = new MemoryStream();
     return [.. compilation.Emit(image).Diagnostics
       .Where(diagnostic => diagnostic.Severity >= DiagnosticSeverity.Warning)

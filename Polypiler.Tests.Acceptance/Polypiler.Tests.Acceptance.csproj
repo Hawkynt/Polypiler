@@ -11,6 +11,8 @@
     <!-- The assembly's entry point is Cli/RaiseHost.cs, which runs the test-only commands as a child
          process for the exit-code tests, instead of the empty one the test SDK would generate. -->
     <GenerateProgramFile>false</GenerateProgramFile>
+    <!-- The pointer fixtures (tests/fixtures/prototype/pointers) are unsafe code, compiled in as the oracle. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

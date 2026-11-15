@@ -307,6 +307,10 @@ public static partial class IrInterpreter {
   private sealed partial class Machine(Program program, Dictionary<IrGlobal, object> globals) {
 
     public object? Invoke(IrFunction function, object[] arguments) {
+      // An iterator function runs nothing when it is called: it makes the sequence.
+      if (IrSequences.IsIterator(function))
+        return this.Sequence(function, arguments);
+
       var frame = new Frame();
       for (var index = 0; index < arguments.Length; ++index)
         frame.Declare(function.Parameters[index], arguments[index]);
@@ -408,7 +412,7 @@ public static partial class IrInterpreter {
         case IrUsing scope:
           return this.Using(scope, frame);
         default:
-          return this.ExceptionStatement(statement, frame) ?? throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
+          return this.ExceptionStatement(statement, frame) ?? this.SequenceStatement(statement, frame) ?? throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
       }
     }
 
@@ -418,6 +422,8 @@ public static partial class IrInterpreter {
           return Constant(constant.Type, constant.Value);
         case IrConstRef reference:
           return program.Constants[reference.Constant];
+        case IrIntrinsic intrinsic when IrPointers.IsPointerNode(intrinsic):
+          return this.Pointer(intrinsic, frame)!;
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
@@ -505,6 +511,8 @@ public static partial class IrInterpreter {
           return this.Collection(operation, frame);
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
           return this.FunctionValue(expression, frame);
+        case IrArraySequence sequence:
+          return ArraySequence((Array)NotNull(this.Evaluate(sequence.Array, frame)));
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }
@@ -848,6 +856,9 @@ public static partial class IrInterpreter {
 
     public object? Result { get; set; }
 
+    /// <summary>The cursor the body of an iterator function runs for, which its yields hand their values to; <see langword="null"/> in any other function.</summary>
+    public BodyCursor? Cursor { get; init; }
+
     public object Get(IrLocal local) => this.Locals[local].Value!;
 
     /// <summary>Writes a variable: the cell it has, or a new one for a variable that has none yet.</summary>
@@ -869,10 +880,37 @@ public static partial class IrInterpreter {
 
   }
 
-  /// <summary>The storage of one variable.</summary>
+  /// <summary>
+  /// The storage of one variable. Once its address is taken (<see cref="IrIntrinsicOp.AddressOf"/>) the value
+  /// lives in an array of one element, which a pointer reads and writes as the variable does.
+  /// </summary>
   private sealed class Cell(object? value) {
 
-    public object? Value { get; set; } = value;
+    private object? _value = value;
+
+    private Array? _box;
+
+    public object? Value {
+      get => this._box is null ? this._value : Internal(this._box.GetValue(0)!);
+      set {
+        if (this._box is null)
+          this._value = value;
+        else
+          this._box.SetValue(External(this._box.GetType().GetElementType()!, value!), 0);
+      }
+    }
+
+    /// <summary>The array of one element the value lives in from now on, of the host's type for a number type.</summary>
+    public Array Box(IrType type) {
+      if (this._box is null) {
+        this._box = Array.CreateInstance(HostType(type), 1);
+        // A local nothing was assigned to yet keeps the zero of its type.
+        if (this._value is not null)
+          this._box.SetValue(External(this._box.GetType().GetElementType()!, this._value), 0);
+      }
+
+      return this._box;
+    }
 
   }
 

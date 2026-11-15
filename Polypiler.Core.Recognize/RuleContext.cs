@@ -142,7 +142,7 @@ public sealed class RuleContext {
       var frame = this._frames[level - 1];
       // A loop runs its statements again; a catch clause or a finally block may read what a try's body wrote before it threw,
       // and a resource scope is a try.
-      if (frame.Owner is IrWhile or IrDoWhile or IrFor or IrTry or IrUsing or IrForEachCollection)
+      if (frame.Owner is IrWhile or IrDoWhile or IrFor or IrTry or IrUsing or IrForEachCollection or IrForEachSequence)
         return false;
 
       statements = frame.Statements;

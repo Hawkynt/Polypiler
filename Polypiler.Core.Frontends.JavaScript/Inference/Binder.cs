@@ -204,6 +204,14 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       case VariableDeclaration declaration:
         this.Declaration(declaration);
         break;
+      case ExpressionStatement { Expression: YieldExpression produced } when model.Candidate.Function.Generator:
+        // A yield that stands as a statement produces the next value of the generator (#1327).
+        if (produced.Argument is not null) {
+          this.Expression(produced.Argument);
+          model.Flows.Add(new Flow(FlowKind.Yield, produced.Argument, Index: produced.Delegate ? 1 : 0));
+        }
+
+        break;
       case ExpressionStatement expression:
         this.Expression(expression.Expression);
         break;
@@ -251,6 +259,9 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         break;
       case ForOfStatement loop:
         this.ForOf(loop);
+        break;
+      case ReturnStatement { Argument: null } when model.Candidate.Function.Generator:
+        // return; ends a generator, which returns no value of its own.
         break;
       case ReturnStatement result:
         model.Flows.Add(new Flow(FlowKind.Return, result));

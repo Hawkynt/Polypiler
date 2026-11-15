@@ -1112,6 +1112,26 @@
       "bytes": 139476
     },
     {
+      "path": "tests/fixtures/backend/golden/pointers/Fnv1aPointer.cs.csharp.golden",
+      "sha256": "145f2d141dc3d854dd4527f2c4489a24f2c8ff27ff2ab9eaaf281b93942f9424",
+      "bytes": 24562
+    },
+    {
+      "path": "tests/fixtures/backend/golden/pointers/Fnv1aPointer.cs.javascript.golden",
+      "sha256": "f8a58f76394e5d6bb948edcfb084999b3dc8b76c4d839980f1a0863649f42798",
+      "bytes": 103040
+    },
+    {
+      "path": "tests/fixtures/backend/golden/pointers/Pointers.cs.csharp.golden",
+      "sha256": "470414b432d80b802b65048e28f33b0b7b041a45a03881c8ee9c43594427a298",
+      "bytes": 179562
+    },
+    {
+      "path": "tests/fixtures/backend/golden/pointers/Pointers.cs.javascript.golden",
+      "sha256": "73689293da96bc24feb823132f0fb7d91f04ae9b8f52edfd2444fd6185835e87",
+      "bytes": 385232
+    },
+    {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeAbs.cs.csharp.golden",
       "sha256": "3187215bb94ac5aa73099a24d9d8b83ad3b7c15b17d7c6264a38d2cb42e23af0",
       "bytes": 45470
@@ -1570,6 +1590,26 @@
       "path": "tests/fixtures/backend/golden/scopes/Sibling.cs.javascript.golden",
       "sha256": "ac0bc06160ccd41a56ffe2cc0d1b8716506c91828a426db475ad9851c6616061",
       "bytes": 16920
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.csharp.golden",
+      "sha256": "e40ec93bfcdb6ce640299da5d0d010772b6153c797928c54372a78985402c827",
+      "bytes": 437894
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.javascript.golden",
+      "sha256": "b1e06661bea58971eb76d930ea630db36fe3d85d3512640ce426d894fbdd3337",
+      "bytes": 599042
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/iterators.js.csharp.golden",
+      "sha256": "08877f530e31738ce8fcb153bae33a37fa14c8f60edf024f60505509bed80994",
+      "bytes": 208034
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/iterators.js.javascript.golden",
+      "sha256": "6231b68e801710902d9607652581ff55c0739d1121122e0606d003b30a5debef",
+      "bytes": 229574
     },
     {
       "path": "tests/fixtures/backend/golden/spans/Adler32Span.cs.csharp.golden",

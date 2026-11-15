@@ -193,6 +193,7 @@ public static class IrGenerics {
         IrTypeKind.List => IrType.List(Type(element)),
         IrTypeKind.Map => IrType.Map(Type(type.Key!), Type(element), type.Order),
         IrTypeKind.Set => IrType.Set(Type(element), type.Order),
+        IrTypeKind.Sequence => IrType.Sequence(Type(element), type.Restartable),
         _ => IrType.Array(Type(element))
       } : type;
 
@@ -315,6 +316,9 @@ public static class IrGenerics {
         [.. attempt.Catches.Select(clause => clause with { Local = clause.Local is null ? null : this.Local(clause.Local), Filter = clause.Filter is null ? null : this.Expression(clause.Filter), Body = this.Block(clause.Body) })],
         attempt.Finally is null ? null : this.Block(attempt.Finally)),
       IrUsing scope => scope with { Resource = this.Local(scope.Resource), Initializer = this.Expression(scope.Initializer), Body = this.Block(scope.Body) },
+      IrYield produced => new IrYield(this.Expression(produced.Value)),
+      IrYieldFrom delegated => new IrYieldFrom(this.Expression(delegated.Sequence)),
+      IrForEachSequence loop => new IrForEachSequence(this.Local(loop.Element), this.Expression(loop.Sequence), this.Block(loop.Body)),
       _ => statement
     };
 
@@ -361,6 +365,7 @@ public static class IrGenerics {
         IrIsNull test => new IrIsNull(this.Expression(test.Value)),
         IrBind bind => new IrBind(this.Local(bind.Local), this.Expression(bind.Value)),
         IrThrowExpression thrown => new IrThrowExpression(type(thrown.Type), this.Expression(thrown.Exception)),
+        IrArraySequence sequence => new IrArraySequence(this.Expression(sequence.Array)),
         _ => expression
       };
       return special(expression) is { } replaced ? replaced : rebuilt;

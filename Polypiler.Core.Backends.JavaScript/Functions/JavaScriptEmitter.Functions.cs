@@ -78,6 +78,16 @@ public static partial class JavaScriptEmitter {
           this.Environments(counted.Body, counted, captured);
           this.Environments(counted.Step, loop, captured);
           return;
+        case IrForEachSequence or IrForEachCollection when statement is IrForEachSequence || IrSequences.Suspends(statement):
+          // A loop over a sequence, and one over a collection a state machine cuts, give every pass its element (#1327).
+          IrLocal?[] elements = statement is IrForEachSequence sequence ? [sequence.Element] : [((IrForEachCollection)statement).Element, ((IrForEachCollection)statement).Value];
+          foreach (var element in elements.OfType<IrLocal>().Where(captured.Contains))
+            this.Place(statement, element, false);
+
+          foreach (var block in IrTree.Blocks(statement))
+            this.Environments(block, statement, captured);
+
+          return;
         case IrDeclare declare when loop is not null && captured.Contains(declare.Local):
           this.Place(loop, declare.Local, false);
           return;

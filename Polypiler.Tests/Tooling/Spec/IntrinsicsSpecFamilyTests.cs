@@ -147,7 +147,7 @@ public sealed class IntrinsicsSpecFamilyTests {
     Assert.That(names.Where(name => !Enum.TryParse<IrIntrinsicOp>(name, out _)), Is.Empty);
     var missing = Enum.GetValues<IrIntrinsicOp>().Where(op => !names.Contains(op.ToString())).ToList();
     bool Inexact(IrIntrinsicOp op) => FloatOperationTable.Of(op) is { Contract.Kind: FloatContractKind.Ulp } && !IntegerOperations.Operations.Contains(op);
-    Assert.That(missing.Where(op => !Inexact(op)), Is.EquivalentTo(new[] { IrIntrinsicOp.ArrayOf, IrIntrinsicOp.ArrayCopy, IrIntrinsicOp.ArrayFill, IrIntrinsicOp.ArrayClear }.Concat(IrViews.Operations)));
+    Assert.That(missing.Where(op => !Inexact(op)), Is.EquivalentTo(new[] { IrIntrinsicOp.ArrayOf, IrIntrinsicOp.ArrayCopy, IrIntrinsicOp.ArrayFill, IrIntrinsicOp.ArrayClear }.Concat(IrViews.Operations).Concat(IrPointers.Operations)));
     Assert.That(Enum.GetValues<IrIntrinsicOp>().Where(Inexact).Where(op => names.Contains(op.ToString())), Is.Empty);
   }
 
