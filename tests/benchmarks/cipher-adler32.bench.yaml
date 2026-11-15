@@ -1,0 +1,22 @@
+# A P0 source-language baseline of ADR 0006 (ADR-PERF-BUDGETS): Adler-32 of Cipher, pinned upstream
+# code under tests/fixtures/bench/cipher, over 1 KiB, 64 KiB and 1 MiB in node. The expected
+# checksums come from docs/adr/evidence/0006/oracle.py, which computes them without Cipher.
+id: cipher-adler32
+description: Adler-32 of Cipher over a deterministic message of 1 KiB, 64 KiB and 1 MiB in node.
+kind: process
+toolchain: node
+sources:
+  - tests/fixtures/bench/cipher-checksum.js
+  - tests/fixtures/bench/cipher/AlgorithmFramework.js
+  - tests/fixtures/bench/cipher/OpCodes.js
+  - tests/fixtures/bench/cipher/algorithms/checksum/adler.js
+run: [tests/fixtures/bench/cipher-checksum.js, adler, Adler-32]
+expectStdout: "ok"
+variants:
+  - { name: 1kib, args: ["1024", "6a9af6e9"] }
+  - { name: 64kib, args: ["65536", "a1080e49"] }
+  - { name: 1mib, args: ["1048576", "1b1f5ddc"] }
+warmup: 1
+runs: 30
+sizes:
+  source: [tests/fixtures/bench/cipher/algorithms/checksum/adler.js]

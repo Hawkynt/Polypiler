@@ -1,0 +1,154 @@
+## runner fixed: 26 series
+load average (1 min) at series start: min 29.65, median 41.38, max 62.72
+sourceBytes identical in every series: cipher-adler32/1kib [11914], cipher-adler32/1mib [11914], cipher-adler32/64kib [11914], cipher-crc32/1kib [44485], cipher-crc32/1mib [44485], cipher-crc32/64kib [44485], cipher-fletcher32/1kib [14929], cipher-fletcher32/1mib [14929], cipher-fletcher32/64kib [14929]
+samples whose peak memory is below 16777216 bytes, less than node itself needs (the sampler missed the program): 0 of 7020
+
+| id | variant | metric | n | mean | median | RSD % | p95 dev % | p99 dev % | series medians min..max | RSD of series medians % | r(load, median) |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: |
+| cipher-adler32 | 1kib | wallNs | 780 | 66946520 | 54708550 | 52.4 | 146.9 | 287.7 | 38884650..146889800 | 39.5 | 0.46 |
+| cipher-adler32 | 1kib | cpuNs | 780 | 13138305 | 10000000 | 62.5 | 200.0 | 300.0 | 10000000..25000000 | 37.4 | 0.37 |
+| cipher-adler32 | 1kib | peakRssBytes | 780 | 49740401 | 51275776 | 6.7 | 14.5 | 19.7 | 45486080..52598784 | 5.0 | -0.11 |
+| cipher-adler32 | 1mib | wallNs | 780 | 100078672 | 89027500 | 38.1 | 97.0 | 165.2 | 65949800..183811800 | 31.1 | 0.45 |
+| cipher-adler32 | 1mib | cpuNs | 780 | 48948718 | 50000000 | 33.8 | 60.0 | 60.0 | 30000000..80000000 | 33.0 | 0.42 |
+| cipher-adler32 | 1mib | peakRssBytes | 780 | 68643924 | 68440064 | 1.0 | 2.9 | 3.4 | 68075520..69199872 | 0.3 | -0.38 |
+| cipher-adler32 | 64kib | wallNs | 780 | 68541891 | 59715650 | 40.3 | 104.1 | 185.5 | 43206200..141705800 | 37.3 | 0.46 |
+| cipher-adler32 | 64kib | cpuNs | 780 | 20832555 | 20000000 | 61.3 | 100.0 | 150.0 | 10000000..40000000 | 49.6 | 0.50 |
+| cipher-adler32 | 64kib | peakRssBytes | 780 | 55093474 | 52686848 | 9.2 | 19.1 | 19.6 | 50987008..60960768 | 7.4 | 0.52 |
+| cipher-crc32 | 1kib | wallNs | 780 | 64654697 | 56462750 | 43.5 | 94.6 | 242.3 | 41247550..119437550 | 31.4 | 0.55 |
+| cipher-crc32 | 1kib | cpuNs | 780 | 16176309 | 10000000 | 65.7 | 300.0 | 300.0 | 10000000..30000000 | 48.8 | 0.36 |
+| cipher-crc32 | 1kib | peakRssBytes | 780 | 52025628 | 51761152 | 9.1 | 17.3 | 18.5 | 46489600..59101184 | 6.3 | 0.03 |
+| cipher-crc32 | 1mib | wallNs | 780 | 84068126 | 74311500 | 43.8 | 78.0 | 260.8 | 55790550..187428450 | 34.4 | 0.56 |
+| cipher-crc32 | 1mib | cpuNs | 780 | 40346154 | 40000000 | 29.8 | 50.0 | 75.0 | 30000000..70000000 | 27.7 | 0.41 |
+| cipher-crc32 | 1mib | peakRssBytes | 780 | 68807234 | 68689920 | 1.4 | 3.1 | 4.8 | 68335616..69330944 | 0.3 | -0.19 |
+| cipher-crc32 | 64kib | wallNs | 780 | 67416652 | 59691450 | 44.9 | 79.0 | 311.1 | 43766000..140150850 | 33.2 | 0.49 |
+| cipher-crc32 | 64kib | cpuNs | 780 | 21875479 | 20000000 | 60.2 | 100.0 | 150.0 | 10000000..40000000 | 50.6 | 0.49 |
+| cipher-crc32 | 64kib | peakRssBytes | 780 | 55249017 | 53075968 | 9.0 | 19.0 | 19.7 | 50176000..61095936 | 7.4 | 0.52 |
+| cipher-fletcher32 | 1kib | wallNs | 780 | 62856661 | 54755400 | 43.5 | 107.2 | 203.5 | 39302750..129516750 | 36.0 | 0.45 |
+| cipher-fletcher32 | 1kib | cpuNs | 780 | 12761901 | 10000000 | 63.6 | 200.0 | 200.0 | 10000000..30000000 | 45.1 | 0.21 |
+| cipher-fletcher32 | 1kib | peakRssBytes | 780 | 49602423 | 51329024 | 6.8 | 15.6 | 20.4 | 45277184..52056064 | 4.8 | -0.31 |
+| cipher-fletcher32 | 1mib | wallNs | 780 | 93505504 | 79883850 | 43.0 | 107.0 | 231.7 | 59974700..195728450 | 35.9 | 0.25 |
+| cipher-fletcher32 | 1mib | cpuNs | 780 | 48051282 | 50000000 | 32.5 | 60.0 | 60.0 | 30000000..80000000 | 31.0 | 0.23 |
+| cipher-fletcher32 | 1mib | peakRssBytes | 780 | 69078242 | 68956160 | 1.1 | 2.7 | 3.4 | 68704256..69275648 | 0.2 | -0.12 |
+| cipher-fletcher32 | 64kib | wallNs | 780 | 71626452 | 64971850 | 37.8 | 85.0 | 164.2 | 44373450..115465550 | 29.8 | 0.39 |
+| cipher-fletcher32 | 64kib | cpuNs | 780 | 26210888 | 30000000 | 57.7 | 95.8 | 100.0 | 10000000..50000000 | 46.9 | 0.40 |
+| cipher-fletcher32 | 64kib | peakRssBytes | 780 | 56918336 | 59277312 | 8.9 | 16.0 | 21.9 | 51466240..61331456 | 7.2 | 0.46 |
+
+Replay over all ordered pairs of series (baseline, current) of every benchmark and variant:
+
+| metric | pairs | largest ratio | threshold % | false alarms % | +5 % detected % | +10 % detected % | +25 % detected % |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| wallNs | 5850 | 3.778 | 5 | 43.7 | 50.0 | 56.2 | 65.0 |
+| wallNs | 5850 | 3.778 | 10 | 39.9 | 43.8 | 50.0 | 61.7 |
+| wallNs | 5850 | 3.778 | 15 | 37.3 | 40.3 | 44.0 | 59.3 |
+| wallNs | 5850 | 3.778 | 20 | 34.6 | 37.8 | 40.5 | 55.6 |
+| wallNs | 5850 | 3.778 | 25 | 31.8 | 35.0 | 38.3 | 50.0 |
+| wallNs | 5850 | 3.778 | 50 | 18.0 | 21.0 | 24.7 | 34.6 |
+| wallNs | 5850 | 3.778 | 100 | 5.9 | 8.1 | 10.3 | 14.8 |
+| cpuNs | 5850 | 5.000 | 5 | 33.2 | 33.2 | 66.8 | 68.1 |
+| cpuNs | 5850 | 5.000 | 10 | 33.0 | 33.2 | 33.2 | 67.1 |
+| cpuNs | 5850 | 5.000 | 15 | 32.7 | 33.1 | 33.2 | 66.8 |
+| cpuNs | 5850 | 5.000 | 20 | 30.8 | 32.7 | 33.1 | 66.8 |
+| cpuNs | 5850 | 5.000 | 25 | 29.6 | 31.9 | 32.9 | 33.2 |
+| cpuNs | 5850 | 5.000 | 50 | 23.6 | 25.4 | 26.5 | 30.8 |
+| cpuNs | 5850 | 5.000 | 100 | 11.1 | 19.1 | 19.3 | 23.3 |
+| peakRssBytes | 5850 | 1.271 | 5 | 17.2 | 49.9 | 82.6 | 99.5 |
+| peakRssBytes | 5850 | 1.271 | 10 | 13.8 | 17.4 | 49.9 | 91.7 |
+| peakRssBytes | 5850 | 1.271 | 15 | 6.7 | 14.4 | 17.4 | 85.0 |
+| peakRssBytes | 5850 | 1.271 | 20 | 0.4 | 7.5 | 14.7 | 82.4 |
+| peakRssBytes | 5850 | 1.271 | 25 | 0.1 | 0.5 | 8.3 | 49.9 |
+| peakRssBytes | 5850 | 1.271 | 50 | 0.0 | 0.0 | 0.0 | 0.4 |
+| peakRssBytes | 5850 | 1.271 | 100 | 0.0 | 0.0 | 0.0 | 0.0 |
+
+Stability between windows: series before s14 against series from s14 on, median of the series medians.
+
+| id | variant | metric | first window | second window | change % |
+| --- | --- | --- | ---: | ---: | ---: |
+| cipher-adler32 | 1kib | wallNs | 56178800 | 41760100 | -25.7 |
+| cipher-adler32 | 1kib | cpuNs | 10000000 | 10000000 | +0.0 |
+| cipher-adler32 | 1kib | peakRssBytes | 47026176 | 51759104 | +10.1 |
+| cipher-adler32 | 1mib | wallNs | 94972700 | 68297000 | -28.1 |
+| cipher-adler32 | 1mib | cpuNs | 50000000 | 30000000 | -40.0 |
+| cipher-adler32 | 1mib | peakRssBytes | 68462592 | 68433920 | -0.0 |
+| cipher-adler32 | 64kib | wallNs | 63733200 | 45907450 | -28.0 |
+| cipher-adler32 | 64kib | cpuNs | 30000000 | 10000000 | -66.7 |
+| cipher-adler32 | 64kib | peakRssBytes | 59908096 | 51755008 | -13.6 |
+| cipher-crc32 | 1kib | wallNs | 61028200 | 43971800 | -27.9 |
+| cipher-crc32 | 1kib | cpuNs | 20000000 | 10000000 | -50.0 |
+| cipher-crc32 | 1kib | peakRssBytes | 51437568 | 51884032 | +0.9 |
+| cipher-crc32 | 1mib | wallNs | 78691600 | 59471550 | -24.4 |
+| cipher-crc32 | 1mib | cpuNs | 40000000 | 30000000 | -25.0 |
+| cipher-crc32 | 1mib | peakRssBytes | 68618240 | 68753408 | +0.2 |
+| cipher-crc32 | 64kib | wallNs | 63747650 | 47476900 | -25.5 |
+| cipher-crc32 | 64kib | cpuNs | 30000000 | 10000000 | -66.7 |
+| cipher-crc32 | 64kib | peakRssBytes | 59146240 | 51699712 | -12.6 |
+| cipher-fletcher32 | 1kib | wallNs | 57189700 | 41957100 | -26.6 |
+| cipher-fletcher32 | 1kib | cpuNs | 10000000 | 10000000 | +0.0 |
+| cipher-fletcher32 | 1kib | peakRssBytes | 46749696 | 51703808 | +10.6 |
+| cipher-fletcher32 | 1mib | wallNs | 80820750 | 62892400 | -22.2 |
+| cipher-fletcher32 | 1mib | cpuNs | 50000000 | 30000000 | -40.0 |
+| cipher-fletcher32 | 1mib | peakRssBytes | 68974592 | 68937728 | -0.1 |
+| cipher-fletcher32 | 64kib | wallNs | 68223550 | 48420850 | -29.0 |
+| cipher-fletcher32 | 64kib | cpuNs | 30000000 | 10000000 | -66.7 |
+| cipher-fletcher32 | 64kib | peakRssBytes | 60762112 | 51859456 | -14.7 |
+
+## runner old: 3 series
+load average (1 min) at series start: min 53.90, median 57.14, max 65.27
+sourceBytes identical in every series: cipher-adler32/1kib [11914], cipher-adler32/1mib [11914], cipher-adler32/64kib [11914], cipher-crc32/1kib [44485], cipher-crc32/1mib [44485], cipher-crc32/64kib [44485], cipher-fletcher32/1kib [14929], cipher-fletcher32/1mib [14929], cipher-fletcher32/64kib [14929]
+samples whose peak memory is below 16777216 bytes, less than node itself needs (the sampler missed the program): 127 of 810
+
+| id | variant | metric | n | mean | median | RSD % | p95 dev % | p99 dev % | series medians min..max | RSD of series medians % | r(load, median) |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | ---: | ---: |
+| cipher-adler32 | 1kib | wallNs | 90 | 85590534 | 84587300 | 13.1 | 25.0 | 45.9 | 81904500..88037250 | 3.0 | -0.75 |
+| cipher-adler32 | 1kib | cpuNs | 90 | 10219833 | 2329000 | 97.9 | 1188.1 | 1188.1 | 1716500..15000000 | 100.3 | -0.23 |
+| cipher-adler32 | 1kib | peakRssBytes | 90 | 26443913 | 38803456 | 84.7 | 91.6 | 92.0 | 3563520..40615936 | 109.6 | -0.24 |
+| cipher-adler32 | 1mib | wallNs | 90 | 134025400 | 132355700 | 11.9 | 23.0 | 34.4 | 127750500..145331300 | 6.2 | -0.25 |
+| cipher-adler32 | 1mib | cpuNs | 90 | 54000000 | 50000000 | 17.0 | 40.0 | 40.0 | 50000000..60000000 | 8.8 | -0.24 |
+| cipher-adler32 | 1mib | peakRssBytes | 90 | 68387544 | 68227072 | 1.2 | 3.3 | 4.2 | 68167680..68304896 | 0.1 | 0.95 |
+| cipher-adler32 | 64kib | wallNs | 90 | 89669416 | 87710500 | 14.5 | 30.0 | 39.6 | 83650600..94410300 | 5.2 | -0.47 |
+| cipher-adler32 | 64kib | cpuNs | 90 | 20839600 | 20000000 | 45.3 | 100.0 | 100.0 | 20000000..20000000 | 0.0 | nan |
+| cipher-adler32 | 64kib | peakRssBytes | 90 | 53890298 | 58900480 | 24.1 | 93.9 | 94.2 | 53401600..60016640 | 5.2 | 0.77 |
+| cipher-crc32 | 1kib | wallNs | 90 | 84091826 | 83359450 | 11.2 | 21.7 | 57.1 | 82297600..85066850 | 1.4 | -0.97 |
+| cipher-crc32 | 1kib | cpuNs | 90 | 14652600 | 15000000 | 89.8 | 100.0 | 166.7 | 5893000..20000000 | 62.4 | -0.00 |
+| cipher-crc32 | 1kib | peakRssBytes | 90 | 34263541 | 42061824 | 72.4 | 92.2 | 92.6 | 39520256..52541440 | 12.6 | 0.18 |
+| cipher-crc32 | 1mib | wallNs | 90 | 114551230 | 111674100 | 13.6 | 29.5 | 54.0 | 106036450..118091100 | 4.5 | -0.98 |
+| cipher-crc32 | 1mib | cpuNs | 90 | 43000000 | 50000000 | 36.1 | 60.0 | 80.0 | 40000000..50000000 | 10.1 | -0.87 |
+| cipher-crc32 | 1mib | peakRssBytes | 90 | 65866365 | 68147200 | 7.5 | 20.4 | 23.8 | 68020224..68366336 | 0.2 | -1.00 |
+| cipher-crc32 | 64kib | wallNs | 90 | 97160820 | 90783850 | 22.4 | 59.5 | 84.6 | 80261000..119044850 | 17.2 | -0.72 |
+| cipher-crc32 | 64kib | cpuNs | 90 | 25353467 | 20000000 | 41.1 | 150.0 | 150.0 | 20000000..30000000 | 20.2 | -0.86 |
+| cipher-crc32 | 64kib | peakRssBytes | 90 | 56650547 | 57384960 | 8.8 | 13.3 | 28.5 | 55638016..59955200 | 3.3 | -0.19 |
+| cipher-fletcher32 | 1kib | wallNs | 90 | 86494547 | 84877550 | 16.1 | 29.0 | 80.3 | 80994900..94057250 | 7.1 | -0.79 |
+| cipher-fletcher32 | 1kib | cpuNs | 90 | 10689000 | 1950500 | 101.2 | 1438.1 | 1950.8 | 1579500..20000000 | 110.3 | -0.79 |
+| cipher-fletcher32 | 1kib | peakRssBytes | 90 | 26074635 | 33964032 | 86.5 | 90.3 | 90.8 | 3563520..42065920 | 70.7 | -0.98 |
+| cipher-fletcher32 | 1mib | wallNs | 90 | 113955926 | 113365000 | 9.3 | 18.8 | 26.9 | 109540700..114922550 | 2.0 | -0.95 |
+| cipher-fletcher32 | 1mib | cpuNs | 90 | 48222222 | 50000000 | 31.0 | 60.0 | 80.0 | 50000000..60000000 | 8.8 | -0.78 |
+| cipher-fletcher32 | 1mib | peakRssBytes | 90 | 67747112 | 68605952 | 5.4 | 11.6 | 24.4 | 68558848..68616192 | 0.0 | -0.86 |
+| cipher-fletcher32 | 64kib | wallNs | 90 | 92756222 | 92718650 | 14.0 | 23.5 | 35.1 | 90272900..94795800 | 2.0 | 0.18 |
+| cipher-fletcher32 | 64kib | cpuNs | 90 | 25682489 | 20000000 | 43.3 | 150.0 | 150.0 | 20000000..25000000 | 10.9 | -0.78 |
+| cipher-fletcher32 | 64kib | peakRssBytes | 90 | 57440666 | 59543552 | 12.1 | 13.3 | 94.5 | 59486208..59627520 | 0.1 | 0.71 |
+
+Replay over all ordered pairs of series (baseline, current) of every benchmark and variant:
+
+| metric | pairs | largest ratio | threshold % | false alarms % | +5 % detected % | +10 % detected % | +25 % detected % |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| wallNs | 54 | 1.483 | 5 | 24.1 | 50.0 | 74.1 | 96.3 |
+| wallNs | 54 | 1.483 | 10 | 16.7 | 25.9 | 50.0 | 90.7 |
+| wallNs | 54 | 1.483 | 15 | 7.4 | 16.7 | 25.9 | 81.5 |
+| wallNs | 54 | 1.483 | 20 | 3.7 | 7.4 | 18.5 | 72.2 |
+| wallNs | 54 | 1.483 | 25 | 3.7 | 3.7 | 9.3 | 50.0 |
+| wallNs | 54 | 1.483 | 50 | 0.0 | 1.9 | 1.9 | 3.7 |
+| wallNs | 54 | 1.483 | 100 | 0.0 | 0.0 | 0.0 | 0.0 |
+| cpuNs | 54 | 12.662 | 5 | 33.3 | 35.2 | 66.7 | 70.4 |
+| cpuNs | 54 | 12.662 | 10 | 33.3 | 33.3 | 35.2 | 68.5 |
+| cpuNs | 54 | 12.662 | 15 | 31.5 | 33.3 | 33.3 | 66.7 |
+| cpuNs | 54 | 12.662 | 20 | 22.2 | 31.5 | 33.3 | 66.7 |
+| cpuNs | 54 | 12.662 | 25 | 14.8 | 29.6 | 31.5 | 35.2 |
+| cpuNs | 54 | 12.662 | 50 | 11.1 | 14.8 | 14.8 | 22.2 |
+| cpuNs | 54 | 12.662 | 100 | 11.1 | 11.1 | 11.1 | 11.1 |
+| peakRssBytes | 54 | 11.805 | 5 | 22.2 | 50.0 | 77.8 | 87.0 |
+| peakRssBytes | 54 | 11.805 | 10 | 16.7 | 22.2 | 50.0 | 87.0 |
+| peakRssBytes | 54 | 11.805 | 15 | 13.0 | 16.7 | 22.2 | 83.3 |
+| peakRssBytes | 54 | 11.805 | 20 | 13.0 | 13.0 | 16.7 | 77.8 |
+| peakRssBytes | 54 | 11.805 | 25 | 11.1 | 13.0 | 13.0 | 50.0 |
+| peakRssBytes | 54 | 11.805 | 50 | 9.3 | 9.3 | 9.3 | 13.0 |
+| peakRssBytes | 54 | 11.805 | 100 | 7.4 | 9.3 | 9.3 | 9.3 |
+

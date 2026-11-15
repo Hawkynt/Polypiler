@@ -97,10 +97,12 @@ the current value and the relative change:
 - a baseline of 0 is never divided by: 0 to 0 is `0 %`, 0 to more is `new value`;
 - a benchmark on one side only is `new` or `removed`, never a regression.
 
-The budget file has this form; `tooling/bench/budgets.yaml` with real numbers is ADR-PERF-BUDGETS' to
-write after a baseline was measured on the pinned CI machine, and
+The product budgets are [`tooling/bench/budgets.yaml`](../../tooling/bench/budgets.yaml), set by
+[ADR 0006](../adr/0006-performance-budgets.md) from the baseline series under
+[`baseline-p0/`](baseline-p0): only metrics that repeat exactly are gated, at no increase; wall time,
+processor time and peak memory are record only.
 [`tests/fixtures/bench/budgets-test.yaml`](../../tests/fixtures/bench/budgets-test.yaml) exists only to
-test the comparison:
+test the comparison. A budget file has this form:
 
 ```yaml
 schemaVersion: 1
