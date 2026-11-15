@@ -85,7 +85,41 @@ public sealed record PySubscript(PyExpression Target, PyExpression Index) : PyEx
 /// <summary><c>callee(arguments)</c>.</summary>
 /// <param name="Callee">What is called.</param>
 /// <param name="Arguments">The positional arguments.</param>
-public sealed record PyCall(PyExpression Callee, IReadOnlyList<PyExpression> Arguments) : PyExpression;
+public sealed record PyCall(PyExpression Callee, IReadOnlyList<PyExpression> Arguments) : PyExpression {
+
+  /// <summary>The keyword arguments after the positional ones, <c>name=value</c>.</summary>
+  public IReadOnlyList<PyKeyword> Keywords { get; init; } = [];
+
+}
+
+/// <summary>A keyword argument of a call, <c>name=value</c>.</summary>
+/// <param name="Name">The name of the parameter.</param>
+/// <param name="Value">The value.</param>
+public sealed record PyKeyword(string Name, PyExpression Value) : PyNode;
+
+/// <summary><c>*value</c>: the elements of a sequence as positional arguments of a call.</summary>
+/// <param name="Value">The sequence.</param>
+public sealed record PyStarred(PyExpression Value) : PyExpression;
+
+/// <summary><c>lower:upper</c>, the index of a subscript that takes a slice; either bound may be left out.</summary>
+/// <param name="Lower">The first index, or <see langword="null"/> for the start.</param>
+/// <param name="Upper">The index after the last, or <see langword="null"/> for the end.</param>
+public sealed record PySlice(PyExpression? Lower, PyExpression? Upper) : PyExpression;
+
+/// <summary>A dictionary display, <c>{k: v}</c>; keys and values are evaluated pair by pair, left to right.</summary>
+/// <param name="Keys">The keys.</param>
+/// <param name="Values">The value of each key.</param>
+public sealed record PyDict(IReadOnlyList<PyExpression> Keys, IReadOnlyList<PyExpression> Values) : PyExpression;
+
+/// <summary><c>lambda a, b: body</c>: a function of one expression.</summary>
+/// <param name="Parameters">The names of the parameters.</param>
+/// <param name="Body">The expression it returns.</param>
+public sealed record PyLambda(IReadOnlyList<string> Parameters, PyExpression Body) : PyExpression;
+
+/// <summary><c>yield value</c>, or <c>yield from value</c>: a value of a generator, or every value of another iterable.</summary>
+/// <param name="Value">The value, or <see langword="null"/> for none.</param>
+/// <param name="From">Whether the values of an iterable are yielded one by one.</param>
+public sealed record PyYield(PyExpression? Value, bool From) : PyExpression;
 
 /// <summary>A prefix operator: <c>-</c>, <c>+</c>, <c>~</c> or <c>not</c>.</summary>
 /// <param name="Operator">The operator.</param>
@@ -103,7 +137,7 @@ public sealed record PyBinary(PyExpression Left, string Operator, PyExpression R
 /// evaluates every operand at most once.
 /// </summary>
 /// <param name="Operands">Two operands or more.</param>
-/// <param name="Operators">One operator per neighbouring pair: <c>&lt; &lt;= &gt; &gt;= == != in</c>.</param>
+/// <param name="Operators">One operator per neighbouring pair: <c>&lt; &lt;= &gt; &gt;= == != in</c>, <c>not in</c>, <c>is</c>, <c>is not</c>.</param>
 public sealed record PyCompare(IReadOnlyList<PyExpression> Operands, IReadOnlyList<string> Operators) : PyExpression;
 
 /// <summary><c>left and right</c> or <c>left or right</c>: the right operand is evaluated only when the left one does not decide.</summary>
@@ -185,9 +219,36 @@ public sealed record PyBreak : PyStatement;
 /// <summary><c>continue</c>.</summary>
 public sealed record PyContinue : PyStatement;
 
-/// <summary><c>raise exception</c>.</summary>
-/// <param name="Exception">The exception raised.</param>
-public sealed record PyRaise(PyExpression Exception) : PyStatement;
+/// <summary><c>raise exception</c>, or <c>raise</c> on its own, which raises the exception being handled again.</summary>
+/// <param name="Exception">The exception raised, or <see langword="null"/>.</param>
+public sealed record PyRaise(PyExpression? Exception) : PyStatement;
+
+/// <summary><c>nonlocal a, b</c>: the names a nested function assigns in the function around it.</summary>
+/// <param name="Names">The names.</param>
+public sealed record PyNonlocal(IReadOnlyList<string> Names) : PyStatement;
+
+/// <summary>One <c>except</c> clause of a <see cref="PyTry"/>: <c>except Type as name:</c>, or <c>except:</c> without a type.</summary>
+/// <param name="Type">The class or the tuple of classes caught, or <see langword="null"/> for every exception.</param>
+/// <param name="Name">The variable that holds the exception, or <see langword="null"/>.</param>
+/// <param name="Body">The statements of the clause.</param>
+public sealed record PyExceptHandler(PyExpression? Type, string? Name, IReadOnlyList<PyStatement> Body) : PyNode;
+
+/// <summary><c>try:</c> with its <c>except</c> clauses, tested in order, and a <c>finally:</c> that runs on every way out.</summary>
+/// <param name="Body">The statements tried.</param>
+/// <param name="Handlers">The clauses.</param>
+/// <param name="Finally">The statements of <c>finally</c>; empty for none.</param>
+public sealed record PyTry(IReadOnlyList<PyStatement> Body, IReadOnlyList<PyExceptHandler> Handlers, IReadOnlyList<PyStatement> Finally) : PyStatement;
+
+/// <summary><c>class Name(Base):</c> with its body.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Bases">The classes it derives from, in order.</param>
+/// <param name="Body">The statements of the class: its methods and attributes.</param>
+public sealed record PyClassDef(string Name, IReadOnlyList<PyExpression> Bases, IReadOnlyList<PyStatement> Body) : PyStatement {
+
+  /// <summary>The decorators, each an expression on its own line before the class.</summary>
+  public IReadOnlyList<PyExpression> Decorators { get; init; } = [];
+
+}
 
 /// <summary><c>global a, b</c>: the names a function assigns at the level of the module.</summary>
 /// <param name="Names">The names.</param>
@@ -217,7 +278,7 @@ public sealed record PyIf(PyExpression Test, IReadOnlyList<PyStatement> Body, IR
 public sealed record PyWhile(PyExpression Test, IReadOnlyList<PyStatement> Body) : PyStatement;
 
 /// <summary><c>for variable in iterable:</c>.</summary>
-/// <param name="Variable">The loop variable.</param>
+/// <param name="Variable">The loop variable, or several separated by <c>, </c> that take the elements of each item.</param>
 /// <param name="Iterable">What it runs over, evaluated once.</param>
 /// <param name="Body">The statements of one pass.</param>
 public sealed record PyFor(string Variable, PyExpression Iterable, IReadOnlyList<PyStatement> Body) : PyStatement;
@@ -236,10 +297,15 @@ public sealed record PyMatchCase(IReadOnlyList<PyExpression> Patterns, PyExpress
 /// <param name="Cases">The cases.</param>
 public sealed record PyMatchStatement(PyExpression Subject, IReadOnlyList<PyMatchCase> Cases) : PyStatement;
 
-/// <summary>A parameter of a function: its name and type.</summary>
-/// <param name="Name">The name.</param>
-/// <param name="Annotation">The type.</param>
-public sealed record PyParameter(string Name, PyExpression Annotation) : PyNode;
+/// <summary>A parameter of a function: its name and type; <c>self</c> of a method has no type.</summary>
+/// <param name="Name">The name; <c>*name</c> for the parameter that takes the remaining positional arguments.</param>
+/// <param name="Annotation">The type, or <see langword="null"/>.</param>
+public sealed record PyParameter(string Name, PyExpression? Annotation) : PyNode {
+
+  /// <summary>The value the parameter has when a call leaves it out, or <see langword="null"/>.</summary>
+  public PyExpression? Default { get; init; }
+
+}
 
 /// <summary><c>def name(parameters) -&gt; returns:</c> with its body.</summary>
 /// <param name="Name">The name.</param>
@@ -250,6 +316,9 @@ public sealed record PyFunctionDef(string Name, IReadOnlyList<PyParameter> Param
 
   /// <summary>Whether the function is a helper the backend or legalization added, which the target passes may remove.</summary>
   public bool IsHelper { get; init; }
+
+  /// <summary>The decorators, each an expression on its own line before the function.</summary>
+  public IReadOnlyList<PyExpression> Decorators { get; init; } = [];
 
 }
 

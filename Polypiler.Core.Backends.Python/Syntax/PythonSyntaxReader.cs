@@ -55,7 +55,7 @@ public static class PythonSyntaxReader {
 
   private static readonly string[] _operators = [
     "**", "//", "<<", ">>", "<=", ">=", "==", "!=", ":=", "->",
-    "+", "-", "*", "/", "%", "&", "|", "^", "~", "<", ">", "(", ")", "[", "]", ",", ":", ".", "="
+    "+", "-", "*", "/", "%", "&", "|", "^", "~", "<", ">", "(", ")", "[", "]", "{", "}", ",", ":", ".", "=", "@"
   ];
 
   private static List<Token> Tokenize(string source) {
@@ -129,7 +129,7 @@ public static class PythonSyntaxReader {
 
         var op = _operators.FirstOrDefault(candidate => string.CompareOrdinal(line, position, candidate, 0, candidate.Length) == 0)
           ?? throw new FormatException($"line {number}: unexpected character '{character}'");
-        depth += op switch { "(" or "[" => 1, ")" or "]" => -1, _ => 0 };
+        depth += op switch { "(" or "[" or "{" => 1, ")" or "]" or "}" => -1, _ => 0 };
         if (depth < 0)
           throw new FormatException($"line {number}: '{op}' closes no bracket");
 
@@ -255,8 +255,24 @@ public static class PythonSyntaxReader {
     }
 
     private PyStatement Statement() {
+      if (this.IsOperator("@")) {
+        var decorators = new List<PyExpression>();
+        while (this.Accept(TokenKind.Operator, "@")) {
+          decorators.Add(this.Primary());
+          this.Expect(TokenKind.Newline);
+        }
+
+        return this.IsKeyword("class") ? this.Class() with { Decorators = decorators } : this.Function() with { Decorators = decorators };
+      }
+
       if (this.IsKeyword("def"))
         return this.Function();
+
+      if (this.IsKeyword("class"))
+        return this.Class();
+
+      if (this.Accept(TokenKind.Name, "try"))
+        return this.Try();
 
       if (this.IsKeyword("if"))
         return this.If();
@@ -268,6 +284,9 @@ public static class PythonSyntaxReader {
 
       if (this.Accept(TokenKind.Name, "for")) {
         var variable = this.Expect(TokenKind.Name).Text;
+        while (this.Accept(TokenKind.Operator, ","))
+          variable += ", " + this.Expect(TokenKind.Name).Text;
+
         this.Expect(TokenKind.Name, "in");
         var iterable = this.Expression();
         return new PyFor(variable, iterable, this.Block());
@@ -296,10 +315,13 @@ public static class PythonSyntaxReader {
         return new PyReturn(this.Is(TokenKind.Newline) ? null : this.Expression());
 
       if (this.Accept(TokenKind.Name, "raise"))
-        return new PyRaise(this.Expression());
+        return new PyRaise(this.Is(TokenKind.Newline) ? null : this.Expression());
 
       if (this.Accept(TokenKind.Name, "global"))
         return new PyGlobal(this.Names());
+
+      if (this.Accept(TokenKind.Name, "nonlocal"))
+        return new PyNonlocal(this.Names());
 
       if (this.Accept(TokenKind.Name, "import"))
         return new PyImport(this.Dotted());
@@ -338,15 +360,41 @@ public static class PythonSyntaxReader {
       return name;
     }
 
+    private PyClassDef Class() {
+      this.Expect(TokenKind.Name, "class");
+      var name = this.Expect(TokenKind.Name).Text;
+      var bases = this.Accept(TokenKind.Operator, "(") ? this.Items(")") : [];
+      return new PyClassDef(name, bases, this.Block());
+    }
+
+    private PyTry Try() {
+      var body = this.Block();
+      var handlers = new List<PyExceptHandler>();
+      while (this.Accept(TokenKind.Name, "except")) {
+        var type = this.IsOperator(":") ? null : this.Expression();
+        var bound = this.Accept(TokenKind.Name, "as") ? this.Expect(TokenKind.Name).Text : null;
+        handlers.Add(new PyExceptHandler(type, bound, this.Block()));
+      }
+
+      var hasFinally = this.Accept(TokenKind.Name, "finally");
+      if (handlers.Count == 0 && !hasFinally)
+        throw this.Error("expected 'except' or 'finally'");
+
+      var @finally = hasFinally ? this.Block() : [];
+
+      return new PyTry(body, handlers, @finally);
+    }
+
     private PyFunctionDef Function() {
       this.Expect(TokenKind.Name, "def");
       var name = this.Expect(TokenKind.Name).Text;
       this.Expect(TokenKind.Operator, "(");
       var parameters = new List<PyParameter>();
       while (!this.Accept(TokenKind.Operator, ")")) {
-        var parameter = this.Expect(TokenKind.Name).Text;
-        this.Expect(TokenKind.Operator, ":");
-        parameters.Add(new PyParameter(parameter, this.Expression()));
+        var parameter = (this.Accept(TokenKind.Operator, "*") ? "*" : "") + this.Expect(TokenKind.Name).Text;
+        var annotation = this.Accept(TokenKind.Operator, ":") ? this.Expression() : null;
+        var value = this.Accept(TokenKind.Operator, "=") ? this.Expression() : null;
+        parameters.Add(new PyParameter(parameter, annotation) { Default = value });
         if (!this.Accept(TokenKind.Operator, ",") && !this.IsOperator(")"))
           throw this.Error("expected ',' or ')'");
       }
@@ -390,6 +438,24 @@ public static class PythonSyntaxReader {
     }
 
     public PyExpression Expression() {
+      if (this.Accept(TokenKind.Name, "lambda")) {
+        var parameters = new List<string>();
+        while (!this.Accept(TokenKind.Operator, ":")) {
+          parameters.Add(this.Expect(TokenKind.Name).Text);
+          if (!this.Accept(TokenKind.Operator, ",") && !this.IsOperator(":"))
+            throw this.Error("expected ',' or ':'");
+        }
+
+        return new PyLambda(parameters, this.Expression());
+      }
+
+      if (this.Accept(TokenKind.Name, "yield")) {
+        if (this.Accept(TokenKind.Name, "from"))
+          return new PyYield(this.Expression(), true);
+
+        return new PyYield(this.Is(TokenKind.Newline) || this.IsOperator(")") ? null : this.Expression(), false);
+      }
+
       var whenTrue = this.Or();
       if (!this.Accept(TokenKind.Name, "if"))
         return whenTrue;
@@ -428,6 +494,11 @@ public static class PythonSyntaxReader {
           operators.Add(this.Next().Text);
         else if (this.Accept(TokenKind.Name, "in"))
           operators.Add("in");
+        else if (this.IsKeyword("not") && tokens[this._index + 1] is { Kind: TokenKind.Name, Text: "in" }) {
+          this._index += 2;
+          operators.Add("not in");
+        } else if (this.Accept(TokenKind.Name, "is"))
+          operators.Add(this.Accept(TokenKind.Name, "not") ? "is not" : "is");
         else
           break;
 
@@ -474,22 +545,41 @@ public static class PythonSyntaxReader {
       return this.Accept(TokenKind.Operator, "**") ? new PyBinary(left, "**", this.Unary()) : left;
     }
 
-    private PyExpression Primary() {
+    public PyExpression Primary() {
       var expression = this.Atom();
       while (true) {
         if (this.Accept(TokenKind.Operator, ".")) {
           expression = new PyAttribute(expression, this.Expect(TokenKind.Name).Text);
         } else if (this.Accept(TokenKind.Operator, "(")) {
           var arguments = new List<PyExpression>();
+          var keywords = new List<PyKeyword>();
           while (!this.Accept(TokenKind.Operator, ")")) {
-            arguments.Add(this.Expression());
+            if (this.Is(TokenKind.Name) && tokens[this._index + 1] is { Kind: TokenKind.Operator, Text: "=" }) {
+              var keyword = this.Next().Text;
+              this.Next();
+              keywords.Add(new PyKeyword(keyword, this.Expression()));
+            } else {
+              arguments.Add(this.Accept(TokenKind.Operator, "*") ? new PyStarred(this.Binary(0)) : this.Expression());
+            }
+
             if (!this.Accept(TokenKind.Operator, ",") && !this.IsOperator(")"))
               throw this.Error("expected ',' or ')'");
           }
 
-          expression = new PyCall(expression, arguments);
+          expression = new PyCall(expression, arguments) { Keywords = keywords };
         } else if (this.Accept(TokenKind.Operator, "[")) {
-          var index = this.Expression();
+          var lower = this.IsOperator(":") ? null : this.Expression();
+          PyExpression index = lower!;
+          if (this.Accept(TokenKind.Operator, ":")) {
+            index = new PySlice(lower, this.IsOperator("]") ? null : this.Expression());
+          } else if (this.IsOperator(",")) {
+            var indexes = new List<PyExpression> { index };
+            while (this.Accept(TokenKind.Operator, ","))
+              indexes.Add(this.Expression());
+
+            index = new PyTuple(indexes);
+          }
+
           this.Expect(TokenKind.Operator, "]");
           expression = new PySubscript(expression, index);
         } else {
@@ -511,13 +601,25 @@ public static class PythonSyntaxReader {
           return new PyBool(false);
         case TokenKind.Name when token.Text == "None":
           return new PyNone();
-        case TokenKind.Name when token.Text is "if" or "else" or "and" or "or" or "not" or "in" or "def" or "return" or "while" or "for":
+        case TokenKind.Name when token.Text is "if" or "else" or "and" or "or" or "not" or "in" or "is" or "def" or "class" or "return" or "while" or "for" or "try" or "except" or "finally" or "lambda" or "yield" or "raise":
           throw new FormatException($"line {token.Line}: the keyword '{token.Text}' stands where an expression is expected");
         case TokenKind.Name:
           return new PyName(token.Text);
         case TokenKind.Operator when token.Text == "[":
           var items = this.Items("]");
           return new PyList(items) { Tabulated = this.Spans(token) };
+        case TokenKind.Operator when token.Text == "{":
+          var keys = new List<PyExpression>();
+          var values = new List<PyExpression>();
+          while (!this.Accept(TokenKind.Operator, "}")) {
+            keys.Add(this.Expression());
+            this.Expect(TokenKind.Operator, ":");
+            values.Add(this.Expression());
+            if (!this.Accept(TokenKind.Operator, ",") && !this.IsOperator("}"))
+              throw this.Error("expected ',' or '}'");
+          }
+
+          return new PyDict(keys, values);
         case TokenKind.Operator when token.Text == "(":
           if (this.Is(TokenKind.Name) && tokens[this._index + 1] is { Kind: TokenKind.Operator, Text: ":=" }) {
             var name = this.Next().Text;
