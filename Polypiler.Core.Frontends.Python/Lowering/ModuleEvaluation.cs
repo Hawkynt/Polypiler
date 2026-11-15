@@ -142,7 +142,8 @@ internal sealed class ModuleEvaluation(LoweringContext context, Typing.TypeInfer
         $"statement 'module-level {module.File.Quote(expression)}, which raises {Classes.PythonName(exception.Class)} when the module is imported,' is not supported by the Python frontend");
     }
 
-    if (type.Kind == PyKind.List) {
+    // A table read again, such as U = T, is a table of its own with the same values: no function writes one.
+    if (type.Kind is PyKind.List or PyKind.Table) {
       var element = type.Element!;
       if (element.Kind is not (PyKind.Int or PyKind.Float or PyKind.Enum))
         throw module.File.Refuse(expression, PythonFrontend.UnsupportedStatementDescriptor,
@@ -182,8 +183,8 @@ internal sealed class ModuleEvaluation(LoweringContext context, Typing.TypeInfer
     PyKind.Str => new IrStrConst((string)value!),
     PyKind.Enum => new IrConst(PyTypes.Ir(type), System.Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture)),
     PyKind.Bytes or PyKind.ByteArray => Intrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(IrType.U8), [.. ((byte[])value!).Select(octet => (IrExpr)new IrConst(IrType.U8, octet))]),
-    PyKind.Tuple => new IrStructNew(PyTypes.Ir(type), [.. type.Items.Zip((object?[])value!).Select(pair => Constant(pair.First, pair.Second))]),
-    _ => throw new InvalidOperationException($"No constant of the type {type}.")
+    // Every other kind is refused before the interpreter runs, so what is left is a tuple.
+    _ => new IrStructNew(PyTypes.Ir(type), [.. type.Items.Zip((object?[])value!).Select(pair => Constant(pair.First, pair.Second))])
   };
 
 }

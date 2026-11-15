@@ -218,7 +218,7 @@ internal static class ExpressionTypes {
       return type.IsEnum ? PyType.Enum(type) : PyType.Object(type);
 
     if (binding == Binding.Import && scope.Module.Imports[name] is { User: null } library)
-      return library.Module == "math" && library.Name is { } mathName ? LibraryCallMap.MathResult(mathName, []) ?? PyType.Unknown
+      return library.Module == "math" && library.Name is { } mathName ? LibraryCallMap.MathResult(mathName) ?? PyType.Unknown
         : library.Module == "struct" ? StructResult(library.Name!, arguments) : PyType.Unknown;
 
     if (binding != Binding.BuiltIn)
@@ -294,7 +294,7 @@ internal static class ExpressionTypes {
     var name = callee.Text("attr")!;
     var arguments = call.Nodes("args");
     if (scope.LibraryModule(owner) is { } library)
-      return library == "math" ? LibraryCallMap.MathResult(name, []) ?? PyType.Unknown : library == "struct" ? StructResult(name, arguments) : PyType.Unknown;
+      return library == "math" ? LibraryCallMap.MathResult(name) ?? PyType.Unknown : library == "struct" ? StructResult(name, arguments) : PyType.Unknown;
 
     if (scope.UserModule(owner) is { } user)
       return user.Functions.TryGetValue(name, out var function) ? function.Returns

@@ -64,6 +64,43 @@ public sealed class FunctionLoweringTests {
       Assert.That(PythonSnippet.Refusals(source), Has.Some.Contains(diagnostic));
   }
 
+  /// <summary>Every spelling of a hint the import knows: written as code, as a forward reference, through typing, and the ones it does not.</summary>
+  [TestCase("'list[int]'", true)]
+  [TestCase("' int | None '", true)]
+  [TestCase("'typing.List[int]'", true)]
+  [TestCase("'Optional[ValueError]'", true)]
+  [TestCase("bytearray", true)]
+  [TestCase("ValueError", true)]
+  [TestCase("List[int]", true)]
+  [TestCase("typing.List[int]", true)]
+  [TestCase("tuple[int, float]", true)]
+  [TestCase("''", false)]
+  [TestCase("'list[int'", false)]
+  [TestCase("'int float'", false)]
+  [TestCase("'[int]'", false)]
+  [TestCase("'int | str'", false)]
+  [TestCase("math.pi", false)]
+  [TestCase("3", false)]
+  [TestCase("dict | None", false)]
+  [TestCase("None | dict", false)]
+  [TestCase("int | str", false)]
+  [TestCase("tuple[int, None]", false)]
+  [TestCase("tuple[int, ...]", false)]
+  [TestCase("list[int, int]", false)]
+  [TestCase("Union[int, str, float]", false)]
+  [TestCase("Optional[None]", false)]
+  [TestCase("Iterator[...]", false)]
+  [TestCase("Final[int]", false)]
+  [TestCase("Optional[list[int]]", false)]
+  [TestCase("Iterator[int]", false)]
+  public void HintSpellings_AreKnownOrRefused(string hint, bool known) {
+    var diagnostics = PythonSnippet.Import($"import math\nimport typing\nfrom typing import Final, Iterator, List, Optional, Union\n\ndef f(x: {hint}) -> int:\n    return 0\n").Diagnostics.Select(diagnostic => diagnostic.ToString());
+    if (known)
+      Assert.That(diagnostics, Is.Empty);
+    else
+      Assert.That(diagnostics, Has.Some.Contains($"error PLY1801: the type hint '{hint}' of 'x' is not supported"));
+  }
+
   [Test]
   public void UnsupportedReturnHint_IsRefused()
     => Assert.That(PythonSnippet.Refusals("def f(x: int) -> dict[str, int]:\n    return x\n"),

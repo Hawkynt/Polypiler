@@ -28,11 +28,8 @@ internal static class LibraryCallMap {
   /// <summary>Whether a module of the standard library defines a name the import knows.</summary>
   public static bool Has(string module, string name) => _modules.TryGetValue(module, out var names) && names.Contains(name);
 
-  /// <summary>Whether an import binds a module itself, not a name of it.</summary>
-  public static bool IsModule(ImportBinding binding) => binding.Name is null;
-
-  /// <summary>The functions of <c>math</c> the import calls, with the type of their result for an argument of a type.</summary>
-  public static PyType? MathResult(string name, IReadOnlyList<PyType> arguments) => name switch {
+  /// <summary>The functions of <c>math</c> the import calls, with the type of their result; <see langword="null"/> for a constant.</summary>
+  public static PyType? MathResult(string name) => name switch {
     "sqrt" or "fabs" or "copysign" => PyType.Float,
     "isqrt" or "floor" or "ceil" or "trunc" or "gcd" => PyType.Int,
     "isnan" or "isinf" or "isfinite" => PyType.Bool,

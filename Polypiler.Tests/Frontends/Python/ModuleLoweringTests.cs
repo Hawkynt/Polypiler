@@ -69,6 +69,8 @@ public sealed class ModuleLoweringTests {
   [TestCase("a: float", "math.tau / math.pi + math.e - math.e", 0.0, "float 1.9999999999999996")]
   [TestCase("a: float", "math.inf if math.isinf(a + math.inf) else 0.0", 0.0, "float inf")]
   [TestCase("a: float", "math.copysign(1.0, math.nan)", 0.0, "float 1.0")]
+  [TestCase("a: float", "math.isnan(a)", 0.0, "bool False")]
+  [TestCase("a: float", "math.isfinite(a / 1e-308 * 1e308)", 2.0, "bool False")]
   public void MappedLibraryCalls_KeepTheirResultTypesAndEdgeBehaviour(string parameters, string expression, object argument, string expected)
     => Assert.That(PythonSnippet.Run($"import math\n\ndef f({parameters}):\n    return {expression}\n", "f", argument), Is.EqualTo(expected));
 
@@ -242,6 +244,8 @@ public sealed class ModuleLoweringTests {
   [TestCase("def f() -> int:\n    print(1)\n    return 0\n", "error PLY1833: 'print' is neither part of this import nor in the Python call map")]
   [TestCase("import math\ndef f() -> float:\n    return math.sin(1.0)\n", "error PLY1833: 'math.sin' is neither part of this import nor in the Python call map")]
   [TestCase("import math\ndef f() -> float:\n    return math.tan\n", "error PLY1833: 'math.tan' is neither part of this import nor in the Python call map")]
+  [TestCase("import math\ndef f():\n    return math.pi()\n", "error PLY1801: the result type of 'f' is not known")]
+  [TestCase("from math import pi\ndef f():\n    return pi()\n", "error PLY1801: the result type of 'f' is not known")]
   [TestCase("import math\ndef f() -> float:\n    return math.floor\n", "error PLY1832: the function value 'math.floor' escapes")]
   [TestCase("import math\ndef f() -> float:\n    return math.sqrt(x=1.0)\n", "error PLY1833: 'math.sqrt' is neither part of this import nor in the Python call map")]
   [TestCase("import math\ndef f() -> float:\n    return math.sqrt('a')\n", "error PLY1802: 'math.sqrt of these arguments, which raises TypeError,'")]
@@ -271,6 +275,24 @@ public sealed class ModuleLoweringTests {
   [TestCase("X = [1]\n\ndef f() -> int:\n    X.append(2)\n    return 0\n", "error PLY1820: sequence operation 'append' of a value of the type tuple[int, ...] is not supported")]
   [TestCase("X: int\n\ndef f() -> int:\n    return 0\n", "error PLY1810: statement 'module-level X: int' is not supported")]
   public void ModuleStatementOutsideTheSubset_IsRefused(string source, string diagnostic)
+    => Assert.That(PythonSnippet.Refusals(source), Has.Some.Contains(diagnostic));
+
+  /// <summary>Module-level values the interpreter folds when the module is imported: of every kind of constant, a table assigned twice and one copied.</summary>
+  [TestCase("S = 'ab' * 2\n\ndef f() -> int:\n    return len(S)\n", "int 4")]
+  [TestCase("B = bytes([1, 2]) + b'c'\n\ndef f() -> int:\n    return B[2]\n", "int 99")]
+  [TestCase("P = (1, 2 * 3)\n\ndef f() -> int:\n    return P[1]\n", "int 6")]
+  [TestCase("Q = 1 < 2\n\ndef f() -> bool:\n    return Q\n", "bool True")]
+  [TestCase("H = 7.0 / 2\n\ndef f() -> float:\n    return H\n", "float 3.5")]
+  [TestCase("from enum import Enum\n\nclass C(Enum):\n    A = 1\n    B = 2\n\nE = max([C.A.value, C.B.value])\n\ndef f() -> int:\n    return E\n", "int 2")]
+  [TestCase("T = [1, 2]\nT = [3, 4]\n\ndef f() -> int:\n    return T[0]\n", "int 3")]
+  [TestCase("T = [1, 2]\nU = T\n\ndef f() -> int:\n    return U[1]\n", "int 2")]
+  public void ModuleLevelValues_AreFoldedWhenTheModuleIsImported(string source, string expected)
+    => Assert.That(PythonSnippet.Run(source, "f"), Is.EqualTo(expected));
+
+  [TestCase("def f() -> int:\n    def g(a: int = [1][0], b: list[int] = sorted([1])) -> int:\n        return a\n    return g()\n", "the default of parameter 'b' is a mutable object shared across calls")]
+  [TestCase("T = [1, 2]\n\ndef f(a: list[int] = T) -> int:\n    return 0\n", "the default of parameter 'a' is a mutable object shared across calls")]
+  [TestCase("G = (i for i in range(3))\n\ndef f() -> int:\n    return 0\n", "error PLY1810: statement 'module-level (i for i in range(3))' of the type Iterator[int] is not supported")]
+  public void ModuleLevelValuesOutsideTheSubset_AreRefused(string source, string diagnostic)
     => Assert.That(PythonSnippet.Refusals(source), Has.Some.Contains(diagnostic));
 
   /// <summary>A nested function reads its parameters' defaults where its def ran; a lambda's parameter takes the type of the elements it is applied to.</summary>
