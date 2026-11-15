@@ -17,7 +17,7 @@ namespace Polypiler.Tests.Acceptance.Python;
 /// Runs calls of a generated Python module on the interpreter <c>tooling/toolchains.lock</c> pins,
 /// through the cross-language runner and the sandbox of this host, in isolated mode without bytecode
 /// files (<see cref="PythonCommands"/>). The driver imports the module from its file and calls each
-/// function directly; it prints one outcome per call in the notation of
+/// function directly, and runs the coroutine an <c>async def</c> returns with <c>asyncio.run</c>; it prints one outcome per call in the notation of
 /// <see cref="PrototypeFixture.Outcome"/>, so that an outcome compares with the C# compiler's and the
 /// interpreter's as text. A trap is the built-in exception of the trap table of
 /// <c>docs/reference/exceptions.md</c>, read back by its class: Python's own messages are no part of
@@ -31,7 +31,9 @@ internal static class PythonDriver {
   /// 64 bits of a double in hexadecimal, <c>{t:"a"}</c> a list of the element kind <c>k</c>.
   /// </summary>
   private const string Script = """
+    import asyncio
     import importlib.util
+    import inspect
     import json
     import struct
     import sys
@@ -112,6 +114,8 @@ internal static class PythonDriver {
         values = [decode(value) for value in encoded]
         try:
             result = getattr(module, name)(*values)
+            if inspect.iscoroutine(result):
+                result = asyncio.run(result)
         except Exception as error:
             kind = trap(error)
             if kind is None and type(error).__module__ != "generated":
