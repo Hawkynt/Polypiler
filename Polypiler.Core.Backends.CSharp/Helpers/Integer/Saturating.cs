@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 namespace Polypiler.Core.Backends.CSharp;
 
 internal static partial class CSharpIntegerHelpers {

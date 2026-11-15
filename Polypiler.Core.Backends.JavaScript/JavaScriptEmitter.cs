@@ -39,6 +39,14 @@ public static partial class JavaScriptEmitter {
   [Diagnostic]
   public static readonly DiagnosticDescriptor InexpressibleDescriptor = new(Inexpressible, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.backend.profile");
 
+  /// <summary>
+  /// Every helper a module can carry, by its name, with its licence and the source it is copied from:
+  /// Polypiler's own code, released for outputs under <see cref="EmittedHelper.OwnLicence"/>. A
+  /// portable floating-point implementation a module carries is looked up in <see cref="FloatOperationSources.Origin"/>.
+  /// </summary>
+  public static IReadOnlyDictionary<string, (string Licence, string Origin)> HelperOrigins { get; }
+    = JavaScriptHelpers.Order.ToDictionary(name => name, _ => (EmittedHelper.OwnLicence, EmittedHelper.OriginOf(JavaScriptHelpers.Folder)), StringComparer.Ordinal);
+
   /// <summary>Emits the module as <c>&lt;name&gt;.mjs</c>, an ES module of ECMAScript 2022 exporting every public function.</summary>
   /// <param name="module">A module that <see cref="IrVerifier"/> accepts.</param>
   /// <returns>The generated file.</returns>
@@ -85,8 +93,8 @@ public static partial class JavaScriptEmitter {
   /// <returns>The generated file and what the passes changed.</returns>
   /// <exception cref="ArgumentException">The module is ill-typed or cannot be expressed in the profile.</exception>
   public static TargetEmission Emit(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes) {
-    var (program, applications) = Build(module, profile, mode, capabilities, passes);
-    return new([new GeneratedFile(module.Name + profile.Extension, JavaScriptPrinter.Print(program, profile))], applications);
+    var ((program, applications), helpers) = Built(module, profile, mode, capabilities, passes);
+    return new([new GeneratedFile(module.Name + profile.Extension, JavaScriptPrinter.Print(program, profile)) { Helpers = Measured(program, helpers) }], applications);
   }
 
   /// <summary>
@@ -100,7 +108,11 @@ public static partial class JavaScriptEmitter {
   /// <param name="passes">Which target passes run.</param>
   /// <returns>The tree and what the passes changed.</returns>
   /// <exception cref="ArgumentException">The module is ill-typed or cannot be expressed in the profile.</exception>
-  public static TargetPipelineResult<JsProgram> Build(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes) {
+  public static TargetPipelineResult<JsProgram> Build(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes)
+    => Built(module, profile, mode, capabilities, passes).Result;
+
+  /// <summary>What <see cref="Build"/> gives, with the helpers the module carried before the target passes, their texts still empty.</summary>
+  private static (TargetPipelineResult<JsProgram> Result, IReadOnlyList<HelperText> Helpers) Built(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes) {
     ArgumentNullException.ThrowIfNull(passes);
     var writer = new Writer(profile, capabilities ?? JavaScriptCapabilities.Standard, mode);
     var problems = IrVerifier.Verify(module);
@@ -108,8 +120,27 @@ public static partial class JavaScriptEmitter {
     if (problems.Concat(writer.Problems).FirstOrDefault() is { } problem)
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problem.Message}.", nameof(module));
 
-    return JavaScriptTargetPasses.Pipeline.Run(program!, profile, passes);
+    return (JavaScriptTargetPasses.Pipeline.Run(program!, profile, passes), writer.Helpers);
   }
+
+  /// <summary>
+  /// The helpers of a file, measured in its statements at the level of the module, each printed on its
+  /// own without the lines in front of it: the same text whether the file is a module or a script that
+  /// indents them. A helper the target passes inlined everywhere and removed is still listed, as code
+  /// of it is in the file, with no text of its own.
+  /// </summary>
+  private static IReadOnlyList<EmittedHelper> Measured(JsProgram program, IReadOnlyList<HelperText> helpers) {
+    var statements = JavaScriptTargetPasses.ModuleScope(program).Select(statement => (Name: Declared(statement), Text: JavaScriptPrinter.Print(statement with { Leading = JsTrivia.None }))).ToList();
+    var texts = statements.Where(statement => statement.Name is not null).GroupBy(statement => statement.Name!).ToDictionary(group => group.Key, group => string.Concat(group.Select(statement => statement.Text)));
+    return EmittedHelper.Measure([.. helpers.Select(helper => helper with { Text = texts.GetValueOrDefault(helper.Name, "") })], string.Concat(statements.Select(statement => statement.Text)));
+  }
+
+  /// <summary>The name a statement at the level of the module declares, or <see langword="null"/>.</summary>
+  private static string? Declared(JsStatement statement) => statement switch {
+    JsFunctionDeclaration function => function.Name,
+    JsVariableDeclaration { Declarators: [var declarator] } => declarator.Name,
+    _ => null
+  };
 
   /// <summary>Says why a module cannot be emitted for a profile.</summary>
   /// <param name="module">The module.</param>
@@ -280,6 +311,9 @@ public static partial class JavaScriptEmitter {
     /// its public functions, a CommonJS module that assigns them to <c>exports</c>, or a script whose
     /// function expression returns them to a global.
     /// </summary>
+    /// <summary>The helpers and portable implementations <see cref="Module"/> put into the module, their texts still empty; none before it ran.</summary>
+    public IReadOnlyList<HelperText> Helpers { get; private set; } = [];
+
     public JsProgram Module(IrModule module) {
       this.NameGlobals(module);
       var functions = new List<JsStatement>();
@@ -287,13 +321,21 @@ public static partial class JavaScriptEmitter {
       foreach (var function in module.Functions)
         functions.Add(this.Function(function));
 
+      // A portable implementation the legalization copied in is a helper: code of Polypiler's own the module carries.
+      var helpers = module.Implementations.Select(pair => FloatOperationSources.Helper(this.Name(pair.Function), pair.Implementation, "")).ToList();
+
       // The initializers of the globals call helpers as well, which have to be known before they are declared.
       var globals = this.Globals(module);
       this._construct = "the module";
       var structs = this.StructHelpers();
       var body = new List<JsStatement>();
-      foreach (var (_, statements) in JavaScriptHelpers.For(this._used, this.Native))
+      foreach (var (name, statements) in JavaScriptHelpers.For(this._used, this.Native)) {
         body.AddRange(statements.Select((statement, index) => AsHelper(index == 0 ? statement with { Leading = JsTrivia.Blank } : statement)));
+        var (licence, origin) = HelperOrigins[name];
+        helpers.Add(new(name, name, licence, origin, ""));
+      }
+
+      this.Helpers = helpers;
 
       body.AddRange(structs);
       foreach (var constant in module.Constants) {
@@ -309,6 +351,9 @@ public static partial class JavaScriptEmitter {
         $"{module.Name}: generated by polypiler. Change the source, not this file.",
         $"JavaScript profile: {this._profile}."
       };
+      if (EmittedHelper.HeaderLine(helpers.Select(helper => helper.Licence)) is { } licences)
+        header.Add(licences);
+
       header.AddRange(FloatManifest.Lines(module, this._mode, NativeAccuracy.Node));
       if (this._halves)
         header.Add("A 64-bit integer is an object { hi, lo }: its upper and its lower 32 bits, each as an unsigned number.");

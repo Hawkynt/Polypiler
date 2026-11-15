@@ -5,9 +5,11 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Polypiler.Cli;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.Verification.Manifests;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Backends.Testing;
@@ -30,7 +32,8 @@ internal sealed record GoldenVariant(string Target, string Name, string[] Option
 /// (#1336). One file per source and target holds every variant: a line
 /// <c>#### &lt;variant&gt; &lt;file&gt; &lt;length&gt;</c> followed by exactly that many characters of
 /// the generated file, or <c>#### &lt;variant&gt; exit &lt;code&gt;</c> for a variant the translation
-/// refuses. <see cref="GoldenOutputRecorder"/> writes them.
+/// refuses. The manifest beside the files and the header line naming the licence of the helpers are
+/// left out of the comparison: both came later than the recording. <see cref="GoldenOutputRecorder"/> writes them.
 /// </summary>
 internal static class GoldenOutputs {
 
@@ -121,14 +124,23 @@ internal static class GoldenOutputs {
     if (exitCode != 0)
       return section.Append(Marker).Append(variant.Name).Append(" exit ").Append(exitCode.ToString(CultureInfo.InvariantCulture)).Append('\n').ToString();
 
-    foreach (var file in Directory.GetFiles(output).Order(StringComparer.Ordinal)) {
-      var content = File.ReadAllText(file);
+    foreach (var file in Directory.GetFiles(output).Where(file => Path.GetFileName(file) != Manifest.FileName).Order(StringComparer.Ordinal)) {
+      var content = WithoutHelperLine(File.ReadAllText(file));
       section.Append(Marker).Append(variant.Name).Append(' ').Append(Path.GetFileName(file)).Append(' ')
         .Append(content.Length.ToString(CultureInfo.InvariantCulture)).Append('\n').Append(content);
     }
 
     return section.ToString();
   }
+
+  /// <summary>
+  /// A generated file without the header line that names the licence of its helpers, which the
+  /// emitters write since #1351, after the golden files were recorded; the line itself is checked
+  /// where the helpers are (TranslateLicenceTests).
+  /// </summary>
+  private static string WithoutHelperLine(string content) => _helperLine.Replace(content, "", 1);
+
+  private static readonly Regex _helperLine = new("^// Helpers added by polypiler: [^\n]*\n", RegexOptions.CultureInvariant | RegexOptions.Multiline);
 
   /// <summary>The recorded section of every variant of a source and a target, by the name of the variant.</summary>
   public static IReadOnlyDictionary<string, string> Recorded(string source, string target)

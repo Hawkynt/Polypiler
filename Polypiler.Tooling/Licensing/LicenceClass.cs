@@ -31,7 +31,7 @@ public static class LicenceClasses {
   public static IReadOnlyList<string> StrongCopyleft { get; } = ["GPL-2.0-or-later", "GPL-3.0-only", "GPL-3.0-or-later"];
 
   /// <summary>The weak-copyleft identifiers the policy allows.</summary>
-  public static IReadOnlyList<string> WeakCopyleft { get; } = ["LGPL-2.0-only", "LGPL-2.0-or-later", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later"];
+  public static IReadOnlyList<string> WeakCopyleft { get; } = ["LGPL-2.0-only", "LGPL-2.0-or-later", "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later"];
 
   /// <summary>The label of every output with a strong-copyleft member: the GPL as the repository's own LGPL builds on it.</summary>
   public const string StrongLabel = "GPL-3.0-or-later";
