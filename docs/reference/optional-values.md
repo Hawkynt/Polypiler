@@ -13,7 +13,7 @@ Related: [repository README](../../README.md) · [classes](classes.md) · [value
 - **Type.** `IrType.Optional(T)`, written `T?`, holds a value of `T` or none. `T` is a truth value,
   a number or a struct; a string, an array or an object is never optional - an array or an object is
   `null` instead (`IrNull`, `IrIsNull`), and a string is never absent. An optional value is no field
-  of a struct or a class and no element of an array yet (17-lists-maps-sets).
+  of a struct or a class and no element of an array or a [collection](collections.md) yet.
 - **Operations.** `IrNone(T?)`, `IrSome(v)`, `IrIsNone(x)`, `IrUnwrap(x)` - which traps with
   `IrTrap.MissingValue` when `x` holds none - and `IrCoalesce(x, fallback)`, which evaluates `x` once
   and the fallback only when `x` holds none; the fallback is of `T` (the result is a `T`) or of `T?`.
