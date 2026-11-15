@@ -905,7 +905,19 @@ public sealed record IrDoWhile(IrBlock Body, IrExpr Condition) : IrStmt;
 /// <param name="Condition">The truth value that keeps the loop running.</param>
 /// <param name="Body">The statements of one pass.</param>
 /// <param name="Step">What follows every pass: declarations, assignments, stores into arrays and fields, and expressions only.</param>
-public sealed record IrFor(IrExpr Condition, IrBlock Body, IrBlock Step) : IrStmt;
+public sealed record IrFor(IrExpr Condition, IrBlock Body, IrBlock Step) : IrStmt {
+
+  /// <summary>
+  /// The loop variables, declared before the loop, of which every pass has a variable of its own:
+  /// before the condition is tested the first time, and again after every pass before the step, each
+  /// is replaced by a new variable that starts with the value the old one ended with (ECMA-262
+  /// §14.7.4.4, CreatePerIterationEnvironment). A closure made in a pass keeps the variable of that
+  /// pass. A JavaScript <c>for (let …)</c> lists its <c>let</c> variables; a C# <c>for</c> and a
+  /// JavaScript <c>for (var …)</c> list none, and every pass shares the one variable. Empty by default.
+  /// </summary>
+  public IReadOnlyList<IrLocal> PerIteration { get; init; } = [];
+
+}
 
 /// <summary>One section of a <see cref="IrSwitch"/>.</summary>
 /// <param name="Labels">The constants that select the section, as an <see cref="IrConst"/> carries them.</param>

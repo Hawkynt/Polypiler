@@ -69,7 +69,7 @@ public static partial class IrInterpreter {
     private object Place(IrExpr target, Frame frame) {
       switch (target) {
         case IrLocalRef reference:
-          return frame.Locals[reference.Local];
+          return frame.Get(reference.Local);
         case IrArrayLoad load:
           var array = (Array)NotNull(this.Evaluate(load.Array, frame));
           return Load(array, Checked(array, (long)this.Evaluate(load.Index, frame)));

@@ -32,6 +32,8 @@ public static class IrTree {
     IrAsCast cast => [cast.Value],
     IrGenericEquals equality => [equality.Left, equality.Right],
     IrGenericCompare order => [order.Left, order.Right],
+    IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
+    IrBoundMethod { Receiver: { } receiver } => [receiver],
     _ => []
   };
 
@@ -68,10 +70,11 @@ public static class IrTree {
     _ => []
   };
 
-  /// <summary>Every node of an expression, the expression first.</summary>
+  /// <summary>Every node of an expression, the expression first; the nodes of the body of a lambda are among them.</summary>
   /// <param name="expression">The expression.</param>
   /// <returns>The nodes in pre-order.</returns>
-  public static IEnumerable<IrExpr> Nodes(IrExpr expression) => Operands(expression).SelectMany(Nodes).Prepend(expression);
+  public static IEnumerable<IrExpr> Nodes(IrExpr expression)
+    => (expression is IrLambda lambda ? Nodes(lambda.Body) : Operands(expression).SelectMany(Nodes)).Prepend(expression);
 
   /// <summary>Every expression node within a statement, those of its blocks included.</summary>
   /// <param name="statement">The statement.</param>

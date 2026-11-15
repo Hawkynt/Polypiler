@@ -210,7 +210,7 @@ public static partial class IrInterpreter {
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool or float or double or Record or string or Instance => value,
+    Array or bool or float or double or Record or string or Instance or Closure or FunctionReference or BoundMethod or NullReference => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -244,7 +244,7 @@ public static partial class IrInterpreter {
     public object? Invoke(IrFunction function, object[] arguments) {
       var frame = new Frame();
       for (var index = 0; index < arguments.Length; ++index)
-        frame.Locals[function.Parameters[index]] = arguments[index];
+        frame.Declare(function.Parameters[index], arguments[index]);
 
       if (this.Run(function.Body, frame) != Flow.Return && function.ReturnType != IrType.Void)
         throw new InvalidOperationException($"'{function.Name}' ended without returning a value.");
@@ -264,12 +264,11 @@ public static partial class IrInterpreter {
 
           return Flow.Next;
         case IrDeclare declare:
-          if (declare.Initializer is not null)
-            frame.Locals[declare.Local] = this.Evaluate(declare.Initializer, frame);
-
+          // Every run of a declaration makes a new variable, which a closure made before keeps apart.
+          frame.Declare(declare.Local, declare.Initializer is null ? frame.Locals.GetValueOrDefault(declare.Local)?.Value : this.Evaluate(declare.Initializer, frame));
           return Flow.Next;
         case IrAssign assign:
-          frame.Locals[assign.Local] = this.Evaluate(assign.Value, frame);
+          frame.Set(assign.Local, this.Evaluate(assign.Value, frame));
           return Flow.Next;
         case IrGlobalAssign assign:
           globals[assign.Global] = this.Evaluate(assign.Value, frame);
@@ -312,11 +311,13 @@ public static partial class IrInterpreter {
 
           return Flow.Next;
         case IrFor loop:
+          frame.Renew(loop.PerIteration);
           while ((bool)this.Evaluate(loop.Condition, frame)) {
             var pass = this.Run(loop.Body, frame);
             if (pass is Flow.Break or Flow.Return)
               return pass & Flow.Return;
 
+            frame.Renew(loop.PerIteration);
             this.Run(loop.Step, frame);
           }
 
@@ -351,7 +352,7 @@ public static partial class IrInterpreter {
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
-          return Copied(frame.Locals[reference.Local]);
+          return Copied(frame.Get(reference.Local));
         case IrGlobalRef reference:
           return Copied(globals[reference.Global]);
         case IrStrConst text:
@@ -387,6 +388,8 @@ public static partial class IrInterpreter {
           if (creation.Type.Element!.StructType is { } element)
             for (var index = 0; index < count; ++index)
               created.SetValue(Default(element), index);
+          else if (creation.Type.Element.IsFunction)
+            Array.Fill((object[])created, NullReference.Value);
 
           return created;
         case IrStructNew creation:
@@ -423,6 +426,8 @@ public static partial class IrInterpreter {
           return this.Invoke(program.Functions[call.Function], arguments)!;
         case IrStep step:
           return this.Step(step, frame);
+        case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
+          return this.FunctionValue(expression, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }
@@ -539,9 +544,9 @@ public static partial class IrInterpreter {
         globals[reference.Global] = after;
       } else {
         var local = ((IrLocalRef)step.Target).Local;
-        before = frame.Locals[local];
+        before = frame.Get(local);
         after = Stepped(step, before);
-        frame.Locals[local] = after;
+        frame.Set(local, after);
       }
 
       return step.Postfix ? before : after;
@@ -749,11 +754,41 @@ public static partial class IrInterpreter {
     Continue = 4
   }
 
+  /// <summary>
+  /// The variables of one call of a function or a closure. A variable is a cell: a closure shares the
+  /// cells it captures with the frame it was made in, so a write through either is seen by both.
+  /// </summary>
   private sealed class Frame {
 
-    public Dictionary<IrLocal, object> Locals { get; } = [];
+    public Dictionary<IrLocal, Cell> Locals { get; } = [];
 
     public object? Result { get; set; }
+
+    public object Get(IrLocal local) => this.Locals[local].Value!;
+
+    /// <summary>Writes a variable: the cell it has, or a new one for a variable that has none yet.</summary>
+    public void Set(IrLocal local, object value) {
+      if (this.Locals.TryGetValue(local, out var cell))
+        cell.Value = value;
+      else
+        this.Locals[local] = new Cell(value);
+    }
+
+    /// <summary>A new variable, in a cell of its own.</summary>
+    public void Declare(IrLocal local, object? value) => this.Locals[local] = new Cell(value);
+
+    /// <summary>Gives each variable a new cell that starts with the value of its old one, which a closure made before keeps.</summary>
+    public void Renew(IReadOnlyList<IrLocal> variables) {
+      foreach (var variable in variables)
+        this.Locals[variable] = new Cell(this.Locals[variable].Value);
+    }
+
+  }
+
+  /// <summary>The storage of one variable.</summary>
+  private sealed class Cell(object? value) {
+
+    public object? Value { get; set; } = value;
 
   }
 
