@@ -25,7 +25,7 @@ namespace Polypiler.Core.IR;
 public static class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 5;
+  public const int Version = 6;
 
   /// <summary>The byte that stands for the kind of an enum type, followed by its declaration: the kind of an enum type is that of its underlying type.</summary>
   private const byte EnumType = 0xFF;
