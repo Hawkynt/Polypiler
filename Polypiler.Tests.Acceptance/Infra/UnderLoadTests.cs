@@ -13,7 +13,7 @@ namespace Polypiler.Tests.Acceptance.Infra;
 /// <c>ProcessRunnerTests.ProcessOutlivingItsTime_IsKilled_UnderLoad</c>. Each test runs alone, so its
 /// load does not reach the tests beside it.
 /// </summary>
-[TestFixture, Category("Slow"), NonParallelizable]
+[TestFixture, Category("Slow"), Category("UnderLoad"), NonParallelizable]
 [Layer("core")]
 public sealed class UnderLoadTests {
 
