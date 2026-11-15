@@ -14,6 +14,11 @@
   last value of a counter an unrolled loop leaves - and so does the declaration no later statement
   names, even where a variable of the same name in another block is read.
 - A nested block that declares nothing is spliced into the block around it.
+- A call whose value nothing uses goes where the effect summary of its function (`IrEffects`,
+  [#1361](https://github.com/Hawkynt/Polypiler/issues/1361)) says it writes nothing, cannot trap and
+  ends - `Sq(x);` with `static int Sq(int x) => x * x` -, and so does such a call in a value that may
+  go unevaluated, `int t = Sq(x);` with `t` unread. A variable an expression binds keeps its
+  declaration, read or not.
 - A function legalization copied in from the libraries that nothing calls any more - everything it did
   was inlined - goes, and with it its entry in `IrModule.Implementations`; its licence notice stays.
 
@@ -60,7 +65,9 @@ return value;
 ## When it must not fire
 
 - `int t = a / b;` with `t` unread: the division may trap, so the declaration stays.
-- An assignment of a call to an unread variable: the call has an effect.
+- An assignment of a call to an unread variable, or a call standing as a statement, where the
+  function writes something, may trap (`10 / x`) or may not end (recursion, a loop without a proven
+  bound): the call has an effect.
 - A parameter, or a variable a lambda names, is never removed.
 - A store into a variable declared outside its block - the loop around it may read it in the next pass -
   or one a later statement of the block reads, and a store before the declaration of its name in the block.
@@ -80,4 +87,6 @@ After [O0001](O0001-constant-folding.md), whose folded conditions it decides; th
 `IrPassTests` checks the branch of a constant choice with and without a declaration, a false loop, the
 statements after a return, an unread variable with a value that may trap and one without, a store
 nothing reads before its block ends and the stores that may be read, and the library function nothing
-calls; `HelperEquivalenceTests` checks every helper after all passes.
+calls; `EffectPassTests` the unused calls of a function that reads, that is pure, that traps, that
+recurses and that writes, and the variable a binding keeps; `HelperEquivalenceTests` checks every
+helper after all passes.

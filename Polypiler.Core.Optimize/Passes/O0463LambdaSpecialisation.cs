@@ -242,11 +242,23 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
         return this._module;
 
       this.RemoveReplaced();
-      return this._module with {
-        Functions = [.. this._order.Select(name => this._functions[name])],
-        ScopeFunctions = this._scopeFunctions,
-        Clones = this._clones
-      };
+      var specialised = this._module with { Functions = [.. this._order.Select(name => this._functions[name])], Clones = this._clones };
+      var effects = IrEffects.Of(specialised);
+      return specialised with { ScopeFunctions = [.. this._scopeFunctions.Select(known => known.Effects is null ? known with { Effects = Effects(specialised, effects, known) } : known)] };
+    }
+
+    /// <summary>
+    /// What a function of a scope does by its effect summary: a lifted one that of its function, one
+    /// that stays a closure that of the lambda its variable holds, the variables it captures counted as
+    /// storage of its scope.
+    /// </summary>
+    private static IrEffectKinds Effects(IrModule module, IrEffectTable effects, IrScopeFunction known) {
+      if (known.IsLifted)
+        return effects.Function(known.Name).Kinds;
+
+      var scope = module.Functions.FirstOrDefault(function => function.Name == known.Scope);
+      var held = scope is null ? null : IrClosures.Held(scope.Body).FirstOrDefault(pair => pair.Key.Name == known.Name).Value;
+      return held is null ? IrEffects.Unknown.Kinds : effects.Lambda(held).Kinds;
     }
 
     /// <summary>

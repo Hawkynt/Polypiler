@@ -30,14 +30,16 @@ public interface IIrPass {
 /// <summary>
 /// The passes that run over a legalized module, in table order, round after round until a round
 /// changes nothing or <see cref="RoundLimit"/> rounds have run: specialisation for the function values
-/// passed (O0463), inlining (O0006), constant propagation (O0003), constant folding (O0001), dead-code
-/// removal (O0005) and full unrolling (O0023). Each makes work for the next - a lifted lambda and the
-/// copy of its callee are direct calls to inline, an inlined helper has constant parameters, a
-/// constant condition a dead branch, an unrolled loop constant indices - and none of them changes what
-/// a module computes, its traps and the point they happen at included. Specialisation and inlining
-/// look at every function; the others at the functions legalization copied in from the libraries,
-/// the functions specialisation made and every function something was inlined into or specialised
-/// in; the rest of the program stays as the frontend made it. The last round only cleans up:
+/// passed (O0463), inlining (O0006), constant propagation (O0003), constant folding (O0001),
+/// compile-time evaluation of pure calls (O0002), merging of identical calls (O0464), dead-code removal (O0005)
+/// and full unrolling (O0023). Each makes work for the next - a lifted lambda and the copy of its
+/// callee are direct calls to inline, an inlined helper has constant parameters, a constant condition
+/// a dead branch, an unrolled loop constant indices - and none of them changes what a module computes,
+/// its traps and the point they happen at included. The passes that work from the effect summaries of
+/// the functions (<see cref="IrEffects"/>) - merging and evaluation - look at every function, as
+/// specialisation and inlining do; the others at the functions legalization copied in from the
+/// libraries, the functions specialisation made and every function one of those four changed; the
+/// rest of the program stays as the frontend made it. The last round only cleans up:
 /// specialisation, inlining and unrolling, which make code, sit it out, so that what they made in the
 /// round before is propagated, folded and removed. After the first round the passes look only at the
 /// functions the round before changed and at their callers.
@@ -48,7 +50,10 @@ public sealed class IrPassPipeline {
   public const int RoundLimit = 6;
 
   /// <summary>The pipeline of <c>translate</c>.</summary>
-  public static IrPassPipeline Default { get; } = new([new O0463LambdaSpecialisation(), new O0006Inlining(), new O0003ConstantPropagation(), new O0001ConstantFolding(), new O0005DeadCode(), new O0023Unrolling()]);
+  public static IrPassPipeline Default { get; } = new([
+    new O0463LambdaSpecialisation(), new O0006Inlining(), new O0003ConstantPropagation(), new O0001ConstantFolding(), new O0002CallEvaluation(), new O0464CallMerging(),
+    new O0005DeadCode(), new O0023Unrolling()
+  ]);
 
   /// <summary>Makes a pipeline of passes.</summary>
   /// <param name="passes">The passes, in the order they run.</param>
@@ -68,7 +73,10 @@ public sealed class IrPassPipeline {
   /// <summary>Runs the passes the options let run over a module.</summary>
   /// <param name="module">A legalized module.</param>
   /// <param name="options">The level, which runs none at <see cref="OptimizationLevel.None"/>, and the numbers that do not run.</param>
-  /// <returns>The module, every change in the order the changes were made, and the notes of the passes, each once.</returns>
+  /// <returns>
+  /// The module, every change in the order the changes were made, and the notes of the passes, each
+  /// once, followed by the class of every function of a scope: what it captures and what it does.
+  /// </returns>
   /// <exception cref="InvalidOperationException">With <see cref="OptimizerOptions.Verify"/>: a pass left the module ill-typed.</exception>
   public OptimizationResult Run(IrModule module, OptimizerOptions options) {
     ArgumentNullException.ThrowIfNull(module);
@@ -88,7 +96,7 @@ public sealed class IrPassPipeline {
         if (round == RoundLimit - 1 && pass is O0463LambdaSpecialisation or O0006Inlining or O0023Unrolling)
           continue;
 
-        var everywhere = pass is O0463LambdaSpecialisation or O0006Inlining;
+        var everywhere = pass is O0463LambdaSpecialisation or O0006Inlining or O0464CallMerging or O0002CallEvaluation;
         bool Looked(IrFunction function) => (dirty is null || dirty.Contains(function.Name)) && (everywhere || scope.Contains(function.Name));
         void Applied(string function, string position) {
           applications.Add(new(pass.Id, pass.Name, function, position));
@@ -97,9 +105,11 @@ public sealed class IrPassPipeline {
         }
 
         var existing = module.Functions.Select(function => function.Name).ToHashSet(StringComparer.Ordinal);
-        module = pass is O0463LambdaSpecialisation specialisation
-          ? specialisation.Run(module, Looked, Applied, note => { if (!notes.Contains(note)) notes.Add(note); })
-          : pass.Run(module, Looked, Applied);
+        module = pass switch {
+          O0463LambdaSpecialisation specialisation => specialisation.Run(module, Looked, Applied, Note),
+          O0002CallEvaluation evaluation => evaluation.Run(module, Looked, Applied, Note),
+          _ => pass.Run(module, Looked, Applied)
+        };
         // What specialisation made - lifted lambdas and copies - is looked at like the helpers.
         scope.UnionWith(module.Functions.Select(function => function.Name).Where(name => !existing.Contains(name)));
         if (options.Verify && IrVerifier.Verify(module) is { Count: > 0 } problems)
@@ -112,8 +122,21 @@ public sealed class IrPassPipeline {
       dirty = Dirty(start, module.Functions);
     }
 
+    foreach (var known in module.ScopeFunctions)
+      Note(Classification(known));
+
     return new(module, applications) { Notes = notes };
+
+    void Note(string note) {
+      if (!notes.Contains(note))
+        notes.Add(note);
+    }
   }
+
+  /// <summary>The class of a function of a scope as <c>--explain-opt</c> writes it: its name, its scope, what it captures, what it does.</summary>
+  private static string Classification(IrScopeFunction known)
+    => $"O0463 lambda specialisation: '{known.Name}' of '{known.Scope}' is {(known.Class == IrCaptureClass.Static ? "static" : "capturing")}, {(known.IsLifted ? "lifted" : "a closure")}, "
+      + (known.Effects is { } effects ? IrEffects.Describe(effects) : "unclassified");
 
   /// <summary>
   /// The functions the next round looks at: those a round changed, and those that call one of them,

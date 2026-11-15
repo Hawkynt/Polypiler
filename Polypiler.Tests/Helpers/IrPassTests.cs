@@ -487,11 +487,26 @@ public sealed class IrPassTests {
     return module with { Functions = [.. module.Functions, apply] };
   }
 
+  /// <summary>
+  /// A module where the passes that work from the effect summaries have something to do: <c>F</c> calls
+  /// the recursive library function <c>R</c>, which stays a call, twice with its argument - merged - and
+  /// once with a constant one - evaluated.
+  /// </summary>
+  private static IrModule Effects() {
+    var r = new IrFunction("R", false, IrType.I32, [_p], [], Block(new IrReturn(new IrConditional(Op(IrBinaryOp.LessOrEqual, P, Int(0)), Int(0),
+      Op(IrBinaryOp.Add, new IrCall("R", IrType.I32, [Op(IrBinaryOp.Subtract, P, Int(1))]), Int(1))))));
+    IrExpr CallR(IrExpr argument) => new IrCall("R", IrType.I32, [argument]);
+    var f = new IrFunction("F", true, IrType.I32, [_x], [], Block(new IrReturn(Op(IrBinaryOp.Add, Op(IrBinaryOp.Add, CallR(X), CallR(X)), CallR(Int(3))))));
+    return new IrModule("M", [f, r]) { Implementations = [("R", "Library")] };
+  }
+
   [Test]
   public void Pipeline_RunsEveryPassAndKeepsTheResult() {
     var module = Everything();
     var result = IrPassPipeline.Default.Run(module, new OptimizerOptions { Verify = true });
-    Assert.That(result.Applications.Select(application => application.Id).Distinct().Order(), Is.EqualTo(IrPassPipeline.Default.Ids.Order()));
+    var effects = IrPassPipeline.Default.Run(Effects(), new OptimizerOptions { Verify = true });
+    Assert.That(result.Applications.Concat(effects.Applications).Select(application => application.Id).Distinct().Order(), Is.EqualTo(IrPassPipeline.Default.Ids.Order()));
+    SameOutcomes(Effects(), effects.Module, 0, 1, 5, 100);
     Assert.That(result.Module.Functions.Select(function => function.Name), Is.EqualTo(new[] { "F" }));
     Assert.That(result.Module.Functions[0].Body.Statements, Is.EqualTo(new IrStmt[] { new IrReturn(Op(IrBinaryOp.Add, X, Int(12))) }));
     SameOutcomes(module, result.Module, _inputs);
