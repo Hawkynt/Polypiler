@@ -88,6 +88,9 @@ while (i < a.Length) {
 - `inc(); inc();` with `Func<int> inc = () => ++n`: a call through a function value is the worst case,
   and `inc` writes what it captures - both calls stay.
 - `Mk(1).Length + Mk(1).Length` with `Mk` making a new array: two arrays are not one.
+- `await A(1) + await A(1)` with `A` an async function ([#1330](https://github.com/Hawkynt/Polypiler/issues/1330)),
+  and `abs(k) + abs(k)` with `abs` a native function ([#1332](https://github.com/Hawkynt/Polypiler/issues/1332)):
+  both are the worst case.
 - `Get(10 / x) + Get(10 / x)`: an argument that may trap.
 
 ## Switching it off

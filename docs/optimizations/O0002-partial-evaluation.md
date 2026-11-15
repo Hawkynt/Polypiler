@@ -69,6 +69,7 @@ the budget, not the summary, bounds the evaluation.
 - `Fib(40)` and `while (true) {}` in a pure function: the evaluation stops at the budget, and the
   call stays in the program.
 - A callee that makes an array or an object: its identity is not a constant.
+- An async function, which runs as it is awaited, and a native function: both are the worst case.
 - A callee using `Math.Sqrt` or `double.IsNaN`: the host's result may differ from the target's.
 
 ## Switching it off

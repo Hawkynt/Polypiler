@@ -293,6 +293,29 @@ internal sealed class EffectPassTests {
     SameAsBefore(module, merged, new PrototypeCall("M", [1]), new PrototypeCall("M", [-3]));
   }
 
+  /// <summary>
+  /// An async function (#1330) is the worst case: its call is never evaluated, merged or removed, and
+  /// neither is a native call (#1332).
+  /// </summary>
+  [Test]
+  public void AsyncAndNativeCalls_AreNeverEvaluatedMergedOrRemoved() {
+    const string methods = """
+      [System.Runtime.InteropServices.DllImport("libc")] static extern int abs(int x);
+      static async System.Threading.Tasks.Task<int> A(int x) { return x * 2; }
+      static async System.Threading.Tasks.Task<int> Unused(int x) { return x; }
+      public static async System.Threading.Tasks.Task<int> G(int k) { await Unused(k); return await A(1) + await A(1) + await A(k) + await A(k); }
+      public static int N(int k) => abs(k) + abs(k);
+      """;
+    var module = Legalized(methods);
+    var effects = IrEffects.Of(module);
+    Assert.That((effects.Function("A").Kinds, effects.Function("G").Kinds), Is.EqualTo(((IrEffectKinds)31, (IrEffectKinds)31)));
+    Assert.That(effects.Function("N").WritesEverything, Is.True);
+    var result = Optimized(module);
+    Assert.That((Calls(result.Module, "G", "A"), Calls(result.Module, "G", "Unused")), Is.EqualTo((4, 1)));
+    Assert.That(IrTree.Nodes(Function(result.Module, "N").Body).OfType<IrForeignCall>().Count(), Is.EqualTo(2));
+    Assert.That(Ids(result), Has.None.EqualTo("O0002").And.None.EqualTo("O0464"));
+  }
+
   // ---------------------------------------------------------------- O0005 dead-code removal of calls
 
   /// <summary>An unused call of a function that writes nothing, cannot trap and ends goes, and so does an unread variable it initialises; any other call stays.</summary>

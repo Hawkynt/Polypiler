@@ -49,7 +49,7 @@ public sealed record IrPlace(IrPlaceKind Kind, string Name) {
 /// The summary is computed bottom-up over the calls of the module, the functions that call each other
 /// together until nothing changes (<see cref="Of(IrModule, string)"/>); recursion counts as possibly
 /// running forever, and so does a loop the analysis finds no bound for. A call through a function value,
-/// a method, an iterator, a sequence, a collection, a pointer and a function the module
+/// a method, an iterator, an async function or an await, a native function, a sequence, a collection, a pointer and a function the module
 /// does not have is the worst case: it may read and write everything, trap and run forever. Summaries
 /// are kept for as long as the list of functions of a module lives; a pass that rewrites a function
 /// makes a new list, and the summaries of the new one are computed again.
@@ -361,8 +361,11 @@ public sealed class IrEffectTable {
       this._done[name] = summary;
   }
 
-  /// <summary>Whether a function runs nothing when it is called but makes a lazy sequence: an iterator, whose effects happen as the sequence is read.</summary>
-  private static bool Opaque(IrFunction function) => IrSequences.IsIterator(function) || function.Body.Statements.Any(IrSequences.Suspends);
+  /// <summary>
+  /// Whether a function does not run to its end where it is called: an iterator, whose effects happen as
+  /// its sequence is read, and an async function (#1330), whose effects happen as it is awaited.
+  /// </summary>
+  private static bool Opaque(IrFunction function) => function.IsAsync || IrSequences.IsIterator(function) || function.Body.Statements.Any(IrSequences.Suspends);
 
   /// <summary>Gathers the effects of a body, statement by statement and node by node, outside the bodies of closures.</summary>
   private sealed class Walker(Func<string, IrEffects> callee, Func<IrLocal, bool> counts) {
@@ -548,7 +551,7 @@ public sealed class IrEffectTable {
             this.Add(callee(creation.Constructor.Function));
 
           return;
-        case IrInvoke or IrMethodCall or IrSequence or IrArraySequence or IrCollection:
+        case IrInvoke or IrMethodCall or IrSequence or IrArraySequence or IrCollection or IrAwait or IrAsync or IrForeignCall or IrLastError:
           this.Worst();
           return;
         case IrArrayLength or IrConstRef or IrStrConst or IrNull or IrStructNew or IrStructDefault or IrFieldLoad or IrFunctionRef
