@@ -1,3 +1,6 @@
+Origin: https://github.com/v8/v8
+Licence: BSD-3-Clause
+
 The helper ParseText of Polypiler.Core.Backends.CSharp/Helpers/String/CSharpNumberTextHelpers.cs reads the digits of parseInt in a radix other than 2, 4, 8, 10, 16 and 32 as V8 does,
 which ECMA-262 leaves to the implementation for these radices: in runs whose multiplier stays within
 32 bits, each run added to the number so far times its multiplier in double arithmetic, after the
