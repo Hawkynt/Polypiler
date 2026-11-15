@@ -13,9 +13,9 @@ public static partial class RustEmitter {
   /// The lints a faithful translation can trigger and that are allowed by name in <c>src/lib.rs</c>,
   /// only those the crate's code has a shape of: an operation the source wrote with an identity or a
   /// zero operand (<c>identity_op</c>, <c>erasing_op</c>), two equal operands (<c>eq_op</c>), a value
-/// of the source stored and never read (<c>unused_assignments</c> of rustc), a minimum and a maximum
-/// whose bounds may be out of order, which <c>clamp</c> would panic on (<c>manual_clamp</c>, and
-/// <c>min_max</c> where both are constants), a
+  /// of the source stored and never read (<c>unused_assignments</c> of rustc), a minimum and a maximum
+  /// whose bounds may be out of order, which <c>clamp</c> would panic on (<c>manual_clamp</c>, and
+  /// <c>min_max</c> where both are constants), a
   /// comparison of an unsigned value with zero (<c>absurd_extreme_comparisons</c> of clippy and
   /// <c>unused_comparisons</c> of rustc), a range test written out (<c>manual_range_contains</c>), an
   /// ordering of floating-point numbers negated (<c>neg_cmp_op_on_partial_ord</c>, <c>nonminimal_bool</c>),
