@@ -22,7 +22,7 @@ internal sealed partial class Lowering {
   private static bool IsEnumDeclaration(MemberDeclarationSyntax member) => member is EnumDeclarationSyntax;
 
   /// <summary>The enums of every file, in file order; each is a type of the module before any struct, whose field may have its type.</summary>
-  private void DeclareEnums(IReadOnlyList<(string Path, SemanticModel Model, EnumDeclarationSyntax Type)> enums) {
+  private void DeclareEnums(IReadOnlyList<(string Path, BoundModel Model, EnumDeclarationSyntax Type)> enums) {
     foreach (var (file, semantics, declaration) in enums) {
       path = file;
       model = semantics;

@@ -12,11 +12,11 @@ public static partial class CSharpEmitter {
   /// result, a struct by its fields, which are public - and which C# therefore needs to be public as
   /// well; any other enum is public only when the module exports it.
   /// </summary>
-  private static HashSet<IrEnumType> Exposed(IrModule module) {
+  private static HashSet<IrEnumType> ExposedEnums(IrModule module) {
     static IEnumerable<IrEnumType> Named(IrType type) => (type.Element ?? type).EnumType is { } named ? [named] : [];
     var signatures = module.Functions.Where(function => function.IsPublic)
       .SelectMany(function => function.Parameters.Select(parameter => parameter.Type).Append(function.ReturnType));
-    var fields = module.Types.OfType<IrStructType>().SelectMany(type => type.Fields.Select(field => field.Type));
+    var fields = module.Types.OfType<IrTypeDeclaration>().Where(type => type is IrStructType or IrClassType).SelectMany(type => type.Fields.Select(field => field.Type));
     return new HashSet<IrEnumType>(signatures.Concat(fields).SelectMany(Named), ReferenceEqualityComparer.Instance);
   }
 
@@ -37,7 +37,7 @@ public static partial class CSharpEmitter {
     /// <c>[Flags]</c> where it has the attribute, public where the module exports it or a public member names it.
     /// </summary>
     private List<CsMember> Enums() {
-      var exposed = Exposed(this._module);
+      var exposed = ExposedEnums(this._module);
       return [.. this._module.Types.OfType<IrEnumType>().Select(type => (CsMember)new CsEnumDeclaration(
         type.IsFlags ? [Base + "Flags"] : [],
         [type.IsPublic || exposed.Contains(type) ? "public" : "internal"],

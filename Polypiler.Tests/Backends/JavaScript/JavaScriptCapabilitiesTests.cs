@@ -174,7 +174,6 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase(".toUpperCase", 5, null)]
   [TestCase("parseFloat", 5, null)]
   [TestCase("parseInt", 5, null)]
-  [TestCase("Object", 5, null)]
   [TestCase("Object.freeze", 5, null)]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
