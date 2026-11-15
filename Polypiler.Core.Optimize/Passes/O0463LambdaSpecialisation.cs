@@ -287,6 +287,10 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
     /// and every read and store of its element.
     /// </summary>
     private IrFunction Uncell(IrFunction function) {
+      // Most functions have no array of numbers at all: nothing to look at.
+      if (!function.Locals.Any(local => local.Type.Kind == IrTypeKind.Array && Cellable(local.Type.Element!)))
+        return function;
+
       var reads = IrPassSupport.Reads(function.Body);
       var writes = IrPassSupport.Writes(function.Body);
       var declarations = IrPassSupport.Declarations(function.Body);
@@ -424,6 +428,10 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
     /// </summary>
     private IrFunction Lift(IrFunction function) {
       var body = function.Body;
+      // Most functions make no function value and name no local of a function type: nothing to look at.
+      if (!IrPassSupport.Nodes(body).Any(node => node is IrLambda or IrFunctionRef || node is IrLocalRef { Local.Type.IsFunction: true }))
+        return function;
+
       var statements = IrPassSupport.Statements(body).ToList();
       var roots = statements.SelectMany(IrTree.Expressions).ToList();
       var outermost = roots.SelectMany(IrClosures.Outermost).ToList();
