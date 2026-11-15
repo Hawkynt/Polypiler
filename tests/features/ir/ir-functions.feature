@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Delegates, lambdas, local functions and closures
 
   Scenario Outline: A C# for loop shares its variable, a foreach makes one per pass

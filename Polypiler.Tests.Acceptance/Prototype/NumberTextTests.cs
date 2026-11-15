@@ -17,6 +17,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// hundred floats of the reference vectors, which the helpers of JavaScript have to write as .NET does.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class NumberTextTests {
 

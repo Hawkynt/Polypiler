@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Sealed classes and instances
 
   Scenario Outline: A C# class becomes a JavaScript class or constructor function

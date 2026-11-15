@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Lists, maps and sets
 
   Scenario Outline: Each language's enumeration order survives the translation

@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Exceptions and traps
 
   Scenario Outline: Every trap is caught by the clause of its class

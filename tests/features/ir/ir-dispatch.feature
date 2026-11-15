@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Inheritance, interfaces and virtual dispatch
 
   Scenario Outline: An abstract C# hierarchy dispatches the same in every JavaScript profile

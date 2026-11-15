@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Enums as named integer types
 
   Scenario Outline: Flag names follow .NET in every JavaScript profile

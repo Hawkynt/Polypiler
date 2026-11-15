@@ -16,6 +16,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// this assembly, or what <c>node</c> computes of <c>find.js</c>.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class OptionalValuesTests {
 
@@ -38,7 +39,7 @@ public sealed class OptionalValuesTests {
     var (exitCode, text) = Toolchain.Polypiler(true, this._directory, ["translate", source, "--from", file.EndsWith(".cs", StringComparison.Ordinal) ? "csharp" : "javascript", "--to", to, "--output", directory, .. further]);
     TestContext.Out.WriteLine($"translate {file} --to {to} {string.Join(' ', further)}: {clock.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
-    var generated = Directory.GetFiles(directory).Single();
+    var generated = Directory.GetFiles(directory).Single(path => Path.GetFileName(path) != "polypiler.manifest.json");
     return (generated, File.ReadAllText(generated));
   }
 

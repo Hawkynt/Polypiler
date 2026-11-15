@@ -18,6 +18,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// computes of <c>scopes.js</c>.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class ResourceTests {
 
@@ -39,7 +40,7 @@ public sealed class ResourceTests {
     var (exitCode, text) = Toolchain.Polypiler(true, this._directory, ["translate", source, "--from", source.EndsWith(".cs", StringComparison.Ordinal) ? "csharp" : "javascript", "--to", to, "--output", directory, .. further]);
     TestContext.Out.WriteLine($"translate {Path.GetFileName(source)} --to {to} {string.Join(' ', further)}: {clock.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
-    var written = Directory.GetFiles(directory).Single();
+    var written = Directory.GetFiles(directory).Single(path => Path.GetFileName(path) != "polypiler.manifest.json");
     Assert.That(Path.GetFileName(written), Is.EqualTo(generated));
     return File.ReadAllText(written);
   }

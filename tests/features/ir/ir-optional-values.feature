@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Optional values and null
 
   Scenario Outline: A nullable search result reads the same in every profile

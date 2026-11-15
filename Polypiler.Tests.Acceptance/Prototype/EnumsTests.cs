@@ -16,6 +16,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// of every underlying type and every class of text a parse distinguishes.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class EnumsTests {
 

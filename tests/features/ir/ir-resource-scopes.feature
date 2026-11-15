@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Resource scopes
 
   Scenario Outline: Resources are disposed in reverse order in every profile

@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Numbers to text and back, by the rules of the source language
 
   Scenario Outline: C# formatting survives translation to JavaScript

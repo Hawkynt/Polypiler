@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Generic methods and classes
 
   Scenario Outline: A generic search keeps .NET's equality in every profile

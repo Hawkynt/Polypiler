@@ -16,6 +16,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// built into this assembly, or what <c>node</c> computes of the original JavaScript.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
 public sealed class ClassesTests {
 
