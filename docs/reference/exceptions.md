@@ -226,5 +226,9 @@ its range (C#: the helper throws `ArithmeticException`), `Clamp` with its bounds
   and `ReplaceAll` with an empty needle. .NET throws `ArgumentException` for the last two, where the
   IR and JavaScript throw the class of `InvalidOperation`; a `catch (ArgumentException)` around them
   is not translated faithfully yet.
+- The IR has no class for Python's `AssertionError`: the Python frontend raises
+  `InvalidOperationException` for a failing `assert`, which the Python backend writes as
+  `RuntimeError`, so Python translated to Python raises `RuntimeError` there (with the assertion's
+  message).
 - ES5 constructor functions on `Object.create(Error.prototype)` are no exception classes of the
   JavaScript import yet; only `class … extends Error` is.
