@@ -374,7 +374,20 @@ public sealed class CSharpCapability {
   /// <param name="profile">The profile.</param>
   /// <returns><see langword="true"/> when the profile's language version or framework is at or above the row's.</returns>
   public bool IsIn(CSharpProfile profile)
-    => this.Language is { } language ? profile.LanguageVersion >= language : this.Since is { } since && profile.Rank >= since.Rank;
+    => this.Language is { } language ? profile.LanguageVersion >= language : this.Since is { } since && profile.Rank >= since.Rank && !this.Lacking.Any(lacking => lacking.Rank == profile.Rank);
+
+  /// <summary>
+  /// The profiles after <see cref="Since"/> whose framework lacks the API all the same: .NET Standard 2.0 after .NET
+  /// Framework 4.8, for an API that came with .NET Framework 4.7 and .NET Standard 2.1 (#1332). Empty for most rows.
+  /// </summary>
+  public IReadOnlyList<CSharpProfile> Lacking { get; private init; } = [];
+
+  /// <summary>An API that a later profile lacks all the same, which no operation of the IR uses yet.</summary>
+  /// <param name="name">The API as the .NET API reference names it.</param>
+  /// <param name="since">The first profile whose framework has it.</param>
+  /// <param name="lacking">The later profiles whose framework lacks it.</param>
+  /// <returns>The row.</returns>
+  public static CSharpCapability OfApi(string name, CSharpProfile since, IReadOnlyList<CSharpProfile> lacking) => new(name) { Since = since, Lacking = lacking };
 
   /// <summary>The row as a diagnostic names it.</summary>
   public override string ToString() => this.Name;
@@ -544,7 +557,10 @@ public sealed class CSharpCapabilities {
     .. CSharpEnumRows.All,
 
     // The lazy sequences of #1327.
-    .. CSharpSequenceRows.All
+    .. CSharpSequenceRows.All,
+
+    // The native calls of #1332.
+    .. CSharpInteropRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>
