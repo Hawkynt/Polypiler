@@ -123,21 +123,25 @@ public sealed class PythonDifferentialTests {
   /// <summary>The most calls one run of the interpreter takes.</summary>
   private const int Part = 200_000;
 
+  /// <summary>The fewest calls a run takes when the calls are shared among the processors: below, starting CPython costs more than it saves.</summary>
+  private const int MinimumPart = 2_000;
+
   /// <summary>Runs the calls through the translation and compares every outcome with the oracle and the interpreter.</summary>
   private static async Task Compare(string fixture, PythonTranslation translated, IReadOnlyList<PrototypeCall> calls, Func<PrototypeCall, string> expected, Func<PrototypeCall, string> interpreted) {
     if (Refused(fixture, translated))
       return;
 
     var names = translated.Names!;
-    // The calls go to the interpreter in parts, each within the memory the sandbox grants one run.
-    var outcomes = new List<string>(calls.Count);
-    foreach (var part in calls.Chunk(Part))
-      outcomes.AddRange(await PythonDriver.OutcomesAsync(translated.Source!, [.. part.Select(call => call with { Method = names[call.Method] })]));
+    // The calls go to CPython in parts, each within the memory the sandbox grants one run, one part per
+    // processor at a time; meanwhile the oracle and the interpreter work through the calls in parallel.
+    var size = Math.Clamp((calls.Count + Environment.ProcessorCount - 1) / Environment.ProcessorCount, MinimumPart, Part);
+    var running = Task.WhenAll(calls.Chunk(size).Select(part => PythonDriver.OutcomesAsync(translated.Source!, [.. part.Select(call => call with { Method = names[call.Method] })])));
+    var references = calls.AsParallel().AsOrdered().Select(call => (Oracle: expected(call), Interpreter: interpreted(call))).ToList();
+    var outcomes = (await running).SelectMany(part => part).ToList();
 
     var mismatches = new List<string>();
     for (var index = 0; index < calls.Count; ++index) {
-      var oracle = expected(calls[index]);
-      var reference = interpreted(calls[index]);
+      var (oracle, reference) = references[index];
       if (outcomes[index] != oracle || reference != oracle)
         mismatches.Add($"{calls[index]}: oracle {oracle}, python {outcomes[index]}, interpreter {reference}");
     }
