@@ -31,7 +31,7 @@ internal sealed class CollectionFixtureTests {
       Is.EqualTo(PrototypeFixture.InvokedOutcome(CollectionFixtures.Compiled(className, call.Method), call)));
 
   /// <summary>Test design 1, 9 and 13: every fixture is written in every C# profile, and compiles there.</summary>
-  [TestCase("Collections")]
+  [TestCase("Collections"), TestCase("WordFrequency")]
   [Category("Slow")]
   public void EveryCSharpProfile_WritesTheFixture(string file) {
     var module = CollectionFixtures.Imported(file);
@@ -43,7 +43,7 @@ internal sealed class CollectionFixtureTests {
   }
 
   /// <summary>Test design 1, 9 and 13: every fixture is written at every JavaScript level, at that level.</summary>
-  [TestCase("Collections")]
+  [TestCase("Collections"), TestCase("WordFrequency")]
   public void EveryJavaScriptLevel_WritesTheFixture(string file) {
     var module = CollectionFixtures.Imported(file);
     foreach (var profile in _levels) {

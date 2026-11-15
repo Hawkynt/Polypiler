@@ -183,4 +183,182 @@ public static class CollectionsDemo {
     return sum;
   }
 
+  public static int DictionaryOrder() {
+    var map = new Dictionary<int, int>();
+    map[1] = 1;
+    map[2] = 2;
+    map[3] = 3;
+    map.Remove(1);
+    map.Remove(3);
+    map.Remove(7);
+    map[4] = 4;
+    map[5] = 5;
+    map[6] = 6;
+    var result = 0;
+    foreach (var key in map.Keys)
+      result = result * 10 + key;
+
+    return result;
+  }
+
+  public static int SetOrder() {
+    var set = new HashSet<int> { 1, 2, 3 };
+    set.Remove(2);
+    set.Add(4);
+    var result = 0;
+    foreach (var item in set)
+      result = result * 10 + item;
+
+    return set.Add(4) ? -1 : result;
+  }
+
+  public static int Count(int[] values) {
+    var counts = new Dictionary<int, int>();
+    foreach (var value in values) {
+      if (counts.TryGetValue(value, out var seen))
+        counts[value] = seen + 1;
+      else
+        counts[value] = 1;
+    }
+
+    var result = 0;
+    foreach (var (key, count) in counts)
+      result = result * 100 + key * 10 + count;
+
+    return result;
+  }
+
+  public static int RemoveWhileEnumerating() {
+    var map = new Dictionary<int, int> { [1] = 2, [2] = 2, [3] = 9 };
+    var result = 0;
+    foreach (var entry in map) {
+      if (entry.Key == 1)
+        map.Remove(3);
+
+      result = result * 10 + entry.Value;
+    }
+
+    return result;
+  }
+
+  public static int MapPasses(int change) {
+    var map = new Dictionary<int, int> { { 1, 1 }, { 2, 2 }, { 3, 3 } };
+    var passes = 0;
+    try {
+      foreach (var entry in map) {
+        ++passes;
+        if (entry.Key != 1)
+          continue;
+
+        if (change == 0)
+          map[99] = 0;
+        else if (change == 1)
+          map[2] = 7;
+        else if (change == 2)
+          map.Remove(2);
+        else if (change == 3)
+          map.Clear();
+        else if (change == 4)
+          map.TryAdd(5, 5);
+      }
+    } catch (InvalidOperationException) {
+      return -passes;
+    }
+
+    return passes;
+  }
+
+  public static int ClearThenInsert() {
+    var set = new HashSet<int> { 1, 2 };
+    set.Remove(1);
+    set.Clear();
+    set.Add(9);
+    set.Add(8);
+    var result = 0;
+    foreach (var item in set)
+      result = result * 10 + item;
+
+    return result + set.Count * 1000;
+  }
+
+  public static double FirstZeroKey() {
+    var map = new Dictionary<double, int>();
+    map[-0.0] = 1;
+    map[0.0] = 2;
+    var last = 1.0;
+    foreach (var key in map.Keys)
+      last = key;
+
+    return 1 / last;
+  }
+
+  public static int NaNKey() {
+    var map = new Dictionary<double, int>();
+    var zero = 0.0;
+    map[double.NaN] = 1;
+    map[zero / zero] = 2;
+    return map.Count * 10 + map[double.NaN];
+  }
+
+  public static int MissingKey() {
+    var map = new Dictionary<int, int>();
+    return map[5];
+  }
+
+  public static int Missing(int key) {
+    var map = new Dictionary<int, int> { [1] = 10 };
+    try {
+      return map[key];
+    } catch (KeyNotFoundException) {
+      return -1;
+    }
+  }
+
+  public static int DuplicateAdd(int key) {
+    var map = new Dictionary<int, int>();
+    map.Add(1, 1);
+    try {
+      map.Add(key, 2);
+    } catch (ArgumentException) {
+      return -1;
+    }
+
+    return map[key];
+  }
+
+  public static int Tried(int key) {
+    var map = new Dictionary<long, Box>();
+    map.Add(1, new Box(4));
+    if (!map.TryGetValue(key, out var box))
+      return -1;
+
+    return box.Value + (map.TryAdd(key, new Box(9)) ? 100 : 0) + (map.ContainsKey(2) ? 1000 : 0);
+  }
+
+  public static string Keys() {
+    var words = new Dictionary<string, Pair> { ["b"] = new Pair { A = 1 }, ["a"] = new Pair { A = 2 } };
+    var text = "";
+    foreach (var (word, pair) in words)
+      text += pair.A == 1 ? word + word : word;
+
+    var flags = new HashSet<bool> { true, false, true };
+    var boxes = new HashSet<Box>();
+    var shared = new Box(1);
+    boxes.Add(shared);
+    boxes.Add(shared);
+    boxes.Add(new Box(1));
+    var wide = new HashSet<uint> { 4000000000u, 4000000000u };
+    return text + (flags.Count == 2 && boxes.Count == 2 && wide.Contains(4000000000u) && !boxes.Contains(new Box(1)) ? "!" : "?");
+  }
+
+  public static int Values() {
+    var map = new Dictionary<int, double> { [3] = 0.5, [4] = 1.5 };
+    var sum = 0.0;
+    foreach (var value in map.Values)
+      sum += value;
+
+    map[3] += 1;
+    return (int)(sum * 10) + (int)map[3] * 100;
+  }
+
 }

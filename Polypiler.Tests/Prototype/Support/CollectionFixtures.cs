@@ -21,7 +21,7 @@ internal static class CollectionFixtures {
   public const string Namespace = "Polypiler.Fixtures.Prototype.Collections";
 
   /// <summary>The C# fixtures, by file name, each with the name of its static class.</summary>
-  public static readonly (string File, string Class)[] CSharp = [("Collections", "CollectionsDemo")];
+  public static readonly (string File, string Class)[] CSharp = [("Collections", "CollectionsDemo"), ("WordFrequency", "WordFrequencyDemo")];
 
   /// <summary>The path of a fixture file of the folder, its extension included.</summary>
   public static string PathOf(string file) => Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "prototype", "collections", file);
@@ -72,14 +72,39 @@ internal static class CollectionFixtures {
 
     for (var change = 0; change <= 4; ++change)
       yield return Call("Passes", change);
+
+    foreach (var method in new[] { "DictionaryOrder", "SetOrder", "RemoveWhileEnumerating", "ClearThenInsert", "FirstZeroKey", "NaNKey", "MissingKey", "Keys", "Values" })
+      yield return Call(method);
+
+    yield return Call("Count", [new[] { 3, 1, 3, 2, 3 }]);
+    yield return Call("Count", [new int[0]]);
+    for (var change = 0; change <= 4; ++change)
+      yield return Call("MapPasses", change);
+
+    foreach (var key in new[] { 0, 1 }) {
+      yield return Call("Missing", key);
+      yield return Call("DuplicateAdd", key);
+      yield return Call("Tried", key);
+    }
+
+    // Test design 8: the histogram across the resizes of the dictionary, with removals.
+    foreach (var draws in new[] { 0, 1, 3, 4, 7, 8, 17, 97, 1000 })
+      yield return ("WordFrequency", "WordFrequencyDemo", new PrototypeCall("Histogram", [draws]) { Returns = Compiled("WordFrequencyDemo", "Histogram").ReturnType });
   }
+
+  /// <summary>The calls of the JavaScript fixture <c>wordFrequency.js</c>: the histogram across the growth of the map, with removals.</summary>
+  public static IEnumerable<PrototypeCall> HistogramCalls() => new[] { 0, 1, 3, 4, 7, 8, 17, 97, 1000 }.Select(draws => new PrototypeCall("histogram", [(double)draws]));
 
   /// <summary>The functions of the JavaScript fixture <c>collections.js</c>, which take nothing.</summary>
   public static readonly string[] ScriptFunctions = [
-    "arrayOps", "pushWhileIterating", "popOfEmpty", "popped", "searches", "cleared", "words", "copied", "stepped", "passed", "fixedLoop"
+    "arrayOps", "pushWhileIterating", "popOfEmpty", "popped", "searches", "cleared", "words", "copied", "stepped", "passed", "fixedLoop",
+    "mapOrder", "setOrder", "firstZeroKey", "nanKey", "missing", "liveMap", "clearedSet", "hasDelete", "wordSet"
   ];
 
   /// <summary>The calls of the JavaScript fixture every implementation is compared on.</summary>
-  public static IEnumerable<PrototypeCall> ScriptCalls() => ScriptFunctions.Select(function => new PrototypeCall(function, []));
+  public static IEnumerable<PrototypeCall> ScriptCalls()
+    => ScriptFunctions.Select(function => new PrototypeCall(function, []))
+      .Append(new PrototypeCall("count", [new[] { 3.0, 1, 3, 2, 3 }]))
+      .Append(new PrototypeCall("count", [new double[0]]));
 
 }

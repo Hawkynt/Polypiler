@@ -370,6 +370,8 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       case ExpressionStatementSyntax expression:
         this.Effect(expression.Expression, into);
         break;
+      case IfStatementSyntax conditional when this.TryGetIf(conditional, into):
+        break;
       case IfStatementSyntax conditional when this.PatternIf(conditional, into):
         break;
       case IfStatementSyntax conditional:
@@ -389,6 +391,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         break;
       case ForEachStatementSyntax loop:
         into.Add(this.CollectionForEach(loop) ?? this.ForEach(loop));
+        break;
+      case ForEachVariableStatementSyntax loop when this.CollectionForEach(loop) is { } deconstructed:
+        into.Add(deconstructed);
         break;
       case SwitchStatementSyntax choice:
         this.Switch(choice, into);
