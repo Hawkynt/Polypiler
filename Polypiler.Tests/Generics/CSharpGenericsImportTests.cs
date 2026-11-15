@@ -134,6 +134,48 @@ internal sealed class CSharpGenericsImportTests {
     Assert.That(PrototypeFixture.InterpretedOutcome(module, new PrototypeCall("F", [])), Is.EqualTo(GeneratedCSharp.Compile(text, false).Outcome(new PrototypeCall("F", []))));
   }
 
+  /// <summary>A generic body carries the statements and values of the other constructs: try, catch, finally, throw, using, optional values and a throw expression.</summary>
+  [Test]
+  public void GenericBody_CarriesEveryConstruct() {
+    var text = "#nullable disable\n" + """
+      public sealed class R : System.IDisposable { public int N; public void Dispose() { this.N = this.N + 1; } }
+      public static class Snippet {
+        static T At<T>(T[] a, int i) {
+          try {
+            if (i < 0) throw new System.ArgumentException();
+            return a[i];
+          } catch (System.IndexOutOfRangeException) when (i > 100) {
+            return a[0];
+          } finally {
+            i = 0;
+          }
+        }
+        static T First<T>(T[] a) => a.Length > 0 ? a[0] : throw new System.InvalidOperationException();
+        static int? Index<T>(T[] a, T v) where T : System.IEquatable<T> {
+          int? found = null;
+          for (var i = 0; i < a.Length; ++i) if (found == null && a[i].Equals(v)) found = i;
+          return found;
+        }
+        static int Count<T>(T[] a, R r) { using (var s = r) { return a?.Length ?? s.N; } }
+        public static int F(int i) {
+          var a = new[] { 4, 5, 6 };
+          var r = new R();
+          return At(a, i) + First(a) * 10 + (Index(a, 6) ?? -1) * 100 + (Index(a, 7).HasValue ? 1000 : 0) + Count(a, r) * 10000 + r.N * 100000;
+        }
+      }
+      """;
+    var module = PrototypeFixture.Import("Snippet.cs", text);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    var compiled = GeneratedCSharp.Compile(text, false);
+    foreach (var i in new[] { 0, 2, 3, 101 })
+      Assert.That(PrototypeFixture.InterpretedOutcome(module, new PrototypeCall("F", [i])), Is.EqualTo(compiled.Outcome(new PrototypeCall("F", [i]))), i.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+    // A template that instantiates to its instances is written back as a generic method; the others stay instances.
+    var emitted = Polypiler.Core.Backends.CSharp.CSharpEmitter.Emit(module)[0].Content;
+    Assert.That(emitted, Does.Contain("First<T>(").And.Contain("Index<T>(").And.Contain("Count<T>("), emitted);
+    Assert.That(GeneratedCSharp.ComplaintsFor(emitted, "net10.0", "14"), Is.Empty, emitted);
+  }
+
   /// <summary>Test design 8: a private generic nothing calls is dropped; a public one is refused unless --instantiate names its arguments, which also reaches what it calls.</summary>
   [Test]
   public void InstantiationCount_DecidesWhatIsLowered() {

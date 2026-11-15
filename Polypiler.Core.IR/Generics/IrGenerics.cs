@@ -311,6 +311,11 @@ public static class IrGenerics {
       IrReturn result => new IrReturn(result.Value is null ? null : this.Expression(result.Value)),
       IrForEachCollection loop => new IrForEachCollection(this.Expression(loop.Collection), loop.Mode,
         loop.Element is null ? null : this.Local(loop.Element), loop.Value is null ? null : this.Local(loop.Value), this.Block(loop.Body)),
+      IrThrow thrown => new IrThrow(this.Expression(thrown.Exception)),
+      IrTry attempt => new IrTry(this.Block(attempt.Body),
+        [.. attempt.Catches.Select(clause => clause with { Local = clause.Local is null ? null : this.Local(clause.Local), Filter = clause.Filter is null ? null : this.Expression(clause.Filter), Body = this.Block(clause.Body) })],
+        attempt.Finally is null ? null : this.Block(attempt.Finally)),
+      IrUsing scope => scope with { Resource = this.Local(scope.Resource), Initializer = this.Expression(scope.Initializer), Body = this.Block(scope.Body) },
       _ => statement
     };
 
@@ -349,6 +354,14 @@ public static class IrGenerics {
         IrFunctionRef reference => new IrFunctionRef(type(reference.Type), call(reference.Function)),
         IrBoundMethod bound => bound with { Type = type(bound.Type), Receiver = bound.Receiver is null ? null : this.Expression(bound.Receiver) },
         IrInvoke invocation => new IrInvoke(type(invocation.Type), this.Expression(invocation.Callee), this.Expressions(invocation.Arguments)),
+        IrNone none => new IrNone(type(none.Type)),
+        IrSome some => new IrSome(this.Expression(some.Value)),
+        IrIsNone test => new IrIsNone(this.Expression(test.Value)),
+        IrUnwrap unwrap => new IrUnwrap(this.Expression(unwrap.Value)) { IsTested = unwrap.IsTested },
+        IrCoalesce coalesce => new IrCoalesce(this.Expression(coalesce.Value), this.Expression(coalesce.Fallback)),
+        IrIsNull test => new IrIsNull(this.Expression(test.Value)),
+        IrBind bind => new IrBind(this.Local(bind.Local), this.Expression(bind.Value)),
+        IrThrowExpression thrown => new IrThrowExpression(type(thrown.Type), this.Expression(thrown.Exception)),
         _ => expression
       };
       return special(expression) is { } replaced ? replaced : rebuilt;

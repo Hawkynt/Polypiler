@@ -44,6 +44,35 @@ internal sealed class JavaScriptCopiesTests {
     Assert.That(result.Diagnostics.Single().Message, Does.Contain("a call of first, which cannot be imported"));
   }
 
+  /// <summary>A call of a copy inside a try, a catch, a finally block and a throw, and as an optional value, calls the copy.</summary>
+  [Test]
+  public void CallsInsideOtherConstructs_CallTheCopies() {
+    const string Source = """
+      function last(a) { return a[a.length - 1]; }
+      export function f(x) {
+        let t = 0;
+        try {
+          t = last(new Int32Array([1, 2]));
+          if (x > 1 + last(new Float64Array([0.5]))) throw new Error("r");
+        } catch (e) {
+          t = t + last(new Float64Array([0.25]));
+        } finally {
+          t = t + last(new Int32Array([4]));
+        }
+        const o = x > 2 ? null : last(new Int32Array([8]));
+        return t + (o ?? last(new Float64Array([16.5])));
+      }
+      """;
+    var result = Import(Source);
+    Assert.That(result.Diagnostics, Is.Empty, string.Join("\n", result.Diagnostics));
+    var module = result.Module!;
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    Assert.That(module.Functions.Select(function => function.Name), Is.EqualTo(new[] { "last<i32[]>", "last<f64[]>", "f" }));
+    Assert.That(IrInterpreter.Call(module, "f", [0.0]), Is.EqualTo(2 + 4 + 8));
+    Assert.That(IrInterpreter.Call(module, "f", [2.0]), Is.EqualTo(2 + 0.25 + 4 + 8));
+    Assert.That(IrInterpreter.Call(module, "f", [3.0]), Is.EqualTo(2 + 0.25 + 4 + 16.5));
+  }
+
   /// <summary>Calls of one kind share one copy; a copy calls copies itself; the order of evaluation and the number of calls stay.</summary>
   [Test]
   public void CallsOfOneKind_ShareACopy() {
