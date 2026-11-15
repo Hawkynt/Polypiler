@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/dpcm.js",
+ "algorithms": [
+  {
+   "name": "DPCM",
+   "vectors": [
+    {
+     "text": "Empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single sample test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Incrementing sequence, ideal for DPCM",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0a0c0e10"},
+     "expected": {"t":"bytes","v":"0a020202"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wraparound across the 0/255 boundary (modulo-256 residual)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fa0a05"},
+     "expected": {"t":"bytes","v":"fa10fb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

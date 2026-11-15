@@ -1,0 +1,277 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/haval.js",
+ "algorithms": [
+  {
+   "name": "HAVAL",
+   "vectors": [
+    {
+     "text": "String 'abc' - HAVAL-128/3",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":3}},
+      {"set":"hashBits","value":{"t":"number","v":128}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"9e40ed883fb63e985d299b40cda2b8f2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' - HAVAL-256/3",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":3}},
+      {"set":"hashBits","value":{"t":"number","v":256}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"8699f1e3384d05b2a84b032693e2b6f46df85a13a50d93808d6874bb8fb9e86c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Empty string - HAVAL-256/5",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":5}},
+      {"set":"hashBits","value":{"t":"number","v":256}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"be417bb4dd5cfb76c7126f4f8eeb1553a449039307b1a3cd451dbfdc0fbbe330"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Empty string - HAVAL-160/3",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":3}},
+      {"set":"hashBits","value":{"t":"number","v":160}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"d353c3ae22a25401d257643836d7231a9a95f953"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Empty string - HAVAL-192/5",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":5}},
+      {"set":"hashBits","value":{"t":"number","v":192}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"4839d0626f95935e17ee2fc4509387bbe2cc46cb382ffe85"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' - HAVAL-160/3",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":3}},
+      {"set":"hashBits","value":{"t":"number","v":160}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"b21e876c4d391e2a897661149d83576b5530a089"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' - HAVAL-160/4",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":4}},
+      {"set":"hashBits","value":{"t":"number","v":160}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"77aca22f5b12cc09010afc9c0797308638b1cb9b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' - HAVAL-160/5",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":5}},
+      {"set":"hashBits","value":{"t":"number","v":160}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"ae646b04845e3351f00c5161d138940e1fa0c11c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' - HAVAL-192/3",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":3}},
+      {"set":"hashBits","value":{"t":"number","v":192}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"a7b14c9ef3092319b0e75e3b20b957d180bf20745629e8de"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' - HAVAL-192/4",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":4}},
+      {"set":"hashBits","value":{"t":"number","v":192}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"7e29881ed05c915903dd5e24a8e81cde5d910142ae66207c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' - HAVAL-192/5",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":5}},
+      {"set":"hashBits","value":{"t":"number","v":192}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"d12091104555b00119a8d07808a3380bf9e60018915b9025"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'a..z A..Z 0..9' (61 chars) x3 - HAVAL-160/4",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":4}},
+      {"set":"hashBits","value":{"t":"number","v":160}}
+     ],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4f505152535455565758595a303132333435363738396162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4f505152535455565758595a303132333435363738396162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4f505152535455565758595a30313233343536373839"},
+     "expected": {"t":"bytes","v":"3444e38cc2a132b818b554ced8f7d9592df28f57"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'a..z A..Z 0..9' (61 chars) x3 - HAVAL-192/4",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":4}},
+      {"set":"hashBits","value":{"t":"number","v":192}}
+     ],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4f505152535455565758595a303132333435363738396162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4f505152535455565758595a303132333435363738396162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4f505152535455565758595a30313233343536373839"},
+     "expected": {"t":"bytes","v":"0ca58f140ed92828a27913ce5636611abcada220fccf3af7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "117 x 'a' - HAVAL-224/3 (117 bytes, the longest tail the footer still fits behind)",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":3}},
+      {"set":"hashBits","value":{"t":"number","v":224}}
+     ],
+     "input": {"t":"bytes","v":"616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"365601a3c875aeae81f92d0029f1c8ab837148dae077e28fd0a192ea"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "118 x 'a' - HAVAL-128/3 (118 bytes, the shortest tail that pushes the footer into a second block)",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":3}},
+      {"set":"hashBits","value":{"t":"number","v":128}}
+     ],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"1065c6b9296279e1286c9b248bcf3208"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "122 x 'a' - HAVAL-192/4 (122 bytes, footer in a second block)",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":4}},
+      {"set":"hashBits","value":{"t":"number","v":192}}
+     ],
+     "input": {"t":"bytes","v":"6161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"d29ca0a0aed203918df5f7f1ea47cdaae598b2e0cf9bc39e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "127 x 'a' - HAVAL-256/5 (127 bytes, the longest tail that needs a second block)",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":5}},
+      {"set":"hashBits","value":{"t":"number","v":256}}
+     ],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"f7eabeec467c8b56af40f90e799ea878d8ea7eff260d49982209364ad0e0c39d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "128 x 'a' - HAVAL-256/5 (128 bytes, one full block and a padding block)",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":5}},
+      {"set":"hashBits","value":{"t":"number","v":256}}
+     ],
+     "input": {"t":"bytes","v":"6161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"93390552a2d23df530a5918c95d095e3914cf476cd1d95bede099c7674b31efe"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "246 x 'a' - HAVAL-160/4 (246 bytes, 118 bytes past a full block)",
+     "inverse": false,
+     "steps": [
+      {"set":"passes","value":{"t":"number","v":4}},
+      {"set":"hashBits","value":{"t":"number","v":160}}
+     ],
+     "input": {"t":"bytes","v":"616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"a1ca5bfdf2e7bc4ba833d8f6ec047d801b1d99a2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

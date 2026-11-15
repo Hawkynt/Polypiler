@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/lion.js",
+ "algorithms": [
+  {
+   "name": "LION",
+   "vectors": [
+    {
+     "text": "Botan Test Vector - LION(SHA-1,RC4,64)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"}}
+     ],
+     "input": {"t":"bytes","v":"1112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f3031323334353637382015b3db2dc49529c2d26b1f1e86c65ec7b946ab2d2e2f30"},
+     "expected": {"t":"bytes","v":"bce3be866ef63af5ad4cba8c3caa2aa9cf9bb3cc2a3d77ff7c05d0ec7e684ad6134abfd7df6842b7292071064c9f4dfe4b9d34eae89201136b7ce70ed4a190db"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

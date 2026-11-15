@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/neural-compression.js",
+ "algorithms": [
+  {
+   "name": "Neural Network Compression (Educational)",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"010000003d00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple repetition",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141"},
+     "expected": {"t":"bytes","v":"020000003d0c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern recognition",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61626361"},
+     "expected": {"t":"bytes","v":"040000005beb2c4a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

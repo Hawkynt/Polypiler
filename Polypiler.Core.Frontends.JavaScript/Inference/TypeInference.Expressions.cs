@@ -256,6 +256,8 @@ internal sealed partial class TypeInference {
     switch (builtin) {
       case "Math.imul" or "Math.clz32":
         return JsType.I32;
+      case "Array.isArray":
+        return JsType.Boolean;
       case "Math.fround":
         return JsType.F32;
       case "Math.trunc" or "Math.floor" or "Math.ceil" or "Math.round" or "Math.abs" or "Math.sign" or "Math.sqrt" or "Math.min" or "Math.max":

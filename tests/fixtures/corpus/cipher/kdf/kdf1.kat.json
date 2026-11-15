@@ -1,0 +1,166 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/kdf1.js",
+ "algorithms": [
+  {
+   "name": "KDF1",
+   "vectors": [
+    {
+     "text": "KDF1(SHA-1) Test Vector 1 - Full hash output",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"61736f67696a6f7367696a736f69676a736f6964676a6f696a6f736467696a736f6964676a736f6964676a736f696a"},
+     "expected": {"t":"bytes","v":"a0d760447f105ce64db99ff2fc92f961f24e7d9c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF1(SHA-1) Test Vector 2 - Truncated output (10 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":10}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"61736f67696a6f7367696a736f69676a736f6964676a6f696a6f736467696a736f6964676a736f6964676a736f696a"},
+     "expected": {"t":"bytes","v":"a0d760447f105ce64db9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF1(SHA-1) Test Vector 3 - With salt (full output)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"6f6964676a736f6964676a736f696a"}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"61736f67696a6f7367696a736f69676a736f6964676a6f696a6f736467696a73"},
+     "expected": {"t":"bytes","v":"a0d760447f105ce64db99ff2fc92f961f24e7d9c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF1(SHA-1) Test Vector 4 - With salt (full output, different split)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"736f6964676a736f6964676a736f696a"}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"61736f67696a6f7367696a736f69676a736f6964676a6f696a6f736467696a"},
+     "expected": {"t":"bytes","v":"a0d760447f105ce64db99ff2fc92f961f24e7d9c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF1(SHA-1) Test Vector 5 - Full hash output with newline",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"617361736f67696a6f7367696a736f69676a736f6964676a6f696a6f736467696a736f6964676a736f6964676a736f696a0a"},
+     "expected": {"t":"bytes","v":"dbfefa0ea12d352c4ae5b0af17d061e0e2c469a8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF1(SHA-1) Test Vector 6 - With salt and newline",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"6a736f6964676a736f6964676a736f696a0a"}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"617361736f67696a6f7367696a736f69676a736f6964676a6f696a6f73646769"},
+     "expected": {"t":"bytes","v":"dbfefa0ea12d352c4ae5b0af17d061e0e2c469a8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "KDF1-ISO-18033",
+   "vectors": [
+    {
+     "text": "KDF1-ISO-18033(SHA-1) Test Vector C.5.1 - 107 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":107}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"d6e168c5f256a2dcff7ef12facd390f393c7a88d"},
+     "expected": {"t":"bytes","v":"c325ebbb41a82551d5d0ad4834870a05ef3918c8caae38873f07dca43127a4dee36a6ca5970f6c06926037de7df79c4915d83ff705821d2c46a1fa7bb81b73e27176feb7fd3a45e40b843f1aaebccb1ef4fa7ee3b9b491a342f43eaaa435efded41e0a3a6ec2eff1f2ed95"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF1-ISO-18033(SHA-1) Test Vector C.5.1 - 20 byte output (truncated)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"b711f58766b5d696513538f03036f30e0fc11ce1caae38873f07dca43127a4dee36a6ca5970f6c06926037de7df79c4915d83ff705821d2c46a1fa7bb81b73e27176feb7fd3a45e40b843f1aaebccb1fd4ae168aca94f8d062951edec1469bfeb97b79490fa58ad1d3ccb4"},
+     "expected": {"t":"bytes","v":"281d7cb2d7d5531ed1f9382152d9be9a89a1df09"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF1-ISO-18033(SHA-256) Test Vector C.5.3 - 20 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"d6e168c5f256a2dcff7ef12facd390f393c7a88d"},
+     "expected": {"t":"bytes","v":"0742ba966813af75536bb6149cc44fc256fd6406"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF1-ISO-18033(SHA-256) Test Vector - 20 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"09248da92dcf5ca8360ae7f18533a19c6ba8e99adf79665bc31dc5a62f70535e52c53015b9d37d412ff3c1193439599e1b628774c50d9ccb78d82c425e4521ee47b8c36a4bcffe8b8112a89312fc04432a6db6f05118f9946c80230cd9222e0146f2cbd5251cc388a62359"},
+     "expected": {"t":"bytes","v":"6f0195f38eed2417aa6eb7a365245073e58711db"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,104 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/unix-sum.js",
+ "algorithms": [
+  {
+   "name": "Unix-Sum-BSD",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"0061"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"40ac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Standard test phrase",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "expected": {"t":"bytes","v":"c56e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Unix-Sum-SYSV",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"0061"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"0126"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Standard test phrase",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "expected": {"t":"bytes","v":"0fd9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

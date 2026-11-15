@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/nordstrom-robinson.js",
+ "algorithms": [
+  {
+   "name": "Nordstrom-Robinson Code",
+   "vectors": [
+    {
+     "text": "Nordstrom-Robinson all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Nordstrom-Robinson pattern 1",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000001"},
+     "expected": {"t":"bytes","v":"01010101010101010101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Nordstrom-Robinson pattern 2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000100000000"},
+     "expected": {"t":"bytes","v":"00010001000100010001000100010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Nordstrom-Robinson pattern 3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

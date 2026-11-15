@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/swb.js",
+ "algorithms": [
+  {
+   "name": "Subtract-with-Borrow (SWB)",
+   "vectors": [
+    {
+     "text": "Seed 0: First 5 outputs (40 bytes) - SWB(4096, 63, 4093)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0ae12fad109b1c4f2c056fc4220a91deec4507a4021b9a03696a25d23a3110f889863a39432da426"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1: First 5 outputs (40 bytes) - SWB(4096, 63, 4093)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0a16558aa58099ff7d054668d25edd7cebf95bd8080aa072eeba28ca7d12fa3e9e5d5de2489093e8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 42: First 5 outputs (40 bytes) - SWB(4096, 63, 4093)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ca13722c11ad56177a83a92bd6180b4f00af31bd582568005355dd85a78be3acaae02192b3f6f5c4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1234567: First 5 outputs (40 bytes) - SWB(4096, 63, 4093)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000012d687"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"5e5e874a13cc0ad40d0991c3e2bc9b050c3ff517b5ac3f3d44bb3d0dd6f5bdcbfbb7439b68b88be2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 987654321: First 5 outputs (40 bytes) - SWB(4096, 63, 4093)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000003ade68b1"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"268b7f5cee02de79c44e6685e70d7b94c080778ed8a1656da915af8bc016f7cd189c9cccb3c90502"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

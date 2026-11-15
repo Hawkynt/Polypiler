@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzjb.js",
+ "algorithms": [
+  {
+   "name": "LZJB",
+   "vectors": [
+    {
+     "text": "All literals - no compression (ABCD)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424344"},
+     "expected": {"t":"bytes","v":"040000000041424344"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple repetition - AAAA (4 A's)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "expected": {"t":"bytes","v":"0400000002414000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern ABCABC (6 bytes with match)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243"},
+     "expected": {"t":"bytes","v":"0600000008414243c000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetition - AAAAAAAA (8 A's)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141414141414141"},
+     "expected": {"t":"bytes","v":"0800000002414400"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed pattern - Hello",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f"},
+     "expected": {"t":"bytes","v":"050000000048656c6c6f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive data showing compression (ABABABABAB)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424142414241424142"},
+     "expected": {"t":"bytes","v":"0a0000000441428500"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

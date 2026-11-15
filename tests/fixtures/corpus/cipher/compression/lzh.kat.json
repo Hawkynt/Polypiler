@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzh.js",
+ "algorithms": [
+  {
+   "name": "LZH",
+   "vectors": [
+    {
+     "text": "Empty input - header only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'A' - single-symbol trees",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"0100000000010000041000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All literals (ABCD)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424344"},
+     "expected": {"t":"bytes","v":"04000000000428052450b7c006c0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple repetition - AAAA",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "expected": {"t":"bytes","v":"04000000000220043010b6554010"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern ABCABC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243"},
+     "expected": {"t":"bytes","v":"06000000000428053010b7951021b0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "English text with repeats",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"5a000000002b48aeb0a93e067fd560f55200e0018e46079c0012334184289f563c8959c3f2b8551af902a9a235f33bce07c47eb75e18"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long run - 256 bytes of 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"00010000000220043fd136c34010"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All 256 byte values in order",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "expected": {"t":"bytes","v":"00010000010002a000000020406080a0c0e10121416181a1c1e20222426282a2c2e30323436383a3c3e40424446484a4c4e50525456585a5c5e60626466686a6c6e70727476787a7c7e80828486888a8c8e90929496989a9c9ea0a2a4a6a8aaacaeb0b2b4b6b8babcbec0c2c4c6c8caccced0d2d4d6d8dadcdee0e2e4e6e8eaeceef0f2f4f6f8fafcff01030507090b0d0f11131517191b1d1f21232527292b2d2f31333537393b3d3f41434547494b4d4f51535557595b5d5f61636567696b6d6f71737577797b7d7f81838587898b8d8f91939597999b9d9fa1a3a5a7a9abadafb1b3b5b7b9bbbdbfc1c3c5c7c9cbcdcfd1d3d5d7d9dbdddfe1e3e5e7e9ebedeff1f3f5f7f9fbfdfe0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

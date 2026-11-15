@@ -1,0 +1,87 @@
+{
+ "schema": 1,
+ "file": "algorithms/permutation/simpira-v2.js",
+ "algorithms": [
+  {
+   "name": "Simpira-128",
+   "vectors": [
+    {
+     "text": "Simpira-128 Zero Vector Test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"5e7df1010e4e4de68cfafead5b68c3b9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simpira-128 Sequential Vector Test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"1e0566e2f4992a8018c78a87a1501d95"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Simpira-256",
+   "vectors": [
+    {
+     "text": "Simpira-256 Zero Vector Test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"4ebda02a2d75bf86a2cdf824f0d85cfe237ade55421e93a63ce2ac57f5502f42"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simpira-256 Sequential Vector Test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"49f09b8e6db8852307e63990269ee982e8a6649563922db35b5f9ec0d49a5438"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Simpira-512",
+   "vectors": [
+    {
+     "text": "Simpira-512 Zero Vector Test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"1be1c14bac28e36c7c1a106c192ea9f0b7d9aea1aba2de4572442617b626fc35c187de7e94c382b6c5d8022779eeb9167813f10731537de57b5032dda35617ee"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simpira-512 Sequential Vector Test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"48c98b7e030e3ab38dfcf941a6321d9586c47f17bc5acb7d59914a444727aaf8c278e0afc19aa5633939457f5da73e2bf4cb4c8973b48751ba8e15722d025dca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

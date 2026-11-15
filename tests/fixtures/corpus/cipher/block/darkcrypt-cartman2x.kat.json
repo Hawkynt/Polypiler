@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-cartman2x.js",
+ "algorithms": [
+  {
+   "name": "Cartman-2X (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Cartman2x - zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"43cf861e141491ee0baf5f0a7f9838e1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Cartman2x - incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"95924004119c03a401ccf3bc3fb66a6a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Cartman2x - shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f80"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"07d2ff9135ad9a8520b4a6ba580a90ae"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/padding/no-padding.js",
+ "algorithms": [
+  {
+   "name": "No Padding",
+   "vectors": [
+    {
+     "text": "No padding for exact block size",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "No padding for multiple blocks",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a6bc1bee22e409f96e93d7e117393172a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

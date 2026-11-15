@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/rabin-williams.js",
+ "algorithms": [
+  {
+   "name": "Rabin-Williams",
+   "vectors": [
+    {
+     "text": "Rabin-Williams Round-trip Test - IEEE P1363 Compliance",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0400"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"4d47e76ca564e1849f32304da74da59bc0c60b8e75dee9b7d1b1e27d2aa0c465aef24afc823fb84d2f834cc03c5c0f9eebd34b67035136f7035ae4e1ec0ee0b6e57449e456a6333feeb5922e8f9952f28dcb17717fe0ef37402dad10647060b9785c53ea495d23afe4b7182a3d7fb64d3cd8790c175bf64f9486a3c98291c84a01"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rabin-Williams-2048 recovery of a message with leading zero octets",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0800"}}
+     ],
+     "input": {"t":"bytes","v":"0000000102030405"},
+     "expected": {"t":"bytes","v":"0000000102030405"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"08da9a77fdc36ecb4ee6c7327ad2211ae5aadc23ee55e804b696cc08400e13b758cf71869f319971ecbfbfa719cc03aa67c34a7e146d87593f61c86cbdc5e9acb542579f0201a6e11c311eb244dd37b1a149ecf6a386468e7d3a30eb6b6257d9c4cdf850544870643bb302d2b70d362be48531cb3f525aff773cfaacb5782eeecfabdc59e8685cc22a3682c818a73c450c68e10774171bff86e8c755b8494a7440dfbcd2680a1ec59ad54c00767b568e11e2e698115cb3fa72456b8cc0be85d5e1d799e0108af4002c26c9e179e762a78b79a4335f98f896bb079706374936e1a47045a40cb19975dbf87ec38c9b4a5e687009b54d587fbe50fbb488e57131e200"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,201 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/argon2.js",
+ "algorithms": [
+  {
+   "name": "Argon2d",
+   "vectors": [
+    {
+     "text": "Botan Official Test Vector - Argon2d (M=32, T=3, P=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"02020202020202020202020202020202"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"password","value":{"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"}},
+      {"set":"secret","value":{"t":"bytes","v":"0303030303030303"}},
+      {"set":"ad","value":{"t":"bytes","v":"040404040404040404040404"}},
+      {"set":"M","value":{"t":"number","v":32}},
+      {"set":"T","value":{"t":"number","v":3}},
+      {"set":"P","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"512b391b6f1162975371d30919734294f868e3be3984f3c1a13a4db9fabe4acb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Official Test Vector - Argon2d (M=64, T=3, P=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"02020202020202020202020202020202"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"password","value":{"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"}},
+      {"set":"secret","value":{"t":"bytes","v":"0303030303030303"}},
+      {"set":"ad","value":{"t":"bytes","v":"040404040404040404040404"}},
+      {"set":"M","value":{"t":"number","v":64}},
+      {"set":"T","value":{"t":"number","v":3}},
+      {"set":"P","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"ab75c7556cd63bbaa818e02dbdfe8c69e80375d64b31d6a7b2bf41da7f7c9951"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Official Test Vector - Argon2d (M=128, T=3, P=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"02020202020202020202020202020202"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"password","value":{"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"}},
+      {"set":"secret","value":{"t":"bytes","v":"0303030303030303"}},
+      {"set":"ad","value":{"t":"bytes","v":"040404040404040404040404"}},
+      {"set":"M","value":{"t":"number","v":128}},
+      {"set":"T","value":{"t":"number","v":3}},
+      {"set":"P","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"5fc18a6a56b67cadf60287babc490ca0e866f0880a2b51e56a0ab0a640179d13"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Argon2i",
+   "vectors": [
+    {
+     "text": "Botan Official Test Vector - Argon2i (M=32, T=3, P=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"02020202020202020202020202020202"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"password","value":{"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"}},
+      {"set":"secret","value":{"t":"bytes","v":"0303030303030303"}},
+      {"set":"ad","value":{"t":"bytes","v":"040404040404040404040404"}},
+      {"set":"M","value":{"t":"number","v":32}},
+      {"set":"T","value":{"t":"number","v":3}},
+      {"set":"P","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"c814d9d1dc7f37aa13f0d77f2494bda1c8de6b016dd388d29952a4c4672b6ce8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Official Test Vector - Argon2i (M=64, T=3, P=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"02020202020202020202020202020202"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"password","value":{"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"}},
+      {"set":"secret","value":{"t":"bytes","v":"0303030303030303"}},
+      {"set":"ad","value":{"t":"bytes","v":"040404040404040404040404"}},
+      {"set":"M","value":{"t":"number","v":64}},
+      {"set":"T","value":{"t":"number","v":3}},
+      {"set":"P","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"0f639e5eb9ae1d4d582ccb6033b95551f916a2bdf48ae23d2b8ba4414eb6a182"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Official Test Vector - Argon2i (M=128, T=3, P=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"02020202020202020202020202020202"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"password","value":{"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"}},
+      {"set":"secret","value":{"t":"bytes","v":"0303030303030303"}},
+      {"set":"ad","value":{"t":"bytes","v":"040404040404040404040404"}},
+      {"set":"M","value":{"t":"number","v":128}},
+      {"set":"T","value":{"t":"number","v":3}},
+      {"set":"P","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"88031ec2094b24a9c4399e7f3fdaa5701dc3bae89917c6ba582e924a547a623d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Argon2id",
+   "vectors": [
+    {
+     "text": "Botan Official Test Vector - Argon2id (M=32, T=3, P=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"02020202020202020202020202020202"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"password","value":{"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"}},
+      {"set":"secret","value":{"t":"bytes","v":"0303030303030303"}},
+      {"set":"ad","value":{"t":"bytes","v":"040404040404040404040404"}},
+      {"set":"M","value":{"t":"number","v":32}},
+      {"set":"T","value":{"t":"number","v":3}},
+      {"set":"P","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"0d640df58d78766c08c037a34a8b53c9d01ef0452d75b65eb52520e96b01e659"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Official Test Vector - Argon2id (M=64, T=3, P=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"02020202020202020202020202020202"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"password","value":{"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"}},
+      {"set":"secret","value":{"t":"bytes","v":"0303030303030303"}},
+      {"set":"ad","value":{"t":"bytes","v":"040404040404040404040404"}},
+      {"set":"M","value":{"t":"number","v":64}},
+      {"set":"T","value":{"t":"number","v":3}},
+      {"set":"P","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"4275ee5ad887fe3270e82f01e97db8af3cf63fc7f2102bfea84b305f416a4544"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Official Test Vector - Argon2id (M=128, T=3, P=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"02020202020202020202020202020202"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"password","value":{"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"}},
+      {"set":"secret","value":{"t":"bytes","v":"0303030303030303"}},
+      {"set":"ad","value":{"t":"bytes","v":"040404040404040404040404"}},
+      {"set":"M","value":{"t":"number","v":128}},
+      {"set":"T","value":{"t":"number","v":3}},
+      {"set":"P","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0101010101010101010101010101010101010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"8ec72f253bd35d55c3e49c587c77665c9c7fcff26cb3cabe179039b7c4281a48"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

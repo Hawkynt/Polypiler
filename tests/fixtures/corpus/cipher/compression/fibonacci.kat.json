@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/fibonacci.js",
+ "algorithms": [
+  {
+   "name": "Fibonacci Coding",
+   "vectors": [
+    {
+     "text": "Fibonacci coding of byte value 1 (Zeckendorf 2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"0100000060"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Fibonacci coding of byte value 2 (Zeckendorf 3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"02"},
+     "expected": {"t":"bytes","v":"0100000030"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Fibonacci coding of byte value 6 (Zeckendorf 7 = 5+2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"06"},
+     "expected": {"t":"bytes","v":"0100000058"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Fibonacci coding of byte value 8 (Zeckendorf 9 = 8+1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"08"},
+     "expected": {"t":"bytes","v":"010000008c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Fibonacci coding of byte value 11 (Zeckendorf 12 = 8+3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0b"},
+     "expected": {"t":"bytes","v":"01000000ac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All byte values 0-255 round-trip test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"00010000d9d8e6b0e34cbac1c3464e98b96ac0e0d0c8e8c4e4d4c2e2d2caeac07034190e862391a8c27134994ea60b85a2c974b15cad5601c06819074188721a8611c46919475182709a2649d2629ca6a981705a1645d1625c96a585715a5655d5600e01a0320740c41c8350610e21a4328750c11c2344648e918a3946a8c09c1342644e89893926a4c29c534a654ea980b81682c85d0b11722d4584b89692ca5d4b0570ad1592ba562ae55aab003803403203a03103903503083883483283a83043843443243a43143943543023823423223a231239235230a38a34a32a3aa3013813413213a13113913513093893493293a93053853453253a5315395355300b80b40b20ba0b10b90b50b08b88b48b28ba8b04b84b44b24ba4b14b94b54b02b82b42b22ba2b12b92b52b0ab8ab4ab2abaab001c00d006403a01880e406a03081c40d206503a81820e106883241d20c507283541810e0868430"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pseudo-random data round-trip test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"f3ccbfab9d8fe554efb09bd0b0f5ba948035b768414265947a6b83c1414fe53a321915d231a7468a060cbf21437ca17a41025ccf252088f87f924ecff37e92df40a12e81b544d31194c26032d36eca354a9fe4f79104e4ea1097bc6d5150317ea2c765c4eb1b6db8144d814094b69229864d203bc5479e98e75ee7d367dc90ee89deed97b1c55c0c61b36bd4a78958d24eade4af95e86b2d1ccaeff25b494218235cb9f53ed50db60ff2fe0c56d5b2a8d573b0395fc96579bbe4c3202cfcb3e696b3a48fbf61882e199ad6069b1f81fd03773b44bb662b708fcab3b9202625f91d342ff63cbea698059019d56bbf559e40e4c85a12784cac942ede43b90e87a448ba1ef5c6c13fa9a4535568186b9fe612ebf70fcda7801c912831b900c6c5d0d3329d38f99f61135cb28bc4"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"2c010000281c85c29a91c21801a55c56a03aa3a8348baa3041c49881c8b55c8992328ea304620602e51c4b25328e8b4aba0e9627075164b22324c95ac1c2980c1341628602ca33a0711743ab85648311640645c45940e85901d15a462860b517427098258b103a530874b04b827416ab54c90e2ad10680638ab401d3083293027258964ba1728701608e54c806a604d44c0d0b5169188188990184ea5a175621aa9d2688710755720eaac12d11c15c01c80d15915880c20c04d54e818388682728e12c88d15803a8b22e28e2aca8e40c00728ea617416a0348190394ea3a341d030930418468970c44c9a40e0860cab44b813a2344b92754641a8320b04754d24e2ac54eaca6a834132ab5034130230038538870ac1626506496ba832b516043b4a621c2692708d2644c00e82d04c24eac4743a41c5cae1708390c14d08e20e70062689728e14d2b44348e2ad02d01cb2a70585188182c8ac13093460ac08c538934b041805929c4624604615a5648e8e51921955cb201a20c9a85911c8b0b4035192c24f00b55348b04ba5c21a07483243886ae81c09d2b9530"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating pattern round-trip test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"800000009234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b9234ae48d2b"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

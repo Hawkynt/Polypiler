@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/ctw.js",
+ "algorithms": [
+  {
+   "name": "Context Predictor (order-2/1/0)",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000000002"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte - the empty model predicts zero, so it misses",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"01000000020041"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"30"},
+     "expected": {"t":"bytes","v":"01000000020030"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two symbols",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3031"},
+     "expected": {"t":"bytes","v":"0200000002003031"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating pattern - the order-1 context predicts the tail",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"30313031"},
+     "expected": {"t":"bytes","v":"0400000002303031"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Structured pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3030313130303131"},
+     "expected": {"t":"bytes","v":"08000000024730313130"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeating sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263616263"},
+     "expected": {"t":"bytes","v":"06000000021c616263"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Run of one byte - every position after the first is predicted",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"10000000027fff61"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

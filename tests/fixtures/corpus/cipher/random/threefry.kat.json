@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/threefry.js",
+ "algorithms": [
+  {
+   "name": "Threefry2x64-20",
+   "vectors": [
+    {
+     "text": "Threefry2x64-20: Counter=0, Key=0 - Random123 kat_vectors",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"6598c6c2a8e3b6c24d0850f342ed816f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Threefry2x64-20: Counter=0xFFFFFFFFFFFFFFFF (all), Key=0xFFFFFFFFFFFFFFFF (all) - Random123 kat_vectors",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}},
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"7a275dd9c4b72ce0688b3b89d03366d0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Threefry2x64-20: Counter=π digits, Key=π digits - Random123 kat_vectors",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"d0319f29223809a4896c4eec98fa2e08"}},
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"d308a385886a3f24447370032e8a1913"},
+     "expected": {"t":"bytes","v":"f10a0fbb307d3c26261531d36183be56"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

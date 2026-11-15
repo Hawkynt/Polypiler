@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzs.js",
+ "algorithms": [
+  {
+   "name": "LZS",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Highly repetitive input (40 'A' bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141414141414141414141414141414141414141414141414141414141414141414141414141"},
+     "expected": {"t":"bytes","v":"280000002090703ff9e000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f782e"},
+     "expected": {"t":"bytes","v":"410000003a1a0ca20389d4d26335880c472379dcdc20331bcf020351d4da7039880de76329c8419f8d8613d1e440643799c5d8ec35bd0bb000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

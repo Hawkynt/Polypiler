@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/dsfmt.js",
+ "algorithms": [
+  {
+   "name": "dSFMT-521 (Double precision SIMD-oriented Fast Mersenne Twister)",
+   "vectors": [
+    {
+     "text": "dSFMT-521 seed 0, doubles 1-5 in [1,2) - reference prints 1.421944098478936 1.957408659873361 1.190111011127383 1.632549872377003 1.616831120464805",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000"}}
+     ],
+     "input": {"t":"null"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"d3507b7448c0f63f2c0331be8b51ff3ff86cf6d7b10af33fd72b6f9dec1efa3f6ed2184f8adef93f"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "dSFMT-521 seed 0, doubles 6-10 in [1,2) - reference prints 1.984390160895336 1.643335574461273 1.739347032660861 1.228605414113949 1.052731243538065",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"skipBytes","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000"}}
+     ],
+     "input": {"t":"null"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"5ccbb8e50fc0ff3ff5a14a3e1a4bfa3fc9c4da8d5dd4fb3f5bed94265ea8f33f0e9367b7fcd7f03f"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "dSFMT-521 seed 0, doubles 11-15 in [1,2) - reference prints 1.772446323308858 1.114863567000073 1.636605378654444 1.087462000589056 1.391044934734219",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"skipBytes","value":{"t":"number","v":80}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000"}}
+     ],
+     "input": {"t":"null"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"8a6e08adf05bfc3f8646fc2d7bd6f13fe1741c1f892ffa3f7fc3028e3e66f13fe6325f55b841f63f"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

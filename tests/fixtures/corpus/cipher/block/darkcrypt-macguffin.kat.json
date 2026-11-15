@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-macguffin.js",
+ "algorithms": [
+  {
+   "name": "MacGuffin (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Mg — zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"91d3c484e44e69e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Mg — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"667a727b5a48a9d8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Mg — shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"1011121314151617"},
+     "expected": {"t":"bytes","v":"68ed39824c45e8f7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-lucifer.js",
+ "algorithms": [
+  {
+   "name": "Lucifer (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Lucifer — zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"6161616161616161c4c4c4c4c4c4c4c4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Lucifer — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"eac9ad3fbcad4fadbb6351a881169755"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Lucifer — shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"d4e265cd01b3b803b75efc1b0bda4a8b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

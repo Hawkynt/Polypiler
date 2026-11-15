@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/elias-delta.js",
+ "algorithms": [
+  {
+   "name": "Elias Delta Coding",
+   "vectors": [
+    {
+     "text": "Small integer sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0102030405"},
+     "expected": {"t":"bytes","v":"0500000045635c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed small and large values",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"7f8081ff"},
+     "expected": {"t":"bytes","v":"040000001000401100848000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

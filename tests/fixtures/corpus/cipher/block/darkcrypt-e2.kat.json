@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-e2.js",
+ "algorithms": [
+  {
+   "name": "E2-256 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "NIST AES round-1 E2 KAT ecb_vk.txt, KEYSIZE=256, I=1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"1afeb356ae10f7bb2c3221223fb6bd8a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt E2 — zero key/plaintext (matches NTT spec Appendix A, Case 3)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"5002cb8cd878f26fbab9f52e6c96501e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt E2 — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"dff330c9ebbd520262ee310b1feed4dd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt E2 — shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"8ac3a298e0dd7e5e4d5a858c0a213e10"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

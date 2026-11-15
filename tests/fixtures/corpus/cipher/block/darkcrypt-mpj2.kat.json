@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-mpj2.js",
+ "algorithms": [
+  {
+   "name": "MPJ2 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Mpj2 — zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"5df67f54f1cbac7e7585009241045990"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Mpj2 — incrementing key/plaintext (standalone call)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"a37be56c390a3cb4b5e5395ca3b24c40"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Mpj2 — shifted incrementing key/plaintext (standalone call)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"52d7ad38606269f7b96693a5bcc7577d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

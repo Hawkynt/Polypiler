@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/ean13-checksum.js",
+ "algorithms": [
+  {
+   "name": "EAN-13",
+   "vectors": [
+    {
+     "text": "Standard EAN-13",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"353930313233343132333435"},
+     "expected": {"t":"bytes","v":"07"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Product barcode",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"343030363338313333333933"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839303132"},
+     "expected": {"t":"bytes","v":"08"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

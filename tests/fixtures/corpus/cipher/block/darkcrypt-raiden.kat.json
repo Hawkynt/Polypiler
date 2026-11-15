@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-raiden.js",
+ "algorithms": [
+  {
+   "name": "Raiden-16 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "Raiden reference implementation - zero plaintext, incrementing key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"979531fe59845bca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Raiden reference implementation - incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"3e7ff369dad916bc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Raiden reference implementation - shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"1011121314151617"},
+     "expected": {"t":"bytes","v":"44d5e9b829102175"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Raiden reference implementation - all-ones plaintext, descending key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0f0e0d0c0b0a09080706050403020100"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffff"},
+     "expected": {"t":"bytes","v":"54bb5cfd485c0af6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

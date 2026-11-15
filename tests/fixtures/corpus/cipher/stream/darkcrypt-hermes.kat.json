@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-hermes.js",
+ "algorithms": [
+  {
+   "name": "Hermes8 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Hermes - 128 zero bytes, key 00..0f, iv 0",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"896e260cddf5618498ce69e189f2c6e8d2ece3bae069a04485b9853fec8bf3c4ae6682ed94adc3854f080d1d161146d000e22ce9e71c72ea29808d5dcfcc7121bbe2234825f52a48f29c5a833c0df270b6da8d53350b29129d8e1be3632000595582ceb16211c4f5dad13ab26b76366325b6b9923a28e1becc05ad433a887a38"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Hermes - encrypt 00..3f, key 00..0f, iv 0",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"896f240fd9f0678390c763ea85ffc8e7c2fdf1a9f47cb6539da09f24f096eddb8e47a0ceb088e5a2672127363a3c68ff30d31edad32944dd11b9b766f3f14f1e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Hermes — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e33587da2c7ec1136"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457aafe4194e83b8ed22"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"d15c6002a28c7cb2065390cab8313602a53f1f49747205b26212c787171bfc432b37c2e385f22ad20e80d96aca344077"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

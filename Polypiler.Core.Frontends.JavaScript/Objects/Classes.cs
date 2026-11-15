@@ -34,9 +34,8 @@ internal static class Classes {
         if (type.Kind == JsKind.Conflict)
           diagnostics.Add(inference.Diagnose(field.Variable.Evidence ?? field.Variable.Declaration, JavaScriptFrontend.MixedKindsDescriptor, $"'{field.Key}' holds both {type.Kinds.First} and {type.Kinds.Second}"));
 
+        // A view stored into a field is a memory (Stored), so every type a field reaches is one the IR lets a field of a class have.
         var ir = type.Kind == JsKind.Conflict ? IrType.F64 : type.Ir ?? IrType.F64;
-        if (ir.IsString || ir.IsView || ir.Element is { IsNumeric: false })
-          diagnostics.Add(Unsupported(field.Variable.Declaration, $"a field of the type {type.Describe()}"));
 
         field.Ir = new IrField(ClassModel.IrName(field.Key), ir, false) { Visibility = field.IsPrivate ? IrVisibility.Private : IrVisibility.Public };
         fields.Add(field.Ir);

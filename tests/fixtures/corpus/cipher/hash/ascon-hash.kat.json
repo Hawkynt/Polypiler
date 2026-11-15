@@ -1,0 +1,268 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/ascon-hash.js",
+ "algorithms": [
+  {
+   "name": "ASCON-HASH",
+   "vectors": [
+    {
+     "text": "ASCON-HASH: Empty message (Count=1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"7346bc14f036e87ae03d0997913088f5f68411434b3cf8b54fa796a80d251f91"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-HASH: Single byte 0x00 (Count=2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"8dd446ada58a7740ecf56eb638ef775f7d5c0fd5f0c2bbbdfdec29609d3c43a2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-HASH: Two bytes (Count=3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"f77ca13bf89146d3254f1cfb7eddba8fa1bf162284bb29e7f645545cf9e08424"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-HASH: Three bytes (Count=4)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"15ccf3b00f73ef96faa08c9b440660bea52d6f6aa53c8e2da3f8200a990a122f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-HASH: Four bytes (Count=5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"8013eaaa1951580a7bef7d29bac323377e64f279ea73e6881b8aed69855ef764"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-HASH: Eight bytes (Count=9)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"f4c6a44b29915d3d57cf928a18ec6226bb8dd6c1136acd24965f7e7780cd69cf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Ascon-Hash256",
+   "vectors": [
+    {
+     "text": "Ascon-Hash256: Empty message (Count=1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0b3be5850f2f6b98caf29f8fdea89b64a1fa70aa249b8f839bd53baa304d92b2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ascon-Hash256: Single byte 0x00 (Count=2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"0728621035af3ed2bca03bf6fde900f9456f5330e4b5ee23e7f6a1e70291bc80"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ascon-Hash256: Two bytes (Count=3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"6115e7c9c4081c2797fc8fe1bc57a836afa1c5381e556dd583860ca2dfb48dd2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ascon-Hash256: Four bytes (Count=5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"d7e4c7ed9b8a325cd08b9ef259f8877054ecd8304fe1b2d7fd847137df6727ee"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ascon-Hash256: Eight bytes, exact rate multiple (Count=9)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"b88e497ae8e6fb641b87ef622eb8f2fca0ed95383f7ffebe167acf1099ba764f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ascon-Hash256: Sixteen bytes (Count=17)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"3158c1940a2fbadbd68ab661777859b94a689e4efc375911467addd641835c38"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ascon-Hash256: 32 bytes (Count=33)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"bd9d3d60a66b53868eab2a5c74539a518a1f60f01eb176c60e43dee81680b33e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "ASCON-XOF",
+   "vectors": [
+    {
+     "text": "ASCON-XOF: Empty message (Count=1)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"5d4cbde6350ea4c174bd65b5b332f8408f99740b81aa02735eaefbcf0ba0339e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-XOF: Single byte 0x00 (Count=2)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"b2edbb27ac8397a55bc83d137c151de9ede048338fe907f0d3629e717846fedc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-XOF: Two bytes (Count=3)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"d196461c299db714d78c267924b5786ee26fc43b3e640daa5397e38e39d39dc6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-XOF: Three bytes (Count=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"1d18b9dd8ff9a1bf59751b88d32766c5e054910f497bff4092afc47f5885523b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-XOF: Four bytes (Count=5)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"66fb74174782afed898478aa729058d5c30af19af2f5d4e1ce65cd320594ef66"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-XOF: Eight bytes (Count=9)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"18427d2d29df1e0202649f032f2080363fec5de72ecae11b4f98ccc75843e7cc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-XOF: Sixteen bytes (Count=17)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"c861a89cfb1335f278c96cf7ffc9753c290cbe1a4e186d2923b496bb4ea5e519"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCON-XOF: 32 bytes (Count=33)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"0b8e325b9bbf1bb43e77aa1eed93bee62b4ea1e4b0c5a696b2f5c5b09c968918"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/morse.js",
+ "algorithms": [
+  {
+   "name": "Morse Code (International)",
+   "vectors": [
+    {
+     "text": "Morse empty string test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single letter E test - ITU-R M.1677-1",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"45"},
+     "expected": {"t":"bytes","v":"2e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SOS distress signal test - Morse",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"534f53"},
+     "expected": {"t":"bytes","v":"2e2e2e202d2d2d202e2e2e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Basic word encoding test - Morse",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"2e2e2e2e202e202e2d2e2e202e2d2e2e202d2d2d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Exact-spacing and prosign-collision regression test - a doubled space must round-trip exactly (previous word-splitting collapsed runs of whitespace), and '&'/'='/'(' must decode back to themselves rather than to a same-pattern prosign",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"534f532020263d28"},
+     "expected": {"t":"bytes","v":"2e2e2e202d2d2d202e2e2e202f202f202e2d2e2e2e202d2e2e2e2d202d2e2d2d2e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

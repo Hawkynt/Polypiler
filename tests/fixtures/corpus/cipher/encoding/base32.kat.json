@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/base32.js",
+ "algorithms": [
+  {
+   "name": "Base32",
+   "vectors": [
+    {
+     "text": "Base32 empty string test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base32 single character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"66"},
+     "expected": {"t":"bytes","v":"4d593d3d3d3d3d3d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base32 two character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f"},
+     "expected": {"t":"bytes","v":"4d5a58513d3d3d3d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base32 three character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f"},
+     "expected": {"t":"bytes","v":"4d5a5857363d3d3d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base32 four character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f62"},
+     "expected": {"t":"bytes","v":"4d5a58573659513d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base32 five character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f6261"},
+     "expected": {"t":"bytes","v":"4d5a585736595442"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base32 six character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f626172"},
+     "expected": {"t":"bytes","v":"4d5a5857365954424f493d3d3d3d3d3d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

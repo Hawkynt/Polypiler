@@ -1,0 +1,40 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/pcg-rxs-m-xs.js",
+ "algorithms": [
+  {
+   "name": "PCG-RXS-M-XS",
+   "vectors": [
+    {
+     "text": "PCG-RXS-M-XS seed=0x012de1babb3c4104, first 10 x 64-bit outputs (Apache Commons RNG)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":80}},
+      {"set":"seed","value":{"t":"bytes","v":"012de1babb3c4104"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"a5ace6c92c5fa6c7ac02118387228764a6e796e49dc36e004713f32552134368a2ad36cb4e6b7cc96bbce7db898fa11d134cb18300fe9eb03f705c0d635cbc234bd7531b62a59b62413cc95f3c3e9952"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PCG-RXS-M-XS seed=0x012de1babb3c4104 + increment=0xc8161b4202294965, first 10 x 64-bit outputs (Apache Commons RNG)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":80}},
+      {"set":"sequence","value":{"t":"bytes","v":"c8161b4202294965"}},
+      {"set":"seed","value":{"t":"bytes","v":"012de1babb3c4104"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c147f2291fa40ccf8edbcbf8a5f4987761e05a1d5213f0b4c039f9369032e63895146e605b2e4a965480af6332262d037cbfb3a67a7145575c9f0a25eba415756e23dba403318dec7b230e581b829dbc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

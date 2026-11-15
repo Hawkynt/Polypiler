@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/isin-checksum.js",
+ "algorithms": [
+  {
+   "name": "ISIN",
+   "vectors": [
+    {
+     "text": "Apple Inc.",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"5553303337383333313030"},
+     "expected": {"t":"bytes","v":"05"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "British Airways GB0009753368",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4742303030393735333336"},
+     "expected": {"t":"bytes","v":"08"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "German security",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4445303030424159303031"},
+     "expected": {"t":"bytes","v":"07"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

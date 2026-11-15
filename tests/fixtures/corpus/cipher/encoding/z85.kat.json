@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/z85.js",
+ "algorithms": [
+  {
+   "name": "Z85 (ZeroMQ Base85)",
+   "vectors": [
+    {
+     "text": "Z85 empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Basic 4-byte encoding test - Z85",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000001"},
+     "expected": {"t":"bytes","v":"3030303031"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "High-bit-set leading byte regression test - signed-32-bit packing overflow",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff000000"},
+     "expected": {"t":"bytes","v":"4040723330"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All 256 byte values regression test (64 4-byte blocks) - exercises every packed value including high bit set",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "expected": {"t":"bytes","v":"3030396336316f21236d324e483f43333e69575335645d4a2a3643527831372d736b68393333377861722e7b4e6251423d2b635b635240656726466366464c7373673d6d664969352532596a75553e296b54762e376c7d364e6e6e6a3d41446f49466e54702f67613f723828243273784f2a697457705679752430494f776d59763d784c7a6925792661366441622f5d744241492b4a435a6a515a45307b445b4670537238474f74656f48283431454a652d3c554b444359264c3a644d334e333c7a6a4f734d6d7a50526e3950515b25405e53685621245447775565555e37487557365e754b587647682e595568345d5a7d295b392d6b503a703a4a7150462b2a3143565e395a703c21794164342f5862306b2a242a2641266e4a58513c4d6b4b213e267d78232963546c665b427538765d2e347d4c7d313a5e2d407144537b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,166 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/photon-beetle.js",
+ "algorithms": [
+  {
+   "name": "PhotonBeetle-AEAD[128]",
+   "vectors": [
+    {
+     "text": "NIST LWC Vector #1 (empty PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"df4e0bac1162408098fa5cf084d8f464"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC Vector #2 (empty PT, 1-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"e840449949081c5378e01eba6046dbe8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=34 (1-byte PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"a75df91ea594d719d44f29e78e0ae94872"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=529 (16-byte PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"a7b9af5ba1aa580976839229747c9e32403476d930a13d7af7299e3681fc702b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=35 (1-byte PT, 1-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"850d8807c20344c924e2d35382dd3f2d8e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "PhotonBeetle-AEAD[32]",
+   "vectors": [
+    {
+     "text": "NIST LWC Vector #1 (empty PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"df4e0bac1162408098fa5cf084d8f464"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC Vector #2 (empty PT, 1-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"e840449949081c5378e01eba6046dbe8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC Vector #5 (empty PT, 4-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00010203"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"e71c21d5cffb6d6f5c57725757831467"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=34 (1-byte PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"315df91ea594d719d44f29e78e0ae94872"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=133 (4-byte PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"31447c09c54cdeb0fd4d20607b6b733ffc021ec2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

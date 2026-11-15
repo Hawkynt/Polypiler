@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/crypto1.js",
+ "algorithms": [
+  {
+   "name": "Crypto-1",
+   "vectors": [
+    {
+     "text": "Crypto-1 Test Vector (Educational)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405"}}
+     ],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"4e8485a0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/twosquare.js",
+ "algorithms": [
+  {
+   "name": "Two-Square Cipher",
+   "vectors": [
+    {
+     "text": "Keywords SECRET and CIPHER, odd-length message padded with X. No published source carries this value",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5345435245542c434950484552"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"4d434b4d5057"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Keywords EXAMPLE and KEYWORD, J folded onto I. No published source carries this value",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4558414d504c452c4b4559574f5244"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"455652434c59455643425650"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

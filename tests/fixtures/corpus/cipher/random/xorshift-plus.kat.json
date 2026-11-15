@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xorshift-plus.js",
+ "algorithms": [
+  {
+   "name": "XorShift+",
+   "vectors": [
+    {
+     "text": "Seed(1): First 5 outputs - verified against ported C# implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3e008000c0ffffff01100000c0ffffffffef9ffeff4f00e0beff0fff3fc000c0ce1fe4ff373000e0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed(2): First 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0200000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"7d000001c0ffffff42108000c0ffffffffdf1ffeff8f00e07dff5ffe3f4001c0cd2fb8ff2f3000e0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed(123456789): First 10 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":80}},
+      {"set":"seed","value":{"t":"bytes","v":"15cd5b0700000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"d67917552752fcffef01a4542752fcff2bd2ae106de2ad13dd22e59137e85b27f133926903d03d4a82a4449b6cd1acf6cb6bbf5808d507ab69126f885c380d9ee9fdb04d5ee0c0661eb3a02d6279eff6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed(1000000): First 5 outputs - large seed value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"40420f0000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c64dc12361f8ffffcf355f2361f8ffffe0ffc3275e889130b5bfc4335d392361faf73ecec1dea55f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed(0xFFFFFFFFFFFFFFFF): First 5 outputs - maximum seed",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffffffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c2ff7f000000000041ff7f0100000000beefff00004000007c00f00000800000bd200c01f83f0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

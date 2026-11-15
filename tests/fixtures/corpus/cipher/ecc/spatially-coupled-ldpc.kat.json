@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/spatially-coupled-ldpc.js",
+ "algorithms": [
+  {
+   "name": "Spatially Coupled LDPC Code",
+   "vectors": [
+    {
+     "text": "SC-LDPC all-zero encoding test - L=3, w=2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SC-LDPC single-bit encoding test - (3,6) protograph",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010000"},
+     "expected": {"t":"bytes","v":"010000010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SC-LDPC pattern encoding test - threshold saturation",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010100"},
+     "expected": {"t":"bytes","v":"010100000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SC-LDPC alternating pattern test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010001"},
+     "expected": {"t":"bytes","v":"010001000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

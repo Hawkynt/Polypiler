@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/dmac.js",
+ "algorithms": [
+  {
+   "name": "DMAC",
+   "vectors": [
+    {
+     "text": "Crypto++ DMAC<DES> Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"37363534333231204e6f77206973207468652074696d6520666f7220"},
+     "expected": {"t":"bytes","v":"3580c5c46b8124e2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

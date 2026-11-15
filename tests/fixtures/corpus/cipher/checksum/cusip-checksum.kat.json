@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/cusip-checksum.js",
+ "algorithms": [
+  {
+   "name": "CUSIP",
+   "vectors": [
+    {
+     "text": "Apple Inc. (037833100)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3033373833333130"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Cisco Systems (17275R102)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3137323735523130"},
+     "expected": {"t":"bytes","v":"02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Google Inc. (38259P508)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3338323539503530"},
+     "expected": {"t":"bytes","v":"08"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/tea.js",
+ "algorithms": [
+  {
+   "name": "TEA",
+   "vectors": [
+    {
+     "text": "TEA All Zeros Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"41ea3a0a94baa940"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TEA All Ones Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffff"},
+     "expected": {"t":"bytes","v":"319bbefb016abdb2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TEA Sequential Pattern Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"17b5ba5198581091"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TEA ASCII Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"59454c4c4f57205355424d4152494e45"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f313233"},
+     "expected": {"t":"bytes","v":"7adc06304f85383e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TEA Single Bit Key Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000001"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"0c6d2a1d930c3fab"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

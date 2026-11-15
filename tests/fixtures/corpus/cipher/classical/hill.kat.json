@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/hill.js",
+ "algorithms": [
+  {
+   "name": "Hill Cipher",
+   "vectors": [
+    {
+     "text": "Wikipedia worked 2x2 example - HELP under [[3,3],[2,5]]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"332c332c322c35"}}
+     ],
+     "input": {"t":"bytes","v":"48454c50"},
+     "expected": {"t":"bytes","v":"48494154"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wikipedia worked 3x3 example - ACT under [[6,24,1],[13,16,10],[20,17,15]]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"362c32342c312c31332c31362c31302c32302c31372c3135"}}
+     ],
+     "input": {"t":"bytes","v":"414354"},
+     "expected": {"t":"bytes","v":"504f48"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wikipedia worked 3x3 example - CAT under the same matrix",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"362c32342c312c31332c31362c31302c32302c31372c3135"}}
+     ],
+     "input": {"t":"bytes","v":"434154"},
+     "expected": {"t":"bytes","v":"46494e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Padding case - odd-length text filled out to the block size with X. No published source carries this value; it is here to keep the padding path covered",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"332c322c352c37"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"444c44434b58"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

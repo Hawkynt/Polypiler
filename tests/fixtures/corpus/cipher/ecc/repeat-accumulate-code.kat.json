@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/repeat-accumulate-code.js",
+ "algorithms": [
+  {
+   "name": "Repeat-Accumulate Code",
+   "vectors": [
+    {
+     "text": "RA code all zeros - K=2 q=3 seed=42",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000"},
+     "expected": {"t":"bytes","v":"000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RA code pattern 10 - K=2 q=3 seed=42",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100"},
+     "expected": {"t":"bytes","v":"010100000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RA code pattern 01 - K=2 q=3 seed=42",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"000101000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RA code pattern 11 - K=2 q=3 seed=42",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101"},
+     "expected": {"t":"bytes","v":"010001000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RA code pattern 101 - K=3 q=3 seed=42",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010001"},
+     "expected": {"t":"bytes","v":"010100010101000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/jsf.js",
+ "algorithms": [
+  {
+   "name": "JSF",
+   "vectors": [
+    {
+     "text": "Seed 0x00000000: First 10 outputs (40 bytes) - verified against reference C implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"1a9b6c079a550895f12be8760902ba1920f1a244832bc5d20bfdb9a17384175a96a0f7e5470ad8f6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0x00000001: First 10 outputs (40 bytes) - reference implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"a25132f41efa0761332b56b3d1aedb874c4d7156b663157a9b0a0c8a973762fedde060ec17e08dec"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0xDEADBEEF: First 10 outputs - test with common debug value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"deadbeef"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"fa65a416addcc8e093bc44ac7abd07e519cbdd754b2dc24764721eef1216e1bffdcaec4e4dd17fb7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0x12345678: First 10 outputs - test with sequential byte pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"12345678"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"4324435b28203161e6d195a631e53a777c50cdfb1849d8708acf3d19b11c67e422bac8877c58e3e7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0xCAFEBABE: First 8 outputs (32 bytes) - test with another common value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"cafebabe"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c722b02e94af7b4bad16571e1f2632d3faa708acc7a955c6227b814437a4f519"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

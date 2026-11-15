@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/bifid.js",
+ "algorithms": [
+  {
+   "name": "Bifid Cipher",
+   "vectors": [
+    {
+     "text": "Wikipedia worked example - square BGWKZ/QPNDS/IOAXE/FCLUM/THYVR, FLEEATONCE taken as one block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4247574b5a51504e4453494f41584546434c554d54485956522c3130"}}
+     ],
+     "input": {"t":"bytes","v":"464c454541544f4e4345"},
+     "expected": {"t":"bytes","v":"5541454f4c5752494e53"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plain A-Z square, period 5. The Wikipedia article carries no value for this input; the vector covers the unkeyed square",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"35"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"464e4e5644"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Keyword CIPHER, period 3. dCode carries no value for this input; the vector covers a keyed square and a block shorter than the message",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4349504845522c33"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b"},
+     "expected": {"t":"bytes","v":"445154524b49"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Period 1 - a single-letter block is its own coordinate pair, so one letter passes through unchanged",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"31"}}
+     ],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

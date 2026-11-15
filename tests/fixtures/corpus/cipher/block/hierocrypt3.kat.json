@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/hierocrypt3.js",
+ "algorithms": [
+  {
+   "name": "Hierocrypt-3",
+   "vectors": [
+    {
+     "text": "Hierocrypt-3 Test Vector 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0f0e0d0c0b0a09080706050403020100"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"06c42e69000392e7df7c28d40d4419cf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

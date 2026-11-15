@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/geffe.js",
+ "algorithms": [
+  {
+   "name": "Geffe Generator",
+   "vectors": [
+    {
+     "text": "Geffe Generator Test Vector 1 (Educational)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"0c0502030405060708090a0b0c0d0e0f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Geffe Generator Test Vector 2 (Shorter input)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"00010203040506070809"},
+     "expected": {"t":"bytes","v":"0c050203040506070809"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

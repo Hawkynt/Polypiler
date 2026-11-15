@@ -1,0 +1,75 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/batched-sparse-code.js",
+ "algorithms": [
+  {
+   "name": "BATS",
+   "vectors": [
+    {
+     "text": "Single batch encoding test",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"batchSize","value":{"t":"number","v":2}},
+      {"set":"numBatches","value":{"t":"number","v":4}},
+      {"set":"seed","value":{"t":"number","v":42}}
+     ],
+     "input": {"t":"bytes","v":"0102030405060708"},
+     "expected": {"t":"bytes","v":"0102030405060708173a682a30a13159"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Multi-batch with recoding test",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"batchSize","value":{"t":"number","v":2}},
+      {"set":"numBatches","value":{"t":"number","v":4}},
+      {"set":"seed","value":{"t":"number","v":1042}}
+     ],
+     "input": {"t":"bytes","v":"1011121314151617"},
+     "expected": {"t":"bytes","v":"1011121314151617dffc11a04563f571"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Recovery from mixed batches test",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"batchSize","value":{"t":"number","v":2}},
+      {"set":"numBatches","value":{"t":"number","v":4}},
+      {"set":"seed","value":{"t":"number","v":2042}}
+     ],
+     "input": {"t":"bytes","v":"aabbccddeeff0011"},
+     "expected": {"t":"bytes","v":"aabbccddeeff0011d1a311c3895fdb1b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Round-trip encoding/decoding test",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"batchSize","value":{"t":"number","v":2}},
+      {"set":"numBatches","value":{"t":"number","v":4}},
+      {"set":"seed","value":{"t":"number","v":3042}}
+     ],
+     "input": {"t":"bytes","v":"fffefdfcfbfaf9f8"},
+     "expected": {"t":"bytes","v":"fffefdfcfbfaf9f8df4bdbde9be055a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

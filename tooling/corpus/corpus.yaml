@@ -62,6 +62,28 @@ fixtures:
     determinism: deterministic
     tolerance: exact
     profiles: []
+  # #1365: every Cipher algorithm translated to C# and Rust with its embedded known-answer tests
+  # checked on the output (polypiler-tooling cipher kat, docs/corpus/cipher.md): the framework, the
+  # helpers and every algorithm file, with the files of the corpus's own test engine that apply a
+  # vector to an instance (TestEngine.ConfigureInstance) and the block cipher the modes run on.
+  - id: cipher.algorithms
+    repository: Hawkynt/Hawkynt.github.io
+    commit: 48928fc1013dc7d3d42f76b05d0f200dbae23dd1
+    path: Cipher/AlgorithmFramework.js
+    export: RegisterAlgorithm
+    dependencies:
+      - Cipher/OpCodes.js
+      - Cipher/DebugConfig.js
+      - Cipher/tests/TestEngine.js
+      - Cipher/tests/DummyBlockCipher.js
+      - Cipher/tests/round-trip-exemptions.js
+      - 'Cipher/algorithms/**'
+    run: [node, tooling/cipher/record-kats.mjs, --corpus, '{file}', --out, tests/fixtures/corpus/cipher, --check]
+    vectors: { kind: embedded, source: "the tests of every algorithm the files under Cipher/algorithms register" }
+    licence: LGPL-3.0-or-later
+    determinism: deterministic
+    tolerance: exact
+    profiles: [net10.0, net4.8, rust2024]
   - id: bitperm.page
     repository: Hawkynt/Hawkynt.github.io
     path: BitPerm/index.html

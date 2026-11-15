@@ -1,0 +1,141 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/elephant.js",
+ "algorithms": [
+  {
+   "name": "Elephant-Dumbo",
+   "vectors": [
+    {
+     "text": "NIST LWC KAT Vector #1 (empty PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"6655b717736adff3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Vector #2 (empty PT, 1-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"b6925c1c8ca1058e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Vector #17 (empty PT, 16-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"19361bf080366f41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Vector #529 (16-byte PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"0867290ad29d219c4bf3bf0bd652099ba0e7fce07c71c3eb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Elephant-Jumbo",
+   "vectors": [
+    {
+     "text": "NIST LWC KAT Vector #1 (empty PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"1407ef22639e4ae1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Vector #2 (empty PT, 1-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"ba8c57132b2035be"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Elephant-Delirium",
+   "vectors": [
+    {
+     "text": "NIST LWC KAT Vector #1 (empty PT, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"48bf257607d09ebe1c0e108b91058877"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Vector #2 (empty PT, 1-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"6e3705abdc45250ceeb36e4d991b741d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

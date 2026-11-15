@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/playfair.js",
+ "algorithms": [
+  {
+   "name": "Playfair Cipher",
+   "vectors": [
+    {
+     "text": "Lord Playfair Demonstration",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"504c4159464149524558414d504c45"}}
+     ],
+     "input": {"t":"bytes","v":"48494445544845474f4c44494e544845545245455354554d50"},
+     "expected": {"t":"bytes","v":"424d4f445a4258444e4142454b55444d5549584d4d4f55564946"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Standard Educational Example",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4d4f4e4152434859"}}
+     ],
+     "input": {"t":"bytes","v":"494e535452554d454e5453"},
+     "expected": {"t":"bytes","v":"4741544c4d5a434c52515841"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hello World Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4b4559574f5244"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"4759495a5343"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

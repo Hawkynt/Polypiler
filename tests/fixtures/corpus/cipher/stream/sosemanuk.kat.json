@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/sosemanuk.js",
+ "algorithms": [
+  {
+   "name": "SOSEMANUK",
+   "vectors": [
+    {
+     "text": "SOSEMANUK Test Vector 1 - All zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"3333333333333333"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

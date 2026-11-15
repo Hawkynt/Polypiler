@@ -1,0 +1,422 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/knot-hash.js",
+ "algorithms": [
+  {
+   "name": "KNOT-HASH-256-256",
+   "vectors": [
+    {
+     "text": "KNOT-HASH-256-256: Empty message (NIST KAT Count=1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"cf1ac5b7aa08d36d544e2d2049d0d0a5f1f6ff7b553d18035e69323d8e4118b1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-256: Single zero byte (NIST KAT Count=2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"1b8f1c5978adce6c4bac3715e304a0f3026f873820ca4a6386cbfd0a3709949c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-256: Two bytes (NIST KAT Count=3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"3cff1e8cd8cac2feeb696969251f828aa2288d8ccbbecbaf422634577fced63b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-256: Four bytes (NIST KAT Count=5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"8410c4bbd8828e9d9a2183f23918b5f45182735560a2e1d142884d10b66327a8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-256: Eight bytes (NIST KAT Count=9)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"6b8ccc0a32775c876b63e8e146e103172188287cdf7ed236cd5d6276c16c6b76"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-256: 16 bytes (NIST KAT Count=17)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"3d1bb21c5b2fdb385db2231896467cc987e9eb5ccc622f88e9fa45afef66b6ab"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "KNOT-HASH-256-384",
+   "vectors": [
+    {
+     "text": "KNOT-HASH-256-384: Empty message (NIST KAT Count=1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"5025252949bf0ebf9d750d2e11ab5c75e4f7b8dca426b58ea2ae52a857653e04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-384: Single zero byte (NIST KAT Count=2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"c15c34623e347c0d3f73b84d8f1706f4f95c5640a1ab8db43fd7b07e07ad0397"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-384: Two bytes (NIST KAT Count=3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"53ca8ec8bfbb0610154c86019bdbb45c70706696120233d61ec1199bccad8cd3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-384: Three bytes (NIST KAT Count=4)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"9e6908918b5445ffac8321b0d8eb83a47d0c2c858cdad1dbc81db70f9df012ed"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-384: Four bytes (NIST KAT Count=5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"21ef8a4c2e600a3d2b40de5a80e6ba4b664116a1383f26ef95ad1892be649cd5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-384: Eight bytes (NIST KAT Count=9)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"df3dbefa6ab5194e5692c7fef78c442f6a6feaf262adb5f3630682b58fe3766f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-384: 16 bytes (NIST KAT Count=17)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"b3f056368184838cc83dfb0e7466e439a010743ae7c03e55022d116b5c3733b3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-384: 32 bytes (NIST KAT Count=33)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"4968d39797d02a81928e67b085e06f5c9dfb44a1fd8d49f3029b9af126783b54"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-384: 48 bytes (NIST KAT Count=49)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"},
+     "expected": {"t":"bytes","v":"8d818b7b903ba04a94cf0992b89a2988ba086c339096d16dfd636b4a3f7bd743"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-256-384: 64 bytes (NIST KAT Count=65)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"c38b93aac496b1376a1e53e7a82a2836a5141a08bc91f48291d1446921a535b8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "KNOT-HASH-384-384",
+   "vectors": [
+    {
+     "text": "KNOT-HASH-384-384: Empty message (NIST KAT Count=1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"4f3d463251831d3689692aa1b4e02ddad79abfcbe075a2cd2805e95c099db75bf11c3c5ec917b6c5b3b76f8bb8d6db2c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-384-384: Single zero byte (NIST KAT Count=2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"2fece6f7fb33ca6f455e3a09c31b58ba9a4edf0b04f4eab7f1001a3ea23c6ad727fc1a15928e090eaabd0596c69b07aa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-384-384: Two bytes (NIST KAT Count=3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"07ef998b299615edb5afab4d78a15a1c2076089be8faeeb427ff85be69b71a99d591124f7965e5b72b0bc13e1a2a0a7c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-384-384: Three bytes (NIST KAT Count=4)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"750664415d55a3ba35e4a63cba99d79ff1ee85c4b6cdd5d6a40952b27dea031e83df8d4499035a32f94533044b6c8b2c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-384-384: Four bytes (NIST KAT Count=5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"878d0f1348618cca9dba50520ffd5e1d540ff485940cfa3cf4a9bbe25ac2055adac5b110f208126526c9d16abe4d27f4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-384-384: Eight bytes (NIST KAT Count=9)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"b1e3a6b7e420fb6678b27c79270bafe86fe6f91d8625ed60d586cbe4903cca1e2e9585b721731b8ee97b1883325854d7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-384-384: 16 bytes (NIST KAT Count=17)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"8019206bac3d6a99998bb49063204805541c4b406c2ce651aef67b6833a0b43dfcfe110f4ee9604d8a68295db90067cd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-384-384: 32 bytes (NIST KAT Count=33)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"d0dc496ab1d681a63cbcc2156c361ba70f7924da17d8f606f1ad8214114f09d44d35ba33547d512b198a77aec5b09ade"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-384-384: 48 bytes (NIST KAT Count=49)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"},
+     "expected": {"t":"bytes","v":"268397bff02cc2ee39b32644875b3b227b54b194e86f69dd1c2277299daeb82655742de0bbf1121a116d61e563fa10ff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-384-384: 64 bytes (NIST KAT Count=65)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"3aec65fca168df0a8bc4fe1852861097978ccc770ce135c5110681e7aec8e662ac5ad3d764bc03cdec2d09aff2197587"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "KNOT-HASH-512-512",
+   "vectors": [
+    {
+     "text": "KNOT-HASH-512-512: Empty message (NIST KAT Count=1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"729f0dc105a78582b78cd25d3b41cdeef87d99c6c974d5d1df4e96410add3b23ccff5a3c69eb2061fd1bacfc8aaac4e425ed2cc1407f2bee0fb66fef17fcec91"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-512-512: Single zero byte (NIST KAT Count=2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"c52cd4b2c4ba2d8434e92b9b282f01be053b8de3cff0657716de40442995da4af61347c7c431af2d1b35799e7c19f8113bb5a69102cd0903d43d1c87c4b159bd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-512-512: Two bytes (NIST KAT Count=3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"cee96a707a416cb1d9aa4f42e9e7268641b53e613b77f337b56af3cb7426f411714a9abd52fe83df5509676d2713b250eeaa998cbe26d374a94002c93c54a618"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-512-512: Three bytes (NIST KAT Count=4)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"cd2b323e45f1ed5c96e5a3fa90557580077b297b76eeb2ee9b6a95505db4798e90c579f69c623b0213cd0aa38638773618887eb11a8b0fe70594dde14da99af2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-512-512: Four bytes (NIST KAT Count=5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"9f6ef40003f292dcafcc6fea2e4f0c375a527c30190632d2f1fda172623a11f25ba2c524580a80ceec9d4c9297d2929ff19ed9767095a9dc4af5d36b4b99b995"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-512-512: Five bytes (NIST KAT Count=6)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304"},
+     "expected": {"t":"bytes","v":"f0508b66ff661ab94a82c154db81bb83be42c238c15b4de266701d02a5cedbafea5c87be26efc9e132fa05fc93e6fa621b18fe457876440b61a81604a2161531"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-512-512: Eight bytes (NIST KAT Count=9)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"39eac539c10ec0384e7fb96b0df99b5a7669c55e5151580c6ae6769f9f031528036e3e65664f67b8312975e19aaa9b1be4a20e51f2dd82981cf6340ea108a4c8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-512-512: Nine bytes (NIST KAT Count=10)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708"},
+     "expected": {"t":"bytes","v":"e44b1fc05e514245944d1e1df6a2b6d9b8c9c2d304c1b346fff24cb0a77e3eea13a72ee29ab99991c515ba0c4c02fd4047866d42b033b6996caa88b8ff85a4c2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-512-512: 16 bytes (NIST KAT Count=17)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"c544924be5549a4694540271c191bf128b6b636d930a8c9aef26ea0d0d8f12f801a2cb4bd39042a1b71483954445dfa8d1bc83d94f151a3e9254d599b1a0649d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KNOT-HASH-512-512: 24 bytes (NIST KAT Count=25)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011121314151617"},
+     "expected": {"t":"bytes","v":"7a1cbc00f4f13ed3c21bd406992bbe0c71539a88cfd3d870602800842ad3c456c1564ba47252b14ef77f088650e83f2578d6c4b9bc84e6be9951265e44a94f3a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,180 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/tnepres.js",
+ "algorithms": [
+  {
+   "name": "Tnepres",
+   "vectors": [
+    {
+     "text": "Tnepres test vector #1 (256-bit key, zero plaintext)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"8910494504181950f98dd998a82b6749"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #2 (128-bit key, bit 0 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"80000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"10b5ffb720b8cb9002a1142b0ba2e94a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #3 (128-bit key, bit 39 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000008000000000000000000000"},
+     "expected": {"t":"bytes","v":"4f057a42d8d5bd9746e434680ddcd5e5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #4 (128-bit key, bit 63 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000400000000000"},
+     "expected": {"t":"bytes","v":"99407bf8582ef12550886ef5b6f169b9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #5 (192-bit key, bit 0 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"40000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"d522a3b8d6d89d4d2a124fdd88f36896"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #6 (192-bit key, bit 74 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000200000000000000000000"},
+     "expected": {"t":"bytes","v":"189b8ec3470085b3da97e82ca8964e32"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #7 (192-bit key, bit 67 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000008000000000"},
+     "expected": {"t":"bytes","v":"f77d868cf760b9143a89809510ccb099"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #8 (256-bit key, bit 4 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"08000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"d43b7b981b829342fce0e3ec6f5f4c82"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #9 (256-bit key, bit 71 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000100000000000000"},
+     "expected": {"t":"bytes","v":"0bf30e1a0c33ccf6d5293177886912a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #10 (256-bit key, bit 127 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000001"},
+     "expected": {"t":"bytes","v":"6a7f3b805d2ddcba49b89770ade5e507"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #11 (128-bit key bit 0 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"49afbfad9d5a34052cd8ffa5986bd2dd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #12 (192-bit key bit 86 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000004000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"ba8829b1de058c4b48615d851fc74f17"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tnepres test vector #13 (256-bit key bit 199 set)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000100000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"89f64377bf1e8a46c8247044e8056a98"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

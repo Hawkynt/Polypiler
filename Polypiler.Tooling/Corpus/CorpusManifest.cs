@@ -39,6 +39,7 @@ public sealed record CorpusVectors(string Kind, string Source);
 /// <param name="Determinism"><c>deterministic</c> or <c>seeded</c>.</param>
 /// <param name="Tolerance"><c>exact</c>, <c>declared</c> or a policy <c>VERIFICATION.tolerance.&lt;name&gt;</c>.</param>
 /// <param name="Profiles">The target profiles the fixture is checked for.</param>
+/// <param name="Commit">The commit the fixture's files are taken from when it is not the pin of its repository, or <see langword="null"/> for the pin.</param>
 public sealed record CorpusFixtureEntry(
   string Id,
   string Repository,
@@ -50,10 +51,17 @@ public sealed record CorpusFixtureEntry(
   string Licence,
   string Determinism,
   string Tolerance,
-  IReadOnlyList<string> Profiles
+  IReadOnlyList<string> Profiles,
+  string? Commit = null
 ) {
 
-  /// <summary>Every file of the commit the fixture needs: its path, its dependencies and a vector file.</summary>
+  /// <summary>Whether a dependency is a pattern (<see cref="GlobPattern"/>) that stands for every file of the commit it matches.</summary>
+  public static bool IsPattern(string dependency) => dependency.IndexOfAny(['*', '?']) >= 0;
+
+  /// <summary>The repository at the commit the fixture's files are taken from: its own pin unless the fixture names another commit.</summary>
+  public CorpusRepository PinOf(CorpusRepository repository) => this.Commit is { } commit ? repository with { Commit = commit } : repository;
+
+  /// <summary>Every file of the commit the fixture needs: its path, its dependencies - a pattern as it is written - and a vector file.</summary>
   public IEnumerable<string> Files {
     get {
       yield return this.Path;
@@ -84,6 +92,8 @@ public sealed class CorpusManifest {
 
   private static readonly string[] _repositoryFields = ["name", "url", "commit", "licence", "licenceFiles"];
   private static readonly string[] _fixtureFields = ["id", "repository", "path", "export", "dependencies", "run", "vectors", "licence", "determinism", "tolerance", "profiles"];
+
+  private static readonly string[] _optionalFixtureFields = ["commit"];
 
   private CorpusManifest(string file, IReadOnlyList<CorpusRepository> repositories, IReadOnlyList<CorpusFixtureEntry> fixtures) {
     this.File = file;
@@ -218,7 +228,7 @@ public sealed class CorpusManifest {
 
       var before = this._problems.Count;
       var owner = $"fixture '{Text(body, "id")}'";
-      var properties = this.Properties(body, owner, _fixtureFields);
+      var properties = this.Properties(body, owner, _fixtureFields, _optionalFixtureFields);
       var id = this.String(properties, "id", owner, _id, @"[a-z0-9]+(\.[a-z0-9-]+)+");
       var repository = this.String(properties, "repository", owner);
       var path = this.Path(properties, "path", owner);
@@ -230,6 +240,7 @@ public sealed class CorpusManifest {
       var determinism = this.String(properties, "determinism", owner, new("^(deterministic|seeded)$"), "deterministic or seeded");
       var tolerance = this.String(properties, "tolerance", owner, _tolerance, "exact, declared or VERIFICATION.tolerance.<name>");
       var profiles = this.Strings(properties, "profiles", owner);
+      var commit = properties.ContainsKey("commit") ? this.String(properties, "commit", owner, _commit, "40 lower-case hexadecimal digits") : null;
       if (run is { Count: 0 })
         this.Report(properties["run"], $"property 'run' of {owner} must not be empty");
       else if (run is not null && !run.Any(argument => argument.Contains("{file}", StringComparison.Ordinal)))
@@ -237,7 +248,7 @@ public sealed class CorpusManifest {
 
       return this._problems.Count > before
         ? null
-        : new(id!, repository!, path!, export!, dependencies!, run!, vectors!, licence!, determinism!, tolerance!, profiles!);
+        : new(id!, repository!, path!, export!, dependencies!, run!, vectors!, licence!, determinism!, tolerance!, profiles!, commit);
     }
 
     private CorpusVectors? Vectors(Dictionary<string, YamlNode> properties, string owner) {
@@ -254,11 +265,11 @@ public sealed class CorpusManifest {
       return kind is null || source is null ? null : new(kind, source);
     }
 
-    private Dictionary<string, YamlNode> Properties(YamlMappingNode mapping, string owner, string[] names) {
+    private Dictionary<string, YamlNode> Properties(YamlMappingNode mapping, string owner, string[] names, string[]? optional = null) {
       var properties = new Dictionary<string, YamlNode>(StringComparer.Ordinal);
       foreach (var (key, value) in mapping.Children) {
         var name = Text(key);
-        if (names.Contains(name))
+        if (names.Contains(name) || (optional ?? []).Contains(name))
           properties[name] = value;
         else
           this.Report(key, $"unknown property '{name}' in {owner}");

@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/justesen-code.js",
+ "algorithms": [
+  {
+   "name": "Justesen Code",
+   "vectors": [
+    {
+     "text": "Justesen code all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Justesen code pattern 1000",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000000"},
+     "expected": {"t":"bytes","v":"0100010000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Justesen code pattern 0100",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010000"},
+     "expected": {"t":"bytes","v":"0001000100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Justesen code pattern 1100",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010000"},
+     "expected": {"t":"bytes","v":"0101010100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

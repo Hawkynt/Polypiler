@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/hurricane.js",
+ "algorithms": [
+  {
+   "name": "Hurricane",
+   "vectors": [
+    {
+     "text": "Hurricane Test Vector #1 - Single Byte",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"546573744b6579313233343536373839"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"2c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hurricane Test Vector #2 - 8-Byte Block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"546573744b6579313233343536373839"}}
+     ],
+     "input": {"t":"bytes","v":"0011223344556677"},
+     "expected": {"t":"bytes","v":"b8c568864292e08b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hurricane Test Vector #3 - 16-Byte Block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"546573744b6579313233343536373839"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"cae243bb5bdba464dcfdb37df4168bb7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hurricane Test Vector #4 - ASCII Text",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5365637265744b657931323334353637"}}
+     ],
+     "input": {"t":"bytes","v":"485552524943414e45"},
+     "expected": {"t":"bytes","v":"f7c7f40e42fb83cedf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

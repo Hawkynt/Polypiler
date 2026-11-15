@@ -1,0 +1,82 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/lfsr88.js",
+ "algorithms": [
+  {
+   "name": "LFSR88",
+   "vectors": [
+    {
+     "text": "Seed (12345, 23456, 34567): First 5 outputs - verified against LFSR88 specification",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"0000303900005ba000008707"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0d063a5739786e63455d3d002ca381e2805afcf6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (987654321, 123456789, 362436069): First 10 outputs - large seed values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"3ade68b1075bcd15159a55e5"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"38e0e6ebb81c2db71e43dc1d9567cf5178b9be0ccd95f930e9903cb4b3d3529ec1423895391f9e51"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (2, 8, 16): Minimal valid seed values - edge case test",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"000000020000000800000010"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0020208002002c8048088062804d2000428049a0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (1000000, 2000000, 3000000): First 8 outputs - round seed values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"000f4240001e8480002dc6c0"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"784c7d760fa83ede80fde985b34c4faeeaacedf0b65239864005b43bc328d759"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (12345, 23456, 34567): Outputs 11-15 - verifies long-term state progression",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"skip","value":{"t":"number","v":10}},
+      {"set":"seed","value":{"t":"bytes","v":"0000303900005ba000008707"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"93f757cdb1d16696117eee33dd3fcfdd2b582a1e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

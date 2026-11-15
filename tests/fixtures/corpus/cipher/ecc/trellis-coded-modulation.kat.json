@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/trellis-coded-modulation.js",
+ "algorithms": [
+  {
+   "name": "Trellis Coded Modulation",
+   "vectors": [
+    {
+     "text": "TCM 4-state 8-PSK: input 00 from state 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000"},
+     "expected": {"t":"bytes","v":"000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TCM 4-state 8-PSK: input 01 from state 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TCM 4-state 8-PSK: input 10 from state 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100"},
+     "expected": {"t":"bytes","v":"010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TCM 4-state 8-PSK: input 11 from state 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101"},
+     "expected": {"t":"bytes","v":"010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

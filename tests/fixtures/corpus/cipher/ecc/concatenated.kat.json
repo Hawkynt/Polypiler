@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/concatenated.js",
+ "algorithms": [
+  {
+   "name": "Concatenated Code",
+   "vectors": [
+    {
+     "text": "Concatenated code simple test",
+     "inverse": false,
+     "steps": [
+      {"set":"innerType","value":{"t":"string","v":"hamming"}},
+      {"set":"outerType","value":{"t":"string","v":"repetition"}}
+     ],
+     "input": {"t":"bytes","v":"01000101"},
+     "expected": {"t":"bytes","v":"000101000001010001010000010100010100000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Concatenated all zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"innerType","value":{"t":"string","v":"hamming"}},
+      {"set":"outerType","value":{"t":"string","v":"repetition"}}
+     ],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

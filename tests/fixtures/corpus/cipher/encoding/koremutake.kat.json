@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/koremutake.js",
+ "algorithms": [
+  {
+   "name": "Koremutake Encoding",
+   "vectors": [
+    {
+     "text": "Koremutake empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte encoding test - Koremutake",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"6265"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single zero byte encoding test - Koremutake (leading-zero-byte marker, distinct from empty input)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"6261"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two zero bytes encoding test - Koremutake",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000"},
+     "expected": {"t":"bytes","v":"62616261"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "High-bit-set byte regression test - the old 'byte % 128' scheme discarded the 8th bit, so 200 and 200-128=72 encoded identically",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"c801"},
+     "expected": {"t":"bytes","v":"626f66756265"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All 256 byte values regression test - exercises the full big-integer base-128 conversion path",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "expected": {"t":"bytes","v":"626162756275626f626962656a6978616e696a69676164756279726562657469626c7570616a696679646f6275786970796b7576756c7568616661727572656d65786162726970616a65667564696b616a756865667573696b696765736962796761746f6c6976756c6f677964797a61626f646f73617a616d75686973797275627265707978756272696e796a61666f6b6f786f6472696265626972616a6f746f646976616d696879667573656b6567617a6f72697a756e6f6a6174696b75766173696d796a7576656c69766f6c6967756c656b657761626c796e7577756c7976756661677567656665736178796d6f6865626c656461736f6b797669626c616e6177657379627279626f726f78756272656e7568796c757a656e79786562726164726970657779666f766f6272656672616265626570796a69626c7573616c696869666f646972697869746f6e6978756e616879666f73616b616d696b79687574756c656775736f7a61676568657661626c696e6f687974656b6f62726964756665647572796b6174757a6f7661647269726f6b6976656c6576696c656d797a756472797261786f6d697679626c65677577656d797775626c796e6f776f6c75627279736f626c6564726966726570757861626c75767570616b6967796665727978756d696e6f6c6977756d6f686f74617a6562726968696879677574656b7976657a796d7964726f666574617a796e657769626c69627279776566726164656465726f786f6272616e6f7061626c69706f6a7974797a7562726f64726f68797775627279706f7865626c79647265706166726174656c797765626c6f6472616472756672617779706f7a65627279647279667265"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

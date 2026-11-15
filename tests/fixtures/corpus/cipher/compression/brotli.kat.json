@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/brotli.js",
+ "algorithms": [
+  {
+   "name": "Brotli",
+   "vectors": [
+    {
+     "text": "Round-trip - Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"a101"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Interop - decode real zlib brotliCompressSync('Hello, World!') output (uncompressed meta-block)",
+     "inverse": true,
+     "steps": [],
+     "input": {"t":"bytes","v":"0b068048656c6c6f2c20576f726c642103"},
+     "expected": {"t":"bytes","v":"48656c6c6f2c20576f726c6421"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Interop - decode real zlib brotliCompressSync output using Huffman/context-coded meta-block + static dictionary",
+     "inverse": true,
+     "steps": [],
+     "input": {"t":"bytes","v":"1b6701888c946ee622d083a5ba905e13148d807c430b830d387048206f24bc41a715ce66c7e34485a560239c7af587498101"},
+     "expected": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Interop - decode real zlib brotliCompressSync output of pseudo-random binary data",
+     "inverse": true,
+     "steps": [],
+     "input": {"t":"bytes","v":"1bff01f8af8bb705ff306b83267bfcc35b3dd043b93fce189cd7ca005d5c1c1742186f0cce0b2d0df0c1c571a1f7e9e6e0bcd2d2001f5c1c577a9f6e0ece1b9852200fc6a2f18a4f8726d47539f179dc37dad4360025d47962ee799c87e9d596ff4b77cc1d9189f7b9a8f2e5fbafb0a943043ad44528bb3c2e1726b64d81f6659e965deae70926d6f5ffeccb3810b5d4f74dd5acf3fb84ddc70651876b9f445c7edfc34d6c00feca978909d9d40fe31aeafa52b93c0e4336b67d7b0d65be2fb9dc778835b675111965ba2f375b5f01287fae03b34dcfbd990ef5079f7479208c26b64d99f8329f9036f55d13"},
+     "expected": {"t":"bytes","v":"0b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e60b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc01264b7095badf04294e7398bde2072c51769bc0e50a2f54799ec3e80d32577ca1c6eb10355a7fa4c9ee13385d82a7ccf1163b6085aacff4193e6388add2f71c41668bb0d5fa1f44698eb3d8fd22476c91b6db00254a6f94b9de03284d7297bce1062b50759abfe4092e53789dc2e70c31567ba0c5ea0f34597ea3c8ed12375c81a6cbf0153a5f84a9cef3183d6287acd1f61b40658aafd4f91e43688db2d7fc21466b90b5daff24496e93b8dd02274c7196bbe0052a4f7499bee3082d52779cc1e6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Regression - single byte round-trips through our own encoder/decoder",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"58"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"210000045803"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Brotli Round-trip - Pangram",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"a15001000020274b550d42b11982ed41016cc0a9ee3e4090956089aa751cba8b059b3198c8306d7fe224"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Brotli Round-trip - Binary data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"aaaaaaaaaaaaaaaaaaaa"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"a148000000a11a8f0402"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Brotli Round-trip - all 256 byte values",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"a1f80700402801000000feffffff0100e699f341a47a10a90e040030cf940f22d58348f520523dc49521c8e5078ac8c32f038660070486406170041285c6607178029144a65069740693c5e670797c8130100c8523d1583c914ca533d95cbe502c952bd55abdd16cb53bdd5e5f24964865728552a5d668757a83d164b6586d7687d3e5f6787dfe4070301c8d27d3d97cb15cad37dbddfe703c9d2fd7dbfdf17cbd3fdfdf3f148e4463f1443295ce6473f942b154ae546bf546b3d5ee747bfdc11000211841319c20299a61395e1025595135dd302ddb713d7f349e4c67f3c572b5de6c77fbc3f174be5c6ff7c7f3f5fe7c7f7f00"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

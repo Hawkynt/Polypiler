@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/ds-lz77.js",
+ "algorithms": [
+  {
+   "name": "DS-LZ77",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Highly repetitive input (48 zero bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"103000007000f000f0128024"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f782e"},
+     "expected": {"t":"bytes","v":"10410000007468652071756963006b2062726f776e2000666f78206a756d700173206f76657220101e006c617a7920646f67602e200dc02c2e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

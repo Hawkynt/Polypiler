@@ -1,0 +1,110 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/ans.js",
+ "algorithms": [
+  {
+   "name": "uABS (Binary Asymmetric Numeral Systems)",
+   "vectors": [
+    {
+     "text": "Empty input - length header only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single zero byte - eight bits coded at p=1/2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"010000000001000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0x41 - renormalization emits one payload byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"010000000001000041"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0xFF - all-ones bit path",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"01000000000100017f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two identical bytes - pins the context adaptation rule",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141"},
+     "expected": {"t":"bytes","v":"0200000000c82382a6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Natural text round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"2d00000000067f6e05e95c00f0141b8fe40b07f4296d0f0519b951b21128c9bd6bd3461473c10635e62930905442"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All 256 byte values round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"000100000014b6c0b8fa5a9006bb8696cd06eb611583b011820be97d547e59624af988b0cdd2b5a8c69a1ab4401cffa12ba758fd5844492856cdac8c16c0223c724e9cd1a635fe936fe1b338efc49e0ac7f88c69fcd6a6201a4d482c3546d501d8b8458e2cd61b0b7ffc21cc73bfc81e1d35e5f94098ba083cc98c68ce2be5336d104964b7646062027638aae07a6a3489006e73c053ca9daf3707b96b70d6531d698e6e45bddc3face04444c5e9830009a77eedb0d5f0611c71c29f26f73d00f56024b09231f0ce0788d6f1f00da90eb4846db745fe0beab663ec35c9f28eea8415478551f9"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long run round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"00020000000337aa960312b349a778ffe76c88efc5c65cd6ebf2dd2ba05c20f7457b89"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating pattern round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55aa55"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"000100000004e7356a356ce0400b53e91f4ccbf6cd4cb295d3a6544e8e72d94f7c21684c2e2852b2799f2ace6b7381fb6b15f7967a4e7045bdca8ab7286b965cf667610423e7d11ea0d00f06dcb3697488634abfa44696"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,65 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/luby-transform-enhanced.js",
+ "algorithms": [
+  {
+   "name": "LT Enhanced",
+   "vectors": [
+    {
+     "text": "LT Enhanced: K=4, systematic, c=0.1, delta=0.5",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":4}},
+      {"set":"overhead","value":{"t":"number","v":0.5}},
+      {"set":"c","value":{"t":"number","v":0.1}},
+      {"set":"delta","value":{"t":"number","v":0.5}},
+      {"set":"systematic","value":{"t":"bool","v":true}},
+      {"set":"seed","value":{"t":"number","v":12345}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c"},
+     "expected": {"t":"bytes","v":"48656c6c656c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LT Enhanced: K=8, systematic, overhead=37.5%",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"overhead","value":{"t":"number","v":0.375}},
+      {"set":"c","value":{"t":"number","v":0.1}},
+      {"set":"delta","value":{"t":"number","v":0.5}},
+      {"set":"systematic","value":{"t":"bool","v":true}},
+      {"set":"seed","value":{"t":"number","v":54321}}
+     ],
+     "input": {"t":"bytes","v":"0102030405060708"},
+     "expected": {"t":"bytes","v":"0102030405060708010302"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LT Enhanced: K=16, demonstrating degree-1 recovery",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":16}},
+      {"set":"overhead","value":{"t":"number","v":0.25}},
+      {"set":"c","value":{"t":"number","v":0.1}},
+      {"set":"delta","value":{"t":"number","v":0.5}},
+      {"set":"systematic","value":{"t":"bool","v":true}},
+      {"set":"seed","value":{"t":"number","v":11111}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f09090a09"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

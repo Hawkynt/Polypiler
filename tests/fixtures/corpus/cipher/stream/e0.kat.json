@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/e0.js",
+ "algorithms": [
+  {
+   "name": "E0",
+   "vectors": [
+    {
+     "text": "E0 Test Vector (Educational)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f6b37e0393807025e9b6ad61e8ba3953"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

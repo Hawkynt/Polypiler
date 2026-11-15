@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/sha1.js",
+ "algorithms": [
+  {
+   "name": "SHA-1",
+   "vectors": [
+    {
+     "text": "Empty string test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"da39a3ee5e6b4b0d3255bfef95601890afd80709"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character 'a' test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"86f7e437faa5a7fce15d1ddcb9eaeaea377667b8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"a9993e364706816aba3e25717850c26c9cd0d89d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Message 'message digest' test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6d65737361676520646967657374"},
+     "expected": {"t":"bytes","v":"c12252ceda8be8994d5fa0290a47231c1d16aae3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alphabet test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a"},
+     "expected": {"t":"bytes","v":"32d10c7b8cf96570ca04ce37f2a19d84240d3a89"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bcj-sparc.js",
+ "algorithms": [
+  {
+   "name": "BCJ SPARC",
+   "vectors": [
+    {
+     "text": "Empty buffer",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two consecutive CALL instructions (big-endian words, format bits 01)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4000001040000100"},
+     "expected": {"t":"bytes","v":"4000001040000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

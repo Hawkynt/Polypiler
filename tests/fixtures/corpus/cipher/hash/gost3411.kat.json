@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/gost3411.js",
+ "algorithms": [
+  {
+   "name": "GOST R 34.11-94",
+   "vectors": [
+    {
+     "text": "BouncyCastle Test Vector 1 - Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"981e5f3ca30c841487830f84fb433e13ac1101569b9c13584ac483234cd656c0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BouncyCastle Test Vector 2 - 32 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686973206973206d6573736167652c206c656e6774683d3332206279746573"},
+     "expected": {"t":"bytes","v":"2cefc2f7b7bdc514e18ea57fa74ff357e7fa17d652c75f69cb1be7893ede48eb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BouncyCastle Test Vector 3 - 50 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"537570706f736520746865206f726967696e616c206d65737361676520686173206c656e677468203d203530206279746573"},
+     "expected": {"t":"bytes","v":"c3730c5cbccacf915ac292676f21e8bd4ef75331d9405e5f1a61dc3130a65011"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BouncyCastle Test Vector 4 - Alphanumeric",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839"},
+     "expected": {"t":"bytes","v":"73b70a39497de53a6e08c67b6d4db853540f03e9389299d9b0156ef7e85d0f61"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

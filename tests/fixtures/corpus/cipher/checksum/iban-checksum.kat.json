@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/iban-checksum.js",
+ "algorithms": [
+  {
+   "name": "IBAN",
+   "vectors": [
+    {
+     "text": "German IBAN",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"44453839333730343030343430353332303133303030"},
+     "expected": {"t":"bytes","v":"0001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "UK IBAN",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"47423832574553543132333435363938373635343332"},
+     "expected": {"t":"bytes","v":"0001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Check digit calculation - Invalid IBAN",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"47423030574553543132333435363938373635343332"},
+     "expected": {"t":"bytes","v":"0010"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

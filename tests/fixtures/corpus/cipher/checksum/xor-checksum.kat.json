@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/xor-checksum.js",
+ "algorithms": [
+  {
+   "name": "XOR-8",
+   "vectors": [
+    {
+     "text": "NMEA sentence type",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4750524d43"},
+     "expected": {"t":"bytes","v":"4b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020304"},
+     "expected": {"t":"bytes","v":"04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCII test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243"},
+     "expected": {"t":"bytes","v":"40"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

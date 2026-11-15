@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/mwc64x.js",
+ "algorithms": [
+  {
+   "name": "MWC64X",
+   "vectors": [
+    {
+     "text": "Seed 1: First 10 outputs (40 bytes) - x=1, c=0",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"010000001bb8feffeea2075ccba5b14ea56f21525d2fe55ccf64d299cf4059178eeb1d4329577ced"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 123456: First 10 outputs - decimal seed value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"40e2010000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"40e20100fd3e51964536e3a981b7778005d90d3d686fc6b70e0ebd5f07623ccd8a3874e58088b9ce"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0xDEADBEEF: First 10 outputs - hex seed value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"efbeadde00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"efbeadde824a1c01fc44561708baa5932e54e3aefa448724cd006f090be01acaeffedc7a03a5c5eb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed x=1, c=1: First 10 outputs - non-zero carry",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000001000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"000000001cb8feffccfa045c1acfbe324b02f33dbdc64f0e57d817ff7a3489baff68477c9903a06a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 999999: First 8 outputs - medium seed value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"3f420f0000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3f420f008e06b474b3b8662b4d8765cd94d31ed4dd1d373cb2d2ee2130b81cdb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

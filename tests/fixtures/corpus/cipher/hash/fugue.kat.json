@@ -1,0 +1,114 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/fugue.js",
+ "algorithms": [
+  {
+   "name": "Fugue-224",
+   "vectors": [
+    {
+     "text": "sphlib NIST-style test vector (0-bit / empty message) - Fugue-224",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"e2cd30d51a913c4ed2388a141f90caa4914de43010849e7b8a7a9ccd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (8-bit message 0xCC) - Fugue-224",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"34602ea95b2b9936b9a04ba14b5dc463988df90b1a46f90dd716b60f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Fugue-256",
+   "vectors": [
+    {
+     "text": "sphlib NIST-style test vector (0-bit / empty message) - Fugue-256",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"d6ec528980c130aad1d1acd28b9dd8dbdeae0d79eded1fca72c2af9f37c2246f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (8-bit message 0xCC) - Fugue-256",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"b894eb2df58162f6c48d495f156e73bd086dd13db407ee38781177bb23d129bb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Fugue-384",
+   "vectors": [
+    {
+     "text": "sphlib NIST-style test vector (0-bit / empty message) - Fugue-384",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"466d05f6812b58b8628e53816b2a99d173b804a964de971829159c3791ac8b524eebbf5fc73ba40ea8eea446d5424a30"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (8-bit message 0xCC) - Fugue-384",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"436868cd6804b803dac432ed561bb40f91f624a10f2a368702359841cfda6909115628ca4977b3f8063a3b87fc7a0984"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Fugue-512",
+   "vectors": [
+    {
+     "text": "sphlib NIST-style test vector (0-bit / empty message) - Fugue-512",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3124f0cbb5a1c2fb3ce747ada63ed2ab3bcd74795cef2b0e805d5319fcc360b4617b6a7eb631d66f6d106ed0724b56fa8c1110f9b8df1c6898e7ca3c2dfccf79"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (8-bit message 0xCC) - Fugue-512",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"2ef4115479b060fc64a4d6f6913a39e326afc81deb4e39d71c573df5ed132200e7c784bab1804930cad16847f16cbda59a865bbd928ebc17d33689fef233c10b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

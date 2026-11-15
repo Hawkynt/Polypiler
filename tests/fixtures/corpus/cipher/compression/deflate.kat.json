@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/deflate.js",
+ "algorithms": [
+  {
+   "name": "DEFLATE",
+   "vectors": [
+    {
+     "text": "RFC 1951 DEFLATE round-trip - hello",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"68656c6c6f"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"cb48cdc9c90700"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1951 DEFLATE round-trip - AAAA",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"73040200"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1951 DEFLATE round-trip - ABCABCABC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243414243"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"737472862000"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

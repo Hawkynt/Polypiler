@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/ranlux24.js",
+ "algorithms": [
+  {
+   "name": "RANLUX24",
+   "vectors": [
+    {
+     "text": "C++ std::ranlux24 with seed 1, first 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":15}},
+      {"set":"seed","value":{"t":"bytes","v":"01000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0c5f871f153967fc4f6cb618599fb0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "C++ std::ranlux24 with seed 314159265 (FORTRAN default), first 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":15}},
+      {"set":"seed","value":{"t":"bytes","v":"a1b0b912"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"117f61a40213310c8a02a7552fcfea"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "C++ std::ranlux24 with seed 12345, first 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":15}},
+      {"set":"seed","value":{"t":"bytes","v":"39300000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"6bfbfaa56bafc20b1c49a1b4d08033"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "C++ std::ranlux24 with seed 42, first 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":15}},
+      {"set":"seed","value":{"t":"bytes","v":"2a000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"9f9b35687a5d41631f63ed0df023fa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

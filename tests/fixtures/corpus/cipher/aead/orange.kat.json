@@ -1,0 +1,131 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/orange.js",
+ "algorithms": [
+  {
+   "name": "ORANGE-Zest",
+   "vectors": [
+    {
+     "text": "NIST KAT Vector #1 - Empty PT and AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"f315bf7b2779ef4b99f8cc33b7155755"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST KAT Vector #2 - Empty PT, 1-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3e23ce190d4c8fca425d39a3776341b2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST KAT Vector #5 - Empty PT, 4-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00010203"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"ab63b2ade8e854bcb72dbe00a29ebbc6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST KAT Vector #34 - 1-byte PT, empty AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"bc3791431f6a798a76ae57a5177d909210"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST KAT Vector #35 - 1-byte PT, 1-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"cba400078fac89a39288303677e5a08984"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST KAT Vector #38 - 1-byte PT, 4-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00010203"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"4ed50a9171537daad559b399342fdce743"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST KAT Vector #169 - 5-byte PT, 3-byte AD (partial block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"000102"}}
+     ],
+     "input": {"t":"bytes","v":"0001020304"},
+     "expected": {"t":"bytes","v":"98973390f20ab5083c9dd60b822162a7978bc2e2e5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST KAT Vector #1089 - 32-byte PT, 32-byte AD (full block boundary)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"b0991c016366c43f3cf727a44410df56525f4a7be395b05db3dfb3bfcd4aafb912a8537d95006a47d43df8ea8a7c10fb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

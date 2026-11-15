@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-maskenoza.js",
+ "algorithms": [
+  {
+   "name": "Maskenoza (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Maskenoza — zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"a4ec17eaaad1acbb6f78e90a812490682bfc2a43"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Maskenoza — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"},
+     "expected": {"t":"bytes","v":"855d5abf4bfc45412d597d1d35770dba93b8dccf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Maskenoza — shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f40"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f20212223"},
+     "expected": {"t":"bytes","v":"f32bf65dd367edee52b8e08ba69ce4ce54f5a94a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

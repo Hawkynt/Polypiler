@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/cryptoprowrap.js",
+ "algorithms": [
+  {
+   "name": "CryptoPro Key Wrap",
+   "vectors": [
+    {
+     "text": "CryptoPro Wrap Test (Bouncy Castle compatible)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"546d203368656c326973652073736e62206167796967747473656865202c3d73"}},
+      {"set":"ukm","value":{"t":"bytes","v":"1234567890abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"},
+     "expected": {"t":"bytes","v":"0b45e8051b41a19ae67354da4e6249dc477444e855ce81375361fad40dbf659375d073f5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

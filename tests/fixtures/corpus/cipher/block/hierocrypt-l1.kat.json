@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/hierocrypt-l1.js",
+ "algorithms": [
+  {
+   "name": "Hierocrypt-L1",
+   "vectors": [
+    {
+     "text": "NESSIE submission package, C/testvectors.txt",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4703c87e817842c4ce6b167d43701b76"}}
+     ],
+     "input": {"t":"bytes","v":"85693846db4c1b34"},
+     "expected": {"t":"bytes","v":"0cb19444abd24347"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

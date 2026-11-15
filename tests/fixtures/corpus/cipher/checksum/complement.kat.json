@@ -1,0 +1,109 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/complement.js",
+ "algorithms": [
+  {
+   "name": "Ones-Complement",
+   "vectors": [
+    {
+     "text": "Two 16-bit words 0x0001 + 0x0002, complement 0xFFFC (RFC 1071 section 1 definition)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010002"},
+     "expected": {"t":"bytes","v":"fffc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IP header fragment",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001f203f4f5f6f7"},
+     "expected": {"t":"bytes","v":"220d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single word 0xFFFF, complement 0x0000 (RFC 1071 section 1 definition)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ffff"},
+     "expected": {"t":"bytes","v":"0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Twos-Complement-8",
+   "vectors": [
+    {
+     "text": "Byte sum 0x06, 8-bit complement 0xFA",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010203"},
+     "expected": {"t":"bytes","v":"fa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Serial protocol example",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"25623f52"},
+     "expected": {"t":"bytes","v":"e8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Byte sum 0xFF, 8-bit complement 0x01",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Twos-Complement-16",
+   "vectors": [
+    {
+     "text": "Byte sum 0x000A, 16-bit complement 0xFFF6",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020304"},
+     "expected": {"t":"bytes","v":"fff6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Byte sum 0x01FE, 16-bit complement 0xFE02",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ffff"},
+     "expected": {"t":"bytes","v":"fe02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

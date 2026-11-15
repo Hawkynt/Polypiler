@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/deflate64.js",
+ "algorithms": [
+  {
+   "name": "Deflate64",
+   "vectors": [
+    {
+     "text": "Deflate64 round-trip - hello",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"68656c6c6f"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"010500faff68656c6c6f"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deflate64 round-trip - AAAA",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"010400fbff41414141"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deflate64 round-trip - ABCABCABC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243414243"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"010900f6ff414243414243414243"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

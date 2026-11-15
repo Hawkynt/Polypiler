@@ -1,0 +1,107 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/acrng.js",
+ "algorithms": [
+  {
+   "name": "ACRNG (Additive Congruential RNG)",
+   "vectors": [
+    {
+     "text": "ACRNG order=12, implicit modulo (2^64), seed=0: First 8 outputs (64 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"order","value":{"t":"number","v":12}},
+      {"set":"modulo","value":{"t":"null"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"80de6c41ff947f8323ada7ab849c1f4d1829d6c3d65999983834669e0759a38120fa987227ad02f258c87338a1c8fe2ce59e98a337cfe90519aa71a2997f1e74"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ACRNG order=12, implicit modulo (2^64), seed=1: First 8 outputs (64 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"order","value":{"t":"number","v":12}},
+      {"set":"modulo","value":{"t":"null"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"84e6e8aa35bdd945987c4da32714a28c77396d87d11bcb5953dbf93125371bbd052bd52374f843b24a91588a9723b6ea4cd40d5385a95d74469279f6ad4c280f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ACRNG order=12, implicit modulo (2^64), seed=42: First 8 outputs (64 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"order","value":{"t":"number","v":12}},
+      {"set":"modulo","value":{"t":"null"}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"7519c1f49dda4850d8aaa63cc2aae849652d5163487f134bdf346bf650785de2e376c4db79c67deb3bda3cffd4bcd9b9e90e68a25e07f5271a03b3cc067a8c69"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ACRNG order=12, implicit modulo (2^64), seed=1234567: First 5 outputs (40 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"order","value":{"t":"number","v":12}},
+      {"set":"modulo","value":{"t":"null"}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000012d687"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"5cbefabf9c666daedfcfc7a2c85f1cee695bd837c36f809268479c6444f4d82b1d75265f5d690a31"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ACRNG order=5, implicit modulo (2^64), seed=42: First 5 outputs (40 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"order","value":{"t":"number","v":5}},
+      {"set":"modulo","value":{"t":"null"}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"a48f3117d94fa0e63102a4464575d18521bd544c486ed973a3bfe0962dcf51d8f120de0995d56ec9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ACRNG order=12, modulo=2^31-1, seed=1: First 8 outputs (32 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"order","value":{"t":"number","v":12}},
+      {"set":"modulo","value":{"t":"bytes","v":"7fffffff"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3f8baaaf580d3e883f8eaa324cef1da87f5023482c4708441f532a983a755751"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

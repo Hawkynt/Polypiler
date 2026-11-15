@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/lexicographic-code.js",
+ "algorithms": [
+  {
+   "name": "Lexicographic Code",
+   "vectors": [
+    {
+     "text": "Lexicographic (7,3) zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":7}},
+      {"set":"d","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"00000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Lexicographic (7,3) pattern 1",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":7}},
+      {"set":"d","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"00000001"},
+     "expected": {"t":"bytes","v":"00000000010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Lexicographic (7,3) pattern 2",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":7}},
+      {"set":"d","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"00000100"},
+     "expected": {"t":"bytes","v":"00000101000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Lexicographic (7,3) pattern 3",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":7}},
+      {"set":"d","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"00010000"},
+     "expected": {"t":"bytes","v":"00010001000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

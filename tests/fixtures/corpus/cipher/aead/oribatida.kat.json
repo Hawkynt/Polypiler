@@ -1,0 +1,166 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/oribatida.js",
+ "algorithms": [
+  {
+   "name": "Oribatida-192-96",
+   "vectors": [
+    {
+     "text": "NIST LWC KAT Count=1: Empty plaintext, empty AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"83dcc3e7df9986adc38358cd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=2: Empty plaintext, 1-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"aad","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"2ca7f3d7ac0074e649a768a5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=46: 1-byte plaintext, 12-byte AD (full rate block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"5df32fd38e0d3e2a6482dd055d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=18: 0-byte plaintext, 13-byte AD (partial rate block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"685c11ca5529e306030fd98f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=403: 12-byte plaintext (full rate block), 6-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b"},
+     "expected": {"t":"bytes","v":"a1315d1f07aa2b5bfa676b5cbed7374a962cd217373cce64"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Oribatida-256-64",
+   "vectors": [
+    {
+     "text": "NIST LWC KAT Count=1: Empty plaintext, empty AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"21065eb73fff09a323253f97971a1167"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=34: 1-byte plaintext, empty AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"56f962072ac37ed49dfb53977f2092993b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=35: 1-byte plaintext, 1-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"2f246a9091e193f0807f525d247b352ea2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=50: 1-byte plaintext, 16-byte AD (full block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"c9f8e6974574513fb8e5bc6bf1716fc391"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=172: 5-byte plaintext, 6-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405"}}
+     ],
+     "input": {"t":"bytes","v":"0001020304"},
+     "expected": {"t":"bytes","v":"10bec53b7c7089ee95475257f9caed015a8064e4b7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,51 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-lili2.js",
+ "algorithms": [
+  {
+   "name": "LILI-2 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Lili2 — keystream from incrementing key, zero IV/input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"1198a219a3f3ed729500b3a54187f40dbbc9da59ceb3216f2dfbfdb31b70b63463eba7448eed9b629b622cd545b9a458eb4f559e145be166fff1f640d7e706123a61be369b294af9dd489193b7b0eaf0eb7dd8deaa3efa309344810abc1db15457816e31b6ea37b1b2d437d994c52a14b172af605149529e6ec3a9c28782ac1c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Lili2 — incrementing key/plaintext, zero IV",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"1199a01aa7f6eb759d09b9ae4d8afa02abd8c84adaa6377835e2e7a8076da82b43ca8567aac8bd45b34b06fe69948a77db7e67ad206ed751c7c8cc7bebda382d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Lili2 — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e33587da2c7ec1136"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457aafe4194e83b8ed22"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"60a4bc025c0938ea737f073a2f733852f4477ffd3f4f8d67984fafa637417bd90ee480ca40d2d0c40b378496e6a1d422"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

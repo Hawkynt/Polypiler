@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/baudot.js",
+ "algorithms": [
+  {
+   "name": "Baudot Code (ITA2)",
+   "vectors": [
+    {
+     "text": "Baudot empty string test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single letter A test - Baudot ITA2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Letter E encoding test - Baudot",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"45"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NUL-A-NUL regression test - code point 0 ('\\0') must round-trip; it was previously unencodable because '\\0' is falsy in JavaScript",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"004100"},
+     "expected": {"t":"bytes","v":"000300"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

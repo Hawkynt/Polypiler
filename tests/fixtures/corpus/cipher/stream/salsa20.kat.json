@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/salsa20.js",
+ "algorithms": [
+  {
+   "name": "Salsa20",
+   "vectors": [
+    {
+     "text": "eSTREAM Salsa20 Set 1, Vector 0 (128-bit key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}},
+      {"set":"nonce","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"4dfa5e481da23ea09a31022050859936"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "eSTREAM Salsa20 Set 6, Vector 0 (256-bit key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8000000000000000000000000000000000000000000000000000000000000000"}},
+      {"set":"nonce","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"e3be8fdd8beca2e3ea8ef9475b29a6e7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

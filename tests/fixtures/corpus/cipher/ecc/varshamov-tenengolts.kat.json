@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/varshamov-tenengolts.js",
+ "algorithms": [
+  {
+   "name": "Varshamov-Tenengolts Code",
+   "vectors": [
+    {
+     "text": "VT (7,0) all zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":7}},
+      {"set":"a","value":{"t":"number","v":0}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VT (7,0) sum=8: positions 1,7",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":7}},
+      {"set":"a","value":{"t":"number","v":0}}
+     ],
+     "input": {"t":"bytes","v":"01000000000001"},
+     "expected": {"t":"bytes","v":"01000000000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VT (7,0) sum=8: positions 2,6",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":7}},
+      {"set":"a","value":{"t":"number","v":0}}
+     ],
+     "input": {"t":"bytes","v":"00010000000100"},
+     "expected": {"t":"bytes","v":"00010000000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VT (7,3) sum=3: position 3",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":7}},
+      {"set":"a","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"00000100000000"},
+     "expected": {"t":"bytes","v":"00000100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

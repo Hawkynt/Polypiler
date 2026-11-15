@@ -1,0 +1,101 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/subterranean.js",
+ "algorithms": [
+  {
+   "name": "Subterranean AEAD",
+   "vectors": [
+    {
+     "text": "Subterranean: Empty message, empty AAD (Count 1)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"119838e888c950cdb651e73e1be37cfb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Subterranean: Empty message, 1-byte AAD (Count 2)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"70ed5336da2ee7a99bae0ce68832fe0e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Subterranean: Empty message, 4-byte AAD (Count 5)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":"00010203"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3239852bc3478b82edb25c47f6c13ece"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Subterranean: 1-byte plaintext, empty AAD (Count 44)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"5fabceade76378ea5e2f79f0b5417eb3d5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Subterranean: 4-byte plaintext, empty AAD (Count 133)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"5fae2772e4148412d4479a84f6a0b20ec8e4429b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Subterranean: 16-byte plaintext, 8-byte AAD (Count 537)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"52b608b5e28e649b680c7b9b6c7dacd5c839da24570162f6b6f401ce1ff020d9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

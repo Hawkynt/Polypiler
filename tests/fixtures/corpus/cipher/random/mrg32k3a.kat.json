@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/mrg32k3a.js",
+ "algorithms": [
+  {
+   "name": "MRG32k3a",
+   "vectors": [
+    {
+     "text": "MRG32k3a with seed 1234567 (first 5 outputs - Rosetta Code verification)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"87d61200"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"99d6f9569a6e8ba895cd0ffdd59c1fe71ff2b09a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MRG32k3a with seed 987654321 (first 5 outputs)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"b168de3a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"44775cb5c8b3f5b8a93488c320e06f2fee99fc5f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MRG32k3a with seed 12345 (first 5 outputs)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"39300000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"cf81c57ba22715c3768957e45edb6ac52b06432c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

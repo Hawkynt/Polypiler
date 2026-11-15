@@ -1,0 +1,169 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/ocb.js",
+ "algorithms": [
+  {
+   "name": "OCB",
+   "vectors": [
+    {
+     "text": "OCB round-trip test #1 - 1 byte",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"DummyBlockCipherInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setNonce","args":[{"t":"bytes","v":"bbaa99887766554433221100"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":""}]},
+      {"call":"setTagLength","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"0101800000000000000000000000000000"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "OCB round-trip test #2 - 8-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"DummyBlockCipherInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setNonce","args":[{"t":"bytes","v":"bbaa99887766554433221101"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":""}]},
+      {"call":"setTagLength","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"000102030405060700010203040506078000000000000000"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "OCB round-trip test #3 - With AAD",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"DummyBlockCipherInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setNonce","args":[{"t":"bytes","v":"bbaa99887766554433221102"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"0001020304050607"}]},
+      {"call":"setTagLength","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"00000000000000000000000000000000000000000000000008090a0b0c0d0e0f"},
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "OCB3",
+   "vectors": [
+    {
+     "text": "RFC 7253 AES-128 OCB TAGLEN128, N=...01, 8-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setNonce","args":[{"t":"bytes","v":"bbaa99887766554433221101"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"0001020304050607"}]},
+      {"call":"setTagLength","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"6820b3657b6f615a5725bda0d3b4eb3a257c9af1f8f03009"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7253 AES-128 OCB TAGLEN128, N=...03, empty AAD",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setNonce","args":[{"t":"bytes","v":"bbaa99887766554433221103"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":""}]},
+      {"call":"setTagLength","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"45dd69f8f5aae72414054cd1f35d82760b2cd00d2f99bfa9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7253 AES-128 OCB TAGLEN128, N=...04, one full block",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setNonce","args":[{"t":"bytes","v":"bbaa99887766554433221104"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setTagLength","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"571d535b60b277188be5147170a9a22c3ad7a4ff3835b8c5701c1ccec8fc3358"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7253 AES-128 OCB TAGLEN128, N=...07, block plus half block",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setNonce","args":[{"t":"bytes","v":"bbaa99887766554433221107"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011121314151617"}]},
+      {"call":"setTagLength","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011121314151617"},
+     "expected": {"t":"bytes","v":"1ca2207308c87c010756104d8840ce1952f09673a448a122c92c62241051f57356d7f3c90bb0e07f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7253 AES-128 OCB TAGLEN128, N=...0D, 40-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setNonce","args":[{"t":"bytes","v":"bbaa9988776655443322110d"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627"}]},
+      {"call":"setTagLength","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627"},
+     "expected": {"t":"bytes","v":"d5ca91748410c1751ff8a2f618255b68a0a12e093ff454606e59f9c1d0ddc54b65e8628e568bad7aed07ba06a4a69483a7035490c5769e60"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7253 OCB TAGLEN96 with key 0F0E...0100",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"0f0e0d0c0b0a09080706050403020100"}]},
+      {"call":"setNonce","args":[{"t":"bytes","v":"bbaa9988776655443322110d"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627"}]},
+      {"call":"setTagLength","args":[{"t":"number","v":12}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627"},
+     "expected": {"t":"bytes","v":"1792a4e31e0755fb03e31b22116e6c2ddf9efd6e33d536f1a0124b0a55bae884ed93481529c76b6ad0c515f4d1cdd4fdac4f02aa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

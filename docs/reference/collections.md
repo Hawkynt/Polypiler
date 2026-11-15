@@ -48,7 +48,7 @@ reference source (`Dictionary.Remove` links the freed entry as the new head of t
 
 | Kind | Operation | Value | Traps |
 | --- | --- | --- | --- |
-| list | `ListNew`, `ListFromArray`, `ListCount`, `ListCopyToArray` | the list, its count, a new array | - |
+| list | `ListNew`, `ListFromArray`, `ListOf` (a list of the operands, for elements no array holds: objects, arrays; #1365), `ListCount`, `ListCopyToArray` | the list, its count, a new array | - |
 | list | `ListGet`, `ListSet`, `ListRemoveAt`; `ListInsert` (0 … count) | the element; nothing | `ArgumentOutOfRange` outside |
 | list | `ListAdd`, `ListClear` | nothing | - |
 | list | `ListRemoveLast` (`pop`) | an optional element, `null` for references, none when empty | - |

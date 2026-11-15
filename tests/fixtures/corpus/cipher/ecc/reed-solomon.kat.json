@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/reed-solomon.js",
+ "algorithms": [
+  {
+   "name": "Reed-Solomon",
+   "vectors": [
+    {
+     "text": "Reed-Solomon (7,3) encoding test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010203"},
+     "expected": {"t":"bytes","v":"010203ac07842f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Reed-Solomon zero codeword test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"00000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Reed-Solomon max value test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff8040"},
+     "expected": {"t":"bytes","v":"ff8040bd33e253"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

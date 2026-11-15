@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/trivium.js",
+ "algorithms": [
+  {
+   "name": "Trivium",
+   "vectors": [
+    {
+     "text": "eSTREAM Trivium Set 1, vector#0 - stream[0..63]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"38eb86ff730d7a9caf8df13a4420540dbb7b651464c87501552041c249f29a64d2fbf515610921ebe06c8f92cecf7f8098ff20cccc6a62b97be8ef7454fc80f9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "eSTREAM Trivium Set 6, vector#0 - stream[0..63]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0053a6f94c9ff24598eb"}},
+      {"set":"iv","value":{"t":"bytes","v":"0d74db42a91077de45ac"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f4cd954a717f26a7d6930830c4e7cf0819f80e03f25f342c64adc66aba7f8a8e6eaa49f23632ae3cd41a7bd290a0132f81c6d4043b6e397d7388f3a03b5fe358"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,42 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/mickey.js",
+ "algorithms": [
+  {
+   "name": "MICKEY",
+   "vectors": [
+    {
+     "text": "Educational test vector with simplified initialization",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f"},
+     "expected": {"t":"bytes","v":"5ce1c2430d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "MICKEY-128",
+   "vectors": [
+    {
+     "text": "Educational test vector for MICKEY-128",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00010203040506070809101112131415"}}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"4dbc308d5236cc4c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

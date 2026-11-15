@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/ds-lz77-doublespace.js",
+ "algorithms": [
+  {
+   "name": "DoubleSpace/DriveSpace LZ77",
+   "vectors": [
+    {
+     "text": "Empty input - size header only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte - one literal token",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"010000008200"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample repeated 4x",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"b4000000e8a02903224e9d3463d6801023e7cd1d3720ccbcc103424d9d3670e6807863a78c1c90e26113464f1e1064de9c713940f3ff0716"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetitive run - 256 identical bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"00010000c2feef0200"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating two-byte pattern - ABABABABABAB",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414241424142414241424142"},
+     "expected": {"t":"bytes","v":"0c0000008208bd2000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pseudo-random binary sample with one repeated run",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"9e1fd24b6a0cf7832155be083dc471aa9e1fd24b6a0cf7831162ef904d7c38a1"},
+     "expected": {"t":"bytes","v":"200000003c7d90b6440d837b834254f185a007b138aa1f784410f30e52133e384201"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "English text with short interior repeats",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4f7074696d616c2070617273696e67206d696e696d697365732074686520746f74616c20746f6b656e20636f73742c206e6f7420746865206c6f63616c206d61746368206c656e6774682e"},
+     "expected": {"t":"bytes","v":"4b0000009ec0a193a64d183620e0849133278d9b3320da02111e69e6949903820e9ab230784337b6505853c60d88316fe6d06101c22d4407c8b0793336b290a333062d2ca17316262e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,397 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/vest.js",
+ "algorithms": [
+  {
+   "name": "VEST-4",
+   "vectors": [
+    {
+     "text": "VEST-4 root cipher, 128-bit key 01000000000000000000000000000000, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"01000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"bda8528d861661692ad6e8e969ab9c8c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-4 root cipher, 128-bit key 00000000000000000000000000000080, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000080"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0f87786dec8d07b146b887a93b117ee9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-4 root cipher, 128-bit key ffffffffffffffffffffffffffffffff, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"8a7b5332c7e856830c2f9d57736ac6b5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-4 root cipher, all-zero 128-bit key, IV 01000000000000000000000000000000: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"01000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"be316f44840e3bd759862a9a26810b2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-4 root cipher, all-zero 128-bit key, IV aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"65858bec962b64325ea149ec11f53867"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "VEST-8",
+   "vectors": [
+    {
+     "text": "VEST-8 root cipher, 128-bit key 01000000000000000000000000000000, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"01000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"fc1b52fb52244e610ef2633ba45f8aac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-8 root cipher, 128-bit key 00000000000000000000000000000080, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000080"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"884c87fbb02f733f6057214b6499cb03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-8 root cipher, 128-bit key ffffffffffffffffffffffffffffffff, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"6f7b3d07da2246d9dfd15c56951b6e36"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-8 root cipher, all-zero 128-bit key, IV 01000000000000000000000000000000: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"01000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"443c1fece8585070ed5bd90cb6563cca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-8 root cipher, all-zero 128-bit key, IV aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"4658f26e009f79ec5a63d85192ffff4d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "VEST-16",
+   "vectors": [
+    {
+     "text": "VEST-16 root cipher, 128-bit key 01000000000000000000000000000000, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"01000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"87eede84f7c08d86da9841f2031cb418"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-16 root cipher, 128-bit key 00000000000000000000000000000080, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000080"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"4f46a7e9f6b96f88bb8beed0f6ace991"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-16 root cipher, 128-bit key ffffffffffffffffffffffffffffffff, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"3612e9960bc6215688955c6c38e5f1e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-16 root cipher, all-zero 128-bit key, IV 01000000000000000000000000000000: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"01000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"2c68e45dc51edf42045e044a6cf37c03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-16 root cipher, all-zero 128-bit key, IV aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"515e6c2b6330039d25ec6e76b51a0925"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "VEST-32",
+   "vectors": [
+    {
+     "text": "VEST-32 root cipher, 128-bit key 01000000000000000000000000000000, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"01000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"737a1f618b28cb22c0ab78f1b6e02c82"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-32 root cipher, 128-bit key 00000000000000000000000000000080, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000080"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"cdbc52392401b5190ebf8d02c2a282d6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-32 root cipher, 128-bit key ffffffffffffffffffffffffffffffff, no IV: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"4e646575316ddb838b4daca53d9b4752"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-32 root cipher, all-zero 128-bit key, IV 01000000000000000000000000000000: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"01000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f04e8c4459c6ae7944d01dec498434ac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VEST-32 root cipher, all-zero 128-bit key, IV aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa: first 128 keystream bits",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"e904d4a74a62352e01433fdf6516d774"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "ProVEST-32",
+   "vectors": [
+    {
+     "text": "ProVEST-32 eSTREAM set 1, vector 0: stream[0..63]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"035f0f42b1d8a93ec22dd00a5e46840d093159d99a97049cedf0a2511ea7f920ca7793603625d772072d2cb0b0595ee6196a3fbe808c3adf8582581fb0d72ed4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ProVEST-32 eSTREAM set 3, vector 0: stream[0..63]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"9118cf64a92266e55f3d68137d2a60b39ae200765036d0c06a40f77142a7310f3958cc9d82e350d4215063cc2b841adc05f8beaebace4ee8eec1c719cb7ad93f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ProVEST-32 eSTREAM set 6, vector 0: stream[0..63]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0053a6f94c9ff24598eb3e91e4378add"}},
+      {"set":"iv","value":{"t":"bytes","v":"0d74db42a91077de"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"1adb4077926109a4d1c25eb0fb283c363f7f5f4cb7941590e3596c3555ba536774250669f6a54376fff7f25bb0631f45b062159b2685c70b1c0bd541d098c789"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ProVEST-32 eSTREAM set 9, vector 0: encryption",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0053a6f94c9ff24598eb3e91e4378add"}},
+      {"set":"iv","value":{"t":"bytes","v":"0d74db42a91077de"}}
+     ],
+     "input": {"t":"bytes","v":"6dce2f90f152b31475d63798f95abb1c7dde3fa00162c32485e647a8096acb2c"},
+     "expected": {"t":"bytes","v":"77156fe76333bab0a41469280272872a42a160ecb6f6d6b466bf2b9d5cd0984b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Vest32-Pro, 256-bit key and IV, 1-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ac643e2c1397b00cbcb2e5bacebe4c32a2decc2193408eccef781f2e04284d18"}},
+      {"set":"iv","value":{"t":"bytes","v":"7b48d886824e4cf1df0a552c8abd5e1c9104330b27fc0d386564f77aff6f1532"}}
+     ],
+     "input": {"t":"bytes","v":"d8"},
+     "expected": {"t":"bytes","v":"db"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Vest32-Pro, 256-bit key and IV, 44-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"b13ea7ded907d0328f861dfebb1e4643fd2eb8faa5c115e6bb062bc397230c05"}},
+      {"set":"iv","value":{"t":"bytes","v":"f71dbde6db5a7dc751f901507d104053dac79e7580a53db0fb396a0bdbf22c19"}}
+     ],
+     "input": {"t":"bytes","v":"4a0404992fcff9295795f8d20afb71165d961cbfe6ddc2b051b0c505231fdfcb106c382ce6ec66b9d4d39b15"},
+     "expected": {"t":"bytes","v":"94b9935bb9610fa2608f882c7d5995c438f5ed41802f7f3cf5c1e53b5067a4d92839e9e67c6c2bb39896b36d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Vest32-Pro, 256-bit key and IV, 150-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"bfdff22e378c5fceb9f220319d70e16e1006659804e769542a66c3f3487b517e"}},
+      {"set":"iv","value":{"t":"bytes","v":"3605d37a97da9af4157b820b53c12bd6c93c0b3b3980321426ce5ad1314ce7f7"}}
+     ],
+     "input": {"t":"bytes","v":"15a1c3f5321768dd66ffd651bd20d2a88263033b5cebf03ec087066a2e8610ab6076ee9682ce495e4b68486fe06e65b4d8e6be0a44ed361a0130efc9d4751c7eba184d3b1b33bf2481f43e386857284b03b82f00a8069c2bd7c2f1cccd6b076433d7ed321135caabf68722289cfd5b1bb156d6aba2c7dfa088fc1a6de7f5e4219d565b207dcbc3373fa8fcbbf1b0e9e8281e0772b6ab"},
+     "expected": {"t":"bytes","v":"ec3bb6a53bf539b1c36bebd264797744407ee54ed95766f4394d3de70212281ecc205fa87b40affa71edc2caa9cb4b021e7e030337d69d55bc8a2f17fbdd5a15e7b95c3231ed61684a85514049bbd861b834451d8ef35e268cc02b8fe11d02f3a4c9b722459f40ebf52b0de349025a718e52a376b968a43a03b649ba93697b39f34ec1a8b89c8235e76f547632d4c8b1280791e6131f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

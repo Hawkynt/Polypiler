@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/railfence.js",
+ "algorithms": [
+  {
+   "name": "Rail Fence Cipher",
+   "vectors": [
+    {
+     "text": "Classic rail fence example with 3 rails",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"33"}}
+     ],
+     "input": {"t":"bytes","v":"5745415245444953434f5645524544464c454541544f4e4345"},
+     "expected": {"t":"bytes","v":"574543524c5445455244534f45454645414f4341495644454e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Educational example with 4 rails",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"34"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"4141544b544e544344574141"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple 2 rail example",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"32"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"484c4f454c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed case with spaces",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"33"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"486f72656c206f6c6c5764"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long message with 5 rails",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"35"}}
+     ],
+     "input": {"t":"bytes","v":"544845515549434b42524f574e464f584a554d50534f5645525448454c415a59444f47"},
+     "expected": {"t":"bytes","v":"54424a5244484b5258554554594f45434f4f4d56485a4751495746504f4541554e534c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

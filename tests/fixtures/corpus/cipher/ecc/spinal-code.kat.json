@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/spinal-code.js",
+ "algorithms": [
+  {
+   "name": "Spinal Code",
+   "vectors": [
+    {
+     "text": "Spinal code all-zero message k=4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"010000000101010000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Spinal code alternating pattern k=4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000100"},
+     "expected": {"t":"bytes","v":"010101010000000001000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Spinal code all-ones message k=4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010101"},
+     "expected": {"t":"bytes","v":"010000000001010001010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Spinal code alternating pattern phase2 k=4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010001"},
+     "expected": {"t":"bytes","v":"000000000000010001010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

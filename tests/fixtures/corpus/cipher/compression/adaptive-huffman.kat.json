@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/adaptive-huffman.js",
+ "algorithms": [
+  {
+   "name": "Adaptive Huffman (FGK)",
+   "vectors": [
+    {
+     "text": "Empty input - only the 4-byte little-endian length header",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0x41 - empty NYT path plus the raw eight-bit value",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"0100000041"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetitive run - 256 copies of 0x61 collapse to one bit each",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"0001000061fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating two-byte pattern - 32 repetitions of 'ab'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162616261626162"},
+     "expected": {"t":"bytes","v":"4000000061315b6db6db6db6db6db6db6db4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pseudo-random binary sample - 16 high-entropy bytes, all first occurrences",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"d3b07a1c8f4e2b6905c1fd3846a70e92"},
+     "expected": {"t":"bytes","v":"10000000d3580f507047e27415a34802f3071fb438823329d01c4920"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ASCII text - 'the quick brown fox jumps over the lazy dog. ' repeated four times",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"b400000074340cb08038e3ac34a318358e3151ca0dec774376233281e370d51636c8e1039ef71da5034e5ec36646101eae3cfd0c99519ec17732a7a1fbad8bbd977861d8167b0caee30ad7d66fd155147b2e79a86e990722dc476f7f0b7b635f697e47635a359a30aeab5b2e79af374c83916e83b7bf85bdb1afb4bf23b1ad1acd385f75ad973cd4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All 256 byte values 0x00..0xFF - every symbol arrives through the NYT escape",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "expected": {"t":"bytes","v":"00010000000080500c02602c03203804702701540b806303501c40f0087823c09682780a582b40b482f00c3832c0d283680e183a40f083e0107c21f045d08f8126c25d04d909f0145c29b05550ae8164c2d905d10be0183c317064d0cd81a2c35506c90dd01c1c39307450ec81e0c3d107c10fc0207e20fc217a21f8227622f4237223f0246e24ec256a25e8266626e4276227e0285e28dc295a29d82a562ad42b522bd02c4e2ccc2d4a2dc82e462ec42f422fc0303e30bc313a31b8323632b4333233b0342e34ac352a35a8362636a4372237a0381e389c391a39983a163a943b123b903c0e3c8c3d0a3d883e063e843f023f80407f207f105f483f8427b217d10de487f04477227b115d48be84673237911dc48fe0486f2477125b493d84a6b257512da497d04c672673135949bc84e63277113d849fc0505f286f14574a3b8525b296d14d64a7b054572a6b15554aba856532b6915d44afa0584f2c6716534b3985a4b2d6516d24b7905c472e6317514bb885e432f6117d04bf80603f305f184f4c378623b315d18ce4c7706437325b194d4cb686633335919cc4cf60682f34571a4b4d3586a2b35551aca4d7506c2736531b494db486e2337511bc84df40701f384f1c474e338721b394d1cc64e73074173a4b1d454eb2876133b491dc44ef20780f3c471e434f3187a0b3d451ec24f7107c073e431f414fb087e033f411fc04ff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

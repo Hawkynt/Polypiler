@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/sedol-checksum.js",
+ "algorithms": [
+  {
+   "name": "SEDOL",
+   "vectors": [
+    {
+     "text": "BAE Systems (0263494)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"303236333439"},
+     "expected": {"t":"bytes","v":"04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SEDOL 406566 (4065663)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"343036353636"},
+     "expected": {"t":"bytes","v":"03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SEDOL B0YBKJ (B0YBKJ7)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"423059424b4a"},
+     "expected": {"t":"bytes","v":"07"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

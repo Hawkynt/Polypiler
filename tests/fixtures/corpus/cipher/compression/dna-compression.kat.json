@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/dna-compression.js",
+ "algorithms": [
+  {
+   "name": "DNA Sequence Compression",
+   "vectors": [
+    {
+     "text": "Empty DNA sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Basic nucleotides - 2-bit encoding",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41434754"},
+     "expected": {"t":"bytes","v":"04000000000000001b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple nucleotide sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414347544743"},
+     "expected": {"t":"bytes","v":"06000000000000001b90"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ambiguity code N escaped through the exception list",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414347544e414347544e"},
+     "expected": {"t":"bytes","v":"0a00000002000000040000004e090000004e1b06c0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

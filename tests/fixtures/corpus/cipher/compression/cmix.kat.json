@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/cmix.js",
+ "algorithms": [
+  {
+   "name": "CMIX",
+   "vectors": [
+    {
+     "text": "Empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"010000004200"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed alphanumeric data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"2b00000055026179b699cbe56dbe2ed975085e3e15ccc33aea00a6adeb36fabd5bf52ab21b4a40"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive text compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263616263616263616263616263616263"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"1200000061c5b7f7f84680"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

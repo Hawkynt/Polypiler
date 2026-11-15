@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/balz.js",
+ "algorithms": [
+  {
+   "name": "BALZ",
+   "vectors": [
+    {
+     "text": "Empty input - header only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte literal",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"0100000041fffffe"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Run of one byte - literal then a single ROLZ match",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141414141414141"},
+     "expected": {"t":"bytes","v":"0a0000004121f0008678"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424142"},
+     "expected": {"t":"bytes","v":"04000000412253673fb46e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeating sequence - reduced-offset advantage",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243414243414243"},
+     "expected": {"t":"bytes","v":"0c00000041225448f8f9794f3f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Natural text",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"0b0000004835ebd7577ab768ca98283d3b86f2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}
