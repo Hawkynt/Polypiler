@@ -19,11 +19,15 @@ public sealed class IrExceptionClassTests {
 
   private static readonly IrTrap[] _traps = Enum.GetValues<IrTrap>();
 
+  /// <summary>The .NET class of a library class: in <c>System</c>, <c>KeyNotFoundException</c> in <c>System.Collections.Generic</c>.</summary>
+  private static Type HostType(IrClassType type)
+    => typeof(Exception).Assembly.GetType((type == IrExceptionClass.KeyNotFoundException ? "System.Collections.Generic." : "System.") + type.Name)!;
+
   /// <summary>The classes stand as they stand in .NET, <c>SystemException</c> left out.</summary>
   [Test]
   public void Hierarchy_IsThatOfDotNet() {
     foreach (var type in IrExceptionClass.All) {
-      var host = typeof(Exception).Assembly.GetType("System." + type.Name)!;
+      var host = HostType(type);
       Assert.That(host, Is.Not.Null, type.Name);
       // SystemException, which stands between in .NET, is no class of the IR: the nearest ancestor the IR has is the base.
       var ancestor = host.BaseType;
@@ -89,7 +93,7 @@ public sealed class IrExceptionClassTests {
   [Test]
   public void DefaultMessage_IsThatOfDotNet() {
     foreach (var type in IrExceptionClass.All.Where(type => type.Name is not "ArgumentOutOfRangeException")) {
-      var host = (Exception)Activator.CreateInstance(typeof(Exception).Assembly.GetType("System." + type.Name)!)!;
+      var host = (Exception)Activator.CreateInstance(HostType(type))!;
       Assert.That(IrExceptionClass.DefaultMessage(type), Is.EqualTo(host.Message), type.Name);
     }
 
@@ -149,7 +153,7 @@ public sealed class IrExceptionClassTests {
   [Test]
   public void EveryTrap_HasItsRowInTheReference() {
     var text = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "docs", "reference", "exceptions.md"));
-    var rows = Regex.Matches(text, @"^\| `(?<class>\w+)` \(`(?<trap>\w+)`\) \| `System\.(?<csharp>\w+)` \| [^|]+ \| `(?<js>\w+)`", RegexOptions.Multiline)
+    var rows = Regex.Matches(text, @"^\| `(?<class>\w+)` \(`(?<trap>\w+)`\) \| `System\.(?:Collections\.Generic\.)?(?<csharp>\w+)` \| [^|]+ \| `(?<js>\w+)`", RegexOptions.Multiline)
       .ToDictionary(match => match.Groups["trap"].Value, match => (Class: match.Groups["class"].Value, CSharp: match.Groups["csharp"].Value, JavaScript: match.Groups["js"].Value));
     foreach (var trap in _traps) {
       Assert.That(rows, Contains.Key(trap.ToString()), $"the trap {trap} has no row");

@@ -190,6 +190,9 @@ public static class IrGenerics {
       : type.Element is { } element ? type.Kind switch {
         IrTypeKind.Span => IrType.Span(Type(element)),
         IrTypeKind.ReadOnlySpan => IrType.ReadOnlySpan(Type(element)),
+        IrTypeKind.List => IrType.List(Type(element)),
+        IrTypeKind.Map => IrType.Map(Type(type.Key!), Type(element), type.Order),
+        IrTypeKind.Set => IrType.Set(Type(element), type.Order),
         _ => IrType.Array(Type(element))
       } : type;
 
@@ -305,6 +308,8 @@ public static class IrGenerics {
       IrFor loop => new IrFor(this.Expression(loop.Condition), this.Block(loop.Body), this.Block(loop.Step)),
       IrSwitch choice => new IrSwitch(this.Expression(choice.Value), [.. choice.Sections.Select(section => section with { Body = this.Block(section.Body) })]),
       IrReturn result => new IrReturn(result.Value is null ? null : this.Expression(result.Value)),
+      IrForEachCollection loop => new IrForEachCollection(this.Expression(loop.Collection), loop.Mode,
+        loop.Element is null ? null : this.Local(loop.Element), loop.Value is null ? null : this.Local(loop.Value), this.Block(loop.Body)),
       _ => statement
     };
 
@@ -338,6 +343,7 @@ public static class IrGenerics {
         IrAsCast cast => new IrAsCast(type(cast.Type), this.Expression(cast.Value)),
         IrGenericEquals equality => new IrGenericEquals(this.Expression(equality.Left), this.Expression(equality.Right)),
         IrGenericCompare order => new IrGenericCompare(this.Expression(order.Left), this.Expression(order.Right)),
+        IrCollection operation => new IrCollection(operation.Op, type(operation.Type), this.Expressions(operation.Arguments)),
         _ => expression
       };
       return special(expression) is { } replaced ? replaced : rebuilt;

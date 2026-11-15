@@ -140,6 +140,7 @@ public static class FloatLegalization {
       IrTry attempt => new IrTry(this.Block(attempt.Body),
         [.. attempt.Catches.Select(clause => clause with { Filter = clause.Filter is null ? null : this.Expression(clause.Filter), Body = this.Block(clause.Body) })],
         attempt.Finally is null ? null : this.Block(attempt.Finally)),
+      IrForEachCollection loop => loop with { Collection = this.Expression(loop.Collection), Body = this.Block(loop.Body) },
       _ => statement
     };
 
@@ -199,6 +200,8 @@ public static class FloatLegalization {
           return bind with { Value = this.Expression(bind.Value) };
         case IrThrowExpression thrown:
           return thrown with { Exception = this.Expression(thrown.Exception) };
+        case IrCollection operation:
+          return operation with { Arguments = [.. operation.Arguments.Select(this.Expression)] };
         case IrCall call:
           var arguments = call.Arguments.Select(this.Expression).ToList();
           return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);

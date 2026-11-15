@@ -54,6 +54,7 @@ public static class IrShape {
       (IrBind a, IrBind b) => a.Local == b.Local && Same(a.Value, b.Value),
       (IrGenericEquals a, IrGenericEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       (IrGenericCompare a, IrGenericCompare b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
+      (IrCollection a, IrCollection b) => a.Op == b.Op && a.Type == b.Type && All(a.Arguments, b.Arguments),
       _ => false
     };
   }
@@ -94,6 +95,7 @@ public static class IrShape {
     IrThrowExpression thrown => [thrown.Exception],
     IrGenericEquals equality => [equality.Left, equality.Right],
     IrGenericCompare order => [order.Left, order.Right],
+    IrCollection operation => operation.Arguments,
     _ => []
   };
 
@@ -217,6 +219,7 @@ public static class IrShape {
     IrThrowExpression thrown => thrown with { Exception = operands[0] },
     IrGenericEquals => new IrGenericEquals(operands[0], operands[1]),
     IrGenericCompare => new IrGenericCompare(operands[0], operands[1]),
+    IrCollection operation => operation with { Arguments = operands },
     _ => expression
   };
 
