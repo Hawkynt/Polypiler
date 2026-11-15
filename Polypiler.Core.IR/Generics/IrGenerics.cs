@@ -181,7 +181,10 @@ public static class IrGenerics {
     if (arguments.Count != template.Parameters.Count)
       throw new ArgumentException($"The template '{template.Function.Name}' takes {template.Parameters.Count} type arguments, not {arguments.Count}.", nameof(arguments));
 
-    var map = template.Parameters.Zip(arguments).ToDictionary(pair => pair.First.Declaration!, pair => pair.Second, ReferenceEqualityComparer.Instance);
+    var map = new Dictionary<IrTypeDeclaration, IrType>(ReferenceEqualityComparer.Instance);
+    foreach (var (parameter, argument) in template.Parameters.Zip(arguments))
+      map[parameter.Declaration!] = argument;
+
     var functions = module.Functions.ToDictionary(function => function.Name);
     IrType Type(IrType type) => type.Declaration is { } declared && map.TryGetValue(declared, out var argument) ? argument
       : type.Element is { } element ? type.Kind switch {
