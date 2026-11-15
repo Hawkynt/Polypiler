@@ -11,6 +11,7 @@ namespace Polypiler.Tests.Acceptance.Infra;
 /// on a platform the toolchain is not used on, and no outcome at all at the pinned version.
 /// </summary>
 [TestFixture, Category("EndToEnd")]
+[Layer("core")]
 public sealed class RequiresToolchainAttributeTests {
 
   private static readonly string _fixtures = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "infra", "toolchains");

@@ -1,4 +1,5 @@
 using System;
+using Polypiler.Core.Verification.Images;
 
 namespace Polypiler.Core.Verification.Oracles;
 
@@ -13,6 +14,9 @@ public sealed record TestVector(string Name, byte[] Input, byte[]? Expected) {
 
   /// <summary>The input bytes.</summary>
   public byte[] Input { get; } = Input ?? throw new ArgumentNullException(nameof(Input));
+
+  /// <summary>The trap the call must end in, in place of an expected output; <see langword="null"/> unless the vector file states one.</summary>
+  public TrapClass? ExpectedTrap { get; init; }
 
 }
 

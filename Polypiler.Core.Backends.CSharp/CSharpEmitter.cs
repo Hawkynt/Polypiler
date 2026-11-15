@@ -38,6 +38,15 @@ public static partial class CSharpEmitter {
   [Diagnostic]
   public static readonly DiagnosticDescriptor UnsupportedDescriptor = new(Unsupported, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "csharp.backend.ir");
 
+  /// <summary>
+  /// Every helper a class can carry with the default capability table, by its symbol
+  /// (<see cref="CSharpHelper.Symbol"/>), with its licence and the source it is copied from. A
+  /// portable floating-point implementation a class carries is looked up in <see cref="FloatOperationSources.Origin"/>.
+  /// </summary>
+  public static IReadOnlyDictionary<string, (string Licence, string Origin)> HelperOrigins { get; }
+    = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct()
+      .ToDictionary(helper => helper.Symbol(helper.Name), helper => (helper.Licence, helper.Origin), StringComparer.Ordinal);
+
   /// <summary>The base library by its full name, which no name of the module can hide.</summary>
   private const string Base = "global::System.";
 
@@ -280,9 +289,23 @@ public static partial class CSharpEmitter {
   /// <returns>The generated file and what the passes changed.</returns>
   /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
   public static TargetEmission Emit(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace, CSharpCapabilities? capabilities, TargetPassOptions passes) {
-    var (unit, applications) = Build(module, profile, mode, @namespace, capabilities, passes);
-    var name = CSharpTargetPasses.ModuleClass(unit)!.Name.TrimStart('@');
-    return new([new GeneratedFile(name + ".cs", CSharpPrinter.Print(unit, profile, capabilities))], applications);
+    var ((unit, applications), helpers) = Built(module, profile, mode, @namespace, capabilities, passes);
+    var type = CSharpTargetPasses.ModuleClass(unit)!;
+    var name = type.Name.TrimStart('@');
+    return new([new GeneratedFile(name + ".cs", CSharpPrinter.Print(unit, profile, capabilities)) { Helpers = Measured(type, helpers, profile) }], applications);
+  }
+
+  /// <summary>
+  /// The helpers of a class, measured in its members, each printed on its own without the lines in
+  /// front of it: the same text whatever namespace indents the class. A helper the target passes
+  /// inlined everywhere and removed is still listed, as code of it is in the file, with no text of its own.
+  /// </summary>
+  private static IReadOnlyList<EmittedHelper> Measured(CsTypeDeclaration type, IReadOnlyList<HelperText> helpers, CSharpProfile profile) {
+    var members = (type.Members ?? []).Select(member => (Name: member is CsMethod method ? method.Name.TrimStart('@') : null, Text: CSharpPrinter.Print(member with { Leading = CsTrivia.None }, profile))).ToList();
+    var texts = members.Where(member => member.Name is not null).GroupBy(member => member.Name!).ToDictionary(group => group.Key, group => group.Select(member => member.Text).ToList());
+    // Overloads share their name: each takes the text of the method its symbol names.
+    string Text(HelperText helper) => texts.GetValueOrDefault(helper.Name)?.FirstOrDefault(text => text.Contains(helper.Symbol[helper.Name.Length..], StringComparison.Ordinal) || !helper.Symbol.Contains('(')) ?? "";
+    return EmittedHelper.Measure([.. helpers.Select(helper => helper with { Text = Text(helper) })], string.Concat(members.Select(member => member.Text)));
   }
 
   /// <summary>
@@ -297,7 +320,11 @@ public static partial class CSharpEmitter {
   /// <param name="passes">Which target passes run.</param>
   /// <returns>The tree and what the passes changed.</returns>
   /// <exception cref="ArgumentException">The module cannot be emitted, or the namespace is not a name.</exception>
-  public static TargetPipelineResult<CsCompilationUnit> Build(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace, CSharpCapabilities? capabilities, TargetPassOptions passes) {
+  public static TargetPipelineResult<CsCompilationUnit> Build(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace, CSharpCapabilities? capabilities, TargetPassOptions passes)
+    => Built(module, profile, mode, @namespace, capabilities, passes).Result;
+
+  /// <summary>What <see cref="Build"/> gives, with the helpers the class carried before the target passes, their texts still empty.</summary>
+  private static (TargetPipelineResult<CsCompilationUnit> Result, IReadOnlyList<HelperText> Helpers) Built(IrModule module, CSharpProfile profile, FloatMode mode, string? @namespace, CSharpCapabilities? capabilities, TargetPassOptions passes) {
     ArgumentNullException.ThrowIfNull(passes);
     if (@namespace is not null && !IsNamespace(@namespace))
       throw new ArgumentException($"'{@namespace}' is not a namespace name.", nameof(@namespace));
@@ -311,7 +338,8 @@ public static partial class CSharpEmitter {
     var draft = new Writer(module, profile, table, [], mode);
     draft.Module(@namespace);
     var writer = new Writer(module, profile, table, draft.Helpers, mode);
-    return CSharpTargetPasses.Pipeline.Run(writer.Module(@namespace), profile, passes);
+    var unit = writer.Module(@namespace);
+    return (CSharpTargetPasses.Pipeline.Run(unit, profile, passes), writer.Emitted);
   }
 
   private static void Known(IrType type, List<string> unknown) {
@@ -592,6 +620,9 @@ public static partial class CSharpEmitter {
     /// <summary>The helpers the class has called so far.</summary>
     public IReadOnlyCollection<CSharpHelper> Helpers => this._used;
 
+    /// <summary>The helpers and portable implementations <see cref="Module"/> put into the class, their texts still empty; none before it ran.</summary>
+    public IReadOnlyList<HelperText> Emitted { get; private set; } = [];
+
     private bool Has(CSharpFeature feature) => this._table.Has(feature, this._profile);
 
     /// <summary>The name of a helper in this class; calling it is what makes the class declare it.</summary>
@@ -657,16 +688,26 @@ public static partial class CSharpEmitter {
       foreach (var function in this._module.Functions)
         members.Add(this.Function(function));
 
+      // A portable implementation the legalization copied in is a helper: code of Polypiler's own the class carries.
+      var emitted = this._module.Implementations.Select(pair => FloatOperationSources.Helper(this._members[pair.Function].TrimStart('@'), pair.Implementation, "")).ToList();
+
       // The table's order is the order of the helpers, whatever order the class calls them in.
-      foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains))
-        members.Add(HelperDeclaration(helper) with { Name = this._helpers.GetValueOrDefault(helper.Name, helper.Name), Leading = CsTrivia.Blank, IsHelper = true });
+      foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains)) {
+        var called = this._helpers.GetValueOrDefault(helper.Name, helper.Name);
+        members.Add(HelperDeclaration(helper) with { Name = called, Leading = CsTrivia.Blank, IsHelper = true });
+        emitted.Add(new(helper.Symbol(called), called, helper.Licence, helper.Origin, ""));
+      }
+
+      this.Emitted = emitted;
 
       var types = this.Structs();
       types.Add(new CsTypeDeclaration(["public", "static"], "class", this._class, null, [], [.. members.Select(member => member with { Leading = CsTrivia.Blank })]));
       List<string> header = [
         $"{this.ClassName}: generated by polypiler. Change the source, not this file.",
         $"Profile: {this._profile}.",
-        .. FloatManifest.Lines(this._module, this._mode, NativeAccuracy.DotNet)
+        .. EmittedHelper.HeaderLine(emitted.Select(helper => helper.Licence)) is { } licences ? [licences] : (string[])[],
+        .. FloatManifest.Lines(this._module, this._mode, NativeAccuracy.DotNet),
+        .. FloatOperationSources.Notices(this._module.Implementations.Select(pair => pair.Implementation))
       ];
       if (@namespace is null)
         return new CsCompilationUnit(header, types);

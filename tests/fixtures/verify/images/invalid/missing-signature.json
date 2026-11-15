@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "fixture": "verify.images.invalid.missing-signature",
+  "provenance": {
+    "kind": "published",
+    "source": "backlog/infra/VER-IMAGES.md",
+    "detail": "an invalid vector file: missing-signature",
+    "generatedBy": "hand"
+  },
+  "export": "f",
+  "vectors": [
+    {
+      "name": "any",
+      "input": {
+        "hex": "07000000"
+      },
+      "expected": {
+        "hex": "07"
+      }
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Command-line foundation
 
   The scenarios register the test-only commands "echo" and "demand" beside nothing else and run

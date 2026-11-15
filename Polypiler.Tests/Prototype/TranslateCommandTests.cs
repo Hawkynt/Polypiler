@@ -7,6 +7,7 @@ using System.Text.Json;
 using NUnit.Framework;
 using Polypiler.Cli;
 using Polypiler.Core;
+using Polypiler.Core.Verification.Manifests;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 
@@ -52,7 +53,7 @@ public sealed class TranslateCommandTests {
     Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
     Assert.That(output.Trim(), Is.EqualTo(path));
     Assert.That(File.ReadAllText(path), Does.Contain("export function Compute(data) {"));
-    Assert.That(Directory.GetFiles(this._out), Is.EqualTo(new[] { path }));
+    Assert.That(Directory.GetFiles(this._out), Is.EquivalentTo(new[] { path, Path.Combine(this._out, Manifest.FileName) }));
   }
 
   /// <summary>The options may stand before the file and in any order; an existing directory is reused.</summary>

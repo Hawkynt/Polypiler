@@ -5,9 +5,12 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Polypiler.Cli;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.IR;
+using Polypiler.Core.Verification.Manifests;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Backends.Testing;
@@ -30,7 +33,9 @@ internal sealed record GoldenVariant(string Target, string Name, string[] Option
 /// (#1336). One file per source and target holds every variant: a line
 /// <c>#### &lt;variant&gt; &lt;file&gt; &lt;length&gt;</c> followed by exactly that many characters of
 /// the generated file, or <c>#### &lt;variant&gt; exit &lt;code&gt;</c> for a variant the translation
-/// refuses. <see cref="GoldenOutputRecorder"/> writes them.
+/// refuses. The manifest beside the files, the header line naming the licence of the helpers and the
+/// notices of their third-party origins are left out of the comparison: they came later than the
+/// recording. <see cref="GoldenOutputRecorder"/> writes them.
 /// </summary>
 internal static class GoldenOutputs {
 
@@ -85,6 +90,18 @@ internal static class GoldenOutputs {
        ])
   ];
 
+  /// <summary>
+  /// The representative slice of the full matrix: every source in one variant of each target, the
+  /// variants taken in turn along <see cref="All"/>, so that every source and, as there are more
+  /// sources than variants, every variant is in it once at least. The per-OS test jobs run it; the
+  /// full matrix of every source in every variant is the <c>Sweep</c> category, run once.
+  /// </summary>
+  public static IReadOnlyList<(string Source, GoldenVariant Variant)> Slice { get; } = [
+    .. from target in Targets
+       from item in All.Select((source, index) => (source, index))
+       select (item.source, Variants(target)[item.index % Variants(target).Count])
+  ];
+
   /// <summary>The source language of a source file, by its extension.</summary>
   public static string LanguageOf(string source) => source.EndsWith(".cs", StringComparison.Ordinal) ? "csharp" : "javascript";
 
@@ -109,13 +126,33 @@ internal static class GoldenOutputs {
     if (exitCode != 0)
       return section.Append(Marker).Append(variant.Name).Append(" exit ").Append(exitCode.ToString(CultureInfo.InvariantCulture)).Append('\n').ToString();
 
-    foreach (var file in Directory.GetFiles(output).Order(StringComparer.Ordinal)) {
-      var content = File.ReadAllText(file);
+    foreach (var file in Directory.GetFiles(output).Where(file => Path.GetFileName(file) != Manifest.FileName).Order(StringComparer.Ordinal)) {
+      var content = WithoutNotices(WithoutHelperLine(File.ReadAllText(file)));
       section.Append(Marker).Append(variant.Name).Append(' ').Append(Path.GetFileName(file)).Append(' ')
         .Append(content.Length.ToString(CultureInfo.InvariantCulture)).Append('\n').Append(content);
     }
 
     return section.ToString();
+  }
+
+  /// <summary>
+  /// A generated file without the header line that names the licence of its helpers, which the
+  /// emitters write since #1351, after the golden files were recorded; the line itself is checked
+  /// where the helpers are (TranslateLicenceTests).
+  /// </summary>
+  private static string WithoutHelperLine(string content) => _helperLine.Replace(content, "", 1);
+
+  private static readonly Regex _helperLine = new("^// Helpers added by polypiler: [^\n]*\n", RegexOptions.CultureInvariant | RegexOptions.Multiline);
+
+  /// <summary>
+  /// A generated file without the notice of FreeBSD's <c>s_fmaf.c</c> in its header, which the
+  /// emitters write with the float fused multiply-add since it is converted from there, after the
+  /// golden files were recorded; the notice itself is checked by TranslateLicenceTests.
+  /// </summary>
+  private static string WithoutNotices(string content) {
+    var notice = string.Concat(FloatOperationSources.Notices([nameof(FloatOperations.FusedMultiplyAddF)]).Select(line => ("// " + line).TrimEnd() + "\n"));
+    var index = content.IndexOf(notice, StringComparison.Ordinal);
+    return index < 0 ? content : content.Remove(index, notice.Length);
   }
 
   /// <summary>The recorded section of every variant of a source and a target, by the name of the variant.</summary>

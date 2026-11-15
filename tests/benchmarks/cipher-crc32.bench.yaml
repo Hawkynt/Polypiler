@@ -1,0 +1,22 @@
+# A P0 source-language baseline of ADR 0006 (ADR-PERF-BUDGETS): CRC-32-IEEE of Cipher, pinned upstream
+# code under tests/fixtures/bench/cipher, over 1 KiB, 64 KiB and 1 MiB in node. The expected
+# checksums come from docs/adr/evidence/0006/oracle.py, which computes them without Cipher.
+id: cipher-crc32
+description: CRC-32-IEEE of Cipher over a deterministic message of 1 KiB, 64 KiB and 1 MiB in node.
+kind: process
+toolchain: node
+sources:
+  - tests/fixtures/bench/cipher-checksum.js
+  - tests/fixtures/bench/cipher/AlgorithmFramework.js
+  - tests/fixtures/bench/cipher/OpCodes.js
+  - tests/fixtures/bench/cipher/algorithms/checksum/crc.js
+run: [tests/fixtures/bench/cipher-checksum.js, crc, CRC-32-IEEE]
+expectStdout: "ok"
+variants:
+  - { name: 1kib, args: ["1024", "aebc9398"] }
+  - { name: 64kib, args: ["65536", "c3ff93ee"] }
+  - { name: 1mib, args: ["1048576", "5e9af322"] }
+warmup: 1
+runs: 30
+sizes:
+  source: [tests/fixtures/bench/cipher/algorithms/checksum/crc.js]

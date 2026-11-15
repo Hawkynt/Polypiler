@@ -92,7 +92,7 @@ codes:
     rule: adr-0004.grammar
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: "standard error of polypiler, alone, for a command line the grammar of ADR 0004 refuses (unknown option, option without its value, flag given a value, option given more than once, value outside its set, empty list element, missing required option, missing or surplus operand, no command), and of polypiler translate for a language it does not know or an option that does not apply to the languages chosen; standard error of polypiler-tooling toolchains, diagnostics and fuzz as '<command>: error PLY0003: <reason>', for fuzz also an unknown target and a corpus directory that is missing or empty"
+    surfaces: "standard error of polypiler, alone, for a command line the grammar of ADR 0004 refuses (unknown option, option without its value, flag given a value, option given more than once, value outside its set, empty list element, missing required option, missing or surplus operand, no command), and of polypiler translate for a language it does not know or an option that does not apply to the languages chosen; standard error of polypiler-tooling toolchains, diagnostics and fuzz as '<command>: error PLY0003: <reason>', for fuzz also an unknown target and a corpus directory that is missing or empty; standard error of polypiler-tooling rebuild check for '--runs' below 2 or not a number, a missing '--output' or '-- <toolchain key>', an '--output' that is absolute or contains '..', and an '--input' that does not exist, and of rebuild compare for a directory that does not exist"
   - code: PLY0004
     severity: error
     exit: EnvironmentError
@@ -101,7 +101,7 @@ codes:
     rule: io.read
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: "standard error of polypiler-tooling toolchains validate and probe; standard error of polypiler as \"input '<path>' does not exist or is not readable\" for an input of the command line"
+    surfaces: "standard error of polypiler-tooling toolchains validate and probe; standard error of polypiler as \"input '<path>' does not exist or is not readable\" for an input of the command line; standard error of polypiler-tooling ci as \"'<path>' cannot be read: <reason>\" for a workflow, category file, test listing, lock, changed-file list or test build it needs and cannot read"
   - code: PLY0005
     severity: error
     exit: EnvironmentError
@@ -268,7 +268,7 @@ codes:
     rule: licences.policy
     area: infrastructure
     owner: INFRA-LICENSES
-    surfaces: "standard error of polypiler-tooling licenses scan and licenses inventory; also ''<path>': declared licence '<declared>' disagrees with detected '<family>'' and ''<path>' is a restricted asset and may not be redistributed'"
+    surfaces: "standard error of polypiler-tooling licenses scan and licenses inventory; also ''<path>': declared licence '<declared>' disagrees with detected '<family>'' and ''<path>' is a restricted asset and may not be redistributed'; for a generated package ''<dir>': output licence '<stated>' understates the effective licence '<effective>' (because of <origin>)'' and ''<origin>': licence '<expression>' is reference-only|denied and cannot be part of an output''; in project mode ''<path>': GPL-derived code may not be merged into the LGPL-licensed compiler projects; keep '<origin>' as a rung 2 reference''"
   - code: PLY0025
     severity: error
     exit: EnvironmentError
@@ -286,7 +286,7 @@ codes:
     rule: corpus.manifest
     area: infrastructure
     owner: INFRA-CORPUS
-    surfaces: "standard error of polypiler-tooling corpus import, verify and discover; reasons include a schema violation of corpus.yaml or corpus.lock.json, a fixture naming an undeclared repository, a duplicated fixture ID, an absolute path or one containing '..', a file under corpus/upstream that is not in the lock, a file not yet in the lock and an unknown fixture or repository asked for; also standard error of polypiler-tooling licenses scan and licenses inventory with the reasons 'licence policy: <detail>' (tooling/licensing/policy.yaml or its DECISIONS.md), 'licence declarations: <detail>' (licences.yaml of a scanned tree) and 'licence inventory: <detail>' (tooling/licensing/third-party.yaml)"
+    surfaces: "standard error of polypiler-tooling corpus import, verify and discover; reasons include a schema violation of corpus.yaml or corpus.lock.json, a fixture naming an undeclared repository, a duplicated fixture ID, an absolute path or one containing '..', a file under corpus/upstream that is not in the lock, a file not yet in the lock and an unknown fixture or repository asked for; also standard error of polypiler-tooling licenses scan and licenses inventory with the reasons 'licence policy: <detail>' (tooling/licensing/policy.yaml or its DECISIONS.md), 'licence declarations: <detail>' (licences.yaml of a scanned tree) and 'licence inventory: <detail>' (tooling/licensing/third-party.yaml); also standard error of polypiler-tooling rebuild check and rebuild compare with the reason 'rebuild ignore: <detail>' for a tooling/ci/rebuild-ignore.yaml that is not schema 1, has an unknown key, an entry without its reason or a manifest pointer that is not an RFC 6901 pointer below the root"
   - code: PLY0027
     severity: error
     exit: EnvironmentError
@@ -313,7 +313,7 @@ codes:
     rule: licences.detection
     area: infrastructure
     owner: INFRA-LICENSES
-    surfaces: "standard error of polypiler-tooling licenses scan, for a file no rule yields a licence for, a header expression that does not parse, an unknown licence text, a shared text no declaration selects a variant of, and a Vendored/<library>/ folder without a licence file; of licenses inventory for a notice file or package reference tooling/licensing/third-party.yaml does not list"
+    surfaces: "standard error of polypiler-tooling licenses scan, for a file no rule yields a licence for, a header expression that does not parse, an unknown licence text, a shared text no declaration selects a variant of, and a Vendored/<library>/ folder without a licence file; of licenses inventory for a notice file or package reference tooling/licensing/third-party.yaml does not list; of a distribution scan for a manifest input or helper whose licence cannot be determined, or a manifest that lists neither; of a project scan for a provenance entry that lacks 'Origin:' or 'Licence:'"
   - code: PLY0030
     severity: error
     exit: TargetBuildFailure
@@ -364,9 +364,10 @@ codes:
     exit: EnvironmentError
     title: rebuild differs
     message: "rebuild not deterministic: '<path>' differs at byte <offset>"
+    rule: rebuild.determinism
     area: infrastructure
     owner: INFRA-REBUILD
-    reserved: true
+    surfaces: "standard error of polypiler-tooling rebuild check and rebuild compare, one per difference between run 1 and a later run; a file that only one run wrote reads 'rebuild not deterministic: '<path>' exists only in run <n>'"
   - code: PLY0037
     severity: error
     exit: LicenseBlocker
@@ -487,18 +488,20 @@ codes:
     severity: error
     exit: EnvironmentError
     title: manifest invalid
-    message: "'<path>' is not a valid manifest: <reason>"
+    message: "manifest '<path>' is invalid: <JSON pointer>: <reason>"
+    rule: manifest.schema
     area: infrastructure
     owner: VER-MANIFEST
-    reserved: true
+    surfaces: "the diagnostics of ManifestReader and ManifestValidator for a polypiler.manifest.json that is not JSON, fails spec/schemas/manifest.schema.json, has an unsupported schemaVersion or a state lower than its evidence supports; one per schema error, at its JSON pointer"
   - code: PLY0054
     severity: error
     exit: EnvironmentError
-    title: manifest file missing or changed
-    message: "'<path>' listed in the manifest is <missing|changed>"
+    title: manifest state unsupported
+    message: "manifest '<path>' claims '<state>' but the evidence supports only '<derived>': <missing>"
+    rule: manifest.state
     area: infrastructure
     owner: VER-MANIFEST
-    reserved: true
+    surfaces: "the diagnostics of ManifestReader and ManifestValidator for a polypiler.manifest.json whose state is higher than its build, execution and verification records support"
   - code: PLY0055
     severity: warning
     title: proof budget exhausted
@@ -526,10 +529,11 @@ codes:
     severity: error
     exit: EnvironmentError
     title: gate record invalid
-    message: "<reason>"
+    message: "gate record '<file>': fixture '<fixture>' claims '<state>': <reason>"
+    rule: gates.record
     area: infrastructure
     owner: VER-GATES
-    reserved: true
+    surfaces: "the diagnostics of GateStore.Load, one per problem of a rejected gate record: evidence file missing, evidence hash differs, evidence kind '<k>' not accepted for this state, manifest state '<m>' is below '<required>', unknown state '<text>'; a record that is no JSON, fails spec/schemas/gate-record.schema.json or is named after another pair reads 'gate record '<file>': <reason>'"
   - code: PLY0059
     severity: error
     exit: SemanticMismatch
@@ -542,10 +546,11 @@ codes:
     severity: error
     exit: EnvironmentError
     title: evidence invalid
-    message: "<reason>"
+    message: "evidence bundle '<directory>' <reason>"
+    rule: evidence.complete
     area: infrastructure
     owner: VER-EVIDENCE
-    reserved: true
+    surfaces: "the diagnostics of EvidenceValidator, and the failure of a BDD scenario whose bundle under artifacts/evidence/ it rejects; the reason reads 'is incomplete: missing <item>[, <item>...]' with the items named as in PRD §6.6, 'contradicts its outcome: <n> vector(s) failed' for a passed @translation scenario with a failed vector, or 'is invalid: <JSON pointer>: <reason>' for an evidence.json that breaks spec/schemas/evidence.schema.json"
   - code: PLY0061
     severity: error
     exit: EnvironmentError
@@ -571,6 +576,15 @@ codes:
     area: infrastructure
     owner: VER-ORACLE
     surfaces: "the diagnostics of a verification of a fixture without an oracle; the registry refuses an oracle whose producer is polypiler or whose reference file lies in a directory with polypiler.manifest.json"
+  - code: PLY0064
+    severity: error
+    exit: UsageError
+    title: value image invalid
+    message: "<reason>"
+    rule: verification.images
+    area: infrastructure
+    owner: VER-IMAGES
+    surfaces: "loading a vector file whose signature names an unknown image type, or whose input or expected image is truncated, has bytes left over or is not canonical, as '<file>: signature: unknown image type 'int'' or '<file>: vector '<name>': input image has 1 byte(s) left over after '<parameter>''; encoding a value that does not fit its image type, as 'value 256 does not fit u8'"
   - code: PLY0070
     severity: error
     exit: EnvironmentError
@@ -616,6 +630,24 @@ codes:
     area: infrastructure
     owner: INFRA-BDD
     surfaces: "the assertion message of the feature-binding tests, for a step without a binding or with several, a feature without a scenario, a file that does not parse and a feature path that does not follow tests/features/<area>/<id>.feature"
+  - code: PLY0075
+    severity: error
+    exit: EnvironmentError
+    title: CI layer inconsistent
+    message: "<reason>"
+    rule: ci.layer
+    area: infrastructure
+    owner: INFRA-CI-CORE
+    surfaces: "standard error of polypiler-tooling ci audit, matrix and env, for a layer file of tooling/ci/layers that is not valid ('<file>: <reason>'), no layer file at all, a layer without its job layer-<name> in .github/workflows/ci.yml or a job layer-<name> without its layer file, a toolchain the lock does not hold, an entry of tooling/ci/categories.yaml that is not valid, an unknown layer of ci env, and a decision record of docs/adr that breaks the numbering rule: a number used twice, a number outside the block of its area, a record missing from docs/adr/README.md or a row of it without a file"
+  - code: PLY0076
+    severity: error
+    exit: EnvironmentError
+    title: test not run by any layer
+    message: "<reason>"
+    rule: ci.unrun
+    area: infrastructure
+    owner: INFRA-CI-CORE
+    surfaces: "standard error of polypiler-tooling ci audit, for a category of tooling/ci/categories.yaml whose step does not run it ('category '<name>' is not run by any step: <reason>') or that has no tests and is not pending, and for a test of the acceptance project without exactly one Layer category, in a layer without a layer file, or requiring a toolchain its layer does not provide"
   - code: PLY0077
     severity: error
     exit: EnvironmentError

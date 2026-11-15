@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Golden vectors are read-only and independently sourced
 
   Scenario: The first vector file carries reference-run provenance and matches the reference

@@ -19,6 +19,8 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </para>
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
+[Category("Prototype")]
 public sealed class CSharpToJavaScriptTests {
 
   private string _directory = "";

@@ -129,6 +129,26 @@ internal static class Toolchain {
   /// <summary>Stands for the output directory in a translation kept for the run.</summary>
   private const string OutputMark = "\u0001output\u0001";
 
+  /// <summary>Stands for the path of the source relative to the output directory, which the manifest of a kept translation records.</summary>
+  private const string ManifestInputMark = "\u0001manifest-input\u0001";
+
+  /// <summary>
+  /// The manifest of a translation with the path of its input, relative to the output directory,
+  /// replaced by <paramref name="to"/> where it stands for <paramref name="from"/>: as a JSON string of
+  /// its own and in the recorded command line.
+  /// </summary>
+  private static byte[] Relocated(byte[] manifest, string from, string to) {
+    static string Quoted(string path) => global::Polypiler.Cli.CliContext.Invocation([path])["polypiler ".Length..];
+    // The command line first: the mark, quoted there, would otherwise be taken for a JSON string.
+    var text = Encoding.UTF8.GetString(manifest)
+      .Replace($"polypiler translate {Quoted(from)} ", $"polypiler translate {Quoted(to)} ", StringComparison.Ordinal)
+      .Replace($"\"{from}\"", $"\"{to}\"", StringComparison.Ordinal);
+    return Encoding.UTF8.GetBytes(text);
+  }
+
+  /// <summary>The manifest a translation writes beside its files.</summary>
+  private const string ManifestFile = "polypiler.manifest.json";
+
   /// <summary>Every translation done in process during this run, by <see cref="TranslationKey"/>.</summary>
   private static readonly ConcurrentDictionary<string, Lazy<Translation>> _translations = new(StringComparer.Ordinal);
 
@@ -216,8 +236,9 @@ internal static class Toolchain {
     if (translation.Files is { } files) {
       var directory = Path.Combine(workingDirectory, arguments[output]);
       Directory.CreateDirectory(directory);
+      var input = global::Polypiler.Cli.TranslateCommand.InputPath(Path.GetFullPath(directory), source);
       foreach (var (path, content) in files)
-        File.WriteAllBytes(Path.Combine(directory, path), content);
+        File.WriteAllBytes(Path.Combine(directory, path), path == ManifestFile ? Relocated(content, ManifestInputMark, input) : content);
     }
 
     string Unmarked(string text) => text.Replace(InputMark, arguments[1], StringComparison.Ordinal).Replace(OutputMark, arguments[output], StringComparison.Ordinal);
@@ -249,8 +270,11 @@ internal static class Toolchain {
       using var standardError = new StringWriter();
       var exitCode = global::Polypiler.Cli.Program.Run(actual, standardOutput, standardError);
       string Marked(string text) => text.Replace(directory, OutputMark, StringComparison.Ordinal).Replace(source, InputMark, StringComparison.Ordinal);
+      var input = global::Polypiler.Cli.TranslateCommand.InputPath(directory, source);
       var files = Directory.Exists(directory)
-        ? Directory.GetFiles(directory).Order(StringComparer.Ordinal).Select(file => (Path.GetFileName(file), File.ReadAllBytes(file))).ToArray()
+        ? Directory.GetFiles(directory).Order(StringComparer.Ordinal)
+          .Select(file => (Path.GetFileName(file), Path.GetFileName(file) == ManifestFile ? Relocated(File.ReadAllBytes(file), input, ManifestInputMark) : File.ReadAllBytes(file)))
+          .ToArray()
         : null;
       return new Translation(exitCode, Marked(standardOutput.ToString()), Marked(standardError.ToString()), files);
     } finally {

@@ -15,3 +15,13 @@ A request not decided yet is recorded under `pendingDecisions` in `policy.yaml`,
 | `GPL-3.0-only` | allowed | 2026-11-13 | same sentence | INFRA-LICENSES |
 | `GPL-3.0-or-later` | allowed | 2026-11-13 | same sentence | INFRA-LICENSES |
 | `GPL-2.0-only`, `AGPL-3.0-only`, `AGPL-3.0-or-later` | referenceOnly | 2026-11-13 | not covered by the sentence; kept as oracles only | INFRA-LICENSES |
+| `LGPL-2.1-only` | allowed | 2026-11-14 | the owner allows LGPL-2.1-only sources; weak copyleft like the other LGPL identifiers | Hawkynt |
+
+## Outputs
+
+Decisions about the licence of what Polypiler writes rather than what it reads. The first cell names
+no identifier, so the scan does not read these rows as list decisions.
+
+| Decision | Date | Reason | Asked by |
+| --- | --- | --- | --- |
+| Code Polypiler copies into its outputs (helpers, portable floating-point implementations) is MIT, see LICENSE-OUTPUT.md; code converted from third-party sources keeps its own licence | 2026-11-14 | a translated program keeps its author's licence instead of becoming LGPL; the compiler stays LGPL-3.0-or-later | Hawkynt |

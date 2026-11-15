@@ -1,0 +1,14 @@
+[package]
+name = "adler32"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Each feature turns the crate into one of the negative cases of the Rust CI layer.
+[features]
+# The unit test expects a wrong checksum: `cargo test` exits 101 with `1 failed`.
+wrong-expectation = []
+# The test module is compiled out: `cargo test` runs nothing.
+no-tests = []
+# A constant of the wrong type: the crate does not compile.
+type-error = []

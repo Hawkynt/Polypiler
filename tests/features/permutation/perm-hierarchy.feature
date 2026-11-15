@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Typed semantic hierarchy of bit transforms
 
   Scenario: A reversal narrows to a bit permutation

@@ -34,7 +34,7 @@ public sealed class CSharpRoundTripSteps(PrototypeScenario scenario) {
   /// <summary>The one file the last command line wrote into <c>out</c>.</summary>
   private string Generated() {
     Assert.That(scenario.Log.Last.ExitCode, Is.Zero, scenario.Log.Last.Output);
-    return File.ReadAllText(Directory.GetFiles(scenario.Workspace.Resolve("out")).Single());
+    return File.ReadAllText(Directory.GetFiles(scenario.Workspace.Resolve("out")).Single(path => Path.GetFileName(path) != "polypiler.manifest.json"));
   }
 
   /// <summary>The C# was written where the step says.</summary>

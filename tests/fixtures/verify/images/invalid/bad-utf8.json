@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "fixture": "verify.images.invalid.bad-utf8",
+  "provenance": {
+    "kind": "published",
+    "source": "backlog/infra/VER-IMAGES.md",
+    "detail": "an invalid vector file: bad-utf8",
+    "generatedBy": "hand"
+  },
+  "export": "f",
+  "signature": {
+    "parameters": [
+      {
+        "name": "s",
+        "type": "utf8"
+      }
+    ],
+    "result": "void"
+  },
+  "vectors": [
+    {
+      "name": "ff",
+      "input": {
+        "hex": "01000000ff"
+      },
+      "expected": {
+        "hex": ""
+      }
+    }
+  ]
+}

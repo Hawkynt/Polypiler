@@ -48,6 +48,16 @@ public sealed class CrossLanguageRunnerTests {
 
   }
 
+  /// <summary>A resolver that records the keys it is asked for.</summary>
+  private sealed class RecordingResolver(IToolchainResolver inner, List<string> asked) : IToolchainResolver {
+
+    public ToolchainResolution Resolve(string toolchain) {
+      asked.Add(toolchain);
+      return inner.Resolve(toolchain);
+    }
+
+  }
+
   /// <summary>Every sandbox of this host: the one the factory chooses, and on Linux both polling tables and bubblewrap when it works.</summary>
   private static IEnumerable<TestCaseData> Sandboxes() {
     yield return new TestCaseData("host").SetArgDisplayNames("host");
@@ -269,6 +279,27 @@ public sealed class CrossLanguageRunnerTests {
     var result = await Run(Host, plan);
     Assert.That((result.Outcome, result.ExitCode), Is.EqualTo((RunOutcome.Completed, 0)), string.Join("\n", result.Diagnostics.Select(diagnostic => diagnostic.Cause)));
     Assert.That(OutputComparison.Compare("hello 42\n"u8, result.Stdout.Span, ComparisonMode.Exact).IsEqual, Is.True);
+  }
+
+  /// <summary>
+  /// A program the build wrote runs as the execute step: the native launcher the SDK puts beside the
+  /// assembly. Only the SDK is resolved; the launcher finds the runtime through <c>DOTNET_ROOT</c>.
+  /// </summary>
+  [Test]
+  public async Task ABuiltProgram_IsExecutedFromTheRunDirectory() {
+    var asked = new List<string>();
+    var resolver = new RecordingResolver(Toolchains, asked);
+    var dotnet = resolver.Resolve(DotNet).Executable!;
+    var root = Path.GetDirectoryName(File.ResolveLinkTarget(dotnet, true)?.FullName ?? dotnet)!;
+    var launcher = ProcessSpec.Built(OperatingSystem.IsWindows() ? @"out\hello.exe" : "out/hello") with {
+      Environment = new Dictionary<string, string> { ["DOTNET_ROOT"] = root }
+    };
+    var plan = new RunPlan(FixtureFiles("hello"), [new ProcessSpec(DotNet, "build", "-c", "Release", "-o", "out")], launcher, RunLimits.Default, TrustLevel.Trusted);
+    asked.Clear();
+    var result = await Run(Host, plan, resolver);
+    Assert.That((result.Outcome, result.ExitCode), Is.EqualTo((RunOutcome.Completed, 0)), string.Join("\n", result.Diagnostics.Select(diagnostic => diagnostic.Cause)) + Encoding.UTF8.GetString(result.Stderr.Span));
+    Assert.That(Encoding.UTF8.GetString(result.Stdout.Span), Is.EqualTo("hello 42\n"));
+    Assert.That(asked, Is.EqualTo(new[] { DotNet }), "a built program is not a toolchain of the lock");
   }
 
   /// <summary>Test design 13: the SDK writes its errors to standard output, which becomes the cause.</summary>

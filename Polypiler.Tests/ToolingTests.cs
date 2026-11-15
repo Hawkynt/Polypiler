@@ -89,15 +89,36 @@ public sealed class ToolingTests {
     Assert.That(File.Exists(file), Is.False);
   }
 
+  /// <summary>A directory on the way that is a file: nothing can create the file below it.</summary>
   [Test]
   public void AFileThatCannotBeWritten_IsAFailure() {
-    var file = Path.Combine(Path.GetTempPath(), "polypiler-" + Guid.NewGuid().ToString("N"), "missing", "out.irm");
-    using var output = new StringWriter();
-    using var error = new StringWriter();
-    var exitCode = Program.WriteFloatImplementations([new CSharpSource("Small.cs", "public static class Small { public static int F() => 1; }")], file, output, error);
-    Assert.That(exitCode, Is.EqualTo(Program.Failure));
-    Assert.That(error.ToString(), Does.Contain("cannot be written"));
-    Assert.That(output.ToString(), Is.Empty);
+    var blocker = Path.Combine(Path.GetTempPath(), "polypiler-" + Guid.NewGuid().ToString("N"));
+    File.WriteAllText(blocker, "");
+    try {
+      using var output = new StringWriter();
+      using var error = new StringWriter();
+      var exitCode = Program.WriteFloatImplementations([new CSharpSource("Small.cs", "public static class Small { public static int F() => 1; }")], Path.Combine(blocker, "out.irm"), output, error);
+      Assert.That(exitCode, Is.EqualTo(Program.Failure));
+      Assert.That(error.ToString(), Does.Contain("cannot be written"));
+      Assert.That(output.ToString(), Is.Empty);
+    } finally {
+      File.Delete(blocker);
+    }
+  }
+
+  /// <summary>The rebuild check names the file inside an output directory that does not exist yet.</summary>
+  [Test]
+  public void TheDirectoriesOnTheWay_AreCreated() {
+    var root = Path.Combine(Path.GetTempPath(), "polypiler-" + Guid.NewGuid().ToString("N"));
+    try {
+      using var output = new StringWriter();
+      using var error = new StringWriter();
+      var exitCode = Program.WriteFloatImplementations([new CSharpSource("Small.cs", "public static class Small { public static int F() => 1; }")], Path.Combine(root, "out", "float.irm"), output, error);
+      Assert.That((exitCode, error.ToString()), Is.EqualTo((Program.Success, "")));
+      Assert.That(File.Exists(Path.Combine(root, "out", "float.irm")), Is.True);
+    } finally {
+      Directory.Delete(root, true);
+    }
   }
 
   [Test]

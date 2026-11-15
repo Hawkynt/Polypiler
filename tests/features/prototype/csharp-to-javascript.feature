@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Translate a small C# algorithm to JavaScript
 
   Scenario Outline: A translated checksum matches its published value

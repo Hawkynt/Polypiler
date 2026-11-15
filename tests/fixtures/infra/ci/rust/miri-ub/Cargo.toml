@@ -1,0 +1,10 @@
+[package]
+name = "miri-ub"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# With debug assertions the standard library checks the precondition of `get_unchecked` itself and
+# aborts before the read; without them the read happens, and only Miri reports it as undefined.
+[profile.dev]
+debug-assertions = false

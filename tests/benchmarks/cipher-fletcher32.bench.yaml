@@ -1,0 +1,22 @@
+# A P0 source-language baseline of ADR 0006 (ADR-PERF-BUDGETS): Fletcher-32 of Cipher, pinned upstream
+# code under tests/fixtures/bench/cipher, over 1 KiB, 64 KiB and 1 MiB in node. The expected
+# checksums come from docs/adr/evidence/0006/oracle.py, which computes them without Cipher.
+id: cipher-fletcher32
+description: Fletcher-32 of Cipher over a deterministic message of 1 KiB, 64 KiB and 1 MiB in node.
+kind: process
+toolchain: node
+sources:
+  - tests/fixtures/bench/cipher-checksum.js
+  - tests/fixtures/bench/cipher/AlgorithmFramework.js
+  - tests/fixtures/bench/cipher/OpCodes.js
+  - tests/fixtures/bench/cipher/algorithms/checksum/fletcher.js
+run: [tests/fixtures/bench/cipher-checksum.js, fletcher, Fletcher-32]
+expectStdout: "ok"
+variants:
+  - { name: 1kib, args: ["1024", "13753d94"] }
+  - { name: 64kib, args: ["65536", "0f90242b"] }
+  - { name: 1mib, args: ["1048576", "b45ea07c"] }
+warmup: 1
+runs: 30
+sizes:
+  source: [tests/fixtures/bench/cipher/algorithms/checksum/fletcher.js]

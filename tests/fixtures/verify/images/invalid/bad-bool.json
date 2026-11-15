@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "fixture": "verify.images.invalid.bad-bool",
+  "provenance": {
+    "kind": "published",
+    "source": "backlog/infra/VER-IMAGES.md",
+    "detail": "an invalid vector file: bad-bool",
+    "generatedBy": "hand"
+  },
+  "export": "f",
+  "signature": {
+    "parameters": [
+      {
+        "name": "x",
+        "type": "u32"
+      }
+    ],
+    "result": "bool"
+  },
+  "vectors": [
+    {
+      "name": "two",
+      "input": {
+        "hex": "07000000"
+      },
+      "expected": {
+        "hex": "02"
+      }
+    }
+  ]
+}

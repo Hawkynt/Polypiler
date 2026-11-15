@@ -77,6 +77,22 @@ public sealed class RunPlanTests {
     Assert.That(spec.Arguments, Is.EqualTo(new[] { "a" }));
   }
 
+  [TestCase("out/hello", "out/hello")]
+  [TestCase(@"out\hello.exe", @"out\hello.exe")]
+  public void ABuiltProgram_IsNamedByItsPlaceInTheRunDirectory(string program, string expected) {
+    var spec = ProcessSpec.Built(program, "a");
+    Assert.That((spec.Toolchain, spec.BuiltProgram, spec.Arguments), Is.EqualTo(("built:" + expected, expected, new[] { "a" })));
+    Assert.That(new ProcessSpec("dotnet-sdk", "x").BuiltProgram, Is.Null);
+  }
+
+  /// <summary>A built program is a file of the run's directory, by the same rule as the plan's files.</summary>
+  [TestCase("../x")]
+  [TestCase("/usr/bin/env")]
+  [TestCase(@"C:\x.exe")]
+  [TestCase("")]
+  public void ABuiltProgramOutsideTheRunDirectory_IsAnArgumentException(string program)
+    => Assert.That(() => ProcessSpec.Built(program), Throws.ArgumentException.With.Message.Contains($"'{program}' leaves the working directory"));
+
   [Test]
   public void AProcessWithoutToolchainOrArguments_IsRefused() {
     Assert.That(() => new ProcessSpec("", "x"), Throws.ArgumentException);

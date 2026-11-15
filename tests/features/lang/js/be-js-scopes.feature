@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Shadowed locals keep their meaning in generated JavaScript
   A let hides every other variable of its name from its whole block, the reads in front of it and its
   own initializer included; the IR does not. Above ECMAScript 5 the JavaScript backend renames a local

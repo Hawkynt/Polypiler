@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "pair": {
+    "from": "csharp",
+    "to": "javascript",
+    "sourceProfile": "net10",
+    "targetProfile": "node-es2022"
+  },
+  "commit": "fixture",
+  "fixtures": [
+    {
+      "fixture": "add32",
+      "evidence": [
+        {
+          "state": "parsed",
+          "kind": "frontend-log",
+          "path": "evidence/frontend.log",
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        {
+          "state": "lifted",
+          "kind": "ir-dump",
+          "path": "evidence/lifted.ir",
+          "sha256": "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
+        },
+        {
+          "state": "legalized",
+          "kind": "ir-dump",
+          "path": "evidence/legal.ir",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "state": "emitted",
+          "kind": "manifest",
+          "path": "evidence/manifests/generated.json",
+          "sha256": "701c2a4d5f5eaf7c7324baac855465c9780e54be9cfcfc6d3d82f249673e9a58"
+        },
+        {
+          "state": "compiled",
+          "kind": "manifest",
+          "path": "evidence/manifests/built.json",
+          "sha256": "6bac1ada3cc914fd89c1429604493cc86c6fd018ecc30b3ac89a283ad09532d0"
+        },
+        {
+          "state": "executed",
+          "kind": "manifest",
+          "path": "evidence/manifests/executed.json",
+          "sha256": "79bc183034cb02c705847995d6847fe63c0ee35ab187e0aad4631dd2a246e6c5"
+        },
+        {
+          "state": "verified",
+          "kind": "manifest",
+          "path": "evidence/manifests/verified.json",
+          "sha256": "7adc22161285a3058a045f1e1bf4dec6cd2a75597193d7cc8f208c9ac3a1a62a"
+        }
+      ]
+    },
+    {
+      "fixture": "mix32",
+      "evidence": [
+        {
+          "state": "parsed",
+          "kind": "frontend-log",
+          "path": "evidence/frontend.log",
+          "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        },
+        {
+          "state": "lifted",
+          "kind": "ir-dump",
+          "path": "evidence/lifted.ir",
+          "sha256": "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"
+        },
+        {
+          "state": "legalized",
+          "kind": "ir-dump",
+          "path": "evidence/legal.ir",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "state": "emitted",
+          "kind": "manifest",
+          "path": "evidence/manifests/generated.json",
+          "sha256": "701c2a4d5f5eaf7c7324baac855465c9780e54be9cfcfc6d3d82f249673e9a58"
+        },
+        {
+          "state": "compiled",
+          "kind": "manifest",
+          "path": "evidence/manifests/built.json",
+          "sha256": "6bac1ada3cc914fd89c1429604493cc86c6fd018ecc30b3ac89a283ad09532d0"
+        }
+      ]
+    }
+  ]
+}

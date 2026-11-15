@@ -9,6 +9,9 @@ that breaks a rule below. A capability may only be claimed against a document it
 spec/
   diagnostics.yaml        the diagnostics registry (ADR 0003); not a spec document
   schemas/                JSON Schema 2020-12: meta.schema.json, and <family>.schema.json per family
+                          manifest.schema.json: polypiler.manifest.json of an output directory, not a spec document
+                          evidence.schema.json: evidence.json of a BDD scenario's evidence bundle, not a spec document
+                          gate-record.schema.json: artifacts/gates/<pair>.json, how far each fixture of a pair got
   <family>/**/*.yaml      the documents of one family
   adapters/<adapter>/     not spec documents: the adapter licence audits (schemas/adapter-audit.schema.json),
                           checked by polypiler-tooling catalog audit-adapter

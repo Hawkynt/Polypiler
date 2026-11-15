@@ -1,0 +1,25 @@
+# Every test category the fast-tier filter can exclude, and the step of .github/workflows/ci.yml that
+# runs it (AGENTS.md, "Tests come in two tiers"). `polypiler-tooling ci audit` fails when the filter of
+# that step's `dotnet test` does not select a test of the category, and when a category has no test
+# unless it is `pending` on the issue that brings its first one.
+schema: 1
+categories:
+  - { name: Slow, job: layer-core, step: test }
+  - { name: EndToEnd, job: layer-core, step: test }
+  - { name: OsIntegration, job: layer-core, step: test }
+  - { name: ExternalInterop, job: layer-core, step: test, pending: CLI-VERIFY }
+  - { name: PolyglotInterop, job: layer-core, step: test, pending: CAT-TESTS }
+  - { name: Performance, job: layer-core, step: test }
+  - { name: IrVerifier, job: layer-core, step: ir-verifier, pending: IR-VERIFIER }
+  # The full target sweep of the backends, run once, on Linux and without the coverage collector; the
+  # layer jobs and the coverage gate run its representative slice (#1352).
+  - { name: Sweep, job: target-sweep, step: test }
+  # Exhaustive checks that run the same code paths up to millions of times: the layer jobs run them on
+  # every OS, the coverage gate leaves them out (#1352).
+  - { name: Exhaustive, job: layer-core, step: test }
+  # The end-to-end suites of the prototype (Polypiler.Tests.Acceptance/Prototype), the third part of
+  # each OS's layer-core job: the other acceptance tests leave them out (#1352).
+  - { name: Prototype, job: layer-core, step: test-prototype }
+  # The scenarios that run 20 times each under a CPU load of twice the processor count (#1347), the
+  # fourth part of each OS's layer-core job: the load would slow every test beside them.
+  - { name: UnderLoad, job: layer-core, step: test-load }

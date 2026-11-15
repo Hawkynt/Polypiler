@@ -21,6 +21,7 @@ allowed:
   - LGPL-3.0-or-later
   - LGPL-3.0-only
   - LGPL-2.1-or-later
+  - LGPL-2.1-only
   - LGPL-2.0-or-later
   - LGPL-2.0-only
   - GPL-3.0-or-later
@@ -51,6 +52,21 @@ restrictedAssets:
   - '*.safetensors'
   - '*.mlmodel'
 
-overrides: []
+# Polypiler's own code that it copies into generated outputs is MIT (owner decision of 2026-11-14,
+# LICENSE-OUTPUT.md); a file there converted from third-party code states its own licence in its
+# SPDX header, which takes precedence over these.
+overrides:
+  - glob: Polypiler.Core.Backends.CSharp/Helpers/**
+    licence: MIT
+    reason: helper code emitted into generated outputs, released under MIT (LICENSE-OUTPUT.md)
+    reviewer: Hawkynt
+  - glob: Polypiler.Core.Backends.JavaScript/Helpers/**
+    licence: MIT
+    reason: helper code emitted into generated outputs, released under MIT (LICENSE-OUTPUT.md)
+    reviewer: Hawkynt
+  - glob: Polypiler.Core.IR/Float/Operations/**
+    licence: MIT
+    reason: portable floating-point implementations emitted into generated outputs, released under MIT (LICENSE-OUTPUT.md)
+    reviewer: Hawkynt
 
 pendingDecisions: []

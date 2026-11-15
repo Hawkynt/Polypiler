@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: File-level licence audit of the NCNN adapter's native inputs
 
   Background:

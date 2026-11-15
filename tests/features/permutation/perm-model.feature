@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Pure bit-mapping model
 
   Scenario: A byte reversal is a bijection

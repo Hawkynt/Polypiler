@@ -54,6 +54,8 @@ internal static class CbmTools {
   public static ViceResult Run(ViceRunner runner, ViceRequest request) {
     var result = runner.RunAsync(request).GetAwaiter().GetResult();
     TestContext.Out.WriteLine($"{request.Machine}: {result.Status} at cycle {result.Cycles}; banner: {result.Banner.Replace('\n', '|')}; screen: {result.ScreenText.Replace('\n', '|')}");
+    foreach (var diagnostic in result.Diagnostics)
+      TestContext.Out.WriteLine($"{diagnostic}{(diagnostic.Cause is { } cause ? ": " + cause : "")}");
     return result;
   }
 

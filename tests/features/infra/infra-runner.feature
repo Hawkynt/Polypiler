@@ -1,4 +1,4 @@
-@OsIntegration
+@OsIntegration @Layer.core
 Feature: Sandboxed cross-language runner
 
   Scenario: A program is built, executed and compared

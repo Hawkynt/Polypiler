@@ -49,6 +49,24 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   so converting code or adding a package adds its row there. Only the repository owner moves a
   licence between the policy's lists, with a row in
   [`tooling/licensing/DECISIONS.md`](tooling/licensing/DECISIONS.md).
+- Whatever is derived from a GPL file is GPL. A distribution scan of a generated package (a root
+  holding `polypiler.manifest.json`) computes the package's effective licence from the licences of
+  its inputs and helpers - any GPL member makes it `GPL-3.0-or-later`, else any LGPL member
+  `LGPL-3.0-or-later`, else the permissive identifiers joined by `AND` - fails when the manifest's
+  `licensing.outputLicence` states less, and writes `artifacts/licenses/effective.json`.
+  `licenses scan --mode project` is the fence around the LGPL compiler: no file of a `Polypiler.*`
+  folder may carry a GPL, reference-only or denied licence, by header, licence file or notice entry.
+  Every entry of a `THIRD_PARTY_NOTICES.md` (one per `## ` section) or `THIRD-PARTY-NOTICE.<Name>.txt`
+  (one per file) there carries the lines `Origin: <owner/repo@sha:path or URL>` and
+  `Licence: <SPDX expression>`, one pair per work it records.
+- Code a translation copies into its output is MIT ([`LICENSE-OUTPUT.md`](LICENSE-OUTPUT.md)): the
+  helpers of `Polypiler.Core.Backends.CSharp/Helpers` and `Polypiler.Core.Backends.JavaScript/Helpers`
+  and the portable implementations of `Polypiler.Core.IR/Float/Operations`. Unlike every other `.cs`
+  file of the repository, each of these starts with `// SPDX-License-Identifier: MIT`, or with the
+  expression of what it is converted from (`MIT AND BSD-2-Clause` for FreeBSD's `fmaf`), and
+  `HelperLicenceTests` fails on one without it. A new helper goes into one of these folders; a
+  backend reports what it emitted with its origin and licence (`GeneratedFile.Helpers`), and
+  `translate` states the output's licence from the input's own header and the helpers' licences.
 - An adapter compiles, links or loads an upstream file only when its licence audit
   (`spec/adapters/<adapter>/licence-audit.yaml`, format
   [`spec/schemas/adapter-audit.schema.json`](spec/schemas/adapter-audit.schema.json)) records it as
@@ -63,6 +81,17 @@ and the Definition of Done. The skeletons are in [`.github/ISSUE_TEMPLATE/`](.gi
   runner isolates: no network, the caller's home hidden, nothing writable but the run's own directory.
   Without it, and on Windows and macOS, the runner only limits, and refuses untrusted code with
   `PLY0034`.
+- Whatever Polypiler generates must come out the same when it is generated again.
+  `polypiler-tooling rebuild check --output <dir> [--runs <n>] [--input <path>]... -- <toolchain key>
+  <args>` runs a command through the runner `n` times (at least 2), each in a fresh directory that
+  starts with the `--input` files and directories, with `{output}` in the arguments standing for the
+  output directory; it prints each run's tree hash (the SHA-256 of the `sha256sum` listing of the
+  tree) and reports every file that differs, or that only one run wrote, as `PLY0036`.
+  `rebuild compare <dir> <dir>` compares two trees built outside the runner, such as two ReadyToRun
+  publishes. `polypiler.manifest.json` is compared as canonical JSON. Content that may differ between
+  runs is exempted only in [`tooling/ci/rebuild-ignore.yaml`](tooling/ci/rebuild-ignore.yaml), each
+  entry with its reason; the `deterministic rebuild` CI job checks the embedded floating-point
+  implementations, a strict float translation and the ReadyToRun publish of `polypiler`.
 
 ## Build
 
@@ -146,7 +175,7 @@ file that is not Gherkin fails the build.
 - **The shared steps** (`Polypiler.Tests.Acceptance/Steps/`): `When I run "<command line>"` — the
   first word `polypiler` is dropped and the rest goes to `polypiler`; a first word `polypiler-tooling`
   is dropped too, and that line, like one whose first word is a verb of `polypiler-tooling`
-  (`toolchains`, `spec`, `corpus`, `licenses`, `integrity`, `rebuild`, `sbom`, `report`), starts the
+  (`toolchains`, `spec`, `corpus`, `licenses`, `integrity`, `rebuild`, `sbom`, `report`, `ci`), starts the
   `polypiler-tooling` executable in the workspace, with the workspace first on `PATH` — its verbs
   read the working directory and `PATH`; text in single quotes is one argument. Then
   `the exit code is <n>`, `stdout contains "<text>"`, `stderr contains "<text>"`,
@@ -164,6 +193,18 @@ file that is not Gherkin fails the build.
   The current directory is never changed, so the scenarios run in parallel like every other test.
   An `IScenarioObserver` registered in the Reqnroll container is told about every scenario —
   feature, scenario, passed or not, the command lines and their results — before the workspace goes.
+- **Every scenario leaves an evidence bundle** (PRD §6.6): `artifacts/evidence/<feature-slug>/<scenario-slug>/`
+  with `evidence.json` ([`spec/schemas/evidence.schema.json`](spec/schemas/evidence.schema.json)) and
+  byte-for-byte copies of what was attached, written after the last step whether the scenario passed
+  or failed. A step class takes the scenario's `EvidenceCollector` in its constructor and adds what
+  only it knows — sources, generated files, the manifest, tool versions, processes, the comparison
+  and its policy, opt diagnostics; the hook adds the runtime's and Polypiler's versions, the values
+  of an example row and every command line. A slug is the lower-case title with each run of
+  characters outside `a-z0-9` as one `-`, at most 80 characters, `scenario` when nothing is left; an
+  example row appends `-<n>`, a second scenario with the same slug `-2`. `EvidenceValidator` then
+  checks the bundle and its `PLY0060` fails the scenario: every scenario needs tool versions and the
+  CI link, one tagged `@translation` also a source, a generated file, the manifest, a process and the
+  comparison (and must not pass with a failed vector), one tagged `@optimization` its opt diagnostics.
 - **The static check** (`FeatureBindingTests` in `Polypiler.Tests`, `SupportTests` in the acceptance
   project) reads every feature file with the Gherkin parser and reports `PLY0074` for a step with no
   binding or more than one, a feature without a scenario and a path that breaks the rule. The
@@ -202,6 +243,27 @@ A test opts out by carrying one of these categories:
 
 **Opting out defers a test, it never skips one.** Everything runs on the pull request. The tiers
 decide *when*, not *whether*.
+
+`Sweep` is not a tier but a place: a `Slow` test that also carries it reads nothing that differs per
+runner and costs minutes per OS, like the full target sweep of the backends (every fixture in every
+profile, module format and float mode, compared with its golden output and parsed back). `ci.yml`
+runs the category once, in the job `target-sweep` on Linux and without the coverage collector, and
+leaves it out of the layer jobs and the coverage gate, which run a representative slice of it
+instead (`GoldenOutputs.Slice`: every fixture in one variant, every variant at least once). A test
+gets `Sweep` only when such a slice stands for it everywhere else.
+
+`Exhaustive` is the same kind of place for the coverage gate alone: a `Slow` test that sends up to
+millions of inputs through the same code paths, such as the equivalence check of the recognition
+fixtures. The layer jobs run it on every OS; the coverage gate leaves it out, because the collector
+makes it the larger part of the gate's time and the first inputs already reach every line it
+reaches. Leaving a category out of the coverage gate must not lower the coverage by more than 0.2
+points.
+
+`Prototype` marks the fixtures of `Polypiler.Tests.Acceptance/Prototype`, the end-to-end suites of the
+prototype. It changes no tier: `layer-core` runs them on each OS as a part of their own, beside the
+unit tests and the other acceptance tests, because the three on one runner would compete for its
+cores. A new fixture in that folder carries the category too; one that does not still runs, in the
+other acceptance part.
 
 **Write `TestCategory!=`, never `Category!=`.** They select the same tests and report the same
 results, and only one of them actually skips anything: with `Category!=` the adapter filters the
@@ -396,7 +458,7 @@ Workflows live in `.github/workflows/`:
 |---|---|---|
 | `smoke.yml` | push to a working branch | The fast tier. One OS, fast tests only, no coverage, no package-README check. Minutes. |
 | `generate.yml` | push to a working branch | Refreshes derived files (screenshots, references) and commits them onto the branch. |
-| `ci.yml` | PR to `main` | The gate. Every OS, every category, coverage. |
+| `ci.yml` | PR to `main` | The gate. Every OS, every category, coverage; the tests run in its layer jobs, the category `Sweep` once in `target-sweep`. |
 | `_build.yml` | called by release/nightly | Shared build/pack step so both paths produce identical artifacts. |
 | `nightly.yml` | automatically after green CI on `main` | Dated `nightly-YYYYMMDD` prerelease, GFS-pruned. |
 | `release.yml` | manual dispatch | Cuts a dated `vYYYYMMDD` release; publishes NuGet packages when configured. |
@@ -450,6 +512,46 @@ linter:
 
 ```bash
 actionlint .github/workflows/*.yml
+```
+
+### The layers of ci.yml
+
+The tests of a pull request run in **layer jobs**, one per file of `tooling/ci/layers/`
+(format: `spec/schemas/ci-layer.schema.json`): the toolchains of `tooling/toolchains.lock` the layer
+installs, the runners it uses, the changed paths that select it and whether it runs always. The job
+`layer-<name>` runs the layer. `layer-core` builds with `-warnaserror`, checks
+`dotnet format --verify-no-changes` (the fixtures under `tests/fixtures` excepted, whose exact text
+the tests read), runs every test that belongs to no other layer
+(`--filter "TestCategory!~Layer.|TestCategory=Layer.core"`) and the `IrVerifier` category, and runs
+`polypiler-tooling spec validate` and `ci audit`. The `ci` job keeps the build, the README checks and
+the coverage report of the shared workflow, without running the tests a second time.
+`layer-jvm` installs the pinned JDK (Temurin) and `kotlinc`, and runs `TestCategory=Layer.jvm`: Java
+compiled with `javac -Xlint:all -Werror`, Kotlin with `kotlinc -Werror -include-runtime`, both run
+on the pinned JDK's `java` and their outputs compared byte for byte (`Infra/Ci/JvmCommands.cs`).
+Locally, a toolchain under your home or `/tmp` is hidden by the bubblewrap sandbox except for its
+`bin` folder; install `kotlinc` elsewhere for these tests.
+
+`layer-pyperl` installs `python` and `perl` at their pinned versions with their setup actions (never
+the runner image's interpreters, and no package from PyPI or CPAN), probes them and runs
+`--filter "TestCategory=Layer.pyperl"`. Its tests start the interpreters through the cross-language
+runner with the command lines of `Polypiler.Tests.Acceptance/Infra/Ci/PythonCommands.cs` and
+`PerlCommands.cs`: `python -I -B`, `unittest discover -s . -p <file>` (because `-I` keeps the working
+directory off `sys.path`), `perl -c`, `perl -I.` and `prove -I.`.
+
+- **Every test of `Polypiler.Tests.Acceptance` names its layer**: `[Layer("core")]` on its class, or
+  the tag `@Layer.core` on its feature file, exactly one.
+- **`tooling/ci/categories.yaml` names the step of every category the fast tier leaves out.**
+  `polypiler-tooling ci audit` evaluates the `--filter` of that step's `dotnet test` and fails with
+  `PLY0076` when it does not select the category, and when a category has no test unless it is
+  `pending` on the issue that brings its first one. It also holds layer files, jobs and the lock to
+  each other (`PLY0075`) and checks the numbering of the decision records under `docs/adr/`. It reads
+  the categories of the tests from the Release builds of the test projects, so build first:
+
+```bash
+dotnet build Polypiler.slnx -c Release
+polypiler-tooling ci audit                              # one line per layer, then "<n> categories, <m> problems"
+polypiler-tooling ci matrix --changed changed.txt       # the layers a list of changed paths selects, as JSON
+polypiler-tooling ci env --layer core                   # <key>=<version> per toolchain, for $GITHUB_OUTPUT
 ```
 
 ### When the package-README check fails

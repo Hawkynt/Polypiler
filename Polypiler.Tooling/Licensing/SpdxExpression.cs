@@ -26,7 +26,10 @@ public enum LicenceMode {
   Corpus,
 
   /// <summary>Files that are shipped: only an allowed licence passes, and restricted assets are refused.</summary>
-  Distribution
+  Distribution,
+
+  /// <summary>The compiler projects: only an allowed licence of weak copyleft or weaker passes (<see cref="ProjectFence"/>).</summary>
+  Project
 
 }
 

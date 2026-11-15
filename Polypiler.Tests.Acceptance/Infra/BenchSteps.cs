@@ -76,11 +76,16 @@ public sealed class BenchSteps(ScenarioWorkspace workspace, CommandLog log) {
   [Then("^" + StepText.Quoted + @" contains exactly (\d+) samples$")]
   public void ContainsSamples(string path, int count) => Assert.That(this.ResultFile(path).Samples, Has.Count.EqualTo(count));
 
-  [Then("^every sample has a positive " + StepText.Quoted + ", " + StepText.Quoted + " and " + StepText.Quoted + "$")]
-  public void EverySampleIsPositive(string wall, string cpu, string peak) {
+  /// <summary>
+  /// Every sample took time and recorded the processor time and the peak memory the runner measured.
+  /// Those two are what the samples of the tree saw, so a run shorter than one sampling interval may
+  /// record 0 for either (docs/benchmarks); the harness records them and does not judge them.
+  /// </summary>
+  [Then("^every sample has a positive " + StepText.Quoted + " and records " + StepText.Quoted + " and " + StepText.Quoted + "$")]
+  public void EverySampleIsRecorded(string wall, string cpu, string peak) {
     Assert.That((wall, cpu, peak), Is.EqualTo(("wallNs", "cpuNs", "peakRssBytes")));
     var samples = this.ResultFile($"artifacts/bench/{Id}/default.json").Samples;
-    Assert.That(samples, Has.All.Matches<BenchmarkSample>(sample => sample.WallNs > 0 && sample.CpuNs > 0 && sample.PeakRssBytes > 0), string.Join("\n", samples));
+    Assert.That(samples, Has.All.Matches<BenchmarkSample>(sample => sample.WallNs > 0 && sample.CpuNs >= 0 && sample.PeakRssBytes >= 0), string.Join("\n", samples));
   }
 
   /// <summary>A run that printed anything else would have ended the measurement without a result (PLY0051).</summary>

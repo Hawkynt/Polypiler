@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Translate wider C# to JavaScript
 
   Scenario Outline: A translated algorithm matches its published value

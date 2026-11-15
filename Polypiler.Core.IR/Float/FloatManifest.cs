@@ -11,39 +11,78 @@ namespace Polypiler.Core.IR;
 /// </summary>
 public static class FloatManifest {
 
+  /// <summary>A native function the generated code calls under an <c>ulp(n)</c> contract, as the header and the output manifest record it.</summary>
+  /// <param name="Op">The operation.</param>
+  /// <param name="Format"><see cref="IrType.F32"/> or <see cref="IrType.F64"/>.</param>
+  /// <param name="Contract">The accuracy contract of the operation.</param>
+  /// <param name="Runtime">The runtime whose slack applies.</param>
+  /// <param name="Slack">The slack <c>N</c> of the runtime's function.</param>
+  /// <param name="Bound">The comparison bound <c>n + N + max(n, N)</c>.</param>
+  public sealed record NativeFunction(IrIntrinsicOp Op, IrType Format, FloatContract Contract, string Runtime, int Slack, int Bound);
+
   /// <summary>The lines of the record, without comment markers; none for a module without floating-point numbers.</summary>
   /// <param name="module">The module as it is emitted, after legalization: every operation of the table left in it is a native call.</param>
   /// <param name="mode">The floating-point mode.</param>
   /// <param name="runtime">The runtime whose slack applies (<see cref="NativeAccuracy.DotNet"/>, <see cref="NativeAccuracy.Node"/>).</param>
   /// <returns>The lines.</returns>
   public static IReadOnlyList<string> Lines(IrModule module, FloatMode mode, string runtime) {
-    var intrinsics = new List<IrIntrinsic>();
-    var floating = module.Constants.Any(constant => IsFloat(constant.Type))
-      || module.Functions.Any(function => IsFloat(function.ReturnType) || function.Parameters.Concat(function.Locals).Any(local => IsFloat(local.Type)));
-    foreach (var function in module.Functions)
-      Collect(function.Body, intrinsics);
-
-    var natives = intrinsics
-      .Where(intrinsic => intrinsic.Arguments.Count > 0 && intrinsic.Arguments[0].Type.IsFloat
-        && FloatOperationTable.Of(intrinsic.Op) is { Contract.Kind: FloatContractKind.Ulp })
-      .Select(intrinsic => (intrinsic.Op, Format: intrinsic.Arguments[0].Type))
-      .Distinct()
-      .OrderBy(native => native.Op.ToString(), System.StringComparer.Ordinal).ThenBy(native => native.Format.ToString(), System.StringComparer.Ordinal)
-      .ToList();
     if (mode == FloatMode.Strict)
-      return floating ? ["Floating point: strict (ADR 0005). Every function is the portable implementation: the results are the same bits on every target."] : [];
+      return HasFloat(module) ? ["Floating point: strict (ADR 0005). Every function is the portable implementation: the results are the same bits on every target."] : [];
 
+    var natives = Natives(module, mode, runtime);
     if (natives.Count == 0)
       return [];
 
     return [
       "Floating point: accurate (ADR 0005). Native functions, each within its bound of the correctly rounded result:",
-      .. natives.Select(native => {
-        var slack = NativeAccuracy.Slack(runtime, native.Op, native.Format) ?? 0;
-        var contract = FloatOperationTable.Of(native.Op)!.Contract;
-        return $"  {native.Op} of {native.Format}: {contract}, slack {slack} on {runtime}, bound {NativeAccuracy.Bound(native.Op, slack)}";
-      })
+      .. natives.Select(native => $"  {native.Op} of {native.Format}: {native.Contract}, slack {native.Slack} on {native.Runtime}, bound {native.Bound}")
     ];
+  }
+
+  /// <summary>Whether a module has floating-point numbers: a constant, a parameter, a local or a result of a floating-point type or an array of one.</summary>
+  /// <param name="module">The module.</param>
+  /// <returns>Whether it has.</returns>
+  public static bool HasFloat(IrModule module)
+    => module.Constants.Any(constant => IsFloat(constant.Type))
+      || module.Functions.Any(function => IsFloat(function.ReturnType) || function.Parameters.Concat(function.Locals).Any(local => IsFloat(local.Type)));
+
+  /// <summary>
+  /// Every native function with an <c>ulp(n)</c> contract the module calls, once per operation and
+  /// format, ordered by operation and format: what the header lists line by line. None in
+  /// <see cref="FloatMode.Strict"/>, where every function is the portable implementation.
+  /// </summary>
+  /// <param name="module">The module as it is emitted, after legalization.</param>
+  /// <param name="mode">The floating-point mode.</param>
+  /// <param name="runtime">The runtime whose slack applies.</param>
+  /// <returns>The functions.</returns>
+  public static IReadOnlyList<NativeFunction> Natives(IrModule module, FloatMode mode, string runtime) {
+    if (mode == FloatMode.Strict)
+      return [];
+
+    return [.. Intrinsics(module)
+      .Where(intrinsic => intrinsic.Arguments.Count > 0 && intrinsic.Arguments[0].Type.IsFloat
+        && FloatOperationTable.Of(intrinsic.Op) is { Contract.Kind: FloatContractKind.Ulp })
+      .Select(intrinsic => (intrinsic.Op, Format: intrinsic.Arguments[0].Type))
+      .Distinct()
+      .OrderBy(native => native.Op.ToString(), System.StringComparer.Ordinal).ThenBy(native => native.Format.ToString(), System.StringComparer.Ordinal)
+      .Select(native => {
+        var slack = NativeAccuracy.Slack(runtime, native.Op, native.Format) ?? 0;
+        return new NativeFunction(native.Op, native.Format, FloatOperationTable.Of(native.Op)!.Contract, runtime, slack, NativeAccuracy.Bound(native.Op, slack));
+      })];
+  }
+
+  /// <summary>Every intrinsic operation the functions of a module use, once each, ordered by name.</summary>
+  /// <param name="module">The module.</param>
+  /// <returns>The operations.</returns>
+  public static IReadOnlyList<IrIntrinsicOp> Operations(IrModule module)
+    => [.. Intrinsics(module).Select(intrinsic => intrinsic.Op).Distinct().OrderBy(op => op.ToString(), System.StringComparer.Ordinal)];
+
+  private static List<IrIntrinsic> Intrinsics(IrModule module) {
+    var intrinsics = new List<IrIntrinsic>();
+    foreach (var function in module.Functions)
+      Collect(function.Body, intrinsics);
+
+    return intrinsics;
   }
 
   private static bool IsFloat(IrType type) => type.IsFloat || type.Element is { IsFloat: true };

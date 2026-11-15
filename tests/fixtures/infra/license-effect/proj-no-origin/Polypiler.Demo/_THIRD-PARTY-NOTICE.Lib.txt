@@ -1,0 +1,3 @@
+Parts of Polypiler.Demo are converted from a library whose origin is not recorded.
+
+Licence: MIT
