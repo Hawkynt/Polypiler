@@ -221,6 +221,8 @@ public static class FloatLegalization {
           return operation with { Arguments = [.. operation.Arguments.Select(this.Expression)] };
         case IrArraySequence sequence:
           return new IrArraySequence(this.Expression(sequence.Array));
+        case IrSequence operation:
+          return operation with { Arguments = [.. operation.Arguments.Select(this.Expression)] };
         case IrCall call:
           var arguments = call.Arguments.Select(this.Expression).ToList();
           return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);

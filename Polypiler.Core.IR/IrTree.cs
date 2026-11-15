@@ -43,6 +43,7 @@ public static class IrTree {
     IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
     IrBoundMethod { Receiver: { } receiver } => [receiver],
     IrArraySequence sequence => [sequence.Array],
+    IrSequence operation => operation.Arguments,
     _ => []
   };
 
@@ -89,6 +90,103 @@ public static class IrTree {
     IrForEachSequence loop => [loop.Body],
     _ => []
   };
+
+  /// <summary>An expression with new operands, in the order <see cref="Operands"/> lists them.</summary>
+  /// <param name="expression">The expression.</param>
+  /// <param name="operands">The new operands, as many as it has.</param>
+  /// <returns>The expression rebuilt; one without operands as it is.</returns>
+  public static IrExpr With(IrExpr expression, IReadOnlyList<IrExpr> operands) => expression switch {
+    IrUnary unary => new IrUnary(unary.Op, operands[0]),
+    IrBinary binary => new IrBinary(binary.Op, operands[0], operands[1]),
+    IrConvert conversion => conversion with { Operand = operands[0] },
+    IrConditional => new IrConditional(operands[0], operands[1], operands[2]),
+    IrArrayLoad => new IrArrayLoad(operands[0], operands[1]),
+    IrArrayLength => new IrArrayLength(operands[0]),
+    IrNewArray creation => creation with { Length = operands[0] },
+    IrCall call => call with { Arguments = operands },
+    IrIntrinsic intrinsic => intrinsic with { Arguments = operands },
+    IrStep step => step with { Target = operands[0] },
+    IrStructNew creation => creation with { Arguments = operands },
+    IrFieldLoad load => load with { Target = operands[0] },
+    IrStructEquals => new IrStructEquals(operands[0], operands[1]),
+    IrNew creation => creation with { Arguments = operands },
+    IrMethodCall { Target: not null } call => call with { Target = operands[0], Arguments = [.. operands.Skip(1)] },
+    IrMethodCall call => call with { Arguments = operands },
+    IrReferenceEquals => new IrReferenceEquals(operands[0], operands[1]),
+    IrTypeTest test => test with { Value = operands[0] },
+    IrCast cast => cast with { Value = operands[0] },
+    IrAsCast cast => cast with { Value = operands[0] },
+    IrSome => new IrSome(operands[0]),
+    IrIsNone => new IrIsNone(operands[0]),
+    IrUnwrap unwrap => unwrap with { Value = operands[0] },
+    IrCoalesce => new IrCoalesce(operands[0], operands[1]),
+    IrIsNull => new IrIsNull(operands[0]),
+    IrBind bind => bind with { Value = operands[0] },
+    IrGenericEquals => new IrGenericEquals(operands[0], operands[1]),
+    IrGenericCompare => new IrGenericCompare(operands[0], operands[1]),
+    IrThrowExpression thrown => thrown with { Exception = operands[0] },
+    IrCollection operation => operation with { Arguments = operands },
+    IrInvoke invocation => invocation with { Callee = operands[0], Arguments = [.. operands.Skip(1)] },
+    IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
+    IrArraySequence => new IrArraySequence(operands[0]),
+    IrSequence operation => operation with { Arguments = operands },
+    _ => expression
+  };
+
+  /// <summary>
+  /// A statement other than a block with new expressions and blocks, in the orders
+  /// <see cref="Expressions"/> and <see cref="Blocks"/> list them.
+  /// </summary>
+  /// <param name="statement">The statement.</param>
+  /// <param name="expressions">The new expressions, as many as it evaluates itself.</param>
+  /// <param name="blocks">The new blocks, as many as it holds.</param>
+  /// <returns>The statement rebuilt; one without either as it is.</returns>
+  public static IrStmt With(IrStmt statement, IReadOnlyList<IrExpr> expressions, IReadOnlyList<IrBlock> blocks) {
+    switch (statement) {
+      case IrDeclare { Initializer: not null } declare:
+        return declare with { Initializer = expressions[0] };
+      case IrAssign assign:
+        return assign with { Value = expressions[0] };
+      case IrGlobalAssign assign:
+        return assign with { Value = expressions[0] };
+      case IrStore store:
+        return store with { Array = expressions[0], Index = expressions[1], Value = expressions[2] };
+      case IrFieldStore store:
+        return store with { Target = expressions[0], Value = expressions[1] };
+      case IrExprStmt evaluated:
+        return evaluated with { Expression = expressions[0] };
+      case IrIf conditional:
+        return conditional with { Condition = expressions[0], Then = blocks[0], Else = blocks.Count > 1 ? blocks[1] : null };
+      case IrWhile loop:
+        return loop with { Condition = expressions[0], Body = blocks[0] };
+      case IrDoWhile loop:
+        return loop with { Body = blocks[0], Condition = expressions[0] };
+      case IrFor loop:
+        return loop with { Condition = expressions[0], Body = blocks[0], Step = blocks[1] };
+      case IrSwitch choice:
+        return choice with { Value = expressions[0], Sections = [.. choice.Sections.Select((section, index) => section with { Body = blocks[index] })] };
+      case IrReturn { Value: not null } result:
+        return result with { Value = expressions[0] };
+      case IrThrow thrown:
+        return thrown with { Exception = expressions[0] };
+      case IrTry attempt:
+        var filter = 0;
+        var catches = attempt.Catches.Select((clause, index) => clause with { Filter = clause.Filter is null ? null : expressions[filter++], Body = blocks[index + 1] }).ToList();
+        return attempt with { Body = blocks[0], Catches = catches, Finally = attempt.Finally is null ? null : blocks[^1] };
+      case IrUsing scope:
+        return scope with { Initializer = expressions[0], Body = blocks[0] };
+      case IrForEachCollection loop:
+        return loop with { Collection = expressions[0], Body = blocks[0] };
+      case IrYield produced:
+        return produced with { Value = expressions[0] };
+      case IrYieldFrom delegated:
+        return delegated with { Sequence = expressions[0] };
+      case IrForEachSequence loop:
+        return loop with { Sequence = expressions[0], Body = blocks[0] };
+      default:
+        return statement;
+    }
+  }
 
   /// <summary>Every node of an expression, the expression first; the nodes of the body of a lambda are among them.</summary>
   /// <param name="expression">The expression.</param>
