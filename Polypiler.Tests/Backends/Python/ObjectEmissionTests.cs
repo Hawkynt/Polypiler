@@ -53,8 +53,10 @@ public sealed class ObjectEmissionTests {
     var text = Python("""
       public sealed class Box { public int Value; }
       public static class Objects {
-        private static int Pick() => 0;
-        private static int Compute() => 5;
+        // A static each reads keeps the calls: a pure call of constants would be evaluated (O0002).
+        private static int _seed;
+        private static int Pick() => _seed;
+        private static int Compute() => _seed + 5;
         public static int Write() { var boxes = new System.Collections.Generic.List<Box> { new Box() }; boxes[Pick()].Value = Compute(); return boxes[0].Value; }
       }
       """);

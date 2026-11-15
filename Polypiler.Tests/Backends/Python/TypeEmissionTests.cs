@@ -143,7 +143,8 @@ public sealed class TypeEmissionTests {
           for (var t = 0; t < 3; t++) { var copy = t * 10; fs[t] = () => copy; }
           return fs[0]() + fs[1]() + fs[2]();
         }
-        public static int Twice(int x) { System.Func<int, int> f = v => v * 2; return f(x); }
+        // A choice of two lambdas keeps the function value: one known lambda would be specialised away (O0463).
+        public static int Twice(int x) { System.Func<int, int> f = x > 0 ? v => v * 2 : v => v * 3; return f(x); }
       }
       """);
     Assert.That(text, Does.Contain("nonlocal n"));
