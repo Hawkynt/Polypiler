@@ -1,7 +1,7 @@
 # O0500 — Inline single-expression helpers into their call sites in the target syntax tree
 
 <!-- status: implemented (prototype) -->
-> **Status: implemented (prototype).** The target passes `CSharpHelperInlining` and `JavaScriptHelperInlining` run between the backend's syntax tree and its printer ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)). Switched off with `--disable-opt O0500`. The IR-level inlining of calls between functions of the program stays [O0006](O0006-inlining.md).
+> **Status: implemented (prototype).** The target passes `CSharpHelperInlining`, `JavaScriptHelperInlining` and `RustHelperInlining` run between the backend's syntax tree and its printer ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)). Switched off with `--disable-opt O0500`. The IR-level inlining of calls between functions of the program stays [O0006](O0006-inlining.md).
 
 ## What it does
 
@@ -78,6 +78,9 @@ function F(x) {
 - In C#: arguments that are all constants, and any constant argument of a body that divides, which
   would make the compiler evaluate the expression and refuse an overflow or a zero divisor it was
   meant to meet at run time; an argument of a type the call converts implicitly to no other.
+- In Rust: any argument that is no variable or literal, which the body could evaluate after a trap of
+  its own or twice; the inlined body loses the parentheses where any expression may stand, which
+  rustc's `unused_parens` would warn about.
 
 ## Switching it off
 

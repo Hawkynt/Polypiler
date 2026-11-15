@@ -70,7 +70,7 @@ generated code — a row changes only in the pull request that makes it true.
 | PowerBASIC | DOS 3.5 (`pb35`), `pb36` | — | — | |
 | C | C11 / C17 / C23 | — | — | |
 | C++ | C++17 / 20 / 23 | — | — | |
-| Rust | 2024 edition | — | — | |
+| Rust | Backend, by `--profile`: `rust2018` (Rust 1.31), `rust2021` (Rust 1.56), `rust2024` (Rust 1.85, the default); `--rust-version` raises the MSRV | — | ⚠️ | Backend: a Cargo package - `Cargo.toml` without dependencies, `src/lib.rs` with `#![forbid(unsafe_code)]` and the lints the code needs allowed, `src/<module>.rs` - for scalar code: every integer type, `f32`, `f64` and `bool`; the arithmetic with its contract in every build mode (`wrapping_add`, `checked_add(…).expect("IntegerOverflow")`, `saturating_add`, masked `wrapping_shl`), the division and its traps, every conversion, the intrinsics Rust has a method for (the IR helper library and the portable floating-point implementations for the others, chosen by the MSRV); functions, calls, recursion, read-only constant tables; `if`/`else if`, `while`, `loop`, `for i in a..b`, `match` with or-patterns and ranges, labelled blocks from Rust 1.65; traps as panics named after the IR trap; optional `#[test]` functions. Arrays and views, strings, structs, classes and enums, module state, closures and collections are refused with `PLY1550` naming them, exception handling with `PLY1560`. [The Rust backend](docs/architecture/RUST-BACKEND.md). |
 | Kotlin | JVM | — | — | |
 | Perl | Perl 5 | — | — | |
 | Python | 3.x | — | — | |
