@@ -138,7 +138,8 @@ public static class CSharpFrontend {
     var compilation = CSharpCompilation.Create(
       "Imported",
       trees,
-      [_coreLibrary.Value, _collections.Value, .. _linq.Value],
+      // LINQ is bound only for a source that names it: its assemblies are costs every other import would pay at startup.
+      [_coreLibrary.Value, _collections.Value, .. files.Any(file => file.Text.Contains("Linq", StringComparison.Ordinal)) ? _linq.Value : []],
       new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, checkOverflow: checkedByDefault, allowUnsafe: true));
 
     var errors = compilation.GetDiagnostics()
