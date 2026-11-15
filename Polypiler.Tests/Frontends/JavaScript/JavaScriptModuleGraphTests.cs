@@ -39,10 +39,10 @@ public sealed class JavaScriptModuleGraphTests {
     })(), function ({{parameters}}) {
     {{body}}
     }));
-    """;
+    """.ReplaceLineEndings("\n");
 
   /// <summary>A helper library as OpCodes is written: a wrapper whose object literal is the export.</summary>
-  private const string Helpers = """
+  private static readonly string Helpers = """
     (function(global) {
       'use strict';
       const Ops = {
@@ -57,14 +57,14 @@ public sealed class JavaScriptModuleGraphTests {
         module.exports = Ops;
       }
     })(typeof global !== 'undefined' ? global : this);
-    """;
+    """.ReplaceLineEndings("\n");
 
-  private const string Library = """
+  private static readonly string Library = """
       /** @param {int32} a @returns {int32} */
       function square(a) { return Math.imul(a, a); }
       function broken(a) { return typeof a; }
       return { square, broken };
-    """;
+    """.ReplaceLineEndings("\n");
 
   private static ImportResult Import(string entry, params (string Name, string Text)[] files) {
     var all = files.ToDictionary(file => At(file.Name), file => file.Text);

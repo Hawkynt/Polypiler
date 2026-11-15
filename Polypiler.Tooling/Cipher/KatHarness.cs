@@ -88,7 +88,7 @@ public sealed class KatHarness(IProcessRunner runner, IReadOnlyList<string> poly
   /// <summary>How long building and running one test project may take.</summary>
   public static readonly TimeSpan TestTimeout = TimeSpan.FromMinutes(15);
 
-  private static readonly JsonSerializerOptions _json = new() { WriteIndented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+  private static readonly JsonSerializerOptions _json = new() { WriteIndented = true, NewLine = "\n", Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
   /// <summary>Checks one file on every target.</summary>
   /// <param name="relative">The file below <c>algorithms/</c>, <c>checksum/adler.js</c>.</param>
