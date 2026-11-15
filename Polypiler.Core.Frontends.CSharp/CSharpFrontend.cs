@@ -143,7 +143,7 @@ public static class CSharpFrontend {
       new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, checkOverflow: checkedByDefault, allowUnsafe: true));
 
     var errors = compilation.GetDiagnostics()
-      .Where(diagnostic => diagnostic.Severity == RoslynSeverity.Error)
+      .Where(diagnostic => diagnostic.Severity == RoslynSeverity.Error && !IsGeneratedPart(diagnostic))
       .Select(diagnostic => {
         var position = diagnostic.Location.GetLineSpan().StartLinePosition;
         return (diagnostic.Id is "CS0220" or "CS0221" ? ConstantOverflowDescriptor : CompilerErrorDescriptor).At(
@@ -159,6 +159,15 @@ public static class CSharpFrontend {
     var parts = trees.Select(tree => (tree.FilePath, new BoundModel(compilation.GetSemanticModel(tree)), tree.GetCompilationUnitRoot())).ToList();
     return new Lowering(parts[0].FilePath, parts[0].Item2) { Requested = instantiations, Intrinsics = intrinsics }.Run(parts);
   }
+
+  /// <summary>
+  /// Whether an error is CS8795 - a partial method without its implementing part - on a <c>[LibraryImport]</c>
+  /// declaration, whose part the interop source generator writes, which the import does not run (#1332).
+  /// </summary>
+  private static bool IsGeneratedPart(Microsoft.CodeAnalysis.Diagnostic diagnostic)
+    => diagnostic.Id == "CS8795" && diagnostic.Location.SourceTree?.GetRoot().FindNode(diagnostic.Location.SourceSpan) is { } node
+      && node.AncestorsAndSelf().OfType<Microsoft.CodeAnalysis.CSharp.Syntax.MethodDeclarationSyntax>().FirstOrDefault() is { } method
+      && method.AttributeLists.SelectMany(list => list.Attributes).Any(attribute => attribute.Name.ToString().Split('.')[^1] is "LibraryImport" or "LibraryImportAttribute");
 
   /// <summary>
   /// An assembly of the running process as a compiler reference. It is read from memory rather than
