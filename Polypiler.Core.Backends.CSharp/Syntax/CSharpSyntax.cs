@@ -125,7 +125,12 @@ public sealed record CsInvocation(CsExpression Target, IReadOnlyList<CsExpressio
 
 /// <summary>An argument passed by reference, <c>out value</c>; it stands only in an argument list.</summary>
 /// <param name="Value">The variable, or the discard.</param>
-public sealed record CsOutArgument(CsExpression Value) : CsExpression;
+public sealed record CsOutArgument(CsExpression Value) : CsExpression {
+
+  /// <summary>The keyword in front of the variable: <c>out</c>, or <c>ref</c> and <c>in</c> for a native call (#1332).</summary>
+  public string Keyword { get; init; } = "out";
+
+}
 
 /// <summary><c>target[index]</c>, or <c>target?[index]</c>.</summary>
 /// <param name="Target">The array.</param>
@@ -400,14 +405,24 @@ public abstract record CsMember : CsNode {
 /// <param name="ParameterType">The type.</param>
 /// <param name="Name">The name.</param>
 /// <param name="Modifier">The modifier, such as <c>out</c>, or <see langword="null"/>.</param>
-public sealed record CsParameter(CsType ParameterType, string Name, string? Modifier = null) : CsNode;
+public sealed record CsParameter(CsType ParameterType, string Name, string? Modifier = null) : CsNode {
+
+  /// <summary>The attributes, each as it stands between its brackets in front of the parameter, such as <c>global::System.Runtime.InteropServices.In</c>.</summary>
+  public IReadOnlyList<string> Attributes { get; init; } = [];
+
+}
 
 /// <summary>A field: <c>modifiers T name = initializer;</c>.</summary>
 /// <param name="Modifiers">The modifiers, in their order.</param>
 /// <param name="FieldType">The type.</param>
 /// <param name="Name">The name.</param>
 /// <param name="Initializer">The initial value, or <see langword="null"/>.</param>
-public sealed record CsField(IReadOnlyList<string> Modifiers, CsType FieldType, string Name, CsExpression? Initializer) : CsMember;
+public sealed record CsField(IReadOnlyList<string> Modifiers, CsType FieldType, string Name, CsExpression? Initializer) : CsMember {
+
+  /// <summary>The attributes, each as it stands between its brackets on a line of its own, such as <c>global::System.Runtime.InteropServices.FieldOffset(0)</c>.</summary>
+  public IReadOnlyList<string> Attributes { get; init; } = [];
+
+}
 
 /// <summary>
 /// A method or an operator (whose name is <c>operator ==</c>): a block body, or an expression body
@@ -429,6 +444,9 @@ public sealed record CsMethod(
 
   /// <summary>The constraint clauses of the type parameters, each as it follows <c>where</c>: <c>T : global::System.IEquatable&lt;T&gt;</c>; empty for none.</summary>
   public IReadOnlyList<string> Constraints { get; init; } = [];
+
+  /// <summary>The attributes, each as it stands between its brackets on a line of its own, such as <c>global::System.Runtime.InteropServices.DllImport("libc.so.6")</c>; one for the result starts with <c>return: </c>.</summary>
+  public IReadOnlyList<string> Attributes { get; init; } = [];
 
 }
 
@@ -490,6 +508,9 @@ public sealed record CsTypeDeclaration(
 
   /// <summary>The type parameters of a generic type, such as <c>TKey</c>; empty for none.</summary>
   public IReadOnlyList<string> TypeParameters { get; init; } = [];
+
+  /// <summary>The attributes, each as it stands between its brackets on a line of its own, such as <c>global::System.Runtime.InteropServices.StructLayout(…)</c>.</summary>
+  public IReadOnlyList<string> Attributes { get; init; } = [];
 
 }
 

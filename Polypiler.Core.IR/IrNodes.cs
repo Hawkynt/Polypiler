@@ -1139,4 +1139,7 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// </summary>
   public IReadOnlyList<string> Caveats { get; init; } = [];
 
+  /// <summary>The functions of native libraries the module calls (#1332), in source order; their names are unique among the functions.</summary>
+  public IReadOnlyList<IrForeignFunction> ForeignFunctions { get; init; } = [];
+
 }

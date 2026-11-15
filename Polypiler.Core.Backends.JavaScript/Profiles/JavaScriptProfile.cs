@@ -28,6 +28,9 @@ public sealed record JavaScriptProfile {
     this.Global = global;
   }
 
+  /// <summary>No binding of a native library; declared before <see cref="Default"/>, whose initializer reads it.</summary>
+  private static readonly IReadOnlyDictionary<string, string> _unbound = new Dictionary<string, string>();
+
   /// <summary>The profile of a command line that names none: ECMAScript 2022 as an ES module.</summary>
   public static JavaScriptProfile Default { get; } = new(JavaScriptLevel.Es2022, JavaScriptModuleFormat.Esm, true, null);
 
@@ -51,6 +54,27 @@ public sealed record JavaScriptProfile {
 
   /// <summary>The name of the global object of an <see cref="JavaScriptModuleFormat.Iife"/>; otherwise <see langword="null"/>.</summary>
   public string? Global { get; }
+
+  /// <summary>
+  /// The binding module of every native library the module may call (#1332), by the library's name as the source names
+  /// it: a module specifier that an ES module imports and a CommonJS module requires, or for <c>iife</c> a global
+  /// object, such as <c>globalThis.LibC</c>. A native call into a library without one is refused.
+  /// </summary>
+  public IReadOnlyDictionary<string, string> Bindings { get; init; } = _unbound;
+
+
+  /// <summary>
+  /// What is wrong with the binding of a library, <c>--bind &lt;library&gt;=&lt;module or global&gt;</c>, for a module
+  /// format: an empty library or target, or for <c>iife</c> a target that is no dotted name of a global object.
+  /// </summary>
+  /// <param name="library">The library.</param>
+  /// <param name="target">The module specifier or the global.</param>
+  /// <param name="module">The module format.</param>
+  /// <returns>The problem, or <see langword="null"/> for a binding that is well-formed.</returns>
+  public static string? BindingProblem(string library, string target, JavaScriptModuleFormat module)
+    => library.Length == 0 || target.Length == 0 ? $"'{library}={target}' binds no library or to nothing; --bind takes <library>=<module or global>"
+      : module == JavaScriptModuleFormat.Iife && !target.Split('.').All(JavaScriptWords.IsIdentifier) ? $"'{target}' is no global object the module format 'iife' can read the binding of '{library}' from"
+      : null;
 
   /// <summary>The name of the level as <see cref="Parse"/> takes it, for example <c>es2017</c>.</summary>
   public string LevelName => _levels.First(level => level.Level == this.Level).Name;

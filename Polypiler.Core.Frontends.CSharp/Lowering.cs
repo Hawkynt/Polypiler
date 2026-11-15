@@ -93,6 +93,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     }
 
     this.Globals();
+    this.DeclareForeign(classes);
     var seen = new HashSet<string>();
     foreach (var (file, semantics, type) in classes) {
       path = file;
@@ -114,7 +115,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
           if (!seen.Add(method.Identifier.Text))
             throw new UnsupportedException(method, "method overloading");
 
-          if (this.Intrinsics.ContainsKey(method.Identifier.Text))
+          if (this.Intrinsics.ContainsKey(method.Identifier.Text) || IsForeignDeclaration(method))
             continue;
 
           if (method.TypeParameterList is not null) {
@@ -139,7 +140,8 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
     var module = new IrModule(name, functions, this._constants.Values.ToList()) {
       Types = [.. this._types], Globals = [.. this._initialized.Select(entry => entry.Global)],
-      Caveats = this._cultureImplied ? [CSharpFrontend.InvariantCulture] : []
+      Caveats = this._cultureImplied ? [CSharpFrontend.InvariantCulture] : [],
+      ForeignFunctions = this.ForeignFunctions
     };
     if (this._diagnostics.Count == 0)
       this.Constructed(module);
@@ -829,6 +831,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       throw this.Reference(reference);
 
     this.RefuseOpen(expression);
+    if (this.ForeignValue(expression) is { } foreign)
+      return foreign;
+
     var info = model.GetTypeInfo(expression);
     if (this.Defaulted(expression, info) is { } defaulted)
       return defaulted;

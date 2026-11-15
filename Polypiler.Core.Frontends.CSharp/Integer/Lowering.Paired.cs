@@ -18,6 +18,9 @@ internal sealed partial class Lowering {
   /// </summary>
   /// <returns><see langword="false"/> for a statement that is none of these.</returns>
   private bool Paired(ExpressionSyntax statement, List<IrStmt> into) {
+    if (this.ForeignStatement(statement, into))
+      return true;
+
     switch (statement) {
       case InvocationExpressionSyntax call when this.OutForm(call) is { } method:
         this.Pair(method, call, null, this.Out(call), into);
@@ -41,6 +44,9 @@ internal sealed partial class Lowering {
 
   /// <summary>A declaration of one local whose initializer is a call with an out argument.</summary>
   private bool Paired(VariableDeclarationSyntax declaration, List<IrStmt> into) {
+    if (this.ForeignStatement(declaration, into))
+      return true;
+
     if (declaration.Variables is not [{ Initializer.Value: InvocationExpressionSyntax call } variable] || this.OutForm(call) is not { } method)
       return false;
 

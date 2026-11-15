@@ -190,7 +190,11 @@ public sealed class CSharpCapabilitiesTests {
     ("generator object of ECMA-262 as a single-pass IEnumerable<T>", "net2.0"),
     ("async/await", "C# 5"),
     ("Task.CompletedTask", "net4.6"),
-    ("ValueTask<T>", "netstandard2.1")
+    ("ValueTask<T>", "netstandard2.1"),
+    ("DllImportAttribute", "net2.0"),
+    ("LibraryImportAttribute", "net8.0"),
+    ("UnmanagedType.LPUTF8Str", "net4.8"),
+    ("Marshal.GetLastPInvokeError", "net8.0")
   ];
 
   /// <summary>
@@ -400,7 +404,8 @@ public sealed class CSharpCapabilitiesTests {
       Assert.That(CSharpProfile.All.Where(row.IsIn), Is.EqualTo(CSharpProfile.All.Where(profile => profile.LanguageVersion >= language)));
     } else {
       var from = row.Since is null ? CSharpProfile.All.Count : CSharpProfile.All.ToList().IndexOf(row.Since);
-      Assert.That(CSharpProfile.All.Where(row.IsIn), Is.EqualTo(CSharpProfile.All.Skip(from)));
+      // A row of an API that a later profile lacks all the same (#1332) leaves that profile out.
+      Assert.That(CSharpProfile.All.Where(row.IsIn), Is.EqualTo(CSharpProfile.All.Skip(from).Where(profile => !row.Lacking.Contains(profile))));
       Assert.That(raised.Where(row.IsIn), row.Since == CSharpProfile.Net20 ? Is.EqualTo(raised) : Is.Empty);
     }
   }
