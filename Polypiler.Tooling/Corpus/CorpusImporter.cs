@@ -83,11 +83,15 @@ public sealed class CorpusImporter {
       : [.. manifest.Repositories.Where(repository => fixtures.Any(fixture => fixture.Repository == repository.Name))];
 
     // A fixture that names a commit of its own is imported from that commit, with the licence files of the repository there.
-    var pins = repositories.Select(repository => (Pin: repository, Fixtures: fixtures.Where(fixture => fixture.Repository == repository.Name && fixture.Commit is null).ToList()))
-      .Concat(fixtures.Where(fixture => fixture.Commit is not null).GroupBy(fixture => (fixture.Repository, fixture.Commit))
-        .Select(group => (Pin: group.First().PinOf(manifest.Repository(group.Key.Repository)!), Fixtures: group.ToList())))
-      .GroupBy(pin => pin.Pin)
-      .Select(group => (Pin: group.Key, Fixtures: group.SelectMany(pin => pin.Fixtures).ToList()));
+    var pins = repositories.Select(repository => (Pin: repository, Fixtures: new List<CorpusFixtureEntry>())).ToList();
+    foreach (var fixture in fixtures) {
+      var pin = fixture.PinOf(manifest.Repository(fixture.Repository)!);
+      var index = pins.FindIndex(entry => entry.Pin == pin);
+      if (index < 0)
+        pins.Add((pin, [fixture]));
+      else
+        pins[index].Fixtures.Add(fixture);
+    }
 
     var files = new List<(CorpusRepository Repository, string Path, byte[] Content)>();
     var problems = new List<Diagnostic>();

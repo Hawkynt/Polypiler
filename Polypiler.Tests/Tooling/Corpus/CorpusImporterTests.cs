@@ -301,6 +301,22 @@ public sealed class CorpusImporterTests {
   }
 
   [Test]
+  public void Verify_OfAnEntryAtTheCommitOfAFixtureOfAnotherRepository_ReportsPly0026() {
+    var manifest = Manifest(_mini.Manifest(MiniUpstream.Fixture("mini.a", "a.txt", commit: _mini.FirstCommit)).Replace("repositories:", $"""
+      repositories:
+        - name: other/repo
+          url: https://example.org/other.git
+          commit: {_mini.Commit}
+          licence: MIT
+          licenceFiles: []
+      """));
+    var entries = new CorpusLock([new("other/repo", _mini.FirstCommit, "a.txt", Hello, 6)]);
+    Assert.That(CorpusVerifier.Verify(this._root, manifest, entries).Select(Text), Is.EqualTo(new[] {
+      $"PLY0026: corpus manifest invalid: lock entry 'other/repo@{_mini.FirstCommit}/a.txt' is not at the pin {_mini.Commit} nor at the commit of a fixture"
+    }));
+  }
+
+  [Test]
   public void Import_OfTwoFixturesAtTheSameCommitOfTheirOwn_ReadsThatCommitOnce() {
     var fixtures = MiniUpstream.Fixture("mini.a", "a.txt", commit: _mini.FirstCommit) + MiniUpstream.Fixture("mini.licence", "LICENSE", commit: _mini.FirstCommit);
     var imported = this.ImportAll(_mini, fixtures);

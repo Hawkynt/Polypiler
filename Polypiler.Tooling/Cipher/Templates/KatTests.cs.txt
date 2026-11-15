@@ -1,0 +1,192 @@
+// The known-answer tests of one Cipher algorithm file, run on its translation to C#: written by
+// polypiler-tooling cipher kat beside the translated sources. Every vector of kats.json is one test.
+// The algorithm comes from the registry of the translation, the instance from its CreateInstance;
+// the vector's steps set its properties and call its methods by name, as node did, and the result of
+// Feed and Result must be exactly the recorded bytes.
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+using System.Reflection;
+using System.Text.Json;
+using NUnit.Framework;
+
+namespace Polypiler.CipherKat;
+
+/// <summary>One test per known-answer test of the file.</summary>
+public sealed class KatTests {
+
+  private const BindingFlags Members = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.FlattenHierarchy;
+
+  /// <summary>The vectors, each a test named after its algorithm, its position and its text.</summary>
+  public static IEnumerable<TestCaseData> Vectors() {
+    using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "kats.json")));
+    foreach (var vector in document.RootElement.EnumerateArray())
+      yield return new TestCaseData(vector.GetProperty("id").GetString()!, vector.GetRawText()).SetName(vector.GetProperty("id").GetString()!);
+  }
+
+  /// <summary>Feeds the vector's input to a configured instance and compares the result with the recorded bytes.</summary>
+  [TestCaseSource(nameof(Vectors))]
+  public void Kat(string id, string json) {
+    using var document = JsonDocument.Parse(json);
+    var vector = document.RootElement;
+    var algorithm = Registered(vector.GetProperty("algorithm").GetString()!);
+    var instance = Call(algorithm, "CreateInstance", [Value(vector.GetProperty("inverse"))]);
+    Assert.That(instance, Is.Not.Null, "CreateInstance gave no instance");
+    foreach (var step in vector.GetProperty("steps").EnumerateArray()) {
+      var name = step.GetProperty("name").GetString()!;
+      var values = step.GetProperty("values").EnumerateArray().ToList();
+      if (step.GetProperty("call").GetBoolean())
+        Call(instance!, name, values);
+      else
+        Set(instance!, name, values[0]);
+    }
+
+    Call(instance!, "Feed", [vector.GetProperty("input")]);
+    var result = Bytes(Call(instance!, "Result", []));
+    var expected = Convert.FromHexString(vector.GetProperty("answer").GetString()!);
+    var length = Math.Min(result.Length, expected.Length);
+    for (var index = 0; index < length; ++index)
+      if (result[index] != expected[index])
+        Assert.Fail($"first differing byte at {index}: expected 0x{expected[index]:x2}, got 0x{result[index]:x2} ({expected.Length} bytes expected, {result.Length} given)");
+    if (result.Length != expected.Length)
+      Assert.Fail($"first differing byte at {length}: expected {expected.Length} bytes, got {result.Length}");
+  }
+
+  /// <summary>The registered algorithm of a name: an element of a static list of the translation whose 'name' is it.</summary>
+  private static object Registered(string name) {
+    foreach (var type in typeof(KatTests).Assembly.GetTypes().Where(type => type.Namespace != typeof(KatTests).Namespace && !type.ContainsGenericParameters)) {
+      var members = type.GetFields(Members).Where(field => field.IsStatic).Select(field => (Func<object?>)(() => field.GetValue(null)))
+        .Concat(type.GetProperties(Members).Where(property => property.GetMethod is { IsStatic: true } && property.GetIndexParameters().Length == 0).Select(property => (Func<object?>)(() => property.GetValue(null))));
+      foreach (var read in members) {
+        if (read() is not IEnumerable items || items is string)
+          continue;
+        foreach (var item in items)
+          if (item is not null && Read(item, "name") is string named && named == name)
+            return item;
+      }
+    }
+
+    Assert.Fail($"the translation registers no algorithm named '{name}'");
+    return null!;
+  }
+
+  private static object? Read(object target, string name) {
+    var type = target.GetType();
+    if (type.GetProperty(name, Members) is { GetMethod: not null } property && property.GetIndexParameters().Length == 0)
+      return property.GetValue(target);
+    return type.GetField(name, Members)?.GetValue(target);
+  }
+
+  private static void Set(object target, string name, JsonElement value) {
+    var type = target.GetType();
+    if (type.GetProperty(name, Members) is { SetMethod: not null } property && property.GetIndexParameters().Length == 0) {
+      property.SetValue(target, Value(value, property.PropertyType));
+      return;
+    }
+
+    if (type.GetField(name, Members) is { } field) {
+      field.SetValue(target, Value(value, field.FieldType));
+      return;
+    }
+
+    Assert.Fail($"the translation of {type.Name} has no property '{name}' to set");
+  }
+
+  private static object? Call(object target, string name, IReadOnlyList<JsonElement> arguments) {
+    var methods = target.GetType().GetMethods(Members).Where(method => method.Name == name && !method.IsGenericMethodDefinition
+      && method.GetParameters().Length >= arguments.Count && method.GetParameters().Skip(arguments.Count).All(parameter => parameter.IsOptional)).ToList();
+    if (methods.Count == 0)
+      Assert.Fail($"the translation of {target.GetType().Name} has no method '{name}' of {arguments.Count} arguments");
+
+    var chosen = methods.OrderBy(method => method.GetParameters().Length).First();
+    var parameters = chosen.GetParameters();
+    var values = parameters.Select((parameter, index) => index < arguments.Count ? Value(arguments[index], parameter.ParameterType) : Type.Missing).ToArray();
+    try {
+      return chosen.Invoke(chosen.IsStatic ? null : target, values);
+    } catch (TargetInvocationException thrown) when (thrown.InnerException is { } inner) {
+      Assert.Fail($"{name} threw {inner.GetType().Name}: {inner.Message}");
+      return null;
+    }
+  }
+
+  private static object? Value(JsonElement value) => Value(value, typeof(object));
+
+  /// <summary>A recorded value as the type a property, a field or a parameter of the translation has.</summary>
+  private static object? Value(JsonElement value, Type type) {
+    var kind = value.GetProperty("t").GetString();
+    var target = Nullable.GetUnderlyingType(type) ?? type;
+    switch (kind) {
+      case "null":
+      case "undefined":
+        return null;
+      case "bool":
+        return value.GetProperty("v").GetBoolean();
+      case "string":
+        return value.GetProperty("v").GetString();
+      case "number":
+        return Number(value.GetProperty("v").ValueKind == JsonValueKind.String ? double.Parse(value.GetProperty("v").GetString()!, CultureInfo.InvariantCulture) : value.GetProperty("v").GetDouble(), target);
+      case "bigint":
+        var big = BigInteger.Parse(value.GetProperty("v").GetString()!, CultureInfo.InvariantCulture);
+        return target == typeof(BigInteger) || target == typeof(object) ? big : Convert.ChangeType(big.ToString(CultureInfo.InvariantCulture), target, CultureInfo.InvariantCulture);
+      case "bytes":
+        return Sequence(Convert.FromHexString(value.GetProperty("v").GetString()!).Select(item => (object)(double)item).ToList(), target, typeof(byte));
+      case "typed":
+        return Sequence(value.GetProperty("v").EnumerateArray().Select(item => (object)(item.ValueKind == JsonValueKind.String ? double.Parse(item.GetString()!, CultureInfo.InvariantCulture) : item.GetDouble())).ToList(), target, typeof(double));
+      case "array":
+        return Sequence(value.GetProperty("v").EnumerateArray().Select(item => (object)item.Clone()).ToList(), target, typeof(object));
+      default:
+        Assert.Fail($"a recorded value of the kind '{kind}' cannot be given to the translation");
+        return null;
+    }
+  }
+
+  private static object Number(double number, Type target) {
+    if (target == typeof(object) || target == typeof(double))
+      return number;
+    if (target == typeof(float))
+      return (float)number;
+    if (number != Math.Floor(number))
+      Assert.Fail($"the number {number} is given where the translation takes an integer {target.Name}");
+    return Convert.ChangeType(number, target, CultureInfo.InvariantCulture);
+  }
+
+  /// <summary>Elements as an array or a list of the element type the target has.</summary>
+  private static object Sequence(IReadOnlyList<object> items, Type target, Type natural) {
+    var element = target.IsArray ? target.GetElementType()!
+      : target.IsGenericType && target.GetGenericArguments().Length == 1 ? target.GetGenericArguments()[0]
+      : natural;
+    var values = items.Select(item => item is JsonElement nested ? Value(nested, element) : Number((double)item, element)).ToList();
+    if (target.IsArray || target == typeof(object) || !target.IsGenericType) {
+      var array = Array.CreateInstance(element, values.Count);
+      for (var index = 0; index < values.Count; ++index)
+        array.SetValue(values[index], index);
+      return array;
+    }
+
+    var list = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(element))!;
+    foreach (var item in values)
+      list.Add(item);
+    return list;
+  }
+
+  /// <summary>The result as bytes: every element an integer from 0 to 255.</summary>
+  private static byte[] Bytes(object? result) {
+    if (result is not IEnumerable items || result is string)
+      Assert.Fail($"Result gave {(result is null ? "nothing" : result.GetType().Name)}, not a sequence of bytes");
+
+    var bytes = new List<byte>();
+    foreach (var item in (IEnumerable)result!) {
+      var number = Convert.ToDouble(item, CultureInfo.InvariantCulture);
+      if (number != Math.Floor(number) || number < 0 || number > 255)
+        Assert.Fail($"Result gave {number} at {bytes.Count}, which is no byte");
+      bytes.Add((byte)number);
+    }
+
+    return [.. bytes];
+  }
+
+}
