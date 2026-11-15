@@ -59,7 +59,8 @@ internal sealed partial class TypeInference {
           return Unsupported(loop, "for await");
         case NewExpression { Callee: Identifier { Name: "Promise" } } made:
           return Unsupported(made, HandCompleted);
-        case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: "then" or "catch" or "finally" } method } } continued:
+        case CallExpression { Callee: MemberExpression { Computed: false, Object: var receiver, Property: Identifier { Name: "then" or "catch" or "finally" } method } } continued
+          when this.MayBePromise(receiver, method.Name):
           return Unsupported(continued, "." + method.Name);
         case CallExpression { Callee: Identifier { Name: "setTimeout" or "setInterval" or "setImmediate" or "queueMicrotask" } timer } scheduled:
           return Unsupported(scheduled, timer.Name);
@@ -97,6 +98,34 @@ internal sealed partial class TypeInference {
 
     return Search((Node)function, null, null);
   }
+
+  /// <summary>
+  /// Whether the receiver of a <c>.then</c>, <c>.catch</c> or <c>.finally</c> is or may be a promise. Without
+  /// a class of the module that declares an instance method of the name only a promise has one. With
+  /// one, a promise is what the subset can make: <c>new Promise</c>, a member of <c>Promise</c>, and a call
+  /// of an async function or of anything the module declares no plain function or method for. A variable,
+  /// <c>this</c> or a field never holds one: a promise that is not awaited where it is created is refused.
+  /// </summary>
+  private bool MayBePromise(Node receiver, string method) {
+    if (!candidates.Exists(candidate => candidate is { Member: MemberKind.Method, IsStatic: false } && candidate.Key == method))
+      return true;
+
+    return receiver switch {
+      NewExpression { Callee: Identifier { Name: "Promise" } } => true,
+      CallExpression call => IsPromiseCall(call, out _) || !candidates.Exists(candidate => !candidate.Function.Async && call.Callee switch {
+        Identifier { Name: var name } => candidate.Class is null && candidate.Name == name,
+        MemberExpression { Computed: false, Property: Identifier { Name: var key } } => candidate.Member == MemberKind.Method && candidate.Key == key,
+        _ => false
+      }),
+      _ => false
+    };
+  }
+
+  /// <summary>
+  /// Whether a value is a thenable: an object of a class that has, or inherits, an instance method
+  /// <c>then</c>. JavaScript calls it when an async function returns or awaits the object, .NET never does.
+  /// </summary>
+  internal static bool IsThenable(JsType type) => type.Class?.Member(MemberKind.Method, "then") is not null;
 
   /// <summary>
   /// The type of what an <c>await</c> gives: the value of <c>Promise.resolve(v)</c>, nothing for

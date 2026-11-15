@@ -105,9 +105,50 @@ internal sealed class JavaScriptAsyncImportTests {
     Assert.That(IrInterpreter.Call(result.Module!, "m", []), Is.EqualTo(3.0));
   }
 
+  /// <summary>A class's own <c>then</c>, <c>catch</c> and <c>finally</c> are methods like any other: called on an object of the class - a variable, <c>this</c>, the result of a method or a function - they are imported in a file with async functions.</summary>
+  [Test]
+  public void OwnThenCatchFinally_OfAClass_AreImported() {
+    const string source = "class Chain { constructor(v) { this.v = v; } then(k) { return this.v + k; } catch(k) { return this.v - k; } finally(k) { return this.then(k) * k; } self() { return this; } }"
+      + " function make(v) { return new Chain(v); } async function g(x) { await 0; return x + 1; }"
+      + " export async function m(x) { const c = new Chain(await g(x)); return c.then(1) + c.catch(1) + c.finally(2) + c.self().then(0) + make(5).then(0); }";
+    var result = JavaScriptFrontend.Import("snippet.mjs", source);
+    Assert.That(result.Diagnostics, Is.Empty);
+    Assert.That(IrInterpreter.Call(result.Module!, "m", [1.0]), Is.EqualTo(19.0));
+  }
+
+  /// <summary>A class declaring <c>then</c> does not let a promise's own <c>.then</c>, <c>.catch</c> or <c>.finally</c> through: the receiver is (or may be) a promise.</summary>
+  [TestCase("return await f().then(x => x + 1);", "'.then'")]
+  [TestCase("return await f().catch(x => x);", "'.catch'")]
+  [TestCase("return await Promise.resolve(1).finally(() => 1);", "'.finally'")]
+  [TestCase("return await new Promise(r => r(1)).then(x => x);", "'.then'")]
+  [TestCase("return await h().then(x => x);", "'.then'")]
+  [TestCase("return await h[0]().then(x => x);", "'.then'")]
+  public void PromiseContinuation_BesideAClassThen_IsRefused(string body, string words) {
+    var diagnostics = Refused("class Chain { then(k) { return k; } catch(k) { return k; } finally(k) { return k; } }"
+      + " async function f() { await 0; return 1; }"
+      + $" export async function m(h) {{ {body} }}");
+    Assert.That(diagnostics, Does.Contain("PLY1102").And.Contain(words), diagnostics);
+  }
+
+  /// <summary>Without a class that declares it, <c>.then</c> on any receiver may be a promise's and is refused.</summary>
+  [Test]
+  public void Then_OnAnObjectWithoutSuchAMethod_IsRefused() {
+    var diagnostics = Refused("class Box { constructor(v) { this.v = v; } } async function f() { await 0; return 1; } export async function m() { const b = new Box(await f()); return b.then(1); }");
+    Assert.That(diagnostics, Does.Contain("PLY1102").And.Contain("'.then'"), diagnostics);
+  }
+
+  /// <summary>An object of a class with <c>then</c> is a thenable: an async function that returns or awaits one would call it in JavaScript and not in .NET.</summary>
+  [TestCase("return new Chain(1);")]
+  [TestCase("const c = await new Chain(1); return 1;")]
+  [TestCase("return await Promise.resolve(new Chain(1));")]
+  public void Thenable_ReturnedOrAwaited_IsRefused(string body) {
+    var diagnostics = Refused($"class Chain {{ constructor(v) {{ this.v = v; }} then(k) {{ return this.v + k; }} }} export async function m() {{ await 0; {body} }}");
+    Assert.That(diagnostics, Does.Contain("PLY1102").And.Contain("a thenable object"), diagnostics);
+  }
+
   [Test]
   public void ConstructTable_HasRefusalsAndImports() {
-    Assert.That(JavaScriptAsyncApi.Supported.Count(), Is.EqualTo(6));
+    Assert.That(JavaScriptAsyncApi.Supported.Count(), Is.EqualTo(7));
     Assert.That(JavaScriptAsyncApi.Refused.Select(member => member.Refusal), Has.All.Not.Empty);
   }
 

@@ -82,7 +82,9 @@ JavaScript (`JavaScriptAsyncApi`), refused with **PLY1102**:
 | `await Promise.all([f(…), g(…)])` of isolated async functions, at most one of which can fault | `Await` of `WhenAll` |
 | a promise stored, passed or returned without `await` | "a task that is not awaited where it is created" |
 | `new Promise(…)` | "a task completed by hand" |
-| `.then`, `.catch`, `.finally`, `setTimeout`, `setInterval`, `setImmediate`, `queueMicrotask`, `Promise.race`, `Promise.any`, `Promise.allSettled`, `Promise.reject` | the member |
+| `o.then(…)`, `o.catch(…)`, `o.finally(…)` where `o` is an object of a class of the module that declares the method | a method call, as [classes](classes.md) import it |
+| `.then`, `.catch`, `.finally` of a promise, or of any receiver when no class of the module declares the method, `setTimeout`, `setInterval`, `setImmediate`, `queueMicrotask`, `Promise.race`, `Promise.any`, `Promise.allSettled`, `Promise.reject` | the member |
+| an object of a class with a `then` method returned from an async function or awaited: JavaScript calls its `then`, .NET does not | "a thenable object" |
 | an async arrow, a nested async function, an async method, an async generator, `for await` | named |
 | `Promise.all` of two calls that can fault | "Promise.all whose rejection depends on timing": `Promise.all` rejects with the first fault in time, `Task.WhenAll` with the first in argument order |
 

@@ -17,10 +17,16 @@ internal sealed partial class Lowering {
   /// <summary>The calls of <c>Promise.all</c> lowered, with their node, for the diagnostics of one whose order or rejection depends on timing.</summary>
   private readonly Dictionary<IrAsync, Node> _whenAll = new(ReferenceEqualityComparer.Instance);
 
+  /// <summary>What the refusal of a thenable an async function returns or awaits says.</summary>
+  private const string Thenable = "a thenable object, of a class with then, returned or awaited: JavaScript calls its then, .NET does not";
+
   /// <summary>The type a function declares: the result its returns give, or for an async function the async value of it.</summary>
   private IrType Declared(FunctionModel model) {
     if (!model.Candidate.Function.Async)
       return this._returnType;
+
+    if (TypeInference.IsThenable(model.Result))
+      throw this.Unsupported(model.Candidate.Anchor, Thenable);
 
     return IrAsyncFunctions.IsResult(this._returnType)
       ? IrType.Async(this._returnType)
@@ -46,6 +52,9 @@ internal sealed partial class Lowering {
 
   /// <summary>A value as the async value that has it.</summary>
   private IrAsync Resolved(Node value) {
+    if (TypeInference.IsThenable(types.Of(value)))
+      throw this.Unsupported(value, Thenable);
+
     var lowered = this.Value(value, this.Storable(types.Of(value), value));
     return new IrAsync(IrAsyncOp.FromResult, IrType.Async(lowered.Type), [lowered]);
   }
