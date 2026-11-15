@@ -41,7 +41,7 @@ public sealed class PointerCSharpTests {
   [Test]
   public void Output_IsUnsafeCodeAndSaysSo() {
     var text = CSharpEmitter.Emit(Pointers, CSharpProfile.Net20).Single().Content;
-    Assert.That(text, Does.Contain("public static unsafe class Pointers"));
+    Assert.That(text, Does.Contain("public static class Pointers").And.Contain("static unsafe uint Checksum(").And.Not.Contain("unsafe class"));
     Assert.That(text, Does.Contain("*(uint*)(p + at)"));
     Assert.That(text, Does.Contain("AllowUnsafeBlocks"));
     Assert.That(text, Does.Contain("fixed (byte* start = data)"));
@@ -50,6 +50,21 @@ public sealed class PointerCSharpTests {
     Assert.That(text, Does.Contain("void* v = p;"));
     var plain = CSharpEmitter.Emit(PrototypeFixture.Import("Plain.cs", "public static class Plain { public static int F(int x) => x; }"), CSharpProfile.Net20).Single().Content;
     Assert.That(plain, Does.Not.Contain("unsafe").And.Not.Contain("AllowUnsafeBlocks"));
+  }
+
+  /// <summary>Only the methods that hold pointer code are <c>unsafe</c>: no class is, and no other method.</summary>
+  [TestCase("net2.0")]
+  [TestCase("net10.0")]
+  public void Unsafe_MarksOnlyTheMethodsWithPointers(string name) {
+    var module = PrototypeFixture.Import("Snippet.cs", "public static class Snippet { "
+      + "private static unsafe int First(int[] a) { fixed (int* p = a) { return *p; } } "
+      + "public static int G(int[] a) => First(a) + a.Length; }");
+    var profile = CSharpProfile.Parse(name);
+    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    Assert.That(text, Does.Not.Contain("unsafe class").And.Contain("AllowUnsafeBlocks"), text);
+    Assert.That(text, Does.Contain("private static unsafe int First(").And.Contain("public static int G("), text);
+    Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
+    Assert.That(GeneratedCSharp.Compile(text, false).Outcome(new PrototypeCall("G", [new[] { 4, 5 }])), Is.EqualTo("6 | [4,5]"));
   }
 
   /// <summary>Test design 14: no profile lacks unsafe code or stackalloc into a pointer; a table without them refuses or pins.</summary>

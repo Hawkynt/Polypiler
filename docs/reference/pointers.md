@@ -99,8 +99,8 @@ Unsafe code exists since C# 1 in every framework, so every profile from `net2.0`
 | `StackAlloc` into a pointer | `T* p = stackalloc T[n];` for a constant length of fewer than 1024 bytes outside every loop; `fixed (T* p = new T[n])` around the rest of the block otherwise |
 | `AddressOf`, `PointerLoad`, `PointerStore`, `PointerAdd`, `PointerDifference`, comparisons, `PointerCast` | `&x`, `*p` or `p[i]`, `*p = v`, `p + n`, `p - q`, `==` …, `(U*)p`; to `void*` without a cast |
 
-A pinned variable the IR assigns is a copy of the `fixed` one, which C# makes read-only. Every class of a module
-with pointers is declared `unsafe`, and the header says that the project compiling the file must set
+A pinned variable the IR assigns is a copy of the `fixed` one, which C# makes read-only. Every method and
+constructor that holds pointer code is declared `unsafe` - no class, and no other member - and the header says that the project compiling the file must set
 `AllowUnsafeBlocks`. No bounds check is written. Two rows of the capability table, `CSharpFeature.UnsafeCode` and
 `CSharpFeature.StackAllocPointer` from C# 1, let a profile without unsafe code refuse a module with pointers with
 `PLY1053` and one without `stackalloc` into a pointer pin an array instead; no profile of today lacks either.

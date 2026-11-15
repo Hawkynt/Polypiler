@@ -9,15 +9,22 @@ namespace Polypiler.Core.Backends.CSharp;
 /// The bounded pointers of the IR in C# (#1331): unsafe code, which every profile has since C# 1. A pointer is a
 /// pointer, a pin is <c>fixed</c> around the rest of its block, <c>stackalloc</c> into a pointer stays
 /// <c>stackalloc</c> where the length is a constant of fewer than 1024 bytes outside every loop and is a pinned
-/// array otherwise, and every class that holds pointer code is <c>unsafe</c>. Nothing is checked: an access out of
+/// array otherwise, and every method or constructor that holds pointer code is <c>unsafe</c>, no class is. Nothing is checked: an access out of
 /// bounds is undefined in C#, and a check would change what the source's code costs.
 /// </summary>
 public static partial class CSharpEmitter {
 
-  /// <summary>Whether a module holds pointer code: a variable of a pointer type or an operation on pointers.</summary>
-  private static bool UsesPointers(IrModule module)
-    => module.Functions.Any(function => function.Parameters.Concat(function.Locals).Any(local => local.Type.IsPointer)
-      || IrTree.Nodes(function.Body).OfType<IrIntrinsic>().Any(IrPointers.IsPointerNode));
+  /// <summary>Whether a module holds pointer code in any of its functions.</summary>
+  private static bool UsesPointers(IrModule module) => module.Functions.Any(UsesPointers);
+
+  /// <summary>Whether a function holds pointer code: a variable of a pointer type or an operation on pointers.</summary>
+  private static bool UsesPointers(IrFunction function)
+    => function.Parameters.Concat(function.Locals).Any(local => local.Type.IsPointer)
+      || IrTree.Nodes(function.Body).OfType<IrIntrinsic>().Any(IrPointers.IsPointerNode);
+
+  /// <summary>The modifiers of the member a function becomes, with <c>unsafe</c> when it holds pointer code.</summary>
+  private static IReadOnlyList<string> Unsafe(IReadOnlyList<string> modifiers, IrFunction function)
+    => UsesPointers(function) ? [.. modifiers, "unsafe"] : modifiers;
 
   /// <summary>A profile without unsafe code cannot write a module with pointers: <see cref="Inexpressible"/>.</summary>
   private static IEnumerable<Diagnostic> PointerProblems(IrModule module, CSharpProfile profile, CSharpCapabilities table)
@@ -32,12 +39,6 @@ public static partial class CSharpEmitter {
       => UsesPointers(this._module)
         ? ["Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe)."]
         : [];
-
-    /// <summary>The classes of a module with pointers declared <c>unsafe</c>; the declarations as they are otherwise.</summary>
-    private List<CsMember> Unsafe(List<CsMember> types)
-      => UsesPointers(this._module)
-        ? [.. types.Select(type => type is CsTypeDeclaration { Keyword: "class" } declared ? declared with { Modifiers = [.. declared.Modifiers, "unsafe"] } : type)]
-        : types;
 
     /// <summary>Whether a <c>stackalloc</c> into a pointer stays on the stack: a constant length under the limit, outside every loop.</summary>
     private bool OnStack(IrIntrinsic allocation)
