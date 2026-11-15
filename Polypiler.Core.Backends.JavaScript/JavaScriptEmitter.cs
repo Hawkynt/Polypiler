@@ -361,6 +361,8 @@ public static partial class JavaScriptEmitter {
       if (this._structs)
         header.Add("A struct is an object of its fields, copied wherever the place it is read from can still be used.");
 
+      header.AddRange(FloatOperationSources.Notices(module.Implementations.Select(pair => pair.Implementation)));
+
       var strict = new JsExpressionStatement(new JsString("use strict"));
       switch (this._profile.Module) {
         case JavaScriptModuleFormat.Esm:

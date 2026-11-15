@@ -63,6 +63,54 @@ public static class FloatOperationSources {
     return origins;
   }
 
+  /// <summary>
+  /// The notices a file of the portable implementations obliges an output to keep, by the file's name:
+  /// <c>Arithmetic.Single.cs</c> is converted from FreeBSD's <c>lib/msun/src/s_fmaf.c</c>, whose
+  /// BSD-2-Clause asks every redistribution of its source to retain the copyright notice, the
+  /// conditions and the disclaimer (<c>THIRD-PARTY-NOTICE.musl.txt</c> beside the folder).
+  /// </summary>
+  private static readonly Dictionary<string, string[]> _notices = new(StringComparer.Ordinal) {
+    ["Arithmetic.Single.cs"] = [
+      "FusedMultiplyAddF is converted from FreeBSD's lib/msun/src/s_fmaf.c, which carries this notice:",
+      "Copyright (c) 2005-2011 David Schultz <das@FreeBSD.ORG>",
+      "All rights reserved.",
+      "Redistribution and use in source and binary forms, with or without",
+      "modification, are permitted provided that the following conditions",
+      "are met:",
+      "1. Redistributions of source code must retain the above copyright",
+      "   notice, this list of conditions and the following disclaimer.",
+      "2. Redistributions in binary form must reproduce the above copyright",
+      "   notice, this list of conditions and the following disclaimer in the",
+      "   documentation and/or other materials provided with the distribution.",
+      "THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND",
+      "ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE",
+      "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE",
+      "ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE",
+      "FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL",
+      "DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS",
+      "OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)",
+      "HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT",
+      "LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY",
+      "OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF",
+      "SUCH DAMAGE."
+    ]
+  };
+
+  /// <summary>
+  /// The lines of the notices an output keeps for the portable implementations it carries: each
+  /// notice of the files that declare them once, in the order of the file names; none for a file
+  /// under MIT alone, whose notice the grant of <c>LICENSE-OUTPUT.md</c> the header names already is.
+  /// </summary>
+  /// <param name="implementations">The names of the functions in <see cref="FloatOperations"/> the output carries.</param>
+  public static IReadOnlyList<string> Notices(IEnumerable<string> implementations) {
+    ArgumentNullException.ThrowIfNull(implementations);
+    return [.. implementations
+      .Select(Origin).OfType<(string Path, string Licence)>()
+      .Select(origin => Path.GetFileName(origin.Path))
+      .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
+      .SelectMany(file => _notices.GetValueOrDefault(file, []))];
+  }
+
   private static IEnumerable<(string Name, string Text)> Read() {
     var assembly = typeof(FloatOperationSources).Assembly;
     var names = assembly.GetManifestResourceNames().Where(name => name.StartsWith(Prefix, StringComparison.Ordinal)).Order(StringComparer.Ordinal);

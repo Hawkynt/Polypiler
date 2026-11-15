@@ -12,7 +12,9 @@ Code converted from third-party sources keeps its own licence, which its file st
 `SPDX-License-Identifier` header and its `THIRD-PARTY-NOTICE.*.txt` records: CORE-MATH and musl
 under MIT, FreeBSD msun under BSD-2-Clause. Every generated file that carries helpers names their
 licence in its header, and `polypiler.manifest.json` lists each helper with its origin and licence
-under `helpers`.
+under `helpers`. A file that carries the single-precision fused multiply-add converted from FreeBSD
+(`FloatFusedMultiplyAddF`) carries FreeBSD's copyright notice, conditions and disclaimer in its
+header too, as the BSD-2-Clause asks.
 
 ---
 

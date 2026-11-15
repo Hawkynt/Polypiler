@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Cli;
 using Polypiler.Core;
+using Polypiler.Core.IR;
 using Polypiler.Core.Verification.Manifests;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Tooling.Licensing;
@@ -97,6 +98,25 @@ public sealed class TranslateLicenceTests {
     var manifest = this.Translate("MIT", "public static float F(float a, float b, float c) => System.MathF.FusedMultiplyAdd(a, b, c);", "--to", "javascript");
     Assert.That(manifest.Helpers.Single(helper => helper.Symbol == "FloatFusedMultiplyAddF").License, Is.EqualTo("MIT AND BSD-2-Clause"));
     Assert.That((manifest.Licensing.OutputLicence, manifest.Licensing.Obligations.Count), Is.EqualTo(("BSD-2-Clause AND MIT", 2)));
+  }
+
+  // The BSD-2-Clause of FreeBSD's s_fmaf.c asks to retain its copyright notice, its conditions and its disclaimer.
+  [TestCase("javascript", "Snippet.mjs", "es2022")]
+  [TestCase("csharp", "Snippet.cs", "net2.0")]
+  public void TheFusedMultiplyAddOfFloat_CarriesTheNoticeOfFreeBsd(string target, string file, string profile) {
+    this.Translate("MIT", "public static float F(float a, float b, float c) => System.MathF.FusedMultiplyAdd(a, b, c);", "--to", target, "--profile", profile);
+    var lines = File.ReadAllLines(Path.Combine(this._out, file));
+    var notice = FloatOperationSources.Notices([nameof(FloatOperations.FusedMultiplyAddF)]);
+    var start = Array.IndexOf(lines, "// " + notice[0]);
+    Assert.That(start, Is.GreaterThan(0));
+    Assert.That(lines.Skip(start).Take(notice.Count), Is.EqualTo(notice.Select(line => ("// " + line).TrimEnd())));
+  }
+
+  [TestCase("javascript", "Snippet.mjs")]
+  [TestCase("csharp", "Snippet.cs")]
+  public void AnOutputWithoutTheFusedMultiplyAddOfFloat_CarriesNoNotice(string target, string file) {
+    this.Translate("MIT", "public static double F(double a) => System.Math.Cbrt(a);", "--to", target);
+    Assert.That(File.ReadAllText(Path.Combine(this._out, file)), Does.Not.Contain("David Schultz"));
   }
 
   // The licence translate states is what licenses scan computes for the package, never less.

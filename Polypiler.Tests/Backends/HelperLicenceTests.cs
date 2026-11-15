@@ -72,6 +72,24 @@ public sealed class HelperLicenceTests {
     Assert.That(FloatOperationSources.Origin("NoSuchFunction"), Is.Null);
   }
 
+  [Test]
+  public void Notices_OfTheFloatFusedMultiplyAdd_AreFreeBsdsOnce() {
+    var notice = FloatOperationSources.Notices([nameof(FloatOperations.FusedMultiplyAddF), nameof(FloatOperations.FusedMultiplyAddF)]);
+    Assert.That((notice[1], notice[^1], notice.Count(line => line.Contains("David Schultz", StringComparison.Ordinal))),
+      Is.EqualTo(("Copyright (c) 2005-2011 David Schultz <das@FreeBSD.ORG>", "SUCH DAMAGE.", 1)));
+  }
+
+  [TestCase(nameof(FloatOperations.FusedMultiplyAdd))]
+  [TestCase("NoSuchFunction")]
+  public void Notices_OfAnMitFileOrOfNoFile_AreNone(string function)
+    => Assert.That(FloatOperationSources.Notices([function]), Is.Empty);
+
+  [Test]
+  public void Notices_OfNothing_AreNone() {
+    Assert.That(FloatOperationSources.Notices([]), Is.Empty);
+    Assert.That(() => FloatOperationSources.Notices(null!), Throws.ArgumentNullException);
+  }
+
   // Test design 4: every source of an emitted helper carries its SPDX marker; the folders of the backends are MIT throughout.
   [Test]
   public void EveryHelperSource_CarriesItsSpdxMarker() {
