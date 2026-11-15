@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.JavaScript;
@@ -46,8 +47,8 @@ public sealed class JavaScriptSequenceImportTests {
   public void EveryCSharpProfile_WritesTheFixture() {
     var module = SequenceFixtures.ImportedScript();
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile.Name}\n{text}");
     }
   }
@@ -57,8 +58,8 @@ public sealed class JavaScriptSequenceImportTests {
   public void EveryJavaScriptLevel_WritesTheFixture() {
     var module = SequenceFixtures.ImportedScript();
     foreach (var profile in JavaScriptProfile.LevelNames.Select(level => JavaScriptProfile.Parse(level, level == "es5" ? "cjs" : "esm")).Append(JavaScriptProfile.Parse("es5", "cjs", typedArrays: true))) {
-      Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, profile.ToString());
-      var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+      Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, profile.ToString());
+      var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
       Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{profile}\n{text}");
     }
   }

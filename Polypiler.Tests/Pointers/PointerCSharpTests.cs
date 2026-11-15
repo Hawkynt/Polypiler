@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
@@ -25,14 +26,14 @@ public sealed class PointerCSharpTests {
   [TestCaseSource(nameof(Profiles))]
   public void Fixture_ComputesInEveryProfileWhatDotNetComputes(string name) {
     var profile = CSharpProfile.Parse(name);
-    Assert.That(CSharpEmitter.Check(Pointers, profile), Is.Empty);
-    var text = CSharpEmitter.Emit(Pointers, profile).Single().Content;
+    Assert.That(LegalizedCSharp.Check(Pointers, profile), Is.Empty);
+    var text = LegalizedCSharp.Emit(Pointers, profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, false);
     foreach (var call in PointerFixtures.Calls())
       Assert.That(build.Outcome(call), Is.EqualTo(PointerFixtures.DotNet("Pointers", call)), $"{call.Method} in {name}\n{text}");
 
-    var fnv = CSharpEmitter.Emit(PointerFixtures.Imported("Fnv1aPointer"), profile).Single().Content;
+    var fnv = LegalizedCSharp.Emit(PointerFixtures.Imported("Fnv1aPointer"), profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(fnv, profile.Name, profile.LanguageVersionName), Is.Empty, fnv);
     Assert.That(GeneratedCSharp.Compile(fnv, false).Outcome(new PrototypeCall("Hash", ["a"u8.ToArray()])).Split(" | ")[0], Is.EqualTo("3826002220"));
   }
@@ -40,7 +41,7 @@ public sealed class PointerCSharpTests {
   /// <summary>The C# stays unsafe code, and says so: an unsafe class, the reinterpreting read as it was, the header's note.</summary>
   [Test]
   public void Output_IsUnsafeCodeAndSaysSo() {
-    var text = CSharpEmitter.Emit(Pointers, CSharpProfile.Net20).Single().Content;
+    var text = LegalizedCSharp.Emit(Pointers, CSharpProfile.Net20).Single().Content;
     Assert.That(text, Does.Contain("public static class Pointers").And.Contain("static unsafe uint Checksum(").And.Not.Contain("unsafe class"));
     Assert.That(text, Does.Contain("*(uint*)(p + at)"));
     Assert.That(text, Does.Contain("AllowUnsafeBlocks"));
@@ -48,7 +49,7 @@ public sealed class PointerCSharpTests {
     Assert.That(text, Does.Contain("int* p = stackalloc int[8];"));
     Assert.That(text, Does.Contain("&x"));
     Assert.That(text, Does.Contain("void* v = p;"));
-    var plain = CSharpEmitter.Emit(PrototypeFixture.Import("Plain.cs", "public static class Plain { public static int F(int x) => x; }"), CSharpProfile.Net20).Single().Content;
+    var plain = LegalizedCSharp.Emit(PrototypeFixture.Import("Plain.cs", "public static class Plain { public static int F(int x) => x; }"), CSharpProfile.Net20).Single().Content;
     Assert.That(plain, Does.Not.Contain("unsafe").And.Not.Contain("AllowUnsafeBlocks"));
   }
 
@@ -60,7 +61,7 @@ public sealed class PointerCSharpTests {
       + "private static unsafe int First(int[] a) { fixed (int* p = a) { return *p; } } "
       + "public static int G(int[] a) => First(a) + a.Length; }");
     var profile = CSharpProfile.Parse(name);
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(text, Does.Not.Contain("unsafe class").And.Contain("AllowUnsafeBlocks"), text);
     Assert.That(text, Does.Contain("private static unsafe int First(").And.Contain("public static int G("), text);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
@@ -76,11 +77,11 @@ public sealed class PointerCSharpTests {
     }
 
     var withoutUnsafe = new CSharpCapabilities(CSharpCapabilities.Default.Rows.Where(row => row.Feature != CSharpFeature.UnsafeCode));
-    Assert.That(CSharpEmitter.Check(Pointers, CSharpProfile.Net100, withoutUnsafe).Select(diagnostic => diagnostic.ToString()),
+    Assert.That(LegalizedCSharp.Check(Pointers, CSharpProfile.Net100, withoutUnsafe).Select(diagnostic => diagnostic.ToString()),
       Has.Some.Contains(CSharpEmitter.Inexpressible).And.Some.Contains("'unsafe code' cannot be expressed in C# profile 'net10.0'"));
 
     var withoutStack = new CSharpCapabilities(CSharpCapabilities.Default.Rows.Where(row => row.Feature != CSharpFeature.StackAllocPointer));
-    var pinned = CSharpEmitter.Emit(Pointers, CSharpProfile.Net100, null, withoutStack).Single().Content;
+    var pinned = LegalizedCSharp.Emit(Pointers, CSharpProfile.Net100, null, withoutStack).Single().Content;
     Assert.That(pinned, Does.Contain("fixed (int* p = new int[8])").And.Not.Contain("stackalloc"));
     Assert.That(GeneratedCSharp.Compile(pinned, false).Outcome(new PrototypeCall("Stack", [3])), Is.EqualTo("29"));
   }
@@ -97,7 +98,7 @@ public sealed class PointerCSharpTests {
       new IrAssign(pointer, new IrIntrinsic(IrIntrinsicOp.PointerAdd, pointer.Type, [new IrLocalRef(pointer), new IrLocalRef(n)])),
       new IrReturn(new IrIntrinsic(IrIntrinsicOp.PointerLoad, IrType.I32, [new IrLocalRef(pointer)]))
     ]))]);
-    var text = CSharpEmitter.Emit(module, CSharpProfile.Net100).Single().Content;
+    var text = LegalizedCSharp.Emit(module, CSharpProfile.Net100).Single().Content;
     Assert.That(text.Contains("stackalloc", System.StringComparison.Ordinal), Is.EqualTo(onStack), text);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net10.0", CSharpProfile.Net100.LanguageVersionName), Is.Empty, text);
     Assert.That(GeneratedCSharp.Compile(text, false).Outcome(new PrototypeCall("F", [count - 1])), Is.EqualTo("0"));
@@ -137,7 +138,7 @@ public sealed class PointerCSharpTests {
     Assert.That(IrInterpreter.Call(module, "G", []), Is.EqualTo(1));
 
     var profile = CSharpProfile.Parse(name);
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, false);
     var outcome = build.Outcome(new PrototypeCall("F", [length]));
@@ -157,7 +158,7 @@ public sealed class PointerCSharpTests {
       + "public static unsafe int G(int[] a) { fixed (int* p = a.AsSpan(1, 2)) { return p[1]; } } "
       + "public static unsafe int H(int[] a, int i) { Span<int> v = a; fixed (int* p = &v[i]) { return *p; } } }");
     var profile = CSharpProfile.Parse(name);
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, false);
     Assert.That(build.Outcome(new PrototypeCall("F", [new[] { 1, 2, 3 }, 1, 2])), Is.EqualTo("2 | [1,2,3]"));

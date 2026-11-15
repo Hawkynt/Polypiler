@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
@@ -24,15 +25,15 @@ public sealed class JavaScriptSequenceEmissionTests {
   [TestCaseSource(nameof(Levels))]
   public void Iterators_ParseAtEveryLevel(JavaScriptProfile profile) {
     var module = SequenceModules.Module();
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, profile.ToString());
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, profile.ToString());
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{profile}\n{text}");
   }
 
   /// <summary>Test design 8: from ECMAScript 2015 the generators of the language; a restartable sequence calls its generator anew.</summary>
   [Test]
   public void Es2015_WritesGenerators() {
-    var text = JavaScriptEmitter.Emit(SequenceModules.Module(), JavaScriptProfile.Parse("es2015", "esm")).Single().Content;
+    var text = LegalizedJavaScript.Emit(SequenceModules.Module(), JavaScriptProfile.Parse("es2015", "esm")).Single().Content;
     Assert.That(text, Does.Contain("function* TracedOnce(t) {"));
     Assert.That(text, Does.Contain("const $make = function* (t) {"));
     Assert.That(text, Does.Contain("return { [Symbol.iterator]: () => $make(t) };"));
@@ -48,14 +49,14 @@ public sealed class JavaScriptSequenceEmissionTests {
     var x = new IrLocal("x", IrType.I32);
     var body = new IrBlock([new IrForEachCollection(new IrLocalRef(l), EnumerationMode.Checked, x, null, new IrBlock([new IrYield(new IrLocalRef(x))]))]);
     var module = new IrModule("M", [new IrFunction("G", true, IrType.Sequence(IrType.I32, true), [l], [x], body)]);
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es5", "cjs")), Is.Empty);
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es2015", "esm")), Is.Empty);
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Parse("es5", "cjs")), Is.Empty);
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Parse("es2015", "esm")), Is.Empty);
   }
 
   /// <summary>Test design 8: at ECMAScript 5 no generator syntax, a state machine on $generator, a loop over next().</summary>
   [Test]
   public void Es5_WritesAStateMachine() {
-    var text = JavaScriptEmitter.Emit(SequenceModules.Module(), JavaScriptProfile.Parse("es5", "cjs")).Single().Content;
+    var text = LegalizedJavaScript.Emit(SequenceModules.Module(), JavaScriptProfile.Parse("es5", "cjs")).Single().Content;
     Assert.That(text, Does.Not.Contain("function*").And.Not.Contain("yield").And.Not.Contain("Symbol"));
     Assert.That(text, Does.Contain("return $generator(function ($g) {"));
     Assert.That(text, Does.Contain("$machine: for (; ; ) {"));
