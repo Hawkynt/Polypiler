@@ -177,6 +177,9 @@ public sealed record JsFunctionExpression(string? Name, IReadOnlyList<string> Pa
   /// <summary>Whether the function is a generator, <c>function* (…) { … }</c> (ECMAScript 2015).</summary>
   public bool IsGenerator { get; init; }
 
+  /// <summary>Whether the function is async, <c>async function (…) { … }</c> (ECMAScript 2017).</summary>
+  public bool IsAsync { get; init; }
+
 }
 
 /// <summary>An arrow function, <c>(a, b) =&gt; body</c>: a block body, or an expression whose value it returns (ECMAScript 2015).</summary>
@@ -295,6 +298,9 @@ public sealed record JsFunctionDeclaration(string Name, IReadOnlyList<string> Pa
 
   /// <summary>Whether the function is a generator, <c>function* name(…) { … }</c> (ECMAScript 2015).</summary>
   public bool IsGenerator { get; init; }
+
+  /// <summary>Whether the function is async, <c>async function name(…) { … }</c> (ECMAScript 2017).</summary>
+  public bool IsAsync { get; init; }
 
 }
 

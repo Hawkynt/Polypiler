@@ -109,6 +109,8 @@ public static partial class JavaScriptEmitter {
           return this.FunctionValue(expression);
         case IrArraySequence sequence:
           return this.ArraySequence(sequence);
+        case IrAwait or IrAsync:
+          return this.AsyncWrite(expression);
         default:
           var call = (IrCall)expression;
           return (new JsCall(Id(this.Name(call.Function)), [.. call.Arguments.Select(this.Value)]), true);

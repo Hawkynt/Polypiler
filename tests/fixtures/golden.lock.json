@@ -72,6 +72,26 @@
       "bytes": 162084
     },
     {
+      "path": "tests/fixtures/backend/golden/async/Pipeline.cs.csharp.golden",
+      "sha256": "0b50a8dafe759e183c48d106c4c7cd6138a53cbb7666ec1a948c284e086b0727",
+      "bytes": 104742
+    },
+    {
+      "path": "tests/fixtures/backend/golden/async/Pipeline.cs.javascript.golden",
+      "sha256": "bd83ca110907a5d06398c841f4f5b8c7282a5a4d8480836eec190591ba2aced1",
+      "bytes": 88810
+    },
+    {
+      "path": "tests/fixtures/backend/golden/async/pipeline.mjs.csharp.golden",
+      "sha256": "587eca0fee97d0126f25fbe78fbb29595fdfc2bd138e87de72883705e3ddbe62",
+      "bytes": 52242
+    },
+    {
+      "path": "tests/fixtures/backend/golden/async/pipeline.mjs.javascript.golden",
+      "sha256": "9f2ddc33d5fec2832a5898be9c473d902f33448aa4a78973dd022ff3f8ace10c",
+      "bytes": 47728
+    },
+    {
       "path": "tests/fixtures/backend/golden/bits/BitsBounds.cs.csharp.golden",
       "sha256": "eef3770535989a66ebca89633e296404735e9efaf7dbd6f109f47a45404bb87d",
       "bytes": 37170

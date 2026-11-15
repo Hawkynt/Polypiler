@@ -25,7 +25,7 @@ namespace Polypiler.Core.IR;
 public static class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 7;
+  public const int Version = 8;
 
   /// <summary>The byte that stands for the kind of an enum type, followed by its declaration: the kind of an enum type is that of its underlying type.</summary>
   private const byte EnumType = 0xFF;
@@ -44,7 +44,8 @@ public static class IrModuleFormat {
     Block, Declare, Assign, Store, FieldStore, ExprStmt, If, While, DoWhile, For, Switch, Break, Continue, Return, GlobalAssign,
     Throw, Rethrow, Try, Using, ForEachCollection,
     ArraySequence, Yield, YieldBreak, YieldFrom, ForEachSequence,
-    Sequence
+    Sequence,
+    Await, Async
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -488,6 +489,10 @@ public static class IrModuleFormat {
           this.Type(type.Element!);
           writer.Write(type.Restartable);
           break;
+        case IrTypeKind.Async:
+          this.Type(type.Element!);
+          writer.Write(type.IsValueTask);
+          break;
       }
     }
 
@@ -670,6 +675,8 @@ public static class IrModuleFormat {
       IrInvoke => Tag.Invoke,
       IrArraySequence => Tag.ArraySequence,
       IrSequence => Tag.Sequence,
+      IrAwait => Tag.Await,
+      IrAsync => Tag.Async,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -851,6 +858,13 @@ public static class IrModuleFormat {
           this.Node(sequence.Array);
           break;
         case IrSequence operation:
+          this.Count((int)operation.Op);
+          this.Nodes(operation.Arguments);
+          break;
+        case IrAwait awaited:
+          this.Node(awaited.Operand);
+          break;
+        case IrAsync operation:
           this.Count((int)operation.Op);
           this.Nodes(operation.Arguments);
           break;
@@ -1217,6 +1231,7 @@ public static class IrModuleFormat {
         IrTypeKind.Function => IrType.Function(new IrFunctionType(this.Types(), this.Type())),
         IrTypeKind.Sequence => IrType.Sequence(this.Type(), reader.ReadBoolean()),
         IrTypeKind.Pointer => IrType.Pointer(this.Type()),
+        IrTypeKind.Async => IrType.Async(this.Type(), reader.ReadBoolean()),
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };
@@ -1291,12 +1306,12 @@ public static class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.Sequence)
+      if (tag > Tag.Async)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async) ? this.Statement(tag) : this.Expression(tag);
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1346,6 +1361,8 @@ public static class IrModuleFormat {
         Tag.BoundMethod => this.BoundMethod(type),
         Tag.ArraySequence => new IrArraySequence(this.Node<IrExpr>()),
         Tag.Sequence => new IrSequence(this.Enum<IrSequenceOp>(), type, this.Nodes<IrExpr>()),
+        Tag.Await => new IrAwait(this.Node<IrExpr>()),
+        Tag.Async => new IrAsync(this.Enum<IrAsyncOp>(), type, this.Nodes<IrExpr>()),
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };

@@ -60,6 +60,8 @@ internal sealed partial class Lowering {
         return this.Member(member);
       case CallExpression call:
         return this.Call(call);
+      case AwaitExpression awaited:
+        return this.Await(awaited);
       case NewExpression creation:
         return this.New(creation, types.Of(creation).Ir!);
       case ArrayExpression literal:

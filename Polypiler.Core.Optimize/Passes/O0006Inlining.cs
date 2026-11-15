@@ -79,7 +79,8 @@ public sealed class O0006Inlining : IIrPass {
 
   /// <summary>Whether a function may be inlined: within the budget, no lambda, no call of itself through any chain of calls, and a single way out.</summary>
   private static bool Inlinable(IrFunction function, Dictionary<string, IrFunction> functions)
-    => IrPassSupport.Size(function.Body) <= Budget
+    // An async function is awaited where it is called: its body is no expression of the caller's (#1330).
+    => !function.IsAsync && IrPassSupport.Size(function.Body) <= Budget
       && !IrPassSupport.Nodes(function.Body).Any(node => node is IrLambda)
       && !Reaches(function.Name, function, functions)
       && Exit(function.Body.Statements, function.ReturnType == IrType.Void ? null : new IrLocal("$result", function.ReturnType)) is not null;
