@@ -169,6 +169,7 @@ public static class CSharpSyntaxReader {
       ContinueStatementSyntax => new CsContinue(),
       ReturnStatementSyntax result => new CsReturn(result.Expression is null ? null : Read(result.Expression)),
       ThrowStatementSyntax exception => new CsThrow(exception.Expression is null ? null : Read(exception.Expression)),
+      YieldStatementSyntax produced => new CsYield(produced.Expression is null ? null : Read(produced.Expression)),
       TryStatementSyntax attempt => new CsTry(Block(attempt.Block), [.. attempt.Catches.Select(clause => new CsCatch(
         clause.Declaration is null ? null : new CsType(clause.Declaration.Type.ToString()),
         clause.Declaration is { Identifier.Text: { Length: > 0 } name } ? name : null,

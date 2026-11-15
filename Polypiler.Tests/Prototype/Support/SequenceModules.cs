@@ -140,7 +140,7 @@ internal static class SequenceModules {
     // ThrowInBody: the iterator throws after its first value; the value is consumed first - 1 8 9 4.
     {
       var t = new IrLocal("t", Trace);
-      functions.Add(Iterator("Thrower", Ints, [t], [], new IrTry(B(Step(t, 1), new IrYield(I(1)), thrown, new IrYield(I(2))), [], B(Step(t, 9)))));
+      functions.Add(Iterator("Thrower", Ints, [t], [], new IrTry(B(Step(t, 1), new IrYield(I(1)), thrown), [], B(Step(t, 9)))));
       var u = new IrLocal("t", Trace);
       var v = new IrLocal("v", IrType.I32);
       functions.Add(Public("ThrowInBody", [u, v],
