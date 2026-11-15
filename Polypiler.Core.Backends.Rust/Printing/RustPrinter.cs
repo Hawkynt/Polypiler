@@ -249,8 +249,10 @@ public static class RustPrinter {
         return Flat(assign.Target) is { } place && Flat(assign.Value) is { } value2 ? $"{place} {assign.Operator} {value2}" : null;
       case RsRange range:
         return Flat(range.Start) is { } from && Flat(range.End) is { } to ? $"{from}{(range.Inclusive ? "..=" : "..")}{to}" : null;
-      case RsBreak exit:
-        return "break" + (exit.Label is null ? "" : " '" + exit.Label) + (exit.Value is null ? "" : Flat(exit.Value) is { } broken ? " " + broken : null);
+      case RsBreak exit: {
+        var keyword = "break" + (exit.Label is null ? "" : " '" + exit.Label);
+        return exit.Value is null ? keyword : Flat(exit.Value) is { } flatValue ? keyword + " " + flatValue : null;
+      }
       case RsContinue next:
         return "continue" + (next.Label is null ? "" : " '" + next.Label);
       case RsReturn result:
@@ -328,7 +330,11 @@ public static class RustPrinter {
           var first = links[0];
           var firstArguments = Arguments(first.Arguments);
           var fits = firstArguments is not null && column + root.Length + first.Name.Length + firstArguments.Length + 3 + (links.Count == 1 ? trailing : 0) <= MaxWidth;
-          text.Append('.').Append(first.Name).Append('(').Append(fits ? firstArguments : VerticalArguments(first.Arguments, indent)).Append(')');
+          var written = fits ? firstArguments! : Overflowed(first.Arguments, indent, column + root.Length + first.Name.Length + 2) ?? VerticalArguments(first.Arguments, indent);
+          text.Append('.').Append(first.Name).Append('(').Append(written).Append(')');
+          // The first call over several lines ends a block of lines: the calls after it stand at the root's indentation.
+          if (written.Contains('\n'))
+            linkIndent = indent;
           skip = 1;
         }
 

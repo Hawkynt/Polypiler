@@ -32,16 +32,15 @@ public static class RustTargetPasses {
   public static T Unparenthesized<T>(T node) where T : RsNode {
     static RsExpression Bare(RsExpression expression) => expression is RsParenthesized { Inner: var inner } ? Bare(inner) : expression;
     static RsExpression Test(RsExpression expression) => expression is RsParenthesized { Inner: var inner } && !Printing.RustPrinter.IsBlockLike(inner) ? Test(inner) : expression;
-    static RsExpression? Maybe(RsExpression? expression) => expression is null ? null : Bare(expression);
     static bool Wrapped(RsExpression? expression) => expression is RsParenthesized;
     return RustSyntaxRewriter.Rewrite(node, item => item switch {
-      RsLet binding when Wrapped(binding.Initializer) => binding with { Initializer = Maybe(binding.Initializer) },
-      RsBlock block when Wrapped(block.Tail) => block with { Tail = Maybe(block.Tail) },
+      RsLet { Initializer: RsParenthesized initializer } binding => binding with { Initializer = Bare(initializer) },
+      RsBlock { Tail: RsParenthesized tail } block => block with { Tail = Bare(tail) },
       RsCall call when call.Arguments.Any(Wrapped) => call with { Arguments = [.. call.Arguments.Select(Bare)] },
       RsMethodCall call when call.Arguments.Any(Wrapped) => call with { Arguments = [.. call.Arguments.Select(Bare)] },
       RsMacro macro when macro.Arguments.Any(Wrapped) => macro with { Arguments = [.. macro.Arguments.Select(Bare)] },
       RsAssign assign when Wrapped(assign.Value) => assign with { Value = Bare(assign.Value) },
-      RsReturn result when Wrapped(result.Value) => result with { Value = Maybe(result.Value) },
+      RsReturn { Value: RsParenthesized value } result => result with { Value = Bare(value) },
       RsIf choice when Test(choice.Condition) != choice.Condition => choice with { Condition = Test(choice.Condition) },
       RsWhile loop when Test(loop.Condition) != loop.Condition => loop with { Condition = Test(loop.Condition) },
       RsMatch choice when Test(choice.Scrutinee) != choice.Scrutinee => choice with { Scrutinee = Test(choice.Scrutinee) },

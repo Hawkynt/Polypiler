@@ -280,7 +280,7 @@ public static partial class RustEmitter {
         if (convert.Contract != IrConversion.Trap)
           return this.Cast(operand, target);
         if (this.Has(RustCapabilities.TryFrom))
-          return Expect(new RsCall(new RsPath(TypeName(target)! + "::try_from"), [operand]) { Type = target }, IrTrap.IntegerOverflow);
+          return Expect(new RsCall(new RsPath(TypeName(target)! + "::try_from"), [Suffixed(operand)]) { Type = target }, IrTrap.IntegerOverflow);
 
         return new RsCall(new RsPath(this.CheckedNarrowing(source, target)), [operand]) { Type = target };
       }

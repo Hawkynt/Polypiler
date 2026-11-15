@@ -324,9 +324,7 @@ public static partial class RustEmitter {
     else if (!text.Contains('.') && text.Contains('e'))
       text = text.Insert(text.IndexOf('e'), ".0");
 
-    if (number == 0 && double.IsNegative(number) && !text.StartsWith('-'))
-      text = "-" + text;
-
+    // "R" keeps the sign of a negative zero: -0.0 is "-0", written "-0.0".
     return new RsLiteral(text) { Type = type };
   }
 
