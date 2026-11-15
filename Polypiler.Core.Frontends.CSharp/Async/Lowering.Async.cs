@@ -62,6 +62,13 @@ internal sealed partial class Lowering {
     if (symbol.IsAsync && symbol.ReturnsVoid)
       throw new UnsupportedException(member, "async void");
 
+    // No task can stand in a compilation that never names one: a method that returns one declares it.
+    this._namesTasks ??= this.Unclosed.Compilation.SyntaxTrees.Any(tree => tree.ToString().Contains("Task", System.StringComparison.Ordinal));
+    if (!this._namesTasks.Value)
+      return;
+
+    // The semantic model as the compiler bound the source: the check asks no question of an instantiation.
+    var model = this.Unclosed;
     foreach (var node in member.DescendantNodes()) {
       switch (node) {
         case AnonymousFunctionExpressionSyntax { AsyncKeyword.RawKind: not 0 }:
@@ -92,8 +99,14 @@ internal sealed partial class Lowering {
     }
   }
 
+  /// <summary>Whether a file of the compilation names a task, which only then can stand anywhere; <see langword="null"/> before it is asked.</summary>
+  private bool? _namesTasks;
+
+  /// <summary>The semantic model of the compiler, without the instantiation of the generic definitions.</summary>
+  private SemanticModel Unclosed => model.Inner;
+
   /// <summary>The type of a parameter, as declared.</summary>
-  private ITypeSymbol? ParameterType(ParameterSyntax parameter) => parameter.Type is { } type ? model.GetTypeInfo(type).Type : null;
+  private ITypeSymbol? ParameterType(ParameterSyntax parameter) => parameter.Type is { } type ? this.Unclosed.GetTypeInfo(type).Type : null;
 
   /// <summary>Whether a method is a member of a task type or of <c>Task</c>'s static members, such as <c>Task.Run</c> or <c>t.ContinueWith</c>.</summary>
   private static bool IsTaskMember(IMethodSymbol method) => IsTask(method.ContainingType);
@@ -111,8 +124,8 @@ internal sealed partial class Lowering {
       case MemberAccessExpressionSyntax { Name.Identifier.Text: "ConfigureAwait" } access when access.Parent is InvocationExpressionSyntax configured:
         return Outer(configured).Parent is AwaitExpressionSyntax;
       case ArgumentSyntax { Parent: ArgumentListSyntax { Parent: InvocationExpressionSyntax all } } when expression is InvocationExpressionSyntax
-        && model.GetSymbolInfo(all).Symbol is IMethodSymbol { Name: "WhenAll" } whenAll && IsTask(whenAll.ContainingType):
-        return IsTask(model.GetTypeInfo(all).Type) && this.IsAwaitedWhereCreated(all);
+        && this.Unclosed.GetSymbolInfo(all).Symbol is IMethodSymbol { Name: "WhenAll" } whenAll && IsTask(whenAll.ContainingType):
+        return IsTask(this.Unclosed.GetTypeInfo(all).Type) && this.IsAwaitedWhereCreated(all);
       default:
         return false;
     }
