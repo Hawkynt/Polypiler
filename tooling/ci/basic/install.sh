@@ -83,22 +83,31 @@ for tool in llvm-config llvm-as opt; do
   ln -sfn "$cache/llvm-$llvm/bin/$tool" "$prefix/bin/$tool"
 done
 
-# vice: built once per version into <cache>/vice-<version>, then copied to /usr/local, where the
-# emulators look for their ROM images.
+# vice: built once per version into <cache>/vice-<version>-<build>, then copied to /usr/local, where
+# the emulators look for their ROM images. VICE 3.10's log_helper (src/log.c) strips the colours of
+# a message only when it logs to a file or does not colourize, yet hands the stripped text to
+# standard output whenever that is no terminal: with no log file, as on a runner, every message
+# then passes NULL to strlen and the emulator dies at its first log line (SIGSEGV in log_archdep).
+# The build strips them always; <build> names that change, so a cache of an unpatched build is not
+# used.
 vice=$(version vice)
-if [ ! -x "$cache/vice-$vice/usr/local/bin/x64sc" ]; then
+build_id=logfix1
+vice_root="$cache/vice-$vice-$build_id"
+if [ ! -x "$vice_root/usr/local/bin/x64sc" ]; then
   build="$prefix/vice-src"
   rm -rf "$build" && mkdir -p "$build"
   curl -fsSL --retry 3 -o "$prefix/vice.tar.gz" "https://sourceforge.net/projects/vice-emu/files/releases/vice-$vice.tar.gz/download"
   tar -xzf "$prefix/vice.tar.gz" -C "$build" --strip-components 1
   rm "$prefix/vice.tar.gz"
+  sed -i 's/^    if ((log_to_file) || (!log_colorize)) {$/    if (1) {/' "$build/src/log.c"
+  grep -q '^    if (1) {$' "$build/src/log.c"
   (cd "$build" \
     && ./configure --prefix=/usr/local --enable-headlessui --disable-pdf-docs --disable-html-docs --without-pulse --without-alsa --without-oss --without-libcurl > configure.log \
     && make -j"$(nproc)" > make.log \
-    && make install DESTDIR="$cache/vice-$vice" > install.log)
+    && make install DESTDIR="$vice_root" > install.log)
   rm -rf "$build"
 fi
-sudo cp -a "$cache/vice-$vice/usr/local/." /usr/local/
+sudo cp -a "$vice_root/usr/local/." /usr/local/
 
 # pcbasic
 python3 -m venv "$prefix/pcbasic"

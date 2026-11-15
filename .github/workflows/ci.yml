@@ -366,16 +366,6 @@ jobs:
           echo "PCBASIC_HOME=$RUNNER_TEMP/basic/pcbasic" >> "$GITHUB_ENV"
       - name: toolchains
         run: $TOOLING toolchains probe --only dotnet-sdk,git,pb-compiler,dosbox-x,llvm,vice,vice-x128,vice-xvic,petcat,xvfb-run,pcbasic
-      - name: vice smoke
-        continue-on-error: true
-        run: |
-          cd "$RUNNER_TEMP"
-          set +e
-          sudo apt-get install -y -qq gdb > /dev/null
-          echo '--- gdb'; timeout 120 gdb -batch -ex run -ex bt -ex "info registers rip" --args x64sc -default -warp -sounddev dummy -limitcycles 3000000 -verbose 2>&1 | tail -60
-          echo '--- xvfb-run'; timeout 60 xvfb-run -a x64sc -default -warp -sounddev dummy -limitcycles 3000000 2>&1 | tail -30; echo "exit ${PIPESTATUS[0]}"
-          echo '--- bwrap'; timeout 60 bwrap --ro-bind / / --dev /dev --proc /proc --tmpfs /tmp --tmpfs "$HOME" --unshare-all x64sc -default -warp -sounddev dummy -limitcycles 3000000 2>&1 | tail -30; echo "exit ${PIPESTATUS[0]}"
-          ldd /usr/local/bin/x64sc
       - name: build
         run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
       - name: test
