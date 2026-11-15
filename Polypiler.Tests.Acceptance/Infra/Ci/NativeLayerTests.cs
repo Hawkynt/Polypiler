@@ -48,7 +48,8 @@ public sealed class NativeLayerTests {
     var c = NativeFlags.Compile("gcc", NativeLanguage.C, "a.c", "program", [], "linux");
     Assert.That((clang.Toolchain, clang.Arguments[0], clang.Arguments.TakeLast(4)), Is.EqualTo(("clang", "--driver-mode=g++", new[] { "-DEMPTY", "a.cpp", "-o", "program" })));
     Assert.That((gcc.Toolchain, gcc.Arguments[0], gcc.Arguments[^1]), Is.EqualTo(("gcc", "-std=c++20", "-lstdc++")));
-    Assert.That(c.Arguments.TakeLast(3), Is.EqualTo(new[] { "a.c", "-o", "program" }));    Assert.That(NativeFlags.Compile("clang", NativeLanguage.C, "a.c", "program.exe", [], "windows").Arguments, Does.Contain("-fuse-ld=lld"));
+    Assert.That(c.Arguments.TakeLast(3), Is.EqualTo(new[] { "a.c", "-o", "program" }));
+    Assert.That(NativeFlags.Compile("clang", NativeLanguage.C, "a.c", "program.exe", [], "windows").Arguments, Does.Contain("-fuse-ld=lld"));
     Assert.That(c.Arguments, Does.Not.Contain("-fuse-ld=lld"));
   }
 
