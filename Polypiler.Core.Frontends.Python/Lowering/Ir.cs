@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Numerics;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.Python.Lowering;
@@ -8,6 +9,9 @@ internal static class Ir {
 
   /// <summary>An <c>i64</c> constant.</summary>
   public static IrConst Int(long value) => new(IrType.I64, value);
+
+  /// <summary>A constant of Python's <c>int</c>: an arbitrary-precision integer.</summary>
+  public static IrBigConst Big(BigInteger value) => new(value);
 
   /// <summary>An <c>i32</c> constant.</summary>
   public static IrConst Int32(int value) => new(IrType.I32, value);

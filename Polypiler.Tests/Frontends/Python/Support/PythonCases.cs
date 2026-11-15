@@ -72,7 +72,7 @@ internal static class PythonCases {
   }
 
   private static IReadOnlyList<object> Values(IrType type)
-    => type == IrType.I64 ? [.. Ints.Cast<object>()] : type == IrType.F64 ? [.. Floats.Cast<object>()] : [false, true];
+    => type == IrType.BigInt ? [.. Ints.Cast<object>()] : type == IrType.F64 ? [.. Floats.Cast<object>()] : [false, true];
 
   /// <summary>A random operand: an integer of a random width up to 63 bits with a random sign, a float of random bits, a truth value.</summary>
   private static object Random(Random random, IrType type) {

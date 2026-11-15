@@ -109,10 +109,10 @@ public sealed class LoweringEdgeTests {
     Assert.That(PythonOutcome.Interpreted(module, new PythonCall("PyAbsInt", [-3L])), Is.EqualTo("int 4"));
   }
 
-  /// <summary>An integer literal below 64 bits is refused as one above them; a multi-line construct is quoted by its first line.</summary>
+  /// <summary>An integer literal below 64 bits is exact as one above them; a multi-line construct is quoted by its first line.</summary>
   [Test]
-  public void NegativeHugeLiteralAndMultiLineConstruct_AreRefused() {
-    Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return -18446744073709551616\n"), Has.Some.Contains("error PLY1804: the integer '-18446744073709551616' needs more than 64 bits"));
+  public void NegativeHugeLiteral_IsExact_AndMultiLineConstruct_IsRefused() {
+    Assert.That(PythonSnippet.Run("def f() -> int:\n    return -18446744073709551616\n", "f"), Is.EqualTo("int -18446744073709551616"));
     Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return [1,\n            2]\n"), Has.Some.Contains("error PLY1802: '[1,…' is not supported by the Python frontend"));
   }
 
@@ -166,7 +166,7 @@ public sealed class LoweringEdgeTests {
   /// <summary>The caveats describe what differs.</summary>
   [Test]
   public void Caveats_AreDescribed() {
-    Assert.That(PythonFrontend.Describe(PythonFrontend.Int64), Does.Contain("OverflowError"));
+    Assert.That(PythonFrontend.Describe(PythonFrontend.Widened), Does.Contain("converted"));
     Assert.That(PythonFrontend.Describe(PythonFrontend.ComplexPower), Does.Contain("complex"));
     var result = PythonSnippet.Import("def f(a: float, b: float) -> float:\n    return a ** b\n");
     Assert.That(result.Caveats.Select(caveat => caveat.Id), Is.EqualTo(new[] { PythonFrontend.ComplexPower }));

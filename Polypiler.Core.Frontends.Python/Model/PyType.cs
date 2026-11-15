@@ -5,8 +5,7 @@ namespace Polypiler.Core.Frontends.Python.Model;
 
 /// <summary>
 /// The static type of a Python value as the import knows it. <see cref="Int"/> is Python's unbounded
-/// <c>int</c>, carried as a 64-bit integer whose every operation either gives the exact result or
-/// raises <c>OverflowError</c>; it never wraps around.
+/// <c>int</c>, carried as the IR's arbitrary-precision integer: every operation gives the exact result.
 /// </summary>
 internal enum PyType {
 
@@ -16,7 +15,7 @@ internal enum PyType {
   /// <summary>A <c>bool</c>.</summary>
   Bool,
 
-  /// <summary>An <c>int</c>, exact within 64 bits.</summary>
+  /// <summary>An <c>int</c>: exact, of any magnitude.</summary>
   Int,
 
   /// <summary>A <c>float</c>: an IEEE 754 binary64 number.</summary>
@@ -33,7 +32,7 @@ internal static class PyTypes {
   /// <summary>The IR type of a Python type.</summary>
   public static IrType Ir(PyType type) => type switch {
     PyType.Bool => IrType.Bool,
-    PyType.Int => IrType.I64,
+    PyType.Int => IrType.BigInt,
     PyType.Float => IrType.F64,
     PyType.None => IrType.Void,
     _ => throw new ArgumentOutOfRangeException(nameof(type), type, "An unknown type has no IR type.")

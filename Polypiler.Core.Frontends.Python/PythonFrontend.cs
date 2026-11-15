@@ -12,7 +12,7 @@ using Polypiler.Core.IR;
 namespace Polypiler.Core.Frontends.Python;
 
 /// <summary>A point where the imported code is known to behave differently from the Python it came from.</summary>
-/// <param name="Id">The stable name of the difference, for example <c>py-int-64</c>.</param>
+/// <param name="Id">The stable name of the difference, for example <c>py-number-widened</c>.</param>
 /// <param name="Description">What Python does and what the imported code does instead.</param>
 public sealed record PythonCaveat(string Id, string Description);
 
@@ -55,8 +55,8 @@ public sealed record PythonImportResult(IrModule? Module, IReadOnlyList<Diagnost
 /// through a helper that only parses and prints JSON; it is never imported or executed.
 /// <para>
 /// A value has the static type its hint states for a parameter, and of the values that reach it for
-/// a local and a result. An <c>int</c> is a 64-bit integer whose every operation gives Python's exact
-/// result or raises <c>OverflowError</c>: nothing wraps around. Everything outside the subset is
+/// a local and a result. An <c>int</c> is the arbitrary-precision integer of the IR, whose every operation gives Python's exact
+/// result: nothing wraps around and nothing overflows. Everything outside the subset is
 /// refused with a diagnostic that names the construct.
 /// </para>
 /// </summary>
@@ -146,9 +146,6 @@ public static class PythonFrontend {
   [Diagnostic]
   public static readonly DiagnosticDescriptor UnresolvedDescriptor = new(Unresolved, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.names");
 
-  /// <summary>The caveat of a module that computes with <c>int</c>: beyond 64 bits it raises <c>OverflowError</c>.</summary>
-  public const string Int64 = "py-int-64";
-
   /// <summary>The caveat of a module that stores a narrower number where a wider one is held.</summary>
   public const string Widened = "py-number-widened";
 
@@ -159,8 +156,6 @@ public static class PythonFrontend {
   public const string ComplexPower = "py-complex-power";
 
   private static readonly Dictionary<string, string> _caveats = new() {
-    [Int64] = "an int is a 64-bit integer: an operation whose exact result lies outside -2**63 .. 2**63 - 1 raises OverflowError, "
-      + "where Python computes the exact value; no result is ever truncated",
     [Widened] = "a bool or int stored where a variable, an argument or a result also holds wider numbers is converted to the wider type "
       + "when it is stored; Python keeps the narrower value, which compares equal but has its own type",
     [PowerSign] = "an int raised to an int power whose sign the import does not know is an int, and a negative power raises ValueError, "
@@ -234,8 +229,6 @@ public static class PythonFrontend {
       return new(null, [.. diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column)], [], []) { Python = parsed.Python };
 
     var caveats = new List<string>();
-    if (notes.UsesInt)
-      caveats.Add(Int64);
 
     if (notes.Widens || functions.Values.Any(function => function.Parameters.Concat(function.Locals.Values).Any(variable => variable.Widened)))
       caveats.Add(Widened);
@@ -252,7 +245,7 @@ public static class PythonFrontend {
   }
 
   /// <summary>The description of a caveat, by its name.</summary>
-  /// <param name="id">The name of the caveat, such as <see cref="Int64"/>.</param>
+  /// <param name="id">The name of the caveat, such as <see cref="Widened"/>.</param>
   /// <returns>What Python does and what the imported code does instead.</returns>
   public static string Describe(string id) => _caveats[id];
 
