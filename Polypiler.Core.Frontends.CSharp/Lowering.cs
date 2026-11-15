@@ -348,6 +348,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     if (this.CollectionType(type, node) is { } collection)
       return collection;
 
+    if (this.SequenceType(type, node) is { } sequence)
+      return sequence;
+
     if (type is INamedTypeSymbol named && this._structs.TryGetValue(named, out var declared))
       return IrType.Struct(declared);
 
@@ -424,7 +427,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         into.Add(this.For(loop));
         break;
       case ForEachStatementSyntax loop:
-        into.Add(this.CollectionForEach(loop) ?? this.ForEach(loop));
+        into.Add(this.CollectionForEach(loop) ?? this.SequenceForEach(loop) ?? this.ForEach(loop));
         break;
       case ForEachVariableStatementSyntax loop when this.CollectionForEach(loop) is { } deconstructed:
         into.Add(deconstructed);
@@ -439,10 +442,11 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         into.Add(new IrContinue());
         break;
       case ReturnStatementSyntax result:
+        this.NoSequenceReturn(result);
         into.Add(new IrReturn(result.Expression is null ? null : this.Initialized(result.Expression, into).Value));
         break;
       default:
-        if (!this.ExceptionStatement(statement, into) && !this.ResourceStatement(statement, into))
+        if (!this.ExceptionStatement(statement, into) && !this.ResourceStatement(statement, into) && !this.SequenceStatement(statement, into))
           throw new UnsupportedException(statement, statement.Kind().ToString());
 
         break;
@@ -823,6 +827,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       throw new UnsupportedException(expression, $"the static readonly array '{table.Constant.Name}' used as a value");
 
     var converted = this.Map(info.ConvertedType, expression);
+    if (this.ToSequence(natural, converted, expression) is { } sequence)
+      return sequence;
+
     return converted.IsView || converted.IsMemory ? ToView(natural, converted) : this.Converted(natural, converted);
   }
 
