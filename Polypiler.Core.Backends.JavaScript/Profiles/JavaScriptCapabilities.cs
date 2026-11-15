@@ -222,7 +222,9 @@ public sealed class JavaScriptCapabilities {
     new("Symbol", 2015, "$iterator"),
     new("for-of", 2015, "next loop"),
     new("Symbol.iterator", 2015, "$iterator"),
-    new("yield*", 2015, "nested resume point")
+    new("yield*", 2015, "nested resume point"),
+    // The bounded pointers of #1331: no level of ECMAScript has pointers; a pointer is a region and a byte offset in it.
+    new("*p, a pointer", int.MaxValue, "view and index", Emitted: false)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

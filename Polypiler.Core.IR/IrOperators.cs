@@ -46,6 +46,10 @@ public static class IrOperators {
   /// <param name="arguments">The types of the arguments, in order.</param>
   /// <returns><see langword="true"/> when the operation applies.</returns>
   public static bool Accepts(IrIntrinsicOp op, IrType result, IReadOnlyList<IrType> arguments) {
+    // The bounded pointers, a stackalloc into a pointer among them.
+    if (IrPointers.Accepts(op, result, arguments) is { } pointer)
+      return pointer;
+
     // The views, and the endian loads and stores on a view of bytes, which are checked as on an array of them.
     if (IrViews.Accepts(op, result, arguments) is { } view)
       return view;

@@ -461,7 +461,7 @@ public static class IrModuleFormat {
 
       writer.Write((byte)type.Kind);
       switch (type.Kind) {
-        case IrTypeKind.Array or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory or IrTypeKind.List:
+        case IrTypeKind.Array or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory or IrTypeKind.List or IrTypeKind.Pointer:
           this.Type(type.Element!);
           break;
         case IrTypeKind.Map:
@@ -1210,6 +1210,7 @@ public static class IrModuleFormat {
         IrTypeKind.Set => IrType.Set(this.Type(), this.Enum<MapOrder>()),
         IrTypeKind.Function => IrType.Function(new IrFunctionType(this.Types(), this.Type())),
         IrTypeKind.Sequence => IrType.Sequence(this.Type(), reader.ReadBoolean()),
+        IrTypeKind.Pointer => IrType.Pointer(this.Type()),
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };

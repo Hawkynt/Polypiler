@@ -122,7 +122,16 @@ public enum CSharpFeature {
   StaticAnonymousFunction,
 
   /// <summary>An iterator method, <c>yield return</c> and <c>yield break</c> (C# 2).</summary>
-  Iterator
+  Iterator,
+
+  /// <summary>
+  /// Unsafe code (C# 1): <c>unsafe</c>, pointer types, <c>fixed</c>, <c>&amp;</c>, <c>*p</c>, <c>p[i]</c> and the arithmetic
+  /// of pointers, which every profile has; a profile without it refuses a module with pointers (#1331).
+  /// </summary>
+  UnsafeCode,
+
+  /// <summary><c>T* p = stackalloc T[n];</c> (C# 1); without it the pointer is that of a pinned <c>new T[n]</c>.</summary>
+  StackAllocPointer
 
 }
 
@@ -480,6 +489,9 @@ public sealed class CSharpCapabilities {
 
     // The string operations of #1314.
     .. CSharpStringRows.All,
+
+    // The bounded pointers of #1331.
+    .. CSharpPointerRows.All,
 
     // The collections of #1328.
     .. CSharpCollectionRows.All,

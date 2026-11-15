@@ -139,6 +139,22 @@ public sealed class CSharpCapabilitiesTests {
     ("BinaryPrimitives.Read… on an ArraySegment<byte>", "net2.0"),
     ("BinaryPrimitives.Write… on an ArraySegment<byte>", "net2.0"),
     ("BinaryPrimitives.Write… on a span, the value evaluated first", "netstandard2.1"),
+    ("unsafe code", "C# 1"),
+    ("stackalloc into a pointer", "C# 1"),
+    ("T* p = stackalloc T[n]", "net2.0"),
+    ("fixed (T* p = a)", "net2.0"),
+    ("&x", "net2.0"),
+    ("p + n", "net2.0"),
+    ("p - q", "net2.0"),
+    ("p == q", "net2.0"),
+    ("p != q", "net2.0"),
+    ("p < q", "net2.0"),
+    ("p <= q", "net2.0"),
+    ("p > q", "net2.0"),
+    ("p >= q", "net2.0"),
+    ("*p", "net2.0"),
+    ("*p = v", "net2.0"),
+    ("(U*)p", "net2.0"),
     ("List<T>", "net2.0"),
     ("Array.prototype.pop of ECMA-262 on a List<T> of values", "net2.0"),
     ("Array.prototype.pop of ECMA-262 on a List<T> of references", "net2.0"),
@@ -374,7 +390,9 @@ public sealed class CSharpCapabilitiesTests {
     var raised = CSharpProfile.LanguageVersions.Where(version => version >= CSharpProfile.Net20.LanguageVersion)
       .Select(version => CSharpProfile.Parse("net2.0", CSharpProfile.NameOf(version))).ToList();
     if (row.Language is { } language) {
-      Assert.That(raised.Where(row.IsIn).Select(profile => profile.LanguageVersion), Is.EqualTo(CSharpProfile.LanguageVersions.Where(version => version >= language)));
+      // The oldest profile's version is the lowest a profile can be raised from; a row of C# 1 is in all of them.
+      Assert.That(raised.Where(row.IsIn).Select(profile => profile.LanguageVersion),
+        Is.EqualTo(CSharpProfile.LanguageVersions.Where(version => version >= language && version >= CSharpProfile.Net20.LanguageVersion)));
       Assert.That(CSharpProfile.All.Where(row.IsIn), Is.EqualTo(CSharpProfile.All.Where(profile => profile.LanguageVersion >= language)));
     } else {
       var from = row.Since is null ? CSharpProfile.All.Count : CSharpProfile.All.ToList().IndexOf(row.Since);
@@ -449,9 +467,9 @@ public sealed class CSharpCapabilitiesTests {
   /// <summary>Every row an operation or a conversion is written by has a function here that uses it.</summary>
   [Test]
   public void EveryWrittenRow_HasAUse() {
-    // The rows of the views have tests of their own (CSharpViewTests).
+    // The rows of the views and of the pointers have tests of their own (CSharpViewTests, PointerCSharpTests).
     var written = CSharpCapabilities.Default.Rows.Where(row => (row.Operation is not null || row.Saturates is not null) && !IsIntegerRow(row) && !IsFloating(row) && !IsStringRow(row)
-      && !(row.Operation is { } op && IrViews.IsViewOperation(op))).Select(row => row.Name);
+      && !(row.Operation is { } op && (IrViews.IsViewOperation(op) || IrPointers.IsPointerOperation(op)))).Select(row => row.Name);
     Assert.That(_uses.Select(use => use.Row).Distinct(), Is.EquivalentTo(written));
   }
 

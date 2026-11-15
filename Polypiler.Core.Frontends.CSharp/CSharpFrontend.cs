@@ -112,7 +112,7 @@ public static class CSharpFrontend {
       "Imported",
       trees,
       [_coreLibrary.Value, _collections.Value],
-      new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, checkOverflow: checkedByDefault));
+      new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, checkOverflow: checkedByDefault, allowUnsafe: true));
 
     var errors = compilation.GetDiagnostics()
       .Where(diagnostic => diagnostic.Severity == RoslynSeverity.Error)
