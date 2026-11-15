@@ -84,7 +84,7 @@ internal sealed class Reachability {
   /// </summary>
   private int AfterComma(int end) {
     var index = end;
-    for (;;) {
+    while (true) {
       if (char.IsWhiteSpace(this._text[index]))
         ++index;
       else if (string.CompareOrdinal(this._text, index, "//", 0, 2) == 0)

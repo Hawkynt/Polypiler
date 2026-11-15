@@ -53,7 +53,7 @@ public sealed class CipherKatTests {
   public void Golden_IsRead_WithStepsOfBothKindsAndNodesOutcome() {
     var file = KatFile.Parse(Golden("checksum/x.js", Algorithm("X",
       Vector(steps: """[{"set":"key","value":{"t":"bytes","v":"00ff"}},{"call":"setIV","args":[{"t":"number","v":1}]}]"""),
-      Vector(expected: "", outcome: "threw", output: null) .Replace("\"deterministic\"", "\"error\":\"boom\",\"deterministic\""))));
+      Vector(expected: "", outcome: "threw", output: null).Replace("\"deterministic\"", "\"error\":\"boom\",\"deterministic\""))));
     Assert.That(file.Relative, Is.EqualTo("checksum/x.js"));
     var (_, first) = file.Vectors.First();
     Assert.That(first.Steps.Select(step => (step.Name, step.IsCall, step.Values[0].Kind)), Is.EqualTo(new[] { ("key", false, "bytes"), ("setIV", true, "number") }));
