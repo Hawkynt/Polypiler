@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Polypiler.Core.Backends.JavaScript.Syntax;
@@ -39,6 +40,13 @@ public static partial class JavaScriptEmitter {
     /// <summary>Whether a function expression of the method being written reads <c>this</c>.</summary>
     private bool _self;
 
+    /// <summary>
+    /// The statements at the top of the function being written that give a function of its scope that
+    /// writes what it captures (<see cref="IrCaptureClass.Capturing"/>) its lambda - its declaration, or
+    /// the assignment of a local function: each is written as a nested function declaration.
+    /// </summary>
+    private readonly HashSet<IrStmt> _nested = new(ReferenceEqualityComparer.Instance);
+
     /// <summary>Whether the level has arrow functions, or writes function expressions in their place.</summary>
     private bool Arrows => this.Native("=>");
 
@@ -47,7 +55,8 @@ public static partial class JavaScriptEmitter {
     /// functions of their own, and at ECMAScript 5 the environments of the loops whose variables of a
     /// pass a closure captures - a variable declared in the body, or a variable of every pass of a for.
     /// </summary>
-    private void Prepare(IrBlock body) {
+    private void Prepare(IrFunction function) {
+      var body = function.Body;
       this._environments.Clear();
       this._inEnvironment.Clear();
       this._headed.Clear();
@@ -59,6 +68,14 @@ public static partial class JavaScriptEmitter {
 
       var placed = this._environments.Values.SelectMany(environment => environment.Variables).Select(variable => variable.Local).ToHashSet();
       this._held = IrClosures.Held(body).Where(pair => !placed.Contains(pair.Key)).ToDictionary(pair => pair.Key, pair => pair.Value);
+      this._nested.Clear();
+      var capturing = this._module!.ScopeFunctions.Where(known => known.Scope == function.Name && known is { IsLifted: false, Class: IrCaptureClass.Capturing }).Select(known => known.Name).ToHashSet(StringComparer.Ordinal);
+      if (capturing.Count > 0)
+        this._nested.UnionWith(body.Statements.Where(statement => statement switch {
+          IrDeclare { Initializer: IrLambda } declare => this._held.ContainsKey(declare.Local) && capturing.Contains(declare.Local.Name),
+          IrAssign { Value: IrLambda } assign => this._held.ContainsKey(assign.Local) && capturing.Contains(assign.Local.Name),
+          _ => false
+        }));
     }
 
     private void Environments(IrStmt statement, IrStmt? loop, IReadOnlySet<IrLocal> captured) {
@@ -138,11 +155,11 @@ public static partial class JavaScriptEmitter {
         case IrDeclare declare when this._held.ContainsKey(declare.Local):
           var name = this.Declare(declare.Local);
           if (declare.Initializer is IrLambda lambda)
-            statements.Add(this.Held(name, lambda));
+            statements.Add(this._nested.Contains(declare) ? this.Nested(name, lambda) : this.Held(name, lambda));
 
           return true;
         case IrAssign { Value: IrLambda assigned } assign when this._held.ContainsKey(assign.Local):
-          statements.Add(this.Held(this.Local(assign.Local), assigned));
+          statements.Add(this._nested.Contains(assign) ? this.Nested(this.Local(assign.Local), assigned) : this.Held(this.Local(assign.Local), assigned));
           return true;
         case IrDeclare { Initializer: null, Local.Type.IsFunction: true } declare:
           statements.Add(new JsVariableDeclaration(this.Let, [new JsDeclarator(this.Declare(declare.Local), new JsNull())]));
@@ -150,6 +167,16 @@ public static partial class JavaScriptEmitter {
         default:
           return false;
       }
+    }
+
+    /// <summary>
+    /// A function of the scope that writes what it captures as a nested function declaration at the top
+    /// of its function, which ECMAScript 5 admits there: <c>function f(…) { … }</c>. One whose closure
+    /// needs the environments of loop passes keeps the form of <see cref="Held"/>.
+    /// </summary>
+    private JsStatement Nested(string name, IrLambda lambda) {
+      var (node, _) = this.Lambda(lambda, false);
+      return node is JsFunctionExpression function ? new JsFunctionDeclaration(name, function.Parameters, function.Body) : new JsVariableDeclaration(this.Native("const") ? "const" : "var", [new JsDeclarator(name, node)]);
     }
 
     private JsVariableDeclaration Held(string name, IrLambda lambda) {
@@ -166,9 +193,10 @@ public static partial class JavaScriptEmitter {
     /// a closure over variables of a pass is made by a function that takes the environments of their
     /// passes, so that it keeps the environment of the pass it was made in.
     /// </summary>
-    private (JsExpression Node, bool Atomic) Lambda(IrLambda lambda) {
+    private (JsExpression Node, bool Atomic) Lambda(IrLambda lambda) => this.Lambda(lambda, this.Arrows);
+
+    private (JsExpression Node, bool Atomic) Lambda(IrLambda lambda, bool arrows) {
       var outer = this._taken.Keys.ToHashSet();
-      var arrows = this.Arrows;
       var parameters = lambda.Parameters.Select(this.Declare).ToList();
       ++this._functionDepth;
       JsExpression node;

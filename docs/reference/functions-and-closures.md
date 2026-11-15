@@ -109,12 +109,28 @@ existing `local function` (C# 7) and `static local function` (C# 8), `static ano
 the first listed profile at or after .NET Framework 4.0). A declared delegate type covers what no row
 does, so `PLY1053` is unreachable for every construct of this page.
 
+### Functions of a scope after O0463
+
+At `--opt default` [O0463](../optimizations/O0463-lambda-specialisation.md) lifts a lambda or local
+function whose value stays in its function and that writes nothing it captures into a function of the
+module (`<function>_<local>`, or `<function>_Lambda` for one passed at a call) - what it reads becomes
+parameters - and classifies one that writes a captured variable as capturing, which stays a closure.
+What is not inlined afterwards is written as:
+
+| Function of a scope | net2.0, net3.5, net4.6 | net4.8, netstandard2.0 (C# 7.3) | netstandard2.1, netcoreapp3.1, net8.0, net10.0 |
+| --- | --- | --- | --- |
+| static, called only by its scope | `private static` method | local function at the end of its scope, where no variable of the two shares a name; else `private static` method | `static` local function at the end of its scope |
+| static, called by a bound copy too | `private static` method | same | same |
+| capturing | the forms of the table above | same | same |
+
 ## JavaScript backend
 
 | IR | es5 (with or without `--typed-arrays`) | es2015, es2017, es2020, es2022 |
 | --- | --- | --- |
 | `IrLambda` | `function (x) { … }`; `this` of a method as `var $self = this` | arrow function; an expression body for one `return` |
 | local function | `var f = function f(…) { … };` | `const f = (…) => …;` |
+| local function O0463 classified as capturing, declared at the top of its function | `function f(…) { … }`, a nested declaration | same |
+| function of a scope O0463 lifted, capture-free | a function of the module | same |
 | `IrFunctionRef` | the function's name | same |
 | `IrBoundMethod` | `(function (o) { return function (a1) { return o.m(a1); }; })(receiver)` - never `bind` | `((o) => (a1) => o.m(a1))(receiver)` |
 | `IrInvoke` | `f(x)`; a `null` callee throws the engine's `TypeError` after the arguments, which #1323 maps to the trap | same |

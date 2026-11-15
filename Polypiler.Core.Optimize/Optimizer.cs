@@ -25,7 +25,12 @@ public sealed record RuleApplication(string Id, string Name, string Function, st
 /// <summary>What the optimizer made of a module.</summary>
 /// <param name="Module">The optimized module.</param>
 /// <param name="Applications">Every rule application, in the order they happened.</param>
-public sealed record OptimizationResult(IrModule Module, IReadOnlyList<RuleApplication> Applications);
+public sealed record OptimizationResult(IrModule Module, IReadOnlyList<RuleApplication> Applications) {
+
+  /// <summary>What a pass did not do and why, such as a call a budget left as it is, each once, as <c>--explain-opt</c> prints it.</summary>
+  public IReadOnlyList<string> Notes { get; init; } = [];
+
+}
 
 /// <summary>
 /// The pass pipeline between the frontend and the backend: the rules of a table, in table order, run
