@@ -26,6 +26,7 @@ public static class IrStatements {
     IrThrow thrown => [thrown.Exception],
     IrTry attempt => [.. attempt.Catches.Select(clause => clause.Filter).OfType<IrExpr>()],
     IrUsing scope => [scope.Initializer],
+    IrForEachCollection loop => [loop.Collection],
     _ => []
   };
 
@@ -42,6 +43,7 @@ public static class IrStatements {
     IrSwitch choice => [.. choice.Sections.Select(section => section.Body)],
     IrTry attempt => [attempt.Body, .. attempt.Catches.Select(clause => clause.Body), .. attempt.Finally is { } final ? [final] : (IrBlock[])[]],
     IrUsing scope => [scope.Body],
+    IrForEachCollection loop => [loop.Body],
     _ => []
   };
 

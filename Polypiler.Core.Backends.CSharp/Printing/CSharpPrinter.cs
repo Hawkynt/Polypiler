@@ -282,6 +282,9 @@ public static class CSharpPrinter {
 
     private void Type(CsTypeDeclaration type, int depth) {
       this.Modifiers(type.Modifiers, depth).Append(type.Keyword).Append(' ').Append(type.Name);
+      if (type.TypeParameters.Count > 0)
+        this._text.Append('<').AppendJoin(", ", type.TypeParameters).Append('>');
+
       if (type.Parameters is not null)
         this.Parameters(type.Parameters);
 
@@ -380,6 +383,12 @@ public static class CSharpPrinter {
           break;
         case CsIf conditional:
           this.If(conditional, depth);
+          break;
+        case CsForEach loop:
+          this._text.Append("foreach (").Append(loop.LocalType.Name).Append(' ').Append(loop.Name).Append(" in ");
+          this.Expression(loop.Collection, depth);
+          this._text.Append(") ");
+          this.Embedded(loop.Body, depth);
           break;
         case CsWhile loop:
           this._text.Append("while (");

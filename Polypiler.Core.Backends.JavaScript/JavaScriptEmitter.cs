@@ -402,6 +402,12 @@ public static partial class JavaScriptEmitter {
           return this.Name(type.Declaration!.Name);
         case IrTypeKind.Span or IrTypeKind.ReadOnlySpan:
           return this.DescribeView(type);
+        case IrTypeKind.List:
+          return $"Array<{this.Describe(type.Element!)}>";
+        case IrTypeKind.Map:
+          return $"Map<{this.Describe(type.Key!)}, {this.Describe(type.Element!)}>";
+        case IrTypeKind.Set:
+          return $"Set<{this.Describe(type.Element!)}>";
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)
             return "bigint";
@@ -587,6 +593,9 @@ public static partial class JavaScriptEmitter {
           break;
         case IrSwitch choice:
           statements.Add(this.Switch(choice));
+          break;
+        case IrForEachCollection loop:
+          this.ForEachCollection(loop, statements);
           break;
         case IrBreak:
           statements.Add(new JsBreak());

@@ -263,6 +263,9 @@ internal sealed partial class Lowering {
   /// otherwise into a temporary declared in front of the statement.
   /// </summary>
   private (IrExpr Value, List<IrStmt> After) Initialized(ExpressionSyntax value, List<IrStmt> into, IrLocal? declared = null) {
+    if (this.CollectionInitialized(value, into, declared) is { } collection)
+      return collection;
+
     if (value is BaseObjectCreationExpressionSyntax { Initializer: { } entries } made && this.ClassOf(model.GetTypeInfo(made).Type) is { } owner)
       return this.ObjectInitialized(made, entries, IrType.Object(owner), into, declared);
 

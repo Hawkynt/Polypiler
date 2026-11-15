@@ -71,7 +71,22 @@ public enum IrTypeKind {
   /// operations are no part of the type: the IR spells them out with <see cref="IrIsNone"/>,
   /// <see cref="IrUnwrap"/> and <see cref="IrSome"/>.
   /// </summary>
-  Optional
+  Optional,
+
+  /// <summary>
+  /// A growable list of elements with an identity: <c>List&lt;T&gt;</c> of C#, an <c>Array</c> of
+  /// JavaScript that changes its length. What its operations mean is stated at <see cref="IrCollectionOp"/>.
+  /// </summary>
+  List,
+
+  /// <summary>
+  /// A map from keys to values with an identity and an order of enumeration (<see cref="IrType.Order"/>):
+  /// <c>Dictionary&lt;TKey, TValue&gt;</c> of C#, <c>Map</c> of JavaScript.
+  /// </summary>
+  Map,
+
+  /// <summary>A set of keys with an identity and an order of enumeration: <c>HashSet&lt;T&gt;</c> of C#, <c>Set</c> of JavaScript.</summary>
+  Set
 
 }
 
@@ -90,6 +105,11 @@ public sealed record IrType {
   }
 
   private IrType(IrType underlying, IrTypeKind kind) : this(kind, null, null) => this.Underlying = underlying;
+
+  private IrType(IrTypeKind kind, IrType? key, IrType element, MapOrder order) : this(kind, element, null) {
+    this.Key = key;
+    this.Order = order;
+  }
 
   /// <summary>The shape of the type.</summary>
   public IrTypeKind Kind { get; }
@@ -227,6 +247,36 @@ public sealed record IrType {
   /// <summary>Whether a type may be the underlying type of an optional one: a truth value, a number or a struct.</summary>
   public bool IsOptionalValue => this == Bool || this.IsNumeric || this.IsStruct;
 
+  /// <summary>The list type with the given element type.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <returns>The list type.</returns>
+  public static IrType List(IrType element) => new(IrTypeKind.List, null, element, MapOrder.Insertion);
+
+  /// <summary>The map type with the given key and value types and order of enumeration.</summary>
+  /// <param name="key">The type of the keys.</param>
+  /// <param name="value">The type of the values, which <see cref="Element"/> gives.</param>
+  /// <param name="order">The order the entries are enumerated in.</param>
+  /// <returns>The map type.</returns>
+  public static IrType Map(IrType key, IrType value, MapOrder order) => new(IrTypeKind.Map, key, value, order);
+
+  /// <summary>The set type with the given element type and order of enumeration.</summary>
+  /// <param name="element">The type of every element.</param>
+  /// <param name="order">The order the elements are enumerated in.</param>
+  /// <returns>The set type.</returns>
+  public static IrType Set(IrType element, MapOrder order) => new(IrTypeKind.Set, null, element, order);
+
+  /// <summary>The type of the keys of a map, otherwise <see langword="null"/>.</summary>
+  public IrType? Key { get; }
+
+  /// <summary>The order a map or a set enumerates in; <see cref="MapOrder.Insertion"/> for every other type.</summary>
+  public MapOrder Order { get; }
+
+  /// <summary>Whether the type is a list, a map or a set.</summary>
+  public bool IsCollection => this.Kind is IrTypeKind.List or IrTypeKind.Map or IrTypeKind.Set;
+
+  /// <summary>Whether the type is a list.</summary>
+  public bool IsList => this.Kind == IrTypeKind.List;
+
   /// <summary>Whether a value of the type is a reference that may be <c>null</c>: an object or an array.</summary>
   public bool IsNullable => this.IsObject || this.IsArray;
 
@@ -283,7 +333,9 @@ public sealed record IrType {
   /// Whether the type can be the type of a local: not void, an array only of numbers, of structs or of
   /// strings, and a view only of numbers.
   /// </summary>
-  public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && (this.Element.IsStruct || this.Element.IsString)));
+  public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue
+    : this.IsCollection ? IrCollections.IsElement(this)
+    : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && (this.Element.IsStruct || this.Element.IsString)));
 
   /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c>, <c>i32?</c> or the name of a struct.</summary>
   public override string ToString()
@@ -293,6 +345,9 @@ public sealed record IrType {
       : this.Element is null ? this.Kind.ToString().ToLowerInvariant()
       : this.Kind == IrTypeKind.Span ? $"span<{this.Element}>"
       : this.Kind == IrTypeKind.ReadOnlySpan ? $"readonly span<{this.Element}>"
+      : this.Kind == IrTypeKind.List ? $"list<{this.Element}>"
+      : this.Kind == IrTypeKind.Map ? $"map<{this.Key}, {this.Element}, {this.Order.ToString().ToLowerInvariant()}>"
+      : this.Kind == IrTypeKind.Set ? $"set<{this.Element}, {this.Order.ToString().ToLowerInvariant()}>"
       : $"{this.Element}[]";
 
 }

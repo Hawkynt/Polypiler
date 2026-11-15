@@ -91,6 +91,8 @@ public static partial class JavaScriptEmitter {
           return this.GenericEquals(equality);
         case IrGenericCompare order:
           return this.GenericCompare(order);
+        case IrCollection operation:
+          return this.Collection(operation);
         case IrCall chained when this._owners.ContainsKey(chained.Function):
           return (this.Chained(chained), true);
         default:

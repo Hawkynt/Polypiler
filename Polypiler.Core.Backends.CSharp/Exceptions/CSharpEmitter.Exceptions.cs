@@ -39,7 +39,9 @@ public static partial class CSharpEmitter {
   private sealed partial class Writer {
 
     /// <summary>The C# name of a class: .NET's own for a library class, the module's name for any other.</summary>
-    private string ClassTypeName(IrClassType type) => type.IsLibrary ? Base + type.Name : this._typeNames[type.Name];
+    private string ClassTypeName(IrClassType type)
+      => type == IrExceptionClass.KeyNotFoundException ? Base + "Collections.Generic." + type.Name
+        : type.IsLibrary ? Base + type.Name : this._typeNames[type.Name];
 
     /// <summary>The statements of exception handling; <see langword="false"/> for any other.</summary>
     private bool ExceptionStatement(IrStmt statement, List<CsStatement> statements) {

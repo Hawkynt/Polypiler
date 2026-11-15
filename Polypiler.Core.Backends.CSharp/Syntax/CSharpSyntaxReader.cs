@@ -117,7 +117,9 @@ public static class CSharpSyntaxReader {
         type.Identifier.Text,
         type.ParameterList is null ? null : Read(type.ParameterList),
         type.BaseList is null ? [] : [.. type.BaseList.Types.Select(baseType => new CsType(baseType.Type.ToString()))],
-        type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]),
+        type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]) {
+        TypeParameters = type.TypeParameterList is null ? [] : [.. type.TypeParameterList.Parameters.Select(parameter => parameter.Identifier.Text)]
+      },
       FileScopedNamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), true, [.. scope.Members.Select(Read)]),
       NamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), false, [.. scope.Members.Select(Read)]),
       _ => throw Unknown(member)
@@ -144,6 +146,7 @@ public static class CSharpSyntaxReader {
       ExpressionStatementSyntax expression => new CsExpressionStatement(Read(expression.Expression)),
       IfStatementSyntax conditional => new CsIf(Read(conditional.Condition), Read(conditional.Statement), conditional.Else is null ? null : Read(conditional.Else.Statement)),
       WhileStatementSyntax loop => new CsWhile(Read(loop.Condition), Read(loop.Statement)),
+      ForEachStatementSyntax loop => new CsForEach(new CsType(loop.Type.ToString()), loop.Identifier.Text, Read(loop.Expression), Read(loop.Statement)),
       DoStatementSyntax loop => new CsDo(Read(loop.Statement), Read(loop.Condition)),
       ForStatementSyntax { Initializers.Count: 0 } loop => new CsFor(
         loop.Declaration is null ? null : Declaration(loop.Declaration), loop.Condition is null ? null : Read(loop.Condition),

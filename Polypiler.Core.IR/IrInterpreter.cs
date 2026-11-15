@@ -35,7 +35,16 @@ public enum IrTrap {
   InvalidCast,
 
   /// <summary>The value of an optional value that holds none (<see cref="IrUnwrap"/>).</summary>
-  MissingValue
+  MissingValue,
+
+  /// <summary>The value of a key a map does not hold (<see cref="IrCollectionOp.MapGet"/>).</summary>
+  KeyNotFound,
+
+  /// <summary>A key added to a map that holds it already (<see cref="IrCollectionOp.MapAdd"/>).</summary>
+  DuplicateKey,
+
+  /// <summary>The next step of a checked loop over a collection that changed during it (<see cref="EnumerationMode.Checked"/>).</summary>
+  CollectionModified
 
 }
 
@@ -89,6 +98,9 @@ public sealed class IrTrapException : IrException {
     IrTrap.NullReference => "null reference",
     IrTrap.InvalidCast => "invalid cast",
     IrTrap.MissingValue => "missing value",
+    IrTrap.KeyNotFound => "key not found",
+    IrTrap.DuplicateKey => "duplicate key",
+    IrTrap.CollectionModified => "collection modified",
     _ => "integer overflow"
   };
 
@@ -372,6 +384,8 @@ public static partial class IrInterpreter {
 
           var chosen = this.Run(section.Body, frame);
           return chosen == Flow.Break ? Flow.Next : chosen;
+        case IrForEachCollection loop:
+          return this.ForEachCollection(loop, frame);
         case IrBreak:
           return Flow.Break;
         case IrContinue:
@@ -473,6 +487,8 @@ public static partial class IrInterpreter {
           return this.Step(step, frame);
         case IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind:
           return this.Optional(expression, frame);
+        case IrCollection operation:
+          return this.Collection(operation, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }

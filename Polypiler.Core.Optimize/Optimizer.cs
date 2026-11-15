@@ -202,6 +202,7 @@ public static class Optimizer {
       IrTry attempt => [attempt.Body, .. attempt.Catches.SelectMany(clause => clause.Filter is null ? (object[])[clause.Body] : [clause.Filter, clause.Body]),
         .. attempt.Finally is null ? Array.Empty<object>() : [attempt.Finally]],
       IrUsing scope => [scope.Initializer, scope.Body],
+      IrForEachCollection loop => [loop.Collection, loop.Body],
       IrStmt statement => IrStatements.Expressions(statement),
       _ => []
     };
@@ -224,6 +225,7 @@ public static class Optimizer {
       IrThrow => new IrThrow((IrExpr)parts[0]),
       IrTry attempt => RebuildTry(attempt, parts),
       IrUsing scope => scope with { Initializer = (IrExpr)parts[0], Body = (IrBlock)parts[1] },
+      IrForEachCollection loop => loop with { Collection = (IrExpr)parts[0], Body = (IrBlock)parts[1] },
       _ => value
     };
 

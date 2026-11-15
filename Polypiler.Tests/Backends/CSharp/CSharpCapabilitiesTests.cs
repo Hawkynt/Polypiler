@@ -138,7 +138,24 @@ public sealed class CSharpCapabilitiesTests {
     ("ArraySegment<T> element place", "net2.0"),
     ("BinaryPrimitives.Read… on an ArraySegment<byte>", "net2.0"),
     ("BinaryPrimitives.Write… on an ArraySegment<byte>", "net2.0"),
-    ("BinaryPrimitives.Write… on a span, the value evaluated first", "netstandard2.1")
+    ("BinaryPrimitives.Write… on a span, the value evaluated first", "netstandard2.1"),
+    ("List<T>", "net2.0"),
+    ("Array.prototype.pop of ECMA-262 on a List<T> of values", "net2.0"),
+    ("Array.prototype.pop of ECMA-262 on a List<T> of references", "net2.0"),
+    ("Array.prototype.includes of ECMA-262 on a List<T> of references", "net2.0"),
+    ("Array.prototype.indexOf of ECMA-262 on a List<T> of records", "net2.0"),
+    ("Array.prototype.indexOf of ECMA-262 on a List<double>", "net2.0"),
+    ("Array.prototype.indexOf of ECMA-262 on a List<float>", "net2.0"),
+    ("Dictionary<TKey,TValue>", "net2.0"),
+    ("HashSet<T>", "net3.5"),
+    ("Dictionary<TKey,TValue>.TryAdd", "netstandard2.1"),
+    ("Dictionary<TKey,TValue>.TryGetValue as an optional value", "net2.0"),
+    ("Dictionary<TKey,TValue>.TryGetValue as a reference or null", "net2.0"),
+    ("TryGetValue of the slots as an optional value", "net2.0"),
+    ("TryGetValue of the slots as a reference or null", "net2.0"),
+    ("Dictionary<TKey,TValue> enumeration of .NET Core 3.0", "netstandard2.1"),
+    ("EqualityComparer<double>.Default normalising NaN and -0", "netstandard2.1"),
+    ("OrderedDictionary<TKey,TValue>", "net10.0")
   ];
 
   /// <summary>
@@ -474,8 +491,10 @@ public sealed class CSharpCapabilitiesTests {
   public void EveryHelper_IsCSharp2ForNetFramework20() {
     // The store on a span is the one helper only a profile with spans calls; it is C# 8 for .NET Standard 2.1.
     var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(helper => helper != CSharpViewHelpers.StoreSpan).ToList();
-    var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(113));
+    // The helpers of the collections take the nested classes of the collections (#1328), which are C# 2 as well.
+    string[] classes = [CSharpCollectionClasses.KeyedSlots, CSharpCollectionClasses.FloatKeys, CSharpCollectionClasses.SingleKeys];
+    var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))).Concat(classes))}\n\n}}\n";
+    Assert.That(helpers, Has.Count.EqualTo(124));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);

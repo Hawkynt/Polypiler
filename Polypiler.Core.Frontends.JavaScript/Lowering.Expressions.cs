@@ -27,6 +27,9 @@ internal sealed partial class Lowering {
     if (this.Instance(node) is { } instance)
       return instance;
 
+    if (this.ListExpression(node) is { } listed)
+      return listed;
+
     switch (node) {
       case NumericLiteral literal:
         return Number(literal.Value);
@@ -556,6 +559,18 @@ internal sealed partial class Lowering {
   private IrExpr Value(Node node, IrType type) {
     if (type.IsStruct && node is ObjectExpression record && types.Of(record).Kind == JsKind.Record)
       return this.ObjectLiteral(record, type);
+
+    // A new empty Map or Set takes the key and value types of the place it goes to (#1328).
+    if (type.Kind is IrTypeKind.Map or IrTypeKind.Set && node is NewExpression { Callee: Identifier { Name: "Map" or "Set" } keyed, Arguments.Count: 0 } && !this._model.Bindings.ContainsKey(keyed))
+      return ListOp(type.Kind == IrTypeKind.Map ? IrCollectionOp.MapNew : IrCollectionOp.SetNew, type);
+
+    if (type.IsList && !this._substitutes.ContainsKey(node)) {
+      if (node is ArrayExpression list)
+        return this.ListLiteral(list, type);
+
+      if (node is NewExpression { Callee: Identifier { Name: "Array" } constructor, Arguments.Count: 0 } && !this._model.Bindings.ContainsKey(constructor))
+        return ListOp(IrCollectionOp.ListNew, type);
+    }
 
     if (type.IsArray && !this._substitutes.ContainsKey(node)) {
       if (node is ArrayExpression literal)

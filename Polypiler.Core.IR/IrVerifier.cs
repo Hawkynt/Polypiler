@@ -110,6 +110,14 @@ public static partial class IrVerifier {
 
     /// <summary>A declared type - a struct, a class, or an array of a struct - is one the module declares.</summary>
     private void Declared(IrType type) {
+      if (type.IsCollection) {
+        this.Declared(type.Element!);
+        if (type.Key is { } key)
+          this.Declared(key);
+
+        return;
+      }
+
       var named = (type.Underlying ?? type.Element ?? type).Declaration;
       this.Require(named is null || types.Declares(named), $"the type {named} is not among the types of the module");
     }
@@ -189,6 +197,9 @@ public static partial class IrVerifier {
           break;
         case IrSwitch choice:
           this.Switch(choice);
+          break;
+        case IrForEachCollection loop:
+          this.ForEachCollection(loop);
           break;
         case IrBreak:
           this.Require(this._breakable > 0, "a break outside a loop and outside a switch");
@@ -391,6 +402,9 @@ public static partial class IrVerifier {
           break;
         case IrGenericEquals or IrGenericCompare:
           this.Generic(expression);
+          break;
+        case IrCollection operation:
+          this.Collection(operation);
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)

@@ -39,6 +39,7 @@ public static class IrTree {
     IrGenericEquals equality => [equality.Left, equality.Right],
     IrGenericCompare order => [order.Left, order.Right],
     IrThrowExpression thrown => [thrown.Exception],
+    IrCollection operation => operation.Arguments,
     _ => []
   };
 
@@ -61,6 +62,7 @@ public static class IrTree {
     IrThrow thrown => [thrown.Exception],
     IrTry attempt => [.. attempt.Catches.Select(clause => clause.Filter).OfType<IrExpr>()],
     IrUsing scope => [scope.Initializer],
+    IrForEachCollection loop => [loop.Collection],
     _ => []
   };
 
@@ -77,6 +79,7 @@ public static class IrTree {
     IrSwitch choice => [.. choice.Sections.Select(section => section.Body)],
     IrTry attempt => [attempt.Body, .. attempt.Catches.Select(clause => clause.Body), .. attempt.Finally is { } final ? [final] : (IrBlock[])[]],
     IrUsing scope => [scope.Body],
+    IrForEachCollection loop => [loop.Body],
     _ => []
   };
 

@@ -446,6 +446,12 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
 
         this.Expression(assignment.Right);
         break;
+      case MemberExpression { Computed: false, Object: Identifier truncated, Property: Identifier { Name: "length" } } length
+          when this.Lookup(truncated.Name, out var resized):
+        this.Expression(length);
+        this.Expression(assignment.Right);
+        model.Flows.Add(new Flow(FlowKind.Grow, assignment, resized));
+        break;
       case MemberExpression { Computed: false } element when KeyOf(element) is not null:
         this.Expression(element);
         this.Expression(assignment.Right);
@@ -454,8 +460,13 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       case MemberExpression element:
         this.Expression(element);
         this.Expression(assignment.Right);
-        if (this.Holder(element) is { } holder)
+        if (this.Holder(element) is { } holder) {
           model.Flows.Add(new Flow(FlowKind.Store, assignment, holder));
+          // A write at a[a.length] appends.
+          if (element is { Object: Identifier { Name: var appended }, Property: MemberExpression { Computed: false, Object: Identifier { Name: var measured }, Property: Identifier { Name: "length" } } }
+              && appended == measured)
+            model.Flows.Add(new Flow(FlowKind.Grow, assignment, holder));
+        }
 
         break;
       default:
@@ -499,6 +510,15 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
     if (loop.Left is VariableDeclaration { Declarations: [{ Id: Identifier id }] } declaration && this.Declare(id, declaration, loop) is { } variable)
       model.Flows.Add(new Flow(FlowKind.Assign, loop, variable));
 
+    // for (const [k, v] of m): the key and the value of every entry of a Map (#1328).
+    if (loop.Left is VariableDeclaration { Declarations: [{ Id: ArrayPattern { Elements: [Identifier key, Identifier value] } }] } entries) {
+      if (this.Declare(key, entries, loop) is { } keyVariable)
+        model.Flows.Add(new Flow(FlowKind.Entry, loop, keyVariable, Index: 0));
+
+      if (this.Declare(value, entries, loop) is { } valueVariable)
+        model.Flows.Add(new Flow(FlowKind.Entry, loop, valueVariable, Index: 1));
+    }
+
     this.Body(loop.Body);
     this.Leave(outer);
   }
@@ -515,6 +535,12 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       text.UsedAsString ??= access;
 
     this.Expression(call.Callee);
+    // push, pop and splice change the length of the array a variable holds, which makes it a list (#1328); the
+    // searches of the IR are those of lists, so indexOf and includes make a list of a JavaScript Array as well.
+    if (call.Callee is MemberExpression { Computed: false, Object: Identifier grown, Property: Identifier { Name: "push" or "pop" or "splice" or "indexOf" or "includes" or "set" or "add" } }
+        && model.Bindings.GetValueOrDefault(grown) is Variable list)
+      model.Flows.Add(new Flow(FlowKind.Grow, call, list));
+
     var builtin = this.Builtin(call);
     for (var index = 0; index < call.Arguments.Count; ++index) {
       var coercion = builtin switch {

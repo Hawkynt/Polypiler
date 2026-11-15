@@ -205,7 +205,11 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   private bool Apply(FunctionModel model, Flow flow) {
     switch (flow.Kind) {
       case FlowKind.Assign:
-        return this.Reach(flow.Target!, this.Of(flow.Node), flow.Node);
+        return this.Reach(flow.Target!, this.Of(flow.Node), flow.Node) | this.Alias(model, flow.Node, flow.Target!.Type);
+      case FlowKind.Grow:
+        return this.Grow(flow);
+      case FlowKind.Entry:
+        return this.Entry(flow);
       case FlowKind.Compound:
         return this.Reach(flow.Target!, this.Combined((AssignmentExpression)flow.Node), flow.Node);
       case FlowKind.Step:
@@ -220,8 +224,10 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       case FlowKind.Return:
         var argument = ((ReturnStatement)flow.Node).Argument;
         var result = JsType.Join(model.Result, argument is null ? JsType.UndefinedValue : this.Of(argument));
+        // A returned variable is the list the result is (#1328).
+        var aliased = argument is not null && this.Alias(model, argument, result);
         if (result == model.Result)
-          return false;
+          return aliased;
 
         if (Decides(model.Result, result))
           model.ResultEvidence = argument ?? flow.Node;
@@ -235,8 +241,9 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       case FlowKind.FieldStore or FlowKind.FieldStep or FlowKind.MethodArgument:
         return this.ApplyMember(flow);
       default:
-        return this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Declared: null } parameter
-          && this.Pass(parameter, flow.Missing ? JsType.UndefinedValue : this.Of(flow.Node), flow.Node);
+        var called = this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index);
+        return (called is { Declared: null } parameter && this.Pass(parameter, flow.Missing ? JsType.UndefinedValue : this.Of(flow.Node), flow.Node))
+          | (called is not null && !flow.Missing && this.Alias(model, flow.Node, called.Type));
     }
   }
 

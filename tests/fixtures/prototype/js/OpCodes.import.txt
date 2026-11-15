@@ -53,15 +53,15 @@ Pack64LE	OpCodes.js(632,14): error PLY1103: the result of '(BigInt(high) << 32n)
 Pack64LE	OpCodes.js(659,14): error PLY1103: the result of 'OpCodes.Pack64BE(b7, b6, b5, b4, b3, b2, b1, b0)' has no bounded type
 Unpack64LE	OpCodes.js(642,40): error PLY1102: 'BigInt of bigint that is no proven integer' is not supported yet
 Unpack64LE	OpCodes.js(669,14): error PLY1102: 'a call of OpCodes.Unpack64BE(qword).reverse' is not supported yet
-Words32ToBytesBE	OpCodes.js(681,9): error PLY1102: 'a call of bytes.push' is not supported yet
-BytesToWords32BE	OpCodes.js(702,9): error PLY1102: 'a call of words.push' is not supported yet
+Words32ToBytesBE	imported
+BytesToWords32BE	imported
 GetByte	imported
 SetByte	imported
 Split64	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
 Combine64	imported
-AnsiToBytes	OpCodes.js(2244,9): error PLY1102: 'a call of bytes.push' is not supported yet
+AnsiToBytes	imported
 BytesToAnsi	imported
-AsciiToBytes	OpCodes.js(2272,9): error PLY1102: 'a call of bytes.push' is not supported yet
+AsciiToBytes	imported
 BytesToChars	OpCodes.js(2293,16): error PLY1102: 'a call of String.fromCharCode.apply' is not supported yet
 DoubleToBytes	imported
 BytesToDouble	imported
@@ -70,7 +70,7 @@ HexCharCodeToValue	imported
 Hex8ToBytes	OpCodes.js(2380,11): error PLY1102: 'typeof' is not supported yet
 Hex16ToWords	OpCodes.js(2405,11): error PLY1102: 'typeof' is not supported yet
 Hex32ToDWords	OpCodes.js(2430,11): error PLY1102: 'typeof' is not supported yet
-XorArrays	OpCodes.js(2460,9): error PLY1102: 'a call of result.push' is not supported yet
+XorArrays	imported
 CopyArray	OpCodes.js(2481,14): error PLY1105: 'CopyArray' holds both uint8[] and uint8[]
 ClearArray	OpCodes.js(2489,26): error PLY1101: parameter 'arr' of 'ClearArray' has no supported JSDoc type
 CopyBytes	imported
@@ -94,7 +94,7 @@ FastXorInPlace	imported
 FastSubBytes	imported
 FastXorWords32	imported
 BatchRotL32	imported
-GetPooledArray	OpCodes.js(2851,9): error PLY1102: 'a call of result.push' is not supported yet
+GetPooledArray	imported
 ReturnToPool	imported
 TimingSafeAddMod	imported
 TimingSafeSelect	imported
@@ -104,7 +104,7 @@ EncodeMsgLength128BE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0
 EncodeMsgLength128BE	OpCodes.js(2934,44): error PLY1102: 'float64 where uint32 is expected' is not supported yet
 ModSafe	imported
 CreateArray	imported
-ArraySlice	OpCodes.js(2980,9): error PLY1102: 'a call of result.push' is not supported yet
+ArraySlice	imported
 ConcatArrays	OpCodes.js(2990,28): error PLY1101: parameter 'arrays' of 'ConcatArrays' has no supported JSDoc type
 InverseSBoxLookup	imported
 BuildInverseSBox	imported

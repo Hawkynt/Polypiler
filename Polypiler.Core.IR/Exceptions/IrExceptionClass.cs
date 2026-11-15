@@ -9,7 +9,8 @@ namespace Polypiler.Core.IR;
 /// <c>Exception</c> ← <c>ArithmeticException</c> ← {<c>DivideByZeroException</c>, <c>OverflowException</c>};
 /// <c>Exception</c> ← <c>IndexOutOfRangeException</c>, <c>NullReferenceException</c>,
 /// <c>InvalidCastException</c>, <c>InvalidOperationException</c>;
-/// <c>Exception</c> ← <c>ArgumentException</c> ← <c>ArgumentOutOfRangeException</c>.
+/// <c>Exception</c> ← <c>ArgumentException</c> ← <c>ArgumentOutOfRangeException</c>;
+/// <c>Exception</c> ← <c>KeyNotFoundException</c>.
 /// <para>
 /// They are classes (<see cref="IrClassType"/>) that no module declares and every module may name: a
 /// class of a module derives from one of them, a catch clause names one, and every trap of the IR is
@@ -38,9 +39,10 @@ public static class IrExceptionClass {
     InvalidOperationException = Library("InvalidOperationException", Exception, "Operation is not valid due to the current state of the object.");
     ArgumentException = Library("ArgumentException", Exception, "Value does not fall within the expected range.");
     ArgumentOutOfRangeException = Library("ArgumentOutOfRangeException", ArgumentException, "Specified argument was out of the range of valid values.");
+    KeyNotFoundException = Library("KeyNotFoundException", Exception, "The given key was not present in the dictionary.");
     All = [
       Exception, ArithmeticException, DivideByZeroException, OverflowException, IndexOutOfRangeException, NullReferenceException,
-      InvalidCastException, InvalidOperationException, ArgumentException, ArgumentOutOfRangeException
+      InvalidCastException, InvalidOperationException, ArgumentException, ArgumentOutOfRangeException, KeyNotFoundException
     ];
   }
 
@@ -65,10 +67,13 @@ public static class IrExceptionClass {
   /// <summary>The class of <see cref="IrTrap.InvalidCast"/>.</summary>
   public static IrClassType InvalidCastException { get; }
 
-  /// <summary>The class of <see cref="IrTrap.MissingValue"/>.</summary>
+  /// <summary>The class of <see cref="IrTrap.MissingValue"/> and <see cref="IrTrap.CollectionModified"/>.</summary>
   public static IrClassType InvalidOperationException { get; }
 
-  /// <summary>An argument a method does not accept.</summary>
+  /// <summary>The class of <see cref="IrTrap.KeyNotFound"/>.</summary>
+  public static IrClassType KeyNotFoundException { get; }
+
+  /// <summary>An argument a method does not accept; the class of <see cref="IrTrap.DuplicateKey"/>.</summary>
   public static IrClassType ArgumentException { get; }
 
   /// <summary>The class of <see cref="IrTrap.ArgumentOutOfRange"/>.</summary>
@@ -97,7 +102,9 @@ public static class IrExceptionClass {
     IrTrap.ArgumentOutOfRange => ArgumentOutOfRangeException,
     IrTrap.NullReference => NullReferenceException,
     IrTrap.InvalidCast => InvalidCastException,
-    IrTrap.MissingValue => InvalidOperationException,
+    IrTrap.MissingValue or IrTrap.CollectionModified => InvalidOperationException,
+    IrTrap.KeyNotFound => KeyNotFoundException,
+    IrTrap.DuplicateKey => ArgumentException,
     _ => throw new ArgumentOutOfRangeException(nameof(trap), trap, "The trap has no exception class.")
   };
 

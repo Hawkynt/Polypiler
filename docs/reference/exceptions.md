@@ -20,8 +20,9 @@ Exception
 ├── NullReferenceException
 ├── InvalidCastException
 ├── InvalidOperationException
-└── ArgumentException
-    └── ArgumentOutOfRangeException
+├── ArgumentException
+│   └── ArgumentOutOfRangeException
+└── KeyNotFoundException
 ```
 
 An exception has a `Message` (a string) and an `InnerException` (an exception or `null`), two
@@ -44,6 +45,9 @@ tests: a trap without a row fails them, so a trap a later change introduces adds
 | `NullReferenceException` (`NullReference`) | `System.NullReferenceException` | Object reference not set to an instance of an object. | `TypeError` (native) | — | the engine's text |
 | `InvalidCastException` (`InvalidCast`) | `System.InvalidCastException` | Unable to cast object of type 'A' to type 'B'. | `InvalidCastError` | `TypeError` | invalid cast |
 | `InvalidOperationException` (`MissingValue`) | `System.InvalidOperationException` | Nullable object must have a value. | `InvalidOperationError` | `Error` | missing value |
+| `InvalidOperationException` (`CollectionModified`) | `System.InvalidOperationException` | Collection was modified; enumeration operation may not execute. | `InvalidOperationError` | `Error` | collection modified |
+| `KeyNotFoundException` (`KeyNotFound`) | `System.Collections.Generic.KeyNotFoundException` | The given key 'k' was not present in the dictionary. | `KeyNotFoundError` | `Error` | key not found |
+| `ArgumentException` (`DuplicateKey`) | `System.ArgumentException` | An item with the same key has already been added. Key: k | `ArgumentError` | `Error` | duplicate key |
 
 - **JavaScript.** A generated class is declared in a module only where it is used, with the classes
   of its chain. A class keeps `RangeError` in its chain where the code generated before these classes

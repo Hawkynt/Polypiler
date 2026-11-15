@@ -18,7 +18,9 @@ internal sealed partial class Lowering {
   /// <summary>The library class of the IR a type of .NET is, or <see langword="null"/>.</summary>
   private static IrClassType? LibraryClass(ITypeSymbol? type)
     => type is INamedTypeSymbol { Arity: 0, ContainingNamespace: { Name: "System", ContainingNamespace.IsGlobalNamespace: true } } named
-      ? IrExceptionClass.All.FirstOrDefault(library => library.Name == named.Name) : null;
+      ? IrExceptionClass.All.FirstOrDefault(library => library.Name == named.Name && library != IrExceptionClass.KeyNotFoundException)
+      : type is INamedTypeSymbol { Name: "KeyNotFoundException" } found && found.ContainingNamespace.ToDisplayString() == "System.Collections.Generic"
+      ? IrExceptionClass.KeyNotFoundException : null;
 
   /// <summary>Whether a type of .NET is an exception class: <c>System.Exception</c> or a class derived from it.</summary>
   private static bool IsException(ITypeSymbol? type) {
