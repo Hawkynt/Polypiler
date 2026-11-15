@@ -88,6 +88,42 @@ public sealed class ModuleInitializerTests {
     Assert.That(IrInterpreter.Instantiate(module).Call("f"), Is.EqualTo(26));
   }
 
+  /// <summary>A declaration, an export, a constructor function with its prototype and a wrapper are no statements of the initializer.</summary>
+  [Test]
+  public void DeclarationsOfEveryKind_StayOutOfTheInitializer() {
+    var module = Import("""
+      'use strict';
+      ;
+      let count = 0;
+      function Counter() { this.n = 1; }
+      Counter.prototype.add = function () { count = (count + this.n) | 0; };
+      new Counter().add();
+      export function f() { return count; }
+      """);
+    var initializer = module.Functions.Single(function => function.Name == module.Initializer);
+    Assert.That(initializer.Body.Statements, Has.Count.EqualTo(1));
+    Assert.That(IrInterpreter.Instantiate(module).Call("f"), Is.EqualTo(1));
+    // An immediately invoked function stays what it was: no statement of the initializer, refused where the module has state.
+    var wrapped = JavaScriptFrontend.Import("m.mjs", "let count = 0;\n(function () { count = 1; })();\nexport function f() { return count; }");
+    Assert.That(wrapped.Diagnostics.Single().Message, Is.EqualTo("'a statement at the top level of the module' is not supported yet"));
+  }
+
+  /// <summary>A global of an object that only the initializer of the module assigns and reads starts as null; one of a list is a new list.</summary>
+  [Test]
+  public void GlobalsOfReferences_AreNullOrANewCollection() {
+    var module = Import("""
+      const registry = [];
+      let pending;
+      class Thing { constructor(n) { this.n = n | 0; } }
+      function register(thing) { registry.push(thing); }
+      pending = new Thing(3);
+      register(pending);
+      export function f() { return registry.length; }
+      """);
+    Assert.That(module.Globals.Select(global => (global.Name, global.Initializer is null)), Is.EqualTo(new[] { ("registry", false), ("pending", true) }));
+    Assert.That(IrInterpreter.Instantiate(module).Call("f"), Is.EqualTo(1));
+  }
+
   [Test]
   public void ModuleWithoutState_DoesNotRunItsStatements() {
     var module = Import("console.log('loaded');\n/** @param {int32} a @returns {int32} */\nexport function f(a) { return a | 0; }");

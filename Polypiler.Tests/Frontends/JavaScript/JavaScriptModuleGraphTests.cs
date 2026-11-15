@@ -236,6 +236,18 @@ public sealed class JavaScriptModuleGraphTests {
   }
 
   [Test]
+  public void ProblemOfARequiredFile_IsReportedThere() {
+    var refusal = Refusal("main.js", ("main.js", "const B = require('./bad');\nmodule.exports = {};"), ("bad.js", "(function () { }(this, function () { return {}; }));"));
+    Assert.That((refusal.File, refusal.Message), Is.EqualTo((At("bad.js"), "'a factory that its wrapper does not call with the files it requires' is not supported yet")));
+  }
+
+  [Test]
+  public void MemberOfSomethingElseUnderItsOwnName_IsNoExportTaken() {
+    var module = Imported("main.js", ("main.js", "const Ops = require('./ops');\nconst PI = Math.PI;\nconst plus = Ops.Add;\n/** @param {int32} x @returns {int32} */\nfunction f(x) { return Ops.Add(x, 1); }\nmodule.exports = { f };"), ("ops.js", Helpers));
+    Assert.That(IrInterpreter.Call(module, "f", [1]), Is.EqualTo(2));
+  }
+
+  [Test]
   public void NameOfAModule_AsAKeyOrAPropertyName_IsNoUseOfTheModule() {
     var module = Imported("main.js",
       ("main.js", "const L = require('./lib');\n/** @returns {int32} */\nfunction f() { const o = { L: 3 }; return o.L + L.square(2); }\nmodule.exports = { f };"),

@@ -230,7 +230,7 @@ internal sealed partial class FunctionCollector(string source, List<Comment> com
       .Concat(this._enums.Select(named => named.Name)).Concat(this._candidates.Select(candidate => candidate.Owner).OfType<string>()).ToHashSet();
     this.Effects = [.. program.Body.Where(statement => statement switch {
       FunctionDeclaration or ClassDeclaration or Directive or EmptyStatement or ImportDeclaration or ExportNamedDeclaration or ExportDefaultDeclaration or ExportAllDeclaration => false,
-      VariableDeclaration declaration => !declaration.Declarations.Any(declarator => declarator.Id is Identifier { Name: var name } && held.Contains(name)),
+      VariableDeclaration declaration => !declaration.Declarations.Select(declarator => declarator.Id).OfType<Identifier>().Any(id => held.Contains(id.Name)),
       _ => !this.ClassStatements.Contains(statement) && Wrapped(statement) is null
     })];
     if (this.Effects.Count == 0)

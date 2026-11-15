@@ -67,7 +67,7 @@ public sealed class JavaScriptReferenceFieldTests {
   public void References_AsConditions_CountAsTrueUnlessNull() {
     var module = Import("""
       class Link {
-        constructor() { this.next = null; this.items = []; }
+        constructor() { this.next = null; this.items = []; this.seen = new Map(); }
       }
       export function f() {
         const link = new Link();
@@ -77,7 +77,8 @@ public sealed class JavaScriptReferenceFieldTests {
         link.next = new Link();
         if (link.next)
           count += 10;
-        if (link.items)
+        link.items.push(1);
+        if (link.items && link.seen)
           count += 100;
         const data = new Uint8Array(2);
         if (data && !!data)
@@ -118,6 +119,30 @@ public sealed class JavaScriptReferenceFieldTests {
       Is.EqualTo("'Array.isArray of uint8[], which JSDoc may have meant as an Array' is not supported yet"));
     Assert.That(JavaScriptFrontend.Import("m.mjs", "export function f() { return Array.isArray(1, 2) ? 1 : 0; }").Diagnostics.Single().Message,
       Is.EqualTo("'Array.isArray with 2 arguments' is not supported yet"));
+  }
+
+  /// <summary>Every change of the length of an array through a field, and a member that is no field of an object, which grows nothing.</summary>
+  [Test]
+  public void ChangesThroughAField_MakeItAList() {
+    var module = Import("""
+      class Bag {
+        constructor() { this.items = [1]; this.keys = new Set(); this.seen = new Map(); }
+        get first() { return this.items[0]; }
+      }
+      export function f() {
+        const bag = new Bag();
+        bag.items.push(2, 3);
+        bag.items.pop();
+        bag.items.splice(0, 1);
+        bag.keys.add(5);
+        bag.seen.set(1, 2);
+        const at = bag.items.indexOf(2) + (bag.items.includes(2) ? 10 : 0);
+        return at + bag.items.length + bag.keys.size + bag.seen.size + bag.first;
+      }
+      """);
+    Assert.That(IrInterpreter.Call(module, "f", []), Is.EqualTo(15));
+    var refused = JavaScriptFrontend.Import("m.mjs", "export function f() { const a = [1]; a.x.push(2); return 1; }");
+    Assert.That(refused.Module, Is.Null);
   }
 
   [Test]
