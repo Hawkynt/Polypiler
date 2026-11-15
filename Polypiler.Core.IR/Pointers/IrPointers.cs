@@ -41,6 +41,12 @@ public static class IrPointers {
   /// <returns><see langword="true"/> for <c>&lt;</c>, <c>&lt;=</c>, <c>&gt;</c> and <c>&gt;=</c>.</returns>
   public static bool Orders(IrIntrinsicOp op) => op is >= IrIntrinsicOp.PointerLess and <= IrIntrinsicOp.PointerGreaterOrEqual;
 
+  /// <summary>
+  /// What the rules say of a pointer in an iterator function: its locals live across a yield, where the region of a
+  /// pin or of a local is no longer held, so no parameter, local or value of one is a pointer.
+  /// </summary>
+  public const string InIterator = "a pointer in an iterator function";
+
   /// <summary>Whether a type is a pointer to a number, through which values are read and written and which arithmetic moves.</summary>
   private static bool Typed(IrType type) => type.IsPointer && type.Element!.IsNumeric;
 
@@ -78,7 +84,8 @@ public static class IrPointers {
   /// What a function breaks of the rules of the bounded pointers (#1331), one message per rule: no pointer is a
   /// result, the value of a conditional, or held by a lambda; a pin and a <c>stackalloc</c> into a pointer only
   /// initialize a declaration, and the pinned local is never assigned; the address is taken only of a local that
-  /// no lambda captures; and no pointer outlives the block of the pin or of the local it points into.
+  /// no lambda captures; no pointer outlives the block of the pin or of the local it points into; and an iterator
+  /// function holds no pointer at all, <see cref="InIterator"/>.
   /// </summary>
   /// <param name="function">The function.</param>
   /// <returns>The messages, empty when the function keeps the rules.</returns>
@@ -116,6 +123,8 @@ public static class IrPointers {
     /// </summary>
     public void Run() {
       this.Require(!function.ReturnType.IsPointer, IrVerifier.PointerStored);
+      this.Require(!IrSequences.IsIterator(function) || !(function.Parameters.Concat(function.Locals).Any(local => local.Type.IsPointer)
+        || IrTree.Nodes(function.Body).Any(node => node.Type.IsPointer)), InIterator);
       foreach (var parameter in function.Parameters)
         this._depths[parameter] = 0;
 

@@ -121,6 +121,8 @@ public sealed class PointerFrontendTests {
   [TestCase("public static unsafe int F(int[] a) { return Unsafe.Add(ref a[0], 1); }", "Unsafe")]
   [TestCase("public static unsafe int F(int[] a) { GCHandle h = GCHandle.Alloc(a, GCHandleType.Pinned); return 1; }", "GCHandle")]
   [TestCase("public static unsafe int F() { IntPtr m = Marshal.AllocHGlobal(4); return 1; }", "nint")]
+  [TestCase("public static System.Collections.Generic.IEnumerable<int> F(int[] a) { int t = 0; unsafe { fixed (int* p = a) t = *p; } yield return t; }", "a pointer in an iterator function")]
+  [TestCase("public static System.Collections.Generic.IEnumerable<int> F() { int t; unsafe { int* p = stackalloc int[2]; p[1] = 3; t = p[1]; } yield return t; }", "a pointer in an iterator function")]
   public void DiagnosedConstruct_IsRefusedByName(string methods, string named) {
     var refused = Refused(methods);
     Assert.That(refused, Does.Contain(CSharpFrontend.Unsupported).Or.Contain(CSharpFrontend.CompilerError));
@@ -135,7 +137,7 @@ public sealed class PointerFrontendTests {
       Assert.That(fixtures, Does.Contain(syntax), syntax);
 
     Assert.That(CSharpPointerApi.Supported.Select(entry => entry.Syntax), Is.Unique);
-    Assert.That(CSharpPointerApi.Diagnosed, Is.Unique.And.Count.EqualTo(15));
+    Assert.That(CSharpPointerApi.Diagnosed, Is.Unique.And.Count.EqualTo(16));
   }
 
 }

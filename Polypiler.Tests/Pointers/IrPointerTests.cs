@@ -147,6 +147,30 @@ public sealed class IrPointerTests {
     Assert.That(Verified(kept), Is.Empty);
   }
 
+  /// <summary>
+  /// An iterator function holds no pointer - no parameter, no local, no value - since its locals live across a yield,
+  /// where the region of a pin or of a local is no longer held; the same function without the pointer is verified.
+  /// </summary>
+  [Test]
+  public void Pointer_StaysOutOfAnIterator() {
+    var sequence = IrType.Sequence(IrType.U8, true);
+    var array = new IrLocal("a", _bytes);
+    var pointer = new IrLocal("p", _bytePointer);
+    var pinning = Pinning(sequence, array, [], pointer, new IrYield(Load(new IrLocalRef(pointer))));
+    Assert.That(Verified(pinning), Has.Some.Contains(IrPointers.InIterator));
+
+    var parameter = Module(sequence, [pointer], [], new IrYield(new IrConst(IrType.U8, 1)));
+    Assert.That(Verified(parameter), Has.Some.Contains(IrPointers.InIterator));
+
+    var x = new IrLocal("x", IrType.U8);
+    var addressed = Module(sequence, [], [x], new IrDeclare(x, new IrConst(IrType.U8, 2)), new IrYield(Load(Op(IrIntrinsicOp.AddressOf, _bytePointer, new IrLocalRef(x)))));
+    Assert.That(Verified(addressed), Has.Some.Contains(IrPointers.InIterator));
+
+    var plain = Module(sequence, [array], [x], new IrDeclare(x, new IrConst(IrType.U8, 2)), new IrYield(new IrLocalRef(x)));
+    Assert.That(Verified(plain), Is.Empty);
+    Assert.That(Verified(Pinning(IrType.U8, array, [], pointer, new IrReturn(Load(new IrLocalRef(pointer))))), Is.Empty);
+  }
+
   /// <summary>The address of a local declared in an inner block does not reach a pointer of the outer one.</summary>
   [Test]
   public void AddressOfInnerLocal_DoesNotEscape() {

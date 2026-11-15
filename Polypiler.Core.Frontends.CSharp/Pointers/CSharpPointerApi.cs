@@ -48,7 +48,8 @@ public static class CSharpPointerApi {
     "fixed of",
     "a step of a pointer whose value is used",
     "a conditional expression of pointers",
-    "[SkipLocalsInit]"
+    "[SkipLocalsInit]",
+    "a pointer in an iterator function"
   ];
 
 }

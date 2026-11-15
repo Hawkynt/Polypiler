@@ -32,7 +32,10 @@ Related: [repository README](../../README.md) · [views](views.md) · [exception
   `IntegerOverflow`.
 - **Lifetime.** A pointer never outlives the block of its pin or of the local it points into: a pointer variable of
   an outer block is assigned no pointer into an inner one ("a pointer outlives the block of its region"). The
-  pinned variable itself is never assigned, as C# makes a `fixed` variable read-only.
+  pinned variable itself is never assigned, as C# makes a `fixed` variable read-only. An iterator function
+  ([lazy sequences](sequences.md)) holds no pointer at all - no parameter, local or value - since its locals
+  live across a `yield`, where the region of a pin or of a local is no longer held ("a pointer in an iterator
+  function").
 - **Undefined in C#.** Out-of-bounds access is undefined behaviour in C#; the IR defines it as a trap (a
   refinement), JavaScript reproduces the trap, and the C# backend writes raw pointers without a check. The
   differential tests compare .NET only on calls in bounds.
@@ -78,7 +81,8 @@ Refused with `PLY1002`, naming the construct: a cast between a pointer and an in
 `(ulong)p` - the value is a machine address, which no target reproduces; `nint`/`IntPtr` (and so their arithmetic
 with pointers); `delegate*`; `char*`, `bool*` and a pointer to a struct; a pointer in a field, an array, a lambda
 or a local function, returned, or as a parameter of a public method; a pointer kept after its `fixed` block or the
-local it points into; a step of a pointer whose value is used (`*p++`); a conditional of pointers;
+local it points into; a pointer in an iterator method, even in an `unsafe` block between two `yield`s; a step of a
+pointer whose value is used (`*p++`); a conditional of pointers;
 `[SkipLocalsInit]`, which would leave `stackalloc` unspecified; `Unsafe`, `GCHandle` and `Marshal` members as
 members of the library. `->` and `fixed` buffers wait for layouts (#1332), `fixed (char* p = s)` for strings as
 memory (#123).
