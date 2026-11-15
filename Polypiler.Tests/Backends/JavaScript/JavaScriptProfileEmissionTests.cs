@@ -312,7 +312,7 @@ public sealed class JavaScriptProfileEmissionTests {
   [TestCase("sbyte", "ulong", "checked((sbyte)a)", "CheckRangeUnsigned64(a, { hi: 0, lo: 0 }, { hi: 0, lo: 127 }).lo << 24 >> 24")]
   [TestCase("uint", "ulong", "checked((uint)a)", "CheckRangeUnsigned64(a, { hi: 0, lo: 0 }, { hi: 0, lo: 4294967295 }).lo")]
   [TestCase("byte", "long", "checked((byte)a)", "CheckRangeSigned64(a, { hi: 0, lo: 0 }, { hi: 0, lo: 255 }).lo & 0xFF")]
-  [TestCase("ulong", "int", "checked((ulong)a)", "{ hi: 0, lo: $ck(a, 0, 2147483647) }")]
+  [TestCase("ulong", "int", "checked((ulong)a)", "Widen64(CheckRange32(a, 0, 2147483647))")]
   [TestCase("long", "ulong", "checked((long)a)", "CheckRangeUnsigned64(a, { hi: 0, lo: 0 }, { hi: 2147483647, lo: 4294967295 })")]
   [TestCase("ulong", "long", "checked((ulong)a)", "CheckRangeSigned64(a, { hi: 0, lo: 0 }, { hi: 2147483647, lo: 4294967295 })")]
   [TestCase("long", "int", "checked((long)a)", "Widen64(a)")]
@@ -542,9 +542,9 @@ public sealed class JavaScriptProfileEmissionTests {
     const string source = "public static int F(uint a, ulong b, float f) => System.Numerics.BitOperations.PopCount(a) + System.Numerics.BitOperations.TrailingZeroCount(b) + (int)f + (int)(f * f);";
     var old = Emit(source, _es5);
     // The counts are helpers of the library, written at the level as every function is; the writer's own helpers are what the level lacks.
-    Assert.That(Helpers(old), Is.EqualTo(new[] { "imul", "fround", "trunc", "f2i" }));
+    Assert.That(Helpers(old), Is.EqualTo(new[] { "imul", "fround" }));
     Assert.That(old, Does.Contain("function PopCount32(value) {").And.Contain("function TrailingZeroCount64(value) {").And.Contain("function ShiftRightLogical64(value, count) {").And.Contain("$imul(")
-      .And.Contain("return value <= low ? low : value >= high ? high : $trunc(value) + 0;")
+      .And.Contain("function SaturateToInt32(value, low, high) {").And.Contain("function Truncate(value) {")
       .And.Contain("  var whole = Math.floor(rest);\n"));
 
     var typed = Emit(source, _es5Typed);
@@ -552,7 +552,7 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(typed, Does.Contain("var $f32a = new Float32Array(1);\n\nfunction $fround(value) {\n  $f32a[0] = value;\n  return $f32a[0];\n}\n"));
 
     var modern = Emit(source, _es2017);
-    Assert.That(Helpers(modern), Is.EqualTo(new[] { "f2i" }));
+    Assert.That(Helpers(modern), Is.Empty);
     Assert.That(modern, Does.Contain("function PopCount32(value) {").And.Contain("Math.imul(").And.Not.Contain("$imul("));
 
     Assert.That(Emit(source, _es2020), Does.Contain("function TrailingZeroCount64(value) {").And.Not.Contain("ShiftRightLogical64"));

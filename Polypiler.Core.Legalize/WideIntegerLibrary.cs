@@ -97,19 +97,13 @@ public static class WideIntegerLibrary {
       return calls.Call(name + (to.IsSigned ? "64" : "Unsigned64"), to, value);
     }
 
-    if (from.IsLong) {
-      if (conversion.Contract != IrConversion.Trap)
-        return null;
+    if (from.IsLong)
+      return conversion.Contract == IrConversion.Trap ? TrapLibrary.Range(conversion, calls) : null;
 
-      var (low, high) = (Int128.Max(IrOperators.Minimum(to), IrOperators.Minimum(from)), Int128.Min(IrOperators.Maximum(to), IrOperators.Maximum(from)));
-      var checkedValue = calls.Call(from.IsSigned ? "CheckRangeSigned64" : "CheckRangeUnsigned64", from, value, new IrConst(from, (long)low), new IrConst(from, (long)(ulong)high));
-      return new IrConvert(to, checkedValue);
-    }
-
-    // A narrower integer to a 64-bit one: only a negative number can lie outside, which the conversion
-    // to the unsigned type of its own width traps on.
+    // A narrower integer to a 64-bit one: only a negative number can lie outside, which the check
+    // against the bounds of the source from 0 on traps on.
     if (conversion.Contract == IrConversion.Trap && from.IsSigned && !to.IsSigned)
-      value = new IrConvert(Unsigned(from), value, IrConversion.Trap);
+      value = calls.Call("CheckRange32", IrType.I32, value, new IrConst(IrType.I32, 0), new IrConst(IrType.I32, (long)IrOperators.Maximum(from)));
 
     if (value.Type.IsSigned)
       return calls.Call("Widen64", to, value);
@@ -130,9 +124,23 @@ public static class WideIntegerLibrary {
       return calls.Call((step.Trap ? "StepElementChecked" : "StepElement") + (type.IsSigned ? "64" : "Unsigned64"), type,
         element.Array, element.Index, Truth(step.Increment), Truth(step.Postfix));
 
+    var name = step.Trap ? (step.Increment ? "AddChecked" : "SubtractChecked") + (type.IsSigned ? "Signed64" : "Unsigned64") : step.Increment ? "Add64" : "Subtract64";
+    return Stepped(step, before => calls.Call(name, type, before, new IrConst(type, 1)));
+  }
+
+  /// <summary>
+  /// A step of a variable, or of an element of a view held in one, as the call of a lambda that stores
+  /// the value <paramref name="after"/> makes of the one before and gives the value before or after:
+  /// the IR has no assignment that is an expression. A step of an element of a view that is no variable
+  /// is <see langword="null"/>, kept for the backend to report.
+  /// </summary>
+  /// <param name="step">The step.</param>
+  /// <param name="after">The value after the step, of the value before it.</param>
+  internal static IrExpr? Stepped(IrStep step, Func<IrExpr, IrExpr> after) {
     if (step.Target is IrArrayLoad { Array: not (IrLocalRef or IrGlobalRef) })
       return null;
 
+    var type = step.Type;
     var before = new IrLocal("$before", type);
     var stored = new IrLocal("$after", type);
     var index = new IrLocal("$index", IrType.I32);
@@ -146,9 +154,8 @@ public static class WideIntegerLibrary {
       current = load with { Index = new IrLocalRef(index) };
     }
 
-    var name = step.Trap ? (step.Increment ? "AddChecked" : "SubtractChecked") + (type.IsSigned ? "Signed64" : "Unsigned64") : step.Increment ? "Add64" : "Subtract64";
     statements.Add(new IrDeclare(before, current));
-    statements.Add(new IrDeclare(stored, calls.Call(name, type, new IrLocalRef(before), new IrConst(type, 1))));
+    statements.Add(new IrDeclare(stored, after(new IrLocalRef(before))));
     statements.Add(current switch {
       IrLocalRef local => new IrAssign(local.Local, new IrLocalRef(stored)),
       IrGlobalRef global => new IrGlobalAssign(global.Global, new IrLocalRef(stored)),
@@ -159,12 +166,6 @@ public static class WideIntegerLibrary {
     var lambda = new IrLambda(IrType.Function(type), captures, [], locals, new IrBlock(statements));
     return new IrInvoke(type, lambda, []);
   }
-
-  private static IrType Unsigned(IrType type) => type.Kind switch {
-    IrTypeKind.I8 => IrType.U8,
-    IrTypeKind.I16 => IrType.U16,
-    _ => IrType.U32
-  };
 
   private static IrConst Truth(bool value) => new(IrType.Bool, value ? 1 : 0);
 

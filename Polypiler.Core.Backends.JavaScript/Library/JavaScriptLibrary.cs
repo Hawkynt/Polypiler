@@ -33,8 +33,10 @@ internal static partial class JavaScriptLibrary {
 
   /// <summary>
   /// The rewrite of legalization for a profile: every node a row covers becomes the call of its
-  /// helper, and below ECMAScript 2020, which has no <c>BigInt</c>, every operation on a 64-bit
-  /// integer the call of its helper on the two limbs (<see cref="WideIntegerLibrary"/>, O0075).
+  /// helper; below ECMAScript 2020, which has no <c>BigInt</c>, every operation on a 64-bit integer
+  /// the call of its helper on the two limbs (<see cref="WideIntegerLibrary"/>, O0075); and every
+  /// integer operation that traps, as JavaScript's numbers do not, the call of its helper that checks
+  /// (<see cref="TrapLibrary"/>).
   /// </summary>
   /// <param name="profile">The profile.</param>
   /// <param name="table">The capability table.</param>
@@ -43,8 +45,7 @@ internal static partial class JavaScriptLibrary {
     var context = Context(profile, table);
     var limbs = context.Replaces("BigInt");
     return (expression, calls) => expression is IrIntrinsic intrinsic && RowOf(intrinsic, context) is { } row ? row.Build(intrinsic, calls)
-      : limbs ? WideIntegerLibrary.Call(expression, calls)
-      : null;
+      : (limbs ? WideIntegerLibrary.Call(expression, calls) : null) ?? TrapLibrary.Call(expression, calls);
   }
 
   private static JavaScriptLibraryContext Context(JavaScriptProfile profile, JavaScriptCapabilities table)

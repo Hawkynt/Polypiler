@@ -73,8 +73,8 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("int", "a + b", "(a + b) | 0")]
   [TestCase("int", "a - b", "(a - b) | 0")]
   [TestCase("int", "a * b", "Math.imul(a, b)")]
-  [TestCase("int", "a / b", "$div(a, b)")]
-  [TestCase("int", "a % b", "$rem(a, b)")]
+  [TestCase("int", "a / b", "Divide32(a, b, -2147483648)")]
+  [TestCase("int", "a % b", "Remainder32(a, b, -2147483648)")]
   [TestCase("int", "a & b", "a & b")]
   [TestCase("int", "a | b", "a | b")]
   [TestCase("int", "a ^ b", "a ^ b")]
@@ -89,8 +89,8 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("uint", "a + b", "(a + b) >>> 0")]
   [TestCase("uint", "a - b", "(a - b) >>> 0")]
   [TestCase("uint", "a * b", "Math.imul(a, b) >>> 0")]
-  [TestCase("uint", "a / b", "$udiv(a, b)")]
-  [TestCase("uint", "a % b", "$urem(a, b)")]
+  [TestCase("uint", "a / b", "DivideUnsigned32(a, b)")]
+  [TestCase("uint", "a % b", "RemainderUnsigned32(a, b)")]
   [TestCase("uint", "a & b", "(a & b) >>> 0")]
   [TestCase("uint", "a | b", "(a | b) >>> 0")]
   [TestCase("uint", "a ^ b", "(a ^ b) >>> 0")]
@@ -126,15 +126,15 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("ulong", "a >>> 3", "a >> 3n")]
   [TestCase("ulong", "~a", "BigInt.asUintN(64, ~a)")]
   [TestCase("ulong", "a * 0x100000001B3UL + 1UL", "BigInt.asUintN(64, BigInt.asUintN(64, a * 1099511628211n) + 1n)")]
-  [TestCase("int", "checked(a + b)", "$ck(a + b, -2147483648, 2147483647)")]
-  [TestCase("int", "checked(a - b)", "$ck(a - b, -2147483648, 2147483647)")]
-  [TestCase("int", "checked(a * b)", "$ck(a * b, -2147483648, 2147483647) | 0")]
-  [TestCase("int", "checked(-a)", "$ck(-a, -2147483648, 2147483647) | 0")]
-  [TestCase("uint", "checked(a + b)", "$ck(a + b, 0, 4294967295)")]
-  [TestCase("uint", "checked(a * b)", "$ck(a * b, 0, 4294967295)")]
-  [TestCase("long", "checked(a * b)", "$ck(a * b, -9223372036854775808n, 9223372036854775807n)")]
-  [TestCase("long", "checked(-a)", "$ck(-a, -9223372036854775808n, 9223372036854775807n)")]
-  [TestCase("ulong", "checked(a - b)", "$ck(a - b, 0n, 18446744073709551615n)")]
+  [TestCase("int", "checked(a + b)", "AddChecked32(a, b, -2147483648, 2147483647)")]
+  [TestCase("int", "checked(a - b)", "SubtractChecked32(a, b, -2147483648, 2147483647)")]
+  [TestCase("int", "checked(a * b)", "MultiplyChecked32(a, b, -2147483648, 2147483647)")]
+  [TestCase("int", "checked(-a)", "SubtractChecked32(0, a, -2147483648, 2147483647)")]
+  [TestCase("uint", "checked(a + b)", "AddCheckedUnsigned32(a, b, 4294967295)")]
+  [TestCase("uint", "checked(a * b)", "MultiplyCheckedUnsigned32(a, b, 4294967295)")]
+  [TestCase("long", "checked(a * b)", "MultiplyCheckedSigned64(a, b)")]
+  [TestCase("long", "checked(-a)", "SubtractCheckedSigned64(0n, a)")]
+  [TestCase("ulong", "checked(a - b)", "SubtractCheckedUnsigned64(a, b)")]
   [TestCase("double", "a + b", "a + b")]
   [TestCase("double", "a - b", "a - b")]
   [TestCase("double", "a * b + a", "(a * b) + a")]
@@ -208,12 +208,12 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("uint", "sbyte", "(uint)a", "a >>> 0")]
   [TestCase("ushort", "short", "(ushort)a", "a & 0xFFFF")]
   [TestCase("short", "ushort", "(short)(a + 1)", "((a + 1) | 0) << 16 >> 16")]
-  [TestCase("byte", "int", "checked((byte)a)", "$ck(a, 0, 255)")]
-  [TestCase("sbyte", "uint", "checked((sbyte)a)", "$ck(a, 0, 127)")]
-  [TestCase("uint", "int", "checked((uint)a)", "$ck(a, 0, 2147483647)")]
-  [TestCase("int", "long", "checked((int)a)", "Number($ck(a, -2147483648n, 2147483647n))")]
-  [TestCase("ulong", "int", "checked((ulong)a)", "BigInt($ck(a, 0, 2147483647))")]
-  [TestCase("long", "ulong", "checked((long)a)", "$ck(a, 0n, 9223372036854775807n)")]
+  [TestCase("byte", "int", "checked((byte)a)", "CheckRange32(a, 0, 255) & 0xFF")]
+  [TestCase("sbyte", "uint", "checked((sbyte)a)", "CheckRangeUnsigned32(a, 0, 127) << 24 >> 24")]
+  [TestCase("uint", "int", "checked((uint)a)", "CheckRange32(a, 0, 2147483647) >>> 0")]
+  [TestCase("int", "long", "checked((int)a)", "Number(BigInt.asIntN(32, CheckRangeSigned64(a, -2147483648n, 2147483647n)))")]
+  [TestCase("ulong", "int", "checked((ulong)a)", "BigInt.asUintN(64, BigInt(CheckRange32(a, 0, 2147483647)))")]
+  [TestCase("long", "ulong", "checked((long)a)", "BigInt.asIntN(64, CheckRangeUnsigned64(a, 0n, 9223372036854775807n))")]
   [TestCase("long", "int", "checked((long)a)", "BigInt(a)")]
   [TestCase("long", "bool", "long.MinValue", "-9223372036854775808n")]
   [TestCase("ulong", "bool", "ulong.MaxValue", "18446744073709551615n")]
@@ -226,14 +226,14 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("double", "ulong", "a", "Number(a)")]
   [TestCase("float", "long", "a", "$f32(a)")]
   [TestCase("float", "ulong", "a", "$f32(a)")]
-  [TestCase("int", "double", "(int)a", "$f2i(a, -2147483648, 2147483647)")]
-  [TestCase("uint", "float", "(uint)a", "$f2i(a, 0, 4294967295)")]
-  [TestCase("byte", "double", "(byte)a", "$f2i(a, -2147483648, 2147483647) & 0xFF")]
-  [TestCase("short", "float", "(short)a", "$f2i(a, -2147483648, 2147483647) << 16 >> 16")]
+  [TestCase("int", "double", "(int)a", "SaturateToInt32(a, -2147483648, 2147483647)")]
+  [TestCase("uint", "float", "(uint)a", "SaturateToUInt32(a)")]
+  [TestCase("byte", "double", "(byte)a", "SaturateToInt32(a, -2147483648, 2147483647) & 0xFF")]
+  [TestCase("short", "float", "(short)a", "SaturateToInt32(a, -2147483648, 2147483647) << 16 >> 16")]
   [TestCase("long", "double", "(long)a", "$f2l(a, -9223372036854775808, 9223372036854775808)")]
   [TestCase("ulong", "double", "(ulong)a", "$f2l(a, 0, 18446744073709551616)")]
-  [TestCase("int", "double", "checked((int)a)", "$f2ic(a, -2147483648, 2147483647)")]
-  [TestCase("byte", "float", "checked((byte)a)", "$f2ic(a, 0, 255)")]
+  [TestCase("int", "double", "checked((int)a)", "FromDoubleChecked32(a, -2147483648, 2147483647)")]
+  [TestCase("byte", "float", "checked((byte)a)", "FromDoubleChecked32(a, 0, 255) & 0xFF")]
   [TestCase("long", "float", "checked((long)a)", "$f2lc(a, -9223372036854775808, 9223372036854775808)")]
   [TestCase("ulong", "double", "checked((ulong)a)", "$f2lc(a, 0, 18446744073709551616)")]
   [TestCase("double", "bool", "double.NaN", "NaN")]
@@ -435,16 +435,21 @@ public sealed class JavaScriptEmitterTests {
   [TestCase("char", "++a", "a = (a + 1) & 0xFFFF")]
   [TestCase("float", "++a", "a = Math.fround(a + 1)")]
   [TestCase("double", "--a", "a = a - 1")]
-  [TestCase("int", "checked(++a)", "a = $ck(a + 1, -2147483648, 2147483647)")]
-  [TestCase("ulong", "checked(--a)", "a = $ck(a - 1n, 0n, 18446744073709551615n)")]
   [TestCase("double", "checked(++a)", "a = a + 1")]
   public void PrefixStep_IsWritten(string type, string expression, string expected)
     => Assert.That(Body($"public static {type} F({type} a) => {expression};"), Is.EqualTo(new[] { $"return {expected};" }));
 
+  /// <summary>A checked step of a variable whose value is used is a function that assigns it the library's checked sum or difference.</summary>
+  [TestCase("int", "checked(++a)", "AddChecked32($before, 1, -2147483648, 2147483647)", "$after")]
+  [TestCase("ulong", "checked(--a)", "SubtractCheckedUnsigned64($before, 1n)", "$after")]
+  [TestCase("byte", "checked(a--)", "SubtractCheckedUnsigned32($before, 1, 255) & 0xFF", "$before")]
+  public void CheckedStep_IsTheLibrarysCheckedSum(string type, string expression, string after, string result)
+    => Assert.That(Body($"public static {type} F({type} a) => {expression};"),
+      Is.EqualTo(new[] { "return (() => {", "let $before = a;", $"let $after = {after};", "a = $after;", $"return {result};", "})();" }));
+
   /// <summary>The postfix form keeps the old value in a variable the function declares once.</summary>
   [TestCase("int", "a++", "($p = a, a = ($p + 1) | 0, $p)")]
   [TestCase("ulong", "a--", "($p = a, a = BigInt.asUintN(64, $p - 1n), $p)")]
-  [TestCase("byte", "checked(a--)", "($p = a, a = $ck($p - 1, 0, 255), $p)")]
   [TestCase("double", "a++", "($p = a, a = $p + 1, $p)")]
   [TestCase("float", "a-- - a++", "Math.fround(($p = a, a = Math.fround($p - 1), $p) - ($p = a, a = Math.fround($p + 1), $p))")]
   public void PostfixStep_IsWritten(string type, string expression, string expected)
@@ -474,7 +479,9 @@ public sealed class JavaScriptEmitterTests {
   public void Helpers_AreListedOnceAndOnlyWhenUsed() {
     var text = Emit("public static int F(int[] a, uint u) { a[0] = a[1] / a[2] % a[3]; return (int)(u / 2 % 3) + new int[2].Length; }");
     var helpers = text.Split('\n').Where(line => line.StartsWith("function $")).Select(line => line[..line.IndexOf('(')]);
-    Assert.That(helpers, Is.EqualTo(new[] { "function $div", "function $rem", "function $udiv", "function $urem", "function $get", "function $set", "function $len" }));
+    Assert.That(helpers, Is.EqualTo(new[] { "function $get", "function $set", "function $len" }));
+    Assert.That(text, Does.Contain("function Divide32(").And.Contain("function Remainder32(").And.Contain("function DivideUnsigned32(").And.Contain("function RemainderUnsigned32("),
+      "the division of numbers is the library's");
     Assert.That(text, Does.Contain("throw new DivideByZeroError(\"divide by zero\")")
       .And.Contain("throw new IndexOutOfRangeError(\"index out of range\")")
       .And.Contain("throw new OverflowError(\"integer overflow\")"));
@@ -485,10 +492,10 @@ public sealed class JavaScriptEmitterTests {
   public void WideHelpers_AreListedOnceAndOnlyWhenUsed() {
     var text = Emit("public static long F(long a, ulong u) => checked(a / a % a + (long)(u / u % u) + a);");
     var helpers = text.Split('\n').Where(line => line.StartsWith("function $")).Select(line => line[..line.IndexOf('(')]);
-    Assert.That(helpers, Is.EqualTo(new[] { "function $div64", "function $rem64", "function $udiv64", "function $urem64", "function $ck" }));
+    Assert.That(helpers, Is.EqualTo(new[] { "function $div64", "function $rem64", "function $udiv64", "function $urem64" }));
     Assert.That(text, Does.Contain("if (b === 0n) throw new DivideByZeroError(\"divide by zero\");")
       .And.Contain("if (a === -9223372036854775808n && b === -1n) throw new OverflowError(\"integer overflow\");")
-      .And.Contain("if (value < low || value > high) throw new OverflowError(\"integer overflow\");"));
+      .And.Contain("function AddCheckedSigned64("), "the checked sum is the library's");
   }
 
   /// <summary>The helpers of the conversions from and to floating point, in their order.</summary>
@@ -497,9 +504,8 @@ public sealed class JavaScriptEmitterTests {
     var text = Emit(
       "public static float F(double d, long n) => (int)d + (long)d + checked((int)d) + checked((long)d) + (float)n + (int)d;");
     var helpers = text.Split('\n').Where(line => line.StartsWith("function $")).Select(line => line[..line.IndexOf('(')]);
-    Assert.That(helpers, Is.EqualTo(new[] { "function $f2i", "function $f2l", "function $f2ic", "function $f2lc", "function $f32" }));
-    Assert.That(text, Does.Contain("if (value !== value) return 0;").And.Contain("if (value !== value) return 0n;")
-      .And.Contain("if (!(whole >= low && whole <= high)) throw new OverflowError(\"integer overflow\");")
+    Assert.That(helpers, Is.EqualTo(new[] { "function $f2l", "function $f2lc", "function $f32" }));
+    Assert.That(text, Does.Contain("function SaturateToInt32(").And.Contain("function FromDoubleChecked32(").And.Contain("if (value !== value) return 0n;")
       .And.Contain("if (!(whole >= low && whole < limit)) throw new OverflowError(\"integer overflow\");")
       .And.Contain("magnitude = (magnitude >> 11n) | (magnitude & 2047n ? 1n : 0n);"));
   }

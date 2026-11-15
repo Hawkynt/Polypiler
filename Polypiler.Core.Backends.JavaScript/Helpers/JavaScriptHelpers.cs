@@ -19,9 +19,7 @@ namespace Polypiler.Core.Backends.JavaScript;
 internal static partial class JavaScriptHelpers {
 
   private const string Overflow = "throw new OverflowError(\"integer overflow\");";
-  private const string ZeroDivisor = "  if (b === 0) throw new DivideByZeroError(\"divide by zero\");";
   private const string ZeroDivisor64 = "  if (b === 0n) throw new DivideByZeroError(\"divide by zero\");";
-  private const string Unrepresentable = "  if (a === -2147483648 && b === -1) " + Overflow;
   private const string Unrepresentable64 = "  if (a === -9223372036854775808n && b === -1n) " + Overflow;
   private const string OutOfRange = "  if (index < 0 || index >= array.length) throw new IndexOutOfRangeError(\"index out of range\");";
   private const string RangeOutOfRange = "  if (from < 0 || to < 0 || length < 0 || from + length > source.length || to + length > target.length) throw new IndexOutOfRangeError(\"index out of range\");";
@@ -33,8 +31,8 @@ internal static partial class JavaScriptHelpers {
   public static readonly IReadOnlyList<string> Order = [
     .. ErrorOrder,
     "$imul", "$f32a", "$fround", "$trunc",
-    "$div", "$rem", "$udiv", "$urem", "$div64", "$rem64", "$udiv64", "$urem64", "$ck",
-    "$f2i", "$f2l", "$f2ic", "$f2lc", "$f32",
+    "$div64", "$rem64", "$udiv64", "$urem64",
+    "$f2l", "$f2lc", "$f32",
     "$get", "$set", "$new", "$fill",
     "$view", "$bits64", "$bits32", "$float64", "$float32", "$key64",
     "$copy", "$copya", "$step", "$stepi", "$stepf", "$stepck", "$len",
@@ -146,25 +144,14 @@ internal static partial class JavaScriptHelpers {
       }
       """,
 
-    // Division, which traps.
-    "$div" => Lines("function $div(a, b) {", ZeroDivisor, Unrepresentable, "  return (a / b) | 0;", "}"),
-    "$rem" => Lines("function $rem(a, b) {", ZeroDivisor, Unrepresentable, "  return (a % b) | 0;", "}"),
-    "$udiv" => Lines("function $udiv(a, b) {", ZeroDivisor, "  return (a / b) >>> 0;", "}"),
-    "$urem" => Lines("function $urem(a, b) {", ZeroDivisor, "  return a % b;", "}"),
-    // Of BigInts; below ECMAScript 2020 the division of 64 bits is the library's (O0075).
+    // The division of BigInts, which traps: the operation itself, with nothing weaker in the IR to write it with.
+    // That of numbers, and below ECMAScript 2020 that of 64 bits (O0075), is the library's.
     "$div64" => Lines("function $div64(a, b) {", ZeroDivisor64, Unrepresentable64, "  return a / b;", "}"),
     "$rem64" => Lines("function $rem64(a, b) {", ZeroDivisor64, Unrepresentable64, "  return a % b;", "}"),
     "$udiv64" => Lines("function $udiv64(a, b) {", ZeroDivisor64, "  return a / b;", "}"),
     "$urem64" => Lines("function $urem64(a, b) {", ZeroDivisor64, "  return a % b;", "}"),
 
-    // Checked arithmetic and checked conversions; of 64 bits below ECMAScript 2020 they are the library's.
-    "$ck" => Lines("function $ck(value, low, high) {", "  if (value < low || value > high) " + Overflow, "  return value;", "}"),
-    "$f2i" => """
-      function $f2i(value, low, high) {
-        if (value !== value) return 0;
-        return value <= low ? low : value >= high ? high : @trunc(value) + 0;
-      }
-      """,
+    // A number to a BigInt, saturating or trapping; to a number it is the library's.
     "$f2l" => """
       function $f2l(value, low, limit) {
         if (value !== value) return 0n;
@@ -172,12 +159,6 @@ internal static partial class JavaScriptHelpers {
         return value <= low ? BigInt(low) : BigInt(@trunc(value));
       }
       """,
-    "$f2ic" => Lines(
-      "function $f2ic(value, low, high) {",
-      "  @const whole = @trunc(value);",
-      "  if (!(whole >= low && whole <= high)) " + Overflow,
-      "  return whole + 0;",
-      "}"),
     "$f2lc" => Lines(
       "function $f2lc(value, low, limit) {",
       "  @const whole = @trunc(value);",

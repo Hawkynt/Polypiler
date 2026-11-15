@@ -16,7 +16,9 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// is specialised at ECMAScript 5 until no 64-bit helper is called, and calls the library's add
 /// without the inlining. Every operator, conversion and step of 64 bits, on the edges 0, ±1, 2^31,
 /// 2^32, 2^63 − 1 and −2^63 against each other and on random pairs (fixed seed), has in <c>node</c>
-/// the outcome of the interpreter - the value, or the same trap.
+/// the outcome of the interpreter - the value, or the same trap; so do the traps of up to 32 bits that
+/// are the library's helpers too: the division, the checked arithmetic and conversions, the conversion
+/// from floating point.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 [Layer("core")]
@@ -137,6 +139,27 @@ public sealed class WideIntegerScenarioTests {
         Values().Select(value => new object[] { host == typeof(long) ? new[] { (long)value, 5L } : new[] { (ulong)value, 5UL }, random.Next(-1, 3) }));
     }
 
+    // The traps of up to 32 bits (test design 4): the division, the checked arithmetic and conversions, from floating point.
+    foreach (var (type, values) in new[] {
+      ("int", new object[] { 0, 1, -1, 2, 7, -7, int.MaxValue, int.MinValue, 65536, -65536 }),
+      ("uint", [0u, 1u, 2u, 7u, uint.MaxValue, 2147483648u, 65536u])
+    }) {
+      var pairs = (from x in values from y in values select new[] { x, y }).ToList();
+      foreach (var op in new[] { "/", "%" })
+        Method(type, $"{type} a, {type} b", $"a {op} b", null, pairs);
+
+      foreach (var op in new[] { "+", "-", "*" })
+        Method(type, $"{type} a, {type} b", $"checked(a {op} b)", null, pairs);
+
+      foreach (var narrow in new[] { "sbyte", "byte", "short", "ushort", "int", "uint" })
+        Method(narrow, $"{type} a", $"checked(({narrow})a)", null, values.Select(value => new[] { value }));
+
+      Method(type, $"{type} a", "checked(a++ + a)", null, values.Select(value => new[] { value }));
+      Method(type, "double a", $"({type})a", null, new object[] { 0.0, -0.5, 1.5, -2147483648.5, 4294967296.0, double.NaN, -1e300, 1e300 }.Select(value => new[] { value }));
+      Method(type, "double a", $"checked(({type})a)", null, new object[] { 0.0, -0.5, 1.5, -2147483648.5, 4294967296.0, double.NaN, -1e300, 1e300 }.Select(value => new[] { value }));
+    }
+
+    Method("int", "int a", "checked(-a)", null, new object[] { 0, 1, int.MaxValue, int.MinValue }.Select(value => new[] { value }));
     Method("long", "long a", "-a", typeof(long), _edges.Select(value => new object[] { value }));
     Method("long", "long a", "checked(-a)", typeof(long), _edges.Select(value => new object[] { value }));
     Method("long", "ulong a", "checked((long)a)", typeof(long), _edges.Select(value => new object[] { unchecked((ulong)value) }));
