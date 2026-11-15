@@ -173,6 +173,72 @@ internal static partial class RustCases {
     return calls;
   }
 
+  private static IReadOnlyList<PrototypeCall> Edges() {
+    var calls = new List<PrototypeCall>();
+    foreach (var x in new uint[] { 0, 2, 4, 5 })
+      calls.Add(Call("equalities", x));
+
+    foreach (var x in new uint[] { 3, 5, 200 })
+      calls.Add(Call("unit_results", x));
+
+    foreach (var x in new uint[] { 3, 9 })
+      calls.Add(Call("unwrap_unit", x));
+
+    foreach (var i in new ulong[] { 0, 2, 3 })
+      calls.Add(Call("defaults", i));
+
+    foreach (var c in new[] { true, false })
+      calls.Add(Call("chosen", c));
+
+    foreach (var x in new uint[] { 3, uint.MaxValue })
+      calls.Add(Call("pointers", x));
+
+    foreach (var data in new double[][] { [1.5, 2.0], [], [double.NaN] })
+      calls.Add(Call("float_folds", data));
+
+    foreach (var n in new[] { 5, int.MaxValue })
+      calls.Add(Call("vector_places", n));
+
+    foreach (var n in new[] { 2, int.MaxValue })
+      calls.Add(Call("temporaries", n));
+
+    foreach (var i in new ulong[] { 0, 2, 3 })
+      calls.Add(Call("struct_copies", i));
+
+    foreach (var x in new uint[] { 4, uint.MaxValue })
+      calls.Add(Call("closure_try", x));
+
+    foreach (var i in new ulong[] { 0, 1, 2, 3 })
+      calls.Add(Call("tables", i));
+
+    foreach (var (x, y) in new (int, int)[] { (0, 0), (1, 5), (3, 3), (0, 9), (4, 2), (-1, 300) })
+      calls.Add(Call("patterns", x, y));
+
+    foreach (var n in new uint[] { 0, 3, 8, 20 })
+      calls.Add(Call("switches", n));
+
+    foreach (var n in new uint[] { 0, 1, 5 })
+      calls.Add(Call("returning_switch", n));
+
+    foreach (var high in new[] { true, false })
+      calls.Add(Call("levels", high));
+
+    foreach (var n in new uint[] { 1, uint.MaxValue - 1 })
+      calls.Add(Call("into_iteration", n));
+
+    foreach (var x in new[] { 3, 0, int.MaxValue })
+      calls.Add(Call("struct_options", x));
+
+    foreach (var x in new[] { 3, 11, int.MaxValue / 2 + 1 })
+      calls.Add(Call("nested_return", x));
+
+    calls.Add(Call("diverging_assignment", new byte[] { 1 }, true));
+    calls.Add(Call("diverging_assignment", new byte[] { 1 }, false));
+    calls.Add(Call("diverging_assignment", new byte[0], false));
+    calls.Add(Call("diverging_assignment", new byte[] { 255 }, false));
+    return calls;
+  }
+
   private static IReadOnlyList<PrototypeCall> Closures() {
     var calls = new List<PrototypeCall>();
     foreach (var x in new uint[] { 5, 0, uint.MaxValue / 3 })
