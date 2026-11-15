@@ -228,6 +228,9 @@ public sealed class IrClassType : IrTypeDeclaration {
   /// <summary>Who may name the class.</summary>
   public IrVisibility Visibility { get; init; } = IrVisibility.Public;
 
+  /// <summary>The generic class the class is one instantiation of; <see langword="null"/> for a class of its own.</summary>
+  public IrGenericOrigin? Origin { get; init; }
+
   /// <summary>The constructors, in source order.</summary>
   public IReadOnlyList<IrConstructor> Constructors { get; private set; } = [];
 

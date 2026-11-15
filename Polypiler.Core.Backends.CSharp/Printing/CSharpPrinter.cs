@@ -184,6 +184,9 @@ public static class CSharpPrinter {
             this._text.Append('<').AppendJoin(", ", method.TypeParameters).Append('>');
 
           this.Parameters(method.Parameters);
+          foreach (var constraint in method.Constraints)
+            this._text.Append(" where ").Append(constraint);
+
           this.Body(method.Body, method.ExpressionBody, depth);
           break;
         case CsProperty property:

@@ -357,6 +357,9 @@ public sealed record CsMethod(
   /// <summary>Whether the backend declares the method in support of the module's code: a helper, which a target pass may inline or remove.</summary>
   public bool IsHelper { get; init; }
 
+  /// <summary>The constraint clauses of the type parameters, each as it follows <c>where</c>: <c>T : global::System.IEquatable&lt;T&gt;</c>; empty for none.</summary>
+  public IReadOnlyList<string> Constraints { get; init; } = [];
+
 }
 
 /// <summary>A constructor, which may chain to another of its type: <c>: this(arguments)</c>.</summary>

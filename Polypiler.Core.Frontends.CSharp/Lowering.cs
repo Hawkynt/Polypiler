@@ -13,7 +13,7 @@ namespace Polypiler.Core.Frontends.CSharp;
 /// compiler chose, the conversions it inserted and the constants it folded. A construct outside the
 /// subset ends the method it stands in with one diagnostic; nothing is guessed.
 /// </summary>
-internal sealed partial class Lowering(string path, SemanticModel model) {
+internal sealed partial class Lowering(string path, BoundModel model) {
 
   private readonly List<Diagnostic> _diagnostics = [];
   private readonly Dictionary<ISymbol, IrLocal> _variables = new(SymbolEqualityComparer.Default);
@@ -30,12 +30,12 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   /// methods in file order. Each part is read with the semantic model of its own tree, and a
   /// diagnostic names the file it stands in.
   /// </summary>
-  public ImportResult Run(IReadOnlyList<(string Path, SemanticModel Model, CompilationUnitSyntax Root)> parts) {
+  public ImportResult Run(IReadOnlyList<(string Path, BoundModel Model, CompilationUnitSyntax Root)> parts) {
     var functions = new List<IrFunction>();
     var name = "";
-    var classes = new List<(string Path, SemanticModel Model, ClassDeclarationSyntax Type)>();
-    var structs = new List<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)>();
-    var objects = new List<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)>();
+    var classes = new List<(string Path, BoundModel Model, ClassDeclarationSyntax Type)>();
+    var structs = new List<(string Path, BoundModel Model, TypeDeclarationSyntax Type)>();
+    var objects = new List<(string Path, BoundModel Model, TypeDeclarationSyntax Type)>();
     foreach (var part in parts) {
       path = part.Path;
       model = part.Model;
@@ -88,6 +88,11 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
           if (!seen.Add(method.Identifier.Text))
             throw new UnsupportedException(method, "method overloading");
 
+          if (method.TypeParameterList is not null) {
+            this.Generic(method);
+            continue;
+          }
+
           functions.Add(this.Method(method));
         } catch (UnsupportedException unsupported) {
           this.Report(unsupported);
@@ -96,6 +101,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     }
 
     functions.AddRange(this.ClassBodies());
+    functions = this.Instantiations(functions);
     if (this._diagnostics.Count == 0)
       this.CheckInitializers(name, functions);
 
@@ -214,11 +220,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword))
         throw new UnsupportedException(method, modifier.Text);
 
-    if (method.TypeParameterList is not null)
-      throw new UnsupportedException(method.TypeParameterList, "a generic method");
-
     var symbol = model.GetDeclaredSymbol(method)!;
-    return this.Function(symbol.Name, symbol.DeclaredAccessibility == Accessibility.Public, symbol, method, method.ParameterList.Parameters, null, null, method.Body, method.ExpressionBody?.Expression);
+    var name = symbol.IsGenericMethod ? IrGenerics.Mangle(symbol.Name, symbol.TypeArguments.Select(argument => this.Map(argument, method))) : symbol.Name;
+    return this.Function(name, symbol.DeclaredAccessibility == Accessibility.Public, symbol, method, method.ParameterList.Parameters, null, null, method.Body, method.ExpressionBody?.Expression);
   }
 
   /// <summary>
@@ -275,6 +279,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   }
 
   private IrType Map(ITypeSymbol? type, SyntaxNode node) {
+    type = model.Close(type);
+    if (this.Open(type, node) is { } open)
+      return open;
     if (this.OptionalType(type, node) is { } optional)
       return optional;
 
@@ -318,7 +325,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
     if (type is IArrayTypeSymbol { Rank: 1 } array) {
       var element = this.Map(array.ElementType, node);
-      if (element.IsNumeric || element.IsStruct || element.IsString)
+      if (element.IsNumeric || element.IsStruct || element.IsString || this.IsStandIn(element))
         return IrType.Array(element);
     }
 
@@ -728,6 +735,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (expression is RefExpressionSyntax reference)
       throw this.Reference(reference);
 
+    this.RefuseOpen(expression);
     var info = model.GetTypeInfo(expression);
     if (this.ReferenceOf(info.ConvertedType) is { } nulled && expression is LiteralExpressionSyntax or DefaultExpressionSyntax && model.GetConstantValue(expression) is { HasValue: true, Value: null })
       return new IrNull(nulled);
@@ -737,6 +745,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       var absent = this.Map(info.ConvertedType, expression);
       return absent.IsOptional ? new IrNone(absent) : new IrNull(absent);
     }
+
+    if (this.Defaulted(expression, info) is { } defaulted)
+      return defaulted;
 
     if (expression is StackAllocArrayCreationExpressionSyntax stack)
       return this.StackAlloc(stack, info.ConvertedType);
@@ -780,6 +791,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
     if (this.OptionalNatural(expression, type) is { } optionalNode)
       return optionalNode;
+
+    if (this.GenericNatural(expression, type) is { } generic)
+      return generic;
 
     if (this.ObjectNatural(expression, type) is { } objectNode)
       return objectNode;
@@ -964,6 +978,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     var arguments = invocation.ArgumentList.Arguments;
     // An invocation the compiler accepted and gave a type of the subset is bound to a method.
     var method = (IMethodSymbol)model.GetSymbolInfo(invocation).Symbol!;
+    if (this.GenericOperation(invocation, method) is { } generic)
+      return generic;
+
     // Equals(T) of a record struct is its field-wise equality; Equals(object) is another method.
     if (method is { Name: "Equals", Parameters: [{ Type: INamedTypeSymbol other }] } && this._structs.ContainsKey(method.ContainingType)
         && SymbolEqualityComparer.Default.Equals(other, method.ContainingType) && invocation.Expression is MemberAccessExpressionSyntax receiver)
@@ -980,7 +997,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       return text;
 
     if (SymbolEqualityComparer.Default.Equals(method.ContainingType, this._class))
-      return new IrCall(method.Name, type, operands.Select(this.Value).ToList());
+      return new IrCall(method.IsGenericMethod ? this.Instance(method, invocation) : method.Name, type, operands.Select(this.Value).ToList());
 
     return this.Library(method, operands, type)
       ?? throw new UnsupportedException(invocation, $"{method.ContainingType.Name}.{method.Name}");

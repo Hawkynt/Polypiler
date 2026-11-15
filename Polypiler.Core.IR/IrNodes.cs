@@ -954,6 +954,9 @@ public sealed record IrFunction(
   /// </summary>
   public IrAbsent Absent { get; init; }
 
+  /// <summary>The generic definition the function is one instantiation of; <see langword="null"/> for a function of its own.</summary>
+  public IrGenericOrigin? Origin { get; init; }
+
 }
 
 /// <summary>A module: the functions, constants and globals of one source class, and the types they use.</summary>

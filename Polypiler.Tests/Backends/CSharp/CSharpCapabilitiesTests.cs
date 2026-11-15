@@ -47,6 +47,8 @@ public sealed class CSharpCapabilitiesTests {
     ("null-conditional operator", "C# 6"),
     ("null-coalescing assignment", "C# 8"),
     ("nullable reference types", "C# 8"),
+    ("generic constraint unmanaged", "C# 7.3"),
+    ("generic constraint notnull", "C# 8"),
     ("IEquatable<T>", "net2.0"),
     ("EqualityComparer<T>.Default", "net2.0"),
     ("HashCode.Combine", "netstandard2.1"),

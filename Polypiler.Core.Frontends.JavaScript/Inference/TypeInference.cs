@@ -23,7 +23,10 @@ internal sealed partial class TypeInference(string path, string source, List<Can
 
   private readonly Dictionary<Candidate, FunctionModel> _models = [];
   private readonly Dictionary<FunctionModel, Binder> _binders = [];
-  private readonly Dictionary<(Node, Coercion), JsType> _known = [];
+  private readonly Dictionary<(FunctionModel?, Node, Coercion), JsType> _known = [];
+
+  /// <summary>The copy of a function each call that the import gave one calls instead of the function, by the callee of the call.</summary>
+  public IReadOnlyDictionary<Node, Candidate> Redirects { get; init; } = new Dictionary<Node, Candidate>();
   private FunctionModel? _scope;
 
   /// <summary>Makes a function the one whose expressions are typed.</summary>
@@ -140,11 +143,14 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       }
     } while (this.Promote([.. this.Flowing(models)]));
 
-    // Nothing in the file says what array a parameter is that no call passes one to.
+    // Nothing in the file says what array a parameter is that no call passes one to; calls that pass arrays of two kinds say two.
     foreach (var model in models)
       foreach (var parameter in model.Parameters.Where(parameter => parameter.IsArrayByCall && parameter.Entry.Kind != JsKind.Array))
-        model.Problem ??= this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingTypeDescriptor,
-          $"parameter '{parameter.Name}' of '{model.Candidate.Name}' is used as an array and needs a JSDoc type");
+        model.Problem ??= parameter.Entry.Kind == JsKind.Conflict
+          ? this.Diagnose(parameter.EntryEvidence ?? parameter.Declaration, JavaScriptFrontend.MixedKindsDescriptor,
+            $"'{parameter.Name}' holds both {parameter.Entry.Kinds.First} and {parameter.Entry.Kinds.Second}")
+          : this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingTypeDescriptor,
+            $"parameter '{parameter.Name}' of '{model.Candidate.Name}' is used as an array and needs a JSDoc type");
 
     return models;
   }

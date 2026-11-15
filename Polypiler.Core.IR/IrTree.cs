@@ -36,6 +36,8 @@ public static class IrTree {
     IrCoalesce coalesce => [coalesce.Value, coalesce.Fallback],
     IrIsNull test => [test.Value],
     IrBind bind => [bind.Value],
+    IrGenericEquals equality => [equality.Left, equality.Right],
+    IrGenericCompare order => [order.Left, order.Right],
     _ => []
   };
 
