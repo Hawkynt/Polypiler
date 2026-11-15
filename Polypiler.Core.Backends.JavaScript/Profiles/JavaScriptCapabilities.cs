@@ -222,8 +222,7 @@ public sealed class JavaScriptCapabilities {
     new("Symbol", 2015, "$iterator"),
     new("for-of", 2015, "next loop"),
     new("Symbol.iterator", 2015, "$iterator"),
-    new("yield*", 2015, "nested resume point"),
-    new("yield inside a loop over a collection", 2015)
+    new("yield*", 2015, "nested resume point")
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

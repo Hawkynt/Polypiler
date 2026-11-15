@@ -45,7 +45,7 @@ internal static class SequenceModules {
   public static readonly string[] Functions = [
     "Lazy", "EarlyBreak", "Full", "ReturnInside", "ThrowInside", "ThrowInBody", "Twice", "TwiceOnce", "ResumeOnce", "NestedClose",
     "NestedFull", "Loops", "Switched", "Empty", "Delegated", "FromArray", "ArrayLoop", "Floats", "Truths", "Objects", "Doubled",
-    "DoubledClose", "Counted", "FibSum", "Closure", "Repeated"
+    "DoubledClose", "Counted", "FibSum", "Closure", "Repeated", "Picked"
   ];
 
   /// <summary>The calls every implementation is compared on.</summary>
@@ -226,6 +226,26 @@ internal static class SequenceModules {
       var t = new IrLocal("t", Trace);
       var v = new IrLocal("v", IrType.I32);
       functions.Add(Public("Switched", [t, v], NewTrace(t), new IrForEachSequence(v, Call("Switching", Ints, I(4)), B(StepBy(t, R(v)))), TraceValue(t)));
+    }
+
+    // Picked: a switch over a 64-bit value without a default section, whose sections yield.
+    {
+      var w = new IrLocal("w", IrType.I64);
+      functions.Add(Iterator("Pick", Ints, [w], [],
+        new IrSwitch(R(w), [
+          new IrSwitchSection([1], false, B(new IrYield(I(7)))),
+          new IrSwitchSection([1L << 40], false, B(new IrYield(I(8)), new IrBreak()))
+        ]),
+        new IrYield(I(0))));
+      var t = new IrLocal("t", Trace);
+      var a = new IrLocal("a", IrType.I32);
+      var b = new IrLocal("b", IrType.I32);
+      var c = new IrLocal("c", IrType.I32);
+      functions.Add(Public("Picked", [t, a, b, c], NewTrace(t),
+        new IrForEachSequence(a, Call("Pick", Ints, new IrConst(IrType.I64, 1)), B(StepBy(t, R(a)))),
+        new IrForEachSequence(b, Call("Pick", Ints, new IrConst(IrType.I64, 1L << 40)), B(StepBy(t, R(b)))),
+        new IrForEachSequence(c, Call("Pick", Ints, new IrConst(IrType.I64, 3)), B(StepBy(t, R(c)))),
+        TraceValue(t)));
     }
 
     // Empty: a yield break first - the loop's body never runs.

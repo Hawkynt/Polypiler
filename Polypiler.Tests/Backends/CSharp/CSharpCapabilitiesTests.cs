@@ -167,7 +167,10 @@ public sealed class CSharpCapabilitiesTests {
     ("System.Func<T1…T16, TResult>", "net4.6"),
     ("System.Action<T1…T16>", "net4.6"),
     ("enum declaration with [Flags] (FlagsAttribute)", "net2.0"),
-    ("Enum.HasFlag(Enum)", "net4.6")
+    ("Enum.HasFlag(Enum)", "net4.6"),
+    ("iterator (yield)", "C# 2"),
+    ("IEnumerable<T>", "net2.0"),
+    ("generator object of ECMA-262 as a single-pass IEnumerable<T>", "net2.0")
   ];
 
   /// <summary>
@@ -507,7 +510,7 @@ public sealed class CSharpCapabilitiesTests {
     // The helpers of the collections take the nested classes of the collections (#1328), which are C# 2 as well.
     string[] classes = [CSharpCollectionClasses.KeyedSlots, CSharpCollectionClasses.FloatKeys, CSharpCollectionClasses.SingleKeys];
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))).Concat(classes))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(127));
+    Assert.That(helpers, Has.Count.EqualTo(128));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);

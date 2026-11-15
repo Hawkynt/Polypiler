@@ -33,9 +33,6 @@ public static partial class IrInterpreter {
     /// <summary>Ends the enumeration: what the producer still has pending - its finally blocks - runs, innermost first; a second close does nothing.</summary>
     public abstract void Close();
 
-    /// <summary>Hands a value of the body of an iterator function to the consumer and waits until the consumer wants the next one.</summary>
-    public virtual void Yield(object value) => throw new InvalidOperationException("Only the body of an iterator function yields.");
-
   }
 
   /// <summary>The elements of an array, read when they are reached.</summary>
@@ -86,21 +83,17 @@ public static partial class IrInterpreter {
       return !this._finished;
     }
 
+    /// <summary>Closes the cursor, which every loop asked for a value first: the body waits at a yield, or has ended.</summary>
     public override void Close() {
       if (this._finished)
         return;
 
       this._closing = true;
-      if (this._thread is null) {
-        // A body that never started has nothing pending.
-        this._finished = true;
-        return;
-      }
-
       this.Run();
     }
 
-    public override void Yield(object value) {
+    /// <summary>Hands a value of the body to the consumer and waits until the consumer wants the next one or closes the cursor.</summary>
+    public void Yield(object value) {
       this.Current = value;
       this._suspended.Release();
       this._resumed.Wait();

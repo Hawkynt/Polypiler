@@ -855,7 +855,7 @@ public static partial class IrInterpreter {
     public object? Result { get; set; }
 
     /// <summary>The cursor the body of an iterator function runs for, which its yields hand their values to; <see langword="null"/> in any other function.</summary>
-    public Cursor? Cursor { get; init; }
+    public BodyCursor? Cursor { get; init; }
 
     public object Get(IrLocal local) => this.Locals[local].Value!;
 

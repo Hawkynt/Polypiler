@@ -292,7 +292,10 @@ public static partial class JavaScriptEmitter {
           break;
         default:
           // A loop over a collection that suspends: its enumeration is not cut into resume points yet.
-          this.Native("yield inside a loop over a collection");
+          const string collection = "a yield inside a loop over a collection";
+          if (this._refused.Add(collection))
+            this._problems.Add(InexpressibleDescriptor.At($"'{collection}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
+
           this.Statement(statement, machine.Current);
           break;
       }

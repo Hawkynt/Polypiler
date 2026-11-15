@@ -88,6 +88,7 @@ public sealed class IrSequencesTests {
   [TestCase("FibSum", 512559679)]
   [TestCase("Closure", 30)]
   [TestCase("Repeated", 18289)]
+  [TestCase("Picked", 70800)]
   public void Interpreter_RunsTheModule(string function, int expected)
     => Assert.That(IrInterpreter.Call(SequenceModules.Module(), function, []), Is.EqualTo(expected));
 
