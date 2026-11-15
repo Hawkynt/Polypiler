@@ -149,9 +149,19 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1811](PLY1811.md) | error | 3 (UnsupportedConstruct) | `'<name>' may be unbound here; python would raise UnboundLocalError` | #449 |
 | [PLY1812](PLY1812.md) | error | 3 (UnsupportedConstruct) | `match pattern '<pattern>' is not supported; supported are literals, '\|', captures, '_' and guards` | #449 |
 | [PLY1813](PLY1813.md) | error | 3 (UnsupportedConstruct) | `iteration over '<iterable>' is not supported` | #449 |
+| [PLY1820](PLY1820.md) | error | 3 (UnsupportedConstruct) | `sequence operation '<operation>' is not supported by the Python frontend` | #451 |
+| [PLY1821](PLY1821.md) | error | 3 (UnsupportedConstruct) | `slice form '<form>' is not supported; slices are imported as values only` | #451 |
+| [PLY1822](PLY1822.md) | error | 3 (UnsupportedConstruct) | `string operation '<operation>' is not supported by the Python frontend` | #451 |
+| [PLY1823](PLY1823.md) | error | 3 (UnsupportedConstruct) | `struct format or array typecode '<format>' is not supported: <reason>` | #451 |
 | [PLY1830](PLY1830.md) | error | 3 (UnsupportedConstruct) | `'<feature>' is not supported for functions by the Python frontend` | #450 |
-| [PLY1832](PLY1832.md) | error | 3 (UnsupportedConstruct) | `the function value '<name>' escapes, or '<name>' is a generator or coroutine; only direct calls of the module's functions are imported` | #450 |
+| [PLY1832](PLY1832.md) | error | 3 (UnsupportedConstruct) | `the function value '<name>' escapes, or '<name>' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported` | #450 |
 | [PLY1833](PLY1833.md) | error | 3 (UnsupportedConstruct) | `'<name>' is neither part of this import nor in the Python call map` | #450 |
+| [PLY1834](PLY1834.md) | error | 3 (UnsupportedConstruct) | `the default of parameter '<name>' is a mutable object shared across calls` | #450 |
+| [PLY1840](PLY1840.md) | error | 3 (UnsupportedConstruct) | `'<feature>' is outside the first Python subset (dataclasses, simple final classes, enums); it is imported by <issue>` | #453 |
+| [PLY1841](PLY1841.md) | error | 3 (UnsupportedConstruct) | `generic declaration '<declaration>' is not supported; generic classes and functions are imported by #472` | #453 |
+| [PLY1842](PLY1842.md) | error | 3 (UnsupportedConstruct) | `dict or set operation '<operation>' is not supported by the Python frontend` | #453 |
+| [PLY1843](PLY1843.md) | error | 3 (UnsupportedConstruct) | `exception construct '<construct>' is not supported by the Python frontend` | #453 |
+| [PLY1844](PLY1844.md) | error | 3 (UnsupportedConstruct) | `attribute '<name>' of class '<class>' is created dynamically; only attributes assigned in __init__ or declared as dataclass fields are imported` | #453 |
 | [PLY1850](PLY1850.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no Python representation in profile '<profile>' (function '<function>')` | BE-PY-SCALARS |
 | [PLY1851](PLY1851.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be expressed in Python profile '<profile>' (function '<function>')` | BE-PY-SCALARS |
 | [PLY1858](PLY1858.md) | error | 3 (UnsupportedConstruct) | `control construct '<construct>' has no Python form (function '<function>')` | BE-PY-CONTROL |
