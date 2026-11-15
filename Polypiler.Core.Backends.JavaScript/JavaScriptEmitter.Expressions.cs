@@ -36,6 +36,12 @@ public static partial class JavaScriptEmitter {
           return (Id(this.Name(reference.Constant.Name)), true);
         case IrStrConst text:
           return (new JsString(text.Value), true);
+        case IrBigConst big:
+          return this.BigLiteral(big.Value);
+        case IrUnary { Type.IsBigInt: true } big:
+          return this.UnaryBig(big);
+        case IrBinary { Left.Type.IsBigInt: true } big:
+          return this.BinaryBig(big);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
         case IrLocalRef reference when reference.Local == this._receiver && this._functionDepth > 0 && !this.Arrows:
@@ -426,6 +432,9 @@ public static partial class JavaScriptEmitter {
     private (JsExpression Node, bool Atomic) Convert(IrConvert conversion) {
       var from = conversion.Operand.Type;
       var to = conversion.Type;
+      if (from.IsBigInt || to.IsBigInt)
+        return this.ConvertBig(conversion);
+
       if (to.IsFloat)
         return this.ToFloat(conversion);
 

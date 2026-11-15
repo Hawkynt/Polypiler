@@ -470,6 +470,9 @@ public static partial class JavaScriptEmitter {
           return $"Set<{this.Describe(type.Element!)}>";
         case IrTypeKind.Sequence:
           return $"{(this.Native("Symbol.iterator") ? "Iterable" : "{ $iterator() }")}<{this.Describe(type.Element!)}>";
+        case IrTypeKind.BigInt:
+          this.RequireBigInt();
+          return "bigint";
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)
             return "bigint";
