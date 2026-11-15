@@ -89,8 +89,10 @@ public sealed class PointerFrontendTests {
     Assert.That(IrInterpreter.Call(moved, "F", [new[] { 3L, 4L }]), Is.EqualTo(7L));
     var stored = Imported("public static unsafe int F(int[] a) { fixed (int* p = a) { p[1] += 2; *p = 9; return p[1] * *p; } }");
     Assert.That(IrInterpreter.Call(stored, "F", [new[] { 1, 2 }]), Is.EqualTo(36));
-    var compared = Imported("public static unsafe int F(int[] a) { int n = 0; fixed (int* p = a) { int* q = p + 1; if (q != p) n++; if (q > p) n++; if (q >= p) n++; if (p <= q) n++; } return n; }");
-    Assert.That(IrInterpreter.Call(compared, "F", [new[] { 1, 2 }]), Is.EqualTo(4));
+    var compared = Imported("public static unsafe int F(int[] a, byte[] b) { int n = 0; fixed (int* p = a) { fixed (byte* r = b) { int* q = p + 1; if (q != p) n++; if (q > p) n++; if (q >= p) n++; if (p <= q) n++; if (null != p) n++; if ((void*)r != p) n++; } } return n; }");
+    Assert.That(IrInterpreter.Call(compared, "F", [new[] { 1, 2 }, new byte[] { 1 }]), Is.EqualTo(6));
+    var casts = compared.Functions[0].Body.Statements.SelectMany(IrTree.Nodes).OfType<IrIntrinsic>().Where(node => node.Op == IrIntrinsicOp.PointerCast).ToList();
+    Assert.That(casts.Select(cast => cast.Type.ToString()), Is.EqualTo(new[] { "void*", "void*" }));
   }
 
   /// <summary>Test design 12: every construct the table diagnoses is refused with PLY1002, naming it.</summary>

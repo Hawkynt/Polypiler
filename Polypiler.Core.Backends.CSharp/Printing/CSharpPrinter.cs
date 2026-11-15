@@ -489,6 +489,12 @@ public static class CSharpPrinter {
         case CsTry attempt:
           this.Try(attempt, depth);
           break;
+        case CsFixed pinned:
+          this._text.Append("fixed (");
+          this.Declaration(pinned.Pointer, depth);
+          this._text.Append(") ");
+          this.Embedded(pinned.Body, depth);
+          break;
         case CsUsing scope:
           this._text.Append("using (");
           this.Declaration(scope.Resource, depth);

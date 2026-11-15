@@ -139,11 +139,15 @@ internal sealed partial class Lowering {
       _ => throw new UnsupportedException(binary, $"{binary.OperatorToken.Text} of pointers")
     };
     if (op != IrIntrinsicOp.PointerAdd) {
-      var left = this.Value(binary.Left);
-      var right = this.Value(binary.Right);
+      // The compiler compares pointers as void*; the IR compares them as they are, the right one as the left one.
+      var left = this.Pointed(binary.Left);
+      var right = this.Pointed(binary.Right);
+      if (left is IrNull)
+        left = new IrNull(right.Type);
+
       return op == IrIntrinsicOp.PointerDifference
         ? new IrIntrinsic(op, IrType.I64, [left, right])
-        : new IrIntrinsic(op, IrType.Bool, [left, ToPointer(right, left.Type)]);
+        : new IrIntrinsic(op, IrType.Bool, [left, right is IrNull ? new IrNull(left.Type) : ToPointer(right, left.Type)]);
     }
 
     // n + p evaluates n first; the pointer is a variable or arithmetic of one, which a count cannot change.
@@ -156,6 +160,9 @@ internal sealed partial class Lowering {
     var count = this.Count(binary.Right);
     return Moved(pointer, binary.IsKind(SyntaxKind.SubtractExpression) ? Negated(count) : count);
   }
+
+  /// <summary>An operand of a comparison of pointers: a pointer of its own type, not of the void* the compiler converts it to; null as it is.</summary>
+  private IrExpr Pointed(ExpressionSyntax operand) => this.IsPointer(operand) ? this.Read(operand) : this.Value(operand);
 
   /// <summary>
   /// What an assignment writes through a pointer: <c>*p</c> or <c>p[i]</c>, the pointer evaluated once when it
