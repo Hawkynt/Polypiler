@@ -53,7 +53,7 @@ public sealed class CrossLanguageRunner(ISandbox sandbox, IToolchainResolver too
     var directory = RunDirectory.Create(plan.Files);
     foreach (var step in plan.Steps)
       if (step.BuiltProgram is { } program)
-        executables[step.Toolchain] = Path.GetFullPath(Path.Combine(directory, program));
+        executables[step.Toolchain] = ToolchainResolution.Found(Path.GetFullPath(Path.Combine(directory, program)));
 
     try {
       var buildTime = TimeSpan.Zero;
