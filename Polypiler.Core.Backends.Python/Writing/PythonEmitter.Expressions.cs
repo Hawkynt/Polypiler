@@ -148,7 +148,7 @@ public static partial class PythonEmitter {
     }
 
     private PyExpression Written(IrExpr expression) {
-      if ((this.ObjectExpression(expression) ?? this.FunctionExpression(expression) ?? this.OptionalExpression(expression)) is { } special)
+      if ((this.ObjectExpression(expression) ?? this.FunctionExpression(expression) ?? this.OptionalExpression(expression) ?? this.AsyncExpression(expression)) is { } special)
         return special;
 
       switch (expression) {

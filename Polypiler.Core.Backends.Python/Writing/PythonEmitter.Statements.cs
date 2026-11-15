@@ -158,7 +158,11 @@ public static partial class PythonEmitter {
           written.Add(new PyAssign(new PySubscript(target, index), this.Expression(value)));
           break;
         case IrExprStmt expression:
-          written.Add(new PyExpressionStatement(this.Expression(expression.Expression)));
+          var evaluated = this.Expression(expression.Expression);
+          // An await of the completed task waits for nothing and gives nothing: it is left out.
+          if (evaluated is not PyNone || expression.Expression is not IrAwait)
+            written.Add(new PyExpressionStatement(evaluated));
+
           break;
         case IrIf conditional:
           written.Add(this.If(conditional));
