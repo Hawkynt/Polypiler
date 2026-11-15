@@ -39,7 +39,7 @@ public sealed class CrossLanguageRunner(ISandbox sandbox, IToolchainResolver too
 
     var executables = new Dictionary<string, string>(StringComparer.Ordinal);
     var problems = new List<Diagnostic>();
-    foreach (var key in plan.Steps.Select(step => step.Toolchain).Distinct(StringComparer.Ordinal)) {
+    foreach (var key in plan.Steps.Where(step => step.BuiltProgram is null).Select(step => step.Toolchain).Distinct(StringComparer.Ordinal)) {
       var resolution = toolchains.Resolve(key);
       if (resolution.Executable is { } executable)
         executables[key] = executable;
@@ -51,6 +51,10 @@ public sealed class CrossLanguageRunner(ISandbox sandbox, IToolchainResolver too
       return this.Refused(problems);
 
     var directory = RunDirectory.Create(plan.Files);
+    foreach (var step in plan.Steps)
+      if (step.BuiltProgram is { } program)
+        executables[step.Toolchain] = Path.GetFullPath(Path.Combine(directory, program));
+
     try {
       var buildTime = TimeSpan.Zero;
       foreach (var build in plan.Build) {

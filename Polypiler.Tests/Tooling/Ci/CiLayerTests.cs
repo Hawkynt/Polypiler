@@ -94,6 +94,15 @@ public sealed class CiLayerTests {
     Assert.That((layers.Select(layer => layer.Name), problems), Is.EqualTo((new[] { "core", "rust" }, new object[0])));
   }
 
+  [Test]
+  public void LoadAll_FileWithAFurtherDot_IsDataOfALayer_NotALayerFile() {
+    using var tree = new CiTree();
+    tree.Write("tooling/ci/layers/rust.sanitizers.yaml", "schema: 1\nsanitizers: {}\n");
+    var (layers, problems) = CiLayer.LoadAll(tree.Root);
+    Assert.That((layers.Select(layer => layer.Name), problems), Is.EqualTo((new[] { "core", "rust" }, new object[0])));
+    Assert.That(CiLayer.Files(tree.Root).Select(Path.GetFileName), Is.EqualTo(new[] { "core.yaml", "rust.yaml" }));
+  }
+
   [TestCase("core.yaml", true)]
   [TestCase("tooling/ci/layers/basic.yaml", true)]
   [TestCase("basic.oracles.yaml", false)]

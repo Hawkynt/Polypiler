@@ -56,7 +56,8 @@ public sealed record CiLayer(string Name, string File, IReadOnlyList<string> Too
 
   /// <summary>
   /// Whether a file of <see cref="Folder"/> is a layer file: <c>&lt;name&gt;.yaml</c>. A file whose name
-  /// has a further dot, such as <c>basic.oracles.yaml</c>, belongs to a layer without being one.
+  /// has a further dot, such as <c>basic.oracles.yaml</c> or <c>native.sanitizers.yaml</c>, holds data a
+  /// layer reads and is no layer file: a layer's name has no dot.
   /// </summary>
   /// <param name="file">The file name or path.</param>
   public static bool IsLayerFile(string file) {
@@ -64,14 +65,21 @@ public sealed record CiLayer(string Name, string File, IReadOnlyList<string> Too
     return name.EndsWith(".yaml", StringComparison.Ordinal) && !Path.GetFileNameWithoutExtension(name).Contains('.', StringComparison.Ordinal);
   }
 
+  /// <summary>The layer files of a repository, sorted (<see cref="IsLayerFile"/>).</summary>
+  /// <param name="root">The repository root.</param>
+  /// <returns>The full paths; none when the folder does not exist.</returns>
+  public static IReadOnlyList<string> Files(string root) {
+    ArgumentNullException.ThrowIfNull(root);
+    var folder = Path.Combine(root, Folder);
+    return Directory.Exists(folder) ? [.. Directory.GetFiles(folder, "*.yaml").Where(IsLayerFile).Order(StringComparer.Ordinal)] : [];
+  }
+
   /// <summary>Reads every layer file of a repository; the companion files of a layer are left out (<see cref="IsLayerFile"/>).</summary>
   /// <param name="root">The repository root.</param>
   /// <returns>The valid layers, sorted by name, and a <c>PLY0075</c> for every file that is not valid; no layer file at all is one <c>PLY0075</c> too.</returns>
   public static (IReadOnlyList<CiLayer> Layers, IReadOnlyList<Diagnostic> Problems) LoadAll(string root) {
-    ArgumentNullException.ThrowIfNull(root);
-    var folder = Path.Combine(root, Folder);
-    var files = Directory.Exists(folder) ? Directory.GetFiles(folder, "*.yaml").Where(IsLayerFile).Order(StringComparer.Ordinal).ToArray() : [];
-    if (files.Length == 0)
+    var files = Files(root);
+    if (files.Count == 0)
       return ([], [CiDiagnostics.InconsistentWith($"no layer files found in {Folder}")]);
 
     var layers = new List<CiLayer>();
