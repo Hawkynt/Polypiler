@@ -30,6 +30,8 @@ public static class IrTree {
     IrTypeTest test => [test.Value],
     IrCast cast => [cast.Value],
     IrAsCast cast => [cast.Value],
+    IrGenericEquals equality => [equality.Left, equality.Right],
+    IrGenericCompare order => [order.Left, order.Right],
     _ => []
   };
 

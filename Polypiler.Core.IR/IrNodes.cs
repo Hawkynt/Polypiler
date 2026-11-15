@@ -945,7 +945,12 @@ public sealed record IrFunction(
   IrType ReturnType,
   IReadOnlyList<IrLocal> Parameters,
   IReadOnlyList<IrLocal> Locals,
-  IrBlock Body);
+  IrBlock Body) {
+
+  /// <summary>The generic definition the function is one instantiation of; <see langword="null"/> for a function of its own.</summary>
+  public IrGenericOrigin? Origin { get; init; }
+
+}
 
 /// <summary>A module: the functions, constants and globals of one source class, and the types they use.</summary>
 /// <param name="Name">The name of the module.</param>

@@ -47,6 +47,7 @@ public static partial class IrVerifier {
     var globals = Globals(module, names, functions, constants, types, diagnostics);
     var members = Members(module, types, functions, diagnostics);
     var signatures = Hierarchy(types, functions, diagnostics);
+    Generics(module, diagnostics);
     foreach (var function in module.Functions)
       new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures }.Run();
 
@@ -367,6 +368,9 @@ public static partial class IrVerifier {
           break;
         case IrTypeTest or IrCast or IrAsCast:
           this.Conversion(expression);
+          break;
+        case IrGenericEquals or IrGenericCompare:
+          this.Generic(expression);
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)

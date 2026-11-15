@@ -45,6 +45,8 @@ public static class IrShape {
       (IrStructEquals a, IrStructEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       (IrNull, IrNull) => true,
       (IrReferenceEquals a, IrReferenceEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
+      (IrGenericEquals a, IrGenericEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
+      (IrGenericCompare a, IrGenericCompare b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       _ => false
     };
   }
@@ -76,6 +78,8 @@ public static class IrShape {
     IrTypeTest test => [test.Value],
     IrCast cast => [cast.Value],
     IrAsCast cast => [cast.Value],
+    IrGenericEquals equality => [equality.Left, equality.Right],
+    IrGenericCompare order => [order.Left, order.Right],
     _ => []
   };
 
@@ -190,6 +194,8 @@ public static class IrShape {
     IrTypeTest test => test with { Value = operands[0] },
     IrCast cast => cast with { Value = operands[0] },
     IrAsCast cast => cast with { Value = operands[0] },
+    IrGenericEquals => new IrGenericEquals(operands[0], operands[1]),
+    IrGenericCompare => new IrGenericCompare(operands[0], operands[1]),
     _ => expression
   };
 
