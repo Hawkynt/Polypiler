@@ -317,8 +317,9 @@ jobs:
   # PB-Compiler, built from its pinned commit, and run in DOSBox-X; the modules pbc emits checked by
   # LLVM; the Commodore BASIC oracles VICE and petcat and the GW-BASIC oracle PC-BASIC.
   # tooling/ci/basic/install.sh installs the toolchains, LLVM and the VICE build from a cache keyed by
-  # their versions and the script itself; the oracle availability table (tooling/ci/layers/basic.oracles.yaml) goes into the
-  # job summary, the record of every run into the uploaded artifacts.
+  # their versions and the script itself; the oracle availability table
+  # (tooling/ci/layers/basic.oracles.yaml) goes into the job summary, the record of every run into the
+  # uploaded artifacts.
   layer-basic:
     name: layer-basic ${{ matrix.os }}
     strategy:
