@@ -43,9 +43,12 @@ public static partial class CSharpEmitter {
   /// (<see cref="CSharpHelper.Symbol"/>), with its licence and the source it is copied from. A
   /// portable floating-point implementation a class carries is looked up in <see cref="FloatOperationSources.Origin"/>.
   /// </summary>
-  public static IReadOnlyDictionary<string, (string Licence, string Origin)> HelperOrigins { get; }
-    = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct()
-      .ToDictionary(helper => helper.Symbol(helper.Name), helper => (helper.Licence, helper.Origin), StringComparer.Ordinal);
+  /// <remarks>Built on first use: the capability table names helpers that are static members of this class.</remarks>
+  public static IReadOnlyDictionary<string, (string Licence, string Origin)> HelperOrigins => _helperOrigins.Value;
+
+  private static readonly Lazy<IReadOnlyDictionary<string, (string Licence, string Origin)>> _helperOrigins = new(()
+    => CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct()
+      .ToDictionary(helper => helper.Symbol(helper.Name), helper => (helper.Licence, helper.Origin), StringComparer.Ordinal));
 
   /// <summary>The base library by its full name, which no name of the module can hide.</summary>
   private const string Base = "global::System.";
