@@ -11,9 +11,6 @@ internal sealed partial class TypeChecker {
   /// <summary>The functions of <c>core</c> the subset imports, by their path after <c>std::</c> or <c>core::</c>.</summary>
   public static readonly IReadOnlySet<string> LibraryFunctions = new HashSet<string> { "cmp::min", "cmp::max", "mem::swap" };
 
-  /// <summary>Whether the callee of the call being checked is the path being checked: a closure variable may be called, never passed on.</summary>
-  private Expr? _callee;
-
   // ---------------------------------------------------------------- paths
 
   private RType Path(PathExpr path, RType? expected) {
@@ -21,7 +18,8 @@ internal sealed partial class TypeChecker {
       var name = path.Segments[0];
       if (this.Lookup(name) is { } binding) {
         this._typed.Bindings[path] = binding;
-        if (binding.Type.Resolved.Kind == RKind.Closure && !ReferenceEquals(this._callee, path) && !this._closureArgument)
+        // A closure variable is called where the call names it, or handed to an iterator method; anything else lets it escape.
+        if (binding.Type.Resolved.Kind == RKind.Closure && !this._closureArgument)
           this.Refuse(new Refusal(RustFrontend.EscapingClosure, $"closure '{name}' used other than called", path.At));
 
         return binding.Type;
@@ -34,6 +32,9 @@ internal sealed partial class TypeChecker {
 
       if (name == "None") {
         this._typed.Resolutions[path] = "None";
+        if (path.Generics.TryGetValue(0, out var generics) && generics.Count == 1)
+          return RType.Option(this.Resolve(generics[0], false) ?? this.ErrorType());
+
         return expected?.Resolved is { Kind: RKind.Option } option ? option : RType.Option(this.Fresh(VariableKind.Any));
       }
     }
@@ -81,6 +82,10 @@ internal sealed partial class TypeChecker {
   }
 
   private RType UnknownPath(PathExpr path) {
+    // Box::new, Rc::new and their relatives: the prelude's smart pointers and collections, refused by kind.
+    if (_refusedTypes.TryGetValue(path.Segments[0], out var refused) && this._crate.Lookup(this._module, path.Segments[0], new(ReferenceEqualityComparer.Instance)) is null)
+      return this.Refused(refused, path.Text, path.At);
+
     if (path.Segments[0] is "std" or "core" or "alloc")
       return this.Refused(RustFrontend.ForeignPath, path.Text, path.At);
 
@@ -205,8 +210,8 @@ internal sealed partial class TypeChecker {
       case DerefExpr deref:
         return this._typed.TypeOf(deref.Operand) is { Kind: RKind.Reference, Mutable: true };
       default:
-        // A temporary may be borrowed mutably: `&mut [1, 2, 3]`.
-        return place is ArrayExpr or ArrayRepeatExpr or MacroExpr or CallExpr or MethodCallExpr;
+        // Any other expression is a temporary, which may be borrowed mutably: `&mut [1, 2, 3]`, `&mut 10`.
+        return place is not PathExpr;
     }
   }
 

@@ -169,7 +169,7 @@ internal sealed partial class TypeChecker {
         this.Count(call, 1);
         this.Coerce(result.Element!, this.Value(call.Arguments[0], result.Element), call.Arguments[0].At);
         return result.Element!;
-      case "ok":
+      case "ok" when result.Element!.Resolved.Kind != RKind.Unit:
         this.Count(call, 0);
         return RType.Option(result.Element!);
       case "clone":

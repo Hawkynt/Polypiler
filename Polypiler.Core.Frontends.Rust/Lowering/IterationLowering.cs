@@ -146,8 +146,6 @@ internal sealed partial class FunctionLowering {
     var item = shape.Current();
     for (var index = shape.Streaming; index < iteration.Adapters.Count; ++index) {
       var adapter = iteration.Adapters[index];
-      var type = index == 0 ? null : (RType?)null;
-      _ = type;
       switch (adapter.Name) {
         case "map": {
           var value = this.ApplyFunction(adapter.Function!, [item]);

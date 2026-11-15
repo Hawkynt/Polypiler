@@ -120,7 +120,7 @@ internal sealed partial class FunctionLowering {
 
     var result = signature.Result.Resolved.Kind is RKind.Unit or RKind.Never ? IrType.Void : this.Ir(signature.Result);
     if (this._outputs.Count > 0)
-      this._outputType = this.OutputType(signature, result);
+      this._outputType = this._module.OutputOf(signature);
 
     foreach (var (pattern, local, type) in unpack)
       this.Bind(pattern, new ValueItem(new IrLocalRef(local)), type);
@@ -132,9 +132,6 @@ internal sealed partial class FunctionLowering {
     var returns = this._outputType is null ? result : IrType.Struct(this._outputType);
     return new IrFunction(signature.IrName, signature.IsExported, returns, parameters, this._locals, new IrBlock(this._statements));
   }
-
-  /// <summary>The struct of the result and the copied-out parameters, declared once per function.</summary>
-  private IrStructType OutputType(FunctionSignature signature, IrType result) => this._module.Output(signature, result, this._outputs.Select(output => (output.Name, output.Place.Type)).ToList());
 
   /// <summary>Leaves the function, or the closure being inlined, with a value; a function with <c>&amp;mut</c> parameters returns them with it.</summary>
   private void EmitReturn(IrExpr? value) {
@@ -222,8 +219,6 @@ internal sealed partial class FunctionLowering {
 
     return new IrConst(type, 0);
   }
-
-  private static IrConst Zero(IrType type, bool _) => new(type == IrType.Void ? IrType.I32 : type, 0);
 
   private void Emit(IrStmt statement) {
     if (!this._diverged)
@@ -376,7 +371,7 @@ internal sealed partial class FunctionLowering {
     if (lowered is null)
       return;
 
-    this.Bind(let.Pattern, this.ItemOf(lowered, let.Initializer), initializerType);
+    this.Bind(let.Pattern, new ValueItem(lowered), initializerType);
   }
 
   /// <summary>Declares the local of a binding with its first value.</summary>

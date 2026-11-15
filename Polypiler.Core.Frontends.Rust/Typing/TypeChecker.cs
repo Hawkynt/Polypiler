@@ -28,6 +28,9 @@ internal sealed partial class TypeChecker {
   private readonly List<Context> _contexts = [];
   private readonly List<RType> _variables = [];
   private readonly List<(RType Type, Binding Binding, Span At)> _undecided = [];
+
+  /// <summary>The expressions checked, whose types must be decided once the function is: an expression nothing types is <c>E0282</c>.</summary>
+  private readonly List<(Expr Expression, RType Type)> _expressions = [];
   private readonly List<Action> _deferred = [];
   private readonly List<ClosureInfo> _closures = [];
 
@@ -235,6 +238,7 @@ internal sealed partial class TypeChecker {
     this._contexts.Clear();
     this._variables.Clear();
     this._undecided.Clear();
+    this._expressions.Clear();
     this._deferred.Clear();
     this._errors.Clear();
     this._closures.Clear();
@@ -325,6 +329,22 @@ internal sealed partial class TypeChecker {
     foreach (var (type, binding, at) in this._undecided)
       if (Undecided(type) && !this.IsError(type))
         throw this.Unresolved(binding.Name, at);
+
+    foreach (var (expression, type) in this._expressions)
+      if (Undecided(type) && !this.HoldsError(type))
+        throw this.Unresolved(Describe(expression), expression.At);
+  }
+
+  /// <summary>Whether a type has a refused part, about which everything has been said.</summary>
+  private bool HoldsError(RType type) {
+    var resolved = type.Resolved;
+    if (this.IsError(resolved))
+      return true;
+
+    if (resolved.Kind is RKind.Closure or RKind.Iterator)
+      return false;
+
+    return (resolved.Element is { } element && this.HoldsError(element)) || resolved.Elements.Any(this.HoldsError);
   }
 
   /// <summary>Whether a type still has a variable in it.</summary>
@@ -525,6 +545,7 @@ internal sealed partial class TypeChecker {
   private RType Expression(Expr expression, RType? expected = null) {
     var type = this.ExpressionUnrecorded(expression, expected);
     this._typed.Types[expression] = type;
+    this._expressions.Add((expression, type));
     return type;
   }
 

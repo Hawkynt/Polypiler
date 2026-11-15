@@ -181,7 +181,7 @@ internal sealed partial class FunctionLowering {
           this.Emit(new IrDeclare(index, new IrConst(IrType.I32, 0)));
           var element = new IrArrayLoad(source, new IrLocalRef(index));
           this.Emit(new IrFor(Binary(IrBinaryOp.Less, new IrLocalRef(index), length),
-            new IrBlock([new IrStore(copy, new IrLocalRef(index), HoldsArray(resolved.Element!) ? this.DuplicateInline(element, resolved.Element!) : element)]),
+            new IrBlock([new IrStore(copy, new IrLocalRef(index), element)]),
             new IrBlock([new IrAssign(index, Binary(IrBinaryOp.Add, new IrLocalRef(index), new IrConst(IrType.I32, 1)))])));
         } else {
           this.Emit(new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.ArrayCopy, IrType.Void, [source, new IrConst(IrType.I32, 0), copy, new IrConst(IrType.I32, 0), length])));
@@ -203,9 +203,6 @@ internal sealed partial class FunctionLowering {
         return value;
     }
   }
-
-  /// <summary>A copy made inside a loop body that is built as one statement: structs of arrays in an array are rare, and copied field by field.</summary>
-  private IrExpr DuplicateInline(IrExpr value, RType type) => value;
 
   /// <summary>
   /// A value converted to the IR type a coercion site wants (The Rust Reference, "Type coercions"):
@@ -231,9 +228,6 @@ internal sealed partial class FunctionLowering {
   }
 
   // ---------------------------------------------------------------- binding patterns
-
-  /// <summary>The item a lowered value is for a pattern: the parts of a tuple expression stay apart.</summary>
-  private Item ItemOf(IrExpr value, Expr source) => new ValueItem(value);
 
   /// <summary>The value of an item: a place read, a tuple made.</summary>
   private IrExpr ValueOf(Item item, RType type) {

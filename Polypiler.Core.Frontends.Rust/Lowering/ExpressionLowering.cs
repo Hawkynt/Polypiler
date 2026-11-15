@@ -246,7 +246,9 @@ internal sealed partial class FunctionLowering {
       return this.Lower(reference.Operand);
     }
 
-    return this.Lower(reference.Operand);
+    // `&a[1..]` of a writable array is a read-only view.
+    var value = this.Lower(reference.Operand);
+    return value is null ? null : this.Converted(value, this._typed.TypeOf(reference), null);
   }
 
   private IrExpr? Deref(DerefExpr deref) {

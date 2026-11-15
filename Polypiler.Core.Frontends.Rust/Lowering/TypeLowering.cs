@@ -198,7 +198,6 @@ internal sealed partial class FunctionLowering {
   // ---------------------------------------------------------------- Option and Result methods
 
   private IrExpr? OptionMethod(MethodCallExpr call, string name) {
-    var type = this._typed.TypeOf(call.Receiver).Dereferenced;
     var values = this.Operands([call.Receiver, .. call.Arguments.Where(argument => argument is not StringLiteral)]);
     var option = this.Stable(values[0], "option");
     var value = new IrUnwrap(option) { IsTested = true };
@@ -219,8 +218,7 @@ internal sealed partial class FunctionLowering {
         return new IrConditional(new IrIsNone(option), this.Result(result, false, error), this.Result(result, true, value));
       }
       default:
-        // copied, cloned, clone.
-        _ = type;
+        // copied, cloned, clone: a reference to a value is the value.
         return option;
     }
   }

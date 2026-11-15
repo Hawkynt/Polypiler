@@ -124,8 +124,9 @@ internal sealed partial class TypeChecker {
   /// </summary>
   private void Pattern(Pattern pattern, RType type, bool inAlternative, bool? byReference = null) {
     var resolved = type.Resolved;
-    // Look through references for a pattern that is not one and not a binding.
-    if (resolved.Kind == RKind.Reference && pattern is not (ReferencePattern or WildcardPattern or IdentifierPattern or RefusedPattern or OrPattern)) {
+    // Look through references for a pattern that is not one and not a binding: a constant like `None` is looked through too.
+    var isConstant = pattern is IdentifierPattern { Mutable: false } named && this.PatternConstant(named) is not null;
+    if (resolved.Kind == RKind.Reference && (isConstant || pattern is not (ReferencePattern or WildcardPattern or IdentifierPattern or RefusedPattern or OrPattern))) {
       var mutable = resolved.Mutable && byReference != false;
       this.Pattern(pattern, resolved.Element!, inAlternative, mutable);
       return;

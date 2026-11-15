@@ -23,9 +23,6 @@ internal sealed partial class TypeChecker {
   /// <summary>The function being checked, whose path a nested function's path extends.</summary>
   private FunctionSignature? _enclosing;
 
-  /// <summary>The signature of a function of the crate, by its item.</summary>
-  public FunctionSignature? SignatureOf(FunctionItem item) => this._signatures.GetValueOrDefault(item);
-
   /// <summary>Declares the types, the signatures and the constants of the crate; <see langword="false"/> when one of them was refused.</summary>
   public bool Declare() {
     var failed = false;
@@ -193,8 +190,12 @@ internal sealed partial class TypeChecker {
       ok = false;
     }
 
-    if (ok && info.Derives.Contains("Copy") && info.Fields.FirstOrDefault(field => !field.Type.IsCopy) is { Name: { } name })
-      this._deferredDeclarations.Add(() => this._report(RustFrontend.InvalidSource, $"E0204: the trait `Copy` cannot be implemented for this type: field `{name}` does not implement `Copy`", item.At));
+    // Whether the fields are Copy is known once every enum has its derives.
+    if (ok && info.Derives.Contains("Copy"))
+      this._deferredDeclarations.Add(() => {
+        if (info.Fields.FirstOrDefault(field => !field.Type.IsCopy) is { Name: { } name })
+          this._report(RustFrontend.InvalidSource, $"E0204: the trait `Copy` cannot be implemented for this type: field `{name}` does not implement `Copy`", item.At);
+      });
 
     if (ok && info.Derives.Contains("Eq") && !info.Derives.Contains("PartialEq")) {
       this._report(RustFrontend.InvalidSource, $"E0277: can't compare `{info.Name}` with `{info.Name}`", item.At);
@@ -327,9 +328,6 @@ internal sealed partial class TypeChecker {
 
   /// <summary>A function declared in a block: its signature, and its body checked once, on its own.</summary>
   private FunctionSignature Nested(FunctionItem item) {
-    if (this._signatures.TryGetValue(item, out var known))
-      return known;
-
     var enclosing = this._self;
     var signature = this.Signature(item, this._module, null) ?? throw new CheckAbort();
     if (this._enclosing is { } outer) {
@@ -341,8 +339,10 @@ internal sealed partial class TypeChecker {
 
     if (this._nestedChecked.Add(signature)) {
       var (variables, undecided, deferred, errors) = (this._variables.ToList(), this._undecided.ToList(), this._deferred.ToList(), this._errors.ToList());
+      var expressions = this._expressions.ToList();
       this._variables.Clear();
       this._undecided.Clear();
+      this._expressions.Clear();
       this._deferred.Clear();
       this._self = null;
       var outerFunction = this._enclosing;
@@ -359,6 +359,8 @@ internal sealed partial class TypeChecker {
         this._variables.AddRange(variables);
         this._undecided.Clear();
         this._undecided.AddRange(undecided);
+        this._expressions.Clear();
+        this._expressions.AddRange(expressions);
         this._deferred.Clear();
         this._deferred.AddRange(deferred);
         this._errors.UnionWith(errors);

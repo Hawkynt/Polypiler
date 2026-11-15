@@ -84,7 +84,7 @@ internal sealed partial class FunctionLowering {
       container = this.Duplicate(table, RType.Array(RType.U8, 0));
 
     if (container.Type.IsView)
-      return writable || container.Type.Kind == IrTypeKind.ReadOnlySpan ? container : container;
+      return container;
 
     if (container.Type.IsList)
       return new IrIntrinsic(IrIntrinsicOp.ViewOf, IrType.ReadOnlySpan(container.Type.Element!), [new IrCollection(IrCollectionOp.ListCopyToArray, IrType.Array(container.Type.Element!), [container])]);

@@ -92,7 +92,7 @@ internal sealed partial class FunctionLowering {
       return then.Value;
     }
 
-    var slot = this.Slot(type.Ir, "result");
+    var slot = this.Slot(this.Ir(type), "result");
     then.Statements.Add(new IrAssign(slot, then.Value!));
     otherwise.Statements.Add(new IrAssign(slot, otherwise.Value!));
     this.Emit(new IrIf(condition, new IrBlock(then.Statements), new IrBlock(otherwise.Statements)));

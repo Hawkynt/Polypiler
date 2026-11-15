@@ -128,7 +128,10 @@ internal sealed class ModuleLowering {
   /// module of the smallest path. The modules compiled for tests only come after the library's.
   /// </summary>
   private static List<ModuleScope> Order(CrateScope crate, IEnumerable<(ModuleScope User, ModuleScope Used)> uses) {
-    var dependencies = crate.Modules.ToDictionary(module => module, _ => new HashSet<ModuleScope>(ReferenceEqualityComparer.Instance), ReferenceEqualityComparer.Instance);
+    var dependencies = new Dictionary<ModuleScope, HashSet<ModuleScope>>(ReferenceEqualityComparer.Instance);
+    foreach (var module in crate.Modules)
+      dependencies[module] = new HashSet<ModuleScope>(ReferenceEqualityComparer.Instance);
+
     foreach (var module in crate.Modules)
       if (module.Parent is { } parent && !(module.TestOnly && !parent.TestOnly))
         dependencies[parent].Add(module);
@@ -289,9 +292,6 @@ internal sealed class ModuleLowering {
     this._types.Add(declaration);
     return declaration;
   }
-
-  /// <summary>The output struct of a function, for the function itself.</summary>
-  public IrStructType Output(FunctionSignature signature, IrType result, IReadOnlyList<(string Name, IrType Type)> outputs) => this.OutputOf(signature);
 
   /// <summary>The table of the module a constant or static array is, made once.</summary>
   public IrModuleConst? Table(Binding constant, Func<IrModuleConst?> make) {
