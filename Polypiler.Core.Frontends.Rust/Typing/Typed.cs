@@ -44,6 +44,15 @@ internal sealed record FunctionSignature(FunctionItem Item, IReadOnlyList<RType>
   /// <summary>Whether the crate exports the function: it is reachable as <c>pub</c> from the crate root.</summary>
   public bool IsExported { get; set; }
 
+  /// <summary>The type parameters of a generic function's template; none for any other function.</summary>
+  public IReadOnlyList<GenericParameter> Generics { get; set; } = [];
+
+  /// <summary>The instances of a template, by the list of its type arguments.</summary>
+  public Dictionary<string, FunctionSignature> Instances { get; } = new(System.StringComparer.Ordinal);
+
+  /// <summary>The types an instance's type parameters stand for; <see langword="null"/> for any other function.</summary>
+  public IReadOnlyDictionary<string, RType>? Substitution { get; set; }
+
 }
 
 /// <summary>
@@ -161,6 +170,9 @@ internal sealed class Typed {
 
   /// <summary>Whether <c>debug_assert*!</c> asserts: <c>rustc</c>'s <c>-C debug-assertions</c>.</summary>
   public bool DebugAssertions { get; set; }
+
+  /// <summary>The method of a trait impl each operator, unary or compound assignment on a struct or an enum calls.</summary>
+  public Dictionary<Expr, FunctionSignature> Operators { get; } = new(ReferenceEqualityComparer.Instance);
 
   /// <summary>The pieces of each <c>format!</c>.</summary>
   public Dictionary<MacroExpr, IReadOnlyList<FormatPiece>> Formats { get; } = new(ReferenceEqualityComparer.Instance);

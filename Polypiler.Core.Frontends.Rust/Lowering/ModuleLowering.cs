@@ -40,7 +40,7 @@ internal sealed class ModuleLowering {
   }
 
   /// <summary>The crate lowered, or <see langword="null"/> when something was reported.</summary>
-  public static LoweredCrate? Run(SourceFile file, string path, RustImportOptions options, Action<string, string, Span> report) {
+  public static LoweredCrate? Run(SourceFile file, string path, string source, RustImportOptions options, Action<string, string, Span> report) {
     var failed = false;
     void Report(string code, string message, Span at) {
       failed = true;
@@ -48,7 +48,7 @@ internal sealed class ModuleLowering {
     }
 
     var lowering = new ModuleLowering(options.OverflowChecks, Report);
-    var crate = CrateScope.Build(file, path, Report, options.ReadFile);
+    var crate = CrateScope.Build(file, path, source, Report, options.ReadFile);
     var checker = new TypeChecker(lowering._typed, crate, Report) { DebugAssertions = options.DebugAssertions, Internal = options.Internal };
     lowering._typed.DebugAssertions = options.DebugAssertions == true;
     lowering._typed.Modules.AddRange(crate.Modules);
@@ -56,9 +56,9 @@ internal sealed class ModuleLowering {
       return null;
 
     checker.FinishDeclarations();
-    var signatures = lowering._typed.Functions.ToList();
-    foreach (var signature in signatures)
-      checker.Function(signature);
+    // The instances of generic functions the checked bodies call join the functions as they are made.
+    for (var index = 0; index < lowering._typed.Functions.Count; ++index)
+      checker.Function(lowering._typed.Functions[index]);
 
     if (failed)
       return null;
@@ -343,7 +343,7 @@ internal sealed class ModuleLowering {
       source += TextHelpers.Source(this._textHelpers, this.TextPrefix);
 
     var file = Parser.Parse(source);
-    var lowered = Run(file, "helpers.rs", new RustImportOptions(OverflowChecks.Wrap) { Internal = true }, report);
+    var lowered = Run(file, "helpers.rs", source, new RustImportOptions(OverflowChecks.Wrap) { Internal = true }, report);
     return lowered?.Functions.ToList();
   }
 

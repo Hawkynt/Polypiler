@@ -325,7 +325,7 @@ public static class RustFrontend {
       diagnostics.Add(descriptor.At(message, path, at.Line, at.Column));
     }
 
-    var lowered = ModuleLowering.Run(file, path, options, Report);
+    var lowered = ModuleLowering.Run(file, path, source, options, Report);
     if (diagnostics.Count > 0 || lowered is null)
       return new(null, diagnostics);
 

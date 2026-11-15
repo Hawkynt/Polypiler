@@ -111,7 +111,10 @@ internal sealed partial class FunctionLowering {
     return Constants.Evaluate(expression, this._typed) is { } value ? Integer(type, value).Value : null;
   }
 
-  private IrExpr Unary(UnaryExpr unary) {
+  private IrExpr? Unary(UnaryExpr unary) {
+    if (this._typed.Operators.TryGetValue(unary, out var method))
+      return this.Invoke(method, [], method.Parameters, (unary.Operand, method.Item.Receiver));
+
     var type = this._typed.TypeOf(unary);
     if (unary is { Op: "-", Operand: IntegerLiteral literal })
       return Integer(type, -literal.Value);
@@ -125,9 +128,15 @@ internal sealed partial class FunctionLowering {
     return type.Kind == RKind.Bool ? Not(operand) : Bitwise(null, operand, null, type.Ir);
   }
 
-  private IrExpr Binary(BinaryExpr binary) {
+  private IrExpr? Binary(BinaryExpr binary) {
     if (binary.Op is "&&" or "||")
       return this.ShortCircuit(binary);
+
+    // An operator a trait impl of the crate gives: a call of the impl's method, `!=` the negation of `eq`.
+    if (this._typed.Operators.TryGetValue(binary, out var method)) {
+      var result = this.Invoke(method, [binary.Right], method.Parameters, (binary.Left, method.Item.Receiver));
+      return binary.Op == "!=" && result is not null ? Not(result) : result;
+    }
 
     var operandType = this._typed.TypeOf(binary.Left);
     var values = this.Operands(binary.Left, binary.Right);
@@ -205,6 +214,10 @@ internal sealed partial class FunctionLowering {
   }
 
   private IrExpr? Assign(AssignExpr assign) {
+    // `a += b` of a trait impl: the place is borrowed first, then the value is evaluated, as for any method call.
+    if (this._typed.Operators.TryGetValue(assign, out var method))
+      return this.Invoke(method, [assign.Value], method.Parameters, (assign.Target, method.Item.Receiver));
+
     var placeType = this._typed.TypeOf(assign.Target).Dereferenced;
     // The value is evaluated before the place, also for a compound assignment on a primitive.
     var value = this.Value(assign.Value);

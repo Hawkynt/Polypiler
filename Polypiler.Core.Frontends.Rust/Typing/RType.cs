@@ -69,7 +69,10 @@ internal enum RKind {
   Str,
 
   /// <summary><c>String</c>, owned text; an IR string, which is immutable, so the value is the text.</summary>
-  String
+  String,
+
+  /// <summary>A type parameter of a generic function's template, which only its instances replace.</summary>
+  Param
 
 }
 
@@ -173,6 +176,9 @@ internal sealed class RType {
 
   /// <summary><c>&amp;str</c>, the type of a string literal.</summary>
   public static RType StrRef { get; } = Reference(Str, false);
+
+  /// <summary>A type parameter of a template.</summary>
+  public static RType Param(string name) => new(RKind.Param, name);
 
   /// <summary>Whether a type is text: <c>String</c> or <c>str</c>, behind any number of references.</summary>
   public bool IsText => this.Dereferenced.Kind is RKind.String or RKind.Str;

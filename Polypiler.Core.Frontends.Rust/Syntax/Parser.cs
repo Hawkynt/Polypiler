@@ -204,7 +204,7 @@ internal sealed class Parser {
 
         return new FunctionItem(item.At, item.Name, item.Parameters, item.ReturnType, item.Body) {
           IsPublic = isPublic, IsVisible = isVisible, Receiver = item.Receiver, MutableReceiver = item.MutableReceiver,
-          ReceiverAt = item.ReceiverAt, IsTest = attributes.Any(attribute => attribute.Name == "test")
+          ReceiverAt = item.ReceiverAt, IsTest = attributes.Any(attribute => attribute.Name == "test"), Generics = item.Generics
         };
       }
 
@@ -239,8 +239,7 @@ internal sealed class Parser {
       case "use":
         return this.Use(at, isPublic, isVisible, attributes);
       case "trait":
-        this.SkipItem();
-        return new RefusedItem(new Refusal(RustFrontend.UnsupportedTrait, "trait " + this.NameAfter(at), at));
+        return this.Trait(at, isPublic, isVisible, attributes);
       case "unsafe": {
         // unsafe trait, unsafe impl: an unsafe fn was taken as a qualifier above.
         var form = "unsafe " + this.PeekAt(1).Text;
@@ -262,15 +261,6 @@ internal sealed class Parser {
     }
 
     throw this.Error($"expected item, found {this.Current}");
-  }
-
-  /// <summary>The name of an item that was skipped, read from its tokens.</summary>
-  private string NameAfter(Span at) {
-    var index = this._tokens.FindIndex(token => token.At == at);
-    while (index >= 0 && index < this._tokens.Count - 1 && this._tokens[index].Kind == TokenKind.Identifier && this._tokens[index].Text is "pub" or "trait" or "unsafe")
-      ++index;
-
-    return index >= 0 && this._tokens[index].Kind == TokenKind.Identifier ? this._tokens[index].Text : "?";
   }
 
   private static Item WithVisibility(ConstItem constant, bool isPublic, bool isVisible)
@@ -344,7 +334,7 @@ internal sealed class Parser {
     return inside.Count > 0 && inside.All(token => token.Kind == TokenKind.Lifetime || token.Is(",") || token.Is(":") || token.Is("+"));
   }
 
-  private Item Function(Span at, List<string> qualifiers) {
+  private Item Function(Span at, List<string> qualifiers, bool inTrait = false) {
     this.Expect("fn");
     var name = this.Identifier();
     Refusal? refused = null;
@@ -353,13 +343,7 @@ internal sealed class Parser {
     else if (qualifiers.FirstOrDefault(qualifier => qualifier is "unsafe" or "extern") is { } qualifier)
       refused = new Refusal(RustFrontend.UnsupportedFunction, $"{qualifier} fn", at);
 
-    if (this.At("<")) {
-      var genericAt = this.Current.At;
-      refused ??= this.LifetimesOnly()
-        ? new Refusal(RustFrontend.UnsupportedLifetime, $"lifetime parameters of fn {name}", genericAt)
-        : new Refusal(RustFrontend.UnsupportedFunction, "generic fn", genericAt);
-    }
-
+    var generics = this.Generics($"fn {name}", ref refused);
     this.Expect("(");
     var parameters = new List<Parameter>();
     var receiver = ReceiverKind.None;
@@ -420,21 +404,184 @@ internal sealed class Parser {
     if (this.Accept("->"))
       returnType = this.Type();
 
-    if (this.At("where")) {
-      refused ??= new Refusal(RustFrontend.UnsupportedFunction, "where clause", this.Current.At);
-      while (!this.At("{") && !this.At(";") && this.Current.Kind != TokenKind.End)
-        this.SkipTree();
-    }
-
+    generics = this.Where(generics, ref refused);
     if (this.At(";")) {
       this.Next();
-      return new RefusedItem(refused ?? new Refusal(RustFrontend.UnsupportedFunction, "fn without a body", at));
+      if (!inTrait)
+        return new RefusedItem(refused ?? new Refusal(RustFrontend.UnsupportedFunction, "fn without a body", at));
+
+      return refused is null
+        ? new FunctionItem(at, name, parameters, returnType, new Block(at, [], null)) { Receiver = receiver, MutableReceiver = mutableReceiver, ReceiverAt = receiverAt, Generics = generics, IsRequired = true }
+        : new RefusedItem(refused);
     }
 
     var body = this.Block();
     return refused is null
-      ? new FunctionItem(at, name, parameters, returnType, body) { Receiver = receiver, MutableReceiver = mutableReceiver, ReceiverAt = receiverAt }
+      ? new FunctionItem(at, name, parameters, returnType, body) { Receiver = receiver, MutableReceiver = mutableReceiver, ReceiverAt = receiverAt, Generics = generics }
       : new RefusedItem(refused);
+  }
+
+  /// <summary>
+  /// The generic type parameters at a <c>&lt;</c>, each with its bounds; none without one. A lifetime,
+  /// a const generic and a default type refuse the item the parameters belong to.
+  /// </summary>
+  private List<GenericParameter> Generics(string owner, ref Refusal? refused) {
+    var generics = new List<GenericParameter>();
+    if (!this.At("<"))
+      return generics;
+
+    var at = this.Current.At;
+    if (this.LifetimesAhead()) {
+      refused ??= new Refusal(RustFrontend.UnsupportedLifetime, owner == "impl" ? "impl<'a>" : $"lifetime parameters of {owner}", at);
+      this.SkipAngles();
+      return generics;
+    }
+
+    this.Next();
+    while (!this.At(">")) {
+      var parameterAt = this.Current.At;
+      if (this.Current.Kind == TokenKind.Lifetime) {
+        refused ??= new Refusal(RustFrontend.UnsupportedLifetime, $"lifetime parameters of {owner}", parameterAt);
+        this.Next();
+        if (this.Accept(":"))
+          this.Bounds(ref refused);
+      } else if (this.Accept("const")) {
+        refused ??= new Refusal(RustFrontend.UnsupportedGeneric, $"const generic parameter of {owner}", parameterAt);
+        this.Identifier();
+        this.Expect(":");
+        this.Type();
+      } else {
+        var name = this.Identifier();
+        var bounds = this.Accept(":") ? this.Bounds(ref refused) : [];
+        generics.Add(new GenericParameter(name, parameterAt) { Bounds = bounds });
+      }
+
+      if (this.Accept("=")) {
+        refused ??= new Refusal(RustFrontend.UnsupportedGeneric, $"default type parameter of {owner}", this.Current.At);
+        this.Type();
+      }
+
+      if (!this.Accept(","))
+        break;
+    }
+
+    this.CloseAngle();
+    return generics;
+  }
+
+  /// <summary>Whether the generic parameters at a <c>&lt;</c> are lifetimes only, which the subset refuses as before generics.</summary>
+  private bool LifetimesAhead() {
+    var start = this._position;
+    var only = this.LifetimesOnly();
+    this._position = start;
+    return only;
+  }
+
+  /// <summary>The bounds after a <c>:</c>: traits joined by <c>+</c>; <c>?Sized</c> says nothing a value of the subset needs, a lifetime refuses.</summary>
+  private List<TypeRef> Bounds(ref Refusal? refused) {
+    var bounds = new List<TypeRef>();
+    do {
+      if (this.Current.Kind == TokenKind.Lifetime) {
+        refused ??= new Refusal(RustFrontend.UnsupportedLifetime, $"'{this.Current.Text}", this.Current.At);
+        this.Next();
+      } else if (this.Accept("?")) {
+        this.Type();
+      } else if (this.At("for")) {
+        refused ??= new Refusal(RustFrontend.UnsupportedTrait, "higher-ranked bound", this.Current.At);
+        this.Next();
+        this.SkipAngles();
+        this.Type();
+      } else {
+        bounds.Add(this.Type());
+      }
+    } while (this.Accept("+"));
+
+    return bounds;
+  }
+
+  /// <summary>A <c>where</c> clause: its bounds join those of the parameters they name; a bound of any other type refuses.</summary>
+  private List<GenericParameter> Where(List<GenericParameter> generics, ref Refusal? refused) {
+    if (!this.Accept("where"))
+      return generics;
+
+    var joined = generics.ToList();
+    while (!this.At("{") && !this.At(";") && this.Current.Kind != TokenKind.End) {
+      var at = this.Current.At;
+      if (this.Current.Kind == TokenKind.Identifier && this.PeekAt(1).Is(":") && joined.FindIndex(parameter => parameter.Name == this.Current.Text) is var index and >= 0) {
+        this.Next();
+        this.Next();
+        var bounds = this.Bounds(ref refused);
+        joined[index] = joined[index] with { Bounds = [.. joined[index].Bounds, .. bounds] };
+      } else {
+        refused ??= new Refusal(RustFrontend.UnsupportedGeneric, "where clause on a type that is no type parameter", at);
+        while (!this.At(",") && !this.At("{") && !this.At(";") && this.Current.Kind != TokenKind.End)
+          this.SkipTree();
+      }
+
+      if (!this.Accept(","))
+        break;
+    }
+
+    return joined;
+  }
+
+  /// <summary><c>type Name = Type;</c> of an impl, <c>type Name;</c> of a trait; bounds and generics of the type are refused.</summary>
+  private Item AssociatedType(Span at) {
+    this.Expect("type");
+    var name = this.Identifier();
+    if (this.At("<") || this.At(":")) {
+      this.SkipItem();
+      return new RefusedItem(new Refusal(RustFrontend.UnsupportedTrait, $"associated type {name} with generics or bounds", at));
+    }
+
+    var type = this.Accept("=") ? this.Type() : null;
+    this.Expect(";");
+    return new AssociatedTypeItem(at, name, type);
+  }
+
+  /// <summary>A trait: its generic parameters are refused, its supertraits kept, its methods with and without a body and its associated types.</summary>
+  private Item Trait(Span at, bool isPublic, bool isVisible, List<Attribute> attributes) {
+    this.Expect("trait");
+    var name = this.Identifier();
+    Refusal? refused = Refused(attributes, _ => false);
+    if (this.At("<")) {
+      refused ??= new Refusal(RustFrontend.UnsupportedGeneric, $"trait {name}<...>", this.Current.At);
+      this.SkipAngles();
+    }
+
+    var supertraits = this.Accept(":") ? this.Bounds(ref refused) : [];
+    if (this.At("where")) {
+      refused ??= new Refusal(RustFrontend.UnsupportedGeneric, "where clause of a trait", this.Current.At);
+      while (!this.At("{") && this.Current.Kind != TokenKind.End)
+        this.SkipTree();
+    }
+
+    if (refused is not null) {
+      this.SkipTree();
+      return new RefusedItem(refused);
+    }
+
+    this.Expect("{");
+    var items = new List<Item>();
+    while (!this.At("}")) {
+      if (this.Current.Kind == TokenKind.End)
+        throw this.Error("this file contains an unclosed delimiter");
+
+      var itemAt = this.Current.At;
+      var itemAttributes = this.OuterAttributes();
+      if (this.At("type")) {
+        items.Add(this.AssociatedType(itemAt));
+      } else if (this.At("fn")) {
+        var function = this.Function(itemAt, [], true);
+        items.Add(Refused(itemAttributes, attribute => _functionOnly.Contains(attribute.Name)) is { } attribute ? new RefusedItem(attribute) : function);
+      } else {
+        this.SkipItem();
+        items.Add(new RefusedItem(new Refusal(RustFrontend.UnsupportedTrait, "trait item other than a method or an associated type", itemAt)));
+      }
+    }
+
+    this.Expect("}");
+    return new TraitItem(at, name, items) { Supertraits = supertraits, IsPublic = isPublic, IsVisible = isVisible };
   }
 
   /// <summary>Whether the parameter list starts with a receiver.</summary>
@@ -462,18 +609,7 @@ internal sealed class Parser {
     this.Expect("struct");
     var name = this.Identifier();
     Refusal? refused = Refused(attributes, attribute => attribute.Name is "derive" or "repr");
-    if (this.At("<")) {
-      var genericAt = this.Current.At;
-      refused ??= this.LifetimesOnly()
-        ? new Refusal(RustFrontend.UnsupportedLifetime, $"lifetime parameters of struct {name}", genericAt)
-        : new Refusal(RustFrontend.UnsupportedGeneric, $"struct {name}<...>", genericAt);
-    }
-
-    if (this.At("where")) {
-      refused ??= new Refusal(RustFrontend.UnsupportedGeneric, "where clause", this.Current.At);
-      while (!this.At("{") && !this.At(";") && !this.At("(") && this.Current.Kind != TokenKind.End)
-        this.SkipTree();
-    }
+    var generics = this.Where(this.Generics($"struct {name}", ref refused), ref refused);
 
     var fields = new List<FieldDeclaration>();
     StructForm form;
@@ -509,7 +645,10 @@ internal sealed class Parser {
       this.Expect("}");
     }
 
-    return refused is not null ? new RefusedItem(refused) : new StructItem(at, name, form, fields, attributes) { IsPublic = isPublic, IsVisible = isVisible };
+    if (form == StructForm.Tuple)
+      generics = this.Where(generics, ref refused);
+
+    return refused is not null ? new RefusedItem(refused) : new StructItem(at, name, form, fields, attributes) { IsPublic = isPublic, IsVisible = isVisible, Generics = generics };
   }
 
   private Item Enum(Span at, bool isPublic, bool isVisible, List<Attribute> attributes) {
@@ -550,29 +689,22 @@ internal sealed class Parser {
   private Item Impl(Span at, List<Attribute> attributes) {
     this.Expect("impl");
     Refusal? refused = Refused(attributes, _ => false);
-    if (this.At("<")) {
-      var genericAt = this.Current.At;
-      refused ??= this.LifetimesOnly()
-        ? new Refusal(RustFrontend.UnsupportedLifetime, "impl<'a>", genericAt)
-        : new Refusal(RustFrontend.UnsupportedGeneric, "impl<...>", genericAt);
-    }
+    var generics = this.Generics("impl", ref refused);
+    if (this.Accept("!"))
+      refused ??= new Refusal(RustFrontend.UnsupportedTrait, "negative impl", at);
 
-    this.Accept("!");
     var type = this.Type();
+    TypeRef? implemented = null;
     if (this.Accept("for")) {
       var target = this.Type();
-      var trait = type.Name.Split("::")[^1];
-      refused ??= trait == "Drop"
-        ? new Refusal(RustFrontend.Destructor, target.Text, at)
-        : new Refusal(RustFrontend.UnsupportedTrait, $"impl {type.Text} for {target.Text}", at);
+      if (type.Name.Split("::")[^1] == "Drop")
+        refused ??= new Refusal(RustFrontend.Destructor, target.Text, at);
+
+      implemented = type;
       type = target;
     }
 
-    if (this.At("where")) {
-      refused ??= new Refusal(RustFrontend.UnsupportedGeneric, "where clause", this.Current.At);
-      while (!this.At("{") && this.Current.Kind != TokenKind.End)
-        this.SkipTree();
-    }
+    generics = this.Where(generics, ref refused);
 
     if (refused is not null) {
       this.SkipTree();
@@ -589,8 +721,7 @@ internal sealed class Parser {
       var itemAttributes = this.OuterAttributes();
       var (isPublic, isVisible) = this.Visibility();
       if (this.At("type")) {
-        this.SkipItem();
-        items.Add(new RefusedItem(new Refusal(RustFrontend.UnsupportedTrait, "associated type", itemAt)));
+        items.Add(this.AssociatedType(itemAt));
         continue;
       }
 
@@ -599,7 +730,7 @@ internal sealed class Parser {
     }
 
     this.Expect("}");
-    return new ImplItem(at, type, items);
+    return new ImplItem(at, type, items) { Trait = implemented, Generics = generics };
   }
 
   private Item Module(Span at, bool isPublic, bool isVisible, List<Attribute> attributes) {
@@ -700,10 +831,13 @@ internal sealed class Parser {
       TokenKind.Identifier when token.Text is "mut" or "const" or "dyn" or "impl" or "unsafe" or "extern" => token.Text + " ",
       TokenKind.Punctuation when token.Text is "," or ";" => token.Text + " ",
       TokenKind.Punctuation when token.Text == "->" => " -> ",
+      TokenKind.Punctuation when token.Text == "=" => " = ",
       TokenKind.String => "\"" + token.Text + "\" ",
       _ => token.Text
     })).TrimEnd();
-    return type with { Text = text };
+    // A '>' that closed this type as half of a '>>' stays with the token the type around it closes with.
+    var open = text.Count(character => character == '<') - text.Count(character => character == '>') + (text.Length - text.Replace("->", "", System.StringComparison.Ordinal).Length) / 2;
+    return type with { Text = open > 0 ? text + new string('>', open) : text };
   }
 
   private TypeRef TypeUnrecorded(Span at) {
@@ -810,6 +944,11 @@ internal sealed class Parser {
         while (!this.At(">") && !this.At(">>")) {
           if (this.Current.Kind == TokenKind.Lifetime) {
             arguments.Add(new TypeRef("'" + this.Current.Text, this.Current.At) { Shape = TypeShape.Reference, Lifetime = this.Next().Text });
+          } else if (this.Current.Kind == TokenKind.Identifier && this.PeekAt(1).Is("=")) {
+            var binding = this.Next();
+            this.Next();
+            var bound = this.Type();
+            arguments.Add(new TypeRef(binding.Text, binding.At) { Binding = binding.Text, Element = bound, Text = $"{binding.Text} = {bound.Text}" });
           } else {
             arguments.Add(this.Type());
           }

@@ -165,6 +165,9 @@ internal sealed partial class TypeChecker {
     if (methods.TryGetValue(name, out var method))
       return method;
 
+    if (this.TraitMethodOf(resolved, name, at) is { } traitMethod)
+      return traitMethod;
+
     if (this.AssociatedConstant(owner, name) is { } constant)
       return constant;
 
@@ -268,8 +271,14 @@ internal sealed partial class TypeChecker {
       throw this.Invalid($"E0618: expected function, found `{callee}`", path.At);
     }
 
+    if (path.Segments.Count == 2 && this._typeParameters?.GetValueOrDefault(path.Segments[0]) is { } parameter)
+      return this.ParameterCall(call, parameter, path.Segments[1]);
+
     var target = path.Segments.Count == 1 && this.LocalFunction(path.Segments[0]) is { } local ? local : this.PathTarget(path);
     switch (target) {
+      case FunctionSignature { Generics.Count: > 0 } template:
+        this.Uses(template.Module);
+        return this.GenericCall(call, path, template);
       case FunctionSignature function: {
         this._typed.Callees[call] = function;
         IReadOnlyList<RType> parameters = function.Receiver is null ? function.Parameters : [function.Receiver, .. function.Parameters];

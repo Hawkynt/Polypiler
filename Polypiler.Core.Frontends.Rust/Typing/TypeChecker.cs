@@ -256,8 +256,13 @@ internal sealed partial class TypeChecker {
 
   /// <summary>Checks a function; <see langword="false"/> when it does not compile or uses a construct outside the subset (already reported).</summary>
   public bool Function(FunctionSignature signature) {
+    if (this._nestedChecked.Contains(signature))
+      return true;
+
     this.Reset(signature.Module ?? this._crate.Root, signature.Receiver is { } receiver ? receiver.Dereferenced : this.SelfOf(signature));
     this._enclosing = signature;
+    this._typeParameters = signature.Substitution;
+    this._instantiations.Clear();
     try {
       this.Body(signature);
       this.Finish();
@@ -265,8 +270,11 @@ internal sealed partial class TypeChecker {
         check();
 
       this.Moves(signature.Item);
+      this.Instantiate();
     } catch (CheckAbort) {
       return false;
+    } finally {
+      this._typeParameters = null;
     }
 
     return true;
@@ -628,6 +636,9 @@ internal sealed partial class TypeChecker {
 
   private RType Unary(UnaryExpr unary) {
     var operand = unary is { Op: "-", Operand: IntegerLiteral literal } ? this.Literal(literal, true) : this.Value(unary.Operand);
+    if (this.TraitUnary(unary, operand) is { } overloaded)
+      return overloaded;
+
     // The operators of the primitive types are implemented for references to them too.
     var type = this.Fresh(VariableKind.Any);
     this._deferred.Add(() => {
@@ -672,6 +683,9 @@ internal sealed partial class TypeChecker {
 
     if (this.TextOperator(binary, left, right) is { } text)
       return text;
+
+    if (this.TraitOperator(binary, StripShared(left), right) is { } overloaded)
+      return overloaded;
 
     if (StripShared(left).Resolved.Kind == RKind.Char && !_comparisons.Contains(binary.Op))
       throw this.Invalid($"E0369: cannot apply `{binary.Op}` to `char`", binary.At);
@@ -788,6 +802,9 @@ internal sealed partial class TypeChecker {
       this.Coerce(place, value, assign.Value.At);
       return RType.Unit;
     }
+
+    if (this.TraitAssign(assign, place, value))
+      return RType.Unit;
 
     if (assign.Op == "+" && place.Resolved.Kind == RKind.String) {
       this.Coerce(RType.StrRef, value, assign.Value.At);

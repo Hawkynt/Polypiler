@@ -112,6 +112,9 @@ internal sealed partial class TypeChecker {
   private RType? PathType(TypeRef type, bool allowUnit) {
     var segments = type.Name.Split("::");
     var last = segments[^1];
+    if (type.Arguments.Count == 0 && this.ParameterType(segments, type.At) is { } parameter)
+      return parameter;
+
     if (segments.Length == 1 && RType.Named(last) is { } primitive && type.Arguments.Count == 0)
       return primitive;
 
@@ -180,6 +183,10 @@ internal sealed partial class TypeChecker {
   /// </summary>
   private bool Representable(RType type, TypeRef at) {
     var resolved = type.Resolved;
+    // A template's types hold its parameters; each instance's types are checked with the arguments.
+    if (HoldsParameter(resolved))
+      return true;
+
     switch (resolved.Kind) {
       case RKind.Array: {
         var element = resolved.Element!.Resolved;
@@ -244,6 +251,12 @@ internal sealed partial class TypeChecker {
       default:
         return true;
     }
+  }
+
+  /// <summary>Whether a type holds a type parameter of a template.</summary>
+  private static bool HoldsParameter(RType type) {
+    var resolved = type.Resolved;
+    return resolved.Kind == RKind.Param || (resolved.Element is { } element && HoldsParameter(element)) || resolved.Elements.Any(HoldsParameter);
   }
 
   /// <summary>Whether every field of a struct is a scalar, an enum or a struct of the same kind: the IR gives it a default value.</summary>

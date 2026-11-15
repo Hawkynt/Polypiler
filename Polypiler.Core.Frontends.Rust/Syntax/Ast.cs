@@ -49,6 +49,9 @@ internal sealed record TypeRef(string Name, Span At) {
   /// <summary>The generic arguments of a path, the elements of a tuple, the parameters of a function type.</summary>
   public IReadOnlyList<TypeRef> Arguments { get; init; } = [];
 
+  /// <summary>The associated type an argument of a bound binds, <c>Output</c> of <c>Add&lt;Output = T&gt;</c>; the type is <see cref="Element"/>.</summary>
+  public string? Binding { get; init; }
+
   /// <summary>The element of an array or a slice, the target of a reference or a pointer, the result of a function type.</summary>
   public TypeRef? Element { get; init; }
 
@@ -106,6 +109,13 @@ internal enum ReceiverKind {
 
 }
 
+/// <summary>A generic type parameter and the traits it is bounded by, its own and those of a <c>where</c> clause.</summary>
+internal sealed record GenericParameter(string Name, Span At) {
+
+  public IReadOnlyList<TypeRef> Bounds { get; init; } = [];
+
+}
+
 /// <summary>A function: free, nested, or a method of an <c>impl</c>.</summary>
 internal sealed class FunctionItem(Span at, string name, IReadOnlyList<Parameter> parameters, TypeRef? returnType, Block body) : Item(at) {
 
@@ -128,6 +138,12 @@ internal sealed class FunctionItem(Span at, string name, IReadOnlyList<Parameter
 
   /// <summary>Whether the function is a <c>#[test]</c>.</summary>
   public bool IsTest { get; init; }
+
+  /// <summary>The generic type parameters.</summary>
+  public IReadOnlyList<GenericParameter> Generics { get; init; } = [];
+
+  /// <summary>Whether the function is a method of a trait without a body, which every impl provides.</summary>
+  public bool IsRequired { get; init; }
 
 }
 
@@ -173,6 +189,9 @@ internal sealed class StructItem(Span at, string name, StructForm form, IReadOnl
 
   public IReadOnlyList<Attribute> Attributes { get; } = attributes;
 
+  /// <summary>The generic type parameters.</summary>
+  public IReadOnlyList<GenericParameter> Generics { get; init; } = [];
+
 }
 
 /// <summary>A variant of an enum without data: its name and its explicit discriminant, if any.</summary>
@@ -189,12 +208,39 @@ internal sealed class EnumItem(Span at, string name, IReadOnlyList<VariantDeclar
 
 }
 
-/// <summary>An inherent <c>impl</c> block: its type and its functions and constants.</summary>
+/// <summary>An <c>impl</c> block, inherent or of a trait: its type and its functions, constants and associated types.</summary>
 internal sealed class ImplItem(Span at, TypeRef type, IReadOnlyList<Item> items) : Item(at) {
 
   public TypeRef Type { get; } = type;
 
   public IReadOnlyList<Item> Items { get; } = items;
+
+  /// <summary>The trait of <c>impl Trait for Type</c>; <see langword="null"/> for an inherent impl.</summary>
+  public TypeRef? Trait { get; init; }
+
+  /// <summary>The generic type parameters of <c>impl&lt;T&gt;</c>.</summary>
+  public IReadOnlyList<GenericParameter> Generics { get; init; } = [];
+
+}
+
+/// <summary>A <c>trait</c>: its methods, required and provided, and its associated types.</summary>
+internal sealed class TraitItem(Span at, string name, IReadOnlyList<Item> items) : Item(at) {
+
+  public string Name { get; } = name;
+
+  public IReadOnlyList<Item> Items { get; } = items;
+
+  /// <summary>The traits every implementer implements too, <c>trait A: B</c>.</summary>
+  public IReadOnlyList<TypeRef> Supertraits { get; init; } = [];
+
+}
+
+/// <summary><c>type Output = T;</c> of an impl, or <c>type Output;</c> of a trait.</summary>
+internal sealed class AssociatedTypeItem(Span at, string name, TypeRef? type) : Item(at) {
+
+  public string Name { get; } = name;
+
+  public TypeRef? Type { get; } = type;
 
 }
 

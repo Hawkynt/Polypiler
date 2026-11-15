@@ -54,6 +54,8 @@ internal sealed partial class TypeChecker {
         return this.ResultMethod(call, target);
       case RKind.Array or RKind.Slice or RKind.Vec:
         return this.SliceMethod(call, receiver, target, expected);
+      case RKind.String or RKind.Str or RKind.Char or RKind.Integer or RKind.Float or RKind.Bool when this.TraitMethodOf(target, call.Name, call.At) is { } ownMethod && !Builtin(target, call.Name):
+        return this.CallMethod(call, receiver, target, ownMethod);
       case RKind.String or RKind.Str:
         return this.TextMethod(call, receiver, target, expected);
       case RKind.Char:
@@ -65,6 +67,9 @@ internal sealed partial class TypeChecker {
       case RKind.Integer or RKind.Float or RKind.Bool:
         return this.PrimitiveMethod(call, target);
     }
+
+    if (this.TraitMethodOf(target, call.Name, call.At) is { } traitMethod)
+      return this.CallMethod(call, receiver, target, traitMethod);
 
     foreach (var argument in call.Arguments)
       this.Expression(argument);
@@ -197,7 +202,10 @@ internal sealed partial class TypeChecker {
   private RType InherentMethod(MethodCallExpr call, RType receiver, RType target) {
     var methods = target.Kind == RKind.Struct ? target.Struct!.Methods : target.Enum!.Methods;
     var derives = target.Kind == RKind.Struct ? target.Struct!.Derives : target.Enum!.Derives;
-    if (!methods.TryGetValue(call.Name, out var method)) {
+    if (!methods.TryGetValue(call.Name, out var method) && this.TraitMethodOf(target, call.Name, call.At) is { } traitMethod)
+      return this.CallMethod(call, receiver, target, traitMethod);
+
+    if (method is null) {
       if (call.Name == "clone" && derives.Contains("Clone")) {
         this.Count(call, 0);
         this._typed.Methods[call] = "clone";
@@ -210,11 +218,19 @@ internal sealed partial class TypeChecker {
       throw this.Invalid($"E0599: no method named `{call.Name}` found for `{target}` in the current scope", call.At);
     }
 
+    if (!method.Item.IsVisible && !this._module.IsWithin(method.Module!))
+      throw this.Invalid($"E0624: method `{call.Name}` is private", call.At);
+
+    return this.CallMethod(call, receiver, target, method);
+  }
+
+  /// <summary>A call of a method of the crate, inherent or of a trait impl: the receiver as the method takes it, then the arguments.</summary>
+  private RType CallMethod(MethodCallExpr call, RType receiver, RType target, FunctionSignature method) {
     if (method.Receiver is null)
       throw this.Invalid($"E0599: no method named `{call.Name}` found: `{target}::{call.Name}` is an associated function, not a method", call.At);
 
-    if (!method.Item.IsVisible && !this._module.IsWithin(method.Module!))
-      throw this.Invalid($"E0624: method `{call.Name}` is private", call.At);
+    if (method.Generics.Count > 0)
+      return this.Refused(RustFrontend.UnsupportedGeneric, $"generic method '{call.Name}'", call.At);
 
     this._typed.Callees[call] = method;
     this.Uses(method.Module);

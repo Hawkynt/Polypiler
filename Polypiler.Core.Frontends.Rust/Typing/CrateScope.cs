@@ -42,13 +42,46 @@ internal sealed class CrateScope {
   /// <summary>The impl blocks with their modules.</summary>
   public List<(ImplItem Item, ModuleScope Module)> Impls { get; } = [];
 
+  /// <summary>The traits of the crate.</summary>
+  public List<(TraitItem Item, ModuleScope Module)> Traits { get; } = [];
+
+  /// <summary>The source of every file of the crate, by its path.</summary>
+  private readonly Dictionary<string, string> _sources = new(StringComparer.Ordinal);
+
+  /// <summary>
+  /// A function item parsed anew from its file: the same function with nodes of its own, for an
+  /// instance of a generic function or a provided method checked for another type, since the
+  /// checker keeps what it learns of a node in tables keyed by the node.
+  /// </summary>
+  public FunctionItem Fresh(FunctionItem item, ModuleScope module) {
+    var file = Parser.Parse(this._sources[module.File]);
+    return Find(file.Items) ?? throw new InvalidOperationException($"no function at {item.At} in {module.File}");
+
+    FunctionItem? Find(IEnumerable<Item> items) {
+      foreach (var candidate in items) {
+        var found = candidate switch {
+          FunctionItem function when function.At == item.At => function,
+          ImplItem impl => Find(impl.Items),
+          TraitItem trait => Find(trait.Items),
+          ModuleItem { Items: { } children } => Find(children),
+          _ => null
+        };
+        if (found is not null)
+          return found;
+      }
+
+      return null;
+    }
+  }
+
   /// <summary>Builds the module tree of a crate whose root file has been parsed.</summary>
   /// <param name="file">The root file.</param>
   /// <param name="path">Its path, from which file modules are found.</param>
   /// <param name="report">Where refusals and errors go.</param>
   /// <param name="read">Reads another file of the crate, <see langword="null"/> when there is none; without it, a file module is refused.</param>
-  public static CrateScope Build(SourceFile file, string path, Action<string, string, Span> report, Func<string, string?>? read) {
+  public static CrateScope Build(SourceFile file, string path, string source, Action<string, string, Span> report, Func<string, string?>? read) {
     var scope = new CrateScope(report, read);
+    scope._sources[path] = source;
     scope.Root = new ModuleScope("crate", null, path);
     scope.Modules.Add(scope.Root);
     scope.Declare(scope.Root, file.Items, true);
@@ -82,6 +115,13 @@ internal sealed class CrateScope {
         case EnumItem enumeration:
           this.Add(module, enumeration.Name, enumeration, enumeration);
           this.Types.Add((enumeration, module));
+          break;
+        case TraitItem trait:
+          this.Add(module, trait.Name, trait, trait);
+          this.Traits.Add((trait, module));
+          foreach (var member in trait.Items.OfType<RefusedItem>())
+            this._report(member.Refusal.Code, member.Refusal.Construct, member.Refusal.At);
+
           break;
         case ImplItem impl:
           this.Impls.Add((impl, module));
@@ -129,6 +169,7 @@ internal sealed class CrateScope {
 
       try {
         items = Parser.Parse(found.Value.Source).Items;
+        this._sources[found.Value.Path] = found.Value.Source;
       } catch (RustSyntaxException error) {
         this._report(RustFrontend.InvalidSource, $"{error.Message} (in {Path.GetFileName(found.Value.Path)} at {error.At.Line}:{error.At.Column})", item.At);
         return;

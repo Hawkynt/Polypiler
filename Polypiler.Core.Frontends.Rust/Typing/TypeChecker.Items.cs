@@ -27,6 +27,8 @@ internal sealed partial class TypeChecker {
   public bool Declare() {
     var failed = false;
     void Failed() => failed = true;
+    if (!this.DeclareTraits())
+      Failed();
 
     foreach (var (item, module) in this._crate.Types) {
       var path = Mangled(module, item is StructItem s ? s.Name : ((EnumItem)item).Name);
@@ -57,29 +59,36 @@ internal sealed partial class TypeChecker {
         Failed();
       }
 
+    var impls = new Dictionary<ImplItem, RType?>(ReferenceEqualityComparer.Instance);
+    foreach (var (impl, module) in this._crate.Impls)
+      impls[impl] = this.ImplType(impl, module);
+
     foreach (var (item, module, impl) in this._crate.Functions) {
       RType? self = null;
       if (impl is not null) {
-        self = this.Resolve(impl.Type, false, module, null);
+        self = impls[impl];
         if (self is null) {
-          Failed();
-          continue;
-        }
-
-        if (self.Resolved.Kind is not (RKind.Struct or RKind.Enum)) {
-          this._report(RustFrontend.InvalidSource, $"E0116: cannot define inherent `impl` for a type outside of the crate where the type is defined: `{impl.Type.Text}`", impl.At);
           Failed();
           continue;
         }
       }
 
-      var signature = this.Signature(item, module, self);
+      // The IR's functions have no type parameters: a generic function the crate exports has no IR form.
+      if (item.Generics.Count > 0 && item.IsPublic && impl is null) {
+        this._report(RustFrontend.UnsupportedGeneric, $"public generic fn {item.Name}", item.At);
+        Failed();
+        continue;
+      }
+
+      var signature = item.Generics.Count > 0 ? this.Template(item, module, self) : this.Signature(item, module, self);
       if (signature is null) {
         Failed();
         continue;
       }
 
-      if (self is not null) {
+      if (impl?.Trait is not null) {
+        this.TraitMethod(self!, impl.Trait.Name.Split("::")[^1], signature);
+      } else if (self is not null) {
         var methods = self.Resolved.Kind == RKind.Struct ? self.Struct!.Methods : self.Enum!.Methods;
         if (!methods.TryAdd(item.Name, signature)) {
           this._report(RustFrontend.InvalidSource, $"E0592: duplicate definitions with name `{item.Name}`", item.At);
@@ -89,9 +98,16 @@ internal sealed partial class TypeChecker {
     }
 
     foreach (var (impl, module) in this._crate.Impls) {
-      var self = this.Resolve(impl.Type, false, module, null);
+      var self = impls[impl];
       if (self is null)
         continue;
+
+      if (impl.Trait is not null) {
+        if (!this.ProvidedMethods(impl, module, self))
+          Failed();
+
+        continue;
+      }
 
       foreach (var constant in impl.Items.OfType<ConstItem>()) {
         if (!this.Constant(constant, module, self)) {
@@ -109,6 +125,33 @@ internal sealed partial class TypeChecker {
         Failed();
 
     return !failed;
+  }
+
+  /// <summary>
+  /// The type an impl is for, its trait impl checked; <see langword="null"/>, reported, when the type
+  /// is refused, when an inherent impl is for a type of another crate or the impl is generic.
+  /// </summary>
+  private RType? ImplType(ImplItem impl, ModuleScope module) {
+    if (impl.Generics.Count > 0) {
+      this._report(RustFrontend.UnsupportedGeneric, "impl<...>", impl.At);
+      return null;
+    }
+
+    var self = this.Resolve(impl.Type, false, module, null);
+    if (self is null)
+      return null;
+
+    if (impl.Trait is null && impl.Items.OfType<AssociatedTypeItem>().FirstOrDefault() is { } associated) {
+      this._report(RustFrontend.InvalidSource, "E0658: inherent associated types are unstable", associated.At);
+      return null;
+    }
+
+    if (impl.Trait is null && self.Resolved.Kind is not (RKind.Struct or RKind.Enum)) {
+      this._report(RustFrontend.InvalidSource, $"E0116: cannot define inherent `impl` for a type outside of the crate where the type is defined: `{impl.Type.Text}`", impl.At);
+      return null;
+    }
+
+    return impl.Trait is null || this.TraitImpl(impl, module, self) ? self : null;
   }
 
   /// <summary>The name of an item in the IR: its crate path, the separators made underscores; the root's items keep their own names.</summary>
@@ -150,6 +193,11 @@ internal sealed partial class TypeChecker {
 
   private bool StructFields(StructInfo info) {
     var item = info.Item;
+    if (item.Generics.Count > 0) {
+      this._report(RustFrontend.UnsupportedGeneric, $"struct {item.Name}<...>", item.At);
+      return false;
+    }
+
     var ok = this.Derives(item.Attributes, info.Derives);
     foreach (var repr in item.Attributes.Where(attribute => attribute.Name == "repr")) {
       if (repr.Arguments is ["C"]) {
@@ -284,7 +332,7 @@ internal sealed partial class TypeChecker {
   }
 
   /// <summary>The signature of a function: its parameter and result types and, of a method, its receiver.</summary>
-  private FunctionSignature? Signature(FunctionItem item, ModuleScope module, RType? self) {
+  private FunctionSignature? Signature(FunctionItem item, ModuleScope module, RType? self, bool register = true) {
     var parameters = item.Parameters.Select(parameter => this.Resolve(parameter.Type, false, module, self)).ToList();
     var result = this.Resolve(item.ReturnType, true, module, self);
     if (parameters.Any(parameter => parameter is null) || result is null) {
@@ -310,7 +358,7 @@ internal sealed partial class TypeChecker {
       ReceiverKind.Exclusive => RType.Reference(self!, true),
       _ => null
     };
-    var owner = self is null ? null : self.Resolved.Kind == RKind.Struct ? self.Struct!.Name : self.Enum!.Name;
+    var owner = self is null ? null : OwnerName(self);
     var path = owner is null ? item.Name : owner + "::" + item.Name;
     var signature = new FunctionSignature(item, parameters!, result) {
       Receiver = receiver,
@@ -322,7 +370,9 @@ internal sealed partial class TypeChecker {
       this._selfTypes[signature] = self;
 
     this._signatures[item] = signature;
-    this._typed.Functions.Add(signature);
+    if (register)
+      this._typed.Functions.Add(signature);
+
     return signature;
   }
 
