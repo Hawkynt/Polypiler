@@ -28,6 +28,9 @@ internal sealed partial class FunctionLowering {
   private readonly HashSet<string> _names;
   private readonly Stack<LoopContext> _loops = new();
 
+  /// <summary>The sequences of keys a comprehension takes <c>d.items()</c> as, with the dict whose values its clause reads.</summary>
+  private readonly Dictionary<IrExpr, (IrExpr Value, PyType Type)> _keyedItems = new(ReferenceEqualityComparer.Instance);
+
   /// <summary>The statements that have to run before the statement being lowered: temporaries its expressions needed.</summary>
   private List<IrStmt> _prefix = [];
 
@@ -124,6 +127,8 @@ internal sealed partial class FunctionLowering {
     PyKind.Object or PyKind.Bytes or PyKind.ByteArray or PyKind.Table => new IrNull(PyTypes.Ir(type)),
     PyKind.Tuple => new IrStructDefault(PyTypes.Ir(type)),
     PyKind.List => new IrCollection(IrCollectionOp.ListNew, PyTypes.Ir(type), []),
+    PyKind.Dict => new IrCollection(IrCollectionOp.MapNew, PyTypes.Ir(type), []),
+    PyKind.Set => new IrCollection(IrCollectionOp.SetNew, PyTypes.Ir(type), []),
     _ => null
   };
 
@@ -231,6 +236,8 @@ internal sealed partial class FunctionLowering {
         return this.Try(statement);
       case "FunctionDef":
         return this.NestedDefinition(statement);
+      case "Delete":
+        return this.Delete(statement);
       default:
         // Pass, global and nonlocal; SubsetCheck refused everything else.
         return [];

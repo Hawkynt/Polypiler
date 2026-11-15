@@ -369,7 +369,7 @@ public sealed class ScalarLoweringTests {
   [TestCase("a: int, b: int", "a @ b", "error PLY1802: '@' is not supported by the Python frontend")]
   [TestCase("a: int", "round(a, 2)", "error PLY1802: 'round(a, 2)' is not supported by the Python frontend")]
   [TestCase("a: int", "Decimal(a)", "error PLY1833: 'Decimal' is neither part of this import nor in the Python call map")]
-  [TestCase("a: int", "{a: 1}", "error PLY1842: dict or set operation '{a: 1}' is not supported by the Python frontend")]
+  [TestCase("a: int", "len(frozenset([a]))", "error PLY1842: dict or set operation 'frozenset([a])' is not supported by the Python frontend")]
   [TestCase("a: float", "a << 1", "error PLY1802: '<< with a float operand, which raises TypeError,' is not supported by the Python frontend")]
   [TestCase("a: float", "a & 1", "error PLY1802: '& with a float operand, which raises TypeError,' is not supported by the Python frontend")]
   [TestCase("a: float", "~a", "error PLY1802: '~ with a float operand, which raises TypeError,' is not supported by the Python frontend")]

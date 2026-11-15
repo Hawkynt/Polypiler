@@ -113,7 +113,7 @@ public sealed class LoweringEdgeTests {
   [Test]
   public void NegativeHugeLiteral_IsExact_AndMultiLineConstruct_IsRefused() {
     Assert.That(PythonSnippet.Run("def f() -> int:\n    return -18446744073709551616\n", "f"), Is.EqualTo("int -18446744073709551616"));
-    Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return {1:\n            2}\n"), Has.Some.Contains("error PLY1842: dict or set operation '{1:…' is not supported by the Python frontend"));
+    Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return len(frozenset([1,\n            2]))\n"), Has.Some.Contains("error PLY1842: dict or set operation 'frozenset([1,…' is not supported by the Python frontend"));
   }
 
   /// <summary>A conditional expression of a number and a call that returns None is refused: the call could not run before its None is given.</summary>

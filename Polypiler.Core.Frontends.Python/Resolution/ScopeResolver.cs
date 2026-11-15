@@ -51,7 +51,7 @@ internal static class ScopeResolver {
 
   /// <summary>The built-ins the import knows, by their names.</summary>
   public static readonly IReadOnlySet<string> BuiltIns = new HashSet<string> {
-    "int", "float", "bool", "abs", "round", "divmod", "pow", "range", "len", "list", "tuple", "bytes", "bytearray", "str",
+    "int", "float", "bool", "abs", "round", "divmod", "pow", "range", "len", "list", "tuple", "bytes", "bytearray", "str", "dict", "set",
     "min", "max", "sum", "any", "all", "sorted", "reversed", "enumerate", "zip", "map", "filter", "ord", "chr", "isinstance",
     "ValueError", "TypeError", "IndexError", "KeyError", "ZeroDivisionError", "OverflowError", "ArithmeticError", "LookupError",
     "AssertionError", "RuntimeError", "NotImplementedError", "Exception", "BaseException", "UnicodeEncodeError"

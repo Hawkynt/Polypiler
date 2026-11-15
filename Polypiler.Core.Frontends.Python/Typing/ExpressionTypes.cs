@@ -111,6 +111,16 @@ internal static class ExpressionTypes {
         return PyType.List(Inner("elt"));
       case "GeneratorExp":
         return PyType.Iterator(Inner("elt"));
+      case "Dict":
+        // A key of None, the ** of a display, the subset check refused.
+        var keys = Enumerable.Range(0, expression.Nodes("values").Count).Select(index => Of(expression.Item("keys", index)!, scope));
+        return PyType.Dict(Joined(keys, true), Joined(expression.Nodes("values").Select(value => Of(value, scope)), true));
+      case "Set":
+        return PyType.Set(Joined(expression.Nodes("elts").Select(element => Of(element, scope)), true));
+      case "DictComp":
+        return PyType.Dict(Inner("key"), Inner("value"));
+      case "SetComp":
+        return PyType.Set(Inner("elt"));
       case "Subscript":
         return Subscript(expression, scope);
       case "Attribute":
@@ -142,9 +152,10 @@ internal static class ExpressionTypes {
     };
   }
 
-  /// <summary>The element a value of a type gives when it is indexed or iterated; <see langword="null"/> for a type that is no sequence.</summary>
+  /// <summary>The element a value of a type gives when it is indexed or iterated - of a dict its keys; <see langword="null"/> for a type that is no sequence.</summary>
   public static PyType? Element(PyType type) => type.Kind switch {
-    PyKind.List or PyKind.Table or PyKind.Iterator => type.Element,
+    PyKind.List or PyKind.Table or PyKind.Iterator or PyKind.Set => type.Element,
+    PyKind.Dict => type.Key,
     PyKind.Str => PyType.Str,
     PyKind.Bytes or PyKind.ByteArray => PyType.Int,
     PyKind.Tuple when type.Items.Count > 0 && type.Items.All(item => item == type.Items[0]) => type.Items[0],
@@ -165,6 +176,9 @@ internal static class ExpressionTypes {
     if (target.Kind == PyKind.Tuple)
       return Constants.Integer(index) is { } position && position >= -target.Items.Count && position < target.Items.Count
         ? target.Items[(int)(position < 0 ? position + target.Items.Count : position)] : PyType.Unknown;
+
+    if (target.Kind == PyKind.Dict)
+      return target.Element!;
 
     if (target.Kind == PyKind.Object && target.Class!.Method("__getitem__") is { } getter)
       return getter.Returns;
@@ -248,6 +262,10 @@ internal static class ExpressionTypes {
       case "divmod" when types.Count == 2:
         var quotient = Binary("FloorDiv", types[0], types[1], arguments[1]);
         return PyType.Tuple([quotient, quotient]);
+      case "dict":
+        return types.Count == 0 ? PyType.Dict(PyType.Unknown, PyType.Unknown) : First().Kind == PyKind.Dict ? First() : PyType.Unknown;
+      case "set":
+        return types.Count == 0 ? PyType.Set(PyType.Unknown) : Element(First()) is { } member ? PyType.Set(member) : PyType.Unknown;
       case "list" or "sorted":
         return types.Count == 0 ? PyType.List(PyType.Unknown) : Element(First()) is { } element ? PyType.List(element.Kind == PyKind.Bool && First().IsBytes ? PyType.Int : element) : PyType.Unknown;
       case "reversed":
@@ -313,7 +331,13 @@ internal static class ExpressionTypes {
     return (receiver.Kind, name) switch {
       (PyKind.List, "append" or "extend") => PyType.None,
       (PyKind.List, "pop") => receiver.Element!,
-      (PyKind.List, "copy") => receiver,
+      (PyKind.List or PyKind.Dict or PyKind.Set, "copy") => receiver,
+      (PyKind.Dict, "get") => arguments.Count > 1 ? Joined([receiver.Element!, Of(arguments[1], scope)]) : PyType.Optional(receiver.Element!),
+      (PyKind.Dict, "pop") => arguments.Count > 1 ? Joined([receiver.Element!, Of(arguments[1], scope)]) : receiver.Element!,
+      (PyKind.Dict, "keys") => PyType.Iterator(receiver.Key!),
+      (PyKind.Dict, "values") => PyType.Iterator(receiver.Element!),
+      (PyKind.Dict, "items") => PyType.Iterator(PyType.Tuple([receiver.Key!, receiver.Element!])),
+      (PyKind.Dict or PyKind.Set, "clear") or (PyKind.Set, "add" or "remove" or "discard") => PyType.None,
       (PyKind.Str, "encode") => PyType.Bytes,
       (PyKind.Int or PyKind.Bool, "to_bytes") => PyType.Bytes,
       (PyKind.Object, _) when receiver.Class!.Method(name) is { IsProperty: false } method => method.Returns,

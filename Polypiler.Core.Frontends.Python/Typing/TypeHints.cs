@@ -8,14 +8,14 @@ namespace Polypiler.Core.Frontends.Python.Typing;
 
 /// <summary>
 /// The type a type hint names: <c>int</c>, <c>float</c>, <c>bool</c>, <c>str</c>, <c>bytes</c>,
-/// <c>bytearray</c>, <c>None</c>, <c>list[T]</c>, <c>tuple[A, B]</c>, <c>Optional[T]</c> and
+/// <c>bytearray</c>, <c>None</c>, <c>list[T]</c>, <c>tuple[A, B]</c>, <c>dict[K, V]</c>, <c>set[T]</c>, <c>Optional[T]</c> and
 /// <c>T | None</c>, <c>Iterator[T]</c> and its kin for a generator, and a class or enum of the module.
 /// The names of <c>typing</c> count only where an import binds them.
 /// </summary>
 internal static class TypeHints {
 
   /// <summary>The names a hint gives the supported types, for the message of an unsupported one.</summary>
-  public const string Supported = "int, float, bool, str, bytes, bytearray, list[T], tuple[…], T | None and the classes of the module";
+  public const string Supported = "int, float, bool, str, bytes, bytearray, list[T], tuple[…], dict[K, V], set[K] (K an int, a bool, a str or a plain class), T | None and the classes of the module";
 
   /// <summary>The type a hint names, or <see langword="null"/> for a hint the import does not know.</summary>
   public static PyType? Of(PyNode hint, ModuleModel module) {
@@ -144,6 +144,10 @@ internal static class TypeHints {
     switch (name) {
       case "list" or "List" when types is [{ } element]:
         return PyType.List(element);
+      case "dict" or "Dict" when types is [{ } key, { } value] && PyTypes.Keyable(key) && PyTypes.Mappable(value):
+        return PyType.Dict(key, value);
+      case "set" or "Set" when types is [{ } member] && PyTypes.Keyable(member):
+        return PyType.Set(member);
       case "tuple" or "Tuple" when types.Count > 0 && types.All(item => item is not null && item.Kind != PyKind.None):
         return PyType.Tuple([.. types!]);
       case "Optional" when types is [{ } underlying] && PyTypes.Optionable(underlying):

@@ -109,9 +109,10 @@ comparisons exact; `//` and `%` floor division from truncating division; `<<` an
 `/`, `int()`, `round()`, `math.isqrt`, `math.gcd`, `sum`, `range` and `enumerate` and the conversion
 to `float` with CPython's results and exceptions. Nothing wraps around and nothing overflows.
 
-The IR keeps a `bigint` in a variable, an argument, a result, a list and a sequence, but not in a
-field, a struct, an optional or an array. An `int` kept in an attribute, a tuple, an `int | None`, a
-module table or a module variable - and one used as an index, a count or an argument of the byte and
+The IR keeps a `bigint` in a variable, an argument, a result, a list, a value of a map and a sequence,
+but not in a field, a struct, an optional, an array, a key of a map or an element of a set. An `int`
+kept in an attribute, a tuple, an `int | None`, a module table, a module variable, a key of a dict or
+an element of a set - and one used as an index, a count or an argument of the byte and
 `struct` operations - is therefore an `i64` there (`PyTypes.Held`): reading it back gives the exact
 `int` again, and storing one outside -2**63 .. 2**63 - 1 raises `OverflowError` (`py-int-held-64`).
 
@@ -133,9 +134,9 @@ width of an `int` to that specialization.
 | `**`, `pow(a, b)` | `PyPowerInt` for an `int` exponent that is a non-negative constant or of unknown sign (`py-int-power-sign`), `PyPowerFloat` for a negative constant one and for floats: `ZeroDivisionError` for `0.0` to a negative power, `OverflowError`, and `ArithmeticError` where CPython gives a complex (`py-complex-power`) |
 | `<<`, `>>` | a constant count the IR's `ShiftLeft`, `ShiftRight`; otherwise `PyShiftLeft`, `PyShiftRight`: `ValueError` for a negative count, `OverflowError` for a left shift beyond 2^31 - 1 bits |
 | `&`, `\|`, `^`, `~` | `And`, `Or`, `Xor`, `BitNot` on the infinite two's complement; of two `bool`s a `bool` |
-| `< <= > >= == !=` | of numbers the comparison, an `int` with a `float` exactly; of strs and bytes their contents; of lists and tuples element by element; of objects the class's `__eq__`, else identity; of two optional objects of one class `None` equal only to `None`; an optional against another type refused (`PLY1802`) |
+| `< <= > >= == !=` | of numbers the comparison, an `int` with a `float` exactly; of strs and bytes their contents; of lists and tuples element by element; of dicts the same keys with `==` values, of sets the same elements, in any order; of objects the class's `__eq__`, else identity; of two optional objects of one class `None` equal only to `None`; an optional against another type refused (`PLY1802`) |
 | `is`, `is not` | `None` against an optional, identity of objects and bytes, members of an enum by value; lists, numbers and strs refused (`PLY1820`, `PLY1802`) |
-| `in`, `not in` | a substring of a str; an element of a list, tuple, table or bytes by Python's `==` from the start (`py-float-identity`) |
+| `in`, `not in` | a substring of a str; an element of a list, tuple, table or bytes by Python's `==` from the start (`py-float-identity`); a key of a dict, an element of a set (`MapContainsKey`, `SetContains`) |
 | `and`, `or`, `not`, `x if c else y` | the short-circuit operators, a choice that gives an operand, the truth of the value (zero, empty and `None` are false) |
 | `x := e` | `IrBind`: the value assigned to the variable of the function and given |
 | `int()`, `round()`, `float()`, `bool()`, `abs()` | `PyIntOfFloat` (toward zero, exact; `ValueError` for NaN, `OverflowError` for an infinity), `RoundEven` then `PyIntOfFloat`, `PyFloatOfInt` (`OverflowError` beyond the largest float; also where an `int` meets a `float`), the truth, `PyAbsInt` or `Abs` |
@@ -175,6 +176,48 @@ width of an `int` to that specialization.
   endian loads and stores; `struct.error` for a buffer of the wrong length or a value outside its
   field. A native format, another letter or a format that is no constant is `PLY1823`.
 
+## Dicts and sets
+
+A `dict[K, V]` is the IR's map in the order of insertion (`IrType.Map(K, V, MapOrder.Insertion)`), the
+order Python 3.7 and later iterate a dict in; a `set[K]` is the IR's set
+(`IrType.Set(K, MapOrder.Insertion)`). Both are references: `b = a` aliases, `dict(a)`, `set(a)` and
+`.copy()` copy. A key and an element of a set are an `int` (held as an `i64`, `py-int-held-64`), a
+`bool`, a `str`, or an object of a plain class without `__eq__`, which Python hashes by its identity; a
+value is anything a list holds but an optional. An `int` and a `bool` key are one key, as in Python:
+inserting a key present keeps the key and replaces the value.
+
+- **Displays and constructions**: `{k: v, …}`, `{e, …}`, `dict()`, `set()`, `dict(d)`, `set(s)`,
+  `set(iterable)`, dict and set comprehensions (the key evaluated before the value). An empty one takes
+  its types from a hint, from the place it goes to or from what is stored into it (`d[k] = v`,
+  `s.add(x)`); one nothing tells is `PLY1801`.
+- **Operations**: `d[k]` (`KeyError` where missing), `d[k] = v`, `d[k] op= v`, `del d[k]` (`KeyError`),
+  `k in d`, `len`, the truth of an empty one, `d.get(k)` (an optional, of a value type an optional
+  holds), `d.get(k, default)`, `d.pop(k)` (`KeyError`), `d.pop(k, default)`, `d.clear()`, `d.copy()`;
+  `s.add`, `s.remove` (`KeyError`), `s.discard`, `x in s`, `s.clear()`, `s.copy()`; `==` and `!=` of two
+  of one type.
+- **Iteration of a dict**: `for k in d`, `d.keys()`, `d.values()`, `d.items()` - in a `for`, a
+  comprehension or a built-in such as `list`, `sorted`, `sum`, `min`, `max`, `any`, `all` and
+  `enumerate` - walk the map live in insertion order (`PyDict_keys`, `PyDict_values`, `PyDict_items`).
+  As CPython's iterator does, a dict whose size changed raises `RuntimeError` at the next step or after
+  the last one, and a key removed and inserted again raises it when the walk meets it a second time; a
+  value replaced is no change, and a `break` before the next step raises nothing. `for k, v in
+  d.items()` and a comprehension `… for k, v in d.items()` read each value at its step, so keys and
+  values of any type are taken apart; other uses of `items()` make a tuple of the pair, which holds no
+  str, list or object.
+- **A set has no order Python defines** - it iterates in the order of the hash - so a set is iterated
+  only where no order can change the result: `sorted(s)`, `min(s)` and `max(s)` without a key of ints,
+  bools and strs, `sum(s)` of integers, `any(s)` and `all(s)` of numbers and strs, `len`, `in`, `==`.
+  `for x in s`, `list(s)`, a comprehension over a set, and `sorted`, `min` or `max` with a key are
+  `PLY1842`, naming the iteration.
+- **Refused** with `PLY1842`, naming the construct: a key of a `float` (Python tells two NaNs apart by
+  identity, the IR does not), of a tuple or of an object a dataclass compares by its fields; a value
+  that is an optional; `**` and `*` in a display; a view (`d.keys()` and its kin) kept as a value;
+  `d.get(k)` of values no optional holds (a default works); `setdefault`, `update`, `popitem`,
+  `fromkeys`, `set.pop` (arbitrary in Python), `union`, `intersection`, `difference`,
+  `symmetric_difference`, `issubset`, `issuperset`, `isdisjoint` and the operators `| & - ^` of sets;
+  `frozenset`; `dict` of anything but a dict; a dict or set at module level (`PLY1810`), as a default
+  (`PLY1834`) or as an attribute (`PLY1840`).
+
 ## Classes
 
 - A **plain class** without bases has the attributes `__init__` assigns to its receiver; a
@@ -191,7 +234,7 @@ width of an `int` to that specialization.
   optional; an attribute of `None` raises `AttributeError`.
 - Bases (other than the exception form), `super()`, `@classmethod`, metaclasses, operator methods,
   class attributes, `field(default_factory=...)` and nested classes are `PLY1840`, naming the issue
-  that imports them; generics `PLY1841`; `dict` and `set` `PLY1842`; attributes created outside
+  that imports them; generics `PLY1841`; attributes created outside
   `__init__`, `setattr` and its kin `PLY1844`.
 
 ## Exceptions
@@ -252,7 +295,7 @@ exception classes with members, and `return`, `break` or `continue` in a `finall
 | `PLY1834` | a mutable default |
 | `PLY1840` | a class feature outside dataclasses, simple final classes and enums |
 | `PLY1841` | a generic declaration |
-| `PLY1842` | a `dict` or `set` operation |
+| `PLY1842` | a `dict` or `set` operation outside the subset: a key that is no int, bool, str or plain object, an optional value, the iteration of a set where its order counts, a view kept as a value, a method other than those of [Dicts and sets](#dicts-and-sets) |
 | `PLY1843` | an exception construct outside the subset |
 | `PLY1844` | an attribute created dynamically |
 
@@ -261,7 +304,9 @@ exception classes with members, and `return`, `break` or `continue` in a `finall
 Beside `py-number-widened`, `py-int-power-sign` and `py-complex-power`:
 
 - `py-int-held-64`: an `int` kept in an attribute, a tuple, an optional, a module table or variable,
-  or used as an index or a count, is 64 bits wide there; one beyond raises `OverflowError`.
+  a key of a dict or an element of a set, or used as an index or a count, is 64 bits wide there; one
+  beyond raises `OverflowError` - also where a key beyond 64 bits is only looked up, which Python
+  answers with `KeyError` or `False`.
 
 - `py-float-identity`: CPython finds the very same NaN object equal to itself inside a list, a tuple
   and `in`; the import compares by value, so a NaN is never equal.

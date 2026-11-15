@@ -15,7 +15,7 @@ namespace Polypiler.Core.Frontends.Python.Resolution;
 internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode, Variable> bound, List<Diagnostic> diagnostics) {
 
   /// <summary>The methods of lists the import refuses, by name.</summary>
-  public static readonly IReadOnlySet<string> RefusedSequenceMethods = new HashSet<string> { "insert", "remove", "index", "count", "clear", "sort", "reverse" };
+  public static readonly IReadOnlySet<string> RefusedSequenceMethods = new HashSet<string> { "insert", "index", "count", "sort", "reverse" };
 
   /// <summary>The methods of strings and bytes the import refuses, by name.</summary>
   public static readonly IReadOnlySet<string> RefusedStringMethods = new HashSet<string> {
@@ -26,7 +26,7 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
 
   /// <summary>The methods of dicts and sets the import refuses, by name.</summary>
   public static readonly IReadOnlySet<string> RefusedDictMethods = new HashSet<string> {
-    "keys", "values", "items", "get", "setdefault", "update", "add", "discard", "popitem", "union", "intersection", "difference", "fromkeys"
+    "setdefault", "update", "popitem", "union", "intersection", "difference", "symmetric_difference", "issubset", "issuperset", "isdisjoint", "fromkeys"
   };
 
   private FunctionModel? _function;
@@ -267,7 +267,9 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
         this.Refuse(target, PythonFrontend.UnsupportedSliceDescriptor, $"slice form 'del {this.Quote(target)}' is not supported; slices are imported as values only");
         break;
       case "Subscript":
-        this.Refuse(target, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation 'del {this.Quote(target)}' is not supported by the Python frontend");
+        // del d[k] of a dict; the lowering refuses it of a list.
+        this.Expression(target.Node("value")!);
+        this.Expression(target.Node("slice")!);
         break;
       case "Attribute":
         this.Refuse(target, PythonFrontend.DynamicAttributeDescriptor, $"attribute '{target.Text("attr")}' of class '{this.Quote(target.Node("value")!)}' is created dynamically; only attributes assigned in __init__ or declared as dataclass fields are imported (del)");
@@ -444,8 +446,31 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
       case "JoinedStr" or "TemplateStr":
         this.Refuse(expression, PythonFrontend.UnsupportedStringDescriptor, "string operation 'f-string' is not supported by the Python frontend");
         break;
-      case "Dict" or "Set" or "DictComp" or "SetComp":
-        this.Refuse(expression, PythonFrontend.UnsupportedDictDescriptor, $"dict or set operation '{this.Quote(expression)}' is not supported by the Python frontend");
+      case "Dict":
+        var values = expression.Nodes("values");
+        for (var index = 0; index < values.Count; ++index) {
+          // A key of None is the ** that unpacks a dict into the display.
+          if (expression.Item("keys", index) is not { } key) {
+            this.Refuse(values[index], PythonFrontend.UnsupportedDictDescriptor, $"dict or set operation '**{this.Quote(values[index])} in a display' is not supported by the Python frontend");
+            continue;
+          }
+
+          this.Expression(key);
+          this.Expression(values[index]);
+        }
+
+        break;
+      case "Set":
+        foreach (var element in expression.Nodes("elts")) {
+          if (element.Is("Starred"))
+            this.Refuse(element, PythonFrontend.UnsupportedDictDescriptor, $"dict or set operation '{this.Quote(element)} in a display' is not supported by the Python frontend");
+          else
+            this.Expression(element);
+        }
+
+        break;
+      case "DictComp" or "SetComp":
+        this.Comprehension(expression);
         break;
       case "Starred":
         this.Refuse(expression, PythonFrontend.UnsupportedFunctionDescriptor, $"'unpacked arguments in {this.Quote(expression)}' is not supported for functions by the Python frontend");
@@ -467,7 +492,9 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
         this.Expression(condition);
     }
 
-    this.Expression(comprehension.Node("elt")!);
+    foreach (var part in new[] { "elt", "key", "value" })
+      if (comprehension.Node(part) is { } produced)
+        this.Expression(produced);
   }
 
   private void Subscript(PyNode subscript) {
@@ -602,7 +629,7 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
       var (descriptor, message) = name switch {
         "getattr" or "setattr" or "hasattr" or "delattr" or "vars" => (PythonFrontend.DynamicAttributeDescriptor,
           $"attribute '{name}' of class '{(arguments.Count > 0 ? this.Quote(arguments[0]) : "")}' is created dynamically; only attributes assigned in __init__ or declared as dataclass fields are imported"),
-        "dict" or "set" or "frozenset" => (PythonFrontend.UnsupportedDictDescriptor, $"dict or set operation '{this.Quote(call)}' is not supported by the Python frontend"),
+        "frozenset" => (PythonFrontend.UnsupportedDictDescriptor, $"dict or set operation '{this.Quote(call)}' is not supported by the Python frontend"),
         "repr" or "format" or "hex" or "oct" or "bin" or "ascii" => (PythonFrontend.UnsupportedStringDescriptor, $"string operation '{this.Quote(call)}' is not supported by the Python frontend"),
         "memoryview" or "iter" or "next" => (PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation '{name}' is not supported by the Python frontend"),
         "super" => (PythonFrontend.UnsupportedClassDescriptor, "'super()' is outside the first Python subset (dataclasses, simple final classes, enums)"),

@@ -138,6 +138,9 @@ internal sealed partial class FunctionLowering {
     if (this.ListMethod(call, name, receiver) is { } listed)
       return listed;
 
+    if (this.CollectionMethod(call, name, receiver) is { } collected)
+      return collected;
+
     switch (receiver.Type.Kind) {
       case PyKind.Str when name == "encode":
         return this.Encode(call, receiver);

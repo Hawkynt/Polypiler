@@ -51,7 +51,13 @@ internal enum PyKind {
   Iterator,
 
   /// <summary>A table of the module: a list or tuple of numbers a module-level name holds and nothing changes.</summary>
-  Table
+  Table,
+
+  /// <summary>A <c>dict</c> whose keys all have one type and whose values all have one type, in the order the keys were first inserted.</summary>
+  Dict,
+
+  /// <summary>A <c>set</c> whose elements all have one type.</summary>
+  Set
 
 }
 
@@ -62,18 +68,22 @@ internal enum PyKind {
 /// </summary>
 internal sealed class PyType : IEquatable<PyType> {
 
-  private PyType(PyKind kind, PyType? element = null, IReadOnlyList<PyType>? items = null, ClassModel? @class = null) {
+  private PyType(PyKind kind, PyType? element = null, IReadOnlyList<PyType>? items = null, ClassModel? @class = null, PyType? key = null) {
     this.Kind = kind;
     this.Element = element;
     this.Items = items ?? [];
     this.Class = @class;
+    this.Key = key;
   }
 
   /// <summary>The shape.</summary>
   public PyKind Kind { get; }
 
-  /// <summary>The element type of a list, an iterator or a table, the type an optional holds; otherwise <see langword="null"/>.</summary>
+  /// <summary>The element type of a list, an iterator, a table or a set, the value type of a dict, the type an optional holds; otherwise <see langword="null"/>.</summary>
   public PyType? Element { get; }
+
+  /// <summary>The key type of a dict; otherwise <see langword="null"/>.</summary>
+  public PyType? Key { get; }
 
   /// <summary>The types of the positions of a tuple; empty for every other type.</summary>
   public IReadOnlyList<PyType> Items { get; }
@@ -126,6 +136,12 @@ internal sealed class PyType : IEquatable<PyType> {
   /// <summary>A table of numbers of the module.</summary>
   public static PyType Table(PyType element) => new(PyKind.Table, element);
 
+  /// <summary>A dict from keys of a type to values of a type.</summary>
+  public static PyType Dict(PyType key, PyType value) => new(PyKind.Dict, value, key: key);
+
+  /// <summary>A set of elements of a type.</summary>
+  public static PyType Set(PyType element) => new(PyKind.Set, element);
+
   /// <summary>Whether the type is a number: <c>bool</c>, <c>int</c> or <c>float</c>.</summary>
   public bool IsNumber => this.Kind is PyKind.Bool or PyKind.Int or PyKind.Float;
 
@@ -136,11 +152,11 @@ internal sealed class PyType : IEquatable<PyType> {
   public bool IsSequence => this.Kind is PyKind.List or PyKind.Str or PyKind.Bytes or PyKind.ByteArray or PyKind.Table or PyKind.Tuple;
 
   /// <summary>Whether the type, or a type inside it, is not known yet.</summary>
-  public bool IsIncomplete => this.Kind == PyKind.Unknown || (this.Element?.IsIncomplete ?? false) || this.Items.Any(item => item.IsIncomplete);
+  public bool IsIncomplete => this.Kind == PyKind.Unknown || (this.Element?.IsIncomplete ?? false) || (this.Key?.IsIncomplete ?? false) || this.Items.Any(item => item.IsIncomplete);
 
   /// <inheritdoc/>
   public bool Equals(PyType? other)
-    => other is not null && this.Kind == other.Kind && Equals(this.Element, other.Element) && ReferenceEquals(this.Class, other.Class) && this.Items.SequenceEqual(other.Items);
+    => other is not null && this.Kind == other.Kind && Equals(this.Element, other.Element) && Equals(this.Key, other.Key) && ReferenceEquals(this.Class, other.Class) && this.Items.SequenceEqual(other.Items);
 
   /// <inheritdoc/>
   public override bool Equals(object? obj) => this.Equals(obj as PyType);
@@ -169,6 +185,8 @@ internal sealed class PyType : IEquatable<PyType> {
     PyKind.Optional => $"{this.Element} | None",
     PyKind.Iterator => $"Iterator[{this.Element}]",
     PyKind.Table => $"tuple[{this.Element}, ...]",
+    PyKind.Dict => $"dict[{this.Key}, {this.Element}]",
+    PyKind.Set => $"set[{this.Element}]",
     _ => "unknown"
   };
 
@@ -192,6 +210,9 @@ internal static class PyTypes {
     PyKind.Optional => IsReference(type.Element!) ? Ir(type.Element!) : IrType.Optional(Held(type.Element!)),
     PyKind.Iterator => IrType.Sequence(Ir(type.Element!), false),
     PyKind.Table => IrType.Array(Held(type.Element!)),
+    // A key and an element of a set are held as a field holds them: the IR keeps no bigint key.
+    PyKind.Dict => IrType.Map(Held(type.Key!), Ir(type.Element!), MapOrder.Insertion),
+    PyKind.Set => IrType.Set(Held(type.Element!), MapOrder.Insertion),
     _ => throw new ArgumentOutOfRangeException(nameof(type), type, "An unknown type has no IR type.")
   };
 
@@ -207,6 +228,19 @@ internal static class PyTypes {
 
   /// <summary>Whether a type can be the type an optional holds: a number, a tuple, an enum member or an object.</summary>
   public static bool Optionable(PyType type) => type.IsNumber || type.Kind is PyKind.Tuple or PyKind.Enum or PyKind.Object;
+
+  /// <summary>
+  /// Whether a type can be a key of a dict or an element of a set: an <c>int</c> (held as an <c>i64</c>),
+  /// a <c>bool</c>, a <c>str</c>, or an object of a plain class without <c>__eq__</c>, which Python hashes
+  /// by its identity. A <c>float</c> is none - Python tells two NaNs apart by identity, the IR does not -
+  /// nor is a tuple, which the IR keeps no key of, nor an object a dataclass compares by its fields.
+  /// </summary>
+  public static bool Keyable(PyType type)
+    => type.Kind is PyKind.Int or PyKind.Bool or PyKind.Str
+      || (type.Kind == PyKind.Object && type.Class!.Kind == ClassKind.Plain && type.Class.Method("__eq__") is null);
+
+  /// <summary>Whether a type can be a value of a dict: anything a list can hold but an optional, <c>None</c> and a generator.</summary>
+  public static bool Mappable(PyType type) => type.Kind is not (PyKind.Optional or PyKind.None or PyKind.Iterator or PyKind.Unknown);
 
   /// <summary>Whether a type is a number: <c>bool</c>, <c>int</c> or <c>float</c>.</summary>
   public static bool IsNumber(PyType type) => type.IsNumber;
@@ -248,6 +282,10 @@ internal static class PyTypes {
           PyKind.Iterator => PyType.Iterator(element),
           _ => PyType.Table(element)
         } : null;
+      case PyKind.Set:
+        return Exact(first.Element!, second.Element!) is { } member ? PyType.Set(member) : null;
+      case PyKind.Dict:
+        return Exact(first.Key!, second.Key!) is { } key && Exact(first.Element!, second.Element!) is { } value ? PyType.Dict(key, value) : null;
       case PyKind.Tuple when first.Items.Count == second.Items.Count:
         var items = new List<PyType>();
         foreach (var (a, b) in first.Items.Zip(second.Items)) {

@@ -109,7 +109,7 @@ internal sealed class ModuleEvaluation(LoweringContext context, Typing.TypeInfer
       throw module.File.Refuse(node, PythonFrontend.MutableDefaultDescriptor, $"the default of parameter '{parameter.Name}' is a mutable object shared across calls");
 
     var value = this.Evaluate(module, lowering, parameter.Default!, null, parameter.Name);
-    if (value.Type.Kind is PyKind.List or PyKind.ByteArray or PyKind.Table or PyKind.Object)
+    if (value.Type.Kind is PyKind.List or PyKind.ByteArray or PyKind.Table or PyKind.Object or PyKind.Dict or PyKind.Set)
       throw module.File.Refuse(parameter.Default!, PythonFrontend.MutableDefaultDescriptor, $"the default of parameter '{parameter.Name}' is a mutable object shared across calls");
 
     return value;
@@ -127,7 +127,7 @@ internal sealed class ModuleEvaluation(LoweringContext context, Typing.TypeInfer
     if (prefix.Count == 0 && IsConstant(value))
       return new ConstantValue(type, value, null);
 
-    if (type.Kind is PyKind.Object or PyKind.Iterator or PyKind.None or PyKind.Optional)
+    if (type.Kind is PyKind.Object or PyKind.Iterator or PyKind.None or PyKind.Optional or PyKind.Dict or PyKind.Set)
       throw module.File.Refuse(expression, PythonFrontend.UnsupportedStatementDescriptor,
         $"statement 'module-level {module.File.Quote(expression)}' of the type {type} is not supported by the Python frontend");
 
