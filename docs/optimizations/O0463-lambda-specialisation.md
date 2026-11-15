@@ -14,8 +14,8 @@ JavaScript callback - without knowing anything about LINQ:
 1. **What stays local.** A parameter of a function type stays local when every use of it is a call
    of it, or an argument to a parameter of another function that stays local in turn. It escapes when
    it is stored, returned, assigned, compared, captured by a lambda, passed anywhere else, when its
-   function returns a lazy sequence or yields (the iterators of a stored or returned sequence), and
-   when the chain of calls comes back to a function on it. Any doubt means it escapes.
+   function returns a lazy sequence or yields (the iterators of a stored or returned sequence), when
+   its function is async (once it awaits, its caller goes on), and when the chain of calls comes back to a function on it. Any doubt means it escapes.
 2. **Lifting.** A function value that stays local - a lambda passed to such a parameter, a local
    that holds a lambda for good and is only called or passed on (a local function), a lambda called
    where it stands - becomes a function of the module whose parameters are the lambda's, followed by
@@ -109,7 +109,7 @@ lives in a cell while the copy is a function of its own and is a variable again 
 ## When it applies
 
 - The callee is a function of the program or one fusion made: not generic, no helper of the library,
-  no method of a class, no iterator; its parameter stays local as above.
+  no method of a class, no iterator, no async function; its parameter stays local as above.
 - The value is a lambda, a method group of a function of the module with the parameter's signature,
   or a local declared with a lambda, never assigned again, captured by no lambda, and only called or
   passed on to parameters that stay local.
@@ -128,6 +128,9 @@ lives in a cell while the copy is a function of its own and is a variable again 
   any of that: the same.
 - A function that returns a lazy sequence or yields: its body runs when the sequence is enumerated,
   later. A sequence that is stored, passed or returned stays an iterator ([#1329](https://github.com/Hawkynt/Polypiler/issues/1329)).
+- An async function ([async functions](../reference/async.md)): once it awaits, its caller goes on, and
+  the function may call the value after the caller changed what the value captures. The lambda passed
+  to it stays a closure.
 - Recursion through the parameter, `Rec(n - 1, f)`: a copy would need a copy of itself.
 - A variable a lambda writes that another lambda captures which stays a closure, or that is a
   parameter, a variable of a loop, a reference or a struct: a cell would split it from what the

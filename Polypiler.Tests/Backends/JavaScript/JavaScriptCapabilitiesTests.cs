@@ -181,6 +181,12 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("Symbol.iterator", 2015, "$iterator")]
   [TestCase("yield*", 2015, "nested resume point")]
   [TestCase("*p, a pointer", int.MaxValue, "view and index")]
+  [TestCase("Promise", 2015, null)]
+  [TestCase("Promise.resolve", 2015, null)]
+  [TestCase("Promise.all", 2015, null)]
+  [TestCase(".then", 2015, null)]
+  [TestCase("async function", 2017, "$async")]
+  [TestCase("Promise.allSettled", 2020, "Promise.all")]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
     Assert.That((entry.Name, entry.Since, entry.Replacement), Is.EqualTo((name, since, replacement)));
@@ -217,7 +223,8 @@ public sealed class JavaScriptCapabilitiesTests {
   /// <summary>Everything above ECMAScript 5 that the emitter writes has a replacement, so no module is refused today.</summary>
   [Test]
   public void Standard_ReplacesEverythingAboveEcmaScript5()
-    => Assert.That(_table.Entries.Where(entry => entry.Since > 5 && entry.Replacement is null), Is.Empty);
+    // The promises of the async functions of #1330 have no form at ECMAScript 5, which refuses them with PLY1152.
+    => Assert.That(_table.Entries.Where(entry => entry.Since > 5 && entry.Replacement is null).Select(entry => entry.Name), Is.EqualTo(new[] { "Promise", "Promise.resolve", "Promise.all", ".then" }));
 
   /// <summary>Test design 3, the boundary of every level: on it, just below it, just above it.</summary>
   [TestCase("var", "es5", true)]
@@ -291,7 +298,7 @@ public sealed class JavaScriptCapabilitiesTests {
     => Assert.That(_table.Globals(), Is.EquivalentTo(new[] {
       "NaN", "Infinity", "RangeError", "Error", "TypeError", "Math", "Number", "globalThis", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array",
       "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String", "Object", "Array", "Map", "Set",
-      "parseFloat", "parseInt", "Symbol"
+      "parseFloat", "parseInt", "Symbol", "Promise"
     }));
 
   [Test]

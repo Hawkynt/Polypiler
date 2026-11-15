@@ -177,6 +177,9 @@ public sealed record JsFunctionExpression(string? Name, IReadOnlyList<string> Pa
   /// <summary>Whether the function is a generator, <c>function* (…) { … }</c> (ECMAScript 2015).</summary>
   public bool IsGenerator { get; init; }
 
+  /// <summary>Whether the function is async, <c>async function (…) { … }</c> (ECMAScript 2017).</summary>
+  public bool IsAsync { get; init; }
+
 }
 
 /// <summary>An arrow function, <c>(a, b) =&gt; body</c>: a block body, or an expression whose value it returns (ECMAScript 2015).</summary>
@@ -296,6 +299,9 @@ public sealed record JsFunctionDeclaration(string Name, IReadOnlyList<string> Pa
   /// <summary>Whether the function is a generator, <c>function* name(…) { … }</c> (ECMAScript 2015).</summary>
   public bool IsGenerator { get; init; }
 
+  /// <summary>Whether the function is async, <c>async function name(…) { … }</c> (ECMAScript 2017).</summary>
+  public bool IsAsync { get; init; }
+
 }
 
 /// <summary>What a member of a class is.</summary>
@@ -345,6 +351,11 @@ public sealed record JsClass(string Name, IReadOnlyList<JsClassMember> Members) 
 /// <summary><c>export</c> in front of a declaration.</summary>
 /// <param name="Declaration">The declaration.</param>
 public sealed record JsExport(JsStatement Declaration) : JsStatement;
+
+/// <summary><c>import * as name from "source";</c>, the namespace of a module, as an ES module imports a binding module (#1332).</summary>
+/// <param name="Name">The name the namespace is bound to.</param>
+/// <param name="Source">The module specifier.</param>
+public sealed record JsImport(string Name, string Source) : JsStatement;
 
 /// <summary>A file: the lines of its header comment and its statements.</summary>
 /// <param name="Header">The header, each line without its <c>//</c>.</param>

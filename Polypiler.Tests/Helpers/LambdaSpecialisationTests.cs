@@ -120,6 +120,25 @@ internal sealed class LambdaSpecialisationTests {
     SameOutcomes(methods, module, Optimized(module).Module, "G", Arrays(3));
   }
 
+  /// <summary>
+  /// An async callee (#1330) lets its lambda out: once it awaits, the caller goes on, and the callee may
+  /// call the lambda after the caller has changed what it captures. Neither the lambda nor the callee is
+  /// specialised, and the outcome stays that of the source.
+  /// </summary>
+  [Test]
+  public void Escape_AnAsyncCalleeKeepsItsLambda() {
+    const string methods = "static async System.Threading.Tasks.Task<int> Map(int[] a, Func<int, int> f) { await System.Threading.Tasks.Task.CompletedTask; int s = 0; foreach (var x in a) s += f(x); return s; }"
+      + " public static async System.Threading.Tasks.Task<int> G(int[] a, int k) { var s = await Map(a, x => x * k); return s + 1; }";
+    var module = Legalized(methods);
+    var (result, _) = Specialised(module);
+    Assert.That(HasLambda(result, "G"), Is.True);
+    Assert.That(result.Clones, Is.Empty);
+    var optimized = Optimized(module).Module;
+    Assert.That(HasLambda(optimized, "G"), Is.True);
+    foreach (var arguments in Arrays(3))
+      Assert.That(IrInterpreter.Call(optimized, "G", arguments), Is.EqualTo(IrInterpreter.Call(module, "G", arguments)));
+  }
+
   // ---------------------------------------------------------------- captures (row 3)
 
   private static IEnumerable<TestCaseData> Captures() {

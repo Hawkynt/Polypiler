@@ -87,7 +87,7 @@ internal sealed partial class Lowering(TypeInference types) {
 
       // A member is reached through its class, never by its name from outside the module.
       List<IrLocal> parameters = [.. receiver is null ? [] : (IrLocal[])[receiver], .. model.Parameters.Select(parameter => parameter.Parameter!)];
-      return new IrFunction(model.Candidate.Name, model.IsPublic && model.Candidate.Class is null, this._returnType, parameters, this._locals.ToList(), body) {
+      return new IrFunction(model.Candidate.Name, model.IsPublic && model.Candidate.Class is null, this.Declared(model), parameters, this._locals.ToList(), body) {
         Absent = this._returnType.IsOptional ? AbsentResult(model) : IrAbsent.Null
       };
     } catch (Refusal refusal) {
@@ -450,8 +450,8 @@ internal sealed partial class Lowering(TypeInference types) {
       case CallExpression call when this.ByteStore(call) is { } store:
         into.Add(store);
         break;
-      case CallExpression call:
-        into.Add(new IrExprStmt(this.Expression(call)));
+      case CallExpression or AwaitExpression:
+        into.Add(new IrExprStmt(this.Expression(expression)));
         break;
       case SequenceExpression sequence:
         foreach (var part in sequence.Expressions)

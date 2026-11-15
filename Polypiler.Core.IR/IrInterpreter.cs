@@ -335,6 +335,7 @@ public static partial class IrInterpreter {
   };
 
   private static object? ToHost(IrType type, object? value) => value switch {
+    Settled settled => Settle(type, settled),
     not null when type.IsOptional => OptionalToHost(type, value),
     View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
@@ -386,6 +387,10 @@ public static partial class IrInterpreter {
       // An iterator function runs nothing when it is called: it makes the sequence.
       if (IrSequences.IsIterator(function))
         return this.Sequence(function, arguments);
+
+      // An async function runs to its end when it is called: what it returns, or throws, is the async value.
+      if (function.IsAsync)
+        return this.Started(function, arguments);
 
       var frame = new Frame();
       for (var index = 0; index < arguments.Length; ++index)
@@ -596,6 +601,12 @@ public static partial class IrInterpreter {
           return ArraySequence((Array)NotNull(this.Evaluate(sequence.Array, frame)));
         case IrSequence operation:
           return this.SequenceOperation(operation, frame);
+        case IrAwait awaited:
+          return Awaited((Settled)this.Evaluate(awaited.Operand, frame));
+        case IrAsync operation:
+          return this.AsyncOperation(operation, frame);
+        case IrForeignCall or IrLastError:
+          return this.Foreign(expression, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }

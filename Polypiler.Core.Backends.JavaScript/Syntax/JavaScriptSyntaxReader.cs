@@ -140,7 +140,7 @@ public static class JavaScriptSyntaxReader {
             attempt.Handler is null ? null : this.Block(attempt.Handler.Body, attempt.Handler.Body.Body),
             attempt.Finalizer is null ? null : this.Block(attempt.Finalizer, attempt.Finalizer.Body));
         case FunctionDeclaration function:
-          return new JsFunctionDeclaration(function.Id!.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body)) { IsGenerator = function.Generator };
+          return new JsFunctionDeclaration(function.Id!.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body)) { IsGenerator = function.Generator, IsAsync = function.Async };
         case ForOfStatement { Left: VariableDeclaration { Declarations: [{ Id: Identifier element }] } declared } loop:
           return new JsForOf(this.Text(declared).Split(' ')[0], element.Name, this.Expression(loop.Right), this.Statement(loop.Body));
         case ClassDeclaration { SuperClass: null or Identifier } type:
@@ -208,7 +208,9 @@ public static class JavaScriptSyntaxReader {
         case ObjectExpression literal:
           return new JsObject([.. literal.Properties.Select(this.Property)]) { Multiline = this.Text(literal).Contains('\n') };
         case FunctionExpression function:
-          return new JsFunctionExpression(function.Id?.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body)) { IsGenerator = function.Generator };
+          return new JsFunctionExpression(function.Id?.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body)) { IsGenerator = function.Generator, IsAsync = function.Async };
+        case AwaitExpression awaited:
+          return new JsAwait(this.Expression(awaited.Argument));
         case YieldExpression produced:
           return new JsYield(produced.Argument is null ? null : this.Expression(produced.Argument), produced.Delegate);
         case ArrowFunctionExpression arrow:

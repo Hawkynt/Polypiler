@@ -80,8 +80,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     if (candidate.Problem is not null)
       return Unsupported(candidate.Anchor, candidate.Problem);
 
-    if (function.Async)
-      return Unsupported(candidate.Anchor, function.Generator ? "an async generator" : "an async function");
+    if (this.AsyncProblem(candidate) is { } asynchronous)
+      return asynchronous;
 
     if (function.Generator && this.GeneratorProblem(candidate) is { } generator)
       return generator;
