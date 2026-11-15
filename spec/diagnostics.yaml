@@ -966,6 +966,33 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY1591
+    severity: error
+    exit: TargetBuildFailure
+    title: Rust compiler rejected the input
+    message: "the Rust compiler rejected the input: <every error with its code, text and location>"
+    rule: rust.runner.compile
+    area: rust
+    owner: "#468"
+    surfaces: the diagnostics of RustRunner, after PLY0030
+  - code: PLY1592
+    severity: error
+    exit: OracleFailure
+    title: Rust driver died
+    message: "the Rust driver died with exit code <code>: <standard error>"
+    rule: rust.runner.crash
+    area: rust
+    owner: "#468"
+    surfaces: the diagnostics of RustRunner.ExecuteAsync for a driver that aborted, overflowed its stack or was killed by a signal
+  - code: PLY1595
+    severity: error
+    exit: OracleFailure
+    title: Rust driver protocol error
+    message: "<reason>"
+    rule: rust.runner.protocol
+    area: rust
+    owner: "#468"
+    surfaces: "the diagnostics of RustRunner.ExecuteAsync: a signature that does not fit the declaration or has no pairing, an unknown export, an answer that is no output image"
   - code: PLY3935
     severity: error
     exit: OracleFailure
