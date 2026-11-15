@@ -351,12 +351,16 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
 
     // ------------------------------------------------------------------ escape
 
-    /// <summary>Whether a function may be called with a function value bound: one of the program's own, not generic, no helper, no method, and no iterator.</summary>
+    /// <summary>
+    /// Whether a function may be called with a function value bound: one of the program's own, not
+    /// generic, no helper, no method, no iterator and no async function (#1330) - once that awaits, its
+    /// caller goes on, and it may call the value after the caller changed what the value captures.
+    /// </summary>
     private bool Bindable(string name, out IrFunction function) {
       if (!this._functions.TryGetValue(name, out function!) || function.Origin is not null || this._library.Contains(name) || this._members.Contains(name))
         return false;
 
-      return !function.ReturnType.IsLazySequence && !function.Body.Statements.Any(IrSequences.Suspends);
+      return !function.ReturnType.IsLazySequence && !function.ReturnType.IsAsync && !function.Body.Statements.Any(IrSequences.Suspends);
     }
 
     /// <summary>
