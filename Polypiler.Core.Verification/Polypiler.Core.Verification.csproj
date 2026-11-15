@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
+    <PackageReference Include="JsonSchema.Net" Version="8.0.5" />
   </ItemGroup>
 
   <!-- The runner's default limits are a repository file; the assembly carries the copy it was built with. -->
@@ -18,6 +19,11 @@
   <!-- petcat's named escapes, recorded from petcat itself; the normalisation of its listings reads them. -->
   <ItemGroup>
     <EmbeddedResource Include="Emulators\Resources\petcat-escapes.tsv" LogicalName="Polypiler.Core.Verification.Emulators.petcat-escapes.tsv" />
+  </ItemGroup>
+
+  <!-- The manifest schema and the sub-schemas of its sections travel with the validator. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\spec\schemas\manifest*.schema.json" LogicalName="Polypiler.Core.Verification.Manifests.%(Filename)%(Extension)" Link="Manifests\%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

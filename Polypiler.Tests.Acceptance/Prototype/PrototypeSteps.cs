@@ -57,7 +57,7 @@ public sealed class PrototypeScenario(ScenarioWorkspace workspace, PolypilerRunn
     var output = "out-" + Guid.NewGuid().ToString("N");
     var result = polypiler.Run(["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
     Assert.That(result.ExitCode, Is.Zero, result.Output);
-    var file = Directory.GetFiles(workspace.Resolve(output)).Single();
+    var file = Directory.GetFiles(workspace.Resolve(output)).Single(path => Path.GetFileName(path) != "polypiler.manifest.json");
     return (file, File.ReadAllText(file));
   }
 

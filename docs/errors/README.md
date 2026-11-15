@@ -55,8 +55,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0050](PLY0050.md) | error | 7 (OracleFailure) | `reference oracle '<oracle>' failed for '<fixture>': <cause>` | VER-ORACLE |
 | [PLY0051](PLY0051.md) | error | 5 (SemanticMismatch) | `'<fixture>' vector '<name>': expected <hex>, actual <hex>, first difference at byte <offset>` | VER-ORACLE |
 | [PLY0052](PLY0052.md) | error | 5 (SemanticMismatch) | `'<fixture>' vector '<name>' element <index>: expected <hex>, actual <hex>, <distance> exceeds <mode> <bound>` | VER-ORACLE |
-| [PLY0053](PLY0053.md) (reserved) | error | 1 (EnvironmentError) | `'<path>' is not a valid manifest: <reason>` | VER-MANIFEST |
-| [PLY0054](PLY0054.md) (reserved) | error | 1 (EnvironmentError) | `'<path>' listed in the manifest is <missing\|changed>` | VER-MANIFEST |
+| [PLY0053](PLY0053.md) | error | 1 (EnvironmentError) | `manifest '<path>' is invalid: <JSON pointer>: <reason>` | VER-MANIFEST |
+| [PLY0054](PLY0054.md) | error | 1 (EnvironmentError) | `manifest '<path>' claims '<state>' but the evidence supports only '<derived>': <missing>` | VER-MANIFEST |
 | [PLY0055](PLY0055.md) (reserved) | warning | — | `proof of <rule> gave up after <budget>` | VER-SMT |
 | [PLY0056](PLY0056.md) (reserved) | error | 5 (SemanticMismatch) | `proof of <rule> refuted: <name>=<hex>[, ...]: before <hex>, after <hex>` | VER-SMT |
 | [PLY0057](PLY0057.md) (reserved) | error | 10 (BudgetExceeded) | `exhaustive proof of <rule> needs <n> input bits, budget is <m>` | VER-EXHAUSTIVE |

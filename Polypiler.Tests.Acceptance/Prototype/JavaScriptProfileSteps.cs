@@ -22,7 +22,7 @@ public sealed class JavaScriptProfileSteps(PrototypeScenario scenario) {
   /// <summary>The one file the last command line wrote into <c>out</c>.</summary>
   private string Generated() {
     Assert.That(scenario.Log.Last.ExitCode, Is.Zero, scenario.Log.Last.Output);
-    return Directory.GetFiles(scenario.Workspace.Resolve("out")).Single();
+    return Directory.GetFiles(scenario.Workspace.Resolve("out")).Single(path => Path.GetFileName(path) != "polypiler.manifest.json");
   }
 
   /// <summary>Translates the source with the options of a profile into <c>out</c>.</summary>

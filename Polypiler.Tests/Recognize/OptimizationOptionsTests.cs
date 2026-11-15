@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Cli;
 using Polypiler.Core;
+using Polypiler.Core.Verification.Manifests;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Recognize;
@@ -37,7 +38,7 @@ public sealed class OptimizationOptionsTests {
     using var standard = new StringWriter();
     using var error = new StringWriter();
     var exitCode = Program.Run(["translate", source, "--from", "csharp", "--to", to, "--output", output, .. further], standard, error);
-    var text = Directory.Exists(output) ? File.ReadAllText(Directory.GetFiles(output).Single()) : "";
+    var text = Directory.Exists(output) ? File.ReadAllText(Directory.GetFiles(output).Single(path => Path.GetFileName(path) != Manifest.FileName)) : "";
     return (exitCode, text, error.ToString());
   }
 
