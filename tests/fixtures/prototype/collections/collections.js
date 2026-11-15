@@ -105,3 +105,122 @@ export function fixedLoop() {
   }
   return s;
 }
+
+export function mapOrder() {
+  const m = new Map();
+  m.set(1, 1);
+  m.set(2, 2);
+  m.set(3, 3);
+  m.delete(1);
+  m.delete(3);
+  m.set(4, 4);
+  m.set(5, 5);
+  m.set(6, 6);
+  let r = 0;
+  for (const k of m.keys()) {
+    r = r * 10 + k;
+  }
+  return r;
+}
+
+export function setOrder() {
+  const s = new Set([1, 2, 3]);
+  s.delete(2);
+  s.add(4);
+  let r = 0;
+  for (const x of s) {
+    r = r * 10 + x;
+  }
+  return r;
+}
+
+export function firstZeroKey() {
+  const m = new Map();
+  m.set(-0, 1);
+  m.set(0, 2);
+  let last = 1;
+  for (const k of m.keys()) {
+    last = k;
+  }
+  return 1 / last;
+}
+
+export function nanKey() {
+  const m = new Map();
+  const z = 0;
+  m.set(0 / 0, 1);
+  m.set(z / z, 2);
+  return m.size * 10 + (m.get(0 / 0) ?? 0);
+}
+
+export function missing() {
+  const m = new Map();
+  m.set(1, 2);
+  return m.get(5);
+}
+
+/**
+ * @param {number[]} a
+ */
+export function count(a) {
+  const counts = new Map();
+  for (const x of a) {
+    counts.set(x, (counts.get(x) ?? 0) + 1);
+  }
+  let r = 0;
+  for (const [k, v] of counts) {
+    r = r * 100 + k * 10 + v;
+  }
+  return r;
+}
+
+export function liveMap() {
+  const m = new Map([[1, 1], [2, 2], [3, 3]]);
+  let r = 0;
+  for (const [k, v] of m) {
+    r = r * 10 + v;
+    if (k === 1) {
+      m.delete(2);
+      m.set(4, 4);
+    }
+  }
+  return r;
+}
+
+export function clearedSet() {
+  const s = new Set([1, 2]);
+  s.delete(1);
+  s.clear();
+  s.add(9);
+  s.add(8);
+  let r = 0;
+  for (const x of s.values()) {
+    r = r * 10 + x;
+  }
+  return r + s.size * 1000;
+}
+
+export function hasDelete() {
+  const m = new Map();
+  m.set("a", 1);
+  let r = m.has("a") ? 10 : 0;
+  if (m.delete("a")) {
+    r = r + 1;
+  }
+  if (m.delete("a")) {
+    r = r + 100;
+  }
+  return r;
+}
+
+export function wordSet() {
+  const s = new Set();
+  s.add("b");
+  s.add("a");
+  s.add("b");
+  let t = "";
+  for (const w of s) {
+    t += w;
+  }
+  return t;
+}

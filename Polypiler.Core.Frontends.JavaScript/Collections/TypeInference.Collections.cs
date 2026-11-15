@@ -15,7 +15,17 @@ internal sealed partial class TypeInference {
 
   /// <summary>Makes the array of a flow of <see cref="FlowKind.Grow"/> a list with what it adds; says whether its type changed.</summary>
   private bool Grow(Flow flow) {
-    if (flow.Target!.Type is not { Kind: JsKind.Array, IsPlain: true } held)
+    // m.set(k, v) and s.add(x) join what they insert into the keys, values and elements (#1328).
+    if (flow.Node is CallExpression { Callee: MemberExpression { Property: Identifier { Name: var inserting } } } insertion) {
+      var arguments = insertion.Arguments;
+      if (flow.Target!.Type is { Kind: JsKind.Map } map && inserting == "set" && arguments.Count == 2)
+        return this.Reach(flow.Target, JsType.MapOf(JsType.Join(map.Key!, this.Of(arguments[0])), JsType.Join(map.Element!, this.Of(arguments[1]))), flow.Node);
+
+      if (flow.Target!.Type is { Kind: JsKind.Set } set && inserting == "add" && arguments.Count == 1)
+        return this.Reach(flow.Target, JsType.SetOf(JsType.Join(set.Element!, this.Of(arguments[0]))), flow.Node);
+    }
+
+    if (flow.Target!.Type is not { Kind: JsKind.Array, IsPlain: true } held || flow.Node is CallExpression { Callee: MemberExpression { Property: Identifier { Name: "set" or "add" } } })
       return false;
 
     var added = flow.Node switch {
@@ -65,6 +75,61 @@ internal sealed partial class TypeInference {
       "includes" => JsType.Boolean,
       _ => null
     };
+  }
+
+
+  /// <summary>The type of the key (index 0) or the value (1) of the entries of the <c>Map</c> a <c>for…of</c> destructures, joined into its variable.</summary>
+  private bool Entry(Flow flow) {
+    var loop = (ForOfStatement)flow.Node;
+    var source = loop.Right is CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: "entries" } } entries, Arguments.Count: 0 } ? entries.Object : loop.Right;
+    return this.Of(source) is { Kind: JsKind.Map } map && this.Reach(flow.Target!, flow.Index == 0 ? map.Key! : map.Element!, loop);
+  }
+
+  /// <summary>What a <c>for…of</c> yields over a <c>Set</c>, <c>keys()</c> or <c>values()</c> of a <c>Map</c> or of a <c>Set</c>, or <see langword="null"/>.</summary>
+  private JsType? Iterated(Node right) {
+    if (right is CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: "keys" or "values" } method } member, Arguments.Count: 0 }) {
+      var source = this.Of(member.Object);
+      return source.Kind switch {
+        JsKind.Map => method.Name == "keys" ? source.Key : source.Element,
+        JsKind.Set => source.Element,
+        _ => null
+      };
+    }
+
+    return this.Of(right) is { Kind: JsKind.Set } set ? set.Element : null;
+  }
+
+  /// <summary>
+  /// The type of an expression on a <c>Map</c> or a <c>Set</c>: a new one, with the entries or the
+  /// elements of an array literal; its <c>size</c>; what <c>get</c>, <c>has</c> and <c>delete</c> yield.
+  /// <see langword="null"/> for any other expression.
+  /// </summary>
+  private JsType? KeyedType(Node node) {
+    switch (node) {
+      case NewExpression { Callee: Identifier { Name: var name } constructor } creation when name is "Map" or "Set" && !this._scope!.Bindings.ContainsKey(constructor):
+        var listed = creation.Arguments is [ArrayExpression literal] ? literal.Elements : [];
+        if (name == "Set") {
+          var element = creation.Arguments is [Node source] && source is not ArrayExpression && this.Of(source) is { Kind: JsKind.Array, Element: { } from } ? from : JsType.Unknown;
+          return JsType.SetOf(listed.Aggregate(element, (type, item) => item is null or SpreadElement ? type : JsType.Join(type, this.Of(item))));
+        }
+
+        var (key, value) = (JsType.Unknown, JsType.Unknown);
+        foreach (var entry in listed)
+          if (entry is ArrayExpression { Elements: [Node first, Node second] } && first is not SpreadElement && second is not SpreadElement)
+            (key, value) = (JsType.Join(key, this.Of(first)), JsType.Join(value, this.Of(second)));
+
+        return JsType.MapOf(key, value);
+      case MemberExpression { Computed: false, Property: Identifier { Name: "size" } } size when this.Of(size.Object).Kind is JsKind.Map or JsKind.Set:
+        return JsType.I32;
+      case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } member } when this.Of(member.Object) is { Kind: JsKind.Map or JsKind.Set } keyed:
+        return method switch {
+          "get" when keyed.Kind == JsKind.Map => JsType.Join(keyed.Element!.Float == 32 ? JsType.F64 : keyed.Element, JsType.UndefinedValue),
+          "has" or "delete" => JsType.Boolean,
+          _ => JsType.Unknown
+        };
+      default:
+        return null;
+    }
   }
 
 }

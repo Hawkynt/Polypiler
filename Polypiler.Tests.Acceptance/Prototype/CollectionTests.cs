@@ -61,7 +61,7 @@ public sealed class CollectionTests {
   }
 
   /// <summary>Test design 1 and 9: every call of every C# fixture computes in every C# profile what .NET computes.</summary>
-  [TestCase("Collections", "CollectionsDemo")]
+  [TestCase("Collections", "CollectionsDemo"), TestCase("WordFrequency", "WordFrequencyDemo")]
   public void CSharpFixture_RunsInEveryCSharpProfileLikeDotNet(string file, string className) {
     var calls = CollectionFixtures.Calls().Where(call => call.File == file).Select(call => call.Call).ToList();
     var expected = calls.Select(call => PrototypeFixture.InvokedOutcome(CollectionFixtures.Compiled(className, call.Method), call)).ToList();
@@ -74,44 +74,49 @@ public sealed class CollectionTests {
 
   /// <summary>Test design 4, 5, 6 and 9: the module of every list operation computes in node at every level what the interpreter computes.</summary>
   [TestCaseSource(typeof(ProfileCase), nameof(ProfileCase.All))]
-  public void ListModule_RunsInNodeLikeTheInterpreter(ProfileCase profile) {
-    var module = CollectionModules.Lists();
-    var calls = CollectionModules.ListCalls().ToList();
+  public void ListModule_RunsInNodeLikeTheInterpreter(ProfileCase profile) => this.ModuleRunsInNode(profile, CollectionModules.Lists(), [.. CollectionModules.ListCalls()]);
+
+  /// <summary>Test design 2, 3, 4, 9 and 10: the module of every map and set operation computes in node at every level what the interpreter computes.</summary>
+  [TestCaseSource(typeof(ProfileCase), nameof(ProfileCase.All))]
+  public void MapModule_RunsInNodeLikeTheInterpreter(ProfileCase profile) => this.ModuleRunsInNode(profile, CollectionModules.Maps(), [.. CollectionModules.MapCalls()]);
+
+  private void ModuleRunsInNode(ProfileCase profile, Core.IR.IrModule module, List<PrototypeCall> calls) {
     var text = Core.Backends.JavaScript.JavaScriptEmitter.Emit(module, profile.Parsed).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, text);
-    File.WriteAllText(Path.Combine(this._directory, "Lists" + profile.Parsed.Extension), text);
-    var outcomes = Toolchain.NodeOutcomes(this._directory, "Lists" + profile.Parsed.Extension, calls, true, profile.Mode, profile.Global);
+    File.WriteAllText(Path.Combine(this._directory, module.Name + profile.Parsed.Extension), text);
+    var outcomes = Toolchain.NodeOutcomes(this._directory, module.Name + profile.Parsed.Extension, calls, true, profile.Mode, profile.Global);
     Assert.That(outcomes, Is.EqualTo(calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call))), $"{profile}\n{text}");
   }
 
   /// <summary>The calls of the JavaScript fixture and what node computes of the original.</summary>
-  private (List<PrototypeCall> Calls, IReadOnlyList<string> Expected) Original() {
-    var calls = CollectionFixtures.ScriptCalls().ToList();
-    var copy = Path.Combine(this._directory, "collections.mjs");
-    File.WriteAllText(copy, CollectionFixtures.SourceOf("collections.js"));
+  private (List<PrototypeCall> Calls, IReadOnlyList<string> Expected) Original(string file) {
+    var calls = (file == "collections.js" ? CollectionFixtures.ScriptCalls() : CollectionFixtures.HistogramCalls()).ToList();
+    var copy = Path.Combine(this._directory, Path.ChangeExtension(file, ".mjs"));
+    File.WriteAllText(copy, CollectionFixtures.SourceOf(file));
     return (calls, Toolchain.NodeOutcomes(this._directory, Path.GetFileName(copy), calls, true));
   }
 
   /// <summary>Test design 1, 4, 5 and 6: the JavaScript fixture in every C# profile computes what node computes of the original.</summary>
-  [Test]
-  public void JavaScriptFixture_RunsInEveryCSharpProfileLikeNode() {
-    var (calls, expected) = this.Original();
+  [TestCase("collections.js"), TestCase("wordFrequency.js")]
+  public void JavaScriptFixture_RunsInEveryCSharpProfileLikeNode(string file) {
+    var (calls, expected) = this.Original(file);
     foreach (var profile in CSharpProfile.All) {
-      var text = this.Translate(CollectionFixtures.PathOf("collections.js"), "csharp", "collections.cs", profile.Name, "--profile", profile.Name);
+      var text = this.Translate(CollectionFixtures.PathOf(file), "csharp", Path.ChangeExtension(file, ".cs"), profile.Name, "--profile", profile.Name);
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
       Assert.That(calls.Select(GeneratedCSharp.Compile(text, false).Outcome), Is.EqualTo(expected), $"{profile.Name}\n{text}");
     }
   }
 
   /// <summary>Test design 1 and 4: the JavaScript fixture at every JavaScript level computes in node what the original computes.</summary>
-  [Test]
-  public void JavaScriptFixture_RunsInEveryJavaScriptProfileLikeNode() {
-    var (calls, expected) = this.Original();
+  [TestCase("collections.js"), TestCase("wordFrequency.js")]
+  public void JavaScriptFixture_RunsInEveryJavaScriptProfileLikeNode(string file) {
+    var (calls, expected) = this.Original(file);
+    var name = Path.GetFileNameWithoutExtension(file);
     foreach (var profile in ProfileCase.All) {
       var output = "js-" + Guid.NewGuid().ToString("N");
-      var text = this.Translate(CollectionFixtures.PathOf("collections.js"), "javascript", "collections" + profile.Parsed.Extension, output, profile.Arguments);
+      var text = this.Translate(CollectionFixtures.PathOf(file), "javascript", name + profile.Parsed.Extension, output, profile.Arguments);
       Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, text);
-      Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, output), "collections" + profile.Parsed.Extension, calls, true, profile.Mode, profile.Global),
+      Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, output), name + profile.Parsed.Extension, calls, true, profile.Mode, profile.Global),
         Is.EqualTo(expected), $"{profile}\n{text}");
     }
   }

@@ -161,7 +161,13 @@ internal enum FlowKind {
   /// write of <c>length</c> or at <c>a[a.length]</c> - which makes it a list and adds what is pushed
   /// or inserted to its elements (#1328).
   /// </summary>
-  Grow
+  Grow,
+
+  /// <summary>
+  /// The key (<see cref="Flow.Index"/> 0) or the value (1) of an entry of a <c>Map</c> that a
+  /// <c>for…of</c> destructures into a variable (#1328).
+  /// </summary>
+  Entry
 
 }
 

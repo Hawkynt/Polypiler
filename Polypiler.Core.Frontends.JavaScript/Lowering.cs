@@ -112,6 +112,9 @@ internal sealed partial class Lowering(TypeInference types) {
 
   /// <summary>The IR type of a variable; a place nothing reached is a number.</summary>
   private IrType Storable(JsType type, Node node) {
+    if (type is { Kind: JsKind.Map, Key.Kind: JsKind.Record } or { Kind: JsKind.Set, Element.Kind: JsKind.Record })
+      throw this.Unsupported(node, $"a {(type.Kind == JsKind.Map ? "Map keyed" : "Set")} by objects of an object literal");
+
     var storable = type.Ir ?? IrType.F64;
     return storable.IsStorable ? storable : throw this.Unsupported(node, $"{JsType.Spell(storable)} as the value of a variable");
   }
@@ -192,7 +195,7 @@ internal sealed partial class Lowering(TypeInference types) {
         into.Add(this.For(loop));
         break;
       case ForOfStatement loop:
-        into.Add(this.ListForOf(loop) ?? this.ForOf(loop));
+        into.Add(this.KeyedForOf(loop) ?? this.ListForOf(loop) ?? this.ForOf(loop));
         break;
       case SwitchStatement choice:
         into.Add(this.Switch(choice, into));
@@ -406,6 +409,12 @@ internal sealed partial class Lowering(TypeInference types) {
         continue;
 
       var local = new IrLocal(name, this.Storable(variable.Type, declarator.Init ?? id));
+      if (this.KeyedDeclaration(declarator.Init, local, into)) {
+        variable.Local = local;
+        this._locals.Add(local);
+        continue;
+      }
+
       var value = declarator.Init is null ? null : this.Value(declarator.Init, local.Type);
       variable.Local = local;
       this._locals.Add(local);

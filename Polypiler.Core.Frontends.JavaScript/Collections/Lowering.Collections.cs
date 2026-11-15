@@ -27,6 +27,9 @@ internal sealed partial class Lowering {
   /// <c>includes</c>, a new list - or <see langword="null"/> where the expression is about no list.
   /// </summary>
   private IrExpr? ListExpression(Node node) {
+    if (this.KeyedExpression(node) is { } keyed)
+      return keyed;
+
     switch (node) {
       case MemberExpression { Computed: true } element when this.ListOf(element.Object) is { } list:
         this.AccessesElements = true;
@@ -72,6 +75,9 @@ internal sealed partial class Lowering {
     var element = list.Element!;
     if (literal.Elements is [SpreadElement spread]) {
       var source = this.Expression(spread.Argument);
+      if (source.Type.IsList && !IrType.Array(element).IsStorable)
+        throw this.Unsupported(literal, $"a copy of {types.Of(spread.Argument).Describe()}, of which the IR has no array");
+
       if (source.Type.IsList)
         source = ListOp(IrCollectionOp.ListCopyToArray, source.Type, source);
 
@@ -93,6 +99,9 @@ internal sealed partial class Lowering {
   /// <see langword="false"/> for any other statement.
   /// </summary>
   private bool ListEffect(Expression expression, List<IrStmt> into) {
+    if (this.KeyedEffect(expression, into))
+      return true;
+
     switch (expression) {
       case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } member } call when this.ListOf(member.Object) is { } list:
         this.ListChange(call, method, member, list, into);

@@ -19,7 +19,7 @@ internal sealed partial class TypeInference {
         var iterated = this.Of(loop.Right);
         return iterated.Kind == JsKind.String ? JsType.String
           : iterated is { Kind: JsKind.Array, IsView: false, Element: { } element } ? (element.Float == 32 ? JsType.F64 : element)
-          : JsType.Unknown;
+          : this.Iterated(loop.Right) ?? JsType.Unknown;
       case MemberExpression member when this.Of(member.Object).Kind == JsKind.String:
         return member.Computed ? JsType.String : member.Property is Identifier { Name: "length" } ? JsType.I32 : JsType.Unknown;
       case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } callee }:

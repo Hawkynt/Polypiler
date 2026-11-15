@@ -42,7 +42,13 @@ internal enum JsKind {
   Null,
 
   /// <summary>Values of two kinds reach the place, which no type of the IR holds.</summary>
-  Conflict
+  Conflict,
+
+  /// <summary>A <c>Map</c>: keys of <see cref="JsType.Key"/>, values of <see cref="JsType.Element"/> (#1328).</summary>
+  Map,
+
+  /// <summary>A <c>Set</c> of elements of <see cref="JsType.Element"/> (#1328).</summary>
+  Set
 
 }
 
@@ -187,6 +193,18 @@ internal sealed record JsType {
   /// </summary>
   public bool IsGrowable { get; private init; }
 
+  /// <summary>The type of the keys of a <c>Map</c>.</summary>
+  public JsType? Key { get; private init; }
+
+  /// <summary>A <c>Map</c> type.</summary>
+  public static JsType MapOf(JsType key, JsType value) => new(JsKind.Map) { Key = key, Element = value };
+
+  /// <summary>A <c>Set</c> type.</summary>
+  public static JsType SetOf(JsType element) => new(JsKind.Set) { Element = element };
+
+  /// <summary>The IR type of a key, a value or an element of a map or a set: what the values reaching it are, a double where nothing reached it.</summary>
+  private static IrType Held(JsType type) => type.Ir is { } held && (held.IsNumeric || held == IrType.Bool || held.IsString || held.IsObject || held.IsStruct || held.IsCollection) ? held : IrType.F64;
+
   /// <summary>The type of a JavaScript <c>Array</c> that changes its length.</summary>
   public static JsType ListOf(JsType element) => new(JsKind.Array) { Element = element, IsPlain = true, IsGrowable = true };
 
@@ -197,7 +215,7 @@ internal sealed record JsType {
   public static JsType Record(RecordShape shape) => new(JsKind.Record) { Shape = shape };
 
   /// <summary>Whether the type is a record or holds one, as an element or a value: such a type has its struct only once the shapes are named.</summary>
-  public bool HasRecord => this.Kind == JsKind.Record || this.Element is { HasRecord: true };
+  public bool HasRecord => this.Kind == JsKind.Record || this.Element is { HasRecord: true } || this.Key is { HasRecord: true };
 
   /// <summary>Whether the values are proven integers. An absent value is no integer, but null is 0 to every operator that computes with it.</summary>
   public bool IsInteger => this.Kind == JsKind.Number && this.Float == 0 && !this.MayBeUndefined;
@@ -226,6 +244,8 @@ internal sealed record JsType {
     JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection) ? listed : IrType.F64),
     JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString) ? element : IrType.F64),
     JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
+    JsKind.Map => IrType.Map(Held(this.Key!), Held(this.Element!), MapOrder.Insertion),
+    JsKind.Set => IrType.Set(Held(this.Element!), MapOrder.Insertion),
     JsKind.Object => IrType.Object(this.Class!.Ir),
     _ => null
   };
@@ -240,6 +260,8 @@ internal sealed record JsType {
     JsKind.Array when this.IsGrowable => $"a list of {this.Element!.Describe()}",
     JsKind.Array => this.Element!.HasRecord ? $"{this.Element.Describe()}[]" : Spell(this.Ir!),
     JsKind.Record => this.Shape!.ToString(),
+    JsKind.Map => $"a Map of {this.Key!.Describe()} to {this.Element!.Describe()}",
+    JsKind.Set => $"a Set of {this.Element!.Describe()}",
     JsKind.Object => this.Class!.Name,
     JsKind.Null => Absence(this),
     _ => "nothing"
@@ -265,6 +287,10 @@ internal sealed record JsType {
     IrTypeKind.Struct => type.Declaration!.Name,
     IrTypeKind.Span or IrTypeKind.ReadOnlySpan => Spell(type.Element!) + " view",
     IrTypeKind.String => "string",
+    IrTypeKind.List => Spell(type.Element!) + " list",
+    IrTypeKind.Map => $"Map<{Spell(type.Key!)}, {Spell(type.Element!)}>",
+    IrTypeKind.Set => $"Set<{Spell(type.Element!)}>",
+    IrTypeKind.Object => type.Declaration!.Name,
     _ => Spell(type.Element!) + "[]"
   };
 
@@ -314,6 +340,10 @@ internal sealed record JsType {
 
         var joined = a.Types.Zip(b.Types, Join).ToList();
         return joined.Exists(type => type.Kind == JsKind.Conflict) ? Conflict(first, second) : Record(new RecordShape(a.Registry, a.Keys, joined));
+      case JsKind.Map:
+        return MapOf(Join(first.Key!, second.Key!), Join(first.Element!, second.Element!));
+      case JsKind.Set:
+        return SetOf(Join(first.Element!, second.Element!));
       case JsKind.Object:
         // Objects of several classes are objects of the nearest class of the file they all derive from.
         return first.Class!.Lineage.FirstOrDefault(second.Class!.Lineage.Contains) is { } common ? Object(common) : Conflict(first, second);
