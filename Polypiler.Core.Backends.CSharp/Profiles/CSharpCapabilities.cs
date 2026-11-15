@@ -456,7 +456,10 @@ public sealed class CSharpCapabilities {
     .. CSharpViewRows.Helpers,
 
     // The string operations of #1314.
-    .. CSharpStringRows.All
+    .. CSharpStringRows.All,
+
+    // The collections of #1328.
+    .. CSharpCollectionRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>

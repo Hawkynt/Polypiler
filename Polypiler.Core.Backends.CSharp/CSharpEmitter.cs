@@ -381,7 +381,7 @@ public static partial class CSharpEmitter {
     IrSwitch choice => ([choice.Value], choice.Sections.Select(section => section.Body).ToList()),
     IrBreak or IrContinue => ([], []),
     IrReturn result => (result.Value is null ? [] : [result.Value], []),
-    IrThrow or IrRethrow or IrTry => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
+    IrThrow or IrRethrow or IrTry or IrForEachCollection => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
     _ => null
   };
 
@@ -404,7 +404,7 @@ public static partial class CSharpEmitter {
     IrStructEquals equality => [equality.Left, equality.Right],
     IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast => IrTree.Operands(expression),
     IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrThrowExpression => IrTree.Operands(expression),
-    IrGenericEquals or IrGenericCompare => IrTree.Operands(expression),
+    IrGenericEquals or IrGenericCompare or IrCollection => IrTree.Operands(expression),
     _ => null
   };
 
@@ -751,6 +751,7 @@ public static partial class CSharpEmitter {
       => type.Underlying is { } underlying ? this.TypeName(underlying) + "?"
         : type.ClassType is { IsLibrary: true } library ? this.ClassTypeName(library)
         : type.Declaration is { } declared ? this._generics.Parameters.ContainsKey(declared) ? declared.Name : this._typeNames[declared.Name] : type.IsView ? this.ViewTypeName(type)
+        : type.IsCollection ? this.CollectionTypeName(type)
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
@@ -834,6 +835,9 @@ public static partial class CSharpEmitter {
           break;
         case IrSwitch choice:
           statements.Add(this.Switch(choice));
+          break;
+        case IrForEachCollection loop:
+          this.ForEachCollection(loop, statements);
           break;
         case IrBreak:
           statements.Add(new CsBreak());
@@ -1104,6 +1108,8 @@ public static partial class CSharpEmitter {
           return this.Object(expression);
         case IrTypeTest or IrCast or IrAsCast:
           return this.Conversion(expression);
+        case IrCollection operation:
+          return this.Collection(operation);
         case IrUnary unary:
           var operand = Promoted(unary.Operand);
           return (new CsPrefixUnary(_unary[unary.Op], unary.Op == IrUnaryOp.NegateChecked ? this.AtRunTime(operand, false, Cast) : this.Operand(operand, Cast)), Unary);

@@ -289,6 +289,13 @@ public sealed record CsDo(CsStatement Body, CsExpression Condition) : CsStatemen
 /// <param name="Body">The body.</param>
 public sealed record CsFor(CsLocalDeclaration? Declaration, CsExpression? Condition, IReadOnlyList<CsExpression> Incrementors, CsStatement Body) : CsStatement;
 
+/// <summary><c>foreach (type name in collection) body</c>.</summary>
+/// <param name="LocalType">The type of the iteration variable, or <c>var</c>.</param>
+/// <param name="Name">The name of the iteration variable.</param>
+/// <param name="Collection">What the loop enumerates.</param>
+/// <param name="Body">The body.</param>
+public sealed record CsForEach(CsType LocalType, string Name, CsExpression Collection, CsStatement Body) : CsStatement;
+
 /// <summary><c>switch (value) { sections }</c>.</summary>
 /// <param name="Value">The value.</param>
 /// <param name="Sections">The sections.</param>

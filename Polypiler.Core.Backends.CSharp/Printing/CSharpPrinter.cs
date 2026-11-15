@@ -381,6 +381,12 @@ public static class CSharpPrinter {
         case CsIf conditional:
           this.If(conditional, depth);
           break;
+        case CsForEach loop:
+          this._text.Append("foreach (").Append(loop.LocalType.Name).Append(' ').Append(loop.Name).Append(" in ");
+          this.Expression(loop.Collection, depth);
+          this._text.Append(") ");
+          this.Embedded(loop.Body, depth);
+          break;
         case CsWhile loop:
           this._text.Append("while (");
           this.Expression(loop.Condition, depth);

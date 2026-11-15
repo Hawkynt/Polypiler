@@ -142,6 +142,7 @@ public static class CSharpSyntaxReader {
       ExpressionStatementSyntax expression => new CsExpressionStatement(Read(expression.Expression)),
       IfStatementSyntax conditional => new CsIf(Read(conditional.Condition), Read(conditional.Statement), conditional.Else is null ? null : Read(conditional.Else.Statement)),
       WhileStatementSyntax loop => new CsWhile(Read(loop.Condition), Read(loop.Statement)),
+      ForEachStatementSyntax loop => new CsForEach(new CsType(loop.Type.ToString()), loop.Identifier.Text, Read(loop.Expression), Read(loop.Statement)),
       DoStatementSyntax loop => new CsDo(Read(loop.Statement), Read(loop.Condition)),
       ForStatementSyntax { Initializers.Count: 0 } loop => new CsFor(
         loop.Declaration is null ? null : Declaration(loop.Declaration), loop.Condition is null ? null : Read(loop.Condition),
