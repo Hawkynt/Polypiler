@@ -81,11 +81,18 @@ Rows: `iterator (yield)` (C# 2), `IEnumerable<T>` (net2.0), the helper of single
 | exported function returning a sequence | the cursor, or the object of `$iterator()` | the generator object or the iterable |
 
 In the state machine a statement that suspends is cut into resume points: a yield sets the next one
-and returns its value, a loop, a switch and a conditional become jumps between them, and a try's
+and returns its value, a loop, a switch and a conditional become jumps between them - a loop over a
+list walks it by an index the machine keeps, one over a map or a set the slots of its `$Keyed`,
+comparing the count of changes before every step where it is checked - and a try's
 finally block becomes a function the cursor keeps (`enter`) while the body is inside the try, which
 leaving it (`leave`), closing the cursor and an exception run. Every other statement is written as
 it is; a `break`, `continue` or `return` that leaves it becomes a jump of the machine
 (`$s = n; continue $machine;`), through a resume point that leaves the finally blocks it crosses.
+A closure made in a pass of a loop that suspends keeps the variables of that pass - a variable the
+body declares, the element of a loop over a sequence or a collection, a variable of every pass of a
+`for (let …)` - in the environment object the pass makes anew, as everywhere else at ES5. A checked
+loop over a list, a map or a set whose body suspends counts the changes of the collection, since the
+consumer may change it while the iterator waits.
 
 Rows: `function*` (2015, "state machine"), `for-of` (2015, "next loop"), `Symbol` and
 `Symbol.iterator` (2015, `$iterator`), `yield*` (2015, "nested resume point"); the helpers
@@ -93,8 +100,6 @@ Rows: `function*` (2015, "state machine"), `for-of` (2015, "next loop"), `Symbol
 
 ## Known differences
 
-- A yield inside a loop over a list, a map or a set is not cut into resume points yet: at ES5 it is
-  `PLY1152` ("a yield inside a loop over a collection").
 - An exception a `finally` block of the iterator throws while the cursor is closed by an exception of
   the consumer replaces that exception, as `Dispose` does in .NET; JavaScript's `for…of` keeps the
   consumer's exception.

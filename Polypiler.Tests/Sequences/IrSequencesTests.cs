@@ -89,6 +89,14 @@ public sealed class IrSequencesTests {
   [TestCase("Closure", 30)]
   [TestCase("Repeated", 18289)]
   [TestCase("Picked", 70800)]
+  [TestCase("Listed", 2461312)]
+  [TestCase("ListedBreak", 2)]
+  [TestCase("Modified", 102)]
+  [TestCase("Mapped", 1256)]
+  [TestCase("PassWhile", 30)]
+  [TestCase("PassSequence", 60)]
+  [TestCase("PassFor", 30)]
+  [TestCase("PassList", 150)]
   public void Interpreter_RunsTheModule(string function, int expected)
     => Assert.That(IrInterpreter.Call(SequenceModules.Module(), function, []), Is.EqualTo(expected));
 

@@ -74,7 +74,7 @@ public static partial class CSharpEmitter {
       var nodes = this._module.Functions.SelectMany(function => IrTree.Nodes(function.Body)).OfType<IrCollection>().ToList();
       var framework = !this.HasApi("Dictionary<TKey,TValue> enumeration of .NET Core 3.0");
       // A live loop that may change what it walks, which .NET's enumerator refuses, and a checked one on .NET Framework, which also refuses a removal.
-      bool Changing(MapOrder order) => loops.Any(loop => loop.Collection.Type.Order == order && (loop.Mode == EnumerationMode.Live || framework) && MayChangeKeyed(loop.Body));
+      bool Changing(MapOrder order) => loops.Any(loop => loop.Collection.Type.Order == order && (loop.Mode == EnumerationMode.Live || framework) && (MayChangeKeyed(loop.Body) || IrSequences.Suspends(loop.Body)));
       var removes = nodes.Any(node => node.Op is IrCollectionOp.MapRemove or IrCollectionOp.SetRemove && node.Arguments[0].Type.Order == MapOrder.Insertion);
       return new() { [MapOrder.SlotReuse] = Changing(MapOrder.SlotReuse), [MapOrder.Insertion] = removes || Changing(MapOrder.Insertion) };
     }

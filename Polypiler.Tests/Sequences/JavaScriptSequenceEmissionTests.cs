@@ -40,16 +40,15 @@ public sealed class JavaScriptSequenceEmissionTests {
     Assert.That(text, Does.Contain("for (const v of s) {"));
   }
 
-  /// <summary>A yield inside a loop over a list is not cut into resume points: refused at ECMAScript 5, written from ECMAScript 2015.</summary>
+  /// <summary>A yield inside a loop over a list is cut into resume points at ECMAScript 5: no profile refuses it.</summary>
   [Test]
-  public void YieldInsideACollectionLoop_IsRefusedAtEs5Only() {
+  public void YieldInsideACollectionLoop_IsWrittenAtEveryLevel() {
     var list = IrType.List(IrType.I32);
     var l = new IrLocal("l", list);
     var x = new IrLocal("x", IrType.I32);
     var body = new IrBlock([new IrForEachCollection(new IrLocalRef(l), EnumerationMode.Checked, x, null, new IrBlock([new IrYield(new IrLocalRef(x))]))]);
     var module = new IrModule("M", [new IrFunction("G", true, IrType.Sequence(IrType.I32, true), [l], [x], body)]);
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es5", "cjs")).Select(diagnostic => diagnostic.Message),
-      Is.EqualTo(new[] { "'a yield inside a loop over a collection' cannot be expressed in JavaScript profile 'es5'" }));
+    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es5", "cjs")), Is.Empty);
     Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es2015", "esm")), Is.Empty);
   }
 

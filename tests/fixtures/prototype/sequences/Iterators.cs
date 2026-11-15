@@ -144,6 +144,23 @@ public static class Iterators {
     }
   }
 
+  private static IEnumerable<int> Listed(List<int> list) {
+    foreach (var x in list)
+      yield return x * 2;
+  }
+
+  private static IEnumerable<int> Entries(Dictionary<int, int> map) {
+    foreach (var entry in map)
+      yield return entry.Key * 10 + entry.Value;
+  }
+
+  private static IEnumerable<Func<int>> Makers(int n) {
+    for (var i = 0; i < n; ++i) {
+      var k = i;
+      yield return () => k * 10;
+    }
+  }
+
   private static int Sum(IEnumerable<int> values) {
     var sum = 0;
     foreach (var v in values)
@@ -315,6 +332,27 @@ public static class Iterators {
     var sum = 0;
     foreach (var v in counter.Upwards(3))
       sum = sum * 10 + v;
+
+    return sum;
+  }
+
+  public static int FromList() {
+    var list = new List<int> { 1, 2, 3 };
+    var map = new Dictionary<int, int> { { 1, 2 }, { 3, 4 } };
+    return Sum(Listed(list)) * 1000 + Sum(Entries(map));
+  }
+
+  public static int Captured() {
+    var all = new Func<int>[3];
+    var at = 0;
+    foreach (var f in Makers(3)) {
+      all[at] = f;
+      ++at;
+    }
+
+    var sum = 0;
+    foreach (var g in all)
+      sum += g();
 
     return sum;
   }

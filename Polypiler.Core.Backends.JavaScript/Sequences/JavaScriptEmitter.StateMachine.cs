@@ -195,9 +195,9 @@ public static partial class JavaScriptEmitter {
       if (!IrSequences.Suspends(statement)) {
         switch (statement) {
           case IrDeclare declare:
-            var kept = this.Keep(declare.Local);
+            var kept = this.Assigned(declare.Local);
             if (declare.Initializer is not null)
-              machine.Current.Add(new JsExpressionStatement(new JsAssignment(Id(kept), "=", this.Value(declare.Initializer))));
+              machine.Current.Add(new JsExpressionStatement(new JsAssignment(kept, "=", this.Value(declare.Initializer))));
 
             return;
           case IrBreak or IrContinue or IrReturn or IrYieldBreak:
@@ -237,7 +237,7 @@ public static partial class JavaScriptEmitter {
           if (loop.Condition is not IrConst { Value: not 0 })
             machine.Current.Add(this.Unless(loop.Condition, end));
 
-          this.Loop(loop.Body, end, head);
+          this.Loop(loop.Body, end, head, loop);
           Begin(machine, head);
           machine.Current = machine.Cases[end];
           break;
@@ -246,7 +246,7 @@ public static partial class JavaScriptEmitter {
           var test = Point(machine);
           var after = Point(machine);
           Begin(machine, pass);
-          this.Loop(loop.Body, after, test);
+          this.Loop(loop.Body, after, test, loop);
           Begin(machine, test);
           machine.Current.Add(new JsIf(this.Text(loop.Condition), new JsBlock(Goto(machine, pass, machine.Depth)), null));
           Begin(machine, after);
@@ -259,8 +259,13 @@ public static partial class JavaScriptEmitter {
           if (loop.Condition is not IrConst { Value: not 0 })
             machine.Current.Add(this.Unless(loop.Condition, done));
 
-          this.Loop(loop.Body, done, step);
+          this.Loop(loop.Body, done, step, loop);
           Begin(machine, step);
+          // A variable of every pass the body wrote goes back to the loop's own before the step.
+          if (this._environments.TryGetValue(loop, out var environment))
+            foreach (var (local, key, _) in environment.Variables.Where(variable => variable.PerIteration && CSharpLikeWrites(loop.Body, variable.Local)))
+              machine.Current.Add(new JsExpressionStatement(new JsAssignment(this.Variable(local), "=", new JsMember(Id(environment.Name), key))));
+
           this.Flatten(loop.Step);
           Begin(machine, top);
           machine.Current = machine.Cases[done];
@@ -285,18 +290,13 @@ public static partial class JavaScriptEmitter {
           this.Flatten(scope.Lowered());
           break;
         case IrForEachSequence loop:
-          this.FlattenSequence(loop.Sequence, loop.Element, loop.Body);
+          this.FlattenSequence(loop.Sequence, loop, loop.Body);
           break;
         case IrYieldFrom delegated:
           this.FlattenSequence(delegated.Sequence, null, null);
           break;
         default:
-          // A loop over a collection that suspends: its enumeration is not cut into resume points yet.
-          const string collection = "a yield inside a loop over a collection";
-          if (this._refused.Add(collection))
-            this._problems.Add(InexpressibleDescriptor.At($"'{collection}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
-
-          this.Statement(statement, machine.Current);
+          this.FlattenCollection((IrForEachCollection)statement);
           break;
       }
     }
@@ -308,12 +308,97 @@ public static partial class JavaScriptEmitter {
     private JsIf Unless(IrExpr condition, int target)
       => new(new JsUnary("!", this.Operand(condition)), new JsBlock(Goto(this._machine!, target, this._machine!.Depth)), null);
 
-    /// <summary>The body of a loop, whose break goes to one resume point and whose continue to another.</summary>
-    private void Loop(IrBlock body, int breaks, int? continues) {
+    /// <summary>
+    /// The body of a loop, whose break goes to one resume point and whose continue to another. Every
+    /// pass of a loop whose variables of a pass a closure captures makes their environment anew, and
+    /// the values a pass starts with - the element of a loop over a sequence or a collection - go there.
+    /// </summary>
+    private void Loop(IrBlock body, int breaks, int? continues, IrStmt? owner = null, params (IrLocal Local, JsExpression Value)[] starts) {
       var machine = this._machine!;
+      var made = this.Pass(owner, machine.Current);
+      foreach (var (local, value) in starts)
+        machine.Current.Add(new JsExpressionStatement(new JsAssignment(this.Assigned(local), "=", value)));
+
       machine.Frames.Add((breaks, continues, machine.Depth));
       this.Flatten(body);
       machine.Frames.RemoveAt(machine.Frames.Count - 1);
+      this.Passed(made);
+    }
+
+    /// <summary>
+    /// Starts a pass of a loop that has an environment: the object of the pass, with the variables of
+    /// every pass copied in from the loop's own, made in front of the pass; from here on its variables
+    /// live there. Returns the environment, or <see langword="null"/> for a loop without one.
+    /// </summary>
+    private Environment? Pass(IrStmt? owner, List<JsStatement> statements) {
+      if (owner is null || !this._environments.TryGetValue(owner, out var environment))
+        return null;
+
+      var properties = environment.Variables.Where(variable => variable.PerIteration).Select(variable => new JsProperty(variable.Key, this.Variable(variable.Local))).ToList();
+      statements.Add(new JsExpressionStatement(new JsAssignment(Id(environment.Name), "=", new JsObject(properties))));
+      foreach (var (local, key, _) in environment.Variables)
+        this._inEnvironment[local] = (environment.Name, key);
+
+      return environment;
+    }
+
+    /// <summary>Ends the body of a pass: the variables of its environment are the loop's own again.</summary>
+    private void Passed(Environment? environment) {
+      foreach (var (local, _, _) in environment?.Variables ?? [])
+        this._inEnvironment.Remove(local);
+    }
+
+    /// <summary>Where a variable of the body is assigned: in the environment of its pass, or a variable the machine keeps.</summary>
+    private JsExpression Assigned(IrLocal local) => this.InEnvironment(local) is { } place ? Dotted(place) : Id(this.Keep(local));
+
+    /// <summary>
+    /// A loop over a list, a map or a set that suspends: the collection, the position and the count of
+    /// changes it started with are kept by the machine. A list is walked by index up to its length at
+    /// every step, a map or a set by the slots of its <c>$Keyed</c>, skipping the empty ones; a checked
+    /// loop compares the count of changes before every step, also the last, as it does elsewhere.
+    /// </summary>
+    private void FlattenCollection(IrForEachCollection loop) {
+      var machine = this._machine!;
+      var type = loop.Collection.Type;
+      var list = type.IsList;
+      var collection = this.Keep(new IrLocal("$c", type));
+      var position = this.Keep(new IrLocal("$i", IrType.I32));
+      machine.Current.Add(new JsExpressionStatement(new JsAssignment(Id(collection), "=", this.Text(loop.Collection))));
+      machine.Current.Add(new JsExpressionStatement(new JsAssignment(Id(position), "=", Number("0"))));
+      var checks = loop.Mode == EnumerationMode.Checked && (!list || this.Versioned);
+      string? version = null;
+      if (checks) {
+        version = this.Keep(new IrLocal("$version", IrType.I32));
+        JsExpression count = list ? Infix(new JsMember(Id(collection), "$v"), "|", Number("0")) : new JsMember(Id(collection), "$v");
+        machine.Current.Add(new JsExpressionStatement(new JsAssignment(Id(version), "=", count)));
+      }
+
+      var head = Point(machine);
+      var step = Point(machine);
+      var end = Point(machine);
+      Begin(machine, head);
+      if (version is not null)
+        machine.Current.Add(new JsExpressionStatement(this.Helper(list ? "$lvcheck" : "$mvcheck", [Id(collection), Id(version)])));
+
+      var length = list ? new JsMember(Id(collection), "length") : new JsMember(new JsMember(Id(collection), "$u"), "length");
+      machine.Current.Add(new JsIf(new JsUnary("!", Parenthesized(Infix(Id(position), "<", length))), new JsBlock(Goto(machine, end, machine.Depth)), null));
+      var starts = new List<(IrLocal, JsExpression)>();
+      if (list) {
+        starts.Add((loop.Element!, this.Copied(loop.Element!.Type, new JsIndex(Id(collection), Id(position)))));
+      } else {
+        machine.Current.Add(new JsIf(new JsUnary("!", new JsIndex(new JsMember(Id(collection), "$u"), Id(position))), new JsBlock(Goto(machine, step, machine.Depth)), null));
+        if (loop.Element is { } key)
+          starts.Add((key, new JsIndex(new JsMember(Id(collection), "$k"), Id(position))));
+
+        if (loop.Value is { } value)
+          starts.Add((value, this.Copied(value.Type, new JsIndex(new JsMember(Id(collection), "$w"), Id(position)))));
+      }
+
+      this.Loop(loop.Body, end, step, loop, [.. starts]);
+      Begin(machine, step);
+      machine.Current.Add(new JsExpressionStatement(new JsUpdate("++", false, Id(position))));
+      Begin(machine, head);
+      machine.Current = machine.Cases[end];
     }
 
     private void FlattenIf(IrIf conditional) {
@@ -372,7 +457,7 @@ public static partial class JavaScriptEmitter {
     /// cursor the machine keeps, which a pending finally block closes unless it has reached its end.
     /// The end of the loop leaves that block, so a break and the end close the cursor alike.
     /// </summary>
-    private void FlattenSequence(IrExpr sequence, IrLocal? element, IrBlock? body) {
+    private void FlattenSequence(IrExpr sequence, IrForEachSequence? loop, IrBlock? body) {
       var machine = this._machine!;
       var cursor = this.Keep(new IrLocal("$it", sequence.Type));
       var result = this.Keep(new IrLocal("$r", sequence.Type));
@@ -387,11 +472,10 @@ public static partial class JavaScriptEmitter {
       var next = Parenthesized(new JsAssignment(Id(result), "=", new JsCall(new JsMember(Id(cursor), "next"), [])));
       machine.Current.Add(new JsIf(new JsMember(next, "done"), new JsBlock(Goto(machine, exit, machine.Depth)), null));
       var current = new JsMember(Id(result), "value");
-      if (element is null) {
+      if (loop is null) {
         machine.Current.AddRange([new JsExpressionStatement(new JsAssignment(Id(State), "=", Number(head.ToString(CultureInfo.InvariantCulture)))), Produced(current)]);
       } else {
-        machine.Current.Add(new JsExpressionStatement(new JsAssignment(Id(this.Keep(element)), "=", current)));
-        this.Loop(body!, exit, head);
+        this.Loop(body!, exit, head, loop, (loop.Element, current));
         Begin(machine, head);
       }
 

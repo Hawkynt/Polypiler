@@ -96,9 +96,15 @@ public static partial class JavaScriptEmitter {
         var cursor = this.Declare(new IrLocal("$it", loop.Sequence.Type));
         var result = this.Declare(new IrLocal("$r", loop.Sequence.Type));
         statements.Add(new JsVariableDeclaration("var", [new JsDeclarator(cursor, this.Helper("$iterate", [this.Text(loop.Sequence)])), new JsDeclarator(result, new JsNull())]));
-        var name = this.Declare(loop.Element);
-        var body = new List<JsStatement> { new JsVariableDeclaration("var", [new JsDeclarator(name, new JsMember(Id(result), "value"))]) };
+        var body = new List<JsStatement>();
+        var made = this.Pass(loop, body);
+        if (this.InEnvironment(loop.Element) is { } place)
+          body.Add(new JsExpressionStatement(new JsAssignment(Dotted(place), "=", new JsMember(Id(result), "value"))));
+        else
+          body.Add(new JsVariableDeclaration("var", [new JsDeclarator(this.Declare(loop.Element), new JsMember(Id(result), "value"))]));
+
         body.AddRange(this.Statements(loop.Body));
+        this.Passed(made);
         var next = Parenthesized(new JsAssignment(Id(result), "=", new JsCall(new JsMember(Id(cursor), "next"), [])));
         var walk = new JsWhile(new JsUnary("!", new JsMember(next, "done")), new JsBlock(body));
         statements.Add(new JsTry(new JsBlock([walk]), null, null, new JsBlock([Closing(cursor, result)])));

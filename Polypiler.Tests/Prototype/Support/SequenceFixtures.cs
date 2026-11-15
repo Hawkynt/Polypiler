@@ -46,7 +46,7 @@ internal static class SequenceFixtures {
   /// <summary>The calls of the C# fixture every implementation is compared on, each with the type it returns.</summary>
   public static IEnumerable<PrototypeCall> Calls() {
     PrototypeCall Call(string method, params object[] arguments) => new(method, arguments) { Returns = Compiled(method).ReturnType };
-    foreach (var method in new[] { "EarlyBreak", "Full", "Twice", "Throws", "Returned", "ThrowInside", "NestedClose", "NestedFull", "Restarted", "FromArray", "Longs", "Floats", "Truths", "Objects", "Widened" })
+    foreach (var method in new[] { "EarlyBreak", "Full", "Twice", "Throws", "Returned", "ThrowInside", "NestedClose", "NestedFull", "Restarted", "FromArray", "Longs", "Floats", "Truths", "Objects", "Widened", "FromList", "Captured" })
       yield return Call(method);
 
     foreach (var n in new[] { 0, 1, 10, 47 })

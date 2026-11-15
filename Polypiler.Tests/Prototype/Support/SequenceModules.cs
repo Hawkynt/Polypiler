@@ -45,7 +45,8 @@ internal static class SequenceModules {
   public static readonly string[] Functions = [
     "Lazy", "EarlyBreak", "Full", "ReturnInside", "ThrowInside", "ThrowInBody", "Twice", "TwiceOnce", "ResumeOnce", "NestedClose",
     "NestedFull", "Loops", "Switched", "Empty", "Delegated", "FromArray", "ArrayLoop", "Floats", "Truths", "Objects", "Doubled",
-    "DoubledClose", "Counted", "FibSum", "Closure", "Repeated", "Picked"
+    "DoubledClose", "Counted", "FibSum", "Closure", "Repeated", "Picked", "Listed", "ListedBreak", "Mapped", "Modified",
+    "PassWhile", "PassSequence", "PassFor", "PassList"
   ];
 
   /// <summary>The calls every implementation is compared on.</summary>
@@ -246,6 +247,117 @@ internal static class SequenceModules {
         new IrForEachSequence(b, Call("Pick", Ints, new IrConst(IrType.I64, 1L << 40)), B(StepBy(t, R(b)))),
         new IrForEachSequence(c, Call("Pick", Ints, new IrConst(IrType.I64, 3)), B(StepBy(t, R(c)))),
         TraceValue(t)));
+    }
+
+    // Listed, ListedBreak, Mapped, Modified: a yield inside a loop over a list and over a map.
+    {
+      var ints = IrType.List(IrType.I32);
+      var l = new IrLocal("l", ints);
+      var x = new IrLocal("x", IrType.I32);
+      IrCollection Op(IrCollectionOp op, IrType type, params IrExpr[] arguments) => new(op, type, arguments);
+      functions.Add(Iterator("FromList", Ints, [l], [x],
+        new IrForEachCollection(R(l), EnumerationMode.Checked, x, null, B(new IrYield(Times(R(x), I(2)))))));
+      functions.Add(Iterator("FromListLive", Ints, [l], [x],
+        new IrForEachCollection(R(l), EnumerationMode.Live, x, null, B(
+          new IrIf(new IrBinary(IrBinaryOp.Less, R(x), I(3)), B(new IrExprStmt(Op(IrCollectionOp.ListAdd, IrType.Void, R(l), Plus(R(x), I(10))))), null),
+          new IrIf(new IrBinary(IrBinaryOp.Equal, R(x), I(2)), B(new IrContinue()), null),
+          new IrYield(R(x))))));
+      IrStmt[] Filled(IrLocal list) => [
+        new IrDeclare(list, Op(IrCollectionOp.ListNew, ints)),
+        new IrExprStmt(Op(IrCollectionOp.ListAdd, IrType.Void, R(list), I(1))),
+        new IrExprStmt(Op(IrCollectionOp.ListAdd, IrType.Void, R(list), I(2))),
+        new IrExprStmt(Op(IrCollectionOp.ListAdd, IrType.Void, R(list), I(3)))
+      ];
+      var a = new IrLocal("a", ints);
+      var t = new IrLocal("t", Trace);
+      var v = new IrLocal("v", IrType.I32);
+      functions.Add(Public("Listed", [a, t, v], [.. Filled(a), NewTrace(t),
+        new IrForEachSequence(v, Call("FromList", Ints, R(a)), B(StepBy(t, R(v)))),
+        new IrForEachSequence(v, Call("FromListLive", Ints, R(a)), B(StepBy(t, new IrBinary(IrBinaryOp.Remainder, R(v), I(10))))),
+        TraceValue(t)]));
+      var b = new IrLocal("b", ints);
+      var u = new IrLocal("t", Trace);
+      var w = new IrLocal("w", IrType.I32);
+      functions.Add(Public("ListedBreak", [b, u, w], [.. Filled(b), NewTrace(u),
+        new IrForEachSequence(w, Call("FromList", Ints, R(b)), B(StepBy(u, R(w)), new IrBreak())),
+        TraceValue(u)]));
+      // A change of the list while the iterator is suspended inside its checked loop traps at its next step.
+      var c = new IrLocal("c", ints);
+      var y = new IrLocal("y", IrType.I32);
+      var s = new IrLocal("s", IrType.I32);
+      functions.Add(Public("Modified", [c, y, s], [.. Filled(c), new IrDeclare(s, I(0)),
+        new IrTry(B(new IrForEachSequence(y, Call("FromList", Ints, R(c)), B(new IrAssign(s, Plus(R(s), R(y))), new IrExprStmt(Op(IrCollectionOp.ListAdd, IrType.Void, R(c), I(9)))))),
+          [new IrCatch(IrExceptionClass.InvalidOperationException, null, null, B(new IrAssign(s, Plus(R(s), I(100)))))], null),
+        new IrReturn(R(s))]));
+
+      var map = IrType.Map(IrType.I32, IrType.I32, MapOrder.SlotReuse);
+      var m = new IrLocal("m", map);
+      var k = new IrLocal("k", IrType.I32);
+      var entry = new IrLocal("value", IrType.I32);
+      functions.Add(Iterator("FromMap", Ints, [m], [k, entry],
+        new IrForEachCollection(R(m), EnumerationMode.Checked, k, entry, B(new IrYield(Plus(Times(R(k), I(10)), R(entry)))))));
+      var n = new IrLocal("n", map);
+      var z = new IrLocal("z", IrType.I32);
+      var r = new IrLocal("t", Trace);
+      IrStmt Put(long key, long put) => new IrExprStmt(Op(IrCollectionOp.MapPut, IrType.Void, R(n), I(key), I(put)));
+      functions.Add(Public("Mapped", [n, z, r], new IrDeclare(n, Op(IrCollectionOp.MapNew, map)), Put(1, 2), Put(3, 4), Put(5, 6),
+        new IrExprStmt(Op(IrCollectionOp.MapRemove, IrType.Bool, R(n), I(3))), NewTrace(r),
+        new IrForEachSequence(z, Call("FromMap", Ints, R(n)), B(new IrStore(R(r), I(0), Plus(Times(new IrArrayLoad(R(r), I(0)), I(100)), R(z))))),
+        TraceValue(r)));
+    }
+
+    // PassWhile, PassSequence, PassFor, PassList: a closure made in a pass of a loop that suspends keeps the variables of that pass.
+    {
+      var function = IrType.Function(IrType.I32);
+      var functionsOf = IrType.Sequence(function, true);
+      IrLambda Reads(IrLocal local) => IrLambda.Of([], IrType.I32, [], B(new IrReturn(Times(R(local), I(10)))));
+      IrFunction Summed(string name, string iterator) {
+        var f = new IrLocal("f", function);
+        var sum = new IrLocal("sum", IrType.I32);
+        return Public(name, [f, sum], new IrDeclare(sum, I(0)),
+          new IrForEachSequence(f, Call(iterator, functionsOf), B(new IrAssign(sum, Plus(R(sum), new IrInvoke(IrType.I32, R(f), []))))), new IrReturn(R(sum)));
+      }
+
+      // Every closure is called after the iterator ended: a shared variable would give the last value three times.
+      IrFunction Deferred(string name, string iterator) {
+        var f = new IrLocal("f", function);
+        var all = new IrLocal("all", IrType.Array(function));
+        var at = new IrLocal("at", IrType.I32);
+        var sum = new IrLocal("sum", IrType.I32);
+        var g = new IrLocal("g", function);
+        return Public(name, [f, all, at, sum, g],
+          new IrDeclare(all, new IrNewArray(IrType.Array(function), I(3))),
+          new IrDeclare(at, I(0)),
+          new IrForEachSequence(f, Call(iterator, functionsOf), B(new IrStore(R(all), R(at), R(f)), new IrAssign(at, Plus(R(at), I(1))))),
+          new IrDeclare(sum, I(0)),
+          new IrForEachSequence(g, new IrArraySequence(R(all)), B(new IrAssign(sum, Plus(R(sum), new IrInvoke(IrType.I32, R(g), []))))),
+          new IrReturn(R(sum)));
+      }
+
+      var i = new IrLocal("i", IrType.I32);
+      var k = new IrLocal("k", IrType.I32);
+      functions.Add(Iterator("MadeInWhile", functionsOf, [], [i, k],
+        new IrDeclare(i, I(0)),
+        new IrWhile(new IrBinary(IrBinaryOp.Less, R(i), I(3)), B(new IrDeclare(k, R(i)), new IrYield(Reads(k)), new IrAssign(i, Plus(R(i), I(1)))))));
+      functions.Add(Deferred("PassWhile", "MadeInWhile"));
+      var v = new IrLocal("v", IrType.I32);
+      functions.Add(Iterator("MadeInSequence", functionsOf, [], [v], new IrForEachSequence(v, Call("Up", Ints, I(3)), B(new IrYield(Reads(v))))));
+      functions.Add(Deferred("PassSequence", "MadeInSequence"));
+      var j = new IrLocal("j", IrType.I32);
+      functions.Add(Iterator("MadeInFor", functionsOf, [], [j],
+        new IrDeclare(j, I(0)),
+        new IrFor(new IrBinary(IrBinaryOp.Less, R(j), I(3)), B(new IrYield(Reads(j))), B(new IrAssign(j, Plus(R(j), I(1))))) { PerIteration = [j] }));
+      functions.Add(Deferred("PassFor", "MadeInFor"));
+      var e = new IrLocal("e", IrType.I32);
+      var list = new IrLocal("list", IrType.List(IrType.I32));
+      functions.Add(Iterator("MadeInList", functionsOf, [], [list, e],
+        new IrDeclare(list, new IrCollection(IrCollectionOp.ListNew, IrType.List(IrType.I32), [])),
+        new IrExprStmt(new IrCollection(IrCollectionOp.ListAdd, IrType.Void, [R(list), I(4)])),
+        new IrExprStmt(new IrCollection(IrCollectionOp.ListAdd, IrType.Void, [R(list), I(5)])),
+        new IrExprStmt(new IrCollection(IrCollectionOp.ListAdd, IrType.Void, [R(list), I(6)])),
+        new IrForEachCollection(R(list), EnumerationMode.Live, e, null, B(new IrYield(Reads(e))))));
+      functions.Add(Deferred("PassList", "MadeInList"));
+      functions.Add(Summed("PassSummed", "MadeInWhile"));
     }
 
     // Empty: a yield break first - the loop's body never runs.
