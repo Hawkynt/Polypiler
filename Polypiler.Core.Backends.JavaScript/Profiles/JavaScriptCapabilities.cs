@@ -106,7 +106,7 @@ public sealed class JavaScriptCapabilities {
     new("Math.clz32", 2015, "$clz32"),
     new("Math.fround", 2015, "$fround"),
     new("Math.trunc", 2015, "$trunc"),
-    new("Math.sign", 2015, "$sign"),
+    new("Math.sign", 2015, "Sign32"),
     // The functions of Math that compute a floating-point operation with an ulp(n) contract. Below the
     // level that has one, or where its error is not admitted, the operation is its portable
     // implementation, which legalization puts in before the module is written.

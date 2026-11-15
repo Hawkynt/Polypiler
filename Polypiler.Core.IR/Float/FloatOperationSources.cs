@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace Polypiler.Core.IR;
 
@@ -19,20 +16,13 @@ public static class FloatOperationSources {
   /// <summary>The folder of the repository the files lie in.</summary>
   public const string Folder = "Polypiler.Core.IR/Float/Operations";
 
-  private const string Prefix = "Polypiler.Core.IR.Float.Operations.";
-
-  private static readonly Regex _header = new(@"^// SPDX-License-Identifier: (\S.*)$", RegexOptions.CultureInvariant);
-  private static readonly Regex _method = new(@"^\s*(?:public|private|internal)\s+static\s+(?!readonly\b)[^=;({\n]*?\b(\w+)[ \t]*\(", RegexOptions.CultureInvariant | RegexOptions.Multiline);
-
   /// <summary>Every file as its name and its text, in the order of the names.</summary>
-  public static IReadOnlyList<(string Name, string Text)> All { get; } = [.. Read()];
-
-  private static readonly Lazy<IReadOnlyDictionary<string, (string Path, string Licence)>> _origins = new(() => Origins(All));
+  public static IReadOnlyList<(string Name, string Text)> All => _sources.All;
 
   /// <summary>The file that declares a function of the portable implementations, with the licence its header states.</summary>
   /// <param name="function">The name of the function in <see cref="FloatOperations"/>.</param>
   /// <returns>The path of the file in the repository and its licence; <see langword="null"/> for a name no file declares.</returns>
-  public static (string Path, string Licence)? Origin(string function) => _origins.Value.TryGetValue(function, out var origin) ? origin : null;
+  public static (string Path, string Licence)? Origin(string function) => _sources.Origin(function);
 
   /// <summary>A portable implementation as a backend wrote it into a file, as a helper of the file.</summary>
   /// <param name="name">The name the function has in the file, which is also its symbol.</param>
@@ -48,20 +38,8 @@ public static class FloatOperationSources {
   /// <param name="sources">The files, as their names and their texts.</param>
   /// <returns>Each method name with the path of its file in the repository and its licence; the first file that declares a name wins.</returns>
   /// <exception cref="InvalidDataException">A file has no <c>SPDX-License-Identifier</c> header on its first line.</exception>
-  public static IReadOnlyDictionary<string, (string Path, string Licence)> Origins(IEnumerable<(string Name, string Text)> sources) {
-    ArgumentNullException.ThrowIfNull(sources);
-    var origins = new Dictionary<string, (string Path, string Licence)>(StringComparer.Ordinal);
-    foreach (var (name, text) in sources) {
-      var match = _header.Match(text.Split('\n')[0].TrimEnd('\r'));
-      if (!match.Success)
-        throw new InvalidDataException($"'{Folder}/{name}' has no SPDX-License-Identifier header on its first line.");
-
-      foreach (Match method in _method.Matches(text))
-        origins.TryAdd(method.Groups[1].Value, ($"{Folder}/{name}", match.Groups[1].Value.Trim()));
-    }
-
-    return origins;
-  }
+  public static IReadOnlyDictionary<string, (string Path, string Licence)> Origins(IEnumerable<(string Name, string Text)> sources)
+    => LibrarySources.Origins(Folder, sources);
 
   /// <summary>
   /// The notices a file of the portable implementations obliges an output to keep, by the file's name:
@@ -69,7 +47,7 @@ public static class FloatOperationSources {
   /// BSD-2-Clause asks every redistribution of its source to retain the copyright notice, the
   /// conditions and the disclaimer (<c>THIRD-PARTY-NOTICE.musl.txt</c> beside the folder).
   /// </summary>
-  private static readonly Dictionary<string, string[]> _notices = new(StringComparer.Ordinal) {
+  private static readonly LibrarySources _sources = new(Folder, "Polypiler.Core.IR.Float.Operations.", new Dictionary<string, string[]>(StringComparer.Ordinal) {
     ["Arithmetic.Single.cs"] = [
       "FusedMultiplyAddF is converted from FreeBSD's lib/msun/src/s_fmaf.c, which carries this notice:",
       "Copyright (c) 2005-2011 David Schultz <das@FreeBSD.ORG>",
@@ -94,7 +72,7 @@ public static class FloatOperationSources {
       "OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF",
       "SUCH DAMAGE."
     ]
-  };
+  });
 
   /// <summary>
   /// The lines of the notices an output keeps for the portable implementations it carries: each
@@ -104,20 +82,7 @@ public static class FloatOperationSources {
   /// <param name="implementations">The names of the functions in <see cref="FloatOperations"/> the output carries.</param>
   public static IReadOnlyList<string> Notices(IEnumerable<string> implementations) {
     ArgumentNullException.ThrowIfNull(implementations);
-    return [.. implementations
-      .Select(Origin).OfType<(string Path, string Licence)>()
-      .Select(origin => Path.GetFileName(origin.Path))
-      .Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
-      .SelectMany(file => _notices.GetValueOrDefault(file, []))];
-  }
-
-  private static IEnumerable<(string Name, string Text)> Read() {
-    var assembly = typeof(FloatOperationSources).Assembly;
-    var names = assembly.GetManifestResourceNames().Where(name => name.StartsWith(Prefix, StringComparison.Ordinal)).Order(StringComparer.Ordinal);
-    foreach (var resource in names) {
-      using var reader = new StreamReader(assembly.GetManifestResourceStream(resource)!);
-      yield return (resource[Prefix.Length..], reader.ReadToEnd());
-    }
+    return _sources.Notices(implementations);
   }
 
 }

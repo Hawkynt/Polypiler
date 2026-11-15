@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -39,8 +40,8 @@ public sealed class CSharpProfileDifferentialTests {
   /// in its place, or <see langword="null"/> when the case of the profile runs its code.
   /// </summary>
   private static CSharpProfile? RunBy(IrModule module, CSharpProfile profile) {
-    var code = Code(CSharpEmitter.Emit(module, profile).Single().Content);
-    return CSharpProfile.All.TakeWhile(candidate => candidate != profile).FirstOrDefault(candidate => Code(CSharpEmitter.Emit(module, candidate).Single().Content) == code);
+    var code = Code(LegalizedCSharp.Emit(module, profile).Single().Content);
+    return CSharpProfile.All.TakeWhile(candidate => candidate != profile).FirstOrDefault(candidate => Code(LegalizedCSharp.Emit(module, candidate).Single().Content) == code);
   }
 
   /// <summary>The generated file without the header that names the profile: two profiles with the same code need one run.</summary>
@@ -64,7 +65,7 @@ public sealed class CSharpProfileDifferentialTests {
 
     var profile = CSharpProfile.All.Single(candidate => candidate.Name == name);
     var mismatches = new List<string>();
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(text, Does.Contain($"\n// Profile: {profile.Name}, C# {profile.LanguageVersionName}.\n"));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
     if (RunBy(module, profile) is { } earlier) {
@@ -100,7 +101,7 @@ public sealed class CSharpProfileDifferentialTests {
 
     var profile = CSharpProfile.All.Single(candidate => candidate.Name == name);
     var mismatches = new List<string>();
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
     if (RunBy(module, profile) is { } earlier) {
       TestContext.Out.WriteLine($"{fixture}: {profile.Name} has the code of {earlier.Name}, which runs it");

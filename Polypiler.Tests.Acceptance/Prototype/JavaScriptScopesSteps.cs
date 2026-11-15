@@ -40,7 +40,7 @@ public sealed class JavaScriptScopesSteps(PrototypeScenario scenario) {
     Assert.That(IrVerifier.Verify(this._case!.Module), Is.Empty);
     var index = 0;
     foreach (var profile in ProfileCase.All) {
-      var file = JavaScriptEmitter.Emit(this._case.Module, profile.Parsed).Single();
+      var file = LegalizedJavaScript.Emit(this._case.Module, profile.Parsed).Single();
       var path = Path.Combine("p" + index++, file.Path);
       scenario.Workspace.Write(path, file.Content);
       this._files.Add((profile, path, file.Content));
@@ -63,7 +63,7 @@ public sealed class JavaScriptScopesSteps(PrototypeScenario scenario) {
   /// <summary>Every call of the case returns the same in node for every profile, the interpreter and the C# build.</summary>
   [Then("^every call returns in node for every profile what the interpreter and the C# compiler's build return$")]
   public void EveryCallAgrees() {
-    var csharp = CSharpEmitter.Emit(this._case!.Module, CSharpProfile.Parse("net10.0")).Single().Content;
+    var csharp = LegalizedCSharp.Emit(this._case!.Module, CSharpProfile.Parse("net10.0")).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(csharp, "net10.0", "14"), Is.Empty, csharp);
     foreach (var (argument, result) in this._case.Calls) {
       var call = new PrototypeCall("F", [argument]);

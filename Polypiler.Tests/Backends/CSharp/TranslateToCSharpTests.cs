@@ -10,6 +10,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Core.Optimize.Target;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -234,7 +235,7 @@ public sealed class TranslateToCSharpTests {
     var parsed = CSharpProfile.Parse(profile ?? "net10.0", languageVersion);
     Assert.That(text, Does.Contain($"\n// Profile: {header}.\n"));
     // translate runs the target passes, which the emitter runs when it is told to.
-    Assert.That(text, Is.EqualTo(CSharpEmitter.Emit(PrototypeFixture.Imported("wide/Library"), parsed, FloatMode.Accurate, "Demo", null, TargetPassOptions.Default).Files.Single().Content));
+    Assert.That(text, Is.EqualTo(LegalizedCSharp.Emit(PrototypeFixture.Imported("wide/Library"), parsed, FloatMode.Accurate, "Demo", null, TargetPassOptions.Default).Files.Single().Content));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, parsed.Name, parsed.LanguageVersionName), Is.Empty);
   }
 

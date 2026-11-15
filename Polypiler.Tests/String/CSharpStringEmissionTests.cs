@@ -6,6 +6,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.String;
 
@@ -17,12 +18,12 @@ namespace Polypiler.Tests.String;
 [TestFixture]
 internal sealed class CSharpStringEmissionTests {
 
-  private static string Emitted(CSharpProfile profile) => CSharpEmitter.Emit(StringModules.Operations, profile)[0].Content;
+  private static string Emitted(CSharpProfile profile) => LegalizedCSharp.Emit(StringModules.Operations, profile)[0].Content;
 
   /// <summary>Test design 3 and 14: every operation in every profile is written, compiles, and computes what the interpreter computes.</summary>
   [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
   public void EveryOperation_IsWrittenInEveryProfile_AndRunsLikeTheInterpreter(CSharpProfile profile) {
-    Assert.That(CSharpEmitter.Check(StringModules.Operations, profile), Is.Empty);
+    Assert.That(LegalizedCSharp.Check(StringModules.Operations, profile), Is.Empty);
     var text = Emitted(profile);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);
@@ -111,7 +112,7 @@ internal sealed class CSharpStringEmissionTests {
   [Test]
   public void Module_WithoutAStringRow_IsUnsupported() {
     var table = new CSharpCapabilities(CSharpCapabilities.Default.Rows.Where(row => row.Operation != IrIntrinsicOp.StrNextCodePoint));
-    Assert.That(CSharpEmitter.Check(StringModules.Operations, CSharpProfile.Default, table).Select(diagnostic => diagnostic.Code), Is.EqualTo(new[] { CSharpEmitter.Unsupported }));
+    Assert.That(LegalizedCSharp.Check(StringModules.Operations, CSharpProfile.Default, table).Select(diagnostic => diagnostic.Code), Is.EqualTo(new[] { CSharpEmitter.Unsupported }));
   }
 
 }

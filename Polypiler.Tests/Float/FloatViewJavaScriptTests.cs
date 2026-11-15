@@ -4,6 +4,7 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Float;
 
@@ -28,7 +29,7 @@ public sealed class FloatViewJavaScriptTests {
   private static IEnumerable<TestCaseData> Profiles() => _profiles.Select(profile => new TestCaseData(profile).SetArgDisplayNames(profile.ToString()));
 
   private static string Emit(string function, JavaScriptProfile profile)
-    => JavaScriptEmitter.Emit(IntegerCases.Module([FloatViewCases.Of(function)], "Snippet"), profile).Single().Content;
+    => LegalizedJavaScript.Emit(IntegerCases.Module([FloatViewCases.Of(function)], "Snippet"), profile).Single().Content;
 
   private static JavaScriptProfile Profile(string level, bool typed = false) => JavaScriptProfile.Parse(level, level == "es5" ? "cjs" : "esm", null, typed);
 
@@ -43,8 +44,8 @@ public sealed class FloatViewJavaScriptTests {
   [TestCaseSource(nameof(Profiles))]
   public void EveryOperation_HasAFormInEveryProfile(JavaScriptProfile profile) {
     var module = FloatViewCases.Module();
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty);
     Assert.That(text, Does.Not.Contain("@"));
     if (!profile.TypedArrays)
@@ -54,7 +55,7 @@ public sealed class FloatViewJavaScriptTests {
   /// <summary>Every helper the module needs is declared once, and every declared helper is called.</summary>
   [TestCaseSource(nameof(Profiles))]
   public void Helpers_AreDeclaredOnceAndCalled(JavaScriptProfile profile) {
-    var text = JavaScriptEmitter.Emit(FloatViewCases.Module(), profile).Single().Content;
+    var text = LegalizedJavaScript.Emit(FloatViewCases.Module(), profile).Single().Content;
     var helpers = Helpers(text);
     Assert.That(helpers, Is.Unique);
     foreach (var helper in helpers)

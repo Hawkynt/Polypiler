@@ -45,15 +45,38 @@ public static partial class JavaScriptEmitter {
       && (capabilities ?? JavaScriptCapabilities.Standard).Has(name, profile);
   }
 
-  /// <summary>The module with every floating-point operation the module does not write itself replaced by its portable implementation.</summary>
+  /// <summary>
+  /// The module with every floating-point operation the module does not write itself replaced by its
+  /// portable implementation, and every operation the profile has only as a helper of the library
+  /// (<see cref="JavaScriptLibrary"/>) replaced by the call of that helper, each copied into the module.
+  /// </summary>
   /// <param name="module">The module.</param>
   /// <param name="implementations">Gives the portable implementations, as the C# frontend imports <see cref="FloatOperationSources"/>; asked only when needed.</param>
   /// <param name="profile">The profile.</param>
   /// <param name="mode">The floating-point mode.</param>
   /// <param name="capabilities">The capability table; the standard one when <see langword="null"/>.</param>
   /// <returns>The module to emit.</returns>
-  public static IrModule Legalize(IrModule module, System.Func<IrModule> implementations, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities = null)
-    => FloatLegalization.Lower(module, implementations, intrinsic => Writes(intrinsic, profile, mode, capabilities));
+  public static IrModule Legalize(IrModule module, System.Func<IrModule> implementations, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities = null) {
+    var table = capabilities ?? JavaScriptCapabilities.Standard;
+    var floats = FloatLegalization.Rewrite(intrinsic => Writes(intrinsic, profile, mode, table));
+    var helpers = JavaScriptLibrary.Rewrite(name => table.Has(name, profile));
+    return LibraryLegalization.Lower(module, implementations, (expression, calls) => floats(expression, calls) ?? helpers(expression, calls));
+  }
+
+  /// <summary>
+  /// The module with every operation the profile has only as a helper of the library replaced by the
+  /// call of that helper, copied into the module; the floating-point operations stay as they are, for
+  /// <see cref="Legalize"/> to replace.
+  /// </summary>
+  /// <param name="module">The module.</param>
+  /// <param name="implementations">Gives the libraries as one module; asked only when needed.</param>
+  /// <param name="profile">The profile.</param>
+  /// <param name="capabilities">The capability table; the standard one when <see langword="null"/>.</param>
+  /// <returns>The module to emit.</returns>
+  public static IrModule LegalizeHelpers(IrModule module, System.Func<IrModule> implementations, JavaScriptProfile profile, JavaScriptCapabilities? capabilities = null) {
+    var table = capabilities ?? JavaScriptCapabilities.Standard;
+    return LibraryLegalization.Lower(module, implementations, JavaScriptLibrary.Rewrite(name => table.Has(name, profile)));
+  }
 
   private sealed partial class Writer {
 

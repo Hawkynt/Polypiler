@@ -34,18 +34,17 @@ internal static partial class JavaScriptHelpers {
   /// <summary>The names of all helpers, in the order a module lists the ones it uses.</summary>
   public static readonly IReadOnlyList<string> Order = [
     .. ErrorOrder,
-    "$imul", "$clz32", "$f32a", "$fround", "$trunc", "$sign",
+    "$imul", "$clz32", "$f32a", "$fround", "$trunc",
     "$add64", "$sub64", "$neg64", "$not64", "$and64", "$or64", "$xor64", "$shl64", "$shr64", "$sar64",
     "$eq64", "$ucmp64", "$scmp64", "$mulw", "$mul64", "$mag64", "$udm64",
     "$div", "$rem", "$udiv", "$urem", "$div64", "$rem64", "$udiv64", "$urem64", "$ck",
     "$addck64s", "$addck64u", "$subck64s", "$subck64u", "$mulck64s", "$mulck64u", "$ck64s", "$ck64u",
     "$sx64", "$ul2d", "$l2d", "$d2l",
     "$f2i", "$f2l", "$f2ic", "$f2lc", "$f32", "$ul2f", "$l2f",
-    "$get", "$set", "$new", "$fill", "$abs", "$abs64", "$min64", "$max64", "$smin64", "$umin64", "$smax64", "$umax64",
-    "$sign64", "$fsign", "$round", "$rounda", "$roundd", "$roundd32", "$rotl", "$rotr", "$rotl64", "$rotr64",
-    "$pop", "$pop64", "$clz64", "$ctz", "$ctz64", "$view", "$bits64", "$bits32", "$float64", "$float32", "$key64",
+    "$get", "$set", "$new", "$fill",
+    "$fsign", "$round", "$rounda", "$roundd", "$roundd32",
+    "$view", "$bits64", "$bits32", "$float64", "$float32", "$key64",
     "$copy", "$copya", "$step", "$stepi", "$stepf", "$step64", "$stepck", "$stepck64s", "$stepck64u", "$len",
-    .. IntegerOrder,
     .. ViewOrder,
     .. StringOrder,
     .. OptionalOrder,
@@ -162,11 +161,6 @@ internal static partial class JavaScriptHelpers {
     "$trunc" => """
       function $trunc(value) {
         return value < 0 ? Math.ceil(value) : Math.floor(value);
-      }
-      """,
-    "$sign" => """
-      function $sign(value) {
-        return value < 0 ? -1 : value > 0 ? 1 : 0;
       }
       """,
 
@@ -510,21 +504,6 @@ internal static partial class JavaScriptHelpers {
       """,
 
     // The base library.
-    "$abs" => Lines("function $abs(value, low) {", "  if (value === low) " + Overflow, "  return value < 0 ? -value : value;", "}"),
-    "$abs64" => Lines(
-      "function $abs64(value) {",
-      "  if (value.hi === 2147483648 && value.lo === 0) " + Overflow,
-      "  return $mag64(value);",
-      "}"),
-    "$min64" => Lines("function $min64(a, b) {", "  return a < b ? a : b;", "}"),
-    "$max64" => Lines("function $max64(a, b) {", "  return a > b ? a : b;", "}"),
-    "$smin64" => Lines("function $smin64(a, b) {", "  return $scmp64(a, b) < 0 ? a : b;", "}"),
-    "$umin64" => Lines("function $umin64(a, b) {", "  return $ucmp64(a, b) < 0 ? a : b;", "}"),
-    "$smax64" => Lines("function $smax64(a, b) {", "  return $scmp64(a, b) > 0 ? a : b;", "}"),
-    "$umax64" => Lines("function $umax64(a, b) {", "  return $ucmp64(a, b) > 0 ? a : b;", "}"),
-    "$sign64" => native("BigInt")
-      ? Lines("function $sign64(value) {", "  return value < 0n ? -1 : value > 0n ? 1 : 0;", "}")
-      : Lines("function $sign64(value) {", "  return value.hi >= 2147483648 ? -1 : (value.hi | value.lo) !== 0 ? 1 : 0;", "}"),
     "$roundd" => """
       function $roundd(value, digits, mode) {
         if (digits < 0 || digits > 15) throw new ArgumentOutOfRangeError("argument out of range");
@@ -562,69 +541,6 @@ internal static partial class JavaScriptHelpers {
       }
       """,
     "$rounda" => Lines("function $rounda(value) {", "  return value < 0 ? -Math.round(-value) : Math.round(value);", "}"),
-    "$rotl" => Lines("function $rotl(value, count) {", "  return ((value << count) | (value >>> (-count & 31))) >>> 0;", "}"),
-    "$rotr" => Lines("function $rotr(value, count) {", "  return ((value >>> count) | (value << (-count & 31))) >>> 0;", "}"),
-    "$rotl64" => native("BigInt")
-      ? """
-        function $rotl64(value, count) {
-          @const by = BigInt(count & 63);
-          return BigInt.asUintN(64, (value << by) | (value >> (64n - by)));
-        }
-        """
-      : """
-        function $rotl64(value, count) {
-          count &= 63;
-          return count === 0 ? value : $or64($shl64(value, count), $shr64(value, 64 - count));
-        }
-        """,
-    "$rotr64" => native("BigInt")
-      ? """
-        function $rotr64(value, count) {
-          @const by = BigInt(count & 63);
-          return BigInt.asUintN(64, (value >> by) | (value << (64n - by)));
-        }
-        """
-      : """
-        function $rotr64(value, count) {
-          count &= 63;
-          return count === 0 ? value : $or64($shr64(value, count), $shl64(value, 64 - count));
-        }
-        """,
-    "$pop" => """
-      function $pop(value) {
-        value -= (value >>> 1) & 0x55555555;
-        value = (value & 0x33333333) + ((value >>> 2) & 0x33333333);
-        return @imul((value + (value >>> 4)) & 0x0F0F0F0F, 0x01010101) >>> 24;
-      }
-      """,
-    "$pop64" => native("BigInt")
-      ? Lines("function $pop64(value) {", "  return $pop(Number(value >> 32n)) + $pop(Number(value & 0xFFFFFFFFn));", "}")
-      : Lines("function $pop64(value) {", "  return $pop(value.hi) + $pop(value.lo);", "}"),
-    "$clz64" => native("BigInt")
-      ? """
-        function $clz64(value) {
-          @const high = Number(value >> 32n);
-          return high !== 0 ? @clz32(high) : 32 + @clz32(Number(value & 0xFFFFFFFFn));
-        }
-        """
-      : """
-        function $clz64(value) {
-          return value.hi !== 0 ? @clz32(value.hi) : 32 + @clz32(value.lo);
-        }
-        """,
-    "$ctz" => Lines("function $ctz(value) {", "  return value === 0 ? 32 : 31 - @clz32(value & -value);", "}"),
-    "$ctz64" => native("BigInt")
-      ? """
-        function $ctz64(value) {
-          @const low = Number(value & 0xFFFFFFFFn);
-          return low !== 0 ? $ctz(low) : 32 + $ctz(Number(value >> 32n));
-        }
-        """
-      : """
-        function $ctz64(value) {
-          return value.lo !== 0 ? $ctz(value.lo) : 32 + $ctz(value.hi);
-        }
-        """,
 
     // The bits of a floating-point number: through a DataView, or taken apart by arithmetic that is
     // exact because it only multiplies and divides by two.
@@ -750,7 +666,6 @@ internal static partial class JavaScriptHelpers {
       "}"),
     "$stepck64s" => CheckedStep("s"),
     "$stepck64u" => CheckedStep("u"),
-    _ when IntegerSource(name, native) is { } integer => integer,
     _ when ViewSource(name, native) is { } view => view,
     _ when StringSource(name, native) is { } text => text,
     _ when OptionalSource(name) is { } optional => optional,

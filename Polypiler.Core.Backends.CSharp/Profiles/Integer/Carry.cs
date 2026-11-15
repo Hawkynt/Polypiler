@@ -16,9 +16,9 @@ internal static partial class CSharpIntegerRows {
     .. _unsigned.SelectMany(kind => Width(kind) == 64
       ? (IEnumerable<CSharpCapability>)[
         Written(IrIntrinsicOp.AddCarry, kind, "({0} + {1} + ({2} ? 1UL : 0UL))"),
-        Helped(IrIntrinsicOp.CarryOut, kind, "{h}({0}, {1}, {2})", CSharpIntegerHelpers.CarryOut64),
+        Helped(IrIntrinsicOp.CarryOut, kind),
         Written(IrIntrinsicOp.SubBorrow, kind, "({0} - {1} - ({2} ? 1UL : 0UL))"),
-        Helped(IrIntrinsicOp.BorrowOut, kind, "{h}({0}, {1}, {2})", CSharpIntegerHelpers.BorrowOut64)
+        Helped(IrIntrinsicOp.BorrowOut, kind)
       ]
       : [
         Written(IrIntrinsicOp.AddCarry, kind, $"({Type(kind)})((ulong){{0}} + {{1}} + ({{2}} ? 1UL : 0UL))"),

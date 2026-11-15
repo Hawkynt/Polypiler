@@ -6,6 +6,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -24,7 +25,7 @@ public sealed class CSharpEmitterProfileTests {
   private static IrModule Import(string methods) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
 
   private static string Emit(IrModule module, string profile, string? languageVersion = null, string? @namespace = null)
-    => CSharpEmitter.Emit(module, CSharpProfile.Parse(profile, languageVersion), @namespace).Single().Content;
+    => LegalizedCSharp.Emit(module, CSharpProfile.Parse(profile, languageVersion), @namespace).Single().Content;
 
   /// <summary>The file as its profile's compiler accepts it, or the test fails with what it reports.</summary>
   private static string Accepted(string text, string profile, string? languageVersion = null) {
@@ -56,9 +57,9 @@ public sealed class CSharpEmitterProfileTests {
   [Test]
   public void WithoutAProfile_TheFileIsWrittenForTheDefault() {
     var module = PrototypeFixture.Imported("wide/Library");
-    Assert.That(CSharpEmitter.Emit(module, "Demo").Single(), Is.EqualTo(CSharpEmitter.Emit(module, CSharpProfile.Default, "Demo").Single()));
-    Assert.That(CSharpEmitter.Check(module), Is.Empty);
-    Assert.That(CSharpProfile.All.Select(profile => CSharpEmitter.Check(module, profile)), Has.All.Empty);
+    Assert.That(LegalizedCSharp.Emit(module, "Demo").Single(), Is.EqualTo(LegalizedCSharp.Emit(module, CSharpProfile.Default, "Demo").Single()));
+    Assert.That(LegalizedCSharp.Check(module), Is.Empty);
+    Assert.That(CSharpProfile.All.Select(profile => LegalizedCSharp.Check(module, profile)), Has.All.Empty);
   }
 
   /// <summary>
@@ -123,7 +124,7 @@ public sealed class CSharpEmitterProfileTests {
     Assert.That(Accepted(Emit(module, "net4.6", null, "Demo.event"), "net4.6"), Does.Contain("\nnamespace Demo.@event {\n\n  public static class Snippet {\n"));
     Assert.That(Accepted(Emit(module, "net10.0", null, "Demo.event"), "net10.0"), Does.Contain("\nnamespace Demo.@event;\n\npublic static class Snippet {\n"));
     Assert.That(CSharpProfile.All.Select(profile => Emit(module, profile.Name)), Has.All.Not.Contain("namespace"));
-    Assert.That(() => CSharpEmitter.Emit(module, CSharpProfile.Net20, "2fast"), Throws.ArgumentException.With.Message.Contains("'2fast' is not a namespace name"));
+    Assert.That(() => LegalizedCSharp.Emit(module, CSharpProfile.Net20, "2fast"), Throws.ArgumentException.With.Message.Contains("'2fast' is not a namespace name"));
   }
 
   // ---------------------------------------------------------------- the body of a function
@@ -207,10 +208,10 @@ public sealed class CSharpEmitterProfileTests {
         new IrDeclare(named, new IrBinary(IrBinaryOp.Add, new IrLocalRef(x), new IrLocalRef(x))),
         new IrReturn(new IrLocalRef(named)))
     ];
-    var inside = Accepted(CSharpEmitter.Emit(new IrModule("var", functions), CSharpProfile.Net100).Single().Content, "net10.0");
+    var inside = Accepted(LegalizedCSharp.Emit(new IrModule("var", functions), CSharpProfile.Net100).Single().Content, "net10.0");
     Assert.That(inside, Does.Contain("public static class @var {").And.Contain("      int x = a + 1;\n      int var_ = x + x;\n"));
 
-    var outside = Accepted(CSharpEmitter.Emit(new IrModule("Var", functions), CSharpProfile.Net100).Single().Content, "net10.0");
+    var outside = Accepted(LegalizedCSharp.Emit(new IrModule("Var", functions), CSharpProfile.Net100).Single().Content, "net10.0");
     Assert.That(outside, Does.Contain("      var x = a + 1;\n      var var = x + x;\n"));
     foreach (var text in new[] { inside, outside })
       Assert.That(_overflowChecking.Select(checking => Run(text, checking, 20)), Has.All.EqualTo(42));
@@ -378,17 +379,17 @@ public sealed class CSharpEmitterProfileTests {
       "public static uint F(uint a, int n) => System.Numerics.BitOperations.RotateLeft(a, n) ^ System.Numerics.BitOperations.RotateLeft(a, 1); "
       + "public static ulong G(ulong a, int n) => System.Numerics.BitOperations.RotateLeft(a, n);");
 
-    var problems = CSharpEmitter.Check(module, CSharpProfile.Net48, table);
+    var problems = LegalizedCSharp.Check(module, CSharpProfile.Net48, table);
     Assert.That(problems.Select(problem => problem.ToString()), Is.EqualTo(new[] { "error PLY1053: 'BitOperations.RotateLeft(uint, int)' cannot be expressed in C# profile 'net4.8'" }));
     Assert.That(CSharpEmitter.Inexpressible, Is.EqualTo("PLY1053"));
-    Assert.That(() => CSharpEmitter.Emit(module, CSharpProfile.Net48, null, table),
+    Assert.That(() => LegalizedCSharp.Emit(module, CSharpProfile.Net48, null, table),
       Throws.ArgumentException.With.Message.Contains("'BitOperations.RotateLeft(uint, int)' cannot be expressed in C# profile 'net4.8'"));
 
     // On the row's first profile (the boundary) the same table writes the module, and the real table writes it everywhere.
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.NetStandard21, table), Has.Count.EqualTo(1));
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.NetCoreApp31, table), Is.Empty);
-    Assert.That(Accepted(CSharpEmitter.Emit(module, CSharpProfile.NetCoreApp31, null, table).Single().Content, "netcoreapp3.1"), Does.Not.Contain("private"));
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.Net48), Is.Empty);
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.NetStandard21, table), Has.Count.EqualTo(1));
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.NetCoreApp31, table), Is.Empty);
+    Assert.That(Accepted(LegalizedCSharp.Emit(module, CSharpProfile.NetCoreApp31, null, table).Single().Content, "netcoreapp3.1"), Does.Not.Contain("private"));
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.Net48), Is.Empty);
   }
 
   /// <summary>
@@ -411,15 +412,15 @@ public sealed class CSharpEmitterProfileTests {
     var withoutOperation = new CSharpCapabilities(rows.Where(row => row.Operation != IrIntrinsicOp.PopCount));
     var withoutOperand = new CSharpCapabilities(rows.Where(row => row.Name != "BitOperations.Log2(ulong)" && row.Saturates != IrTypeKind.I16));
     foreach (var profile in new[] { CSharpProfile.Net20, CSharpProfile.Net100 }) {
-      Assert.That(CSharpEmitter.Check(module, profile, withoutOperation).Select(problem => problem.ToString()),
+      Assert.That(LegalizedCSharp.Check(module, profile, withoutOperation).Select(problem => problem.ToString()),
         Is.EqualTo(new[] { "error PLY1052: 'PopCount' is not supported by the C# backend yet" }));
-      Assert.That(CSharpEmitter.Check(module, profile, withoutOperand).Select(problem => problem.ToString()), Is.EqualTo(new[] {
+      Assert.That(LegalizedCSharp.Check(module, profile, withoutOperand).Select(problem => problem.ToString()), Is.EqualTo(new[] {
         "error PLY1052: 'Log2 of u64' is not supported by the C# backend yet",
         "error PLY1052: 'i16 with saturation' is not supported by the C# backend yet"
       }));
-      Assert.That(() => CSharpEmitter.Emit(module, profile, null, withoutOperation), Throws.ArgumentException);
-      Assert.That(() => CSharpEmitter.Emit(module, profile, null, withoutOperand), Throws.ArgumentException);
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty);
+      Assert.That(() => LegalizedCSharp.Emit(module, profile, null, withoutOperation), Throws.ArgumentException);
+      Assert.That(() => LegalizedCSharp.Emit(module, profile, null, withoutOperand), Throws.ArgumentException);
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty);
     }
   }
 
@@ -435,7 +436,7 @@ public sealed class CSharpEmitterProfileTests {
       Function("G", IrType.I32, [a], new IrReturn(new IrIntrinsic(IrIntrinsicOp.Sqrt, IrType.I32, [new IrLocalRef(a)])))
     ]);
     foreach (var profile in CSharpProfile.All) {
-      var problems = CSharpEmitter.Check(module, profile);
+      var problems = LegalizedCSharp.Check(module, profile);
       Assert.That(problems, Is.Not.Empty);
       Assert.That(problems.Select(problem => problem.Code), Has.All.EqualTo(IrVerifier.Code));
     }
@@ -445,7 +446,7 @@ public sealed class CSharpEmitterProfileTests {
   [Test]
   public void IllTypedIr_IsRefusedInEveryProfile() {
     var module = new IrModule("M", [Function("F", IrType.I32, [], new IrReturn(new IrBinary(IrBinaryOp.Add, new IrConst(IrType.I32, 1), new IrConst(IrType.Bool, 1))))]);
-    Assert.That(CSharpProfile.All.Select(profile => CSharpEmitter.Check(module, profile).Single().Code), Has.All.EqualTo(IrVerifier.Code));
+    Assert.That(CSharpProfile.All.Select(profile => LegalizedCSharp.Check(module, profile).Single().Code), Has.All.EqualTo(IrVerifier.Code));
   }
 
   // ---------------------------------------------------------------- saturation

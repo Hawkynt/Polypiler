@@ -7,6 +7,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.String;
 
@@ -50,7 +51,7 @@ public sealed class NumberTextFixtureTests {
   [TestCaseSource(nameof(FixturesAndProfiles))]
   public void CSharpFixture_CompilesForTheProfile_AndRunsLikeDotNet(string className, string file, string profileName) {
     var profile = CSharpProfile.Parse(profileName);
-    var text = CSharpEmitter.Emit(CSharpModule(file), profile)[0].Content;
+    var text = LegalizedCSharp.Emit(CSharpModule(file), profile)[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);
     foreach (var call in Calls(className))
@@ -64,7 +65,7 @@ public sealed class NumberTextFixtureTests {
     foreach (var level in JavaScriptProfile.LevelNames)
       foreach (var module in modules) {
         var profile = JavaScriptProfile.Parse(level, "cjs");
-        var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+        var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
         Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{module.Name} at {level}\n{text}");
       }
   }
@@ -75,7 +76,7 @@ public sealed class NumberTextFixtureTests {
     var module = JavaScriptModule(file);
     Assert.That(IrVerifier.Verify(module), Is.Empty);
     foreach (var profile in CSharpProfile.All) {
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile.Name}\n{text}");
     }
   }

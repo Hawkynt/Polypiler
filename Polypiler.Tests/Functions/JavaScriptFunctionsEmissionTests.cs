@@ -5,6 +5,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Functions;
 
@@ -30,8 +31,8 @@ internal sealed class JavaScriptFunctionsEmissionTests {
     => FunctionsFixtures.CSharp.Select(fixture => FunctionsFixtures.Imported(fixture.File)).Concat(FunctionsFixtures.JavaScript.Select(FunctionsFixtures.ImportedScript));
 
   private static string Emit(IrModule module, JavaScriptProfile profile) {
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -91,7 +92,7 @@ internal sealed class JavaScriptFunctionsEmissionTests {
   /// <summary>Scenario "A JavaScript let makes one variable per pass": the C# translation of the JavaScript fixture, for every profile, computes what node does.</summary>
   [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
   public void JavaScriptFixture_AsCSharp_ComputesWhatNodeComputes(CSharpProfile profile) {
-    var text = CSharpEmitter.Emit(FunctionsFixtures.ImportedScript("closures.js"), profile)[0].Content;
+    var text = LegalizedCSharp.Emit(FunctionsFixtures.ImportedScript("closures.js"), profile)[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, false);
     string Run(string method, params object[] arguments) => build.Outcome(new PrototypeCall(method, arguments));
@@ -105,7 +106,7 @@ internal sealed class JavaScriptFunctionsEmissionTests {
   [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
   public void SortAndFold_AsCSharp_ComputeWhatDotNetComputes(CSharpProfile profile) {
     foreach (var (script, file) in new[] { ("sort.js", "Sort"), ("accumulate.js", "Accumulate") }) {
-      var text = CSharpEmitter.Emit(FunctionsFixtures.ImportedScript(script), profile)[0].Content;
+      var text = LegalizedCSharp.Emit(FunctionsFixtures.ImportedScript(script), profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
       var build = GeneratedCSharp.Compile(text, false);
       foreach (var (_, className, call) in FunctionsFixtures.Calls().Where(call => call.File == file && call.Call.Method != "Calls")) {

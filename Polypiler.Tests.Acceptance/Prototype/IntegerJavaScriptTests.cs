@@ -5,6 +5,7 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -54,7 +55,7 @@ public sealed class IntegerJavaScriptTests {
   public void EveryOperation_ComputesTheReference(ProfileCase profile) {
     var (calls, expected) = _expected.Value;
     var module = IntegerCases.Module(IntegerCases.All);
-    var file = JavaScriptEmitter.Emit(module, profile.Parsed).Single();
+    var file = LegalizedJavaScript.Emit(module, profile.Parsed).Single();
     Assert.That(GeneratedJavaScript.Problems(file.Content, profile.Parsed), Is.Empty);
     File.WriteAllText(Path.Combine(this._directory, file.Path), file.Content);
 

@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Legalize;
@@ -41,19 +39,19 @@ public static class FloatLegalization {
   /// The legalized module, which records every implementation it copied in under
   /// <see cref="IrModule.Implementations"/>; the module itself when nothing had to be replaced.
   /// </returns>
-  public static IrModule Lower(IrModule module, Func<IrModule> implementations, Func<IrIntrinsic, bool> native) {
-    var run = new Run(module, implementations, native);
-    var functions = module.Functions.Select(run.Function).ToList();
-    if (run.Names.Count == 0)
-      return module;
+  public static IrModule Lower(IrModule module, Func<IrModule> implementations, Func<IrIntrinsic, bool> native)
+    => LibraryLegalization.Lower(module, implementations, Rewrite(native));
 
-    var helpers = run.Helpers();
-    return module with {
-      Functions = [.. functions, .. helpers.Functions],
-      Constants = [.. module.Constants, .. helpers.Constants],
-      Implementations = [.. module.Implementations, .. run.Names.Select(pair => (pair.Value, pair.Key))]
-    };
-  }
+  /// <summary>
+  /// The rewrite of this legalization, for a backend that composes it with its own: an intrinsic with
+  /// a portable implementation that <paramref name="native"/> rejects becomes a call of it.
+  /// </summary>
+  /// <param name="native">Whether the target writes an intrinsic itself.</param>
+  /// <returns>The rewrite.</returns>
+  public static LibraryRewrite Rewrite(Func<IrIntrinsic, bool> native)
+    => (expression, calls) => expression is IrIntrinsic intrinsic && IsReplaceable(intrinsic) && !native(intrinsic)
+      ? calls.Call(Implementation(intrinsic), intrinsic.Type, intrinsic.Arguments)
+      : null;
 
   /// <summary>Whether an intrinsic is one the legalization replaces where the target lacks it.</summary>
   /// <param name="intrinsic">The intrinsic.</param>
@@ -66,170 +64,6 @@ public static class FloatLegalization {
   private static string Implementation(IrIntrinsic intrinsic) {
     var operation = FloatOperationTable.Of(intrinsic.Op)!;
     return intrinsic.Arguments[0].Type == IrType.F32 ? operation.SingleName! : operation.DoubleName!;
-  }
-
-  private sealed class Run(IrModule module, Func<IrModule> implementations, Func<IrIntrinsic, bool> native) {
-
-    private readonly Lazy<Dictionary<string, IrFunction>> _available = new(() => implementations().Functions.ToDictionary(function => function.Name));
-    private readonly HashSet<string> _taken = [
-      .. module.Functions.Select(function => function.Name), .. module.Constants.Select(constant => constant.Name), .. module.Globals.Select(global => global.Name)
-    ];
-    private readonly Dictionary<IrModuleConst, IrModuleConst> _tables = new(ReferenceEqualityComparer.Instance);
-    private bool _inHelper;
-
-    /// <summary>The name in the module of every implementation it needs, in the order they were first needed.</summary>
-    public Dictionary<string, string> Names { get; } = [];
-
-    public IrFunction Function(IrFunction function) => function with { Body = this.Block(function.Body) };
-
-    /// <summary>The implementations the module calls, each legalized itself, and the tables they read.</summary>
-    public (List<IrFunction> Functions, List<IrModuleConst> Constants) Helpers() {
-      this._inHelper = true;
-      var done = new List<IrFunction>();
-      var index = 0;
-      while (index < this.Names.Count) {
-        var name = this.Names.Keys.ElementAt(index++);
-        var source = this._available.Value[name];
-        done.Add(this.Function(source) with { Name = this.Names[name], IsPublic = false });
-      }
-
-      return (done, [.. this._tables.Values]);
-    }
-
-    private string Rename(string name) {
-      if (this.Names.TryGetValue(name, out var renamed))
-        return renamed;
-
-      if (!this._available.Value.ContainsKey(name))
-        throw new ArgumentException($"The portable implementation '{name}' is missing.", nameof(implementations));
-
-      var candidate = "Float" + name;
-      while (!this._taken.Add(candidate))
-        candidate += "_";
-
-      this.Names[name] = candidate;
-      return candidate;
-    }
-
-    private IrModuleConst Table(IrModuleConst constant) {
-      if (!this._inHelper)
-        return constant;
-
-      if (!this._tables.TryGetValue(constant, out var renamed)) {
-        var candidate = "Float" + constant.Name.TrimStart('_');
-        while (!this._taken.Add(candidate))
-          candidate += "_";
-
-        renamed = constant with { Name = candidate };
-        this._tables[constant] = renamed;
-      }
-
-      return renamed;
-    }
-
-    private IrBlock Block(IrBlock block) => new(block.Statements.Select(this.Statement).ToList());
-
-    private IrStmt Statement(IrStmt statement) => statement switch {
-      IrBlock block => this.Block(block),
-      IrDeclare declare => declare with { Initializer = declare.Initializer is null ? null : this.Expression(declare.Initializer) },
-      IrAssign assign => assign with { Value = this.Expression(assign.Value) },
-      IrGlobalAssign assign => assign with { Value = this.Expression(assign.Value) },
-      IrStore store => new IrStore(this.Expression(store.Array), this.Expression(store.Index), this.Expression(store.Value)),
-      IrFieldStore store => store with { Target = this.Expression(store.Target), Value = this.Expression(store.Value) },
-      IrExprStmt expression => new IrExprStmt(this.Expression(expression.Expression)),
-      IrIf conditional => new IrIf(this.Expression(conditional.Condition), this.Block(conditional.Then), conditional.Else is null ? null : this.Block(conditional.Else)),
-      IrWhile loop => new IrWhile(this.Expression(loop.Condition), this.Block(loop.Body)),
-      IrDoWhile loop => new IrDoWhile(this.Block(loop.Body), this.Expression(loop.Condition)),
-      IrFor loop => new IrFor(this.Expression(loop.Condition), this.Block(loop.Body), this.Block(loop.Step)) { PerIteration = loop.PerIteration },
-      IrSwitch choice => new IrSwitch(this.Expression(choice.Value), choice.Sections.Select(section => section with { Body = this.Block(section.Body) }).ToList()),
-      IrReturn result => new IrReturn(result.Value is null ? null : this.Expression(result.Value)),
-      IrThrow thrown => new IrThrow(this.Expression(thrown.Exception)),
-      IrTry attempt => new IrTry(this.Block(attempt.Body),
-        [.. attempt.Catches.Select(clause => clause with { Filter = clause.Filter is null ? null : this.Expression(clause.Filter), Body = this.Block(clause.Body) })],
-        attempt.Finally is null ? null : this.Block(attempt.Finally)),
-      IrUsing scope => scope with { Initializer = this.Expression(scope.Initializer), Body = this.Block(scope.Body) },
-      IrForEachCollection loop => loop with { Collection = this.Expression(loop.Collection), Body = this.Block(loop.Body) },
-      _ => statement
-    };
-
-    private IrExpr Expression(IrExpr expression) {
-      switch (expression) {
-        case IrConstRef reference:
-          return new IrConstRef(this.Table(reference.Constant));
-        case IrUnary unary:
-          return new IrUnary(unary.Op, this.Expression(unary.Operand));
-        case IrBinary binary:
-          return new IrBinary(binary.Op, this.Expression(binary.Left), this.Expression(binary.Right));
-        case IrConvert conversion:
-          return new IrConvert(conversion.Type, this.Expression(conversion.Operand), conversion.Contract);
-        case IrConditional choice:
-          return new IrConditional(this.Expression(choice.Condition), this.Expression(choice.WhenTrue), this.Expression(choice.WhenFalse));
-        case IrArrayLoad load:
-          return new IrArrayLoad(this.Expression(load.Array), this.Expression(load.Index));
-        case IrArrayLength length:
-          return new IrArrayLength(this.Expression(length.Array));
-        case IrNewArray creation:
-          return new IrNewArray(creation.Type, this.Expression(creation.Length));
-        case IrStep step:
-          return step with { Target = this.Expression(step.Target) };
-        case IrStructNew creation:
-          return creation with { Arguments = [.. creation.Arguments.Select(this.Expression)] };
-        case IrFieldLoad load:
-          return load with { Target = this.Expression(load.Target) };
-        case IrStructEquals equality:
-          return new IrStructEquals(this.Expression(equality.Left), this.Expression(equality.Right));
-        case IrNew creation:
-          return creation with { Arguments = [.. creation.Arguments.Select(this.Expression)] };
-        case IrMethodCall call:
-          return call with { Target = call.Target is null ? null : this.Expression(call.Target), Arguments = [.. call.Arguments.Select(this.Expression)] };
-        case IrReferenceEquals identity:
-          return new IrReferenceEquals(this.Expression(identity.Left), this.Expression(identity.Right));
-        case IrGenericEquals equality:
-          return new IrGenericEquals(this.Expression(equality.Left), this.Expression(equality.Right));
-        case IrGenericCompare order:
-          return new IrGenericCompare(this.Expression(order.Left), this.Expression(order.Right));
-        case IrLambda lambda:
-          return lambda with { Body = this.Block(lambda.Body) };
-        case IrBoundMethod { Receiver: { } receiver } bound:
-          return bound with { Receiver = this.Expression(receiver) };
-        case IrInvoke invocation:
-          return invocation with { Callee = this.Expression(invocation.Callee), Arguments = [.. invocation.Arguments.Select(this.Expression)] };
-        case IrTypeTest test:
-          return test with { Value = this.Expression(test.Value) };
-        case IrCast cast:
-          return cast with { Value = this.Expression(cast.Value) };
-        case IrAsCast cast:
-          return cast with { Value = this.Expression(cast.Value) };
-        case IrSome some:
-          return new IrSome(this.Expression(some.Value));
-        case IrIsNone test:
-          return new IrIsNone(this.Expression(test.Value));
-        case IrUnwrap unwrap:
-          return unwrap with { Value = this.Expression(unwrap.Value) };
-        case IrCoalesce coalesce:
-          return new IrCoalesce(this.Expression(coalesce.Value), this.Expression(coalesce.Fallback));
-        case IrIsNull test:
-          return new IrIsNull(this.Expression(test.Value));
-        case IrBind bind:
-          return bind with { Value = this.Expression(bind.Value) };
-        case IrThrowExpression thrown:
-          return thrown with { Exception = this.Expression(thrown.Exception) };
-        case IrCollection operation:
-          return operation with { Arguments = [.. operation.Arguments.Select(this.Expression)] };
-        case IrCall call:
-          var arguments = call.Arguments.Select(this.Expression).ToList();
-          return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);
-        case IrIntrinsic intrinsic:
-          var operands = intrinsic.Arguments.Select(this.Expression).ToList();
-          var lowered = new IrIntrinsic(intrinsic.Op, intrinsic.Type, operands);
-          return IsReplaceable(lowered) && !native(lowered)
-            ? new IrCall(this.Rename(Implementation(lowered)), lowered.Type, operands)
-            : lowered;
-        default:
-          return expression;
-      }
-    }
-
   }
 
 }

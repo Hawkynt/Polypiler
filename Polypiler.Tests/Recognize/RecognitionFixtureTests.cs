@@ -8,6 +8,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Core.Optimize;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Recognize;
 
@@ -129,7 +130,7 @@ public sealed class RecognitionFixtureTests {
   public void OptimizedFixture_ComputesWhatItsBuildComputes(string fixture) {
     var original = RecognitionFixtures.Imported(fixture + ".cs");
     var optimized = Optimizer.Run(original, RecognitionFixtures.Options).Module;
-    var written = new Lazy<GeneratedCSharp>(() => GeneratedCSharp.Compile(CSharpEmitter.Emit(original).Single().Content, false));
+    var written = new Lazy<GeneratedCSharp>(() => GeneratedCSharp.Compile(LegalizedCSharp.Emit(original).Single().Content, false));
     var mismatches = new List<string>();
     foreach (var function in optimized.Functions.Where(function => function.IsPublic)) {
       var differs = _jitDiffers.Contains($"{fixture}.{function.Name}");
@@ -149,7 +150,7 @@ public sealed class RecognitionFixtureTests {
   [Test, Category("Slow")]
   public void JitDiffers_DifferOnlyAtCountZero() {
     var original = RecognitionFixtures.Imported("RecognizeRotate.cs");
-    var written = GeneratedCSharp.Compile(CSharpEmitter.Emit(original).Single().Content, false);
+    var written = GeneratedCSharp.Compile(LegalizedCSharp.Emit(original).Single().Content, false);
     var call = new PrototypeCall("XorVariable", [0x12345678u, 0]);
     Assert.That(written.Outcome(call), Is.EqualTo("0").And.EqualTo(PrototypeFixture.InterpretedOutcome(original, call)));
     var differing = RecognitionFixtures.Calls(original.Functions.Single(function => function.Name == "XorVariable")).Take(3000)
@@ -163,12 +164,12 @@ public sealed class RecognitionFixtureTests {
     var optimized = Optimizer.Run(RecognitionFixtures.Imported(file), RecognitionFixtures.Options).Module;
     foreach (var level in new[] { "es5", "es2015", "es2017", "es2020", "es2022" }) {
       var profile = JavaScriptProfile.Parse(level);
-      Assert.That(JavaScriptEmitter.Check(optimized, profile), Is.Empty, level);
-      Assert.That(GeneratedJavaScript.Problems(JavaScriptEmitter.Emit(optimized, profile).Single().Content, profile), Is.Empty, level);
+      Assert.That(LegalizedJavaScript.Check(optimized, profile), Is.Empty, level);
+      Assert.That(GeneratedJavaScript.Problems(LegalizedJavaScript.Emit(optimized, profile).Single().Content, profile), Is.Empty, level);
     }
 
     foreach (var profile in CSharpProfile.All) {
-      var text = CSharpEmitter.Emit(optimized, profile).Single().Content;
+      var text = LegalizedCSharp.Emit(optimized, profile).Single().Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
     }
   }

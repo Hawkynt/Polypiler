@@ -7,6 +7,7 @@ using Polypiler.Core.IR;
 using Polypiler.Core.Verification.Generators;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Properties;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -468,7 +469,7 @@ public sealed class CSharpCapabilitiesTests {
     var expected = calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call)).ToList();
     var executed = new Dictionary<string, string>();
     foreach (var profile in CSharpProfile.All) {
-      var text = CSharpEmitter.Emit(module, profile).Single().Content;
+      var text = LegalizedCSharp.Emit(module, profile).Single().Content;
       var native = row.IsIn(profile);
       var declarations = text.Split('\n').Where(line => line.StartsWith("  private static ", StringComparison.Ordinal)).ToList();
       // What the function calls, not what a helper behind it calls in turn.

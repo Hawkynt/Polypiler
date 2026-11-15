@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Objects;
 
@@ -20,7 +21,7 @@ internal sealed class CSharpDispatchEmissionTests {
        from profile in CSharpProfile.All
        select new TestCaseData(fixture.File, fixture.Class, profile.Name).SetName($"{fixture.File} for {profile.Name}");
 
-  private static string Emitted(string file, CSharpProfile profile) => CSharpEmitter.Emit(DispatchFixtures.Imported(file), profile)[0].Content;
+  private static string Emitted(string file, CSharpProfile profile) => LegalizedCSharp.Emit(DispatchFixtures.Imported(file), profile)[0].Content;
 
   /// <summary>Test design 1: every fixture compiles for every profile and computes what .NET computes, the invalid cast included.</summary>
   [TestCaseSource(nameof(FixturesAndProfiles))]

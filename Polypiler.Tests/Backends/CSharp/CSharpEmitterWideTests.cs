@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -26,7 +27,7 @@ public sealed class CSharpEmitterWideTests {
 
   private static IrModule Import(string methods) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
 
-  private static string Emit(IrModule module) => CSharpEmitter.Emit(module).Single().Content;
+  private static string Emit(IrModule module) => LegalizedCSharp.Emit(module).Single().Content;
 
   /// <summary>The lines of the function <c>F</c>, without indentation and without the <c>unchecked</c> block around them.</summary>
   private static string[] Body(IrModule module) => EmittedCSharp.Body(Emit(module));
@@ -1000,8 +1001,8 @@ public sealed class CSharpEmitterWideTests {
   public void UnknownIntrinsic_IsRefused() {
     var a = new IrLocal("a", IrType.I32);
     var module = new IrModule("M", [Function("F", IrType.I32, [a], new IrReturn(new IrIntrinsic((IrIntrinsicOp)9999, IrType.I32, [Ref(a)])))]);
-    Assert.That(CSharpEmitter.Check(module).Select(problem => problem.ToString()), Is.EqualTo(new[] { "error PLY1052: '9999' is not supported by the C# backend yet" }));
-    Assert.That(() => CSharpEmitter.Emit(module), Throws.ArgumentException.With.Message.Contains("'9999' is not supported by the C# backend yet"));
+    Assert.That(LegalizedCSharp.Check(module).Select(problem => problem.ToString()), Is.EqualTo(new[] { "error PLY1052: '9999' is not supported by the C# backend yet" }));
+    Assert.That(() => LegalizedCSharp.Emit(module), Throws.ArgumentException.With.Message.Contains("'9999' is not supported by the C# backend yet"));
   }
 
   /// <summary>A constant of a type the backend does not know is refused like a local of that type.</summary>
@@ -1009,7 +1010,7 @@ public sealed class CSharpEmitterWideTests {
   public void UnknownTypeOfAConstant_IsRefused() {
     var unheard = (IrType)Activator.CreateInstance(typeof(IrType), BindingFlags.Instance | BindingFlags.NonPublic, null, [(IrTypeKind)99, null], null)!;
     var module = new IrModule("M", [], [new IrModuleConst("N", unheard, [1])]);
-    Assert.That(CSharpEmitter.Check(module).Select(problem => problem.ToString()), Is.EqualTo(new[] { "error PLY1052: '99' is not supported by the C# backend yet" }));
+    Assert.That(LegalizedCSharp.Check(module).Select(problem => problem.ToString()), Is.EqualTo(new[] { "error PLY1052: '99' is not supported by the C# backend yet" }));
   }
 
 }

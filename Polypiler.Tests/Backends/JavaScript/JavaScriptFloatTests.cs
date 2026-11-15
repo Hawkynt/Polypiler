@@ -5,6 +5,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Float.Support;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.JavaScript;
 
@@ -72,7 +73,7 @@ public sealed class JavaScriptFloatTests {
       foreach (var profile in _profiles)
         foreach (var mode in _modes) {
           var module = JavaScriptEmitter.Legalize(FloatIntrinsics.Module(operation, format), () => FloatImplementations.Module, profile, mode);
-          Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, $"{format} {profile} {mode}");
+          Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, $"{format} {profile} {mode}");
         }
   }
 
@@ -84,7 +85,7 @@ public sealed class JavaScriptFloatTests {
     ]);
     foreach (var profile in _profiles)
       foreach (var mode in _modes) {
-        var text = JavaScriptEmitter.Emit(JavaScriptEmitter.Legalize(module, () => FloatImplementations.Module, profile, mode), profile, mode).Single().Content;
+        var text = LegalizedJavaScript.Emit(JavaScriptEmitter.Legalize(module, () => FloatImplementations.Module, profile, mode), profile, mode).Single().Content;
         Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{profile} {mode}");
       }
   }
@@ -93,23 +94,23 @@ public sealed class JavaScriptFloatTests {
   public void Header_NamesTheModeAndEveryNativeFunctionWithItsBound() {
     var sin = FloatIntrinsics.Module(FloatOperationTable.Of(IrIntrinsicOp.Sin)!, IrType.F32);
     var profile = JavaScriptProfile.Default;
-    var accurate = JavaScriptEmitter.Emit(JavaScriptEmitter.Legalize(sin, () => FloatImplementations.Module, profile, FloatMode.Accurate), profile, FloatMode.Accurate).Single().Content;
+    var accurate = LegalizedJavaScript.Emit(JavaScriptEmitter.Legalize(sin, () => FloatImplementations.Module, profile, FloatMode.Accurate), profile, FloatMode.Accurate).Single().Content;
     Assert.That(accurate, Does.Contain("//   Sin of f32: ulp(1), slack 1 on node, bound 3").And.Contain("Math.fround(Math.sin(p0))"));
-    var strict = JavaScriptEmitter.Emit(JavaScriptEmitter.Legalize(sin, () => FloatImplementations.Module, profile, FloatMode.Strict), profile, FloatMode.Strict).Single().Content;
+    var strict = LegalizedJavaScript.Emit(JavaScriptEmitter.Legalize(sin, () => FloatImplementations.Module, profile, FloatMode.Strict), profile, FloatMode.Strict).Single().Content;
     Assert.That(strict, Does.Contain("// Floating point: strict (ADR 0005).").And.Not.Contain("Math.sin("));
   }
 
   [Test]
   public void AnOperationWithoutAFunctionOfMath_IsRefusedUnlessItIsLegalized() {
     var module = FloatIntrinsics.Module(FloatOperationTable.Of(IrIntrinsicOp.CopySign)!, IrType.F64);
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Default).Select(diagnostic => diagnostic.Code), Is.EqualTo(new[] { JavaScriptEmitter.Inexpressible }));
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Default).Select(diagnostic => diagnostic.Code), Is.EqualTo(new[] { JavaScriptEmitter.Inexpressible }));
   }
 
   [Test]
   public void TheOperationsThatTrap_AreHelpers() {
-    var clamp = JavaScriptEmitter.Emit(FloatIntrinsics.Module(FloatOperationTable.Of(IrIntrinsicOp.Clamp)!, IrType.F64), JavaScriptProfile.Default).Single().Content;
+    var clamp = LegalizedJavaScript.Emit(FloatIntrinsics.Module(FloatOperationTable.Of(IrIntrinsicOp.Clamp)!, IrType.F64), JavaScriptProfile.Default).Single().Content;
     Assert.That(clamp, Does.Contain("function $clamp(value, low, high)").And.Contain("return $clamp(p0, p1, p2);"));
-    var round = JavaScriptEmitter.Emit(FloatIntrinsics.Module(FloatOperationTable.Of(IrIntrinsicOp.RoundDigits)!, IrType.F32, 3), JavaScriptProfile.Parse("es5")).Single().Content;
+    var round = LegalizedJavaScript.Emit(FloatIntrinsics.Module(FloatOperationTable.Of(IrIntrinsicOp.RoundDigits)!, IrType.F32, 3), JavaScriptProfile.Parse("es5")).Single().Content;
     Assert.That(round, Does.Contain("function $roundd32(value, digits, mode)").And.Contain("$roundd32(p0, p1, 3)").And.Contain("$fround("));
   }
 

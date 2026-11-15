@@ -6,6 +6,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -36,9 +37,9 @@ public sealed class EnumsTests {
   public void EveryOperation_RunsInNodeLikeTheInterpreter(ProfileCase profile) {
     var module = EnumFixtures.Module;
     var parsed = profile.Parsed;
-    Assert.That(JavaScriptEmitter.Check(module, parsed), Is.Empty);
+    Assert.That(LegalizedJavaScript.Check(module, parsed), Is.Empty);
     var file = module.Name + parsed.Extension;
-    var text = JavaScriptEmitter.Emit(module, parsed).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, parsed).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, parsed), Is.Empty, text);
     File.WriteAllText(Path.Combine(this._directory, file), text);
     var calls = EnumFixtures.Calls().ToList();

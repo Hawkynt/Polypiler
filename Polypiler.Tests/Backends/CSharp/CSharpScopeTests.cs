@@ -8,6 +8,7 @@ using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -55,7 +56,7 @@ public sealed class CSharpScopeTests {
   /// <summary>The module's file for a profile, after the C# compiler built it for the reference assemblies of the profile without complaint.</summary>
   private static string Emitted(IrModule module, CSharpProfile profile) {
     Assert.That(IrVerifier.Verify(module), Is.Empty);
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
     return text;
   }

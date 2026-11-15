@@ -6,6 +6,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Collections;
 
@@ -115,13 +116,13 @@ public sealed class JavaScriptListImportTests {
     var module = CollectionFixtures.ImportedScript("collections.js");
     foreach (var level in JavaScriptProfile.LevelNames) {
       var profile = JavaScriptProfile.Parse(level, level == "es5" ? "cjs" : "esm");
-      Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, level);
-      var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+      Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, level);
+      var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
       Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{level}\n{text}");
     }
 
     foreach (var profile in CSharpProfile.All)
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
   }
 
 }

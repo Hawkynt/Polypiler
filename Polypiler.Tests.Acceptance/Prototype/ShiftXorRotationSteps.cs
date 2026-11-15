@@ -4,6 +4,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Acceptance.Support;
 using Reqnroll;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -48,7 +49,7 @@ public sealed class ShiftXorRotationSteps(PrototypeScenario scenario) {
     Assert.That(text, Does.Contain("(x << 8) | (x >> 24)"));
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(scenario.Text));
     var unguarded = new CSharpCapabilities(CSharpCapabilities.Default.Rows.Where(row => row.Defect is null));
-    Assert.That(CSharpEmitter.Emit(module, CSharpProfile.Default, null, unguarded).Single().Content, Is.EqualTo(CSharpEmitter.Emit(module).Single().Content));
+    Assert.That(LegalizedCSharp.Emit(module, CSharpProfile.Default, null, unguarded).Single().Content, Is.EqualTo(LegalizedCSharp.Emit(module).Single().Content));
   }
 
 }

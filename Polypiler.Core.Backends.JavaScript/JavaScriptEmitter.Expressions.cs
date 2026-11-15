@@ -137,6 +137,14 @@ public static partial class JavaScriptEmitter {
       if (EnumOperations.IsEnum(intrinsic.Op))
         return this.EnumOperation(intrinsic);
 
+      // An operation the profile has only as a helper of the library reaches the writer only where the module was not legalized.
+      if (JavaScriptLibrary.Covers(intrinsic, name => this._capabilities.Has(name, this._profile))) {
+        if (this._refused.Add(intrinsic.Op.ToString()))
+          this._problems.Add(InexpressibleDescriptor.At($"'{intrinsic.Op}' needs its helper of the library in JavaScript profile '{this._profile.LevelName}'; the module was not legalized"));
+
+        return (new JsNumber(double.NaN), true);
+      }
+
       // The integer and bit operations, also those defined on floating-point numbers as well, are written by their families.
       if (this.Integer(intrinsic) is { } integer)
         return integer;

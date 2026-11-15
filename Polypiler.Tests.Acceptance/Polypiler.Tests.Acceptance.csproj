@@ -47,6 +47,7 @@
     <Compile Include="..\Polypiler.Tests\Support\DocumentationChecks.cs" LinkBase="Infrastructure\Support" />
     <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
     <Compile Include="..\tests\shared\Cli\*.cs" LinkBase="Cli\Support" />
+    <Compile Include="..\tests\shared\Backends\*.cs" LinkBase="Backends\Legalized" />
     <Compile Include="..\Polypiler.Tests\Tooling\Corpus\MiniUpstream.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Verification\Running\Support\*.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Verification\Fuzzing\DemoTargets.cs" LinkBase="Infra\Support" />

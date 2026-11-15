@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Exceptions;
 
@@ -18,7 +19,7 @@ public sealed class JavaScriptErrorClassTests {
   private static string Emit(string methods, string level) {
     var profile = JavaScriptProfile.Parse(level, level == "es5" ? "cjs" : "esm");
     var module = PrototypeFixture.Import("C.cs", PrototypeFixture.Wrap(methods));
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }

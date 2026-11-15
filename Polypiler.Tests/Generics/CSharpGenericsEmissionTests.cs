@@ -5,6 +5,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Generics;
 
@@ -22,7 +23,7 @@ internal sealed class CSharpGenericsEmissionTests {
        from profile in CSharpProfile.All
        select new TestCaseData(fixture.File, fixture.Class, profile.Name).SetName($"{fixture.File} for {profile.Name}");
 
-  private static string Emitted(IrModule module, string profile) => CSharpEmitter.Emit(module, CSharpProfile.Parse(profile))[0].Content;
+  private static string Emitted(IrModule module, string profile) => LegalizedCSharp.Emit(module, CSharpProfile.Parse(profile))[0].Content;
 
   private static string Compiled(string source, string profile) {
     var module = PrototypeFixture.Import("Snippet.cs", "#nullable disable\n" + source);

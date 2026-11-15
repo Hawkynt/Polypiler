@@ -13,10 +13,8 @@ internal static partial class CSharpIntegerRows {
   /// which makes 2^width the 0 it wraps to.
   /// </summary>
   private static IEnumerable<CSharpCapability> PowersOfTwo => [
-    .. _all.Select(kind => Row(IrIntrinsicOp.IsPow2, kind, CSharpProfile.Net80, Bits + "IsPow2", $"{Bits}IsPow2({{0}})", "{h}({0})",
-      IsSigned(kind) ? CSharpIntegerHelpers.IsPow2Signed : CSharpIntegerHelpers.IsPow2Unsigned)),
-    .. _all.Select(kind => Row(IrIntrinsicOp.RoundUpPow2, kind, CSharpProfile.Net80, Bits + "RoundUpToPowerOf2",
-      $"({Type(kind)}){Bits}RoundUpToPowerOf2({Word(kind)})", $"({Type(kind)}){{h}}({Pattern(kind)})", CSharpIntegerHelpers.RoundUpPow2))
+    .. _all.Select(kind => Library(IrIntrinsicOp.IsPow2, kind, CSharpProfile.Net80, Bits + "IsPow2", $"{Bits}IsPow2({{0}})")),
+    .. _all.Select(kind => Library(IrIntrinsicOp.RoundUpPow2, kind, CSharpProfile.Net80, Bits + "RoundUpToPowerOf2", $"({Type(kind)}){Bits}RoundUpToPowerOf2({Word(kind)})"))
   ];
 
 }

@@ -7,6 +7,7 @@ using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Exceptions;
 
@@ -41,16 +42,16 @@ internal sealed class ExceptionImportTests {
   }
 
   private static string Emit(IrModule module, CSharpProfile profile) {
-    Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-    var text = CSharpEmitter.Emit(module, profile)[0].Content;
+    Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+    var text = LegalizedCSharp.Emit(module, profile)[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     return text;
   }
 
   private static string Emit(IrModule module, string level) {
     var profile = JavaScriptProfile.Parse(level, level == "es5" ? "cjs" : "esm");
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, level);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, level);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -154,9 +155,9 @@ internal sealed class ExceptionImportTests {
       }
       """);
     Assert.That(IrInterpreter.Call(module, "F", [0]), Is.EqualTo(1), "the filter runs before the finally block");
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.Parse("net3.5")).Select(problem => problem.Message), Has.One.Contains("runs before finally blocks"));
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.Parse("net4.6")), Is.Empty);
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Default).Select(problem => problem.Message), Has.One.Contains("runs before finally blocks"));
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.Parse("net3.5")).Select(problem => problem.Message), Has.One.Contains("runs before finally blocks"));
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.Parse("net4.6")), Is.Empty);
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Default).Select(problem => problem.Message), Has.One.Contains("runs before finally blocks"));
     Assert.That(Emit(ExceptionFixtures.Imported("Classes"), "es2022"), Does.Contain("if ((e instanceof X) && (e.message === \"x\")) {"));
   }
 

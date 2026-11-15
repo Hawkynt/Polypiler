@@ -131,13 +131,13 @@ public sealed class TargetPassTests {
   [Test]
   public void InliningScenario_OnTheEmittedModule() {
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap("public static uint F(uint x) => System.Numerics.BitOperations.RotateLeft(x, 8);"));
-    Assert.That(JavaScriptEmitter.Emit(module, _es5).Single().Content, Does.Contain("return $rotl(x, 8);"));
-    var inlined = JavaScriptEmitter.Emit(module, _es5, FloatMode.Accurate, null, TargetPassOptions.Default).Files.Single().Content;
+    Assert.That(LegalizedJavaScript.Emit(module, _es5).Single().Content, Does.Contain("return $rotl(x, 8);"));
+    var inlined = LegalizedJavaScript.Emit(module, _es5, FloatMode.Accurate, null, TargetPassOptions.Default).Files.Single().Content;
     Assert.That(inlined, Does.Not.Contain("$rotl").And.Contain("return ((x << 8) | (x >>> (-8 & 31))) >>> 0;"));
-    var kept = JavaScriptEmitter.Emit(module, _es5, FloatMode.Accurate, null, new TargetPassOptions { Disabled = new HashSet<string> { "O0500" } });
+    var kept = LegalizedJavaScript.Emit(module, _es5, FloatMode.Accurate, null, new TargetPassOptions { Disabled = new HashSet<string> { "O0500" } });
     Assert.That(kept.Files.Single().Content, Does.Contain("function $rotl(").And.Contain("return $rotl(x, 8);"));
     Assert.That(kept.Applications, Is.Empty);
-    var csharp = CSharpEmitter.Emit(module, CSharpProfile.Net20, FloatMode.Accurate, null, null, TargetPassOptions.Default).Files.Single().Content;
+    var csharp = LegalizedCSharp.Emit(module, CSharpProfile.Net20, FloatMode.Accurate, null, null, TargetPassOptions.Default).Files.Single().Content;
     Assert.That(csharp, Does.Contain("return (uint)((x << 8) | (x >> (32 - (8 & 31))));").And.Not.Contain("private static uint RotateLeft"));
   }
 

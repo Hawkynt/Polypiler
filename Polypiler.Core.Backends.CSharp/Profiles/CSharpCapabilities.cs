@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Polypiler.Core.Backends.CSharp.Syntax;
 using Polypiler.Core.IR;
+using Polypiler.Core.Legalize;
 
 namespace Polypiler.Core.Backends.CSharp;
 
@@ -248,7 +249,7 @@ public sealed class CSharpCapability {
   /// <returns>The row extended.</returns>
   public CSharpCapability When(Func<IrIntrinsic, bool> condition) => new(this.Name) {
     Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
-    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = this.Rewrite, Condition = condition
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = this.Rewrite, Condition = condition, Library = this.Library
   };
 
   /// <summary>The row with a form for arguments with which the operation cannot trap.</summary>
@@ -257,7 +258,7 @@ public sealed class CSharpCapability {
   /// <returns>The row extended.</returns>
   public CSharpCapability WithTotal(CSharpForm form, Func<IReadOnlyList<IrExpr>, bool> holds) => new(this.Name) {
     Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
-    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds, Rewrite = this.Rewrite, Condition = this.Condition
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds, Rewrite = this.Rewrite, Condition = this.Condition, Library = this.Library
   };
 
   /// <summary>The row written as other operations of the IR where the profile lacks it.</summary>
@@ -265,8 +266,34 @@ public sealed class CSharpCapability {
   /// <returns>The row extended.</returns>
   public CSharpCapability WithRewrite(Func<IrIntrinsic, IrExpr> rewrite) => new(this.Name) {
     Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
-    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = rewrite, Condition = this.Condition
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = rewrite, Condition = this.Condition, Library = this.Library
   };
+
+  /// <summary>
+  /// The operation as a call of a helper of the library (<see cref="HelperOperations"/>) where the
+  /// profile lacks the row, or <see langword="null"/>: legalization puts it in before the module is
+  /// written, so the helper is emitted, and optimised, as code of the module. It takes the node, its
+  /// operands legalized, and gives an expression of the same type.
+  /// </summary>
+  public Func<IrExpr, LibraryCalls, IrExpr?>? Library { get; private init; }
+
+  /// <summary>The row written as a call of a helper of the library where the profile lacks it.</summary>
+  /// <param name="library">The call, from the node; see <see cref="Library"/>.</param>
+  /// <returns>The row extended.</returns>
+  public CSharpCapability WithLibrary(Func<IrExpr, LibraryCalls, IrExpr?> library) => new(this.Name) {
+    Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = this.Rewrite, Condition = this.Condition, Library = library
+  };
+
+  /// <summary>The row written as the helper of the library of a name, with the arguments of the node, where the profile lacks it.</summary>
+  /// <param name="helper">The name of the helper in <see cref="HelperOperations"/>.</param>
+  /// <returns>The row extended.</returns>
+  public CSharpCapability WithLibrary(string helper) => this.WithLibrary((node, calls) => calls.Call(helper, node.Type, ((IrIntrinsic)node).Arguments));
+
+  /// <summary>Whether legalization replaces the operation of the row by a helper of the library in a profile.</summary>
+  /// <param name="profile">The profile.</param>
+  /// <returns><see langword="true"/> when the profile lacks the row and the row has a helper of the library.</returns>
+  public bool IsLibraryIn(CSharpProfile profile) => this.Library is not null && !this.IsIn(profile);
 
   /// <summary>Whether a profile writes the operation of the row as the others of <see cref="Rewrite"/>.</summary>
   /// <param name="profile">The profile.</param>
@@ -434,20 +461,20 @@ public sealed class CSharpCapabilities {
     Single("MathF.Round(float, MidpointRounding)", IrIntrinsicOp.RoundAway, "Round", Base + "MidpointRounding.AwayFromZero"),
 
     // The bit operations.
-    Bit("BitOperations.RotateLeft(uint, int)", IrIntrinsicOp.RotateLeft, _word, CSharpHelpers.RotateLeft32),
-    Bit("BitOperations.RotateLeft(ulong, int)", IrIntrinsicOp.RotateLeft, _long, CSharpHelpers.RotateLeft64),
-    Bit("BitOperations.RotateRight(uint, int)", IrIntrinsicOp.RotateRight, _word, CSharpHelpers.RotateRight32),
-    Bit("BitOperations.RotateRight(ulong, int)", IrIntrinsicOp.RotateRight, _long, CSharpHelpers.RotateRight64),
-    Bit("BitOperations.PopCount(uint)", IrIntrinsicOp.PopCount, _word, CSharpHelpers.PopCount32),
-    Bit("BitOperations.PopCount(ulong)", IrIntrinsicOp.PopCount, _long, CSharpHelpers.PopCount64),
-    Bit("BitOperations.LeadingZeroCount(uint)", IrIntrinsicOp.LeadingZeroCount, _word, CSharpHelpers.LeadingZeroCount32),
-    Bit("BitOperations.LeadingZeroCount(ulong)", IrIntrinsicOp.LeadingZeroCount, _long, CSharpHelpers.LeadingZeroCount64),
-    Bit("BitOperations.TrailingZeroCount(uint)", IrIntrinsicOp.TrailingZeroCount, _word, CSharpHelpers.TrailingZeroCount32),
-    Bit("BitOperations.TrailingZeroCount(ulong)", IrIntrinsicOp.TrailingZeroCount, _long, CSharpHelpers.TrailingZeroCount64),
-    Bit("BitOperations.Log2(uint)", IrIntrinsicOp.Log2, _word, CSharpHelpers.Log232),
-    Bit("BitOperations.Log2(ulong)", IrIntrinsicOp.Log2, _long, CSharpHelpers.Log264),
-    Call("Math.BigMul(uint, uint)", CSharpProfile.Net100, IrIntrinsicOp.BigMul, _word, "Math.BigMul", CSharpHelpers.BigMul32),
-    CSharpCapability.OfApi("Math.BigMul(ulong, ulong, out ulong)", CSharpProfile.Net80, CSharpHelpers.BigMul64),
+    Bit("BitOperations.RotateLeft(uint, int)", IrIntrinsicOp.RotateLeft, _word, "RotateLeft"),
+    Bit("BitOperations.RotateLeft(ulong, int)", IrIntrinsicOp.RotateLeft, _long, "RotateLeft"),
+    Bit("BitOperations.RotateRight(uint, int)", IrIntrinsicOp.RotateRight, _word, "RotateRight"),
+    Bit("BitOperations.RotateRight(ulong, int)", IrIntrinsicOp.RotateRight, _long, "RotateRight"),
+    Bit("BitOperations.PopCount(uint)", IrIntrinsicOp.PopCount, _word, "PopCount"),
+    Bit("BitOperations.PopCount(ulong)", IrIntrinsicOp.PopCount, _long, "PopCount"),
+    Bit("BitOperations.LeadingZeroCount(uint)", IrIntrinsicOp.LeadingZeroCount, _word, "LeadingZeroCount"),
+    Bit("BitOperations.LeadingZeroCount(ulong)", IrIntrinsicOp.LeadingZeroCount, _long, "LeadingZeroCount"),
+    Bit("BitOperations.TrailingZeroCount(uint)", IrIntrinsicOp.TrailingZeroCount, _word, "TrailingZeroCount"),
+    Bit("BitOperations.TrailingZeroCount(ulong)", IrIntrinsicOp.TrailingZeroCount, _long, "TrailingZeroCount"),
+    Bit("BitOperations.Log2(uint)", IrIntrinsicOp.Log2, _word, "Log2"),
+    Bit("BitOperations.Log2(ulong)", IrIntrinsicOp.Log2, _long, "Log2"),
+    CSharpCapability.OfOperation("Math.BigMul(uint, uint)", CSharpProfile.Net100, IrIntrinsicOp.BigMul, _word, new CSharpForm(Base + "Math.BigMul")).WithLibrary(IntegerLibrary.Call),
+    CSharpCapability.OfApi("Math.BigMul(ulong, ulong, out ulong)", CSharpProfile.Net80),
 
     // The bits of a floating-point number.
     Call("BitConverter.DoubleToInt64Bits(double)", CSharpProfile.Net20, IrIntrinsicOp.FloatBits, _double, "BitConverter.DoubleToInt64Bits"),
@@ -579,9 +606,9 @@ public sealed class CSharpCapabilities {
     => CSharpCapability.OfOperation(name, CSharpProfile.NetStandard21, operation, _single,
       new CSharpForm($"{Base}MathF.{method}", Further: further), new CSharpForm($"{Base}Math.{method}", "float", further));
 
-  /// <summary>A method of <c>BitOperations</c>, replaced by a helper.</summary>
-  private static CSharpCapability Bit(string name, IrIntrinsicOp operation, IrTypeKind[] operands, CSharpHelper helper)
-    => CSharpCapability.OfOperation(name, CSharpProfile.NetCoreApp31, operation, operands, new CSharpForm(Bits + helper.Name), new CSharpForm(null), helper);
+  /// <summary>A method of <c>BitOperations</c>, replaced by the helper of the library (<see cref="IntegerLibrary"/>).</summary>
+  private static CSharpCapability Bit(string name, IrIntrinsicOp operation, IrTypeKind[] operands, string method)
+    => CSharpCapability.OfOperation(name, CSharpProfile.NetCoreApp31, operation, operands, new CSharpForm(Bits + method)).WithLibrary(IntegerLibrary.Call);
 
   /// <summary>An operation of ECMA-262 that no framework has, which is its helper in every profile.</summary>
   private static CSharpCapability Ecma(string name, IrIntrinsicOp operation, IrTypeKind[] operands, CSharpHelper helper, string? cast = null)

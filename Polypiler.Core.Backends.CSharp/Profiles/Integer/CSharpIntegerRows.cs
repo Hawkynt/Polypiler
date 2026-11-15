@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Polypiler.Core.IR;
+using Polypiler.Core.Legalize;
 
 namespace Polypiler.Core.Backends.CSharp;
 
@@ -77,19 +78,16 @@ internal static partial class CSharpIntegerRows {
   /// native form and is its replacement everywhere; a row whose native form exists in every
   /// profile has none.
   /// </summary>
-  private static CSharpCapability Row(
-    IrIntrinsicOp op, IrTypeKind kind, CSharpProfile? since, string? method, string? native, string? replacement = null, CSharpHelper? helper = null)
-    => CSharpCapability.OfOperation(
-      $"{op} of {Type(kind)}", since, op, [kind],
-      native is null ? null : new CSharpForm(method, Template: native),
-      replacement is null ? null : new CSharpForm(null, Template: replacement),
-      helper);
+  private static CSharpCapability Row(IrIntrinsicOp op, IrTypeKind kind, CSharpProfile? since, string? method, string? native)
+    => CSharpCapability.OfOperation($"{op} of {Type(kind)}", since, op, [kind], native is null ? null : new CSharpForm(method, Template: native));
 
-  /// <summary>A row that is a helper in every profile.</summary>
-  private static CSharpCapability Helped(IrIntrinsicOp op, IrTypeKind kind, string replacement, CSharpHelper helper)
-    => Row(op, kind, null, null, null, replacement, helper);
+  /// <summary>A row that no framework has: in every profile the helper of the library (<see cref="IntegerLibrary"/>).</summary>
+  private static CSharpCapability Helped(IrIntrinsicOp op, IrTypeKind kind) => Row(op, kind, null, null, null).WithLibrary(IntegerLibrary.Call);
 
-  /// <summary>A row that C# writes with its operators in every profile.</summary>
+  /// <summary>A row the framework has from a profile on, before it the helper of the library (<see cref="IntegerLibrary"/>).</summary>
+  private static CSharpCapability Library(IrIntrinsicOp op, IrTypeKind kind, CSharpProfile since, string method, string native)
+    => Row(op, kind, since, method, native).WithLibrary(IntegerLibrary.Call);
+
   private static CSharpCapability Written(IrIntrinsicOp op, IrTypeKind kind, string native)
     => Row(op, kind, CSharpProfile.Net20, null, native);
 

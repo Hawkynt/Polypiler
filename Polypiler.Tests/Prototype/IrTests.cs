@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Polypiler.Core;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Prototype;
 
@@ -238,7 +239,7 @@ public sealed class IrTests {
     Assert.That(diagnostics.Select(diagnostic => (diagnostic.Code, diagnostic.Severity, diagnostic.File)),
       Has.All.EqualTo(("PLY0100", DiagnosticSeverity.Error, (string?)null)));
     Assert.That(diagnostics[0].Message, Does.StartWith("ill-typed IR in '"));
-    Assert.That(() => JavaScriptEmitter.Emit(module), Throws.ArgumentException.With.Message.Contains("cannot be emitted"));
+    Assert.That(() => LegalizedJavaScript.Emit(module), Throws.ArgumentException.With.Message.Contains("cannot be emitted"));
   }
 
   [Test]
@@ -297,7 +298,7 @@ public sealed class IrTests {
     Assert.That(IrInterpreter.Call(module, "F", [3]), Is.EqualTo(3112));
     Assert.That(IrInterpreter.Call(module, "F", [5]), Is.EqualTo(3114));
     Assert.That(IrInterpreter.Call(module, "F", [9]), Is.EqualTo(3114));
-    Assert.That(JavaScriptEmitter.Emit(module).Single().Content, Does.Contain("for (; i < a; ($p = i, i = ($p + 1) | 0, $p)) {"));
+    Assert.That(LegalizedJavaScript.Emit(module).Single().Content, Does.Contain("for (; i < a; ($p = i, i = ($p + 1) | 0, $p)) {"));
   }
 
   /// <summary>
@@ -357,7 +358,7 @@ public sealed class IrTests {
     Assert.That(filled, Is.EqualTo(new[] { 7, 7 }));
     IrInterpreter.Call(module, "Clear", [filled]);
     Assert.That(filled, Is.EqualTo(new[] { 0, 0 }));
-    Assert.That(JavaScriptEmitter.Emit(module).Single().Content, Does.Contain("const N = -5n;\nconst B = true;\nconst H = 0.5;\nconst T = new Int32Array([7, 8, 9]);\nconst E = new Float64Array([]);\n"));
+    Assert.That(LegalizedJavaScript.Emit(module).Single().Content, Does.Contain("const N = -5n;\nconst B = true;\nconst H = 0.5;\nconst T = new Int32Array([7, 8, 9]);\nconst E = new Float64Array([]);\n"));
   }
 
   /// <summary>A return inside a loop, of each kind, leaves the function and not only the loop.</summary>

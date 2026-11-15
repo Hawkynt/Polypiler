@@ -6,6 +6,7 @@ using Polypiler.Core;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.JavaScript;
 
@@ -43,7 +44,7 @@ public sealed class JavaScriptProfileEmissionTests {
 
   private static string Emit(string methods, JavaScriptProfile profile) {
     var module = JavaScriptEmitter.Legalize(Import(methods), () => Polypiler.Tests.Float.Support.FloatImplementations.Module, profile, FloatMode.Accurate);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -66,8 +67,8 @@ public sealed class JavaScriptProfileEmissionTests {
   [TestCaseSource(nameof(FixturesAndProfiles))]
   public void Fixture_IsAtTheLevelOfItsProfile(string fixture, JavaScriptProfile profile) {
     var module = PrototypeFixture.Imported(fixture);
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var files = JavaScriptEmitter.Emit(module, profile);
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var files = LegalizedJavaScript.Emit(module, profile);
     Assert.That(files.Select(file => file.Path), Is.EqualTo(new[] { PrototypeFixture.ClassOf(fixture) + profile.Extension }));
 
     var text = files[0].Content;
@@ -88,10 +89,10 @@ public sealed class JavaScriptProfileEmissionTests {
   [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
   public void DefaultProfile_IsTheOutputWithoutAProfile(string fixture) {
     var module = PrototypeFixture.Imported(fixture);
-    var file = JavaScriptEmitter.Emit(module).Single();
+    var file = LegalizedJavaScript.Emit(module).Single();
     var text = file.Content;
-    Assert.That(JavaScriptEmitter.Emit(module, JavaScriptProfile.Default).Single(), Is.EqualTo(new GeneratedFile(PrototypeFixture.ClassOf(fixture) + ".mjs", text) { Helpers = file.Helpers }));
-    Assert.That(JavaScriptEmitter.Emit(module, JavaScriptProfile.Parse("es2022", "esm"), JavaScriptCapabilities.Standard).Single().Content, Is.EqualTo(text));
+    Assert.That(LegalizedJavaScript.Emit(module, JavaScriptProfile.Default).Single(), Is.EqualTo(new GeneratedFile(PrototypeFixture.ClassOf(fixture) + ".mjs", text) { Helpers = file.Helpers }));
+    Assert.That(LegalizedJavaScript.Emit(module, JavaScriptProfile.Parse("es2022", "esm"), JavaScriptCapabilities.Standard).Single().Content, Is.EqualTo(text));
   }
 
   /// <summary>
@@ -101,7 +102,7 @@ public sealed class JavaScriptProfileEmissionTests {
   [TestCaseSource(typeof(PrototypeFixture), nameof(PrototypeFixture.Names))]
   public void NeighbouringLevels_DifferOnlyInTheirName(string fixture) {
     var module = PrototypeFixture.Imported(fixture);
-    string Text(JavaScriptProfile profile) => JavaScriptEmitter.Emit(module, profile).Single().Content.Replace(profile.LevelName, "level");
+    string Text(JavaScriptProfile profile) => LegalizedJavaScript.Emit(module, profile).Single().Content.Replace(profile.LevelName, "level");
     Assert.That(Text(_es2017), Is.EqualTo(Text(_es2015)));
     Assert.That(Text(JavaScriptProfile.Default), Is.EqualTo(Text(_es2020)));
   }
@@ -718,7 +719,7 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(never, Has.Count.EqualTo(11));
     foreach (var fixture in PrototypeFixture.Names)
       foreach (var profile in new[] { _es5, _es2017, JavaScriptProfile.Default }) {
-        var text = JavaScriptEmitter.Emit(PrototypeFixture.Imported(fixture), profile).Single().Content;
+        var text = LegalizedJavaScript.Emit(PrototypeFixture.Imported(fixture), profile).Single().Content;
         Assert.That(never.Where(text.Contains), Is.Empty, $"{fixture} as {profile}");
         Assert.That(System.Text.RegularExpressions.Regex.IsMatch(text, @"\d_\d"), Is.False, $"{fixture} as {profile}");
       }
@@ -754,7 +755,7 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(IrVerifier.Verify(module), Is.Empty);
 
     string[] Lines(JavaScriptProfile profile) {
-      var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+      var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
       Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty);
       return text.Split('\n').Select(line => line.Trim()).SkipWhile(line => !line.StartsWith("function F", StringComparison.Ordinal)).Skip(1).TakeWhile(line => line != "exports.F = F;").ToArray();
     }
@@ -801,10 +802,10 @@ public sealed class JavaScriptProfileEmissionTests {
   public void PairAsAStatement_IsInParentheses() {
     var module = new IrModule("M", [new IrFunction("F", true, IrType.Void, [], [], new IrBlock([new IrExprStmt(new IrConst(IrType.U64, 1)), new IrExprStmt(new IrConst(IrType.I32, 1))]))]);
     Assert.That(IrVerifier.Verify(module), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, _es2017).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, _es2017).Single().Content;
     Assert.That(text, Does.EndWith("export function F() {\n  ({ hi: 0, lo: 1 });\n  1;\n}\n"));
     Assert.That(GeneratedJavaScript.Problems(text, _es2017), Is.Empty);
-    Assert.That(JavaScriptEmitter.Emit(module, _es2020).Single().Content, Does.EndWith("export function F() {\n  1n;\n  1;\n}\n"));
+    Assert.That(LegalizedJavaScript.Emit(module, _es2020).Single().Content, Does.EndWith("export function F() {\n  1n;\n  1;\n}\n"));
   }
 
   /// <summary>
@@ -827,15 +828,15 @@ public sealed class JavaScriptProfileEmissionTests {
     var module = Import(source);
     var message = $"'{construct}' cannot be expressed in JavaScript profile '{level}'";
 
-    var problems = JavaScriptEmitter.Check(module, profile, table);
+    var problems = LegalizedJavaScript.Check(module, profile, table);
     Assert.That(problems.Select(problem => problem.ToString()), Has.Exactly(1).EqualTo($"error PLY1152: {message}"));
     Assert.That(problems.Select(problem => (problem.Code, problem.Severity)), Has.All.EqualTo((JavaScriptEmitter.Inexpressible, DiagnosticSeverity.Error)));
     Assert.That(problems.Select(problem => problem.Message), Is.Unique);
-    Assert.That(() => JavaScriptEmitter.Emit(module, profile, table), Throws.ArgumentException.With.Message.Contains("The module 'Snippet' cannot be emitted: '").And.Message.Contains("cannot be expressed in JavaScript profile"));
+    Assert.That(() => LegalizedJavaScript.Emit(module, profile, table), Throws.ArgumentException.With.Message.Contains("The module 'Snippet' cannot be emitted: '").And.Message.Contains("cannot be expressed in JavaScript profile"));
 
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, "the standard table has a replacement");
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Default, table), Is.Empty, "the level that has it needs no replacement");
-    Assert.That(JavaScriptEmitter.Emit(module, JavaScriptProfile.Default, table).Single().Content, Is.EqualTo(JavaScriptEmitter.Emit(module).Single().Content));
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, "the standard table has a replacement");
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Default, table), Is.Empty, "the level that has it needs no replacement");
+    Assert.That(LegalizedJavaScript.Emit(module, JavaScriptProfile.Default, table).Single().Content, Is.EqualTo(LegalizedJavaScript.Emit(module).Single().Content));
   }
 
   /// <summary>
@@ -860,8 +861,8 @@ public sealed class JavaScriptProfileEmissionTests {
   public void EcmaScriptOperations_AreWrittenAsTheyAreInEveryProfile(JavaScriptProfile profile) {
     var module = EcmaScriptOperations();
     Assert.That(IrVerifier.Verify(module), Is.Empty);
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty);
     Assert.That(text, Does.Contain("  return d | 0;\n").And.Contain("  return d >>> 0;\n").And.Contain("  return Math.round(d);\n").And.Contain("  return Math.round(f);\n"));
     Assert.That(Helpers(text), Is.Empty);
@@ -873,24 +874,24 @@ public sealed class JavaScriptProfileEmissionTests {
   [TestCase("Math.round", "RoundHalfUp")]
   public void EcmaScriptOperation_WithoutAnEntryForItsLevel_IsReported(string capability, string construct) {
     var table = JavaScriptCapabilities.Standard.With(new(capability, 2015));
-    var problems = JavaScriptEmitter.Check(EcmaScriptOperations(), _es5, table);
+    var problems = LegalizedJavaScript.Check(EcmaScriptOperations(), _es5, table);
     Assert.That(problems.Select(problem => problem.ToString()), Is.EqualTo(new[] { $"error PLY1152: '{construct}' cannot be expressed in JavaScript profile 'es5'" }));
-    Assert.That(JavaScriptEmitter.Check(EcmaScriptOperations(), _es2015, table), Is.Empty);
+    Assert.That(LegalizedJavaScript.Check(EcmaScriptOperations(), _es2015, table), Is.Empty);
   }
 
   /// <summary>An ill-typed module is reported by the verifier's findings, whatever the profile, and not emitted.</summary>
   [Test]
   public void IllTypedModule_IsReportedAndNotEmitted() {
     var module = new IrModule("M", [new IrFunction("F", true, IrType.I32, [], [], new IrBlock([new IrReturn(new IrConst(IrType.Bool, 1))]))]);
-    Assert.That(JavaScriptEmitter.Check(module, _es5).Select(problem => problem.Code), Is.EqualTo(new[] { IrVerifier.Code }));
-    Assert.That(() => JavaScriptEmitter.Emit(module, _es5), Throws.ArgumentException.With.Message.Contains("The module 'M' cannot be emitted: ill-typed IR in 'F'"));
+    Assert.That(LegalizedJavaScript.Check(module, _es5).Select(problem => problem.Code), Is.EqualTo(new[] { IrVerifier.Code }));
+    Assert.That(() => LegalizedJavaScript.Emit(module, _es5), Throws.ArgumentException.With.Message.Contains("The module 'M' cannot be emitted: ill-typed IR in 'F'"));
   }
 
   /// <summary>A table that lacks an entry the emitter asks for is a mistake of whoever made the table.</summary>
   [Test]
   public void TableWithoutAnEntry_IsAnError() {
     var module = Import("public static int F(int a) => a * a;");
-    Assert.That(() => JavaScriptEmitter.Check(module, _es5, new JavaScriptCapabilities([])), Throws.ArgumentException.With.Message.Contains("The capability table has no entry '"));
+    Assert.That(() => LegalizedJavaScript.Check(module, _es5, new JavaScriptCapabilities([])), Throws.ArgumentException.With.Message.Contains("The capability table has no entry '"));
   }
 
 }
