@@ -1103,8 +1103,8 @@ public static partial class CSharpEmitter {
           return (this.GlobalName(reference.Global), Primary);
         case IrNull or IrGenericEquals or IrGenericCompare or IrCall when this.GenericNode(expression) is { } generic:
           return generic;
-        case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke or IrConditional { Type.IsFunction: true } or IrReferenceEquals { Left.Type.IsFunction: true } when this.FunctionNode(expression) is { } function:
-          return function;
+        case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke or IrConditional { Type.IsFunction: true } or IrReferenceEquals { Left.Type.IsFunction: true }:
+          return this.FunctionNode(expression);
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrFieldLoad { Target.Type.IsObject: true } or IrStructEquals { Left.Type.IsObject: true }:
           return this.Object(expression);
         case IrTypeTest or IrCast or IrAsCast:

@@ -27,8 +27,8 @@ public static partial class JavaScriptEmitter {
     /// <summary>The environments of the loops of the function being written, by loop.</summary>
     private readonly Dictionary<IrStmt, Environment> _environments = new(ReferenceEqualityComparer.Instance);
 
-    /// <summary>The variables that live in the environment of a pass while its body is written, with the environment and the property.</summary>
-    private readonly Dictionary<IrLocal, (string Environment, string Key)> _inEnvironment = [];
+    /// <summary>The variables that live in the environment of a pass while its body is written, with the environment and the property; two locals of one name and type are two variables here.</summary>
+    private readonly Dictionary<IrLocal, (string Environment, string Key)> _inEnvironment = new(ReferenceEqualityComparer.Instance);
 
     /// <summary>The loops of variables of every pass whose variables the loop's own header declares.</summary>
     private readonly HashSet<IrFor> _headed = new(ReferenceEqualityComparer.Instance);
@@ -251,16 +251,13 @@ public static partial class JavaScriptEmitter {
 
     private List<JsStatement> InEnvironment(Environment environment, IrBlock body) {
       var properties = environment.Variables.Where(variable => variable.PerIteration).Select(variable => new JsProperty(variable.Key, this.Variable(variable.Local))).ToList();
-      var saved = environment.Variables.Select(variable => (variable.Local, Had: this._inEnvironment.TryGetValue(variable.Local, out var before), Before: before)).ToList();
+      // A variable lives in the environment of the innermost loop that declares it, which is no other loop's.
       foreach (var (local, key, _) in environment.Variables)
         this._inEnvironment[local] = (environment.Name, key);
 
       var statements = this.Statements(body);
-      foreach (var (local, had, before) in saved)
-        if (had)
-          this._inEnvironment[local] = before;
-        else
-          this._inEnvironment.Remove(local);
+      foreach (var (local, _, _) in environment.Variables)
+        this._inEnvironment.Remove(local);
 
       var back = environment.Variables.Where(variable => variable.PerIteration && CSharpLikeWrites(body, variable.Local))
         .Select(variable => (JsStatement)new JsExpressionStatement(new JsAssignment(this.Variable(variable.Local), "=", new JsMember(Id(environment.Name), variable.Key)))).ToList();

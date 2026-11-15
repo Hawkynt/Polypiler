@@ -23,6 +23,9 @@ internal sealed partial class Lowering {
   /// <summary>The number of locals of the functions around the lambda being lowered, so that the temporaries of each are named apart.</summary>
   private int _localBase;
 
+  /// <summary>The delegate types declared beside the static class, each with the file and the model it is read with.</summary>
+  private readonly List<(string Path, BoundModel Model, DelegateDeclarationSyntax Type)> _delegates = [];
+
   /// <summary>The parameters and locals of the lambdas of the function being lowered, which may hide a constant as its own locals may.</summary>
   private readonly List<IrLocal> _nested = [];
 
@@ -83,7 +86,7 @@ internal sealed partial class Lowering {
       return null;
 
     if (method.MethodKind == MethodKind.LocalFunction)
-      return new IrLocalRef(this.LocalFunction(method, expression));
+      return new IrLocalRef(this.LocalFunction(method));
 
     if (method.IsStatic && SymbolEqualityComparer.Default.Equals(method.ContainingType, this._class))
       return new IrFunctionRef(type, method.IsGenericMethod ? this.Instance(method, expression) : method.Name);
@@ -148,14 +151,8 @@ internal sealed partial class Lowering {
     }
   }
 
-  /// <summary>The variable that holds a local function, made when its block begins.</summary>
-  private IrLocal LocalFunction(IMethodSymbol symbol, SyntaxNode node) {
-    if (symbol.IsGenericMethod)
-      throw new UnsupportedException(node, "a generic local function");
-
-    return this._variables.TryGetValue(symbol.OriginalDefinition, out var variable) ? variable
-      : throw new UnsupportedException(node, $"the local function {symbol.Name} outside its block");
-  }
+  /// <summary>The variable that holds a local function, made when its block begins - before anything of the block names it; a generic one is refused there.</summary>
+  private IrLocal LocalFunction(IMethodSymbol symbol) => this._variables[symbol.OriginalDefinition];
 
   /// <summary>
   /// The statements of a block that declares local functions: each is a variable declared first, and
@@ -215,7 +212,7 @@ internal sealed partial class Lowering {
 
     IrExpr callee;
     if (method.MethodKind == MethodKind.LocalFunction)
-      callee = new IrLocalRef(this.LocalFunction(method, invocation));
+      callee = new IrLocalRef(this.LocalFunction(method));
     else
       callee = this.Value(invocation.Expression is MemberAccessExpressionSyntax { Name.Identifier.Text: "Invoke" } member && IsDelegate(model.GetTypeInfo(member.Expression).Type)
         ? member.Expression : invocation.Expression);

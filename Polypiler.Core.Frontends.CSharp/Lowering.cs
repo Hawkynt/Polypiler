@@ -58,6 +58,16 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
     this.DeclareStructs(structs);
     this.DeclareClasses(objects);
+    // A delegate type beside the class is checked once the types it may name are declared.
+    foreach (var (file, semantics, declared) in this._delegates) {
+      (path, model) = (file, semantics);
+      try {
+        this.DelegateDeclaration(declared);
+      } catch (UnsupportedException unsupported) {
+        this.Report(unsupported);
+      }
+    }
+
     this.FindWrittenArrays(classes);
     foreach (var (file, semantics, type) in classes) {
       path = file;
@@ -210,13 +220,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       throw new UnsupportedException(types.Count > 1 ? types[1] : root, "a file that is not exactly one static class");
 
     structs.AddRange(members.Concat(type.Members).Where(member => IsStruct(member) || IsClass(member)).Cast<TypeDeclarationSyntax>());
-    foreach (var declared in members.OfType<DelegateDeclarationSyntax>()) {
-      try {
-        this.DelegateDeclaration(declared);
-      } catch (UnsupportedException unsupported) {
-        this.Report(unsupported);
-      }
-    }
+    this._delegates.AddRange(members.OfType<DelegateDeclarationSyntax>().Select(declared => (path, model, declared)));
 
     if (!type.Modifiers.Any(SyntaxKind.StaticKeyword))
       throw new UnsupportedException(type, "a class that is not static");

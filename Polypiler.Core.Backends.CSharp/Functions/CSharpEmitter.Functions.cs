@@ -262,7 +262,7 @@ public static partial class CSharpEmitter {
     }
 
     /// <summary>The nodes of function values: a lambda, a function or a bound method as a value, a call of a function value, and the conditionals and comparisons of them.</summary>
-    private (CsExpression Node, int Binding)? FunctionNode(IrExpr expression) {
+    private (CsExpression Node, int Binding) FunctionNode(IrExpr expression) {
       switch (expression) {
         case IrLambda lambda:
           return this.Lambda(lambda);
@@ -282,11 +282,10 @@ public static partial class CSharpEmitter {
           var condition = this.Operand(choice.Condition, Unary);
           var whenTrue = this.Typed(choice.WhenTrue, Unary);
           return (new CsConditional(condition, whenTrue, this.Typed(choice.WhenFalse, Unary)), Loose);
-        case IrReferenceEquals { Left.Type.IsFunction: true } identity:
+        default:
+          var identity = (IrReferenceEquals)expression;
           var left = this.Typed(identity.Left, Unary);
           return (new CsBinary(left, "==", this.Typed(identity.Right, Unary)), Loose);
-        default:
-          return null;
       }
     }
 
