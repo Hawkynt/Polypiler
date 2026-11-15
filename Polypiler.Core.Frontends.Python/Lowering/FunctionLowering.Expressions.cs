@@ -60,7 +60,7 @@ internal sealed partial class FunctionLowering {
     }
   }
 
-  /// <summary>A constant; an integer that 64 bits do not hold is refused.</summary>
+  /// <summary>A constant; an integer of any magnitude.</summary>
   private (IrExpr, PyType) Constant(PyNode node, BigInteger? integer) {
     switch (node.Text("kind")) {
       case "bool":
@@ -68,10 +68,7 @@ internal sealed partial class FunctionLowering {
       case "float":
         return (Float(Constants.Float(node.Text("value")!)), PyType.Float);
       default:
-        this._notes.UsesInt = true;
-        return integer < long.MinValue || integer > long.MaxValue
-          ? throw this.Refuse(node, PythonFrontend.IntegerRangeDescriptor, $"the integer '{this._file.Quote(node)}' needs more than 64 bits, which the import does not hold yet")
-          : (Int((long)integer!.Value), PyType.Int);
+        return (Big(integer!.Value), PyType.Int);
     }
   }
 
@@ -82,31 +79,36 @@ internal sealed partial class FunctionLowering {
 
     this._notes.Widens = true;
     return (value.Type, type, value.Value) switch {
-      (PyType.Bool, PyType.Int, IrConst constant) => Int(constant.Value),
-      (PyType.Bool, PyType.Int, _) => Choose(value.Value, Int(1), Int(0)),
+      (PyType.Bool, PyType.Int, IrConst constant) => Big(constant.Value),
+      (PyType.Bool, PyType.Int, _) => Choose(value.Value, Big(1), Big(0)),
       (PyType.Bool, _, IrConst constant) => Float(constant.Value),
       (PyType.Bool, _, _) => Choose(value.Value, Float(1), Float(0)),
-      (_, _, IrConst constant) => Float(constant.Value),
-      _ => Convert(IrType.F64, value.Value)
+      _ => this.FloatOfInt(value.Value)
     };
   }
 
   /// <summary>A <c>bool</c> as the <c>int</c> it is, without counting it as a widening: Python computes it so.</summary>
   private (IrExpr, PyType) Integer((IrExpr Value, PyType Type) value)
-    => value.Type == PyType.Bool ? (value.Value is IrConst constant ? Int(constant.Value) : Choose(value.Value, Int(1), Int(0)), PyType.Int) : value;
+    => value.Type == PyType.Bool ? (value.Value is IrConst constant ? Big(constant.Value) : Choose(value.Value, Big(1), Big(0)), PyType.Int) : value;
 
   /// <summary>An <c>int</c> or <c>bool</c> as a <c>float</c>, as an arithmetic operator with a <c>float</c> operand converts it.</summary>
-  private static IrExpr Floating((IrExpr Value, PyType Type) value) => value.Type switch {
+  private IrExpr Floating((IrExpr Value, PyType Type) value) => value.Type switch {
     PyType.Float => value.Value,
     PyType.Bool => value.Value is IrConst constant ? Float(constant.Value) : Choose(value.Value, Float(1), Float(0)),
-    _ => value.Value is IrConst constant ? Float(constant.Value) : Convert(IrType.F64, value.Value)
+    _ => this.FloatOfInt(value.Value)
   };
+
+  /// <summary>An <c>int</c> as the nearest <c>float</c>, which raises <c>OverflowError</c> beyond the largest one; a constant that converts is converted here.</summary>
+  private IrExpr FloatOfInt(IrExpr value)
+    => value is IrBigConst constant && IrBigInts.ToDouble(constant.Value) is var number && double.IsFinite(number)
+      ? Float(number)
+      : this.Effect(this._helpers.FloatOfInt(value));
 
   /// <summary>The truth of a value, as a condition tests it: an <c>int</c> or <c>float</c> is true when it is not zero; a NaN is true.</summary>
   private IrExpr Truth((IrExpr Value, PyType Type) value) => value.Type switch {
     PyType.Bool => value.Value,
     PyType.Float => Binary(IrBinaryOp.NotEqual, value.Value, Float(0)),
-    _ => Binary(IrBinaryOp.NotEqual, value.Value, Int(0))
+    _ => Binary(IrBinaryOp.NotEqual, value.Value, Big(0))
   };
 
   private (IrExpr Value, PyType Type) Operate(PyNode node, string op, (IrExpr Value, PyType Type) left, (IrExpr Value, PyType Type) right) {
@@ -117,7 +119,7 @@ internal sealed partial class FunctionLowering {
     if (op is "BitAnd" or "BitOr" or "BitXor" && left.Type == PyType.Bool && right.Type == PyType.Bool)
       return (op == "BitXor"
         ? Binary(IrBinaryOp.NotEqual, left.Value, right.Value)
-        : Binary(IrBinaryOp.NotEqual, Binary(op == "BitAnd" ? IrBinaryOp.And : IrBinaryOp.Or, this.Integer(left).Item1, this.Integer(right).Item1), Int(0)), PyType.Bool);
+        : Binary(IrBinaryOp.NotEqual, Binary(op == "BitAnd" ? IrBinaryOp.And : IrBinaryOp.Or, this.Integer(left).Item1, this.Integer(right).Item1), Big(0)), PyType.Bool);
 
     if (op == "Div")
       return (floating ? this.Effect(this._helpers.TrueDivideFloat(Floating(left), Floating(right))) : this.Effect(this._helpers.TrueDivideInt(this.Integer(left).Item1, this.Integer(right).Item1)), PyType.Float);
@@ -136,21 +138,25 @@ internal sealed partial class FunctionLowering {
       }, PyType.Float);
     }
 
-    this._notes.UsesInt = true;
     var (x, y) = (this.Integer(left).Item1, this.Integer(right).Item1);
+    // A constant count or a divisor that is a positive power of two needs no check: the operation is one of the IR.
+    var count = y is IrBigConst { Value: var shift } && shift.Sign >= 0 && shift <= int.MaxValue ? (int?)(int)shift : null;
+    var power = y is IrBigConst { Value: var divisor } && divisor.Sign > 0 && divisor.IsPowerOfTwo ? (int?)(int)(divisor.GetBitLength() - 1) : null;
     return (op switch {
-      "Add" => this.Effect(Binary(IrBinaryOp.AddChecked, x, y)),
-      "Sub" => this.Effect(Binary(IrBinaryOp.SubtractChecked, x, y)),
-      "Mult" => this.Effect(Binary(IrBinaryOp.MultiplyChecked, x, y)),
-      "FloorDiv" => this.Effect(Intrinsic(IrIntrinsicOp.DivFloor, IrType.I64, x, y)),
-      "Mod" when y is IrConst { Value: not -1 } => this.Effect(Intrinsic(IrIntrinsicOp.ModFloor, IrType.I64, x, y)),
+      "Add" => Binary(IrBinaryOp.Add, x, y),
+      "Sub" => Binary(IrBinaryOp.Subtract, x, y),
+      "Mult" => Binary(IrBinaryOp.Multiply, x, y),
+      // The floor of a quotient by 2^k is the arithmetic shift, the floor remainder the low k bits, also of a negative dividend.
+      "FloorDiv" when power is { } k => Binary(IrBinaryOp.ShiftRight, x, Int32(k)),
+      "FloorDiv" => this.Effect(this._helpers.FloorDivideInt(x, y)),
+      "Mod" when power is { } k => Binary(IrBinaryOp.And, x, Big((BigInteger.One << k) - 1)),
       "Mod" => this.Effect(this._helpers.ModuloInt(x, y)),
       "BitAnd" => Binary(IrBinaryOp.And, x, y),
       "BitOr" => Binary(IrBinaryOp.Or, x, y),
       "BitXor" => Binary(IrBinaryOp.Xor, x, y),
-      // A constant count inside the width shifts without a check: an arithmetic shift loses nothing Python keeps.
-      "RShift" when y is IrConst { Value: >= 0 and < 64 } count => Binary(IrBinaryOp.ShiftRight, x, Int32((int)count.Value)),
+      "RShift" when count is { } n => Binary(IrBinaryOp.ShiftRight, x, Int32(n)),
       "RShift" => this.Effect(this._helpers.ShiftRight(x, y)),
+      "LShift" when count is { } n => Binary(IrBinaryOp.ShiftLeft, x, Int32(n)),
       _ => this.Effect(this._helpers.ShiftLeft(x, y))
     }, PyType.Int);
   }
@@ -161,9 +167,12 @@ internal sealed partial class FunctionLowering {
   /// An integer exponent whose sign is not known gives an <c>int</c>, and a negative one raises.
   /// </summary>
   private (IrExpr, PyType) Power(PyNode node, (IrExpr Value, PyType Type) left, (IrExpr Value, PyType Type) right, bool floating) {
-    if (!floating && !(right.Value is IrConst { Value: < 0 } && right.Type == PyType.Int)) {
-      this._notes.UsesInt = true;
-      if (right.Value is not IrConst)
+    if (!floating && !(right.Value is IrBigConst { Value.Sign: < 0 } && right.Type == PyType.Int)) {
+      // A constant to a constant power is the constant, as far as its size stays reasonable.
+      if (left.Value is IrBigConst @base && right.Value is IrBigConst exponent && exponent.Value <= 4096)
+        return (Big(BigInteger.Pow(@base.Value, (int)exponent.Value)), PyType.Int);
+
+      if (right.Value is not (IrConst or IrBigConst))
         this._notes.PowersBySignUnknown = true;
 
       return (this.Effect(this._helpers.PowerInt(this.Integer(left).Item1, this.Integer(right).Item1)), PyType.Int);
@@ -192,10 +201,9 @@ internal sealed partial class FunctionLowering {
         throw this.Refuse(expression, PythonFrontend.UnsupportedDescriptor, "'~ with a float operand, which raises TypeError,' is not supported by the Python frontend");
     }
 
-    this._notes.UsesInt = true;
     var integer = this.Integer(operand).Item1;
     return (op switch {
-      "USub" => this.Effect(new IrUnary(IrUnaryOp.NegateChecked, integer)),
+      "USub" => new IrUnary(IrUnaryOp.Negate, integer),
       "Invert" => new IrUnary(IrUnaryOp.BitNot, integer),
       _ => integer
     }, PyType.Int);
@@ -236,7 +244,7 @@ internal sealed partial class FunctionLowering {
   /// operation that may raise.
   /// </summary>
   private (IrExpr Value, PyType Type) Kept(PyNode node, (IrExpr Value, PyType Type) value, int before) {
-    if (value.Value is IrConst or IrLocalRef)
+    if (value.Value is IrConst or IrBigConst or IrLocalRef)
       return value;
 
     var reordered = this._effects > before && before > this._statementEffects;
@@ -258,11 +266,11 @@ internal sealed partial class FunctionLowering {
       return Binary(_comparisons[op], a.Item1, b.Item1);
 
     // An int and a float compare exactly; a constant int a float holds exactly compares as that float.
-    if (a.Item2 == PyType.Int && a.Item1 is IrConst { Value: >= -(1L << 53) and <= 1L << 53 } leftConstant)
-      return Binary(_comparisons[op], Float(leftConstant.Value), b.Item1);
+    if (a.Item2 == PyType.Int && a.Item1 is IrBigConst leftConstant && BigInteger.Abs(leftConstant.Value) <= 1L << 53)
+      return Binary(_comparisons[op], Float((double)leftConstant.Value), b.Item1);
 
-    if (b.Item2 == PyType.Int && b.Item1 is IrConst { Value: >= -(1L << 53) and <= 1L << 53 } rightConstant)
-      return Binary(_comparisons[op], a.Item1, Float(rightConstant.Value));
+    if (b.Item2 == PyType.Int && b.Item1 is IrBigConst rightConstant && BigInteger.Abs(rightConstant.Value) <= 1L << 53)
+      return Binary(_comparisons[op], a.Item1, Float((double)rightConstant.Value));
 
     return this.Effect(a.Item2 == PyType.Int ? this._helpers.CompareIntFloat(a.Item1, b.Item1, code) : this._helpers.CompareFloatInt(a.Item1, b.Item1, code));
   }
@@ -342,7 +350,6 @@ internal sealed partial class FunctionLowering {
     }
 
     if (argument.Type != PyType.Float) {
-      this._notes.UsesInt = true;
       var integer = this.Integer(argument).Item1;
       return (name == "abs" ? this.Effect(this._helpers.AbsInt(integer)) : integer, PyType.Int);
     }

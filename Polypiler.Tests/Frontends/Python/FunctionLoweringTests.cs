@@ -40,7 +40,7 @@ public sealed class FunctionLoweringTests {
   [Test]
   public void ResultOnlyRecursionReaches_TakesItsHint() {
     const string source = "def f(n: int) -> int:\n    return f(n)\n";
-    Assert.That(PythonSnippet.Module(source).Functions.Single().ReturnType, Is.EqualTo(IrType.I64));
+    Assert.That(PythonSnippet.Module(source).Functions.Single().ReturnType, Is.EqualTo(IrType.BigInt));
     Assert.That(PythonSnippet.Refusals("def f(n: int):\n    return f(n)\n"), Has.Some.Contains("error PLY1801: the result type of 'f' is not known"));
   }
 

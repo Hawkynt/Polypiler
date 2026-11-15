@@ -63,13 +63,13 @@ public sealed class PythonFrontendTests {
     Assert.That(Core.IR.IrModuleFormat.Write(live.Module!), Is.EqualTo(Core.IR.IrModuleFormat.Write(PythonFixture.Import(fixture))));
   }
 
-  /// <summary>Each fixture translates with the executable into C# and JavaScript, with the caveats of the import as notes.</summary>
+  /// <summary>Each fixture translates with the executable into C# and JavaScript, with the caveats of the import as notes - an int is exact, which needs none.</summary>
   [TestCaseSource(nameof(Fixtures)), RequiresToolchain("python")]
   public void Fixture_TranslatesWithTheExecutable(string fixture) {
     foreach (var target in new[] { "csharp", "javascript" }) {
       var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", PythonFixture.PathOf(fixture), "--from", "python", "--to", target, "--output", "out-" + target);
       Assert.That(exitCode, Is.Zero, output);
-      Assert.That(output, Does.Contain("note py-int-64"));
+      Assert.That(output, Does.Not.Contain("py-int-64"));
       Assert.That(Directory.EnumerateFiles(Path.Combine(this._directory, "out-" + target)).Select(Path.GetFileName), Does.Contain("polypiler.manifest.json"));
     }
   }

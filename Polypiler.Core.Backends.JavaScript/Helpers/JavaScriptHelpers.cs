@@ -34,7 +34,7 @@ internal static partial class JavaScriptHelpers {
     .. ErrorOrder,
     "$imul", "$f32a", "$fround", "$trunc",
     "$div64", "$rem64", "$udiv64", "$urem64",
-    "$f2l", "$f2lc", "$f32",
+    "$f2l", "$f2lc", "$f32", "$bigfit",
     "$get", "$set", "$new", "$fill",
     "$view", "$bits64", "$bits32", "$float64", "$float32", "$key64",
     "$copy", "$copya", "$step", "$stepi", "$stepf", "$stepck", "$len",
@@ -153,6 +153,9 @@ internal static partial class JavaScriptHelpers {
     "$rem64" => Lines("function $rem64(a, b) {", ZeroDivisor64, Unrepresentable64, "  return a % b;", "}"),
     "$udiv64" => Lines("function $udiv64(a, b) {", ZeroDivisor64, "  return a / b;", "}"),
     "$urem64" => Lines("function $urem64(a, b) {", ZeroDivisor64, "  return a % b;", "}"),
+
+    // An arbitrary-precision integer to a fixed width that traps: the bounds checked on the BigInt itself.
+    "$bigfit" => Lines("function $bigfit(value, low, high) {", "  if (value < low || value > high) " + Overflow, "  return value;", "}"),
 
     // A number to a BigInt, saturating or trapping; to a number it is the library's.
     "$f2l" => """

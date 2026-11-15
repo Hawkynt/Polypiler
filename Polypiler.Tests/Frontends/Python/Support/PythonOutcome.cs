@@ -38,23 +38,18 @@ internal static class PythonOutcome {
 
   /// <summary>
   /// What the import is expected to do for a call, given what CPython did: the same, except where the
-  /// import says it differs - an <c>int</c> result beyond 64 bits raises <c>OverflowError</c>
-  /// (<c>py-int-64</c>), and a complex result raises <c>ArithmeticError</c> (<c>py-complex-power</c>).
+  /// import says it differs - a complex result raises <c>ArithmeticError</c> (<c>py-complex-power</c>).
+  /// An <c>int</c> is exact at every magnitude.
   /// </summary>
-  public static string Expected(string python) {
-    if (python.StartsWith("int ", StringComparison.Ordinal)) {
-      var value = BigInteger.Parse(python[4..], CultureInfo.InvariantCulture);
-      return value < long.MinValue || value > long.MaxValue ? "raise OverflowError" : python;
-    }
-
-    return python.StartsWith("complex ", StringComparison.Ordinal) ? "raise ArithmeticError" : python;
-  }
+  public static string Expected(string python)
+    => python.StartsWith("complex ", StringComparison.Ordinal) ? "raise ArithmeticError" : python;
 
   /// <summary>A value as the oracle prints a result.</summary>
   public static string Show(object? value) => value switch {
     null => "None",
     bool truth => "bool " + (truth ? "True" : "False"),
     long integer => "int " + integer.ToString(CultureInfo.InvariantCulture),
+    BigInteger integer => "int " + integer.ToString(CultureInfo.InvariantCulture),
     double number => "float " + Repr(number),
     _ => value.GetType().Name + " " + value
   };
@@ -112,7 +107,8 @@ internal static class PythonOutcome {
   /// <summary>What the interpreter does for a call of an imported module.</summary>
   public static string Interpreted(IrModule module, PythonCall call) {
     try {
-      return Show(IrInterpreter.Call(module, call.Function, call.Arguments));
+      var parameters = module.Functions.First(function => function.Name == call.Function).Parameters;
+      return Show(IrInterpreter.Call(module, call.Function, [.. call.Arguments.Select((argument, index) => parameters[index].Type.IsBigInt && argument is long integer ? (BigInteger)integer : argument)]));
     } catch (IrException exception) {
       return "raise " + Exception(exception.Class.Name);
     }
@@ -121,7 +117,8 @@ internal static class PythonOutcome {
   /// <summary>What a method compiled from the emitted C# does for a call.</summary>
   public static string Invoked(MethodInfo method, PythonCall call) {
     try {
-      return Show(method.Invoke(null, call.Arguments));
+      var parameters = method.GetParameters();
+      return Show(method.Invoke(null, [.. call.Arguments.Select((argument, index) => parameters[index].ParameterType == typeof(BigInteger) && argument is long integer ? (BigInteger)integer : argument)]));
     } catch (TargetInvocationException exception) when (exception.InnerException is { } inner) {
       return "raise " + Exception(inner.GetType().Name);
     }

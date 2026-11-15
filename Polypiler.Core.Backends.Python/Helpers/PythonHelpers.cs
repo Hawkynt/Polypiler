@@ -81,6 +81,24 @@ internal static class PythonHelpers {
   /// <summary>The nearest integral double, a tie away from zero.</summary>
   public const string RoundAway = "_ply_round_away";
 
+  /// <summary>The quotient of two arbitrary-precision integers truncated toward zero; <c>ZeroDivisionError</c> only.</summary>
+  public const string BigDivide = "_ply_big_div";
+
+  /// <summary>The remainder of two arbitrary-precision integers with the sign of the dividend.</summary>
+  public const string BigRemainder = "_ply_big_rem";
+
+  /// <summary>An arbitrary-precision shift to the left by a count of any sign, a negative one shifting to the right.</summary>
+  public const string BigShiftLeft = "_ply_big_shl";
+
+  /// <summary>An arbitrary-precision shift to the right by a count of any sign, a negative one shifting to the left.</summary>
+  public const string BigShiftRight = "_ply_big_shr";
+
+  /// <summary>The nearest double to an integer, an infinity where Python's <c>float</c> raises <c>OverflowError</c>.</summary>
+  public const string BigToFloat = "_ply_big_float";
+
+  /// <summary>A float truncated toward zero to an integer of any magnitude; the overflow trap for a NaN and an infinity.</summary>
+  public const string FloatToBig = "_ply_float_big";
+
   /// <summary>The source of every helper, in the order a module declares them.</summary>
   private const string Source = """
     def _ply_checked(value: int, low: int, high: int) -> int:
@@ -235,6 +253,36 @@ internal static class PythonHelpers {
         if abs(value - whole) >= 0.5:
             whole = whole + (1 if value > 0.0 else -1)
         return math.copysign(float(whole), value)
+
+
+    def _ply_big_div(dividend: int, divisor: int) -> int:
+        quotient = abs(dividend) // abs(divisor)
+        return -quotient if (dividend < 0) != (divisor < 0) else quotient
+
+
+    def _ply_big_rem(dividend: int, divisor: int) -> int:
+        remainder = abs(dividend) % abs(divisor)
+        return -remainder if dividend < 0 else remainder
+
+
+    def _ply_big_shl(value: int, count: int) -> int:
+        return value << count if count >= 0 else value >> -count
+
+
+    def _ply_big_shr(value: int, count: int) -> int:
+        return value >> count if count >= 0 else value << -count
+
+
+    def _ply_big_float(value: int) -> float:
+        if abs(value) >= (1 << 1024) - (1 << 970):
+            return math.inf if value > 0 else -math.inf
+        return float(value)
+
+
+    def _ply_float_big(value: float) -> int:
+        if not math.isfinite(value):
+            raise OverflowError("integer overflow")
+        return int(value)
     """;
 
   private static readonly Lazy<IReadOnlyList<PyFunctionDef>> _functions = new(() => [

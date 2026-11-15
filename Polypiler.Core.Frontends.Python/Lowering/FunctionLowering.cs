@@ -11,9 +11,6 @@ namespace Polypiler.Core.Frontends.Python.Lowering;
 /// <summary>What the lowering of the module found that the import has to announce as a known difference.</summary>
 internal sealed class LoweringNotes {
 
-  /// <summary>An <c>int</c> is computed: beyond 64 bits it raises <c>OverflowError</c>.</summary>
-  public bool UsesInt { get; set; }
-
   /// <summary>A narrower number is stored where a wider one is held, and converted.</summary>
   public bool Widens { get; set; }
 
@@ -97,7 +94,7 @@ internal sealed partial class FunctionLowering {
   private static IrExpr Zero(PyType type) => type switch {
     PyType.Bool => Bool(false),
     PyType.Float => Float(0),
-    _ => Int(0)
+    _ => Big(0)
   };
 
   /// <summary>A new local of the function for a temporary, named after what it holds and unlike every other name.</summary>
@@ -222,7 +219,7 @@ internal sealed partial class FunctionLowering {
     for (var index = 0; index < values.Count; ++index) {
       var value = this.Value(values[index]);
       var earlier = names.Take(index).Select(name => name.Text("id")).ToHashSet();
-      var stable = value.Value is IrConst || (value.Value is IrLocalRef local && !earlier.Contains(local.Local.Name));
+      var stable = value.Value is IrConst or IrBigConst || (value.Value is IrLocalRef local && !earlier.Contains(local.Local.Name));
       if (!stable) {
         var temporary = this.Fresh(names[index].Text("id")!, value.Value.Type);
         result.Add(new IrDeclare(temporary, value.Value));
@@ -243,7 +240,7 @@ internal sealed partial class FunctionLowering {
     var operands = new List<(IrExpr Value, PyType Type)>();
     foreach (var argument in arguments) {
       var value = this.Value(argument);
-      if (value.Value is not (IrConst or IrLocalRef)) {
+      if (value.Value is not (IrConst or IrBigConst or IrLocalRef)) {
         var temporary = this.Fresh("operand", value.Value.Type);
         result.Add(new IrDeclare(temporary, value.Value));
         value = (Ref(temporary), value.Type);

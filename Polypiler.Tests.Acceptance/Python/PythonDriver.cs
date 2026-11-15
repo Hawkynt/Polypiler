@@ -142,6 +142,7 @@ internal static class PythonDriver {
     long or ulong or int or uint or short or ushort or sbyte or byte => new { t = "n", v = Convert.ToString(argument, CultureInfo.InvariantCulture) },
     float or double => new { t = "f", v = BitConverter.DoubleToInt64Bits(Convert.ToDouble(argument, CultureInfo.InvariantCulture)).ToString("x16", CultureInfo.InvariantCulture) },
     char unit => new { t = "n", v = ((int)unit).ToString(CultureInfo.InvariantCulture) },
+    System.Numerics.BigInteger big => new { t = "n", v = big.ToString(CultureInfo.InvariantCulture) },
     _ => argument
   };
 

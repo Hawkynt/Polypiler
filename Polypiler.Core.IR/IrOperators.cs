@@ -12,7 +12,7 @@ public static class IrOperators {
   /// <param name="operand">The type of the operand.</param>
   /// <returns><see langword="true"/> when the operator applies.</returns>
   /// <remarks>Of the operators on one operand only the complement applies to an enum, of 32 or 64 bits.</remarks>
-  public static bool Accepts(IrUnaryOp op, IrType operand) => (!operand.IsEnum || op == IrUnaryOp.BitNot) && op switch {
+  public static bool Accepts(IrUnaryOp op, IrType operand) => operand.IsBigInt ? IrBigInts.Accepts(op) : (!operand.IsEnum || op == IrUnaryOp.BitNot) && op switch {
     IrUnaryOp.Negate => operand.IsFloat || operand == IrType.I32 || operand == IrType.I64,
     IrUnaryOp.NegateChecked => operand == IrType.I32 || operand == IrType.I64,
     IrUnaryOp.BitNot => operand.IsWideInteger,
@@ -29,7 +29,8 @@ public static class IrOperators {
   /// by bit, as their underlying values are; anything else is computed on the underlying type, which an
   /// enum converts to and from without a change.
   /// </remarks>
-  public static bool Accepts(IrBinaryOp op, IrType left, IrType right) => left.IsEnum || right.IsEnum
+  public static bool Accepts(IrBinaryOp op, IrType left, IrType right) => left.IsBigInt ? IrBigInts.Accepts(op, right)
+    : left.IsEnum || right.IsEnum
     ? right == left && (op is IrBinaryOp.Equal or IrBinaryOp.NotEqual || (op is IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor && left.IsWideInteger))
     : op switch {
       IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr => left == IrType.Bool && right == IrType.Bool,

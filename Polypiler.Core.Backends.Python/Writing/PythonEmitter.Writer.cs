@@ -159,7 +159,7 @@ public static partial class PythonEmitter {
           return new PyNone();
         case { Kind: IrTypeKind.Bool }:
           return new PyName("bool");
-        case { IsInteger: true, IsEnum: false }:
+        case { IsInteger: true, IsEnum: false } or { IsBigInt: true }:
           return new PyName("int");
         case { IsFloat: true }:
           return new PyName("float");

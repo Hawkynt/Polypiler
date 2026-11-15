@@ -36,7 +36,7 @@ internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
   /// <summary>The helpers called so far, in the order they were first called.</summary>
   public IReadOnlyList<IrFunction> Functions => [.. this._made.Values];
 
-  /// <summary><c>a / b</c> of two <c>int</c>: the correctly rounded quotient; <c>ZeroDivisionError</c>.</summary>
+  /// <summary><c>a / b</c> of two <c>int</c>: the correctly rounded quotient; <c>ZeroDivisionError</c>, <c>OverflowError</c> beyond the largest float.</summary>
   public IrCall TrueDivideInt(IrExpr a, IrExpr b) => this.Call("PyTrueDivideInt", IrType.F64, [a, b], this.MakeTrueDivideInt);
 
   /// <summary><c>a / b</c> of two <c>float</c>; <c>ZeroDivisionError</c>.</summary>
@@ -48,26 +48,32 @@ internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
   /// <summary><c>a % b</c> of two <c>float</c>, with the sign of the divisor; <c>ZeroDivisionError</c>.</summary>
   public IrCall ModuloFloat(IrExpr a, IrExpr b) => this.Call("PyModuloFloat", IrType.F64, [a, b], this.MakeModuloFloat);
 
-  /// <summary><c>a % b</c> of two <c>int</c>, with the sign of the divisor; <c>ZeroDivisionError</c>. Of any number and -1 it is 0, also of the smallest.</summary>
-  public IrCall ModuloInt(IrExpr a, IrExpr b) => this.Call("PyModuloInt", IrType.I64, [a, b], this.MakeModuloInt);
+  /// <summary><c>a // b</c> of two <c>int</c>, the quotient rounded towards negative infinity; <c>ZeroDivisionError</c>.</summary>
+  public IrCall FloorDivideInt(IrExpr a, IrExpr b) => this.Call("PyFloorDivideInt", IrType.BigInt, [a, b], this.MakeFloorDivideInt);
 
-  /// <summary><c>a ** b</c> of two <c>int</c>, <c>b</c> not negative; <c>OverflowError</c> beyond 64 bits.</summary>
-  public IrCall PowerInt(IrExpr a, IrExpr b) => this.Call("PyPowerInt", IrType.I64, [a, b], this.MakePowerInt);
+  /// <summary><c>a % b</c> of two <c>int</c>, with the sign of the divisor; <c>ZeroDivisionError</c>.</summary>
+  public IrCall ModuloInt(IrExpr a, IrExpr b) => this.Call("PyModuloInt", IrType.BigInt, [a, b], this.MakeModuloInt);
+
+  /// <summary><c>a ** b</c> of two <c>int</c>, <c>b</c> not negative.</summary>
+  public IrCall PowerInt(IrExpr a, IrExpr b) => this.Call("PyPowerInt", IrType.BigInt, [a, b], this.MakePowerInt);
 
   /// <summary><c>a ** b</c> of two <c>float</c>; <c>ZeroDivisionError</c>, <c>OverflowError</c>, and a trap where CPython gives a complex.</summary>
   public IrCall PowerFloat(IrExpr a, IrExpr b) => this.Call("PyPowerFloat", IrType.F64, [a, b], this.MakePowerFloat);
 
-  /// <summary><c>a &lt;&lt; n</c>: <c>ValueError</c> for a negative count, <c>OverflowError</c> for a lost bit.</summary>
-  public IrCall ShiftLeft(IrExpr a, IrExpr n) => this.Call("PyShiftLeft", IrType.I64, [a, n], this.MakeShiftLeft);
+  /// <summary><c>a &lt;&lt; n</c>: <c>ValueError</c> for a negative count, <c>OverflowError</c> for a count beyond 2**31 - 1.</summary>
+  public IrCall ShiftLeft(IrExpr a, IrExpr n) => this.Call("PyShiftLeft", IrType.BigInt, [a, n], this.MakeShiftLeft);
 
   /// <summary><c>a &gt;&gt; n</c>, arithmetic, for any count; <c>ValueError</c> for a negative one.</summary>
-  public IrCall ShiftRight(IrExpr a, IrExpr n) => this.Call("PyShiftRight", IrType.I64, [a, n], this.MakeShiftRight);
+  public IrCall ShiftRight(IrExpr a, IrExpr n) => this.Call("PyShiftRight", IrType.BigInt, [a, n], this.MakeShiftRight);
 
-  /// <summary><c>int(x)</c> of a <c>float</c>: toward zero; <c>ValueError</c> for a NaN, <c>OverflowError</c> for an infinity or beyond 64 bits.</summary>
-  public IrCall IntOfFloat(IrExpr x) => this.Call("PyIntOfFloat", IrType.I64, [x], this.MakeIntOfFloat);
+  /// <summary><c>int(x)</c> of a <c>float</c>: toward zero; <c>ValueError</c> for a NaN, <c>OverflowError</c> for an infinity.</summary>
+  public IrCall IntOfFloat(IrExpr x) => this.Call("PyIntOfFloat", IrType.BigInt, [x], this.MakeIntOfFloat);
 
-  /// <summary><c>abs(a)</c> of an <c>int</c>; <c>OverflowError</c> for the one value whose magnitude needs 64 bits.</summary>
-  public IrCall AbsInt(IrExpr a) => this.Call("PyAbsInt", IrType.I64, [a], this.MakeAbsInt);
+  /// <summary><c>float(a)</c> of an <c>int</c>: the nearest float; <c>OverflowError</c> beyond the largest one.</summary>
+  public IrCall FloatOfInt(IrExpr a) => this.Call("PyFloatOfInt", IrType.F64, [a], this.MakeFloatOfInt);
+
+  /// <summary><c>abs(a)</c> of an <c>int</c>.</summary>
+  public IrCall AbsInt(IrExpr a) => this.Call("PyAbsInt", IrType.BigInt, [a], this.MakeAbsInt);
 
   /// <summary>An exact comparison of an <c>int</c> with a <c>float</c>, by the code of <see cref="Comparisons"/>.</summary>
   public IrCall CompareIntFloat(IrExpr a, IrExpr b, int code) => this.Call("PyCompareIntFloat", IrType.Bool, [a, b, Int32(code)], this.MakeCompareIntFloat);
@@ -94,45 +100,56 @@ internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
   private static IrLocal Local(string name, IrType type) => new(name, type);
 
   private IrFunction MakeTrueDivideInt(string name) {
-    var (a, b) = (Local("a", IrType.I64), Local("b", IrType.I64));
-    var (n, d, q, r, e, sticky) = (Local("n", IrType.U64), Local("d", IrType.U64), Local("q", IrType.U64), Local("r", IrType.U64), Local("e", IrType.I32), Local("sticky", IrType.U64));
-    const long exact = 1L << 53;
-    IrExpr Within(IrLocal x) => Binary(IrBinaryOp.LogicalAnd, Binary(IrBinaryOp.GreaterOrEqual, Ref(x), Int(-exact)), Binary(IrBinaryOp.LessOrEqual, Ref(x), Int(exact)));
-    IrExpr Magnitude(IrLocal x) => Choose(Binary(IrBinaryOp.Less, Ref(x), Int(0)), Binary(IrBinaryOp.Subtract, UInt(0), Convert(IrType.U64, Ref(x))), Convert(IrType.U64, Ref(x)));
-    var magnitude = Local("magnitude", IrType.F64);
-    return Function(name, IrType.F64, [a, b], [n, d, q, r, e, sticky, magnitude],
-      If(Equal(Ref(b), Int(0)), Raise(IrExceptionClass.DivideByZeroException, "division by zero")),
+    var (a, b) = (Local("a", IrType.BigInt), Local("b", IrType.BigInt));
+    var (n, d, e, q, s, sticky) = (Local("n", IrType.BigInt), Local("d", IrType.BigInt), Local("e", IrType.I64), Local("q", IrType.I64), Local("s", IrType.I64), Local("sticky", IrType.Bool));
+    var (mantissa, rest, magnitude) = (Local("mantissa", IrType.I64), Local("rest", IrType.I64), Local("magnitude", IrType.F64));
+    IrExpr Within(IrLocal x) => Binary(IrBinaryOp.LogicalAnd, Binary(IrBinaryOp.GreaterOrEqual, Ref(x), Big(-(1L << 53))), Binary(IrBinaryOp.LessOrEqual, Ref(x), Big(1L << 53)));
+    IrExpr Magnitude(IrLocal x) => Choose(Binary(IrBinaryOp.Less, Ref(x), Big(0)), new IrUnary(IrUnaryOp.Negate, Ref(x)), Ref(x));
+    IrExpr Shifted(IrLocal x, int count) => Binary(IrBinaryOp.ShiftLeft, Ref(x), Int32(count));
+    IrBlock Step(IrLocal x, int count, long exponent) => Block(Assign(x, Shifted(x, count)), Assign(e, Binary(IrBinaryOp.Add, Ref(e), Int(exponent))));
+    IrExpr Mask(IrExpr count) => Binary(IrBinaryOp.Subtract, Binary(IrBinaryOp.ShiftLeft, Int(1), Convert(IrType.I32, count)), Int(1));
+    return Function(name, IrType.F64, [a, b], [n, d, e, q, s, sticky, mantissa, rest, magnitude],
+      If(Equal(Ref(b), Big(0)), Raise(IrExceptionClass.DivideByZeroException, "division by zero")),
       // Two integers a binary64 number holds exactly divide with the one rounding of the division; so does a zero, whose sign is the quotient's.
-      If(Binary(IrBinaryOp.LogicalOr, Equal(Ref(a), Int(0)), Binary(IrBinaryOp.LogicalAnd, Within(a), Within(b))), Return(Binary(IrBinaryOp.Divide, Convert(IrType.F64, Ref(a)), Convert(IrType.F64, Ref(b))))),
+      If(Binary(IrBinaryOp.LogicalAnd, Within(a), Within(b)), Return(Binary(IrBinaryOp.Divide, Convert(IrType.F64, Ref(a)), Convert(IrType.F64, Ref(b))))),
+      If(Equal(Ref(a), Big(0)), Return(Choose(Binary(IrBinaryOp.Less, Ref(b), Big(0)), Float(-0.0), Float(0)))),
       new IrDeclare(n, Magnitude(a)),
       new IrDeclare(d, Magnitude(b)),
-      new IrDeclare(q, Binary(IrBinaryOp.Divide, Ref(n), Ref(d))),
-      new IrDeclare(r, Binary(IrBinaryOp.Remainder, Ref(n), Ref(d))),
-      new IrDeclare(e, Int32(0)),
-      new IrDeclare(sticky, UInt(0)),
-      // A quotient of more than 55 bits loses its low bits into the sticky bit ...
-      new IrWhile(Binary(IrBinaryOp.GreaterOrEqual, Ref(q), UInt(1UL << 55)), Block(
-        Assign(sticky, Binary(IrBinaryOp.Or, Ref(sticky), Binary(IrBinaryOp.And, Ref(q), UInt(1)))),
-        Assign(q, Binary(IrBinaryOp.ShiftRightLogical, Ref(q), Int32(1))),
-        Assign(e, Binary(IrBinaryOp.Add, Ref(e), Int32(1))))),
-      // ... a shorter one takes the next bits of the fraction, one by one, without overflow: 2r >= d is r >= d - r.
-      new IrWhile(Binary(IrBinaryOp.Less, Ref(q), UInt(1UL << 54)), Block(
-        Assign(q, Binary(IrBinaryOp.Add, Ref(q), Ref(q))),
-        Assign(e, Binary(IrBinaryOp.Subtract, Ref(e), Int32(1))),
-        new IrIf(Binary(IrBinaryOp.GreaterOrEqual, Ref(r), Binary(IrBinaryOp.Subtract, Ref(d), Ref(r))),
-          Block(Assign(q, Binary(IrBinaryOp.Add, Ref(q), UInt(1))), Assign(r, Binary(IrBinaryOp.Subtract, Ref(r), Binary(IrBinaryOp.Subtract, Ref(d), Ref(r))))),
-          Block(Assign(r, Binary(IrBinaryOp.Add, Ref(r), Ref(r))))))),
-      // The rest of the fraction is the sticky bit; 53 bits, a rounding bit and the sticky bit round once.
-      Assign(q, Binary(IrBinaryOp.Or, Ref(q), Binary(IrBinaryOp.Or, Ref(sticky), Choose(Binary(IrBinaryOp.NotEqual, Ref(r), UInt(0)), UInt(1), UInt(0))))),
-      // Scaled by powers of two, which is exact: the quotient lies between 2^-64 and 2^64, far from the subnormals and the infinities.
-      new IrDeclare(magnitude, Convert(IrType.F64, Ref(q))),
-      new IrWhile(Binary(IrBinaryOp.Greater, Ref(e), Int32(0)), Block(
+      new IrDeclare(e, Int(0)),
+      // The quotient n / d * 2^e is brought into [2^54, 2^55): 53 bits, a rounding bit and one more; divisor and dividend move by 64 bits first, then by one.
+      new IrWhile(Binary(IrBinaryOp.GreaterOrEqual, Ref(n), Shifted(d, 55 + 64)), Step(d, 64, 64)),
+      new IrWhile(Binary(IrBinaryOp.GreaterOrEqual, Ref(n), Shifted(d, 55)), Step(d, 1, 1)),
+      new IrWhile(Binary(IrBinaryOp.Less, Shifted(n, 64), Shifted(d, 54)), Step(n, 64, -64)),
+      new IrWhile(Binary(IrBinaryOp.Less, Ref(n), Shifted(d, 54)), Step(n, 1, -1)),
+      new IrDeclare(q, Convert(IrType.I64, Binary(IrBinaryOp.Divide, Ref(n), Ref(d)))),
+      new IrDeclare(sticky, Binary(IrBinaryOp.NotEqual, Binary(IrBinaryOp.Remainder, Ref(n), Ref(d)), Big(0))),
+      new IrDeclare(s, Int(0)),
+      // Below the normal numbers the last bit kept weighs 2^-1074: the bits beneath it join the sticky bit.
+      If(Binary(IrBinaryOp.Less, Ref(e), Int(-1076)),
+        Assign(s, Binary(IrBinaryOp.Subtract, Int(-1076), Ref(e))),
+        new IrIf(Binary(IrBinaryOp.GreaterOrEqual, Ref(s), Int(56)), Block(
+          Assign(sticky, Binary(IrBinaryOp.LogicalOr, Ref(sticky), Binary(IrBinaryOp.NotEqual, Ref(q), Int(0)))),
+          Assign(q, Int(0))), Block(
+          Assign(sticky, Binary(IrBinaryOp.LogicalOr, Ref(sticky), Binary(IrBinaryOp.NotEqual, Binary(IrBinaryOp.And, Ref(q), Mask(Ref(s))), Int(0)))),
+          Assign(q, Binary(IrBinaryOp.ShiftRight, Ref(q), Convert(IrType.I32, Ref(s)))))),
+        Assign(e, Int(-1076))),
+      // Rounded to nearest, ties to even, by the two bits below the last one kept and the sticky bit.
+      new IrDeclare(mantissa, Binary(IrBinaryOp.ShiftRight, Ref(q), Int32(2))),
+      new IrDeclare(rest, Binary(IrBinaryOp.And, Ref(q), Int(3))),
+      If(Binary(IrBinaryOp.LogicalOr, Binary(IrBinaryOp.Greater, Ref(rest), Int(2)), Binary(IrBinaryOp.LogicalAnd, Equal(Ref(rest), Int(2)),
+          Binary(IrBinaryOp.LogicalOr, Ref(sticky), Equal(Binary(IrBinaryOp.And, Ref(mantissa), Int(1)), Int(1))))),
+        Assign(mantissa, Binary(IrBinaryOp.Add, Ref(mantissa), Int(1)))),
+      // Scaled by powers of two, which is exact: the number lies on the grid of its binade, or overflows.
+      new IrDeclare(magnitude, Convert(IrType.F64, Ref(mantissa))),
+      Assign(e, Binary(IrBinaryOp.Add, Ref(e), Int(2))),
+      new IrWhile(Binary(IrBinaryOp.LogicalAnd, Binary(IrBinaryOp.Greater, Ref(e), Int(0)), Intrinsic(IrIntrinsicOp.IsFinite, IrType.Bool, Ref(magnitude))), Block(
         Assign(magnitude, Binary(IrBinaryOp.Multiply, Ref(magnitude), Float(2))),
-        Assign(e, Binary(IrBinaryOp.Subtract, Ref(e), Int32(1))))),
-      new IrWhile(Binary(IrBinaryOp.Less, Ref(e), Int32(0)), Block(
+        Assign(e, Binary(IrBinaryOp.Subtract, Ref(e), Int(1))))),
+      new IrWhile(Binary(IrBinaryOp.Less, Ref(e), Int(0)), Block(
         Assign(magnitude, Binary(IrBinaryOp.Multiply, Ref(magnitude), Float(0.5))),
-        Assign(e, Binary(IrBinaryOp.Add, Ref(e), Int32(1))))),
-      Return(Choose(Binary(IrBinaryOp.NotEqual, Binary(IrBinaryOp.Less, Ref(a), Int(0)), Binary(IrBinaryOp.Less, Ref(b), Int(0))),
+        Assign(e, Binary(IrBinaryOp.Add, Ref(e), Int(1))))),
+      If(Intrinsic(IrIntrinsicOp.IsInfinity, IrType.Bool, Ref(magnitude)), Raise(IrExceptionClass.OverflowException, "integer division result too large for a float")),
+      Return(Choose(Binary(IrBinaryOp.NotEqual, Binary(IrBinaryOp.Less, Ref(a), Big(0)), Binary(IrBinaryOp.Less, Ref(b), Big(0))),
         new IrUnary(IrUnaryOp.Negate, Ref(magnitude)), Ref(magnitude))));
   }
 
@@ -170,24 +187,41 @@ internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
       Return(Ref(mod)));
   }
 
+  /// <summary>Whether a truncating remainder differs in sign from the divisor: then the floor division's quotient is one lower and its remainder moved by the divisor.</summary>
+  private static IrExpr Differs(IrLocal remainder, IrLocal divisor)
+    => Binary(IrBinaryOp.LogicalAnd, Binary(IrBinaryOp.NotEqual, Ref(remainder), Big(0)), Binary(IrBinaryOp.NotEqual, Binary(IrBinaryOp.Less, Ref(remainder), Big(0)), Binary(IrBinaryOp.Less, Ref(divisor), Big(0))));
+
+  private IrFunction MakeFloorDivideInt(string name) {
+    var (a, b) = (Local("a", IrType.BigInt), Local("b", IrType.BigInt));
+    var remainder = Local("remainder", IrType.BigInt);
+    return Function(name, IrType.BigInt, [a, b], [remainder],
+      If(Equal(Ref(b), Big(0)), Raise(IrExceptionClass.DivideByZeroException, "division by zero")),
+      new IrDeclare(remainder, Binary(IrBinaryOp.Remainder, Ref(a), Ref(b))),
+      If(Differs(remainder, b), Return(Binary(IrBinaryOp.Subtract, Binary(IrBinaryOp.Divide, Ref(a), Ref(b)), Big(1)))),
+      Return(Binary(IrBinaryOp.Divide, Ref(a), Ref(b))));
+  }
+
   private IrFunction MakeModuloInt(string name) {
-    var (a, b) = (Local("a", IrType.I64), Local("b", IrType.I64));
-    return Function(name, IrType.I64, [a, b], [],
-      If(Equal(Ref(b), Int(-1)), Return(Int(0))),
-      Return(Intrinsic(IrIntrinsicOp.ModFloor, IrType.I64, Ref(a), Ref(b))));
+    var (a, b) = (Local("a", IrType.BigInt), Local("b", IrType.BigInt));
+    var remainder = Local("remainder", IrType.BigInt);
+    return Function(name, IrType.BigInt, [a, b], [remainder],
+      If(Equal(Ref(b), Big(0)), Raise(IrExceptionClass.DivideByZeroException, "division by zero")),
+      new IrDeclare(remainder, Binary(IrBinaryOp.Remainder, Ref(a), Ref(b))),
+      If(Differs(remainder, b), Return(Binary(IrBinaryOp.Add, Ref(remainder), Ref(b)))),
+      Return(Ref(remainder)));
   }
 
   private IrFunction MakePowerInt(string name) {
-    var (a, b) = (Local("a", IrType.I64), Local("b", IrType.I64));
-    var result = Local("result", IrType.I64);
-    return Function(name, IrType.I64, [a, b], [result],
-      If(Binary(IrBinaryOp.Less, Ref(b), Int(0)), Raise(IrExceptionClass.ArgumentException, "negative exponent of an int whose sign is not known")),
-      new IrDeclare(result, Int(1)),
-      // Square and multiply; a square is only made where a higher bit of the exponent needs it, so it overflows only where the result does.
-      new IrWhile(Binary(IrBinaryOp.Greater, Ref(b), Int(0)), Block(
-        If(Binary(IrBinaryOp.NotEqual, Binary(IrBinaryOp.And, Ref(b), Int(1)), Int(0)), Assign(result, Binary(IrBinaryOp.MultiplyChecked, Ref(result), Ref(a)))),
+    var (a, b) = (Local("a", IrType.BigInt), Local("b", IrType.BigInt));
+    var result = Local("result", IrType.BigInt);
+    return Function(name, IrType.BigInt, [a, b], [result],
+      If(Binary(IrBinaryOp.Less, Ref(b), Big(0)), Raise(IrExceptionClass.ArgumentException, "negative exponent of an int whose sign is not known")),
+      new IrDeclare(result, Big(1)),
+      // Square and multiply; a square is only made where a higher bit of the exponent needs it.
+      new IrWhile(Binary(IrBinaryOp.Greater, Ref(b), Big(0)), Block(
+        If(Binary(IrBinaryOp.NotEqual, Binary(IrBinaryOp.And, Ref(b), Big(1)), Big(0)), Assign(result, Binary(IrBinaryOp.Multiply, Ref(result), Ref(a)))),
         Assign(b, Binary(IrBinaryOp.ShiftRight, Ref(b), Int32(1))),
-        If(Binary(IrBinaryOp.Greater, Ref(b), Int(0)), Assign(a, Binary(IrBinaryOp.MultiplyChecked, Ref(a), Ref(a)))))),
+        If(Binary(IrBinaryOp.Greater, Ref(b), Big(0)), Assign(a, Binary(IrBinaryOp.Multiply, Ref(a), Ref(a)))))),
       Return(Ref(result)));
   }
 
@@ -213,58 +247,61 @@ internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
   }
 
   private IrFunction MakeShiftLeft(string name) {
-    var (a, n) = (Local("a", IrType.I64), Local("n", IrType.I64));
-    var result = Local("result", IrType.I64);
-    return Function(name, IrType.I64, [a, n], [result],
-      If(Binary(IrBinaryOp.Less, Ref(n), Int(0)), Raise(IrExceptionClass.ArgumentException, "negative shift count")),
-      If(Equal(Ref(a), Int(0)), Return(Int(0))),
-      If(Binary(IrBinaryOp.GreaterOrEqual, Ref(n), Int(64)), Raise(IrExceptionClass.OverflowException, "int too large")),
-      new IrDeclare(result, Binary(IrBinaryOp.ShiftLeft, Ref(a), Convert(IrType.I32, Ref(n)))),
-      If(Binary(IrBinaryOp.NotEqual, Binary(IrBinaryOp.ShiftRight, Ref(result), Convert(IrType.I32, Ref(n))), Ref(a)), Raise(IrExceptionClass.OverflowException, "int too large")),
-      Return(Ref(result)));
+    var (a, n) = (Local("a", IrType.BigInt), Local("n", IrType.BigInt));
+    return Function(name, IrType.BigInt, [a, n], [],
+      If(Binary(IrBinaryOp.Less, Ref(n), Big(0)), Raise(IrExceptionClass.ArgumentException, "negative shift count")),
+      If(Equal(Ref(a), Big(0)), Return(Big(0))),
+      If(Binary(IrBinaryOp.Greater, Ref(n), Big(int.MaxValue)), Raise(IrExceptionClass.OverflowException, "too many digits in integer")),
+      Return(Binary(IrBinaryOp.ShiftLeft, Ref(a), Convert(IrType.I32, Ref(n)))));
   }
 
   private IrFunction MakeShiftRight(string name) {
-    var (a, n) = (Local("a", IrType.I64), Local("n", IrType.I64));
-    return Function(name, IrType.I64, [a, n], [],
-      If(Binary(IrBinaryOp.Less, Ref(n), Int(0)), Raise(IrExceptionClass.ArgumentException, "negative shift count")),
-      If(Binary(IrBinaryOp.GreaterOrEqual, Ref(n), Int(64)), Return(Choose(Binary(IrBinaryOp.Less, Ref(a), Int(0)), Int(-1), Int(0)))),
+    var (a, n) = (Local("a", IrType.BigInt), Local("n", IrType.BigInt));
+    return Function(name, IrType.BigInt, [a, n], [],
+      If(Binary(IrBinaryOp.Less, Ref(n), Big(0)), Raise(IrExceptionClass.ArgumentException, "negative shift count")),
+      // A count beyond 2^31 - 1 shifts out every bit an int of the import can have.
+      If(Binary(IrBinaryOp.Greater, Ref(n), Big(int.MaxValue)), Return(Choose(Binary(IrBinaryOp.Less, Ref(a), Big(0)), Big(-1), Big(0)))),
       Return(Binary(IrBinaryOp.ShiftRight, Ref(a), Convert(IrType.I32, Ref(n)))));
   }
 
   private IrFunction MakeIntOfFloat(string name) {
     var x = Local("x", IrType.F64);
-    var truncated = Local("truncated", IrType.F64);
-    return Function(name, IrType.I64, [x], [truncated],
+    return Function(name, IrType.BigInt, [x], [],
       If(Intrinsic(IrIntrinsicOp.IsNaN, IrType.Bool, Ref(x)), Raise(IrExceptionClass.ArgumentException, "cannot convert float NaN to integer")),
       If(Intrinsic(IrIntrinsicOp.IsInfinity, IrType.Bool, Ref(x)), Raise(IrExceptionClass.OverflowException, "cannot convert float infinity to integer")),
-      new IrDeclare(truncated, Intrinsic(IrIntrinsicOp.Truncate, IrType.F64, Ref(x))),
-      If(Binary(IrBinaryOp.LogicalOr, Binary(IrBinaryOp.Less, Ref(truncated), Float(-9223372036854775808.0)), Binary(IrBinaryOp.GreaterOrEqual, Ref(truncated), Float(9223372036854775808.0))),
-        Raise(IrExceptionClass.OverflowException, "int too large")),
-      Return(new IrConvert(IrType.I64, Ref(truncated), IrConversion.Trap)));
+      Return(new IrConvert(IrType.BigInt, Ref(x), IrConversion.Trap)));
+  }
+
+  private IrFunction MakeFloatOfInt(string name) {
+    var a = Local("a", IrType.BigInt);
+    var result = Local("result", IrType.F64);
+    return Function(name, IrType.F64, [a], [result],
+      new IrDeclare(result, Convert(IrType.F64, Ref(a))),
+      If(Intrinsic(IrIntrinsicOp.IsInfinity, IrType.Bool, Ref(result)), Raise(IrExceptionClass.OverflowException, "int too large to convert to float")),
+      Return(Ref(result)));
   }
 
   private IrFunction MakeAbsInt(string name) {
-    var a = Local("a", IrType.I64);
-    return Function(name, IrType.I64, [a], [],
-      If(Binary(IrBinaryOp.Less, Ref(a), Int(0)), Return(new IrUnary(IrUnaryOp.NegateChecked, Ref(a)))),
+    var a = Local("a", IrType.BigInt);
+    return Function(name, IrType.BigInt, [a], [],
+      If(Binary(IrBinaryOp.Less, Ref(a), Big(0)), Return(new IrUnary(IrUnaryOp.Negate, Ref(a)))),
       Return(Ref(a)));
   }
 
   private IrFunction MakeCompareIntFloat(string name) {
-    var (a, b, op) = (Local("a", IrType.I64), Local("b", IrType.F64), Local("op", IrType.I32));
-    var (order, truncated, whole) = (Local("order", IrType.I32), Local("truncated", IrType.F64), Local("whole", IrType.I64));
+    var (a, b, op) = (Local("a", IrType.BigInt), Local("b", IrType.F64), Local("op", IrType.I32));
+    var (order, truncated, whole) = (Local("order", IrType.I32), Local("truncated", IrType.F64), Local("whole", IrType.BigInt));
     IrExpr Is(int code) => Equal(Ref(op), Int32(code));
     IrExpr Sign(IrBinaryOp op, IrLocal left, IrLocal right) => Choose(Binary(op, Ref(left), Ref(right)), Int32(1), Int32(0));
-    // Outside the range of i64 the float is beyond every int; inside, its integral part is an i64
-    // exactly, which decides unless it equals the int, and then the fraction decides.
-    var inside = Block(
+    // An infinity is beyond every int; the integral part of a finite float is an int exactly, which
+    // decides unless it equals the int, and then the fraction decides.
+    var finite = Block(
       new IrDeclare(truncated, Intrinsic(IrIntrinsicOp.Truncate, IrType.F64, Ref(b))),
-      new IrDeclare(whole, new IrConvert(IrType.I64, Ref(truncated), IrConversion.Trap)),
+      new IrDeclare(whole, new IrConvert(IrType.BigInt, Ref(truncated), IrConversion.Trap)),
       Assign(order, Binary(IrBinaryOp.Subtract, Sign(IrBinaryOp.Greater, a, whole), Sign(IrBinaryOp.Less, a, whole))),
       If(Equal(Ref(order), Int32(0)), Assign(order, Binary(IrBinaryOp.Subtract, Sign(IrBinaryOp.Less, b, truncated), Sign(IrBinaryOp.Greater, b, truncated)))));
-    var below = new IrIf(Binary(IrBinaryOp.Less, Ref(b), Float(-9223372036854775808.0)), Block(Assign(order, Int32(1))), inside);
-    var above = new IrIf(Binary(IrBinaryOp.GreaterOrEqual, Ref(b), Float(9223372036854775808.0)), Block(Assign(order, Int32(-1))), Block(below));
+    var infinite = new IrIf(Intrinsic(IrIntrinsicOp.IsInfinity, IrType.Bool, Ref(b)),
+      Block(Assign(order, Choose(Binary(IrBinaryOp.Greater, Ref(b), Float(0)), Int32(-1), Int32(1)))), finite);
     var result = Choose(Is(4), Equal(Ref(order), Int32(0)), Binary(IrBinaryOp.NotEqual, Ref(order), Int32(0)));
     result = Choose(Is(3), Binary(IrBinaryOp.GreaterOrEqual, Ref(order), Int32(0)), result);
     result = Choose(Is(2), Binary(IrBinaryOp.Greater, Ref(order), Int32(0)), result);
@@ -273,12 +310,12 @@ internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
     return Function(name, IrType.Bool, [a, b, op], [order, truncated, whole],
       If(Intrinsic(IrIntrinsicOp.IsNaN, IrType.Bool, Ref(b)), Return(Is(5))),
       new IrDeclare(order, Int32(0)),
-      above,
+      infinite,
       Return(result));
   }
 
   private IrFunction MakeCompareFloatInt(string name) {
-    var (a, b, op) = (Local("a", IrType.F64), Local("b", IrType.I64), Local("op", IrType.I32));
+    var (a, b, op) = (Local("a", IrType.F64), Local("b", IrType.BigInt), Local("op", IrType.I32));
     var compare = this.Call("PyCompareIntFloat", IrType.Bool, [], this.MakeCompareIntFloat).Function;
     // The operands are evaluated in the caller's order; the comparison is the mirrored one of the swapped operands.
     return Function(name, IrType.Bool, [a, b, op], [],
@@ -287,7 +324,7 @@ internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
   }
 
   /// <summary>The names every helper may take, so that the lowering keeps them free for its own functions.</summary>
-  public static IEnumerable<string> Keys => ["PyModuloInt", "PyTrueDivideInt", "PyTrueDivideFloat", "PyFloorDivideFloat", "PyModuloFloat", "PyPowerInt", "PyPowerFloat",
+  public static IEnumerable<string> Keys => ["PyModuloInt", "PyFloorDivideInt", "PyFloatOfInt", "PyTrueDivideInt", "PyTrueDivideFloat", "PyFloorDivideFloat", "PyModuloFloat", "PyPowerInt", "PyPowerFloat",
     "PyShiftLeft", "PyShiftRight", "PyIntOfFloat", "PyAbsInt", "PyCompareIntFloat", "PyCompareFloatInt"];
 
 }

@@ -114,6 +114,7 @@ public static partial class PythonEmitter {
     private bool NonNegative(IrExpr expression) => expression switch {
       { Type.IsInteger: true, Type.IsSigned: false } => true,
       IrConst constant => IrOperators.Number(constant.Type, constant.Value) >= 0,
+      IrBigConst big => big.Value.Sign >= 0,
       IrArrayLength => true,
       IrLocalRef reference => this._nonNegative.Contains(reference.Local),
       _ => false
@@ -126,6 +127,8 @@ public static partial class PythonEmitter {
       switch (expression) {
         case IrConst constant:
           return this.Literal(constant.Type, constant.Value);
+        case IrBigConst big:
+          return Integer(big.Value, IrType.BigInt);
         case IrLocalRef reference:
           return Name(this.LocalName(reference.Local));
         case IrConstRef reference:
@@ -170,6 +173,10 @@ public static partial class PythonEmitter {
       switch (unary.Op) {
         case IrUnaryOp.LogicalNot:
           return Not(operand);
+        case IrUnaryOp.BitNot when type.IsBigInt:
+          return new PyUnary("~", operand);
+        case IrUnaryOp.Negate when type.IsBigInt:
+          return Negated(operand);
         case IrUnaryOp.BitNot:
           return type.IsSigned ? new PyUnary("~", operand) : Binary(operand, "^", Mask(type.Bits));
         case IrUnaryOp.Negate when type.IsFloat:
@@ -211,6 +218,9 @@ public static partial class PythonEmitter {
 
       if (type.IsFloat)
         return this.Floating(binary.Op, type, left, right);
+
+      if (type.IsBigInt)
+        return this.BigBinary(binary, left, right);
 
       switch (binary.Op) {
         case IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply:
@@ -274,6 +284,9 @@ public static partial class PythonEmitter {
       var operand = this.Expression(conversion.Operand);
       if (from == to)
         return operand;
+
+      if (from.IsBigInt || to.IsBigInt)
+        return this.BigConversion(conversion, operand);
 
       if (from.IsInteger && to.IsInteger) {
         // Between integers a conversion wraps or traps (IrConvert).

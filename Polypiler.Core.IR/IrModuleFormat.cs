@@ -25,7 +25,7 @@ namespace Polypiler.Core.IR;
 public static partial class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 9;
+  public const int Version = 10;
 
   /// <summary>The byte that stands for the kind of an enum type, followed by its declaration: the kind of an enum type is that of its underlying type.</summary>
   private const byte EnumType = 0xFF;
@@ -46,7 +46,8 @@ public static partial class IrModuleFormat {
     ArraySequence, Yield, YieldBreak, YieldFrom, ForEachSequence,
     Sequence,
     Await, Async,
-    ForeignCall, LastError
+    ForeignCall, LastError,
+    BigConst
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -683,6 +684,7 @@ public static partial class IrModuleFormat {
       IrAsync => Tag.Async,
       IrForeignCall => Tag.ForeignCall,
       IrLastError => Tag.LastError,
+      IrBigConst => Tag.BigConst,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -730,6 +732,9 @@ public static partial class IrModuleFormat {
           break;
         case IrStrConst text:
           this.Text(text.Value);
+          break;
+        case IrBigConst big:
+          this.Text(big.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
           break;
         case IrUnary unary:
           this.Count((int)unary.Op);
@@ -1248,6 +1253,7 @@ public static partial class IrModuleFormat {
         IrTypeKind.Sequence => IrType.Sequence(this.Type(), reader.ReadBoolean()),
         IrTypeKind.Pointer => IrType.Pointer(this.Type()),
         IrTypeKind.Async => IrType.Async(this.Type(), reader.ReadBoolean()),
+        IrTypeKind.BigInt => IrType.BigInt,
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };
@@ -1322,12 +1328,12 @@ public static partial class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.LastError)
+      if (tag > Tag.BigConst)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst) ? this.Statement(tag) : this.Expression(tag);
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1354,6 +1360,7 @@ public static partial class IrModuleFormat {
         Tag.Intrinsic => new IrIntrinsic(this.Enum<IrIntrinsicOp>(), type, this.Nodes<IrExpr>()),
         Tag.GlobalRef => new IrGlobalRef(Of(this._globals, this.Count(), "global")),
         Tag.StrConst => new IrStrConst(this.Text()),
+        Tag.BigConst => new IrBigConst(System.Numerics.BigInteger.Parse(this.Text(), System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture)),
         Tag.New => new IrNew(type, this.Constructor(), this.Nodes<IrExpr>()),
         Tag.NullValue => new IrNull(type),
         Tag.MethodCall => new IrMethodCall(type, this.Method(), this.OptionalNode<IrExpr>(), this.Nodes<IrExpr>()) { Kind = this.Enum<IrMethodCallKind>() },

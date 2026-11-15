@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Polypiler.Core.Frontends.Python.Ast;
 using Polypiler.Core.Frontends.Python.Model;
 using Polypiler.Core.Frontends.Python.Resolution;
@@ -15,9 +16,8 @@ internal sealed partial class FunctionLowering {
   /// raises <c>ValueError</c> before the first pass. A counter walks the range and the loop variable
   /// is assigned from it at the start of every pass, so that assigning the variable in the body skips
   /// nothing; where the body never assigns it and nothing reads it after the loop, the variable is
-  /// the counter. A step of 1 or -1 cannot step beyond the 64 bits from inside the range; any other
-  /// step decides whether another element follows on the distance to the end, which is exact in
-  /// unsigned 64 bits, so that no element of a range near the limits is lost or added.
+  /// the counter. The counter is an <c>int</c> as exact as the bounds, so no element is lost or added
+  /// at any magnitude; a step of 1 or -1 tests the bound directly, any other step tests it by its sign.
   /// </summary>
   private IEnumerable<IrStmt> For(PyNode statement) {
     var range = statement.Node("iter")!;
@@ -31,10 +31,9 @@ internal sealed partial class FunctionLowering {
       if (value.Type == PyType.Float)
         throw this.Refuse(argument, PythonFrontend.UnsupportedIterationDescriptor, $"iteration over '{this._file.Quote(range)}' is not supported: a float argument raises TypeError");
 
-      this._notes.UsesInt = true;
       var integer = this.Integer(value).Item1;
-      if (!(integer is IrConst || (integer is IrLocalRef local && !assigned.Contains(local.Local.Name) && local.Local.Name != target))) {
-        var temporary = this.Fresh(arguments.Count == 0 && range.Nodes("args").Count > 1 ? "start" : arguments.Count == 2 ? "step" : "stop", IrType.I64);
+      if (!(integer is IrConst or IrBigConst || (integer is IrLocalRef local && !assigned.Contains(local.Local.Name) && local.Local.Name != target))) {
+        var temporary = this.Fresh(arguments.Count == 0 && range.Nodes("args").Count > 1 ? "start" : arguments.Count == 2 ? "step" : "stop", IrType.BigInt);
         setup.Add(new IrDeclare(temporary, integer));
         integer = Ref(temporary);
       }
@@ -43,21 +42,21 @@ internal sealed partial class FunctionLowering {
     }
 
     var (start, stop, step) = arguments.Count switch {
-      1 => (Int(0), arguments[0], (IrExpr)Int(1)),
-      2 => (arguments[0], arguments[1], Int(1)),
+      1 => (Big(0), arguments[0], (IrExpr)Big(1)),
+      2 => (arguments[0], arguments[1], Big(1)),
       _ => (arguments[0], arguments[1], arguments[2])
     };
-    if (step is IrConst { Value: 0 })
+    if (step is IrBigConst { Value.IsZero: true })
       return [.. setup, Raise(IrExceptionClass.ArgumentException, "range() arg 3 must not be zero")];
 
     var variable = this._variables[target];
     var direct = !assigned.Contains(target) && !UsedOutside(this._function.Body, statement, target);
-    var counter = direct ? variable : this.Fresh("k", IrType.I64);
+    var counter = direct ? variable : this.Fresh("k", IrType.BigInt);
     if (!direct)
-      setup.Add(new IrDeclare(counter, Int(0)));
+      setup.Add(new IrDeclare(counter, Big(0)));
 
-    if (step is not IrConst)
-      setup.Add(If(Equal(step, Int(0)), Raise(IrExceptionClass.ArgumentException, "range() arg 3 must not be zero")));
+    if (step is not IrBigConst)
+      setup.Add(If(Equal(step, Big(0)), Raise(IrExceptionClass.ArgumentException, "range() arg 3 must not be zero")));
 
     setup.Add(Assign(counter, start));
     return this.WithElse(statement, () => {
@@ -65,21 +64,18 @@ internal sealed partial class FunctionLowering {
       if (!direct)
         lowered.Insert(0, Assign(variable, Ref(counter)));
 
-      if (step is IrConst { Value: 1 or -1 } unit) {
-        var up = unit.Value == 1;
+      if (step is IrBigConst unit && BigInteger.Abs(unit.Value).IsOne) {
+        var up = unit.Value.Sign > 0;
         var loop = new IrFor(Binary(up ? IrBinaryOp.Less : IrBinaryOp.Greater, Ref(counter), stop), new(lowered),
-          Block(Assign(counter, Binary(up ? IrBinaryOp.Add : IrBinaryOp.Subtract, Ref(counter), Int(1)))));
+          Block(Assign(counter, Binary(up ? IrBinaryOp.Add : IrBinaryOp.Subtract, Ref(counter), Big(1)))));
         return [.. setup, loop];
       }
 
-      IrExpr Ascending(IrExpr positive, IrExpr negative) => step is IrConst constant ? constant.Value > 0 ? positive : negative : Choose(Binary(IrBinaryOp.Greater, step, Int(0)), positive, negative);
-      IrExpr Distance(IrExpr from, IrExpr to) => Convert(IrType.U64, Binary(IrBinaryOp.Subtract, to, from));
+      IrExpr Ascending(IrExpr positive, IrExpr negative) => step is IrBigConst constant ? constant.Value.Sign > 0 ? positive : negative : Choose(Binary(IrBinaryOp.Greater, step, Big(0)), positive, negative);
+      IrExpr Inside() => Ascending(Binary(IrBinaryOp.Less, Ref(counter), stop), Binary(IrBinaryOp.Greater, Ref(counter), stop));
       var more = this.Fresh("more", IrType.Bool);
-      setup.Add(new IrDeclare(more, Ascending(Binary(IrBinaryOp.Less, Ref(counter), stop), Binary(IrBinaryOp.Greater, Ref(counter), stop))));
-      var next = Ascending(
-        Binary(IrBinaryOp.Greater, Distance(Ref(counter), stop), Convert(IrType.U64, step)),
-        Binary(IrBinaryOp.Greater, Distance(stop, Ref(counter)), Convert(IrType.U64, Binary(IrBinaryOp.Subtract, Int(0), step))));
-      return [.. setup, new IrFor(Ref(more), new(lowered), Block(Assign(more, next), Assign(counter, Binary(IrBinaryOp.Add, Ref(counter), step))))];
+      setup.Add(new IrDeclare(more, Inside()));
+      return [.. setup, new IrFor(Ref(more), new(lowered), Block(Assign(counter, Binary(IrBinaryOp.Add, Ref(counter), step)), Assign(more, Inside())))];
     });
   }
 
@@ -138,7 +134,7 @@ internal sealed partial class FunctionLowering {
   private IEnumerable<IrStmt> Match(PyNode statement) {
     var subject = this.Value(statement.Node("subject")!);
     var result = new List<IrStmt>();
-    if (subject.Value is not (IrConst or IrLocalRef)) {
+    if (subject.Value is not (IrConst or IrBigConst or IrLocalRef)) {
       var temporary = this.Fresh("subject", subject.Value.Type);
       result.Add(new IrDeclare(temporary, subject.Value));
       subject = (Ref(temporary), subject.Type);

@@ -34,22 +34,22 @@ public sealed class ScalarLoweringTests {
   [TestCase("a: int, b: int", "int", "a or b", new object[] { 0L, 9L }, "int 9")]
   public void Expression_ComputesWhatPythonComputes(string parameters, string returns, string expression, object[] arguments, string expected) {
     var outcome = PythonSnippet.Run(F(parameters, returns, expression), "f", arguments);
-    // An int beyond 64 bits raises OverflowError (py-int-64); every other outcome is CPython's.
+    // Every outcome is CPython's, but a complex power (py-complex-power).
     Assert.That(outcome, Is.EqualTo(PythonOutcome.Expected(expected)));
   }
 
   /// <summary>
-  /// Scenario: an integer result beyond 64 bits. The IR has no unbounded integer yet, so the import
-  /// raises OverflowError where CPython gives 2^128 + 1, and never wraps (py-int-64); within 64 bits
-  /// the same function is exact.
+  /// Scenario: an integer result beyond 64 bits. An int is the IR's arbitrary-precision integer, so
+  /// the import gives 2^64 + 1 as CPython does, with no caveat; within 64 bits the same function is exact as well.
   /// </summary>
   [Test]
-  public void IntegerBeyond64Bits_RaisesOverflowErrorInsteadOfWrapping() {
+  public void IntegerBeyond64Bits_IsExact() {
     const string source = "def f(a: int) -> int: return a ** 2 + 1\n";
-    Assert.That(PythonSnippet.Run(source, "f", 4294967296L), Is.EqualTo("raise OverflowError"));
+    Assert.That(PythonSnippet.Run(source, "f", 4294967296L), Is.EqualTo("int 18446744073709551617"));
     Assert.That(PythonSnippet.Run(source, "f", 3037000499L), Is.EqualTo("int 9223372030926249002"));
     var result = PythonSnippet.Import(source);
-    Assert.That(result.Caveats.Select(caveat => caveat.Id), Does.Contain(PythonFrontend.Int64));
+    Assert.That(result.Caveats, Is.Empty);
+    Assert.That(result.Module!.Functions[0].ReturnType, Is.EqualTo(IrType.BigInt));
   }
 
   /// <summary>Scenario outline: failing operations trap with python's exception class at line 1.</summary>
@@ -66,7 +66,7 @@ public sealed class ScalarLoweringTests {
     var result = PythonSnippet.Import(source);
     Assert.That(result.Contracts, Is.EqualTo(new[] { "f.a: int", "f.return: int" }));
     var function = result.Module!.Functions.Single(function => function.Name == "f");
-    Assert.That(IrTree.Nodes(function.Body).OfType<IrBinary>().Select(binary => binary.Op), Is.EqualTo(new[] { IrBinaryOp.AddChecked }));
+    Assert.That(IrTree.Nodes(function.Body).OfType<IrBinary>().Select(binary => binary.Op), Is.EqualTo(new[] { IrBinaryOp.Add }));
     Assert.That(PythonSnippet.Statements(function.Body).OfType<IrIf>(), Is.Empty, "no check of the parameter");
   }
 
@@ -93,7 +93,7 @@ public sealed class ScalarLoweringTests {
   public void ParameterWithoutHint_TakesTheTypeOfItsCalls() {
     const string source = "def f(a, b):\n    return a + b\n\ndef g() -> int:\n    return f(2, 3)\n";
     var module = PythonSnippet.Module(source);
-    Assert.That(module.Functions.Single(function => function.Name == "f").Parameters.Select(parameter => parameter.Type), Is.EqualTo(new[] { IrType.I64, IrType.I64 }));
+    Assert.That(module.Functions.Single(function => function.Name == "f").Parameters.Select(parameter => parameter.Type), Is.EqualTo(new[] { IrType.BigInt, IrType.BigInt }));
     Assert.That(PythonOutcome.Interpreted(module, new PythonCall("g", [])), Is.EqualTo("int 5"));
     Assert.That(PythonSnippet.Import(source).Contracts, Is.EqualTo(new[] { "g.return: int" }));
   }
@@ -155,9 +155,9 @@ public sealed class ScalarLoweringTests {
   [TestCase(0L, "int 1", "int -8")]
   [TestCase(1L, "int 2", "int -4")]
   [TestCase(62L, "int 4611686018427387904", "int -1")]
-  [TestCase(63L, "raise OverflowError", "int -1")]
-  [TestCase(64L, "raise OverflowError", "int -1")]
-  [TestCase(1000L, "raise OverflowError", "int -1")]
+  [TestCase(63L, "int 9223372036854775808", "int -1")]
+  [TestCase(64L, "int 18446744073709551616", "int -1")]
+  [TestCase(200L, "int 1606938044258990275541962092341162602522202993782792835301376", "int -1")]
   [TestCase(-1L, "raise ValueError", "raise ValueError")]
   public void Shifts_AreExactOrRaise(long count, string left, string right) {
     const string source = "def l(n: int) -> int: return 1 << n\ndef r(n: int) -> int: return -8 >> n\n";
@@ -169,10 +169,10 @@ public sealed class ScalarLoweringTests {
   [TestCase(double.NaN, "raise ValueError", "raise ValueError")]
   [TestCase(double.PositiveInfinity, "raise OverflowError", "raise OverflowError")]
   [TestCase(double.NegativeInfinity, "raise OverflowError", "raise OverflowError")]
-  [TestCase(1e300, "raise OverflowError", "raise OverflowError")]
+  [TestCase(1e300, "int 1000000000000000052504760255204420248704468581108159154915854115511802457988908195786371375080447864043704443832883878176942523235360430575644792184786706982848387200926575803737830233794788090059368953234970799945081119038967640880074652742780142494579258788820056842838115669472196386865459400540160", "int 1000000000000000052504760255204420248704468581108159154915854115511802457988908195786371375080447864043704443832883878176942523235360430575644792184786706982848387200926575803737830233794788090059368953234970799945081119038967640880074652742780142494579258788820056842838115669472196386865459400540160")]
   [TestCase(-0.0, "int 0", "int 0")]
   [TestCase(-9223372036854775808.0, "int -9223372036854775808", "int -9223372036854775808")]
-  [TestCase(9223372036854775808.0, "raise OverflowError", "raise OverflowError")]
+  [TestCase(9223372036854775808.0, "int 9223372036854775808", "int 9223372036854775808")]
   public void FloatToInt_TruncatesOrRaises(double value, string truncated, string rounded) {
     const string source = "def t(a: float) -> int: return int(a)\ndef r(a: float) -> int: return round(a)\n";
     Assert.That(PythonSnippet.Run(source, "t", value), Is.EqualTo(truncated));
@@ -226,12 +226,10 @@ public sealed class ScalarLoweringTests {
   public void Literals_HaveTheirPythonValues()
     => Assert.That(PythonSnippet.Run("def f() -> float: return 0xFFFF_FFFF + 0o17 + 0b101 + 1_000 + 1e3 + -9223372036854775808 // 2 ** 62\n", "f"), Is.EqualTo("float 4294969313.0"));
 
-  /// <summary>Test design 10: a 200-digit literal needs more than 64 bits and is refused.</summary>
+  /// <summary>Test design 10: a 200-digit literal is an int like any other.</summary>
   [Test]
-  public void HugeLiteral_IsRefusedWithPLY1804()
-    => Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return " + new string('9', 200) + "\n"), Is.EqualTo(new[] {
-      $"snippet.py(2,12): error PLY1804: the integer '{new string('9', 200)}' needs more than 64 bits, which the import does not hold yet"
-    }));
+  public void HugeLiteral_IsExact()
+    => Assert.That(PythonSnippet.Run("def f() -> int:\n    return " + new string('9', 200) + "\n", "f"), Is.EqualTo("int " + new string('9', 200)));
 
   /// <summary>Test design 11: and/or return an operand, a chained comparison evaluates its middle once.</summary>
   [Test]
@@ -268,7 +266,7 @@ public sealed class ScalarLoweringTests {
   [TestCase("a: int, b: int", "a ** b", 2L, 10L, "int 1024")]
   [TestCase("a: int, b: int", "a ** b", 2L, 0L, "int 1")]
   [TestCase("a: int, b: int", "a ** b", -2L, 63L, "int -9223372036854775808")]
-  [TestCase("a: int, b: int", "a ** b", 2L, 63L, "raise OverflowError")]
+  [TestCase("a: int, b: int", "a ** b", 2L, 63L, "int 9223372036854775808")]
   [TestCase("a: float, b: float", "a ** b", 2.0, 0.5, "float 1.4142135623730951")]
   [TestCase("a: float, b: float", "a ** b", -8.0, 0.5, "raise ArithmeticError")]
   [TestCase("a: float, b: float", "a ** b", 0.0, -1.0, "raise ZeroDivisionError")]
@@ -338,11 +336,11 @@ public sealed class ScalarLoweringTests {
 
   /// <summary>Test design 2: the built-ins on int and float.</summary>
   [TestCase("abs(a)", -5L, "int 5")]
-  [TestCase("abs(a)", long.MinValue, "raise OverflowError")]
+  [TestCase("abs(a)", long.MinValue, "int 9223372036854775808")]
   [TestCase("int(a)", 7L, "int 7")]
   [TestCase("round(a)", 7L, "int 7")]
   [TestCase("bool(a)", 0L, "bool False")]
-  [TestCase("-a", long.MinValue, "raise OverflowError")]
+  [TestCase("-a", long.MinValue, "int 9223372036854775808")]
   [TestCase("+a", 3L, "int 3")]
   [TestCase("a % -1", long.MinValue, "int 0")]
   [TestCase("a % 5", -7L, "int 3")]
