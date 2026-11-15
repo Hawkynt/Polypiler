@@ -22,6 +22,16 @@ and prints it with `RustPrinter`, which writes what `rustfmt` writes in its defa
 `RustSyntaxRewriter` walks and rewrites it; `RustLiveness` finds the values a function stores and
 never reads.
 
+```mermaid
+flowchart LR
+  IR["Legalized IR<br/>(library helpers bound in)"] --> Build["RustEmitter<br/>tree of the crate"]
+  Build --> Passes["O0500 inlining<br/>O0501 removal"]
+  Passes --> Lints["allowed lints<br/>of the shapes found"]
+  Lints --> Print["RustPrinter<br/>rustfmt layout"]
+  Print --> Crate["Cargo.toml, src/lib.rs,<br/>src/&lt;module&gt;.rs"]
+  Crate --> Runner["RustRunner<br/>cargo build, test, fmt, clippy, driver"]
+```
+
 ## Profiles
 
 `--profile` names the edition, `--rust-version` raises the minimum supported Rust version (MSRV)
