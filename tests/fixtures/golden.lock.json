@@ -1573,13 +1573,13 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.csharp.golden",
-      "sha256": "6c79c044bf41893221dbd3f400287949222413689744957143b065c3bb36742c",
-      "bytes": 287286
+      "sha256": "e40ec93bfcdb6ce640299da5d0d010772b6153c797928c54372a78985402c827",
+      "bytes": 437894
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.javascript.golden",
-      "sha256": "26c4e0b98fbb6a47551fe1ac9718291bed6f3e8e59b971108ba6d2fa00910104",
-      "bytes": 438920
+      "sha256": "b1e06661bea58971eb76d930ea630db36fe3d85d3512640ce426d894fbdd3337",
+      "bytes": 599042
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/iterators.js.csharp.golden",
@@ -1588,8 +1588,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/iterators.js.javascript.golden",
-      "sha256": "a91fd6985c3e5d9f788e550abc47366960671f8d0a79a72189102ebf7ceec9a4",
-      "bytes": 229546
+      "sha256": "6231b68e801710902d9607652581ff55c0739d1121122e0606d003b30a5debef",
+      "bytes": 229574
     },
     {
       "path": "tests/fixtures/backend/golden/spans/Adler32Span.cs.csharp.golden",
