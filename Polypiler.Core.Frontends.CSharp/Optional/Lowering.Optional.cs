@@ -115,7 +115,8 @@ internal sealed partial class Lowering {
         return Absent(this.Value(pattern.Expression));
       case IsPatternExpressionSyntax { Pattern: UnaryPatternSyntax { Pattern: ConstantPatternSyntax constant } } pattern when IsNull(constant.Expression) && this.IsNullTested(pattern.Expression):
         return Not(Absent(this.Value(pattern.Expression)));
-      case IsPatternExpressionSyntax { Pattern: DeclarationPatternSyntax or RecursivePatternSyntax or TypePatternSyntax } pattern:
+      case IsPatternExpressionSyntax { Pattern: DeclarationPatternSyntax or RecursivePatternSyntax or TypePatternSyntax } pattern
+          when model.GetTypeInfo(pattern.Expression).Type is not { TypeKind: TypeKind.Class or TypeKind.Interface }:
         throw new UnsupportedException(pattern, "a type pattern such as 'is int i'");
       default:
         return null;

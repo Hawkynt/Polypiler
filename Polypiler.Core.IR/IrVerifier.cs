@@ -370,6 +370,7 @@ public static partial class IrVerifier {
           break;
         case IrTypeTest or IrCast or IrAsCast:
           this.Conversion(expression);
+          break;
         case IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind:
           this.Optional(expression);
           break;
