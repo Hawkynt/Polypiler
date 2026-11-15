@@ -96,13 +96,16 @@ and why:
 | `Polypiler.Core.Backends.JavaScript/Helpers/Views.cs` | A view is a `subarray` or an object `{ a, o, n }` over a plain array: its helpers work on that representation. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/ViewBytes.cs` | The bytes of a view over a plain array, by the index into the array beneath: what the view's endian access calls. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/Collections.cs` | The slots of `$Keyed`, a map or set below ECMAScript 2015, and the list operations of the arrays the lists are: a representation. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/Sequences.cs` | The cursor of a lazy sequence below ECMAScript 2015 - `$generator`, `$closeAll`, `$iterate`, `$arrayIterator` - is an object with `next()` and `"return"()` that closes over the state machine and its pending `finally` blocks: the iterator protocol of ECMA-262, a representation of the IR's sequence, which has no type the library could be written in. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/Pointers.cs` | A pointer is a region object `{ a, o, n, s, k }` and a byte offset, its loads and stores of another kind go through a `DataView` or the bits of a plain array's elements: a representation of the IR's bounded pointer, like the view's. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/Enum/Enums.cs` | The frozen object an enum is, looked up by name and value: a representation. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/String/Strings.cs` | The string operations of .NET and of the later levels in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
 | `Polypiler.Core.Backends.JavaScript/Helpers/String/NumberText.cs` | The numbers to text and back of .NET in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
 
 Outside the folders the emitters keep a few more of the same kind: the C# `Throw<T>` of a throw
-expression before C# 7, the JavaScript `$sameValueZero` and `$compare` of the generic equality and
-order.
+expression before C# 7, the C# `SinglePass<T>` that makes the one cursor of an iterator a sequence
+enumerated once (a `yield return` over an `IEnumerator<T>`, which the IR has no type for), the
+JavaScript `$sameValueZero` and `$compare` of the generic equality and order.
 
 ## Target passes
 
