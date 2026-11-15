@@ -1047,6 +1047,42 @@ codes:
     area: python
     owner: "#449"
     surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1820
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python sequence operation not supported
+    message: "sequence operation '<operation>' is not supported by the Python frontend"
+    rule: python.sequences
+    area: python
+    owner: "#451"
+    surfaces: "standard error of polypiler translate --from python, for list methods other than append, pop(), extend and copy, del of an element, is between lists, zip of more than two sequences"
+  - code: PLY1821
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python slice form not supported
+    message: "slice form '<form>' is not supported; slices are imported as values only"
+    rule: python.slices
+    area: python
+    owner: "#451"
+    surfaces: "standard error of polypiler translate --from python, for slice assignment and deletion and several dimensions"
+  - code: PLY1822
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python string operation not supported
+    message: "string operation '<operation>' is not supported by the Python frontend"
+    rule: python.strings
+    area: python
+    owner: "#451"
+    surfaces: "standard error of polypiler translate --from python, for f-strings, formatting, str() of numbers and string methods other than encode"
+  - code: PLY1823
+    severity: error
+    exit: UnsupportedConstruct
+    title: struct format or array typecode not supported
+    message: "struct format or array typecode '<format>' is not supported: <reason>"
+    rule: python.layouts
+    area: python
+    owner: "#451"
+    surfaces: "standard error of polypiler translate --from python, for struct formats of native byte order or size, letters outside x B b H h I i L l Q q f d ?, a format that is no constant, and a byte order that is no constant"
   - code: PLY1830
     severity: error
     exit: UnsupportedConstruct
@@ -1055,12 +1091,12 @@ codes:
     rule: python.functions
     area: python
     owner: "#450"
-    surfaces: "standard error of polypiler translate --from python, for defaults, keyword arguments, decorators, nested functions, global and nonlocal"
+    surfaces: "standard error of polypiler translate --from python, for *args, **kwargs, decorators, a def inside a loop or conditional, redefinitions, and calls whose arguments do not bind to the parameters"
   - code: PLY1832
     severity: error
     exit: UnsupportedConstruct
     title: function value escapes
-    message: "the function value '<name>' escapes, or '<name>' is a generator or coroutine; only direct calls of the module's functions are imported"
+    message: "the function value '<name>' escapes, or '<name>' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported"
     rule: python.function-values
     area: python
     owner: "#450"
@@ -1073,7 +1109,61 @@ codes:
     rule: python.names
     area: python
     owner: "#450"
-    surfaces: "standard error of polypiler translate --from python, for a name that is no local, function of the module or supported built-in, and for an import"
+    surfaces: "standard error of polypiler translate --from python, for a name that is no local, function of the import or supported built-in, for an import of a module that is neither under the search path nor in the call map, for star imports and for modules that import each other"
+  - code: PLY1834
+    severity: error
+    exit: UnsupportedConstruct
+    title: mutable default of a parameter
+    message: "the default of parameter '<name>' is a mutable object shared across calls"
+    rule: python.defaults
+    area: python
+    owner: "#450"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1840
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python class feature outside the subset
+    message: "'<feature>' is outside the first Python subset (dataclasses, simple final classes, enums); it is imported by <issue>"
+    rule: python.classes
+    area: python
+    owner: "#453"
+    surfaces: "standard error of polypiler translate --from python, for base classes, super(), @classmethod, operator methods, class attributes, field(default_factory=...) and attributes of a type a class cannot hold"
+  - code: PLY1841
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python generic declaration not supported
+    message: "generic declaration '<declaration>' is not supported; generic classes and functions are imported by #472"
+    rule: python.generics
+    area: python
+    owner: "#453"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1842
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python dict or set operation not supported
+    message: "dict or set operation '<operation>' is not supported by the Python frontend"
+    rule: python.dicts
+    area: python
+    owner: "#453"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1843
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python exception construct not supported
+    message: "exception construct '<construct>' is not supported by the Python frontend"
+    rule: python.exceptions
+    area: python
+    owner: "#453"
+    surfaces: "standard error of polypiler translate --from python, for raise ... from, with, except*, exception classes with members, return, break and continue in finally"
+  - code: PLY1844
+    severity: error
+    exit: UnsupportedConstruct
+    title: dynamically created attribute
+    message: "attribute '<name>' of class '<class>' is created dynamically; only attributes assigned in __init__ or declared as dataclass fields are imported"
+    rule: python.attributes
+    area: python
+    owner: "#453"
+    surfaces: "standard error of polypiler translate --from python, for attributes assigned outside __init__, setattr, getattr, hasattr, del of an attribute and __dict__"
   - code: PLY1850
     severity: error
     exit: UnsupportedConstruct

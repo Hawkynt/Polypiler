@@ -54,6 +54,16 @@ internal sealed class PyNode {
     return (IReadOnlyList<PyNode>)children!;
   }
 
+  /// <summary>The node at a position of a field that holds a list, or <see langword="null"/> where the position holds <c>None</c> or is missing.</summary>
+  public PyNode? Item(string field, int index) {
+    var key = $"item:{field}:{index}";
+    if (!this._children.TryGetValue(key, out var child))
+      this._children[key] = child = this._element.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.Array
+        && index < value.GetArrayLength() && value[index].ValueKind == JsonValueKind.Object ? new PyNode(value[index]) : null;
+
+    return (PyNode?)child;
+  }
+
   /// <summary>A field that holds a text, or <see langword="null"/>.</summary>
   public string? Text(string field)
     => this._element.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
@@ -67,7 +77,8 @@ internal sealed class PyNode {
       ? [.. value.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String).Select(item => item.GetString()!)]
       : [];
 
-  private int Number(string field)
+  /// <summary>A field that holds a number, such as the level of a relative import; 1 where it is missing.</summary>
+  public int Number(string field)
     => this._element.TryGetProperty(field, out var value) && value.ValueKind == JsonValueKind.Number ? value.GetInt32() : 1;
 
   /// <inheritdoc/>

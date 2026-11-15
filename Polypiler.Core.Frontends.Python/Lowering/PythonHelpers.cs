@@ -23,7 +23,7 @@ namespace Polypiler.Core.Frontends.Python.Lowering;
 /// nearest integer. The true division of integers is the correctly rounded quotient, found by long
 /// division to 55 significant bits and a sticky bit, so that the one rounding to binary64 is the only one.
 /// </remarks>
-internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
+internal sealed partial class PythonHelpers(IReadOnlySet<string> taken) {
 
   /// <summary>The comparison a call of <see cref="CompareIntFloat"/> makes, by the code it passes.</summary>
   public static readonly IReadOnlyDictionary<string, int> Comparisons = new Dictionary<string, int> {
