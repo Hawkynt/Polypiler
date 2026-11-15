@@ -46,6 +46,7 @@ public sealed class LicencePolicyTests {
     Assert.That(policy.Overrides.Select(entry => (entry.Glob.Text, entry.Licence, entry.Reviewer)), Is.EqualTo(new[] {
       ("Polypiler.Core.Backends.CSharp/Helpers/**", "MIT", "Hawkynt"),
       ("Polypiler.Core.Backends.JavaScript/Helpers/**", "MIT", "Hawkynt"),
+      ("Polypiler.Core.Backends.Python/Helpers/**", "MIT", "Hawkynt"),
       ("Polypiler.Core.IR/Float/Operations/**", "MIT", "Hawkynt")
     }));
     Assert.That(policy.RestrictedAssets.Select(glob => glob.Text), Is.EqualTo(new[] { "*.onnx", "*.param", "*.bin", "*.pt", "*.safetensors", "*.mlmodel" }));

@@ -36,7 +36,7 @@ public sealed class RegistryMatchesCodeTests {
   public void TheAssembliesSearched_IncludeEveryLayer()
     => Assert.That(_assemblies.Value.Select(assembly => assembly.GetName().Name), Is.SupersetOf(new[] {
       "Polypiler.Core", "Polypiler.Core.IR", "Polypiler.Core.Frontends.CSharp", "Polypiler.Core.Frontends.JavaScript",
-      "Polypiler.Core.Backends.CSharp", "Polypiler.Core.Backends.JavaScript", "polypiler", "polypiler-tooling", "Polypiler.Tests"
+      "Polypiler.Core.Backends.CSharp", "Polypiler.Core.Backends.JavaScript", "Polypiler.Core.Backends.Python", "polypiler", "polypiler-tooling", "Polypiler.Tests"
     }));
 
   [Test]

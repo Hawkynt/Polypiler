@@ -55,6 +55,7 @@
     <ProjectReference Include="..\Polypiler.Core.Analysis\Polypiler.Core.Analysis.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.CSharp\Polypiler.Core.Backends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.JavaScript\Polypiler.Core.Backends.JavaScript.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.Python\Polypiler.Core.Backends.Python.csproj" />
     <ProjectReference Include="..\Polypiler.Core.BinaryFormats\Polypiler.Core.BinaryFormats.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.JavaScript\Polypiler.Core.Frontends.JavaScript.csproj" />

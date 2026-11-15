@@ -7,11 +7,13 @@ using System.Text;
 using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
+using Polypiler.Core.Backends.Python.Passes;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Optimize.Passes;
 using Polypiler.Core.Optimize.Target;
@@ -22,7 +24,7 @@ namespace Polypiler.Cli;
 
 /// <summary>
 /// The <c>translate</c> command of the prototype:
-/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript&gt; --to &lt;javascript|csharp&gt; --output &lt;directory&gt;</c>.
+/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript&gt; --to &lt;javascript|csharp|python&gt; --output &lt;directory&gt;</c>.
 /// A target language may take a profile. <c>--profile</c> is one option that every target reads its
 /// own way: for C# it names the target framework, and <c>--langversion</c> raises the version of the
 /// language above the one the profile brings; for JavaScript it names the language level, and
@@ -85,7 +87,7 @@ public sealed class TranslateCommand : ICliCommand {
     [ExplainOpt] = "write every optimization applied to standard error",
     [Export] = "JavaScript: the functions to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
@@ -121,7 +123,8 @@ public sealed class TranslateCommand : ICliCommand {
   /// <summary>The target languages; another one is another entry.</summary>
   private static readonly Backend[] _backends = [
     JavaScript(JavaScriptCapabilities.Standard, Implementations),
-    CSharp(CSharpCapabilities.Default, Implementations)
+    CSharp(CSharpCapabilities.Default, Implementations),
+    Python(PythonCapabilities.Standard, Implementations)
   ];
 
   /// <summary>
@@ -172,7 +175,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -184,7 +187,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -251,7 +254,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// of their numbers.
   /// </summary>
   private static readonly string[] _optimizations = [
-    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids)
+    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(PythonTargetPasses.Pipeline.Ids)
       .Distinct().Order(StringComparer.Ordinal)
   ];
 
@@ -506,6 +509,23 @@ public sealed class TranslateCommand : ICliCommand {
     (module, options) => CSharpEmitter.Legalize(module, implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
     (module, options, passes) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
+
+  /// <summary>The Python backend with a capability table; <c>--profile</c> names the version of Python.</summary>
+  private static Backend Python(PythonCapabilities capabilities, Func<IrModule> implementations) => new("python",
+    PythonEmitter.Runtime,
+    options => PythonProfileOf(options).Profile!.Name,
+    RuleTarget.Neutral,
+    [new(Profile, Choice(PythonProfile.Names)), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? PythonProfileOf(options).Error,
+    (module, options) => PythonEmitter.Legalize(module, implementations, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities),
+    (module, options) => PythonEmitter.Check(module, PythonProfileOf(options).Profile!, capabilities),
+    (module, options, passes) => PythonEmitter.Emit(module, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
+
+  /// <summary>The Python profile <c>--profile</c> names, the default one without it, or what is wrong with the name.</summary>
+  private static (PythonProfile? Profile, string? Error) PythonProfileOf(IReadOnlyDictionary<string, string> options) {
+    PythonProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
+    return (profile, error);
+  }
 
   /// <summary>The values <c>--float</c> takes.</summary>
   private static string FloatChoice => Choice(["strict", "accurate"]);
