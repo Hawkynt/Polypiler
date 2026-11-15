@@ -70,4 +70,46 @@ public sealed class LinqTests {
     }
   }
 
+  /// <summary>The calls of a JavaScript fixture and what node computes of the original.</summary>
+  private (List<PrototypeCall> Calls, IReadOnlyList<string> Expected) Original(string file) {
+    var calls = LinqFixtures.ScriptCalls(file).ToList();
+    var copy = Path.Combine(this._directory, "original-" + file);
+    File.WriteAllText(copy, SequenceFixtures.SourceOf(file));
+    return (calls, Toolchain.NodeOutcomes(this._directory, Path.GetFileName(copy), calls, true));
+  }
+
+  /// <summary>Test design 1, 3, 7, 13, 14 and 17: every call of a JavaScript fixture computes in the interpreter what node computes of the original.</summary>
+  [TestCase("pipes.mjs"), TestCase("runLength.mjs")]
+  public void ScriptFixture_RunsInTheInterpreterLikeNode(string file) {
+    var (calls, expected) = this.Original(file);
+    var module = LinqFixtures.ImportedScript(file);
+    Assert.That(calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call)), Is.EqualTo(expected));
+  }
+
+  /// <summary>Test design 1, 3, 7, 13, 14 and 17: every call of a JavaScript fixture computes in every C# profile what node computes of the original.</summary>
+  [TestCase("pipes.mjs"), TestCase("runLength.mjs")]
+  public void ScriptFixture_RunsInEveryCSharpProfileLikeNode(string file) {
+    var (calls, expected) = this.Original(file);
+    var name = Path.GetFileNameWithoutExtension(file);
+    foreach (var profile in CSharpProfile.All) {
+      var text = this.Translate(SequenceFixtures.PathOf(file), "csharp", name + ".cs", profile.Name, "--profile", profile.Name);
+      Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
+      Assert.That(calls.Select(GeneratedCSharp.Compile(text, false).Outcome), Is.EqualTo(expected), $"{profile.Name}\n{text}");
+    }
+  }
+
+  /// <summary>Test design 1, 3, 7, 13, 14, 17 and 18: every call of a JavaScript fixture computes at every JavaScript level what node computes of the original.</summary>
+  [TestCase("pipes.mjs"), TestCase("runLength.mjs")]
+  public void ScriptFixture_RunsInEveryJavaScriptProfileLikeNode(string file) {
+    var (calls, expected) = this.Original(file);
+    var name = Path.GetFileNameWithoutExtension(file);
+    foreach (var profile in ProfileCase.All) {
+      var output = "js-" + Guid.NewGuid().ToString("N");
+      var text = this.Translate(SequenceFixtures.PathOf(file), "javascript", name + profile.Parsed.Extension, output, profile.Arguments);
+      Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, text);
+      Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, output), name + profile.Parsed.Extension, calls, true, profile.Mode, profile.Global),
+        Is.EqualTo(expected), $"{profile}\n{text}");
+    }
+  }
+
 }

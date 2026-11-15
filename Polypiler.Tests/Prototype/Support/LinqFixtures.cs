@@ -92,6 +92,27 @@ internal static class LinqFixtures {
     yield return Call("Searches", new[] { 5 });
   }
 
+  /// <summary>The calls of a JavaScript fixture every implementation is compared on; numbers are doubles.</summary>
+  public static IEnumerable<PrototypeCall> ScriptCalls(string file) {
+    static PrototypeCall Call(string function, params object[] arguments) => new(function, arguments);
+    if (file == "runLength.mjs") {
+      yield return Call("encode", new[] { 1.0, 1, 2, 3, 3, 3 });
+      yield return Call("encode", Array.Empty<double>());
+      yield return Call("counted", new[] { 4.0, 4, 4, 5 });
+      yield break;
+    }
+
+    yield return Call("trace", new[] { 1.0, 2, 3 });
+    yield return Call("total", new[] { 1.0, 2, 3 });
+    yield return Call("firstOver", new[] { 1.0, 2, 3, 4 });
+    yield return Call("firstOver", Array.Empty<double>());
+    yield return Call("found", new[] { 1.0, 5, 3 });
+    yield return Call("found", new[] { 1.0 });
+    yield return Call("stable", new[] { 2.0, 1, 2, 1 });
+    foreach (var function in new[] { "eager", "nanSearch", "flat", "emptyReduce", "single", "emptyTests", "indexed", "pushDuring", "eagerThrow", "right", "each", "whole", "byName" })
+      yield return Call(function);
+  }
+
   /// <summary>64 numbers with the largest int32 first, 1 at 8 and -1 at 9: the vectorized sum of .NET 8 and later sees them too.</summary>
   private static int[] Long() {
     var a = new int[64];
