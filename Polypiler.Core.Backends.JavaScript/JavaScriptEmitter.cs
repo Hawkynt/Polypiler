@@ -472,6 +472,8 @@ public static partial class JavaScriptEmitter {
           return $"Set<{this.Describe(type.Element!)}>";
         case IrTypeKind.Sequence:
           return $"{(this.Native("Symbol.iterator") ? "Iterable" : "{ $iterator() }")}<{this.Describe(type.Element!)}>";
+        case IrTypeKind.Async:
+          return $"Promise<{this.Describe(type.Element!)}>";
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)
             return "bigint";
@@ -524,7 +526,7 @@ public static partial class JavaScriptEmitter {
 
       this._direct = true;
       var (parameters, body) = this.Body(function, 0);
-      JsStatement declaration = new JsFunctionDeclaration(name, parameters, body) { IsGenerator = this._generator };
+      JsStatement declaration = new JsFunctionDeclaration(name, parameters, body) { IsGenerator = this._generator, IsAsync = function.IsAsync && this.Native("async function") };
       return (exported ? new JsExport(declaration) : declaration) with { Leading = new JsTrivia(1, [comment]) };
     }
 
@@ -554,6 +556,8 @@ public static partial class JavaScriptEmitter {
       var pointers = this.Pointers(function, skipped);
       if (IrSequences.IsIterator(function))
         this.Iterator(function, parameters, statements);
+      else if (function.IsAsync)
+        this.AsyncBody(function, statements);
       else
         this.Statements(function.Body, statements);
 

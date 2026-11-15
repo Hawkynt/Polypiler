@@ -68,7 +68,7 @@ public static class JavaScriptPrinter {
     JsNumber number when IsNegative(number.Value) => Prefix,
     JsBigInt { Value.Sign: < 0 } => Prefix,
     JsUpdate { Prefix: false } => Postfix,
-    JsUnary or JsUpdate => Prefix,
+    JsUnary or JsUpdate or JsAwait => Prefix,
     JsBinary binary => Of(binary.Operator),
     JsConditional or JsAssignment or JsArrowFunction or JsYield => Conditional,
     JsSequence => Sequence,
@@ -271,7 +271,7 @@ public static class JavaScriptPrinter {
 
           break;
         case JsFunctionDeclaration function:
-          this.Function(function.Name, function.Parameters, function.Body, depth, function.IsGenerator);
+          this.Function(function.Name, function.Parameters, function.Body, depth, function.IsGenerator, function.IsAsync);
           break;
         case JsForOf loop:
           this._text.Append("for (").Append(loop.Kind).Append(' ').Append(loop.Name).Append(" of ");
@@ -325,8 +325,8 @@ public static class JavaScriptPrinter {
       this.Line(depth).Append('}');
     }
 
-    private void Function(string? name, IReadOnlyList<string> parameters, JsBlock body, int depth, bool generator) {
-      this._text.Append(generator ? "function* " : "function ");
+    private void Function(string? name, IReadOnlyList<string> parameters, JsBlock body, int depth, bool generator, bool async) {
+      this._text.Append(async ? "async " : "").Append(generator ? "function* " : "function ");
       if (name is not null)
         this._text.Append(name);
 
@@ -504,6 +504,10 @@ public static class JavaScriptPrinter {
         case JsObject literal:
           this.Object(literal, depth);
           break;
+        case JsAwait awaited:
+          this._text.Append("await ");
+          this.Operand(awaited.Argument, Precedence(awaited.Argument) >= Prefix, depth);
+          break;
         case JsYield produced:
           this._text.Append(produced.Delegate ? "yield*" : "yield");
           if (produced.Argument is not null) {
@@ -523,7 +527,7 @@ public static class JavaScriptPrinter {
           break;
         default:
           var function = (JsFunctionExpression)expression;
-          this.Function(function.Name, function.Parameters, function.Body, depth, function.IsGenerator);
+          this.Function(function.Name, function.Parameters, function.Body, depth, function.IsGenerator, function.IsAsync);
           break;
       }
     }
