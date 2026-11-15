@@ -979,8 +979,8 @@ public static partial class CSharpEmitter {
     /// </summary>
     private CsExpression Stored(IrExpr expression) => expression switch {
       IrConst constant => Bare(constant.Type, constant.Value),
-      // Where the type is given, none is null and a value converts to the optional type by itself.
-      IrNone or IrNull => new CsNullLiteral { Type = expression.Type },
+      // Where the type is given, none is null and a value converts to the optional type by itself; the default of a type parameter is default(T).
+      IrNone or IrNull when this.GenericNode(expression) is null => new CsNullLiteral { Type = expression.Type },
       IrSome some => this.Stored(some.Value) with { Type = expression.Type },
       // The literal default takes the type of the place it goes to.
       IrStructDefault when this.Has(CSharpFeature.DefaultLiteral) => new CsDefaultLiteral { Type = expression.Type },
