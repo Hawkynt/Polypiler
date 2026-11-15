@@ -110,9 +110,10 @@ public sealed class ProcFileSystemTable : IProcessTable {
 
   /// <summary>The children of every thread of one process.</summary>
   /// <returns>
-  /// The children's IDs, none for a process that ended meanwhile; <see langword="null"/> when a
-  /// thread's children file cannot be read, because the kernel has none or because the thread ended
-  /// between the listing and the read: the whole table then stands in for the tree.
+  /// The children's IDs, none for a process that ended meanwhile; <see langword="null"/> when no
+  /// thread's children file can be read, because the kernel has none: the whole table then stands in
+  /// for the tree. A thread that ended between the listing and the read has no file any more while its
+  /// siblings still have theirs; it had no children of its own left, so it adds none.
   /// </returns>
   private static List<int>? Children(string directory) {
     var children = new List<int>();
@@ -123,18 +124,20 @@ public sealed class ProcFileSystemTable : IProcessTable {
       return children;
     }
 
+    var read = 0;
     foreach (var task in tasks) {
       string text;
       try {
         text = File.ReadAllText(Path.Combine(task, "children"));
       } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
-        return null;
+        continue;
       }
 
+      ++read;
       children.AddRange(text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(field => int.Parse(field, NumberStyles.None, CultureInfo.InvariantCulture)));
     }
 
-    return children;
+    return read == 0 && tasks.Length > 0 ? null : children;
   }
 
   /// <inheritdoc />

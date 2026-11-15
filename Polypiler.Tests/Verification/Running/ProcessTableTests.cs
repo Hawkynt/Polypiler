@@ -132,6 +132,18 @@ public sealed class ProcessTableTests {
     }
   }
 
+  /// <summary>A thread that ended between the listing of the threads and the read of its children file leaves its siblings' children in the tree.</summary>
+  [Test]
+  public void AThreadThatEndedMeanwhile_LeavesTheTreeOfItsSiblings() {
+    var root = Proc((10, Stat(10, "root"), ["11 "]), (11, Stat(11, "child", parent: 10), [""]), (20, Stat(20, "beside"), null));
+    try {
+      Directory.CreateDirectory(Path.Combine(root, "10", "task", "1001"));
+      Assert.That(new ProcFileSystemTable(root).SnapshotTree([10]).Select(entry => entry.Pid).Order(), Is.EqualTo(new[] { 10, 11 }));
+    } finally {
+      Directory.Delete(root, true);
+    }
+  }
+
   /// <summary>A table that cannot follow a tree answers with all of its processes.</summary>
   [Test]
   public void ATableWithoutTrees_AnswersWithTheWholeTable() {
