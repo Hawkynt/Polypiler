@@ -79,7 +79,20 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | a value assigned in every branch | `let x = if c { a } else { b };` (clippy's `needless_late_init`) |
 | a throw of a library exception | `panic!("<IrTrap>")` |
 | `try`/`catch` | refused, `PLY1560` |
-| a read-only table | `const NAME: [u32; N] = […];`, read as `NAME[i as usize]` |
+| a read-only table | `static NAME: [u32; N] = […];`, read as `NAME[i as usize]`, borrowed as `&NAME` |
+| an array parameter | `&[T]`, or `&mut [T]` where the function or a callee writes it (#460) |
+| an array the function makes | `Vec<T>`: `vec![0; n]` (`usize::try_from(n).expect("IntegerOverflow")` for a signed length), `vec![a, b]`, `Vec::new()`; a temporary one only read is an array `[a, b]` |
+| an array result | `Vec<T>`, or the borrow of its parameters, `fn f<'a>(a: &'a [T], b: &'a [T]) -> &'a [T]`, exclusive where a caller writes through it |
+| `a[i]`, `a[i] = v`, `a.Length` | `a[i as usize]` with Rust's own bounds panic as the trap, `a[i as usize] = v` (an index with an effect bound first, since Rust evaluates the value before the place), `a.len() as i32` |
+| a counted loop over an array that only reads its elements | `for &x in data` (`&v` for a vector, `.iter()` for an exclusive borrow) |
+| `Array.Copy`, `Fill`, `Clear` | `ply_copy`, `ply_copy_within` (one array), each range checked by `ply_range` first; `a.fill(v)` |
+| a swap of two elements through a variable | `a.swap(i, j)` where the indices can neither panic nor change anything |
+| `LoadLittle`/`LoadBig`, `StoreLittle`/`StoreBig` | `u32::from_le_bytes(d[ply_range(i, 4, d.len())].try_into().expect("4 bytes"))`; `let at = ply_range(…); d[at].copy_from_slice(&v.to_le_bytes());` |
+| one array passed twice to a call that writes one of them | a copy of the callee with the two parameters merged, `<callee>_aliased<i><j>`, where the callee assigns neither; otherwise `PLY1566` |
+| a struct of numbers | `#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)] pub struct Name { pub field: T }`; with a floating-point field `impl PartialEq` of the IR's equality (a NaN equals a NaN) instead of the derived one (#462) |
+| `StructNew`, `StructDefault`, a field read or written | `Name { a, b: x }`, `Name::default()`, `p.x`, `p.x = v;` (`let mut` for the variable, a parameter rebound) |
+| a string | its UTF-16 code units: `Vec<u16>` owned, `&[u16]` as a parameter; a literal `ply_utf16("text")`, a constant `static NAME: &str` |
+| string operations | `len`, indexing, `==`, `starts_with`, `ends_with`, `repeat`, `cmp`, `[a, b].concat()`, `parts.join(sep)`, `push`/`extend_from_slice` for `s += …`; the helpers of `Helpers/Strings.cs` for searching, replacing, splitting, trimming and padding |
 
 A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, `DivideByZero`,
 `ArgumentOutOfRange`, … - in every build mode; the verification reads it back with `RustTraps`
@@ -87,17 +100,20 @@ A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, 
 
 ## Refused
 
-What the backend does not write yet is refused with `PLY1550`, naming the construct: arrays, views
-and pointers (`arrays and views`), strings (`the type str`), structs, classes and enums (`declared
-types`), module state (`module state (globals)`), closures, collections and sequences. Two exported
-functions whose Rust names are the same are `PLY1574`; an exception handler `PLY1560`.
+What the backend does not write yet is refused with `PLY1550`, naming the construct: views and
+pointers, classes, interfaces and enums (`declared types (classes)` …), module state
+(`module state (globals)`), closures, collections and sequences, the conversions between numbers and
+text; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
+array in one written variable), a struct with a field that is no value. One array passed to a call
+twice where it is written and the callee swaps its parameters is `PLY1566`. Two exported functions
+whose Rust names are the same are `PLY1574`; an exception handler `PLY1560`.
 
 ## Lints
 
 `src/lib.rs` allows exactly the lints the module has a shape for, from a closed list:
 `unused_assignments` (a value of the source stored and never read, found by `RustLiveness`),
 `unused_comparisons`, `clippy::absurd_extreme_comparisons`, `clippy::approx_constant`,
-`clippy::empty_loop`, `clippy::eq_op`, `clippy::erasing_op`, `clippy::identity_op`,
+`clippy::almost_swapped` (the source's `let a = b; b = a;`), `clippy::empty_loop`, `clippy::eq_op`, `clippy::erasing_op`, `clippy::identity_op`,
 `clippy::manual_clamp` and `clippy::min_max` (a minimum and a maximum whose bounds may be out of
 order, where `clamp` would panic), `clippy::manual_range_contains`, `clippy::neg_cmp_op_on_partial_ord`
 and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `clippy::too_many_arguments`.
@@ -111,9 +127,13 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `RustDifferentialTests` (layer `rust`): every prototype fixture the backend writes is built by the
+- `MemoryEmitTests`, `TypeEmitTests`: arrays, ownership and aliasing, structs, their forms and refusals.
+- `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
-  outcome equals the C# compiler's and the interpreter's. The others are refused by name.
+  outcome, the final contents of every array argument included, equals the C# compiler's and the
+  interpreter's.
+- `RustFamilyDifferentialTests` (layer `rust`): the fixtures of the families the backend writes - bits,
+  records, strings, the floating-point view of bytes - against .NET in both overflow modes.
 - `RustRoundTripTests` (layer `rust`): every Rust fixture, imported by the Rust frontend in each
   overflow mode, comes back as a crate that is built with overflow checks on and off; every outcome is
   what rustc recorded for the original in the mode of the import.
@@ -123,7 +143,8 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 
 The runner (`Polypiler.Core.Verification/Runners`): `RustRunner` builds (`cargo build`), tests
 (`cargo test`), format-checks (`cargo fmt --check`), lints (`cargo clippy -- -D warnings`) and calls
-exports through a generated driver (`RustDriverGenerator`) on input images, with `RustBuildOptions`
+exports through a generated driver (`RustDriverGenerator`) on input images - scalars, and `seq<T>` and
+`utf16` as vectors borrowed by the call, an `inout` one exclusively and written back after the result - with `RustBuildOptions`
 (`OverflowChecks`, `DebugAssertions`, `OptLevel`) that have no defaults. Diagnostics: `PLY1591` the
 compiler rejected the input, `PLY1592` the driver died, `PLY1595` a protocol error such as a signature
 that does not fit the declaration.
