@@ -169,6 +169,12 @@ public sealed record JsNull : JsExpression;
 /// <param name="Body">The body.</param>
 public sealed record JsFunctionExpression(string? Name, IReadOnlyList<string> Parameters, JsBlock Body) : JsExpression;
 
+/// <summary>An arrow function, <c>(a, b) =&gt; body</c>: a block body, or an expression whose value it returns (ECMAScript 2015).</summary>
+/// <param name="Parameters">The names of the parameters.</param>
+/// <param name="Body">The block body, or <see langword="null"/>.</param>
+/// <param name="ExpressionBody">The expression body, or <see langword="null"/>.</param>
+public sealed record JsArrowFunction(IReadOnlyList<string> Parameters, JsBlock? Body, JsExpression? ExpressionBody) : JsExpression;
+
 #endregion
 
 #region Statements
@@ -260,6 +266,11 @@ public sealed record JsReturn(JsExpression? Value) : JsStatement;
 /// <summary><c>throw value;</c>.</summary>
 /// <param name="Value">The exception.</param>
 public sealed record JsThrow(JsExpression Value) : JsStatement;
+
+/// <summary><c>try { body } finally { cleanup }</c>.</summary>
+/// <param name="Body">The block that runs first.</param>
+/// <param name="Finally">The block that runs however the first one ends.</param>
+public sealed record JsTryFinally(JsBlock Body, JsBlock Finally) : JsStatement;
 
 /// <summary><c>function name(parameters) { body }</c>.</summary>
 /// <param name="Name">The name.</param>

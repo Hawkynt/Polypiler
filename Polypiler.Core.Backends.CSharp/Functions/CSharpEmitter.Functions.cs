@@ -7,29 +7,13 @@ namespace Polypiler.Core.Backends.CSharp;
 
 public static partial class CSharpEmitter {
 
-  /// <summary>Every statement within a statement, those in the bodies of its lambdas included, the statement first.</summary>
-  private static IEnumerable<IrStmt> AllWithin(IrStmt statement) {
-    yield return statement;
-    var inner = statement is IrBlock block ? block.Statements : Parts(statement)!.Value.Statements;
-    foreach (var nested in inner.SelectMany(AllWithin))
-      yield return nested;
-
-    foreach (var lambda in IrTree.Expressions(statement).SelectMany(Outermost))
-      foreach (var nested in AllWithin(lambda.Body))
-        yield return nested;
-  }
-
-  /// <summary>The lambdas of an expression that no other lambda of it holds.</summary>
-  private static IEnumerable<IrLambda> Outermost(IrExpr expression)
-    => expression is IrLambda lambda ? [lambda] : IrTree.Operands(expression).SelectMany(Outermost);
-
   /// <summary>The parameters and locals of the lambdas in a body, at any depth.</summary>
   private static IEnumerable<IrLocal> LambdaVariables(IrBlock body)
     => IrTree.Nodes(body).OfType<IrLambda>().SelectMany(lambda => lambda.Parameters.Concat(lambda.Locals));
 
   /// <summary>Whether a body writes a variable: assigns it or steps it, also inside a lambda.</summary>
   private static bool Writes(IrBlock body, IrLocal variable)
-    => AllWithin(body).Any(statement => statement is IrAssign assign && assign.Local == variable)
+    => IrClosures.Within(body).Any(statement => statement is IrAssign assign && assign.Local == variable)
       || IrTree.Nodes(body).Any(node => node is IrStep { Target: IrLocalRef reference } && reference.Local == variable);
 
   /// <summary>The name a type contributes to the name of a delegate type the class declares: <c>Int32</c>, <c>DoubleArray</c>, the name of a class.</summary>
@@ -185,26 +169,10 @@ public static partial class CSharpEmitter {
       if (!this.Has(CSharpFeature.LocalFunction))
         return [];
 
-      var statements = AllWithin(body).ToList();
-      var definitions = statements.SelectMany(statement => statement switch {
-        IrDeclare { Initializer: not null } declare => [declare.Local],
-        IrAssign assign => [assign.Local],
-        _ => (IEnumerable<IrLocal>)[]
-      }).GroupBy(local => local).ToDictionary(group => group.Key, group => group.Count());
+      var statements = IrClosures.Within(body).ToList();
       var initialized = statements.OfType<IrDeclare>().Where(declare => declare.Initializer is not null).Select(declare => declare.Local).ToHashSet();
       var parameters = IrTree.Nodes(body).OfType<IrLambda>().SelectMany(lambda => lambda.Parameters).ToHashSet();
-      var candidates = new Dictionary<IrLocal, IrLambda>();
-      foreach (var block in statements.OfType<IrBlock>().Prepend(body))
-        foreach (var statement in block.Statements) {
-          if (statement is not IrDeclare { Local.Type.IsFunction: true } declare || definitions.GetValueOrDefault(declare.Local) != 1)
-            continue;
-
-          var lambda = declare.Initializer as IrLambda
-            ?? (declare.Initializer is null ? block.Statements.OfType<IrAssign>().FirstOrDefault(assign => assign.Local == declare.Local)?.Value as IrLambda : null);
-          if (lambda is not null)
-            candidates[declare.Local] = lambda;
-        }
-
+      var candidates = IrClosures.Held(body);
       bool Admitted(IrLocal capture) => parameters.Contains(capture) || initialized.Contains(capture) || candidates.ContainsKey(capture) || !statements.OfType<IrDeclare>().Any(declare => declare.Local == capture);
       return [.. candidates.Where(candidate => candidate.Value.Captures.All(Admitted)).Select(candidate => candidate.Key)];
     }

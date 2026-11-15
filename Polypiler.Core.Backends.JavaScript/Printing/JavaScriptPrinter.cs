@@ -70,7 +70,7 @@ public static class JavaScriptPrinter {
     JsUpdate { Prefix: false } => Postfix,
     JsUnary or JsUpdate => Prefix,
     JsBinary binary => Of(binary.Operator),
-    JsConditional or JsAssignment => Conditional,
+    JsConditional or JsAssignment or JsArrowFunction => Conditional,
     JsSequence => Sequence,
     _ => Primary
   };
@@ -248,6 +248,12 @@ public static class JavaScriptPrinter {
           this._text.Append("throw ");
           this.Expression(exception.Value, depth);
           this._text.Append(';');
+          break;
+        case JsTryFinally attempt:
+          this._text.Append("try ");
+          this.Braces(attempt.Body, depth);
+          this._text.Append(" finally ");
+          this.Braces(attempt.Finally, depth);
           break;
         case JsFunctionDeclaration function:
           this.Function(function.Name, function.Parameters, function.Body, depth);
@@ -472,6 +478,15 @@ public static class JavaScriptPrinter {
           break;
         case JsObject literal:
           this.Object(literal, depth);
+          break;
+        case JsArrowFunction arrow:
+          this._text.Append('(').AppendJoin(", ", arrow.Parameters).Append(") => ");
+          if (arrow.Body is not null)
+            this.Braces(arrow.Body, depth);
+          else
+            // An object literal as the body would be read as a block, a sequence as more parameters of an outer call.
+            this.Operand(arrow.ExpressionBody!, Precedence(arrow.ExpressionBody!) > Sequence && arrow.ExpressionBody is not JsObject, depth);
+
           break;
         default:
           var function = (JsFunctionExpression)expression;

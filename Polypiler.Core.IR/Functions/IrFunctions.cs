@@ -122,6 +122,56 @@ public static class IrClosures {
   };
 
   /// <summary>
+  /// The locals of a body that hold one lambda for good - what a local function of the source is: the
+  /// local is of a function type, declared with the lambda, or declared without a value and assigned
+  /// the lambda once in the block that declares it, and nothing else ever assigns it. A backend may
+  /// write such a local as a function of its target's own.
+  /// </summary>
+  /// <param name="body">The body of the function, lambdas inside it included.</param>
+  /// <returns>Each such local with its lambda.</returns>
+  public static IReadOnlyDictionary<IrLocal, IrLambda> Held(IrBlock body) {
+    var statements = Within(body).ToList();
+    var definitions = statements.SelectMany(statement => statement switch {
+      IrDeclare { Initializer: not null } declare => [declare.Local],
+      IrAssign assign => [assign.Local],
+      _ => (IEnumerable<IrLocal>)[]
+    }).GroupBy(local => local).ToDictionary(group => group.Key, group => group.Count());
+    var held = new Dictionary<IrLocal, IrLambda>();
+    foreach (var block in statements.OfType<IrBlock>().Prepend(body))
+      foreach (var statement in block.Statements) {
+        if (statement is not IrDeclare { Local.Type.IsFunction: true } declare || definitions.GetValueOrDefault(declare.Local) != 1)
+          continue;
+
+        var lambda = declare.Initializer as IrLambda
+          ?? (declare.Initializer is null ? block.Statements.OfType<IrAssign>().FirstOrDefault(assign => assign.Local == declare.Local)?.Value as IrLambda : null);
+        if (lambda is not null)
+          held[declare.Local] = lambda;
+      }
+
+    return held;
+  }
+
+  /// <summary>Every statement within a statement, those of the bodies of its lambdas included, the statement first.</summary>
+  /// <param name="statement">The statement.</param>
+  /// <returns>The statements in pre-order.</returns>
+  public static IEnumerable<IrStmt> Within(IrStmt statement) {
+    yield return statement;
+    var inner = statement is IrBlock block ? block.Statements : IrTree.Blocks(statement).SelectMany(nested => nested.Statements);
+    foreach (var nested in inner.SelectMany(Within))
+      yield return nested;
+
+    foreach (var lambda in IrTree.Expressions(statement).SelectMany(Outermost))
+      foreach (var nested in Within(lambda.Body))
+        yield return nested;
+  }
+
+  /// <summary>The lambdas of an expression that no other lambda of it holds.</summary>
+  /// <param name="expression">The expression.</param>
+  /// <returns>The lambdas, in the order they are evaluated.</returns>
+  public static IEnumerable<IrLambda> Outermost(IrExpr expression)
+    => expression is IrLambda lambda ? [lambda] : IrTree.Operands(expression).SelectMany(Outermost);
+
+  /// <summary>
   /// The variables a function captures by any lambda inside it, at any depth: those whose storage a
   /// closure shares, which a pass may therefore neither copy nor move.
   /// </summary>
