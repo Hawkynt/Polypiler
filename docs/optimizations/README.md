@@ -7,7 +7,7 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**25 of 292 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), in legalization (#1358) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
+**26 of 292 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), in legalization (#1358) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
 
 ## General passes
 
@@ -46,7 +46,7 @@ maps every one of its optimization documents to the page here that covers it.
 
 - [ ] [O0060](O0060-js-numeric-specialization.md) — Specialize JavaScript Number arithmetic to typed integer and float operations (P2)
 - [ ] [O0061](O0061-js-array-specialization.md) — Specialize JavaScript arrays and typed arrays to typed sequences (P2)
-- [ ] [O0062](O0062-python-int-specialization.md) — Specialize Python arbitrary-precision int to fixed-width integers or keep it exact (P3)
+- [x] [O0062](O0062-python-int-specialization.md) — Specialize Python arbitrary-precision int to fixed-width integers or keep it exact (P3)
 - [ ] [O0063](O0063-python-protocol-specialization.md) — Resolve Python protocols, attributes, slices and iterators statically where proven (P3)
 - [ ] [O0064](O0064-perl-context-resolution.md) — Resolve Perl scalar, list and void context explicitly (P3)
 - [ ] [O0065](O0065-perl-scalar-specialization.md) — Specialize Perl scalars: undef, numeric/string duality, references and tied variables (P3)

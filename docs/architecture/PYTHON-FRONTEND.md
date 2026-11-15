@@ -57,39 +57,38 @@ are `bool`, `i64` and `f64`:
 - Every hint is recorded as a **source contract** - `f.a: int`, `f.return: int`, `f.x: int` for a local -
   in `PythonImportResult.Contracts`; `PythonImportOptions.RecordAnnotations = false` records none.
 
-### `int` is exact or raises
+### `int` is exact
 
-Python's `int` is unbounded. The IR has no arbitrary-precision integer yet, so an `int` is an `i64`
-whose every operation gives Python's exact result or raises `OverflowError` (`py-int-64`): `+ - *`
-and unary `-` are the checked operations, `//` the floor division that traps on the one quotient that
-does not fit, `<<` a helper that raises where a bit would be lost, `abs`, `**`, `int()` and `round()`
-of a float raise beyond 64 bits. Nothing ever wraps around, so a masked hash such as
-`((h * 33) ^ c) & 0xFFFFFFFF` is exact as long as its intermediate values fit. An integer literal
-outside 64 bits is `PLY1804`.
+Python's `int` is unbounded, and so is the IR's `bigint` (#494), which every `int` is imported as:
+literals of any size, `+ - *`, unary `-`, `& | ^ ~` on the infinite two's complement and the
+comparisons exact; `//` and `%` floor division from truncating division; `<<` and `>>` by any count;
+`/`, `int()`, `round()` and the conversion to `float` with CPython's results and exceptions. Nothing
+wraps around and nothing overflows.
 
-This is where the repository and #452 differ: #452 imports every value as `dyn` and leaves the choice
-of width to the specialization of #494, neither of which exists yet. With an arbitrary-precision
-integer in the IR, the exact results beyond 64 bits come back; until then the translation is exact
-or fails explicitly, never silently.
+Which `int` fits a fixed width is no guess of the import: [O0062](../optimizations/O0062-python-int-specialization.md)
+narrows a variable, an expression or a result to `i32`, `u32`, `i64` or `u64` where its masks and
+ranges prove that exact, so a masked hash such as `(h * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF` computes
+natively. #452 imports every value as `dyn`; the repository imports a typed value and leaves only the
+width of an `int` to that specialization.
 
 ## Operations
 
 | Python | IR |
 | --- | --- |
-| `+ - *` on `int` | `AddChecked`, `SubtractChecked`, `MultiplyChecked` |
+| `+ - *` on `int` | `Add`, `Subtract`, `Multiply` of `bigint`, exact |
 | `+ - *` with a `float` | the operation on `f64`, the `int` or `bool` converted |
-| `/` | always a `float`: of two `int` the correctly rounded quotient (`PyTrueDivideInt`, long division to 55 bits and a sticky bit), of floats `PyTrueDivideFloat`; `ZeroDivisionError` |
-| `//`, `%` on `int` | `DivFloor`, `ModFloor` (`PyModuloInt` for a divisor that may be -1); `ZeroDivisionError` |
+| `/` | always a `float`: of two `int` the correctly rounded quotient (`PyTrueDivideInt`: the quotient brought to 55 bits by shifting, a sticky bit, the subnormals rounded at 2^-1074, `OverflowError` beyond the largest float), of floats `PyTrueDivideFloat`; `ZeroDivisionError` |
+| `//`, `%` on `int` | by a positive power of two `>>` and `&` (floor semantics for every sign); otherwise `PyFloorDivideInt`, `PyModuloInt` from the truncating `Divide` and `Remainder`; `ZeroDivisionError` |
 | `//`, `%` on `float` | `PyFloorDivideFloat`, `PyModuloFloat`: the exact `fmod` moved by the divisor where the signs differ, the quotient brought to the nearest integer; `ZeroDivisionError` |
 | `**`, `pow(a, b)` | `PyPowerInt` for an `int` exponent that is a non-negative constant or of unknown sign (`py-int-power-sign`), `PyPowerFloat` for a negative constant one and for floats: `ZeroDivisionError` for `0.0` to a negative power, `OverflowError`, and `ArithmeticError` where CPython gives a complex (`py-complex-power`) |
-| `<<`, `>>` | `PyShiftLeft`, `PyShiftRight` (a constant count below 64 is a plain arithmetic shift); `ValueError` for a negative count |
-| `&`, `\|`, `^`, `~` | `And`, `Or`, `Xor`, `BitNot`: infinite two's complement is the 64-bit one; of two `bool`s a `bool` |
+| `<<`, `>>` | a constant count the IR's `ShiftLeft`, `ShiftRight`; otherwise `PyShiftLeft`, `PyShiftRight`: `ValueError` for a negative count, `OverflowError` for a left shift beyond 2^31 - 1 bits |
+| `&`, `\|`, `^`, `~` | `And`, `Or`, `Xor`, `BitNot` on the infinite two's complement; of two `bool`s a `bool` |
 | `< <= > >= == !=` | the comparison; an `int` with a `float` compared exactly (`PyCompareIntFloat`, `PyCompareFloatInt`) |
 | `a < b < c` | `b` evaluated once, `c` only when `a < b` holds |
 | `and`, `or` | of `bool`s the short-circuit operators; otherwise a choice that gives an operand: `0 or 9` is 9 |
 | `not`, a condition | the truth of the value: not zero; a NaN is true |
 | `x if c else y` | a choice |
-| `int()`, `round()`, `float()`, `bool()`, `abs()` | `PyIntOfFloat` (toward zero; `ValueError` for NaN, `OverflowError` for an infinity), `RoundEven` then `PyIntOfFloat`, a conversion, the truth, `PyAbsInt` or `Abs` |
+| `int()`, `round()`, `float()`, `bool()`, `abs()` | `PyIntOfFloat` (toward zero, exact; `ValueError` for NaN, `OverflowError` for an infinity), `RoundEven` then `PyIntOfFloat`, `PyFloatOfInt` (`OverflowError` beyond the largest float; also where an `int` meets a `float`), the truth, `PyAbsInt` or `Abs` |
 | `divmod(a, b)` | only as `q, r = divmod(a, b)`: both computed before either name is assigned |
 
 The helpers are private functions of the module that the lowering adds where it calls one; every
@@ -106,9 +105,8 @@ of an operand evaluated under a condition, the expression is refused (`PLY1802`)
 - **`range`**: the arguments are evaluated once, in order, before the loop; a zero step raises
   `ValueError` before the first pass. A counter walks the range and the loop variable is assigned from
   it at the start of every pass; where the body never assigns the variable and nothing reads it after
-  the loop, the variable is the counter. A step other than ±1 decides whether another element follows
-  on the distance to the end, exact in unsigned 64 bits, so no element of a range near the limits is
-  lost or added.
+  the loop, the variable is the counter, an `int` as exact as the bounds, so no element of a range is
+  lost or added at any magnitude; a step other than ±1 tests the bound by its sign.
 - **Loop `else`** runs when the loop ends without `break`: after the loop where nothing breaks,
   otherwise under a flag every `break` sets.
 - **`match`** evaluates its subject once and tries the cases in order. A literal is compared with `==`
@@ -139,7 +137,7 @@ that rebinds a built-in's name calls its own function.
 | `PLY1801` | a type that is not known, or a hint the import does not know |
 | `PLY1802` | an expression outside the subset |
 | `PLY1803` | values of types no type of the import holds both of |
-| `PLY1804` | an integer literal beyond 64 bits |
+| `PLY1804` | reserved: an integer literal beyond 64 bits, which the import no longer refuses |
 | `PLY1810` | a statement outside the subset |
 | `PLY1811` | a local that may be unbound |
 | `PLY1812` | a match pattern outside literals, alternatives, captures, `_` and guards |
@@ -155,5 +153,5 @@ through `oracle.py` on every combination of the boundary values of their paramet
 operands (seed 1800) and lists of their own, and the outcomes are recorded under `recorded/`. The unit
 tests hold the interpreter and the C# emitted from the IR to the recordings, the acceptance tests the
 JavaScript emitted from the IR and run by node, and the tests of the Python layer hold the recordings
-to CPython again. A recorded `int` beyond 64 bits is expected to raise `OverflowError` and a complex
-result `ArithmeticError`, as the caveats say; every other outcome must be CPython's, type included.
+to CPython again. A complex result is expected to raise `ArithmeticError`, as the caveat says; every
+other outcome must be CPython's, type and magnitude included.

@@ -95,7 +95,7 @@ raises the exception CPython raises, as the class of the IR that stands for it, 
 | Python raises | IR class | where |
 | --- | --- | --- |
 | `ZeroDivisionError` | `DivideByZeroException` | `/`, `//`, `%`, `divmod` by zero, `0.0` to a negative power |
-| `OverflowError` | `OverflowException` | an `int` beyond 64 bits (`py-int-64`), `int()`/`round()` of an infinity, a float power that overflows |
+| `OverflowError` | `OverflowException` | an `int` too large for a `float` or a left shift beyond 2**31 - 1 bits, `int()`/`round()` of an infinity, a float power that overflows |
 | `ValueError` | `ArgumentException` | a negative shift count, `int()`/`round()` of a NaN, a zero step of `range`, a negative power of an `int` whose sign was not known |
 | `AssertionError` | `InvalidOperationException` | a failing `assert` |
 | a `complex` result | `ArithmeticException` | a negative float to a fractional power (`py-complex-power`) |
