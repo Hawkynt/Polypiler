@@ -477,7 +477,14 @@ public sealed class IrPassTests {
       new IrDeclare(i, Int(0)),
       new IrWhile(Op(IrBinaryOp.Less, new IrLocalRef(i), Int(2)), Block(new IrAssign(_p, Op(IrBinaryOp.Add, P, P)), new IrAssign(i, Op(IrBinaryOp.Add, new IrLocalRef(i), Int(1))))),
       new IrReturn(P));
-    return Module(Block(new IrReturn(Op(IrBinaryOp.Add, X, CallH(Int(3))))), helper, [], [i]);
+    // F passes a lambda that calls H to A, which only calls it: specialisation binds it, and inlining takes all three in.
+    var f = new IrLocal("f", IrType.Function(IrType.I32, IrType.I32));
+    var v = new IrLocal("v", IrType.I32);
+    var y = new IrLocal("y", IrType.I32);
+    var apply = new IrFunction("A", false, IrType.I32, [f, v], [], Block(new IrReturn(new IrInvoke(IrType.I32, new IrLocalRef(f), [new IrLocalRef(v)]))));
+    var lambda = IrLambda.Of([y], IrType.I32, [], Block(new IrReturn(CallH(new IrLocalRef(y)))));
+    var module = Module(Block(new IrReturn(Op(IrBinaryOp.Add, X, new IrCall("A", IrType.I32, [lambda, Int(3)])))), helper, [], [i]);
+    return module with { Functions = [.. module.Functions, apply] };
   }
 
   [Test]
