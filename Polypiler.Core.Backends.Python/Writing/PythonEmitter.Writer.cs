@@ -51,6 +51,9 @@ public static partial class PythonEmitter {
 
     public PyModule Module(IrModule module) {
       this.Reserve();
+      foreach (var foreign in module.ForeignFunctions)
+        this._foreign.TryAdd(foreign.Name, foreign);
+
       this.NameTypes(module);
       this.NameFunctions(module);
       foreach (var constant in module.Constants)
