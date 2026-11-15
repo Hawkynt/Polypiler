@@ -289,7 +289,8 @@ public static partial class JavaScriptEmitter {
       foreach (var function in module.Functions.Where(function => !this.IsMember(function)))
         functions.Add(this.Function(function));
 
-      var classes = module.Types.OfType<IrClassType>().SelectMany(type => this.Class(type, module)).ToList();
+      // A class follows the class it derives from, which extends evaluates.
+      var classes = module.Types.OfType<IrClassType>().OrderBy(type => type.Lineage.Count()).SelectMany(type => this.Class(type, module)).ToList();
 
       // The initializers of the globals call helpers as well, which have to be known before they are declared.
       var globals = this.Globals(module);

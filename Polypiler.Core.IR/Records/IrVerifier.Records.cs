@@ -20,6 +20,11 @@ public static partial class IrVerifier {
       }
 
       Require(names.Add(declaration.Name), "the module declares the type twice");
+      if (declaration is IrInterfaceType { HasMembers: true } contract) {
+        table.Add(contract);
+        continue;
+      }
+
       if (declaration is IrClassType { IsDefined: true, HasMembers: true } declared) {
         table.Add(declared);
         Fields(declared, true, Require);
@@ -76,7 +81,11 @@ public static partial class IrVerifier {
 
     public bool Declares(IrStructType type) => this._structs.Contains(type);
 
-    public bool Declares(IrTypeDeclaration type) => type is IrStructType structure ? this.Declares(structure) : this.Declares((IrClassType)type);
+    public bool Declares(IrTypeDeclaration type) => type switch {
+      IrStructType structure => this.Declares(structure),
+      IrInterfaceType contract => this.Declares(contract),
+      _ => this.Declares((IrClassType)type)
+    };
 
     /// <summary>Whether a value of a struct holds one of another through its fields; a type outside the module holds nothing.</summary>
     public bool Contains(IrStructType outer, IrStructType inner) {

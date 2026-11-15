@@ -132,6 +132,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
           foreach (var flow in model.Flows)
             changed |= this.Apply(model, flow);
         }
+
+        changed |= this.Unify();
       }
     } while (this.Promote([.. this.Flowing(models)]));
 

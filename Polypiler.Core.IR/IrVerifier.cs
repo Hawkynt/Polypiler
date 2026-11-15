@@ -46,8 +46,13 @@ public static partial class IrVerifier {
 
     var globals = Globals(module, names, functions, constants, types, diagnostics);
     var members = Members(module, types, functions, diagnostics);
+    var signatures = Hierarchy(types, functions, diagnostics);
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members }.Run();
+      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures }.Run();
+
+    if (diagnostics.Count == 0)
+      foreach (var (constructor, call) in IrConstruction.VirtualCalls(module))
+        diagnostics.Add(Error(constructor, $"a virtual call of '{call.Method.Name}' on 'this' during construction"));
 
     return diagnostics;
   }
@@ -239,7 +244,7 @@ public static partial class IrVerifier {
 
     private void Value(IrExpr expression, IrType? expected, string what) {
       this.Expression(expression);
-      this.Require(expression.Type == expected, $"{what} has the type {expression.Type}, expected {expected}");
+      this.Require(expression.Type.IsAssignableTo(expected), $"{what} has the type {expression.Type}, expected {expected}");
     }
 
     /// <summary>
@@ -360,6 +365,9 @@ public static partial class IrVerifier {
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals:
           this.Object(expression);
           break;
+        case IrTypeTest or IrCast or IrAsCast:
+          this.Conversion(expression);
+          break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
             if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind == IrTypeKind.ReadOnlySpan)))
@@ -403,11 +411,17 @@ public static partial class IrVerifier {
         this.Require(types.HasDefault(named), $"the struct {named.Name} has a field of an array type and so no default value");
     }
 
-    /// <summary>A field is one of the target type's own.</summary>
+    /// <summary>A field is one of the target type's own, or of a base class of its class.</summary>
     private void Member(IrExpr target, IrField field) {
-      IrTypeDeclaration? owner = target.Type.IsObject ? this.Class(target.Type) : this.Struct(target.Type);
-      if (owner is not null)
-        this.Require(owner.Owns(field), $"the field '{field.Name}' is not a field of {owner.Name}");
+      if (target.Type.IsObject) {
+        if (this.Class(target.Type) is { } owner)
+          this.Require(owner.OwnerOf(field) is not null, $"the field '{field.Name}' is not a field of {owner.Name}");
+
+        return;
+      }
+
+      if (this.Struct(target.Type) is { } structure)
+        this.Require(structure.Owns(field), $"the field '{field.Name}' is not a field of {structure.Name}");
     }
 
     /// <summary>Whether an expression names a place a field can be written in: a variable, an array element, or a field of a place.</summary>
@@ -429,8 +443,8 @@ public static partial class IrVerifier {
 
       this.Require(call.Type == target.ReturnType,
         $"the call of '{call.Function}' has the type {call.Type}, the function returns {target.ReturnType}");
-      this.Require(call.Arguments.Select(argument => argument.Type).SequenceEqual(target.Parameters.Select(parameter => parameter.Type)),
-        $"the arguments of the call of '{call.Function}' do not match its parameters");
+      this.Require(Assignable(call.Arguments, target.Parameters), $"the arguments of the call of '{call.Function}' do not match its parameters");
+      this.Require(!this.Signatures.Contains(call.Function), $"the signature '{call.Function}' of an abstract method is called");
     }
 
     private static bool Converts(IrConvert conversion) {

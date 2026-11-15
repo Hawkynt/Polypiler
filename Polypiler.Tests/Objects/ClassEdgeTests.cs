@@ -50,7 +50,6 @@ public sealed class ClassEdgeTests {
   [TestCase("public sealed class D { public volatile int V; } public static class C { public static int F() => 0; }", "a volatile field")]
   [TestCase("public sealed class D { public int P { get; set { field = value; } } } public static class C { public static int F() => 0; }", "a property with an automatic and a written accessor")]
   [TestCase("public sealed class D { public int P { get => 1; init { } } } public static class C { public static int F() => 0; }", "an init accessor that is not automatic")]
-  [TestCase("public sealed class D { public D() : base() { } } public static class C { public static int F() => 0; }", "base(...)")]
   [TestCase("public sealed class D { public D(int a) { } public D() : this(a: 1) { } } public static class C { public static int F() => 0; }", "a named argument")]
   [TestCase("public sealed class D { public int M(int x) => x; } public static class C { public static int F() => new D().M(x: 1); }", "a named or ref argument")]
   [TestCase("public sealed class D { public D(int a) { } } public static class C { public static int F() { new D(a: 1); return 0; } }", "a named argument")]

@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Polypiler.Core.IR;
 
 /// <summary>The shapes a value of the prototype IR can have.</summary>
@@ -58,8 +60,9 @@ public enum IrTypeKind {
   String,
 
   /// <summary>
-  /// A reference to an object of a class, an <see cref="IrClassType"/>, or <c>null</c>: the object has an
-  /// identity, and every copy of the reference names the same object.
+  /// A reference to an object of a class, an <see cref="IrClassType"/>, or of a class that implements an
+  /// <see cref="IrInterfaceType"/>, or <c>null</c>: the object has an identity, and every copy of the
+  /// reference names the same object.
   /// </summary>
   Object
 
@@ -166,6 +169,34 @@ public sealed record IrType {
 
   /// <summary>The class of a reference type, otherwise <see langword="null"/>.</summary>
   public IrClassType? ClassType => this.Declaration as IrClassType;
+
+  /// <summary>The type of the references to objects of the classes that implement an interface.</summary>
+  /// <param name="declaration">The interface.</param>
+  /// <returns>The reference type.</returns>
+  public static IrType Object(IrInterfaceType declaration) => new(IrTypeKind.Object, null, declaration);
+
+  /// <summary>The interface of a reference type, otherwise <see langword="null"/>.</summary>
+  public IrInterfaceType? InterfaceType => this.Declaration as IrInterfaceType;
+
+  /// <summary>
+  /// Whether a value of this type is a value of another without a conversion: the same type, or a
+  /// reference to a class that converts to its base class or an interface it implements (an upcast,
+  /// which has no effect).
+  /// </summary>
+  /// <param name="target">The type the value goes to.</param>
+  /// <returns><see langword="true"/> when the value can stand where the target type is expected.</returns>
+  public bool IsAssignableTo(IrType? target) {
+    if (this == target)
+      return true;
+
+    if (!this.IsObject || target is not { IsObject: true })
+      return false;
+
+    if (this.ClassType is { } type)
+      return target.ClassType is { } ancestor ? type.DerivesFrom(ancestor) : type.AllInterfaces.Contains(target.InterfaceType!);
+
+    return target.InterfaceType is { } other && this.InterfaceType!.Closure.Contains(other);
+  }
 
   /// <summary>Whether the type is a reference to an object of a class, which may be <c>null</c>.</summary>
   public bool IsObject => this.Kind == IrTypeKind.Object;

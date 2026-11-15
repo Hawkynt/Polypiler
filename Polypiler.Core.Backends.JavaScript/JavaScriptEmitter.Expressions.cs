@@ -75,6 +75,8 @@ public static partial class JavaScriptEmitter {
           return this.Step(step);
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrFieldLoad { Target.Type.IsObject: true } or IrStructEquals { Left.Type.IsObject: true }:
           return this.Object(expression);
+        case IrTypeTest or IrCast or IrAsCast:
+          return this.Conversion(expression);
         case IrStructNew or IrStructDefault or IrFieldLoad or IrStructEquals:
           return this.Struct(expression);
         case IrCall chained when this._owners.ContainsKey(chained.Function):

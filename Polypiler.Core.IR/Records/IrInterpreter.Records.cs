@@ -75,7 +75,7 @@ public static partial class IrInterpreter {
           return Load(array, Checked(array, (long)this.Evaluate(load.Index, frame)));
         case IrFieldLoad load when load.Target.Type.IsObject:
           // A struct field of an object is a place in the object, which every reference to it shares.
-          return ((Instance)NotNull(this.Evaluate(load.Target, frame))).Fields[Position(load.Field, load.Target.Type)];
+          return ((Instance)NotNull(this.Evaluate(load.Target, frame))).Fields[ObjectPosition(load.Field, load.Target.Type)];
         case IrFieldLoad load:
           return ((Record)this.Place(load.Target, frame)).Fields[Position(load.Field, load.Target.Type)];
         default:

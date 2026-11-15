@@ -264,7 +264,11 @@ public static class JavaScriptPrinter {
 
     /// <summary>A class, each member on a line of its own.</summary>
     private void Class(JsClass type, int depth) {
-      this._text.Append("class ").Append(type.Name).Append(" {\n");
+      this._text.Append("class ").Append(type.Name);
+      if (type.Base is { } inherited)
+        this._text.Append(" extends ").Append(inherited);
+
+      this._text.Append(" {\n");
       foreach (var member in type.Members) {
         this._text.Append('\n', member.Leading.BlankLines);
         foreach (var comment in member.Leading.Comments)

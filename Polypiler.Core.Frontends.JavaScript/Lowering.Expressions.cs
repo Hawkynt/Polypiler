@@ -262,7 +262,9 @@ internal sealed partial class Lowering {
       throw this.Unsupported(choice, $"?: on {types.Of(choice.Consequent).Describe()} and {types.Of(choice.Alternate).Describe()}");
     }
 
-    return new IrConditional(condition, this.Value(choice.Consequent, type), this.Value(choice.Alternate, type));
+    var (consequent, alternate) = (this.Value(choice.Consequent, type), this.Value(choice.Alternate, type));
+    return consequent.Type == alternate.Type ? new IrConditional(condition, consequent, alternate)
+      : throw this.Unsupported(choice, "a conditional expression whose branches are objects of two classes");
   }
 
   private IrExpr Member(MemberExpression member) {
@@ -554,7 +556,7 @@ internal sealed partial class Lowering {
       return type.IsObject ? new IrNull(type) : throw this.Unsupported(node, "null");
 
     var from = value.Expr.Type;
-    if (from == type)
+    if (from == type || from.IsAssignableTo(type))
       return value.Expr;
 
     if (type.IsStruct && this.Reshaped(value, type, node) is { } reshaped)

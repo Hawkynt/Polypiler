@@ -400,7 +400,7 @@ public static partial class CSharpEmitter {
     IrStructDefault => [],
     IrFieldLoad load => [load.Target],
     IrStructEquals equality => [equality.Left, equality.Right],
-    IrNew or IrNull or IrMethodCall or IrReferenceEquals => IrTree.Operands(expression),
+    IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast => IrTree.Operands(expression),
     _ => null
   };
 
@@ -842,7 +842,7 @@ public static partial class CSharpEmitter {
     /// <c>int</c> unasked. Inside a class named <c>var</c> the word is that class.
     /// </summary>
     private bool Infers(IrDeclare declare)
-      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && !declare.Local.Type.IsView
+      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView
         && this.ClassName != "var" && this.Has(CSharpFeature.ImplicitlyTypedLocal);
 
     /// <summary>
@@ -947,6 +947,9 @@ public static partial class CSharpEmitter {
     }
 
     private CsIf If(IrIf conditional) {
+      if (this.PatternIf(conditional) is { } pattern)
+        return pattern;
+
       var condition = this.Text(conditional.Condition);
       var then = new CsBlock(this.Statements(conditional.Then));
       if (conditional.Else is null)
@@ -1072,6 +1075,8 @@ public static partial class CSharpEmitter {
           return (this.GlobalName(reference.Global), Primary);
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrFieldLoad { Target.Type.IsObject: true } or IrStructEquals { Left.Type.IsObject: true }:
           return this.Object(expression);
+        case IrTypeTest or IrCast or IrAsCast:
+          return this.Conversion(expression);
         case IrUnary unary:
           var operand = Promoted(unary.Operand);
           return (new CsPrefixUnary(_unary[unary.Op], unary.Op == IrUnaryOp.NegateChecked ? this.AtRunTime(operand, false, Cast) : this.Operand(operand, Cast)), Unary);

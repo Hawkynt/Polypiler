@@ -269,7 +269,8 @@ internal sealed record JsType {
         var joined = a.Types.Zip(b.Types, Join).ToList();
         return joined.Exists(type => type.Kind == JsKind.Conflict) ? Conflict(first, second) : Record(new RecordShape(a.Registry, a.Keys, joined));
       case JsKind.Object:
-        return first.Class == second.Class ? first : Conflict(first, second);
+        // Objects of several classes are objects of the nearest class of the file they all derive from.
+        return first.Class!.Lineage.FirstOrDefault(second.Class!.Lineage.Contains) is { } common ? Object(common) : Conflict(first, second);
       default:
         return first;
     }

@@ -7,11 +7,12 @@ using Polypiler.Core.Frontends.JavaScript.Inference;
 namespace Polypiler.Core.Frontends.JavaScript;
 
 /// <summary>
-/// The classes of a file: ECMAScript 2015 classes without <c>extends</c>, and constructor functions of
-/// ECMAScript 5 - a function declaration that assigns a property of <c>this</c> or whose prototype the
-/// top level of the file gives methods (<c>C.prototype.m = function …</c>) or accessors
-/// (<c>Object.defineProperty(C.prototype, "p", { get, set })</c>). Each member is a candidate of its
-/// own, named <c>Class.member</c>, which no function of the module can be named.
+/// The classes of a file: ECMAScript 2015 classes, also with <c>extends</c> of a class of the file,
+/// and constructor functions of ECMAScript 5 - a function declaration that assigns a property of
+/// <c>this</c> or whose prototype the top level of the file gives methods
+/// (<c>C.prototype.m = function …</c>), accessors (<c>Object.defineProperty(C.prototype, "p", { get, set })</c>)
+/// or the prototype of another (<c>B.prototype = Object.create(C.prototype)</c>). Each member is a
+/// candidate of its own, named <c>Class.member</c>, which no function of the module can be named.
 /// </summary>
 internal sealed partial class FunctionCollector {
 
@@ -30,6 +31,11 @@ internal sealed partial class FunctionCollector {
       if (PrototypeOwner(statement) is { } owner)
         names.Add(owner);
 
+      // The class a constructor function's prototype is made from is one as well, whatever it declares.
+      if (statement is ExpressionStatement { Expression: AssignmentExpression { Right: CallExpression { Arguments: [MemberExpression { Object: Identifier inherited, Property: Identifier { Name: "prototype" } }] } } }
+          && PrototypeOwner(statement) is not null)
+        names.Add(inherited.Name);
+
       if ((statement is ExportNamedDeclaration { Declaration: FunctionDeclaration exported } ? exported : statement as FunctionDeclaration) is { } function && AssignsThis(function.Body))
         names.Add(function.Id!.Name);
     }
@@ -40,6 +46,7 @@ internal sealed partial class FunctionCollector {
   /// <summary>The class whose prototype a statement gives a member, <c>C.prototype.m = …</c> or <c>Object.defineProperty(C.prototype, …)</c>, or <see langword="null"/>.</summary>
   private static string? PrototypeOwner(Statement statement) => statement switch {
     ExpressionStatement { Expression: AssignmentExpression { Left: MemberExpression { Object: MemberExpression { Object: Identifier owner, Property: Identifier { Name: "prototype" } } } } } => owner.Name,
+    ExpressionStatement { Expression: AssignmentExpression { Left: MemberExpression { Object: Identifier owner, Property: Identifier { Name: "prototype" } }, Right: CallExpression } } => owner.Name,
     ExpressionStatement { Expression: CallExpression { Callee: MemberExpression { Object: Identifier { Name: "Object" }, Property: Identifier { Name: "defineProperty" } }, Arguments: [MemberExpression { Object: Identifier owner, Property: Identifier { Name: "prototype" } }, ..] } } => owner.Name,
     _ => null
   };
@@ -110,8 +117,10 @@ internal sealed partial class FunctionCollector {
     var owner = new ClassModel(declaration.Id!.Name, declaration) { IsPublic = isPublic };
     this._classes.Add(owner);
     this.ClassStatements.Add(statement);
-    if (declaration.SuperClass is not null)
-      owner.Problem = "extends";
+    if (declaration.SuperClass is Identifier { Name: var inherited })
+      owner.BaseName = inherited;
+    else if (declaration.SuperClass is { } other)
+      owner.Problem = "extends " + source[other.Start..other.End];
 
     foreach (var element in declaration.Body.Body) {
       switch (element) {
@@ -175,6 +184,9 @@ internal sealed partial class FunctionCollector {
         case ExpressionStatement { Expression: AssignmentExpression { Operator: Operator.Assignment, Left: MemberExpression { Computed: false } target, Right: var value } }
           when target.Object is MemberExpression { Object: Identifier { Name: var name }, Property: Identifier { Name: "prototype" } } && this.ClassNamed(name) is { } owner:
           this.ClassStatements.Add(statement);
+          if (owner.Declaration is FunctionDeclaration && owner.BaseName is not null && KeyOf(target.Property) == "constructor" && value is Identifier { Name: var itself } && itself == name)
+            break;
+
           if (owner.Declaration is ClassDeclaration || value is not FunctionExpression prototyped || KeyOf(target.Property) is not { } named)
             owner.Problem ??= "prototype mutation";
           else
@@ -184,8 +196,12 @@ internal sealed partial class FunctionCollector {
         case ExpressionStatement { Expression: AssignmentExpression { Operator: Operator.Assignment, Left: MemberExpression { Computed: false, Object: Identifier { Name: var name }, Property: Identifier { Name: var member } } target, Right: var value } }
           when this.ClassNamed(name) is { Declaration: FunctionDeclaration } owner:
           this.ClassStatements.Add(statement);
-          if (member == "prototype")
-            owner.Problem ??= "prototype mutation";
+          if (member == "prototype" && value is CallExpression { Callee: MemberExpression { Object: Identifier { Name: "Object" }, Property: Identifier { Name: "create" } },
+              Arguments: [MemberExpression { Object: Identifier { Name: var inherited }, Property: Identifier { Name: "prototype" } }] }
+              && owner.BaseName is null && owner.Members.Count == 0)
+            owner.BaseName = inherited;
+          else if (member == "prototype")
+            owner.Problem ??= owner.Members.Count > 0 ? "a method put on the prototype before Object.create replaces it" : "prototype mutation";
           else if (value is FunctionExpression function)
             this.Member(owner, MemberKind.Method, member, true, statement, function);
           else
@@ -215,6 +231,59 @@ internal sealed partial class FunctionCollector {
           this.ClassStatements.Add(statement);
           owner.Problem ??= "prototype mutation";
           break;
+        case ExpressionStatement { Expression: CallExpression { Callee: MemberExpression { Object: Identifier { Name: "Object" }, Property: Identifier { Name: "setPrototypeOf" } },
+            Arguments: [var target, ..] } } when (target is MemberExpression { Object: Identifier changed } ? changed : target as Identifier) is { } chained && this.ClassNamed(chained.Name) is { } owner:
+          this.ClassStatements.Add(statement);
+          owner.Problem ??= "Object.setPrototypeOf";
+          break;
+      }
+    }
+
+    this.Hierarchy();
+  }
+
+  /// <summary>
+  /// Gives every class the class of the file it extends, refusing one that is no class of the file or
+  /// a hierarchy that loops, and settles which methods override which: a method of a derived class
+  /// replaces the method of its key of the nearest base class. A field or an accessor of a base class
+  /// declared again, and a method with the key of a field or an accessor, is refused.
+  /// </summary>
+  private void Hierarchy() {
+    foreach (var owner in this._classes.Where(owner => owner.BaseName is not null)) {
+      owner.Base = this.ClassNamed(owner.BaseName!);
+      if (owner.Base is null)
+        owner.Problem ??= $"extends {owner.BaseName}, which is no class of the file";
+      else if (owner.Base.Lineage.Contains(owner))
+        (owner.Problem, owner.Base) = (owner.Problem ?? "a class that extends itself", null);
+    }
+
+    foreach (var owner in this._classes.Where(owner => owner.Base is not null)) {
+      var ancestors = owner.Base!.Lineage.ToList();
+      // Below ES2022 a private #x is the property _x, which one of a base class would share.
+      if (owner.Fields.Select(field => field.Key).Concat(owner.Members.Select(member => member.Key)).FirstOrDefault(key => key.StartsWith('#')
+          && ancestors.Any(ancestor => ancestor.Fields.Any(field => field.Key == key) || ancestor.Members.Any(member => member.Key == key))) is { } hidden)
+        owner.Problem ??= $"the member {hidden} of a base class declared again";
+
+      foreach (var field in owner.Fields.ToList()) {
+        if (field.IsPrivate || !ancestors.Any(ancestor => ancestor.OwnField(field.Key) is not null || ancestor.Members.Any(member => member.Key == field.Key && !member.IsStatic)))
+          continue;
+
+        if (field.Initializer is not null || ancestors.All(ancestor => ancestor.OwnField(field.Key) is null))
+          owner.Problem ??= $"the member {field.Key} of a base class declared again";
+        else
+          owner.Fields.Remove(field);
+      }
+
+      foreach (var member in owner.Members.Where(member => !member.IsStatic && !member.Key.StartsWith('#'))) {
+        var inherited = ancestors.SelectMany(ancestor => ancestor.Members).FirstOrDefault(other => other.Key == member.Key && !other.IsStatic);
+        if (inherited is not null && member.Member == MemberKind.Method && inherited.Member == MemberKind.Method) {
+          member.Overrides = inherited;
+          inherited.IsOverridden = true;
+          if (member.Function.Params.Count != inherited.Function.Params.Count)
+            owner.Problem ??= "an override with another number of parameters";
+        } else if (inherited is not null || ancestors.Any(ancestor => ancestor.OwnField(member.Key) is not null)) {
+          owner.Problem ??= $"the member {member.Key} of a base class declared again";
+        }
       }
     }
   }

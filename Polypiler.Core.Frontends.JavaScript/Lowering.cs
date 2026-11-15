@@ -67,7 +67,13 @@ internal sealed partial class Lowering(TypeInference types) {
 
       this._returnType = model.ReturnType;
       var (receiver, prologue) = this.Member(model);
-      var body = new IrBlock([.. entry, .. prologue, .. this.Block(((FunctionBody)model.Candidate.Function.Body).Body).Statements]);
+      var statements = this.Block(((FunctionBody)model.Candidate.Function.Body).Body).Statements;
+      var inherited = model.Candidate is { Member: MemberKind.Constructor, Class.Base: { } @base } ? @base : null;
+      // A constructor of a derived class calls that of its base class first; the fields of its own class get their values after it.
+      if (inherited is not null && !(statements is [IrExprStmt { Expression: IrCall { Function: var first } }, ..] && first == inherited.Creator!.Function))
+        throw this.Unsupported(model.Candidate.Anchor, "a constructor of a derived class that does not begin with the call of the constructor of its base class");
+
+      var body = new IrBlock(inherited is null ? [.. entry, .. prologue, .. statements] : [.. entry, statements[0], .. prologue, .. statements.Skip(1)]);
       if (this._returnType != IrType.Void && !AlwaysReturns(body))
         throw this.Unsupported(model.Candidate.Anchor, "a function that can end without returning its value");
 

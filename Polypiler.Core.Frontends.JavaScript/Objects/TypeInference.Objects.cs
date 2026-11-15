@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Linq;
+using Acornima;
 using Acornima.Ast;
 
 namespace Polypiler.Core.Frontends.JavaScript.Inference;
@@ -45,6 +47,52 @@ internal sealed partial class TypeInference {
       return field.Variable.Type;
 
     return owner.Member(MemberKind.Getter, key) is { } getter ? this.ResultOf(this.ModelOf(getter)) : JsType.Unknown;
+  }
+
+  /// <summary>
+  /// The type of a call of a constructor or a method of a base class - nothing, or the method's
+  /// result - of a getter of a base class read through <c>super</c>, and of <c>instanceof</c>; <see langword="null"/> for any other node.
+  /// </summary>
+  private JsType? Inherited(Node node) {
+    var current = this._scope!.Candidate.Class;
+    if (Inheritance.Of(node, current, this.Names.ClassNamed) is { } reference)
+      return reference.IsConstructor ? JsType.Undefined : reference.Member is { } method ? this.ResultOf(this.ModelOf(method)) : JsType.Unknown;
+
+    return node switch {
+      MemberExpression { Object: Super } member when current?.Base is { } @base => this.MemberType(@base, member),
+      BinaryExpression { Operator: Operator.InstanceOf } test when this.Names.ClassNamed(test.Right) is not null => JsType.Boolean,
+      _ => null
+    };
+  }
+
+  private List<List<Candidate>>? _slots;
+
+  /// <summary>
+  /// Gives the methods of each slot of a hierarchy - a method and its overrides - one signature:
+  /// the join of their results and of their parameters, since a call through the base class reaches
+  /// any of them. Says whether a type changed.
+  /// </summary>
+  private bool Unify() {
+    var changed = false;
+    foreach (var slot in this._slots ??= Inheritance.Slots(this.Classes.Values)) {
+      var models = slot.Select(this.ModelOf).ToList();
+      var result = models.Select(model => model.Result).Aggregate(JsType.Join);
+      foreach (var model in models.Where(model => model.Result != result)) {
+        model.ResultEvidence ??= models.Select(other => other.ResultEvidence).FirstOrDefault(evidence => evidence is not null);
+        model.Result = result;
+        this._known.Clear();
+        changed = true;
+      }
+
+      for (var index = 0; index < models.Min(model => model.Parameters.Count); ++index) {
+        var parameters = models.Select(model => model.Parameters[index]).ToList();
+        var entry = parameters.Select(parameter => parameter.Entry).Aggregate(JsType.Join);
+        foreach (var parameter in parameters.Where(parameter => parameter.Declared is null && parameter.Entry != entry))
+          changed |= this.Pass(parameter, entry, parameter.Declaration);
+      }
+    }
+
+    return changed;
   }
 
   /// <summary>The type of what a call of a function yields, as its result type in the IR says once it has one.</summary>

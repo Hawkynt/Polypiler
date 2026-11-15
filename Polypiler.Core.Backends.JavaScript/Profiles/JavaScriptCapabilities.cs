@@ -70,6 +70,12 @@ public sealed class JavaScriptCapabilities {
     new("static fields", 2022, "assignment after the class"),
     new("Object", 5),
     new("Object.defineProperty", 5),
+    new("extends", 2015, "Object.create chain"),
+    new("super", 2015, "Base.prototype.m.call(this, …)"),
+    new("Object.create", 5),
+    new("instanceof", 5),
+    new(".call", 5),
+    new("TypeError", 5),
 
     // Globals and the functions of Math.
     new("NaN", 5),

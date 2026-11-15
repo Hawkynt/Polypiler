@@ -99,13 +99,14 @@ public static partial class IrVerifier {
 
           if (this.Class(creation.Type) is { } created) {
             this.Require(created.Constructors.Contains(creation.Constructor), $"a constructor that is not one of {created.Name} makes an object of it");
+            this.Require(!created.IsAbstract, $"an object of the abstract class {created.Name} is made");
             if (functions.TryGetValue(creation.Constructor.Function, out var body))
               this.Arguments(creation.Arguments, body.Parameters.Skip(1), $"the constructor of {created.Name}");
           }
 
           break;
         case IrNull value:
-          this.Class(value.Type);
+          this.Reference(value.Type);
           break;
         case IrMethodCall call:
           this.MethodCall(call);
@@ -114,8 +115,9 @@ public static partial class IrVerifier {
           var identity = (IrReferenceEquals)expression;
           this.Expression(identity.Left);
           this.Expression(identity.Right);
-          this.Class(identity.Left.Type);
-          this.Require(identity.Right.Type == identity.Left.Type, $"a reference to {identity.Left.Type} is compared with one of the type {identity.Right.Type}");
+          this.Reference(identity.Left.Type);
+          this.Require(identity.Right.Type.IsAssignableTo(identity.Left.Type) || identity.Left.Type.IsAssignableTo(identity.Right.Type),
+            $"a reference to {identity.Left.Type} is compared with one of the type {identity.Right.Type}");
           break;
       }
     }
@@ -127,49 +129,89 @@ public static partial class IrVerifier {
       foreach (var argument in call.Arguments)
         this.Expression(argument);
 
-      var owner = types.Classes.FirstOrDefault(type => type.Methods.Contains(call.Method));
+      IrTypeDeclaration? owner = types.Classes.FirstOrDefault(type => type.Methods.Contains(call.Method));
+      owner ??= types.Interfaces.FirstOrDefault(type => type.Methods.Contains(call.Method));
       if (owner is null || !functions.TryGetValue(call.Method.Function, out var body)) {
         this.Require(false, $"the method '{call.Method.Name}' is not one of a class of the module");
         return;
       }
 
-      this.Require(call.Method.IsStatic == call.Target is null, $"the method '{call.Method.Name}' is called {(call.Target is null ? "without" : "with")} a receiver");
+      var method = call.Method;
+      this.Require(method.IsStatic == call.Target is null, $"the method '{method.Name}' is called {(call.Target is null ? "without" : "with")} a receiver");
+      var reference = owner is IrClassType type ? IrType.Object(type) : IrType.Object((IrInterfaceType)owner);
       if (call.Target is { } target)
-        this.Require(target.Type == IrType.Object(owner), $"the method '{call.Method.Name}' of {owner.Name} is called on the type {target.Type}");
+        this.Require(target.Type.IsAssignableTo(reference), $"the method '{method.Name}' of {owner.Name} is called on the type {target.Type}");
 
-      this.Require(call.Type == body.ReturnType, $"the call of '{call.Method.Name}' has the type {call.Type}, the method returns {body.ReturnType}");
-      this.Arguments(call.Arguments, body.Parameters.Skip(call.Method.IsStatic ? 0 : 1), $"the method '{call.Method.Name}'");
+      switch (call.Kind) {
+        case IrMethodCallKind.Direct:
+          this.Require(!method.IsVirtual, $"the virtual method '{method.Name}' is called directly");
+          break;
+        case IrMethodCallKind.Virtual:
+          this.Require(method.IsVirtual && owner is IrClassType, $"the method '{method.Name}', which is no virtual method of a class, is called virtually");
+          break;
+        case IrMethodCallKind.Interface:
+          this.Require(owner is IrInterfaceType, $"the method '{method.Name}', which is no method of an interface, is called through one");
+          break;
+        default:
+          this.Require(owner is IrClassType && method.Dispatch is not (IrDispatch.Abstract or IrDispatch.Static) && call.Target is IrLocalRef { Local: var self } && self == this.Receiver
+            && this.Self?.Owner is { } caller && caller != owner && caller.DerivesFrom((IrClassType)owner),
+            $"the method '{method.Name}' is no method with a body of a base class called on the receiver");
+          break;
+      }
+
+      this.Require(call.Type == body.ReturnType, $"the call of '{method.Name}' has the type {call.Type}, the method returns {body.ReturnType}");
+      this.Arguments(call.Arguments, body.Parameters.Skip(method.IsStatic ? 0 : 1), $"the method '{method.Name}'");
     }
 
     private void Arguments(IReadOnlyList<IrExpr> arguments, IEnumerable<IrLocal> parameters, string what)
-      => this.Require(arguments.Select(argument => argument.Type).SequenceEqual(parameters.Select(parameter => parameter.Type)), $"the arguments of {what} do not match its parameters");
+      => this.Require(Assignable(arguments, [.. parameters]), $"the arguments of {what} do not match its parameters");
+
+    /// <summary>Whether there is one argument per parameter, each of the parameter's type or converting to it without an effect.</summary>
+    private static bool Assignable(IReadOnlyList<IrExpr> arguments, IReadOnlyList<IrLocal> parameters)
+      => arguments.Count == parameters.Count && arguments.Zip(parameters).All(pair => pair.First.Type.IsAssignableTo(pair.Second.Type));
 
     /// <summary>The class of a reference type the module declares, or <see langword="null"/> after reporting that it is none.</summary>
     private IrClassType? Class(IrType type) {
-      this.Require(type.IsObject, $"a reference to an object is expected, not the type {type}");
+      this.Require(type.IsObject && type.InterfaceType is null, $"a reference to an object of a class is expected, not the type {type}");
       this.Declared(type);
       return type.ClassType is { } named && types.Declares(named) ? named : null;
     }
 
+    /// <summary>A reference type the module declares: of a class or of an interface.</summary>
+    private void Reference(IrType type) {
+      this.Require(type.IsObject, $"a reference to an object is expected, not the type {type}");
+      this.Declared(type);
+    }
+
     /// <summary>
     /// A call by name of the function of a member: allowed only as the first statement of a
-    /// constructor, of another constructor of its class on the new object, which is how one chains to another.
+    /// constructor, of another constructor of its class or of a constructor of its base class on the
+    /// new object, which is how one chains to another and how an object of a derived class is made.
     /// </summary>
     private void CallOfMember(IrCall call, bool chains) {
       if (!this.Members.TryGetValue(call.Function, out var callee))
         return;
 
-      this.Require(chains && callee.IsConstructor && this.Self is { IsConstructor: true } self && self.Owner == callee.Owner
+      this.Require(chains && callee.IsConstructor && this.Self is { IsConstructor: true } self && (self.Owner == callee.Owner || self.Owner.Base == callee.Owner)
         && call.Arguments is [IrLocalRef { Local: var receiver }, ..] && receiver == this.Receiver,
         $"the function '{call.Function}' of a member is called by name");
     }
 
     /// <summary>
     /// The statements of a constructor that does not chain write every read-only array field of its
-    /// class, which no default could fill, at the top level of its body.
+    /// class, which no default could fill, at the top level of its body; a constructor of a derived
+    /// class begins with the call of a constructor of its base class or of another of its own.
     /// </summary>
     private void Constructed() {
-      if (this.Self is not { IsConstructor: true } self || Chains(function.Body))
+      if (this.Self is not { IsConstructor: true } self)
+        return;
+
+      if (self.Owner.Base is { } @base)
+        this.Require(function.Body.Statements is [IrExprStmt { Expression: IrCall first }, ..] && this.Members.TryGetValue(first.Function, out var called)
+          && called.IsConstructor && (called.Owner == self.Owner || called.Owner == @base),
+          $"the constructor does not begin with the call of a constructor of {@base.Name} or of {self.Owner.Name}");
+
+      if (this.Chains(function.Body, self.Owner))
         return;
 
       var written = function.Body.Statements.OfType<IrFieldStore>().Where(store => store.Target is IrLocalRef reference && reference.Local == this.Receiver).Select(store => store.Field).ToHashSet();
@@ -177,9 +219,9 @@ public static partial class IrVerifier {
         this.Require(false, $"the constructor does not give the read-only field '{field.Name}' an array");
     }
 
-    /// <summary>Whether a body begins with a call of another constructor's function.</summary>
-    private bool Chains(IrBlock body)
-      => body.Statements is [IrExprStmt { Expression: IrCall call }, ..] && this.Members.TryGetValue(call.Function, out var callee) && callee.IsConstructor;
+    /// <summary>Whether a body begins with a call of the function of another constructor of its class.</summary>
+    private bool Chains(IrBlock body, IrClassType owner)
+      => body.Statements is [IrExprStmt { Expression: IrCall call }, ..] && this.Members.TryGetValue(call.Function, out var callee) && callee.IsConstructor && callee.Owner == owner;
 
   }
 
@@ -193,6 +235,14 @@ public static partial class IrVerifier {
     public void Add(IrClassType type) => this._classes.Add(type);
 
     public bool Declares(IrClassType type) => this._classes.Contains(type);
+
+    private readonly HashSet<IrInterfaceType> _interfaces = new(ReferenceEqualityComparer.Instance);
+
+    public IEnumerable<IrInterfaceType> Interfaces => this._interfaces;
+
+    public void Add(IrInterfaceType type) => this._interfaces.Add(type);
+
+    public bool Declares(IrInterfaceType type) => this._interfaces.Contains(type);
 
   }
 

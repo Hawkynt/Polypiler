@@ -35,14 +35,20 @@ public sealed record IrNull(IrType Type) : IrExpr(Type);
 /// A call of a method of a class. An instance method is called on the value of <paramref name="Target"/>,
 /// which is evaluated first and traps when it is <c>null</c> (see <see cref="IrNew"/>); then the
 /// arguments are evaluated left to right and the function of the method is called with the receiver
-/// in front of them. A static method has no target. The method is the one named, never another:
-/// there is no dispatch yet.
+/// in front of them. A static method has no target. Which method's function runs is what
+/// <see cref="Kind"/> selects: the one named for a direct call and a base call, an override of it for
+/// a virtual call and an interface call.
 /// </summary>
 /// <param name="Type">The return type of the method's function.</param>
 /// <param name="Method">The method, one of a class of the module.</param>
 /// <param name="Target">The receiver of an instance method; <see langword="null"/> for a static one.</param>
 /// <param name="Arguments">One value per parameter of the method's function after the receiver.</param>
-public sealed record IrMethodCall(IrType Type, IrMethod Method, IrExpr? Target, IReadOnlyList<IrExpr> Arguments) : IrExpr(Type);
+public sealed record IrMethodCall(IrType Type, IrMethod Method, IrExpr? Target, IReadOnlyList<IrExpr> Arguments) : IrExpr(Type) {
+
+  /// <summary>How the call selects the method that runs.</summary>
+  public IrMethodCallKind Kind { get; init; } = IrMethodCallKind.Direct;
+
+}
 
 /// <summary>
 /// Whether two references name the same object, or are both <c>null</c>: identity, as C#'s

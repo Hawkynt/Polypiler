@@ -70,7 +70,10 @@ public enum CSharpFeature {
   InitAccessor,
 
   /// <summary>A <c>record</c> class with its positional parameters and the value equality the compiler gives it (C# 9); its init accessors need <c>IsExternalInit</c>.</summary>
-  Record
+  Record,
+
+  /// <summary>A type pattern that declares a variable, <c>x is T t</c> (C# 7).</summary>
+  PatternDeclaration
 
 }
 
@@ -324,6 +327,7 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfLanguage("get-only auto-property", CSharpFeature.GetOnlyAutoProperty, new Version(6, 0)),
     CSharpCapability.OfLanguage("init accessor", CSharpFeature.InitAccessor, new Version(9, 0)),
     CSharpCapability.OfLanguage("record class", CSharpFeature.Record, new Version(9, 0)),
+    CSharpCapability.OfLanguage("pattern declaration", CSharpFeature.PatternDeclaration, new Version(7, 0)),
 
     // The equality members of a struct written out where the language has no record struct.
     CSharpCapability.OfApi("IEquatable<T>", CSharpProfile.Net20),

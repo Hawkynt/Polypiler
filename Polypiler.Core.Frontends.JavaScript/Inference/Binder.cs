@@ -293,6 +293,9 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         this.Expression(logical.Left);
         this.Expression(logical.Right);
         break;
+      case BinaryExpression { Operator: Operator.InstanceOf } test when this.ClassNamed(test.Right) is not null:
+        this.Expression(test.Left);
+        break;
       case BinaryExpression binary:
         var (left, right) = Operands(binary.Operator);
         this.Expression(binary.Left, left, binary);
@@ -306,6 +309,19 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
 
         if (member.Computed)
           this.Expression(member.Property);
+
+        break;
+      case CallExpression call when Inheritance.Of(call, model.Candidate.Class, this.ClassNamed) is { } inherited:
+        foreach (var argument in inherited.Arguments)
+          this.Expression(argument);
+
+        if (inherited.Member is { } reached) {
+          if (!model.Callees.Contains(reached))
+            model.Callees.Add(reached);
+
+          for (var index = 0; index < inherited.Arguments.Count; ++index)
+            model.Flows.Add(new Flow(FlowKind.Argument, inherited.Arguments[index], null, reached, index));
+        }
 
         break;
       case CallExpression call:

@@ -99,9 +99,11 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (this._diagnostics.Count == 0)
       this.CheckInitializers(name, functions);
 
-    return this._diagnostics.Count > 0
-      ? new(null, this._diagnostics)
-      : new(new IrModule(name, functions, this._constants.Values.ToList()) { Types = [.. this._types], Globals = [.. this._initialized.Select(entry => entry.Global)] }, this._diagnostics);
+    var module = new IrModule(name, functions, this._constants.Values.ToList()) { Types = [.. this._types], Globals = [.. this._initialized.Select(entry => entry.Global)] };
+    if (this._diagnostics.Count == 0)
+      this.Constructed(module);
+
+    return this._diagnostics.Count > 0 ? new(null, this._diagnostics) : new(module, this._diagnostics);
   }
 
   /// <summary>
@@ -306,8 +308,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (type is INamedTypeSymbol named && this._structs.TryGetValue(named, out var declared))
       return IrType.Struct(declared);
 
-    if (this.ClassOf(type) is { } owner)
-      return IrType.Object(owner);
+    if (this.ReferenceOf(type) is { } reference)
+      return reference;
 
     if (type is IArrayTypeSymbol { Rank: 1 } array) {
       var element = this.Map(array.ElementType, node);
@@ -348,6 +350,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         break;
       case ExpressionStatementSyntax expression:
         this.Effect(expression.Expression, into);
+        break;
+      case IfStatementSyntax conditional when this.PatternIf(conditional, into):
         break;
       case IfStatementSyntax conditional:
         into.Add(new IrIf(
@@ -712,8 +716,8 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       throw this.Reference(reference);
 
     var info = model.GetTypeInfo(expression);
-    if (this.ClassOf(info.ConvertedType) is { } nulled && expression is LiteralExpressionSyntax or DefaultExpressionSyntax && model.GetConstantValue(expression) is { HasValue: true, Value: null })
-      return new IrNull(IrType.Object(nulled));
+    if (this.ReferenceOf(info.ConvertedType) is { } nulled && expression is LiteralExpressionSyntax or DefaultExpressionSyntax && model.GetConstantValue(expression) is { HasValue: true, Value: null })
+      return new IrNull(nulled);
 
     if (expression is StackAllocArrayCreationExpressionSyntax stack)
       return this.StackAlloc(stack, info.ConvertedType);
@@ -775,7 +779,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       case BinaryExpressionSyntax binary:
         return this.Binary(binary);
       case ConditionalExpressionSyntax choice:
-        return new IrConditional(this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse));
+        var (condition, whenTrue, whenFalse) = (this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse));
+        return whenTrue.Type == whenFalse.Type ? new IrConditional(condition, whenTrue, whenFalse)
+          : throw new UnsupportedException(choice, "a conditional expression whose branches are objects of two classes");
       case CastExpressionSyntax cast:
         return Convert(this.Value(cast.Expression), type, this.IsChecked(cast));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments: [{ Expression: RangeExpressionSyntax or PrefixUnaryExpressionSyntax { RawKind: (int)SyntaxKind.IndexExpression } }] } element when model.GetTypeInfo(element.Expression).Type?.SpecialType == SpecialType.System_String:
@@ -1068,7 +1074,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   /// </summary>
   private static IrExpr Convert(IrExpr value, IrType type, bool trap = false) {
     var from = value.Type;
-    if (from == type)
+    if (from == type || from.IsAssignableTo(type))
       return value;
 
     if (type.IsFloat)

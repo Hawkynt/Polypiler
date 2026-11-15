@@ -46,6 +46,12 @@ internal sealed class Candidate(string name, Node anchor, IFunction function) {
   /// <summary>Whether a member is static: called on the class, without <c>this</c>.</summary>
   public bool IsStatic { get; init; }
 
+  /// <summary>The method of a base class this method replaces, or <see langword="null"/>.</summary>
+  public Candidate? Overrides { get; set; }
+
+  /// <summary>Whether a method of a class derived from this one's replaces it.</summary>
+  public bool IsOverridden { get; set; }
+
   /// <summary>The key of a member as the source spells it, with <c>#</c> when it is private.</summary>
   public string Key { get; init; } = "";
 
