@@ -120,6 +120,8 @@ assignment before its place.
 `control.rs` (the control forms and all twelve range forms over bound pairs and steps) and
 `functions.rs` (calls, recursion, `pub`). `recorded/` holds what rustc did with each, per overflow
 mode, for the calls of `RustCases`; `RustDifferentialTests` in `Polypiler.Tests` holds the
-interpreter to the recordings, the one in `Polypiler.Tests.Acceptance` (layer `rust`) holds the
-recordings to rustc and the emitted C# and JavaScript to the recordings. Run the acceptance test
+interpreter to the recordings, `RustFrontendDifferentialTests` in `Polypiler.Tests.Acceptance`
+(layer `rust`) holds the recordings to rustc and the emitted C# and JavaScript to the recordings, and
+`RustRoundTripTests` there holds the Rust the Rust backend writes back from the IR to them, its crate
+built with overflow checks on and off. Run the acceptance test
 `Recording_IsWhatRustcDoes` with `POLYPILER_RECORD=1` after a fixture or its calls changed.
