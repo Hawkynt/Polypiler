@@ -78,6 +78,7 @@ public sealed class TranslateCommand : ICliCommand {
   private const string RustVersion = "--rust-version";
   private const string OverflowChecksOption = "--overflow-checks";
   private const string CargoProfileOption = "--cargo-profile";
+  private const string DebugAssertionsOption = "--debug-assertions";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -106,6 +107,7 @@ public sealed class TranslateCommand : ICliCommand {
     [Instantiate] = "C#: an instantiation of a public generic method that the class itself does not use",
     [OverflowChecksOption] = "Rust: what an overflowing operator does, as rustc -C overflow-checks: panic (debug) or wrap (release); by default what the Cargo profile gives",
     [CargoProfileOption] = "Rust: the Cargo profile whose overflow-checks apply when --overflow-checks is not given (default: dev)",
+    [DebugAssertionsOption] = "Rust: whether debug_assert! asserts, as rustc -C debug-assertions: on (debug) or off (release); a source with one needs it",
     [LangVersion] = "C#: the language version, above the one of the profile",
     [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition"
   };
@@ -131,7 +133,7 @@ public sealed class TranslateCommand : ICliCommand {
   private static readonly Frontend[] _frontends = [
     new("csharp", [new(Instantiate, "<method[type,...]>")], InstantiateMisuse, ImportCSharp),
     new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript),
-    new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>")], OverflowChecksMisuse, ImportRust)
+    new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>"), new(DebugAssertionsOption, "<on|off>")], OverflowChecksMisuse, ImportRust)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -477,7 +479,11 @@ public sealed class TranslateCommand : ICliCommand {
       ? $"overflow checks on, an overflowing operator panics ({choice.Origin})"
       : $"overflow checks off, an overflowing operator wraps ({choice.Origin})";
     context.Note($"{file}: note {RustOverflowCaveat}: {description}");
-    var imported = RustFrontend.Import(file, source, choice.Mode);
+    // A file module is read from beside the file that declares it.
+    var imported = RustFrontend.Import(file, source, new RustImportOptions(choice.Mode) {
+      DebugAssertions = options.TryGetValue(DebugAssertionsOption, out var debug) ? debug == "on" : null,
+      ReadFile = path => File.Exists(context.Resolve(path)) ? File.ReadAllText(context.Resolve(path)) : null
+    });
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
 
@@ -489,6 +495,8 @@ public sealed class TranslateCommand : ICliCommand {
   private static string? OverflowChecksMisuse(IReadOnlyDictionary<string, string> options)
     => options.TryGetValue(OverflowChecksOption, out var mode) && mode is not ("panic" or "wrap")
       ? $"unknown overflow mode '{mode}'; the modes are panic and wrap"
+      : options.TryGetValue(DebugAssertionsOption, out var debug) && debug is not ("on" or "off")
+      ? $"unknown debug-assertions setting '{debug}'; the settings are on and off"
       : null;
 
   /// <summary>

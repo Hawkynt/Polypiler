@@ -17,7 +17,23 @@ namespace Polypiler.Core.Frontends.Rust.Lowering;
 internal sealed partial class FunctionLowering {
 
   private IrExpr? For(ForExpr loop) {
-    var range = this._typed.Ranges[loop];
+    if (this._typed.Iterations.TryGetValue(loop, out var iteration))
+      return this.IterationFor(loop, iteration);
+
+    var (counter, condition, advance) = this.RangeCounter(this._typed.Ranges[loop]);
+    return this.Breakable(loop, _ => {
+      if (loop.Pattern is IdentifierPattern variable)
+        this.Declared(variable, new IrLocalRef(counter));
+
+      this.Block(loop.Body);
+    }, statements => new IrFor(condition, new IrBlock(statements), new IrBlock(advance)));
+  }
+
+  /// <summary>
+  /// Emits what a range loop needs before it - its bounds, its step and their checks - and gives its
+  /// counter, the test before every pass and the step after it.
+  /// </summary>
+  private (IrLocal Counter, IrExpr Condition, List<IrStmt> Advance) RangeCounter(RangeLoop range) {
     var element = this._typed.TypeOf(range.Start).Ir;
     var bounds = this.Operands(range.Start, range.End);
     var start = this.Once(bounds[0], "start");
@@ -57,12 +73,7 @@ internal sealed partial class FunctionLowering {
       advance.Add(new IrAssign(counter, Step(counter, stride, !range.Reversed)));
     }
 
-    return this.Breakable(loop, _ => {
-      if (loop.Pattern is IdentifierPattern variable)
-        this.Bind(variable, new IrLocalRef(counter));
-
-      this.Block(loop.Body);
-    }, statements => new IrFor(condition, new IrBlock(statements), new IrBlock(advance)));
+    return (counter, condition, advance);
   }
 
   /// <summary>A bound read once into a local of its own, so that the body cannot change it through its variable.</summary>

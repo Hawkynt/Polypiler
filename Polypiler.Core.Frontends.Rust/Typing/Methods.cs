@@ -122,7 +122,7 @@ internal static class Methods {
   /// <summary>The type of a method's result for a receiver type.</summary>
   public static RType ResultOf(MethodSignature method, RType receiver) => method.Result switch {
     MethodResult.Option => RType.Option(receiver),
-    MethodResult.Tuple => RType.Tuple(receiver),
+    MethodResult.Tuple => RType.Pair(receiver),
     MethodResult.Unsigned => receiver.Unsigned,
     MethodResult.U32 => RType.U32,
     MethodResult.Bool => RType.Bool,

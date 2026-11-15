@@ -20,11 +20,58 @@ internal sealed partial class FunctionLowering {
   private const string OverflowingPrefix = "overflowing_";
   private const string Saturating = "saturating_";
 
-  private IrExpr Method(MethodCallExpr call) {
-    if (call.Receiver is MethodCallExpr { Name: var inner } checkedCall && inner.StartsWith(CheckedPrefix, StringComparison.Ordinal))
+  private IrExpr? Method(MethodCallExpr call) {
+    if (this._typed.Iterations.TryGetValue(call, out var iteration))
+      return this.Terminal(call, iteration);
+
+    // A checked_* consumed on the spot, as phase one imported it: its flag and its value, never an optional value.
+    if (call.Receiver is MethodCallExpr { Name: var inner } checkedCall && inner.StartsWith(CheckedPrefix, StringComparison.Ordinal)
+        && Methods.Consumers.Contains(call.Name) && this._typed.TypeOf(checkedCall.Receiver).Dereferenced.IsNumber)
       return this.Consumer(call, checkedCall);
 
-    var receiver = this._typed.TypeOf(call.Receiver);
+    if (this._typed.Callees.TryGetValue(call, out var method))
+      return this.Invoke(method, call.Arguments, method.Parameters, (call.Receiver, method.Item.Receiver));
+
+    var name = this._typed.Methods[call];
+    var receiver = this._typed.TypeOf(call.Receiver).Dereferenced;
+    if (name.StartsWith("Option::", StringComparison.Ordinal))
+      return this.OptionMethod(call, name["Option::".Length..]);
+
+    if (name.StartsWith("Result::", StringComparison.Ordinal))
+      return this.ResultMethod(call, name["Result::".Length..]);
+
+    if (name.StartsWith("Vec::", StringComparison.Ordinal))
+      return this.SliceMethod(call, name["Vec::".Length..]);
+
+    if (receiver.Kind is RKind.Array or RKind.Slice or RKind.Vec)
+      return this.SliceMethod(call, name);
+
+    if (name == "clone") {
+      var value = this.Lower(call.Receiver) ?? this.Zero(this.Ir(receiver));
+      return HoldsArray(receiver) ? this.Duplicate(value, receiver) : value;
+    }
+
+    if (name is "to_le_bytes" or "to_be_bytes")
+      return this.ToBytes(this.Value(call.Receiver), name == "to_le_bytes");
+
+    if (name.StartsWith(OverflowingPrefix, StringComparison.Ordinal)) {
+      var (value, flag) = this.Overflowing(call);
+      return new IrStructNew(this.Ir(this._typed.TypeOf(call)), [value, flag]);
+    }
+
+    if (name.StartsWith(CheckedPrefix, StringComparison.Ordinal)) {
+      // The value is computed only where the flag says it exists: a checked division by zero never divides.
+      var values = this.Operands([call.Receiver, .. call.Arguments]);
+      var a = this.Stable(values[0]);
+      var b = call.Arguments.Count > 0 ? this.Stable(values[1]) : null;
+      var op = name[CheckedPrefix.Length..];
+      return new IrConditional(this.Flag(op, a, b, receiver, true), new IrNone(IrType.Optional(receiver.Ir)), new IrSome(this.Wrapped(op, a, b, receiver)));
+    }
+
+    return this.PrimitiveMethod(call, receiver);
+  }
+
+  private IrExpr PrimitiveMethod(MethodCallExpr call, RType receiver) {
     var values = this.Operands([call.Receiver, .. call.Arguments]);
     if (receiver.Kind == RKind.Float)
       return this.FloatMethod(call.Name, values[0], receiver.Ir);

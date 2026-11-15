@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Numerics;
 using System.Text;
 
@@ -53,6 +54,9 @@ internal sealed record Token(TokenKind Kind, string Text, Span At) {
 
   /// <summary>Whether the token is the punctuation or the identifier <paramref name="text"/>.</summary>
   public bool Is(string text) => this.Kind is TokenKind.Punctuation or TokenKind.Identifier && !this.Raw && this.Text == text;
+
+  /// <summary>Whether a string literal is a byte string, <c>b"..."</c> or <c>br"..."</c>: its text holds one byte per character.</summary>
+  public bool Byte { get; init; }
 
   /// <summary>Whether an identifier was written raw (<c>r#type</c>): it is never a keyword.</summary>
   public bool Raw { get; init; }
@@ -162,10 +166,15 @@ internal static class Lexer {
       }
 
       if ((c == 'b' && (Peek(1) == '"' || (Peek(1) == 'r' && (Peek(2) == '"' || Peek(2) == '#')))) || (c == 'r' && (Peek(1) == '"' || (Peek(1) == '#' && Peek(2) is '"' or '#')))) {
-        if (c == 'b')
+        var isByte = c == 'b';
+        if (isByte)
           Advance(1);
 
-        tokens.Add(new Token(TokenKind.String, StringLiteral(source, ref index, ref line, ref column, at), at));
+        var text = StringLiteral(source, ref index, ref line, ref column, at);
+        if (isByte && text.Any(unit => unit > 0xFF))
+          throw new RustSyntaxException("non-ASCII character in byte string literal", at);
+
+        tokens.Add(new Token(TokenKind.String, text, at) { Byte = isByte });
         continue;
       }
 
