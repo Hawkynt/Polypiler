@@ -1,0 +1,4 @@
+# The package claims GPL-3.0-or-later; its input src/old.c is GPL-2.0-only.
+schema: 1
+declared:
+  - { glob: '**', licence: GPL-3.0-or-later }

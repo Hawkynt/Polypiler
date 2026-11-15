@@ -1,0 +1,6 @@
+# The package is GPL-3.0-or-later; the copy of gpl-nested keeps its own licences.
+schema: 1
+declared:
+  - { glob: '**', licence: GPL-3.0-or-later }
+  - { glob: 'gpl-nested/**', licence: LGPL-3.0-or-later }
+  - { glob: 'gpl-nested/sub/**', licence: GPL-3.0-only }

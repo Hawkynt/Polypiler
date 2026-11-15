@@ -1,3 +1,8 @@
+Origin: https://git.musl-libc.org/cgit/musl/tag/?h=v1.2.5
+Licence: MIT
+Origin: https://cgit.freebsd.org/src/tree/lib/msun/src/s_fmaf.c
+Licence: BSD-2-Clause
+
 Parts of Polypiler.Core.IR/Float/Operations are converted to C# from musl libc 1.2.5
 (https://git.musl-libc.org/cgit/musl/tag/?h=v1.2.5, release tarball musl-1.2.5.tar.gz):
 

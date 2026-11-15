@@ -1,0 +1,5 @@
+# The package claims LGPL-3.0-or-later although its input gpl-nested/sub/x.c is GPL-3.0-only.
+schema: 1
+declared:
+  - { glob: '**', licence: LGPL-3.0-or-later }
+  - { glob: 'gpl-nested/sub/**', licence: GPL-3.0-only }

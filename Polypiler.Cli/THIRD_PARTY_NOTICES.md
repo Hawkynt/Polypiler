@@ -11,7 +11,8 @@ not modified; the `polypiler` executable ships the assembly as the package provi
 - **Used for:** the command tree of `polypiler`, the tokenisation of `--name value`, `--name=value` and the
   `--` terminator, and the typed values a command reads; the grammar, its refusals and the help texts are
   Polypiler's own (ADR 0004)
-- **Licence:** MIT
+- Origin: https://github.com/dotnet/dotnet/tree/8e0f8ed2312954727f8919d7d1c2f78b483b4ee7/src/command-line-api
+- Licence: MIT
 
 ```
 The MIT License (MIT)
