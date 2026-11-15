@@ -145,7 +145,9 @@ public sealed class IrObjectTests {
     Refused(valued, "the constructor 'K.ctor' returns a value");
 
     var objectGlobal = new Built();
-    Assert.That(Problems(objectGlobal.Module() with { Globals = [new IrGlobal("g", objectGlobal.Object, null)] }), Has.Some.Contains("a global of the type K"));
+    // A global holds an object (#1365): what the initializer of the module puts there.
+    Assert.That(Problems(objectGlobal.Module() with { Globals = [new IrGlobal("g", objectGlobal.Object, null)] }), Has.None.Contains("a global of the type K"));
+    Assert.That(Problems(objectGlobal.Module() with { Globals = [new IrGlobal("g", IrType.Span(IrType.I32), null)] }), Has.Some.Contains("a global of the type"));
   }
 
   /// <summary>Test design 9: a null receiver traps on a field read, a field write, a method call and an array field without an array.</summary>

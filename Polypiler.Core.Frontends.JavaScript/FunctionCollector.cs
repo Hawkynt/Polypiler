@@ -205,7 +205,48 @@ internal sealed partial class FunctionCollector(string source, List<Comment> com
       }
     }
 
+    this.Initialize(program);
     return this._candidates.OrderBy(candidate => candidate.Anchor.Start).ToList();
+  }
+
+  /// <summary>The statements at the top level that do something when the module is loaded, in source order (#1365).</summary>
+  public IReadOnlyList<Statement> Effects { get; private set; } = [];
+
+  /// <summary>The function of the effects, which the module runs once when it is loaded, or <see langword="null"/> for a module without any.</summary>
+  public Candidate? Initializer { get; private set; }
+
+  /// <summary>
+  /// Gathers the statements of the top level that are no declaration - a call, an <c>if</c>, a loop, a
+  /// variable of an object or a computed value - into one function, which the module runs once when it
+  /// is loaded: the registration of what it defines, as the Cipher algorithms do. A variable it declares
+  /// is a local of that function. A module without variables of its own has no state such statements
+  /// could change for its functions, and they are not looked at, as before.
+  /// </summary>
+  private void Initialize(Program program) {
+    if (this._globals.Count == 0)
+      return;
+
+    var held = this._constants.Select(constant => constant.Name).Concat(this._globals.Select(global => global.Name))
+      .Concat(this._enums.Select(named => named.Name)).Concat(this._candidates.Select(candidate => candidate.Owner).OfType<string>()).ToHashSet();
+    this.Effects = [.. program.Body.Where(statement => statement switch {
+      FunctionDeclaration or ClassDeclaration or Directive or EmptyStatement or ImportDeclaration or ExportNamedDeclaration or ExportDefaultDeclaration or ExportAllDeclaration => false,
+      VariableDeclaration declaration => !declaration.Declarations.Any(declarator => declarator.Id is Identifier { Name: var name } && held.Contains(name)),
+      _ => !this.ClassStatements.Contains(statement) && Wrapped(statement) is null
+    })];
+    if (this.Effects.Count == 0)
+      return;
+
+    var (first, last) = (this.Effects[0], this.Effects[^1]);
+    var range = Acornima.Range.From(first.Start, last.End);
+    var location = SourceLocation.From(first.Location.Start, last.Location.End, first.Location.SourceFile);
+    var body = new FunctionBody(NodeList.From(this.Effects), true) { Range = range, Location = location };
+    var function = new FunctionExpression(null, NodeList.From<Node>([]), body, false, false) { Range = range, Location = location };
+    var name = "initialize";
+    for (var suffix = 1; this._candidates.Exists(candidate => candidate.Name == name) || held.Contains(name); ++suffix)
+      name = $"initialize{suffix}";
+
+    this.Initializer = new Candidate(name, first, function);
+    this._candidates.Add(this.Initializer);
   }
 
   /// <summary>Takes the enum objects a <c>const</c> declares, exported where the file exports the declaration or is a script.</summary>

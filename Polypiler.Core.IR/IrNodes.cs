@@ -1149,6 +1149,14 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// </summary>
   public IReadOnlyList<string> Caveats { get; init; } = [];
 
+  /// <summary>
+  /// The function of the module that runs once when the module is loaded, after every global has its
+  /// initial value - the statements at the top level of a JavaScript module, which register what the
+  /// module defines (#1365) - or <see langword="null"/> for none. It takes nothing, returns nothing
+  /// and is no public function; nothing calls it.
+  /// </summary>
+  public string? Initializer { get; init; }
+
   /// <summary>The functions of native libraries the module calls (#1332), in source order; their names are unique among the functions.</summary>
   public IReadOnlyList<IrForeignFunction> ForeignFunctions { get; init; } = [];
 

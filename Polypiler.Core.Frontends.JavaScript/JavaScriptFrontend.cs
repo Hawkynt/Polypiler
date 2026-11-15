@@ -237,12 +237,12 @@ public static partial class JavaScriptFrontend {
           diagnostics.Add(UnknownExportDescriptor.At($"the file has no function '{name}' to export", path, 1, 1));
       }
 
-      // A class is imported whole, whichever of its members the functions exported use.
-      chosen.AddRange(candidates.Where(candidate => candidate.Class is not null && !chosen.Contains(candidate)));
+      // A class is imported whole, whichever of its members the functions exported use; so is what the module does when it is loaded.
+      chosen.AddRange(candidates.Where(candidate => (candidate.Class is not null || candidate == collector.Initializer) && !chosen.Contains(candidate)));
     }
 
     // With an export list the functions the named ones call are imported too; the types are found for all of them together.
-    var models = inference.Solve(chosen, candidate => exports is null ? candidate.IsPublic : exports.Contains(candidate.Name));
+    var models = inference.Solve(chosen, candidate => candidate != collector.Initializer && (exports is null ? candidate.IsPublic : exports.Contains(candidate.Name)));
     if (copies.Count == 0 && Wanted(inference, models) is { Count: > 0 } split) {
       wanted = split;
       return Refused([]);
@@ -258,7 +258,16 @@ public static partial class JavaScriptFrontend {
     inference.Shapes.Seal();
     Classes.Declare(classes, inference, diagnostics);
     var lowering = new Lowering(inference);
-    var state = ModuleState.Lower(program, globals, models, inference.Initializers, lowering, diagnostics, classes.SelectMany(owner => owner.Statics.Values), collector.ClassStatements);
+    // What the module does when it is loaded runs only where its functions have state it could change; otherwise it is not looked at.
+    var initializer = collector.Initializer;
+    if (initializer is not null && !classes.Any(owner => owner.Statics.Count > 0)
+        && !models.Where(model => model.Candidate != initializer).SelectMany(model => model.Bindings.Values).OfType<Variable>().Any(variable => variable.IsGlobal)) {
+      models = [.. models.Where(model => model.Candidate != initializer)];
+      initializer = null;
+    }
+
+    var state = ModuleState.Lower(program, globals, models, inference.Initializers, lowering, diagnostics, classes.SelectMany(owner => owner.Statics.Values),
+      initializer is null ? collector.ClassStatements : [.. collector.ClassStatements, .. collector.Effects]);
     if (diagnostics.Count > 0)
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
@@ -285,7 +294,8 @@ public static partial class JavaScriptFrontend {
       lowered,
       constants.Where(lowering.Constants.Contains).Select(constant => constant.Constant).ToList()) {
       Types = [.. enums.Select(named => named.Type).OfType<IrEnumType>(), .. lowering.Structs(lowered, inference.Shapes), .. classes.Select(owner => owner.Ir)],
-      Globals = [.. state.Select(global => global.Global!)]
+      Globals = [.. state.Select(global => global.Global!)],
+      Initializer = initializer?.Name
     };
 
     // An overridden method called on the object a constructor is making would run before the fields of the derived class have their values in C#'s order and after it in JavaScript's.

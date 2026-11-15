@@ -53,6 +53,11 @@ public static partial class IrVerifier {
     Pointers(module, diagnostics);
     Timed(module, diagnostics);
     var foreign = Foreign(module, names, types, diagnostics);
+    // The initializer runs once at load: it takes nothing, gives nothing and nothing outside calls it.
+    if (module.Initializer is { } initializer
+        && !(functions.TryGetValue(initializer, out var start) && start is { IsPublic: false, Parameters.Count: 0, IsAsync: false } && start.ReturnType == IrType.Void))
+      diagnostics.Add(Error(initializer, "the initializer of the module is no private function of the module that takes and gives nothing"));
+
     foreach (var function in module.Functions)
       new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures, ForeignFunctions = foreign }.Run();
 
