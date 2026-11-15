@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: The complete integer and bit operation set
   Every integer and bit operation of the IR on every width translates from C# and JavaScript and is
   written by both backends in every profile, as a library call where the profile has one and as a

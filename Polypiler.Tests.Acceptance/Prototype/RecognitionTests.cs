@@ -18,6 +18,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// both backends with optimization on and off (test design 3), translated in process.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
 public sealed class RecognitionTests {
 
   private static readonly bool[] _overflowChecking = [false, true];

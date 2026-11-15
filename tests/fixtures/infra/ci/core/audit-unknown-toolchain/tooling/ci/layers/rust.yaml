@@ -1,0 +1,6 @@
+schema: 1
+layer: rust
+toolchains: [cargo]
+os: [ubuntu-latest]
+paths: ["Polypiler.Core.Backends.Rust/**"]
+always: false

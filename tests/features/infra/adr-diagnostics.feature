@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Diagnostics registry, renderings and exit codes
 
   @EndToEnd

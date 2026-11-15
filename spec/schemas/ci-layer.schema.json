@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/ci-layer.schema.json",
+  "title": "Polypiler CI layer",
+  "description": "tooling/ci/layers/<layer>.yaml, written in YAML: one layer of the CI, run by the job 'layer-<layer>' of .github/workflows/ci.yml. 'polypiler-tooling ci audit' also requires 'layer' to equal the file name and every toolchain to be a key of tooling/toolchains.lock.",
+  "type": "object",
+  "required": ["schema", "layer", "toolchains", "os", "paths", "always"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "layer": {
+      "description": "The layer's name: its file name without '.yaml', and the job 'layer-<layer>'.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "toolchains": {
+      "description": "The keys of tooling/toolchains.lock the layer installs; the tests of the layer may require these and dotnet-sdk.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" }
+    },
+    "os": {
+      "description": "The runner labels the layer's job runs on.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "paths": {
+      "description": "Globs of changed repository paths that select the layer: '*' within a segment, '**' any number of whole segments.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "always": {
+      "description": "Whether the layer runs whatever changed.",
+      "type": "boolean"
+    }
+  }
+}

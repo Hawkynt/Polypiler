@@ -28,6 +28,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
 public sealed class CSharpProfilesTests {
 
   private static readonly bool[] _overflowChecking = [false, true];

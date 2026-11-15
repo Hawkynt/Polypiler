@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Navigate the compiler design and requirements
   Scenario: Find every PRD chapter through the index
     Given docs/PRD.md and its ten linked parts

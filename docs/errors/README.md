@@ -71,6 +71,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0072](PLY0072.md) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': <reason>` | INFRA-BENCH |
 | [PLY0073](PLY0073.md) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': <metric> regressed by <p> % (baseline <b>, current <c>), budget <m> % from <budget file>` | INFRA-BENCH |
 | [PLY0074](PLY0074.md) | error | 1 (EnvironmentError) | `<file>(<line>): step '<step>' has no binding` | INFRA-BDD |
+| [PLY0075](PLY0075.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-CI-CORE |
+| [PLY0076](PLY0076.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-CI-CORE |
 | [PLY0077](PLY0077.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-FUZZ |
 | [PLY0078](PLY0078.md) | error | 1 (EnvironmentError) | `<file>(<line>,<column>): <reason naming the field>` | INFRA-BENCH |
 | [PLY0079](PLY0079.md) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': the program exited with <code>; nothing is recorded` | INFRA-BENCH |

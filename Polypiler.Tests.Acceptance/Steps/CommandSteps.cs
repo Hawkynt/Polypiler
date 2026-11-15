@@ -20,7 +20,7 @@ public sealed class CommandSteps(PolypilerRunner polypiler, ScenarioWorkspace wo
 
   /// <summary>The verbs of <c>polypiler-tooling</c>.</summary>
   public static IReadOnlySet<string> ToolingVerbs { get; } = new HashSet<string>(StringComparer.Ordinal) {
-    "toolchains", "spec", "corpus", "licenses", "integrity", "rebuild", "sbom", "report"
+    "toolchains", "spec", "corpus", "licenses", "integrity", "rebuild", "sbom", "report", "ci"
   };
 
   /// <summary>Which program a command line goes to, and the arguments it gets.</summary>

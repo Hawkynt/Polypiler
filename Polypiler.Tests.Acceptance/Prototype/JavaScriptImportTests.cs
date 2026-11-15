@@ -20,6 +20,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </para>
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
 public sealed class JavaScriptImportTests {
 
   private const string Sum = "/** @param {int32} a @param {int32} b @returns {int32} */ function f(a, b) { return a + b; }";

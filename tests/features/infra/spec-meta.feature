@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Spec metadata rules and shared validator
 
   Scenario: A complete normative document validates

@@ -52,6 +52,9 @@ public static class Program {
       output.WriteLine($"       {Name} {FuzzCommand.Verb} run --target <id> [--seed <n>] [--iterations <n>] [--engine inprocess|afl] [--duration <seconds>] [--assembly <path>]...");
       output.WriteLine($"       {Name} {FuzzCommand.Verb} minimize --target <id> --input <file> [--assembly <path>]...");
       output.WriteLine($"       {Name} {FuzzCommand.Verb} replay [--target <id>] [--assembly <path>]...");
+      output.WriteLine($"       {Name} {CiCommand.Verb} audit [--root <dir>]");
+      output.WriteLine($"       {Name} {CiCommand.Verb} matrix (--changed <file> | --all) [--root <dir>]");
+      output.WriteLine($"       {Name} {CiCommand.Verb} env --layer <name> [--root <dir>]");
       output.WriteLine($"       {Name} {IntegrityCommand.Verb} check [--base <git ref>]");
       output.WriteLine($"       {Name} {IntegrityCommand.Verb} seal <path>...");
       output.WriteLine($"       {Name} {LicensesCommand.Verb} scan --mode corpus|distribution [--root <dir>] [--report <file>] [--policy <file>]");
@@ -97,6 +100,9 @@ public static class Program {
       return new CatalogCommand().Run(args[1..], output, error);
     if (args[0] == ImportBitPermCommand.Verb)
       return ImportBitPermCommand.Run(args[1..], output, error);
+
+    if (args[0] == CiCommand.Verb)
+      return CiCommand.Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;

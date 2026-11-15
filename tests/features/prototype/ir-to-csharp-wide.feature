@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Emit the widened IR as C#
 
   Scenario Outline: A wide fixture survives the round trip C# to IR to C#

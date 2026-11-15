@@ -16,6 +16,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// two forms of every 64-bit helper are compared on the same calls.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
 public sealed class IntegerJavaScriptTests {
 
   /// <summary>The calls and what the reference makes of them, computed once for every profile.</summary>
