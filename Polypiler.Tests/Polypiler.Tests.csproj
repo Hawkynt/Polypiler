@@ -7,6 +7,8 @@
          (Roslyn, the interpreter): one GC heap per processor keeps the workers from waiting on each
          other's collections. -->
     <ServerGarbageCollection>true</ServerGarbageCollection>
+    <!-- The pointer fixtures (tests/fixtures/prototype/pointers) are unsafe code, compiled in as the oracle. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
