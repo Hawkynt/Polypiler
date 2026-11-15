@@ -132,6 +132,46 @@ before finally blocks; it cannot be expressed in profile '{profile}'" - `PLY1053
 JavaScript. The emulation that would catch and rethrow runs the `finally` block first ("F,W,C" in node
 where .NET logs "W,F,C"), which is why it is never written.
 
+## Resource scopes
+
+`IrUsing(Resource, Initializer, Dispose, Body)` is C#'s `using` (ECMA-334, the using statement):
+the initializer is evaluated and bound to the resource, a read-only local; the body runs; on every way
+out of it - the end, `break`, `continue`, `return` (whose value is computed before) and an exception -
+`Dispose()` is called through the interface of cleanup unless the resource is `null`. It is exactly
+`IrUsing.Lowered()`, `{ r = e; try { body } finally { if (r != null) r.Dispose(); } }`, which the
+interpreter runs, so the rules of `finally` above hold: an exception thrown by `Dispose` replaces the
+one leaving the body. Several resources are scopes nested in the order they are acquired, so they are
+disposed in the reverse order; when two `Dispose` calls throw, both run and the outer one's exception
+leaves. The interface of cleanup is `IrDisposable`: an interface the module declares with
+`IsDisposable` set and the one method `Dispose()`, which the verifier checks, as it checks that the
+resource implements it and that nothing assigns the resource.
+
+| Construct | C# 2 - 7.3 (`net2.0` … `net4.8`, `netstandard2.0`) | C# 8 and later (`netstandard2.1`, `netcoreapp3.1`, `net8.0`, `net10.0`) |
+| --- | --- | --- |
+| using statement, several declarators, stacked statements | native, one `using (…)` per resource, stacked where a scope holds only the next | same |
+| using declaration | `using (…) { rest of the block }` | native `using var r = …;` (row `using declaration`, C# 8; CS8370 at 7.3) |
+| `IDisposable` | `global::System.IDisposable`; the module declares no interface of its own | same |
+
+| Construct | ES5 (with or without typed arrays) | ES2015, ES2017, ES2020, ES2022 |
+| --- | --- | --- |
+| one resource | `var r = e; try { … } finally { if (r != null) r.Dispose(); }` | `const r = e; try { … } finally { if (r != null) r.Dispose(); }` |
+| several resources | nested `try … finally`, the first acquired outermost | same |
+| resource class | constructor function with `Dispose` on the prototype | `class` with a `Dispose` method |
+
+No JavaScript level a profile targets has Explicit Resource Management, so `try`/`finally`
+(ECMAScript 3) is the only form; the `const`/`var` choice is the row `const`.
+
+- **C# frontend:** `using (T r = e) S`, `using (T a = e1, b = e2) S`, `using (e) S` (the value held in
+  a hidden local, so assigning the variable `e` names inside `S` changes nothing), stacked statements,
+  `using var r = e;` and `using T r = e;` (the scope is the rest of the block), over classes of the
+  file that implement `System.IDisposable`, with `Dispose` public or an explicit implementation, and
+  over references of the type `IDisposable`. `await using` ("'await using' is not supported yet"), a
+  resource of a struct type, a `ref struct` with a pattern-based `Dispose`, a resource of a library
+  class and a finalizer are refused with `PLY1002`.
+- **JavaScript frontend:** a `try … finally` that disposes is an `IrTry` and stays one, also in C#
+  (recovering `using` from it is O0257). A `using` or `await using` declaration is the parser's syntax
+  error (`PLY1100`), a `[Symbol.dispose]` or `[Symbol.asyncDispose]` method of a class `PLY1102`.
+
 ## Known differences
 
 - .NET names a class in a namespace with it in the default message ("Exception of type 'N.X' was

@@ -379,6 +379,8 @@ public static partial class IrInterpreter {
         case IrReturn result:
           frame.Result = result.Value is null ? null : this.Evaluate(result.Value, frame);
           return Flow.Return;
+        case IrUsing scope:
+          return this.Using(scope, frame);
         default:
           return this.ExceptionStatement(statement, frame) ?? throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
       }

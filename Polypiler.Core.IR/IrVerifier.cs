@@ -48,6 +48,7 @@ public static partial class IrVerifier {
     var members = Members(module, types, functions, diagnostics);
     var signatures = Hierarchy(types, functions, diagnostics);
     Generics(module, diagnostics);
+    Disposables(types, functions, diagnostics);
     foreach (var function in module.Functions)
       new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures }.Run();
 
@@ -202,6 +203,9 @@ public static partial class IrVerifier {
           else
             this.Value(result.Value, function.ReturnType, "the value returned");
 
+          break;
+        case IrUsing scope:
+          this.Using(scope);
           break;
         default:
           if (!this.ExceptionStatement(statement))

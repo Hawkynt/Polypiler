@@ -30,6 +30,14 @@ public sealed class IrInterfaceType : IrTypeDeclaration {
   /// <summary>Who may name the interface.</summary>
   public IrVisibility Visibility { get; init; } = IrVisibility.Public;
 
+  /// <summary>
+  /// Whether the interface stands for the platform's interface of deterministic cleanup - .NET's
+  /// <c>System.IDisposable</c>, which a resource scope (<see cref="IrUsing"/>) disposes through. It
+  /// has one method, <c>Dispose()</c>, which returns nothing; a backend names the platform's own and
+  /// declares none (<see cref="IrDisposable"/>).
+  /// </summary>
+  public bool IsDisposable { get; init; }
+
   /// <summary>Whether <see cref="DefineMembers"/> has been called.</summary>
   public bool HasMembers { get; private set; }
 

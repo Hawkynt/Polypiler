@@ -171,7 +171,7 @@ public sealed class CSharpDispatchImportTests {
   [TestCase("public interface I { public int M(); }", "a public interface member")]
   [TestCase("public partial interface I { }", "a partial interface")]
   [TestCase("[System.Obsolete] public interface I { }", "the attribute System.Obsolete")]
-  [TestCase("public interface I : System.IDisposable { }", "the interface IDisposable, which the file does not declare")]
+  [TestCase("public interface I : System.IComparable { }", "the interface IComparable, which the file does not declare")]
   [TestCase("public interface I : System.IEquatable<int> { }", "a generic interface")]
   [TestCase("public sealed class D : System.IEquatable<D> { public bool Equals(D other) => true; }", "a generic interface")]
   [TestCase("public sealed class D { public override string ToString() => \"d\"; }", "overriding the object member ToString")]

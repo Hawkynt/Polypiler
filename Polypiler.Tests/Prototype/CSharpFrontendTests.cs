@@ -146,7 +146,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int[] F(int a) => [a, .. new[] { 1 }];", "SpreadElement", 37, TestName = "spread in a collection expression")]
   [TestCase("public static extern int F();", "extern", 1, TestName = "extern")]
   [TestCase("public static int F() => 1; public static int F(int a) => a;", "method overloading", 29, TestName = "overload")]
-  [TestCase("public static int F() { using var m = new System.IO.MemoryStream(); return 1; }", "using", 25, TestName = "modifier of a local")]
+  [TestCase("public static int F() { using var m = new System.IO.MemoryStream(); return 1; }", "a resource of the type MemoryStream, which implements System.IDisposable through no class of the file", 31, TestName = "resource of a library class")]
   [TestCase("public static int F(int a) { int b = a = 1; return b; }", "SimpleAssignmentExpression", 38, TestName = "assignment as a value")]
   [TestCase("public static int F(object o) => 1;", "object", 21, TestName = "object")]
   [TestCase("public static void F() { new object(); }", "ObjectCreationExpression", 26, TestName = "object creation statement")]

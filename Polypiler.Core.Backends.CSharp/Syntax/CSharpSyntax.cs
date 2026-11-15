@@ -260,7 +260,17 @@ public sealed record CsBlock(IReadOnlyList<CsStatement> Statements) : CsStatemen
 /// <param name="LocalType">The type, or <see cref="CsType.Var"/>.</param>
 /// <param name="Name">The name.</param>
 /// <param name="Initializer">The initial value, or <see langword="null"/>.</param>
-public sealed record CsLocalDeclaration(CsType LocalType, string Name, CsExpression? Initializer) : CsStatement;
+public sealed record CsLocalDeclaration(CsType LocalType, string Name, CsExpression? Initializer) : CsStatement {
+
+  /// <summary>Whether it is a using declaration, <c>using T name = initializer;</c> (C# 8), which disposes the local at the end of its block.</summary>
+  public bool IsUsing { get; init; }
+
+}
+
+/// <summary><c>using (T name = initializer) body</c>; a body that is itself a using statement stands on the next line, stacked.</summary>
+/// <param name="Resource">The resource the statement declares.</param>
+/// <param name="Body">The statement it holds the resource for.</param>
+public sealed record CsUsing(CsLocalDeclaration Resource, CsStatement Body) : CsStatement;
 
 /// <summary>An expression evaluated as a statement.</summary>
 /// <param name="Expression">The expression.</param>

@@ -138,7 +138,9 @@ public static class CSharpSyntaxReader {
   private static CsStatement Read(StatementSyntax statement) {
     CsStatement read = statement switch {
       BlockSyntax block => Block(block),
-      LocalDeclarationStatementSyntax { Modifiers.Count: 0 } declaration => Declaration(declaration.Declaration),
+      LocalDeclarationStatementSyntax { Modifiers.Count: 0, AwaitKeyword.RawKind: 0 } declaration
+        => Declaration(declaration.Declaration) with { IsUsing = declaration.UsingKeyword.IsKind(SyntaxKind.UsingKeyword) },
+      UsingStatementSyntax { Declaration: { } resource, AwaitKeyword.RawKind: 0 } scope => new CsUsing(Declaration(resource), Read(scope.Statement)),
       ExpressionStatementSyntax expression => new CsExpressionStatement(Read(expression.Expression)),
       IfStatementSyntax conditional => new CsIf(Read(conditional.Condition), Read(conditional.Statement), conditional.Else is null ? null : Read(conditional.Else.Statement)),
       WhileStatementSyntax loop => new CsWhile(Read(loop.Condition), Read(loop.Statement)),

@@ -382,6 +382,7 @@ public static partial class CSharpEmitter {
     IrBreak or IrContinue => ([], []),
     IrReturn result => (result.Value is null ? [] : [result.Value], []),
     IrThrow or IrRethrow or IrTry => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
+    IrUsing scope => ([scope.Initializer], [scope.Body]),
     _ => null
   };
 
@@ -479,6 +480,7 @@ public static partial class CSharpEmitter {
     IrBlock block => block.Statements.Any(Breaks),
     IrIf conditional => Breaks(conditional.Then) || (conditional.Else is not null && Breaks(conditional.Else)),
     IrTry attempt => IrTree.Blocks(attempt).Any(Breaks),
+    IrUsing scope => Breaks(scope.Body),
     _ => false
   };
 
@@ -491,6 +493,7 @@ public static partial class CSharpEmitter {
     IrBreak or IrContinue or IrReturn or IrThrow or IrRethrow => false,
     IrTry attempt => (Completes(attempt.Body) || attempt.Catches.Any(clause => Completes(clause.Body))) && (attempt.Finally is null || Completes(attempt.Finally)),
     IrBlock block => block.Statements.All(Completes),
+    IrUsing scope => Completes(scope.Body),
     IrIf conditional => Completes(conditional.Then) || conditional.Else is null || Completes(conditional.Else),
     IrWhile loop => !Always(loop.Condition) || Breaks(loop.Body),
     IrDoWhile loop => !Always(loop.Condition) || Breaks(loop.Body),
@@ -591,6 +594,7 @@ public static partial class CSharpEmitter {
       this._members = this.Aliased(Names(members, [this.ClassName]), module.Functions.Select(function => function.Name));
       // A struct is named beside the class, where a member of the class of its name would hide it.
       this._typeNames = this.Aliased(Names(module.Types.Select(type => this.Spelled(type.Name)), [this.ClassName, .. this._members.Values.Select(member => member.TrimStart('@'))]), module.Types.Select(type => type.Name));
+      this.NameDisposable(module);
       this._equatable = Equatable(module);
       var taken = this._members.Values.Select(member => member.TrimStart('@')).Append(this.ClassName).ToList();
       this._helpers = Names(helpers.Select(helper => helper.Name), taken);
@@ -763,9 +767,7 @@ public static partial class CSharpEmitter {
     private void Statements(IrBlock block, List<CsStatement> statements) {
       var scope = new Scope();
       this._scopes.Add(scope);
-      foreach (var statement in block.Statements)
-        this.Statement(statement, statements);
-
+      this.Sequence(block.Statements, statements);
       this._scopes.RemoveAt(this._scopes.Count - 1);
       this._scopes[^1].Within.UnionWith(scope.Within);
     }
@@ -845,6 +847,9 @@ public static partial class CSharpEmitter {
           break;
         case IrReturn result:
           statements.Add(new CsReturn(result.Value is null ? null : this.Stored(result.Value)));
+          break;
+        case IrUsing scope:
+          statements.Add(this.Using(scope));
           break;
         default:
           this.ExceptionStatement(statement, statements);

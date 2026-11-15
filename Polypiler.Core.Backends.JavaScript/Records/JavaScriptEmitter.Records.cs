@@ -116,6 +116,11 @@ public static partial class JavaScriptEmitter {
           // A catch clause or a finally block runs after any statement of the try: as a loop, nothing in it is the last use.
           this.Loop([.. IrTree.Expressions(statement)], [.. IrTree.Blocks(statement)]);
           break;
+        case IrUsing scope:
+          // The resource is acquired before the try its scope is.
+          this.Expression(scope.Initializer);
+          this.Loop([], [scope.Body]);
+          break;
       }
     }
 

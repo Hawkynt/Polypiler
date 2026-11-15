@@ -140,6 +140,7 @@ public static class FloatLegalization {
       IrTry attempt => new IrTry(this.Block(attempt.Body),
         [.. attempt.Catches.Select(clause => clause with { Filter = clause.Filter is null ? null : this.Expression(clause.Filter), Body = this.Block(clause.Body) })],
         attempt.Finally is null ? null : this.Block(attempt.Finally)),
+      IrUsing scope => scope with { Initializer = this.Expression(scope.Initializer), Body = this.Block(scope.Body) },
       _ => statement
     };
 

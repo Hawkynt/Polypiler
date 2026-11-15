@@ -65,6 +65,10 @@ public sealed class RuleContext {
             this._initializers[declare.Local] = declare.Initializer;
 
           break;
+        case IrUsing scope:
+          // A resource holds what its scope acquired, which no rule may compute again in its place: no initializer is recorded.
+          this.Count(scope.Resource);
+          break;
       }
     }
 
@@ -136,8 +140,9 @@ public sealed class RuleContext {
         return true;
 
       var frame = this._frames[level - 1];
-      // A loop runs its statements again; a catch clause or a finally block may read what a try's body wrote before it threw.
-      if (frame.Owner is IrWhile or IrDoWhile or IrFor or IrTry)
+      // A loop runs its statements again; a catch clause or a finally block may read what a try's body wrote before it threw,
+      // and a resource scope is a try.
+      if (frame.Owner is IrWhile or IrDoWhile or IrFor or IrTry or IrUsing)
         return false;
 
       statements = frame.Statements;

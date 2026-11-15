@@ -448,6 +448,19 @@ public static class CSharpPrinter {
         case CsTry attempt:
           this.Try(attempt, depth);
           break;
+        case CsUsing scope:
+          this._text.Append("using (");
+          this.Declaration(scope.Resource, depth);
+          this._text.Append(") ");
+          if (scope.Body is CsUsing stacked) {
+            this._text.Length -= 1;
+            this.NewLine(depth);
+            this.Bare(stacked, depth);
+          } else {
+            this.Embedded(scope.Body, depth);
+          }
+
+          break;
         default:
           var context = (CsCheckedStatement)statement;
           this._text.Append(context.Checked ? "checked " : "unchecked ");
@@ -463,6 +476,9 @@ public static class CSharpPrinter {
     }
 
     private void Declaration(CsLocalDeclaration declaration, int depth) {
+      if (declaration.IsUsing)
+        this._text.Append("using ");
+
       this._text.Append(declaration.LocalType.Name).Append(' ').Append(declaration.Name);
       if (declaration.Initializer is null)
         return;

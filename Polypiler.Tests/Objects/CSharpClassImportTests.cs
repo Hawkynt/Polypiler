@@ -164,7 +164,7 @@ public sealed class CSharpClassImportTests {
 
   /// <summary>Test design 10: what the construct table refuses, by name, with nothing written.</summary>
   [TestCase("public sealed class D : System.Attribute { }", "inheritance from Attribute, which the file does not declare")]
-  [TestCase("public sealed class D : System.IDisposable { public void Dispose() { } }", "the interface IDisposable, which the file does not declare")]
+  [TestCase("public sealed class D : System.IComparable { public int CompareTo(object o) => 0; }", "the interface IComparable, which the file does not declare")]
   [TestCase("public sealed class G<T> : System.IDisposable { public void Dispose() { } }", "a generic class in a hierarchy")]
   [TestCase("public sealed class D { public event System.Action E; }", "an event")]
   [TestCase("public sealed class D { public int this[int i] => i; }", "an indexer")]
