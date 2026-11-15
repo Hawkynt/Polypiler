@@ -966,6 +966,114 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY1800
+    severity: error
+    exit: InvalidSource
+    title: Python syntax error or helper failure
+    message: "<python's exception class>: <python's message>"
+    rule: python.syntax
+    area: python
+    owner: "#452"
+    surfaces: "standard error of polypiler translate --from python: a source CPython's ast module rejects, an interpreter that cannot be started, or a helper that speaks another wire format"
+  - code: PLY1801
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python type unknown
+    message: "<reason>"
+    rule: python.types
+    area: python
+    owner: "#452"
+    surfaces: "standard error of polypiler translate --from python, for a type hint the importer does not know and a parameter, local or result no hint and no value gives a type"
+  - code: PLY1802
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python expression not supported
+    message: "'<construct>' is not supported by the Python frontend"
+    rule: python.subset
+    area: python
+    owner: "#452"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1803
+    severity: error
+    exit: UnsupportedConstruct
+    title: values of two kinds
+    message: "<reason>"
+    rule: python.mixed-kinds
+    area: python
+    owner: "#452"
+    surfaces: "standard error of polypiler translate --from python, for a variable, a result or an expression that None and a number, or values no type of the import holds both of, reach"
+  - code: PLY1804
+    severity: error
+    exit: UnsupportedConstruct
+    title: integer literal beyond 64 bits
+    message: "the integer '<literal>' needs more than 64 bits, which the import does not hold yet"
+    rule: python.int-bounds
+    area: python
+    owner: "#452"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1810
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python statement not supported
+    message: "statement '<statement>' is not supported by the Python frontend"
+    rule: python.statements
+    area: python
+    owner: "#449"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1811
+    severity: error
+    exit: UnsupportedConstruct
+    title: local possibly unbound
+    message: "'<name>' may be unbound here; python would raise UnboundLocalError"
+    rule: python.definite-assignment
+    area: python
+    owner: "#449"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1812
+    severity: error
+    exit: UnsupportedConstruct
+    title: match pattern not supported
+    message: "match pattern '<pattern>' is not supported; supported are literals, '|', captures, '_' and guards"
+    rule: python.match
+    area: python
+    owner: "#449"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1813
+    severity: error
+    exit: UnsupportedConstruct
+    title: iteration not supported
+    message: "iteration over '<iterable>' is not supported"
+    rule: python.iteration
+    area: python
+    owner: "#449"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1830
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python function feature not supported
+    message: "'<feature>' is not supported for functions by the Python frontend"
+    rule: python.functions
+    area: python
+    owner: "#450"
+    surfaces: "standard error of polypiler translate --from python, for defaults, keyword arguments, decorators, nested functions, global and nonlocal"
+  - code: PLY1832
+    severity: error
+    exit: UnsupportedConstruct
+    title: function value escapes
+    message: "the function value '<name>' escapes, or '<name>' is a generator or coroutine; only direct calls of the module's functions are imported"
+    rule: python.function-values
+    area: python
+    owner: "#450"
+    surfaces: "standard error of polypiler translate --from python"
+  - code: PLY1833
+    severity: error
+    exit: UnsupportedConstruct
+    title: name not resolved
+    message: "'<name>' is neither part of this import nor in the Python call map"
+    rule: python.names
+    area: python
+    owner: "#450"
+    surfaces: "standard error of polypiler translate --from python, for a name that is no local, function of the module or supported built-in, and for an import"
   - code: PLY3935
     severity: error
     exit: OracleFailure
