@@ -1090,6 +1090,9 @@ public sealed record IrFunction(
   /// <summary>The generic definition the function is one instantiation of; <see langword="null"/> for a function of its own.</summary>
   public IrGenericOrigin? Origin { get; init; }
 
+  /// <summary>Whether the function is async: its result is an <see cref="IrTypeKind.Async"/>, which its body may <see cref="IrAwait"/> in (#1330).</summary>
+  public bool IsAsync => this.ReturnType.IsAsync;
+
 }
 
 /// <summary>A module: the functions, constants and globals of one source class, and the types they use.</summary>
