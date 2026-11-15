@@ -85,7 +85,7 @@ public sealed class VectorFileTests {
   [TestCase("{ \"name\": \"text\"", "{ \"name\": \"hex\"", "vector 'hex' is listed twice")]
   [TestCase("{ \"name\": \"text\"", "{ \"name\": \"\"", "vector 2 must have a non-empty 'name'")]
   [TestCase("{ \"name\": \"text\"", "{ \"name\": 2", "vector 2 must have a non-empty 'name'")]
-  [TestCase("{ \"name\": \"text\",", "{ \"label\": \"text\",", "vector 2 must be an object of exactly 'name', 'input' and 'expected'")]
+  [TestCase("{ \"name\": \"text\",", "{ \"label\": \"text\",", "vector 2 must be an object of exactly 'name', 'input' and 'expected' or 'expectedTrap'")]
   [TestCase("{ \"text\": \"abc\" }, \"expected\"", "{ \"text\": \"abc\", \"hex\": \"\" }, \"expected\"", "vector 'text' input must be an object of exactly one of 'hex', 'text' or 'args'")]
   [TestCase("{ \"text\": \"abc\" }, \"expected\"", "{ \"value\": 1 }, \"expected\"", "vector 'text' input must be an object of exactly one of 'hex', 'text' or 'args'")]
   [TestCase("{ \"text\": \"abc\" }, \"expected\"", "[], \"expected\"", "vector 'text' input must be an object of exactly one of 'hex', 'text' or 'args'")]
@@ -105,9 +105,29 @@ public sealed class VectorFileTests {
 
   [TestCase("\"provenance\": {", "\"provenance\": 1, \"was\": {", "'provenance' must be an object")]
   [TestCase("\"vectors\": [", "\"vectors\": 1, \"was\": [", "'vectors' must be an array")]
-  [TestCase("\"vectors\": [", "\"vectors\": [1,", "vector 1 must be an object of exactly 'name', 'input' and 'expected'")]
+  [TestCase("\"vectors\": [", "\"vectors\": [1,", "vector 1 must be an object of exactly 'name', 'input' and 'expected' or 'expectedTrap'")]
   public void WrongShape_IsRefused(string original, string replacement, string reason)
     => Assert.That(Problems(Kinds.Replace(original, replacement, StringComparison.Ordinal)), Does.Contain(reason));
+
+  /// <summary>A runner's file names the function and its signature, and a vector may expect a trap; the verification framework checks both in depth.</summary>
+  [Test]
+  public void ARunnerFile_WithATrapVector_Loads() {
+    var text = Kinds.Replace("\"schema\": 1", "\"schema\": 1, \"export\": \"f\", \"signature\": { \"parameters\": [], \"result\": \"u8\" }", StringComparison.Ordinal)
+      .Replace("\"expected\": { \"hex\": \"024d0127\" }", "\"expectedTrap\": \"divide-by-zero\"", StringComparison.Ordinal);
+    var trap = VectorFile.Parse(text, "runner").Find("hex")!.Expected;
+    Assert.That((trap.Kind, trap.Text, trap.Json, trap.Bytes.Length), Is.EqualTo((VectorValueKind.Trap, "divide-by-zero", "\"divide-by-zero\"", 0)));
+  }
+
+  [TestCase("1")]
+  [TestCase("\"\"")]
+  public void AnExpectedTrapThatIsNoName_IsRefused(string trap)
+    => Assert.That(Problems(Kinds.Replace("\"expected\": { \"hex\": \"024d0127\" }", $"\"expectedTrap\": {trap}", StringComparison.Ordinal)),
+      Does.Contain("vector 'hex' expectedTrap must be a non-empty string"));
+
+  [Test]
+  public void ExpectedAndExpectedTrapTogether_AreRefused()
+    => Assert.That(Problems(Kinds.Replace("\"expected\": { \"hex\": \"024d0127\" }", "\"expected\": { \"hex\": \"024d0127\" }, \"expectedTrap\": \"bounds\"", StringComparison.Ordinal)),
+      Does.Contain("must be an object of exactly 'name', 'input' and 'expected' or 'expectedTrap'"));
 
   [TestCase("[]", "a vector file must be a JSON object")]
   [TestCase("{", "not JSON: ")]

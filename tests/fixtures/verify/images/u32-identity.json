@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "fixture": "verify.images.u32-identity",
+  "provenance": {
+    "kind": "published",
+    "source": "backlog/infra/VER-IMAGES.md",
+    "detail": "the scenario 'A width-less native value takes its width from the signature'",
+    "generatedBy": "hand"
+  },
+  "export": "identity",
+  "signature": { "parameters": [ { "name": "x", "type": "u32", "mode": "in" } ], "result": "u32" },
+  "vectors": [
+    { "name": "max", "input": { "hex": "ffffffff" }, "expected": { "hex": "ffffffff" } },
+    { "name": "max widened by a width-less number", "input": { "hex": "ffffffff" }, "expectedTrap": "result-type" }
+  ]
+}
