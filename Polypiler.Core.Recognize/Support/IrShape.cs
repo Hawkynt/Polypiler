@@ -27,6 +27,7 @@ public static class IrShape {
 
     return (left, right) switch {
       (IrConst a, IrConst b) => a.Value == b.Value,
+      (IrBigConst a, IrBigConst b) => a.Value == b.Value,
       (IrLocalRef a, IrLocalRef b) => a.Local == b.Local,
       (IrConstRef a, IrConstRef b) => ReferenceEquals(a.Constant, b.Constant),
       (IrUnary a, IrUnary b) => a.Op == b.Op && Same(a.Operand, b.Operand),
@@ -155,10 +156,10 @@ public static class IrShape {
   /// <param name="node">The node.</param>
   /// <returns><see langword="true"/> when the node itself is total.</returns>
   public static bool IsTrapFreeNode(IrExpr node) => node switch {
-    IrConst or IrLocalRef => true,
+    IrConst or IrBigConst or IrLocalRef => true,
     IrConstRef reference => !reference.Type.IsArray,
     IrUnary unary => unary.Op != IrUnaryOp.NegateChecked,
-    IrBinary binary => !IrOperators.Traps(binary.Op) && !(binary.Left.Type.IsInteger && binary.Op is IrBinaryOp.Divide or IrBinaryOp.Remainder),
+    IrBinary binary => !IrOperators.Traps(binary.Op) && !((binary.Left.Type.IsInteger || binary.Left.Type.IsBigInt) && binary.Op is IrBinaryOp.Divide or IrBinaryOp.Remainder),
     IrConvert conversion => conversion.Contract == IrConversion.Wrap && !conversion.Operand.Type.IsFloat,
     IrConditional => true,
     IrIntrinsic { Op: IrIntrinsicOp.ToInt32 or IrIntrinsicOp.ToUint32 } => true,

@@ -44,7 +44,8 @@ public static class IrModuleFormat {
     Block, Declare, Assign, Store, FieldStore, ExprStmt, If, While, DoWhile, For, Switch, Break, Continue, Return, GlobalAssign,
     Throw, Rethrow, Try, Using, ForEachCollection,
     ArraySequence, Yield, YieldBreak, YieldFrom, ForEachSequence,
-    Sequence
+    Sequence,
+    BigConst
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -670,6 +671,7 @@ public static class IrModuleFormat {
       IrInvoke => Tag.Invoke,
       IrArraySequence => Tag.ArraySequence,
       IrSequence => Tag.Sequence,
+      IrBigConst => Tag.BigConst,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -717,6 +719,9 @@ public static class IrModuleFormat {
           break;
         case IrStrConst text:
           this.Text(text.Value);
+          break;
+        case IrBigConst big:
+          this.Text(big.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
           break;
         case IrUnary unary:
           this.Count((int)unary.Op);
@@ -1217,6 +1222,7 @@ public static class IrModuleFormat {
         IrTypeKind.Function => IrType.Function(new IrFunctionType(this.Types(), this.Type())),
         IrTypeKind.Sequence => IrType.Sequence(this.Type(), reader.ReadBoolean()),
         IrTypeKind.Pointer => IrType.Pointer(this.Type()),
+        IrTypeKind.BigInt => IrType.BigInt,
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };
@@ -1291,12 +1297,12 @@ public static class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.Sequence)
+      if (tag > Tag.BigConst)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.BigConst) ? this.Statement(tag) : this.Expression(tag);
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1323,6 +1329,7 @@ public static class IrModuleFormat {
         Tag.Intrinsic => new IrIntrinsic(this.Enum<IrIntrinsicOp>(), type, this.Nodes<IrExpr>()),
         Tag.GlobalRef => new IrGlobalRef(Of(this._globals, this.Count(), "global")),
         Tag.StrConst => new IrStrConst(this.Text()),
+        Tag.BigConst => new IrBigConst(System.Numerics.BigInteger.Parse(this.Text(), System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture)),
         Tag.New => new IrNew(type, this.Constructor(), this.Nodes<IrExpr>()),
         Tag.NullValue => new IrNull(type),
         Tag.MethodCall => new IrMethodCall(type, this.Method(), this.OptionalNode<IrExpr>(), this.Nodes<IrExpr>()) { Kind = this.Enum<IrMethodCallKind>() },

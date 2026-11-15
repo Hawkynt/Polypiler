@@ -118,7 +118,13 @@ public enum IrTypeKind {
   /// number or <c>void</c>, are read and written. It lives on the stack only, like a span, and is never a
   /// result. <c>docs/reference/pointers.md</c> states what its operations mean.
   /// </summary>
-  Pointer
+  Pointer,
+
+  /// <summary>
+  /// An exact integer of any magnitude, as Python's <c>int</c> is: its arithmetic never wraps and never
+  /// overflows. What its operations mean is stated at <see cref="IrBigInts"/>.
+  /// </summary>
+  BigInt
 
 }
 
@@ -187,6 +193,12 @@ public sealed record IrType {
 
   /// <summary>An IEEE 754 binary64 number.</summary>
   public static IrType F64 { get; } = new(IrTypeKind.F64, null);
+
+  /// <summary>An exact integer of any magnitude, written <c>bigint</c> (<see cref="IrBigInts"/>).</summary>
+  public static IrType BigInt { get; } = new(IrTypeKind.BigInt, null);
+
+  /// <summary>Whether the type is the arbitrary-precision integer.</summary>
+  public bool IsBigInt => this.Kind == IrTypeKind.BigInt;
 
   /// <summary>An immutable, non-null sequence of UTF-16 code units, written <c>str</c>.</summary>
   public static IrType String { get; } = new(IrTypeKind.String, null);

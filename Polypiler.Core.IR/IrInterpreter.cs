@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace Polypiler.Core.IR;
@@ -237,6 +238,9 @@ public static partial class IrInterpreter {
 
   /// <summary>The IR type a .NET type crosses the boundary as, or <see langword="null"/> when it does not.</summary>
   private static IrType? TypeOf(Type host) {
+    if (host == typeof(BigInteger))
+      return IrType.BigInt;
+
     if (host.IsSZArray)
       return TypeOf(host.GetElementType()!) is { } element && (element.IsNumeric || element.IsString) ? IrType.Array(element) : null;
 
@@ -274,7 +278,7 @@ public static partial class IrInterpreter {
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool or float or double or Record or string or Instance or Closure or FunctionReference or BoundMethod or NullReference => value,
+    Array or bool or float or double or BigInteger or Record or string or Instance or Closure or FunctionReference or BoundMethod or NullReference => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -434,8 +438,13 @@ public static partial class IrInterpreter {
           return Copied(globals[reference.Global]);
         case IrStrConst text:
           return text.Value;
+        case IrBigConst big:
+          return big.Value;
         case IrUnary unary:
           var operand = this.Evaluate(unary.Operand, frame);
+          if (operand is BigInteger exact)
+            return IrBigInts.Evaluate(unary.Op, exact);
+
           if (unary.Type.IsFloat)
             return operand is float single ? (object)-single : -(double)operand;
 
@@ -674,6 +683,9 @@ public static partial class IrInterpreter {
       if (first is bool)
         return binary.Op == IrBinaryOp.Equal ? first.Equals(second) : !first.Equals(second);
 
+      if (first is BigInteger big)
+        return IrBigInts.Evaluate(binary.Op, big, second is BigInteger other ? other : (long)second);
+
       var type = binary.Left.Type;
       if (type == IrType.F32)
         return Binary(binary.Op, (float)first, (float)second);
@@ -767,6 +779,9 @@ public static partial class IrInterpreter {
     private static object Convert(IrConvert conversion, object operand) {
       var from = conversion.Operand.Type;
       var to = conversion.Type;
+      if (from.IsBigInt || to.IsBigInt)
+        return ConvertBig(from, to, conversion.Contract, operand);
+
       if (from.IsFloat) {
         var number = operand is float single ? single : (double)operand;
         if (to == IrType.F32)
@@ -788,6 +803,22 @@ public static partial class IrInterpreter {
       return conversion.Contract == IrConversion.Trap
         ? Fit(to, IrOperators.Number(from, value))
         : IrOperators.Wrap(to, value);
+    }
+
+    /// <summary>A conversion from or to the arbitrary-precision integer, as <see cref="IrBigInts"/> states it.</summary>
+    private static object ConvertBig(IrType from, IrType to, IrConversion contract, object operand) {
+      if (to.IsBigInt)
+        return operand switch {
+          double number => IrBigInts.FromDouble(number),
+          float single => IrBigInts.FromDouble(single),
+          _ => IrBigInts.Of(from, (long)operand)
+        };
+
+      var value = (BigInteger)operand;
+      if (to == IrType.F64)
+        return IrBigInts.ToDouble(value);
+
+      return contract == IrConversion.Trap ? IrBigInts.Fit(to, value) : IrBigInts.Wrap(to, value);
     }
 
     /// <summary>
