@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,8 @@ using NUnit.Framework;
 using Polypiler.Cli;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
+using Polypiler.Core.Optimize.Specialize;
+using Polypiler.Prototype.Testing;
 using Polypiler.Tests.BigInt;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
@@ -53,13 +56,38 @@ public sealed class BigIntJavaScriptTests {
   public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
 
   [TestCase("es2020"), TestCase("es2022")]
-  public void NodeOnTheEmittedJavaScript_AgreesWithTheInterpreter(string profile) {
-    var module = BigIntCases.Module();
+  public void NodeOnTheEmittedJavaScript_AgreesWithTheInterpreter(string profile)
+    => this.Run(BigIntCases.Module(), [.. BigIntCases.Calls()], profile);
+
+  /// <summary>
+  /// The hashes and generators of O0062, imported from their recorded tree and specialized: the
+  /// narrowed arithmetic of 32 bits on numbers, of 64 bits on BigInts cut to 64 bits, the rest exact.
+  /// </summary>
+  [Test]
+  public void NodeOnTheSpecializedHashes_AgreesWithTheInterpreter() {
+    var source = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "optimize", "o0062", "hashes.py")).Replace("\r\n", "\n", StringComparison.Ordinal);
+    var module = PyIntSpecialization.Run(PythonFixture.Module(PythonFixture.Import("hashes.py", source))).Module;
+    BigInteger[] operands = [0, 1, -1, 255, 4294967295, 0x0123456789ABCDEF, BigInteger.One << 64, (BigInteger.One << 70) + 5, -(BigInteger.One << 65) + 3];
+    var calls = new List<(string Function, object[] Arguments)>();
+    foreach (var name in new[] { "fnv1a64", "fnv1a32", "splitmix64", "xorshift64", "xorshift32_sum", "shifted_low", "power" })
+      calls.AddRange(operands.Where(operand => name != "power" || (operand >= 0 && operand < 200)).Select(operand => (name, new object[] { operand })));
+
+    calls.Add(("checksum", []));
+    foreach (var (a, b) in new (BigInteger, BigInteger)[] { (BigInteger.One << 40, 2), (7, -2), (-7, 2), (5, 0), (BigInteger.One << 80, 7) }) {
+      calls.Add(("unmasked_product", [a, b]));
+      calls.Add(("quotient_low", [a, b]));
+    }
+
+    this.Run(module, calls, "es2022");
+    var text = JavaScriptEmitter.Emit(JavaScriptEmitter.Legalize(module, () => PrecomputedImplementations.Module, JavaScriptProfile.Default, FloatMode.Accurate), JavaScriptProfile.Default, FloatMode.Accurate).Single().Content;
+    Assert.That(text, Does.Contain("Math.imul(h, 16777619) >>> 0"), "fnv1a32 multiplies on numbers");
+  }
+
+  private void Run(IrModule module, IReadOnlyList<(string Function, object[] Arguments)> calls, string profile) {
     var level = JavaScriptProfile.Parse(profile);
     var legalized = JavaScriptEmitter.Legalize(module, () => PrecomputedImplementations.Module, level, FloatMode.Accurate);
     var file = JavaScriptEmitter.Emit(legalized, level, FloatMode.Accurate).Single();
     File.WriteAllText(Path.Combine(this._directory, file.Path), file.Content);
-    var calls = BigIntCases.Calls().ToList();
     var returns = module.Functions.ToDictionary(function => function.Name, function => function.ReturnType);
     var request = new JsonObject {
       ["module"] = file.Path,

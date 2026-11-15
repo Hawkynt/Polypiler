@@ -17,6 +17,7 @@ using Polypiler.Core.Backends.JavaScript.Passes;
 using Polypiler.Core.Backends.Python.Passes;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Optimize.Passes;
+using Polypiler.Core.Optimize.Specialize;
 using Polypiler.Core.Optimize.Target;
 using Polypiler.Core.Recognize;
 using Polypiler.Core.Verification.Manifests;
@@ -256,7 +257,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// of their numbers.
   /// </summary>
   private static readonly string[] _optimizations = [
-    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(PythonTargetPasses.Pipeline.Ids)
+    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Append(PyIntSpecialization.Id).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(PythonTargetPasses.Pipeline.Ids)
       .Distinct().Order(StringComparer.Ordinal)
   ];
 
@@ -287,16 +288,20 @@ public sealed class TranslateCommand : ICliCommand {
   /// <c>--explain-opt</c> every rule application is written to the error stream as a note.
   /// </summary>
   private static (IrModule Module, IReadOnlyList<RuleApplication> Applications) Optimized(string file, IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend) {
-    var result = Optimizer.Run(module, new OptimizerOptions {
+    var disabled = options.TryGetValue(DisableOpt, out var list) ? list.Split(',').ToHashSet() : [];
+    // The specialization of the arbitrary-precision integer is required: it runs at every level, --opt none too.
+    var specialized = disabled.Contains(PyIntSpecialization.Id) ? new OptimizationResult(module, []) : PyIntSpecialization.Run(module);
+    var result = Optimizer.Run(specialized.Module, new OptimizerOptions {
       Level = LevelOf(options)!.Value,
-      Disabled = options.TryGetValue(DisableOpt, out var list) ? list.Split(',').ToHashSet() : [],
+      Disabled = disabled,
       Target = backend.Target
     });
+    IReadOnlyList<RuleApplication> applications = [.. specialized.Applications, .. result.Applications];
     if (options.ContainsKey(ExplainOpt))
-      foreach (var application in result.Applications)
+      foreach (var application in applications)
         context.Note($"{file}: opt {application}");
 
-    return (result.Module, result.Applications);
+    return (result.Module, applications);
   }
 
   /// <summary>Checks a module and writes it in the target language into the output directory.</summary>
