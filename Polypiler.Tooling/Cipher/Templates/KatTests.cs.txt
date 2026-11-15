@@ -34,7 +34,7 @@ public sealed class KatTests {
     using var document = JsonDocument.Parse(json);
     var vector = document.RootElement;
     var algorithm = Registered(vector.GetProperty("algorithm").GetString()!);
-    var instance = Call(algorithm, "CreateInstance", [Value(vector.GetProperty("inverse"))]);
+    var instance = Call(algorithm, "CreateInstance", [vector.GetProperty("inverse")]);
     Assert.That(instance, Is.Not.Null, "CreateInstance gave no instance");
     foreach (var step in vector.GetProperty("steps").EnumerateArray()) {
       var name = step.GetProperty("name").GetString()!;
@@ -112,8 +112,6 @@ public sealed class KatTests {
       return null;
     }
   }
-
-  private static object? Value(JsonElement value) => Value(value, typeof(object));
 
   /// <summary>A recorded value as the type a property, a field or a parameter of the translation has.</summary>
   private static object? Value(JsonElement value, Type type) {

@@ -1,0 +1,64 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/xorsum.js",
+ "algorithms": [
+  {
+   "name": "XorSum-0",
+   "vectors": [
+    {
+     "text": "three bytes, the expected byte altered",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010203"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "a step that throws",
+     "inverse": false,
+     "steps": [
+      {"call":"Explode","args":[]}
+     ],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"ff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "a property the translation does not have",
+     "inverse": false,
+     "steps": [
+      {"set":"rounds","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"ff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "XorSum-9",
+   "vectors": [
+    {
+     "text": "an algorithm the translation does not register",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

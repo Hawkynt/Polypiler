@@ -1,0 +1,51 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/xorsum.js",
+ "algorithms": [
+  {
+   "name": "XorSum-0",
+   "vectors": [
+    {
+     "text": "three bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010203"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "a key through its setter",
+     "inverse": false,
+     "steps": [
+      {"call":"setKey","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"ef"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "XorSum-7",
+   "vectors": [
+    {
+     "text": "three bytes, seeded",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010203"},
+     "expected": {"t":"bytes","v":"07"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}
