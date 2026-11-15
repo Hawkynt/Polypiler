@@ -127,6 +127,10 @@ public sealed class PointerCSharpTests {
       new IrFunction("G", true, IrType.I32, [], [fixedPointer], new IrBlock([
         new IrDeclare(fixedPointer, new IrIntrinsic(IrIntrinsicOp.StackAlloc, pointer.Type, [new IrConst(IrType.I32, 0)])),
         new IrReturn(new IrConditional(fixedIsNull, new IrConst(IrType.I32, 0), new IrConst(IrType.I32, 1)))
+      ])),
+      new IrFunction("H", true, IrType.I32, [n], [pointer], new IrBlock([
+        new IrDeclare(pointer, new IrIntrinsic(IrIntrinsicOp.StackAlloc, pointer.Type, [new IrBinary(IrBinaryOp.Add, new IrLocalRef(n), new IrConst(IrType.I32, 0))])),
+        new IrReturn(new IrConditional(isNull, new IrConst(IrType.I32, 0), new IrConst(IrType.I32, 1)))
       ]))]);
     Assert.That(IrVerifier.Verify(module), Is.Empty);
     Assert.That(PrototypeFixture.InterpretedOutcome(module, new PrototypeCall("F", [length])), Is.EqualTo(length < 0 ? PrototypeFixture.Trap(IrTrap.IntegerOverflow) : "1"));
@@ -139,6 +143,8 @@ public sealed class PointerCSharpTests {
     var outcome = build.Outcome(new PrototypeCall("F", [length]));
     Assert.That(outcome, Is.EqualTo(PrototypeFixture.InterpretedOutcome(module, new PrototypeCall("F", [length]))), text);
     Assert.That(build.Outcome(new PrototypeCall("G", [])), Is.EqualTo("1"), text);
+    Assert.That(build.Outcome(new PrototypeCall("H", [length])), Is.EqualTo(outcome), text);
+    Assert.That(text, Does.Contain("Length = n + 0;"), text);
   }
 
   /// <summary>A pinned span is a fixed of the span with spans, and of the segment's array without, the empty one the null pointer.</summary>
