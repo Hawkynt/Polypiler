@@ -103,7 +103,15 @@ public enum IrTypeKind {
   Memory,
 
   /// <summary>A view like <see cref="Memory"/> whose elements are only read.</summary>
-  ReadOnlyMemory
+  ReadOnlyMemory,
+
+  /// <summary>
+  /// A bounded pointer of unsafe code (#1331): a region of memory - an array, a view, a <c>stackalloc</c>
+  /// or a local - and a byte offset in it, through which values of its <see cref="IrType.Element"/> type, a
+  /// number or <c>void</c>, are read and written. It lives on the stack only, like a span, and is never a
+  /// result. <c>docs/reference/pointers.md</c> states what its operations mean.
+  /// </summary>
+  Pointer
 
 }
 
@@ -200,6 +208,14 @@ public sealed record IrType {
   /// <param name="element">The type of every element.</param>
   /// <returns>The memory type.</returns>
   public static IrType ReadOnlyMemory(IrType element) => new(IrTypeKind.ReadOnlyMemory, element);
+
+  /// <summary>The type of a bounded pointer to values of a number type or to <c>void</c>, written <c>T*</c>.</summary>
+  /// <param name="element">The type pointed to: a number or <see cref="Void"/>.</param>
+  /// <returns>The pointer type.</returns>
+  public static IrType Pointer(IrType element) => new(IrTypeKind.Pointer, element);
+
+  /// <summary>Whether the type is a pointer.</summary>
+  public bool IsPointer => this.Kind == IrTypeKind.Pointer;
 
   /// <summary>Whether the type is a memory, a view that may be stored, writable or read-only.</summary>
   public bool IsMemory => this.Kind is IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory;
@@ -395,9 +411,10 @@ public sealed record IrType {
 
   /// <summary>
   /// Whether the type can be the type of a local: not void, an array only of numbers, of structs or of
-  /// strings, and a view or a memory only of numbers.
+  /// strings, a view or a memory only of numbers, and a pointer only to a number or to <c>void</c>.
   /// </summary>
   public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue
+    : this.IsPointer ? this.Element!.IsNumeric || this.Element == Void
     : this.IsCollection ? IrCollections.IsElement(this)
     : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && !this.IsMemory && (this.Element.IsStruct || this.Element.IsString || this.Element.IsFunction)));
 
@@ -415,6 +432,7 @@ public sealed record IrType {
       : this.Kind == IrTypeKind.Set ? $"set<{this.Element}, {this.Order.ToString().ToLowerInvariant()}>"
       : this.Kind == IrTypeKind.Memory ? $"memory<{this.Element}>"
       : this.Kind == IrTypeKind.ReadOnlyMemory ? $"readonly memory<{this.Element}>"
+      : this.Kind == IrTypeKind.Pointer ? $"{this.Element}*"
       : $"{this.Element}[]";
 
 }

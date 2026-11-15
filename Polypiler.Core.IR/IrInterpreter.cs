@@ -418,6 +418,8 @@ public static partial class IrInterpreter {
           return Constant(constant.Type, constant.Value);
         case IrConstRef reference:
           return program.Constants[reference.Constant];
+        case IrIntrinsic intrinsic when IrPointers.IsPointerNode(intrinsic):
+          return this.Pointer(intrinsic, frame)!;
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
@@ -869,10 +871,37 @@ public static partial class IrInterpreter {
 
   }
 
-  /// <summary>The storage of one variable.</summary>
+  /// <summary>
+  /// The storage of one variable. Once its address is taken (<see cref="IrIntrinsicOp.AddressOf"/>) the value
+  /// lives in an array of one element, which a pointer reads and writes as the variable does.
+  /// </summary>
   private sealed class Cell(object? value) {
 
-    public object? Value { get; set; } = value;
+    private object? _value = value;
+
+    private Array? _box;
+
+    public object? Value {
+      get => this._box is null ? this._value : Internal(this._box.GetValue(0)!);
+      set {
+        if (this._box is null)
+          this._value = value;
+        else
+          this._box.SetValue(External(this._box.GetType().GetElementType()!, value!), 0);
+      }
+    }
+
+    /// <summary>The array of one element the value lives in from now on, of the host's type for a number type.</summary>
+    public Array Box(IrType type) {
+      if (this._box is null) {
+        this._box = Array.CreateInstance(HostType(type), 1);
+        // A local nothing was assigned to yet keeps the zero of its type.
+        if (this._value is not null)
+          this._box.SetValue(External(this._box.GetType().GetElementType()!, this._value), 0);
+      }
+
+      return this._box;
+    }
 
   }
 

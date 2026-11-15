@@ -50,6 +50,7 @@ public static partial class IrVerifier {
     var signatures = Hierarchy(types, functions, diagnostics);
     Generics(module, diagnostics);
     Disposables(types, functions, diagnostics);
+    Pointers(module, diagnostics);
     foreach (var function in module.Functions)
       new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures }.Run();
 
@@ -108,6 +109,7 @@ public static partial class IrVerifier {
 
       this.Block(function.Body);
       this.Constructed();
+      this.Pointers();
     }
 
     private void Require(bool holds, string message) {
@@ -401,8 +403,8 @@ public static partial class IrVerifier {
         case IrThrowExpression thrown:
           this.ThrowExpression(thrown);
           break;
-        case IrNull { Type.IsArray: true } value:
-          this.Require(value.Type.IsStorable, $"null of the type {value.Type}");
+        case IrNull { Type.IsArray: true } or IrNull { Type.IsPointer: true }:
+          this.Require(expression.Type.IsStorable, $"null of the type {expression.Type}");
           break;
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals:
           this.Object(expression);
