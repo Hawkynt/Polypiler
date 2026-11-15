@@ -242,8 +242,6 @@ public static partial class JavaScriptEmitter {
 
     private static JsObject Zero64 => Halves(Number("0"), Number("0"));
 
-    private static JsObject One64 => Halves(Number("0"), Number("1"));
-
     private readonly JavaScriptProfile _profile;
     private readonly JavaScriptCapabilities _capabilities;
     private readonly FloatMode _mode;

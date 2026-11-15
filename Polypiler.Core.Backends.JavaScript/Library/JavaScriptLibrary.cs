@@ -31,13 +31,20 @@ internal static partial class JavaScriptLibrary {
   /// <param name="table">The capability table.</param>
   public static bool Covers(IrIntrinsic intrinsic, JavaScriptProfile profile, JavaScriptCapabilities table) => RowOf(intrinsic, Context(profile, table)) is not null;
 
-  /// <summary>The rewrite of legalization for a profile: every node a row covers becomes the call of its helper.</summary>
+  /// <summary>
+  /// The rewrite of legalization for a profile: every node a row covers becomes the call of its
+  /// helper, and below ECMAScript 2020, which has no <c>BigInt</c>, every operation on a 64-bit
+  /// integer the call of its helper on the two limbs (<see cref="WideIntegerLibrary"/>, O0075).
+  /// </summary>
   /// <param name="profile">The profile.</param>
   /// <param name="table">The capability table.</param>
   /// <returns>The rewrite.</returns>
   public static LibraryRewrite Rewrite(JavaScriptProfile profile, JavaScriptCapabilities table) {
     var context = Context(profile, table);
-    return (expression, calls) => expression is IrIntrinsic intrinsic && RowOf(intrinsic, context) is { } row ? row.Build(intrinsic, calls) : null;
+    var limbs = context.Replaces("BigInt");
+    return (expression, calls) => expression is IrIntrinsic intrinsic && RowOf(intrinsic, context) is { } row ? row.Build(intrinsic, calls)
+      : limbs ? WideIntegerLibrary.Call(expression, calls)
+      : null;
   }
 
   private static JavaScriptLibraryContext Context(JavaScriptProfile profile, JavaScriptCapabilities table)

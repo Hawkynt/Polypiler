@@ -234,100 +234,100 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(Emit(source, JavaScriptProfile.Parse("es2015", "iife", "exports")), Does.Contain("var exports = (function () {").And.Contain("    exports: exports,\n    F: F\n"));
   }
 
-  /// <summary>Each 64-bit operator as the call of the helper that computes it on pairs of halves.</summary>
-  [TestCase("long", "a + b", "$add64(a, b)")]
-  [TestCase("long", "a - b", "$sub64(a, b)")]
-  [TestCase("long", "a * b", "$mul64(a, b)")]
-  [TestCase("long", "a / b", "$div64(a, b)")]
-  [TestCase("long", "a % b", "$rem64(a, b)")]
-  [TestCase("long", "a & b", "$and64(a, b)")]
-  [TestCase("long", "a | b", "$or64(a, b)")]
-  [TestCase("long", "a ^ b", "$xor64(a, b)")]
-  [TestCase("long", "a << 3", "$shl64(a, 3)")]
-  [TestCase("long", "a << 67", "$shl64(a, 3)")]
-  [TestCase("long", "a >> 3", "$sar64(a, 3)")]
-  [TestCase("long", "a >>> 3", "$shr64(a, 3)")]
-  [TestCase("long", "-a", "$neg64(a)")]
-  [TestCase("long", "~a", "$not64(a)")]
-  [TestCase("long", "a - -5", "$sub64(a, { hi: 4294967295, lo: 4294967291 })")]
-  [TestCase("long", "(a * b) + 1", "$add64($mul64(a, b), { hi: 0, lo: 1 })")]
-  [TestCase("ulong", "a + b", "$add64(a, b)")]
-  [TestCase("ulong", "a - b", "$sub64(a, b)")]
-  [TestCase("ulong", "a * b", "$mul64(a, b)")]
-  [TestCase("ulong", "a / b", "$udiv64(a, b)")]
-  [TestCase("ulong", "a % b", "$urem64(a, b)")]
-  [TestCase("ulong", "a & b", "$and64(a, b)")]
-  [TestCase("ulong", "a << 3", "$shl64(a, 3)")]
-  [TestCase("ulong", "a >> 3", "$shr64(a, 3)")]
-  [TestCase("ulong", "a >>> 3", "$shr64(a, 3)")]
-  [TestCase("ulong", "~a", "$not64(a)")]
-  [TestCase("ulong", "a * 0x100000001B3UL + 1UL", "$add64($mul64(a, { hi: 256, lo: 435 }), { hi: 0, lo: 1 })")]
-  [TestCase("long", "checked(a + b)", "$addck64s(a, b)")]
-  [TestCase("long", "checked(a - b)", "$subck64s(a, b)")]
-  [TestCase("long", "checked(a * b)", "$mulck64s(a, b)")]
-  [TestCase("long", "checked(-a)", "$subck64s({ hi: 0, lo: 0 }, a)")]
-  [TestCase("ulong", "checked(a + b)", "$addck64u(a, b)")]
-  [TestCase("ulong", "checked(a - b)", "$subck64u(a, b)")]
-  [TestCase("ulong", "checked(a * b)", "$mulck64u(a, b)")]
-  [TestCase("long", "a > b ? a : b", "($scmp64(a, b) > 0) ? a : b")]
+  /// <summary>Each 64-bit operator as the call of its helper of the library on the two limbs (O0075); the helper masks the count of a shift.</summary>
+  [TestCase("long", "a + b", "Add64(a, b)")]
+  [TestCase("long", "a - b", "Subtract64(a, b)")]
+  [TestCase("long", "a * b", "Multiply64(a, b)")]
+  [TestCase("long", "a / b", "DivideSigned64(a, b)")]
+  [TestCase("long", "a % b", "RemainderSigned64(a, b)")]
+  [TestCase("long", "a & b", "And64(a, b)")]
+  [TestCase("long", "a | b", "Or64(a, b)")]
+  [TestCase("long", "a ^ b", "Xor64(a, b)")]
+  [TestCase("long", "a << 3", "ShiftLeft64(a, 3)")]
+  [TestCase("long", "a << 67", "ShiftLeft64(a, 67)")]
+  [TestCase("long", "a >> 3", "ShiftRightArithmetic64(a, 3)")]
+  [TestCase("long", "a >>> 3", "ShiftRightLogical64(a, 3)")]
+  [TestCase("long", "-a", "Negate64(a)")]
+  [TestCase("long", "~a", "Not64(a)")]
+  [TestCase("long", "a - -5", "Subtract64(a, { hi: 4294967295, lo: 4294967291 })")]
+  [TestCase("long", "(a * b) + 1", "Add64(Multiply64(a, b), { hi: 0, lo: 1 })")]
+  [TestCase("ulong", "a + b", "Add64(a, b)")]
+  [TestCase("ulong", "a - b", "Subtract64(a, b)")]
+  [TestCase("ulong", "a * b", "Multiply64(a, b)")]
+  [TestCase("ulong", "a / b", "DivideUnsigned64(a, b)")]
+  [TestCase("ulong", "a % b", "RemainderUnsigned64(a, b)")]
+  [TestCase("ulong", "a & b", "And64(a, b)")]
+  [TestCase("ulong", "a << 3", "ShiftLeft64(a, 3)")]
+  [TestCase("ulong", "a >> 3", "ShiftRightLogical64(a, 3)")]
+  [TestCase("ulong", "a >>> 3", "ShiftRightLogical64(a, 3)")]
+  [TestCase("ulong", "~a", "Not64(a)")]
+  [TestCase("ulong", "a * 0x100000001B3UL + 1UL", "Add64(Multiply64(a, { hi: 256, lo: 435 }), { hi: 0, lo: 1 })")]
+  [TestCase("long", "checked(a + b)", "AddCheckedSigned64(a, b)")]
+  [TestCase("long", "checked(a - b)", "SubtractCheckedSigned64(a, b)")]
+  [TestCase("long", "checked(a * b)", "MultiplyCheckedSigned64(a, b)")]
+  [TestCase("long", "checked(-a)", "SubtractCheckedSigned64({ hi: 0, lo: 0 }, a)")]
+  [TestCase("ulong", "checked(a + b)", "AddCheckedUnsigned64(a, b)")]
+  [TestCase("ulong", "checked(a - b)", "SubtractCheckedUnsigned64(a, b)")]
+  [TestCase("ulong", "checked(a * b)", "MultiplyCheckedUnsigned64(a, b)")]
+  [TestCase("long", "a > b ? a : b", "(CompareSigned64(a, b) > 0) ? a : b")]
   public void HalvesArithmetic_IsWrittenAsHelperCalls(string type, string expression, string expected) {
     Assert.That(Body($"public static {type} F({type} a, {type} b) => {expression};", _es2017), Is.EqualTo(new[] { $"return {expected};" }));
     Assert.That(Body($"public static {type} F({type} a, {type} b) => {expression};", _es5), Is.EqualTo(new[] { $"return {expected};" }));
   }
 
   /// <summary>A shift by a count that is not a constant leaves the masking to the helper; an order is the sign of a comparison.</summary>
-  [TestCase("long", "a << n", "$shl64(a, n)")]
-  [TestCase("long", "a >> (n + 1)", "$sar64(a, (n + 1) | 0)")]
-  [TestCase("ulong", "a >>> n", "$shr64(a, n)")]
-  [TestCase("ulong", "a == a", "$eq64(a, a)")]
-  [TestCase("long", "a != a", "!$eq64(a, a)")]
-  [TestCase("long", "a < a", "$scmp64(a, a) < 0")]
-  [TestCase("long", "a <= a", "$scmp64(a, a) <= 0")]
-  [TestCase("ulong", "a > a", "$ucmp64(a, a) > 0")]
-  [TestCase("ulong", "a >= a", "$ucmp64(a, a) >= 0")]
-  [TestCase("ulong", "a != a && a < a", "(!$eq64(a, a)) && ($ucmp64(a, a) < 0)")]
+  [TestCase("long", "a << n", "ShiftLeft64(a, n)")]
+  [TestCase("long", "a >> (n + 1)", "ShiftRightArithmetic64(a, (n + 1) | 0)")]
+  [TestCase("ulong", "a >>> n", "ShiftRightLogical64(a, n)")]
+  [TestCase("ulong", "a == a", "Equal64(a, a)")]
+  [TestCase("long", "a != a", "!Equal64(a, a)")]
+  [TestCase("long", "a < a", "CompareSigned64(a, a) < 0")]
+  [TestCase("long", "a <= a", "CompareSigned64(a, a) <= 0")]
+  [TestCase("ulong", "a > a", "CompareUnsigned64(a, a) > 0")]
+  [TestCase("ulong", "a >= a", "CompareUnsigned64(a, a) >= 0")]
+  [TestCase("ulong", "a != a && a < a", "(!Equal64(a, a)) && (CompareUnsigned64(a, a) < 0)")]
   public void HalvesShiftAndComparison_AreWritten(string type, string expression, string expected) {
     var returns = expression.Contains('=') || expression.Contains('<') && !expression.Contains("<<") || expression.Contains("> a") ? "bool" : type;
     Assert.That(Body($"public static {returns} F({type} a, int n) => {expression};", _es2015), Is.EqualTo(new[] { $"return {expected};" }));
   }
 
   /// <summary>Each conversion from, to and between pairs of halves.</summary>
-  [TestCase("long", "int", "a", "$sx64(a)")]
-  [TestCase("long", "sbyte", "a", "$sx64(a)")]
+  [TestCase("long", "int", "a", "Widen64(a)")]
+  [TestCase("long", "sbyte", "a", "Widen64(a)")]
   [TestCase("ulong", "uint", "a", "{ hi: 0, lo: a }")]
   [TestCase("ulong", "char", "a", "{ hi: 0, lo: a }")]
   [TestCase("long", "uint", "a", "{ hi: 0, lo: a }")]
-  [TestCase("ulong", "int", "(ulong)a", "$sx64(a)")]
+  [TestCase("ulong", "int", "(ulong)a", "Widen64(a)")]
   [TestCase("long", "ulong", "(long)a", "a")]
   [TestCase("ulong", "long", "(ulong)a", "a")]
-  [TestCase("ulong", "long", "(ulong)(a + a)", "$add64(a, a)")]
+  [TestCase("ulong", "long", "(ulong)(a + a)", "Add64(a, a)")]
   [TestCase("int", "long", "(int)a", "a.lo | 0")]
   [TestCase("uint", "long", "(uint)a", "a.lo")]
-  [TestCase("uint", "ulong", "(uint)(a + a)", "$add64(a, a).lo")]
+  [TestCase("uint", "ulong", "(uint)(a + a)", "Add64(a, a).lo")]
   [TestCase("byte", "ulong", "(byte)a", "a.lo & 0xFF")]
   [TestCase("sbyte", "long", "(sbyte)a", "a.lo << 24 >> 24")]
   [TestCase("short", "long", "(short)a", "a.lo << 16 >> 16")]
   [TestCase("char", "ulong", "(char)a", "a.lo & 0xFFFF")]
-  [TestCase("int", "long", "checked((int)a)", "$ck64s(a, { hi: 4294967295, lo: 2147483648 }, { hi: 0, lo: 2147483647 }).lo | 0")]
-  [TestCase("sbyte", "ulong", "checked((sbyte)a)", "$ck64u(a, { hi: 0, lo: 0 }, { hi: 0, lo: 127 }).lo | 0")]
-  [TestCase("uint", "ulong", "checked((uint)a)", "$ck64u(a, { hi: 0, lo: 0 }, { hi: 0, lo: 4294967295 }).lo")]
-  [TestCase("byte", "long", "checked((byte)a)", "$ck64s(a, { hi: 0, lo: 0 }, { hi: 0, lo: 255 }).lo")]
-  [TestCase("ulong", "int", "checked((ulong)a)", "$sx64($ck(a, 0, 2147483647))")]
-  [TestCase("long", "ulong", "checked((long)a)", "$ck64u(a, { hi: 0, lo: 0 }, { hi: 2147483647, lo: 4294967295 })")]
-  [TestCase("ulong", "long", "checked((ulong)a)", "$ck64s(a, { hi: 0, lo: 0 }, { hi: 2147483647, lo: 4294967295 })")]
-  [TestCase("long", "int", "checked((long)a)", "$sx64(a)")]
+  [TestCase("int", "long", "checked((int)a)", "CheckRangeSigned64(a, { hi: 4294967295, lo: 2147483648 }, { hi: 0, lo: 2147483647 }).lo | 0")]
+  [TestCase("sbyte", "ulong", "checked((sbyte)a)", "CheckRangeUnsigned64(a, { hi: 0, lo: 0 }, { hi: 0, lo: 127 }).lo << 24 >> 24")]
+  [TestCase("uint", "ulong", "checked((uint)a)", "CheckRangeUnsigned64(a, { hi: 0, lo: 0 }, { hi: 0, lo: 4294967295 }).lo")]
+  [TestCase("byte", "long", "checked((byte)a)", "CheckRangeSigned64(a, { hi: 0, lo: 0 }, { hi: 0, lo: 255 }).lo & 0xFF")]
+  [TestCase("ulong", "int", "checked((ulong)a)", "{ hi: 0, lo: $ck(a, 0, 2147483647) }")]
+  [TestCase("long", "ulong", "checked((long)a)", "CheckRangeUnsigned64(a, { hi: 0, lo: 0 }, { hi: 2147483647, lo: 4294967295 })")]
+  [TestCase("ulong", "long", "checked((ulong)a)", "CheckRangeSigned64(a, { hi: 0, lo: 0 }, { hi: 2147483647, lo: 4294967295 })")]
+  [TestCase("long", "int", "checked((long)a)", "Widen64(a)")]
   [TestCase("long", "bool", "long.MinValue", "{ hi: 2147483648, lo: 0 }")]
   [TestCase("long", "bool", "-1L", "{ hi: 4294967295, lo: 4294967295 }")]
   [TestCase("ulong", "bool", "ulong.MaxValue", "{ hi: 4294967295, lo: 4294967295 }")]
   [TestCase("ulong", "bool", "a ? 1UL : 0x100000000UL", "a ? { hi: 0, lo: 1 } : { hi: 1, lo: 0 }")]
-  [TestCase("double", "long", "a", "$l2d(a)")]
-  [TestCase("double", "ulong", "a", "$ul2d(a)")]
-  [TestCase("float", "long", "a", "$l2f(a)")]
-  [TestCase("float", "ulong", "a", "$ul2f(a)")]
-  [TestCase("long", "double", "(long)a", "$f2l(a, -9223372036854775808, 9223372036854775808)")]
-  [TestCase("ulong", "float", "(ulong)a", "$f2l(a, 0, 18446744073709551616)")]
-  [TestCase("long", "float", "checked((long)a)", "$f2lc(a, -9223372036854775808, 9223372036854775808)")]
-  [TestCase("ulong", "double", "checked((ulong)a)", "$f2lc(a, 0, 18446744073709551616)")]
+  [TestCase("double", "long", "a", "ToDouble64(a)")]
+  [TestCase("double", "ulong", "a", "ToDoubleUnsigned64(a)")]
+  [TestCase("float", "long", "a", "ToSingle64(a)")]
+  [TestCase("float", "ulong", "a", "ToSingleUnsigned64(a)")]
+  [TestCase("long", "double", "(long)a", "FromDouble64(a)")]
+  [TestCase("ulong", "float", "(ulong)a", "FromDoubleUnsigned64(a)")]
+  [TestCase("long", "float", "checked((long)a)", "FromDoubleChecked64(a)")]
+  [TestCase("ulong", "double", "checked((ulong)a)", "FromDoubleCheckedUnsigned64(a)")]
   public void HalvesConversion_IsWritten(string to, string from, string expression, string expected)
     => Assert.That(Body($"public static {to} F({from} a) => {expression};", _es2017), Is.EqualTo(new[] { $"return {expected};" }));
 
@@ -344,28 +344,33 @@ public sealed class JavaScriptProfileEmissionTests {
   [TestCase("int", "ulong", "System.Numerics.BitOperations.LeadingZeroCount(a)", "LeadingZeroCount64(a)")]
   [TestCase("int", "ulong", "System.Numerics.BitOperations.TrailingZeroCount(a)", "TrailingZeroCount64(a)")]
   [TestCase("int", "ulong", "System.Numerics.BitOperations.Log2(a)", "Log2Of64(a)")]
-  [TestCase("ulong", "uint", "System.Math.BigMul(a, a)", "$mul64({ hi: 0, lo: a }, { hi: 0, lo: a })")]
+  [TestCase("ulong", "uint", "System.Math.BigMul(a, a)", "Multiply64({ hi: 0, lo: a }, { hi: 0, lo: a })")]
   [TestCase("long", "double", "System.BitConverter.DoubleToInt64Bits(a)", "$bits64(a)")]
   [TestCase("double", "long", "System.BitConverter.Int64BitsToDouble(a)", "$float64(a)")]
   public void HalvesLibraryOperation_IsWritten(string returns, string type, string expression, string expected)
     => Assert.That(Body($"public static {returns} F({type} a) => {expression};", _es2015), Is.EqualTo(new[] { $"return {expected};" }));
 
-  /// <summary>A step of a pair of halves: by the helper that adds or subtracts, wrapping around or trapping.</summary>
-  [TestCase("long", "++a", "a = $add64(a, { hi: 0, lo: 1 })")]
-  [TestCase("ulong", "--a", "a = $sub64(a, { hi: 0, lo: 1 })")]
-  [TestCase("long", "checked(++a)", "a = $addck64s(a, { hi: 0, lo: 1 })")]
-  [TestCase("long", "checked(--a)", "a = $subck64s(a, { hi: 0, lo: 1 })")]
-  [TestCase("ulong", "checked(++a)", "a = $addck64u(a, { hi: 0, lo: 1 })")]
-  [TestCase("ulong", "checked(--a)", "a = $subck64u(a, { hi: 0, lo: 1 })")]
-  public void HalvesPrefixStep_IsWritten(string type, string expression, string expected)
-    => Assert.That(Body($"public static {type} F({type} a) => {expression};", _es2017), Is.EqualTo(new[] { $"return {expected};" }));
+  /// <summary>
+  /// A step of a pair of halves whose value is used: the call of a function that assigns the variable
+  /// the sum or difference of the library's helper, wrapping around or trapping, and gives the value
+  /// after it (O0075).
+  /// </summary>
+  [TestCase("long", "++a", "Add64")]
+  [TestCase("ulong", "--a", "Subtract64")]
+  [TestCase("long", "checked(++a)", "AddCheckedSigned64")]
+  [TestCase("long", "checked(--a)", "SubtractCheckedSigned64")]
+  [TestCase("ulong", "checked(++a)", "AddCheckedUnsigned64")]
+  [TestCase("ulong", "checked(--a)", "SubtractCheckedUnsigned64")]
+  public void HalvesPrefixStep_IsWritten(string type, string expression, string helper)
+    => Assert.That(Body($"public static {type} F({type} a) => {expression};", _es2017),
+      Is.EqualTo(new[] { "return (() => {", "let $before = a;", $"let $after = {helper}($before, {{ hi: 0, lo: 1 }});", "a = $after;", "return $after;", "})();" }));
 
-  /// <summary>The variable that keeps the old value of a postfix step is declared with the keyword of the level.</summary>
+  /// <summary>A postfix step of a pair of halves gives the value before it; with <c>BigInt</c>s the variable that keeps the old value is declared with the keyword of the level.</summary>
   [Test]
   public void HalvesPostfixStep_IsWritten() {
     const string source = "public static ulong F(ulong a) => a--;";
-    Assert.That(Body(source, _es2017), Is.EqualTo(new[] { "let $p;", "return ($p = a, a = $sub64($p, { hi: 0, lo: 1 }), $p);" }));
-    Assert.That(Body(source, _es5), Is.EqualTo(new[] { "var $p;", "return ($p = a, a = $sub64($p, { hi: 0, lo: 1 }), $p);" }));
+    Assert.That(Body(source, _es2017), Is.EqualTo(new[] { "return (() => {", "let $before = a;", "let $after = Subtract64($before, { hi: 0, lo: 1 });", "a = $after;", "return $before;", "})();" }));
+    Assert.That(Body(source, _es5), Is.EqualTo(new[] { "return (function () {", "var $before = a;", "var $after = Subtract64($before, { hi: 0, lo: 1 });", "a = $after;", "return $before;", "})();" }));
     Assert.That(Body(source, _es2020), Is.EqualTo(new[] { "let $p;", "return ($p = a, a = BigInt.asUintN(64, $p - 1n), $p);" }));
   }
 
@@ -385,10 +390,10 @@ public sealed class JavaScriptProfileEmissionTests {
   [TestCase("float", "x[0]++", "es2015", "$step(x, 0, 1, true)")]
   [TestCase("double", "--x[0]", "es5", "$step(x, 0, -1, false)")]
   [TestCase("sbyte", "checked(++x[0])", "es5", "$stepck(x, 0, 1, false, -128, 127)")]
-  [TestCase("long", "--x[i + 1]", "es2017", "$step64(x, (i + 1) | 0, false, false)")]
-  [TestCase("long", "x[i]++", "es5", "$step64(x, i, true, true)")]
-  [TestCase("long", "checked(++x[0])", "es2015", "$stepck64s(x, 0, true, false)")]
-  [TestCase("ulong", "checked(x[i]--)", "es2017", "$stepck64u(x, i, false, true)")]
+  [TestCase("long", "--x[i + 1]", "es2017", "StepElement64(x, (i + 1) | 0, false, false)")]
+  [TestCase("long", "x[i]++", "es5", "StepElement64(x, i, true, true)")]
+  [TestCase("long", "checked(++x[0])", "es2015", "StepElementChecked64(x, 0, true, false)")]
+  [TestCase("ulong", "checked(x[i]--)", "es2017", "StepElementCheckedUnsigned64(x, i, false, true)")]
   [TestCase("long", "--x[i + 1]", "es2020", "$step(x, (i + 1) | 0, -1n, false)")]
   [TestCase("ulong", "checked(x[i]--)", "es2020", "$stepck(x, i, -1n, true, 0n, 18446744073709551615n)")]
   public void ElementStep_FollowsTheStorageOfTheArray(string type, string expression, string level, string expected)
@@ -399,7 +404,7 @@ public sealed class JavaScriptProfileEmissionTests {
   public void ElementStep_WithTypedArraysAtEcmaScript5_IsThatOfTheTypedArray() {
     Assert.That(Body("public static byte F(byte[] x) => ++x[0];", _es5Typed), Is.EqualTo(new[] { "return $step(x, 0, 1, false);" }));
     Assert.That(Body("public static float F(float[] x) => ++x[0];", _es5Typed), Is.EqualTo(new[] { "return $step(x, 0, 1, false);" }));
-    Assert.That(Body("public static long F(long[] x) => ++x[0];", _es5Typed), Is.EqualTo(new[] { "return $step64(x, 0, true, false);" }));
+    Assert.That(Body("public static long F(long[] x) => ++x[0];", _es5Typed), Is.EqualTo(new[] { "return StepElement64(x, 0, true, false);" }));
   }
 
   /// <summary>A switch over a pair of halves compares the text of the two halves, which a case can compare.</summary>
@@ -426,7 +431,7 @@ public sealed class JavaScriptProfileEmissionTests {
       "b.fill({ hi: 0, lo: 7 });",
       "a.fill(0);",
       "G(b).fill({ hi: 0, lo: 0 });",
-      "let c = [$sx64(n), { hi: 0, lo: 1 }];",
+      "let c = [Widen64(n), { hi: 0, lo: 1 }];",
       "let d = [];",
       "let e = new Float32Array($len(n));",
       "let f = $new($len(2), { hi: 0, lo: 0 });",
@@ -439,7 +444,7 @@ public sealed class JavaScriptProfileEmissionTests {
       "$fill(b, { hi: 0, lo: 7 });",
       "$fill(a, 0);",
       "$fill(G(b), { hi: 0, lo: 0 });",
-      "var c = [$sx64(n), { hi: 0, lo: 1 }];",
+      "var c = [Widen64(n), { hi: 0, lo: 1 }];",
       "var d = [];",
       "var e = $new($len(n), 0);",
       "var f = $new($len(2), { hi: 0, lo: 0 });",
@@ -507,7 +512,7 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(Emit(source, _es5Typed), Does.Contain("\n// F(a: { hi, lo }, b: boolean, c: number, d: Int16Array, e: Array<{ hi, lo }>): { hi, lo }\n"));
 
     Assert.That(Emit(source, _es2020), Does.Not.Contain(note).And.Contain("// F(a: bigint, b: boolean, c: number, d: Int16Array, e: BigUint64Array): bigint"));
-    Assert.That(Emit("public static int F(int a) { long b = a; return (int)(b + b); }", _es2017), Does.Not.Contain(note), "no pair crosses the boundary");
+    Assert.That(Emit("public static int F(uint a) { ulong b = a; return (int)b; }", _es2017), Does.Not.Contain(note), "no pair crosses the boundary");
   }
 
   /// <summary>What ECMAScript 2015 added to Math, and what stands in for it at ECMAScript 5.</summary>
@@ -537,8 +542,8 @@ public sealed class JavaScriptProfileEmissionTests {
     const string source = "public static int F(uint a, ulong b, float f) => System.Numerics.BitOperations.PopCount(a) + System.Numerics.BitOperations.TrailingZeroCount(b) + (int)f + (int)(f * f);";
     var old = Emit(source, _es5);
     // The counts are helpers of the library, written at the level as every function is; the writer's own helpers are what the level lacks.
-    Assert.That(Helpers(old), Is.EqualTo(new[] { "imul", "fround", "trunc", "shr64", "f2i" }));
-    Assert.That(old, Does.Contain("function PopCount32(value) {").And.Contain("function TrailingZeroCount64(value) {").And.Contain("$imul(")
+    Assert.That(Helpers(old), Is.EqualTo(new[] { "imul", "fround", "trunc", "f2i" }));
+    Assert.That(old, Does.Contain("function PopCount32(value) {").And.Contain("function TrailingZeroCount64(value) {").And.Contain("function ShiftRightLogical64(value, count) {").And.Contain("$imul(")
       .And.Contain("return value <= low ? low : value >= high ? high : $trunc(value) + 0;")
       .And.Contain("  var whole = Math.floor(rest);\n"));
 
@@ -547,15 +552,19 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(typed, Does.Contain("var $f32a = new Float32Array(1);\n\nfunction $fround(value) {\n  $f32a[0] = value;\n  return $f32a[0];\n}\n"));
 
     var modern = Emit(source, _es2017);
-    Assert.That(Helpers(modern), Is.EqualTo(new[] { "shr64", "f2i" }));
+    Assert.That(Helpers(modern), Is.EqualTo(new[] { "f2i" }));
     Assert.That(modern, Does.Contain("function PopCount32(value) {").And.Contain("Math.imul(").And.Not.Contain("$imul("));
 
-    Assert.That(Emit(source, _es2020), Does.Contain("function TrailingZeroCount64(value) {").And.Not.Contain("$shr64"));
+    Assert.That(Emit(source, _es2020), Does.Contain("function TrailingZeroCount64(value) {").And.Not.Contain("ShiftRightLogical64"));
   }
 
-  /// <summary>The helpers of the arithmetic on pairs of halves, in their order, each with what it calls.</summary>
+  /// <summary>
+  /// The arithmetic on pairs of halves is the library's (O0075): every operation the helpers of the
+  /// writer once computed is a function of the module, and of the writer's own only those that are
+  /// the representation stay - the bits of a floating-point number through a <c>DataView</c>.
+  /// </summary>
   [Test]
-  public void HalvesHelpers_AreListedOnceWithWhatTheyNeed() {
+  public void HalvesArithmetic_IsTheLibrarys() {
     var text = Emit(
       "public static long F(long a, ulong u, int n, double d, float f, long[] x, ulong[] y) => checked(a / a % a + (long)(u / u % u) * a - (a << n)) + (a >> n) + (long)(u >> n) + (~a & a | a ^ a) "
       + "+ (a == a ? 1 : 0) + (u < u ? 1 : 0) + (a < a ? 1 : 0) + System.Math.Abs(a) + System.Math.Min(a, a) + System.Math.Max(a, a) + (long)System.Math.Min(u, u) + (long)System.Math.Max(u, u) "
@@ -564,17 +573,20 @@ public sealed class JavaScriptProfileEmissionTests {
       + "+ (long)d + checked((long)d) + (long)(float)a + (long)(float)u + (long)(double)a + (long)(double)u + checked((int)a) + (long)checked(u + u) + (long)checked(u - u) + (long)checked(u * u) + (long)checked((uint)u) "
       + "+ x[0]++ + checked(x[0]--) + (long)checked(++y[0]) + (-a) + n;",
       _es2017);
-    Assert.That(Helpers(text), Is.EqualTo(new[] {
-      "add64", "sub64", "neg64", "not64", "and64", "or64", "xor64", "shl64", "shr64", "sar64", "eq64", "ucmp64", "scmp64", "mulw", "mag64", "udm64",
-      "div64", "rem64", "udiv64", "urem64", "addck64s", "addck64u", "subck64s", "subck64u", "mulck64s", "mulck64u", "ck64s", "ck64u", "sx64", "ul2d", "l2d", "d2l",
-      "f2l", "f2lc", "ul2f", "l2f", "bits64", "float64", "step64", "stepck64s", "stepck64u"
-    }));
+    Assert.That(Helpers(text).Where(name => name.Contains("64", StringComparison.Ordinal)), Is.EqualTo(new[] { "bits64", "float64" }));
+    foreach (var helper in new[] {
+      "Add64", "Subtract64", "Negate64", "Not64", "And64", "Or64", "Xor64", "ShiftLeft64", "ShiftRightLogical64", "ShiftRightArithmetic64", "Equal64",
+      "CompareSigned64", "CompareUnsigned64", "Multiply64", "DivideSigned64", "RemainderSigned64", "DivideUnsigned64", "RemainderUnsigned64",
+      "AddCheckedSigned64", "AddCheckedUnsigned64", "SubtractCheckedUnsigned64", "MultiplyCheckedUnsigned64", "CheckRangeSigned64", "CheckRangeUnsigned64",
+      "Widen64", "ToDouble64", "ToDoubleUnsigned64", "ToSingle64", "ToSingleUnsigned64", "FromDouble64", "FromDoubleChecked64", "StepElement64", "StepElementChecked64", "StepElementCheckedUnsigned64"
+    })
+      Assert.That(text, Does.Contain($"function {helper}("), helper);
+
     Assert.That(text, Does.Contain("const $view = new DataView(new ArrayBuffer(8));")
       .And.Contain("  return { hi: $view.getUint32(0), lo: $view.getUint32(4) };")
       .And.Contain("  $view.setUint32(0, value.hi);\n  $view.setUint32(4, value.lo);\n  return $view.getFloat64(0);")
-      .And.Contain("  if (n === 0) throw new DivideByZeroError(\"divide by zero\");")
-      .And.Contain("  if (a.hi === 2147483648 && a.lo === 0 && b.hi === 4294967295 && b.lo === 4294967295) throw new OverflowError(\"integer overflow\");")
-      .And.Contain("  return Math.fround((value.hi >>> 11) * 4294967296 + lo) * 2048;")
+      .And.Contain("throw new DivideByZeroError(\"divide by zero\");")
+      .And.Contain("throw new OverflowError(\"integer overflow\");")
       .And.Not.Contain("BigInt").And.Not.Contain("var "));
     Assert.That(text.Split('\n').Count(line => line.StartsWith("function $", StringComparison.Ordinal)), Is.EqualTo(Helpers(text).Distinct().Count()));
   }
@@ -666,9 +678,9 @@ public sealed class JavaScriptProfileEmissionTests {
       ["super"] = ("public class B { public virtual int M() => 1; } public sealed class K : B { public override int M() => base.M() + 1; } public static int F() => new K().M();",
         "super.M()", "B.prototype.M.call(this)"),
       ["shorthand property"] = ("public struct V { public double X; public V(double x) { X = x; } } public static V F(double X) => new V(X);", "return { X };", "return { X: X };"),
-      ["BigInt"] = ("public static long F(int a) => a;", "BigInt(a)", "$sx64(a)"),
-      ["BigInt.asIntN"] = ("public static long F(long a) => a + a;", "BigInt.asIntN(64, a + a)", "$add64(a, a)"),
-      ["BigInt.asUintN"] = ("public static ulong F(ulong a) => a + a;", "BigInt.asUintN(64, a + a)", "$add64(a, a)"),
+      ["BigInt"] = ("public static long F(int a) => a;", "BigInt(a)", "Widen64(a)"),
+      ["BigInt.asIntN"] = ("public static long F(long a) => a + a;", "BigInt.asIntN(64, a + a)", "Add64(a, a)"),
+      ["BigInt.asUintN"] = ("public static ulong F(ulong a) => a + a;", "BigInt.asUintN(64, a + a)", "Add64(a, a)"),
       ["BigInt64Array"] = (Array("long"), "new BigInt64Array($len(n))", "$new($len(n), { hi: 0, lo: 0 })"),
       ["BigUint64Array"] = (Array("ulong"), "new BigUint64Array($len(n))", "$new($len(n), { hi: 0, lo: 0 })"),
       [".getBigInt64"] = (bits, "return $view.getBigInt64(0);", "hi: $view.getUint32(0)"),

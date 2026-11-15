@@ -342,10 +342,9 @@ public static partial class JavaScriptEmitter {
       if (field.Type.IsFloat)
         return Parenthesized(Infix(Infix(a, "===", b), "||", Parenthesized(Infix(Infix(a, "!==", a), "&&", Infix(b, "!==", b)))));
 
-      if (field.Type.IsLong && this.Halves) {
-        this._used.Add("$eq64");
-        return Invoke("$eq64", a, b);
-      }
+      // A pair of halves is equal by both of them.
+      if (field.Type.IsLong && this.Halves)
+        return Parenthesized(Infix(Infix(new JsMember(a, "hi"), "===", new JsMember(b, "hi")), "&&", Infix(new JsMember(a, "lo"), "===", new JsMember(b, "lo"))));
 
       return Infix(a, "===", b);
     }

@@ -20,7 +20,7 @@ public static partial class JavaScriptEmitter {
     /// <c>Math.min</c>, the arithmetic of <c>BigInt</c> - it is written as it is.
     /// </summary>
     private static readonly Dictionary<IrIntrinsicOp, Func<Writer, IrIntrinsic, (JsExpression Node, bool Atomic)>> _integerForms = Register(
-      CountForms, WideMultiplyForms, BoundForms, CarryForms);
+      CountForms, WideMultiplyForms, BoundForms, CarryForms, LimbForms);
 
     private static Dictionary<IrIntrinsicOp, Func<Writer, IrIntrinsic, (JsExpression Node, bool Atomic)>> Register(
       params IEnumerable<(IrIntrinsicOp Op, Func<Writer, IrIntrinsic, (JsExpression Node, bool Atomic)> Form)>[] families)

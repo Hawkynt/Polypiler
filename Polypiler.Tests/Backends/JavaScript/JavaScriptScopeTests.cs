@@ -43,11 +43,12 @@ public sealed class JavaScriptScopeTests {
     return text;
   }
 
-  /// <summary>The body of <c>F</c>, one line per statement without indentation.</summary>
+  /// <summary>The body of <c>F</c>, one line per statement without indentation: up to the brace that closes it, as far in as the function.</summary>
   private static string[] Body(string text) {
     var lines = text.Split('\n');
     var start = Array.FindIndex(lines, line => line.Contains("function F("));
-    return lines.Skip(start + 1).TakeWhile(line => line.TrimEnd() != "}").Select(line => line.Trim()).ToArray();
+    var end = lines[start][..(lines[start].Length - lines[start].TrimStart().Length)] + "}";
+    return lines.Skip(start + 1).TakeWhile(line => line.TrimEnd() != end).Select(line => line.Trim()).ToArray();
   }
 
   /// <summary>The names a file declares with <c>let</c> or <c>var</c>, in their order.</summary>

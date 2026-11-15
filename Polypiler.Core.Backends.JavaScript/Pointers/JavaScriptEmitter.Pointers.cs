@@ -246,7 +246,13 @@ public static partial class JavaScriptEmitter {
           var size = arguments[0].Type.Element!.Size;
           // The bytes between two pointers of one region are a multiple of the size: the division is exact.
           JsExpression count = size == 1 ? bytes : Infix(Infix(bytes, "/", Count(size)), "|", Count(0));
-          return this.Halves ? (this.Helper("$sx64", [count]), true) : (Invoke("BigInt", count), true);
+          if (!this.Halves)
+            return (Invoke("BigInt", count), true);
+
+          // The pair of halves of the count, its sign extended: the count is kept in the variable a postfix step keeps its old value in.
+          this._previous = true;
+          return (Parenthesized(new JsSequence([new JsAssignment(Id(Previous), "=", count),
+            Halves(Infix(Parenthesized(Infix(Id(Previous), ">>", Number("31"))), ">>>", Number("0")), Infix(Id(Previous), ">>>", Number("0")))])), true);
         default:
           var symbol = intrinsic.Op switch {
             IrIntrinsicOp.PointerLess => "<",

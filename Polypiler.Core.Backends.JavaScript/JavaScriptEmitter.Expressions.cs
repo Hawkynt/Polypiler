@@ -57,7 +57,7 @@ public static partial class JavaScriptEmitter {
           var operands = binary.Left.Type;
           return operands.IsFloat ? this.BinaryFloat(binary)
             : !operands.IsLong ? this.Binary(binary)
-            : this.Halves ? this.BinaryHalves(binary)
+            : this.Halves ? this.Unlegalized(binary.Op.ToString())
             : this.Binary64(binary);
         case IrConvert conversion:
           return this.Convert(conversion);
@@ -211,16 +211,13 @@ public static partial class JavaScriptEmitter {
     /// </summary>
     private (JsExpression Node, bool Atomic) Step(IrStep step) {
       var type = step.Type;
-      var halves = type.IsLong && this.Halves;
+      if (type.IsLong && this.Halves)
+        return this.Unlegalized("a step");
+
       var post = Flag(step.Postfix);
       if (step.Target is IrArrayLoad element) {
         var (array, index) = this.Place(element);
         var arguments = new List<JsExpression> { array, index };
-        if (halves) {
-          arguments.AddRange([Flag(step.Increment), post]);
-          return (this.Helper(!step.Trap ? "$step64" : type.IsSigned ? "$stepck64s" : "$stepck64u", arguments), true);
-        }
-
         arguments.AddRange([type.IsLong ? new JsBigInt(step.Increment ? 1 : -1) : Number(step.Increment ? "1" : "-1"), post]);
         if (step.Trap) {
           arguments.Add(this.Literal(type, IrOperators.Minimum(type)));
@@ -242,8 +239,7 @@ public static partial class JavaScriptEmitter {
       var current = step.Postfix ? Previous : name;
       JsExpression One() => type.IsLong ? new JsBigInt(1) : Number("1");
       JsExpression Moved() => Infix(Dotted(current), step.Increment ? "+" : "-", One());
-      var stepped = halves ? this.Helper(HalvesStep(step), [Dotted(current), One64])
-        : step.Trap ? this.Check(type, Moved()).Node
+      var stepped = step.Trap ? this.Check(type, Moved()).Node
         : type == IrType.F64 ? Moved()
         : type == IrType.F32 ? this.Fround(Moved())
         : type.IsWideInteger ? Wrap(type, Moved()).Node
@@ -253,12 +249,6 @@ public static partial class JavaScriptEmitter {
 
       this._previous = true;
       return (Parenthesized(new JsSequence([new JsAssignment(Id(Previous), "=", Dotted(name)), new JsAssignment(Dotted(name), "=", stepped), Id(Previous)])), true);
-    }
-
-    /// <summary>The helper that adds one to a pair of halves or subtracts it, wrapping around or trapping.</summary>
-    private static string HalvesStep(IrStep step) {
-      var operation = step.Increment ? "$add" : "$sub";
-      return !step.Trap ? operation + "64" : operation + (step.Type.IsSigned ? "ck64s" : "ck64u");
     }
 
     /// <summary>A number cut to an integer type of up to 32 bits; the operand is written as an operand already.</summary>
@@ -291,11 +281,7 @@ public static partial class JavaScriptEmitter {
     private (JsExpression Node, bool Atomic) Unary(IrUnary unary) {
       var type = unary.Type;
       if (type.IsLong && this.Halves)
-        return (unary.Op switch {
-          IrUnaryOp.Negate => this.Helper("$neg64", unary.Operand),
-          IrUnaryOp.NegateChecked => this.Helper("$subck64s", [Zero64, this.Text(unary.Operand)]),
-          _ => this.Helper("$not64", unary.Operand)
-        }, true);
+        return this.Unlegalized(unary.Op.ToString());
 
       var operand = this.Operand(unary.Operand);
       switch (unary.Op) {
@@ -395,38 +381,17 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>
-    /// An operator on 64-bit integers that are pairs of halves: a call of the helper that computes it.
-    /// An order is the sign of the helper that compares two pairs, as signed or as unsigned numbers;
-    /// the count of a shift is a number, which the helper masks to 6 bits as C# masks it.
+    /// An operation on a 64-bit integer below ECMAScript 2020, where it is a pair of halves: it reaches
+    /// the writer only where the module was not legalized, as legalization makes it the call of its
+    /// helper on the two limbs (O0075).
     /// </summary>
-    private (JsExpression Node, bool Atomic) BinaryHalves(IrBinary binary) {
-      var signed = binary.Left.Type.Integral == IrType.I64;
-      var suffix = signed ? "s" : "u";
-      switch (binary.Op) {
-        case IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical:
-          var shift = binary.Op == IrBinaryOp.ShiftLeft ? "$shl64" : binary.Op == IrBinaryOp.ShiftRight && signed ? "$sar64" : "$shr64";
-          var count = binary.Right is IrConst constant ? Number((constant.Value & 63).ToString(CultureInfo.InvariantCulture)) : this.Text(binary.Right);
-          return (this.Helper(shift, [this.Text(binary.Left), count]), true);
-        case IrBinaryOp.NotEqual:
-          return (new JsUnary("!", this.Helper("$eq64", binary.Left, binary.Right)), false);
-        case IrBinaryOp.Less or IrBinaryOp.LessOrEqual or IrBinaryOp.Greater or IrBinaryOp.GreaterOrEqual:
-          return (Infix(this.Helper(signed ? "$scmp64" : "$ucmp64", binary.Left, binary.Right), Sign(binary.Op), Number("0")), false);
-      }
+    private (JsExpression Node, bool Atomic) Unlegalized(string operation) {
+      // Without the pairs of halves as a replacement the level has no 64-bit integer, which the check of BigInt reported.
+      if (this._capabilities["BigInt"].Replacement is not null && this._refused.Add("64-bit " + operation))
+        this._problems.Add(InexpressibleDescriptor.At(
+          $"'{operation}' of a 64-bit integer needs its helper of the library in JavaScript profile '{this._profile.LevelName}'; the module was not legalized"));
 
-      return (this.Helper(binary.Op switch {
-        IrBinaryOp.Add => "$add64",
-        IrBinaryOp.Subtract => "$sub64",
-        IrBinaryOp.Multiply => "$mul64",
-        IrBinaryOp.Divide => signed ? "$div64" : "$udiv64",
-        IrBinaryOp.Remainder => signed ? "$rem64" : "$urem64",
-        IrBinaryOp.AddChecked => "$addck64" + suffix,
-        IrBinaryOp.SubtractChecked => "$subck64" + suffix,
-        IrBinaryOp.MultiplyChecked => "$mulck64" + suffix,
-        IrBinaryOp.And => "$and64",
-        IrBinaryOp.Or => "$or64",
-        IrBinaryOp.Xor => "$xor64",
-        _ => "$eq64"
-      }, binary.Left, binary.Right), true);
+      return (new JsNumber(double.NaN), true);
     }
 
     /// <summary>
@@ -476,7 +441,7 @@ public static partial class JavaScriptEmitter {
         return this.ToFloat(conversion);
 
       if (from.IsFloat)
-        return (this.FromFloat(conversion), true);
+        return this.FromFloat(conversion);
 
       if ((from.IsLong || to.IsLong) && this.Halves)
         return this.ConvertHalves(conversion);
@@ -510,33 +475,22 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>
-    /// A conversion between integers of which one at least is a pair of halves. The two 64-bit types
-    /// share their bits, so one becomes the other as it stands; a narrower type is the lower half cut
-    /// to size, and becomes a pair by sign extension or with an upper half of zero.
+    /// A conversion between integers of which one at least is a pair of halves: the two 64-bit types
+    /// share their bits, so one becomes the other as it stands, and a narrower type is the lower half
+    /// cut to size. A conversion that checks, and one to a pair from a narrower type, legalization
+    /// makes the calls of helpers on the limbs.
     /// </summary>
     private (JsExpression Node, bool Atomic) ConvertHalves(IrConvert conversion) {
-      var from = conversion.Operand.Type;
       var to = conversion.Type;
-      if (conversion.Contract == IrConversion.Trap) {
-        var (low, high) = Bounds(conversion);
-        JsExpression[] bounds = [this.Text(conversion.Operand), this.Literal(from, low), this.Literal(from, high)];
-        if (!from.IsLong)
-          return this.Widen(from, this.Helper("$ck", bounds));
-
-        var inRange = this.Helper(from.IsSigned ? "$ck64s" : "$ck64u", bounds);
-        return to.IsLong ? (inRange, true) : to.IsSigned ? (Infix(new JsMember(inRange, "lo"), "|", Number("0")), false) : (new JsMember(inRange, "lo"), true);
-      }
+      if (conversion.Contract == IrConversion.Trap || !conversion.Operand.Type.IsLong)
+        return this.Unlegalized("conversion");
 
       if (to.IsLong)
-        return from.IsLong ? this.Expression(conversion.Operand) : this.Widen(from, this.Text(conversion.Operand));
+        return this.Expression(conversion.Operand);
 
       var half = new JsMember(this.Operand(conversion.Operand), "lo");
       return to == IrType.U32 ? (half, true) : (Narrow(to, half), false);
     }
-
-    /// <summary>A number of up to 32 bits as a pair of halves.</summary>
-    private (JsExpression Node, bool Atomic) Widen(IrType from, JsExpression value)
-      => (from.IsSigned ? this.Helper("$sx64", [value]) : Halves(Number("0"), value), true);
 
     /// <summary>
     /// A number converted to floating point. An integer of up to 32 bits is already a double with its
@@ -547,7 +501,7 @@ public static partial class JavaScriptEmitter {
       var from = conversion.Operand.Type;
       var single = conversion.Type == IrType.F32;
       if (from.IsLong && this.Halves)
-        return (this.Helper((from.IsSigned ? "$l2" : "$ul2") + (single ? "f" : "d"), conversion.Operand), true);
+        return this.Unlegalized("conversion");
 
       if (from.IsLong)
         return (single ? this.Helper("$f32", conversion.Operand) : Invoke("Number", this.Text(conversion.Operand)), true);
@@ -559,13 +513,16 @@ public static partial class JavaScriptEmitter {
     /// A floating-point number converted to an integer by a helper that saturates or traps. The bounds
     /// of a 64-bit target are numbers: its smallest value and the power of two just above its largest.
     /// </summary>
-    private JsCall FromFloat(IrConvert conversion) {
+    private (JsExpression Node, bool Atomic) FromFloat(IrConvert conversion) {
       var to = conversion.Type;
+      if (to.IsLong && this.Halves)
+        return this.Unlegalized("conversion");
+
       var trap = conversion.Contract == IrConversion.Trap;
       var low = Number(IrOperators.Minimum(to));
-      return to.IsLong
+      return (to.IsLong
         ? this.Helper(trap ? "$f2lc" : "$f2l", [this.Text(conversion.Operand), low, Number(IrOperators.Maximum(to) + 1)])
-        : this.Helper(trap ? "$f2ic" : "$f2i", [this.Text(conversion.Operand), low, Number(IrOperators.Maximum(to))]);
+        : this.Helper(trap ? "$f2ic" : "$f2i", [this.Text(conversion.Operand), low, Number(IrOperators.Maximum(to))]), true);
     }
 
   }
