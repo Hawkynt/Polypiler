@@ -27,6 +27,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Optional values](reference/optional-values.md) — `T?`, `null` and `undefined`: the optional type of the IR, C#'s lifted operators and JavaScript's coercion written out, and how each profile writes `??`, `?.` and `??=`.
 - [Collections](reference/collections.md) — lists, maps and sets: the two orders of enumeration, the equality of keys and the key kept, what a change does to a loop, and how each profile writes them.
 - [Sequences](reference/sequences.md) — C# iterators and JavaScript generators: laziness, restartable and single-pass sequences, closing on early exit, and the state machine below ECMAScript 2015.
+- [Sequence operations](reference/sequence-operations.md) — LINQ to Objects and JavaScript's array callbacks: deferred against eager, the order of the lambda calls, one loop per chain, the stable sort.
 - [Exceptions](reference/exceptions.md) — the exception classes of the IR, the class every trap throws in C# and JavaScript, and the generated error classes of each profile.
 - [Generics](reference/generics.md) — generic methods and classes monomorphized in the IR: the instantiations, their equality and order, the JavaScript copies, and how each profile writes them back.
 - [Functions and closures](reference/functions-and-closures.md) — delegates, lambdas, local functions and nested functions as function values of the IR: closures over shared variables, the variables of every pass of a loop, and how each profile writes them.
