@@ -1,0 +1,164 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/balloon.js",
+ "algorithms": [
+  {
+   "name": "Balloon Hashing",
+   "vectors": [
+    {
+     "text": "GNU Nettle Test Vector 1: SHA-256, hunter42/examplesalt, s_cost=1024, t_cost=3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"6578616d706c6573616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"sCost","value":{"t":"number","v":1024}},
+      {"set":"tCost","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"68756e7465723432"},
+     "expected": {"t":"bytes","v":"716043dff777b44aa7b88dcbab12c078abecfac9d289c5b5195967aa63440dfb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GNU Nettle Test Vector 2: SHA-256, empty password/salt, s_cost=3, t_cost=3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"sCost","value":{"t":"number","v":3}},
+      {"set":"tCost","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"5f02f8206f9cd212485c6bdf85527b698956701ad0852106f94b94ee94577378"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GNU Nettle Test Vector 3: SHA-256, password/empty salt, s_cost=3, t_cost=3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"sCost","value":{"t":"number","v":3}},
+      {"set":"tCost","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"20aa99d7fe3f4df4bd98c655c5480ec98b143107a331fd491deda885c4d6a6cc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GNU Nettle Test Vector 4: SHA-256, single char password/salt, s_cost=3, t_cost=3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"sCost","value":{"t":"number","v":3}},
+      {"set":"tCost","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"4fc7e302ffa29ae0eac31166cee7a552d1d71135f4e0da66486fb68a749b73a4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GNU Nettle Test Vector 5: SHA-256, password/salt, s_cost=1, t_cost=1 (minimal)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"sCost","value":{"t":"number","v":1}},
+      {"set":"tCost","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"eefda4a8a75b461fa389c1dcfaf3e9dfacbc26f81f22e6f280d15cc18c417545"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GNU Nettle Test Vector 6: SHA-1, password/salt, s_cost=3, t_cost=3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}},
+      {"set":"sCost","value":{"t":"number","v":3}},
+      {"set":"tCost","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"99393c091fdd3136f85864099ec49a439dcacc21"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GNU Nettle Test Vector 7: SHA-256, password/salt, s_cost=3, t_cost=3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"sCost","value":{"t":"number","v":3}},
+      {"set":"tCost","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"a4df347f5a312e8b2b14c32164f61a81758c807f1bdcda44f4930e2b80ab2154"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GNU Nettle Test Vector 8: SHA-384, password/salt, s_cost=3, t_cost=3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":48}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-384"}},
+      {"set":"sCost","value":{"t":"number","v":3}},
+      {"set":"tCost","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"78da235f7d0f84aba98b50a432fa6c8f7f3ecb7ea0858cfb316c7e5356aae6c8d7e7b3924c54c4ed71a3d0d68cb0ad68"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GNU Nettle Test Vector 9: SHA-512, password/salt, s_cost=3, t_cost=3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-512"}},
+      {"set":"sCost","value":{"t":"number","v":3}},
+      {"set":"tCost","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"9baf289dfa42990f4b189d96d4ede0f2610ba71fb644169427829d696f6866d87af41eb68f9e14fd4b1f1a7ce4832f1ed6117c16e8eae753f9e1d054a7c0a7eb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

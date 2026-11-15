@@ -1,0 +1,101 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/lagged-fibonacci.js",
+ "algorithms": [
+  {
+   "name": "Lagged Fibonacci Generator",
+   "vectors": [
+    {
+     "text": "Additive LFG(56,0,31) with seed 0: First 8 outputs (64 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"operationMode","value":{"t":"string","v":"additive"}},
+      {"set":"stateSize","value":{"t":"number","v":56}},
+      {"set":"shortLag","value":{"t":"number","v":0}},
+      {"set":"longLag","value":{"t":"number","v":31}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"6e2b270f55bbd9cbbe8f229a0ff0fd698a430423d94979b1d766fcbc25827cfa50bfb1219b6256e68cdbb5a71ade3d8bef555e79ac7f597d883deadf8941fd1b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Additive LFG(56,0,31) with seed 1: First 5 outputs (40 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"operationMode","value":{"t":"string","v":"additive"}},
+      {"set":"stateSize","value":{"t":"number","v":56}},
+      {"set":"shortLag","value":{"t":"number","v":0}},
+      {"set":"longLag","value":{"t":"number","v":31}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"2b440a8129b79edde2179fe86c5ab5afe080f26c03d0eb10a10aa381f5b9f82d936be653bd04cd1a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Subtractive LFG(56,0,31) with seed 42: First 5 outputs (40 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"operationMode","value":{"t":"string","v":"subtractive"}},
+      {"set":"stateSize","value":{"t":"number","v":56}},
+      {"set":"shortLag","value":{"t":"number","v":0}},
+      {"set":"longLag","value":{"t":"number","v":31}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"5d1e3eb40aaea7ba3e7e3396389d12f73ef9fe630d996aadedfb62f25c34a10a5532868cab023e14"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "XOR LFG(56,0,31) with seed 1234567: First 5 outputs (40 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"operationMode","value":{"t":"string","v":"xor"}},
+      {"set":"stateSize","value":{"t":"number","v":56}},
+      {"set":"shortLag","value":{"t":"number","v":0}},
+      {"set":"longLag","value":{"t":"number","v":31}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000012d687"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"66f0d01c5164976d5268a9a206681b448116e1454f567576e04c5db1b8743592400afd37d1cc0a8d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Multiplicative LFG(56,0,31) with seed 42: First 5 outputs (40 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"operationMode","value":{"t":"string","v":"multiplicative"}},
+      {"set":"stateSize","value":{"t":"number","v":56}},
+      {"set":"shortLag","value":{"t":"number","v":0}},
+      {"set":"longLag","value":{"t":"number","v":31}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"49a85f3e89dad777781c458423f1463425eeb35e0f4788d66d99b848395acfab801d649c534714ac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

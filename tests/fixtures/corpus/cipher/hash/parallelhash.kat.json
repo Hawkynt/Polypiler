@@ -1,0 +1,138 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/parallelhash.js",
+ "algorithms": [
+  {
+   "name": "ParallelHash128",
+   "vectors": [
+    {
+     "text": "ParallelHash128: Sample #1 (B=8, S='', 32 bytes) - NIST",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"blockSize","value":{"t":"number","v":8}},
+      {"set":"customization","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060710111213141516172021222324252627"},
+     "expected": {"t":"bytes","v":"ba8dc1d1d979331d3f813603c67f72609ab5e44b94a0b8f9af46514454a2b4f5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ParallelHash128: Sample #2 (B=8, S='Parallel Data', 32 bytes) - NIST",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"blockSize","value":{"t":"number","v":8}},
+      {"set":"customization","value":{"t":"bytes","v":"506172616c6c656c2044617461"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060710111213141516172021222324252627"},
+     "expected": {"t":"bytes","v":"fc484dcb3f84dceedc353438151bee58157d6efed0445a81f165e495795b7206"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ParallelHash128: Sample #3 (B=12, S='Parallel Data', 32 bytes) - NIST",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"blockSize","value":{"t":"number","v":12}},
+      {"set":"customization","value":{"t":"bytes","v":"506172616c6c656c2044617461"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b101112131415161718191a1b202122232425262728292a2b303132333435363738393a3b404142434445464748494a4b505152535455565758595a5b"},
+     "expected": {"t":"bytes","v":"f7fd5312896c6685c828af7e2adb97e393e7f8d54e3c2ea4b95e5aca3796e8fc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ParallelHash128: XOF mode (B=12, S='Parallel Data', 32 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"blockSize","value":{"t":"number","v":12}},
+      {"set":"customization","value":{"t":"bytes","v":"506172616c6c656c2044617461"}},
+      {"set":"xofMode","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b101112131415161718191a1b202122232425262728292a2b303132333435363738393a3b404142434445464748494a4b505152535455565758595a5b"},
+     "expected": {"t":"bytes","v":"0127ad9772ab904691987fcc4a24888f341fa0db2145e872d4efd255376602f0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "ParallelHash256",
+   "vectors": [
+    {
+     "text": "ParallelHash256: Sample #1 (B=8, S='', 64 bytes) - NIST",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"blockSize","value":{"t":"number","v":8}},
+      {"set":"customization","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060710111213141516172021222324252627"},
+     "expected": {"t":"bytes","v":"bc1ef124da34495e948ead207dd9842235da432d2bbc54b4c110e64c451105531b7f2a3e0ce055c02805e7c2de1fb746af97a1dd01f43b824e31b87612410429"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ParallelHash256: Sample #2 (B=8, S='Parallel Data', 64 bytes) - NIST",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"blockSize","value":{"t":"number","v":8}},
+      {"set":"customization","value":{"t":"bytes","v":"506172616c6c656c2044617461"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060710111213141516172021222324252627"},
+     "expected": {"t":"bytes","v":"cdf15289b54f6212b4bc270528b49526006dd9b54e2b6add1ef6900dda3963bb33a72491f236969ca8afaea29c682d47a393c065b38e29fae651a2091c833110"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ParallelHash256: Sample #3 (B=12, S='Parallel Data', 64 bytes) - NIST",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"blockSize","value":{"t":"number","v":12}},
+      {"set":"customization","value":{"t":"bytes","v":"506172616c6c656c2044617461"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b101112131415161718191a1b202122232425262728292a2b303132333435363738393a3b404142434445464748494a4b505152535455565758595a5b"},
+     "expected": {"t":"bytes","v":"69d0fcb764ea055dd09334bc6021cb7e4b61348dff375da262671cdec3effa8d1b4568a6cce16b1cad946ddde27f6ce2b8dee4cd1b24851ebf00eb90d43813e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ParallelHash256: XOF mode (B=12, S='Parallel Data', 64 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"blockSize","value":{"t":"number","v":12}},
+      {"set":"customization","value":{"t":"bytes","v":"506172616c6c656c2044617461"}},
+      {"set":"xofMode","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b101112131415161718191a1b202122232425262728292a2b303132333435363738393a3b404142434445464748494a4b505152535455565758595a5b"},
+     "expected": {"t":"bytes","v":"6b3e790b330c889a204c2fbc728d809f19367328d852f4002dc829f73afd6bcefb7fe5b607b13a801c0be5c1170bdb794e339458fdb0e62a6af3d42558970249"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

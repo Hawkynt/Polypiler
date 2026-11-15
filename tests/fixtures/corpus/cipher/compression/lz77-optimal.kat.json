@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lz77-optimal.js",
+ "algorithms": [
+  {
+   "name": "LZ77-Optimal",
+   "vectors": [
+    {
+     "text": "Empty input - zero-byte output",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte - one literal token",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"0041"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample repeated 4x - literals then a long back-reference",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"00740068006500200071007500690063006b002000620072006f0077006e00200066006f00780020006a0075006d007000730020006f0076006500720020011f000400006c0061007a007900200064006f0067002e00200074012d008600"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetitive run - 256 identical bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"0061010100ff00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating two-byte pattern - ABABABABABAB",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414241424142414241424142"},
+     "expected": {"t":"bytes","v":"004100420102000a00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pseudo-random binary sample with one repeated run",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"9e1fd24b6a0cf7832155be083dc471aa9e1fd24b6a0cf7831162ef904d7c38a1"},
+     "expected": {"t":"bytes","v":"009e001f00d2004b006a000c00f700830021005500be0008003d00c4007100aa01100008000011006200ef0090004d007c003800a1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "English text with short interior repeats",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4f7074696d616c2070617273696e67206d696e696d697365732074686520746f74616c20746f6b656e20636f73742c206e6f7420746865206c6f63616c206d61746368206c656e6774682e"},
+     "expected": {"t":"bytes","v":"004f007000740069006d0061006c002000700061007200730069006e00670020006d0069006e0069006d0069007300650073002000740068006500200074006f00740061006c0106000300006b0065006e00200063006f00730074002c0020006e006f0074011a000500006c006f0063011a000300006d00610074006300680020006c0065006e006700740068002e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

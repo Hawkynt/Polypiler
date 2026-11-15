@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/magma.js",
+ "algorithms": [
+  {
+   "name": "Magma",
+   "vectors": [
+    {
+     "text": "RFC 8891 Section 5.1 - Encryption Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffeeddccbbaa99887766554433221100f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"}}
+     ],
+     "input": {"t":"bytes","v":"fedcba9876543210"},
+     "expected": {"t":"bytes","v":"4ee901e5c2d8ca3d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 8891 Section 5.2 - Decryption Test Vector",
+     "inverse": true,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffeeddccbbaa99887766554433221100f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"}}
+     ],
+     "input": {"t":"bytes","v":"4ee901e5c2d8ca3d"},
+     "expected": {"t":"bytes","v":"fedcba9876543210"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

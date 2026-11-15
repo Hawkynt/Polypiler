@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/grand-cru.js",
+ "algorithms": [
+  {
+   "name": "Grand Cru",
+   "vectors": [
+    {
+     "text": "Grand Cru synthetic test vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"71de5e5bf5e1983cbc13f15601efe59a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Grand Cru synthetic test vector #2 (all zeros)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"6b4791315ffd4d34b9e85ae6d88829ab"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Grand Cru synthetic test vector #3 (all ones)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"c10a7527a61765e2606bec10a86ad75e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Grand Cru synthetic test vector #4 (mixed pattern)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"fedcba98765432100123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdeffedcba9876543210"},
+     "expected": {"t":"bytes","v":"09cc7353d442f37f3d74a663fe74338e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/seedwrap.js",
+ "algorithms": [
+  {
+   "name": "SEED-WRAP",
+   "vectors": [
+    {
+     "text": "SEED-WRAP 128-bit KEK wrapping 128-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"bf71f77138b5afea05232a8dad54024e812dc8dd7d132559"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SEED-WRAP single 64-bit block (simplified algorithm)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"bff44891b9801360b718dbaaa5083596"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SEED-WRAP wrapping 192-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff0001020304050607"},
+     "expected": {"t":"bytes","v":"405bbc1a0f41638d8fac416726d69f4d64742da5a8702b34858a395eda259aef"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/feal.js",
+ "algorithms": [
+  {
+   "name": "FEAL-8",
+   "vectors": [
+    {
+     "text": "Handbook of Applied Cryptography, Example 7.99 (FEAL-8)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"ceef2c86f2490752"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

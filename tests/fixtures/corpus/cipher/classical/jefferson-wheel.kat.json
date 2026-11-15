@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/jefferson-wheel.js",
+ "algorithms": [
+  {
+   "name": "Jefferson Wheel",
+   "vectors": [
+    {
+     "text": "dCode worked example - JEFFERSON on the 25 standard wheels, read one row below",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"32357c31"}}
+     ],
+     "input": {"t":"bytes","v":"4a4546464552534f4e"},
+     "expected": {"t":"bytes","v":"464859474d4e59424c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Offset zero is the identity row - the plaintext row is the ciphertext row",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"32357c30"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"41545441434b41544441574e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

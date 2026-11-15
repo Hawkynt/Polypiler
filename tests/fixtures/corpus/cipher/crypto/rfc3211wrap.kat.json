@@ -1,0 +1,43 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/rfc3211wrap.js",
+ "algorithms": [
+  {
+   "name": "RFC 3211 Key Wrap",
+   "vectors": [
+    {
+     "text": "DES-CBC Key Wrap - 64-bit key with fixed random",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"d1daa78615f287e6"}},
+      {"set":"iv","value":{"t":"bytes","v":"efe598ef21b33d6d"}},
+      {"set":"cipherName","value":{"t":"string","v":"DES"}},
+      {"set":"random","value":{"t":"bytes","v":"c436f541"}}
+     ],
+     "input": {"t":"bytes","v":"8c627c897323a2f8"},
+     "expected": {"t":"bytes","v":"b81b2565ee373ca6dedca26a178b0c10"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "3DES-CBC Key Wrap - 256-bit key with fixed random",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"6a8970bf68c92caea84a8df28510858607126380cc47ab2d"}},
+      {"set":"iv","value":{"t":"bytes","v":"baf1ca7931213c4e"}},
+      {"set":"cipherName","value":{"t":"string","v":"3DES (Triple DES)"}},
+      {"set":"random","value":{"t":"bytes","v":"fa060a45"}}
+     ],
+     "input": {"t":"bytes","v":"8c637d887223a2f965b566eb014b0fa5d52300a3f7ea40fffc577203c71baf3b"},
+     "expected": {"t":"bytes","v":"c03c514abdb9e2c5aac038572b5e24553876b377aafb82eca5a9d73f8ab143d9ec74e6cad7db260c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/sober128.js",
+ "algorithms": [
+  {
+   "name": "SOBER-128",
+   "vectors": [
+    {
+     "text": "LibTomCrypt Test Vector - 128-bit key, 4-byte IV",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"74657374206b65792031323862697473"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000","typed":"Uint8Array"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"43500ccf89919f1daa377495f4b458c240378bbb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt keystream, incremental key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f0348280f75f4051b97a4ba5c6535204a344e639110df57ff515c3af11776f87e9fc8e9a661ef4e9272c0e71d891b997ba63ba2392a1da420a336f54733e0197c280386ee9b035c9d78ca0c1884025e9649047b791d74de0557abefabd7eaf1c722acf3bc83600023531bee7aa750779f4405a3b9ab14ed2e732d71a476a729f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt incremental plaintext, incremental key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"f0358083f35a4656b17341aeca5e5c0bb355f42a0518e368ed0cd9b40d6a7198c9ddacb9423bd2ce0f05245af4bc97b88a528810a694ec75320a556f4f033fa8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Sober-128 — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e33587da2c7ec1136"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457aafe4194e83b8ed22"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"5151082d2cfaea538cfab05da62df5ca34be696dce37f701b5d640ce7fe7ab59c4181db3c5b8038221167a9b28dda377"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

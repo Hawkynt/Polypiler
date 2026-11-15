@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/rar5.js",
+ "algorithms": [
+  {
+   "name": "RAR5",
+   "vectors": [
+    {
+     "text": "Empty input - size prefix only, no block emitted",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte - one literal plus the four Huffman tables",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"01000000c08812010000000000000000015abff6cb320c9f80"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample repeated 4x",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"b4000000c2a53d534543400000000030320afc05c27e81f3935ce7fa1b04b04599ec42a40054241f9a0c2144fab1e44ace1f95c2a8d7c8154d11af33bce07c47eb73c0a0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetitive run - 256 identical bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"00010000c78e1301000000000000000001d67fd5214b320c9f7a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating two-byte pattern - ABABABABABAB",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414241424142414241424142"},
+     "expected": {"t":"bytes","v":"0c000000c08f150220000000000000000136f7f368628ce80e87ec80"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pseudo-random binary sample with one repeated run",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"9e1fd24b6a0cf7832155be083dc471aa9e1fd24b6a0cf7831162ef904d7c38a1"},
+     "expected": {"t":"bytes","v":"20000000c0a43e4400320000000000002268812408e21624811c30808c163c5901204770dd08cad02d11ccd09d1af5fcb7fe07ff1ff44eb97af2571750b40de184edb73f80"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "English text with short interior repeats",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4f7074696d616c2070617273696e67206d696e696d697365732074686520746f74616c20746f6b656e20636f73742c206e6f7420746865206c6f63616c206d61746368206c656e6774682e"},
+     "expected": {"t":"bytes","v":"4b000000c7da47330533300000000050420af801960ae0355545645a7c55a78ffd6ac1d7d58adb01b61ff365a30e378fada7421a5a1ad2c154068f2cd7a9233567a1347f97acf263072a1d27457b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

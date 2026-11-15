@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/mwc256.js",
+ "algorithms": [
+  {
+   "name": "MWC256 (Multiply-with-Carry 256)",
+   "vectors": [
+    {
+     "text": "Seed 0: First 5 outputs (20 bytes) - verified against C reference",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"853985dd4d44ad486eb3d35a389c85df4dab581a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1: First 5 outputs (20 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"abbf7382b9c63de8072c39b1e81359e13fc9883b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 42: First 5 outputs (20 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"03595d70f2fbe6a89e8aa771ba8da0dfe712ebdd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1234567: First 8 outputs (32 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000012d687"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"63b2d6ee7ddc289bf248367e4ce3d7ccab2b932c118e6002cea2fcaaea750b8b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 987654321: First 8 outputs (32 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"000000003ade68b1"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"996730de7c9749be79d140f50648de5cd4a6c28bf4bff9ba2884ec73ba3f879d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -32,7 +32,8 @@ public static partial class IrVerifier {
 
       Require(names.Add(global.Name), "the module declares the name twice");
       var element = global.Type.Element ?? global.Type;
-      Require(global.Type.IsStorable && !element.IsStruct && !element.IsObject && !global.Type.IsView && !global.Type.IsMemory, $"a global of the type {global.Type}");
+      // A reference - an object, a collection - holds what the initializer of the module puts there (#1365).
+      Require(global.Type.IsStorable && !element.IsStruct && !global.Type.IsView && !global.Type.IsMemory && (!element.IsObject || global.Type.IsObject || global.Type.IsCollection), $"a global of the type {global.Type}");
       Require(element.EnumType is not { } named || types.Declares(named), $"the type {element} is not among the types of the module");
       if (global.Initializer is not { } initializer) {
         Require(!global.Type.IsArray && !global.Type.IsString, $"{(global.Type.IsArray ? "an array" : "a string")} global without an initializer");
@@ -57,6 +58,8 @@ public static partial class IrVerifier {
   private static bool IsStatic(IrExpr node, HashSet<string> impure) => node switch {
     IrConst or IrStrConst or IrConstRef or IrGlobalRef or IrUnary or IrBinary or IrConvert or IrConditional or IrNewArray => true,
     IrIntrinsic intrinsic => intrinsic.Op == IrIntrinsicOp.ArrayOf || StringOperations.IsString(intrinsic.Op) || NumberTextOperations.IsNumberText(intrinsic.Op) || EnumOperations.IsEnum(intrinsic.Op),
+    // A new collection, empty or of static elements, observes nothing (#1365).
+    IrCollection collection => IrCollections.Constructs(collection.Op),
     IrCall call => !impure.Contains(call.Function),
     _ => false
   };

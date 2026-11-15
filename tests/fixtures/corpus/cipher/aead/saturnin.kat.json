@@ -1,0 +1,121 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/saturnin.js",
+ "algorithms": [
+  {
+   "name": "SATURNIN-CTR-Cascade",
+   "vectors": [
+    {
+     "text": "SATURNIN-CTR-Cascade KAT Count 1 (empty plaintext, empty AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"ba6f18356b82c46910fe1738e72d99a43250269b8fe631ce0c1c6a38a5afc6cb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SATURNIN-CTR-Cascade KAT Count 35 (1-byte plaintext, 1-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"73a4facf5ae96450e8bb1a98fe2492a1acd92b322d60280d229463545d22b5adcb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SATURNIN-CTR-Cascade KAT Count 69 (2-byte plaintext, 2-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":"0001"}}
+     ],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"73a3db8d008657a5844bcd7fb9f7ac5805f83b1715754970a7004d9e481ea475d4e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SATURNIN-CTR-Cascade KAT Count 1089 (32-byte plaintext, 32-byte AD)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"73a3610620a34b523a47ea4eddff83ac52370b3a1643965ace464be43f5033f5e9e56ed79c0be6ed0b3a96fc6cf741e1d5e5398f23f98d8208fba00f43ba6bc7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "SATURNIN-Short",
+   "vectors": [
+    {
+     "text": "SATURNIN-Short KAT Count 1 (empty message)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"ef142fc810ce92839726d600fccfd7119050da25a3ec5586c7c43ca668e3c8c0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SATURNIN-Short KAT Count 13 (12-byte message)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b"},
+     "expected": {"t":"bytes","v":"20a7207939100227c9e3cab563ab1fe472a971711e12a5cad360b6757f8d8d14"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SATURNIN-Short KAT Count 16 (15-byte message, maximum length)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e"},
+     "expected": {"t":"bytes","v":"f8b7dbf80e519cf80e03a207a4798a5a0144f9392169faebf781bf4da9bdb0e4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

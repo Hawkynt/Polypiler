@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/lrc.js",
+ "algorithms": [
+  {
+   "name": "LRC",
+   "vectors": [
+    {
+     "text": "Wikipedia LRC worked example - STX 0 0 1 # ETX",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"023030312303"},
+     "expected": {"t":"bytes","v":"47"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "minimalmodbus known value - 'ABCDE'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142434445"},
+     "expected": {"t":"bytes","v":"b1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

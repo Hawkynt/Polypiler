@@ -1,0 +1,56 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/kdf2.js",
+ "algorithms": [
+  {
+   "name": "KDF2",
+   "vectors": [
+    {
+     "text": "KDF2(SHA-1) Test Vector 1 - 1 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"bf0b2ecd1724a348211d8c0ca7"}},
+      {"set":"outputSize","value":{"t":"number","v":1}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"fd7a43ea8a443c580c0de618ecc013704505eff8b5a4a9"},
+     "expected": {"t":"bytes","v":"79"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF2(SHA-1) Test Vector 2 - 2 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"55a4e9dd5f4ca2ef82"}},
+      {"set":"outputSize","value":{"t":"number","v":2}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"701f3480dfe95f57941f804b1b2413ef"},
+     "expected": {"t":"bytes","v":"fbec"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "KDF2(SHA-1) BouncyCastle Test Vector - full block (no salt)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"ca7c0f8c3ffa87a96e1b74ac8e6af594347bb40a"},
+     "expected": {"t":"bytes","v":"744ab703f5bc082e59185f6d049d2d367db245c2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

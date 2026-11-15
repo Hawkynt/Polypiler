@@ -1,0 +1,133 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/cat-code.js",
+ "algorithms": [
+  {
+   "name": "Cat Code",
+   "vectors": [
+    {
+     "text": "Encode logical |0⟩ as even cat state with α=2.0",
+     "inverse": false,
+     "steps": [
+      {"set":"alpha","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Encode logical |1⟩ as odd cat state with α=2.0",
+     "inverse": false,
+     "steps": [
+      {"set":"alpha","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Photon parity measurement on even cat state (no errors)",
+     "inverse": false,
+     "steps": [
+      {"set":"alpha","value":{"t":"number","v":2}},
+      {"set":"parityMeasurement","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Photon parity measurement on odd cat state (no errors)",
+     "inverse": false,
+     "steps": [
+      {"set":"alpha","value":{"t":"number","v":2}},
+      {"set":"parityMeasurement","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Encode with smaller coherent amplitude α=1.0",
+     "inverse": false,
+     "steps": [
+      {"set":"alpha","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Encode with larger coherent amplitude α=3.0 (enhanced bit-flip suppression)",
+     "inverse": false,
+     "steps": [
+      {"set":"alpha","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single photon loss error detection and recovery",
+     "inverse": false,
+     "steps": [
+      {"set":"alpha","value":{"t":"number","v":2}},
+      {"set":"simulatePhotonLoss","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Encode two logical qubits in separate cavity modes",
+     "inverse": false,
+     "steps": [
+      {"set":"alpha","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"0001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Verify cat state fidelity remains high (F > 0.99) for α=2",
+     "inverse": false,
+     "steps": [
+      {"set":"alpha","value":{"t":"number","v":2}},
+      {"set":"checkFidelity","value":{"t":"bool","v":true}},
+      {"set":"minFidelity","value":{"t":"number","v":0.99}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

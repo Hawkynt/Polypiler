@@ -1,0 +1,59 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/blumblumshub.js",
+ "algorithms": [
+  {
+   "name": "Blum Blum Shub",
+   "vectors": [
+    {
+     "text": "Classic example: p=11, q=23, seed=3 (commonly cited)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":2}},
+      {"set":"p","value":{"t":"bigint","v":"11"}},
+      {"set":"q","value":{"t":"bigint","v":"23"}},
+      {"set":"seed","value":{"t":"bytes","v":"03"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"43b8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Smaller example: p=7, q=11, seed=5",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":2}},
+      {"set":"p","value":{"t":"bigint","v":"7"}},
+      {"set":"q","value":{"t":"bigint","v":"11"}},
+      {"set":"seed","value":{"t":"bytes","v":"05"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"9999"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Larger primes: p=499, q=547 (both ≡ 3 mod 4), seed=42",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"p","value":{"t":"bigint","v":"499"}},
+      {"set":"q","value":{"t":"bigint","v":"547"}},
+      {"set":"seed","value":{"t":"bytes","v":"2a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"a280777a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

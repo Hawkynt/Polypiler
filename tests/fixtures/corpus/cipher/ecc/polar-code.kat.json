@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/polar-code.js",
+ "algorithms": [
+  {
+   "name": "Polar Code",
+   "vectors": [
+    {
+     "text": "Polar (8,4) all-zero codeword",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Polar (8,4) all-one codeword from single info bit",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000001"},
+     "expected": {"t":"bytes","v":"0101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Polar (8,4) single info bit at position 3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000000"},
+     "expected": {"t":"bytes","v":"0100010001000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Polar (8,4) single info bit at position 5",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010000"},
+     "expected": {"t":"bytes","v":"0101000001010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Polar (8,4) two info bits pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000001"},
+     "expected": {"t":"bytes","v":"0001000100010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

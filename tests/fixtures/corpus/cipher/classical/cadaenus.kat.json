@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/cadaenus.js",
+ "algorithms": [
+  {
+   "name": "CADAENUS Cipher",
+   "vectors": [
+    {
+     "text": "Basic Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"534543524554"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"5258474943"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alphabet Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4b4559"}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a"},
+     "expected": {"t":"bytes","v":"4d505343484443474253564544464e424d504543484e43475053"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Position Dependency Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"434950484552"}}
+     ],
+     "input": {"t":"bytes","v":"4141414141"},
+     "expected": {"t":"bytes","v":"53584a4d44"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

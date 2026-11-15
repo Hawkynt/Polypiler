@@ -1,0 +1,41 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/ctr.js",
+ "algorithms": [
+  {
+   "name": "CTR",
+   "vectors": [
+    {
+     "text": "NIST SP 800-38A CTR test vector",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"}]}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"874d6191b620e3261bef6864990db6ce"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-38A CTR multi-block",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"}]}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710"},
+     "expected": {"t":"bytes","v":"874d6191b620e3261bef6864990db6ce9806f66b7970fdff8617187bb9fffdff5ae4df3edbd5d35e5b4f09020db03eab1e031dda2fbe03d1792170a0f3009cee"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

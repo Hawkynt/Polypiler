@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/sm3.js",
+ "algorithms": [
+  {
+   "name": "SM3",
+   "vectors": [
+    {
+     "text": "SM3: Empty message (Crypto++ generated)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"1ab21d8355cfa17f8e61194831e81a8f22bec8c728fefb747ed035eb5082aa2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SM3: 'abc' (draft-shen-sm3-hash Appendix B)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"66c7f0f462eeedd9d1f2d46bdc10e4e24167c4875cf2f7a2297da02b8f4ba8e0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SM3: 16 x 'abcd' (draft-shen-sm3-hash Appendix B)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61626364616263646162636461626364616263646162636461626364616263646162636461626364616263646162636461626364616263646162636461626364"},
+     "expected": {"t":"bytes","v":"debe9ff92275b8a138604889c18e5a4d6fdb70e5387e5765293dcba39c0c5732"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SM3: 1 word 'abcd' (Crypto++ generated)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61626364"},
+     "expected": {"t":"bytes","v":"82ec580fe6d36ae4f81cae3c73f4a5b3b5a09c943172dc9053c69fd8e18dca1e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SM3: 2 words (Crypto++ generated)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636461626364"},
+     "expected": {"t":"bytes","v":"b58b85b795b34879c354428f7c78cd1486c4ef25ea4c5d68e611ff41c15731ef"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SM3: 8 words (Crypto++ generated)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636461626364616263646162636461626364616263646162636461626364"},
+     "expected": {"t":"bytes","v":"73edef5c9d3710f14dbaf892f50ce9dfab48e462d837d93ec0f9422c5f2a4007"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

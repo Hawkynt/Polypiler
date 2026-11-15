@@ -1,0 +1,120 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/modulo.js",
+ "algorithms": [
+  {
+   "name": "Modulo-10",
+   "vectors": [
+    {
+     "text": "Simple digit sum",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233"},
+     "expected": {"t":"bytes","v":"06"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Sum with overflow",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"393837"},
+     "expected": {"t":"bytes","v":"04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long digit sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"31323334353637383930"},
+     "expected": {"t":"bytes","v":"05"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Modulo-11",
+   "vectors": [
+    {
+     "text": "ISBN-10 format",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"303132303030303038"},
+     "expected": {"t":"bytes","v":"03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple digit sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"0a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Zero digits",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3030"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Modulo-97",
+   "vectors": [
+    {
+     "text": "Simple digit sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536"},
+     "expected": {"t":"bytes","v":"48"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IBAN check digit validation",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3938"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Large digit sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"393939393939"},
+     "expected": {"t":"bytes","v":"1a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

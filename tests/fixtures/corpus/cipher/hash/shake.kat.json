@@ -1,0 +1,107 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/shake.js",
+ "algorithms": [
+  {
+   "name": "SHAKE128",
+   "vectors": [
+    {
+     "text": "SHAKE128 Empty String - 16 bytes output",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"7f9c2ba4e88f827d616045507605853e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SHAKE128 'abc' - 16 bytes output",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"5881092dd818bf5cf8a3ddb793fbcba7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SHAKE128 'abc' - 32 bytes output",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"5881092dd818bf5cf8a3ddb793fbcba74097d5c526a6d35f97b83351940f2cc8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "SHAKE256",
+   "vectors": [
+    {
+     "text": "SHAKE256: Empty, 64 bytes (Crypto++)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SHAKE256: Single byte, 64 bytes (Crypto++)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"af"},
+     "expected": {"t":"bytes","v":"b7cbfeda173533a5fb72340c9af14b82545bc9fa02828da3b6773094289fb8fe75cff7d0bdfb6015f3068907a1ba24611631d1dbe4eadf8d95a9f6b6021231b7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SHAKE256: Two bytes, 64 bytes (Crypto++)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"4fd6"},
+     "expected": {"t":"bytes","v":"426d6fcdfb2387a470c4b55b999315c69c9cbbcac337b98d5f5cb38accfe99e2b195432bb464b2e857ff20db2a10563bf93fb518e6f246397c1c86ce19a7c1c1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SHAKE256: Four bytes, 64 bytes (Crypto++)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"fae3e468"},
+     "expected": {"t":"bytes","v":"5b3f24082085a8e223cdfdc2d644f559befef6ef22288d87717cc7af1a9fcb18dfde7ad7e38838015894f7acc98e420db10ded4e85837b1b19cfe0007dc3fc4a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

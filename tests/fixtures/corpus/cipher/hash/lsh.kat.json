@@ -1,0 +1,251 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/lsh.js",
+ "algorithms": [
+  {
+   "name": "LSH-224",
+   "vectors": [
+    {
+     "text": "LSH-224: Empty (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"48a0d55b2b3d91f26e06f7110fe9ce8ea0e2656bbe344cb1c5930653"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-224: Single byte (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ca"},
+     "expected": {"t":"bytes","v":"4253e6e91b3c37f75c231d53ca6dc8464885250d2058c41d495bd08f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-224: Two bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"40ea"},
+     "expected": {"t":"bytes","v":"11302cc1282f57a8b107cbf1e495e0e81cae7561803c039d60e48720"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-224: Four bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"8f62d29f"},
+     "expected": {"t":"bytes","v":"81959fa33ebfab68af7522d0aa87b51d7c15894a538dd6b9e78666ef"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "LSH-256",
+   "vectors": [
+    {
+     "text": "LSH-256: Empty (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"f3cd416a03818217726cb47f4e4d2881c9c29fd445c18b66fb19dea1a81007c1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-256: Single byte (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ce"},
+     "expected": {"t":"bytes","v":"862f86db654094840d86df7881732fd69b7227ee4f7943868162feb733a9ca5b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-256: Two bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"8b6c"},
+     "expected": {"t":"bytes","v":"da96b21314cfd129fdbaa620dc3d0e2b5b3e087e90e6c147cc6b9950fde4b40e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-256: Four bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"a546a625"},
+     "expected": {"t":"bytes","v":"48da0960d72bab0f52f7f33f063f6b4fb9b6c73e15d08f865bb62e22fb7eaa8a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "LSH-384",
+   "vectors": [
+    {
+     "text": "LSH-384: Empty (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"dbb259cf22459368ab2c52b3e1c977288b38670adcb91cae6b8b6a2d646e76f8bd53e5cab0e47c856f55249b895c1730"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-384: Single byte (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"76"},
+     "expected": {"t":"bytes","v":"52ff6386afce2189733ab9f206dd87774c22c1475b22f4e72cb7f603c1ac54402c63cabe2cf10cf01697a0da717de9ec"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-384: Two bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0adc"},
+     "expected": {"t":"bytes","v":"483c7ae2baf4323296482c47e02323aa2aa6d3b0cdd1d386b91d8ba1f707025ca0b469515e72cd593f027d21367e36c7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-384: Three bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3c0f2e"},
+     "expected": {"t":"bytes","v":"66f0262b988628d2691f9b0d87e123c48eff9ac3e6549bc96c808359b1ae596c16d51c256b2c21f59e5d92ccc2509221"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "LSH-512",
+   "vectors": [
+    {
+     "text": "LSH-512: Empty (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"118a2ff2a99e3b2134125e2baf20ebe3bdd034d5a69b29c22fc4995063340b46697801d7f7fb0070568f78e8ed514215fc70af27d6f27b01aa8a1da72b14ce7c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-512: Single byte (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"32e896b21bec19c15254f7a1f089f748e05918a68e6d829fb1a62b7d5822ad98b7de274f7dc6c73e6f52c5f0b7633666dbe6048661351d811105ee015b9dcac9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-512: Two bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3c57"},
+     "expected": {"t":"bytes","v":"e86ac1ef43519446927c26d907fa5a3a64b3f4b1888ef10ffc6b687ec73ac5bfd9db4ad7427011d35243adc98d2c2b1b58a28bd22179668b43a2816d07c65963"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-512: Three bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"abfcde"},
+     "expected": {"t":"bytes","v":"732442e8c76252c6d6fc950ccd7fd6d5a8a8114be245a3076c3f6732b80294478b136bc52fe8db4e01766711a71aa69179361804c2791c77ec2383c1be480501"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "LSH-512-256",
+   "vectors": [
+    {
+     "text": "LSH-512-256: Empty (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"706df4ebf100f06d5cc9f6c79be5297c3f6f515801dd10fbc1b665a2d7bdb653"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-512-256: Single byte (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"1a"},
+     "expected": {"t":"bytes","v":"415382363239665872545914061d19df20e803c7446ed603df0b16142fbcc731"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-512-256: Two bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"efca"},
+     "expected": {"t":"bytes","v":"2bf860b81103b1b85e117dfe1d436170f4b4dd32d5471cfc6a210ba305901e8e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LSH-512-256: Three bytes (Crypto++)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"082f78"},
+     "expected": {"t":"bytes","v":"4112d19e66e222f3ed565f6823583120424287b1d09276f69b61d4ebfbb72f91"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

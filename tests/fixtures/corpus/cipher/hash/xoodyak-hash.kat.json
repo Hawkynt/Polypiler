@@ -1,0 +1,121 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/xoodyak-hash.js",
+ "algorithms": [
+  {
+   "name": "Xoodyak Hash",
+   "vectors": [
+    {
+     "text": "Xoodyak Hash: empty message (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"ea152f2b47bce24efb66c479d4adf17bd324d806e85ff75ee369ee50dc8f8bd1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Xoodyak Hash: 0x00 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"27921f8ddf392894460b70b3ed6c091e6421b7d2147dcd6031d7efebad3030cc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Xoodyak Hash: 0x0001 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"dd3f12e89db41c61d3c05779705fa946a8c69c79eefdc1b4a966a5f1ab35073d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Xoodyak Hash: 0x000102 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"72abd350dc287e8c4b95dd37bd796d79f90026c1bd4e0d99d2117baab26bc2ca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Xoodyak Hash: 0x00010203 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"a13ae46f62e433ce4cad9e4f24c46f37b6b3815c8539a3659daaecaae1ab8fdb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Xoodyak Hash: 0x0001020304 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304"},
+     "expected": {"t":"bytes","v":"042383068c131a0d365b781dfcb20e855f4a68de2072aa8d1e16181563d6f622"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Xoodyak Hash: 0x000102030405060708 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708"},
+     "expected": {"t":"bytes","v":"d926f7e44b263cba8f98e2a52b7be175d406a2e81b462408bdbc408784c4284f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Xoodyak Hash: 0x000102030405060708090A0B0C0D0E0F (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"9ea695347cdddff9bc63ece30fe231441d581768fe223dd6bd7367094fd216b3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Xoodyak Hash: 0x000102030405060708090A0B0C0D0E0F10111213 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"},
+     "expected": {"t":"bytes","v":"9bebe7579ec1d075b6768ae981c54c7d60db82931b074a618b0a68f84cbccfe6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Xoodyak Hash: 32-byte message (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"cebe4aff9eac2218017dda5f8207ba830e989187256539bd7d31ae5e94ff0c6e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

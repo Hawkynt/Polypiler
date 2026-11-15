@@ -1,0 +1,82 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/ran0.js",
+ "algorithms": [
+  {
+   "name": "Ran0 (Numerical Recipes)",
+   "vectors": [
+    {
+     "text": "Seed=1: First 10 output values (floating-point doubles)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":80}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"80d32000c069e03e76ac21f13ad6c03fd65b7036eb2de83f0cb53a15865add3fdc18a2e06d0ce13fb60d38c8da06cc3f772c30603b16a83f8572ab7f42b9e53f9879ebd0cbbce53f02d27b1301e9ed3f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=123456789: First 5 output values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"075bcd15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"43ea377921f5cb3f4f347d51279aee3fae16f5f2568bea3fd1f2a3b868f9e13fc82835276494da3f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Park-Miller canonical test: 10,000th iteration from seed=1",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"count","value":{"t":"number","v":10000}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"5934be882c1adf3f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=16807 (multiplier a): First value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"000041a7"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"76ac21f13ad6c03f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=2147483646 (max valid seed): First value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"7ffffffe"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"dfff3f96efffef3f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/base91.js",
+ "algorithms": [
+  {
+   "name": "Base91",
+   "vectors": [
+    {
+     "text": "Base91 empty string test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base91 single character test - 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"4742"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base91 word test - 'test'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74657374"},
+     "expected": {"t":"bytes","v":"66504e4b64"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base91 palindrome test with newline",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4e65766572206f6464206f72206576656e0a"},
+     "expected": {"t":"bytes","v":"5f4f5e6770404a6037527a746a626c4c41235f31654841"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base91 sentence test with newline",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d61792061206d6f6f6479206261627920646f6f6d20612079616d3f0a"},
+     "expected": {"t":"bytes","v":"3844394b63293d2f3224577a654675692347394b6d2b3c7b56543275394d5a696c7d5b41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base91 all 256 byte values regression test - exercises the 91st alphabet symbol (double quote)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "expected": {"t":"bytes","v":"3a4323283a433f685642244d53695645776e6442414d5a527877466642423b49573c7d59515621415f7624595f63257a723463595150466c302c4068654d414a3c3a4e5b2a542b2f534647722a60623450447d76675971553e635730502a314e77562c4f7b63513575306d3930305b38406e342c77683f44503c322b7e6a515357366e6d4c6d316f2e4a2c3f6a547325323c57462571623d6f687c7d2e432b5760454921627622584a354b49563c472b61585d635b7a243829406152363767623770286072346b486a4f72614572383a4138793047394b73446d376a70617b66683e685438253b4021393b733e4a583f2347543c572b766266604132615e776b465a43723c3a56247d53522323263c5e6c723c4a6e3f5f4b3571682e4a794c702b393926425f36765a26785b75686e7d4c407368337d675f5f7e23"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base91 pseudo-random 128-byte regression test - exercises the decode bit-queue-length branch for a decode value above the 13-bit mask (8191)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"614d13f8a060bea6b2892cc12663c843464cbfe81f5efd2e7d762e4fec2fbd48b7e7d8d5ebb86871547f1c5a7dd75f8ab41e5cbd036e007136a4f6e0db5bac073cf14ca26680c32c25e5bde205bba5c05160a88216eeb2a420426f61faf74ab6f26a705f12b8cdd726ba0d5bbc0f9be71e11a43759de14c7394f97d24a039955"},
+     "expected": {"t":"bytes","v":"366c234252585b406364364e544e354e32587d79363154783346647b643638702471617d43727e6f286f2665684b3b6b7535524c69234d713d515d2f677531266d6e7857616d686c7a5f516e667b4a566c6b5a3762225d6a2b5a77724b685b3d5f222e42336438667d675e357e466167477b243945676c38245e7047326d7e235b6f52214c3e466d233d424775263d30394f423360364e61456c2f316041"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

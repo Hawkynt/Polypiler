@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "file": "algorithms/padding/iso10126.js",
+ "algorithms": [
+  {
+   "name": "ISO 10126",
+   "vectors": [
+    {
+     "text": "ISO 10126 padding example (random bytes vary)",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":32}},
+      {"set":"testMode","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e11739317"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393170000000000000000000000000000000011"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

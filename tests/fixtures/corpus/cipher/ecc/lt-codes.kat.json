@@ -1,0 +1,41 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/lt-codes.js",
+ "algorithms": [
+  {
+   "name": "LT",
+   "vectors": [
+    {
+     "text": "LT encoding test with 4 source symbols",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":4}},
+      {"set":"overhead","value":{"t":"number","v":1}},
+      {"set":"seed","value":{"t":"number","v":12345}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c"},
+     "expected": {"t":"bytes","v":"48656c6c09652d09"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LT encoding test with 8 source symbols",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"overhead","value":{"t":"number","v":0.5}},
+      {"set":"seed","value":{"t":"number","v":54321}}
+     ],
+     "input": {"t":"bytes","v":"0102030405060708"},
+     "expected": {"t":"bytes","v":"0102030405060708030a0309"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

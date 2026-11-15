@@ -1,0 +1,41 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/cfbmac.js",
+ "algorithms": [
+  {
+   "name": "CFB-MAC",
+   "vectors": [
+    {
+     "text": "BouncyCastle MacTest Vector 1 - DES CFB-MAC with IV",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}},
+      {"set":"iv","value":{"t":"bytes","v":"1234567890abcdef"}},
+      {"set":"macSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"37363534333231204e6f77206973207468652074696d6520666f7220"},
+     "expected": {"t":"bytes","v":"cd647403"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BouncyCastle MacTest Vector 2 - DES CFB-MAC, block-aligned 8 byte message",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}},
+      {"set":"iv","value":{"t":"bytes","v":"1234567890abcdef"}},
+      {"set":"macSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"3736353433323120"},
+     "expected": {"t":"bytes","v":"3af549c9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

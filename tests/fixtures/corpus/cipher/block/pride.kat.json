@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/pride.js",
+ "algorithms": [
+  {
+   "name": "PRIDE",
+   "vectors": [
+    {
+     "text": "PRIDE Test Vector #1 - specification Appendix J",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"82b4109fcc70bd1f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PRIDE Test Vector #2 - specification Appendix J",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffff"},
+     "expected": {"t":"bytes","v":"d70e60680a17b956"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PRIDE Test Vector #3 - specification Appendix J",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffff0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"28f19f97f5e846a9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PRIDE Test Vector #4 - specification Appendix J",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000ffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"d123ebaf368fce62"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PRIDE Test Vector #5 - specification Appendix J",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000fedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"d1372929712d336e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

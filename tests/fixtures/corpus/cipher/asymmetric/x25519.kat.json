@@ -1,0 +1,265 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/x25519.js",
+ "algorithms": [
+  {
+   "name": "X25519",
+   "vectors": [
+    {
+     "text": "RFC 7748 Section 6.1 - Test Vector 1",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a"}},
+      {"set":"publicKey","value":{"t":"bytes","v":"8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7748 Section 6.1 - Test Vector 2 (Bob's perspective)",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb"}},
+      {"set":"publicKey","value":{"t":"bytes","v":"de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7748 Section 5.2 - Scalar Multiplication Test Vector 1",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"a546e36bf0527c9d3b16154b82465edd62144c0ac1fc5a18506a2244ba449ac4"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"e6db6867583030db3594c1a424b15f7c726624ec26b3353b10a903a6d0ab1c4c"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c3da55379de9c6908e94ea4df28d084f32eccf03491c71f754b4075577a28552"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7748 Section 5.2 - Scalar Multiplication Test Vector 2",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"4b66e9d4d1b4673c5ad22691957d6af5c11b6421e0ea01d42ca4169e7918ba0d"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"e5210f12786811d3f4b7959d0538ae2c31dbe7106fc03c3efc4cd549c715a493"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"95cbde9476e8907d7aade45cb4b873f88b595a68799fa152e6f8f7647aac7957"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7748 Section 5.2 - Iterated Scalar Multiplication (1 iteration)",
+     "inverse": false,
+     "steps": [
+      {"set":"iterations","value":{"t":"number","v":1}},
+      {"set":"privateKey","value":{"t":"bytes","v":"0900000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"422c8e7a6227d7bca1350b3e2bb7279f7897b87bb6854b783c60e80311ae3079"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7748 Section 5.2 - Iterated Scalar Multiplication (1000 iterations)",
+     "inverse": false,
+     "steps": [
+      {"set":"iterations","value":{"t":"number","v":1000}},
+      {"set":"privateKey","value":{"t":"bytes","v":"0900000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"684cf59ba83309552800ef566f2f4d3c1c3887c49360e3875f2eb94d99532c51"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof - Public key = 0 (low-order point)",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"207494038f2bb811d47805bcdf04a2ac585ada7f2f23389bfd4658f9ddd4debc"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof - Public key = 1 (low-order point)",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"202e8972b61c7e61930eb9450b5070eae1c670475685541f0476217e4818cfab"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"0100000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof - Edge case on twist",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"38dde9f3e7b799045f9ac3793d4a9277dadeadc41bec0290f81f744f73775f84"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"0200000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"9a2cfe84ff9c4a9739625cae4a3b82a906877a441946f8d7b3d795fe8f5d1639"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof - Public key on twist",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"588c061a50804ac488ad774ac716c3f5ba714b2712e048491379a500211998a8"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"63aa40c6e38346c5caf23a6df0a5e6c80889a08647e551b3563449befcfc9733"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b1a707519495ffffb298ff941716b06dfab87cf8d91123fe2be9a233dda22212"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof - Edge case for public key (all-zeros variant)",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"386f7f16c50731d64f82e6a170b142a4e34f31fd7768fcb8902925e7d1e21abe"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"0400000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0fcab5d842a078d7a71fc59b57bfb4ca0be6873b49dcdb9f44e14ae8fbdfa542"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof - Public key >= p (reduction test)",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"f01e48dafac9d7bcf589cbc382c878d18bda3550589ffb5d50b523bebe329dae"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"efffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"bd36a0790eb883098c988b21786773de0b3a4df162282cf110de18dd484ce74b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof - Low-order public key test",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"10255c9230a97a30a458ca284a629669293a31890cda9d147febc7d1e22d6bb1"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof - Checking for overflow handling",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"c81724704000b26d31703cc97e3a378d56fad8219361c88cca8bd7c5719b12b2"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"fd300aeb40e1fa582518412b49b208a7842b1e1f056a040178ea4141534f652d"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b734105dc257585d73b566ccb76f062795ccbec89128e52b02f3e59639f13c46"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "libsodium scalarmult1 - Standard test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"0900000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "libsodium scalarmult2 - Standard test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"0900000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "curve25519-donna - Non-canonical point test",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"0100000000000000000000000000000000000000000000000000000000000000"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"2500000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3c7777caf997b264416077665b4e229d0b9548dc0cd81998ddcdc5c8533c797f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "curve25519-donna - All-bits-set public key",
+     "inverse": false,
+     "steps": [
+      {"set":"privateKey","value":{"t":"bytes","v":"0100000000000000000000000000000000000000000000000000000000000000"}},
+      {"set":"otherPublicKey","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b32d1362c248d62fe62619cff04dd43db73ffc1b6308ede30b78d87380f1e834"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

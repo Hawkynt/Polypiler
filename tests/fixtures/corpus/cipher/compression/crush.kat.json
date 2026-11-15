@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/crush.js",
+ "algorithms": [
+  {
+   "name": "Crush",
+   "vectors": [
+    {
+     "text": "Empty input - header only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte literal",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"010000002080"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Run of one byte - literal then an overlapping match",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141414141414141"},
+     "expected": {"t":"bytes","v":"0a00000020ce0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424142"},
+     "expected": {"t":"bytes","v":"040000002090882420"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeating sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243414243414243"},
+     "expected": {"t":"bytes","v":"0c00000020908873800100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Natural text without repeats",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"0b00000024194d86c37880ae6f391b0c80"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

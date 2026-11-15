@@ -1,0 +1,26 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/dstu7624mac.js",
+ "algorithms": [
+  {
+   "name": "DSTU 7624 MAC",
+   "vectors": [
+    {
+     "text": "BouncyCastle Test Vector 1 - 128-bit block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"blockSize","value":{"t":"number","v":16}},
+      {"set":"macSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f"},
+     "expected": {"t":"bytes","v":"123b4eab8e63ecf3e645a99c1115e241"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

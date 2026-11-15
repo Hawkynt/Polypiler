@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xoroshiro128plusplus.js",
+ "algorithms": [
+  {
+   "name": "Xoroshiro128++",
+   "vectors": [
+    {
+     "text": "Seed=0: First four 64-bit outputs from xoroshiro128++",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"fedf5a13a838f2ec3a06107952b7b9f69f58d1d0cf24ef5dd25b233ff4904de3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=1: First four 64-bit outputs from xoroshiro128++",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"583bc2046428f442302496ed84374119cf70e301d8b7d23a7ccfdccf150fad6f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=12345: First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"3930000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"dd5d8f477ada03e76e998957d2390bd7296f7651568cfde0b3b9db34515685c6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=0xDEADBEEF: First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"efbeadde00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"04bf986cd0068d438d4bf255ddda2222eedb0fe714c4fd0633c5491fbde665ed"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

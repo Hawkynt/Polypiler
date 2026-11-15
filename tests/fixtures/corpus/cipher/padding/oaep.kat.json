@@ -1,0 +1,27 @@
+{
+ "schema": 1,
+ "file": "algorithms/padding/oaep.js",
+ "algorithms": [
+  {
+   "name": "OAEP",
+   "vectors": [
+    {
+     "text": "OAEP padding with 15-byte message (deterministic seed)",
+     "inverse": false,
+     "steps": [
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}},
+      {"set":"keySize","value":{"t":"number","v":128}},
+      {"set":"mgfFunction","value":{"t":"string","v":"MGF1"}},
+      {"set":"label","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e11739317"},
+     "expected": {"t":"bytes","v":"006f74a71a747b4cf4793ce3ed2d2c48955d83635e6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b435225340716f9c8dbaabd8c9f6e714053223504455423320110ffceddacbb8a9968774655243302475621300312fdccdfaeb9889b6a75445726310049582f3e0d1cf3c2d1a0b787fea5c5a87768a098a267532d7c8de6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

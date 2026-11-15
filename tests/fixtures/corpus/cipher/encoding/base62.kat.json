@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/base62.js",
+ "algorithms": [
+  {
+   "name": "Base62",
+   "vectors": [
+    {
+     "text": "Base62 empty string test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base62 zero byte test - maps to first alphabet character",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base62 maximum byte test - 255 in Base62",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"4548"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base62 single byte - 72 ('H' ASCII)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48"},
+     "expected": {"t":"bytes","v":"424b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base62 three byte array test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010203"},
+     "expected": {"t":"bytes","v":"524c56"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base62 leading zero byte test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"4142"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

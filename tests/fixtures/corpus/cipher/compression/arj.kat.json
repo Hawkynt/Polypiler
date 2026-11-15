@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/arj.js",
+ "algorithms": [
+  {
+   "name": "ARJ",
+   "vectors": [
+    {
+     "text": "Empty input - length header only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'A' - one literal in a single-symbol tree",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"0100000000010000041000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated byte run - one literal then a single long match",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"100000000002200430d1364b4004"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Periodic text - literals then a match carrying position bits",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636162636162636162636162636162636162"},
+     "expected": {"t":"bytes","v":"140000000004280530f13792d0086c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/rolz.js",
+ "algorithms": [
+  {
+   "name": "ROLZ (Reduced Offset LZ)",
+   "vectors": [
+    {
+     "text": "Empty input test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character - no context established",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"010000002080"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two characters - building context",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142"},
+     "expected": {"t":"bytes","v":"02000000209080"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating pattern - context-aware matching",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424142"},
+     "expected": {"t":"bytes","v":"040000002090882420"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeating sequence - reduced offset advantage",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243"},
+     "expected": {"t":"bytes","v":"060000002090886412110c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Natural text with character repetition",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"0b00000024194d86c37880ae6f391b0c80"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Structured runs with repetition - optimal case",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616161626262636363616161"},
+     "expected": {"t":"bytes","v":"0c00000030984c26231188c66331984c2610"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/hsiao-code.js",
+ "algorithms": [
+  {
+   "name": "Hsiao Code",
+   "vectors": [
+    {
+     "text": "Hsiao (8,4) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hsiao (8,4) all ones",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010101"},
+     "expected": {"t":"bytes","v":"0101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hsiao (8,4) pattern test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000100"},
+     "expected": {"t":"bytes","v":"0001000101000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/gtin-checksum.js",
+ "algorithms": [
+  {
+   "name": "GTIN",
+   "vectors": [
+    {
+     "text": "GTIN-13 example (9780201379624)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"393738303230313337393632"},
+     "expected": {"t":"bytes","v":"04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GTIN-12 (UPC-A) example",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3034393633343036333835"},
+     "expected": {"t":"bytes","v":"02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GTIN-8 example (96385074)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"39363338353037"},
+     "expected": {"t":"bytes","v":"04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

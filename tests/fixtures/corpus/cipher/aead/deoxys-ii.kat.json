@@ -1,0 +1,226 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/deoxys-ii.js",
+ "algorithms": [
+  {
+   "name": "Deoxys-II-128",
+   "vectors": [
+    {
+     "text": "Deoxys-II-128: Empty plaintext, empty AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"97d951f2fd129001483e831f2a6821e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-128: Empty plaintext, 32-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3c197ca5317af5a2b95b178a60553132"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-128: Empty plaintext, 33-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":"a754f3387be992ffee5bee80e18b151900c6d69ec59786fb12d2eadb0750f82cf5"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0a989ed78fa16776cd6c691ea734d874"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-128: 32-byte plaintext, empty AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"fa22f8eb84ee6d2388bdb16150232e856cd5fa3508bc589dad16d284208048c9a381b06ef16db99df089e738c3b4064a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-128: 33-byte plaintext, empty AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"06ac1756eccece62bd743fa80c299f7baa3872b556130f52265919494bdc136db3"},
+     "expected": {"t":"bytes","v":"82bf241958b324ed053555d23315d3cc20935527fc970ff34a9f521a95e302136d0eadc8612d5208c491e93005195e9769"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-128: 32-byte plaintext, 16-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"9cdb554dfc03bff4feeb94df7736038361a76532b6b5a9c0bdb64a74dee983ffbc1a7b5b8e961e65ceff6877ef9e4a98"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-128: 33-byte plaintext, 17-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"039ca0907aa315a0d5ba020c84378840023d4ad3ba639787d3f6f46cb446bd63dc"},
+     "expected": {"t":"bytes","v":"801f1b81878faca562c8c6c0859b166c2669fbc54b1784be637827b4905729bdf9fe4e9bcd26b96647350eda1e550cc994"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Deoxys-II-256",
+   "vectors": [
+    {
+     "text": "Deoxys-II-256: Empty plaintext, empty AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"2b97bd77712f0cde975309959dfe1d7c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-256: Empty plaintext, 32-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"54708ae5565a71f147bdb94d7ba3aed7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-256: Empty plaintext, 33-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":"f495c9c03d29989695d98ff5d430650125805c1e0576d06f26cbda42b1f82238b8"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3277689dc4208cc1ff59d15434a1baf1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-256: 32-byte plaintext, empty AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"9da20db1c2781f6669257d87e2a4d9be1970f7581bef2c995e1149331e5e8cc192ce3aec3a4b72ff9eab71c2a93492fa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-256: 33-byte plaintext, empty AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"15cd77732f9d0c4c6e581ef400876ad9188c5b8850ebd38224da95d7cdc99f7acc"},
+     "expected": {"t":"bytes","v":"e5ffd2abc5b459a73667756eda6443ede86c0883fc51dd75d22bb14992c684618c5fa78d57308f19d0252072ee39df5ecc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-256: 32-byte plaintext, 16-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"109f8a168b36dfade02628a9e129d5257f03cc7912aefa79729b67b186a2b08f6549f9bf10acba0a451dbb2484a60d90"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Deoxys-II-256: 33-byte plaintext, 17-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"202122232425262728292a2b2c2d2e"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"422857fb165af0a35c03199fb895604dca9cea6d788954962c419e0d5c225c0327"},
+     "expected": {"t":"bytes","v":"7d772203fa38be296d8d20d805163130c69aba8cb16ed845c2296c61a8f34b394e0b3f10e3933c78190b24b33008bf80e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

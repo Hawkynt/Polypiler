@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-redoc2.js",
+ "algorithms": [
+  {
+   "name": "REDOC II (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Redoc2 — zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000"},
+     "expected": {"t":"bytes","v":"b9b2dc11796e8df016ff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Redoc2 — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"}}
+     ],
+     "input": {"t":"bytes","v":"00010203040506070809"},
+     "expected": {"t":"bytes","v":"7db36c42fdaf58a43778"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Redoc2 — shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f1011121314"}}
+     ],
+     "input": {"t":"bytes","v":"10111213141516171819"},
+     "expected": {"t":"bytes","v":"66a4676a026633d2842d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

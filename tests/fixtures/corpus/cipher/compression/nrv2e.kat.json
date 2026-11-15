@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/nrv2e.js",
+ "algorithms": [
+  {
+   "name": "NRV2E",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Highly repetitive input (64 'A' bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141"},
+     "expected": {"t":"bytes","v":"40000000000016b54101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f782e"},
+     "expected": {"t":"bytes","v":"41000000feffffff74686520717569636b2062726f776e20666f78206a756d7073206f76657220b8d8fbef3d6c617a7920646f672e1b592e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

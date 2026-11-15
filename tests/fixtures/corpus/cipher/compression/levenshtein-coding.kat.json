@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/levenshtein-coding.js",
+ "algorithms": [
+  {
+   "name": "Levenshtein Coding",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single small value - byte 1 (encodes value 2, code '1100')",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"01000000c0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Canonical worked examples - byte values 0,1,2,3,7,8",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030708"},
+     "expected": {"t":"bytes","v":"06000000b378747480"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample - 'AB3'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414233"},
+     "expected": {"t":"bytes","v":"03000000f20bc83f1a00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

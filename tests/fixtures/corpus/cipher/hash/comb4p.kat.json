@@ -1,0 +1,38 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/comb4p.js",
+ "algorithms": [
+  {
+   "name": "COMB4P(MD4,MD5)",
+   "vectors": [
+    {
+     "text": "Botan Test Vector: 'comb4_input'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"636f6d62345f696e707574"},
+     "expected": {"t":"bytes","v":"fd1a64f7bc61608fd054303afa2e31608aa3f3788e3034821d63a0288a70b573"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "COMB4P(SHA-1,RIPEMD-160)",
+   "vectors": [
+    {
+     "text": "Botan Test Vector: 'comb4_input'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"636f6d62345f696e707574"},
+     "expected": {"t":"bytes","v":"2b5f61cb57f94e7c7e6d7439fff260028665853988224e0ad8c08c2faa61963c8f761654ac529325"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,101 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/cts.js",
+ "algorithms": [
+  {
+   "name": "CTS",
+   "vectors": [
+    {
+     "text": "RFC 3962 CTS - 17 bytes (one byte past a block boundary)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"4920776f756c64206c696b652074686520"},
+     "expected": {"t":"bytes","v":"c6353568f2bf8cb4d8a580362da7ff7f97"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3962 CTS - 31 bytes (partial final block)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"4920776f756c64206c696b65207468652047656e6572616c20476175277320"},
+     "expected": {"t":"bytes","v":"fc00783e0efdb2c1d445d4c8eff7ed2297687268d6ecccc0c07b25e25ecfe5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3962 CTS - 32 bytes (exact multiple, last two blocks swapped)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"4920776f756c64206c696b65207468652047656e6572616c2047617527732043"},
+     "expected": {"t":"bytes","v":"39312523a78662d5be7fcbcc98ebf5a897687268d6ecccc0c07b25e25ecfe584"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3962 CTS - 47 bytes (three blocks, partial final)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c"},
+     "expected": {"t":"bytes","v":"97687268d6ecccc0c07b25e25ecfe584b3fffd940c16a18c1b5549d2f838029e39312523a78662d5be7fcbcc98ebf5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3962 CTS - 48 bytes (three exact blocks)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20"},
+     "expected": {"t":"bytes","v":"97687268d6ecccc0c07b25e25ecfe5849dad8bbb96c4cdc03bc103e1a194bbd839312523a78662d5be7fcbcc98ebf5a8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3962 CTS - 64 bytes (four exact blocks)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000000000000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"4920776f756c64206c696b65207468652047656e6572616c20476175277320436869636b656e2c20706c656173652c20616e6420776f6e746f6e20736f75702e"},
+     "expected": {"t":"bytes","v":"97687268d6ecccc0c07b25e25ecfe58439312523a78662d5be7fcbcc98ebf5a84807efe836ee89a526730dbc2f7bc8409dad8bbb96c4cdc03bc103e1a194bbd8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bcj-arm-thumb.js",
+ "algorithms": [
+  {
+   "name": "BCJ ARM-Thumb",
+   "vectors": [
+    {
+     "text": "Empty buffer",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two consecutive Thumb BL instructions (halfword pair F0xx/F8xx)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00f000f801f102f9"},
+     "expected": {"t":"bytes","v":"00f002f801f106f9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

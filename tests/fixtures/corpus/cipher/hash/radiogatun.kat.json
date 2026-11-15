@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/radiogatun.js",
+ "algorithms": [
+  {
+   "name": "RadioGatún",
+   "vectors": [
+    {
+     "text": "RadioGatún[32] - Empty string test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"f30028b54afab6b3e55355d277711109a19beda7091067e9a492fb5ed9f20117"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RadioGatún[32] - Single character \"0\"",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"30"},
+     "expected": {"t":"bytes","v":"af0d3f51b98e90eeebae86dd0b304a4003ac5f755fa2cac2b6866a0a91c5c752"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RadioGatún[32] - \"The quick brown fox jumps over the lazy dog\"",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "expected": {"t":"bytes","v":"191589005fec1f2a248f96a16e9553bf38d0aee1648ffa036655ce29c2e229ae"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

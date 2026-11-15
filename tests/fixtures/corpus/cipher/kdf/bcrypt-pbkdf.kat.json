@@ -1,0 +1,116 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/bcrypt-pbkdf.js",
+ "algorithms": [
+  {
+   "name": "Bcrypt-PBKDF",
+   "vectors": [
+    {
+     "text": "Botan Test #1: password/salt, 12 rounds, 32 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"iterations","value":{"t":"number","v":12}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"1ae42c05d487bc02f64921a4ebe4ea93bcacfe135fda99974c06b7b01fae149a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test #2: A/0001020304050607, 10 rounds, 10 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"outputSize","value":{"t":"number","v":10}},
+      {"set":"iterations","value":{"t":"number","v":10}}
+     ],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"3c705da7e10c61c2523b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test #3: A/0001020304050607, 10 rounds, 64 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"iterations","value":{"t":"number","v":10}}
+     ],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"3cf670095d5fa753e1430c6d6177c299521b3b614d9e53fa89c7f893f33289f677ddd72ee1aa29cbf5574a948de4623c71996ffd16c8806fdd7acbe02992deac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test #4: password/salt, 3 rounds, 32 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"iterations","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"ccb508027535a962f591d4a7eea08fe15ee0b68044b1a7b209605fdfbfb41228"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test #5: password/salt, 4 rounds, 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"iterations","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"5bbf0cc293587f1c3635555c27796598"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test #6: password/salt, 8 rounds, 64 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"iterations","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"e1367ec5151a33faac4cc1c144cd23fa15d5548493ecc99b9b5d9c0d3b27bec76227ea66088b849b20ab7aa478010246e74bba51723fefa9f9474d6508845e8d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test #7: password/salt, 10 rounds, 32 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"73616c74"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"iterations","value":{"t":"number","v":10}}
+     ],
+     "input": {"t":"bytes","v":"70617373776f7264"},
+     "expected": {"t":"bytes","v":"abc7dcfb41032d844af67a1d1ef8a5e6a04aa3073d4f2777bfa5fe07a54cff9d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

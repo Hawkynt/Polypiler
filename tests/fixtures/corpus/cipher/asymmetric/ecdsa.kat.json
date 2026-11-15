@@ -1,0 +1,198 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/ecdsa.js",
+ "algorithms": [
+  {
+   "name": "ECDSA",
+   "vectors": [
+    {
+     "text": "RFC 6979 A.2.5 - P-256, SHA-256, message \"sample\"",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"}}
+     ],
+     "input": {"t":"bytes","v":"73616d706c65"},
+     "expected": {"t":"bytes","v":"3046022100efd48b2aacb6a8fd1140dd9cd45e81d69d2c877b56aaf991c34d0ea84eaf3716022100f7cb1c942d657c41d436c7a1b6e29f65f3e900dbb9aff4064dc4ab2f843acda8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6979 A.2.5 - P-256, SHA-256, message \"test\"",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"}}
+     ],
+     "input": {"t":"bytes","v":"74657374"},
+     "expected": {"t":"bytes","v":"3045022100f1abb023518351cd71d881567b1ea663ed3efcf6c5132b354f28d3b0b7d383670220019f4113742a2b14bd25926b49c649155f267e60d3814b4c0cc84250e46f0083"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6979 A.2.5 - P-256, SHA-1, message \"sample\"",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"c9afa9d845ba75166b5c215767b1d6934e50c3db36e89b127b8a622b120f6721"}}
+     ],
+     "input": {"t":"bytes","v":"73616d706c65"},
+     "expected": {"t":"bytes","v":"3044022061340c88c3aaebeb4f6d667f672ca9759a6ccaa9fa8811313039ee4a35471d3202206d7f147dac089441bb2e2fe8f7a3fa264b9c475098fdcf6e00d7c996e1b8b7eb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6979 A.2.6 - P-384, SHA-384, message \"sample\"",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp384r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-384"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"6b9d3dad2e1b8c1c05b19875b6659f4de23c3b667bf297ba9aa47740787137d896d5724e4c70a825f872c9ea60d2edf5"}}
+     ],
+     "input": {"t":"bytes","v":"73616d706c65"},
+     "expected": {"t":"bytes","v":"306602310094edbb92a5ecb8aad4736e56c691916b3f88140666ce9fa73d64c4ea95ad133c81a648152e44acf96e36dd1e80fabe4602310099ef4aeb15f178cea1fe40db2603138f130e740a19624526203b6351d0a3a94fa329c145786e679e7b82c71a38628ac8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6979 A.2.7 - P-521, SHA-512, message \"sample\"",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp521r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-512"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"00fad06daa62ba3b25d2fb40133da757205de67f5bb0018fee8c86e1b68c7e75caa896eb32f1f47c70855836a6d16fcc1466f6d8fbec67db89ec0c08b0e996b83538"}}
+     ],
+     "input": {"t":"bytes","v":"73616d706c65"},
+     "expected": {"t":"bytes","v":"308187024200c328fafcbd79dd77850370c46325d987cb525569fb63c5d3bc53950e6d4c5f174e25a1ee9017b5d450606add152b534931d7d4e8455cc91f9b15bf05ec36e377fa0241617cce7cf5064806c467f678d3b4080d6f1cc50af26ca209417308281b68af282623eaa63e5b5c0723d8b8c37ff0777b1a20f8ccb1dccc43997f1ee0e44da4a67a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof ecdsa_secp256r1_sha256 tcId 5 - valid signature",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"publicKey","value":{"t":"bytes","v":"042927b10512bae3eddcfe467828128bad2903269919f7086069c8c4df6c732838c7787964eaac00e5921fb1498a60f4606766b3d9685001558d1a974e7341513e"}},
+      {"set":"signature","value":{"t":"bytes","v":"304402202ba3a8be6b94d5ec80a6d9d1190a436effe50d85a1eee859b8cc6af9bd5c2e1802204cd60b855d442f5b3c7b11eb6c4e0ae7525fe710fab9aa7c77a67f79e6fadd76"}}
+     ],
+     "input": {"t":"bytes","v":"313233343030"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof ecdsa_secp256r1_sha256 tcId 7 - valid signature",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"publicKey","value":{"t":"bytes","v":"042927b10512bae3eddcfe467828128bad2903269919f7086069c8c4df6c732838c7787964eaac00e5921fb1498a60f4606766b3d9685001558d1a974e7341513e"}},
+      {"set":"signature","value":{"t":"bytes","v":"304502202ba3a8be6b94d5ec80a6d9d1190a436effe50d85a1eee859b8cc6af9bd5c2e18022100b329f479a2bbd0a5c384ee1493b1f5186a87139cac5df4087c134b49156847db"}}
+     ],
+     "input": {"t":"bytes","v":"313233343030"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof ecdsa_secp256r1_sha256 tcId 6 - invalid, s misses its leading zero",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"publicKey","value":{"t":"bytes","v":"042927b10512bae3eddcfe467828128bad2903269919f7086069c8c4df6c732838c7787964eaac00e5921fb1498a60f4606766b3d9685001558d1a974e7341513e"}},
+      {"set":"signature","value":{"t":"bytes","v":"304402202ba3a8be6b94d5ec80a6d9d1190a436effe50d85a1eee859b8cc6af9bd5c2e180220b329f479a2bbd0a5c384ee1493b1f5186a87139cac5df4087c134b49156847db"}}
+     ],
+     "input": {"t":"bytes","v":"313233343030"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof ecdsa_secp256r1_sha256 tcId 84 - invalid, zeros prepended to r",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"publicKey","value":{"t":"bytes","v":"042927b10512bae3eddcfe467828128bad2903269919f7086069c8c4df6c732838c7787964eaac00e5921fb1498a60f4606766b3d9685001558d1a974e7341513e"}},
+      {"set":"signature","value":{"t":"bytes","v":"3047022200002ba3a8be6b94d5ec80a6d9d1190a436effe50d85a1eee859b8cc6af9bd5c2e18022100b329f479a2bbd0a5c384ee1493b1f5186a87139cac5df4087c134b49156847db"}}
+     ],
+     "input": {"t":"bytes","v":"313233343030"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof ecdsa_secp256r1_sha256 tcId 23 - invalid, zeros appended to the SEQUENCE",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256r1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"publicKey","value":{"t":"bytes","v":"042927b10512bae3eddcfe467828128bad2903269919f7086069c8c4df6c732838c7787964eaac00e5921fb1498a60f4606766b3d9685001558d1a974e7341513e"}},
+      {"set":"signature","value":{"t":"bytes","v":"304702202ba3a8be6b94d5ec80a6d9d1190a436effe50d85a1eee859b8cc6af9bd5c2e18022100b329f479a2bbd0a5c384ee1493b1f5186a87139cac5df4087c134b49156847db0000"}}
+     ],
+     "input": {"t":"bytes","v":"313233343030"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof ecdsa_secp256k1_sha256 tcId 1 - valid signature over the empty message",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256k1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"publicKey","value":{"t":"bytes","v":"04782c8ed17e3b2a783b5464f33b09652a71c678e05ec51e84e2bcfc663a3de963af9acb4280b8c7f7c42f4ef9aba6245ec1ec1712fd38a0fa96418d8cd6aa6152"}},
+      {"set":"signature","value":{"t":"bytes","v":"3046022100f80ae4f96cdbc9d853f83d47aae225bf407d51c56b7776cd67d0dc195d99a9dc022100b303e26be1f73465315221f0b331528807a1a9b6eb068ede6eebeaaa49af8a36"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Wycheproof ecdsa_secp256k1_sha256 tcId 3 - valid signature",
+     "inverse": false,
+     "steps": [
+      {"set":"curve","value":{"t":"string","v":"secp256k1"}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}},
+      {"set":"publicKey","value":{"t":"bytes","v":"04782c8ed17e3b2a783b5464f33b09652a71c678e05ec51e84e2bcfc663a3de963af9acb4280b8c7f7c42f4ef9aba6245ec1ec1712fd38a0fa96418d8cd6aa6152"}},
+      {"set":"signature","value":{"t":"bytes","v":"3045022100d035ee1f17fdb0b2681b163e33c359932659990af77dca632012b30b27a057b302201939d9f3b2858bc13e3474cb50e6a82be44faa71940f876c1cba4c3e989202b6"}}
+     ],
+     "input": {"t":"bytes","v":"313233343030"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

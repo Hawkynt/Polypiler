@@ -1,0 +1,95 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-moustique.js",
+ "algorithms": [
+  {
+   "name": "Moustique",
+   "vectors": [
+    {
+     "text": "eSTREAM Moustique testvalues.txt - zero key, zero starting value, zero plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"ffc02501a57e0bf7840e8b8fe2edef46"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "eSTREAM Moustique testvalues.txt - zero key, zero starting value, all-ones plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "eSTREAM Moustique testvalues.txt - zero key, zero starting value, counting plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef0123456789abcdef"},
+     "expected": {"t":"bytes","v":"fee35ee5484164a0fee95934fd771361"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "eSTREAM Moustique testvalues.txt - zero key, zero starting value, descending plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"fedcba9876543210fedcba9876543210"},
+     "expected": {"t":"bytes","v":"0123172a369bce1d035f3447ccb75001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Moustique - 96-bit key, zero starting value, incrementing 64-byte input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"0001021c69bbf834446db204fe215faa5c9dcebd7d420f1b95b50687eb641265064b1664db647d5976dd3d4ebd7542a11fff0fb491ca8ff9686f5d094d72fb33"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Moustique — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e33587da2"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457aafe4194e83"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"81632d46f6435a5c08e47baaae51d874e2d49eeedde551c6bcce0155d033e76360bd7aa1b8ae485fadcb6267aa5fe928"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

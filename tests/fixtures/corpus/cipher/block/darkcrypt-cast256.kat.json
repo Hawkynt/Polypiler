@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-cast256.js",
+ "algorithms": [
+  {
+   "name": "CAST-256 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "RFC 2612 Appendix A CAST-256 test vector, KEYSIZE=256 (each 32-bit word byte-swapped into the little-endian order this build uses)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"9ebb42232c5438fa83acd0be98c20a94ce477c8d4608492613b5c11c04b6e67a"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"38206a4fb9976828360187c9fa173355"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Cast256 — zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"aa55c231eb024287e914d7a0f60733b5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Cast256 — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"b3fb2cefcad5532de25bfc0f905a19f4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Cast256 — shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"f2f8c35a6818087b4b22b9c5b0b98a32"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

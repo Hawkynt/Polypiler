@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/seedwrappad.js",
+ "algorithms": [
+  {
+   "name": "SEED Key Wrap with Padding",
+   "vectors": [
+    {
+     "text": "Self-consistency vector (RFC 5649 wrap structure, sized like RFC 5649 §6.2, with SEED substituted for AES; no official SEED-KWP KAT exists) — single-block case (7-octet key data)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"466f7250617369"},
+     "expected": {"t":"bytes","v":"47e20ac2284005f3dbdf0b2ee509a460"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Self-consistency vector (RFC 5649 wrap structure, sized like RFC 5649 §6.1, with SEED substituted for AES; no official SEED-KWP KAT exists) — multi-block case (20-octet key data, general RFC 3394 loop)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}}
+     ],
+     "input": {"t":"bytes","v":"c37b7e6492584340bed12207808941155068f738"},
+     "expected": {"t":"bytes","v":"938241514e0bf5f5ead58fe8eb09a93fa101fefc47e2f90de121a3765644226a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

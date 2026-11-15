@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-seal2.js",
+ "algorithms": [
+  {
+   "name": "SEAL2 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Seal2 — keystream from incrementing key, zero input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"d95030a48b03db75c9b45cf849d659e443df9aae2e1695a0ba8ea72be7aa37c4940291d21e585a8d1aadcf142de6d0006df1cc6fae1c08778a4b033ef90a80c0ae89ad2e21c0c56936bb2004d5aff9173164ecd8b47ea23816875981ec67cd9e1d75612eab874ef2fcaa9400e4c4c1d85a1e63c80592a764cb886ddc4072ec4c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Seal — keystream from incrementing key, zero input (byte-identical to with the same key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"d95030a48b03db75c9b45cf849d659e443df9aae2e1695a0ba8ea72be7aa37c4940291d21e585a8d1aadcf142de6d0006df1cc6fae1c08778a4b033ef90a80c0ae89ad2e21c0c56936bb2004d5aff9173164ecd8b47ea23816875981ec67cd9e1d75612eab874ef2fcaa9400e4c4c1d85a1e63c80592a764cb886ddc4072ec4c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Seal2 — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"d95132a78f06dd72c1bd56f345db57eb53ce88bd3a0383b7a297bd30fbb729dbb423b3f13a7d7caa3284e53f01cbfe2f5dc0fe5c9a293e40b2723905c537beff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

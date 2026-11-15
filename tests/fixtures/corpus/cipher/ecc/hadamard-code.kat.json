@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/hadamard-code.js",
+ "algorithms": [
+  {
+   "name": "Hadamard Code",
+   "vectors": [
+    {
+     "text": "Hadamard (8,3) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hadamard (8,3) pattern 001",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000001"},
+     "expected": {"t":"bytes","v":"0001000100010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hadamard (8,3) pattern 010",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000100"},
+     "expected": {"t":"bytes","v":"0000010100000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hadamard (8,3) all ones",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010101"},
+     "expected": {"t":"bytes","v":"0001010001000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

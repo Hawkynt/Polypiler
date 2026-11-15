@@ -84,8 +84,13 @@ internal sealed partial class Lowering {
     if (literal.Elements.Count == 0)
       return ListOp(IrCollectionOp.ListNew, list);
 
-    if (element.IsCollection || element.IsObject)
-      throw this.Unsupported(literal, $"a literal of a list of {types.Of(literal).Element!.Describe()}");
+    // Objects, arrays and collections, which no array holds, are the elements of a list of their own (#1365).
+    if (element.IsCollection || element.IsObject || element.IsArray) {
+      if (literal.Elements.Any(item => item is null or SpreadElement))
+        throw this.Unsupported(literal, $"a hole or a spread in a literal of a list of {types.Of(literal).Element!.Describe()}");
+
+      return new IrCollection(IrCollectionOp.ListOf, list, [.. literal.Elements.Select(item => this.Value(item!, element))]);
+    }
 
     return ListOp(IrCollectionOp.ListFromArray, list, this.ArrayLiteral(literal, element));
   }

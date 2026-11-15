@@ -78,9 +78,9 @@ internal sealed class MiniUpstream : IDisposable {
     """;
 
   /// <summary>A fixture list item of the mini-upstream.</summary>
-  public static string Fixture(string id, string path, string dependencies = "[]", string vectors = "{ kind: embedded, source: inline }") => $"""
+  public static string Fixture(string id, string path, string dependencies = "[]", string vectors = "{ kind: embedded, source: inline }", string? commit = null) => $"""
       - id: {id}
-        repository: {Name}
+        repository: {Name}{(commit is null ? "" : $"\n    commit: {commit}")}
         path: {path}
         export: main
         dependencies: {dependencies}

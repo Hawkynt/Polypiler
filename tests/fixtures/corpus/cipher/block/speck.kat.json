@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/speck.js",
+ "algorithms": [
+  {
+   "name": "Speck",
+   "vectors": [
+    {
+     "text": "Speck64/128 - Simon and Speck paper Appendix C (byte-serialised)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0001020308090a0b1011121318191a1b"}}
+     ],
+     "input": {"t":"bytes","v":"2d4375747465723b"},
+     "expected": {"t":"bytes","v":"8b024e4548a56f8c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Speck64/128 - Crypto++ TestVectors #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"64b76fa61ce980ab2f71098d75d66e5f"}}
+     ],
+     "input": {"t":"bytes","v":"1589a8bbff4c7a85"},
+     "expected": {"t":"bytes","v":"2f1d122370946bda"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Speck64/128 - Crypto++ TestVectors #3",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5524abb77240eb5c4554fad4ab730ddf"}}
+     ],
+     "input": {"t":"bytes","v":"f85fa0721a3c9ad6"},
+     "expected": {"t":"bytes","v":"2a740170155b33ee"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Speck64/128 - Crypto++ TestVectors #4",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"922bf30e46f8cd8cb624d0bcff7ae7a2"}}
+     ],
+     "input": {"t":"bytes","v":"35b7e6e160815a52"},
+     "expected": {"t":"bytes","v":"f1761c9cbe6621e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

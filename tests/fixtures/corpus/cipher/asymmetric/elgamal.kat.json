@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/elgamal.js",
+ "algorithms": [
+  {
+   "name": "ElGamal",
+   "vectors": [
+    {
+     "text": "ElGamal over RFC 3526 group 5 - round-trip",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0600"}}
+     ],
+     "input": {"t":"bytes","v":"456c47616d616c2054657374"},
+     "expected": {"t":"bytes","v":"456c47616d616c2054657374"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"c85b46230fdee9eb3b8746ac807840762098eedd978f508c4108a9ca08d653954b0e1e336b0c103d7ab0e2e1a92a8793ce6480abfba63811fdaee238e36d430e461efb8ffaf8e217eb3e924826c7efe77c9e4563d27ebf917c1fb69316688d61c4b9fec83c849377f4768143ee0b42b12f20520e812e5435ab0b879bf891f62fbbea9387e927b45d2989ee371af061a7944af9312f37cda90ef1973de9ffed5234ecdc8aec58e9ebce159119758ff70d83a9c041a8e96e1b1e78b418e010fa5f49e7ec4f880dee1d001e35d37986078c1e27303512a5c30250166379628626944258991246ea50228b7832c9ab108c8cba96403448a32c4f58ad2820fae83919c1c309ae1b2352f3fd63c27e9ac4107873993d98fe0212fa427e57eff4d1fa13ba944739a934d0fbe298778283e385fc9b9cd8103d8c1540bc4ef1755b6b40bb968f2b435cdce374bbe810098530bb9315bb09ac257d826b045272c6a1fb9785be03bef6c7b89a4a63139db669bf796c03861dcdcf9525f339dfdc29474650d0"},
+      "deterministic": false
+     }
+    },
+    {
+     "text": "ElGamal over RFC 3526 group 14 - round-trip with leading zero octets",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0800"}}
+     ],
+     "input": {"t":"bytes","v":"0000000102030405"},
+     "expected": {"t":"bytes","v":"0000000102030405"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"6a28d053b1e5e9bff5bee73af2b9deaaea456b9a5f157c44d415e3f20370d13923e07d281500a027c5f3715f581b417e822df69b7a0abc2de2acf8b33b7b8c437ae69da80da2aa01ca225e47f7f8fd8314646ec14812a661a7bebf1224e034a98eceb783bd342e1662865cb5b12e869f558cbb6dc03faa75a70024beaf9541e86ae9d6169638e516f352bdc559840f30ab69ead58dfee61619109fdd063bd69f0b5d69fbb8f1fc99a6ac7206f127e74c3588839075aa61bb6837a32acd43251a04af1701d9263d661642d58aa33c434e63da7c91035d46c6d96451156394bbc4d9998b25433f23c7a2ec4aeac9e12ebf5c1729113ac8b0ff263f0f3c21feba6a5ccef3acbcdc9cfa3348e26cdb3080c12bd91fba001eec073fc3697724b85b66d99fa2b3e3ace5f0c8ddc619db39f2462ffe2a1ffe919ec1e3f98f696e9caf0f14d8fe167fa7c8cd0b3674719acebf82957fbf4c9d3519fed560b08d54e0d34a0b23e9322b7b6f88bb15833ef78df24eb161881df4d5cdfc0ccad7a27348a4a34a93d694b71c99a436608c501435d8e54ae97012f45ac254188e0335cd1b3daf6d6b8dfe2dea289ce56c15f0ac8fbebff25d03028f11062b9787ad3d25a1fa08a512215d830be39c2465ed673738bebbae07072251415a35616a2ba04dc3e314bf93c2be748b8fb4a0513133d1ab4f27776c9e7be60fb5012b95c5cedaf68398"},
+      "deterministic": false
+     }
+    },
+    {
+     "text": "ElGamal over RFC 3526 group 14 - round-trip of an all-zero message",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0800"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"368b4f5e051e20debca655ae8c972a7b403365ee86d73b655e4792b5a6834e4fdf316a5bc215c560c59cf3c778d882cccb4d607f7a821f195fee18f7bd3eff8cf9b1ccba2a30b6ea39ef7e177f204187a7a2be9bec0c85f3123d01e8a38212ab8be166168401e8e104984f065e54a737c997f34e36f4bfaf156034ad4f8902370006a9150cf27cfd01daa2c6797701c3536bd91d04aa8dbf78e10dfbf95e89e115462a71114f146c378fa127437c9a487694003f0845886fac5095ff3c509f04e91319b33aa75ead4a2484aaab5b7b5a1fe992c08ec3d43547c1a418b58de8d871e2e994eb451f7a9d75d183003f7e91c2aa3443601bc1b35fb1a6355fc367479882ca9b65075ca389b4f405ed695fcbceea173a3ed8bb02175e7f95b79378801b670456f4a41133cbdb4d1160505c1b7727f30f444e6815cb4e9d5dd83db632989bd73747d32f7c042eae4d6a331f6bd615ae61aaecc7e21cffa8e4ff08c8b4dbe2f1f8e097433f324e33ee63f53ef9e3f72bdd90406ee98b5f44e2dc8039fe8d0e207af0c4b41907b9478b34506fa6f31c129dc28310f5309b6763ac1134cdd8998ecffb79a0bd057df810f0d8684704111b8f853c76e1afad1576fb6170a1ec3214d9e74e31713f671fdf710c10fe9c1b8e8e061cf592996215af9c924f7d6bca65fb5cc4f3b0fee1b66700a02b1b9b163799499dc4281d42423e625a9e98"},
+      "deterministic": false
+     }
+    }
+   ]
+  }
+ ]
+}

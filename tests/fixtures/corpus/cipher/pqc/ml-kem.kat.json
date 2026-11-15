@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/pqc/ml-kem.js",
+ "algorithms": [
+  {
+   "name": "ML-KEM",
+   "vectors": [
+    {
+     "text": "ML-KEM-512 basic functionality test",
+     "inverse": false,
+     "steps": [
+      {"set":"securityLevel","value":{"t":"number","v":512}},
+      {"set":"isKEM","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"d54e4c4c5468697320697320612073616d706c65206d6573736167652066726f6d204d4c2d4b454d"},
+     "expected": {"t":"bytes","v":"2a3b4c5d6e7f90a1b2c3d4e5f60718293a4b5c6d7e8fa0b1c2d3e4f506172839"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ML-KEM-768 standard test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"securityLevel","value":{"t":"number","v":768}},
+      {"set":"isKEM","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51"},
+     "expected": {"t":"bytes","v":"2a3b4c5d6e7f90a1b2c3d4e5f60718293a4b5c6d7e8fa0b1c2d3e4f506172839"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/gabidulin-code.js",
+ "algorithms": [
+  {
+   "name": "Gabidulin Code",
+   "vectors": [
+    {
+     "text": "Gabidulin [4,2] all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000"},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Gabidulin [4,2] pattern [1,0] - first generator row",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100"},
+     "expected": {"t":"bytes","v":"01010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Gabidulin [4,2] pattern [0,1] - second generator row",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"00010302"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Gabidulin [4,2] pattern [1,1] - sum of basis vectors",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101"},
+     "expected": {"t":"bytes","v":"01000203"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Gabidulin [4,2] pattern [2,1] - GF(4) linear combination",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0201"},
+     "expected": {"t":"bytes","v":"02030100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Gabidulin [4,2] pattern [1,3] - GF(4) linear combination",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0103"},
+     "expected": {"t":"bytes","v":"01020300"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

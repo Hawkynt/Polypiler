@@ -50,6 +50,7 @@ public static class Program {
       output.WriteLine($"       {Name} {CorpusCommand.Verb} import [--source <dir>]... [--update-lock] [--fixture <id>]...");
       output.WriteLine($"       {Name} {CorpusCommand.Verb} verify");
       output.WriteLine($"       {Name} {CorpusCommand.Verb} discover --repository <owner/repo> --glob <pattern> [--source <dir>]...");
+      output.WriteLine($"       {Name} {CipherCommand.Verb} kat (<file>... | --all) [--targets csharp,rust] [--require <target>,...] [--jobs <n>] [--polypiler <path>] [--report <file.md>] [--work <dir>]");
       output.WriteLine($"       {Name} {FuzzCommand.Verb} run --target <id> [--seed <n>] [--iterations <n>] [--engine inprocess|afl] [--duration <seconds>] [--assembly <path>]...");
       output.WriteLine($"       {Name} {FuzzCommand.Verb} minimize --target <id> --input <file> [--assembly <path>]...");
       output.WriteLine($"       {Name} {FuzzCommand.Verb} replay [--target <id>] [--assembly <path>]...");
@@ -94,6 +95,8 @@ public static class Program {
 
     if (args[0] == CorpusCommand.Verb)
       return new CorpusCommand().Run(args[1..], output, error);
+    if (args[0] == CipherCommand.Verb)
+      return new CipherCommand().Run(args[1..], output, error);
     if (args[0] == FuzzCommand.Verb)
       return new FuzzCommand().Run(args[1..], output, error);
     if (args[0] == IntegrityCommand.Verb)

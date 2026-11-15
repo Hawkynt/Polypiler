@@ -70,12 +70,26 @@ internal sealed class ExceptionImportTests {
 
   /// <summary>Test design 9: a value that is no Error, observed by a catch or leaving the function, is refused; caught without a binding it is not.</summary>
   [TestCase("export function f() { try { throw 42; } catch (e) { return e + 1; } }", "the catch at line 1")]
-  [TestCase("export function f() { throw \"x\"; }", "the caller of 'f'")]
+  [TestCase("export function f() { try { throw 'x'; } catch (e) { return e.length; } }", "the catch at line 1")]
+  [TestCase("export function f() { throw 2; }", "the caller of 'f'")]
   [TestCase("export function f() { try { throw 1; } finally { } }", "the caller of 'f'")]
   public void JavaScript_RefusesAnObservedValueThatIsNoError(string source, string place) {
     var refusal = ScriptRefusal(source);
     Assert.That(refusal.Code, Is.EqualTo(JavaScriptFrontend.NonErrorThrow));
     Assert.That(refusal.Message, Is.EqualTo($"a thrown value that is not an Error reaches {place}, which observes it"));
+  }
+
+  /// <summary>A string thrown out to the caller is an Error of that message (#1365), with the caveat that says so.</summary>
+  [Test]
+  public void JavaScript_ThrowsAStringToTheCallerAsAnErrorOfThatMessage() {
+    var result = JavaScriptFrontend.Import("snippet.js", "export function f(a) { if (a > 0) throw 'not implemented'; try { if (a < 0) throw 'inner'; } finally { } return 1; }");
+    Assert.That(result.Caveats.Select(caveat => caveat.Id), Has.Member(JavaScriptFrontend.ThrowsTextCaveat));
+    var module = result.Module!;
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    Assert.That(IrInterpreter.Call(module, "f", [0.0]), Is.EqualTo(1));
+    Assert.That(() => IrInterpreter.Call(module, "f", [1.0]), Throws.Exception.With.Message.Contains("not implemented"));
+    Assert.That(() => IrInterpreter.Call(module, "f", [-1.0]), Throws.Exception.With.Message.Contains("inner"));
+    Assert.That(Emit(module, CSharpProfile.Default), Does.Contain("throw new global::System.Exception(\"not implemented\");"));
   }
 
   [TestCase("export function f() { try { throw {}; } catch { return 2; } }")]

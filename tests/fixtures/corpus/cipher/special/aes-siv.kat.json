@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/special/aes-siv.js",
+ "algorithms": [
+  {
+   "name": "AES-SIV",
+   "vectors": [
+    {
+     "text": "AES-SIV Educational test - empty plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f"}},
+      {"call":"setAAD","args":[{"t":"bytes","v":""}]}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"5816c832781ec9725816c832380ecbf2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES-SIV Educational test - with data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f"}},
+      {"call":"setAAD","args":[{"t":"bytes","v":""}]}
+     ],
+     "input": {"t":"bytes","v":"112233445566778899aabbccddee"},
+     "expected": {"t":"bytes","v":"3095603a1188f06912b7421853b22c8b9416bfdc4422397d9416bfdce54a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

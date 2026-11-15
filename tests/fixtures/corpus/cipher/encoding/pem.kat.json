@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/pem.js",
+ "algorithms": [
+  {
+   "name": "PEM (Privacy-Enhanced Mail)",
+   "vectors": [
+    {
+     "text": "PEM empty certificate test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"2d2d2d2d2d424547494e2043455254494649434154452d2d2d2d2d0a0a2d2d2d2d2d454e442043455254494649434154452d2d2d2d2d0a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Basic PEM encoding test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f"},
+     "expected": {"t":"bytes","v":"2d2d2d2d2d424547494e2043455254494649434154452d2d2d2d2d0a534756736247383d0a2d2d2d2d2d454e442043455254494649434154452d2d2d2d2d0a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

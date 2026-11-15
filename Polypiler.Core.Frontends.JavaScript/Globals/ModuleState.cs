@@ -22,7 +22,7 @@ internal static class ModuleState {
   /// <returns>The variables lowered, in source order.</returns>
   public static IReadOnlyList<Variable> Lower(
     Program program, IReadOnlyList<Variable> globals, IReadOnlyList<FunctionModel> models, FunctionModel initializers, Lowering lowering, List<Diagnostic> diagnostics,
-    IEnumerable<Variable> owned, IReadOnlySet<Node> declarations) {
+    IEnumerable<Variable> owned, IReadOnlyCollection<Node> declarations) {
     var used = models.SelectMany(model => model.Bindings.Values).OfType<Variable>().Where(variable => variable.IsGlobal).ToHashSet();
     // A static field is a member of its class, whoever uses it.
     used.UnionWith(owned);

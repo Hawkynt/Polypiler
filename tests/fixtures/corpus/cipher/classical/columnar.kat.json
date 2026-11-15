@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/columnar.js",
+ "algorithms": [
+  {
+   "name": "Columnar Transposition",
+   "vectors": [
+    {
+     "text": "Three columns with a short last row filled out with X. No published source carries this value",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4b4559"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"454f484c4c58"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Keyword with a repeated letter - SECRET dedupes to five columns. No published source carries this value",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"534543524554"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"54545854414e414458414b57434158"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single column - one column is no transposition at all and needs no padding",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5a"}}
+     ],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

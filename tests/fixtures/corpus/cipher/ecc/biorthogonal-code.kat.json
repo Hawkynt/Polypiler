@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/biorthogonal-code.js",
+ "algorithms": [
+  {
+   "name": "Biorthogonal Code",
+   "vectors": [
+    {
+     "text": "Biorthogonal (8,4) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Biorthogonal (8,4) pattern 0001",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000001"},
+     "expected": {"t":"bytes","v":"0000000101010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Biorthogonal (8,4) pattern 0010",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000100"},
+     "expected": {"t":"bytes","v":"0001010000010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Biorthogonal (8,4) pattern 1000",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000000"},
+     "expected": {"t":"bytes","v":"0101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

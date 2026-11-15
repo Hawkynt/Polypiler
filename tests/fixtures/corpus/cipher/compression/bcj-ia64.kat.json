@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bcj-ia64.js",
+ "algorithms": [
+  {
+   "name": "BCJ IA-64",
+   "vectors": [
+    {
+     "text": "Empty buffer",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Padding bundle followed by a bundle with a branch in slot 1 (template 18)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000012000000000000180900200000000000"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000012000000000000200900200000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

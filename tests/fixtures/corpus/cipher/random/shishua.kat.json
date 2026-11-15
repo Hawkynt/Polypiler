@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/shishua.js",
+ "algorithms": [
+  {
+   "name": "SHISHUA",
+   "vectors": [
+    {
+     "text": "Seed Zero: First 128 bytes (official test vector)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":128}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"955d96f90fb4aa53092d82e63a7c09e22ca5a4a5a75a5a39dc68b4125de7ce2b6b6efef58bd9cc4212dd744e81fd18b958f0625d38efcc1b6fdb0da336f7e5ee6bdbe8ea5cda40c75344d0d5bfc1d507e02cf51208711bea8882cfd6ccf71d0662c75ef1985df2c6d56d3d2e35dad6853ac176b74db7e026512dce348ba603f1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed Pi: First 128 bytes (digits of pi as seed)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":128}},
+      {"set":"seed","value":{"t":"bytes","v":"243f6a8885a308d313198a2e03707344a409382229f31d0082efa98ec4e6c894"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"fa62a926dc1fbf00f13ce868459b6f744bbf2b57505ed8160e4ed92a2ef6965c01b5c9e79d84d8d95f0db74a47f4acc825cc0b2e3b90030a1d443cd827a842e06e8fa0c1b28e183de393067911dc92930d85acdedbb32304d0befe74efbbbf19c1150a347845a22793b7b24d4b4f6eb6c0dc42546a9bcd5073faa19cb4d1d287"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed Zero: 512 bytes (extended output test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":512}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"955d96f90fb4aa53092d82e63a7c09e22ca5a4a5a75a5a39dc68b4125de7ce2b6b6efef58bd9cc4212dd744e81fd18b958f0625d38efcc1b6fdb0da336f7e5ee6bdbe8ea5cda40c75344d0d5bfc1d507e02cf51208711bea8882cfd6ccf71d0662c75ef1985df2c6d56d3d2e35dad6853ac176b74db7e026512dce348ba603f10ea27a7fcb038c71e2c7057d8fef24945197a6dd608098f9f4cc275dd19751ad0f4bf61896c9c2842e34609e2916384e719f7f056c2a70f4b8592c02d1d6f091065dac7ec8a75e2825fd081e0dacbf1a32c22e8239606c41f1b13cd6b59e04c45afbfeb36700a9ef251cf572e1d74085dbcc0279491d7754962185687ae84102b237021898335f445d673dcc82d03f7894dcc2872739e4853cb0c33ba03329f3468b93a52b58b9429a9bd14bac3744dfee2243d30de211cf490e56b56c5540fc80f768fa4725e75a6d3e8fe774c16a428c429279b03fad49170fb32aa829000964f1b1cbf3492261f0e720db118f053d50e6904ac07676626143faafe0bd4e2468f9ae751b5893814b873cdc263bfaa4cae7680bf0370c78d4d0ccaf54fd9399ba473f88417e61a6ea72a7ee89ead24e559933cdef293a89cfca6b9d7a5e727e34b5f7c83fad44ec25b76bd70e5306e09d0d9b44c1d5c14f9dcb8bbfaf7e0f6ffae08c9a334a253719110db59d150900e4aaef3d1a853ac3b05403a750ec938f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

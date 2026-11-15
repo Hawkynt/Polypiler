@@ -1,0 +1,22 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/chc.js",
+ "algorithms": [
+  {
+   "name": "CHC",
+   "vectors": [
+    {
+     "text": "LibTomCrypt Test Vector - 'hello world' with AES-128",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"68656c6c6f20776f726c64"},
+     "expected": {"t":"bytes","v":"cf579dc30a0eea610d5447c43c06f54e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

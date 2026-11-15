@@ -1,0 +1,161 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/comet64-speck.js",
+ "algorithms": [
+  {
+   "name": "COMET-64-SPECK",
+   "vectors": [
+    {
+     "text": "NIST LWC KAT Count=1: Empty plaintext, empty AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"","typed":"Uint8Array"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"d633b901593e5dfc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=2: Empty plaintext, 1-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"9073a58ec98cd1c1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=3: Empty plaintext, 2-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"0001"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"70c62ef9e8d20c2d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=9: Empty plaintext, 8-byte AD (full block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"67cab3fb65731afa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=17: Empty plaintext, 16-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"657684fb59323ae4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=34: 1-byte plaintext, empty AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"","typed":"Uint8Array"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"ccfd543f711a9794eb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=35: 1-byte plaintext, 1-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"00"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"e8c1b687b7fdc8d826"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=42: 1-byte plaintext, 8-byte AD (full block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"6dd3a86775755daaad"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=10: Empty plaintext, 9-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"000102030405060708"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"459d3a0efd66e5ba"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT Count=6: Empty plaintext, 5-byte AD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"0001020304"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"eeb5cdf87a340dcb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

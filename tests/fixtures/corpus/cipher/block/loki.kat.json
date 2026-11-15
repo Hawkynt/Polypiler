@@ -1,0 +1,73 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/loki.js",
+ "algorithms": [
+  {
+   "name": "LOKI89",
+   "vectors": [
+    {
+     "text": "LOKI89 Educational Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"133457799bbcdff1"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"c304be5781629534"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "LOKI91",
+   "vectors": [
+    {
+     "text": "LOKI91 Educational Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"133457799bbcdff1"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"418df9e7dd8aa563"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "LOKI97",
+   "vectors": [
+    {
+     "text": "LOKI97 Educational Test Vector (128-bit key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"133457799bbcdff10011223344556677"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef0123456789abcdef"},
+     "expected": {"t":"bytes","v":"120d03198dbf3afd3d7d8614d5531c7b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LOKI97 All Zeros Educational Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"1cd98343476374f07e9bddabf83af501"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzfx.js",
+ "algorithms": [
+  {
+   "name": "LZFX",
+   "vectors": [
+    {
+     "text": "All literals - no compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424344"},
+     "expected": {"t":"bytes","v":"040000000341424344"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetition - AAAA",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "expected": {"t":"bytes","v":"0400000000412000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetition - 10 A's",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141414141414141"},
+     "expected": {"t":"bytes","v":"0a0000000041e00000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern repetition - ABCABCABC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243414243"},
+     "expected": {"t":"bytes","v":"09000000024142438002"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long text compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64212048656c6c6f20576f726c6421"},
+     "expected": {"t":"bytes","v":"190000000c48656c6c6f20576f726c642120e0030c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Highly repetitive data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"},
+     "expected": {"t":"bytes","v":"640000000042e05a00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

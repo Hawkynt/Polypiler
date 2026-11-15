@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/atbash.js",
+ "algorithms": [
+  {
+   "name": "Atbash Cipher",
+   "vectors": [
+    {
+     "text": "Basic Atbash transformation",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"53564f4f4c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Full alphabet test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a"},
+     "expected": {"t":"bytes","v":"5a595857565554535251504f4e4d4c4b4a494847464544434241"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed case preservation",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"53766f6f6c20446c696f77"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

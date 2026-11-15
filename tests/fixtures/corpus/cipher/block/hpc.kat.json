@@ -1,0 +1,78 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/hpc.js",
+ "algorithms": [
+  {
+   "name": "HPC",
+   "vectors": [
+    {
+     "text": "HPC-Tiny 15-bit with Wagner fix (1999) - Test #0",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"blockSizeBits","value":{"t":"number","v":15}}
+     ],
+     "input": {"t":"bytes","v":"0000"},
+     "expected": {"t":"bytes","v":"1b41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HPC-Tiny 15-bit with Wagner fix (1999) - Test #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"blockSizeBits","value":{"t":"number","v":15}}
+     ],
+     "input": {"t":"bytes","v":"0100"},
+     "expected": {"t":"bytes","v":"5c41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HPC-Short 64-bit with Wagner fix (1999) - Test #0",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"0da29b76a1616de1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HPC-Short 64-bit with Wagner fix (1999) - Test #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0100000000000000"},
+     "expected": {"t":"bytes","v":"99ecc89522c69080"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HPC-Short 64-bit with Wagner fix (1999) - Test #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0200000000000000"},
+     "expected": {"t":"bytes","v":"92e8afd44c695afd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

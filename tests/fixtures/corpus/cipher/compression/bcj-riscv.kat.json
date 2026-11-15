@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bcj-riscv.js",
+ "algorithms": [
+  {
+   "name": "BCJ RISC-V",
+   "vectors": [
+    {
+     "text": "Empty buffer",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "JAL rd=x0 (plain jump) - opcode 0x6F byte is NOT filtered, only rd=ra/t0 are",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6f0000000000000000000000"},
+     "expected": {"t":"bytes","v":"6f0000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "JAL rd=ra, imm=0, at a nonzero pc - byte-relative immediate rewritten to absolute",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000ef0000000000000000000000"},
+     "expected": {"t":"bytes","v":"00000000ef0000020000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AUIPC register-pair, 'real' form (rd != x0, x2) rewritten to canonical form",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"970000000380000000000000"},
+     "expected": {"t":"bytes","v":"173100080000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AUIPC register-pair, 'fake' bijective form (rd = x0/x2) rewritten back",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"173100080000000000000000"},
+     "expected": {"t":"bytes","v":"970000000380000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

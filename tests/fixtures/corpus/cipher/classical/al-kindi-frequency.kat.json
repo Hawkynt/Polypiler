@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/al-kindi-frequency.js",
+ "algorithms": [
+  {
+   "name": "Al-Kindi Frequency Analysis",
+   "vectors": [
+    {
+     "text": "Caesar Cipher Analysis (ciphertext shifted by 3, recovered by frequency analysis)",
+     "inverse": false,
+     "steps": [
+      {"set":"language","value":{"t":"string","v":"english"}}
+     ],
+     "input": {"t":"bytes","v":"574b5256204c562044205648465548572050485656444a48"},
+     "expected": {"t":"bytes","v":"54484f53204953204120534543524554204d455353414745"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Substitution Analysis",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"656e676c697368"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f20574f524c44"},
+     "expected": {"t":"bytes","v":"454249494c20544c4f4941"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

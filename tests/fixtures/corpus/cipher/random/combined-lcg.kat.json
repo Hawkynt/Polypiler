@@ -1,0 +1,116 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/combined-lcg.js",
+ "algorithms": [
+  {
+   "name": "Combined LCG",
+   "vectors": [
+    {
+     "text": "Default PCG parameters, Additive mode, seed=1 - First 5 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"combinationMode","value":{"t":"number","v":0}},
+      {"set":"lcg1Multiplier","value":{"t":"bytes","v":"5851f42d4c957f2d"}},
+      {"set":"lcg1Increment","value":{"t":"bytes","v":"14057b7ef767814f"}},
+      {"set":"lcg1Modulo","value":{"t":"bytes","v":"00"}},
+      {"set":"lcg2Multiplier","value":{"t":"bytes","v":"369dea0f31a53f85"}},
+      {"set":"lcg2Increment","value":{"t":"bytes","v":"255992d382208b61"}},
+      {"set":"lcg2Modulo","value":{"t":"bytes","v":"00"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"618049f4081c4420659a51615ac96cb0c55ee230c7bb90d8d13ac8e8fa053618925b372afca62170"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Default PCG parameters, XOR mode, seed=42 - First 5 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"combinationMode","value":{"t":"number","v":3}},
+      {"set":"lcg1Multiplier","value":{"t":"bytes","v":"5851f42d4c957f2d"}},
+      {"set":"lcg1Increment","value":{"t":"bytes","v":"14057b7ef767814f"}},
+      {"set":"lcg1Modulo","value":{"t":"bytes","v":"00"}},
+      {"set":"lcg2Multiplier","value":{"t":"bytes","v":"369dea0f31a53f85"}},
+      {"set":"lcg2Increment","value":{"t":"bytes","v":"255992d382208b61"}},
+      {"set":"lcg2Modulo","value":{"t":"bytes","v":"00"}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"079c9839b884a2704981dc493c664dde2ed1bfec97391484183722416c6399f63ed118fd21a09238"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "L'Ecuyer 1988 32-bit parameters, Additive mode, seed=12345 - First 5 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"combinationMode","value":{"t":"number","v":0}},
+      {"set":"lcg1Multiplier","value":{"t":"bytes","v":"00009c4e"}},
+      {"set":"lcg1Increment","value":{"t":"bytes","v":"00000000"}},
+      {"set":"lcg1Modulo","value":{"t":"bytes","v":"7fffffab"}},
+      {"set":"lcg2Multiplier","value":{"t":"bytes","v":"00009ef4"}},
+      {"set":"lcg2Increment","value":{"t":"bytes","v":"00000000"}},
+      {"set":"lcg2Modulo","value":{"t":"bytes","v":"7fffff07"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000003039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"000000006265368c000000005fa824580000000039fd3bd5000000005bf0874e0000000075a84d5d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Subtractive mode test, seed=1 - First 5 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"combinationMode","value":{"t":"number","v":1}},
+      {"set":"lcg1Multiplier","value":{"t":"bytes","v":"5851f42d4c957f2d"}},
+      {"set":"lcg1Increment","value":{"t":"bytes","v":"14057b7ef767814f"}},
+      {"set":"lcg1Modulo","value":{"t":"bytes","v":"00"}},
+      {"set":"lcg2Multiplier","value":{"t":"bytes","v":"369dea0f31a53f85"}},
+      {"set":"lcg2Increment","value":{"t":"bytes","v":"255992d382208b61"}},
+      {"set":"lcg2Modulo","value":{"t":"bytes","v":"00"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"d226e9cefa38d85898c47e2167f31f067017c59a44754ac45cf94be0781ecaf297c52ce171d305f0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Multiplicative mode test, seed=100 - First 5 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"combinationMode","value":{"t":"number","v":2}},
+      {"set":"lcg1Multiplier","value":{"t":"bytes","v":"5851f42d4c957f2d"}},
+      {"set":"lcg1Increment","value":{"t":"bytes","v":"14057b7ef767814f"}},
+      {"set":"lcg1Modulo","value":{"t":"bytes","v":"00"}},
+      {"set":"lcg2Multiplier","value":{"t":"bytes","v":"369dea0f31a53f85"}},
+      {"set":"lcg2Increment","value":{"t":"bytes","v":"255992d382208b61"}},
+      {"set":"lcg2Modulo","value":{"t":"bytes","v":"00"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000064"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"240f6b8a133e41bff80401a36365d6dc879fb6afb278c5d7d2ec230014f07200c6c06de607e40507"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

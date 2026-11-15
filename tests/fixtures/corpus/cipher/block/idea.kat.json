@@ -1,0 +1,89 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/idea.js",
+ "algorithms": [
+  {
+   "name": "IDEA",
+   "vectors": [
+    {
+     "text": "NESSIE IDEA ECB test vector - all zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"0001000100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE IDEA ECB test vector - high bit plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"8000000000000000"},
+     "expected": {"t":"bytes","v":"8001000180008000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan idea.vec - classic ISO/IEC 18033-3 sample, counting plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00010002000300040005000600070008"}}
+     ],
+     "input": {"t":"bytes","v":"0000000100020003"},
+     "expected": {"t":"bytes","v":"11fbed2b01986de5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan idea.vec - classic sample, sequential plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00010002000300040005000600070008"}}
+     ],
+     "input": {"t":"bytes","v":"0102030405060708"},
+     "expected": {"t":"bytes","v":"540e5fea18c2f8b1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan idea.vec - random key/plaintext pair",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ed1bcc9e9267925f3132ba3a8cf9b764"}}
+     ],
+     "input": {"t":"bytes","v":"7409000000000000"},
+     "expected": {"t":"bytes","v":"e18315c171b83765"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan idea.vec - multi-block ECB chain",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00010002000300040005000600070008"}}
+     ],
+     "input": {"t":"bytes","v":"000000010002000301020304050607080019324b647d96aff5202d5b9c671b08"},
+     "expected": {"t":"bytes","v":"11fbed2b01986de5540e5fea18c2f8b19f0a0ab6e10ced78cf18fd7355e2c5c5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

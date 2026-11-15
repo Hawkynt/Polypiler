@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/mlcg.js",
+ "algorithms": [
+  {
+   "name": "MLCG (Multiplicative Linear Congruential Generator)",
+   "vectors": [
+    {
+     "text": "MINSTD (Park-Miller MLCG) a=16807, m=2^31-1, seed=1 - First 10 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"multiplier","value":{"t":"bytes","v":"000041a7"}},
+      {"set":"modulo","value":{"t":"bytes","v":"7fffffff"}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"000041a710d63af160b7acd93ab50c2a4431b7821c06dac806058ed856e509fe56f32f4377a4044d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MINSTD (Park-Miller MLCG) - 10,000th value should be 1043618065",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"multiplier","value":{"t":"bytes","v":"000041a7"}},
+      {"set":"modulo","value":{"t":"bytes","v":"7fffffff"}},
+      {"set":"count","value":{"t":"number","v":10000}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3e345911"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MLCG with a=48271, m=2^31-1, seed=1 - First 5 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"multiplier","value":{"t":"bytes","v":"0000bc8f"}},
+      {"set":"modulo","value":{"t":"bytes","v":"7fffffff"}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000bc8f0ae257e24cf91f467220517d7be5f8f1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Implicit modulo (2^64) with C# default multiplier, seed=12345",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"multiplier","value":{"t":"bytes","v":"5851f42d4c957f2d"}},
+      {"set":"modulo","value":{"t":"bytes","v":""}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000003039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0807dc721521c10529e75c5d499968e147c1c8e2e1f40e8d6f3cc8211f2f81c9f12741ce42b98755"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

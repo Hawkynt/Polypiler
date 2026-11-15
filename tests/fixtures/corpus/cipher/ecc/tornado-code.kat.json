@@ -1,0 +1,75 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/tornado-code.js",
+ "algorithms": [
+  {
+   "name": "Tornado Code",
+   "vectors": [
+    {
+     "text": "Self-computed round-trip verification vector - Tornado encoding with all-zero symbols",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"stages","value":{"t":"number","v":3}},
+      {"set":"overhead","value":{"t":"number","v":0.5}},
+      {"set":"seed","value":{"t":"number","v":12345}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Self-computed round-trip verification vector - Tornado encoding with sequential pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"stages","value":{"t":"number","v":3}},
+      {"set":"overhead","value":{"t":"number","v":0.25}},
+      {"set":"seed","value":{"t":"number","v":54321}}
+     ],
+     "input": {"t":"bytes","v":"0102030405060708"},
+     "expected": {"t":"bytes","v":"0102030405060708030000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Self-computed round-trip verification vector - Tornado encoding with alternating bit pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"stages","value":{"t":"number","v":3}},
+      {"set":"overhead","value":{"t":"number","v":0.5}},
+      {"set":"seed","value":{"t":"number","v":99999}}
+     ],
+     "input": {"t":"bytes","v":"aa55aa55aa55aa55"},
+     "expected": {"t":"bytes","v":"aa55aa55aa55aa55ffaa0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Self-computed round-trip verification vector - Tornado full recovery with arbitrary pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"stages","value":{"t":"number","v":3}},
+      {"set":"overhead","value":{"t":"number","v":0.25}},
+      {"set":"seed","value":{"t":"number","v":11111}}
+     ],
+     "input": {"t":"bytes","v":"123456789abcdef0"},
+     "expected": {"t":"bytes","v":"123456789abcdef01a0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

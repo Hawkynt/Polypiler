@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-xxtea.js",
+ "algorithms": [
+  {
+   "name": "XXTEA (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Xxtea30 — zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"11d1a19de7a3be1c9aae815df67d4f1bec800c8cbd24b5d4935aad1040e448e972b0ebed01a6b8df10c1ce47cf108ba9199670cb2917d8ab2340d1be675a77f96b589b5ee5de5940b52ddb230372240a9845113adbfe407c1e3cbeb2e087e8607716cf873ff520647c87f8eea714f4b0fe85c822b8efbbc3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Xxtea30 — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f7071727374757677"},
+     "expected": {"t":"bytes","v":"3057ac052bfd1a5c1e21ac3cb1f2061a38f9a294a7be9f20bd663d384d033d12d8d9e1806224031437f978262ef1615a0114bce2b9f8a690f5370ab60e46e6cabe6376ef7ec3b7606b510624f0bd9011d33c66c368a0d6e700d1451d673787aa24d0d31a31c0abc2114f87531cd86da375e12a2bc2b112de"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Xxtea30 — shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f8081828384858687"},
+     "expected": {"t":"bytes","v":"2b936df03d617f3f0348038a3fe39b7a4698e9203614461e4eefe40f5a0d8c25e2ec73cb2b3d7caad61bc8eaaf84cdc358028c5a8691f693948467d33a90c2d875173b42c1accbce8dde564c59c86d41b50a1e9faf0b2b52237b8a4c18c68c04a149a1f70e64457e1b5506e056e31dba0c0fa7d3fa9450b8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

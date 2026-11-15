@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xoshiro256plus.js",
+ "algorithms": [
+  {
+   "name": "Xoshiro256+",
+   "vectors": [
+    {
+     "text": "Seed=0: First four 64-bit outputs from xoshiro256+",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"9b4f6aede160acda3584c00ddaa15631ab46d085323ebaf9017bba1d6194d14f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=1: First four 64-bit outputs from xoshiro256+",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"cc2545777db4cb0226ab3444c2c0cde207787f4717e88f28d93b3442a433c9b8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=12345: First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"3930000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"6a541006d790274fec20511df233aed2401ed003e26e8fa284753a5a7af43e21"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

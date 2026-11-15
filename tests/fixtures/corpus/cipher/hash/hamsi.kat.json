@@ -1,0 +1,338 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/hamsi.js",
+ "algorithms": [
+  {
+   "name": "Hamsi-224",
+   "vectors": [
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_224.txt, Len = 0",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"6f5708887722a92764a4d55527feaeba32f297f05d35a8276301d508"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_224.txt, Len = 8",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"fc1c9369ac35b331eda60812a9f51e9e189b5f5a699456d8ed89539f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_224.txt, Len = 512",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"e926ae8b0af6e53176dbffcc2a6b88c6bd765f939d3d178a9bde9ef3aa131c61e31c1e42cdfaf4b4dcde579a37e150efbef5555b4c1cb40439d835a724e2fae7"},
+     "expected": {"t":"bytes","v":"ee0ecdd2ce0553b60a7803416de7e9a5feb381e836c0bfa0bd6f2583"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec224[0] (NIST message, Len = 0)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"b9f6eb1a9b990373f9d2cb125584333c69a3d41ae291845f05da221f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec224[24] (NIST message, Len = 24)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"1f877c"},
+     "expected": {"t":"bytes","v":"15a0b54528fe0f765b50bd340bfb36ae32f106e305aec3b2f42cbec5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec224[1016] (NIST message, Len = 1016)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"a62fc595b4096e6336e53fcdfc8d1cc175d71dac9d750a6133d23199eaac288207944cea6b16d27631915b4619f743da2e30a0c00bbdb1bbb35ab852ef3b9aec6b0a8dcc6e9e1abaa3ad62ac0a6c5de765de2c3711b769e3fde44a74016fff82ac46fa8f1797d3b2a726b696e3dea5530439acee3a45c2a51bc32dd055650b"},
+     "expected": {"t":"bytes","v":"6d30b7cd15b0c6de05f23d7c08dc44fb2f58b5b06c4f02daf2f73408"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Hamsi-256",
+   "vectors": [
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_256.txt, Len = 0",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"750e9ec469f4db626bee7e0c10ddaa1bd01fe194b94efbabebd24764dc2b13e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_256.txt, Len = 8",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"ac2dac2a6ddaf703b7a55745d61b1a16a3d1bf1f74caab265a2e5dbebcf60832"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_256.txt, Len = 512",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"e926ae8b0af6e53176dbffcc2a6b88c6bd765f939d3d178a9bde9ef3aa131c61e31c1e42cdfaf4b4dcde579a37e150efbef5555b4c1cb40439d835a724e2fae7"},
+     "expected": {"t":"bytes","v":"4b24b386d53085883656f1edadf10532ea11f369aa6952d6559cb90c80f8e96d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec256[0] (NIST message, Len = 0)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"750e9ec469f4db626bee7e0c10ddaa1bd01fe194b94efbabebd24764dc2b13e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec256[24] (NIST message, Len = 24)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"1f877c"},
+     "expected": {"t":"bytes","v":"cb596913e691f8654a613e24debf3262e6477fd737d5c422e670e0c75fae7d17"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec256[1016] (NIST message, Len = 1016)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"a62fc595b4096e6336e53fcdfc8d1cc175d71dac9d750a6133d23199eaac288207944cea6b16d27631915b4619f743da2e30a0c00bbdb1bbb35ab852ef3b9aec6b0a8dcc6e9e1abaa3ad62ac0a6c5de765de2c3711b769e3fde44a74016fff82ac46fa8f1797d3b2a726b696e3dea5530439acee3a45c2a51bc32dd055650b"},
+     "expected": {"t":"bytes","v":"5fe8991b5ca9547c156197c9f797296b09690599c75aa0acbd4fa0c54c09f020"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Hamsi-384",
+   "vectors": [
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_384.txt, Len = 0",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"3943cd34e3b96b197a8bf4bac7aa982d18530dd12f41136b26d7e88759255f21153f4a4bd02e523612b8427f9dd96c8d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_384.txt, Len = 8",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"9b299c0b4a6838b5b0f53b0f9c0aea98bbc9c4c9481ec0ec68f344e696f8787de2e08a1404a038c83ac9e121136e8bb8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_384.txt, Len = 512",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"e926ae8b0af6e53176dbffcc2a6b88c6bd765f939d3d178a9bde9ef3aa131c61e31c1e42cdfaf4b4dcde579a37e150efbef5555b4c1cb40439d835a724e2fae7"},
+     "expected": {"t":"bytes","v":"eb2582e8e02dfea88e372f233833eb17b283cad4a3ad13410e16a50867a62270fb4c5b90a9d7c6b2077571f9ea2054e6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec384[0] (NIST message, Len = 0)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"3943cd34e3b96b197a8bf4bac7aa982d18530dd12f41136b26d7e88759255f21153f4a4bd02e523612b8427f9dd96c8d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec384[24] (NIST message, Len = 24)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"1f877c"},
+     "expected": {"t":"bytes","v":"d8c34c26e4147f706b94923073ee272aef4d024e75cb622288016e38175af79c405cec671f426dc2abef6e4381886e69"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec384[1016] (NIST message, Len = 1016)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"a62fc595b4096e6336e53fcdfc8d1cc175d71dac9d750a6133d23199eaac288207944cea6b16d27631915b4619f743da2e30a0c00bbdb1bbb35ab852ef3b9aec6b0a8dcc6e9e1abaa3ad62ac0a6c5de765de2c3711b769e3fde44a74016fff82ac46fa8f1797d3b2a726b696e3dea5530439acee3a45c2a51bc32dd055650b"},
+     "expected": {"t":"bytes","v":"a401dd37b1c6c6bbe5275677b3989f193e0ac946db1d2545de416a30b4d98f444e2ed3287b84411c93b154fa0b027f0a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Hamsi-512",
+   "vectors": [
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_512.txt, Len = 0",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"5cd7436a91e27fc809d7015c3407540633dab391127113ce6ba360f0c1e35f404510834a551610d6e871e75651ea381a8ba628af1dcf2b2be13af2eb6247290f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_512.txt, Len = 8",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"7da1be62a813a8e24d200671cffb1d0be79d2bc176ff0b163b11eded2414ef66261ff52c745383442bc7f1884d5166f26f41d335fc2d2fdb2f93b24b8d079265"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Specification version: NIST round-2 KAT ShortMsgKAT_512.txt, Len = 512",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"specification"}}
+     ],
+     "input": {"t":"bytes","v":"e926ae8b0af6e53176dbffcc2a6b88c6bd765f939d3d178a9bde9ef3aa131c61e31c1e42cdfaf4b4dcde579a37e150efbef5555b4c1cb40439d835a724e2fae7"},
+     "expected": {"t":"bytes","v":"3f8531a92159c5790fa3a0d2a4095a19b25c263ebadc931bc6c88868d8b1568393e722dfd5ce5842d044604c3a357e8a4bb6ef9299049c3c83398a8b2ab4bba9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec512[0] (NIST message, Len = 0)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"","typed":"Uint8Array"},
+     "expected": {"t":"bytes","v":"5cd7436a91e27fc809d7015c3407540633dab391127113ce6ba360f0c1e35f404510834a551610d6e871e75651ea381a8ba628af1dcf2b2be13af2eb6247290f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec512[24] (NIST message, Len = 24)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"1f877c"},
+     "expected": {"t":"bytes","v":"af015a97b6996ed048f32b3a6c209e6a2daeacd4f61eb62eaa31c68328ee5790b0681245ebe1ecec4c0dd7f9008672d28a0424406998ec02518f023b3c27dcde"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib version: test_hamsi.c nist_vec512[1016] (NIST message, Len = 1016)",
+     "inverse": false,
+     "steps": [
+      {"set":"variant","value":{"t":"string","v":"sphlib"}}
+     ],
+     "input": {"t":"bytes","v":"a62fc595b4096e6336e53fcdfc8d1cc175d71dac9d750a6133d23199eaac288207944cea6b16d27631915b4619f743da2e30a0c00bbdb1bbb35ab852ef3b9aec6b0a8dcc6e9e1abaa3ad62ac0a6c5de765de2c3711b769e3fde44a74016fff82ac46fa8f1797d3b2a726b696e3dea5530439acee3a45c2a51bc32dd055650b"},
+     "expected": {"t":"bytes","v":"b39be99df905e73ef94ee8a47cdced6cf3a9dbdbf29d35c7bcabadebcd98cd15219082ac5f25ac0da65b6437146c9cecdbbb89299bd00e3b3fdf51de479de23b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

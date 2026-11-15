@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/trifid.js",
+ "algorithms": [
+  {
+   "name": "Trifid Cipher",
+   "vectors": [
+    {
+     "text": "Delastelle's own example as reproduced on Wikipedia - key alphabet from FELIX MARIE DELASTELLE, group size 5",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"46454c49584d4152494544454c415354454c4c452c35"}}
+     ],
+     "input": {"t":"bytes","v":"41494445544f494c454349454c54414944455241"},
+     "expected": {"t":"bytes","v":"464d4a46564f4953535546544650554645515143"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Basic Trifid example with period 5",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"35"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"424f4a4e2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Military message with period 6",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"36"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"494241414548474842454445"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-mmb.js",
+ "algorithms": [
+  {
+   "name": "MMB (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt MMB — incrementing key/plaintext (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"13d3b3fe7bc02c0dc56dc648a5ae9d32"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt MMB — shifted incrementing key/plaintext (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"eaf8b8248e6a72f072dbc17e40a95c13"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt MMB — zero key, single set bit (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000001"},
+     "expected": {"t":"bytes","v":"1ee0920041dfb7cb05c6fbcd5ba51eec"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt MMB — random key/plaintext (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"b92c2757b9edb9024541662e8ebf42d1"}}
+     ],
+     "input": {"t":"bytes","v":"049005731fad4901eb411879d4f5a4ac"},
+     "expected": {"t":"bytes","v":"916279fa86fa981886f9f4065efcde05"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

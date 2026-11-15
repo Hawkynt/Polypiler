@@ -1,0 +1,246 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/luffa.js",
+ "algorithms": [
+  {
+   "name": "Luffa-224",
+   "vectors": [
+    {
+     "text": "NIST Vector (0 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"dbb8665871f4154d3e4396aefbba417cb7837dd683c332ba6be87e02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (8 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"e47d4158bfe03555d370d8fd877ead17d6aa9fdc689a9614c411fbba"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (16 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41fb"},
+     "expected": {"t":"bytes","v":"08cbdd1c9caea9711ab2b30b872ddc09f2954b98ac1850abe3f648f1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (24 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"1f877c"},
+     "expected": {"t":"bytes","v":"a590d4995c909abd9150398d4ab9465a8e9f768c576921c26a998857"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (32 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"c1ecfdfc"},
+     "expected": {"t":"bytes","v":"25c82f898f66355aba7a6215d07cab27fbeeedd16b52aa910040b40f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Luffa-256",
+   "vectors": [
+    {
+     "text": "NIST Vector (0 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"dbb8665871f4154d3e4396aefbba417cb7837dd683c332ba6be87e02a2712d6f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (8 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"e47d4158bfe03555d370d8fd877ead17d6aa9fdc689a9614c411fbba370c1706"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (16 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41fb"},
+     "expected": {"t":"bytes","v":"08cbdd1c9caea9711ab2b30b872ddc09f2954b98ac1850abe3f648f11b76bf92"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (24 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"1f877c"},
+     "expected": {"t":"bytes","v":"a590d4995c909abd9150398d4ab9465a8e9f768c576921c26a998857e7b0a604"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (32 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"c1ecfdfc"},
+     "expected": {"t":"bytes","v":"25c82f898f66355aba7a6215d07cab27fbeeedd16b52aa910040b40fda859981"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Luffa-384",
+   "vectors": [
+    {
+     "text": "NIST Vector (0 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"117d3ad49024dfe2994f4e335c9b330b48c537a13a9b7fa465938e1a02ff862bcdf33838bc0f371b045d26952d3ea0c5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (8 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"e1979d16848976ca9ff183ec28998ab3d4b56942497f8e2c6d51895a96c7465df6d7b66d6ba9636a16dbe51aae6d2eb9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (16 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41fb"},
+     "expected": {"t":"bytes","v":"836e9c8429d4a071935c72b0e575ea4cca81642dc14a98a87307e02ac2d812682ce3eeaf8043330a7ea5cbe3a578b5d2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (24 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"1f877c"},
+     "expected": {"t":"bytes","v":"0aff61867c087908d2b9742012bb980cae833c79fd4ecaaea31bc1279f4ce356d6308c36d1fd0dbe70f652b0e2c66d35"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (32 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"c1ecfdfc"},
+     "expected": {"t":"bytes","v":"3736466ca7dc43a81025378e6ce678fe010ebb06382a73113af39104cea0f9bf00e27d12e0a1e7f37516e5cd0f2e9752"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Luffa-512",
+   "vectors": [
+    {
+     "text": "NIST Vector (0 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"6e7de4501189b3ca58f3ac114916654bbcd4922024b4cc1cd764acfe8ab4b7805df133eab345ffdb1c414564c924f48e0a301824e2ac4c34bd4efde2e43da90e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (8 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"91f1b09b2842871bc2f069e5d278d2d707ddafabfe3ced5154faf841e96781908290e6533d146183e8b7ec298f6da20e0cfb1d41f4f711a3050faa8dd4641f7f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (16 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41fb"},
+     "expected": {"t":"bytes","v":"3448d8766e1c8cf84ca83d0882305a8ebcab3f9c5b87f8f1bb94ec8abbe86320e6d33024fbe9363595ed3b36bf49a5440a1248f0606940aec1321fc74dbb6be5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (24 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"1f877c"},
+     "expected": {"t":"bytes","v":"327ed73e847b90a1d098250020e45915ce4991b686e3920043ab17f026b2d3c77f9fed996673d527e4a1f628fb2f4f05949d3eabb0b00d9967063877e4370015"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Vector (32 bits)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"c1ecfdfc"},
+     "expected": {"t":"bytes","v":"d6c06a024d386a58a01d9c5852229593f2197bd9f3afc9eb3f3230807d99c06d8eeb7aa36d7eea74fda69ec1356191985cadedb24bf0c312ba1db9e974442b16"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

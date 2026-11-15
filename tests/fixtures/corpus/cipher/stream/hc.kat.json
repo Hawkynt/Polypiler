@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/hc.js",
+ "algorithms": [
+  {
+   "name": "HC-128",
+   "vectors": [
+    {
+     "text": "HC-128 eSTREAM Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"378602b98f32a74847515654ae0de7ed8f72bc34776a065103e51595521ffe47"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "HC-256",
+   "vectors": [
+    {
+     "text": "HC-256 Test Vector - Zero Key/IV",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"5b078985d8f6f30d42c5c02fa6b6795153f06534801f89f24e74248b720b4818"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HC-256 Test Vector - Non-zero Key/IV",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0053a6f94c9ff24598eb3e91e4378add3083d6297ccf2275c81b6ec11467ba0d"}},
+      {"set":"iv","value":{"t":"bytes","v":"0d74db42a91077de45ac137ae148af16b9c6b1f8e9c1a86a6b17f1b9a6c3c8f7"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"2ec868d5779c5f522a5e2a9530a675ec359dd8d08845f57064562fe0c5927ea4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt keystream, incremental key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"7cb997d6e1b46dd7c0a9629b441c377114d6c18f230291fa7ef0b039aedcc9aaa4ae05ba13f3931e3f8373aa320a8bcf28e825b2084d0fa486be52c92c3c6f1487f9af5c886705dcbd33d08c62e59c814a719c6b0372f44948d5130aaf20289bc3dc704d2ffa09ce7989d5afc977695afa6c82dd92a9a01cdc5de373127cc4e1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt incremental plaintext, incremental key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"7cb895d5e5b16bd0c8a068904811397e04c7d39c371787ed66e9aa22b2c1d7b5848f279937d6b53917aa59811e27a5e018d917813c783993be8768f21001512b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

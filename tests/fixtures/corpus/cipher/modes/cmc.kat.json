@@ -1,0 +1,27 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/cmc.js",
+ "algorithms": [
+  {
+   "name": "CMC",
+   "vectors": [
+    {
+     "text": "CMC test - single block (AES-128)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}]},
+      {"call":"setKey2","args":[{"t":"bytes","v":"603deb1015ca71be2b73aef0857d7781"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"43de4eab2b81981eda9088dd9807829a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/single-parity-check.js",
+ "algorithms": [
+  {
+   "name": "Single Parity Check",
+   "vectors": [
+    {
+     "text": "SPC (5,4) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SPC (5,4) all ones",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010101"},
+     "expected": {"t":"bytes","v":"0101010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SPC (5,4) pattern 1010",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000100"},
+     "expected": {"t":"bytes","v":"0100010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SPC (5,4) pattern 1011",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000101"},
+     "expected": {"t":"bytes","v":"0100010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

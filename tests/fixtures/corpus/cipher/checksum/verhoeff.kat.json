@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/verhoeff.js",
+ "algorithms": [
+  {
+   "name": "Verhoeff",
+   "vectors": [
+    {
+     "text": "Rosetta Code test vector 236",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"323336"},
+     "expected": {"t":"bytes","v":"03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rosetta Code test vector 12345",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3132333435"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rosetta Code test vector 123456789012",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839303132"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

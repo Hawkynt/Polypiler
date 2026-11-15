@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/photon-beetle-hash.js",
+ "algorithms": [
+  {
+   "name": "PhotonBeetle Hash",
+   "vectors": [
+    {
+     "text": "Empty message (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"44a99882fea033566856a27e7f0c94dc84fac7e411b08b890a4a574e3db75d4a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0x00 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"f165ccd18640b9703e96f1bd9a4a4ee32dd4031e4680a1b9890891dcc63468a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two bytes 0x0001 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"2ef2d38f71e77928df37fba337872b639f7748556c1a081821b9b8460ac68fac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Three bytes 0x000102 (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"f9a8c467209e7b5f32db28bde50d5210a81a9c6aa9c1686a05c3619cbf44061d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "16 bytes sequential (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"ab0d1eb0315df8af7f7ae0ac42eaf2f52fb0fdf0904e182dcc796b6cb8d7981a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "17 bytes sequential (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10"},
+     "expected": {"t":"bytes","v":"5a281ad7eb81fb083d05ccd21b78c4bca938af26f20869da29c8f13b7389bc5f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "24 bytes sequential (NIST LWC)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011121314151617"},
+     "expected": {"t":"bytes","v":"c65d15e64477d0ca123e85d632e8444c343e00ec08934ef3a8b4e22c871badf8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

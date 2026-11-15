@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/paq8hp.js",
+ "algorithms": [
+  {
+   "name": "PAQ8hp (High Performance)",
+   "vectors": [
+    {
+     "text": "Empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"010000004180"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed alphanumeric data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"2b00000054d75f34befb670ba679d4227ea3c288dcd414ebe57ce702742513ceade7248a405f4e20"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive text compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263616263616263616263616263616263"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"1200000061ab4ace3748"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

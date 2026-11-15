@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/rsa.js",
+ "algorithms": [
+  {
+   "name": "RSA",
+   "vectors": [
+    {
+     "text": "RSA-1024 RSAES-PKCS1-v1_5 round-trip (RFC 8017 Section 7.2)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0400"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20525341"},
+     "expected": {"t":"bytes","v":"48656c6c6f20525341"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"0af238fca74b8bbd08a6ada705de1c74722085ccbb8dafbad52724a8cadcae71ed814215cbc12d2a442d361f91c381eb5ea9b2865924637de01c9edab09bf7e279a2d0f9f0097dffe65a3d94b76b68f77e4d8aba053e2ba6245d8cf3ce9b7b8547baec79bb79b4030fbdd1e6a7f2b525037e40dd3475aa13e9b54f9600d64114"},
+      "deterministic": false
+     }
+    },
+    {
+     "text": "RSA-1024 RSAES-PKCS1-v1_5 round-trip with leading zero octets",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0400"}}
+     ],
+     "input": {"t":"bytes","v":"0000000102030405"},
+     "expected": {"t":"bytes","v":"0000000102030405"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"883d41fe4013537a55cc33ed424f43a5de1d7f5d258a0536ca1377f1889a19ad78aa43c9b2fd64239e6f784a3572cea9a1de90c0736aae5d480493edd6d0b75ba305273fad830c333c6d60e3fbb9db86ebfad92249cc16576cf655ffc267bfaa83a66b4428182889c2de6d688a274733f2d8a167d16d5ce21184762444b0efb1"},
+      "deterministic": false
+     }
+    }
+   ]
+  }
+ ]
+}

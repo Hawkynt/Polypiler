@@ -1,0 +1,132 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzf.js",
+ "algorithms": [
+  {
+   "name": "LZF",
+   "vectors": [
+    {
+     "text": "All literals - no compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424344"},
+     "expected": {"t":"bytes","v":"040000000341424344"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple repetition - AAAA",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "expected": {"t":"bytes","v":"0400000000414000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetition - 10 A's",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141414141414141"},
+     "expected": {"t":"bytes","v":"0a0000000041e00100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern repetition - ABCABCABC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243414243"},
+     "expected": {"t":"bytes","v":"0900000002414243a002"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text compression with pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64212048656c6c6f20576f726c6421"},
+     "expected": {"t":"bytes","v":"190000000c48656c6c6f20576f726c642120e0040c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Highly repetitive data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"42424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242"},
+     "expected": {"t":"bytes","v":"640000000042e05b00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hash collision test data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203049940404009090909090909090909"},
+     "expected": {"t":"bytes","v":"130000000900010203049940404009e00100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hash collision test data 2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"019900000000994040400000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"18000000020199004000049940404000e00500"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Highly repetitive data - 300 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858"},
+     "expected": {"t":"bytes","v":"2c0100000058e0ff00e11c06"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating pattern - 300 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"5a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a595a59"},
+     "expected": {"t":"bytes","v":"2c010000015a59e0ff01e11b07"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "English text sample - repeated sentence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2054686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"c20100001f54686520717569636b2062726f776e20666f78206a756d7073206f7665722074401e096c617a7920646f672e20e0ff2ce1860d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

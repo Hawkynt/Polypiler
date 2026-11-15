@@ -1,0 +1,119 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/safer.js",
+ "algorithms": [
+  {
+   "name": "SAFER",
+   "vectors": [
+    {
+     "text": "Crypto++ SAFER K-64 test 1 (zeros)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"032808c90ee7ab7f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ SAFER K-64 test 2 (sequential plaintext)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0102030405060708"},
+     "expected": {"t":"bytes","v":"7d28038633b92eb4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ SAFER K-64 test 3 (incrementing key/plaintext)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708"}}
+     ],
+     "input": {"t":"bytes","v":"1011121314151617"},
+     "expected": {"t":"bytes","v":"71e5cf7f083a59c5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ SAFER K-64 test 4 (incrementing key/plaintext)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708"}}
+     ],
+     "input": {"t":"bytes","v":"18191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"356f702cc7fa8161"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ SAFER K-128 test 1 (12 rounds, mirrored key halves)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"08070605040302010807060504030201"}},
+      {"set":"rounds","value":{"t":"number","v":12}}
+     ],
+     "input": {"t":"bytes","v":"5051525354555657"},
+     "expected": {"t":"bytes","v":"38e64dbf6e0f896e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ SAFER K-128 test 2 (12 rounds, mirrored key halves)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"08070605040302010807060504030201"}},
+      {"set":"rounds","value":{"t":"number","v":12}}
+     ],
+     "input": {"t":"bytes","v":"58595a5b5c5d5e5f"},
+     "expected": {"t":"bytes","v":"7d8f014a902480fe"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ SAFER K-128 test 3 (12 rounds, distinct key halves)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"01020304050607080807060504030201"}},
+      {"set":"rounds","value":{"t":"number","v":12}}
+     ],
+     "input": {"t":"bytes","v":"6061626364656667"},
+     "expected": {"t":"bytes","v":"113511c22e7936df"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ SAFER K-128 test 4 (12 rounds, distinct key halves)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"01020304050607080807060504030201"}},
+      {"set":"rounds","value":{"t":"number","v":12}}
+     ],
+     "input": {"t":"bytes","v":"68696a6b6c6d6e6f"},
+     "expected": {"t":"bytes","v":"9eeb2d17c0581437"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

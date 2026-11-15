@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/romu.js",
+ "algorithms": [
+  {
+   "name": "RomuTrio",
+   "vectors": [
+    {
+     "text": "Seed (1,1,1): First four 64-bit outputs from RomuTrio",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"010000000000000001000000000000000100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"01000000000000004b574c4f803e83d300000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (0,0,1): First four 64-bit outputs from RomuTrio",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000000000000000000000000100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00000000000000004b574c4f803e83d30000000000b074c50000004b574c4f80"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed via SplitMix64(0): First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"afcd1d7b39a820e22527b99d5442ccc1cc7de71af3e3464122857317d8d4882f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed via SplitMix64(1): First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c15c0289ec2d0a918af4a90cab8108115e4371067b6d365af7421d4ce665d833"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

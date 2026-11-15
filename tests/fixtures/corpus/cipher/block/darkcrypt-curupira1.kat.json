@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-curupira1.js",
+ "algorithms": [
+  {
+   "name": "Curupira-1 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Curupira1 — zero key/plaintext (192-bit key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f174d6feb1be8c3487f51330"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Curupira1 — incrementing key/plaintext (192-bit key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011121314151617"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b"},
+     "expected": {"t":"bytes","v":"bc8d14a7abf41c2420f73ae8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Curupira1 — shifted incrementing key/plaintext (192-bit key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b"},
+     "expected": {"t":"bytes","v":"62c69122b36105fc644ed3d6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

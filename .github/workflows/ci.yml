@@ -313,6 +313,39 @@ jobs:
       - name: Check spec/permutations against the fixtures
         run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- permutations import-bitperm --fixtures tests/fixtures/bitperm --out spec/permutations --check
 
+  # The Cipher corpus of #1365 on a fixed sample: the known-answer tests node records for adler,
+  # sha256 and chacha20 must be the golden ones (tooling/cipher/record-kats.mjs --check), and their
+  # translations to C# and Rust are checked on them (polypiler-tooling cipher kat); the table is an
+  # artifact. Not a required check: the table records how far the translation gets, and the full run
+  # over all 933 files is the manual command of docs/corpus/cipher.md.
+  cipher-kat:
+    name: cipher kat sample
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      FRAMEWORK: corpus/upstream/Hawkynt/Hawkynt.github.io@48928fc1013dc7d3d42f76b05d0f200dbae23dd1/Cipher/AlgorithmFramework.js
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build
+        run: dotnet build Polypiler.slnx -c Release
+      - name: Import the pinned corpus
+        run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- corpus import --fixture cipher.algorithms
+      - name: Check the golden files of the sample against node
+        run: node tooling/cipher/record-kats.mjs --corpus "$FRAMEWORK" --out tests/fixtures/corpus/cipher --check --only checksum/adler.js --only hash/sha256.js --only stream/chacha20.js
+      - name: Check the translations of the sample
+        run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- cipher kat checksum/adler.js hash/sha256.js stream/chacha20.js --jobs 3 --report cipher-kat.md
+      - name: Publish the table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cipher-kat
+          path: cipher-kat.md
+          if-no-files-found: ignore
+
   # The BASIC/PB layer of PRD §7.3 (tooling/ci/layers/basic.yaml): PowerBASIC programs compiled by
   # PB-Compiler, built from its pinned commit, and run in DOSBox-X; the modules pbc emits checked by
   # LLVM; the Commodore BASIC oracles VICE and petcat and the GW-BASIC oracle PC-BASIC.

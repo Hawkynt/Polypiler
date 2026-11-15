@@ -1,0 +1,119 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/sp800-108-pipeline.js",
+ "algorithms": [
+  {
+   "name": "SP800-108-Pipeline",
+   "vectors": [
+    {
+     "text": "SP 800-108 Pipeline Mode - HMAC-SHA1 Test Vector 1 (2 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"fd7dbfdd60fed4cada6db78a"}},
+      {"set":"context","value":{"t":"bytes","v":"b65a30885b0849c7099b"}},
+      {"set":"outputLength","value":{"t":"number","v":2}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"63cb90f9cd34b95007277ae6fc17fb45a9248725"},
+     "expected": {"t":"bytes","v":"4b0d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Pipeline Mode - HMAC-SHA1 Test Vector 2 (2 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"f441ebb9d176afc02ca826c6"}},
+      {"set":"context","value":{"t":"bytes","v":"644e398df79d9477a706"}},
+      {"set":"outputLength","value":{"t":"number","v":2}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"954418fcd0ea5b6800d99b5502afc98ff7e9302d"},
+     "expected": {"t":"bytes","v":"17f5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Pipeline Mode - HMAC-SHA1 Test Vector 3 (2 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"1e1a50a04838fd3d15de70ed"}},
+      {"set":"context","value":{"t":"bytes","v":"6303ad8d6f85b06a8133"}},
+      {"set":"outputLength","value":{"t":"number","v":2}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"486dee7bf8590ad8146f4419131a8ed35fb67407"},
+     "expected": {"t":"bytes","v":"096f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Pipeline Mode - HMAC-SHA1, 20 bytes (exactly one PRF block)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"2894f522fc3244125e79fda2"}},
+      {"set":"context","value":{"t":"bytes","v":"e97ff4ecbe1af9b60f178b36c82a9da13ece72b4eaa7cbe6dae081b51b6e5a0776ddd88252cd2ee81503a10d2679d97b3a647d885bdf529f22dc8db7fcfd013f7a11a4feb91a6f1611262bb4ee0f17c526cd606b2eb6bc2fcef15e1d585ccbae5807285a"}},
+      {"set":"outputLength","value":{"t":"number","v":20}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"e46a6b8aa59e92e64f066319962564f87aff921a"},
+     "expected": {"t":"bytes","v":"9334c17d345653ed331e714a17184ac75d9b9908"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Pipeline Mode - HMAC-SHA256, 36 bytes (one group past the first block)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"ba99b90163142fa41257855bf43d865d"}},
+      {"set":"context","value":{"t":"bytes","v":"06849bae8a99c78d89ca12ec321c74b0f14282ea26f120e837374138aada472cd397f163ec138b36a3a0501ffecccd3a"}},
+      {"set":"outputLength","value":{"t":"number","v":36}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"5f55c3256b553dc14191bb6bf7a2683d5fb23175674a989f4039979b88afb41a"},
+     "expected": {"t":"bytes","v":"c526b989ccc815bfaabe89f9a88b1ff9786b95d09ca03fd9235df54edf89ac7b95d4e0ae"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Pipeline Mode - HMAC-SHA256, 48 bytes (two PRF blocks)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"76088a05cc92d29510c998144c95b9bc"}},
+      {"set":"context","value":{"t":"bytes","v":"d8037597ab1b305806983009732e64ac9ed3a3bdbc6208d6439b2b57138585fb408619fd882e1253b81055d4025d7831087f68442d0d88b3b428b5b0b04abb54"}},
+      {"set":"outputLength","value":{"t":"number","v":48}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"5b5a55801cbf928335b51b03fa90e663d8f15ec10d1ff37e13d4cae60cc7c4c9"},
+     "expected": {"t":"bytes","v":"f255ffa7fb16595048ea36da923c358db664f6ff3f36f76203de596f352f1feb87084379051f511dd2a58bfaa5ec7ac8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

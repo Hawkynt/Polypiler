@@ -106,6 +106,26 @@ public sealed class CorpusManifestTests {
     }));
 
   [Test]
+  public void FixtureCommit_IsOptional_AndPinsTheFixtureToItsOwnCommit() {
+    var manifest = Parse(Manifest(Repository(), Fixture(extra: "    commit: '" + "a".PadRight(40, 'a') + "'\n") + Fixture(id: "a.c")));
+    Assert.That(manifest.Fixtures.Select(fixture => fixture.Commit), Is.EqualTo(new[] { "a".PadRight(40, 'a'), null }));
+    Assert.That(manifest.Fixtures[0].PinOf(manifest.Repositories[0]).Commit, Is.EqualTo("a".PadRight(40, 'a')));
+    Assert.That(manifest.Fixtures[1].PinOf(manifest.Repositories[0]), Is.SameAs(manifest.Repositories[0]));
+  }
+
+  [Test]
+  public void FixtureCommit_NotFortyLowerHexDigits_IsRefused()
+    => Assert.That(Problems(Manifest(Repository(), Fixture(extra: "    commit: main\n"))), Is.EqualTo(new[] {
+      "corpus manifest invalid: property 'commit' of fixture 'a.b' is 'main', expected 40 lower-case hexadecimal digits"
+    }));
+
+  [TestCase("Cipher/algorithms/**/*.js", true)]
+  [TestCase("a?.txt", true)]
+  [TestCase("Cipher/OpCodes.js", false)]
+  public void Dependency_WithAWildcard_IsAPattern(string dependency, bool pattern)
+    => Assert.That(CorpusFixtureEntry.IsPattern(dependency), Is.EqualTo(pattern));
+
+  [Test]
   public void Commit_OfFortyLowerHexDigits_IsAccepted()
     => Assert.That(Parse(Manifest(Repository(commit: "f".PadRight(40, 'f')), "  []\n")).Repositories[0].Commit, Has.Length.EqualTo(40));
 

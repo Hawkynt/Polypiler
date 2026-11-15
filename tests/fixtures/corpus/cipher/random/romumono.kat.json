@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/romumono.js",
+ "algorithms": [
+  {
+   "name": "RomuMono",
+   "vectors": [
+    {
+     "text": "Seed x=1: First four 64-bit outputs from RomuMono",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0100000000000000f4199c5eba627a02b80421e533ec27d6c21f9f404f373fa4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed x=0: First four 64-bit outputs from RomuMono",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed x=0x0123456789ABCDEF: First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"efcdab8967452301"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"efcdab896745230111c2812d702ce264c14ed2dd0f1d50ea3afeeb5c4c652d2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed x=0xFFFFFFFFFFFFFFFF: First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffffffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ffffffffffffffff0be663a9459d85fd68b456cc11b11dfae0d50bc593b1dc8f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

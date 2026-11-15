@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/zuc256.js",
+ "algorithms": [
+  {
+   "name": "ZUC-256",
+   "vectors": [
+    {
+     "text": "ZUC-256 Test Vector 1 - All zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"58d03ad62e032ce2dafc683a39bdcb0352a2bc67f1b7de74163ce3a101ef55589639d75b95fa681b7f090df756391ccc903b7612744d544c17bc3fad8b163b08"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ZUC-256 Test Vector 2 - All ones pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}},
+      {"set":"iv","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffffff3f3f3f3f3f3f3f3f"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"3356cbaed1a1c18b6baa4ffe343f777c9e15128f251ab65b949f7b26ef7157f296dd2fa9df95e3ee7a5be02ec32ba585505af316c2f9ded27cdbd935e441ce11"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

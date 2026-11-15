@@ -1,0 +1,83 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/kiss.js",
+ "algorithms": [
+  {
+   "name": "KISS",
+   "vectors": [
+    {
+     "text": "Standard seed (z=362436069, w=521288629, jsr=123456789, jcong=380116160): First 5 outputs - Marsaglia default initialization",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"159a55e51f123bb5075bcd1516a81cc0"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"2ddccfe02c3a35a87e6ee31aa73a60cebf9847a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Standard seed: After 1,000,000 iterations - Official Marsaglia test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"skip","value":{"t":"number","v":1000000}},
+      {"set":"seed","value":{"t":"bytes","v":"159a55e51f123bb5075bcd1516a81cc0"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"6e00c98c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (1,1,1,1): First 8 outputs - minimal seed values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001000000010000000100000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"90bca43528b06ddc9daed79ce6ccb3023aa7bd7087761af55cf255bb8d103532"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (12345,65435,34221,12345): First 10 outputs - Marsaglia settable() test initialization",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000030390000ff9b000085ad00003039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8f714bb5eb2b61b7bfc72cbd4d222ed8647480f7700e80db151bfa19454f142d9e422d270d7dedd0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Standard seed: Outputs 1000-1004 - verifies long-term state progression",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"skip","value":{"t":"number","v":999}},
+      {"set":"seed","value":{"t":"bytes","v":"159a55e51f123bb5075bcd1516a81cc0"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0cf9f508c9dce4be94a7e42a0d2dcc5e6c0ee0c0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

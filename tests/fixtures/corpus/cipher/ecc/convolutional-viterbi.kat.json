@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/convolutional-viterbi.js",
+ "algorithms": [
+  {
+   "name": "Convolutional Code (Viterbi)",
+   "vectors": [
+    {
+     "text": "K=3 all zeros test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "K=3 single bit test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000000"},
+     "expected": {"t":"bytes","v":"0101010001010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "K=3 all ones test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010101"},
+     "expected": {"t":"bytes","v":"0101000101000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "K=3 alternating pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000100"},
+     "expected": {"t":"bytes","v":"0101010000000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

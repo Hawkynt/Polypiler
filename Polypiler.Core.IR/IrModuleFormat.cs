@@ -25,7 +25,7 @@ namespace Polypiler.Core.IR;
 public static partial class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 9;
+  public const int Version = 10;
 
   /// <summary>The byte that stands for the kind of an enum type, followed by its declaration: the kind of an enum type is that of its underlying type.</summary>
   private const byte EnumType = 0xFF;
@@ -216,6 +216,9 @@ public static partial class IrModuleFormat {
         this.Function(function);
 
       this.ForeignFunctions(module.ForeignFunctions);
+      writer.Write(module.Initializer is not null);
+      if (module.Initializer is not null)
+        writer.Write(module.Initializer);
     }
 
     /// <summary>The declarations that stand for the type parameters of the templates the functions of a module reach.</summary>
@@ -1062,7 +1065,8 @@ public static partial class IrModuleFormat {
 
       var functions = this.List(this.Function);
       return new IrModule(name, functions, constants) {
-        Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats, ForeignFunctions = this.ForeignFunctions()
+        Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats, ForeignFunctions = this.ForeignFunctions(),
+        Initializer = reader.ReadBoolean() ? reader.ReadString() : null
       };
     }
 

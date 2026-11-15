@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/pomaranch.js",
+ "algorithms": [
+  {
+   "name": "Pomaranch",
+   "vectors": [
+    {
+     "text": "Pomaranch Educational Test Vector 1 (Empty)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pomaranch Educational Test Vector 2 (Single Byte)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"ad"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pomaranch Educational Test Vector 3 (Two Bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"ad3a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pomaranch Educational Test Vector 4 (Block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"ad3a0e371e5f3b91189ed272e1c8459f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

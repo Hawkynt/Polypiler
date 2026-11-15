@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/2d-parity.js",
+ "algorithms": [
+  {
+   "name": "2D Parity Code",
+   "vectors": [
+    {
+     "text": "2D Parity 3x3 all zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"rows","value":{"t":"number","v":3}},
+      {"set":"cols","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "2D Parity 3x3 pattern 1",
+     "inverse": false,
+     "steps": [
+      {"set":"rows","value":{"t":"number","v":3}},
+      {"set":"cols","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"010001000100010001"},
+     "expected": {"t":"bytes","v":"01000100000100010100010000010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "2D Parity 3x3 pattern 2",
+     "inverse": false,
+     "steps": [
+      {"set":"rows","value":{"t":"number","v":3}},
+      {"set":"cols","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"010101000000010101"},
+     "expected": {"t":"bytes","v":"01010101000000000101010100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "2D Parity 2x2 simple",
+     "inverse": false,
+     "steps": [
+      {"set":"rows","value":{"t":"number","v":2}},
+      {"set":"cols","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"01000001"},
+     "expected": {"t":"bytes","v":"010001000101010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

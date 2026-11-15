@@ -1,0 +1,109 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/lfsr.js",
+ "algorithms": [
+  {
+   "name": "LFSR",
+   "vectors": [
+    {
+     "text": "Seed 0x0000000000000042: First 8 bytes - minimal seed with tapped bits set",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000042"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"2100000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0x0123456789ABCDEF: First 8 bytes - standard test pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"0123456789abcdef"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"f7e6d5c4b3a29180"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0xFFFFFFFFFFFFFFFF: First 8 bytes - all ones seed",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffffffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ffffffffffffffff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0x0123456789ABCDEF: First 16 bytes - sequence continuation test",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"seed","value":{"t":"bytes","v":"0123456789abcdef"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"f7e6d5c4b3a2918080691bb1a25b9478"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0x8000000000000000: First 8 bytes - high bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"8000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000000000040"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0xAAAAAAAAAAAAAAAA: First 8 bytes - alternating bit pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"aaaaaaaaaaaaaaaa"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"55555555555555d5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0x1111111111111111: First 8 bytes - sparse bit pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"1111111111111111"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8888888888888808"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

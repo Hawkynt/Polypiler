@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/camelliawrappad.js",
+ "algorithms": [
+  {
+   "name": "Camellia Key Wrap with Padding",
+   "vectors": [
+    {
+     "text": "Self-consistency vector (RFC 5649 wrap structure, sized like RFC 5649 §6.2, with Camellia-128 substituted for AES; no official Camellia-KWP KAT exists) — single-block case (7-octet key data)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"466f7250617369"},
+     "expected": {"t":"bytes","v":"bdcc8e794701c12804891be045dd11cb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Self-consistency vector (RFC 5649 wrap structure, sized like RFC 5649 §6.1, with Camellia-192 substituted for AES; no official Camellia-KWP KAT exists) — multi-block case (20-octet key data, general RFC 3394 loop)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5840df6e29b02af1ab493b705bf16ea1ae8338f4dcc176a8"}}
+     ],
+     "input": {"t":"bytes","v":"c37b7e6492584340bed12207808941155068f738"},
+     "expected": {"t":"bytes","v":"6fe8e088d2042ea144139b1c7a46a63027226d16c01034c73b6333d4ab05884c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

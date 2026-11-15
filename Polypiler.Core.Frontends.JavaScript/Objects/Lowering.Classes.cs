@@ -108,10 +108,12 @@ internal sealed partial class Lowering {
     if (callee is not null && types.ModelOf(callee).Problem is not null)
       throw this.Unsupported(call, $"a call of {callee.Name}, which cannot be imported");
 
-    if (arguments.Count != parameters.Count)
+    // A parameter left out that has a default takes it (#1365).
+    if (arguments.Count > parameters.Count || parameters.Skip(arguments.Count).Any(parameter => parameter.Default is null))
       throw this.Unsupported(call, $"a call with {arguments.Count} arguments for {parameters.Count} parameters");
 
-    return [.. arguments.Select((argument, index) => this.Value(argument, parameters[index].Parameter?.Type ?? this.Storable(parameters[index].Entry, argument)))];
+    return [.. arguments.Select((argument, index) => this.Value(argument, parameters[index].Parameter?.Type ?? this.Storable(parameters[index].Entry, argument))),
+      .. callee is null ? [] : this.Missing(call, types.ModelOf(callee), arguments.Count)];
   }
 
   /// <summary>A property read of an object: a field, or the call of a getter.</summary>

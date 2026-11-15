@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-scop.js",
+ "algorithms": [
+  {
+   "name": "SCOP-384 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Scop — keystream from 128 zero bytes, 48-byte incrementing key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"e2ee660b62e416934a31c17c949a93e05692a0d5a8d4971a4a9e94929823f1e5d8ed60d1c201d50ad6af1eec1e29917a6d1ef7cf829d847504dda2f0e010f85fe98d7676c2e5d801da0288a3ee4217bbb2d747f2f5973b4a84bd36c6f291df04847310e2203cf7b8744230088c1e978cbe79febd6d08b9a8bef1356e44d92f0b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Scop — encryption of 64 incrementing bytes, 48-byte incrementing key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"e2ef680e66e91c9a523acb87a0a7a1ef66a3b2e8bce9ad3162b7aeadb4400f05f80e83f4e626fb31fed848174a56bfa99d4f2903b6d2baac3c16dd2b1c4e369f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

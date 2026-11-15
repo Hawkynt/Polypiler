@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-konton.js",
+ "algorithms": [
+  {
+   "name": "Konton (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Konton — keystream from incrementing key, zero input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"ed614f35b2ddde567d95866172815adfba2f3570e61050217724813effb578a23c29ce5c8359c7f649882b5eedfd33694fc0423bffb930c4b04484789eb203b3cd98b3492d3691d8805ddc0251bac134e1e72e98b3037aab296b8be130f1204d542073d0b80d43bafadefc6e150159e9663ed853cbf0b5e300a08ca480cc8ac7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Konton — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"ed604be3f76e28959ef8361a20fcbbe0ecc3d436c600f2c070620c1035ed15e26f6c4ff21a3cfd5b6039e5afa6f76fce47557730b5a8298395fe083915e8000b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

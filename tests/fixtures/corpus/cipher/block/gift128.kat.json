@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/gift128.js",
+ "algorithms": [
+  {
+   "name": "GIFT-128",
+   "vectors": [
+    {
+     "text": "GIFT-128b Test Vector #1 - GIFT-COFB round-2 specification",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"a94af7f9ba181df9b2b00eb7dbfa93df"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GIFT-128b Test Vector #2 - GIFT-COFB round-2 specification",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"e0841f8fb90783136aa8b7f192f5c474"}}
+     ],
+     "input": {"t":"bytes","v":"e491c665522031cf033bf71b9989ecb3"},
+     "expected": {"t":"bytes","v":"3331efc3a6604f9599ed42b7dbc02a38"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GIFT-128b Test Vector #3 (all zeros) - fixslicing reference code",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"5e8e3a2e1697a77dcc0b89dcd97a64ee"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GIFT-128b Test Vector #4 - fixslicing reference code",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"fedcba9876543210fedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"fedcba9876543210fedcba9876543210"},
+     "expected": {"t":"bytes","v":"22581437e5e961ef6d125046c5f20788"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GIFT-128b Test Vector #5 - fixslicing reference code",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"d0f5c59a7700d3e799028fa9f90ad837"}}
+     ],
+     "input": {"t":"bytes","v":"e39c141fa57dba43f08a85b6a91f86c1"},
+     "expected": {"t":"bytes","v":"da1dc8873823e325c4b4a77c1a73330e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

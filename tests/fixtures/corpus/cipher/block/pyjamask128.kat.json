@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/pyjamask128.js",
+ "algorithms": [
+  {
+   "name": "Pyjamask-128",
+   "vectors": [
+    {
+     "text": "Pyjamask-128 block cipher test vector - Pyjamask specification",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff"}}
+     ],
+     "input": {"t":"bytes","v":"50796a616d61736b2d3132383a293a29"},
+     "expected": {"t":"bytes","v":"48f139a109bdd9c0726e8261f8d68e7d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

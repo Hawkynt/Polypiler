@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bpe.js",
+ "algorithms": [
+  {
+   "name": "Byte-Pair Encoding (BPE)",
+   "vectors": [
+    {
+     "text": "Empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"0000010000004100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern with potential compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424142"},
+     "expected": {"t":"bytes","v":"0000040000004100420041004200"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

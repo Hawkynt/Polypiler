@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/uuencode.js",
+ "algorithms": [
+  {
+   "name": "UUencode",
+   "vectors": [
+    {
+     "text": "UUencode empty string test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "UUencode single zero byte test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"2020"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "UUencode single character 'M' test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d"},
+     "expected": {"t":"bytes","v":"3330"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "UUencode two character 'Ma' test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d61"},
+     "expected": {"t":"bytes","v":"333624"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "UUencode three character 'Man' test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d616e"},
+     "expected": {"t":"bytes","v":"3336254e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "UUencode four character 'Test' test - full 3-byte group ('Tes') plus a 1-byte tail group ('t') encoded as its full 2 characters",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54657374"},
+     "expected": {"t":"bytes","v":"352635533d20"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "UUencode 128-byte regression test - final group is a 2-byte tail, not the whole input, so the old data.length-based tail check silently dropped its 3rd character",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383625413836254138362541383624"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

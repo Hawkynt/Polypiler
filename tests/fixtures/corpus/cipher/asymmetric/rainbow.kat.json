@@ -1,0 +1,112 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/rainbow.js",
+ "algorithms": [
+  {
+   "name": "Rainbow-I",
+   "vectors": [
+    {
+     "text": "Rainbow-I Ia Circumzenithal KAT entry 0",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8626ed79d451140800e03b59b956f8210e556067407d13dc90fa9e8b872bfb8f7c9935a0b07694aa0c6d10e4db6b1add2fd81a25ccb148032dcd739936737f2d"}}
+     ],
+     "input": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac8"},
+     "expected": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac88847ec401b4b72631083a138e29d2323d1759d7268af6b3edb06762722491fa2bc3e93dd9a10a995f9b38ab6c65b608ac9fe4b9a9e38ee4622d5bc61d8e1fe912433"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rainbow-I Ia Circumzenithal KAT entry 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"e82fcc97ca60ccb27bf6938c975658aeb8b4d37cffbde25d97e561f36c219ade4b622de1350119c45a9f2e2ef3dc5df50a759d138cdfbd64c81cc7cc2f513345"}}
+     ],
+     "input": {"t":"bytes","v":"225d5ce2ceac61930a07503fb59f7c2f936a3e075481da3ca299a80f8c5df9223a073e7b90e02ebf98ca2227eba38c1ab2568209e46dba961869c6f83983b17dcd49"},
+     "expected": {"t":"bytes","v":"225d5ce2ceac61930a07503fb59f7c2f936a3e075481da3ca299a80f8c5df9223a073e7b90e02ebf98ca2227eba38c1ab2568209e46dba961869c6f83983b17dcd4992f541ac65b6f3240547be53b796eb3581385f9d4a0ef041c833feae44035730493c10ceefe90bfc61cc58d8eff712232740d0bd6e49bd95099f3cfa73edae6777a8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rainbow-I Ia Circumzenithal KAT entry 2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"f333d36590910e7a5a6cbe567bcdd154137eef62b92bf8dc1fdc900e7c194e5f1d836e889e46259bcd1ccd2b369583c5b47cfbb919ec2b72c280247cb15a5569"}}
+     ],
+     "input": {"t":"bytes","v":"2b8c4b0f29363eaee469a7e33524538aa066ae98980eaa19d1f10593203da2143b9e9e1973f7ff0e6c6aaa3c0b900e50d003412efe96deece3046d8c46bc7709228789775abdf56aed6416c90033780cb7a4984815da1b14660dcf34aa34bf82cebbcf"},
+     "expected": {"t":"bytes","v":"2b8c4b0f29363eaee469a7e33524538aa066ae98980eaa19d1f10593203da2143b9e9e1973f7ff0e6c6aaa3c0b900e50d003412efe96deece3046d8c46bc7709228789775abdf56aed6416c90033780cb7a4984815da1b14660dcf34aa34bf82cebbcfa7d2035a4219d6accf47a7a97478f1b48c3e5eb9fb69b323fe3b14f9b87c45dc3650ddc23c09f010234f14c0f49f6cadc6d919ccf0912ae76f9bdb0d8d0ac37e7473"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Rainbow-III",
+   "vectors": [
+    {
+     "text": "Rainbow-III classic KAT entry 0, reconstructed: the submission left this response file ungenerated, so the record was rebuilt from the published request seed and checked against the nistkat-sha256 1eb9bb6e63cfdbd0... that PQClean publishes over it",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"7c9935a0b07694aa0c6d10e4db6b1add2fd81a25ccb148032dcd739936737f2d"}}
+     ],
+     "input": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac8"},
+     "expected": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac86033c99a65042be545eed707341bd14f73ca178f2a5b244a87e847dcab29a9086676d7a7a4b35e3904a9edd7b399b1bd104a19373a415029bccd4c707b416eed683f13a9189ef0bdc151116cbf6d6a9d4bc019faa58fd770b6f567a410c700b48c488a375c33866f3febb8dedf239c64ff9a36f092e3d6192b9a0726b06672a540a892fa7ba47dbe7f3e66bf394ed328a107b8edceb39ad2e43c6ee441f39ece871397ac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rainbow-III circumzenithal KAT entry 0, reconstructed: the submission left this response file ungenerated, so the record was rebuilt from the published request seed and checked against the nistkat-sha256 1b5cbbdef12492ba... that PQClean publishes over it",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8626ed79d451140800e03b59b956f8210e556067407d13dc90fa9e8b872bfb8f7c9935a0b07694aa0c6d10e4db6b1add2fd81a25ccb148032dcd739936737f2d"}}
+     ],
+     "input": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac8"},
+     "expected": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac8451f524fef128edbe93814c041d5edd2c8a0226e05e13942b5b832c864a96184261745a5b530d09d51773c3e6f3c8297e3a8e6e4dbd23e56bda10b5c3a491f7a5d9ea819d712fc6565429f965fd7264041e5f2007085de29930b20b187bb9e5bc4bcac01c35cabc97f5ec6476c42138c3d18a1dbd23ba22b31b21bdbe5421ac1b837a793123c80e2b5028a0763872e76e45f6aa9d675e2d667e6f68024d5ef1143d21713"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Rainbow-V",
+   "vectors": [
+    {
+     "text": "Rainbow-V Vc Classic KAT entry 0",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"7c9935a0b07694aa0c6d10e4db6b1add2fd81a25ccb148032dcd739936737f2d"}}
+     ],
+     "input": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac8"},
+     "expected": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac815040f890f2bf56f8b04b1d8b9ba21d303c490868a0a10c9ffc04a2af9d1f3122d14f7c6d5e0b1d914cc23d763c061b2fd34df8cb0d75f12111244241fa7a136c440c2d40782390fe5ef3c15ed5539285b437da0447e361853e98982e1f16aa0506babffbba8282baa0a307c50eba79596ad26ebece897e7b4de3b601a515c08775526522915ed03f08baa23afed4224c8e50ed67fbccfab62c58872ce880c850d3a03f21b2703c5c085fa410a5fcb3559e50d6bbc6a06faba309962f2922e0d014c5eb074090543c9478050169fccfbc0e9ba11"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rainbow-V Vc Circumzenithal KAT entry 0",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8626ed79d451140800e03b59b956f8210e556067407d13dc90fa9e8b872bfb8f7c9935a0b07694aa0c6d10e4db6b1add2fd81a25ccb148032dcd739936737f2d"}}
+     ],
+     "input": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac8"},
+     "expected": {"t":"bytes","v":"d81c4d8d734fcbfbeade3d3f8a039faa2a2c9957e835ad55b22e75bf57bb556ac8d1f97d1310f57af3509f66307985b7f341234ce8f7516e4b61f9e53b1282ce66b9526321c66954e1753d1a9c8ba4012b9c5a211f0287c72705141f71a9aaec350e81f6ec67ed10e1bd61dcdfa4ac87553563e0fee31927e5877741d5dcdf03c44e50cf80bb3d15856af49f2c68a7edac52fd2957f96a7113dce51785edf0ab8538c1eaad694e8514cdc7872664412bcf9884c185bade87781016826e32e08c1ec6275c6f8588a11ff6575d704505d4ab794d047bec1104c00dad3bcfc2de42267b3552bd74090543c9478050169fccfbc0e9ba11"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

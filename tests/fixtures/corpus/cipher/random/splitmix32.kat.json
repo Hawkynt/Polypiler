@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/splitmix32.js",
+ "algorithms": [
+  {
+   "name": "SplitMix32",
+   "vectors": [
+    {
+     "text": "Seed 0: First 5 outputs (20 bytes) - verified against reference implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"64625032d9c0799caf362e107fa88912c4671b39"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1: First 5 outputs (20 bytes) - single-bit seed difference",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"5e2d177214e498f0d20ea1fdb382f3392660b860"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 42: First 8 outputs (32 bytes) - commonly used test seed",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"20e448180895a9231339a01fb4e3841a361f702a9ddbcdcf03ae3c3c6f22ac67"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 12345: First 5 outputs (20 bytes) - larger seed value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00003039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c3b24a19248b6df5af4b77241ec7438dcbcf9585"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0xFFFFFFFF (max 32-bit): First 5 outputs (20 bytes) - edge case",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"eb721c8affe8bd344da2a8cea4a5cc85c85a6be7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

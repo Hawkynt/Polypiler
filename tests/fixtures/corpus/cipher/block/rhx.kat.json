@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/rhx.js",
+ "algorithms": [
+  {
+   "name": "RHX (Rijndael Extended)",
+   "vectors": [
+    {
+     "text": "RHX-256 ECB Test Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"434d237c44f64a17e6d4bbd510d0fdbf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RHX-512 ECB Test Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"3a906880382ab4b3e90b1aa6a1927b9f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RHX-1024 ECB Test Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"374a5d708396a9bccfe2f5081b2e4154677a8da0b3c6d9ecff1225384b5e718497aabdd0e3f6091c2f4255687b8ea1b4c7daed001326394c5f728598abbed1e4f70a1d304356697c8fa2b5c8dbee0114273a4d60738699acbfd2e5f80b1e3144576a7d90a3b6c9dcef0215283b4e6174879aadc0d3e6f90c1f3245586b7e91a4"}}
+     ],
+     "input": {"t":"bytes","v":"fedcba98765432100123456789abcdef"},
+     "expected": {"t":"bytes","v":"2e339ff7e921e8ad3c9d9830606d8f1e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

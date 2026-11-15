@@ -1,0 +1,251 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/sp800-56a.js",
+ "algorithms": [
+  {
+   "name": "SP800-56A",
+   "vectors": [
+    {
+     "text": "SP800-56A SHA-1 Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}},
+      {"set":"label","value":{"t":"bytes","v":"6c5544797a91115dc3330ebd003851d239a706ff2aa2ab70039c5510ddf06420"}}
+     ],
+     "input": {"t":"bytes","v":"51373e8b6fdec284db569204ca13d2caa23bd1d85dcab02a"},
+     "expected": {"t":"bytes","v":"049b3766"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-1 Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":5}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}},
+      {"set":"label","value":{"t":"bytes","v":"f9c06213585289654996f0c40467b9a69480ab8d5b16a08c7a0c5f1570f966ef"}}
+     ],
+     "input": {"t":"bytes","v":"b2f3a2d4fbb002d9f0b51258af43e98a5423fb145257ae460342361c2199d380"},
+     "expected": {"t":"bytes","v":"b7d5840565"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-1 Vector #3 - 33 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":33}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}},
+      {"set":"label","value":{"t":"bytes","v":"ea0e5d80a76bb5063148cc997b76da2d895bc3e4dff37c48579cc4e580f1fda3"}}
+     ],
+     "input": {"t":"bytes","v":"7ce80e8b0480cde01fec587fe7045a8e"},
+     "expected": {"t":"bytes","v":"176e355aaa4a2209a7cad190d2c76b78b12cdf83add1387709c30750110e573021"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-224 Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-224"}},
+      {"set":"label","value":{"t":"bytes","v":"6c5544797a91115dc3330ebd003851d239a706ff2aa2ab70039c5510ddf06420"}}
+     ],
+     "input": {"t":"bytes","v":"51373e8b6fdec284db569204ca13d2caa23bd1d85dcab02a"},
+     "expected": {"t":"bytes","v":"e14ba657"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-224 Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":5}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-224"}},
+      {"set":"label","value":{"t":"bytes","v":"f9c06213585289654996f0c40467b9a69480ab8d5b16a08c7a0c5f1570f966ef"}}
+     ],
+     "input": {"t":"bytes","v":"b2f3a2d4fbb002d9f0b51258af43e98a5423fb145257ae460342361c2199d380"},
+     "expected": {"t":"bytes","v":"2c92bd1085"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-256 Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}},
+      {"set":"label","value":{"t":"bytes","v":"6c5544797a91115dc3330ebd003851d239a706ff2aa2ab70039c5510ddf06420"}}
+     ],
+     "input": {"t":"bytes","v":"51373e8b6fdec284db569204ca13d2caa23bd1d85dcab02a"},
+     "expected": {"t":"bytes","v":"f62ebab9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-256 Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":5}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}},
+      {"set":"label","value":{"t":"bytes","v":"f9c06213585289654996f0c40467b9a69480ab8d5b16a08c7a0c5f1570f966ef"}}
+     ],
+     "input": {"t":"bytes","v":"b2f3a2d4fbb002d9f0b51258af43e98a5423fb145257ae460342361c2199d380"},
+     "expected": {"t":"bytes","v":"39cb7a8753"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-256 Vector #3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":6}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}},
+      {"set":"label","value":{"t":"bytes","v":"9d4169cc1427f2a407191b84ab7abaace66a95ca26ab0915803106315080f331"}}
+     ],
+     "input": {"t":"bytes","v":"ba68a99d6eb2affd8bd039ab13c3a3aa9f02c6c11fde8570429d2fce61d97d81c51cdbb8ff143d04"},
+     "expected": {"t":"bytes","v":"f7632ae67c0b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-256 Vector #4",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":7}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}},
+      {"set":"label","value":{"t":"bytes","v":"430312b971580ac2abbe70998f136d3cace833e0b165b74c351afe5fa20d1eb7"}}
+     ],
+     "input": {"t":"bytes","v":"dc5e08ed643fc5aca38cdf756ca0d7d678f3b241fa61976eeb16a904fc83e0326e1cbd639a9591899adf8de1fc1b1b5d"},
+     "expected": {"t":"bytes","v":"706f616063adba"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-256 Vector #5",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}},
+      {"set":"label","value":{"t":"bytes","v":"edefb6c58327538f3b4f7e4b9af30c7025122de56b7e682e56d7efe433c2ca85"}}
+     ],
+     "input": {"t":"bytes","v":"2897b5b2f94be3550bac75877817a0f47836a57a5ff777345daa6e5f0599d4ab8d4c59c62067aedf00c02dda77e4af871cda63fbde164edc"},
+     "expected": {"t":"bytes","v":"35f489fc6a91be16"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-384 Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-384"}},
+      {"set":"label","value":{"t":"bytes","v":"6c5544797a91115dc3330ebd003851d239a706ff2aa2ab70039c5510ddf06420"}}
+     ],
+     "input": {"t":"bytes","v":"51373e8b6fdec284db569204ca13d2caa23bd1d85dcab02a"},
+     "expected": {"t":"bytes","v":"894340ad"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-384 Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":5}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-384"}},
+      {"set":"label","value":{"t":"bytes","v":"f9c06213585289654996f0c40467b9a69480ab8d5b16a08c7a0c5f1570f966ef"}}
+     ],
+     "input": {"t":"bytes","v":"b2f3a2d4fbb002d9f0b51258af43e98a5423fb145257ae460342361c2199d380"},
+     "expected": {"t":"bytes","v":"c4159fbaea"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-512 Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-512"}},
+      {"set":"label","value":{"t":"bytes","v":"6c5544797a91115dc3330ebd003851d239a706ff2aa2ab70039c5510ddf06420"}}
+     ],
+     "input": {"t":"bytes","v":"51373e8b6fdec284db569204ca13d2caa23bd1d85dcab02a"},
+     "expected": {"t":"bytes","v":"6f015ea0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-512 Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":5}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-512"}},
+      {"set":"label","value":{"t":"bytes","v":"f9c06213585289654996f0c40467b9a69480ab8d5b16a08c7a0c5f1570f966ef"}}
+     ],
+     "input": {"t":"bytes","v":"b2f3a2d4fbb002d9f0b51258af43e98a5423fb145257ae460342361c2199d380"},
+     "expected": {"t":"bytes","v":"189c0f84b0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-56A SHA-512 Vector #3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":6}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-512"}},
+      {"set":"label","value":{"t":"bytes","v":"9d4169cc1427f2a407191b84ab7abaace66a95ca26ab0915803106315080f331"}}
+     ],
+     "input": {"t":"bytes","v":"ba68a99d6eb2affd8bd039ab13c3a3aa9f02c6c11fde8570429d2fce61d97d81c51cdbb8ff143d04"},
+     "expected": {"t":"bytes","v":"b7269e8fa844"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

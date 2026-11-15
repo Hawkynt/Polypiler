@@ -1,0 +1,141 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/frog.js",
+ "algorithms": [
+  {
+   "name": "FROG",
+   "vectors": [
+    {
+     "text": "AES KAT ecb_vk.txt I=1 — 128-bit key, highest key bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"6ccbd28a71cc30e2a79de52d532a1a1e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES KAT ecb_vk.txt I=128 — 128-bit key, lowest key bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000001"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"c478730c7e57d8d1852a7cebedf3434f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES KAT ecb_vt.txt I=1 — 128-bit key, highest plaintext bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"80000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"43af8869bde62dd0fc003153b30a7082"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES KAT ecb_vt.txt I=128 — 128-bit key, lowest plaintext bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000001"},
+     "expected": {"t":"bytes","v":"c75425e955ce24cdb02c7840f02261b4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES KAT ecb_vk.txt I=1 — 192-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"800000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0e77f45397c67000e2232bd098c77ed9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES KAT ecb_vk.txt I=192 — 192-bit key, lowest key bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000001"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"1c36d07eb28abdf95a54e99200b6e62a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES KAT ecb_vt.txt I=1 — 192-bit key, highest plaintext bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"80000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"cecad44deb19b143fb6399c8a798253f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES KAT ecb_vk.txt I=1 — 256-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"b3b4c6422b18c6b989bc341e92a400e1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES KAT ecb_vk.txt I=256 — 256-bit key, lowest key bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000001"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"c0386da084bcd68241e4f6709c7bdc2e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES KAT ecb_vt.txt I=1 — 256-bit key, highest plaintext bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"80000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"8b26d3a473868cba4f2221bc88de1da5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/internet-checksum.js",
+ "algorithms": [
+  {
+   "name": "Internet-Checksum",
+   "vectors": [
+    {
+     "text": "Empty data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"ffff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IPv4 header example",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4500003044224000800600008c7053548c70545f"},
+     "expected": {"t":"bytes","v":"f611"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Sequential bytes 1-4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001000200030004"},
+     "expected": {"t":"bytes","v":"fff5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Partial IPv4 header",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"45000020000040004006"},
+     "expected": {"t":"bytes","v":"3ad9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

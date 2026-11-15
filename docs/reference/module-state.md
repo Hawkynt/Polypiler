@@ -27,12 +27,22 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
   array is.
 - **Arithmetic.** A global wraps around and converts exactly as a local of its type does; a compound
   assignment evaluates the global once.
+- **References.** A global may hold an object, a list, a map or a set (#1365); without an
+  initializer it starts as `null`, and a new empty collection - or one of static elements - is a
+  static initializer.
+- **The initializer of the module.** `IrModule.Initializer` names a private function of the module
+  that takes and gives nothing and that nothing calls: the module runs it once, when it is loaded,
+  after every global has its value - the statements at the top level of a JavaScript module, which
+  register what it defines (#1365). The interpreter runs it in `Instantiate`; C# runs it from the
+  static constructor of the class, when the class is first used; JavaScript calls it at the end of
+  the module, once every declaration it uses is made.
 
 ## Nodes and verifier rules
 
 | Node | Meaning | Verifier |
 | --- | --- | --- |
-| `IrGlobal(Name, Type, Initializer)` in `IrModule.Globals` | a variable of the module, in source order | name unique among functions, constants and globals; a truth value, a number, a [string](string-operations.md) or an array of them, never a [view](views.md); an array or a string has an initializer; the initializer is static and of the global's type |
+| `IrGlobal(Name, Type, Initializer)` in `IrModule.Globals` | a variable of the module, in source order | name unique among functions, constants and globals; a truth value, a number, a [string](string-operations.md), an array of them, an object or a collection, never a [view](views.md); an array or a string has an initializer; the initializer is static and of the global's type |
+| `IrModule.Initializer` | the function the module runs once when it is loaded | a function of the module, not public, without parameters, of `void` |
 | `IrGlobalRef(Global)` | the value of a global, of an array global its array | a global of the module; in an initializer one declared before |
 | `IrGlobalAssign(Global, Value)` | a statement: a new value | a global of the module that is no array; the value has its type |
 | `IrStep` on an `IrGlobalRef` | `++`/`--` of a global | as for a local |
@@ -65,7 +75,7 @@ function and in its initializer.
 | `const` at the top level holding a typed array or an array literal whose elements the file writes | an array global | supported; one only read stays a constant table |
 | `let x;` read by a function before that function can have assigned it | — | `PLY1106`, as for a local |
 | `export let`, `export var`, `export { x }`, `export default x` | — | `PLY1102` ("the exported variable x") |
-| a statement other than a declaration at the top level of a module whose functions use its variables | — | `PLY1102` ("a statement at the top level of the module"); a module without such variables ignores its top level, as before |
+| a statement other than a declaration at the top level of a module whose functions use its variables - a call, an assignment, an `if`, a loop, a `const` of an object | the initializer of the module, a function `initialize` (`initialize1`, … where the name is taken) whose locals those `const`s are | supported (#1365); a module without such variables ignores its top level, as before. An immediately invoked function that is no wrapper of the file, a TypeScript-style enum among them, stays `PLY1102` |
 | initializer that reads a later variable (temporal dead zone) or calls a function that reads or writes one | — | `PLY1102` |
 | a variable holding an object literal; a string variable declared without an initializer | — | `PLY1102` |
 

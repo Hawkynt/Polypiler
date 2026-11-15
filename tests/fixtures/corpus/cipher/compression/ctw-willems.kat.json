@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/ctw-willems.js",
+ "algorithms": [
+  {
+   "name": "Context Tree Weighting (Willems)",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte literal",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"010000006280"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142"},
+     "expected": {"t":"bytes","v":"0200000062cf00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text with no repetition",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"0b00000066312f2a8b787dd38a2b3780"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated text sample (4x)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"b400000077578191c1ef6951402bbff40fe06e7fad93efe76eb8f98e1d9de8bb6a368862d7cdf641fdba96d3defdd4704484af640788b71c09c0defd04d4ebfe1e479d281c4c77864b08fd5b071433592a699635b9714ef58ca147a1bdb6360a763ad1d9a0d36fd82886b218"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "256 repeated bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"0001000070e865c932a56d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All 256 byte values",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "expected": {"t":"bytes","v":"00010000244b9e5f41569b1e4e74c0ae47a08ce9844e4ff26153655c8e96877c32b6d6f2e2308caf9d1470a06095d867ab488e38112ff7ab7038045b6bce6523f3d4ed553fea0742b6ccee68d88a2b84dbe426a05baf3fcd1915d8c61e74c765d811aee4761fcaccdacadeca2048cf588a33b95cf6da11191ee82fd0b73b902e361414051a2ab69535750770e3aa87a8f931505e83499781db15079bef6b3fbe0c529ae1b3a59e1115cf497f26e0622e3a9e04e26e57ada7c636750366618ecc8ba5708e4bb4b7d7bb759631dbf0b80e8f4d4b3da35b3ba43c7839136dc9b75ca1f59c6ef00571d5c49012ce86d13d0f26ae03cc282eb90f18fc1d41c6bdbfa3fc2a41afa0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

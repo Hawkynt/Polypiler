@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/cortex-code.js",
+ "algorithms": [
+  {
+   "name": "Cortex Code",
+   "vectors": [
+    {
+     "text": "Cortex (16,8) all-zero input (conceptual)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Cortex (16,8) single bit pattern (conceptual)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100000000000000"},
+     "expected": {"t":"bytes","v":"00010100010100010001000000010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Cortex (16,8) alternating pattern (conceptual)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100010001000100"},
+     "expected": {"t":"bytes","v":"00000101000001000000000101010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

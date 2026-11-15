@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/fnv.js",
+ "algorithms": [
+  {
+   "name": "FNV-1a",
+   "vectors": [
+    {
+     "text": "FNV-1a Test Vector - Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"811c9dc5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "FNV-1a Test Vector - 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"e40c292c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "FNV-1a Test Vector - 'foobar'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f626172"},
+     "expected": {"t":"bytes","v":"bf9cf968"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}
