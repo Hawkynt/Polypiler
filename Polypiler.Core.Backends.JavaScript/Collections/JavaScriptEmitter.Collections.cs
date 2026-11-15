@@ -19,7 +19,7 @@ public static partial class JavaScriptEmitter {
 
     private bool Versioned => this._versioned ??= this._module is { } module && module.Functions
       .SelectMany(function => IrTree.Blocks(function.Body).SelectMany(Loops))
-      .Any(loop => loop is { Mode: EnumerationMode.Checked, Collection.Type.IsList: true } && MayChangeAList(loop.Body));
+      .Any(loop => loop is { Mode: EnumerationMode.Checked, Collection.Type.IsList: true } && (MayChangeAList(loop.Body) || IrSequences.Suspends(loop.Body)));
 
     private static IEnumerable<IrForEachCollection> Loops(IrStmt statement)
       => (statement is IrForEachCollection loop ? [loop] : Enumerable.Empty<IrForEachCollection>())

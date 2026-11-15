@@ -70,7 +70,7 @@ public static class JavaScriptPrinter {
     JsUpdate { Prefix: false } => Postfix,
     JsUnary or JsUpdate => Prefix,
     JsBinary binary => Of(binary.Operator),
-    JsConditional or JsAssignment or JsArrowFunction => Conditional,
+    JsConditional or JsAssignment or JsArrowFunction or JsYield => Conditional,
     JsSequence => Sequence,
     _ => Primary
   };
@@ -235,6 +235,13 @@ public static class JavaScriptPrinter {
         case JsContinue:
           this._text.Append("continue;");
           break;
+        case JsLabeledContinue jump:
+          this._text.Append("continue ").Append(jump.Label).Append(';');
+          break;
+        case JsLabeled labeled:
+          this._text.Append(labeled.Label).Append(": ");
+          this.Bare(labeled.Body, depth);
+          break;
         case JsReturn result:
           this._text.Append("return");
           if (result.Value is not null) {
@@ -264,7 +271,13 @@ public static class JavaScriptPrinter {
 
           break;
         case JsFunctionDeclaration function:
-          this.Function(function.Name, function.Parameters, function.Body, depth);
+          this.Function(function.Name, function.Parameters, function.Body, depth, function.IsGenerator);
+          break;
+        case JsForOf loop:
+          this._text.Append("for (").Append(loop.Kind).Append(' ').Append(loop.Name).Append(" of ");
+          this.Expression(loop.Right, depth);
+          this._text.Append(") ");
+          this.Bare(loop.Body, depth);
           break;
         case JsClass type:
           this.Class(type, depth);
@@ -312,8 +325,8 @@ public static class JavaScriptPrinter {
       this.Line(depth).Append('}');
     }
 
-    private void Function(string? name, IReadOnlyList<string> parameters, JsBlock body, int depth) {
-      this._text.Append("function ");
+    private void Function(string? name, IReadOnlyList<string> parameters, JsBlock body, int depth, bool generator) {
+      this._text.Append(generator ? "function* " : "function ");
       if (name is not null)
         this._text.Append(name);
 
@@ -491,6 +504,14 @@ public static class JavaScriptPrinter {
         case JsObject literal:
           this.Object(literal, depth);
           break;
+        case JsYield produced:
+          this._text.Append(produced.Delegate ? "yield*" : "yield");
+          if (produced.Argument is not null) {
+            this._text.Append(' ');
+            this.Operand(produced.Argument, Precedence(produced.Argument) >= Conditional, depth);
+          }
+
+          break;
         case JsArrowFunction arrow:
           this._text.Append('(').AppendJoin(", ", arrow.Parameters).Append(") => ");
           if (arrow.Body is not null)
@@ -502,7 +523,7 @@ public static class JavaScriptPrinter {
           break;
         default:
           var function = (JsFunctionExpression)expression;
-          this.Function(function.Name, function.Parameters, function.Body, depth);
+          this.Function(function.Name, function.Parameters, function.Body, depth, function.IsGenerator);
           break;
       }
     }

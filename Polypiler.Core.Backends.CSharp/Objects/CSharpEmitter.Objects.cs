@@ -139,7 +139,7 @@ public static partial class CSharpEmitter {
         if (method.Dispatch == IrDispatch.Abstract)
           (body, expression) = (null, null);
 
-        members.Add(new CsMethod(this.MethodModifiers(method), new CsType(this.TypeName(function.ReturnType)), names[method], [], parameters, body, expression));
+        members.Add(new CsMethod(Unsafe(this.MethodModifiers(method), function), new CsType(this.TypeName(function.ReturnType)), names[method], [], parameters, body, expression));
       }
 
       IReadOnlyList<string> declared = [Visibility(type.Visibility), .. type.IsAbstract ? ["abstract"] : this.Derived(type) ? (string[])[] : ["sealed"]];
@@ -250,7 +250,7 @@ public static partial class CSharpEmitter {
       })];
       this._receiver = null;
       // : base() is what C# calls without being asked.
-      return new CsConstructor([Visibility(constructor.Visibility)], this._typeNames[type.Name], parameters, body!) {
+      return new CsConstructor(Unsafe([Visibility(constructor.Visibility)], function), this._typeNames[type.Name], parameters, body!) {
         Chained = toBase && chained is [] ? null : chained, ChainsToBase = toBase && chained is not []
       };
     }

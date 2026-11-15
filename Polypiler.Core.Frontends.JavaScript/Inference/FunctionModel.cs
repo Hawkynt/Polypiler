@@ -170,7 +170,10 @@ internal enum FlowKind {
   Entry,
 
   /// <summary>The node is a call of a function value, whose arguments reach the parameters of every function the value may be.</summary>
-  Invoke
+  Invoke,
+
+  /// <summary>The node is the value a generator yields - with <see cref="Flow.Index"/> 1 the iterable of a <c>yield*</c>, whose values it yields (#1327).</summary>
+  Yield
 
 }
 

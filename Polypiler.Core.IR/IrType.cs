@@ -103,7 +103,22 @@ public enum IrTypeKind {
   Memory,
 
   /// <summary>A view like <see cref="Memory"/> whose elements are only read.</summary>
-  ReadOnlyMemory
+  ReadOnlyMemory,
+
+  /// <summary>
+  /// A lazy sequence of values of its <see cref="IrType.Element"/> type, which an iterator function
+  /// produces on demand: <see cref="IrType.Restartable"/> says whether every enumeration starts anew
+  /// (C#'s <c>IEnumerable&lt;T&gt;</c> of an iterator method) or all of them share one cursor (a
+  /// JavaScript generator object). A sequence is a reference that is never <c>null</c>.
+  /// </summary>
+  Sequence,
+
+  /// A bounded pointer of unsafe code (#1331): a region of memory - an array, a view, a <c>stackalloc</c>
+  /// or a local - and a byte offset in it, through which values of its <see cref="IrType.Element"/> type, a
+  /// number or <c>void</c>, are read and written. It lives on the stack only, like a span, and is never a
+  /// result. <c>docs/reference/pointers.md</c> states what its operations mean.
+  /// </summary>
+  Pointer
 
 }
 
@@ -201,8 +216,28 @@ public sealed record IrType {
   /// <returns>The memory type.</returns>
   public static IrType ReadOnlyMemory(IrType element) => new(IrTypeKind.ReadOnlyMemory, element);
 
+  /// <summary>The type of a bounded pointer to values of a number type or to <c>void</c>, written <c>T*</c>.</summary>
+  /// <param name="element">The type pointed to: a number or <see cref="Void"/>.</param>
+  /// <returns>The pointer type.</returns>
+  public static IrType Pointer(IrType element) => new(IrTypeKind.Pointer, element);
+
+  /// <summary>Whether the type is a pointer.</summary>
+  public bool IsPointer => this.Kind == IrTypeKind.Pointer;
+
   /// <summary>Whether the type is a memory, a view that may be stored, writable or read-only.</summary>
   public bool IsMemory => this.Kind is IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory;
+
+  /// <summary>A lazy sequence of values of a type (<see cref="IrTypeKind.Sequence"/>).</summary>
+  /// <param name="element">The type of the values.</param>
+  /// <param name="restartable">Whether every enumeration runs the producer anew from the values of its call; otherwise every enumeration continues one cursor.</param>
+  /// <returns>The sequence type.</returns>
+  public static IrType Sequence(IrType element, bool restartable) => new(IrTypeKind.Sequence, element) { Restartable = restartable };
+
+  /// <summary>Whether a sequence starts anew for every enumeration; <see langword="false"/> for a single-pass sequence and for every other type.</summary>
+  public bool Restartable { get; private init; }
+
+  /// <summary>Whether the type is a lazy sequence (<see cref="IrTypeKind.Sequence"/>), not an array or a view.</summary>
+  public bool IsLazySequence => this.Kind == IrTypeKind.Sequence;
 
   /// <summary>Whether the type is a view of elements, writable or read-only.</summary>
   public bool IsView => this.Kind is IrTypeKind.Span or IrTypeKind.ReadOnlySpan;
@@ -395,10 +430,12 @@ public sealed record IrType {
 
   /// <summary>
   /// Whether the type can be the type of a local: not void, an array only of numbers, of structs or of
-  /// strings, and a view or a memory only of numbers.
+  /// strings, a view or a memory only of numbers, and a pointer only to a number or to <c>void</c>.
   /// </summary>
   public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue
+    : this.IsPointer ? this.Element!.IsNumeric || this.Element == Void
     : this.IsCollection ? IrCollections.IsElement(this)
+    : this.IsLazySequence ? IrSequences.IsElement(this.Element!)
     : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && !this.IsMemory && (this.Element.IsStruct || this.Element.IsString || this.Element.IsFunction)));
 
   /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c>, <c>i32?</c> or the name of a struct.</summary>
@@ -415,6 +452,8 @@ public sealed record IrType {
       : this.Kind == IrTypeKind.Set ? $"set<{this.Element}, {this.Order.ToString().ToLowerInvariant()}>"
       : this.Kind == IrTypeKind.Memory ? $"memory<{this.Element}>"
       : this.Kind == IrTypeKind.ReadOnlyMemory ? $"readonly memory<{this.Element}>"
+      : this.Kind == IrTypeKind.Sequence ? (this.Restartable ? $"seq<{this.Element}>" : $"seq<{this.Element}, single-pass>")
+      : this.Kind == IrTypeKind.Pointer ? $"{this.Element}*"
       : $"{this.Element}[]";
 
 }

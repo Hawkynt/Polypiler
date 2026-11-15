@@ -192,6 +192,7 @@ public static partial class CSharpEmitter {
       Ask(expression);
 
     problems.AddRange(FilterProblems(module, profile, table));
+    problems.AddRange(PointerProblems(module, profile, table));
     return problems.Distinct().ToList();
   }
 
@@ -428,6 +429,7 @@ public static partial class CSharpEmitter {
     IrReturn result => (result.Value is null ? [] : [result.Value], []),
     IrThrow or IrRethrow or IrTry or IrForEachCollection => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
     IrUsing scope => ([scope.Initializer], [scope.Body]),
+    IrYield or IrYieldBreak or IrYieldFrom or IrForEachSequence => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
     _ => null
   };
 
@@ -452,6 +454,7 @@ public static partial class CSharpEmitter {
     IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrThrowExpression => IrTree.Operands(expression),
     IrCollection => IrTree.Operands(expression),
     IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke => IrTree.Operands(expression),
+    IrArraySequence => IrTree.Operands(expression),
     _ => null
   };
 
@@ -765,6 +768,7 @@ public static partial class CSharpEmitter {
         .. FloatManifest.Lines(this._module, this._mode, NativeAccuracy.DotNet),
         .. Caveats(this._module),
         .. this.Notices(),
+        .. this.PointerNotes(),
         .. FloatOperationSources.Notices(this._module.Implementations.Select(pair => pair.Implementation))
       ];
       if (@namespace is null)
@@ -798,7 +802,7 @@ public static partial class CSharpEmitter {
     }
 
     private CsMethod Function(IrFunction function) {
-      IReadOnlyList<string> modifiers = [function.IsPublic ? "public" : "private", "static"];
+      var modifiers = Unsafe([function.IsPublic ? "public" : "private", "static"], function);
       var returns = new CsType(this.TypeName(function.ReturnType));
       var (parameters, body, expression) = this.Body(function, 0, function.Body, true);
       return new CsMethod(modifiers, returns, this._members[function.Name], [], parameters, body, expression);
@@ -815,6 +819,7 @@ public static partial class CSharpEmitter {
       this._localFunctions = this.LocalFunctions(statements);
       this._names = [.. this._taken.Concat(this._spellings.Values).Select(name => name.TrimStart('@'))];
       this._complements = Complements(function);
+      this._iterator = IrSequences.IsIterator(function);
       this._scopes.Clear();
       this._scopes.Add(new Scope());
       var parameters = function.Parameters.Skip(skipped).Select(parameter => new CsParameter(new CsType(this.TypeName(parameter.Type)), this.Declare(parameter))).ToList();
@@ -826,6 +831,7 @@ public static partial class CSharpEmitter {
       }
 
       var body = this.Statements(statements);
+      this.Ended(body);
       return (parameters, new CsBlock(wraps ? [new CsCheckedStatement(false, new CsBlock(body))] : body), null);
     }
 
@@ -835,6 +841,8 @@ public static partial class CSharpEmitter {
         : type.Declaration is { } declared ? this._generics.Parameters.ContainsKey(declared) ? declared.Name : this._typeNames[declared.Name] : type.IsView || type.IsMemory ? this.ViewTypeName(type)
         : type.IsCollection ? this.CollectionTypeName(type)
         : type.IsFunction ? this.FunctionTypeName(type)
+        : type.IsLazySequence ? this.SequenceTypeName(type)
+        : type.IsPointer ? this.TypeName(type.Element!) + "*"
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
@@ -889,7 +897,9 @@ public static partial class CSharpEmitter {
 
       switch (statement) {
         case IrBlock block:
-          statements.Add(new CsBlock(this.Statements(block)));
+          // A block that is one fixed statement is that statement, a scope of its own (#1331).
+          var inner = this.Statements(block);
+          statements.Add(inner is [CsFixed pinned] ? pinned : new CsBlock(inner));
           break;
         case IrDeclare declare:
           // The initializer is read before the variable is declared, as the IR reads it.
@@ -932,6 +942,9 @@ public static partial class CSharpEmitter {
 
           statements.Add(new CsContinue());
           break;
+        case IrReturn { Value: null } when this._iterator:
+          statements.Add(new CsYield(null));
+          break;
         case IrReturn result:
           statements.Add(new CsReturn(result.Value is null ? null : this.Stored(result.Value)));
           break;
@@ -939,7 +952,9 @@ public static partial class CSharpEmitter {
           statements.Add(this.Using(scope));
           break;
         default:
-          this.ExceptionStatement(statement, statements);
+          if (!this.SequenceStatement(statement, statements))
+            this.ExceptionStatement(statement, statements);
+
           break;
       }
     }
@@ -951,7 +966,7 @@ public static partial class CSharpEmitter {
     /// <c>int</c> unasked. Inside a class named <c>var</c> the word is that class.
     /// </summary>
     private bool Infers(IrDeclare declare)
-      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView && !declare.Local.Type.IsMemory && !declare.Local.Type.IsOptional && !declare.Local.Type.IsFunction
+      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView && !declare.Local.Type.IsMemory && !declare.Local.Type.IsOptional && !declare.Local.Type.IsFunction && !declare.Local.Type.IsPointer
         && this.ClassName != "var" && this.Has(CSharpFeature.ImplicitlyTypedLocal);
 
     /// <summary>
@@ -1171,6 +1186,9 @@ public static partial class CSharpEmitter {
     }
 
     private (CsExpression Node, int Binding) Plain(IrExpr expression) {
+      if (this.SequenceNode(expression) is { } sequence)
+        return sequence;
+
       switch (expression) {
         case IrConst { Type.IsEnum: true } constant:
           return this.EnumLiteral(constant.Type, constant.Value);
@@ -1190,6 +1208,8 @@ public static partial class CSharpEmitter {
           return (this.GlobalName(reference.Global), Primary);
         case IrNull or IrGenericEquals or IrGenericCompare or IrCall when this.GenericNode(expression) is { } generic:
           return generic;
+        case IrNull { Type.IsPointer: true }:
+          return (new CsNullLiteral(), Primary);
         case IrNull { Type.IsArray: true } or IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrConditional { Condition: IrIsNull or IrIsNone }:
           return this.Optional(expression);
         case IrThrowExpression thrown:
@@ -1317,6 +1337,9 @@ public static partial class CSharpEmitter {
     }
 
     private (CsExpression Node, int Binding) Intrinsic(IrIntrinsic intrinsic) {
+      if (this.Pointer(intrinsic) is { } pointer)
+        return pointer;
+
       if (intrinsic.Op == IrIntrinsicOp.ArrayOf)
         return (new CsArrayCreation(new CsType(this.TypeName(intrinsic.Type.Element!)), null, new CsArrayInitializer([.. intrinsic.Arguments.Select(this.Stored)])), Unary);
 

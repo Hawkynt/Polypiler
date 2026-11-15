@@ -70,7 +70,8 @@ public static partial class CSharpEmitter {
       foreach (var clause in attempt.Catches) {
         var scope = new Scope();
         this._scopes.Add(scope);
-        var name = clause.Local is { } local ? this.Declare(local) : null;
+        // A variable the clause never reads is left out: C# warns of it (CS0168), as JavaScript's catch (e) does not.
+        var name = clause.Local is { } local && Reads(clause, local) ? this.Declare(local) : null;
         var filter = clause.Filter is null ? null : this.Text(clause.Filter);
         var statements = this.Statements(clause.Body);
         this._scopes.RemoveAt(this._scopes.Count - 1);
@@ -82,6 +83,11 @@ public static partial class CSharpEmitter {
 
       return new CsTry(body, catches, attempt.Finally is null ? null : new CsBlock(this.Statements(attempt.Finally)));
     }
+
+    /// <summary>Whether a catch clause reads or writes its variable: in its filter or its body, also inside a lambda.</summary>
+    private static bool Reads(IrCatch clause, IrLocal local)
+      => (clause.Filter is { } filter ? IrTree.Nodes(filter) : []).Concat(IrTree.Nodes(clause.Body)).Any(node => node is IrLocalRef reference && reference.Local == local)
+        || IrClosures.Within(clause.Body).Any(statement => statement is IrAssign assign && assign.Local == local);
 
     /// <summary>
     /// The clauses of a try as one catch of every exception, below C# 6: each variable of a clause is

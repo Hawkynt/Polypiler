@@ -26,6 +26,9 @@ public static partial class JavaScriptEmitter {
     }
 
     private (JsExpression Node, bool Atomic) Write(IrExpr expression) {
+      if (this.PointerWrite(expression) is { } pointer)
+        return pointer;
+
       switch (expression) {
         case IrConst constant:
           return this.Constant(constant.Type, constant.Value);
@@ -104,6 +107,8 @@ public static partial class JavaScriptEmitter {
           return (this.Chained(chained), true);
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
           return this.FunctionValue(expression);
+        case IrArraySequence sequence:
+          return this.ArraySequence(sequence);
         default:
           var call = (IrCall)expression;
           return (new JsCall(Id(this.Name(call.Function)), [.. call.Arguments.Select(this.Value)]), true);

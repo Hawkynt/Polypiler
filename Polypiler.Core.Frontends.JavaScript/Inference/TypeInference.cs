@@ -59,9 +59,12 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     if (model.Problem is null)
       this._binders[model].Bind();
 
-    // A function without a return returns nothing, which is known before any type is; one that
-    // returns a value and can also end without one returns undefined there.
-    if (!model.Flows.Exists(flow => flow.Kind == FlowKind.Return))
+    // A generator returns its generator object, of the values it yields; a function without a return
+    // returns nothing, which is known before any type is; one that returns a value and can also end
+    // without one returns undefined there.
+    if (candidate.Function.Generator)
+      (model.Result, model.ResultEvidence) = (JsType.SequenceOf(JsType.Unknown), candidate.Anchor);
+    else if (!model.Flows.Exists(flow => flow.Kind == FlowKind.Return))
       model.Result = JsType.Undefined;
     else if (model.Problem is null && candidate.Function.Body is FunctionBody block && Completes.MayComplete(block.Body))
       model.Result = JsType.UndefinedValue;
@@ -77,8 +80,11 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     if (candidate.Problem is not null)
       return Unsupported(candidate.Anchor, candidate.Problem);
 
-    if (function.Generator || function.Async)
-      return Unsupported(candidate.Anchor, function.Generator ? "a generator" : "an async function");
+    if (function.Async)
+      return Unsupported(candidate.Anchor, function.Generator ? "an async generator" : "an async function");
+
+    if (function.Generator && this.GeneratorProblem(candidate) is { } generator)
+      return generator;
 
     if (candidate.Name.Contains('$'))
       return Unsupported(candidate.Anchor, $"the name {candidate.Name}");
@@ -248,6 +254,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         return this.ApplyMember(model, flow);
       case FlowKind.Invoke:
         return this.Invoke((CallExpression)flow.Node);
+      case FlowKind.Yield:
+        return this.Yielded(model, flow);
       default:
         var called = this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index);
         return (called is { Declared: null } parameter && this.Pass(parameter, flow.Missing ? JsType.UndefinedValue : this.Of(flow.Node), flow.Node))

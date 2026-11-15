@@ -149,6 +149,9 @@ public static class FloatLegalization {
         attempt.Finally is null ? null : this.Block(attempt.Finally)),
       IrUsing scope => scope with { Initializer = this.Expression(scope.Initializer), Body = this.Block(scope.Body) },
       IrForEachCollection loop => loop with { Collection = this.Expression(loop.Collection), Body = this.Block(loop.Body) },
+      IrYield produced => new IrYield(this.Expression(produced.Value)),
+      IrYieldFrom delegated => new IrYieldFrom(this.Expression(delegated.Sequence)),
+      IrForEachSequence loop => loop with { Sequence = this.Expression(loop.Sequence), Body = this.Block(loop.Body) },
       _ => statement
     };
 
@@ -216,6 +219,8 @@ public static class FloatLegalization {
           return thrown with { Exception = this.Expression(thrown.Exception) };
         case IrCollection operation:
           return operation with { Arguments = [.. operation.Arguments.Select(this.Expression)] };
+        case IrArraySequence sequence:
+          return new IrArraySequence(this.Expression(sequence.Array));
         case IrCall call:
           var arguments = call.Arguments.Select(this.Expression).ToList();
           return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);

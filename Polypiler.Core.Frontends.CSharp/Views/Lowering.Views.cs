@@ -66,8 +66,9 @@ internal sealed partial class Lowering {
     if (creation.Initializer is not null || creation.Type is not ArrayTypeSyntax { RankSpecifiers: [{ Sizes: [var size] }] } || size is OmittedArraySizeExpressionSyntax)
       throw new UnsupportedException(creation, "stackalloc with an initializer");
 
-    var view = this.ViewType(converted, creation) ?? throw new UnsupportedException(creation, "stackalloc into a pointer");
-    return new IrIntrinsic(IrIntrinsicOp.StackAlloc, IrType.Span(view.Element!), [this.Index(size)]);
+    // Into a pointer (#1331) the result is the pointer to the first of the zeros.
+    var view = this.PointerType(converted, creation) ?? this.ViewType(converted, creation)!;
+    return new IrIntrinsic(IrIntrinsicOp.StackAlloc, view.IsPointer ? view : IrType.Span(view.Element!), [this.Index(size)]);
   }
 
   /// <summary>

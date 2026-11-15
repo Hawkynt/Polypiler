@@ -379,6 +379,9 @@ public static partial class JavaScriptEmitter {
       if (this._halves)
         header.Add("A 64-bit integer is an object { hi, lo }: its upper and its lower 32 bits, each as an unsigned number.");
 
+      if (this._pointers)
+        header.Add("A pointer is a region { a, o, n, s, k } and a byte offset in it: two variables, or [region, offset] where it is passed.");
+
       if (this._structs)
         header.Add("A struct is an object of its fields, copied wherever the place it is read from can still be used.");
 
@@ -455,12 +458,16 @@ public static partial class JavaScriptEmitter {
           return this.Name(type.Declaration!.Name);
         case IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory:
           return this.DescribeView(type);
+        case IrTypeKind.Pointer:
+          return "[region, offset]";
         case IrTypeKind.List:
           return $"Array<{this.Describe(type.Element!)}>";
         case IrTypeKind.Map:
           return $"Map<{this.Describe(type.Key!)}, {this.Describe(type.Element!)}>";
         case IrTypeKind.Set:
           return $"Set<{this.Describe(type.Element!)}>";
+        case IrTypeKind.Sequence:
+          return $"{(this.Native("Symbol.iterator") ? "Iterable" : "{ $iterator() }")}<{this.Describe(type.Element!)}>";
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)
             return "bigint";
@@ -511,8 +518,9 @@ public static partial class JavaScriptEmitter {
       if (function.IsPublic && !exported)
         this._exported.Add(name);
 
+      this._direct = true;
       var (parameters, body) = this.Body(function, 0);
-      JsStatement declaration = new JsFunctionDeclaration(name, parameters, body);
+      JsStatement declaration = new JsFunctionDeclaration(name, parameters, body) { IsGenerator = this._generator };
       return (exported ? new JsExport(declaration) : declaration) with { Leading = new JsTrivia(1, [comment]) };
     }
 
@@ -538,7 +546,14 @@ public static partial class JavaScriptEmitter {
       this._previous = false;
       this._coalesced = false;
       this._undefined = function.IsPublic && function.Absent == IrAbsent.Undefined && function.ReturnType.IsOptional;
-      this.Statements(function.Body, statements);
+      this._generator = false;
+      var pointers = this.Pointers(function, skipped);
+      if (IrSequences.IsIterator(function))
+        this.Iterator(function, parameters, statements);
+      else
+        this.Statements(function.Body, statements);
+
+      this._direct = false;
       if (this._previous)
         statements.Insert(start, new JsVariableDeclaration(this.Let, [new JsDeclarator(Previous, null)]));
 
@@ -546,6 +561,7 @@ public static partial class JavaScriptEmitter {
         statements.Insert(start, new JsVariableDeclaration(this.Let, [new JsDeclarator(Coalesced, null)]));
 
       statements.InsertRange(start, this.Prologue());
+      statements.InsertRange(start, pointers);
 
       return (parameters, new JsBlock(statements));
     }
@@ -609,7 +625,10 @@ public static partial class JavaScriptEmitter {
 
     private void Statement(IrStmt statement, List<JsStatement> statements) {
       this._construct = statement;
-      if (this.FunctionStatement(statement, statements))
+      if (this.Escaping(statement, statements))
+        return;
+
+      if (this.FunctionStatement(statement, statements) || this.PointerStatement(statement, statements))
         return;
 
       switch (statement) {
@@ -680,7 +699,9 @@ public static partial class JavaScriptEmitter {
           this.Using(scope, statements);
           break;
         default:
-          this.ExceptionStatement(statement, statements);
+          if (!this.SequenceStatement(statement, statements))
+            this.ExceptionStatement(statement, statements);
+
           break;
       }
     }
@@ -697,6 +718,9 @@ public static partial class JavaScriptEmitter {
       var parts = new List<JsExpression>();
       foreach (var step in loop.Step.Statements)
         switch (step) {
+          case var _ when this.PointerStep(step, target, parts):
+            // A pointer or an address-taken local is declared and assigned as its own parts (#1331).
+            break;
           case IrDeclare declare:
             var name = this.Declare(declare.Local);
             target.Add(new JsVariableDeclaration(this.Let, [new JsDeclarator(name, null)]));

@@ -145,7 +145,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     var constant = field.Modifiers.Any(SyntaxKind.ConstKeyword);
     foreach (var modifier in field.Modifiers)
       if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword
-          or SyntaxKind.ConstKeyword or SyntaxKind.StaticKeyword or SyntaxKind.ReadOnlyKeyword))
+          or SyntaxKind.ConstKeyword or SyntaxKind.StaticKeyword or SyntaxKind.ReadOnlyKeyword or SyntaxKind.UnsafeKeyword))
         throw new UnsupportedException(field, modifier.Text);
 
     if (field.AttributeLists.SelectMany(list => list.Attributes).FirstOrDefault() is { } attribute)
@@ -243,12 +243,15 @@ internal sealed partial class Lowering(string path, BoundModel model) {
   private IrFunction Method(MethodDeclarationSyntax method) {
     NoAwaitUsing(method);
     foreach (var modifier in method.Modifiers)
-      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword))
+      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword or SyntaxKind.UnsafeKeyword))
         throw new UnsupportedException(method, modifier.Text);
 
+    this.RefuseSkipLocalsInit(method);
     var symbol = model.GetDeclaredSymbol(method)!;
     var name = symbol.IsGenericMethod ? IrGenerics.Mangle(symbol.Name, symbol.TypeArguments.Select(argument => this.Map(argument, method))) : symbol.Name;
-    return this.Function(name, symbol.DeclaredAccessibility == Accessibility.Public, symbol, method, method.ParameterList.Parameters, null, null, method.Body, method.ExpressionBody?.Expression);
+    var function = this.Function(name, symbol.DeclaredAccessibility == Accessibility.Public, symbol, method, method.ParameterList.Parameters, null, null, method.Body, method.ExpressionBody?.Expression);
+    RefuseDangling(function, method);
+    return function;
   }
 
   /// <summary>
@@ -342,11 +345,17 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         return IrType.String;
     }
 
+    if (this.PointerType(type, node) is { } pointer)
+      return pointer;
+
     if (this.ViewType(type, node) is { } view)
       return view;
 
     if (this.CollectionType(type, node) is { } collection)
       return collection;
+
+    if (this.SequenceType(type, node) is { } sequence)
+      return sequence;
 
     if (type is INamedTypeSymbol named && this._structs.TryGetValue(named, out var declared))
       return IrType.Struct(declared);
@@ -424,7 +433,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         into.Add(this.For(loop));
         break;
       case ForEachStatementSyntax loop:
-        into.Add(this.CollectionForEach(loop) ?? this.ForEach(loop));
+        into.Add(this.CollectionForEach(loop) ?? this.SequenceForEach(loop) ?? this.ForEach(loop));
         break;
       case ForEachVariableStatementSyntax loop when this.CollectionForEach(loop) is { } deconstructed:
         into.Add(deconstructed);
@@ -439,10 +448,11 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         into.Add(new IrContinue());
         break;
       case ReturnStatementSyntax result:
+        this.NoSequenceReturn(result);
         into.Add(new IrReturn(result.Expression is null ? null : this.Initialized(result.Expression, into).Value));
         break;
       default:
-        if (!this.ExceptionStatement(statement, into) && !this.ResourceStatement(statement, into))
+        if (!this.ExceptionStatement(statement, into) && !this.ResourceStatement(statement, into) && !this.SequenceStatement(statement, into) && !this.PointerStatement(statement, into))
           throw new UnsupportedException(statement, statement.Kind().ToString());
 
         break;
@@ -644,6 +654,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
   private void Assignment(AssignmentExpressionSyntax assignment, List<IrStmt> into) {
     this.RefuseMulticast(assignment);
+    if (this.PointerAssignment(assignment, into))
+      return;
+
     if (assignment.IsKind(SyntaxKind.CoalesceAssignmentExpression)) {
       this.CoalesceAssignment(assignment, into);
       return;
@@ -699,6 +712,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
   /// it to and converted back, which in a checked context traps instead of wrapping around.
   /// </summary>
   private void Step(ExpressionSyntax operand, bool increment, List<IrStmt> into) {
+    if (this.PointerStep(operand, increment, into))
+      return;
+
     var trap = this.IsChecked(operand);
     var target = this.Target(operand, into, true);
     var current = target.Read();
@@ -738,6 +754,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
   /// than a variable or a constant are evaluated once into a temporary, as C# evaluates them once.
   /// </summary>
   private (Func<IrExpr> Read, Func<IrExpr, IrStmt> Write) Target(ExpressionSyntax target, List<IrStmt> into, bool alsoRead) {
+    if (this.PointerTarget(target, into, alsoRead) is { } pointed)
+      return pointed;
+
     if (this.ObjectTarget(target, into, alsoRead) is { } objectMember)
       return objectMember;
 
@@ -823,7 +842,12 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       throw new UnsupportedException(expression, $"the static readonly array '{table.Constant.Name}' used as a value");
 
     var converted = this.Map(info.ConvertedType, expression);
-    return converted.IsView || converted.IsMemory ? ToView(natural, converted) : this.Converted(natural, converted);
+    if (this.ToSequence(natural, converted, expression) is { } sequence)
+      return sequence;
+
+    return converted.IsView || converted.IsMemory ? ToView(natural, converted)
+      : converted.IsPointer ? ToPointer(natural, converted)
+      : this.Converted(natural, converted);
   }
 
   /// <summary>
@@ -848,6 +872,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
     if (model.GetConstantValue(expression) is { HasValue: true, Value: { } folded })
       return new IrConst(type, Carried(folded));
+
+    if (this.PointerNatural(expression, type) is { } pointerNode)
+      return pointerNode;
 
     if (this.ExceptionNatural(expression, type) is { } exceptionNode)
       return exceptionNode;

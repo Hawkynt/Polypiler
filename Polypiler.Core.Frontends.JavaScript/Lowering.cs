@@ -77,7 +77,7 @@ internal sealed partial class Lowering(TypeInference types) {
 
       var bound = this.TakeBound();
       var body = new IrBlock(inherited is null ? [.. entry, .. bound, .. prologue, .. statements] : [.. entry, statements[0], .. bound, .. prologue, .. statements.Skip(1)]);
-      if (this._returnType != IrType.Void && !AlwaysReturns(body)) {
+      if (this._returnType != IrType.Void && !this._returnType.IsLazySequence && !AlwaysReturns(body)) {
         // A function that can end without its value returns undefined there (#1322).
         if (!this._returnType.IsOptional && !this._returnType.IsNullable)
           throw this.Unsupported(model.Candidate.Anchor, "a function that can end without returning its value");
@@ -173,6 +173,9 @@ internal sealed partial class Lowering(TypeInference types) {
         break;
       case ExpressionStatement { Expression: AssignmentExpression named } when this.NamesError(named):
         break;
+      case ExpressionStatement { Expression: YieldExpression produced }:
+        into.Add(this.Yield(produced));
+        break;
       case ExpressionStatement expression:
         this.Effect(expression.Expression, into);
         break;
@@ -199,7 +202,7 @@ internal sealed partial class Lowering(TypeInference types) {
         into.Add(this.For(loop));
         break;
       case ForOfStatement loop:
-        into.Add(this.KeyedForOf(loop) ?? this.ListForOf(loop) ?? this.ForOf(loop));
+        into.Add(this.SequenceForOf(loop) ?? this.KeyedForOf(loop) ?? this.ListForOf(loop) ?? this.ForOf(loop));
         break;
       case SwitchStatement choice:
         into.Add(this.Switch(choice, into));
