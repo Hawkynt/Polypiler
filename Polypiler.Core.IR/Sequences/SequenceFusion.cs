@@ -17,7 +17,7 @@ namespace Polypiler.Core.IR;
 /// passed - is an iterator function, which runs the loop anew on every enumeration and yields the
 /// elements, so that re-enumeration re-runs the pipeline. An ordering splits the loop: the elements
 /// before it are pulled into a list, their keys computed level by level and their indices sorted
-/// stably (<see cref="SequenceLibrary.StableSort"/>); the operations after it loop over the sorted list.
+/// stably (<see cref="IrIntrinsicOp.StableSort"/>); the operations after it loop over the sorted list.
 /// </summary>
 public static class SequenceFusion {
 
@@ -32,7 +32,6 @@ public static class SequenceFusion {
     var fusion = new Fusion(module);
     var functions = module.Functions.Select(fusion.Function).ToList();
     functions.AddRange(fusion.Added);
-    SequenceLibrary.Require(functions, fusion.Library);
     return module with { Functions = functions };
   }
 
@@ -43,9 +42,6 @@ public static class SequenceFusion {
 
     /// <summary>The functions that replace the chains, in the order they were made.</summary>
     public List<IrFunction> Added { get; } = [];
-
-    /// <summary>The functions of <see cref="SequenceLibrary"/> the added ones call.</summary>
-    public HashSet<string> Library { get; } = [];
 
     /// <summary>A function with every chain of its body, and of the lambdas in it, replaced.</summary>
     public IrFunction Function(IrFunction function) {
@@ -102,7 +98,7 @@ public static class SequenceFusion {
       if (terminal is not null)
         stages.RemoveAt(stages.Count - 1);
 
-      var builder = new Builder(this.Library);
+      var builder = new Builder();
       var arguments = new List<IrExpr>();
       IrExpr Parameter(IrExpr value, string name) {
         arguments.Add(this.Expression(value, owner));
@@ -128,9 +124,8 @@ public static class SequenceFusion {
             (first, checkedStart) = (new IrBind(temporary, start), new IrLocalRef(temporary));
           }
 
-          this.Library.Add(SequenceLibrary.RangeCountName);
           arguments.Add(first);
-          arguments.Add(new IrCall(SequenceLibrary.RangeCountName, IrType.I32, [checkedStart, count]));
+          arguments.Add(new IrIntrinsic(IrIntrinsicOp.RangeCount, IrType.I32, [checkedStart, count]));
           source = new Source(SourceKind.Range, [builder.Parameter("start", IrType.I32), builder.Parameter("count", IrType.I32)]);
           break;
         default:
@@ -198,7 +193,7 @@ public static class SequenceFusion {
   private sealed record Source(SourceKind Kind, IReadOnlyList<IrExpr> Values);
 
   /// <summary>The parameters, locals and statements of the function of one chain.</summary>
-  private sealed class Builder(HashSet<string> library) {
+  private sealed class Builder {
 
     public List<IrLocal> Parameters { get; } = [];
 
@@ -346,8 +341,7 @@ public static class SequenceFusion {
 
       comparison.Add(new IrReturn(I32(0)));
       var lambda = IrLambda.Of([a, b], IrType.I32, [compared], new IrBlock(comparison));
-      library.Add(SequenceLibrary.StableSortName);
-      statements.Add(new IrExprStmt(new IrCall(SequenceLibrary.StableSortName, IrType.Void, [Ref(order), lambda])));
+      statements.Add(new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StableSort, IrType.Void, [Ref(order), lambda])));
       return order;
     }
 

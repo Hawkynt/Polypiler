@@ -245,6 +245,43 @@ public sealed class IrSequenceOpsTests {
     Assert.That(Both(module, start, count)?.ToString(), Is.EqualTo(expected));
   }
 
+  /// <summary>
+  /// The stable sort is one algorithm three ways - the helper as .NET compiles it, the operation as the
+  /// interpreter computes it, and the operation bound to the helper as the library imports it - and they
+  /// agree, ties in input order, for arrays of every length up to 40 with many equal keys (fixed seed).
+  /// </summary>
+  [Test]
+  public void StableSort_IsTheHelperOfTheLibrary() {
+    var keys = new IrLocal("keys", IntArray);
+    var order = new IrLocal("order", IntArray);
+    var compare = Lambda(IrType.I32, p => new IrGenericCompare(new IrArrayLoad(R(keys), R(p[0])), new IrArrayLoad(R(keys), R(p[1]))), IrType.I32, IrType.I32);
+    var module = new IrModule("M", [new IrFunction("F", true, IntArray, [keys, order], [], new IrBlock([
+      new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StableSort, IrType.Void, [R(order), compare])),
+      new IrReturn(R(order))]))]);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    var bound = Polypiler.Core.Legalize.LibraryLegalization.Lower(module, () => Polypiler.Cli.PrecomputedImplementations.Module, Polypiler.Core.Legalize.SequenceLegalization.Rewrite);
+    Assert.That(IrTree.Nodes(bound.Functions[0].Body).OfType<IrIntrinsic>(), Is.Empty);
+    Assert.That(bound.Functions.Select(function => function.Name), Does.Contain("StableSort"));
+    var random = new Random(1329);
+    for (var length = 0; length <= 40; ++length) {
+      var input = Enumerable.Range(0, length).Select(_ => random.Next(4)).ToArray();
+      var expected = Enumerable.Range(0, length).ToArray();
+      HelperOperations.StableSort(expected, (x, y) => input[x].CompareTo(input[y]));
+      Assert.That(expected, Is.EqualTo(Enumerable.Range(0, length).OrderBy(index => input[index]).ToArray()), "stable");
+      Assert.That(IrInterpreter.Call(module, "F", [input, Enumerable.Range(0, length).ToArray()]), Is.EqualTo(expected));
+      Assert.That(IrInterpreter.Call(bound, "F", [input, Enumerable.Range(0, length).ToArray()]), Is.EqualTo(expected));
+    }
+  }
+
+  [Test]
+  public void Intrinsics_TakeTheirOperands() {
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.RangeCount, IrType.I32, [IrType.I32, IrType.I32]), Is.True);
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.RangeCount, IrType.I64, [IrType.I32, IrType.I32]), Is.False);
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.StableSort, IrType.Void, [IntArray, IrType.Function(IrType.I32, IrType.I32, IrType.I32)]), Is.True);
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.StableSort, IrType.Void, [IntArray, IrType.Function(IrType.Bool, IrType.I32, IrType.I32)]), Is.False);
+    Assert.That(IrSequenceOps.Accepts(IrIntrinsicOp.Abs, IrType.I32, [IrType.I32]), Is.Null);
+  }
+
   [Test]
   public void Fusion_LeavesAModuleWithoutSequencesAsItIs() {
     var module = Module(IrType.I32, a => new IrArrayLength(a));

@@ -302,6 +302,24 @@ public static class IrSequenceOps {
     }
   }
 
+  /// <summary>The operations the lowering of the sequence operations calls, which the helper library computes.</summary>
+  public static IReadOnlyList<IrIntrinsicOp> Operations { get; } = [IrIntrinsicOp.StableSort, IrIntrinsicOp.RangeCount];
+
+  /// <summary>
+  /// Whether <see cref="IrIntrinsicOp.StableSort"/> or <see cref="IrIntrinsicOp.RangeCount"/> takes the
+  /// operands and yields the result; <see langword="null"/> for any other operation.
+  /// </summary>
+  /// <param name="op">The operation.</param>
+  /// <param name="result">The type of the node.</param>
+  /// <param name="arguments">The types of the operands.</param>
+  /// <returns>Whether the node is well typed, or <see langword="null"/>.</returns>
+  public static bool? Accepts(IrIntrinsicOp op, IrType result, IReadOnlyList<IrType> arguments) => op switch {
+    IrIntrinsicOp.StableSort => result == IrType.Void && arguments is [var items, var compare] && items == IrType.Array(IrType.I32)
+      && compare == IrType.Function(IrType.I32, IrType.I32, IrType.I32),
+    IrIntrinsicOp.RangeCount => result == IrType.I32 && arguments is [var start, var count] && start == IrType.I32 && count == IrType.I32,
+    _ => null
+  };
+
   /// <summary>Makes the node of an operation with the type its operands give it.</summary>
   /// <param name="op">The operation.</param>
   /// <param name="arguments">The arguments.</param>

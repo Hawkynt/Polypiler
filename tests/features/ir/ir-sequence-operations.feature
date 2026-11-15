@@ -50,11 +50,11 @@ Feature: LINQ and JavaScript array callbacks keep their evaluation order
 
     Examples:
       | to         | profile | helper      |
-      | javascript | es5     | $stableSort |
-      | javascript | es2015  | $stableSort |
-      | javascript | es2022  | $stableSort |
-      | csharp     | net2.0  | _stableSort |
-      | csharp     | net10.0 | _stableSort |
+      | javascript | es5     | StableSort  |
+      | javascript | es2015  | StableSort  |
+      | javascript | es2022  | StableSort  |
+      | csharp     | net2.0  | StableSort  |
+      | csharp     | net10.0 | StableSort  |
 
   Scenario Outline: NaN is found by includes but not by indexOf, in both directions
     Given the fixture "<fixture>"

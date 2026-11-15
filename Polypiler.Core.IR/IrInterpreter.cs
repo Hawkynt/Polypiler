@@ -424,6 +424,8 @@ public static partial class IrInterpreter {
           return program.Constants[reference.Constant];
         case IrIntrinsic intrinsic when IrPointers.IsPointerNode(intrinsic):
           return this.Pointer(intrinsic, frame)!;
+        case IrIntrinsic { Op: IrIntrinsicOp.StableSort or IrIntrinsicOp.RangeCount } intrinsic:
+          return this.SequenceIntrinsic(intrinsic, frame);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:

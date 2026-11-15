@@ -29,9 +29,6 @@ internal sealed partial class Lowering {
   /// <summary>The functions that run the array callbacks of the module, in the order their calls were lowered.</summary>
   public List<IrFunction> Callbacks { get; } = [];
 
-  /// <summary>Whether a call sorts, so that the module needs <see cref="SequenceLibrary.StableSort"/>.</summary>
-  public bool Sorts { get; private set; }
-
   /// <summary>Whether a comparator returns a double, which a NaN makes inconsistent: the caveat <c>js-sort-order</c>.</summary>
   public bool SortsByDifference { get; private set; }
 
@@ -83,7 +80,6 @@ internal sealed partial class Lowering {
     this.CheckCallback(method, given, source.Type, signature, result);
     if (method == "sort") {
       this.CheckComparator(callback, given);
-      this.Sorts = true;
       this.SortsByDifference |= signature.Result.IsFloat;
     }
 

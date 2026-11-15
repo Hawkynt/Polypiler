@@ -60,7 +60,7 @@ public static partial class JavaScriptEmitter {
     var table = capabilities ?? JavaScriptCapabilities.Standard;
     var floats = FloatLegalization.Rewrite(intrinsic => Writes(intrinsic, profile, mode, table));
     var helpers = JavaScriptLibrary.Rewrite(profile, table);
-    return LibraryLegalization.Lower(SequenceFusion.Run(module), implementations, (expression, calls) => floats(expression, calls) ?? helpers(expression, calls));
+    return LibraryLegalization.Lower(SequenceFusion.Run(module), implementations, (expression, calls) => floats(expression, calls) ?? helpers(expression, calls) ?? SequenceLegalization.Rewrite(expression, calls));
   }
 
   /// <summary>
@@ -75,7 +75,7 @@ public static partial class JavaScriptEmitter {
   /// <returns>The module to emit.</returns>
   public static IrModule LegalizeHelpers(IrModule module, System.Func<IrModule> implementations, JavaScriptProfile profile, JavaScriptCapabilities? capabilities = null) {
     var table = capabilities ?? JavaScriptCapabilities.Standard;
-    return LibraryLegalization.Lower(SequenceFusion.Run(module), implementations, JavaScriptLibrary.Rewrite(profile, table));
+    return LibraryLegalization.Lower(SequenceFusion.Run(module), implementations, (expression, calls) => JavaScriptLibrary.Rewrite(profile, table)(expression, calls) ?? SequenceLegalization.Rewrite(expression, calls));
   }
 
   private sealed partial class Writer {

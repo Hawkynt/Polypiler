@@ -107,6 +107,23 @@ public static partial class IrInterpreter {
       return this.Terminal(operation, Values(source), arguments);
     }
 
+    /// <summary>The stable sort of indices by a comparison, and the range check.</summary>
+    private object SequenceIntrinsic(IrIntrinsic intrinsic, Frame frame) {
+      var arguments = intrinsic.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
+      if (intrinsic.Op == IrIntrinsicOp.RangeCount) {
+        var (start, count) = ((long)arguments[0], (long)arguments[1]);
+        return count < 0 || start + count - 1 > int.MaxValue ? throw new IrTrapException(IrTrap.ArgumentOutOfRange) : count;
+      }
+
+      var items = (Array)NotNull(arguments[0]);
+      var order = Enumerable.Range(0, items.Length).Select(index => (int)(long)LoadElement(items, index)).ToArray();
+      MergeSort(order, (a, b) => Math.Sign((long)this.Call(arguments[1], [(long)a, (long)b])!));
+      for (var index = 0; index < order.Length; ++index)
+        StoreElement(items, index, (long)order[index]);
+
+      return null!;
+    }
+
     /// <summary>One enumeration of a lazy operation.</summary>
     private IEnumerable<object> Lazy(IrSequence operation, SequenceValue source, object[] arguments) {
       var function = arguments[1];

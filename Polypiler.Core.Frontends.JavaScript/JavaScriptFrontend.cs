@@ -251,10 +251,8 @@ public static partial class JavaScriptFrontend {
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
     var lowered = candidates.Where(functions.ContainsKey).Select(candidate => functions[candidate]).ToList();
-    // The functions that run the array callbacks, and the stable sort of the comparators (#1329).
+    // The functions that run the array callbacks (#1329).
     lowered.AddRange(lowering.Callbacks);
-    if (lowering.Sorts)
-      SequenceLibrary.Require(lowered, [SequenceLibrary.StableSortName]);
 
     lowered.AddRange(Classes.Define(classes, inference));
     ModuleState.CheckInitializers(state, lowered, lowering, diagnostics);

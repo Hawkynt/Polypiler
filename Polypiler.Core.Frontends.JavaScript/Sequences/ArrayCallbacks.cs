@@ -246,7 +246,7 @@ internal sealed class ArrayCallbacks {
       new IrIf(new IrBinary(IrBinaryOp.Less, Ref(compared), zero), new IrBlock([new IrReturn(I32(-1))]), null),
       new IrIf(new IrBinary(IrBinaryOp.Greater, Ref(compared), zero), new IrBlock([new IrReturn(I32(1))]), null),
       new IrReturn(I32(0))]));
-    statements.Add(new IrExprStmt(new IrCall(SequenceLibrary.StableSortName, IrType.Void, [Ref(order), sign])));
+    statements.Add(new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StableSort, IrType.Void, [Ref(order), sign])));
 
     var position = this.Local("k", IrType.I32);
     var sorted = new IrCollection(IrCollectionOp.ListGet, element, [Ref(copy), new IrArrayLoad(Ref(order), Ref(position))]);

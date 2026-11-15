@@ -50,6 +50,10 @@ public static class IrOperators {
     if (IrPointers.Accepts(op, result, arguments) is { } pointer)
       return pointer;
 
+    // The stable sort and the range check of the sequence operations.
+    if (IrSequenceOps.Accepts(op, result, arguments) is { } sequence)
+      return sequence;
+
     // The views, and the endian loads and stores on a view of bytes, which are checked as on an array of them.
     if (IrViews.Accepts(op, result, arguments) is { } view)
       return view;

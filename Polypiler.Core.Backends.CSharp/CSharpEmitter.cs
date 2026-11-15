@@ -289,10 +289,10 @@ public static partial class CSharpEmitter {
 
   /// <summary>The rewrite of the operations a profile has only as a helper of the library: the row's helper, unless the row's form for arguments that cannot trap applies.</summary>
   private static LibraryRewrite Helpers(CSharpProfile profile, CSharpCapabilities table)
-    => (expression, calls) => IsTabled(expression) && Row(expression, table) is { } row && row.IsLibraryIn(profile)
+    => (expression, calls) => SequenceLegalization.Rewrite(expression, calls) ?? (IsTabled(expression) && Row(expression, table) is { } row && row.IsLibraryIn(profile)
       && !(row.Total is not null && expression is IrIntrinsic intrinsic && row.IsTotal!(intrinsic.Arguments))
         ? row.Library!(expression, calls)
-        : null;
+        : null);
 
   /// <summary>
   /// Emits the module for a profile and a floating-point mode. The header names the profile and, where

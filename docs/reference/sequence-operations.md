@@ -72,15 +72,18 @@ private static IEnumerable<int> Deferred_Where(int[] source, Func<int, int> sele
   of the pass, before the next element is pulled, in every loop of the segment - so an inner sequence of
   `SelectMany` stops too. A `Take` of nothing anywhere in the chain pulls nothing and calls nothing.
 - An **ordering** splits the loop: the elements are pulled into a list, the keys computed level by
-  level, the indices sorted by `$stableSort`, and the operations after the ordering loop over the sorted
+  level, the indices sorted by `StableSort`, and the operations after the ordering loop over the sorted
   list.
-- `Range` is checked where it is evaluated by `$rangeCount`, which returns the count or throws; a start
+- `Range` is checked where it is evaluated by `RangeCount`, which returns the count or throws; a start
   that is no constant is kept in a temporary the check reads.
 
-`$stableSort(int[] items, fn(i32, i32) → i32)` and `$rangeCount` are functions of the IR in
-`SequenceLibrary`, added to a module once; the backends write them as any function, no helper source of
-a backend changed. `$stableSort` is the bottom-up merge sort of Sedgewick and Wayne, *Algorithms*, 4th
-ed., §2.2 - the published algorithm, written as code of this repository; no code was copied, so no notice is needed.
+The sort and the check are operations of the IR, `StableSort` (`(i32[], fn(i32, i32) → i32) → void`) and
+`RangeCount` (`(i32, i32) → i32`), which the interpreter computes itself. No target has them natively, so
+legalization binds both, in every backend (`SequenceLegalization`), to the helpers of the same names in
+the [helper library](../architecture/BACKENDS.md#helpers-one-library-in-the-ir),
+`Polypiler.Core.IR/Helpers/Operations/Sequences.cs`; no helper source of a backend changed. `StableSort` is the
+bottom-up merge sort of Sedgewick and Wayne, *Algorithms*, 4th ed., §2.2 - the published algorithm,
+written as code of this repository; no code was copied, so no notice is needed.
 
 ## C# frontend
 
@@ -116,7 +119,7 @@ whole array:
 | `map`, `filter`, `forEach`, `flatMap` | the length read once before the first call; every element read when it is reached; an index a list no longer has skipped, as `HasProperty` skips it |
 | `reduce`, `reduceRight` | from the initial value, or from the first element present; of an empty array without one a `TypeError` |
 | `some`, `every`, `find`, `findIndex` | stop at the element that decides them |
-| `sort(comparator)` | the elements copied, their indices sorted by `$stableSort` by the sign of the comparator - a NaN counts as 0 - and written back; stable, as ECMAScript 2019 and later require |
+| `sort(comparator)` | the elements copied, their indices sorted by `StableSort` by the sign of the comparator - a NaN counts as 0 - and written back; stable, as ECMAScript 2019 and later require |
 | `indexOf`, `includes` | `ListIndexOfStrict` (`[NaN].indexOf(NaN)` is −1) and `ListIncludesSameValueZero` (`[NaN].includes(NaN)` is true), of [collections](collections.md) |
 
 The callback is an arrow, a function expression or a function of the file; it takes `(element, index,
@@ -139,11 +142,11 @@ ECMA-262 fixes no order, the translation fixes that of its merge sort.
 Both backends write the functions `SequenceFusion` and the JavaScript frontend add as any function of
 the module, in every profile: a fused pipeline is a loop everywhere; an escaping sequence is an iterator
 - `yield return` in C# from `net2.0` on, `function*` from ES2015 and the state machine of
-[sequences](sequences.md) in ES5; the comparison of a sort is `$stableSort` in every profile, since
+[sequences](sequences.md) in ES5; the sort is the helper `StableSort` in every profile, since
 `Array.Sort` and `List.Sort` are unstable and ECMA-262 2015 and 2017 do not require a stable `sort`.
 No operation needs a row of a capability table, and no profile refuses one (`PLY1053`, `PLY1152`).
 Where a target library has the same operation natively - `Enumerable.*` from .NET 3.5, `Enumerable.Zip`
-from .NET 4.0, a stable `Array.prototype.sort` from ES2019 - the IR helper library of #1353 is where a
+from .NET 4.0, a stable `Array.prototype.sort` from ES2019 - a row of the backend's library table (#1353) is where a
 native replacement belongs.
 
 ## Known differences
