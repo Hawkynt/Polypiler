@@ -141,7 +141,7 @@ public static class FloatManifest {
       case IrReturn { Value: { } value }:
         Collect(value, found);
         break;
-      case IrThrow or IrTry or IrUsing or IrForEachCollection:
+      case IrThrow or IrTry or IrUsing or IrForEachCollection or IrYield or IrYieldFrom or IrForEachSequence:
         foreach (var expression in IrTree.Expressions(statement))
           Collect(expression, found);
 
@@ -167,7 +167,7 @@ public static class FloatManifest {
       IrStructNew creation => creation.Arguments,
       IrFieldLoad load => [load.Target],
       IrStructEquals equality => [equality.Left, equality.Right],
-      IrNew or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrGenericEquals or IrGenericCompare or IrThrowExpression or IrCollection => IrTree.Operands(expression),
+      IrNew or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrGenericEquals or IrGenericCompare or IrThrowExpression or IrCollection or IrArraySequence => IrTree.Operands(expression),
       _ => []
     };
     if (expression is IrIntrinsic intrinsic1)

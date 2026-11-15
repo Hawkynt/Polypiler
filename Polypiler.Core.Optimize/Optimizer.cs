@@ -203,6 +203,7 @@ public static class Optimizer {
         .. attempt.Finally is null ? Array.Empty<object>() : [attempt.Finally]],
       IrUsing scope => [scope.Initializer, scope.Body],
       IrForEachCollection loop => [loop.Collection, loop.Body],
+      IrForEachSequence loop => [loop.Sequence, loop.Body],
       IrStmt statement => IrStatements.Expressions(statement),
       _ => []
     };
@@ -226,6 +227,9 @@ public static class Optimizer {
       IrTry attempt => RebuildTry(attempt, parts),
       IrUsing scope => scope with { Initializer = (IrExpr)parts[0], Body = (IrBlock)parts[1] },
       IrForEachCollection loop => loop with { Collection = (IrExpr)parts[0], Body = (IrBlock)parts[1] },
+      IrForEachSequence loop => loop with { Sequence = (IrExpr)parts[0], Body = (IrBlock)parts[1] },
+      IrYield => new IrYield((IrExpr)parts[0]),
+      IrYieldFrom => new IrYieldFrom((IrExpr)parts[0]),
       _ => value
     };
 

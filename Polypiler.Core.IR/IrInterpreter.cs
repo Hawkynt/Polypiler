@@ -307,6 +307,10 @@ public static partial class IrInterpreter {
   private sealed partial class Machine(Program program, Dictionary<IrGlobal, object> globals) {
 
     public object? Invoke(IrFunction function, object[] arguments) {
+      // An iterator function runs nothing when it is called: it makes the sequence.
+      if (IrSequences.IsIterator(function))
+        return this.Sequence(function, arguments);
+
       var frame = new Frame();
       for (var index = 0; index < arguments.Length; ++index)
         frame.Declare(function.Parameters[index], arguments[index]);
@@ -408,7 +412,7 @@ public static partial class IrInterpreter {
         case IrUsing scope:
           return this.Using(scope, frame);
         default:
-          return this.ExceptionStatement(statement, frame) ?? throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
+          return this.ExceptionStatement(statement, frame) ?? this.SequenceStatement(statement, frame) ?? throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
       }
     }
 
@@ -505,6 +509,8 @@ public static partial class IrInterpreter {
           return this.Collection(operation, frame);
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
           return this.FunctionValue(expression, frame);
+        case IrArraySequence sequence:
+          return ArraySequence((Array)NotNull(this.Evaluate(sequence.Array, frame)));
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }
@@ -847,6 +853,9 @@ public static partial class IrInterpreter {
     public Dictionary<IrLocal, Cell> Locals { get; } = [];
 
     public object? Result { get; set; }
+
+    /// <summary>The cursor the body of an iterator function runs for, which its yields hand their values to; <see langword="null"/> in any other function.</summary>
+    public Cursor? Cursor { get; init; }
 
     public object Get(IrLocal local) => this.Locals[local].Value!;
 

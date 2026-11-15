@@ -42,7 +42,8 @@ public static class IrModuleFormat {
     None, Some, IsNone, Unwrap, Coalesce, IsNull, Bind, ThrowExpression,
     Collection, Lambda, FunctionRef, BoundMethod, Invoke,
     Block, Declare, Assign, Store, FieldStore, ExprStmt, If, While, DoWhile, For, Switch, Break, Continue, Return, GlobalAssign,
-    Throw, Rethrow, Try, Using, ForEachCollection
+    Throw, Rethrow, Try, Using, ForEachCollection,
+    ArraySequence, Yield, YieldBreak, YieldFrom, ForEachSequence
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -482,6 +483,10 @@ public static class IrModuleFormat {
           this.Types(type.Signature!.Parameters);
           this.Type(type.Signature.Result);
           break;
+        case IrTypeKind.Sequence:
+          this.Type(type.Element!);
+          writer.Write(type.Restartable);
+          break;
       }
     }
 
@@ -662,6 +667,7 @@ public static class IrModuleFormat {
       IrFunctionRef => Tag.FunctionRef,
       IrBoundMethod => Tag.BoundMethod,
       IrInvoke => Tag.Invoke,
+      IrArraySequence => Tag.ArraySequence,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -686,6 +692,10 @@ public static class IrModuleFormat {
       IrTry => Tag.Try,
       IrUsing => Tag.Using,
       IrForEachCollection => Tag.ForEachCollection,
+      IrYield => Tag.Yield,
+      IrYieldBreak => Tag.YieldBreak,
+      IrYieldFrom => Tag.YieldFrom,
+      IrForEachSequence => Tag.ForEachSequence,
       _ => throw new ArgumentException($"The statement {statement.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -835,6 +845,9 @@ public static class IrModuleFormat {
           this.Method(bound.Method);
           this.Count((int)bound.Kind);
           break;
+        case IrArraySequence sequence:
+          this.Node(sequence.Array);
+          break;
         default:
           var invocation = (IrInvoke)expression;
           this.Node(invocation.Callee);
@@ -931,6 +944,17 @@ public static class IrModuleFormat {
           this.Count((int)loop.Mode);
           this.OptionalLocal(loop.Element);
           this.OptionalLocal(loop.Value);
+          this.Node(loop.Body);
+          break;
+        case IrYield produced:
+          this.Node(produced.Value);
+          break;
+        case IrYieldFrom delegated:
+          this.Node(delegated.Sequence);
+          break;
+        case IrForEachSequence loop:
+          this.Local(loop.Element);
+          this.Node(loop.Sequence);
           this.Node(loop.Body);
           break;
       }
@@ -1185,6 +1209,7 @@ public static class IrModuleFormat {
         IrTypeKind.Map => IrType.Map(this.Type(), this.Type(), this.Enum<MapOrder>()),
         IrTypeKind.Set => IrType.Set(this.Type(), this.Enum<MapOrder>()),
         IrTypeKind.Function => IrType.Function(new IrFunctionType(this.Types(), this.Type())),
+        IrTypeKind.Sequence => IrType.Sequence(this.Type(), reader.ReadBoolean()),
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };
@@ -1259,12 +1284,12 @@ public static class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.ForEachCollection)
+      if (tag > Tag.ForEachSequence)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag != Tag.ArraySequence ? this.Statement(tag) : this.Expression(tag);
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1312,6 +1337,7 @@ public static class IrModuleFormat {
         Tag.Lambda => new IrLambda(type, this.List(this.Local), this.List(this.Local), this.List(this.Local), this.Node<IrBlock>()),
         Tag.FunctionRef => new IrFunctionRef(type, reader.ReadString()),
         Tag.BoundMethod => this.BoundMethod(type),
+        Tag.ArraySequence => new IrArraySequence(this.Node<IrExpr>()),
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };
@@ -1352,6 +1378,10 @@ public static class IrModuleFormat {
       Tag.Rethrow => new IrRethrow(),
       Tag.Try => new IrTry(this.Node<IrBlock>(), this.List(this.Catch), this.OptionalNode<IrBlock>()),
       Tag.Using => new IrUsing(this.Local(), this.Node<IrExpr>(), this.Method(), this.Node<IrBlock>()) { IsDeclaration = reader.ReadBoolean() },
+      Tag.Yield => new IrYield(this.Node<IrExpr>()),
+      Tag.YieldBreak => new IrYieldBreak(),
+      Tag.YieldFrom => new IrYieldFrom(this.Node<IrExpr>()),
+      Tag.ForEachSequence => new IrForEachSequence(this.Local(), this.Node<IrExpr>(), this.Node<IrBlock>()),
       _ => new IrForEachCollection(this.Node<IrExpr>(), this.Enum<EnumerationMode>(), this.OptionalLocal(), this.OptionalLocal(), this.Node<IrBlock>())
     };
 
