@@ -32,7 +32,7 @@ public static class SequenceLibrary {
   /// <c>compare</c> of neighbours is never positive, and keeps the order of the elements it finds
   /// equal. It is the bottom-up merge sort of Sedgewick and Wayne, <i>Algorithms</i>, 4th ed., §2.2,
   /// which merges runs of 1, 2, 4, … elements through a buffer and takes the element of the left run on
-  /// a tie (see <c>THIRD-PARTY-NOTICE.MergeSort.txt</c>). Which pairs it compares, and in which order,
+  /// a tie - the published algorithm, written as code of this repository; nothing of the book was copied. Which pairs it compares, and in which order,
   /// is its own: the callers sort indices by keys computed before, or by a comparator that has no effect.
   /// </summary>
   /// <returns>The function.</returns>

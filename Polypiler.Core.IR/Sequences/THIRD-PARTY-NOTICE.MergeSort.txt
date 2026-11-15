@@ -1,9 +1,0 @@
-The stable sort of SequenceLibrary.StableSort ($stableSort) and of the interpreter's orderings is
-the bottom-up merge sort as published in:
-
-  Robert Sedgewick and Kevin Wayne, Algorithms, 4th edition, Addison-Wesley 2011,
-  section 2.2 "Mergesort", "Bottom-up mergesort".
-
-The algorithm - merging runs of 1, 2, 4, ... elements through an auxiliary array and taking the
-element of the left run when two compare equal, which makes the sort stable - is written here as code
-of this repository in the IR and in C#; no code of the book or of its companion site was copied.

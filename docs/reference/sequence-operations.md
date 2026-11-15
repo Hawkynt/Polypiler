@@ -80,7 +80,7 @@ private static IEnumerable<int> Deferred_Where(int[] source, Func<int, int> sele
 `$stableSort(int[] items, fn(i32, i32) → i32)` and `$rangeCount` are functions of the IR in
 `SequenceLibrary`, added to a module once; the backends write them as any function, no helper source of
 a backend changed. `$stableSort` is the bottom-up merge sort of Sedgewick and Wayne, *Algorithms*, 4th
-ed., §2.2 (see `Polypiler.Core.IR/Sequences/THIRD-PARTY-NOTICE.MergeSort.txt`).
+ed., §2.2 - the published algorithm, written as code of this repository; no code was copied, so no notice is needed.
 
 ## C# frontend
 

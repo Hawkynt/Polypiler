@@ -10,7 +10,7 @@ using Polypiler.Prototype.Testing;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The differential rows of <c>tests/features/prototype/sequences.feature</c> (#1329): the LINQ fixtures
+/// The differential rows of <c>tests/features/ir/ir-sequence-operations.feature</c> (#1329): the LINQ fixtures
 /// compute in node at every JavaScript level and in every C# profile what .NET computes, and the
 /// JavaScript fixtures of array callbacks compute in every profile of both backends what node computes
 /// of the original - the results and the recorded traces of the calls of the lambdas. The time of every
