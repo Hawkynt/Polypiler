@@ -538,8 +538,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/float/BoxMuller.cs.javascript.golden",
-      "sha256": "8ede10f41c3d29747f313ccacbb02d466a8884d6a61a3373e2a9ec8c41d392f7",
-      "bytes": 2468118
+      "sha256": "1dcb15dac841776c01bf693031cdd66246fdaec84c4b36d84b57c5fba05b9b6a",
+      "bytes": 2468074
     },
     {
       "path": "tests/fixtures/backend/golden/float/Dct8.cs.csharp.golden",
@@ -548,8 +548,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/float/Dct8.cs.javascript.golden",
-      "sha256": "d2e07f2ca1882b280cd5e7719ac977cdf65f230ddb573f949fcd95e0581ffc67",
-      "bytes": 1175244
+      "sha256": "4ff81942a493685a0b4c803dce927102c50e0bdefd2b986d70c7fb78a8e6dc2f",
+      "bytes": 1175200
     },
     {
       "path": "tests/fixtures/backend/golden/float/FloatView.cs.csharp.golden",
@@ -568,8 +568,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/float/Haversine.cs.javascript.golden",
-      "sha256": "186f8c693eed585d5f4947cf12a7b95364e160493f45679ad49718f3d6430dd1",
-      "bytes": 2685408
+      "sha256": "d1d60c99b876ad93294f557ee180fb18820f17c842f9a36a4ce77a953bdb8bed",
+      "bytes": 2685364
     },
     {
       "path": "tests/fixtures/backend/golden/functions/Accumulate.cs.csharp.golden",
@@ -1918,8 +1918,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Conversions.cs.javascript.golden",
-      "sha256": "cfc08eb96c7c5434f620c81a2a5e210f1f69a27f21caa6e92dff1b61e79eafd2",
-      "bytes": 1161144
+      "sha256": "d0d66b3430e42045e155d84006508c4fa33624fdb632eef3ce5409b7953db6a4",
+      "bytes": 1160636
     },
     {
       "path": "tests/fixtures/backend/golden/wide/Crc16.cs.csharp.golden",
