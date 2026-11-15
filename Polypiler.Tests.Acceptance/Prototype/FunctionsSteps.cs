@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The steps of <c>tests/features/prototype/functions-and-closures.feature</c> (#1326). The expected
+/// The steps of <c>tests/features/ir/ir-functions.feature</c> (#1326). The expected
 /// value is never computed here: it is what .NET computes of the original C# fixture, built into
 /// this assembly, or what <c>node</c> computes of the original JavaScript; the step's own numbers are
 /// checked against that oracle too.
