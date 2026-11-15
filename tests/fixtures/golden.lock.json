@@ -382,6 +382,66 @@
       "bytes": 59526
     },
     {
+      "path": "tests/fixtures/backend/golden/exceptions/Classes.cs.csharp.golden",
+      "sha256": "823270f4032ad5c5f15dfc27011d32d26116741171bcd2dcd27c1a9b68e0a740",
+      "bytes": 83002
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/Classes.cs.javascript.golden",
+      "sha256": "6e86eaa3eb8274afabdc5a204924a519aec59621a73e6d347e26141bd11f7001",
+      "bytes": 109716
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/Traps.cs.csharp.golden",
+      "sha256": "5b9465e04573606ea1fc27e66fda3644949860d2d3ef1e8e2f6816e1675a43c1",
+      "bytes": 74518
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/Traps.cs.javascript.golden",
+      "sha256": "ff116c1879614e5a36f06132bd4bcf80653c50857d441b3a5954f0169be3b4ff",
+      "bytes": 132992
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/errors.js.csharp.golden",
+      "sha256": "066da12e46b6644c2ec50e5d2ac6407022cb8b4b9a4ecc114239cfae6e62430f",
+      "bytes": 59526
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/errors.js.javascript.golden",
+      "sha256": "aa28607c19b698cd7e79130dba7686b87b8886d76e6f317ebb8ca41d8902cb87",
+      "bytes": 132428
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/finally-return.js.csharp.golden",
+      "sha256": "5c0ab9627d410fee69e954ab399786bcf3ce260b6de469e3e6d69152e655b7e4",
+      "bytes": 1122
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/finally-return.js.javascript.golden",
+      "sha256": "d4b992c07d8b9db50ba717fa9b6e3dd02cb96c19738b578278d9d469c46f8dc3",
+      "bytes": 1004
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/order.cs.csharp.golden",
+      "sha256": "60a0a66d7fe154fa3716e7420aa1cbac417113ef356cdc350961e8c12817c807",
+      "bytes": 19154
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/order.cs.javascript.golden",
+      "sha256": "d4b992c07d8b9db50ba717fa9b6e3dd02cb96c19738b578278d9d469c46f8dc3",
+      "bytes": 1004
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/thrown-value.js.csharp.golden",
+      "sha256": "fdb322ef5c15f194a7d128c4655a979aee80c6a21110976aacab2cedd624a76e",
+      "bytes": 14882
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/thrown-value.js.javascript.golden",
+      "sha256": "a848cb3ae2863a2606daa51ceace792ceac38e3477fe38ab27f4654182b5dcce",
+      "bytes": 15668
+    },
+    {
       "path": "tests/fixtures/backend/golden/float/BoxMuller.cs.csharp.golden",
       "sha256": "ab30be594bda0c0bf11144609d01709b98d159b1caac956a9307930454988eb2",
       "bytes": 2316776
