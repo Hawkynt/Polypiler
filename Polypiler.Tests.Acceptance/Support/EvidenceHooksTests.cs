@@ -11,6 +11,7 @@ namespace Polypiler.Tests.Acceptance.Support;
 
 /// <summary><see cref="EvidenceObserver"/>: every scenario, passed or failed, leaves a bundle; an invalid one fails the scenario.</summary>
 [TestFixture]
+[Layer("core")]
 public sealed class EvidenceHooksTests {
 
   private string _root = "";

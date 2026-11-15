@@ -1,4 +1,4 @@
-@OsIntegration
+@OsIntegration @Layer.jvm
 Feature: Toolchains installed under home run isolated
 
   Background:

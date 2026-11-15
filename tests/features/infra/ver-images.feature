@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Value images and typed call signatures
 
   Scenario Outline: A value has exactly one image

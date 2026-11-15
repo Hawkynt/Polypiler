@@ -7,5 +7,5 @@ schema: 1
 layer: pyperl
 toolchains: [python, perl]
 os: [ubuntu-latest]
-paths: ["Polypiler.Core.Frontends.Python/**", "Polypiler.Core.Frontends.Perl/**", "Polypiler.Core.Backends.Python/**", "Polypiler.Core.Backends.Perl/**", "tests/fixtures/**/*.py", "tests/fixtures/**/*.pl", "tests/fixtures/**/*.pm", "tests/fixtures/**/*.t", "tests/features/infra/infra-ci-pyperl.feature", "Polypiler.Tests.Acceptance/Infra/Ci/PyPerl*.cs", "Polypiler.Tests.Acceptance/Infra/Ci/PythonCommands.cs", "Polypiler.Tests.Acceptance/Infra/Ci/PerlCommands.cs", "tooling/ci/layers/pyperl.yaml"]
+paths: ["Polypiler.Core.Frontends.Python/**", "Polypiler.Core.Frontends.Perl/**", "Polypiler.Core.Backends.Python/**", "Polypiler.Core.Backends.Perl/**", "tests/fixtures/**/*.py", "tests/fixtures/**/*.pl", "tests/fixtures/**/*.pm", "tests/fixtures/**/*.t", "tests/features/infra/infra-ci-pyperl.feature", "Polypiler.Tests.Acceptance/Infra/Ci/PyPerl*.cs", "Polypiler.Tests.Acceptance/Infra/Ci/PythonCommands.cs", "Polypiler.Tests.Acceptance/Infra/Ci/PerlCommands.cs", "tooling/ci/layers/pyperl.yaml", "Polypiler.Tests.Acceptance/Verify/ImageCrossCheckTests.cs", "tests/fixtures/verify/images/**"]
 always: false

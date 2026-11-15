@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Effective licence and the GPL fence
 
   Scenario Outline: The effective licence follows from the closure

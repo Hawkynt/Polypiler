@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Emitted helper code is MIT
 
   Scenario: A translated MIT program stays MIT

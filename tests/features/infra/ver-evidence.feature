@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Evidence bundle per BDD scenario
 
   @translation

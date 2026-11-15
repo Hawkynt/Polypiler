@@ -14,6 +14,7 @@ namespace Polypiler.Tests.Acceptance.Verify;
 /// must produce every row's hex, with no difference.
 /// </summary>
 [TestFixture]
+[Layer("pyperl")]
 public sealed class ImageCrossCheckTests {
 
   private static string Images => Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "verify", "images");

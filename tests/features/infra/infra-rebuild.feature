@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Deterministic rebuild check
 
   # The generator is copied into every run's fresh working directory with "--input generator"; the

@@ -5,5 +5,5 @@ schema: 1
 layer: jvm
 toolchains: [jdk, kotlinc]
 os: [ubuntu-latest]
-paths: ["Polypiler.Core.Frontends.Kotlin/**", "Polypiler.Core.Frontends.Java/**", "Polypiler.Core.Frontends.JVM/**", "Polypiler.Core.Backends.Kotlin/**", "Polypiler.Core.Backends.Java/**", "tests/fixtures/**/*.kt", "tests/fixtures/**/*.java", "tests/fixtures/infra/ci/jvm/**", "tests/features/infra/infra-ci-jvm.feature", "Polypiler.Tests.Acceptance/Infra/Ci/**", "Polypiler.Core.Verification/Running/**", "tooling/ci/layers/jvm.yaml"]
+paths: ["Polypiler.Core.Frontends.Kotlin/**", "Polypiler.Core.Frontends.Java/**", "Polypiler.Core.Frontends.JVM/**", "Polypiler.Core.Backends.Kotlin/**", "Polypiler.Core.Backends.Java/**", "tests/fixtures/**/*.kt", "tests/fixtures/**/*.java", "tests/fixtures/infra/ci/jvm/**", "tests/features/infra/infra-ci-jvm.feature", "Polypiler.Tests.Acceptance/Infra/Ci/**", "Polypiler.Core.Verification/Running/**", "tooling/ci/layers/jvm.yaml", "tests/features/infra/infra-runner-toolchain-roots.feature", "Polypiler.Tests.Acceptance/Infra/ToolchainRootSteps.cs"]
 always: false

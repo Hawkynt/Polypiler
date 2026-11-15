@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Gate-state tracking per language pair
 
   Scenario Outline: A fixture's state is the end of its unbroken evidence chain

@@ -14,6 +14,7 @@ namespace Polypiler.Tests.Acceptance.Infra;
 /// load does not reach the tests beside it.
 /// </summary>
 [TestFixture, Category("Slow"), NonParallelizable]
+[Layer("core")]
 public sealed class UnderLoadTests {
 
   private const int Runs = 20;

@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Generated manifest schema, writer and validator
 
   Scenario Outline: The state is derived from the recorded evidence
