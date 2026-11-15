@@ -226,4 +226,35 @@ public sealed class TypeLoweringTests {
     => Assert.That(PythonSnippet.Refusals("class C:\n    def __init__(self):\n        self.a = []\n\ndef f() -> int:\n    return len(C().a)\n"),
       Has.Some.Contains("error PLY1801: the type of the attribute 'a' of 'C' is not known"));
 
+  private const string Kinds = "from dataclasses import dataclass\nfrom enum import Enum, IntEnum\nfrom typing import Optional\n\n"
+    + "class Color(Enum):\n    RED = 1\n\nclass Level(IntEnum):\n    LOW = 1\n    HIGH = 2\n\n"
+    + "class Box:\n    def __init__(self, n: int):\n        self.n = n\n\n    def __len__(self) -> int:\n        return self.n\n\n"
+    + "@dataclass\nclass P:\n    x: int\n\ndef pick() -> Color:\n    return Color.RED\n\n";
+
+  /// <summary>Values held where another kind is expected, truth, and equality across optionals, enums and None.</summary>
+  [TestCase("x: int = Level.HIGH\n    return x", 0L, "int 2")]
+  [TestCase("return 1 if Box(a) else 0", 0L, "int 0")]
+  [TestCase("return 1 if Box(a) else 0", 2L, "int 1")]
+  [TestCase("e: Optional[ValueError] = None if a == 0 else ValueError()\n    return 1 if e else 0", 0L, "int 0")]
+  [TestCase("e: Optional[ValueError] = None if a == 0 else ValueError()\n    return 1 if e else 0", 1L, "int 1")]
+  [TestCase("o: Optional[int] = None if a == 0 else a\n    return int(o == None) * 10 + int(o != None)", 0L, "int 10")]
+  [TestCase("o: Optional[int] = None if a == 0 else a\n    return int(o == None) * 10 + int(o != None)", 3L, "int 1")]
+  [TestCase("e1: Optional[ValueError] = None\n    e2: Optional[ValueError] = None if a == 0 else ValueError()\n    return int(e1 == e2)", 0L, "int 1")]
+  [TestCase("p1: Optional[P] = P(a) if a > 0 else None\n    p2: Optional[P] = P(a) if a < 5 else None\n    return int(p1 == p2)", 1L, "int 1")]
+  [TestCase("p1: Optional[P] = P(a) if a > 0 else None\n    p2: Optional[P] = P(a) if a < 5 else None\n    return int(p1 == p2)", 7L, "int 0")]
+  [TestCase("return int(None == None) * 10 + int(a == None)", 0L, "int 10")]
+  [TestCase("x: list[int] = [] if a else []\n    return len(x)", 1L, "int 0")]
+  [TestCase("o: Optional[int] = None if a == 0 else a\n    b: int = o\n    return b", 0L, "None")]
+  [TestCase("x: int = 'a'\n    return x", 0L, "String a")]
+  public void KindsMeeting_FollowPython(string body, long argument, string expected)
+    => Assert.That(PythonSnippet.Run($"{Kinds}def f(a: int) -> int:\n    {body}\n", "f", argument), Is.EqualTo(expected));
+
+  [TestCase("o: Optional[int] = None if a == 0 else a\n    return int(o == 1)", "error PLY1802: '== of the optional value of the type int | None; test it with 'is None' first'")]
+  [TestCase("return int(pick() == Level.LOW)", "error PLY1802: '== of Color and Level, which is always False,'")]
+  [TestCase("return int(reversed([1]) == reversed([1]))", "error PLY1802: '== of the type Iterator[int]'")]
+  [TestCase("return 1 if a else 'x'", "error PLY1803: ''x'' gives a value of the type str where one of the type int is held")]
+  [TestCase("return -'a'", "error PLY1802: '- of a value of the type str, which raises TypeError,'")]
+  public void KindsMeetingOutsideTheSubset_AreRefused(string body, string diagnostic)
+    => Assert.That(PythonSnippet.Refusals($"{Kinds}def f(a: int) -> int:\n    {body}\n"), Has.Some.Contains(diagnostic));
+
 }

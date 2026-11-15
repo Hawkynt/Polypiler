@@ -444,7 +444,8 @@ internal sealed partial class FunctionLowering {
   /// <c>Enum</c> equals no number.
   /// </summary>
   private IrExpr Equality(PyNode node, (IrExpr Value, PyType Type) left, (IrExpr Value, PyType Type) right) {
-    if (left.Type.Kind == PyKind.Optional || right.Type.Kind == PyKind.Optional)
+    // Two optional objects of one class compare as Python does: None equals only None.
+    if ((left.Type.Kind == PyKind.Optional || right.Type.Kind == PyKind.Optional) && !(left.Type == right.Type && left.Type.Element!.Kind == PyKind.Object))
       throw this.Unsupported(node, $"== of the optional value of the type {(left.Type.Kind == PyKind.Optional ? left.Type : right.Type)}; test it with 'is None' first");
 
     if (left.Type.Kind == PyKind.Enum && right.Type.Kind == PyKind.Enum && !ReferenceEquals(left.Type.Class, right.Type.Class)
