@@ -73,7 +73,7 @@ generated code — a row changes only in the pull request that makes it true.
 | Rust | 2024 edition | — | — | |
 | Kotlin | JVM | — | — | |
 | Perl | Perl 5 | — | — | |
-| Python | 3.x | — | — | |
+| Python | Frontend: Python 3, parsed by the `ast` module of the installed CPython (pinned 3.14) | ⚠️ | — | Prototype subset ([Python frontend](docs/architecture/PYTHON-FRONTEND.md)). The frontend imports module-level functions with type hints and the calls between them; `int`, `float` and `bool` with `+ - * / // % ** << >> & \| ^ ~`, comparisons (chained, an `int` with a `float` exactly), `and`/`or` giving an operand, `not`, the conditional expression and `int()`, `float()`, `bool()`, `abs()`, `round()`, `pow()`, `divmod()`; `if`/`elif`/`else`, `while` and `for` over `range` with their `else` clauses, `break`, `continue`, `match` on literals with `\|`, captures, `_` and guards, `assert`, chained and tuple assignment, with definite assignment required. A parameter has the type of its hint or of the module's calls, a local and a result the type of their values; hints are recorded as contracts. An `int` is exact within 64 bits and raises `OverflowError` beyond them, where Python is unbounded (`py-int-64`). |
 | TypeScript | current | — | — | |
 | Java | JDK 17 / 21 | — | — | |
 | Go | current | — | — | |
