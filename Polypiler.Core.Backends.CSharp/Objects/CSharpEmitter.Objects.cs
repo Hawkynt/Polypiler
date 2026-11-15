@@ -103,7 +103,7 @@ public static partial class CSharpEmitter {
     /// <summary>The interfaces and classes of the module, each in the form the profile has (see the lowering tables of <c>docs/reference/classes.md</c>).</summary>
     private List<CsMember> Classes() {
       this._inClass = true;
-      List<CsMember> classes = [.. this._module.Types.Where(type => type is IrClassType or IrInterfaceType)
+      List<CsMember> classes = [.. this._module.Types.Where(type => type is IrClassType or IrInterfaceType { IsDisposable: false })
         .Select(type => type is IrClassType declared ? this.Class(declared) : this.Interface((IrInterfaceType)type))];
       this._inClass = false;
       return classes;

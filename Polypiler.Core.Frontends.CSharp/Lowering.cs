@@ -96,6 +96,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     }
 
     functions.AddRange(this.ClassBodies());
+    functions.AddRange(this.DisposableSignature());
     if (this._diagnostics.Count == 0)
       this.CheckInitializers(name, functions);
 
@@ -210,6 +211,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   }
 
   private IrFunction Method(MethodDeclarationSyntax method) {
+    NoAwaitUsing(method);
     foreach (var modifier in method.Modifiers)
       if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword))
         throw new UnsupportedException(method, modifier.Text);
@@ -330,9 +332,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
   private IrBlock Block(BlockSyntax block) {
     var statements = new List<IrStmt>();
-    foreach (var statement in block.Statements)
-      this.Statement(statement, statements);
-
+    this.Statements(block.Statements, statements);
     return new IrBlock(statements);
   }
 
@@ -392,7 +392,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         into.Add(new IrReturn(result.Expression is null ? null : this.Initialized(result.Expression, into).Value));
         break;
       default:
-        if (!this.ExceptionStatement(statement, into))
+        if (!this.ExceptionStatement(statement, into) && !this.ResourceStatement(statement, into))
           throw new UnsupportedException(statement, statement.Kind().ToString());
 
         break;

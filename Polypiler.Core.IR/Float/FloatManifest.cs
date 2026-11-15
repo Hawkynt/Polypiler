@@ -102,7 +102,7 @@ public static class FloatManifest {
       case IrReturn { Value: { } value }:
         Collect(value, found);
         break;
-      case IrThrow or IrTry:
+      case IrThrow or IrTry or IrUsing:
         foreach (var expression in IrTree.Expressions(statement))
           Collect(expression, found);
 

@@ -148,6 +148,10 @@ internal sealed partial class FunctionCollector {
         case StaticBlock:
           owner.Problem ??= "a static block";
           break;
+        // Explicit resource management is in no level a profile targets: a resource scope of JavaScript is a try ... finally.
+        case MethodDefinition { Computed: true, Key: MemberExpression { Computed: false, Object: Identifier { Name: "Symbol" }, Property: Identifier { Name: "dispose" or "asyncDispose" } } key }:
+          owner.Problem ??= $"a [{source[key.Start..key.End]}] method";
+          break;
         default:
           owner.Problem ??= "a computed member name";
           break;

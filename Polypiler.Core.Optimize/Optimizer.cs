@@ -201,6 +201,7 @@ public static class Optimizer {
       IrSwitch choice => [choice.Value, .. choice.Sections.Select(section => section.Body)],
       IrTry attempt => [attempt.Body, .. attempt.Catches.SelectMany(clause => clause.Filter is null ? (object[])[clause.Body] : [clause.Filter, clause.Body]),
         .. attempt.Finally is null ? Array.Empty<object>() : [attempt.Finally]],
+      IrUsing scope => [scope.Initializer, scope.Body],
       IrStmt statement => IrStatements.Expressions(statement),
       _ => []
     };
@@ -222,6 +223,7 @@ public static class Optimizer {
       IrReturn returned => returned with { Value = parts.Count > 0 ? (IrExpr)parts[0] : null },
       IrThrow => new IrThrow((IrExpr)parts[0]),
       IrTry attempt => RebuildTry(attempt, parts),
+      IrUsing scope => scope with { Initializer = (IrExpr)parts[0], Body = (IrBlock)parts[1] },
       _ => value
     };
 

@@ -58,6 +58,7 @@ public static class IrTree {
     IrReturn { Value: { } value } => [value],
     IrThrow thrown => [thrown.Exception],
     IrTry attempt => [.. attempt.Catches.Select(clause => clause.Filter).OfType<IrExpr>()],
+    IrUsing scope => [scope.Initializer],
     _ => []
   };
 
@@ -73,6 +74,7 @@ public static class IrTree {
     IrFor loop => [loop.Body, loop.Step],
     IrSwitch choice => [.. choice.Sections.Select(section => section.Body)],
     IrTry attempt => [attempt.Body, .. attempt.Catches.Select(clause => clause.Body), .. attempt.Finally is { } final ? [final] : (IrBlock[])[]],
+    IrUsing scope => [scope.Body],
     _ => []
   };
 

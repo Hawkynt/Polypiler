@@ -41,6 +41,7 @@ internal sealed partial class Lowering {
   /// class declared later; then their fields and the members whose bodies are lowered later.
   /// </summary>
   private void DeclareClasses(IReadOnlyList<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)> classes) {
+    this.DeclareDisposable(classes);
     var names = new HashSet<string>(this._types.Select(type => type.Name));
     foreach (var (file, semantics, type) in classes) {
       path = file;

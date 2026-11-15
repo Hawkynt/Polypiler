@@ -25,6 +25,7 @@ public static class IrStatements {
     IrReturn { Value: { } value } => [value],
     IrThrow thrown => [thrown.Exception],
     IrTry attempt => [.. attempt.Catches.Select(clause => clause.Filter).OfType<IrExpr>()],
+    IrUsing scope => [scope.Initializer],
     _ => []
   };
 
@@ -40,6 +41,7 @@ public static class IrStatements {
     IrFor loop => [loop.Body, loop.Step],
     IrSwitch choice => [.. choice.Sections.Select(section => section.Body)],
     IrTry attempt => [attempt.Body, .. attempt.Catches.Select(clause => clause.Body), .. attempt.Finally is { } final ? [final] : (IrBlock[])[]],
+    IrUsing scope => [scope.Body],
     _ => []
   };
 
@@ -63,7 +65,8 @@ public static class IrStatements {
   /// <param name="local">The variable.</param>
   /// <returns><see langword="true"/> when it names the variable.</returns>
   public static bool Mentions(IrStmt statement, IrLocal local)
-    => All(statement).Any(inner => inner is IrAssign assign && assign.Local == local || inner is IrDeclare declare && declare.Local == local)
+    => All(statement).Any(inner => inner is IrAssign assign && assign.Local == local || inner is IrDeclare declare && declare.Local == local
+        || inner is IrUsing scope && scope.Resource == local)
       || AllExpressions(statement).Any(expression => IrShape.Reads(expression, local));
 
   /// <summary>The variables a statement writes anywhere: by assignment, declaration, step, or a store into one of their fields.</summary>
@@ -76,6 +79,8 @@ public static class IrStatements {
         written.Add(assign.Local);
       else if (inner is IrDeclare declare)
         written.Add(declare.Local);
+      else if (inner is IrUsing scope)
+        written.Add(scope.Resource);
       else if (inner is IrFieldStore { Target: var target } && Root(target) is { } root)
         written.Add(root);
 

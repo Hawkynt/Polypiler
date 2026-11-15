@@ -588,6 +588,9 @@ public static partial class JavaScriptEmitter {
         case IrReturn result:
           statements.Add(new JsReturn(result.Value is null ? null : this.Value(result.Value)));
           break;
+        case IrUsing scope:
+          this.Using(scope, statements);
+          break;
         default:
           this.ExceptionStatement(statement, statements);
           break;
