@@ -40,10 +40,13 @@ public static partial class CSharpEmitter {
         ? ["Unsafe code: the project that compiles this file must set AllowUnsafeBlocks (the compiler's -unsafe)."]
         : [];
 
-    /// <summary>Whether a <c>stackalloc</c> into a pointer stays on the stack: a constant length under the limit, outside every loop.</summary>
+    /// <summary>
+    /// Whether a <c>stackalloc</c> into a pointer stays on the stack: a constant length under the limit, outside every
+    /// loop, and not 0, for which C# gives the null pointer where the IR has an empty region.
+    /// </summary>
     private bool OnStack(IrIntrinsic allocation)
       => this.Has(CSharpFeature.StackAllocPointer) && this._steps.Count == 0
-        && allocation.Arguments[0] is IrConst { Value: >= 0 } count && count.Value * allocation.Type.Element!.Size < StackLimit;
+        && allocation.Arguments[0] is IrConst { Value: > 0 } count && count.Value * allocation.Type.Element!.Size < StackLimit;
 
     /// <summary>
     /// A declaration whose pointer has to be pinned - a pin, or a <c>stackalloc</c> that does not stay on the stack -
@@ -71,8 +74,7 @@ public static partial class CSharpEmitter {
         return this.PinnedSegment(held, local, type, rest, statements);
       }
 
-      var initializer = pin.Op == IrIntrinsicOp.StackAlloc
-        ? new CsArrayCreation(new CsType(this.TypeName(local.Type.Element!)), this.AtRunTime(Promoted(source), source is IrConst { Value: >= 0 }, Loose), null)
+      CsExpression initializer = pin.Op == IrIntrinsicOp.StackAlloc ? this.PinnedStack(local, Promoted(source), statements)
         : pin.Arguments.Count == 2 ? new CsPrefixUnary("&", this.Place(source, pin.Arguments[1]))
         : this.Text(source);
       // A fixed local is read-only; one the IR assigns is a copy of the pinned pointer.
@@ -89,6 +91,28 @@ public static partial class CSharpEmitter {
       this._scopes[^1].Within.UnionWith(scope.Within);
       statements.Add(new CsFixed(new CsLocalDeclaration(type, name, initializer), new CsBlock(body)));
       return true;
+    }
+
+    /// <summary>
+    /// A <c>stackalloc</c> that does not stay on the stack, as a new array to pin: of one element for a length of 0,
+    /// since <c>fixed</c> of an empty array gives the null pointer and a <c>stackalloc</c> of no elements is an empty
+    /// region that is not null. A length that is no constant and no local is held in a local of its own first, as it
+    /// is read twice; a negative one still overflows.
+    /// </summary>
+    private CsArrayCreation PinnedStack(IrLocal local, IrExpr length, List<CsStatement> statements) {
+      var element = new CsType(this.TypeName(local.Type.Element!));
+      if (length is IrConst constant)
+        return new CsArrayCreation(element, constant.Value == 0 ? new CsIntegerLiteral(1) { Type = length.Type } : this.AtRunTime(length, constant.Value > 0, Loose), null);
+
+      var held = this.Text(length);
+      if (length is not IrLocalRef) {
+        var holder = this.Fresh(this.Spelling(local) + "Length");
+        statements.Add(new CsLocalDeclaration(new CsType(this.TypeName(length.Type)), holder, held));
+        held = new CsName(holder) { Type = length.Type };
+      }
+
+      var empty = new CsBinary(held, "==", new CsIntegerLiteral(0) { Type = length.Type });
+      return new CsArrayCreation(element, new CsConditional(empty, new CsIntegerLiteral(1) { Type = length.Type }, held) { Type = length.Type }, null);
     }
 
     /// <summary>

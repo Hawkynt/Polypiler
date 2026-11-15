@@ -103,6 +103,44 @@ public sealed class PointerCSharpTests {
     Assert.That(GeneratedCSharp.Compile(text, false).Outcome(new PrototypeCall("F", [count - 1])), Is.EqualTo("0"));
   }
 
+  /// <summary>
+  /// A <c>stackalloc</c> of no elements is an empty region, not the null pointer, as the IR and JavaScript say: on the
+  /// stack with a constant length and as a pinned array for a length known at run time only, a negative one still
+  /// overflowing, in every profile.
+  /// </summary>
+  [TestCase("net2.0", 0)]
+  [TestCase("net2.0", 3)]
+  [TestCase("net10.0", 0)]
+  [TestCase("net10.0", 1)]
+  [TestCase("net10.0", -1)]
+  public void EmptyStackAlloc_IsNoNullPointer(string name, int length) {
+    var n = new IrLocal("n", IrType.I32);
+    var pointer = new IrLocal("p", IrType.Pointer(IrType.I32));
+    var fixedPointer = new IrLocal("q", IrType.Pointer(IrType.I32));
+    var isNull = new IrIntrinsic(IrIntrinsicOp.PointerEqual, IrType.Bool, [new IrLocalRef(pointer), new IrNull(pointer.Type)]);
+    var fixedIsNull = new IrIntrinsic(IrIntrinsicOp.PointerEqual, IrType.Bool, [new IrLocalRef(fixedPointer), new IrNull(pointer.Type)]);
+    var module = new IrModule("M", [
+      new IrFunction("F", true, IrType.I32, [n], [pointer], new IrBlock([
+        new IrDeclare(pointer, new IrIntrinsic(IrIntrinsicOp.StackAlloc, pointer.Type, [new IrLocalRef(n)])),
+        new IrReturn(new IrConditional(isNull, new IrConst(IrType.I32, 0), new IrConst(IrType.I32, 1)))
+      ])),
+      new IrFunction("G", true, IrType.I32, [], [fixedPointer], new IrBlock([
+        new IrDeclare(fixedPointer, new IrIntrinsic(IrIntrinsicOp.StackAlloc, pointer.Type, [new IrConst(IrType.I32, 0)])),
+        new IrReturn(new IrConditional(fixedIsNull, new IrConst(IrType.I32, 0), new IrConst(IrType.I32, 1)))
+      ]))]);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    Assert.That(PrototypeFixture.InterpretedOutcome(module, new PrototypeCall("F", [length])), Is.EqualTo(length < 0 ? PrototypeFixture.Trap(IrTrap.IntegerOverflow) : "1"));
+    Assert.That(IrInterpreter.Call(module, "G", []), Is.EqualTo(1));
+
+    var profile = CSharpProfile.Parse(name);
+    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
+    var build = GeneratedCSharp.Compile(text, false);
+    var outcome = build.Outcome(new PrototypeCall("F", [length]));
+    Assert.That(outcome, Is.EqualTo(PrototypeFixture.InterpretedOutcome(module, new PrototypeCall("F", [length]))), text);
+    Assert.That(build.Outcome(new PrototypeCall("G", [])), Is.EqualTo("1"), text);
+  }
+
   /// <summary>A pinned span is a fixed of the span with spans, and of the segment's array without, the empty one the null pointer.</summary>
   [TestCase("net2.0")]
   [TestCase("netstandard2.0")]

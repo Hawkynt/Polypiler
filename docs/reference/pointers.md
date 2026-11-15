@@ -96,7 +96,7 @@ Unsafe code exists since C# 1 in every framework, so every profile from `net2.0`
 | the pointer types | `T*`, `void*` |
 | `Pin` of an array, an element | `fixed (T* p = a)`, `fixed (T* p = &a[i])` around the rest of the block |
 | `Pin` of a view | `fixed (T* p = span)` from `netstandard2.1` on; below, `fixed (T* pPinned = segment.Array) { T* p = segment.Count == 0 ? null : pPinned + segment.Offset; … }` |
-| `StackAlloc` into a pointer | `T* p = stackalloc T[n];` for a constant length of fewer than 1024 bytes outside every loop; `fixed (T* p = new T[n])` around the rest of the block otherwise |
+| `StackAlloc` into a pointer | `T* p = stackalloc T[n];` for a constant length from 1 to fewer than 1024 bytes outside every loop; `fixed (T* p = new T[n == 0 ? 1 : n])` around the rest of the block otherwise, the length held in a local of its own when it is no local |
 | `AddressOf`, `PointerLoad`, `PointerStore`, `PointerAdd`, `PointerDifference`, comparisons, `PointerCast` | `&x`, `*p` or `p[i]`, `*p = v`, `p + n`, `p - q`, `==` …, `(U*)p`; to `void*` without a cast |
 
 A pinned variable the IR assigns is a copy of the `fixed` one, which C# makes read-only. Every method and
@@ -129,8 +129,8 @@ ordering across regions. No profile refuses a pointer operation (`PLY1152`).
 
 ## Known differences
 
-- `stackalloc` into a pointer of a length that is no small constant, or inside a loop, is a pinned array in C#; of
-  the length 0 that array's pointer is `null`, where the IR and JavaScript give a pointer to no elements. Only a
-  comparison with `null` sees the difference.
+- `stackalloc` of no elements is a pointer to no elements, not `null`, in the IR, in JavaScript and in C#: C# gives
+  `null` both for `stackalloc T[0]` and for `fixed` of an empty array, so the C# backend pins an array of one
+  element instead. Only an access out of bounds - undefined in C# - can tell the spare element.
 - A pin of an element of a view keeps the pointer in the view in the IR and in JavaScript; in C# it reaches the
   whole array, which only an access out of bounds - undefined in C# - can tell.
