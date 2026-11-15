@@ -1152,4 +1152,19 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// <summary>The functions of native libraries the module calls (#1332), in source order; their names are unique among the functions.</summary>
   public IReadOnlyList<IrForeignFunction> ForeignFunctions { get; init; } = [];
 
+  /// <summary>
+  /// The functions of a scope the optimizer found: the lambdas, local functions and method groups whose
+  /// value never leaves the function they are made in, each with what it captures - those lifted into
+  /// functions of the module and those that stay closures of their function - in the order they were
+  /// found (<see cref="IrScopeFunction"/>).
+  /// </summary>
+  public IReadOnlyList<IrScopeFunction> ScopeFunctions { get; init; } = [];
+
+  /// <summary>
+  /// The copies of functions the optimizer made for the function values a call passes them, in the
+  /// order they were made, each once (<see cref="IrClone"/>); a copy that was inlined everywhere is no
+  /// function of the module any more, but stays listed.
+  /// </summary>
+  public IReadOnlyList<IrClone> Clones { get; init; } = [];
+
 }

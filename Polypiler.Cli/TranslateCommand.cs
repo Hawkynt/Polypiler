@@ -353,9 +353,13 @@ public sealed partial class TranslateCommand : ICliCommand {
     });
     module = passes.Module;
     if (record is not null) {
-      if (options.ContainsKey(ExplainOpt))
+      if (options.ContainsKey(ExplainOpt)) {
         foreach (var application in passes.Applications)
           context.Note($"{record.File}: opt {application}");
+
+        foreach (var note in passes.Notes)
+          context.Note($"{record.File}: opt {note}");
+      }
 
       record = record with { Applications = [.. record.Applications, .. passes.Applications] };
     }

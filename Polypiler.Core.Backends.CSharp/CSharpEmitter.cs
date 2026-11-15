@@ -770,9 +770,11 @@ public static partial class CSharpEmitter {
 
       // The classes are written first: the names of their variables are settled before those of the static class.
       var classes = this.Classes();
-      foreach (var function in this._module.Functions.Where(function => !this.IsMember(function)))
+      var nested = this.ScopeFunctions();
+      var inner = nested.Values.SelectMany(functions => functions).Select(function => function.Name).ToHashSet(StringComparer.Ordinal);
+      foreach (var function in this._module.Functions.Where(function => !this.IsMember(function) && !inner.Contains(function.Name)))
         if (!this._generics.Generalized.TryGetValue(function.Name, out var origin))
-          members.Add(this.Function(function) with { IsHelper = this._copied.Contains(function.Name) });
+          members.Add(this.WithScopeFunctions(this.Function(function) with { IsHelper = this._copied.Contains(function.Name) }, function, nested));
         else if (this._generics.Written.Contains(function.Name))
           members.Add(this.Generic(function, origin));
 

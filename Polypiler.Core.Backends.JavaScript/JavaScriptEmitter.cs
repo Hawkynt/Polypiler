@@ -548,7 +548,7 @@ public static partial class JavaScriptEmitter {
       var parameters = function.Parameters.Skip(skipped).Select(parameter => this.Name(parameter.Name)).ToList();
       var statements = new List<JsStatement>();
       this._liveness = Liveness.Of(function);
-      this.Prepare(function.Body);
+      this.Prepare(function);
       foreach (var parameter in this._liveness.CopiedOnEntry)
         statements.Add(new JsExpressionStatement(new JsAssignment(Id(this.Local(parameter)), "=", this.Copy(new IrLocalRef(parameter)))));
 
