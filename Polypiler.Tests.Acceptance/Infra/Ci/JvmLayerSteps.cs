@@ -67,13 +67,13 @@ public sealed class JvmLayerSteps {
       this._results.Add(await JvmLayerTests.Run(source));
   }
 
-  [Then("^stdout is " + StepText.Quoted + "$")]
+  [Then("^the program's stdout is " + StepText.Quoted + "$")]
   public void StdoutIs(string expected) {
     Assert.That(this.Result.Outcome, Is.EqualTo(RunOutcome.Completed), () => string.Join('\n', this.Result.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}\n{diagnostic.Cause}")));
     Assert.That(Text(this.Result.Stdout), Is.EqualTo(StepText.Unescape(expected) + "\n"));
   }
 
-  [Then(@"^the exit code is (-?\d+)$")]
+  [Then(@"^the program's exit code is (-?\d+)$")]
   public void ExitCode(int expected) => Assert.That(this.Result.ExitCode, Is.EqualTo(expected), Text(this.Result.Stderr));
 
   [Then("^each prints " + StepText.Quoted + " followed by " + StepText.Quoted + "$")]
@@ -101,7 +101,7 @@ public sealed class JvmLayerSteps {
     Assert.That(this.Result.Diagnostics, Is.Empty);
   }
 
-  [Then("^stderr contains " + StepText.Quoted + "$")]
+  [Then("^the program's stderr contains " + StepText.Quoted + "$")]
   public void StderrContains(string text) => Assert.That(Text(this.Result.Stderr), Does.Contain(StepText.Unescape(text)));
 
 }

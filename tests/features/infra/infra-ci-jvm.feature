@@ -4,8 +4,8 @@ Feature: Kotlin/Java CI layer
   Scenario Outline: The smoke program compiles, runs and prints the checksum
     Given the source "tests/fixtures/infra/ci/jvm/<file>"
     When it is compiled with "<compiler>" and executed on the pinned JDK
-    Then stdout is "38600999"
-    And the exit code is 0
+    Then the program's stdout is "38600999"
+    And the program's exit code is 0
 
     Examples:
       | file         | compiler |
@@ -33,4 +33,4 @@ Feature: Kotlin/Java CI layer
     Given the source "tests/fixtures/infra/ci/jvm/Throws.java"
     When it is compiled with "javac" and executed
     Then the run outcome is "Completed" with exit code 1
-    And stderr contains "Exception in thread"
+    And the program's stderr contains "Exception in thread"
