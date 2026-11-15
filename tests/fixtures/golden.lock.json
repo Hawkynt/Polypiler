@@ -2197,6 +2197,16 @@
       "bytes": 319
     },
     {
+      "path": "tests/fixtures/prototype/rust/recorded/closures.panic.txt",
+      "sha256": "59d880e7ba4270b55c54941e15c4fb662ab645ec8524f96cd5f8f16d46aa9bcd",
+      "bytes": 1963
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/closures.wrap.txt",
+      "sha256": "89b47bd2bc655dd1295b9c336e1e7ed4ba1f49ad9d3b342fd46f873e31679e98",
+      "bytes": 1890
+    },
+    {
       "path": "tests/fixtures/prototype/rust/recorded/control.panic.txt",
       "sha256": "149784801982af7ed24a089609da5953310e0ac45fbb371dde0fa0b85e0b5432",
       "bytes": 144241
@@ -2222,6 +2232,16 @@
       "bytes": 415
     },
     {
+      "path": "tests/fixtures/prototype/rust/recorded/memory.panic.txt",
+      "sha256": "2920c684886e448bde4b5d917364739e063ccd2e346bd217e943f7830eefc0bf",
+      "bytes": 12467
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/memory.wrap.txt",
+      "sha256": "4815ed19505e9f8a16646419f71235be331f29122b3c517f55659293b3960644",
+      "bytes": 12437
+    },
+    {
       "path": "tests/fixtures/prototype/rust/recorded/scalars.panic.txt",
       "sha256": "103cf28817e576a1394bcb708587e876bcd0ddb2395afd8e9233038d2183a007",
       "bytes": 2497185
@@ -2230,6 +2250,16 @@
       "path": "tests/fixtures/prototype/rust/recorded/scalars.wrap.txt",
       "sha256": "496f29054d5894898fe4b85fca592b8d50a1843a4bbcedcacd046fdb66acd548",
       "bytes": 2478752
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/types.panic.txt",
+      "sha256": "e6e668dbada15054710a200b811f6ac7a6eafbdb467e1348633fbe5492143d73",
+      "bytes": 1749
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/types.wrap.txt",
+      "sha256": "59e2d1a9a9b9311ebcbdc7533f9a8d2e52ab811a9b853fb3159db8f6640b9da6",
+      "bytes": 1746
     },
     {
       "path": "tests/fixtures/verify/adler32.vectors.json",
