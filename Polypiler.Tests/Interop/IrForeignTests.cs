@@ -120,7 +120,10 @@ public sealed class IrForeignTests {
       new IrForeignCall("f", IrType.I32, [new IrConst(IrType.Bool, 1), new IrNewArray(IrType.Array(IrType.U8), new IrConst(IrType.I32, 2))]), new IrLastError(true)))], IrType.I32, [_pair, laid]);
     // A second declaration of its own objects, which the format does not share, with the other values of the flags.
     var other = foreign with {
-      Name = "h", SetLastError = true, ExactSpelling = false, Result = IrMarshal.Blittable,
+      Name = "h",
+      SetLastError = true,
+      ExactSpelling = false,
+      Result = IrMarshal.Blittable,
       Parameters = [.. foreign.Parameters.Select(parameter => parameter with { Marshal = parameter.Marshal with { } })]
     };
     module = module with { ForeignFunctions = [foreign, other] };
