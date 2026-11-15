@@ -37,6 +37,7 @@ public sealed class DependencyDirectionTests {
     "Polypiler.Core.Analysis",
     "Polypiler.Core.Backends.CSharp",
     "Polypiler.Core.Backends.JavaScript",
+    "Polypiler.Core.Backends.Python",
     "Polypiler.Core.BinaryFormats",
     "Polypiler.Core.Frontends.CSharp",
     "Polypiler.Core.Frontends.JavaScript",
