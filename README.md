@@ -388,7 +388,7 @@ example before and after, the conditions under which it applies, the cases in wh
 fire, and a switch to turn it off.
 
 **[The optimization checklist](docs/optimizations/README.md)** lists all of them with their state:
-24 of 292 are implemented today, as prototypes in the pipeline of `translate`. The families from "Loop transformations" on are borrowed from
+25 of 293 are implemented today, as prototypes in the pipeline of `translate`. The families from "Loop transformations" on are borrowed from
 [PB-Compiler](https://github.com/Hawkynt/PB-Compiler); the
 [catalog](docs/optimizations/pb-compiler-catalog.md) maps each of its 424 optimization documents to the
 page here that covers it.
@@ -406,7 +406,7 @@ page here that covers it.
 | [Memory and data layout](docs/optimizations/README.md#memory-and-data-layout) — store and load motion, structure layout, lookup tables | 23 |
 | [Redundancy](docs/optimizations/README.md#redundancy) — reassociation, reciprocal reuse | 5 |
 | [Value propagation and arithmetic rewrites](docs/optimizations/README.md#value-propagation-and-arithmetic-rewrites) — path facts, speculation with side exits | 17 |
-| [Interprocedural](docs/optimizations/README.md#interprocedural) — constants across calls, cloning, dead functions and globals | 17 |
+| [Interprocedural](docs/optimizations/README.md#interprocedural) — constants across calls, cloning, lambda specialisation, dead functions and globals | 18 |
 | [Vectorization refinements](docs/optimizations/README.md#vectorization-refinements) — alignment, tails, alias versioning | 11 |
 | [Control-flow shaping and block layout](docs/optimizations/README.md#control-flow-shaping-and-block-layout) — dispatch tables, jump threading, block placement | 20 |
 | [Profile-guided](docs/optimizations/README.md#profile-guided) | 9 |

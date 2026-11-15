@@ -7,7 +7,7 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**24 of 292 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
+**25 of 293 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353) and specialise functions for the lambdas passed to them (#1360), and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
 
 ## General passes
 
@@ -281,6 +281,7 @@ maps every one of its optimization documents to the page here that covers it.
 - [ ] [O0394](O0394-semantic-function-merging.md) — Merge functions that differ in one constant or call target into one body with an extra parameter (P3)
 - [ ] [O0395](O0395-speculative-devirtualization.md) — Version an indirect call into a guarded direct call to a statically likely target with the indirect call as fallback (P3)
 - [ ] [O0396](O0396-task-graph-extraction.md) — Run calls proven independent by their effect summaries concurrently (P5)
+- [x] [O0463](O0463-lambda-specialisation.md) — Specialise a function for the lambdas passed to it: lift the non-escaping ones, bind them, inline and clean up (P2)
 
 ## Vectorization refinements
 

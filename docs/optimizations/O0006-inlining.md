@@ -1,7 +1,7 @@
 # O0006 — Inline direct calls under the cost model
 
 <!-- status: implemented (prototype) -->
-> **Status: implemented (prototype).** `O0006Inlining` runs among the passes over the legalized module, between legalization and the backend ([#1353](https://github.com/Hawkynt/Polypiler/issues/1353)). It inlines the helpers and portable implementations legalization copied in from the [library](../architecture/BACKENDS.md#helpers-one-library-in-the-ir); the inlining of the program's own functions, on SSA with the cost model of PRD §4.8, stays [#159](https://github.com/Hawkynt/Polypiler/issues/159). Switched off with `--disable-opt O0006`.
+> **Status: implemented (prototype).** `O0006Inlining` runs among the passes over the legalized module, between legalization and the backend ([#1353](https://github.com/Hawkynt/Polypiler/issues/1353)). It inlines the helpers and portable implementations legalization copied in from the [library](../architecture/BACKENDS.md#helpers-one-library-in-the-ir), and the lifted lambdas and bound copies [O0463](O0463-lambda-specialisation.md) made of the program's own code; the inlining of the program's own functions, on SSA with the cost model of PRD §4.8, stays [#159](https://github.com/Hawkynt/Polypiler/issues/159). Switched off with `--disable-opt O0006`.
 
 ## What it does
 
@@ -61,8 +61,8 @@ The same module for JavaScript at `es5` has no branch and no call left in `F`, a
 
 ## When it applies
 
-- The callee is a function legalization copied in from the libraries, other than the caller, and calls
-  itself through no chain of calls.
+- The callee is a function legalization copied in from the libraries, or a lifted lambda or bound copy
+  O0463 made, other than the caller, and calls itself through no chain of calls.
 - Its body has at most `O0006Inlining.Small` statements and expression nodes - 24 - and no lambda; or
   at most `O0006Inlining.Budget` - 64 - where the call has a constant argument the copy is specialised
   with, or is the only call of the function in the module. A larger body copied to every call of it costs
@@ -82,7 +82,8 @@ The same module for JavaScript at `es5` has no branch and no call left in `F`, a
 - `x / 0 + H(x)`: the division traps before `H` runs; moving `H` in front would change which happens.
 - `c ? H(x) : 0` and `H(x)` in the condition of a loop: the call runs only sometimes, or many times.
 - A recursive helper, or one whose return stands in a loop: no single way out to assign the result at.
-- A function of the program: the prototype inlines only what the libraries put in.
+- A function of the program: the prototype inlines only what the libraries put in and what O0463
+  made of the program for one call.
 - A body over the budget - the portable `FusedMultiplyAddF`, for instance - stays one function.
 - A body over 24 nodes called from several places with variable arguments only: nothing folds in the
   copies, so each would cost what the call saves many times over.
@@ -94,8 +95,9 @@ The same module for JavaScript at `es5` has no branch and no call left in `F`, a
 
 ## Interactions with other passes
 
-First of the passes over the legalized module, which run round after round until a round changes
-nothing (at most 6; the last round neither inlines nor unrolls, it only cleans up): [O0003](O0003-sccp.md), [O0001](O0001-constant-folding.md),
+Second of the passes over the legalized module, after [O0463](O0463-lambda-specialisation.md), which
+makes the calls of function values direct calls for it; they run round after round until a round changes
+nothing (at most 6; the last round neither specialises, inlines nor unrolls, it only cleans up): [O0003](O0003-sccp.md), [O0001](O0001-constant-folding.md),
 [O0005](O0005-dead-code-elimination.md) and [O0023](O0023-loop-unrolling.md) clean up the copy. Only the
 library functions and the functions something was inlined into are looked at by the others.
 
