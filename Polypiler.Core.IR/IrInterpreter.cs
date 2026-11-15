@@ -517,6 +517,8 @@ public static partial class IrInterpreter {
           return ArraySequence((Array)NotNull(this.Evaluate(sequence.Array, frame)));
         case IrSequence operation:
           return this.SequenceOperation(operation, frame);
+        case IrForeignCall or IrLastError:
+          return this.Foreign(expression, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }

@@ -51,8 +51,9 @@ public static partial class IrVerifier {
     Generics(module, diagnostics);
     Disposables(types, functions, diagnostics);
     Pointers(module, diagnostics);
+    var foreign = Foreign(module, names, types, diagnostics);
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures }.Run();
+      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures, ForeignFunctions = foreign }.Run();
 
     if (diagnostics.Count == 0)
       foreach (var (constructor, call) in IrConstruction.VirtualCalls(module))
@@ -430,6 +431,9 @@ public static partial class IrVerifier {
           break;
         case IrSequence operation:
           this.SequenceOperation(operation);
+          break;
+        case IrForeignCall or IrLastError:
+          this.Foreign(expression);
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)

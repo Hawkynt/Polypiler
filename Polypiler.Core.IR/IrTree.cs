@@ -44,6 +44,7 @@ public static class IrTree {
     IrBoundMethod { Receiver: { } receiver } => [receiver],
     IrArraySequence sequence => [sequence.Array],
     IrSequence operation => operation.Arguments,
+    IrForeignCall call => call.Arguments,
     _ => []
   };
 
@@ -130,6 +131,7 @@ public static class IrTree {
     IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
     IrArraySequence => new IrArraySequence(operands[0]),
     IrSequence operation => operation with { Arguments = operands },
+    IrForeignCall call => call with { Arguments = operands },
     _ => expression
   };
 

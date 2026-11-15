@@ -101,6 +101,7 @@ public static class IrShape {
     IrBoundMethod { Receiver: { } receiver } => [receiver],
     IrArraySequence sequence => [sequence.Array],
     IrSequence operation => operation.Arguments,
+    IrForeignCall call => call.Arguments,
     _ => []
   };
 
@@ -137,6 +138,7 @@ public static class IrShape {
   /// <returns><see langword="true"/> when the node itself has no effect.</returns>
   public static bool IsSideEffectFreeNode(IrExpr node) => node switch {
     IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod or IrSequence => false,
+    IrForeignCall or IrLastError => false,
     IrFieldLoad load => !load.Target.Type.IsObject,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
@@ -244,6 +246,7 @@ public static class IrShape {
     IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
     IrArraySequence => new IrArraySequence(operands[0]),
     IrSequence operation => operation with { Arguments = operands },
+    IrForeignCall call => call with { Arguments = operands },
     _ => expression
   };
 
