@@ -37,6 +37,9 @@ internal sealed partial class TypeInference {
       default:
         var call = (CallExpression)flow.Source!;
         var callee = (MemberExpression)call.Callee;
+        if (this.CallbackCall(call) is not null)
+          return this.Callback(call, flow.Index);
+
         return this.Of(callee.Object).Class is { } type && Binder.KeyOf(callee) is { } name && type.Member(MemberKind.Method, name) is { } method
           && this.ModelOf(method).Parameters.ElementAtOrDefault(flow.Index) is { Declared: null } argument && this.Pass(argument, this.Of(flow.Node), flow.Node);
     }

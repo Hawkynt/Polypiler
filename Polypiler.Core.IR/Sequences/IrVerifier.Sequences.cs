@@ -73,6 +73,29 @@ public static partial class IrVerifier {
     }
 
     /// <summary>
+    /// An operation on lazy sequences: its operands fit it (<see cref="IrSequenceOps.Signature"/>), its
+    /// type is the one they give it, a further key follows an ordering and the second sequence of a
+    /// <see cref="IrSequenceOp.Zip"/> is an array or a list.
+    /// </summary>
+    private void SequenceOperation(IrSequence operation) {
+      foreach (var argument in operation.Arguments)
+        this.Expression(argument);
+
+      var (type, problem) = IrSequenceOps.Signature(operation.Op, [.. operation.Arguments.Select(argument => argument.Type)]);
+      if (type is null) {
+        this.Require(false, problem!);
+        return;
+      }
+
+      this.Require(operation.Type == type, $"{operation.Op} has the type {operation.Type}, expected {type}");
+      if (operation.Op is IrSequenceOp.ThenBy or IrSequenceOp.ThenByDescending)
+        this.Require(operation.Arguments[0] is IrSequence { Op: var before } && IrSequenceOps.IsOrdering(before), $"{operation.Op} of a sequence that is not ordered");
+
+      if (operation.Op == IrSequenceOp.Zip)
+        this.Require(operation.Arguments[1] is IrSequence { Op: IrSequenceOp.FromArray or IrSequenceOp.FromList }, "a Zip whose second sequence is no array and no list");
+    }
+
+    /// <summary>
     /// Where an iterator function suspends: no yield inside a catch clause, a finally block or the
     /// body of a try that has a catch clause - C# has no form for any of them (CS1626, CS1625, CS1631) -
     /// and no return with a value.

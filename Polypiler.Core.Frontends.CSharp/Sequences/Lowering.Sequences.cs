@@ -20,7 +20,10 @@ internal sealed partial class Lowering {
 
   /// <summary>The IR type of <c>IEnumerable&lt;T&gt;</c>; <see langword="null"/> for any other type, a refusal for an enumerator.</summary>
   private IrType? SequenceType(ITypeSymbol? type, SyntaxNode node) {
-    switch (CollectionName(type)) {
+    // An ordered sequence of LINQ is a sequence as any other.
+    var name = type is INamedTypeSymbol { IsGenericType: true, OriginalDefinition.MetadataName: "IOrderedEnumerable`1" } ordered && ordered.ContainingNamespace.ToDisplayString() == "System.Linq"
+      ? "IEnumerable`1" : CollectionName(type);
+    switch (name) {
       case "IEnumerable`1":
         var sequence = IrType.Sequence(this.Map(((INamedTypeSymbol)type!).TypeArguments[0], node), true);
         return sequence.IsStorable ? sequence : throw new UnsupportedException(node, type.ToDisplayString());
@@ -38,6 +41,10 @@ internal sealed partial class Lowering {
 
     if (value.Type.IsArray && value.Type.Element == converted.Element)
       return new IrArraySequence(value);
+
+    // A list converts to the sequence of its elements, enumerated as .NET does (#1329).
+    if (value.Type.IsList && value.Type.Element == converted.Element)
+      return IrSequenceOps.Of(IrSequenceOp.FromList, value);
 
     throw new UnsupportedException(expression, $"{model.GetTypeInfo(expression).Type?.ToDisplayString()} as an IEnumerable<T>");
   }
@@ -65,7 +72,7 @@ internal sealed partial class Lowering {
 
   /// <summary>Refuses the return of a value from a method that returns a sequence without being an iterator, which runs before the sequence is asked for.</summary>
   private void NoSequenceReturn(ReturnStatementSyntax result) {
-    if (result.Expression is { } returned && model.Inner.GetEnclosingSymbol(returned.SpanStart) is IMethodSymbol method && CollectionName(method.ReturnType) == "IEnumerable`1")
+    if (result.Expression is { } returned && model.Inner.GetEnclosingSymbol(returned.SpanStart) is IMethodSymbol { MethodKind: MethodKind.Ordinary } method && CollectionName(method.ReturnType) == "IEnumerable`1")
       throw new UnsupportedException(result, "a method that returns an IEnumerable<T> without being an iterator");
   }
 

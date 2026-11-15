@@ -34,6 +34,11 @@ public static partial class CSharpEmitter {
     IrTypeKind.Array => Readable(type.Element!, declared) + "Array",
     IrTypeKind.Span => Readable(type.Element!, declared) + "Span",
     IrTypeKind.ReadOnlySpan => Readable(type.Element!, declared) + "ReadOnlySpan",
+    IrTypeKind.Sequence => Readable(type.Element!, declared) + "Sequence",
+    IrTypeKind.List => Readable(type.Element!, declared) + "List",
+    IrTypeKind.Set => Readable(type.Element!, declared) + "Set",
+    IrTypeKind.Map => Readable(type.Key!, declared) + Readable(type.Element!, declared) + "Map",
+    IrTypeKind.Optional => Readable(type.Underlying!, declared) + "Optional",
     _ => declared(type)
   };
 

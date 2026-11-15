@@ -979,6 +979,8 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         return this.ArrayOf(type, expression);
       case InvocationExpressionSyntax invocation:
         return this.Call(invocation, type);
+      case QueryExpressionSyntax query:
+        return this.Query(query);
       case MemberAccessExpressionSyntax { Expression: InvocationExpressionSyntax inner } part
         when model.GetSymbolInfo(inner).Symbol is IMethodSymbol { Name: "SinCos" or "SinCosPi" } sinCos && inner.ArgumentList.Arguments.Count == 1:
         return this.SinCos(sinCos, inner.ArgumentList.Arguments[0].Expression, part.Name.Identifier.Text, type)
@@ -1097,6 +1099,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     var arguments = invocation.ArgumentList.Arguments;
     // An invocation the compiler accepted and gave a type of the subset is bound to a method.
     var method = (IMethodSymbol)model.GetSymbolInfo(invocation).Symbol!;
+    if (this.SequenceCall(invocation, method, type) is { } sequence)
+      return sequence;
+
     if (this.Invocation(invocation, method) is { } invoked)
       return invoked;
 

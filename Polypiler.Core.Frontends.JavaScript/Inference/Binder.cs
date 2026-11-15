@@ -456,7 +456,9 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       case MemberExpression member:
         this.Expression(member.Object);
         // An element or the length is taken; the name of the property is read from the source, whatever kind of name it is.
-        if (member.Object is Identifier array && model.Bindings.GetValueOrDefault(array) is Variable used && (member.Computed || source[member.Property.Start..member.Property.End] == "length"))
+        // A method with a callback is one of an array as well (#1329).
+        if (member.Object is Identifier array && model.Bindings.GetValueOrDefault(array) is Variable used
+            && (member.Computed || source[member.Property.Start..member.Property.End] == "length" || (member.Property is Identifier { Name: var method } && TypeInference.IsCallbackMethod(method))))
           used.UsedAsArray ??= member;
 
         if (member.Computed)

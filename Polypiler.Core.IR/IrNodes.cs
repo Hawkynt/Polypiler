@@ -930,7 +930,22 @@ public enum IrIntrinsicOp {
   PointerStore,
 
   /// <summary><c>(T*) → U*</c>: <c>(U*)p</c>, the same place read as another type.</summary>
-  PointerCast
+  PointerCast,
+
+  /// <summary>
+  /// <c>(i32[], fn(i32, i32) → i32) → void</c>: sorts the indices in place, stably, so that the
+  /// comparison of neighbours is never positive (#1329). Which pairs it compares and in which order is
+  /// its own: the orderings of LINQ compare keys computed before, and a comparator of JavaScript's
+  /// <c>sort</c> has no effect. No target has it natively; the helper library computes it.
+  /// </summary>
+  StableSort,
+
+  /// <summary>
+  /// <c>(i32 start, i32 count) → i32</c>: the count, after the check of <c>Enumerable.Range</c> - a
+  /// negative count, or a last number above the largest <c>i32</c>, traps with
+  /// <see cref="IrTrap.ArgumentOutOfRange"/> (#1329).
+  /// </summary>
+  RangeCount
 
 }
 

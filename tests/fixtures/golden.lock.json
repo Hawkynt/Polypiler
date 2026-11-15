@@ -1592,6 +1592,16 @@
       "bytes": 16920
     },
     {
+      "path": "tests/fixtures/backend/golden/sequences/ByteMedian.cs.csharp.golden",
+      "sha256": "057a19bc871d652d383717d08d57d38779a392c516f03d986d544fef9c9b11cf",
+      "bytes": 139270
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/ByteMedian.cs.javascript.golden",
+      "sha256": "43a876e52f655caf6708342e9975f6cb8c1ae6ca447f2119227c096dcd29cca8",
+      "bytes": 181324
+    },
+    {
       "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.csharp.golden",
       "sha256": "48b0ea96bff05270c8612631244cefa715da406b19c7ed50f8073a1fa65c1163",
       "bytes": 439278
@@ -1602,6 +1612,16 @@
       "bytes": 599042
     },
     {
+      "path": "tests/fixtures/backend/golden/sequences/Pipelines.cs.csharp.golden",
+      "sha256": "fa7ede97a853011344342368c40b744a83d7ada54bfefd6c10e8622b9ac69f74",
+      "bytes": 1447638
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/Pipelines.cs.javascript.golden",
+      "sha256": "cbf7bb22752c66efd6a880e1400047c7d0068a4deaa987b8297881eaaf868545",
+      "bytes": 1447724
+    },
+    {
       "path": "tests/fixtures/backend/golden/sequences/iterators.js.csharp.golden",
       "sha256": "08877f530e31738ce8fcb153bae33a37fa14c8f60edf024f60505509bed80994",
       "bytes": 208034
@@ -1610,6 +1630,26 @@
       "path": "tests/fixtures/backend/golden/sequences/iterators.js.javascript.golden",
       "sha256": "6231b68e801710902d9607652581ff55c0739d1121122e0606d003b30a5debef",
       "bytes": 229574
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/pipes.mjs.csharp.golden",
+      "sha256": "e2cc0f3f10c9e50c8ef3cdbb08ad2178d78b137f4cfde2cd03352379b12c7551",
+      "bytes": 588962
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/pipes.mjs.javascript.golden",
+      "sha256": "bcea7cba6d63c70ec934e42789486f97cad6d00e7757a44078b2dd3b00ba7de2",
+      "bytes": 521402
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/runLength.mjs.csharp.golden",
+      "sha256": "6b6217dc0713572cb123753d575bc18ef7cd605a8fbcf8e36d3a085127d1b20e",
+      "bytes": 82090
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/runLength.mjs.javascript.golden",
+      "sha256": "b6fa1aed9b0f2c49f442a57b0a9f3f674b18000ff1828b06f851e58f6301e93d",
+      "bytes": 107096
     },
     {
       "path": "tests/fixtures/backend/golden/spans/Adler32Span.cs.csharp.golden",

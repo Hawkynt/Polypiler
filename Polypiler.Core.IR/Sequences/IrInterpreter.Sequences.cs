@@ -16,6 +16,9 @@ public static partial class IrInterpreter {
 
     private Cursor? _shared;
 
+    /// <summary>The source and the keys of an ordering (<see cref="IrSequenceOp.OrderBy"/>), which a further key extends; <see langword="null"/> for any other sequence.</summary>
+    public Ordering? Ordering { get; init; }
+
     /// <summary>The cursor of an enumeration.</summary>
     public Cursor Open() => restartable ? open() : this._shared ??= open();
 

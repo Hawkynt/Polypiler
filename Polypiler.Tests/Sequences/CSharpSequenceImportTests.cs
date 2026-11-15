@@ -99,9 +99,14 @@ internal sealed class CSharpSequenceImportTests {
     => Assert.That(Refused("private static IEnumerable<int> G() { yield return 1; } private static IEnumerable<int> H() { return G(); } public static int F() { return 0; }"),
       Has.Some.Contains("a method that returns an IEnumerable<T> without being an iterator"));
 
+  /// <summary>A list passed as a sequence is the sequence of its elements (#1329), enumerated as .NET does.</summary>
   [Test]
-  public void ListAsSequence_IsRefused()
-    => Assert.That(Refused("private static int S(IEnumerable<int> s) { var t = 0; foreach (var v in s) t += v; return t; } public static int F() { var l = new List<int>(); l.Add(1); return S(l); }"),
-      Has.Some.Contains("as an IEnumerable<T>"));
+  public void ListAsSequence_IsTheSequenceOfItsElements() {
+    var result = CSharpFrontend.Import("Snippet.cs", "using System.Collections.Generic;\n" + PrototypeFixture.Wrap(
+      "private static int S(IEnumerable<int> s) { var t = 0; foreach (var v in s) t += v; return t; } public static int F() { var l = new List<int>(); l.Add(1); l.Add(2); return S(l); }"));
+    Assert.That(result.Diagnostics, Is.Empty);
+    Assert.That(IrTree.Nodes(result.Module!.Functions.Single(function => function.Name == "F").Body).OfType<IrSequence>().Single().Op, Is.EqualTo(IrSequenceOp.FromList));
+    Assert.That(IrInterpreter.Call(result.Module, "F", []), Is.EqualTo(3));
+  }
 
 }

@@ -55,6 +55,7 @@ public static class IrShape {
       (IrGenericEquals a, IrGenericEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       (IrGenericCompare a, IrGenericCompare b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       (IrCollection a, IrCollection b) => a.Op == b.Op && a.Type == b.Type && All(a.Arguments, b.Arguments),
+      (IrSequence a, IrSequence b) => a.Op == b.Op && a.Type == b.Type && All(a.Arguments, b.Arguments),
       _ => false
     };
   }
@@ -99,6 +100,7 @@ public static class IrShape {
     IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
     IrBoundMethod { Receiver: { } receiver } => [receiver],
     IrArraySequence sequence => [sequence.Array],
+    IrSequence operation => operation.Arguments,
     _ => []
   };
 
@@ -134,7 +136,7 @@ public static class IrShape {
   /// <param name="node">The node.</param>
   /// <returns><see langword="true"/> when the node itself has no effect.</returns>
   public static bool IsSideEffectFreeNode(IrExpr node) => node switch {
-    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod => false,
+    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod or IrSequence => false,
     IrFieldLoad load => !load.Target.Type.IsObject,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
@@ -241,6 +243,7 @@ public static class IrShape {
     IrInvoke invocation => invocation with { Callee = operands[0], Arguments = [.. operands.Skip(1)] },
     IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
     IrArraySequence => new IrArraySequence(operands[0]),
+    IrSequence operation => operation with { Arguments = operands },
     _ => expression
   };
 

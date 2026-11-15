@@ -29,6 +29,9 @@ internal sealed partial class Lowering {
     if (this.Instance(node) is { } instance)
       return instance;
 
+    if (this.ArrayCallback(node) is { } called)
+      return called;
+
     if (this.ListExpression(node) is { } listed)
       return listed;
 
@@ -496,8 +499,13 @@ internal sealed partial class Lowering {
   }
 
   /// <summary>An array literal as an array of the given element type.</summary>
-  private IrExpr ArrayLiteral(ArrayExpression literal, IrType element)
-    => new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(element), this.Elements(literal).Select(item => this.Value(item, element)).ToList());
+  private IrExpr ArrayLiteral(ArrayExpression literal, IrType element) {
+    // [...list] where an array goes: the elements of the list, copied into a new array (#1329).
+    if (literal.Elements is [SpreadElement spread] && this.Expression(spread.Argument) is { Type: { IsList: true } list } copied && list.Element == element)
+      return ListOp(IrCollectionOp.ListCopyToArray, list, copied);
+
+    return new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(element), this.Elements(literal).Select(item => this.Value(item, element)).ToList());
+  }
 
   private List<Node> Elements(ArrayExpression literal)
     => literal.Elements.Select(item => item is null or SpreadElement ? throw this.Unsupported(literal, "an array literal with a hole or a spread element") : (Node)item).ToList();

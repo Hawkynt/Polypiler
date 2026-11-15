@@ -428,6 +428,9 @@ public static partial class IrVerifier {
         case IrArraySequence sequence:
           this.ArraySequence(sequence);
           break;
+        case IrSequence operation:
+          this.SequenceOperation(operation);
+          break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
             if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind is IrTypeKind.ReadOnlySpan or IrTypeKind.ReadOnlyMemory)))
