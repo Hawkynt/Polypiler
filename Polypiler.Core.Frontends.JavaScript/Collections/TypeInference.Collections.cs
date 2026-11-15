@@ -46,6 +46,10 @@ internal sealed partial class TypeInference {
     if (!place.IsGrowable)
       return false;
 
+    // The new array of map, filter or flatMap is the list it is assigned to (#1329).
+    if (this.GrowCall(source))
+      return true;
+
     // The array a function of the file returns is the one its return statements return.
     if (source is CallExpression call && this.Names.Callee(call.Callee) is { } callee && this.ModelOf(callee) is { Result: { Kind: JsKind.Array, IsPlain: true, IsGrowable: false } result } returning) {
       returning.Result = result.Grown;

@@ -142,6 +142,13 @@ public static partial class JavaScriptFrontend {
     + "array and lets an Array grow, and an element of new Array(n) that was never stored is undefined; the imported code traps "
     + "with 'index out of range' or 'integer overflow', takes an index that is a double without its fraction and reads 0");
 
+  /// <summary>The caveat of a module whose sort comparator returns a double, which a NaN makes inconsistent.</summary>
+  public const string SortOrder = "js-sort-order";
+
+  private static readonly ImportCaveat _sortOrder = new(
+    SortOrder,
+    "a sort comparator returns a double: for inputs that make it inconsistent, such as a NaN, ECMA-262 leaves the order to the engine, the translation fixes the one of its stable merge sort");
+
   private static readonly ImportCaveat _divisionByZero = new(
     DivisionByZero,
     "an integer division or remainder under a coercion by zero is Infinity or NaN in JavaScript (0 once coerced), -2147483648 / -1 "
@@ -244,6 +251,9 @@ public static partial class JavaScriptFrontend {
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
     var lowered = candidates.Where(functions.ContainsKey).Select(candidate => functions[candidate]).ToList();
+    // The functions that run the array callbacks (#1329).
+    lowered.AddRange(lowering.Callbacks);
+
     lowered.AddRange(Classes.Define(classes, inference));
     ModuleState.CheckInitializers(state, lowered, lowering, diagnostics);
     if (diagnostics.Count > 0)
@@ -272,6 +282,9 @@ public static partial class JavaScriptFrontend {
 
     if (lowering.Divides)
       caveats.Add(_divisionByZero);
+
+    if (lowering.SortsByDifference)
+      caveats.Add(_sortOrder);
 
     var ordered = models.Where(model => !model.Candidate.IsNested).OrderBy(model => model.Candidate.Anchor.Start).ToList();
     var integers = Signatures(ordered, parameter => parameter.IsIntegerByUse && parameter.Parameter!.Type.IsWord);

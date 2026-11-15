@@ -28,6 +28,8 @@ public sealed class HelperSourceTests {
   private static IEnumerable<TestCaseData> Methods()
     => typeof(HelperOperations).GetMethods(BindingFlags.Public | BindingFlags.Static)
       .Where(method => !method.Name.StartsWith("Intrinsic", StringComparison.Ordinal))
+      // A helper that takes a function value is checked by the tests of its operation, which pass one (StableSort: IrSequenceOpsTests).
+      .Where(method => !method.GetParameters().Any(parameter => typeof(Delegate).IsAssignableFrom(parameter.ParameterType)))
       .OrderBy(method => method.Name, StringComparer.Ordinal)
       .Select(method => new TestCaseData(method.Name).SetArgDisplayNames(method.Name));
 

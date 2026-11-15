@@ -241,6 +241,9 @@ internal sealed partial class TypeInference {
   }
 
   private JsType Call(CallExpression call) {
+    if (this.CallbackType(call) is { } callback)
+      return callback;
+
     if (this.ListCall(call) is { } listed)
       return listed;
 

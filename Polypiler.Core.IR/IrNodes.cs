@@ -933,6 +933,21 @@ public enum IrIntrinsicOp {
   PointerCast,
 
   /// <summary>
+  /// <c>(i32[], fn(i32, i32) → i32) → void</c>: sorts the indices in place, stably, so that the
+  /// comparison of neighbours is never positive (#1329). Which pairs it compares and in which order is
+  /// its own: the orderings of LINQ compare keys computed before, and a comparator of JavaScript's
+  /// <c>sort</c> has no effect. No target has it natively; the helper library computes it.
+  /// </summary>
+  StableSort,
+
+  /// <summary>
+  /// <c>(i32 start, i32 count) → i32</c>: the count, after the check of <c>Enumerable.Range</c> - a
+  /// negative count, or a last number above the largest <c>i32</c>, traps with
+  /// <see cref="IrTrap.ArgumentOutOfRange"/> (#1329).
+  /// </summary>
+  RangeCount,
+
+  /// <summary>
   /// <c>(i64) → u32</c>: the upper 32 bits of a 64-bit integer, its high limb. The low limb is the
   /// conversion to <c>u32</c>. A profile without a 64-bit integer of its own builds every operation on
   /// one of the two limbs (optimization O0075).

@@ -147,6 +147,7 @@ public static partial class CSharpEmitter {
   /// empty when the module can be emitted.
   /// </returns>
   public static IReadOnlyList<Diagnostic> Check(IrModule module, CSharpProfile profile, CSharpCapabilities? capabilities = null) {
+    module = SequenceFusion.Run(module);
     var table = capabilities ?? CSharpCapabilities.Default;
     var unknown = new List<string>();
     foreach (var constant in module.Constants)
@@ -264,7 +265,7 @@ public static partial class CSharpEmitter {
   /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>The module to emit.</returns>
   public static IrModule Legalize(IrModule module, Func<IrModule> implementations, CSharpProfile profile, FloatMode mode, CSharpCapabilities? capabilities = null)
-    => LibraryLegalization.Lower(module, implementations, Rewrite(profile, mode, capabilities ?? CSharpCapabilities.Default));
+    => LibraryLegalization.Lower(SequenceFusion.Run(module), implementations, Rewrite(profile, mode, capabilities ?? CSharpCapabilities.Default));
 
   /// <summary>
   /// The module with every operation the profile has only as a helper of the library replaced by the
@@ -277,7 +278,7 @@ public static partial class CSharpEmitter {
   /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>The module to emit.</returns>
   public static IrModule LegalizeHelpers(IrModule module, Func<IrModule> implementations, CSharpProfile profile, CSharpCapabilities? capabilities = null)
-    => LibraryLegalization.Lower(module, implementations, Helpers(profile, capabilities ?? CSharpCapabilities.Default));
+    => LibraryLegalization.Lower(SequenceFusion.Run(module), implementations, Helpers(profile, capabilities ?? CSharpCapabilities.Default));
 
   /// <summary>What legalization replaces for a profile: the floating-point operations first, then every operation the profile has only as a helper of the library.</summary>
   private static LibraryRewrite Rewrite(CSharpProfile profile, FloatMode mode, CSharpCapabilities table) {
@@ -288,10 +289,10 @@ public static partial class CSharpEmitter {
 
   /// <summary>The rewrite of the operations a profile has only as a helper of the library: the row's helper, unless the row's form for arguments that cannot trap applies.</summary>
   private static LibraryRewrite Helpers(CSharpProfile profile, CSharpCapabilities table)
-    => (expression, calls) => IsTabled(expression) && Row(expression, table) is { } row && row.IsLibraryIn(profile)
+    => (expression, calls) => SequenceLegalization.Rewrite(expression, calls) ?? (IsTabled(expression) && Row(expression, table) is { } row && row.IsLibraryIn(profile)
       && !(row.Total is not null && expression is IrIntrinsic intrinsic && row.IsTotal!(intrinsic.Arguments))
         ? row.Library!(expression, calls)
-        : null;
+        : null);
 
   /// <summary>
   /// Emits the module for a profile and a floating-point mode. The header names the profile and, where
@@ -364,6 +365,7 @@ public static partial class CSharpEmitter {
       throw new ArgumentException($"'{@namespace}' is not a namespace name.", nameof(@namespace));
 
     var table = capabilities ?? CSharpCapabilities.Default;
+    module = SequenceFusion.Run(module);
     var problems = Check(module, profile, table);
     if (problems.Count > 0)
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problems[0].Message}.", nameof(module));
