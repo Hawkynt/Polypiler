@@ -766,9 +766,6 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       return absent.IsOptional ? new IrNone(absent) : new IrNull(absent);
     }
 
-    if (this.Defaulted(expression, info) is { } defaulted)
-      return defaulted;
-
     if (expression is StackAllocArrayCreationExpressionSyntax stack)
       return this.StackAlloc(stack, info.ConvertedType);
     if (info.ConvertedType?.SpecialType == SpecialType.System_String && model.GetConstantValue(expression) is { HasValue: true, Value: null })
