@@ -7,6 +7,7 @@ using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Functions;
 
@@ -27,14 +28,14 @@ internal sealed class FunctionEdgeTests {
 
   private static string Csharp(IrModule module, string profile) {
     var parsed = CSharpProfile.Parse(profile);
-    var text = CSharpEmitter.Emit(module, parsed)[0].Content;
+    var text = LegalizedCSharp.Emit(module, parsed)[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, parsed.Name, parsed.LanguageVersionName), Is.Empty, text);
     return text;
   }
 
   private static string JavaScript(IrModule module, string level) {
     var profile = JavaScriptProfile.Parse(level, level == "es5" ? "cjs" : "esm");
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }

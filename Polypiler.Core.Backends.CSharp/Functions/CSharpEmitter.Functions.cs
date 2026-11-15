@@ -217,6 +217,9 @@ public static partial class CSharpEmitter {
     /// and for nothing returned one effect, where <paramref name="arrow"/> admits it.
     /// </summary>
     private (List<CsParameter> Parameters, CsBlock? Body, CsExpression? Expression) Inside(IrLambda lambda, bool typed, bool arrow) {
+      // A lambda inside an iterator is no iterator: its return is one.
+      var iterator = this._iterator;
+      this._iterator = false;
       var scope = new Scope();
       this._scopes.Add(scope);
       var parameters = lambda.Parameters.Select(parameter => new CsParameter(new CsType(typed ? this.TypeName(parameter.Type) : ""), this.Declare(parameter))).ToList();
@@ -231,6 +234,7 @@ public static partial class CSharpEmitter {
 
       this._scopes.RemoveAt(this._scopes.Count - 1);
       this._scopes[^1].Within.UnionWith(scope.Within);
+      this._iterator = iterator;
       return (parameters, body, expression);
     }
 

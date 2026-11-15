@@ -481,6 +481,14 @@ public static class CSharpPrinter {
         case CsThrow { Value: null }:
           this._text.Append("throw;");
           break;
+        case CsYield { Value: null }:
+          this._text.Append("yield break;");
+          break;
+        case CsYield produced:
+          this._text.Append("yield return ");
+          this.Expression(produced.Value!, depth);
+          this._text.Append(';');
+          break;
         case CsThrow exception:
           this._text.Append("throw ");
           this.Expression(exception.Value!, depth);
@@ -488,6 +496,12 @@ public static class CSharpPrinter {
           break;
         case CsTry attempt:
           this.Try(attempt, depth);
+          break;
+        case CsFixed pinned:
+          this._text.Append("fixed (");
+          this.Declaration(pinned.Pointer, depth);
+          this._text.Append(") ");
+          this.Embedded(pinned.Body, depth);
           break;
         case CsUsing scope:
           this._text.Append("using (");

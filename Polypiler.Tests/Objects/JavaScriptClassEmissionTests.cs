@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Objects;
 
@@ -41,8 +42,8 @@ public sealed class JavaScriptClassEmissionTests {
   ];
 
   private static string Emit(IrModule module, JavaScriptProfile profile) {
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -94,7 +95,7 @@ public sealed class JavaScriptClassEmissionTests {
   [Test]
   public void ConstructorsOfOneArity_AreInexpressible() {
     var module = PrototypeFixture.Import("C.cs", "public sealed class K { public K(int a) { } public K(long a) { } } public static class C { public static int F() { new K(1); return 0; } }");
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Default).Select(problem => problem.Message),
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Default).Select(problem => problem.Message),
       Is.EqualTo(new[] { "'constructors of one arity' of the class 'K' cannot be expressed in JavaScript profile 'es2022'" }));
   }
 

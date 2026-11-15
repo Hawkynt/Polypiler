@@ -879,7 +879,58 @@ public enum IrIntrinsicOp {
   EnumNames,
 
   /// <summary><c>E → E[]</c>: .NET's <c>Enum.GetValues</c> of the enum of the argument, whose value is not read.</summary>
-  EnumValues
+  EnumValues,
+
+  // The bounded pointers of #1331: docs/reference/pointers.md. A pointer is a region and a byte offset in it.
+
+  /// <summary>
+  /// <c>(source) → T*</c>: C#'s <c>fixed (T* p = source)</c>, the pointer to the first element of an array or a
+  /// view of <c>T</c>, the whole of it the region; the null pointer for <c>null</c> or no elements.
+  /// <c>(source, i) → T*</c>: <c>fixed (T* p = &amp;source[i])</c>, the pointer to element <c>i</c>; traps
+  /// <see cref="IrTrap.NullReference"/> for <c>null</c> and <see cref="IrTrap.IndexOutOfRange"/> outside the
+  /// elements. Only the initializer of a declaration, whose block the pointer does not outlive.
+  /// </summary>
+  Pin,
+
+  /// <summary><c>(x) → T*</c>: <c>&amp;x</c> of a local of a number type <c>T</c>, which lives in a region of one element from then on.</summary>
+  AddressOf,
+
+  /// <summary><c>(T*, i32) → T*</c>: <c>p + n</c>, <c>n</c> elements of <c>T</c> on; forming any pointer is allowed, only an access is checked.</summary>
+  PointerAdd,
+
+  /// <summary><c>(T*, T*) → i64</c>: <c>p - q</c>, the bytes between them divided by the size of <c>T</c>; traps <see cref="IrTrap.InvalidOperation"/> for two regions.</summary>
+  PointerDifference,
+
+  /// <summary><c>(T*, T*) → bool</c>: <c>p == q</c>, false for pointers into two regions.</summary>
+  PointerEqual,
+
+  /// <summary><c>(T*, T*) → bool</c>: <c>p != q</c>, true for pointers into two regions.</summary>
+  PointerNotEqual,
+
+  /// <summary><c>(T*, T*) → bool</c>: <c>p &lt; q</c>; traps <see cref="IrTrap.InvalidOperation"/> for two regions, whose order no target reproduces.</summary>
+  PointerLess,
+
+  /// <summary><c>(T*, T*) → bool</c>: <c>p &lt;= q</c>, as <see cref="PointerLess"/>.</summary>
+  PointerLessOrEqual,
+
+  /// <summary><c>(T*, T*) → bool</c>: <c>p &gt; q</c>, as <see cref="PointerLess"/>.</summary>
+  PointerGreater,
+
+  /// <summary><c>(T*, T*) → bool</c>: <c>p &gt;= q</c>, as <see cref="PointerLess"/>.</summary>
+  PointerGreaterOrEqual,
+
+  /// <summary>
+  /// <c>(T*) → T</c>: <c>*p</c>, the bytes at the pointer read as a <c>T</c>, the lowest first; traps
+  /// <see cref="IrTrap.NullReference"/> for the null pointer and <see cref="IrTrap.IndexOutOfRange"/> for bytes not
+  /// wholly in the region.
+  /// </summary>
+  PointerLoad,
+
+  /// <summary><c>(T*, T) → void</c>: <c>*p = v</c>, the value evaluated first, then checked as <see cref="PointerLoad"/>.</summary>
+  PointerStore,
+
+  /// <summary><c>(T*) → U*</c>: <c>(U*)p</c>, the same place read as another type.</summary>
+  PointerCast
 
 }
 
@@ -1044,11 +1095,19 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   public IReadOnlyList<IrTypeDeclaration> Types { get; init; } = [];
 
   /// <summary>
-  /// The functions legalization copied into the module from the portable floating-point
-  /// implementations: the name each has in the module and the name of the implementation it is, in the
-  /// order they were copied. A backend emits them as helpers (<see cref="FloatOperationSources.Origin"/>).
+  /// The functions legalization copied into the module from the libraries of Polypiler's own code -
+  /// the portable floating-point implementations and the helpers: the name each has in the module and
+  /// the name of the function in its library, in the order they were copied. A backend emits them as
+  /// helpers (<see cref="ImplementationSources.Origin"/>).
   /// </summary>
   public IReadOnlyList<(string Function, string Implementation)> Implementations { get; init; } = [];
+
+  /// <summary>
+  /// The functions of the libraries whose code an optimization copied into a function of the module,
+  /// by their names in their libraries, each once: the code stays in the output where the function
+  /// itself may be gone, so its notices stay too (<see cref="ImplementationSources.Notices"/>).
+  /// </summary>
+  public IReadOnlyList<string> Inlined { get; init; } = [];
 
   /// <summary>
   /// The globals of the module, in source order, which is the order they are initialised in. Every

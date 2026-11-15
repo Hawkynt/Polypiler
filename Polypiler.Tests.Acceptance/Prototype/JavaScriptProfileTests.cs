@@ -8,6 +8,7 @@ using System.Reflection;
 using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -101,7 +102,7 @@ public sealed class JavaScriptProfileTests {
       var lifted = PrototypeFixture.Imported(fixture);
       var file = PrototypeFixture.ClassOf(fixture) + profile.Parsed.Extension;
       var problems = GeneratedJavaScript.Problems(text, profile.Parsed);
-      run = new(this._translation, 0, lifted, JavaScriptEmitter.Check(lifted, profile.Parsed), Path.Combine(this._directory, "out"),
+      run = new(this._translation, 0, lifted, LegalizedJavaScript.Check(lifted, profile.Parsed), Path.Combine(this._directory, "out"),
         new("acornima", $"parse {file} as {profile}", problems.Count == 0 ? 0 : 1));
       Assert.That(problems, Is.Empty);
 

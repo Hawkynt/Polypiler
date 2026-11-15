@@ -16,12 +16,11 @@ internal static partial class CSharpIntegerRows {
   /// make the clamp the minimum of a maximum, as the recognition rule O0123 finds it.
   /// </summary>
   private static IEnumerable<CSharpCapability> Bounds => [
-    .. _all.Select(kind => Helped(IrIntrinsicOp.Clamp, kind, $"({Type(kind)}){{h}}({{0}}, {{1}}, {{2}})",
-      IsSigned(kind) ? CSharpIntegerHelpers.ClampSigned : CSharpIntegerHelpers.ClampUnsigned)
+    .. _all.Select(kind => Helped(IrIntrinsicOp.Clamp, kind)
       .WithTotal(new CSharpForm(null, Template: $"{Math}Min({Math}Max({{0}}, {{1}}), {{2}})"), Ordered)),
     .. _unsigned.Select(kind => Written(IrIntrinsicOp.Abs, kind, "{0}")),
     .. _all.Select(kind => IsSigned(kind)
-      ? Helped(IrIntrinsicOp.AbsWrap, kind, $"({Type(kind)}){{h}}({{0}})", CSharpIntegerHelpers.AbsWrap)
+      ? Helped(IrIntrinsicOp.AbsWrap, kind)
       : Written(IrIntrinsicOp.AbsWrap, kind, "{0}")),
     .. _unsigned.Select(kind => Written(IrIntrinsicOp.Sign, kind, "({0} != 0 ? 1 : 0)"))
   ];

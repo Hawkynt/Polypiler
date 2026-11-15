@@ -31,6 +31,18 @@ public static partial class IrInterpreter {
     /// <summary>The bytes of the view read as elements of another type: as many whole ones as they hold.</summary>
     public View As(IrType type) => new(backing, backingElement, byteOffset, (int)((long)this.Length * this.Size / type.Size), type);
 
+    /// <summary>The array the view reads, by which two pointers are told to be in one region.</summary>
+    public Array Backing => backing;
+
+    /// <summary>Where the view starts in the memory of its array, in bytes.</summary>
+    public long Start => byteOffset;
+
+    /// <summary>How many bytes the view spans.</summary>
+    public long Bytes => (long)this.Length * this.Size;
+
+    /// <summary>One value of a type at a byte of the view, which the caller has checked lies in it with all its bytes.</summary>
+    public View At(long bytes, IrType type) => new(backing, backingElement, byteOffset + bytes, 1, type);
+
     public object Get(int index) {
       if (this.Direct)
         return Internal(backing.GetValue((byteOffset / this.Size) + index)!);

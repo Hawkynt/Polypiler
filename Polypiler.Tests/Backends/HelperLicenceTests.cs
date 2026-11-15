@@ -45,22 +45,22 @@ public sealed class HelperLicenceTests {
   [Test]
   public void EveryJavaScriptHelper_HasItsOriginAndLicence() {
     Assert.That(JavaScriptEmitter.HelperOrigins, Has.Count.GreaterThan(100));
-    Assert.That(JavaScriptEmitter.HelperOrigins.Keys, Has.Member("$div").And.Member("$view").And.Member("$clamp"));
+    Assert.That(JavaScriptEmitter.HelperOrigins.Keys, Has.Member("$div").And.Member("$view").And.Not.Member("$clamp").And.Not.Member("$rotl"));
     Assert.That(JavaScriptEmitter.HelperOrigins.Values.Distinct(), Is.EqualTo(new[] { ("MIT", "Hawkynt/Polypiler:Polypiler.Core.Backends.JavaScript/Helpers") }));
   }
 
   [Test]
   public void EveryCSharpHelperOfTheDefaultTable_HasItsOriginAndLicence() {
-    Assert.That(CSharpEmitter.HelperOrigins.Keys, Has.Member("Saturated(double value, int low, int high)").And.Member("Clamp(double value, double min, double max)").And.Member("Clamp(float value, float min, float max)").And.Member("Ignore<T>(T value)"));
+    Assert.That(CSharpEmitter.HelperOrigins.Keys, Has.Member("Ignore<T>(T value)").And.Member("Fill<T>(T[] array, T value)").And.Not.Member("Saturated(double value, int low, int high)"));
     Assert.That(CSharpEmitter.HelperOrigins.Values.Distinct(), Is.EqualTo(new[] { ("MIT", "Hawkynt/Polypiler:Polypiler.Core.Backends.CSharp/Helpers") }));
   }
 
   [Test]
   public void EveryPortableImplementation_HasTheFileThatDeclaresItAndItsLicence() {
-    var missing = FloatImplementations.Module.Functions.Select(function => function.Name).Where(name => FloatOperationSources.Origin(name) is null).ToList();
+    var missing = FloatImplementations.Module.Functions.Select(function => function.Name).Where(name => ImplementationSources.Origin(name) is null).ToList();
     Assert.That(missing, Is.Empty);
     foreach (var function in FloatImplementations.Module.Functions) {
-      var (path, licence) = FloatOperationSources.Origin(function.Name)!.Value;
+      var (path, licence) = ImplementationSources.Origin(function.Name)!.Value;
       Assert.That((File.Exists(Path.Combine(_root, path)), HeaderOf(path)), Is.EqualTo((true, licence)), function.Name);
     }
   }

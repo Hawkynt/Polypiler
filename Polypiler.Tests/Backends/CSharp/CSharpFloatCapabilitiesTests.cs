@@ -6,6 +6,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Float.Support;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -112,19 +113,19 @@ public sealed class CSharpFloatCapabilitiesTests {
       foreach (var profile in CSharpProfile.All)
         foreach (var mode in _modes) {
           var module = CSharpEmitter.Legalize(Module(operation, format), () => FloatImplementations.Module, profile, mode);
-          Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, $"{format} {profile} {mode}");
+          Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, $"{format} {profile} {mode}");
         }
   }
 
   [Test]
   public void Header_NamesTheModeAndEveryNativeFunctionWithItsBound() {
     var sin = Module(FloatOperationTable.Of(IrIntrinsicOp.Sin)!, IrType.F64);
-    var accurate = CSharpEmitter.Emit(CSharpEmitter.Legalize(sin, () => FloatImplementations.Module, CSharpProfile.Net100, FloatMode.Accurate), CSharpProfile.Net100, FloatMode.Accurate).Single().Content;
+    var accurate = LegalizedCSharp.Emit(CSharpEmitter.Legalize(sin, () => FloatImplementations.Module, CSharpProfile.Net100, FloatMode.Accurate), CSharpProfile.Net100, FloatMode.Accurate).Single().Content;
     Assert.That(accurate, Does.Contain("// Floating point: accurate (ADR 0005).").And.Contain("//   Sin of f64: ulp(1), slack 1 on dotnet-sdk, bound 3").And.Contain("global::System.Math.Sin(p0)"));
-    var strict = CSharpEmitter.Emit(CSharpEmitter.Legalize(sin, () => FloatImplementations.Module, CSharpProfile.Net100, FloatMode.Strict), CSharpProfile.Net100, FloatMode.Strict).Single().Content;
+    var strict = LegalizedCSharp.Emit(CSharpEmitter.Legalize(sin, () => FloatImplementations.Module, CSharpProfile.Net100, FloatMode.Strict), CSharpProfile.Net100, FloatMode.Strict).Single().Content;
     Assert.That(strict, Does.Contain("// Floating point: strict (ADR 0005). Every function is the portable implementation").And.Not.Contain("Math.Sin("));
     var integers = new IrModule("M", [new IrFunction("F", true, IrType.I32, [], [], new IrBlock([new IrReturn(new IrConst(IrType.I32, 1))]))]);
-    Assert.That(CSharpEmitter.Emit(integers, CSharpProfile.Net100, FloatMode.Strict).Single().Content, Does.Not.Contain("Floating point"));
+    Assert.That(LegalizedCSharp.Emit(integers, CSharpProfile.Net100, FloatMode.Strict).Single().Content, Does.Not.Contain("Floating point"));
   }
 
   /// <summary>
@@ -138,7 +139,7 @@ public sealed class CSharpFloatCapabilitiesTests {
     var module = Everything();
     foreach (var mode in _modes) {
       var lowered = CSharpEmitter.Legalize(module, () => FloatImplementations.Module, profile, mode);
-      var text = CSharpEmitter.Emit(lowered, profile, mode).Single().Content;
+      var text = LegalizedCSharp.Emit(lowered, profile, mode).Single().Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile} {mode}");
       var build = GeneratedCSharp.Compile(text, false);
       foreach (var function in module.Functions) {

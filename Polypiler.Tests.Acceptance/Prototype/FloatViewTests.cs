@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -92,7 +93,7 @@ public sealed class FloatViewTests {
     var random = new Random(IntegerCases.Seed);
     var cases = FloatViewCases.All.SelectMany(@case => FloatViewCases.Calls(@case, random).Select(call => (Case: @case, Call: call))).ToList();
     var calls = cases.Select(entry => entry.Call).ToList();
-    var file = JavaScriptEmitter.Emit(FloatViewCases.Module(), profile.Parsed).Single();
+    var file = LegalizedJavaScript.Emit(FloatViewCases.Module(), profile.Parsed).Single();
     Assert.That(GeneratedJavaScript.Problems(file.Content, profile.Parsed), Is.Empty);
     File.WriteAllText(Path.Combine(this._directory, file.Path), file.Content);
     var node = Toolchain.NodeOutcomes(this._directory, file.Path, calls, true, profile.Mode, profile.Global);

@@ -103,10 +103,10 @@ public sealed class JavaScriptCapabilities {
     new("Math.ceil", 5),
     new("Math.round", 5),
     new("Math.imul", 2015, "$imul"),
-    new("Math.clz32", 2015, "$clz32"),
+    new("Math.clz32", 2015, "LeadingZeroCount32"),
     new("Math.fround", 2015, "$fround"),
-    new("Math.trunc", 2015, "$trunc"),
-    new("Math.sign", 2015, "$sign"),
+    new("Math.trunc", 2015, "Truncate"),
+    new("Math.sign", 2015, "Sign32"),
     // The functions of Math that compute a floating-point operation with an ulp(n) contract. Below the
     // level that has one, or where its error is not admitted, the operation is its portable
     // implementation, which legalization puts in before the module is written.
@@ -215,7 +215,16 @@ public sealed class JavaScriptCapabilities {
     new("parseInt", 5),
 
     // Enums (#1318): a frozen object of named numbers (Object itself is listed with the classes), ECMA-262 5.1 §15.2.3.9.
-    new("Object.freeze", 5)
+    new("Object.freeze", 5),
+
+    // Lazy sequences (#1327): generators and the iterator protocol; below ECMAScript 2015 a state machine on $generator.
+    new("function*", 2015, "state machine"),
+    new("Symbol", 2015, "$iterator"),
+    new("for-of", 2015, "next loop"),
+    new("Symbol.iterator", 2015, "$iterator"),
+    new("yield*", 2015, "nested resume point"),
+    // The bounded pointers of #1331: no level of ECMAScript has pointers; a pointer is a region and a byte offset in it.
+    new("*p, a pointer", int.MaxValue, "view and index", Emitted: false)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

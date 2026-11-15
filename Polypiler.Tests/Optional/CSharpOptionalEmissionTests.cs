@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Optional;
 
@@ -12,7 +13,7 @@ namespace Polypiler.Tests.Optional;
 [TestFixture]
 internal sealed class CSharpOptionalEmissionTests {
 
-  private static string Emitted(CSharpProfile profile) => CSharpEmitter.Emit(OptionalFixtures.Imported(), profile)[0].Content;
+  private static string Emitted(CSharpProfile profile) => LegalizedCSharp.Emit(OptionalFixtures.Imported(), profile)[0].Content;
 
   /// <summary>Test design 1: the fixture compiles for every profile and computes what .NET computes.</summary>
   [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
@@ -52,6 +53,6 @@ internal sealed class CSharpOptionalEmissionTests {
 
   /// <summary>Test design 12: the C# backend writes every node of optional values in every profile, so PLY1053 never names one.</summary>
   [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
-  public void Check_FindsNothingMissing(CSharpProfile profile) => Assert.That(CSharpEmitter.Check(OptionalFixtures.Imported(), profile), Is.Empty);
+  public void Check_FindsNothingMissing(CSharpProfile profile) => Assert.That(LegalizedCSharp.Check(OptionalFixtures.Imported(), profile), Is.Empty);
 
 }

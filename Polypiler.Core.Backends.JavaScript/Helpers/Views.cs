@@ -147,9 +147,9 @@ internal static partial class JavaScriptHelpers {
   ];
 
   /// <summary>The names of the helpers of the views, in the order a module lists them, after the integer helpers.</summary>
-  private static IEnumerable<string> ViewOrder => ViewHelpers.Select(helper => helper.Name);
+  private static IEnumerable<string> ViewOrder => ViewByteHelpers.Concat(ViewHelpers).Select(helper => helper.Name);
 
-  private static readonly Dictionary<string, Func<Func<string, bool>, string>> _views = ViewHelpers.ToDictionary(helper => helper.Name, helper => helper.Text);
+  private static readonly Dictionary<string, Func<Func<string, bool>, string>> _views = ViewByteHelpers.Concat(ViewHelpers).ToDictionary(helper => helper.Name, helper => helper.Text);
 
   /// <summary>The text of a helper of the views, or <see langword="null"/> for a name that is none.</summary>
   private static string? ViewSource(string name, Func<string, bool> native) => _views.TryGetValue(name, out var text) ? text(native) : null;

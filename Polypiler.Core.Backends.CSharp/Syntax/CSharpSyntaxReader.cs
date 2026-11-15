@@ -150,6 +150,7 @@ public static class CSharpSyntaxReader {
       LocalDeclarationStatementSyntax { Modifiers.Count: 0, AwaitKeyword.RawKind: 0 } declaration
         => Declaration(declaration.Declaration) with { IsUsing = declaration.UsingKeyword.IsKind(SyntaxKind.UsingKeyword) },
       UsingStatementSyntax { Declaration: { } resource, AwaitKeyword.RawKind: 0 } scope => new CsUsing(Declaration(resource), Read(scope.Statement)),
+      FixedStatementSyntax pinned => new CsFixed(Declaration(pinned.Declaration), Read(pinned.Statement)),
       ExpressionStatementSyntax expression => new CsExpressionStatement(Read(expression.Expression)),
       IfStatementSyntax conditional => new CsIf(Read(conditional.Condition), Read(conditional.Statement), conditional.Else is null ? null : Read(conditional.Else.Statement)),
       WhileStatementSyntax loop => new CsWhile(Read(loop.Condition), Read(loop.Statement)),
@@ -169,6 +170,7 @@ public static class CSharpSyntaxReader {
       ContinueStatementSyntax => new CsContinue(),
       ReturnStatementSyntax result => new CsReturn(result.Expression is null ? null : Read(result.Expression)),
       ThrowStatementSyntax exception => new CsThrow(exception.Expression is null ? null : Read(exception.Expression)),
+      YieldStatementSyntax produced => new CsYield(produced.Expression is null ? null : Read(produced.Expression)),
       TryStatementSyntax attempt => new CsTry(Block(attempt.Block), [.. attempt.Catches.Select(clause => new CsCatch(
         clause.Declaration is null ? null : new CsType(clause.Declaration.Type.ToString()),
         clause.Declaration is { Identifier.Text: { Length: > 0 } name } ? name : null,

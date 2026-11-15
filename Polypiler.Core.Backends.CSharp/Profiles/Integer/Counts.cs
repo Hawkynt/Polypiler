@@ -14,20 +14,18 @@ internal static partial class CSharpIntegerRows {
   /// </summary>
   private static IEnumerable<CSharpCapability> Counts => [
     .. _all.Where(kind => kind is not (IrTypeKind.U32 or IrTypeKind.U64)).SelectMany(kind => (IEnumerable<CSharpCapability>)[
-      Count(IrIntrinsicOp.PopCount, kind, "PopCount", Word(kind), "", Width(kind) == 64 ? CSharpHelpers.PopCount64 : CSharpHelpers.PopCount32),
-      Count(IrIntrinsicOp.LeadingZeroCount, kind, "LeadingZeroCount", Word(kind), Width(kind) < 32 ? $" - {Digits(32 - Width(kind))}" : "",
-        Width(kind) == 64 ? CSharpHelpers.LeadingZeroCount64 : CSharpHelpers.LeadingZeroCount32),
-      Count(IrIntrinsicOp.TrailingZeroCount, kind, "TrailingZeroCount", Width(kind) < 32 ? $"{Word(kind)} | 0x{1 << Width(kind):X}u" : Word(kind), "",
-        Width(kind) == 64 ? CSharpHelpers.TrailingZeroCount64 : CSharpHelpers.TrailingZeroCount32),
-      Count(IrIntrinsicOp.Log2, kind, "Log2", Word(kind), "", Width(kind) == 64 ? CSharpHelpers.Log264 : CSharpHelpers.Log232)
+      Count(IrIntrinsicOp.PopCount, kind, "PopCount", Word(kind), ""),
+      Count(IrIntrinsicOp.LeadingZeroCount, kind, "LeadingZeroCount", Word(kind), Width(kind) < 32 ? $" - {Digits(32 - Width(kind))}" : ""),
+      Count(IrIntrinsicOp.TrailingZeroCount, kind, "TrailingZeroCount", Width(kind) < 32 ? $"{Word(kind)} | 0x{1 << Width(kind):X}u" : Word(kind), ""),
+      Count(IrIntrinsicOp.Log2, kind, "Log2", Word(kind), "")
     ]),
-    .. _all.Select(kind => Count(IrIntrinsicOp.Parity, kind, "PopCount", Word(kind), " & 1", Width(kind) == 64 ? CSharpHelpers.PopCount64 : CSharpHelpers.PopCount32))
+    .. _all.Select(kind => Count(IrIntrinsicOp.Parity, kind, "PopCount", Word(kind), " & 1"))
   ];
 
-  /// <summary>A count of <c>BitOperations</c> on the pattern of the value, with a correction after it.</summary>
-  private static CSharpCapability Count(IrIntrinsicOp op, IrTypeKind kind, string method, string argument, string correction, CSharpHelper helper)
-    => Row(op, kind, CSharpProfile.NetCoreApp31, Bits + method, Corrected($"{Bits}{method}({argument})", correction), Corrected($"{{h}}({argument})", correction), helper);
+  private static CSharpCapability Count(IrIntrinsicOp op, IrTypeKind kind, string method, string argument, string correction)
+    => Library(op, kind, CSharpProfile.NetCoreApp31, Bits + method, Corrected($"{Bits}{method}({argument})", correction));
 
+  /// <summary>A call with the correction for the width, in parentheses where there is one.</summary>
   private static string Corrected(string call, string correction) => correction.Length == 0 ? call : $"({call}{correction})";
 
 }

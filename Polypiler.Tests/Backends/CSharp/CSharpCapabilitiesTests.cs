@@ -7,6 +7,7 @@ using Polypiler.Core.IR;
 using Polypiler.Core.Verification.Generators;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Properties;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -139,6 +140,22 @@ public sealed class CSharpCapabilitiesTests {
     ("BinaryPrimitives.Read… on an ArraySegment<byte>", "net2.0"),
     ("BinaryPrimitives.Write… on an ArraySegment<byte>", "net2.0"),
     ("BinaryPrimitives.Write… on a span, the value evaluated first", "netstandard2.1"),
+    ("unsafe code", "C# 1"),
+    ("stackalloc into a pointer", "C# 1"),
+    ("T* p = stackalloc T[n]", "net2.0"),
+    ("fixed (T* p = a)", "net2.0"),
+    ("&x", "net2.0"),
+    ("p + n", "net2.0"),
+    ("p - q", "net2.0"),
+    ("p == q", "net2.0"),
+    ("p != q", "net2.0"),
+    ("p < q", "net2.0"),
+    ("p <= q", "net2.0"),
+    ("p > q", "net2.0"),
+    ("p >= q", "net2.0"),
+    ("*p", "net2.0"),
+    ("*p = v", "net2.0"),
+    ("(U*)p", "net2.0"),
     ("List<T>", "net2.0"),
     ("Array.prototype.pop of ECMA-262 on a List<T> of values", "net2.0"),
     ("Array.prototype.pop of ECMA-262 on a List<T> of references", "net2.0"),
@@ -167,7 +184,10 @@ public sealed class CSharpCapabilitiesTests {
     ("System.Func<T1…T16, TResult>", "net4.6"),
     ("System.Action<T1…T16>", "net4.6"),
     ("enum declaration with [Flags] (FlagsAttribute)", "net2.0"),
-    ("Enum.HasFlag(Enum)", "net4.6")
+    ("Enum.HasFlag(Enum)", "net4.6"),
+    ("iterator (yield)", "C# 2"),
+    ("IEnumerable<T>", "net2.0"),
+    ("generator object of ECMA-262 as a single-pass IEnumerable<T>", "net2.0")
   ];
 
   /// <summary>
@@ -371,7 +391,9 @@ public sealed class CSharpCapabilitiesTests {
     var raised = CSharpProfile.LanguageVersions.Where(version => version >= CSharpProfile.Net20.LanguageVersion)
       .Select(version => CSharpProfile.Parse("net2.0", CSharpProfile.NameOf(version))).ToList();
     if (row.Language is { } language) {
-      Assert.That(raised.Where(row.IsIn).Select(profile => profile.LanguageVersion), Is.EqualTo(CSharpProfile.LanguageVersions.Where(version => version >= language)));
+      // The oldest profile's version is the lowest a profile can be raised from; a row of C# 1 is in all of them.
+      Assert.That(raised.Where(row.IsIn).Select(profile => profile.LanguageVersion),
+        Is.EqualTo(CSharpProfile.LanguageVersions.Where(version => version >= language && version >= CSharpProfile.Net20.LanguageVersion)));
       Assert.That(CSharpProfile.All.Where(row.IsIn), Is.EqualTo(CSharpProfile.All.Where(profile => profile.LanguageVersion >= language)));
     } else {
       var from = row.Since is null ? CSharpProfile.All.Count : CSharpProfile.All.ToList().IndexOf(row.Since);
@@ -446,9 +468,9 @@ public sealed class CSharpCapabilitiesTests {
   /// <summary>Every row an operation or a conversion is written by has a function here that uses it.</summary>
   [Test]
   public void EveryWrittenRow_HasAUse() {
-    // The rows of the views have tests of their own (CSharpViewTests).
+    // The rows of the views and of the pointers have tests of their own (CSharpViewTests, PointerCSharpTests).
     var written = CSharpCapabilities.Default.Rows.Where(row => (row.Operation is not null || row.Saturates is not null) && !IsIntegerRow(row) && !IsFloating(row) && !IsStringRow(row)
-      && !(row.Operation is { } op && IrViews.IsViewOperation(op))).Select(row => row.Name);
+      && !(row.Operation is { } op && (IrViews.IsViewOperation(op) || IrPointers.IsPointerOperation(op)))).Select(row => row.Name);
     Assert.That(_uses.Select(use => use.Row).Distinct(), Is.EquivalentTo(written));
   }
 
@@ -468,7 +490,7 @@ public sealed class CSharpCapabilitiesTests {
     var expected = calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call)).ToList();
     var executed = new Dictionary<string, string>();
     foreach (var profile in CSharpProfile.All) {
-      var text = CSharpEmitter.Emit(module, profile).Single().Content;
+      var text = LegalizedCSharp.Emit(module, profile).Single().Content;
       var native = row.IsIn(profile);
       var declarations = text.Split('\n').Where(line => line.StartsWith("  private static ", StringComparison.Ordinal)).ToList();
       // What the function calls, not what a helper behind it calls in turn.
@@ -476,7 +498,10 @@ public sealed class CSharpCapabilitiesTests {
       if (row.Native is { } form)
         Assert.That(function.Contains(form.Method + "("), Is.EqualTo(native), $"{profile}:\n{text}");
 
-      Assert.That(declarations, Is.EqualTo(native || row.Helper is null ? [] : new[] { "  " + row.Helper.Lines(row.Helper.Name)[0] }), $"{profile}:\n{text}");
+      // A row of the IR library is the call of its helper, a function of the module, or an operation of the
+      // IR where one does it (the product of two widened uint); the outcomes below check it.
+      if (!row.IsLibraryIn(profile))
+        Assert.That(declarations, Is.EqualTo(native || row.Helper is null ? [] : new[] { "  " + row.Helper.Lines(row.Helper.Name)[0] }), $"{profile}:\n{text}");
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
       if (profile == row.Since && Before(profile) is { } before && row.Native is not null && !_sameNameOtherResult.Contains(name))
         Assert.That(GeneratedCSharp.ComplaintsFor(text, before.Name, profile.LanguageVersionName), Is.Not.Empty, $"{before.Name} has '{name}' too:\n{text}");
@@ -507,47 +532,13 @@ public sealed class CSharpCapabilitiesTests {
     // The helpers of the collections take the nested classes of the collections (#1328), which are C# 2 as well.
     string[] classes = [CSharpCollectionClasses.KeyedSlots, CSharpCollectionClasses.FloatKeys, CSharpCollectionClasses.SingleKeys];
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))).Concat(classes))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(127));
+    // The operations are helpers of the library now; what stays with the backend is the language and the runtime it stands in for.
+    Assert.That(helpers, Has.Count.EqualTo(49));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);
     foreach (var checking in _overflowChecking)
       Assert.That(() => GeneratedCSharp.Compile(text, checking), Throws.Nothing);
-  }
-
-  /// <summary>
-  /// Test design 6 for the one helper no operation of the IR calls yet: the product of two 64-bit
-  /// numbers in four partial products has the two halves <c>Math.BigMul</c> has, at 0, 1, all ones,
-  /// the top bit and the carries between the halves, and on a thousand random pairs (seed 2026), as
-  /// a property: a differing pair is shrunk operand by operand and recorded with its seed.
-  /// </summary>
-  [Test]
-  public void FullProductOfTwo64BitNumbers_IsWhatTheLibraryComputes() {
-    var helper = CSharpCapabilities.Default.Rows.Single(row => row.Name == "Math.BigMul(ulong, ulong, out ulong)").Helper!;
-    var text = $"public static class Product {{\n\n  {string.Join("\n  ", helper.Lines(helper.Name))}\n\n}}\n";
-    ulong[] edges = [0, 1, 2, 0xFFFFFFFF, 0x100000000, 0x100000001, 0x7FFFFFFFFFFFFFFF, 0x8000000000000000, 0xFFFFFFFF00000000, ulong.MaxValue];
-    IEnumerable<(ulong Left, ulong Right)> Pairs(ulong seed) {
-      var random = new SeededRandom(seed);
-      return edges.SelectMany(left => edges.Select(right => (left, right)))
-        .Concat(Enumerable.Range(0, 1000).Select(_ => (random.NextUInt64(), random.NextUInt64())));
-    }
-
-    static IEnumerable<(ulong Left, ulong Right)> Smaller((ulong Left, ulong Right) pair)
-      => Shrink.Integer(pair.Left).Select(left => (left, pair.Right)).Concat(Shrink.Integer(pair.Right).Select(right => (pair.Left, right)));
-
-    var checkedPairs = 0;
-    foreach (var checking in _overflowChecking) {
-      var product = GeneratedCSharp.Compile(text, checking).Method("BigMul");
-      Property.ForAll(2026, 1100, Pairs, Smaller, pair => {
-        ++checkedPairs;
-        object?[] arguments = [pair.Left, pair.Right, null];
-        var high = product.Invoke(null, arguments);
-        return Equals((high, arguments[2]), ((object)Math.BigMul(pair.Left, pair.Right, out var low), (object)low));
-      }, $"{nameof(this.FullProductOfTwo64BitNumbers_IsWhatTheLibraryComputes)}_CheckOverflow_{checking}");
-    }
-
-    Assert.That(Pairs(2026).ToList(), Has.Count.EqualTo(1100));
-    Assert.That(checkedPairs, Is.EqualTo(1100 * _overflowChecking.Length));
   }
 
 }

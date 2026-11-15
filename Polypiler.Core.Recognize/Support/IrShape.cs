@@ -98,6 +98,7 @@ public static class IrShape {
     IrCollection operation => operation.Arguments,
     IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
     IrBoundMethod { Receiver: { } receiver } => [receiver],
+    IrArraySequence sequence => [sequence.Array],
     _ => []
   };
 
@@ -105,9 +106,16 @@ public static class IrShape {
   /// <param name="expression">The expression.</param>
   /// <returns>The nodes in pre-order.</returns>
   public static IEnumerable<IrExpr> Nodes(IrExpr expression) {
-    yield return expression;
-    foreach (var node in Operands(expression).SelectMany(Nodes))
+    // A stack rather than nested enumerators, which would pass every node up through each level above it.
+    var pending = new Stack<IrExpr>();
+    pending.Push(expression);
+    while (pending.Count > 0) {
+      var node = pending.Pop();
       yield return node;
+      var operands = Operands(node);
+      for (var index = operands.Count - 1; index >= 0; --index)
+        pending.Push(operands[index]);
+    }
   }
 
   /// <summary>
@@ -120,12 +128,17 @@ public static class IrShape {
   /// </summary>
   /// <param name="expression">The expression.</param>
   /// <returns><see langword="true"/> when it has no effect.</returns>
-  public static bool IsSideEffectFree(IrExpr expression) => Nodes(expression).All(node => node switch {
+  public static bool IsSideEffectFree(IrExpr expression) => Nodes(expression).All(IsSideEffectFreeNode);
+
+  /// <summary>Whether one node of an expression, its operands aside, has no effect: <see cref="IsSideEffectFree"/> holds where it holds for every node.</summary>
+  /// <param name="node">The node.</param>
+  /// <returns><see langword="true"/> when the node itself has no effect.</returns>
+  public static bool IsSideEffectFreeNode(IrExpr node) => node switch {
     IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod => false,
     IrFieldLoad load => !load.Target.Type.IsObject,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
-  });
+  };
 
   /// <summary>
   /// Whether an expression has no effect and never traps: constants, variables, the arithmetic that
@@ -134,9 +147,12 @@ public static class IrShape {
   /// </summary>
   /// <param name="expression">The expression.</param>
   /// <returns><see langword="true"/> when it is pure and total.</returns>
-  public static bool IsTrapFree(IrExpr expression) => Nodes(expression).All(TrapFreeNode);
+  public static bool IsTrapFree(IrExpr expression) => Nodes(expression).All(IsTrapFreeNode);
 
-  private static bool TrapFreeNode(IrExpr node) => node switch {
+  /// <summary>Whether one node of an expression, its operands aside, never traps: <see cref="IsTrapFree"/> holds where it holds for every node.</summary>
+  /// <param name="node">The node.</param>
+  /// <returns><see langword="true"/> when the node itself is total.</returns>
+  public static bool IsTrapFreeNode(IrExpr node) => node switch {
     IrConst or IrLocalRef => true,
     IrConstRef reference => !reference.Type.IsArray,
     IrUnary unary => unary.Op != IrUnaryOp.NegateChecked,
@@ -224,6 +240,7 @@ public static class IrShape {
     IrCollection operation => operation with { Arguments = operands },
     IrInvoke invocation => invocation with { Callee = operands[0], Arguments = [.. operands.Skip(1)] },
     IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
+    IrArraySequence => new IrArraySequence(operands[0]),
     _ => expression
   };
 

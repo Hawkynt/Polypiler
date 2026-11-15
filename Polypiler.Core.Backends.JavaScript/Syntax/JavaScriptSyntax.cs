@@ -172,7 +172,12 @@ public sealed record JsNull : JsExpression;
 /// <param name="Name">The name, or <see langword="null"/>.</param>
 /// <param name="Parameters">The names of the parameters.</param>
 /// <param name="Body">The body.</param>
-public sealed record JsFunctionExpression(string? Name, IReadOnlyList<string> Parameters, JsBlock Body) : JsExpression;
+public sealed record JsFunctionExpression(string? Name, IReadOnlyList<string> Parameters, JsBlock Body) : JsExpression {
+
+  /// <summary>Whether the function is a generator, <c>function* (…) { … }</c> (ECMAScript 2015).</summary>
+  public bool IsGenerator { get; init; }
+
+}
 
 /// <summary>An arrow function, <c>(a, b) =&gt; body</c>: a block body, or an expression whose value it returns (ECMAScript 2015).</summary>
 /// <param name="Parameters">The names of the parameters.</param>
@@ -287,6 +292,9 @@ public sealed record JsFunctionDeclaration(string Name, IReadOnlyList<string> Pa
 
   /// <summary>Whether the backend declares the function in support of the module's code: a helper, which a target pass may inline or remove.</summary>
   public bool IsHelper { get; init; }
+
+  /// <summary>Whether the function is a generator, <c>function* name(…) { … }</c> (ECMAScript 2015).</summary>
+  public bool IsGenerator { get; init; }
 
 }
 

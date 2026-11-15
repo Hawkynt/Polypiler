@@ -7,16 +7,16 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**19 of 292 implemented** - as prototypes in the pass pipeline of `translate` (#1307) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
+**24 of 292 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
 
 ## General passes
 
-- [ ] [O0001](O0001-constant-folding.md) — Fold operations on constants and integer neutral/absorbing elements (P1)
+- [x] [O0001](O0001-constant-folding.md) — Fold operations on constants and integer neutral/absorbing elements (P1)
 - [ ] [O0002](O0002-partial-evaluation.md) — Evaluate pure calls with constant arguments at compile time (P1)
-- [ ] [O0003](O0003-sccp.md) — Sparse conditional constant propagation (P1)
+- [x] [O0003](O0003-sccp.md) — Sparse conditional constant propagation (P1)
 - [ ] [O0004](O0004-global-value-numbering.md) — Global value numbering and common-subexpression elimination (P1)
-- [ ] [O0005](O0005-dead-code-elimination.md) — Remove instructions whose results and effects are unobservable (P1)
-- [ ] [O0006](O0006-inlining.md) — Inline direct calls under the cost model (P1)
+- [x] [O0005](O0005-dead-code-elimination.md) — Remove instructions whose results and effects are unobservable (P1)
+- [x] [O0006](O0006-inlining.md) — Inline direct calls under the cost model (P1)
 - [ ] [O0007](O0007-interprocedural-effects.md) — Replace conservative call effects by proven callee summaries (P1)
 - [ ] [O0008](O0008-range-and-known-bits-simplification.md) — Simplify operations decided by range and known-bit facts (P1)
 - [ ] [O0009](O0009-strength-reduction.md) — Replace multiplications, divisions and remainders by constants with cheaper exact forms (P1)
@@ -33,7 +33,7 @@ maps every one of its optimization documents to the page here that covers it.
 - [ ] [O0020](O0020-loop-vectorization.md) — Vectorize element-wise loops into logical vector operations (P3)
 - [ ] [O0021](O0021-scalarization.md) — Scalarize logical vector operations lane by lane (P3)
 - [ ] [O0022](O0022-exact-fma.md) — Contract multiply-add to FMA only when the result is provably identical (P3)
-- [ ] [O0023](O0023-loop-unrolling.md) — Unroll counted loops under the cost model (P3)
+- [x] [O0023](O0023-loop-unrolling.md) — Unroll counted loops under the cost model (P3)
 - [ ] [O0024](O0024-loop-unswitching.md) — Hoist loop-invariant branches by versioning the loop (P3)
 - [ ] [O0025](O0025-tail-recursion-elimination.md) — Turn self tail calls and accumulating recursion into loops (P3)
 - [ ] [O0026](O0026-tensor-operation-fusion.md) — Fuse transposes and element-wise tensor operations without materializing intermediates (P5)

@@ -6,6 +6,7 @@ using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Float;
 
@@ -30,7 +31,7 @@ public sealed class FloatViewCSharpTests {
     => CSharpCapabilities.Default.Of(@case.Op, FloatViewCases.FormatOf(@case).Kind)!;
 
   private static string Emit(string function, CSharpProfile profile, CSharpCapabilities? table = null)
-    => CSharpEmitter.Emit(IntegerCases.Module([FloatViewCases.Of(function)], "Snippet"), profile, capabilities: table).Single().Content;
+    => LegalizedCSharp.Emit(IntegerCases.Module([FloatViewCases.Of(function)], "Snippet"), profile, capabilities: table).Single().Content;
 
   /// <summary>The body of the one method of a generated class, its expression or its statements, without the helpers.</summary>
   private static string Body(string text, string function) {
@@ -62,26 +63,26 @@ public sealed class FloatViewCSharpTests {
   public void EveryOperation_HasAFormInEveryProfile() {
     var module = FloatViewCases.Module();
     foreach (var profile in CSharpProfile.All)
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
   }
 
   /// <summary>Test design 7: the three forms of a load, at the first profile of each and the one before.</summary>
   [TestCase("LoadLittle_f32", "net8.0", Binary + "ReadSingleLittleEndian(new global::System.ReadOnlySpan<byte>(a, b, 4))")]
   [TestCase("LoadLittle_f32", "netcoreapp3.1", Converter + "Int32BitsToSingle(" + Binary + "ReadInt32LittleEndian(new global::System.ReadOnlySpan<byte>(a, b, 4)))")]
   [TestCase("LoadBig_f32", "netstandard2.1", Converter + "Int32BitsToSingle(" + Binary + "ReadInt32BigEndian(new global::System.ReadOnlySpan<byte>(a, b, 4)))")]
-  [TestCase("LoadBig_f32", "netstandard2.0", "Int32BitsToSingle((int)Load(a, b, 4, false))")]
+  [TestCase("LoadBig_f32", "netstandard2.0", Converter + "ToSingle(" + Converter + "GetBytes(((int)Load32(a, b, 4, false))), 0)")]
   [TestCase("LoadBig_f64", "net10.0", Binary + "ReadDoubleBigEndian(new global::System.ReadOnlySpan<byte>(a, b, 8))")]
   [TestCase("LoadLittle_f64", "netstandard2.1", Converter + "Int64BitsToDouble(" + Binary + "ReadInt64LittleEndian(new global::System.ReadOnlySpan<byte>(a, b, 8)))")]
-  [TestCase("LoadLittle_f64", "net2.0", Converter + "Int64BitsToDouble((long)Load(a, b, 8, true))")]
-  [TestCase("StoreLittle_f32", "net10.0", "Store(a, b, (ulong)" + Converter + "SingleToInt32Bits(c), 4, true);")]
-  [TestCase("StoreLittle_f32", "netstandard2.1", "Store(a, b, (ulong)" + Converter + "SingleToInt32Bits(c), 4, true);")]
-  [TestCase("StoreBig_f32", "netstandard2.0", "Store(a, b, (ulong)SingleToInt32Bits(c), 4, false);")]
-  [TestCase("StoreBig_f64", "net2.0", "Store(a, b, (ulong)" + Converter + "DoubleToInt64Bits(c), 8, false);")]
-  [TestCase("StoreLittle_f64", "net10.0", "Store(a, b, (ulong)" + Converter + "DoubleToInt64Bits(c), 8, true);")]
+  [TestCase("LoadLittle_f64", "net2.0", Converter + "Int64BitsToDouble((long)Load64(a, b, true))")]
+  [TestCase("StoreLittle_f32", "net10.0", "Store32(a, b, (uint)" + Converter + "SingleToInt32Bits(c), 4, true);")]
+  [TestCase("StoreLittle_f32", "netstandard2.1", "Store32(a, b, (uint)" + Converter + "SingleToInt32Bits(c), 4, true);")]
+  [TestCase("StoreBig_f32", "netstandard2.0", "Store32(a, b, (uint)" + Converter + "ToInt32(" + Converter + "GetBytes(c), 0), 4, false);")]
+  [TestCase("StoreBig_f64", "net2.0", "Store64(a, b, (ulong)" + Converter + "DoubleToInt64Bits(c), false);")]
+  [TestCase("StoreLittle_f64", "net10.0", "Store64(a, b, (ulong)" + Converter + "DoubleToInt64Bits(c), true);")]
   public void Form_IsTheOneOfTheProfile(string function, string profile, string form) {
     var text = Emit(function, CSharpProfile.Parse(profile));
     Assert.That(Body(text, function), Does.Contain(form), text);
-    if (!form.Contains("Load(") && !form.Contains("Store("))
+    if (!form.Contains("Load32(") && !form.Contains("Load64(") && !form.Contains("Store32(") && !form.Contains("Store64("))
       Assert.That(text, Does.Not.Contain("private static"), "no helper where the base library has the form");
   }
 
@@ -89,7 +90,7 @@ public sealed class FloatViewCSharpTests {
   [Test]
   public void NoProfile_AsksTheHostForItsByteOrder() {
     foreach (var profile in CSharpProfile.All)
-      Assert.That(CSharpEmitter.Emit(FloatViewCases.Module(), profile).Single().Content, Does.Not.Contain("IsLittleEndian"), profile.Name);
+      Assert.That(LegalizedCSharp.Emit(FloatViewCases.Module(), profile).Single().Content, Does.Not.Contain("IsLittleEndian"), profile.Name);
   }
 
   /// <summary>
@@ -104,9 +105,9 @@ public sealed class FloatViewCSharpTests {
       : row);
     var table = new CSharpCapabilities(rows);
     var module = IntegerCases.Module([FloatViewCases.Of("LoadLittle_f32")], "Snippet");
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.Net80, table), Is.Empty);
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.NetStandard21, table), Is.Empty);
-    var problems = CSharpEmitter.Check(module, CSharpProfile.NetStandard20, table);
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.Net80, table), Is.Empty);
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.NetStandard21, table), Is.Empty);
+    var problems = LegalizedCSharp.Check(module, CSharpProfile.NetStandard20, table);
     Assert.That(problems.Select(problem => problem.Code), Is.EqualTo(new[] { CSharpEmitter.Inexpressible }));
     Assert.That(problems[0].Message, Does.Contain("BitConverter.Int32BitsToSingle(int)").And.Contain("netstandard2.0"));
     Assert.That(() => Emit("LoadLittle_f32", CSharpProfile.NetStandard20, table), Throws.ArgumentException);
@@ -152,8 +153,8 @@ public sealed class FloatViewCSharpTests {
     foreach (var @case in FloatViewCases.All.Where(@case => !FloatViewCases.Stores(@case))) {
       var module = IntegerCases.Module([@case], "Snippet");
       foreach (var (first, before) in new[] { (CSharpProfile.Net80, CSharpProfile.NetCoreApp31), (CSharpProfile.NetStandard21, CSharpProfile.NetStandard20) }) {
-        var native = CSharpEmitter.Emit(module, first).Single().Content;
-        var replaced = CSharpEmitter.Emit(module, before).Single().Content;
+        var native = LegalizedCSharp.Emit(module, first).Single().Content;
+        var replaced = LegalizedCSharp.Emit(module, before).Single().Content;
         Assert.That(GeneratedCSharp.ComplaintsFor(native, first.Name, first.LanguageVersionName), Is.Empty, native);
         Assert.That(GeneratedCSharp.ComplaintsFor(replaced, before.Name, before.LanguageVersionName), Is.Empty, replaced);
         Assert.That(GeneratedCSharp.ComplaintsFor(native, before.Name, first.LanguageVersionName), Is.Not.Empty, $"{before.Name} has the form of {first.Name}:\n{native}");
@@ -177,7 +178,7 @@ public sealed class FloatViewCSharpTests {
     var mismatches = new List<string>();
     var compared = 0;
     foreach (var profile in CSharpProfile.All) {
-      var text = CSharpEmitter.Emit(module, profile).Single().Content;
+      var text = LegalizedCSharp.Emit(module, profile).Single().Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, profile.Name);
       var code = text[text.IndexOf("\n\n", StringComparison.Ordinal)..];
       if (!executed.TryAdd(code, profile.Name))

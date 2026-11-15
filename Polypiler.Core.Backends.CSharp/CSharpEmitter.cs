@@ -183,7 +183,8 @@ public static partial class CSharpEmitter {
         // Written as other operations, the profile has to have what those are written with.
         foreach (var part in Expressions(row.Rewrite!((IrIntrinsic)expression)).Where(IsTabled))
           Ask(part);
-      else if (!row.IsIn(profile) && row.Replacement is null)
+      else if (!row.IsIn(profile) && row.Replacement is null && !(row.Total is not null && expression is IrIntrinsic total && row.IsTotal!(total.Arguments))
+        && !(expression is IrIntrinsic view && IrViews.IsEndianOnView(view)))
         problems.Add(InexpressibleDescriptor.At($"'{row.Name}' cannot be expressed in C# profile '{profile.Name}'"));
     }
 
@@ -192,6 +193,7 @@ public static partial class CSharpEmitter {
       Ask(expression);
 
     problems.AddRange(FilterProblems(module, profile, table));
+    problems.AddRange(PointerProblems(module, profile, table));
     return problems.Distinct().ToList();
   }
 
@@ -252,7 +254,8 @@ public static partial class CSharpEmitter {
 
   /// <summary>
   /// The module with every floating-point operation the class does not write itself (<see cref="Writes"/>)
-  /// replaced by its portable implementation, copied into the class.
+  /// replaced by its portable implementation, and every operation whose row the profile lacks replaced
+  /// by its helper of the library (<see cref="CSharpCapability.Library"/>), each copied into the class.
   /// </summary>
   /// <param name="module">The module.</param>
   /// <param name="implementations">Gives the portable implementations, as the C# frontend imports <see cref="FloatOperationSources"/>; asked only when needed.</param>
@@ -261,7 +264,34 @@ public static partial class CSharpEmitter {
   /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>The module to emit.</returns>
   public static IrModule Legalize(IrModule module, Func<IrModule> implementations, CSharpProfile profile, FloatMode mode, CSharpCapabilities? capabilities = null)
-    => FloatLegalization.Lower(module, implementations, intrinsic => Writes(intrinsic, profile, mode, capabilities));
+    => LibraryLegalization.Lower(module, implementations, Rewrite(profile, mode, capabilities ?? CSharpCapabilities.Default));
+
+  /// <summary>
+  /// The module with every operation the profile has only as a helper of the library replaced by the
+  /// call of that helper, copied into the class; the floating-point operations stay as they are, for
+  /// <see cref="Legalize"/> to replace.
+  /// </summary>
+  /// <param name="module">The module.</param>
+  /// <param name="implementations">Gives the libraries as one module; asked only when needed.</param>
+  /// <param name="profile">The profile.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
+  /// <returns>The module to emit.</returns>
+  public static IrModule LegalizeHelpers(IrModule module, Func<IrModule> implementations, CSharpProfile profile, CSharpCapabilities? capabilities = null)
+    => LibraryLegalization.Lower(module, implementations, Helpers(profile, capabilities ?? CSharpCapabilities.Default));
+
+  /// <summary>What legalization replaces for a profile: the floating-point operations first, then every operation the profile has only as a helper of the library.</summary>
+  private static LibraryRewrite Rewrite(CSharpProfile profile, FloatMode mode, CSharpCapabilities table) {
+    var floats = FloatLegalization.Rewrite(intrinsic => Writes(intrinsic, profile, mode, table));
+    var helpers = Helpers(profile, table);
+    return (expression, calls) => floats(expression, calls) ?? helpers(expression, calls);
+  }
+
+  /// <summary>The rewrite of the operations a profile has only as a helper of the library: the row's helper, unless the row's form for arguments that cannot trap applies.</summary>
+  private static LibraryRewrite Helpers(CSharpProfile profile, CSharpCapabilities table)
+    => (expression, calls) => IsTabled(expression) && Row(expression, table) is { } row && row.IsLibraryIn(profile)
+      && !(row.Total is not null && expression is IrIntrinsic intrinsic && row.IsTotal!(intrinsic.Arguments))
+        ? row.Library!(expression, calls)
+        : null;
 
   /// <summary>
   /// Emits the module for a profile and a floating-point mode. The header names the profile and, where
@@ -428,6 +458,7 @@ public static partial class CSharpEmitter {
     IrReturn result => (result.Value is null ? [] : [result.Value], []),
     IrThrow or IrRethrow or IrTry or IrForEachCollection => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
     IrUsing scope => ([scope.Initializer], [scope.Body]),
+    IrYield or IrYieldBreak or IrYieldFrom or IrForEachSequence => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
     _ => null
   };
 
@@ -452,6 +483,7 @@ public static partial class CSharpEmitter {
     IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrThrowExpression => IrTree.Operands(expression),
     IrCollection => IrTree.Operands(expression),
     IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke => IrTree.Operands(expression),
+    IrArraySequence => IrTree.Operands(expression),
     _ => null
   };
 
@@ -593,6 +625,9 @@ public static partial class CSharpEmitter {
     private readonly CSharpCapabilities _table;
     private readonly FloatMode _mode;
     private readonly string _class;
+    /// <summary>The functions legalization copied in from the libraries, which the target passes treat as helpers.</summary>
+    private HashSet<string> _copied = [];
+
     private readonly HashSet<CSharpHelper> _used = [];
     private readonly Dictionary<string, string> _helpers;
     private readonly HashSet<string> _taken;
@@ -685,6 +720,8 @@ public static partial class CSharpEmitter {
       IrIntrinsic intrinsic when EnumOperations.IsEnum(intrinsic.Op) => false,
       // A conversion between numbers and text computes nothing that overflows; only the digits of a radix cast the value to its bits.
       IrIntrinsic intrinsic when NumberTextOperations.IsNumberText(intrinsic.Op) && intrinsic.Op != IrIntrinsicOp.FormatRadix => false,
+      // An endian access of a view is written by the view's own forms, which cast its bytes.
+      IrIntrinsic intrinsic when IrViews.IsEndianOnView(intrinsic) => true,
       IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic => this.Rewritten(intrinsic) is { } rewritten ? Expressions(rewritten).Any(this.Wraps) : this.Form(intrinsic).Template is not null,
       _ => false
     };
@@ -718,6 +755,7 @@ public static partial class CSharpEmitter {
     /// helpers follow its functions in the order of the table, each as its source has it.
     /// </summary>
     public CsCompilationUnit Module(string? @namespace) {
+      this._copied = [.. this._module.Implementations.Select(pair => pair.Function)];
       var members = new List<CsMember>();
       foreach (var constant in this._module.Constants)
         members.Add(this.Constant(constant));
@@ -729,12 +767,12 @@ public static partial class CSharpEmitter {
       var classes = this.Classes();
       foreach (var function in this._module.Functions.Where(function => !this.IsMember(function)))
         if (!this._generics.Generalized.TryGetValue(function.Name, out var origin))
-          members.Add(this.Function(function));
+          members.Add(this.Function(function) with { IsHelper = this._copied.Contains(function.Name) });
         else if (this._generics.Written.Contains(function.Name))
           members.Add(this.Generic(function, origin));
 
       // A portable implementation the legalization copied in is a helper: code of Polypiler's own the class carries.
-      var emitted = this._module.Implementations.Select(pair => FloatOperationSources.Helper(this._members[pair.Function].TrimStart('@'), pair.Implementation, "")).ToList();
+      var emitted = this._module.Implementations.Select(pair => ImplementationSources.Helper(this._members[pair.Function].TrimStart('@'), pair.Implementation, "")).ToList();
 
       // The table's order is the order of the helpers, whatever order the class calls them in.
       foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains)) {
@@ -765,7 +803,8 @@ public static partial class CSharpEmitter {
         .. FloatManifest.Lines(this._module, this._mode, NativeAccuracy.DotNet),
         .. Caveats(this._module),
         .. this.Notices(),
-        .. FloatOperationSources.Notices(this._module.Implementations.Select(pair => pair.Implementation))
+        .. this.PointerNotes(),
+        .. ImplementationSources.Notices(this._module.Implementations.Select(pair => pair.Implementation).Concat(this._module.Inlined))
       ];
       if (@namespace is null)
         return new CsCompilationUnit(header, types);
@@ -798,7 +837,7 @@ public static partial class CSharpEmitter {
     }
 
     private CsMethod Function(IrFunction function) {
-      IReadOnlyList<string> modifiers = [function.IsPublic ? "public" : "private", "static"];
+      var modifiers = Unsafe([function.IsPublic ? "public" : "private", "static"], function);
       var returns = new CsType(this.TypeName(function.ReturnType));
       var (parameters, body, expression) = this.Body(function, 0, function.Body, true);
       return new CsMethod(modifiers, returns, this._members[function.Name], [], parameters, body, expression);
@@ -815,6 +854,7 @@ public static partial class CSharpEmitter {
       this._localFunctions = this.LocalFunctions(statements);
       this._names = [.. this._taken.Concat(this._spellings.Values).Select(name => name.TrimStart('@'))];
       this._complements = Complements(function);
+      this._iterator = IrSequences.IsIterator(function);
       this._scopes.Clear();
       this._scopes.Add(new Scope());
       var parameters = function.Parameters.Skip(skipped).Select(parameter => new CsParameter(new CsType(this.TypeName(parameter.Type)), this.Declare(parameter))).ToList();
@@ -826,6 +866,7 @@ public static partial class CSharpEmitter {
       }
 
       var body = this.Statements(statements);
+      this.Ended(body);
       return (parameters, new CsBlock(wraps ? [new CsCheckedStatement(false, new CsBlock(body))] : body), null);
     }
 
@@ -835,6 +876,8 @@ public static partial class CSharpEmitter {
         : type.Declaration is { } declared ? this._generics.Parameters.ContainsKey(declared) ? declared.Name : this._typeNames[declared.Name] : type.IsView || type.IsMemory ? this.ViewTypeName(type)
         : type.IsCollection ? this.CollectionTypeName(type)
         : type.IsFunction ? this.FunctionTypeName(type)
+        : type.IsLazySequence ? this.SequenceTypeName(type)
+        : type.IsPointer ? this.TypeName(type.Element!) + "*"
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
@@ -889,7 +932,9 @@ public static partial class CSharpEmitter {
 
       switch (statement) {
         case IrBlock block:
-          statements.Add(new CsBlock(this.Statements(block)));
+          // A block that is one fixed statement is that statement, a scope of its own (#1331).
+          var inner = this.Statements(block);
+          statements.Add(inner is [CsFixed pinned] ? pinned : new CsBlock(inner));
           break;
         case IrDeclare declare:
           // The initializer is read before the variable is declared, as the IR reads it.
@@ -932,6 +977,9 @@ public static partial class CSharpEmitter {
 
           statements.Add(new CsContinue());
           break;
+        case IrReturn { Value: null } when this._iterator:
+          statements.Add(new CsYield(null));
+          break;
         case IrReturn result:
           statements.Add(new CsReturn(result.Value is null ? null : this.Stored(result.Value)));
           break;
@@ -939,7 +987,9 @@ public static partial class CSharpEmitter {
           statements.Add(this.Using(scope));
           break;
         default:
-          this.ExceptionStatement(statement, statements);
+          if (!this.SequenceStatement(statement, statements))
+            this.ExceptionStatement(statement, statements);
+
           break;
       }
     }
@@ -951,7 +1001,7 @@ public static partial class CSharpEmitter {
     /// <c>int</c> unasked. Inside a class named <c>var</c> the word is that class.
     /// </summary>
     private bool Infers(IrDeclare declare)
-      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView && !declare.Local.Type.IsMemory && !declare.Local.Type.IsOptional && !declare.Local.Type.IsFunction
+      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView && !declare.Local.Type.IsMemory && !declare.Local.Type.IsOptional && !declare.Local.Type.IsFunction && !declare.Local.Type.IsPointer
         && this.ClassName != "var" && this.Has(CSharpFeature.ImplicitlyTypedLocal);
 
     /// <summary>
@@ -1171,6 +1221,9 @@ public static partial class CSharpEmitter {
     }
 
     private (CsExpression Node, int Binding) Plain(IrExpr expression) {
+      if (this.SequenceNode(expression) is { } sequence)
+        return sequence;
+
       switch (expression) {
         case IrConst { Type.IsEnum: true } constant:
           return this.EnumLiteral(constant.Type, constant.Value);
@@ -1190,6 +1243,8 @@ public static partial class CSharpEmitter {
           return (this.GlobalName(reference.Global), Primary);
         case IrNull or IrGenericEquals or IrGenericCompare or IrCall when this.GenericNode(expression) is { } generic:
           return generic;
+        case IrNull { Type.IsPointer: true }:
+          return (new CsNullLiteral(), Primary);
         case IrNull { Type.IsArray: true } or IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrConditional { Condition: IrIsNull or IrIsNone }:
           return this.Optional(expression);
         case IrThrowExpression thrown:
@@ -1317,6 +1372,9 @@ public static partial class CSharpEmitter {
     }
 
     private (CsExpression Node, int Binding) Intrinsic(IrIntrinsic intrinsic) {
+      if (this.Pointer(intrinsic) is { } pointer)
+        return pointer;
+
       if (intrinsic.Op == IrIntrinsicOp.ArrayOf)
         return (new CsArrayCreation(new CsType(this.TypeName(intrinsic.Type.Element!)), null, new CsArrayInitializer([.. intrinsic.Arguments.Select(this.Stored)])), Unary);
 

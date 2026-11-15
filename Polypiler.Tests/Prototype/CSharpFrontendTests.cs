@@ -5,6 +5,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Prototype;
 
@@ -394,7 +395,7 @@ public sealed class CSharpFrontendTests {
       "public static long G(int a) { switch (a) { case 1: return 1; } switch (a) { case 2: int x = 2; return x; } switch (a) { default: long x = 3; return x; } }");
     Assert.That(g.Functions[0].Body.Statements.Select(statement => statement.GetType()), Is.EqualTo(new[] { typeof(IrSwitch), typeof(IrBlock), typeof(IrBlock) }));
     Assert.That(IrVerifier.Verify(g), Is.Empty);
-    Assert.That(JavaScriptEmitter.Emit(g).Single().Content, Does.Contain("  {\n    let x;\n    switch (a) {\n      case 2: {"));
+    Assert.That(LegalizedJavaScript.Emit(g).Single().Content, Does.Contain("  {\n    let x;\n    switch (a) {\n      case 2: {"));
   }
 
   /// <summary>A do loop, and the steps whose value is used, with the flags the source gives them.</summary>

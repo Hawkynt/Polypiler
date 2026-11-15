@@ -1,67 +1,64 @@
 # O0001 — Fold operations on constants and integer neutral/absorbing elements
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#154](https://github.com/Hawkynt/Polypiler/issues/154). Once implemented it is switched off with `--disable-opt O0001`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** `O0001ConstantFolding` runs among the passes over the legalized module ([#1353](https://github.com/Hawkynt/Polypiler/issues/1353)), over the library functions and every function a helper was inlined into. Folding everywhere, with floating-point results and the full table of identities, stays its target state. Switched off with `--disable-opt O0001`.
 
 ## What it does
 
-Frontends produce constant expressions constantly — table sizes, masks built from shifts, `x * 1` left by
-macro expansion — and every later pass (SCCP, range analysis, recognition) works better on literals. Folding
-must reproduce the *source* arithmetic exactly: the width, the overflow contract, the rounding. A folder that
-computes in the host's `long` or `double` turns into a silent miscompilation. PRD §4.8 (constant evaluation),
-§8 P1 exit gate ("target-neutral scalar arithmetic can be interpreted and constant-folded").
+An operation whose operands are all constants becomes its value - an integer or a truth value - as the
+interpreter computes it; one that traps stays, so the trap happens where the program has it. A choice
+on a constant becomes its branch, `true && c` becomes `c`, `false || c` becomes `c`. An operation with a
+neutral operand becomes the other operand: `x + 0`, `x - 0`, `x | 0`, `x ^ 0`, shifts by 0, `x * 1` and
+`x & ~0` in the width of the type; `x & 0` and `x * 0` become 0 where `x` may go unevaluated. A
+conversion back to the type a value had before it was widened is the value; a mask that keeps every bit
+a wrapping conversion keeps goes, and so does one that keeps every bit a widening from an unsigned type
+can set.
 
 ## Example
 
+`ushort.RotateLeft(x, 3)` for `net2.0` after inlining and propagation.
+
 ### Before
 
-```
-%a = Shl.u32[strict] 255, 8
-%b = Or.u32 %a, 255
-%c = Mul.u32[wrap] %x, 1
-%r = Add.u32[wrap] %c, %b
+With `--disable-opt O0001`:
+
+```csharp
+uint mask = (1u << 16) - 1u;
+uint value = (uint)x & mask;
+int count = 3 & (16 - 1);
+return (ushort)(((value << count) | (value >> (16 - count))) & mask);
 ```
 
 ### After
 
-```
-%r = Add.u32[wrap] %x, 65535
+```csharp
+uint value = (uint)x;
+return (ushort)((value << 3) | (value >> 13));
 ```
 
 ## When it applies
 
-1. All-constant folding: every operand is a literal of the instruction's operand type, the operation is in
-   the in-scope list, and evaluating it under its contract yields a value (not a trap). The result literal has
-   the instruction's result type; integer results are reduced to the type's width, `[sat]` results clamped.
-2. A `[checked]` operation whose evaluation overflows, a division or remainder by constant zero, a
-   `[checked]` signed `MinValue / -1`, and a `[strict]` shift with a constant amount ≥ width are **not**
-   folded; the instruction stays.
-3. Float folding requires the instruction's rounding mode to be round-to-nearest-even and the source profile
-   to declare floating-point status flags unobservable. A result that is NaN is folded only when the profile's
-   NaN policy is `canonical`; the literal is then the format's canonical quiet NaN.
-4. Identities apply to integer types only and only with the constant in the position listed (`0 - x` is not
-   `x`; `1 / x` is not `x`). `x*0` and `x&0` fold although `x` is discarded because integer operands are pure
-   values; the instruction defining `x` is left for [#156](https://github.com/Hawkynt/Polypiler/issues/156).
-
-## How it is proven
-
-`exhaustive-8bit` for every integer operation × contract and every identity via [#70](https://github.com/Hawkynt/Polypiler/issues/70);
-`interpreter` for wider integers and floats (the fold is the operation's defining evaluator in [#118](https://github.com/Hawkynt/Polypiler/issues/118) /
-[#116](https://github.com/Hawkynt/Polypiler/issues/116), cross-checked against the oracle above). There is no solver call, so no timeout path.
+- Every operand of a unary, binary, conversion or integer intrinsic node is a constant and the result is
+  an integer or a truth value.
+- The other forms above, matched node by node from the bottom up.
 
 ## When it must not fire
 
-- `Add.i32[checked] 2147483647, 1` — folding to −2147483648 erases the overflow trap.
-- `Add.u8[wrap] 200, 100` folded in a wider host type gives 300; the correct result is 44.
-- `Add.f64 %x, 0.0` → `%x` is wrong for `x = −0.0` (the sum is `+0.0`).
-- `Mul.f64 %x, 0.0` → `0.0` is wrong for `x = NaN` (NaN), `x = ∞` (NaN) and `x = −1.0` (`−0.0`).
-- `Add.f32 16777216.0, 1.0` computed in double and narrowed late is still 16777216.0, but `Add.f32 0.1, 0.2` computed in double gives a different bit pattern than the `f32` sum — fold in the instruction's own format.
-- `SDiv.i32[wrap] −7, 2` is −3 (truncation), not −4 (floor); `SRem.i32 −7, 2` is −1.
+- `1 / 0`, `checked(int.MaxValue + 1)`: the operation traps; folding would remove the trap.
+- `f() & 0`: the operand has an effect and must still run.
+- A floating-point result: the prototype leaves rounding to the backend's own forms.
 
 ## Switching it off
 
-`--disable-opt O0001`; active at `--opt balanced`, `speed`, `size` and `memory`, off at `--opt none`.
+`--disable-opt O0001`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs in phase `canonicalize` and again in `optimize` after [#164](https://github.com/Hawkynt/Polypiler/issues/164) and inlining expose constants; enables SCCP, range analysis and every recognition rule that matches literals.
+After [O0003](O0003-sccp.md), which puts the constants in, before [O0005](O0005-dead-code-elimination.md),
+which removes the branches a folded condition decides.
+
+## How it is proven
+
+`IrPassTests` folds constants, keeps a division by zero, checks every neutral and absorbing operand, the
+choices on constants, the widening undone and the masks a conversion makes redundant;
+`HelperEquivalenceTests` checks every helper after all passes against its intrinsic, trap kind included.

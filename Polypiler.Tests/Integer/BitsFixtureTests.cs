@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Integer;
 
@@ -67,8 +68,8 @@ public sealed class BitsFixtureTests {
   public void CSharpFixture_IsWrittenAtEveryJavaScriptLevel(string fixture) {
     var module = BitsFixtures.Imported(fixture);
     foreach (var profile in _levels) {
-      Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-      Assert.That(GeneratedJavaScript.Problems(JavaScriptEmitter.Emit(module, profile).Single().Content, profile), Is.Empty, profile.ToString());
+      Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+      Assert.That(GeneratedJavaScript.Problems(LegalizedJavaScript.Emit(module, profile).Single().Content, profile), Is.Empty, profile.ToString());
     }
   }
 
@@ -95,7 +96,7 @@ public sealed class BitsFixtureTests {
     var executed = new HashSet<string>();
     var mismatches = new List<string>();
     foreach (var profile in CSharpProfile.All) {
-      var text = CSharpEmitter.Emit(module, profile).Single().Content;
+      var text = LegalizedCSharp.Emit(module, profile).Single().Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
       if (!executed.Add(Code(text)))
         continue;

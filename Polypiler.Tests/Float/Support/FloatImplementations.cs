@@ -95,8 +95,15 @@ internal static class FloatImplementations {
     return Bits(format, IrInterpreter.Call(Module, target.Name, Arguments(target, format, operands)));
   }
 
-  private static IrModule Import() {
-    var result = CSharpFrontend.Import(FloatOperationSources.All.Select(file => new CSharpSource(file.Name, file.Text)).ToList());
+  /// <summary>
+  /// Both libraries as the build merges them: the portable implementations call the integer
+  /// operations, which a profile that lacks them takes from the helpers.
+  /// </summary>
+  private static IrModule Import()
+    => ImplementationSources.Merge(Imported(FloatOperationSources.All, new Dictionary<string, IrIntrinsicOp>()), Imported(HelperOperationSources.All, HelperOperationSources.Intrinsics));
+
+  private static IrModule Imported(IReadOnlyList<(string Name, string Text)> sources, IReadOnlyDictionary<string, IrIntrinsicOp> intrinsics) {
+    var result = CSharpFrontend.ImportLibrary([.. sources.Select(file => new CSharpSource(file.Name, file.Text))], intrinsics);
     if (result.Module is null)
       Assert.Fail(string.Join(Environment.NewLine, result.Diagnostics.Take(20)));
 

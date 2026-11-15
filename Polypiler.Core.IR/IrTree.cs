@@ -42,6 +42,7 @@ public static class IrTree {
     IrCollection operation => operation.Arguments,
     IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
     IrBoundMethod { Receiver: { } receiver } => [receiver],
+    IrArraySequence sequence => [sequence.Array],
     _ => []
   };
 
@@ -65,6 +66,9 @@ public static class IrTree {
     IrTry attempt => [.. attempt.Catches.Select(clause => clause.Filter).OfType<IrExpr>()],
     IrUsing scope => [scope.Initializer],
     IrForEachCollection loop => [loop.Collection],
+    IrYield produced => [produced.Value],
+    IrYieldFrom delegated => [delegated.Sequence],
+    IrForEachSequence loop => [loop.Sequence],
     _ => []
   };
 
@@ -82,14 +86,32 @@ public static class IrTree {
     IrTry attempt => [attempt.Body, .. attempt.Catches.Select(clause => clause.Body), .. attempt.Finally is { } final ? [final] : (IrBlock[])[]],
     IrUsing scope => [scope.Body],
     IrForEachCollection loop => [loop.Body],
+    IrForEachSequence loop => [loop.Body],
     _ => []
   };
 
   /// <summary>Every node of an expression, the expression first; the nodes of the body of a lambda are among them.</summary>
   /// <param name="expression">The expression.</param>
   /// <returns>The nodes in pre-order.</returns>
-  public static IEnumerable<IrExpr> Nodes(IrExpr expression)
-    => (expression is IrLambda lambda ? Nodes(lambda.Body) : Operands(expression).SelectMany(Nodes)).Prepend(expression);
+  public static IEnumerable<IrExpr> Nodes(IrExpr expression) {
+    // A stack rather than nested enumerators, which would pass every node up through each level above it.
+    var pending = new Stack<IrExpr>();
+    pending.Push(expression);
+    while (pending.Count > 0) {
+      var node = pending.Pop();
+      yield return node;
+      if (node is IrLambda lambda) {
+        foreach (var inner in Nodes(lambda.Body))
+          yield return inner;
+
+        continue;
+      }
+
+      var operands = Operands(node);
+      for (var index = operands.Count - 1; index >= 0; --index)
+        pending.Push(operands[index]);
+    }
+  }
 
   /// <summary>Every expression node within a statement, those of its blocks included.</summary>
   /// <param name="statement">The statement.</param>

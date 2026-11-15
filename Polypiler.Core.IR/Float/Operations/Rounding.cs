@@ -40,7 +40,11 @@ public static partial class FloatOperations {
   /// <param name="digits">The number of digits after the point, 0 to 15.</param>
   /// <param name="mode">One of <see cref="RoundToEven"/> to <see cref="RoundToPositiveInfinity"/>.</param>
   /// <returns>The rounded number.</returns>
+  /// <exception cref="ArgumentOutOfRangeException">The number of digits lies outside 0 to 15.</exception>
   public static double RoundDigits(double value, int digits, int mode) {
+    if (digits < 0 || digits > 15)
+      throw new ArgumentOutOfRangeException();
+
     if (Math.Abs(value) < 1e16) {
       var power10 = _roundPower10Double[digits];
       value = RoundIntegral(value * power10, mode) / power10;
@@ -54,7 +58,11 @@ public static partial class FloatOperations {
   /// <param name="digits">The number of digits after the point, 0 to 6.</param>
   /// <param name="mode">One of <see cref="RoundToEven"/> to <see cref="RoundToPositiveInfinity"/>.</param>
   /// <returns>The rounded number.</returns>
+  /// <exception cref="ArgumentOutOfRangeException">The number of digits lies outside 0 to 6.</exception>
   public static float RoundDigitsF(float value, int digits, int mode) {
+    if (digits < 0 || digits > 6)
+      throw new ArgumentOutOfRangeException();
+
     if (Math.Abs(value) < 1e8f) {
       var power10 = _roundPower10Single[digits];
       value = RoundIntegralF(value * power10, mode) / power10;

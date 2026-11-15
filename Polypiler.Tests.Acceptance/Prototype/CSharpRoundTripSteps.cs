@@ -10,6 +10,7 @@ using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Acceptance.Support;
 using Reqnroll;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -149,9 +150,9 @@ public sealed class CSharpRoundTripSteps(PrototypeScenario scenario) {
   /// <summary>Checks the module and, where the check finds nothing, emits it.</summary>
   [When("^it is (?:emitted as C#|checked)$")]
   public void Emitted() {
-    this._problems = [.. CSharpEmitter.Check(this._module!).Select(problem => problem.Code)];
+    this._problems = [.. LegalizedCSharp.Check(this._module!).Select(problem => problem.Code)];
     if (this._problems.Count == 0)
-      this._emitted = CSharpEmitter.Emit(this._module!).Single().Content;
+      this._emitted = LegalizedCSharp.Emit(this._module!).Single().Content;
   }
 
   /// <summary>The output escapes the keyword, compiles in both modes and computes what the interpreter computes.</summary>
@@ -166,7 +167,7 @@ public sealed class CSharpRoundTripSteps(PrototypeScenario scenario) {
   [Then(@"^(?:the emitter returns|the result is) (PLY\d{4}) and (?:no file|nothing is emitted)$")]
   public void Refused(string code) {
     Assert.That(this._problems, Is.EqualTo(new[] { code }));
-    Assert.That(() => CSharpEmitter.Emit(this._module!), NUnit.Framework.Throws.ArgumentException);
+    Assert.That(() => LegalizedCSharp.Emit(this._module!), NUnit.Framework.Throws.ArgumentException);
   }
 
   /// <summary>Translates a class of one method with the options of the step.</summary>

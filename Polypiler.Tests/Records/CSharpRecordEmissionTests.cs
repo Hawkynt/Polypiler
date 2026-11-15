@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Records;
 
@@ -22,7 +23,7 @@ internal sealed class CSharpRecordEmissionTests {
        from profile in CSharpProfile.All
        select new TestCaseData(fixture.File, fixture.Class, profile.Name).SetName($"{fixture.File} for {profile.Name}");
 
-  private static string Emitted(string file, CSharpProfile profile) => CSharpEmitter.Emit(RecordFixtures.Imported(file), profile)[0].Content;
+  private static string Emitted(string file, CSharpProfile profile) => LegalizedCSharp.Emit(RecordFixtures.Imported(file), profile)[0].Content;
 
   /// <summary>Test design 1 and 9: every fixture compiles for every profile and computes what .NET computes.</summary>
   [TestCaseSource(nameof(FixturesAndProfiles))]
@@ -50,8 +51,8 @@ internal sealed class CSharpRecordEmissionTests {
   [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
   public void EveryRecordNode_IsWrittenInEveryProfile(CSharpProfile profile) {
     var module = RecordModules.Everything();
-    Assert.That(CSharpEmitter.Check(module, profile), Is.Empty);
-    var text = CSharpEmitter.Emit(module, profile)[0].Content;
+    Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty);
+    var text = LegalizedCSharp.Emit(module, profile)[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     Assert.That(IrInterpreter.Call(module, "Run", [1]), Is.True);
     foreach (var checking in _overflowChecking)
@@ -69,7 +70,7 @@ internal sealed class CSharpRecordEmissionTests {
   [TestCase("net10.0", 16, "public readonly record struct Wide(double F0, ")]
   public void HashOfAStruct_FollowsTheFramework(string profileName, int fields, string expected) {
     var profile = CSharpProfile.Parse(profileName);
-    var text = CSharpEmitter.Emit(RecordModules.Wide(fields), profile)[0].Content;
+    var text = LegalizedCSharp.Emit(RecordModules.Wide(fields), profile)[0].Content;
     Assert.That(text, Does.Contain(expected));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     Assert.That(GeneratedCSharp.Compile(text, true).Method("Sum").Invoke(null, []), Is.EqualTo(fields * (fields - 1) / 2.0));
@@ -90,7 +91,7 @@ internal sealed class CSharpRecordEmissionTests {
       + "private static long G() => default(Pair).A; private static bool H(Pair a) => a == a; }";
     var module = PrototypeFixture.Import("C.cs", Source);
     var profile = CSharpProfile.Parse(profileName, languageVersion);
-    var text = CSharpEmitter.Emit(module, profile)[0].Content;
+    var text = LegalizedCSharp.Emit(module, profile)[0].Content;
     Assert.That(text, Does.Contain(declaration).And.Contain(use));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     Assert.That(GeneratedCSharp.Compile(text, true).Method("F").Invoke(null, []), Is.EqualTo(1L));
@@ -109,7 +110,7 @@ internal sealed class CSharpRecordEmissionTests {
         new IrBinary(IrBinaryOp.Add, new IrFieldLoad(new IrStructDefault(IrType.Struct(clash)), clash.Fields[0]), new IrFieldLoad(new IrStructDefault(IrType.Struct(member)), member.Fields[0]))))
     ]);
     var module = new IrModule("M", [new IrFunction("F", true, IrType.I32, [], [e], body)]) { Types = [keyword, clash, member] };
-    var text = CSharpEmitter.Emit(module, CSharpProfile.Net100)[0].Content;
+    var text = LegalizedCSharp.Emit(module, CSharpProfile.Net100)[0].Content;
     Assert.That(text, Does.Contain("public struct @event {").And.Contain("public int @class;").And.Contain("public int event_;").And.Contain("public struct M_ {").And.Contain("public struct F_ {"));
     Assert.That(GeneratedCSharp.Compile(text, false).Method("F").Invoke(null, []), Is.EqualTo(3));
   }

@@ -25,6 +25,10 @@ public static partial class CSharpEmitter {
     /// <summary>The statements of a block in the scope being written; a scope of a using declaration that ends the block writes its body after it.</summary>
     private void Sequence(IReadOnlyList<IrStmt> block, List<CsStatement> statements) {
       for (var index = 0; index < block.Count; ++index) {
+        // A pinned pointer is a fixed statement around the rest of the block (#1331).
+        if (this.Pinned(block, index, statements))
+          return;
+
         if (index == block.Count - 1 && block[index] is IrUsing { IsDeclaration: true } scope && this.Has(CSharpFeature.UsingDeclaration)) {
           statements.Add(this.Resource(scope) with { IsUsing = true });
           this.Sequence(scope.Body.Statements, statements);
