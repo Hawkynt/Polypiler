@@ -60,8 +60,8 @@ Feature: Rust frontend: branches, match, loops and evaluation order
     And the same call compiled and run by rustc with the same overflow mode panics with panic
     And interpreting with 3 returns 4
 
-  Scenario: An unsupported loop form is rejected with a stable code
-    Given the Rust function "pub fn f(mut o: Option<u32>) -> u32 { let mut s = 0; while let Some(v) = o { s += v; o = None; } s }"
+  Scenario: An unsupported conditional form is rejected with a stable code
+    Given the Rust function "pub fn f(o: Option<u32>) -> u32 { if let Some(v) = o && v > 1 { v } else { 0 } }"
     When it is imported with overflowChecks panic
     Then the import fails with diagnostic PLY1510 at line 1
     And no IR function is produced
