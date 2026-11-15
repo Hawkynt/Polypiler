@@ -966,6 +966,33 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY1550
+    severity: error
+    exit: UnsupportedConstruct
+    title: IR construct inexpressible in the Rust profile
+    message: "'<construct>' cannot be expressed in Rust profile '<profile>' (in <place>)"
+    rule: rust.backend.profile
+    area: rust
+    owner: "#461"
+    surfaces: standard error of polypiler translate --to rust, one line per refused construct
+  - code: PLY1560
+    severity: error
+    exit: UnsupportedConstruct
+    title: exception region under the panic trap policy
+    message: "exception region in <function> cannot be emitted under the trap policy 'panic': 'exception handling' is not supported by the Rust backend"
+    rule: rust.backend.exceptions
+    area: rust
+    owner: "#458"
+    surfaces: standard error of polypiler translate --to rust
+  - code: PLY1574
+    severity: error
+    exit: UnsupportedConstruct
+    title: exported Rust names collide
+    message: "exported names '<first>' and '<second>' both map to '<rust name>'"
+    rule: rust.backend.names
+    area: rust
+    owner: "#459"
+    surfaces: standard error of polypiler translate --to rust
   - code: PLY1591
     severity: error
     exit: TargetBuildFailure
