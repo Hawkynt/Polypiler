@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,7 @@ using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.Frontends.Rust;
+using Polypiler.Core.Frontends.Rust.Cargo;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
@@ -75,6 +77,10 @@ public sealed class TranslateCommand : ICliCommand {
   private const string Instantiate = "--instantiate";
   private const string RustVersion = "--rust-version";
   private const string OverflowChecksOption = "--overflow-checks";
+  private const string CargoProfileOption = "--cargo-profile";
+
+  /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
+  public const string RustOverflowCaveat = "rs-overflow-checks";
 
   private static readonly string[] _required = [From, To, Output];
 
@@ -98,7 +104,8 @@ public sealed class TranslateCommand : ICliCommand {
     [Float] = "the floating-point mode",
     [Namespace] = "C#: the namespace of the generated code",
     [Instantiate] = "C#: an instantiation of a public generic method that the class itself does not use",
-    [OverflowChecksOption] = "Rust: what an overflowing operator does, as rustc -C overflow-checks: panic (debug) or wrap (release)",
+    [OverflowChecksOption] = "Rust: what an overflowing operator does, as rustc -C overflow-checks: panic (debug) or wrap (release); by default what the Cargo profile gives",
+    [CargoProfileOption] = "Rust: the Cargo profile whose overflow-checks apply when --overflow-checks is not given (default: dev)",
     [LangVersion] = "C#: the language version, above the one of the profile",
     [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition"
   };
@@ -124,7 +131,7 @@ public sealed class TranslateCommand : ICliCommand {
   private static readonly Frontend[] _frontends = [
     new("csharp", [new(Instantiate, "<method[type,...]>")], InstantiateMisuse, ImportCSharp),
     new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript),
-    new("rust", [new(OverflowChecksOption, "<panic|wrap>")], OverflowChecksMisuse, ImportRust)
+    new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>")], OverflowChecksMisuse, ImportRust)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -448,17 +455,34 @@ public sealed class TranslateCommand : ICliCommand {
   private static string[] Names(string list) => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
   /// <summary>
-  /// Imports Rust with the overflow mode of <c>--overflow-checks</c>; without it the frontend refuses
-  /// the import (<c>PLY1503</c>), because the source alone does not say what <c>a + b</c> does.
+  /// Imports Rust with the overflow mode of <c>--overflow-checks</c>, else with the one Cargo builds
+  /// the source with: the <c>overflow-checks</c> of the profile <c>--cargo-profile</c> names
+  /// (<c>dev</c> by default) in the <c>Cargo.toml</c> that applies, the profile's default without
+  /// one. A profile the manifest does not define, or a manifest that is no TOML, is <c>PLY1503</c>.
+  /// The mode and its origin are a note and a caveat of the manifest.
   /// </summary>
   private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportRust(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
-    OverflowChecks? mode = options.TryGetValue(OverflowChecksOption, out var value) ? value == "panic" ? OverflowChecks.Panic : OverflowChecks.Wrap : null;
-    var imported = RustFrontend.Import(file, source, mode);
+    OverflowModeChoice choice;
+    if (options.TryGetValue(OverflowChecksOption, out var value))
+      choice = new(value == "panic" ? OverflowChecks.Panic : OverflowChecks.Wrap, OverflowChecksOption);
+    else
+      try {
+        choice = CargoOverflowMode.ForSource(context.Resolve(file), options.GetValueOrDefault(CargoProfileOption, CargoOverflowMode.DefaultProfile));
+      } catch (CargoProfileException unreadable) {
+        context.Report(RustFrontend.UnreadableOverflowModeDescriptor.At(string.Format(CultureInfo.InvariantCulture, RustFrontend.UnreadableOverflowModeDescriptor.MessageFormat, unreadable.Message), file, 1, 1));
+        return (null, (int)ExitCode.UsageError, []);
+      }
+
+    var description = choice.Mode == OverflowChecks.Panic
+      ? $"overflow checks on, an overflowing operator panics ({choice.Origin})"
+      : $"overflow checks off, an overflowing operator wraps ({choice.Origin})";
+    context.Note($"{file}: note {RustOverflowCaveat}: {description}");
+    var imported = RustFrontend.Import(file, source, choice.Mode);
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
 
-    var failure = imported.Diagnostics.Select(diagnostic => diagnostic.ExitCode).FirstOrDefault(code => code is ExitCode.InvalidSource or ExitCode.UsageError) ?? ExitCode.UnsupportedConstruct;
-    return (imported.Module, (int)failure, []);
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, [new ManifestMessage(RustOverflowCaveat, description)]);
   }
 
   /// <summary>What is wrong with <c>--overflow-checks</c>: a value other than <c>panic</c> or <c>wrap</c>.</summary>

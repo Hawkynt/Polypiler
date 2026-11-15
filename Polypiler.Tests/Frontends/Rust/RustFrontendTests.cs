@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Frontends.Rust;
 [TestFixture]
 public sealed class RustFrontendTests {
 
-  private static ImportResult Import(string source, OverflowChecks? mode = OverflowChecks.Panic) => RustFrontend.Import("snippet.rs", source, mode);
+  private static ImportResult Import(string source, OverflowChecks mode = OverflowChecks.Panic) => RustFrontend.Import("snippet.rs", source, mode);
 
   private static IrModule Module(string source, OverflowChecks mode = OverflowChecks.Panic) {
     var result = Import(source, mode);
@@ -27,7 +27,7 @@ public sealed class RustFrontendTests {
   private static string Run(string source, OverflowChecks mode, params object[] arguments)
     => RustFixture.Interpreted(Module(source, mode), new PrototypeCall("f", arguments));
 
-  private static string[] Codes(string source, OverflowChecks? mode = OverflowChecks.Panic) {
+  private static string[] Codes(string source, OverflowChecks mode = OverflowChecks.Panic) {
     var result = Import(source, mode);
     Assert.That(result.Module, Is.Null);
     return [.. result.Diagnostics.Select(diagnostic => diagnostic.Code)];
@@ -82,11 +82,6 @@ public sealed class RustFrontendTests {
     Assert.That(Operators(Module(Source)), Does.Contain(IrBinaryOp.ShiftLeft));
     Assert.That(Run(Source, OverflowChecks.Panic, 1u, 31u), Is.EqualTo("2147483648"));
   }
-
-  /// <summary>Scenario: a profile that leaves the overflow mode open is refused.</summary>
-  [Test]
-  public void ProfileWithoutOverflowChecks_IsRefused()
-    => Assert.That(Codes("pub fn f(a: i32, b: i32) -> i32 { a + b }", null), Is.EqualTo(new[] { RustFrontend.MissingOverflowChecks }));
 
   /// <summary>Scenario: an unsupported numeric type is rejected with a stable code at its position.</summary>
   [Test]

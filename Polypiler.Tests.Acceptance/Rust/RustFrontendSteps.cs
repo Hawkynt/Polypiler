@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Frontends.Rust;
+using Polypiler.Core.Frontends.Rust.Cargo;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 using Reqnroll;
@@ -19,7 +20,9 @@ namespace Polypiler.Tests.Acceptance.Rust;
 public sealed class RustFrontendSteps {
 
   private string _source = "";
+  private string? _manifest;
   private OverflowChecks? _mode;
+  private OverflowModeChoice? _choice;
   private ImportResult? _result;
   private PrototypeCall? _call;
   private string _outcome = "";
@@ -32,11 +35,42 @@ public sealed class RustFrontendSteps {
   [When("^it is imported with overflowChecks (panic|wrap)$")]
   public void Imported(string mode) {
     this._mode = mode == "panic" ? OverflowChecks.Panic : OverflowChecks.Wrap;
-    this._result = RustFrontend.Import("snippet.rs", this._source, this._mode);
+    this._result = RustFrontend.Import("snippet.rs", this._source, this._mode.Value);
   }
 
+  [Given("^a Cargo.toml beside it reading \"(.*)\"$")]
+  public void Manifest(string text) => this._manifest = text.Replace("\\n", "\n", StringComparison.Ordinal).Replace("\\\"", "\"", StringComparison.Ordinal);
+
   [When("^it is imported without an overflow mode$")]
-  public void ImportedWithoutMode() => this._result = RustFrontend.Import("snippet.rs", this._source, null);
+  public void ImportedWithoutMode() => this.ImportedUnderProfile(CargoOverflowMode.DefaultProfile);
+
+  /// <summary>
+  /// The import <c>translate</c> runs without <c>--overflow-checks</c>: the source in a folder of its
+  /// own, beside the manifest when the scenario gives one, the mode from the Cargo profile, a profile
+  /// the manifest cannot give as <c>PLY1503</c>.
+  /// </summary>
+  [When("^it is imported without an overflow mode under the Cargo profile \"(.*)\"$")]
+  public void ImportedUnderProfile(string profile) {
+    var directory = Directory.CreateTempSubdirectory("polypiler-rust-cargo-").FullName;
+    try {
+      var source = Path.Combine(directory, "snippet.rs");
+      File.WriteAllText(source, this._source);
+      if (this._manifest is not null)
+        File.WriteAllText(Path.Combine(directory, CargoOverflowMode.ManifestName), this._manifest);
+      this._choice = CargoOverflowMode.ForSource(source, profile);
+      this._mode = this._choice.Mode;
+      this._result = RustFrontend.Import("snippet.rs", this._source, this._mode.Value);
+    } catch (CargoProfileException unreadable) {
+      var descriptor = RustFrontend.UnreadableOverflowModeDescriptor;
+      this._result = new ImportResult(null, [descriptor.At(string.Format(CultureInfo.InvariantCulture, descriptor.MessageFormat, unreadable.Message), "snippet.rs", 1, 1)]);
+    } finally {
+      Directory.Delete(directory, true);
+    }
+  }
+
+  [Then("^the overflow mode is (panic|wrap), from \"(.*)\"$")]
+  public void TheModeIs(string mode, string origin)
+    => Assert.That(this._choice, Is.EqualTo(new OverflowModeChoice(mode == "panic" ? OverflowChecks.Panic : OverflowChecks.Wrap, origin)));
 
   [When("^it is imported with overflowChecks (panic|wrap) and interpreted with ?(.*)$")]
   public void ImportedAndInterpreted(string mode, string arguments) {

@@ -996,12 +996,12 @@ codes:
   - code: PLY1503
     severity: error
     exit: UsageError
-    title: Rust overflow mode not set
-    message: "the source profile does not set 'overflowChecks' (panic or wrap)"
+    title: Rust overflow mode not readable from Cargo
+    message: "the overflow mode cannot be read from Cargo: <the profile and the reason>"
     rule: rust.overflow-checks
     area: rust
     owner: "#466"
-    surfaces: standard error of polypiler translate --from rust without --overflow-checks
+    surfaces: "standard error of polypiler translate --from rust without --overflow-checks, when the Cargo profile that applies (--cargo-profile, default dev) is not defined, has no inherits or inherits in a circle, sets overflow-checks to no boolean, or the Cargo.toml is no TOML"
   - code: PLY1504
     severity: error
     exit: InvalidSource

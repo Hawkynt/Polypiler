@@ -9,13 +9,13 @@ flowchart LR
   parser --> checker["TypeChecker<br/>(inference, rustc's errors)"]
   checker --> lowering["FunctionLowering<br/>(overflow mode, panics, control flow)"]
   lowering --> ir["IR module"]
-  mode["--overflow-checks panic or wrap"] --> lowering
+  mode["--overflow-checks panic or wrap,<br/>else the Cargo profile (CargoOverflowMode)"] --> lowering
 ```
 
 `Polypiler.Core.Frontends.Rust` imports the scalar subset of Rust (2024 edition) into the IR:
 free functions over the primitive numeric types and `bool`, their operators, casts and overflow
-methods, and the control flow around them. `polypiler translate <file>.rs --from rust
---overflow-checks <panic|wrap>` runs it. Related: [IR](IR.md) · [pipeline](PIPELINE.md) ·
+methods, and the control flow around them. `polypiler translate <file>.rs --from rust` runs it,
+in the overflow mode of `--overflow-checks <panic|wrap>` or of the Cargo profile that applies. Related: [IR](IR.md) · [pipeline](PIPELINE.md) ·
 [exceptions](../reference/exceptions.md) · [integer operations](../reference/integer-operations.md).
 
 ## Parsing and typing in C#
@@ -47,8 +47,29 @@ constant operands; rustc also finds overflows its constant propagation sees thro
 ## The overflow mode
 
 Rust's `+` panics on overflow in a debug build and wraps in a release build; the source does not
-say which, so the import requires `--overflow-checks` and refuses without it (`PLY1503`). The mode
-decides `+ - *`, unary `-`, `abs`, `pow` and the shifts:
+say which. `--overflow-checks panic|wrap` says it. Without the flag the import takes what Cargo
+passes to rustc as `-C overflow-checks` (`Cargo/CargoOverflowMode.cs`, after The Cargo Book,
+"Profiles"):
+
+- the profile is `dev`, the one of a plain `cargo build`, or the one `--cargo-profile <name>` names;
+- the manifest is the nearest `Cargo.toml` at or above the source's folder, or the workspace root
+  whose profiles Cargo reads instead: the one its `package.workspace` names, else the nearest
+  `Cargo.toml` above it with a `[workspace]` table;
+- the profile's own `overflow-checks` wins; without one it inherits: `dev` is on, `release` off,
+  `test` inherits `dev`, `bench` `release`, a custom profile the one its `inherits` names;
+- without a `Cargo.toml` the built-in profiles keep these defaults, so a lone `.rs` file panics.
+
+The manifest is read by a small TOML 1.0.0 reader (`Cargo/TomlReader.cs`), written from the
+specification at toml.io; it reads every form a manifest may use (dotted and quoted keys, inline
+tables, arrays of tables, the four kinds of string). Profile overrides for single packages
+(`[profile.dev.package.<name>]`), `.cargo/config.toml` and `CARGO_PROFILE_*` variables are not
+read. A profile the manifest does not define, a custom profile without `inherits` or without a
+manifest, an `inherits` circle, an `overflow-checks` that is no boolean and a manifest that is no
+TOML are `PLY1503`, a usage error. The chosen mode and where it came from are a note on standard
+error and the caveat `rs-overflow-checks` of the translation's manifest:
+`overflow checks on, an overflowing operator panics (Cargo profile 'dev' of ../Cargo.toml)`.
+
+The mode decides `+ - *`, unary `-`, `abs`, `pow` and the shifts:
 
 | Construct | `panic` | `wrap` |
 | --- | --- | --- |
@@ -104,7 +125,7 @@ assignment before its place.
 | `PLY1500` | source rustc rejects: a syntax error, a type error with its code, a denied lint |
 | `PLY1501` | `i128`, `u128`, `f16`, `f128`, `char`, `str` and every type but the primitives above |
 | `PLY1502` | any other construct: closures, references, arrays, tuples as values, other methods (`floor`, `to_be`, ...), a `checked_*` result stored |
-| `PLY1503` | an import without the overflow mode |
+| `PLY1503` | an overflow mode the Cargo profile cannot give: an undefined profile, no `inherits`, a circle, a manifest that is no TOML |
 | `PLY1504` | a local whose type nothing decides |
 | `PLY1510` | `if let`, `while let`, `let ... else` |
 | `PLY1511` | `@` bindings, slice, struct, enum, reference and const patterns, a binding in an or-pattern, a `match` on a float |

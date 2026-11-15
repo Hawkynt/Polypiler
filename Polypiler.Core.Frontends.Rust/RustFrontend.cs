@@ -12,7 +12,9 @@ namespace Polypiler.Core.Frontends.Rust;
 /// <summary>
 /// What <c>+</c>, <c>-</c>, <c>*</c>, unary <c>-</c>, <c>abs</c>, <c>pow</c> and the shifts do when the
 /// result does not fit: <c>rustc</c>'s <c>-C overflow-checks</c>, on in a debug build and off in a
-/// release build. The source alone does not say, so the import never guesses it.
+/// release build. The source alone does not say: the caller passes the mode, which the command line
+/// takes from <c>--overflow-checks</c> or from the Cargo profile that applies
+/// (<see cref="Cargo.CargoOverflowMode"/>).
 /// </summary>
 public enum OverflowChecks {
 
@@ -66,12 +68,12 @@ public static class RustFrontend {
   [Diagnostic]
   public static readonly DiagnosticDescriptor UnsupportedDescriptor = new(Unsupported, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "'{0}' is not supported by the Rust frontend", "rust.subset");
 
-  /// <summary>The code for an import that does not say what overflow does.</summary>
-  public const string MissingOverflowChecks = "PLY1503";
+  /// <summary>The code for an overflow mode that the Cargo profile that applies does not give: a profile that is not defined, a manifest that is no TOML.</summary>
+  public const string UnreadableOverflowMode = "PLY1503";
 
-  /// <summary>The registered diagnostic of <see cref="MissingOverflowChecks"/>.</summary>
+  /// <summary>The registered diagnostic of <see cref="UnreadableOverflowMode"/>.</summary>
   [Diagnostic]
-  public static readonly DiagnosticDescriptor MissingOverflowChecksDescriptor = new(MissingOverflowChecks, DiagnosticSeverity.Error, ExitCode.UsageError, "the source profile does not set 'overflowChecks' (panic or wrap)", "rust.overflow-checks");
+  public static readonly DiagnosticDescriptor UnreadableOverflowModeDescriptor = new(UnreadableOverflowMode, DiagnosticSeverity.Error, ExitCode.UsageError, "the overflow mode cannot be read from Cargo: {0}", "rust.overflow-checks");
 
   /// <summary>The code for a value whose type nothing decides.</summary>
   public const string UnresolvedType = "PLY1504";
@@ -130,7 +132,7 @@ public static class RustFrontend {
   public static readonly DiagnosticDescriptor UnsupportedAttributeDescriptor = new(UnsupportedAttribute, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "attribute '{0}' is not supported", "rust.attributes");
 
   private static readonly Dictionary<string, DiagnosticDescriptor> _descriptors = new[] {
-    InvalidSourceDescriptor, UnsupportedTypeDescriptor, UnsupportedDescriptor, MissingOverflowChecksDescriptor, UnresolvedTypeDescriptor,
+    InvalidSourceDescriptor, UnsupportedTypeDescriptor, UnsupportedDescriptor, UnresolvedTypeDescriptor,
     ConditionalBindingDescriptor, UnsupportedPatternDescriptor, UnsupportedIterableDescriptor, CoroutineDescriptor,
     UnsupportedFunctionDescriptor, UnsupportedMacroDescriptor, UnsupportedAttributeDescriptor
   }.ToDictionary(descriptor => descriptor.Code);
@@ -138,16 +140,11 @@ public static class RustFrontend {
   /// <summary>Imports one Rust source file.</summary>
   /// <param name="path">The name of the file, used in diagnostics; the module is named after it.</param>
   /// <param name="source">The text of the file.</param>
-  /// <param name="overflowChecks">
-  /// What an overflowing operator does: <c>rustc</c>'s <c>-C overflow-checks</c>. <see langword="null"/>
-  /// refuses the import with <see cref="MissingOverflowChecks"/>: the frontend never picks a mode.
-  /// </param>
+  /// <param name="overflowChecks">What an overflowing operator does: <c>rustc</c>'s <c>-C overflow-checks</c>.</param>
   /// <returns>The module, or the diagnostics that explain why there is none.</returns>
-  public static ImportResult Import(string path, string source, OverflowChecks? overflowChecks) {
+  public static ImportResult Import(string path, string source, OverflowChecks overflowChecks) {
     ArgumentNullException.ThrowIfNull(path);
     ArgumentNullException.ThrowIfNull(source);
-    if (overflowChecks is not { } mode)
-      return new(null, [MissingOverflowChecksDescriptor.At(MissingOverflowChecksDescriptor.MessageFormat, path, 1, 1)]);
 
     SourceFile file;
     try {
@@ -163,7 +160,7 @@ public static class RustFrontend {
       diagnostics.Add(descriptor.At(message, path, at.Line, at.Column));
     }
 
-    var lowered = ModuleLowering.Run(file, mode, Report);
+    var lowered = ModuleLowering.Run(file, overflowChecks, Report);
     if (diagnostics.Count > 0 || lowered is null)
       return new(null, diagnostics);
 

@@ -113,7 +113,8 @@ internal static class RustOracle {
     _ => Convert.ToString(value, CultureInfo.InvariantCulture)!
   };
 
-  private static (int ExitCode, string Output, string Error) Run(string program, string directory, params string[] arguments) {
+  /// <summary>Runs a program in a folder and waits for it: its exit code, standard output and standard error.</summary>
+  internal static (int ExitCode, string Output, string Error) Run(string program, string directory, params string[] arguments) {
     var start = new ProcessStartInfo(program) { WorkingDirectory = directory, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
     foreach (var argument in arguments)
       start.ArgumentList.Add(argument);

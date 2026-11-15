@@ -143,7 +143,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1500](PLY1500.md) | error | 4 (InvalidSource) | `<E####: the error, or the denied lint and its name>` | #466 |
 | [PLY1501](PLY1501.md) | error | 3 (UnsupportedConstruct) | `type '<type>' is not supported by the Rust frontend` | #466 |
 | [PLY1502](PLY1502.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Rust frontend` | #466 |
-| [PLY1503](PLY1503.md) | error | 2 (UsageError) | `the source profile does not set 'overflowChecks' (panic or wrap)` | #466 |
+| [PLY1503](PLY1503.md) | error | 2 (UsageError) | `the overflow mode cannot be read from Cargo: <the profile and the reason>` | #466 |
 | [PLY1504](PLY1504.md) | error | 4 (InvalidSource) | `the type of '<name>' could not be resolved` | #466 |
 | [PLY1510](PLY1510.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Rust frontend` | #463 |
 | [PLY1511](PLY1511.md) | error | 3 (UnsupportedConstruct) | `pattern '<pattern>' is not supported` | #463 |

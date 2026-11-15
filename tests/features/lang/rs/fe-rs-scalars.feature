@@ -51,10 +51,24 @@ Feature: Rust frontend: numeric literals, arithmetic, overflow methods and casts
     And the same call compiled and run by rustc with the same overflow mode panics with overflow
     And interpreting with 1, 31 returns 2147483648
 
-  Scenario: A profile that leaves the overflow mode open is refused
+  Scenario: Without an overflow mode and without a Cargo.toml, Cargo's dev profile panics
     Given the Rust function "pub fn f(a: i32, b: i32) -> i32 { a + b }"
     When it is imported without an overflow mode
-    Then the import fails with diagnostic PLY1503
+    Then the overflow mode is panic, from "the default of Cargo profile 'dev', no Cargo.toml above the source"
+    And interpreting with 2147483647, 1 reports the panic overflow
+
+  Scenario: Without an overflow mode the Cargo profile beside the source decides
+    Given the Rust function "pub fn f(a: i32, b: i32) -> i32 { a + b }"
+    And a Cargo.toml beside it reading "[package]\nname = \"p\"\n[profile.dev]\noverflow-checks = false"
+    When it is imported without an overflow mode
+    Then the overflow mode is wrap, from "Cargo profile 'dev' of Cargo.toml"
+    And interpreting with 2147483647, 1 returns -2147483648
+
+  Scenario: A Cargo profile the manifest does not define is refused
+    Given the Rust function "pub fn f(a: i32, b: i32) -> i32 { a + b }"
+    And a Cargo.toml beside it reading "[package]\nname = \"p\""
+    When it is imported without an overflow mode under the Cargo profile "fast"
+    Then the import fails with diagnostic PLY1503 carrying "Cargo profile 'fast' is not defined in Cargo.toml"
     And no IR function is produced
 
   Scenario: An unsupported numeric type is rejected with a stable code
