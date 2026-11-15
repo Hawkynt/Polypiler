@@ -78,6 +78,8 @@ internal sealed class BoundModel {
 
   public ILocalSymbol? GetDeclaredSymbol(ForEachStatementSyntax node) => this.Inner.GetDeclaredSymbol(node);
 
+  public ILocalSymbol? GetDeclaredSymbol(CatchDeclarationSyntax node) => this.Inner.GetDeclaredSymbol(node);
+
   /// <summary>Whether the compiler bound a type written in the source to a type parameter, which the instantiation replaces.</summary>
   /// <param name="node">The type as written, or an expression of it.</param>
   /// <returns><see langword="true"/> for a type parameter.</returns>
