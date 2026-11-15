@@ -24,6 +24,8 @@ public static class PythonPrinter {
 
   /// <summary>The binding strength of each kind of expression, loosest first.</summary>
   private enum Precedence {
+    Yield = -1,
+    Lambda = 0,
     Conditional = 1,
     Or = 2,
     And = 3,
@@ -69,7 +71,7 @@ public static class PythonPrinter {
   /// <returns>Its text.</returns>
   public static string Print(PyExpression expression) {
     ArgumentNullException.ThrowIfNull(expression);
-    return Expression(expression, Precedence.Conditional, 0);
+    return Expression(expression, Precedence.Lambda, 0);
   }
 
   private static string Comment(string line) => line.Length == 0 ? "#" : "# " + line;
@@ -99,14 +101,14 @@ public static class PythonPrinter {
     var pad = Pad(level);
     switch (statement) {
       case PyExpressionStatement expression:
-        text.Append(pad).Append(Expression(expression.Expression, Precedence.Conditional, level)).Append('\n');
+        text.Append(pad).Append(Expression(expression.Expression, Precedence.Yield, level)).Append('\n');
         break;
       case PyAssign assign:
         text.Append(pad).Append(Expression(assign.Target, Precedence.Primary, level));
         if (assign.Annotation is { } annotation)
           text.Append(": ").Append(Expression(annotation, Precedence.Conditional, level));
 
-        text.Append(" = ").Append(Expression(assign.Value, Precedence.Conditional, level)).Append('\n');
+        text.Append(" = ").Append(Expression(assign.Value, Precedence.Yield, level)).Append('\n');
         break;
       case PyAnnotation declaration:
         text.Append(pad).Append(declaration.Name).Append(": ").Append(Expression(declaration.Annotation, Precedence.Conditional, level)).Append('\n');
@@ -115,7 +117,7 @@ public static class PythonPrinter {
         text.Append(pad).Append("return\n");
         break;
       case PyReturn @return:
-        text.Append(pad).Append("return ").Append(Expression(@return.Value!, Precedence.Conditional, level)).Append('\n');
+        text.Append(pad).Append("return ").Append(Expression(@return.Value!, Precedence.Lambda, level)).Append('\n');
         break;
       case PyPass:
         text.Append(pad).Append("pass\n");
@@ -126,8 +128,44 @@ public static class PythonPrinter {
       case PyContinue:
         text.Append(pad).Append("continue\n");
         break;
+      case PyRaise { Exception: null }:
+        text.Append(pad).Append("raise\n");
+        break;
       case PyRaise raise:
-        text.Append(pad).Append("raise ").Append(Expression(raise.Exception, Precedence.Conditional, level)).Append('\n');
+        text.Append(pad).Append("raise ").Append(Expression(raise.Exception!, Precedence.Conditional, level)).Append('\n');
+        break;
+      case PyNonlocal nonlocal:
+        text.Append(pad).Append("nonlocal ").Append(string.Join(", ", nonlocal.Names)).Append('\n');
+        break;
+      case PyTry attempt:
+        text.Append(pad).Append("try:\n");
+        Statements(attempt.Body, level + 1, text);
+        foreach (var handler in attempt.Handlers) {
+          text.Append(pad).Append("except");
+          if (handler.Type is { } caught)
+            text.Append(' ').Append(Expression(caught, Precedence.Conditional, level));
+
+          if (handler.Name is { } bound)
+            text.Append(" as ").Append(bound);
+
+          text.Append(":\n");
+          Statements(handler.Body, level + 1, text);
+        }
+
+        if (attempt.Finally.Count > 0 || attempt.Handlers.Count == 0) {
+          text.Append(pad).Append("finally:\n");
+          Statements(attempt.Finally, level + 1, text);
+        }
+
+        break;
+      case PyClassDef type:
+        Decorators(type.Decorators, level, text);
+        text.Append(pad).Append("class ").Append(type.Name);
+        if (type.Bases.Count > 0)
+          text.Append('(').Append(string.Join(", ", type.Bases.Select(@base => Expression(@base, Precedence.Conditional, level)))).Append(')');
+
+        text.Append(":\n");
+        Statements(type.Body, level + 1, text);
         break;
       case PyGlobal global:
         text.Append(pad).Append("global ").Append(string.Join(", ", global.Names)).Append('\n');
@@ -185,9 +223,23 @@ public static class PythonPrinter {
     Statements(conditional.Else, level + 1, text);
   }
 
+  private static void Decorators(IReadOnlyList<PyExpression> decorators, int level, StringBuilder text) {
+    foreach (var decorator in decorators)
+      text.Append(Pad(level)).Append('@').Append(Expression(decorator, Precedence.Primary, level)).Append('\n');
+  }
+
+  private static string Parameter(PyParameter parameter, int level) {
+    var written = parameter.Annotation is { } annotation ? parameter.Name + ": " + Expression(annotation, Precedence.Conditional, level) : parameter.Name;
+    if (parameter.Default is { } value)
+      written += (parameter.Annotation is null ? "=" : " = ") + Expression(value, Precedence.Conditional, level);
+
+    return written;
+  }
+
   private static void Function(PyFunctionDef function, int level, StringBuilder text) {
     var pad = Pad(level);
-    var parameters = function.Parameters.Select(parameter => parameter.Name + ": " + Expression(parameter.Annotation, Precedence.Conditional, level)).ToList();
+    Decorators(function.Decorators, level, text);
+    var parameters = function.Parameters.Select(parameter => Parameter(parameter, level)).ToList();
     var returns = " -> " + Expression(function.Returns, Precedence.Conditional, level) + ":";
     var line = $"{pad}def {function.Name}({string.Join(", ", parameters)}){returns}";
     if (line.Length <= LineWidth || parameters.Count == 0) {
@@ -204,6 +256,8 @@ public static class PythonPrinter {
   }
 
   private static Precedence Of(PyExpression expression) => expression switch {
+    PyYield => Precedence.Yield,
+    PyLambda => Precedence.Lambda,
     PyInt integer => integer.Value.Sign < 0 ? Precedence.Unary : Precedence.Atom,
     PyFloat number => double.IsNegative(number.Value) ? Precedence.Unary : Precedence.Atom,
     PyConditional => Precedence.Conditional,
@@ -252,10 +306,28 @@ public static class PythonPrinter {
         // A number before a dot would be read as part of the number.
         var target = attribute.Target is PyInt or PyFloat ? "(" + Bare(attribute.Target, level) + ")" : Expression(attribute.Target, Precedence.Primary, level);
         return target + "." + attribute.Name;
+      case PySubscript { Index: PyTuple { Elements.Count: > 1 } elements } subscript:
+        // A tuple of several indexes stands without its parentheses: Callable[[int], int].
+        return Expression(subscript.Target, Precedence.Primary, level) + "[" + string.Join(", ", elements.Elements.Select(element => Expression(element, Precedence.Conditional, level))) + "]";
       case PySubscript subscript:
         return Expression(subscript.Target, Precedence.Primary, level) + "[" + Expression(subscript.Index, Precedence.Conditional, level) + "]";
       case PyCall call:
-        return Expression(call.Callee, Precedence.Primary, level) + "(" + string.Join(", ", call.Arguments.Select(argument => Expression(argument, Precedence.Conditional, level))) + ")";
+        return Expression(call.Callee, Precedence.Primary, level) + "(" + string.Join(", ", [
+          .. call.Arguments.Select(argument => Expression(argument, Precedence.Lambda, level)),
+          .. call.Keywords.Select(keyword => keyword.Name + "=" + Expression(keyword.Value, Precedence.Lambda, level))
+        ]) + ")";
+      case PyStarred starred:
+        return "*" + Expression(starred.Value, Precedence.BitOr, level);
+      case PySlice slice:
+        return (slice.Lower is { } lower ? Expression(lower, Precedence.Conditional, level) : "") + ":" + (slice.Upper is { } upper ? Expression(upper, Precedence.Conditional, level) : "");
+      case PyDict dict:
+        return "{" + string.Join(", ", dict.Keys.Select((key, index) => Expression(key, Precedence.Lambda, level) + ": " + Expression(dict.Values[index], Precedence.Lambda, level))) + "}";
+      case PyLambda lambda:
+        return "lambda" + (lambda.Parameters.Count == 0 ? "" : " " + string.Join(", ", lambda.Parameters)) + ": " + Expression(lambda.Body, Precedence.Lambda, level);
+      case PyYield { Value: null }:
+        return "yield";
+      case PyYield yielded:
+        return (yielded.From ? "yield from " : "yield ") + Expression(yielded.Value!, Precedence.Conditional, level);
       case PyUnary { Operator: "not" } negation:
         return "not " + Expression(negation.Operand, Precedence.Not, level);
       case PyUnary unary:
@@ -282,7 +354,7 @@ public static class PythonPrinter {
       case PyNamedExpression named:
         return "(" + named.Name + " := " + Expression(named.Value, Precedence.Conditional, level) + ")";
       case PyTuple tuple:
-        return tuple.Elements.Count == 1 ? "(" + Expression(tuple.Elements[0], Precedence.Conditional, level) + ",)" : Display("(", ")", tuple.Elements, tuple.Tabulated, level);
+        return tuple.Elements.Count == 1 ? "(" + Expression(tuple.Elements[0], Precedence.Lambda, level) + ",)" : Display("(", ")", tuple.Elements, tuple.Tabulated, level);
       case PyList list:
         return Display("[", "]", list.Elements, list.Tabulated, level);
       default:
@@ -303,7 +375,7 @@ public static class PythonPrinter {
 
   /// <summary>The elements of a tuple or list between their brackets: on one line, or eight to a line when it is a table of more than eight.</summary>
   private static string Display(string open, string close, IReadOnlyList<PyExpression> elements, bool tabulated, int level) {
-    var written = elements.Select(element => Expression(element, Precedence.Conditional, level)).ToList();
+    var written = elements.Select(element => Expression(element, Precedence.Lambda, level)).ToList();
     if (!tabulated || written.Count <= 8)
       return open + string.Join(", ", written) + close;
 

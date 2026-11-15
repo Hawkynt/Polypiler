@@ -16,7 +16,7 @@ namespace Polypiler.Core.Backends.Python;
 /// integer is rounded to binary32 directly, never through a double, which would round twice. Each is
 /// read into the syntax tree once and declared in a module only when the module names it.
 /// </summary>
-internal static class PythonHelpers {
+internal static partial class PythonHelpers {
 
   /// <summary>The folder of the helpers in the repository, which their origin names.</summary>
   public const string Folder = "Polypiler.Core.Backends.Python/Helpers";
@@ -98,6 +98,9 @@ internal static class PythonHelpers {
 
   /// <summary>A float truncated toward zero to an integer of any magnitude; the overflow trap for a NaN and an infinity.</summary>
   public const string FloatToBig = "_ply_float_big";
+
+  /// <summary>ECMA-262's <c>Math.round</c>: the nearest integral double, a tie toward positive infinity, the sign kept on a zero.</summary>
+  public const string RoundHalfUp = "_ply_round_half_up";
 
   /// <summary>The source of every helper, in the order a module declares them.</summary>
   private const string Source = """
@@ -283,19 +286,50 @@ internal static class PythonHelpers {
         if not math.isfinite(value):
             raise OverflowError("integer overflow")
         return int(value)
+
+
+    def _ply_round_half_up(value: float) -> float:
+        if not math.isfinite(value):
+            return value
+        floor = float(math.floor(value))
+        rounded = floor + 1.0 if value - floor >= 0.5 else floor
+        return math.copysign(0.0, value) if rounded == 0.0 else rounded
     """;
 
-  private static readonly Lazy<IReadOnlyList<PyFunctionDef>> _functions = new(() => [
-    .. PythonSyntaxReader.ReadModule(Source).Body.Cast<PyFunctionDef>().Select(function => function with { IsHelper = true })
+  /// <summary>Every helper's declaration - a function, or the class of a representation - in the order a module declares them.</summary>
+  private static readonly Lazy<IReadOnlyList<PyStatement>> _declarations = new(() => [
+    .. PythonSyntaxReader.ReadModule(string.Join("\n\n\n", Source, ObjectsSource, StringsSource, CollectionsSource, ViewsSource, PointersSource, NumberTextSource)).Body
+      .Select(statement => statement switch {
+        PyFunctionDef function => function with { IsHelper = true },
+        // A blank line in front of every method of a class but the first (PEP 8).
+        PyClassDef type => type with { Body = [.. type.Body.Select((member, index) => index > 0 && member is PyFunctionDef ? member with { Leading = PyTrivia.Blank } : member)] },
+        _ => statement
+      })
   ]);
 
+  /// <summary>The name a helper's declaration declares.</summary>
+  private static string NameOf(PyStatement statement) => statement switch {
+    PyFunctionDef function => function.Name,
+    PyClassDef type => type.Name,
+    _ => throw new InvalidOperationException("A helper is a function or a class.")
+  };
+
   /// <summary>The names of the helpers, in the order a module declares them.</summary>
-  public static IReadOnlyList<string> Order => [.. _functions.Value.Select(function => function.Name)];
+  public static IReadOnlyList<string> Order => [.. _declarations.Value.Select(NameOf)];
 
   /// <summary>The declaration of a helper.</summary>
   /// <param name="name">The name of the helper.</param>
-  /// <returns>The function, marked as a helper.</returns>
+  /// <returns>The function, marked as a helper, or the class.</returns>
   /// <exception cref="InvalidOperationException">There is no helper of that name.</exception>
-  public static PyFunctionDef Declaration(string name) => _functions.Value.First(function => function.Name == name);
+  public static PyStatement Declaration(string name) => _declarations.Value.First(statement => NameOf(statement) == name);
+
+  /// <summary>The helpers and the exception classes a helper names in its body, which a module that declares it declares as well.</summary>
+  /// <param name="name">The name of the helper.</param>
+  /// <returns>The names.</returns>
+  public static IEnumerable<string> Needs(string name) {
+    var names = PythonSyntaxRewriter.DescendantsAndSelf(Declaration(name)).OfType<PyName>().Select(reference => reference.Name).ToHashSet(StringComparer.Ordinal);
+    names.Remove(name);
+    return names;
+  }
 
 }

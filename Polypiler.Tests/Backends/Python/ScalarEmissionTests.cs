@@ -231,17 +231,18 @@ public sealed class ScalarEmissionTests {
 
   [Test]
   public void AnOperationWithoutAPythonForm_IsRefusedByName() {
-    var array = L("a", IrType.Array(IrType.I32));
-    var module = new IrModule("M", [Function("f", IrType.Void, [array], new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.ArrayClear, IrType.Void, [R(array)])), new IrReturn(null))]);
-    Assert.That(Problems(module), Is.EqualTo(new[] { "error PLY1851: 'ArrayClear' cannot be expressed in Python profile 'py3.14' (function 'f')" }));
-    Assert.That(() => PythonEmitter.Emit(module), Throws.ArgumentException.With.Message.Contains("ArrayClear"));
+    var indices = L("a", IrType.Array(IrType.I32));
+    var compare = L("c", IrType.Function(IrType.I32, IrType.I32, IrType.I32));
+    var module = new IrModule("M", [Function("f", IrType.Void, [indices, compare], new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StableSort, IrType.Void, [R(indices), R(compare)])), new IrReturn(null))]);
+    Assert.That(Problems(module), Is.EqualTo(new[] { "error PLY1851: 'StableSort' cannot be expressed in Python profile 'py3.14' (function 'f')" }));
+    Assert.That(() => PythonEmitter.Emit(module), Throws.ArgumentException.With.Message.Contains("StableSort"));
   }
 
   [Test]
-  public void ATypeWithoutAPythonRepresentation_IsRefused() {
+  public void AStringParameter_IsAStr() {
     var text = L("s", IrType.String);
-    var module = new IrModule("M", [Function("f", IrType.I32, [text], new IrReturn(I(0)))]);
-    Assert.That(Problems(module), Is.EqualTo(new[] { "error PLY1850: type 'str' has no Python representation in profile 'py3.14' (function 'f')" }));
+    var module = new IrModule("M", [Function("f", IrType.I32, [text], new IrReturn(new IrIntrinsic(IrIntrinsicOp.StrLength, IrType.I32, [R(text)])))]);
+    Assert.That(Emit(module), Does.Contain("def f(s: str) -> int:\n    return len(s)\n"));
   }
 
   [Test]

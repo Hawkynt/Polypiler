@@ -116,6 +116,7 @@ public static partial class PythonEmitter {
   private static (TargetPipelineResult<PyModule> Result, IReadOnlyList<HelperText> Helpers) Built(IrModule module, PythonProfile profile, FloatMode mode, PythonCapabilities? capabilities, TargetPassOptions passes) {
     ArgumentNullException.ThrowIfNull(profile);
     ArgumentNullException.ThrowIfNull(passes);
+    module = SequenceFusion.Run(module);
     var problems = IrVerifier.Verify(module);
     var writer = new Writer(profile, capabilities ?? PythonCapabilities.Standard, mode);
     var tree = problems.Count > 0 ? null : writer.Module(module);
@@ -127,7 +128,8 @@ public static partial class PythonEmitter {
 
   /// <summary>The helpers of a file, measured in the text of their declarations; a helper the passes removed is listed with no text.</summary>
   private static IReadOnlyList<EmittedHelper> Measured(PyModule tree, IReadOnlyList<HelperText> helpers, string file) {
-    var texts = tree.Body.OfType<PyFunctionDef>().ToDictionary(function => function.Name, PythonPrinter.Print, StringComparer.Ordinal);
+    var texts = tree.Body.Where(statement => statement is PyFunctionDef or PyClassDef)
+      .ToDictionary(statement => statement is PyFunctionDef function ? function.Name : ((PyClassDef)statement).Name, PythonPrinter.Print, StringComparer.Ordinal);
     return EmittedHelper.Measure([.. helpers.Select(helper => helper with { Text = texts.GetValueOrDefault(helper.Name, "") })], file);
   }
 
@@ -142,6 +144,7 @@ public static partial class PythonEmitter {
   public static IReadOnlyList<Diagnostic> Check(IrModule module, PythonProfile profile, PythonCapabilities? capabilities = null) {
     ArgumentNullException.ThrowIfNull(module);
     ArgumentNullException.ThrowIfNull(profile);
+    module = SequenceFusion.Run(module);
     var problems = IrVerifier.Verify(module);
     if (problems.Count > 0)
       return problems;
@@ -181,7 +184,7 @@ public static partial class PythonEmitter {
     var table = capabilities ?? PythonCapabilities.Standard;
     var floats = FloatLegalization.Rewrite(Writes);
     var helpers = PythonLibrary.Rewrite(profile, table);
-    return LibraryLegalization.Lower(module, implementations, (expression, calls) => floats(expression, calls) ?? helpers(expression, calls));
+    return LibraryLegalization.Lower(SequenceFusion.Run(module), implementations, (expression, calls) => floats(expression, calls) ?? helpers(expression, calls) ?? SequenceLegalization.Rewrite(expression, calls));
   }
 
   /// <summary>
@@ -194,7 +197,7 @@ public static partial class PythonEmitter {
   /// <param name="capabilities">The capability table; the standard one when <see langword="null"/>.</param>
   /// <returns>The module to emit.</returns>
   public static IrModule LegalizeHelpers(IrModule module, Func<IrModule> implementations, PythonProfile profile, PythonCapabilities? capabilities = null)
-    => LibraryLegalization.Lower(module, implementations, PythonLibrary.Rewrite(profile, capabilities ?? PythonCapabilities.Standard));
+    => LibraryLegalization.Lower(SequenceFusion.Run(module), implementations, (expression, calls) => PythonLibrary.Rewrite(profile, capabilities ?? PythonCapabilities.Standard)(expression, calls) ?? SequenceLegalization.Rewrite(expression, calls));
 
   /// <summary>
   /// The Python name of every function of a module, by its name in the IR: a public function's is

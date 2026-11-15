@@ -153,10 +153,10 @@ public sealed class PythonBoundaryTests {
   }
 
   [Test]
-  public void AThrowOfAnythingButANewLibraryException_IsRefused() {
+  public void AThrowOfAnExceptionInAVariable_RaisesIt() {
     var thrown = L("e", IrExceptionClass.Reference);
     var module = new IrModule("M", [Function("f", IrType.Void, [thrown], new IrThrow(R(thrown)))]);
-    Assert.That(Problems(module), Has.Some.Contains("'Throw' cannot be expressed"));
+    Assert.That(Emit(module), Does.Contain("def f(e: Exception) -> None:\n    raise e\n"));
   }
 
   [Test]

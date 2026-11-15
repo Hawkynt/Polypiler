@@ -19,7 +19,13 @@ public static class PythonSyntaxRewriter {
   public static IEnumerable<PyNode> Children(PyNode node) => node switch {
     PyAttribute attribute => [attribute.Target],
     PySubscript subscript => [subscript.Target, subscript.Index],
-    PyCall call => [call.Callee, .. call.Arguments],
+    PyCall call => [call.Callee, .. call.Arguments, .. call.Keywords],
+    PyKeyword keyword => [keyword.Value],
+    PyStarred starred => [starred.Value],
+    PySlice slice => [.. Optional(slice.Lower), .. Optional(slice.Upper)],
+    PyDict dict => dict.Keys.Zip(dict.Values).SelectMany(pair => new PyNode[] { pair.First, pair.Second }),
+    PyLambda lambda => [lambda.Body],
+    PyYield yielded => Optional(yielded.Value),
     PyUnary unary => [unary.Operand],
     PyBinary binary => [binary.Left, binary.Right],
     PyCompare compare => compare.Operands,
@@ -32,17 +38,22 @@ public static class PythonSyntaxRewriter {
     PyAssign assign => assign.Annotation is { } annotation ? [assign.Target, annotation, assign.Value] : [assign.Target, assign.Value],
     PyAnnotation annotation => [annotation.Annotation],
     PyReturn { Value: { } value } => [value],
-    PyRaise raise => [raise.Exception],
+    PyRaise raise => Optional(raise.Exception),
+    PyTry attempt => [.. attempt.Body, .. attempt.Handlers, .. attempt.Finally],
+    PyExceptHandler handler => [.. Optional(handler.Type), .. handler.Body],
+    PyClassDef type => [.. type.Decorators, .. type.Bases, .. type.Body],
     PyIf conditional => [conditional.Test, .. conditional.Body, .. conditional.Else],
     PyWhile loop => [loop.Test, .. loop.Body],
     PyFor loop => [loop.Iterable, .. loop.Body],
     PyMatchStatement match => [match.Subject, .. match.Cases],
     PyMatchCase @case => [.. @case.Patterns, .. @case.Guard is null ? Array.Empty<PyNode>() : [@case.Guard], .. @case.Body],
-    PyParameter parameter => [parameter.Annotation],
-    PyFunctionDef function => [.. function.Parameters, function.Returns, .. function.Body],
+    PyParameter parameter => [.. Optional(parameter.Annotation), .. Optional(parameter.Default)],
+    PyFunctionDef function => [.. function.Decorators, .. function.Parameters, function.Returns, .. function.Body],
     PyModule module => module.Body,
     _ => []
   };
+
+  private static PyNode[] Optional(PyNode? node) => node is null ? [] : [node];
 
   /// <summary>The node and every node below it, depth first, in source order.</summary>
   /// <param name="node">The root.</param>
@@ -71,6 +82,7 @@ public static class PythonSyntaxRewriter {
 
   private static PyNode Walk(PyNode node, Func<PyNode, PyNode> rewrite) {
     PyExpression E(PyExpression expression) => (PyExpression)Walk(expression, rewrite);
+    PyExpression? O(PyExpression? expression) => expression is null ? null : E(expression);
     IReadOnlyList<TItem> L<TItem>(IReadOnlyList<TItem> items) where TItem : PyNode {
       var walked = items.Select(item => (TItem)Walk(item, rewrite)).ToList();
       return walked.SequenceEqual(items, ReferenceEqualityComparer.Instance) ? items : walked;
@@ -79,7 +91,13 @@ public static class PythonSyntaxRewriter {
     var rebuilt = node switch {
       PyAttribute attribute => Same(attribute, attribute with { Target = E(attribute.Target) }),
       PySubscript subscript => Same(subscript, subscript with { Target = E(subscript.Target), Index = E(subscript.Index) }),
-      PyCall call => Same(call, call with { Callee = E(call.Callee), Arguments = L(call.Arguments) }),
+      PyCall call => Same(call, call with { Callee = E(call.Callee), Arguments = L(call.Arguments), Keywords = L(call.Keywords) }),
+      PyKeyword keyword => Same(keyword, keyword with { Value = E(keyword.Value) }),
+      PyStarred starred => Same(starred, starred with { Value = E(starred.Value) }),
+      PySlice slice => Same(slice, slice with { Lower = O(slice.Lower), Upper = O(slice.Upper) }),
+      PyDict dict => Same(dict, dict with { Keys = L(dict.Keys), Values = L(dict.Values) }),
+      PyLambda lambda => Same(lambda, lambda with { Body = E(lambda.Body) }),
+      PyYield yielded => Same(yielded, yielded with { Value = O(yielded.Value) }),
       PyUnary unary => Same(unary, unary with { Operand = E(unary.Operand) }),
       PyBinary binary => Same(binary, binary with { Left = E(binary.Left), Right = E(binary.Right) }),
       PyCompare compare => Same(compare, compare with { Operands = L(compare.Operands) }),
@@ -92,14 +110,17 @@ public static class PythonSyntaxRewriter {
       PyAssign assign => Same(assign, assign with { Target = E(assign.Target), Value = E(assign.Value), Annotation = assign.Annotation is null ? null : E(assign.Annotation) }),
       PyAnnotation annotation => Same(annotation, annotation with { Annotation = E(annotation.Annotation) }),
       PyReturn { Value: { } value } @return => Same(@return, @return with { Value = E(value) }),
-      PyRaise raise => Same(raise, raise with { Exception = E(raise.Exception) }),
+      PyRaise raise => Same(raise, raise with { Exception = O(raise.Exception) }),
+      PyTry attempt => Same(attempt, attempt with { Body = L(attempt.Body), Handlers = L(attempt.Handlers), Finally = L(attempt.Finally) }),
+      PyExceptHandler handler => Same(handler, handler with { Type = O(handler.Type), Body = L(handler.Body) }),
+      PyClassDef type => Same(type, type with { Decorators = L(type.Decorators), Bases = L(type.Bases), Body = L(type.Body) }),
       PyIf conditional => Same(conditional, conditional with { Test = E(conditional.Test), Body = L(conditional.Body), Else = L(conditional.Else) }),
       PyWhile loop => Same(loop, loop with { Test = E(loop.Test), Body = L(loop.Body) }),
       PyFor loop => Same(loop, loop with { Iterable = E(loop.Iterable), Body = L(loop.Body) }),
       PyMatchStatement match => Same(match, match with { Subject = E(match.Subject), Cases = L(match.Cases) }),
       PyMatchCase @case => Same(@case, @case with { Patterns = L(@case.Patterns), Guard = @case.Guard is null ? null : E(@case.Guard), Body = L(@case.Body) }),
-      PyParameter parameter => Same(parameter, parameter with { Annotation = E(parameter.Annotation) }),
-      PyFunctionDef function => Same(function, function with { Parameters = L(function.Parameters), Returns = E(function.Returns), Body = L(function.Body) }),
+      PyParameter parameter => Same(parameter, parameter with { Annotation = O(parameter.Annotation), Default = O(parameter.Default) }),
+      PyFunctionDef function => Same(function, function with { Decorators = L(function.Decorators), Parameters = L(function.Parameters), Returns = E(function.Returns), Body = L(function.Body) }),
       PyModule module => Same(module, module with { Body = L(module.Body) }),
       _ => node
     };
@@ -142,8 +163,16 @@ public static class PythonSyntaxRewriter {
       PyImport import => import.Module,
       PyImportFrom import => import.Module + ":" + string.Join(",", import.Names),
       PyFor loop => loop.Variable,
-      PyParameter parameter => parameter.Name,
+      PyParameter parameter => parameter.Name + (parameter.Annotation is null ? "" : ":") + (parameter.Default is null ? "" : "="),
       PyFunctionDef function => function.Name,
+      PyClassDef type => type.Name,
+      PyKeyword keyword => keyword.Name,
+      PySlice slice => (slice.Lower is null ? "-" : "+") + (slice.Upper is null ? "-" : "+"),
+      PyLambda lambda => string.Join(",", lambda.Parameters),
+      PyYield yielded => (yielded.From ? "from" : "") + (yielded.Value is null ? "-" : "+"),
+      PyNonlocal nonlocal => string.Join(",", nonlocal.Names),
+      PyExceptHandler handler => (handler.Type is null ? "-" : "+") + (handler.Name ?? ""),
+      PyTry attempt => $"{attempt.Body.Count}/{attempt.Handlers.Count}/{attempt.Finally.Count}",
       PyIf conditional => $"{conditional.Body.Count}/{conditional.Else.Count}",
       PyMatchCase @case => $"{@case.Patterns.Count}/{(@case.Guard is null ? 0 : 1)}",
       PyReturn @return => @return.Value is null ? "-" : "+",

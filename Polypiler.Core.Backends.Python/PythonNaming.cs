@@ -32,7 +32,8 @@ public static class PythonNaming {
     "hash", "hex", "id", "input", "int", "isinstance", "iter", "len", "list", "map", "max", "min", "next", "object", "oct", "open",
     "ord", "pow", "print", "range", "repr", "reversed", "round", "set", "slice", "sorted", "str", "sum", "super", "tuple", "zip",
     "ArithmeticError", "IndexError", "OverflowError", "ZeroDivisionError", "AssertionError", "ValueError", "TypeError",
-    "math", "struct", "typing", "List", "self", "cls"
+    "math", "struct", "typing", "List", "self", "cls",
+    "copy", "dataclasses", "dataclass", "field", "enum", "annotations", "Callable", "Iterable", "Iterator", "collections"
   };
 
   /// <summary>
@@ -78,7 +79,9 @@ public static class PythonNaming {
   /// <param name="isPublic">Whether the function is visible outside the module.</param>
   /// <returns>The name, or empty when nothing of the name is left.</returns>
   public static string Function(string name, bool isPublic) {
-    var snake = Snake(name).Trim('_');
+    ArgumentNullException.ThrowIfNull(name);
+    // An instantiation of a generic definition names its type arguments: Def<bool> is def_of_bool, not DefBool's def_bool.
+    var snake = Snake(name.Replace("<", "_of_", StringComparison.Ordinal).Replace(",", "_and_", StringComparison.Ordinal)).Trim('_');
     if (snake.Length == 0)
       return "";
 

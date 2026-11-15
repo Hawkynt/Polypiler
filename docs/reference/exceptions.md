@@ -69,25 +69,49 @@ tests: a trap without a row fails them, so a trap a later change introduces adds
 
 ### Python
 
-The **backend** raises the built-in exception of the trap's class; a trap is compared by its class,
-as everywhere, and the message is the trap's own text where the backend raises it (Python's own
-`ZeroDivisionError` of `//` and `%` keeps Python's message). Handling (`try`) is not written yet: a
-module with a handler is refused with `PLY1851` naming it.
+The **backend** raises the Python class of the trap's class: a built-in exception where one has
+exactly the IR's meaning, and otherwise a class the module declares - only where it uses it - that
+derives from the built-in exception of the nearest meaning, so that a caller still sees a
+`ValueError` or a `TypeError` and an `except` clause selects what the IR's catch clause selects. A
+trap is compared by its class, as everywhere; the message is the trap's own text where the backend
+raises it (`missing value` and `collection modified` tell the two traps of `RuntimeError` apart),
+and Python's own where Python raises (`//` and `%` by zero, an index past the end of a list, an
+absent key of a `dict`).
 
-| IR class (trap) | Python raises |
-| --- | --- |
-| `DivideByZeroException` (`DivideByZero`) | `ZeroDivisionError` |
-| `OverflowException` (`IntegerOverflow`) | `OverflowError` |
-| `ArithmeticException` (`InvalidOperation`) | `ArithmeticError` |
-| `IndexOutOfRangeException` (`IndexOutOfRange`) | `IndexError` (a negative index is checked first: Python would count it from the end) |
-| `ArgumentOutOfRangeException` (`ArgumentOutOfRange`) | `ValueError` |
-| `NullReferenceException` (`NullReference`) | `AttributeError` |
-| `InvalidCastException` (`InvalidCast`) | `TypeError` |
-| `InvalidOperationException` (`MissingValue`, `CollectionModified`) | `RuntimeError` |
-| `KeyNotFoundException` (`KeyNotFound`) | `KeyError` |
-| `ArgumentException` (`DuplicateKey`, `UnknownName`) | `ValueError` |
-| `FormatException` (`InvalidFormat`) | `ValueError` |
-| `Exception` | `Exception` |
+| IR class (trap) | Python raises | derives from |
+| --- | --- | --- |
+| `DivideByZeroException` (`DivideByZero`) | `ZeroDivisionError` | `ArithmeticError` |
+| `OverflowException` (`IntegerOverflow`) | `OverflowError` | `ArithmeticError` |
+| `ArithmeticException` (`InvalidOperation`) | `ArithmeticError` | `Exception` |
+| `IndexOutOfRangeException` (`IndexOutOfRange`) | `IndexError` (a negative index is checked first: Python would count it from the end) | `LookupError` |
+| `ArgumentException` (`DuplicateKey`, `UnknownName`) | `ValueError` | `Exception` |
+| `ArgumentOutOfRangeException` (`ArgumentOutOfRange`) | `ArgumentOutOfRangeError`, declared | `ValueError` |
+| `FormatException` (`InvalidFormat`) | `FormatError`, declared | `ValueError` |
+| `NullReferenceException` (`NullReference`) | `AttributeError`, or the `TypeError` Python raises for a member of `None` | `Exception` |
+| `InvalidCastException` (`InvalidCast`) | `InvalidCastError`, declared | `TypeError` |
+| `InvalidOperationException` (`MissingValue`, `CollectionModified`) | `RuntimeError` | `Exception` |
+| `KeyNotFoundException` (`KeyNotFound`) | `KeyError` | `LookupError` |
+| `Exception` | `Exception` | `BaseException` |
+
+A class of the module that derives from an exception class is a Python class that derives from the
+Python class of its base; its constructor passes the message to `super().__init__`, and the message
+.NET gives where the source gives none - "Exception of type 'X' was thrown." with the name of the
+object's class for `Exception`, the library class's own text otherwise. `Message` is the first
+argument of the exception (`_ply_message`), `InnerException` its `__cause__`.
+
+**Handling** (#448). `IrThrow` is `raise e`, `IrRethrow` a bare `raise`, `IrThrowExpression` the
+call of `_ply_throw(e)`. `IrTry` is `try:` with `finally:` for its finally block, which Python runs on
+every way out - the end, `break`, `continue`, `return` and an exception - as the IR does. Its catch
+clauses are `except` clauses in order, `except Class as e:` where the clause binds the exception:
+the Python classes above keep the hierarchy of the IR's library classes, so Python's first matching
+clause is the IR's. Where a clause has a filter, catches `NullReferenceException` (two Python
+classes, one of which an `InvalidCastError` extends) or `ArgumentException` (a `ValueError` that is no
+`FormatError`), the clauses are one `except Exception as e:`
+whose body tests them in order with `isinstance` and the filters and raises again what none selects.
+A filter then runs after the finally blocks inside the try; a filter for which that can make a
+difference (`IrExceptionFilter.MayRunLate`) is refused with `PLY1851` ("the exception filter … runs
+before finally blocks"), as in JavaScript. `IrUsing` is its lowering: the resource bound, then
+`try:` the body `finally:` `if r is not None: r.dispose()`.
 
 The **frontend** does not import `try`, `raise` and `except` yet (#453). An operation that fails
 raises the exception CPython raises, as the class of the IR that stands for it, with CPython's message:

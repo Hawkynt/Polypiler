@@ -25,6 +25,8 @@ internal static class PythonLibrary {
     return intrinsic.Op switch {
       // The limbs of O0075 are what the library's helpers are built from, not helpers themselves.
       IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords => false,
+      // The endian accesses are int.from_bytes, int.to_bytes and struct (#446).
+      IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => false,
       IrIntrinsicOp.PopCount => !table.Has(PythonCapabilities.BitCount, profile),
       _ => true
     };

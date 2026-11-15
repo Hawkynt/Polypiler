@@ -18,7 +18,23 @@ public static partial class PythonEmitter {
 
     private static PyCompare Compare(PyExpression left, string op, PyExpression right) => new([left, right], [op]);
 
-    private static PyExpression Not(PyExpression operand) => new PyUnary("not", operand) { Type = IrType.Bool };
+    /// <summary>The negation of a truth value; of a test for identity, membership or equality the test of the opposite.</summary>
+    private static PyExpression Not(PyExpression operand) => operand switch {
+      PyCompare { Operators: [var op], Operands: [var left, var right] } when Opposite(op) is { } opposite => new PyCompare([left, right], [opposite]) { Type = IrType.Bool },
+      PyUnary { Operator: "not", Operand: { Type: { } type } inner } when type == IrType.Bool => inner,
+      _ => new PyUnary("not", operand) { Type = IrType.Bool }
+    };
+
+    /// <summary>The operator that is the opposite of a comparison for every operand, or <see langword="null"/>: an ordering is not, a NaN fails both.</summary>
+    private static string? Opposite(string op) => op switch {
+      "is" => "is not",
+      "is not" => "is",
+      "in" => "not in",
+      "not in" => "in",
+      "==" => "!=",
+      "!=" => "==",
+      _ => null
+    };
 
     private static BigInteger Big(Int128 value) => BigInteger.Parse(value.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
 
@@ -120,19 +136,49 @@ public static partial class PythonEmitter {
       _ => false
     };
 
-    /// <summary>The Python expression of an IR expression, which evaluates its operands in the IR's order.</summary>
-    private PyExpression Expression(IrExpr expression) => this.Written(expression) with { Type = expression.Type };
+    /// <summary>
+    /// The Python expression of an IR expression, which evaluates its operands in the IR's order. A
+    /// mutable struct read from a place is copied, unless the expression is used in place (<see cref="Place"/>).
+    /// </summary>
+    private PyExpression Expression(IrExpr expression) {
+      var inPlace = this._inPlace;
+      this._inPlace = false;
+      var written = this.Written(expression) with { Type = expression.Type };
+      return inPlace ? written : this.Copied(expression, written);
+    }
 
     private PyExpression Written(IrExpr expression) {
+      if ((this.ObjectExpression(expression) ?? this.FunctionExpression(expression) ?? this.OptionalExpression(expression)) is { } special)
+        return special;
+
       switch (expression) {
+        case IrConst { Type.EnumType: { } enumeration } constant:
+          return this.EnumLiteral(enumeration, constant.Value);
         case IrConst constant:
           return this.Literal(constant.Type, constant.Value);
         case IrBigConst big:
           return Integer(big.Value, IrType.BigInt);
+        case IrStrConst text:
+          return new PyString(text.Value);
         case IrLocalRef reference:
-          return Name(this.LocalName(reference.Local));
+          return this.Read(reference.Local);
+        case IrCollection operation:
+          return this.CollectionOperation(operation);
+        case IrArraySequence sequence:
+          return this.Expression(sequence.Array);
+        case IrGenericCompare comparison:
+          return this.Helper(comparison.Left.Type.IsFloat ? PythonHelpers.CompareFloat : comparison.Left.Type.Bits is > 0 and < 32 && comparison.Left.Type.IsInteger ? PythonHelpers.Difference : PythonHelpers.CompareOrdinal,
+            this.Expression(comparison.Left), this.Expression(comparison.Right));
+        case IrGenericEquals equality when equality.Left.Type.IsFloat:
+          return this.Helper(PythonHelpers.FloatEquals, this.Expression(equality.Left), this.Expression(equality.Right));
+        case IrGenericEquals equality when equality.Left.Type.IsObject && equality.Left.Type.ClassType is not { IsRecord: true }:
+          return Compare(this.Expression(equality.Left), "is", this.Expression(equality.Right));
+        case IrGenericEquals equality:
+          return Compare(this.Expression(equality.Left), "==", this.Expression(equality.Right));
         case IrConstRef reference:
           return Name(this._constants[reference.Constant.Name]);
+        case IrGlobalRef reference when this._staticOwners.ContainsKey(reference.Global.Name):
+          return this.StaticField(reference.Global);
         case IrGlobalRef reference:
           return Name(this._globals[reference.Global.Name]);
         case IrUnary unary:
@@ -152,9 +198,12 @@ public static partial class PythonEmitter {
           return new PySubscript(this.Expression(load.Array), this.Index(load.Index));
         case IrArrayLength length:
           return new PyCall(Name("len"), [this.Expression(length.Array)]);
+        case IrNewArray { Type.Element.StructType: { } element } creation when this._mutableStructs.Contains(element):
+          // Every element is a struct of its own.
+          return this.Helper(PythonHelpers.NewStructs, Name(this.TypeNameOf(element)), this.NonNegative(creation.Length) ? this.Expression(creation.Length) : this.Helper(PythonHelpers.Length, this.Expression(creation.Length)));
         case IrNewArray creation:
           this.Annotation(creation.Type);
-          return Binary(new PyList([this.Zero(creation.Type.Element!)]), "*", this.NonNegative(creation.Length) ? this.Expression(creation.Length) : this.Helper(PythonHelpers.Length, this.Expression(creation.Length)));
+          return Binary(new PyList([this.FieldDefault(creation.Type.Element!)]), "*", this.NonNegative(creation.Length) ? this.Expression(creation.Length) : this.Helper(PythonHelpers.Length, this.Expression(creation.Length)));
         case IrStep step:
           return this.StepValue(step);
         case IrIntrinsic intrinsic:
@@ -315,7 +364,14 @@ public static partial class PythonEmitter {
       if (step.Target is IrArrayLoad load)
         return this.ElementStepValue(load, step);
 
-      var name = this.LocalName(((IrLocalRef)step.Target).Local);
+      var local = ((IrLocalRef)step.Target).Local;
+      if (this.IsCell(local)) {
+        var cell = Name(this.LocalName(local));
+        var stored = this.Helper(PythonHelpers.Put, cell, this.Stepped(this.Read(local), step));
+        return step.Postfix ? new PySubscript(new PyTuple([this.Read(local), stored]), Integer(0)) : stored;
+      }
+
+      var name = this.LocalName(local);
       var assigned = new PyNamedExpression(name, this.Stepped(Name(name), step));
       return step.Postfix ? new PySubscript(new PyTuple([Name(name), assigned]), Integer(0)) : assigned;
     }
@@ -358,6 +414,15 @@ public static partial class PythonEmitter {
     /// list of values. Every other one was replaced by legalization or has no Python form.
     /// </summary>
     private PyExpression Intrinsic(IrIntrinsic intrinsic) {
+      if (StringOperations.IsString(intrinsic.Op))
+        return this.StringOperation(intrinsic);
+
+      if (EnumOperations.IsEnum(intrinsic.Op))
+        return this.EnumOperation(intrinsic);
+
+      if ((this.ViewOperation(intrinsic) ?? this.NumberText(intrinsic) ?? this.PointerOperation(intrinsic)) is { } special)
+        return special;
+
       var arguments = intrinsic.Arguments.Select(this.Expression).ToArray();
       var type = intrinsic.Arguments.Count > 0 ? intrinsic.Arguments[0].Type : intrinsic.Type;
       switch (intrinsic.Op) {
@@ -388,7 +453,7 @@ public static partial class PythonEmitter {
         case IrIntrinsicOp.Abs when type.IsFloat:
           return new PyCall(Name("abs"), arguments);
         case IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Sign or IrIntrinsicOp.Floor or IrIntrinsicOp.Ceiling
-          or IrIntrinsicOp.Truncate or IrIntrinsicOp.RoundEven or IrIntrinsicOp.RoundAway when type.IsFloat:
+          or IrIntrinsicOp.Truncate or IrIntrinsicOp.RoundEven or IrIntrinsicOp.RoundAway or IrIntrinsicOp.RoundHalfUp when type.IsFloat:
           // Exact operations: the result of binary32 operands is a binary32 number.
           return this.Helper(intrinsic.Op switch {
             IrIntrinsicOp.Min => PythonHelpers.Minimum,
@@ -398,11 +463,16 @@ public static partial class PythonEmitter {
             IrIntrinsicOp.Ceiling => PythonHelpers.Ceiling,
             IrIntrinsicOp.Truncate => PythonHelpers.Truncate,
             IrIntrinsicOp.RoundEven => PythonHelpers.RoundEven,
+            IrIntrinsicOp.RoundHalfUp => PythonHelpers.RoundHalfUp,
             _ => PythonHelpers.RoundAway
           }, arguments);
         case IrIntrinsicOp.ArrayOf:
           this.Annotation(intrinsic.Type);
           return new PyList(arguments);
+        case IrIntrinsicOp.ToInt32:
+          return this.Helper(PythonHelpers.ToInt32, arguments[0]);
+        case IrIntrinsicOp.ToUint32:
+          return this.Helper(PythonHelpers.ToUint32, arguments[0]);
         default:
           return this.Inexpressible(intrinsic.Op.ToString());
       }
