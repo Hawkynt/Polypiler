@@ -26,6 +26,9 @@ public static partial class JavaScriptEmitter {
     }
 
     private (JsExpression Node, bool Atomic) Write(IrExpr expression) {
+      if (this.ForeignWrite(expression) is { } foreign)
+        return foreign;
+
       if (this.PointerWrite(expression) is { } pointer)
         return pointer;
 
@@ -109,6 +112,8 @@ public static partial class JavaScriptEmitter {
           return this.FunctionValue(expression);
         case IrArraySequence sequence:
           return this.ArraySequence(sequence);
+        case IrAwait or IrAsync:
+          return this.AsyncWrite(expression);
         default:
           var call = (IrCall)expression;
           return (new JsCall(Id(this.Name(call.Function)), [.. call.Arguments.Select(this.Value)]), true);

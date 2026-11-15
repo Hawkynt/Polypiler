@@ -224,7 +224,14 @@ public sealed class JavaScriptCapabilities {
     new("Symbol.iterator", 2015, "$iterator"),
     new("yield*", 2015, "nested resume point"),
     // The bounded pointers of #1331: no level of ECMAScript has pointers; a pointer is a region and a byte offset in it.
-    new("*p, a pointer", int.MaxValue, "view and index", Emitted: false)
+    new("*p, a pointer", int.MaxValue, "view and index", Emitted: false),
+    // Async functions (#1330): a Promise from ECMAScript 2015, which ECMAScript 5 has no form of; below 2017 a generator driven by $async.
+    new("Promise", 2015),
+    new("Promise.resolve", 2015),
+    new("Promise.all", 2015),
+    new(".then", 2015),
+    new("async function", 2017, "$async"),
+    new("Promise.allSettled", 2020, "Promise.all")
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

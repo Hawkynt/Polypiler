@@ -271,6 +271,9 @@ public static partial class JavaScriptFrontend {
     foreach (var (_, call) in IrConstruction.VirtualCalls(module))
       diagnostics.Add(inference.Diagnose(lowering.Sites[call], UnsupportedDescriptor, "'a call of an overridden method on 'this' during construction' is not supported yet"));
 
+    // A Promise.all whose order or whose rejection would show how JavaScript and .NET interleave its calls (#1330).
+    diagnostics.AddRange(lowering.WhenAllProblems(module));
+
     if (diagnostics.Count > 0)
       return Refused(diagnostics);
 

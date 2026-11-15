@@ -102,4 +102,10 @@ public sealed class IrStructType : IrTypeDeclaration {
   /// </summary>
   public bool HasDefault => this.Fields.All(member => member.Type.Declaration is IrStructType nested ? nested.HasDefault : !member.Type.IsArray && !member.Type.IsString);
 
+  /// <summary>
+  /// The layout the source states for a struct that crosses the boundary of a foreign function (#1332), or
+  /// <see langword="null"/> for none: the runtime's own.
+  /// </summary>
+  public IrStructLayout? Layout { get; init; }
+
 }

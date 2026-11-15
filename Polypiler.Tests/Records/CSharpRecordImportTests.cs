@@ -114,8 +114,8 @@ public sealed class CSharpRecordImportTests {
   [TestCase("public partial struct S { public int X; }", "a partial struct")]
   [TestCase("public struct S<T> { public int X; }", "a generic struct")]
   [TestCase("public struct S : System.IComparable { public int X; public int CompareTo(object o) => 0; }", "a struct that implements an interface")]
-  [TestCase("[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)] public struct S { [System.Runtime.InteropServices.FieldOffset(0)] public int X; }",
-    "the attribute System.Runtime.InteropServices.StructLayout")]
+  [TestCase("[System.Serializable] public struct S { public int X; }",
+    "the attribute System.Serializable")]
   [TestCase("public record struct S(int X = 1);", "a positional parameter with a modifier, an attribute or a default value")]
   [TestCase("public record struct S(int X) { public int Twice() => X * 2; }", "the method Twice of a struct")]
   [TestCase("public struct S { public object O; }", "object")]

@@ -29,7 +29,7 @@ public static partial class CSharpEmitter {
     /// </summary>
     private CsMethod Generic(IrFunction instance, IrGenericOrigin origin) {
       var template = origin.Template!.Function;
-      var modifiers = Unsafe([instance.IsPublic ? "public" : "private", "static"], template);
+      var modifiers = Asynchronous(Unsafe([instance.IsPublic ? "public" : "private", "static"], template), template);
       var returns = new CsType(this.TypeName(template.ReturnType));
       var (parameters, body, expression) = this.Body(template, 0, template.Body, true);
       return new CsMethod(modifiers, returns, this._members[instance.Name], [.. origin.TypeParameters], parameters, body, expression) {

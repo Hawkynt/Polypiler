@@ -101,6 +101,9 @@ public static class IrShape {
     IrBoundMethod { Receiver: { } receiver } => [receiver],
     IrArraySequence sequence => [sequence.Array],
     IrSequence operation => operation.Arguments,
+    IrAwait awaited => [awaited.Operand],
+    IrAsync operation => operation.Arguments,
+    IrForeignCall call => call.Arguments,
     _ => []
   };
 
@@ -136,7 +139,8 @@ public static class IrShape {
   /// <param name="node">The node.</param>
   /// <returns><see langword="true"/> when the node itself has no effect.</returns>
   public static bool IsSideEffectFreeNode(IrExpr node) => node switch {
-    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod or IrSequence => false,
+    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod or IrSequence or IrAwait or IrAsync => false,
+    IrForeignCall or IrLastError => false,
     IrFieldLoad load => !load.Target.Type.IsObject,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
@@ -244,6 +248,9 @@ public static class IrShape {
     IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
     IrArraySequence => new IrArraySequence(operands[0]),
     IrSequence operation => operation with { Arguments = operands },
+    IrAwait => new IrAwait(operands[0]),
+    IrAsync operation => operation with { Arguments = operands },
+    IrForeignCall call => call with { Arguments = operands },
     _ => expression
   };
 

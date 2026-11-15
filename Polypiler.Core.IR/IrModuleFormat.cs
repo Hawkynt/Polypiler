@@ -22,10 +22,10 @@ namespace Polypiler.Core.IR;
 /// bytes: damaged bytes are refused, never read as another module.
 /// </para>
 /// </summary>
-public static class IrModuleFormat {
+public static partial class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 7;
+  public const int Version = 9;
 
   /// <summary>The byte that stands for the kind of an enum type, followed by its declaration: the kind of an enum type is that of its underlying type.</summary>
   private const byte EnumType = 0xFF;
@@ -44,7 +44,9 @@ public static class IrModuleFormat {
     Block, Declare, Assign, Store, FieldStore, ExprStmt, If, While, DoWhile, For, Switch, Break, Continue, Return, GlobalAssign,
     Throw, Rethrow, Try, Using, ForEachCollection,
     ArraySequence, Yield, YieldBreak, YieldFrom, ForEachSequence,
-    Sequence
+    Sequence,
+    Await, Async,
+    ForeignCall, LastError
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -125,7 +127,7 @@ public static class IrModuleFormat {
   /// constructors and properties; the constants and globals; the members of the classes, which list
   /// their static fields among the globals; and the functions last.
   /// </summary>
-  private sealed class Writer(BinaryWriter writer, IrModule module) {
+  private sealed partial class Writer(BinaryWriter writer, IrModule module) {
 
     private readonly Dictionary<IrTypeDeclaration, int> _declarations = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrField, (int Declaration, int Index)> _fields = new(ReferenceEqualityComparer.Instance);
@@ -212,6 +214,8 @@ public static class IrModuleFormat {
       this.Count(module.Functions.Count);
       foreach (var function in module.Functions)
         this.Function(function);
+
+      this.ForeignFunctions(module.ForeignFunctions);
     }
 
     /// <summary>The declarations that stand for the type parameters of the templates the functions of a module reach.</summary>
@@ -235,6 +239,7 @@ public static class IrModuleFormat {
           writer.Write((byte)Declared.Struct);
           writer.Write(structure.IsEquatable);
           writer.Write(structure.IsDefined);
+          this.Layout(structure.Layout);
           break;
         case IrEnumType named:
           writer.Write((byte)Declared.Enum);
@@ -488,6 +493,10 @@ public static class IrModuleFormat {
           this.Type(type.Element!);
           writer.Write(type.Restartable);
           break;
+        case IrTypeKind.Async:
+          this.Type(type.Element!);
+          writer.Write(type.IsValueTask);
+          break;
       }
     }
 
@@ -670,6 +679,10 @@ public static class IrModuleFormat {
       IrInvoke => Tag.Invoke,
       IrArraySequence => Tag.ArraySequence,
       IrSequence => Tag.Sequence,
+      IrAwait => Tag.Await,
+      IrAsync => Tag.Async,
+      IrForeignCall => Tag.ForeignCall,
+      IrLastError => Tag.LastError,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -854,6 +867,20 @@ public static class IrModuleFormat {
           this.Count((int)operation.Op);
           this.Nodes(operation.Arguments);
           break;
+        case IrAwait awaited:
+          this.Node(awaited.Operand);
+          break;
+        case IrAsync operation:
+          this.Count((int)operation.Op);
+          this.Nodes(operation.Arguments);
+          break;
+        case IrForeignCall call:
+          writer.Write(call.Function);
+          this.Nodes(call.Arguments);
+          break;
+        case IrLastError error:
+          writer.Write(error.PInvoke);
+          break;
         default:
           var invocation = (IrInvoke)expression;
           this.Node(invocation.Callee);
@@ -969,7 +996,7 @@ public static class IrModuleFormat {
   }
 
   /// <summary>Reads the parts of a module in the order <see cref="Writer"/> wrote them.</summary>
-  private sealed class Reader(BinaryReader reader) {
+  private sealed partial class Reader(BinaryReader reader) {
 
     private static readonly IrType[] _primitives = [
       IrType.Void, IrType.Bool, IrType.I8, IrType.U8, IrType.I16, IrType.U16, IrType.I32, IrType.U32,
@@ -1034,15 +1061,18 @@ public static class IrModuleFormat {
         type.DefineMembers(this.Methods(), properties[type], this.List(this.Interface));
 
       var functions = this.List(this.Function);
-      return new IrModule(name, functions, constants) { Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats };
+      return new IrModule(name, functions, constants) {
+        Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats, ForeignFunctions = this.ForeignFunctions()
+      };
     }
 
     private IrTypeDeclaration Header(List<IrTypeDeclaration> defined, List<IrClassType> hierarchies, List<IrClassType> classes, List<IrInterfaceType> interfaces) {
       var declared = reader.ReadString();
       switch (reader.ReadByte()) {
         case (byte)Declared.Struct:
-          var structure = new IrStructType(declared) { IsEquatable = reader.ReadBoolean() };
-          if (reader.ReadBoolean())
+          bool equatable = reader.ReadBoolean(), isDefinedStruct = reader.ReadBoolean();
+          var structure = new IrStructType(declared) { IsEquatable = equatable, Layout = this.Layout() };
+          if (isDefinedStruct)
             defined.Add(structure);
 
           return structure;
@@ -1217,6 +1247,7 @@ public static class IrModuleFormat {
         IrTypeKind.Function => IrType.Function(new IrFunctionType(this.Types(), this.Type())),
         IrTypeKind.Sequence => IrType.Sequence(this.Type(), reader.ReadBoolean()),
         IrTypeKind.Pointer => IrType.Pointer(this.Type()),
+        IrTypeKind.Async => IrType.Async(this.Type(), reader.ReadBoolean()),
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };
@@ -1291,12 +1322,12 @@ public static class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.Sequence)
+      if (tag > Tag.LastError)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError) ? this.Statement(tag) : this.Expression(tag);
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1346,6 +1377,10 @@ public static class IrModuleFormat {
         Tag.BoundMethod => this.BoundMethod(type),
         Tag.ArraySequence => new IrArraySequence(this.Node<IrExpr>()),
         Tag.Sequence => new IrSequence(this.Enum<IrSequenceOp>(), type, this.Nodes<IrExpr>()),
+        Tag.Await => new IrAwait(this.Node<IrExpr>()),
+        Tag.Async => new IrAsync(this.Enum<IrAsyncOp>(), type, this.Nodes<IrExpr>()),
+        Tag.ForeignCall => new IrForeignCall(reader.ReadString(), type, this.Nodes<IrExpr>()),
+        Tag.LastError => new IrLastError(reader.ReadBoolean()),
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };
