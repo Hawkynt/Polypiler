@@ -1,0 +1,11 @@
+# The layer of the interpreted languages (PRD §7.3, row "Python/Perl"): pinned python and perl, each
+# language's standard test runner (unittest, prove) and the fixtures of tests/fixtures/infra/ci/pyperl,
+# run by the job layer-pyperl of .github/workflows/ci.yml. Format: spec/schemas/ci-layer.schema.json.
+# The runner issues of PHP and Ruby add their toolchain keys and path globs here. Beyond the globs of
+# the specification, the layer's own tests, feature and this file select it as well.
+schema: 1
+layer: pyperl
+toolchains: [python, perl]
+os: [ubuntu-latest]
+paths: ["Polypiler.Core.Frontends.Python/**", "Polypiler.Core.Frontends.Perl/**", "Polypiler.Core.Backends.Python/**", "Polypiler.Core.Backends.Perl/**", "tests/fixtures/**/*.py", "tests/fixtures/**/*.pl", "tests/fixtures/**/*.pm", "tests/fixtures/**/*.t", "tests/features/infra/infra-ci-pyperl.feature", "Polypiler.Tests.Acceptance/Infra/Ci/PyPerl*.cs", "Polypiler.Tests.Acceptance/Infra/Ci/PythonCommands.cs", "Polypiler.Tests.Acceptance/Infra/Ci/PerlCommands.cs", "tooling/ci/layers/pyperl.yaml"]
+always: false
