@@ -94,6 +94,9 @@ with the interpreter on the emitted JavaScript. No solver, no timeout path.
   width`); `(1 << 40) & 0xFFFFFFFF` is 0.
 - A value used unmasked as well as masked (`p = a * b; return (p & 0xFFFFFFFF) + p`): `p` stays exact.
 - `-7 // 2` is -4 and `-7 % 2` is 1: the floor operations are the frontend's, which the pass keeps.
+- The result of a method, of a function used as a value and of a function with a lambda in it stays
+  exact: only a direct call is widened back. A variable a closure captures or a walrus (`:=`) assigns
+  stays exact too: the closure and the binding name the variable itself.
 
 ## Switching it off
 

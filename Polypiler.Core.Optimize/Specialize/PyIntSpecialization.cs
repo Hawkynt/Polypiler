@@ -50,8 +50,14 @@ public static class PyIntSpecialization {
 
     // A result that every return of its function proves bounded is returned in a fixed width, and
     // every call widens it back where it is used: the value is the same, only its type is narrower.
+    // A function reached otherwise than by a direct call - a method through its class, a function
+    // value - keeps its result: no call of it is there to widen the narrower one back.
+    var indirect = module.Types.OfType<IrClassType>().SelectMany(type => type.Methods.Select(method => method.Function))
+      .Concat(module.Functions.SelectMany(function => IrPassSupport.Nodes(function.Body)).OfType<IrFunctionRef>().Select(reference => reference.Function))
+      .ToHashSet(StringComparer.Ordinal);
     var results = new Dictionary<string, IrType>(StringComparer.Ordinal);
-    foreach (var function in module.Functions.Where(function => function.ReturnType.IsBigInt))
+    foreach (var function in module.Functions.Where(function => function.ReturnType.IsBigInt && !indirect.Contains(function.Name)
+      && !IrPassSupport.Nodes(function.Body).Any(node => node is IrLambda)))
       if (TypeFor(new Specializer(function, null, (_, _, _) => { }).Results()) is { } type)
         results[function.Name] = type;
 
@@ -133,7 +139,13 @@ public static class PyIntSpecialization {
 
     public IrFunction Run() {
       this.Ranges();
-      foreach (var local in function.Locals.Where(local => local.Type.IsBigInt)) {
+      // A variable a lambda captures or a binding expression assigns is kept: both name the variable itself.
+      var pinned = IrPassSupport.Nodes(function.Body).SelectMany(node => node switch {
+        IrLambda lambda => lambda.Captures,
+        IrBind bind => [bind.Local],
+        _ => (IEnumerable<IrLocal>)[]
+      }).ToHashSet();
+      foreach (var local in function.Locals.Where(local => local.Type.IsBigInt && !pinned.Contains(local))) {
         var range = this._ranges.GetValueOrDefault(local, Range.Unbounded);
         if (TypeFor(range) is { } type) {
           this._narrowed[local] = new IrLocal(local.Name, type);

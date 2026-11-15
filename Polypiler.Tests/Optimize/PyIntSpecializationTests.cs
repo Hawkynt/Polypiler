@@ -47,6 +47,30 @@ public sealed class PyIntSpecializationTests {
     _ => Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture)
   };
 
+  /// <summary>
+  /// A method's result stays exact even where its returns are bounded: a method is called through its
+  /// class, which no call of a function widens back; a function called directly is still narrowed.
+  /// </summary>
+  [Test]
+  public void BoundedResultOfAMethod_StaysExact() {
+    const string source = "class C:\n    def __init__(self, n: int) -> None:\n        self.n = n\n\n    def low(self) -> int:\n        return self.n & 0xFF\n\n"
+      + "def low(a: int) -> int:\n    return a & 0xFF\n\ndef f(a: int) -> int:\n    return C(a).low() + low(a)\n";
+    var (before, after, _) = Specialized(source);
+    Assert.That(after.Functions.Single(function => function.Name.EndsWith(".low", StringComparison.Ordinal)).ReturnType, Is.EqualTo(IrType.BigInt));
+    Assert.That(Function(after, "low").ReturnType, Is.EqualTo(IrType.I32));
+    Assert.That(Integer(Call(after, "f", 0x1234L)), Is.EqualTo(new BigInteger(0x68)));
+    Assert.That(Integer(Call(before, "f", 0x1234L)), Is.EqualTo(new BigInteger(0x68)));
+  }
+
+  /// <summary>A variable a closure captures or a walrus binds stays exact: narrowing it would leave the closure and the binding with the old variable.</summary>
+  [TestCase("def f(a: int) -> int:\n    count = a & 0xFF\n    def up() -> int:\n        nonlocal count\n        count += 1\n        return count\n    up()\n    return up()\n", 300L, "46")]
+  [TestCase("def f(a: int) -> int:\n    total = 0\n    if (k := a & 0xFF) > 2:\n        total = k\n    return total + sum(y for x in [a, a] if (y := x & 3) > 0)\n", 7L, "13")]
+  public void CapturedAndBoundVariables_StayExact(string source, long argument, string expected) {
+    var (before, after, _) = Specialized(source);
+    Assert.That(Integer(Call(after, "f", argument)).ToString(System.Globalization.CultureInfo.InvariantCulture), Is.EqualTo(expected));
+    Assert.That(Integer(Call(before, "f", argument)).ToString(System.Globalization.CultureInfo.InvariantCulture), Is.EqualTo(expected));
+  }
+
   /// <summary>Scenario and test design 1: a masked 32-bit addition becomes a wrapping u32 addition.</summary>
   [Test]
   public void MaskedAddition_BecomesAWrappingU32Addition() {
