@@ -404,6 +404,7 @@ public static partial class CSharpEmitter {
     IrStructEquals equality => [equality.Left, equality.Right],
     IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast => IrTree.Operands(expression),
     IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrThrowExpression => IrTree.Operands(expression),
+    IrGenericEquals or IrGenericCompare => IrTree.Operands(expression),
     _ => null
   };
 
@@ -585,10 +586,12 @@ public static partial class CSharpEmitter {
         this._class = "@" + this._class;
 
       // A member keeps its name in every profile; a helper of that name gives way, as does a variable to both.
-      var members = module.Constants.Select(constant => constant.Name).Concat(module.Globals.Select(global => global.Name)).Concat(module.Functions.Select(function => function.Name));
-      this._members = Names(members, [this.ClassName]);
+      // An instantiation and a copy of a function are spelled as the generics decide, copies of one name as overloads of it.
+      this._generics = CSharpGenerics.Of(module, this.Has);
+      var members = module.Constants.Select(constant => constant.Name).Concat(module.Globals.Select(global => global.Name)).Concat(module.Functions.Select(function => this.Spelled(function.Name)));
+      this._members = this.Aliased(Names(members, [this.ClassName]), module.Functions.Select(function => function.Name));
       // A struct is named beside the class, where a member of the class of its name would hide it.
-      this._typeNames = Names(module.Types.Select(type => type.Name), [this.ClassName, .. this._members.Values.Select(member => member.TrimStart('@'))]);
+      this._typeNames = this.Aliased(Names(module.Types.Select(type => this.Spelled(type.Name)), [this.ClassName, .. this._members.Values.Select(member => member.TrimStart('@'))]), module.Types.Select(type => type.Name));
       this._equatable = Equatable(module);
       var taken = this._members.Values.Select(member => member.TrimStart('@')).Append(this.ClassName).ToList();
       this._helpers = Names(helpers.Select(helper => helper.Name), taken);
@@ -665,7 +668,10 @@ public static partial class CSharpEmitter {
       // The classes are written first: the names of their variables are settled before those of the static class.
       var classes = this.Classes();
       foreach (var function in this._module.Functions.Where(function => !this.IsMember(function)))
-        members.Add(this.Function(function));
+        if (!this._generics.Generalized.TryGetValue(function.Name, out var origin))
+          members.Add(this.Function(function));
+        else if (this._generics.Written.Contains(function.Name))
+          members.Add(this.Generic(function, origin));
 
       // The table's order is the order of the helpers, whatever order the class calls them in.
       foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains))
@@ -744,7 +750,7 @@ public static partial class CSharpEmitter {
     private string TypeName(IrType type)
       => type.Underlying is { } underlying ? this.TypeName(underlying) + "?"
         : type.ClassType is { IsLibrary: true } library ? this.ClassTypeName(library)
-        : type.Declaration is { } declared ? this._typeNames[declared.Name] : type.IsView ? this.ViewTypeName(type)
+        : type.Declaration is { } declared ? this._generics.Parameters.ContainsKey(declared) ? declared.Name : this._typeNames[declared.Name] : type.IsView ? this.ViewTypeName(type)
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
@@ -982,7 +988,7 @@ public static partial class CSharpEmitter {
     private CsExpression Stored(IrExpr expression) => expression switch {
       IrConst constant => Bare(constant.Type, constant.Value),
       // Where the type is given, none is null and a value converts to the optional type by itself.
-      IrNone or IrNull => new CsNullLiteral { Type = expression.Type },
+      IrNone or IrNull when this.GenericNode(expression) is null => new CsNullLiteral { Type = expression.Type },
       IrSome some => this.Stored(some.Value) with { Type = expression.Type },
       // The literal default takes the type of the place it goes to.
       IrStructDefault when this.Has(CSharpFeature.DefaultLiteral) => new CsDefaultLiteral { Type = expression.Type },
@@ -1088,6 +1094,8 @@ public static partial class CSharpEmitter {
           return (this.Variable(reference.Local), Primary);
         case IrGlobalRef reference:
           return (this.GlobalName(reference.Global), Primary);
+        case IrNull or IrGenericEquals or IrGenericCompare or IrCall when this.GenericNode(expression) is { } generic:
+          return generic;
         case IrNull { Type.IsArray: true } or IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrConditional { Condition: IrIsNull or IrIsNone }:
           return this.Optional(expression);
         case IrThrowExpression thrown:

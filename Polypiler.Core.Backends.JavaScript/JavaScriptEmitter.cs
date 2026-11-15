@@ -102,8 +102,9 @@ public static partial class JavaScriptEmitter {
   /// <exception cref="ArgumentException">The module is ill-typed or cannot be expressed in the profile.</exception>
   public static TargetPipelineResult<JsProgram> Build(IrModule module, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities, TargetPassOptions passes) {
     ArgumentNullException.ThrowIfNull(passes);
-    var writer = new Writer(profile, capabilities ?? JavaScriptCapabilities.Standard, mode);
+    var table = capabilities ?? JavaScriptCapabilities.Standard;
     var problems = IrVerifier.Verify(module);
+    var writer = new Writer(profile, table, mode) { Naming = problems.Count > 0 ? new([], new HashSet<string>(), true) : Named(module, profile, table, mode) };
     var program = problems.Count > 0 ? null : writer.Module(module);
     if (problems.Concat(writer.Problems).FirstOrDefault() is { } problem)
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problem.Message}.", nameof(module));
@@ -281,17 +282,26 @@ public static partial class JavaScriptEmitter {
     /// function expression returns them to a global.
     /// </summary>
     public JsProgram Module(IrModule module) {
+      this._module = module;
+      this.CountGenerics(module);
       this.NameGlobals(module);
       this.NameClasses(module);
       this.NameExceptions(module);
       var functions = new List<JsStatement>();
       this._members.UnionWith(module.Functions.Select(function => this.Name(function.Name)).Concat(module.Constants.Select(constant => this.Name(constant.Name))));
       this._members.UnionWith(module.Types.OfType<IrClassType>().Select(type => this.Name(type.Name)));
-      foreach (var function in module.Functions.Where(function => !this.IsMember(function)))
+      foreach (var function in module.Functions.Where(function => !this.IsMember(function) && !this.Naming.Skipped.Contains(function.Name))) {
         functions.Add(this.Function(function));
+        this.Declarations[function.Name] = [functions[^1]];
+      }
 
       // A class follows the class it derives from, which extends evaluates.
-      var classes = module.Types.OfType<IrClassType>().OrderBy(type => type.Lineage.Count()).SelectMany(type => this.Class(type, module)).ToList();
+      var classes = new List<JsStatement>();
+      foreach (var type in module.Types.OfType<IrClassType>().Where(type => !this.Naming.Skipped.Contains(type.Name)).OrderBy(type => type.Lineage.Count())) {
+        var declared = this.Class(type, module);
+        classes.AddRange(declared);
+        this.Declarations[type.Name] = declared;
+      }
 
       // The initializers of the globals call helpers as well, which have to be known before they are declared.
       var globals = this.Globals(module);
@@ -384,10 +394,12 @@ public static partial class JavaScriptEmitter {
           return !type.Element!.IsStruct && !type.Element.IsString && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
         case IrTypeKind.String:
           return "string";
-        case IrTypeKind.Struct or IrTypeKind.Object:
+        case IrTypeKind.Struct:
           return type.Declaration!.Name;
         case IrTypeKind.Optional:
           return this.Describe(type.Underlying!) + " | null";
+        case IrTypeKind.Object:
+          return this.Name(type.Declaration!.Name);
         case IrTypeKind.Span or IrTypeKind.ReadOnlySpan:
           return this.DescribeView(type);
         case IrTypeKind.I64 or IrTypeKind.U64:
@@ -430,8 +442,8 @@ public static partial class JavaScriptEmitter {
     /// </summary>
     private JsStatement Function(IrFunction function) {
       this._construct = $"the function '{function.Name}'";
-      var name = this.Name(function.Name);
-      var signature = string.Join(", ", function.Parameters.Select(parameter => $"{this.Name(parameter.Name)}: {this.Describe(parameter.Type)}"));
+      var name = this.DeclaredName(function.Name);
+      var signature = this.Signature(function, this._module!);
       var comment = $"{name}({signature}): {this.Describe(function.ReturnType)}";
       var exported = function.IsPublic && this._profile.Module == JavaScriptModuleFormat.Esm;
       if (function.IsPublic && !exported)
@@ -707,7 +719,13 @@ public static partial class JavaScriptEmitter {
     /// An identifier JavaScript reserves, or one the emitted code relies on itself, gets a <c>$</c>
     /// appended, which no C# identifier can contain.
     /// </summary>
-    private string Name(string identifier) => this._reserved.Contains(identifier) ? identifier + "$" : identifier;
+    private string Name(string identifier) {
+      var aliased = this.Naming.References.GetValueOrDefault(identifier, identifier);
+      return this._reserved.Contains(aliased) ? aliased + "$" : aliased;
+    }
+
+    /// <summary>The module being written, whose functions the comment of a merged set reads.</summary>
+    private IrModule? _module;
 
   }
 

@@ -96,8 +96,9 @@ internal sealed partial class TypeInference {
   /// value modulo 2^32 or 2^64 matters, which is what lets <c>+</c> and <c>-</c> be integer operations.
   /// </summary>
   public JsType Of(Node node, Coercion coercion = Coercion.None) {
-    if (!this._known.TryGetValue((node, coercion), out var type))
-      this._known[(node, coercion)] = type = this.Compute(node, coercion);
+    // A copy of a function shares its nodes with the function, so a type is known per function.
+    if (!this._known.TryGetValue((this._scope, node, coercion), out var type))
+      this._known[(this._scope, node, coercion)] = type = this.Compute(node, coercion);
 
     return type;
   }

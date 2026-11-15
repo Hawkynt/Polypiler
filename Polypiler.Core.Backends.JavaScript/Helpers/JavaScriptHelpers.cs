@@ -45,7 +45,8 @@ internal static partial class JavaScriptHelpers {
     .. ViewOrder,
     .. StringOrder,
     .. OptionalOrder,
-    .. ExceptionOrder
+    .. ExceptionOrder,
+    .. GenericOrder
   ];
 
   private static readonly HashSet<string> _names = [.. Order];
@@ -747,6 +748,7 @@ internal static partial class JavaScriptHelpers {
     _ when StringSource(name, native) is { } text => text,
     _ when OptionalSource(name) is { } optional => optional,
     _ when ErrorSource(name, native) is { } error => error,
+    _ when GenericSource(name) is { } generic => generic,
     _ => Lines("function $len(length) {", "  if (length < 0) " + Overflow, "  return length;", "}")
   };
 

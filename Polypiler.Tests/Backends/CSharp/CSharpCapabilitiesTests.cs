@@ -49,6 +49,8 @@ public sealed class CSharpCapabilitiesTests {
     ("nullable reference types", "C# 8"),
     ("exception filter", "C# 6"),
     ("throw expression", "C# 7"),
+    ("generic constraint unmanaged", "C# 7.3"),
+    ("generic constraint notnull", "C# 8"),
     ("IEquatable<T>", "net2.0"),
     ("EqualityComparer<T>.Default", "net2.0"),
     ("HashCode.Combine", "netstandard2.1"),

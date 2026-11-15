@@ -35,7 +35,7 @@ internal sealed partial class Lowering {
   /// Declares the structs of every file: first a type for each, so that a field may have the type of
   /// a struct declared later, then their fields and constructors.
   /// </summary>
-  private void DeclareStructs(IReadOnlyList<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)> structs) {
+  private void DeclareStructs(IReadOnlyList<(string Path, BoundModel Model, TypeDeclarationSyntax Type)> structs) {
     var names = new HashSet<string>();
     foreach (var (file, semantics, type) in structs) {
       path = file;

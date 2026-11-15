@@ -49,7 +49,7 @@ public sealed record ImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Di
 /// file is refused.
 /// </para>
 /// </summary>
-public static class JavaScriptFrontend {
+public static partial class JavaScriptFrontend {
 
   /// <summary>The code for a syntax error the parser reports.</summary>
   public const string SyntaxError = "PLY1100";
@@ -164,15 +164,31 @@ public static class JavaScriptFrontend {
     if (exports is { Count: 0 })
       exports = null;
 
+    // A function the file does not export that its calls pass values of two kinds is imported once more with a copy per kind.
+    var result = Imported(path, source, program, comments, exports, [], out var copies);
+    return copies.Count == 0 ? result : Imported(path, source, program, comments, exports, copies, out _);
+  }
+
+  /// <summary>
+  /// Imports a parsed file, with a copy of a function for every call <paramref name="copies"/> names;
+  /// without copies, says which calls of a function that is no member of a class and that the file
+  /// does not export pass values of other kinds than its other calls - each kind then gets a copy,
+  /// and the file has to be imported again.
+  /// </summary>
+  private static ImportResult Imported(string path, string source, Program program, List<Comment> comments, IReadOnlyCollection<string>? exports,
+      Dictionary<Node, (IFunction Function, int Copy)> copies, out Dictionary<Node, (IFunction Function, int Copy)> wanted) {
+    wanted = [];
     var errors = new ErrorLibrary(program);
     var collector = new FunctionCollector(source, comments) { Errors = errors };
     var candidates = collector.Collect(program);
+    var redirects = Copies(candidates, copies);
     var constants = collector.Constants;
     var classes = collector.Classes;
     var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name)) {
       // A native error is a class wherever no class of the file has its name.
       Classes = classes.GroupBy(owner => owner.Name).Select(group => group.First())
-        .Concat(errors.ByName.Values.Where(error => classes.All(owner => owner.Name != error.Name))).ToDictionary(owner => owner.Name)
+        .Concat(errors.ByName.Values.Where(error => classes.All(owner => owner.Name != error.Name))).ToDictionary(owner => owner.Name),
+      Redirects = redirects
     };
     var globals = collector.Globals;
     inference.DeclareGlobals(globals, program);
@@ -197,6 +213,10 @@ public static class JavaScriptFrontend {
 
     // With an export list the functions the named ones call are imported too; the types are found for all of them together.
     var models = inference.Solve(chosen, candidate => exports is null ? candidate.IsPublic : exports.Contains(candidate.Name));
+    if (copies.Count == 0 && Wanted(inference, models) is { Count: > 0 } split) {
+      wanted = split;
+      return Refused([]);
+    }
 
     // A struct is named after the first variable, in source order, that holds a value of it, and
     // only where none does after the first array of it.
@@ -241,6 +261,8 @@ public static class JavaScriptFrontend {
     if (diagnostics.Count > 0)
       return Refused(diagnostics);
 
+    // The copies are named after their types last: the checks above find their calls in the module as lowered.
+    module = Named(module, redirects.Values);
     var caveats = new List<ImportCaveat>();
     if (lowering.AccessesElements)
       caveats.Add(_outOfRangeAccess);

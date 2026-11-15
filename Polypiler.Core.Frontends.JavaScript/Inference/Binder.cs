@@ -23,6 +23,9 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   /// <summary>The variables of the module, which every name of a function that no local or parameter hides names.</summary>
   public IReadOnlyDictionary<string, Variable> Globals { get; init; } = new Dictionary<string, Variable>();
 
+  /// <summary>The copy of a function each call the import gave one calls, by the callee of the call.</summary>
+  public IReadOnlyDictionary<Node, Candidate> Redirects { get; init; } = new Dictionary<Node, Candidate>();
+
   /// <summary>The classes of the file by name, which a name that nothing else of the function names names.</summary>
   public IReadOnlyDictionary<string, ClassModel> Classes { get; init; } = new Dictionary<string, ClassModel>();
 
@@ -539,11 +542,11 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       model.Callees.Add(callee);
 
     for (var index = 0; index < call.Arguments.Count; ++index)
-      model.Flows.Add(new Flow(FlowKind.Argument, call.Arguments[index], null, callee, index));
+      model.Flows.Add(new Flow(FlowKind.Argument, call.Arguments[index], null, callee, index, call));
 
     // A parameter no argument is given for is undefined.
     for (var index = call.Arguments.Count; index < callee.Function.Params.Count; ++index)
-      model.Flows.Add(new Flow(FlowKind.Argument, call, null, callee, index) { Missing = true });
+      model.Flows.Add(new Flow(FlowKind.Argument, call, null, callee, index, call) { Missing = true });
   }
 
   /// <summary>
@@ -578,7 +581,7 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       case MemberExpression member when this.ClassNamed(member.Object) is { } owner && KeyOf(member) is { } key:
         return owner.Member(MemberKind.Method, key, true);
       case Identifier { Name: var name } identifier when !model.Bindings.ContainsKey(identifier):
-        return candidates.Find(candidate => !candidate.IsProperty && candidate.Name == name);
+        return this.Redirects.GetValueOrDefault(identifier) ?? candidates.Find(candidate => !candidate.IsProperty && candidate.Name == name);
       case MemberExpression { Computed: false, Property: Identifier { Name: var property } } member when Path(member.Object) is { } path && !model.Bindings.ContainsKey(path.Root):
         return candidates.Find(candidate => candidate.IsProperty && candidate.Owner == path.Text && candidate.Name == property);
       default:

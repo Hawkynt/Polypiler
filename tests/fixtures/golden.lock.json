@@ -482,6 +482,46 @@
       "bytes": 2562974
     },
     {
+      "path": "tests/fixtures/backend/golden/generics/Recursion.cs.csharp.golden",
+      "sha256": "5c0ab9627d410fee69e954ab399786bcf3ce260b6de469e3e6d69152e655b7e4",
+      "bytes": 1122
+    },
+    {
+      "path": "tests/fixtures/backend/golden/generics/Recursion.cs.javascript.golden",
+      "sha256": "d4b992c07d8b9db50ba717fa9b6e3dd02cb96c19738b578278d9d469c46f8dc3",
+      "bytes": 1004
+    },
+    {
+      "path": "tests/fixtures/backend/golden/generics/Ring.cs.csharp.golden",
+      "sha256": "5ca8342605473c6fbdf3af4ea267b3139c8c3fefc8b99a1812cecabc20226a21",
+      "bytes": 61402
+    },
+    {
+      "path": "tests/fixtures/backend/golden/generics/Ring.cs.javascript.golden",
+      "sha256": "74147ca41f48dedab187cf08ff96cff5b3078a731184010ab952ebab348f644a",
+      "bytes": 86172
+    },
+    {
+      "path": "tests/fixtures/backend/golden/generics/Search.cs.csharp.golden",
+      "sha256": "1199e700342483f2dee3f0277699aa2c91af379f1ffa811ac3ca8a0f09f8ac85",
+      "bytes": 89910
+    },
+    {
+      "path": "tests/fixtures/backend/golden/generics/Search.cs.javascript.golden",
+      "sha256": "2f8cfdd75d5cf6afb89ffd0fa75fc1ab75ebcc7a96f7578d2c8742a9f100f8be",
+      "bytes": 137946
+    },
+    {
+      "path": "tests/fixtures/backend/golden/generics/middle.js.csharp.golden",
+      "sha256": "e726536fe1705f1472cb2c00fa8a876d84790e7d64aafb46f6c8c40ce236a8c0",
+      "bytes": 18238
+    },
+    {
+      "path": "tests/fixtures/backend/golden/generics/middle.js.javascript.golden",
+      "sha256": "e7c023bf3744c6af421ca93a5c8a4c039fd249a10d1689660a351d2fd388ea1f",
+      "bytes": 20240
+    },
+    {
       "path": "tests/fixtures/backend/golden/js/FloatView.js.csharp.golden",
       "sha256": "6669a92f8424c332d84be4d9f1151d5fdcfaa9755e814fbfbf1f06172f55866e",
       "bytes": 144658

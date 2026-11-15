@@ -37,6 +37,8 @@ public static class IrTree {
     IrIsNull test => [test.Value],
     IrBind bind => [bind.Value],
     IrThrowExpression thrown => [thrown.Exception],
+    IrGenericEquals equality => [equality.Left, equality.Right],
+    IrGenericCompare order => [order.Left, order.Right],
     _ => []
   };
 

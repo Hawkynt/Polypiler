@@ -73,7 +73,21 @@ public static class CSharpFrontend {
   /// <param name="files">The files, at least one; the functions of the module follow their order.</param>
   /// <param name="checkedByDefault">Whether arithmetic outside any <c>checked</c> or <c>unchecked</c> traps on overflow.</param>
   /// <returns>The module, or the diagnostics that explain why there is none.</returns>
-  public static ImportResult Import(IReadOnlyList<CSharpSource> files, bool checkedByDefault = false) {
+  public static ImportResult Import(IReadOnlyList<CSharpSource> files, bool checkedByDefault = false) => Import(files, checkedByDefault, []);
+
+  /// <summary>
+  /// Imports one static class as <see cref="Import(IReadOnlyList{CSharpSource}, bool)"/> does, with
+  /// instantiations of its public generic methods that the class itself does not use: a generic
+  /// method is otherwise instantiated only for the type arguments the module uses, and a public one
+  /// that nothing instantiates is refused.
+  /// </summary>
+  /// <param name="files">The files, at least one; the functions of the module follow their order.</param>
+  /// <param name="checkedByDefault">Whether arithmetic outside any <c>checked</c> or <c>unchecked</c> traps on overflow.</param>
+  /// <param name="instantiations">The instantiations to lower besides those the module uses.</param>
+  /// <returns>The module, or the diagnostics that explain why there is none.</returns>
+  /// <exception cref="ArgumentException">An instantiation names no generic method of the class, a type that is no type, or another number of type arguments.</exception>
+  public static ImportResult Import(IReadOnlyList<CSharpSource> files, bool checkedByDefault, IReadOnlyList<CSharpInstantiation> instantiations) {
+    ArgumentNullException.ThrowIfNull(instantiations);
     var trees = files
       .Select(file => CSharpSyntaxTree.ParseText(file.Text, new CSharpParseOptions(LanguageVersion.Latest), file.Path))
       .ToList();
@@ -97,8 +111,8 @@ public static class CSharpFrontend {
     if (errors.Count > 0)
       return new(null, errors);
 
-    var parts = trees.Select(tree => (tree.FilePath, compilation.GetSemanticModel(tree), tree.GetCompilationUnitRoot())).ToList();
-    return new Lowering(parts[0].FilePath, parts[0].Item2).Run(parts);
+    var parts = trees.Select(tree => (tree.FilePath, new BoundModel(compilation.GetSemanticModel(tree)), tree.GetCompilationUnitRoot())).ToList();
+    return new Lowering(parts[0].FilePath, parts[0].Item2) { Requested = instantiations }.Run(parts);
   }
 
   /// <summary>

@@ -458,6 +458,12 @@ public static partial class IrInterpreter {
           return ReferenceEquals(first, this.Evaluate(identity.Right, frame));
         case IrCall call when this.LibraryConstructor(call, frame):
           return null!;
+        case IrGenericEquals equality:
+          var compared = this.Evaluate(equality.Left, frame);
+          return GenericEquals(equality.Left.Type, compared, this.Evaluate(equality.Right, frame));
+        case IrGenericCompare order:
+          var ordered = this.Evaluate(order.Left, frame);
+          return GenericCompare(order.Left.Type, ordered, this.Evaluate(order.Right, frame));
         case IrCall call:
           var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
           return this.Invoke(program.Functions[call.Function], arguments)!;
