@@ -123,6 +123,36 @@ public sealed class RustSyntaxTests {
     Assert.That(RustPrinter.Print(RustSyntaxReader.Read(text)), Is.EqualTo(text));
   }
 
+  /// <summary>Every kind of node, each holding a name too long for one line, so that each is broken; the text reads back to itself, and a rename reaches every node.</summary>
+  [Test]
+  public void EveryNodeTooLongForALine_IsBrokenReadBackAndRewritten() {
+    var x = P("x_" + new string('a', 96));
+    RsExpression[] expressions = [
+      new RsUnary("-", x), new RsUnary("!", new RsParenthesized(new RsBinary(x, "<", x))), new RsCast(x, "u32"), new RsParenthesized(new RsBinary(x, "+", x)),
+      new RsIndex(P("TABLE"), new RsCast(x, "usize")), new RsArray([x, L("1")]), new RsRange(x, x, true),
+      new RsMacro("assert_eq", [x, x]), new RsCall(P("g"), [L("1"), new RsIf(x, new RsBlock([], L("1")), new RsBlockExpression(new RsBlock([], L("2"))))]),
+      new RsMethodCall(new RsMethodCall(P("y"), "min", [x]), "max", [x]), new RsMethodCall(new RsCall(P("g"), [x]), "abs", []),
+      new RsBlockExpression(new RsBlock([new RsLet("z", false, null, x)], P("z")))
+    ];
+    var statements = new List<RsStatement>();
+    statements.AddRange(expressions.Select((expression, index) => (RsStatement)new RsLet("v" + index, false, null, expression)));
+    statements.Add(new RsExpressionStatement(new RsAssign(P("v0"), "+=", new RsBinary(x, "*", x))));
+    statements.Add(new RsExpressionStatement(new RsWhile("l0", new RsBinary(x, "!=", x), new RsBlock([new RsExpressionStatement(new RsBreak("l0", x))], null))));
+    statements.Add(new RsExpressionStatement(new RsFor(null, "i", new RsRange(L("0"), x, false), new RsBlock([new RsExpressionStatement(new RsContinue(null))], null))));
+    statements.Add(new RsExpressionStatement(new RsLoop("l1", new RsBlock([new RsExpressionStatement(new RsBreak("l1", null))], null))));
+    statements.Add(new RsExpressionStatement(new RsLabeledBlock("s2", new RsBlock([new RsExpressionStatement(new RsMatch(x, [new RsMatchArm(["_"], x)]))], null))));
+    statements.Add(new RsExpressionStatement(new RsReturn(new RsBinary(x, "-", x))));
+    var function = new RsFunction("f", "pub", [new RsParameter("y", "u32")], "u32", new RsBlock(statements, null));
+    var file = new RsFile([], [], [new RsConst("C", "", "u32", new RsBinary(x, "|", x)), function]);
+    var text = RustPrinter.Print(file);
+    Assert.That(RustPrinter.Print(RustSyntaxReader.Read(text)), Is.EqualTo(text));
+    var renamed = RustSyntaxRewriter.Rewrite(file, node => node == x ? P("w") : node);
+    Assert.That(RustPrinter.Print(renamed), Does.Not.Contain(x.Name));
+    Assert.That(RustSyntaxRewriter.DescendantsAndSelf(renamed).OfType<RsPath>().Count(path => path.Name == "w"), Is.EqualTo(RustSyntaxRewriter.DescendantsAndSelf(file).Count(node => node == x)));
+    Assert.That(RustPrinter.Print(new RsUse("a::b")), Is.EqualTo("use a::b;\n"));
+    Assert.That(RustPrinter.Print(new RsInlineModule("m", [])), Is.EqualTo("mod m {\n}\n"));
+  }
+
   [TestCase("fn f( {}")]
   [TestCase("struct S;")]
   [TestCase("fn f() { a b }")]
