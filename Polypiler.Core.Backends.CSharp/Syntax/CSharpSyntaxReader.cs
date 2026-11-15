@@ -83,8 +83,14 @@ public static class CSharpSyntaxReader {
 
   private static IReadOnlyList<string> Modifiers(SyntaxTokenList modifiers) => [.. modifiers.Select(modifier => modifier.Text)];
 
+  /// <summary>The attributes of lists, each as it stands between its brackets, with its target - <c>return: </c> - where it has one.</summary>
+  private static IReadOnlyList<string> Attributes(SyntaxList<AttributeListSyntax> lists)
+    => [.. lists.SelectMany(list => list.Attributes.Select(attribute => list.Target is null ? attribute.ToString() : $"{list.Target.Identifier.Text}: {attribute}"))];
+
   private static CsParameter Read(ParameterSyntax parameter)
-    => new(new CsType(parameter.Type?.ToString() ?? ""), parameter.Identifier.Text, parameter.Modifiers.Count == 0 ? null : string.Join(' ', parameter.Modifiers.Select(modifier => modifier.Text)));
+    => new(new CsType(parameter.Type?.ToString() ?? ""), parameter.Identifier.Text, parameter.Modifiers.Count == 0 ? null : string.Join(' ', parameter.Modifiers.Select(modifier => modifier.Text))) {
+      Attributes = Attributes(parameter.AttributeLists)
+    };
 
   private static IReadOnlyList<CsParameter> Read(ParameterListSyntax parameters) => [.. parameters.Parameters.Select(Read)];
 
@@ -94,7 +100,8 @@ public static class CSharpSyntaxReader {
         Modifiers(method.Modifiers), new CsType(method.ReturnType.ToString()), method.Identifier.Text,
         method.TypeParameterList is null ? [] : [.. method.TypeParameterList.Parameters.Select(parameter => parameter.Identifier.Text)],
         Read(method.ParameterList), method.Body is null ? null : Block(method.Body), method.ExpressionBody is null ? null : Read(method.ExpressionBody.Expression)) {
-        Constraints = [.. method.ConstraintClauses.Select(clause => $"{clause.Name} : {string.Join(", ", clause.Constraints)}")]
+        Constraints = [.. method.ConstraintClauses.Select(clause => $"{clause.Name} : {string.Join(", ", clause.Constraints)}")],
+        Attributes = Attributes(method.AttributeLists)
       },
       OperatorDeclarationSyntax @operator => new CsMethod(
         Modifiers(@operator.Modifiers), new CsType(@operator.ReturnType.ToString()), "operator " + @operator.OperatorToken.Text, [],
@@ -110,7 +117,9 @@ public static class CSharpSyntaxReader {
           accessor.Body is null ? null : Block(accessor.Body), accessor.ExpressionBody is null ? null : Read(accessor.ExpressionBody.Expression)))],
         property.ExpressionBody is null ? null : Read(property.ExpressionBody.Expression)),
       FieldDeclarationSyntax { Declaration.Variables: [var variable] } field => new CsField(
-        Modifiers(field.Modifiers), new CsType(field.Declaration.Type.ToString()), variable.Identifier.Text, variable.Initializer is null ? null : Read(variable.Initializer.Value)),
+        Modifiers(field.Modifiers), new CsType(field.Declaration.Type.ToString()), variable.Identifier.Text, variable.Initializer is null ? null : Read(variable.Initializer.Value)) {
+        Attributes = Attributes(field.AttributeLists)
+      },
       TypeDeclarationSyntax type => new CsTypeDeclaration(
         Modifiers(type.Modifiers),
         type is RecordDeclarationSyntax record ? record.ClassOrStructKeyword.IsKind(SyntaxKind.None) ? "record" : "record " + record.ClassOrStructKeyword.Text : type.Keyword.Text,
@@ -118,7 +127,8 @@ public static class CSharpSyntaxReader {
         type.ParameterList is null ? null : Read(type.ParameterList),
         type.BaseList is null ? [] : [.. type.BaseList.Types.Select(baseType => new CsType(baseType.Type.ToString()))],
         type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]) {
-        TypeParameters = type.TypeParameterList is null ? [] : [.. type.TypeParameterList.Parameters.Select(parameter => parameter.Identifier.Text)]
+        TypeParameters = type.TypeParameterList is null ? [] : [.. type.TypeParameterList.Parameters.Select(parameter => parameter.Identifier.Text)],
+        Attributes = Attributes(type.AttributeLists)
       },
       EnumDeclarationSyntax declared => new CsEnumDeclaration(
         [.. declared.AttributeLists.SelectMany(list => list.Attributes).Select(attribute => attribute.ToString())],
@@ -240,7 +250,7 @@ public static class CSharpSyntaxReader {
     => new([.. initializer.Expressions.Select(Read)]) { Tabulated = Apart(initializer.OpenBraceToken, initializer.CloseBraceToken) };
 
   private static IReadOnlyList<CsExpression> Arguments(ArgumentListSyntax arguments)
-    => [.. arguments.Arguments.Select(argument => argument.RefKindKeyword.IsKind(SyntaxKind.OutKeyword) ? new CsOutArgument(Read(argument.Expression)) : Read(argument.Expression))];
+    => [.. arguments.Arguments.Select(argument => argument.RefKindKeyword.IsKind(SyntaxKind.None) ? Read(argument.Expression) : new CsOutArgument(Read(argument.Expression)) { Keyword = argument.RefKindKeyword.Text })];
 
   private static CsExpression Literal(LiteralExpressionSyntax literal) {
     var token = literal.Token;
