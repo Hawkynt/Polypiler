@@ -1,0 +1,1 @@
+{"source":"K = 40\n","dump":{"format":1,"module":{"_":"Module","body":[{"_":"Assign","line":1,"col":1,"endLine":1,"endCol":7,"targets":[{"_":"Name","line":1,"col":1,"endLine":1,"endCol":2,"id":"K","ctx":{"_":"Store"}}],"value":{"_":"Constant","line":1,"col":5,"endLine":1,"endCol":7,"kind":"int","value":"40"}}],"type_ignores":[]}}}
