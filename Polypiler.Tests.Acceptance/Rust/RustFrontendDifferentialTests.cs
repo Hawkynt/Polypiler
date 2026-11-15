@@ -63,12 +63,14 @@ public sealed class RustFrontendDifferentialTests {
     var (javaScriptExit, javaScriptText) = Toolchain.Polypiler(true, this._directory, [.. common, "--to", "javascript", "--output", "js"]);
     Assert.That(javaScriptExit, Is.Zero, javaScriptText);
 
-    var build = GeneratedCSharp.Compile(File.ReadAllText(Path.Combine(this._directory, "cs", fixture + ".cs")), false);
+    var build = GeneratedCSharp.Compile(WithArrayEntries(File.ReadAllText(Path.Combine(this._directory, "cs", fixture + ".cs")), module), false);
     var javaScript = Toolchain.NodeOutcomes(Path.Combine(this._directory, "js"), fixture + ".mjs", calls, true);
+    var viewed = module.Functions.Where(function => function.IsPublic && function.Parameters.Any(parameter => parameter.Type.IsView)).Select(function => function.Name).ToHashSet();
     var mismatches = new List<string>();
     for (var index = 0; index < calls.Count; ++index) {
       var expected = recorded[index][(recorded[index].IndexOf(" => ", StringComparison.Ordinal) + 4)..];
-      var csharp = RustFixture.Normalized(build.Outcome(calls[index]));
+      var call = viewed.Contains(calls[index].Method) ? calls[index] with { Method = calls[index].Method + ArrayEntry } : calls[index];
+      var csharp = RustFixture.Normalized(build.Outcome(call));
       var node = RustFixture.Normalized(javaScript[index]);
       if (csharp != expected || node != expected)
         mismatches.Add($"{calls[index]}: rustc {expected}, C# {csharp}, JavaScript {node}");
@@ -77,5 +79,42 @@ public sealed class RustFrontendDifferentialTests {
     TestContext.Out.WriteLine($"{fixture} ({RustFixture.NameOf(mode)}): {calls.Count} calls, {mismatches.Count} mismatches");
     Assert.That(mismatches.Take(30), Is.Empty, $"{mismatches.Count} of {calls.Count} calls differ");
   }
+
+  /// <summary>The suffix of the entry that takes arrays where a public function of the generated C# takes spans.</summary>
+  private const string ArrayEntry = "__arrays";
+
+  /// <summary>
+  /// The generated C# with an entry beside every public function that takes a span, which takes
+  /// arrays instead: reflection cannot pass a span, and an array converts to one where the entry
+  /// calls the function. The entry is test scaffolding; the generated function is what runs.
+  /// </summary>
+  private static string WithArrayEntries(string source, Core.IR.IrModule module) {
+    var entries = new System.Text.StringBuilder();
+    foreach (var function in module.Functions.Where(function => function.IsPublic && function.Parameters.Any(parameter => parameter.Type.IsView))) {
+      var parameters = string.Join(", ", function.Parameters.Select((parameter, index) => $"{CSharpType(parameter.Type)} p{index}"));
+      var arguments = string.Join(", ", function.Parameters.Select((_, index) => $"p{index}"));
+      entries.Append(function.ReturnType == Core.IR.IrType.Void
+        ? $"  public static void {function.Name}{ArrayEntry}({parameters}) {{ {function.Name}({arguments}); }}\n"
+        : $"  public static object {function.Name}{ArrayEntry}({parameters}) => {function.Name}({arguments});\n");
+    }
+
+    var match = System.Text.RegularExpressions.Regex.Match(source, @"public static class @?\w+ \{\n");
+    Assert.That(match.Success, "the generated C# has its static class");
+    return source.Insert(match.Index + match.Length, entries.ToString());
+  }
+
+  private static string CSharpType(Core.IR.IrType type) => type.IsView ? CSharpType(type.Element!) + "[]" : type.Kind switch {
+    Core.IR.IrTypeKind.Bool => "bool",
+    Core.IR.IrTypeKind.I8 => "sbyte",
+    Core.IR.IrTypeKind.U8 => "byte",
+    Core.IR.IrTypeKind.I16 => "short",
+    Core.IR.IrTypeKind.U16 => "ushort",
+    Core.IR.IrTypeKind.I32 => "int",
+    Core.IR.IrTypeKind.U32 => "uint",
+    Core.IR.IrTypeKind.I64 => "long",
+    Core.IR.IrTypeKind.U64 => "ulong",
+    Core.IR.IrTypeKind.F32 => "float",
+    _ => "double"
+  };
 
 }

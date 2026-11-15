@@ -13,7 +13,7 @@ namespace Polypiler.Prototype.Testing;
 /// and random operands from a fixed seed. The calls of <c>control</c> and <c>functions</c> are
 /// written by hand, because their loops must terminate.
 /// </summary>
-internal static class RustCases {
+internal static partial class RustCases {
 
   /// <summary>The seed of the random operands.</summary>
   public const int Seed = 1500;
@@ -25,6 +25,9 @@ internal static class RustCases {
   public static IReadOnlyList<PrototypeCall> For(string fixture, IrModule module) => fixture switch {
     "scalars" => Generated(module),
     "control" => Control(),
+    "memory" => Memory(),
+    "types" => Types(),
+    "closures" => Closures(),
     _ => Functions()
   };
 

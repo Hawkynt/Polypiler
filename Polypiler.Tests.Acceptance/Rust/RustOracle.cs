@@ -35,6 +35,20 @@ internal static class RustOracle {
     impl Show for f32 { fn show(&self) -> String { float(*self as f64) } }
     impl Show for f64 { fn show(&self) -> String { float(*self) } }
     impl Show for () { fn show(&self) -> String { "void".to_string() } }
+    impl<A: Show, B: Show> Show for (A, B) { fn show(&self) -> String { format!("{{{},{}}}", self.0.show(), self.1.show()) } }
+    impl<A: Show, B: Show, C: Show> Show for (A, B, C) { fn show(&self) -> String { format!("{{{},{},{}}}", self.0.show(), self.1.show(), self.2.show()) } }
+    fn slice<T: Show>(v: &[T]) -> String { format!("[{}]", v.iter().map(|x| x.show()).collect::<Vec<_>>().join(",")) }
+
+    fn out_with<T: Show>(o: &mut String, r: std::thread::Result<T>, after: &[String]) {
+      match r {
+        Ok(v) => {
+          o.push_str(&v.show());
+          for a in after { o.push_str(" | "); o.push_str(a); }
+          o.push('\n');
+        }
+        Err(e) => out::<()>(o, Err(e)),
+      }
+    }
 
     fn out<T: Show>(o: &mut String, r: std::thread::Result<T>) {
       match r {
@@ -83,7 +97,9 @@ internal static class RustOracle {
 
       var function = functions[calls[start].Method];
       var types = function.Parameters.Select(parameter => RustType(parameter.Type)).ToList();
-      if (types.Count == 0) {
+      if (function.Parameters.Any(parameter => parameter.Type.IsView)) {
+        Views(text, function, calls, start, end);
+      } else if (types.Count == 0) {
         for (var index = start; index < end; ++index)
           text.Append(CultureInfo.InvariantCulture, $"  out(&mut o, std::panic::catch_unwind(|| {function.Name}()));\n");
       } else {
@@ -102,6 +118,41 @@ internal static class RustOracle {
 
     text.Append("  print!(\"{}\", o);\n}\n");
     return text.ToString();
+  }
+
+  /// <summary>
+  /// A run of calls of a function that takes slices: each slice argument is a <c>Vec</c> of its own,
+  /// passed as <c>&amp;v[..]</c> or <c>&amp;mut v[..]</c>, and after a call that returned its contents
+  /// follow the result, as <see cref="PrototypeFixture.Outcome"/> writes the arrays a call was given.
+  /// </summary>
+  private static void Views(StringBuilder text, IrFunction function, IReadOnlyList<PrototypeCall> calls, int start, int end) {
+    var parameters = function.Parameters;
+    var types = parameters.Select(parameter => parameter.Type.IsView ? $"Vec<{RustType(parameter.Type.Element!)}>" : RustType(parameter.Type)).ToList();
+    var names = parameters.Select((_, index) => $"a{index}").ToList();
+    text.Append(CultureInfo.InvariantCulture, $"  {{\n    let cases: Vec<({string.Join(", ", types)},)> = vec![\n");
+    for (var index = start; index < end; ++index)
+      text.Append(CultureInfo.InvariantCulture, $"      ({string.Join(", ", calls[index].Arguments.Select((argument, position) => Argument(argument, parameters[position].Type)))},),\n");
+
+    text.Append("    ];\n");
+    var arguments = parameters.Select((parameter, index) => parameter.Type.Kind switch {
+      IrTypeKind.Span => $"&mut a{index}[..]",
+      IrTypeKind.ReadOnlySpan => $"&a{index}[..]",
+      _ => $"a{index} as _"
+    });
+    var after = parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsView).Select(pair => $"slice(&a{pair.index})");
+    text.Append(CultureInfo.InvariantCulture, $"    for case in cases.into_iter() {{\n      let (mut {string.Join(", mut ", names)},) = case;\n");
+    text.Append(CultureInfo.InvariantCulture, $"      let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {function.Name}({string.Join(", ", arguments)})));\n");
+    text.Append(CultureInfo.InvariantCulture, $"      out_with(&mut o, r, &[{string.Join(", ", after)}]);\n    }}\n  }}\n");
+  }
+
+  /// <summary>An argument as a Rust literal of its parameter's type: a slice argument as a <c>vec!</c> of typed elements.</summary>
+  private static string Argument(object value, IrType type) {
+    if (!type.IsView)
+      return Literal(value);
+
+    var element = RustType(type.Element!);
+    var items = ((Array)value).Cast<object>().Select(item => item is float or double ? Literal(item) : $"{Literal(item)}{element}");
+    return $"vec![{string.Join(", ", items)}]";
   }
 
   private static string RustType(IrType type) => type == IrType.Bool ? "bool" : type.ToString();

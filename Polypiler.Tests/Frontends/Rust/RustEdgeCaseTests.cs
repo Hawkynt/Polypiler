@@ -40,7 +40,7 @@ public sealed class RustEdgeCaseTests {
   public void LexicalForm_Imports(string source, string? expected) {
     var result = Import(source);
     if (expected is null)
-      Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code), Has.All.EqualTo(RustFrontend.UnsupportedType));
+      Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code), Has.All.EqualTo(RustFrontend.TextType));
     else
       Assert.That(RustFixture.Interpreted(result.Module!, new PrototypeCall("f", [])), Is.EqualTo(expected));
   }
@@ -62,27 +62,44 @@ public sealed class RustEdgeCaseTests {
   public void CutOffText_IsASyntaxError(string source) => Assert.That(Codes(source), Has.All.EqualTo(RustFrontend.InvalidSource));
 
   /// <summary>Types the parser reads to name them in a refusal.</summary>
-  [TestCase("pub fn f(a: (u32, u32)) -> u32 { 1 }")]
-  [TestCase("pub fn f(a: [u8; 4]) -> u32 { 1 }")]
-  [TestCase("pub fn f(a: [u8]) -> u32 { 1 }")]
-  [TestCase("pub fn f(a: &'static mut u32) -> u32 { 1 }")]
-  [TestCase("pub fn f(a: *const u8) -> u32 { 1 }")]
-  [TestCase("pub fn f(a: fn(u32) -> u32) -> u32 { 1 }")]
-  [TestCase("pub fn f(a: unsafe extern \"C\" fn()) -> u32 { 1 }")]
-  [TestCase("pub fn f(a: impl Fn() + Copy) -> u32 { 1 }")]
-  [TestCase("pub fn f(a: &dyn Copy) -> u32 { 1 }")]
-  [TestCase("pub fn f(a: std::num::Wrapping<Vec<u32>>) -> u32 { 1 }")]
   [TestCase("pub fn f() -> u32 { let x: u128 = 1; 1 }")]
   [TestCase("pub fn f() -> u32 { 1 as u128 as u32 }")]
   [TestCase("const C: u128 = 1; pub fn f() -> u32 { 1 }")]
   [TestCase("pub fn f() -> u32 { const C: u128 = 1; 1 }")]
   public void TypeOutsideTheSubset_IsNamed(string source) => Assert.That(Codes(source), Does.Contain(RustFrontend.UnsupportedType));
 
+  /// <summary>Every other form of type outside the subset is refused with the code of what it is.</summary>
+  [TestCase("pub fn f(a: [u8]) -> u32 { 1 }", RustFrontend.InvalidSource)]
+  [TestCase("pub fn f(a: *const u8) -> u32 { 1 }", RustFrontend.UnsafeConstruct)]
+  [TestCase("pub fn f(a: unsafe extern \"C\" fn()) -> u32 { 1 }", RustFrontend.UnsafeConstruct)]
+  [TestCase("pub fn f(a: impl Fn() + Copy) -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
+  [TestCase("pub fn f(a: &dyn Copy) -> u32 { 1 }", RustFrontend.UnsupportedTrait)]
+  [TestCase("pub fn f(a: dyn Copy) -> u32 { 1 }", RustFrontend.UnsupportedTrait)]
+  [TestCase("pub fn f(a: std::num::Wrapping<Vec<u32>>) -> u32 { 1 }", RustFrontend.ForeignPath)]
+  [TestCase("pub fn f(a: Unknown) -> u32 { 1 }", RustFrontend.InvalidSource)]
+  [TestCase("pub fn f(a: m::Unknown) -> u32 { 1 }", RustFrontend.ForeignPath)]
+  [TestCase("pub fn f(a: &&u32) -> u32 { 1 }", RustFrontend.UnsupportedElement)]
+  [TestCase("pub fn f(a: (u32, Vec<u8>)) -> u32 { 1 }", RustFrontend.Unsupported)]
+  [TestCase("pub fn f(a: Option<Vec<u8>>) -> u32 { 1 }", RustFrontend.UnsupportedOptionMethod)]
+  [TestCase("pub fn f(a: Vec<Vec<u8>>) -> u32 { 1 }", RustFrontend.UnsupportedElement)]
+  [TestCase("pub fn f(a: [u8; N]) -> u32 { 1 }", RustFrontend.UnsupportedElement)]
+  [TestCase("pub fn f() -> Self { 1 }", RustFrontend.InvalidSource)]
+  [TestCase("pub fn f(a: Vec<u8, u8>) -> u32 { 1 }", RustFrontend.InvalidSource)]
+  public void OtherType_IsRefusedWithItsCode(string source, string code) => Assert.That(Codes(source), Does.Contain(code));
+
+  /// <summary>Types that once were refused and now import: tuples, arrays, function pointers, references.</summary>
+  [TestCase("pub fn f(a: (u32, u32)) -> u32 { a.0 + a.1 }")]
+  [TestCase("pub fn f(a: [u8; 4]) -> u32 { a[3] as u32 }")]
+  [TestCase("pub fn f(a: &'static mut u32) -> u32 { *a += 1; *a }")]
+  [TestCase("pub fn f(a: fn(u32) -> u32) -> u32 { a(1) }")]
+  [TestCase("pub fn f(a: &u32) -> u32 { *a }")]
+  public void FormerlyRefusedType_Imports(string source) => Assert.That(Import(source).Diagnostics, Is.Empty);
+
   /// <summary>The body of a function whose signature is refused is still searched for refused constructs.</summary>
   [Test]
   public void RefusalsInAnUncheckedBody_AreReported() {
     var codes = Codes("""
-      pub fn f(a: &u32) -> u32 {
+      pub fn f(a: &str) -> u32 {
         let [x] = [1];
         let y = -!(1 as u8).count_ones() + g(|| 1, (2, 3)) + { 0..1; 5 } + match a { Some(v) | [v] if v.await => 1, _ => 2 };
         z = (*a).field;
@@ -92,11 +109,10 @@ public sealed class RustEdgeCaseTests {
         f
       }
       """);
-    // The parameter type; [x] and [1]; the closure; Some(v) and [v]; .await; *a; async; unsafe; break [1]; &1; vec! and println!.
+    // The parameter type; [x]; [v]; .await; async; unsafe; println!.
     Assert.That(codes, Is.EquivalentTo(new[] {
-      RustFrontend.UnsupportedType, RustFrontend.UnsupportedPattern, RustFrontend.Unsupported, RustFrontend.Unsupported,
-      RustFrontend.UnsupportedPattern, RustFrontend.UnsupportedPattern, RustFrontend.Coroutine, RustFrontend.Unsupported, RustFrontend.Coroutine,
-      RustFrontend.Unsupported, RustFrontend.Unsupported, RustFrontend.Unsupported, RustFrontend.UnsupportedMacro, RustFrontend.UnsupportedMacro
+      RustFrontend.TextType, RustFrontend.UnsupportedElement, RustFrontend.UnsupportedElement, RustFrontend.Coroutine, RustFrontend.Coroutine,
+      RustFrontend.UnsafeConstruct, RustFrontend.UnsupportedMacro
     }));
   }
 
@@ -133,25 +149,25 @@ public sealed class RustEdgeCaseTests {
   [TestCase("pub fn f(x: u32) -> u32 { let y; y = 5 + x; y }", new object[] { 1u }, "6")]
   [TestCase("pub fn f(x: u32) -> u32 { { 1u32 }.count_ones(); x + 1 }", new object[] { 1u }, "2")]
   [TestCase("pub fn f(x: u16) -> u32 { let mut r = 0; for i in (0..=x).step_by(2).rev() { r += i as u32; } for i in (0..5usize).step_by(2).rev() { r += i as u32; } r }", new object[] { (ushort)4 }, "12")]
+  [TestCase("fn g() {} pub fn f() -> bool { g() == g() }", new object[0], "true")]
   public void Form_HasTheValueRustGives(string source, object[] arguments, string expected) => Assert.That(Run(source, arguments), Is.EqualTo(expected));
 
   /// <summary>Refusals and compiler errors of the rarer forms.</summary>
-  [TestCase("pub fn f() -> u32 { Foo::BAR }", RustFrontend.Unsupported)]
+  [TestCase("pub fn f() -> u32 { Foo::BAR }", RustFrontend.InvalidSource)]
+  [TestCase("pub fn f() -> u32 { foo::BAR }", RustFrontend.ForeignPath)]
   [TestCase("pub fn f() -> f64 { f64::DIGITS }", RustFrontend.Unsupported)]
   [TestCase("pub fn f(x: u32) -> u32 { x.abs() }", RustFrontend.Unsupported)]
-  [TestCase("pub fn f(x: u32) -> u32 { x.wrapping_add(1).0 }", RustFrontend.Unsupported)]
-  [TestCase("pub fn f(x: u32) -> u32 { let [a] = x; 1 }", RustFrontend.UnsupportedPattern)]
-  [TestCase("pub fn f(x: u32, y: u32) -> u32 { match (x, y) { [a] => 1, _ => 0 } }", RustFrontend.UnsupportedPattern)]
+  [TestCase("pub fn f(x: u32) -> u32 { let [a] = x; 1 }", RustFrontend.UnsupportedElement)]
+  [TestCase("pub fn f(x: u32, y: u32) -> u32 { match (x, y) { [a] => 1, _ => 0 } }", RustFrontend.UnsupportedElement)]
   [TestCase("#[allow(a[b])] #[1] pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedAttribute)]
   [TestCase("pub fn f() -> u32 { #[allow(unused)] let x = 1; foo!; x }", RustFrontend.UnsupportedMacro)]
-  [TestCase("pub fn f((a, b): (u32, u32), c: u32) -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
   [TestCase("pub fn f<A: Into<Vec<u8>>>() -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
   [TestCase("pub fn f() -> u32 { async move { 1 }; 1 }", RustFrontend.Coroutine)]
   [TestCase("pub fn f() -> u32 { for x in .. { } 1 }", RustFrontend.UnsupportedIterable)]
-  [TestCase("pub fn f(x: u32) -> u32 { match x { \"a\" => 1, _ => 0 } }", RustFrontend.UnsupportedType)]
+  [TestCase("pub fn f(x: u32) -> u32 { match x { \"a\" => 1, _ => 0 } }", RustFrontend.TextType)]
   [TestCase("pub fn f(x: f64) -> u32 { match x { 1.0..=2.0 => 1, _ => 0 } }", RustFrontend.UnsupportedPattern)]
-  [TestCase("pub fn f(x: u32) -> u32 { match x { 'a'..='z' => 1, _ => 0 } }", RustFrontend.UnsupportedType)]
-  [TestCase("pub fn f(x: u32) -> u32 { match x { [[a]] => 1, _ => 0 } }", RustFrontend.UnsupportedPattern)]
+  [TestCase("pub fn f(x: u32) -> u32 { match x { 'a'..='z' => 1, _ => 0 } }", RustFrontend.TextType)]
+  [TestCase("pub fn f(x: u32) -> u32 { match x { [[a]] => 1, _ => 0 } }", RustFrontend.UnsupportedElement)]
   public void RareConstruct_IsRefused(string source, string code) => Assert.That(Codes(source), Does.Contain(code));
 
   [TestCase("pub fn f() -> f32 { 1 + 1.5 }", "E0308")]
@@ -162,7 +178,7 @@ public sealed class RustEdgeCaseTests {
   [TestCase("pub fn f(x: u32) -> u32 { x >> 40 }", "shift right")]
   [TestCase("pub fn f() -> i32 { i32::MIN / -1 }", "arithmetic_overflow")]
   [TestCase("pub fn f() -> i32 { i32::MIN % -1 }", "arithmetic_overflow")]
-  [TestCase("fn g() {} pub fn f() -> bool { g() == g() }", "E0369")]
+  [TestCase("pub fn f(x: u32) -> u32 { x.wrapping_add(1).0 }", "E0610")]
   [TestCase("pub fn f(x: u32) -> u32 { x.pow(1, 2) }", "takes 1 argument but")]
   [TestCase("pub fn f(x: u32) -> u32 { x.checked_add(1).unwrap_or() }", "takes 1 argument but")]
   [TestCase("fn g(a: u32) -> u32 { a } pub fn f() -> u32 { g(1, 2) }", "takes 1 argument but")]
