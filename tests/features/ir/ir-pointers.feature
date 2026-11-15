@@ -23,7 +23,7 @@ Feature: Bounded pointers from unsafe C#
 
   Scenario: The C# output stays unsafe code and says so
     When "pointers/Pointers.cs" is translated with "--to csharp --profile net2.0"
-    Then the class is declared "unsafe", Word contains "*(uint*)(" and the header names "AllowUnsafeBlocks"
+    Then Word is declared "unsafe" and contains "*(uint*)(", the class is not, and the header names "AllowUnsafeBlocks"
     And it compiles against the .NET Framework 2.0 reference assemblies at C# 2 with AllowUnsafeBlocks and without diagnostics
 
   Scenario: JavaScript reads a reinterpreted pointer through a DataView

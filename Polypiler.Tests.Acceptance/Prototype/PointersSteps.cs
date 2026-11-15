@@ -82,10 +82,11 @@ public sealed class PointersSteps(PrototypeScenario scenario) {
     Assert.That(calls.Select(call => Result(PointerFixtures.DotNet("Pointers", call))), Is.EqualTo(expected));
   }
 
-  [Then("^the class is declared " + StepText.Quoted + ", Word contains " + StepText.Quoted + " and the header names " + StepText.Quoted + "$")]
+  [Then("^Word is declared " + StepText.Quoted + " and contains " + StepText.Quoted + ", the class is not, and the header names " + StepText.Quoted + "$")]
   public void DeclaredUnsafe(string modifier, string read, string option) {
     var text = this._generated.Text;
-    Assert.That(text, Does.Contain($"public static {modifier} class Pointers"));
+    Assert.That(text, Does.Contain("public static class Pointers").And.Not.Contain($"{modifier} class"));
+    Assert.That(text, Does.Contain($"public static {modifier} uint Word("));
     Assert.That(Function(text, "Word"), Does.Contain(read));
     var header = string.Join('\n', text.Split('\n').TakeWhile(line => line.StartsWith("//", StringComparison.Ordinal)));
     Assert.That(header, Does.Contain(option));
