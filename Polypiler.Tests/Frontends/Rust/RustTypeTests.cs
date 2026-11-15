@@ -87,8 +87,8 @@ public sealed class RustTypeTests {
 
   /// <summary>Scenario: a trait implementation is rejected with a stable code and a pointer to the object model.</summary>
   [Test]
-  public void TraitImplementation_IsRejected() {
-    var result = Import("struct V(i32); impl std::ops::Add for V { type Output = V; fn add(self, o: V) -> V { V(self.0 + o.0) } }");
+  public void TraitObject_IsRejected() {
+    var result = Import("trait T { fn m(&self) -> u8; } pub fn f(x: &dyn T) -> u8 { x.m() }");
     Assert.That(result.Module, Is.Null);
     var diagnostic = result.Diagnostics.Single();
     Assert.That((diagnostic.Code, diagnostic.Line), Is.EqualTo((RustFrontend.UnsupportedTrait, 1)));
@@ -214,7 +214,7 @@ public sealed class RustTypeTests {
     => Assert.That(Run("struct P { x: u8, y: u8 } pub fn f(a: &[u8], z: u8) -> u8 { let p = P { y: 1 / z, x: a[9] }; p.x + p.y }", "f", new byte[3], (byte)0), Is.EqualTo(RustFixture.DivideByZero));
 
   /// <summary>Test design 14 to 17: traits, generics, lifetimes, data enums, attributes, Option methods, destructors and compiler errors.</summary>
-  [TestCase("trait T {} pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedTrait)]
+  [TestCase("trait T {} pub fn f(x: &dyn T) -> u32 { 1 }", RustFrontend.UnsupportedTrait)]
   [TestCase("struct P; impl std::fmt::Display for P { } pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedTrait)]
   [TestCase("pub fn f(t: &dyn Copy) -> u32 { 1 }", RustFrontend.UnsupportedTrait)]
   [TestCase("struct W<T>(T); pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedGeneric)]

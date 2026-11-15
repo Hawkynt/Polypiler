@@ -30,6 +30,7 @@ internal static partial class RustCases {
     "closures" => Closures(),
     "edges" => Edges(),
     "strings" => Text(),
+    "traits" => Traits(),
     _ => Functions()
   };
 

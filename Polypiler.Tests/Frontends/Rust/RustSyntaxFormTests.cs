@@ -40,7 +40,7 @@ public sealed class RustSyntaxFormTests {
   [TestCase("struct S where u8: Copy { a: u8 } pub fn f() -> u8 { 1 }", "where clause")]
   [TestCase("enum E<T> { A } pub fn f() -> u8 { 1 }", RustFrontend.UnsupportedGeneric)]
   [TestCase("struct S; impl S where S: Copy { } pub fn f() -> u8 { 1 }", "where clause")]
-  [TestCase("struct S; impl S { type T = u8; } pub fn f() -> u8 { 1 }", "associated type")]
+  [TestCase("struct S; impl S { type T = u8; } pub fn f() -> u8 { 1 }", "E0658: inherent associated types are unstable")]
   [TestCase("struct S; impl S { struct T; } pub fn f() -> u8 { 1 }", "item in an impl block")]
   [TestCase("mod m { #![allow(dead_code)] #![no_std] pub fn g() {} } pub fn f() -> u8 { 1 }", "no_std")]
   [TestCase("#[cfg(all(test, unix))] fn g() {} pub fn f() -> u8 { 1 }", "cfg(all(test,unix))")]
@@ -56,7 +56,7 @@ public sealed class RustSyntaxFormTests {
   [TestCase("pub fn f() -> u8 { let x = 1u8; let p = &raw const x; 1 }", RustFrontend.UnsafeConstruct)]
   [TestCase("pub fn f(x: impl Copy + 'static) -> u8 { 1 }", RustFrontend.UnsupportedFunction)]
   [TestCase("pub fn f(x: ::std::primitive::u8) -> u8 { 1 }", RustFrontend.ForeignPath)]
-  [TestCase("pub fn f() -> u8 { trait T {} 1 }", RustFrontend.UnsupportedTrait)]
+  [TestCase("pub fn f() -> u8 { trait T {} 1 }", "nested item")]
   [TestCase("pub fn f() -> u8 { struct T; 1 }", "nested item")]
   [TestCase("use crate::missing; pub fn f() -> u8 { 1 }", "E0432")]
   [TestCase("use other::thing; pub fn f() -> u8 { 1 }", RustFrontend.ForeignPath)]
@@ -163,7 +163,7 @@ public sealed class RustSyntaxFormTests {
     Assert.That(result.Diagnostics.Count(diagnostic => diagnostic.Code == RustFrontend.TextType), Is.EqualTo(1));
     Assert.That(result.Diagnostics.Count(diagnostic => diagnostic.Code == RustFrontend.UnsafeConstruct), Is.EqualTo(14));
     Assert.That(result.Diagnostics.Count(diagnostic => diagnostic.Code == RustFrontend.UnsupportedPattern), Is.EqualTo(3));
-    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code), Does.Contain(RustFrontend.UnsupportedTrait));
+    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code), Does.Contain(RustFrontend.UnsupportedFunction));
   }
 
 }

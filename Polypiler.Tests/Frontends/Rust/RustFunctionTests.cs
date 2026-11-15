@@ -212,7 +212,7 @@ public sealed class RustFunctionTests {
   }
 
   /// <summary>Test design 14 to 18: generic and trait-based functions, macros, escaping closures, attributes, foreign paths, other iterator methods, compiler errors.</summary>
-  [TestCase("fn id<T>(x: T) -> T { x } pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
+  [TestCase("pub fn id<T>(x: T) -> T { x } pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedGeneric)]
   [TestCase("fn g(x: impl Into<u32>) -> u32 { 1 } pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
   [TestCase("unsafe fn g() {} pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
   [TestCase("extern \"C\" fn g() {} pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedFunction)]

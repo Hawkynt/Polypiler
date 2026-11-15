@@ -64,7 +64,7 @@ public sealed class RustCheckerFormTests {
   [TestCase("pub fn f() { println!(", "unclosed delimiter '('")]
   [TestCase("pub fn f() { let c = |x", "expected '|', found end of file")]
   [TestCase("pub fn f(o: Option<u8>) -> u8 { if let Some(x) = o && x > 1", "expected '{'")]
-  [TestCase("pub fn f() -> Vec<u8= { 1 }", "expected '>'")]
+  [TestCase("pub fn f() -> Vec<u8= { 1 }", "expected identifier")]
   public void Text_IsASyntaxError(string source, string expected) {
     var result = Import(source);
     Assert.That(result.Module, Is.Null);

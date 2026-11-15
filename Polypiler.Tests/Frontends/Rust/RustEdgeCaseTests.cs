@@ -161,7 +161,7 @@ public sealed class RustEdgeCaseTests {
   [TestCase("pub fn f(x: u32, y: u32) -> u32 { match (x, y) { [a] => 1, _ => 0 } }", RustFrontend.UnsupportedElement)]
   [TestCase("#[allow(a[b])] #[1] pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedAttribute)]
   [TestCase("pub fn f() -> u32 { #[allow(unused)] let x = 1; foo!; x }", RustFrontend.UnsupportedMacro)]
-  [TestCase("pub fn f<A: Into<Vec<u8>>>() -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
+  [TestCase("fn g<A: Into<Vec<u8>>>() -> u32 { 1 } pub fn f() -> u32 { g::<u8>() }", RustFrontend.UnsupportedTrait)]
   [TestCase("pub fn f() -> u32 { async move { 1 }; 1 }", RustFrontend.Coroutine)]
   [TestCase("pub fn f() -> u32 { for x in .. { } 1 }", RustFrontend.UnsupportedIterable)]
   [TestCase("pub fn f(x: u32) -> u32 { match x { \"a\" => 1, _ => 0 } }", RustFrontend.InvalidSource)]
