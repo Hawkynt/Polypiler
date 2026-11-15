@@ -146,7 +146,7 @@ public sealed class IrModuleFormatTests {
 
   [Test]
   public void ADeclarationThatIsNoStruct_IsRefused()
-    => Assert.That(() => IrModuleFormat.Write(new IrModule("M", []) { Types = [new Alias()] }), Throws.ArgumentException.With.Message.Contains("'Alias' is neither a struct nor an enum"));
+    => Assert.That(() => IrModuleFormat.Write(new IrModule("M", []) { Types = [new Alias()] }), Throws.ArgumentException.With.Message.Contains("'Alias' is of no kind the format knows"));
 
   [Test]
   public void AStructThatIsNotTheModules_IsRefused() {
@@ -221,7 +221,7 @@ public sealed class IrModuleFormatTests {
   }
 
   /// <summary>Bytes with a valid header around a content written by hand, as a damaged build could leave them.</summary>
-  private static byte[] Sealed(Action<BinaryWriter> content) {
+  internal static byte[] Sealed(Action<BinaryWriter> content) {
     using var payload = new MemoryStream();
     using (var writer = new BinaryWriter(payload, Encoding.UTF8, true))
       content(writer);
@@ -240,13 +240,16 @@ public sealed class IrModuleFormatTests {
   }
 
   // The numbers of the layout, as IrModuleFormat writes them.
-  private const byte Null = 0, Shared = 1, Const = 2, LocalRef = 4, Unary = 5, GlobalRef = 19, StrConst = 20, Block = 21, ExprStmt = 26, GlobalAssign = 36;
+  internal const byte Null = 0, Shared = 1, Const = 2, LocalRef = 4, Unary = 5, FieldLoad = 16, GlobalRef = 19, StrConst = 20, New = 21, MethodCall = 23, Block = 43, ExprStmt = 48, Try = 60, ForEachCollection = 62;
 
-  private const byte I32 = (byte)IrTypeKind.I32;
+  internal const byte I32 = (byte)IrTypeKind.I32;
 
-  /// <summary>A module of one function <c>void F()</c> with no constants, globals or types, whose body the action writes.</summary>
-  private static byte[] Function(Action<BinaryWriter> body, Action<BinaryWriter>? locals = null) => Sealed(writer => {
+  /// <summary>A module of one function <c>void F()</c> with no caveats, types, methods, constants or globals, whose body the action writes.</summary>
+  internal static byte[] Function(Action<BinaryWriter> body, Action<BinaryWriter>? locals = null) => Sealed(writer => {
     writer.Write("M");
+    writer.Write7BitEncodedInt(0);
+    writer.Write7BitEncodedInt(0);
+    writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(0);
@@ -260,10 +263,17 @@ public sealed class IrModuleFormatTests {
     else
       locals(writer);
     body(writer);
+    NoOrigin(writer);
   });
 
+  /// <summary>What ends a function that is no instantiation: its absent value and no origin.</summary>
+  internal static void NoOrigin(BinaryWriter writer) {
+    writer.Write7BitEncodedInt(0);
+    writer.Write(false);
+  }
+
   /// <summary>A body of one expression statement whose expression the action writes.</summary>
-  private static byte[] Expression(Action<BinaryWriter> expression) => Function(writer => {
+  internal static byte[] Expression(Action<BinaryWriter> expression) => Function(writer => {
     writer.Write(Block);
     writer.Write7BitEncodedInt(1);
     writer.Write(ExprStmt);
@@ -283,10 +293,10 @@ public sealed class IrModuleFormatTests {
   }
 
   private static object[] Malformed() => [
-    new TestCaseData(Expression(writer => writer.Write((byte)(GlobalAssign + 1))), "is no kind of node").SetName("A node of no kind"),
+    new TestCaseData(Expression(writer => writer.Write((byte)(ForEachCollection + 1))), "is no kind of node").SetName("A node of no kind"),
     new TestCaseData(Expression(writer => { writer.Write(GlobalRef); writer.Write(I32); writer.Write7BitEncodedInt(0); }), "global 0 does not exist").SetName("A global that does not exist"),
     new TestCaseData(Expression(writer => { writer.Write(Const); writer.Write((byte)99); }), "is no kind of type").SetName("A type of no kind"),
-    new TestCaseData(Expression(writer => { writer.Write(Const); writer.Write((byte)IrTypeKind.Struct); writer.Write7BitEncodedInt(0); }), "struct 0 does not exist").SetName("A struct that does not exist"),
+    new TestCaseData(Expression(writer => { writer.Write(Const); writer.Write((byte)IrTypeKind.Struct); writer.Write7BitEncodedInt(1); }), "struct 0 does not exist").SetName("A struct that does not exist"),
     new TestCaseData(Expression(writer => { writer.Write(Unary); writer.Write(I32); writer.Write7BitEncodedInt(99); Constant(writer); }), "99 is no IrUnaryOp").SetName("An operator that does not exist"),
     new TestCaseData(Expression(writer => writer.Write(Null)), "IrExpr is missing").SetName("A missing expression"),
     new TestCaseData(Expression(writer => { writer.Write(Shared); writer.Write7BitEncodedInt(99); }), "node 99 does not exist").SetName("A shared node that does not exist"),
@@ -298,36 +308,20 @@ public sealed class IrModuleFormatTests {
     new TestCaseData(Function(writer => { writer.Write(Block); writer.Write7BitEncodedInt(0); writer.Write((byte)0); }), "bytes after its end").SetName("Bytes after the end"),
     new TestCaseData(Function(writer => writer.Write(Block)), "malformed").SetName("Bytes that end too early"),
     new TestCaseData(Function(writer => writer.Write([Block, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF])), "malformed").SetName("A count of too many bytes"),
-    new TestCaseData(Sealed(writer => {
-      writer.Write("M");
-      writer.Write7BitEncodedInt(1);
-      writer.Write("Opaque");
-      writer.Write((byte)0);
-      writer.Write(false);
-      writer.Write(false);
-      writer.Write7BitEncodedInt(0);
-      writer.Write7BitEncodedInt(0);
-      writer.Write7BitEncodedInt(1);
-      writer.Write("F");
-      writer.Write(true);
-      writer.Write((byte)IrTypeKind.Void);
-      writer.Write7BitEncodedInt(0);
-      writer.Write7BitEncodedInt(0);
-      writer.Write(Block);
-      writer.Write7BitEncodedInt(1);
+    new TestCaseData(Declared(Opaque, writer => writer.Write((byte)IrTypeKind.Void), writer => {
       writer.Write(ExprStmt);
-      writer.Write((byte)16);
+      writer.Write(FieldLoad);
       writer.Write(I32);
-      writer.Write7BitEncodedInt(0);
+      writer.Write7BitEncodedInt(1);
       writer.Write7BitEncodedInt(0);
     }), "malformed").SetName("A field of a struct whose fields are not defined"),
-    new TestCaseData(Declared(writer => writer.Write((byte)2), writer => writer.Write((byte)IrTypeKind.Void)), "of no known kind").SetName("A declaration of no known kind"),
-    new TestCaseData(Declared(Opaque, writer => { writer.Write((byte)0xFF); writer.Write7BitEncodedInt(0); }), "An enum type names a struct").SetName("An enum type that names a struct"),
-    new TestCaseData(Declared(Named, writer => { writer.Write((byte)IrTypeKind.Struct); writer.Write7BitEncodedInt(0); }), "A struct type names an enum").SetName("A struct type that names an enum"),
+    new TestCaseData(Declared(writer => writer.Write((byte)4), writer => writer.Write((byte)IrTypeKind.Void)), "of no known kind").SetName("A declaration of no known kind"),
+    new TestCaseData(Declared(Opaque, writer => { writer.Write((byte)0xFF); writer.Write7BitEncodedInt(1); }), "An enum type names no enum").SetName("An enum type that names a struct"),
+    new TestCaseData(Declared(Named, writer => { writer.Write((byte)IrTypeKind.Struct); writer.Write7BitEncodedInt(1); }), "A struct type names no struct").SetName("A struct type that names an enum"),
   ];
 
   /// <summary>A struct declared without fields.</summary>
-  private static void Opaque(BinaryWriter writer) {
+  internal static void Opaque(BinaryWriter writer) {
     writer.Write((byte)0);
     writer.Write(false);
     writer.Write(false);
@@ -342,12 +336,19 @@ public sealed class IrModuleFormatTests {
     writer.Write7BitEncodedInt(0);
   }
 
-  /// <summary>A module of one declaration "D", written by hand after its name, and one function <c>F()</c> whose result type is written by hand.</summary>
-  private static byte[] Declared(Action<BinaryWriter> declaration, Action<BinaryWriter> result) => Sealed(writer => {
+  /// <summary>
+  /// A module of one declaration "D", written by hand after its name, that holds nothing more and has
+  /// no members, and one function <c>F()</c> whose result type is written by hand; the body is empty,
+  /// or one statement written by hand.
+  /// </summary>
+  internal static byte[] Declared(Action<BinaryWriter> declaration, Action<BinaryWriter> result, Action<BinaryWriter>? statement = null) => Sealed(writer => {
     writer.Write("M");
+    writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(1);
+    writer.Write7BitEncodedInt(0);
     writer.Write("D");
     declaration(writer);
+    writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(1);
@@ -357,7 +358,14 @@ public sealed class IrModuleFormatTests {
     writer.Write7BitEncodedInt(0);
     writer.Write7BitEncodedInt(0);
     writer.Write(Block);
-    writer.Write7BitEncodedInt(0);
+    if (statement is null) {
+      writer.Write7BitEncodedInt(0);
+    } else {
+      writer.Write7BitEncodedInt(1);
+      statement(writer);
+    }
+
+    NoOrigin(writer);
   });
 
   [TestCaseSource(nameof(Malformed))]
