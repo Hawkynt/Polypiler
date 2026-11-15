@@ -7,6 +7,7 @@ printed per call: "int <digits>", "float <repr>", "bool True|False", "None", or 
 
 import importlib.util
 import json
+import os
 import sys
 
 
@@ -32,6 +33,8 @@ def outcome(result):
 
 def main():
     request = json.loads(sys.stdin.read())
+    # The modules a fixture imports stand beside it.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(request["module"])))
     spec = importlib.util.spec_from_file_location("fixture", request["module"])
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

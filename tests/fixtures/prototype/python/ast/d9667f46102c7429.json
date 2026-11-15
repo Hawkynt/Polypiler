@@ -1,0 +1,1 @@
+{"source":"import main\n","dump":{"format":1,"module":{"_":"Module","body":[{"_":"Import","line":1,"col":1,"endLine":1,"endCol":12,"names":[{"_":"alias","line":1,"col":8,"endLine":1,"endCol":12,"name":"main","asname":null}]}],"type_ignores":[]}}}

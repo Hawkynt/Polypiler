@@ -2212,9 +2212,24 @@
       "bytes": 389
     },
     {
+      "path": "tests/fixtures/prototype/python/recorded/memory.txt",
+      "sha256": "858591ec5a8793664035859b8f7fe1eb5380e6ef44147ea5341e5893117d8da3",
+      "bytes": 6066
+    },
+    {
+      "path": "tests/fixtures/prototype/python/recorded/modules.txt",
+      "sha256": "b21f49c1dfba9f4ef2d1d1951e27dbea6cfe89b378e62afea1485830714fd902",
+      "bytes": 2257
+    },
+    {
       "path": "tests/fixtures/prototype/python/recorded/scalars.txt",
       "sha256": "e84a6b648df44a70952ae1e649be3e6f9e82ddd560cc270531db68287c61b474",
       "bytes": 1254349
+    },
+    {
+      "path": "tests/fixtures/prototype/python/recorded/types.txt",
+      "sha256": "9b8b1751ba6561fe36a486d0246f1abdb45816959f535ab6ea792562ca063d3e",
+      "bytes": 2579
     },
     {
       "path": "tests/fixtures/verify/adler32.vectors.json",
