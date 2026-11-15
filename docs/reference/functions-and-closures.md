@@ -123,6 +123,19 @@ What is not inlined afterwards is written as:
 | static, called by a bound copy too | `private static` method | same | same |
 | capturing | the forms of the table above | same | same |
 
+### What a function of a scope does
+
+O0463 also records what each function of a scope does by its effect summary (`IrEffects`,
+[#1361](https://github.com/Hawkynt/Polypiler/issues/1361)) - a lifted one that of its function, one
+that stays a closure that of its body with what it captures as storage of its scope - and
+`--explain-opt` names it: `O0463 lambda specialisation: 'H_lim' of 'H' is static, lifted, pure`,
+`'inc' of 'W' is capturing, a closure, writes`. A call of a lifted function the summary finds pure or
+read-only is merged with the same call after it ([O0464](../optimizations/O0464-call-merging.md)),
+evaluated where its arguments are constants ([O0002](../optimizations/O0002-partial-evaluation.md))
+and removed where nothing uses its value ([O0005](../optimizations/O0005-dead-code-elimination.md)); a
+call through a function value is the worst case and stays. An anonymous method, `delegate (int x) {
+return x * x; }` or `delegate { … }`, is the lambda it spells to every pass.
+
 ## JavaScript backend
 
 | IR | es5 (with or without `--typed-arrays`) | es2015, es2017, es2020, es2022 |
