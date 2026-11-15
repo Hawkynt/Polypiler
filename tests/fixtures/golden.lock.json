@@ -1593,13 +1593,13 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/ByteMedian.cs.csharp.golden",
-      "sha256": "902e1c73d64d9bf4e7231120973ff2f2b649640e9a0d73eeb9cc5b47e7dc4cb0",
-      "bytes": 139414
+      "sha256": "057a19bc871d652d383717d08d57d38779a392c516f03d986d544fef9c9b11cf",
+      "bytes": 139270
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/ByteMedian.cs.javascript.golden",
-      "sha256": "1a02f88026f5bb79efadcf0356e15aa8387cfeea9159b1e00b1300bc4651f4d2",
-      "bytes": 181484
+      "sha256": "43a876e52f655caf6708342e9975f6cb8c1ae6ca447f2119227c096dcd29cca8",
+      "bytes": 181324
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.csharp.golden",
@@ -1613,13 +1613,13 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Pipelines.cs.csharp.golden",
-      "sha256": "51259bed4dfa281bf7872fb1a777ca08a03371f314384fb228ce54e838c65828",
-      "bytes": 1453426
+      "sha256": "fa7ede97a853011344342368c40b744a83d7ada54bfefd6c10e8622b9ac69f74",
+      "bytes": 1447638
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Pipelines.cs.javascript.golden",
-      "sha256": "c9e1eb534385ca50f4020f1d3b81f4eec57ed2b7ad79158f9573d3853cefe441",
-      "bytes": 1448164
+      "sha256": "cbf7bb22752c66efd6a880e1400047c7d0068a4deaa987b8297881eaaf868545",
+      "bytes": 1447724
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/iterators.js.csharp.golden",
@@ -1633,13 +1633,13 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/pipes.mjs.csharp.golden",
-      "sha256": "e52c9690bd5f46c267ef83053a3c683967fe85af79b514e9ed8119c0daf9adcd",
-      "bytes": 594498
+      "sha256": "e2cc0f3f10c9e50c8ef3cdbb08ad2178d78b137f4cfde2cd03352379b12c7551",
+      "bytes": 588962
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/pipes.mjs.javascript.golden",
-      "sha256": "cd95b61106cbd05789476ca8222352b4ec69279d7de67fd906424a878e9e0365",
-      "bytes": 521426
+      "sha256": "bcea7cba6d63c70ec934e42789486f97cad6d00e7757a44078b2dd3b00ba7de2",
+      "bytes": 521402
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/runLength.mjs.csharp.golden",
