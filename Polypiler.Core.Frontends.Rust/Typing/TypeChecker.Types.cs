@@ -12,8 +12,6 @@ internal sealed partial class TypeChecker {
     ["Box"] = RustFrontend.SmartPointer, ["Rc"] = RustFrontend.SmartPointer, ["Arc"] = RustFrontend.SmartPointer,
     ["Cell"] = RustFrontend.SmartPointer, ["RefCell"] = RustFrontend.SmartPointer, ["Cow"] = RustFrontend.SmartPointer,
     ["Weak"] = RustFrontend.SmartPointer, ["Mutex"] = RustFrontend.SmartPointer, ["RwLock"] = RustFrontend.SmartPointer,
-    ["HashMap"] = RustFrontend.UnsupportedCollection, ["HashSet"] = RustFrontend.UnsupportedCollection,
-    ["BTreeMap"] = RustFrontend.UnsupportedCollection, ["BTreeSet"] = RustFrontend.UnsupportedCollection,
     ["VecDeque"] = RustFrontend.UnsupportedCollection, ["BinaryHeap"] = RustFrontend.UnsupportedCollection,
     ["LinkedList"] = RustFrontend.UnsupportedCollection,
     ["MaybeUninit"] = RustFrontend.UnsafeConstruct, ["ManuallyDrop"] = RustFrontend.UnsafeConstruct, ["NonNull"] = RustFrontend.UnsafeConstruct
@@ -144,6 +142,9 @@ internal sealed partial class TypeChecker {
       return type.Arguments.Count > 0 ? this.Unsupported(RustFrontend.UnsupportedGeneric, type.Text, type.At) : RType.EnumOf(this._enums[enumeration]);
 
     var library = segments is ["std" or "core" or "alloc", .., var name] ? name : segments.Length == 1 ? last : null;
+    if (this.CollectionType(type, segments, symbol) is { } collection)
+      return collection;
+
     if (library is not null && _refusedTypes.TryGetValue(library, out var code))
       return this.Unsupported(code, type.Text, type.At);
 

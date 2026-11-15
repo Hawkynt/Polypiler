@@ -29,6 +29,9 @@ internal sealed partial class TypeChecker {
     if (call.Receiver is RangeExpr range)
       return this.IteratorMethod(call, this.RangeIterator(range, call), expected);
 
+    if (this.Entry(call) is { } entry)
+      return entry;
+
     // The pair or optional value a checked_* or overflowing_* method yields is a value of its own now.
     var receiver = this.Value(call.Receiver);
     var resolved = receiver.Resolved;
@@ -48,6 +51,10 @@ internal sealed partial class TypeChecker {
         return this.IteratorMethod(call, target.IteratorInfo!, expected);
       case RKind.Struct or RKind.Enum:
         return this.InherentMethod(call, receiver, target);
+      case RKind.Map:
+        return this.MapMethod(call, receiver, target);
+      case RKind.Set:
+        return this.SetMethod(call, receiver, target);
       case RKind.Option:
         return this.OptionMethod(call, target, receiver);
       case RKind.Result:

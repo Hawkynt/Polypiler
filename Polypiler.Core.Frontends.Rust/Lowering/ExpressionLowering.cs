@@ -292,6 +292,9 @@ internal sealed partial class FunctionLowering {
   }
 
   private IrExpr Index(IndexExpr index) {
+    if (this._typed.TypeOf(index.Target).Dereferenced.Kind == RKind.Map)
+      return this.MapIndex(index);
+
     if (index.Index is RangeExpr && this._typed.TypeOf(index.Target).IsText)
       return this.TextSlice(index);
 

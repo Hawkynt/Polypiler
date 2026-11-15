@@ -222,6 +222,11 @@ internal sealed class ModuleLowering {
         return IrType.Span(this.Ir(resolved.Element!));
       case RKind.Vec:
         return IrType.List(this.Ir(resolved.Element!));
+      case RKind.Map:
+        // No map or set is iterated, so the order is the one each target keeps natively: .NET's slots.
+        return IrType.Map(this.Ir(resolved.Key), this.Ir(resolved.Element!), MapOrder.SlotReuse);
+      case RKind.Set:
+        return IrType.Set(this.Ir(resolved.Element!), MapOrder.SlotReuse);
       case RKind.Option:
         return IrType.Optional(this.Ir(resolved.Element!));
       case RKind.Struct:

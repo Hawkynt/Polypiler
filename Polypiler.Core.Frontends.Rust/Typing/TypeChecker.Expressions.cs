@@ -297,7 +297,7 @@ internal sealed partial class TypeChecker {
     }
 
     // The associated functions of the standard library the subset has.
-    if (path.Segments.Count >= 2 && (this.TextCall(call, path) ?? this.StandardCall(call, path, expected)) is { } standard)
+    if (path.Segments.Count >= 2 && (this.TextCall(call, path) ?? this.CollectionCall(call, path, expected) ?? this.StandardCall(call, path, expected)) is { } standard)
       return standard;
 
 
@@ -464,6 +464,11 @@ internal sealed partial class TypeChecker {
 
     if (this.IsError(container))
       return container;
+
+    if (container.Kind == RKind.Map) {
+      this.KeyArgument(index.Index, container.Key);
+      return container.Element!;
+    }
 
     if (container.Kind is RKind.String or RKind.Str && index.Index is not RangeExpr) {
       this.Value(index.Index);

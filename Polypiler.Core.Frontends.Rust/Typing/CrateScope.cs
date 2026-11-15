@@ -252,6 +252,11 @@ internal sealed class CrateScope {
       return;
     }
 
+    if (!path.Glob && joined is "collections::HashMap" or "collections::HashSet" or "collections::BTreeMap" or "collections::BTreeSet") {
+      module.Imported[path.Alias ?? segments[^1]] = new Symbol(new LibraryType(segments[^1]), isPublic, isVisible, module);
+      return;
+    }
+
     if (!path.Glob && Typing.TypeChecker.LibraryFunctions.Contains(joined)) {
       module.Imported[path.Alias ?? segments[^1]] = new Symbol(joined, isPublic, isVisible, module);
       return;
@@ -380,3 +385,6 @@ internal sealed class CrateScope {
 /// <summary>A module of <c>core</c> a <c>use</c> brought in: <c>cmp</c> or <c>mem</c>.</summary>
 /// <param name="Name">The name.</param>
 internal sealed record LibraryModule(string Name);
+
+/// <summary>A type of the standard library a <c>use</c> brings into scope: <c>HashMap</c>, <c>HashSet</c>, <c>BTreeMap</c>, <c>BTreeSet</c>.</summary>
+internal sealed record LibraryType(string Name);

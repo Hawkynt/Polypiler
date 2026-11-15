@@ -224,7 +224,7 @@ internal sealed partial class TypeChecker {
       }
 
       var resolved = type.Resolved;
-      if (resolved.Kind is RKind.Vec or RKind.Function || resolved.IsText || resolved.Kind == RKind.Array && !resolved.Element!.IsNumber) {
+      if (resolved.Kind is RKind.Vec or RKind.Function or RKind.Map or RKind.Set || resolved.IsText || resolved.Kind == RKind.Array && !resolved.Element!.IsNumber) {
         this._report(RustFrontend.UnsupportedElement, $"field '{field.Name}' of type '{field.Type.Text}'", field.Type.At);
         ok = false;
         continue;

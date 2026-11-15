@@ -63,7 +63,7 @@ internal sealed partial class FunctionLowering {
   /// <summary>Whether a type is a <c>&amp;mut</c> to a value the IR copies, which the lowering tracks as a place.</summary>
   private static bool IsExclusiveValue(RType type) {
     var resolved = type.Resolved;
-    return resolved is { Kind: RKind.Reference, Mutable: true } && resolved.Element!.Resolved.Kind is not (RKind.Slice or RKind.Array or RKind.Vec);
+    return resolved is { Kind: RKind.Reference, Mutable: true } && resolved.Element!.Resolved.Kind is not (RKind.Slice or RKind.Array or RKind.Vec or RKind.Map or RKind.Set);
   }
 
   /// <summary>The struct a function with <c>&amp;mut</c> value parameters returns: its result and the final values of those parameters.</summary>
@@ -207,6 +207,12 @@ internal sealed partial class FunctionLowering {
 
     if (type.IsList)
       return new IrCollection(IrCollectionOp.ListNew, type, []);
+
+    if (type.Kind == IrTypeKind.Map)
+      return new IrCollection(IrCollectionOp.MapNew, type, []);
+
+    if (type.Kind == IrTypeKind.Set)
+      return new IrCollection(IrCollectionOp.SetNew, type, []);
 
     if (type.IsArray)
       return new IrNewArray(type, new IrConst(IrType.I32, 0));

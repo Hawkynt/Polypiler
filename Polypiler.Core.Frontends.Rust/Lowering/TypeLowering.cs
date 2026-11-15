@@ -82,6 +82,11 @@ internal sealed partial class FunctionLowering {
       }
       case "Vec::new" or "Vec::with_capacity":
         return this.NewVec(type, call.Arguments);
+      case "collection::new" or "collection::with_capacity":
+        if (call.Arguments.Count > 0)
+          this.Effect(this.Value(call.Arguments[0]));
+
+        return this.Zero(this.Ir(type));
       case string text when text.StartsWith("String::", StringComparison.Ordinal) || text.StartsWith("char::", StringComparison.Ordinal) || text.StartsWith("__", StringComparison.Ordinal):
         return this.TextCall(call, text);
       case "from_bits": {

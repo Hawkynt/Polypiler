@@ -49,6 +49,7 @@ internal sealed partial class FunctionLowering {
     ElementPlace element => new IrArrayLoad(element.Container, element.Index),
     ListElementPlace element => new IrCollection(IrCollectionOp.ListGet, element.Type, [element.List, element.Index]),
     FieldPlace field => new IrFieldLoad(this.Target(field.Parent), field.Field),
+    MapEntryPlace entry => new IrCollection(IrCollectionOp.MapGet, entry.Type, [entry.Map, entry.Key]),
     _ => throw new System.InvalidOperationException()
   };
 
@@ -76,6 +77,9 @@ internal sealed partial class FunctionLowering {
         return;
       case ListElementPlace element:
         this.Emit(new IrExprStmt(new IrCollection(IrCollectionOp.ListSet, IrType.Void, [element.List, element.Index, value])));
+        return;
+      case MapEntryPlace entry:
+        this.Emit(new IrExprStmt(new IrCollection(IrCollectionOp.MapPut, IrType.Void, [entry.Map, entry.Key, value])));
         return;
       case FieldPlace field when Addressable(field.Parent):
         this.Emit(new IrFieldStore(this.Target(field.Parent), field.Field, value));
@@ -109,6 +113,8 @@ internal sealed partial class FunctionLowering {
         return new TemporaryPlace(this.Temporary(this._values[binding], binding.Name).Local);
       case DerefExpr deref:
         return this.PlaceOf(deref.Operand);
+      case MethodCallExpr { Name: "or_insert" or "or_default" } entry when this._typed.Methods.TryGetValue(entry, out var method) && method.StartsWith("map::", System.StringComparison.Ordinal):
+        return this.Entry(entry);
       case FieldExpr field: {
         var parent = this.PlaceOf(field.Target);
         if (parent is null)

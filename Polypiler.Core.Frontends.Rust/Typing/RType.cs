@@ -72,7 +72,13 @@ internal enum RKind {
   String,
 
   /// <summary>A type parameter of a generic function's template, which only its instances replace.</summary>
-  Param
+  Param,
+
+  /// <summary><c>HashMap&lt;K, V&gt;</c> or <c>BTreeMap&lt;K, V&gt;</c>: an IR map; <see cref="RType.Element"/> is the value, the key the first of <see cref="RType.Elements"/>.</summary>
+  Map,
+
+  /// <summary><c>HashSet&lt;T&gt;</c> or <c>BTreeSet&lt;T&gt;</c>: an IR set of <see cref="RType.Element"/>.</summary>
+  Set
 
 }
 
@@ -176,6 +182,15 @@ internal sealed class RType {
 
   /// <summary><c>&amp;str</c>, the type of a string literal.</summary>
   public static RType StrRef { get; } = Reference(Str, false);
+
+  /// <summary>A map of the standard library: <c>HashMap</c> or <c>BTreeMap</c>.</summary>
+  public static RType Map(string name, RType key, RType value) => new(RKind.Map, name) { Element = value, Elements = [key] };
+
+  /// <summary>A set of the standard library: <c>HashSet</c> or <c>BTreeSet</c>.</summary>
+  public static RType Set(string name, RType element) => new(RKind.Set, name) { Element = element };
+
+  /// <summary>The key type of a map.</summary>
+  public RType Key => this.Resolved.Elements[0];
 
   /// <summary>A type parameter of a template.</summary>
   public static RType Param(string name) => new(RKind.Param, name);
@@ -332,6 +347,8 @@ internal sealed class RType {
       RKind.Array => $"[{type.Element}; {type.Length}]",
       RKind.Slice => $"[{type.Element}]",
       RKind.Vec => $"Vec<{type.Element}>",
+      RKind.Map => $"{type.Name}<{type.Key}, {type.Element}>",
+      RKind.Set => $"{type.Name}<{type.Element}>",
       RKind.Reference => $"&{(type.Mutable ? "mut " : "")}{type.Element}",
       RKind.Function => $"fn({string.Join(", ", type.Elements)}) -> {type.Element}",
       RKind.Closure => "{closure}",

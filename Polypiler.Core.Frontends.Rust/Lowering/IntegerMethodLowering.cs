@@ -40,6 +40,9 @@ internal sealed partial class FunctionLowering {
     if (name.StartsWith("char::", StringComparison.Ordinal))
       return this.CharMethod(call, name["char::".Length..]);
 
+    if (name.StartsWith("map::", StringComparison.Ordinal) || name.StartsWith("set::", StringComparison.Ordinal))
+      return this.CollectionMethod(call, name[5..]);
+
     if (name == "to_string")
       return this.Displayed(this.Value(call.Receiver), receiver);
     if (name.StartsWith("Option::", StringComparison.Ordinal))
