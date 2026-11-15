@@ -34,6 +34,8 @@ internal sealed partial class FunctionLowering {
       switch (builtin) {
         case "range":
           return this.Range(target, iterable, body, null);
+        case "enumerate" when iterable.Nodes("args").FirstOrDefault() is { } source && this.TypeOf(source).Kind == PyKind.Dict:
+          return this.EnumerateDict(target, iterable, body);
         case "enumerate":
           return this.Enumerate(target, iterable, body);
         case "zip":
@@ -46,9 +48,16 @@ internal sealed partial class FunctionLowering {
     if (iterable.Is("Name") && this.Scope.Resolve(iterable) == Binding.Class && this.Scope.Class(iterable) is { IsEnum: true } enumeration)
       return this.Indexed(target, this.MemberTable(enumeration), body);
 
+    if (target.Is("Tuple") && target.Nodes("elts").Count == 2 && this.IsView(iterable, "items"))
+      return this.Items(target, iterable, body);
+
+    if (this.DictView(iterable) is { } view)
+      return this.Each(target, view, body);
+
     var sequence = this.Value(iterable);
     return sequence.Type.Kind switch {
       PyKind.Iterator => this.Each(target, sequence, body),
+      PyKind.Dict or PyKind.Set => this.Each(target, (this.Sequence(iterable, sequence), PyType.Iterator(ExpressionTypes.Element(sequence.Type)!)), body),
       PyKind.Str => this.CodePoints(target, sequence, body),
       PyKind.List or PyKind.Tuple or PyKind.Bytes or PyKind.ByteArray or PyKind.Table => this.Indexed(target, sequence, body),
       _ => throw this.Refuse(iterable, PythonFrontend.UnsupportedIterationDescriptor, $"iteration over '{this.Quote(iterable)}' of the type {sequence.Type} is not supported")

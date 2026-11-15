@@ -254,7 +254,7 @@ public static class PythonFrontend {
     [FloatIdentity] = "a NaN inside a list or tuple, or searched for with in, is unequal to itself; CPython finds the very same NaN object equal to itself",
     [SortNaN] = "floats sorted with a NaN among them are ordered by a stable merge sort; CPython's timsort may order them otherwise",
     [Surrogates] = "a str is held as UTF-16: a lone high surrogate followed by a lone low surrogate made with chr is one code point, where Python has two",
-    [HeldInt] = "an int kept in an attribute, a tuple, an optional, a module table or variable, or used as an index, a count or an argument of the "
+    [HeldInt] = "an int kept in an attribute, a tuple, an optional, a module table or variable, a key of a dict or an element of a set, or used as an index, a count or an argument of the "
       + "byte and struct operations, is a 64-bit integer there: one outside -2**63 .. 2**63 - 1 raises OverflowError, where Python keeps it exact"
   };
 

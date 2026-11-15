@@ -77,6 +77,12 @@ internal sealed partial class FunctionLowering {
         return this.ListComprehension(expression, expected);
       case "GeneratorExp":
         return this.GeneratorExpression(expression);
+      case "Dict":
+        return this.DictDisplay(expression, expected);
+      case "Set":
+        return this.SetDisplay(expression, expected);
+      case "DictComp" or "SetComp":
+        return this.CollectionComprehension(expression, expected);
       default:
         // NamedExpr; SubsetCheck refused every other expression.
         return this.Walrus(expression);
@@ -221,7 +227,7 @@ internal sealed partial class FunctionLowering {
         return Binary(IrBinaryOp.NotEqual, value.Value, Float(0));
       case PyKind.Int:
         return Binary(IrBinaryOp.NotEqual, value.Value, Big(0));
-      case PyKind.Str or PyKind.List or PyKind.Bytes or PyKind.ByteArray or PyKind.Table:
+      case PyKind.Str or PyKind.List or PyKind.Bytes or PyKind.ByteArray or PyKind.Table or PyKind.Dict or PyKind.Set:
         return Binary(IrBinaryOp.NotEqual, this.Length32(value), Int32(0));
       case PyKind.Enum when value.Type.Class!.Kind == ClassKind.IntEnum:
         return Binary(IrBinaryOp.NotEqual, Convert(IrType.I64, value.Value), Int(0));
@@ -422,6 +428,9 @@ internal sealed partial class FunctionLowering {
     if (a.IsNumber && b.IsNumber && left.Type.Kind != PyKind.Optional && right.Type.Kind != PyKind.Optional || (a.IsNumber && b.IsNumber && op is not ("Eq" or "NotEq")))
       return this.NumberComparison(op, this.Plain(left, node), this.Plain(right, node));
 
+    if (op is not ("Eq" or "NotEq") && (a.Kind is PyKind.Dict or PyKind.Set || b.Kind is PyKind.Dict or PyKind.Set))
+      throw this.DictRefusal(node, $"{_symbols[op]} of the types {left.Type} and {right.Type}", ", which compares subsets");
+
     if (op is not ("Eq" or "NotEq"))
       throw a.Kind == PyKind.Str && b.Kind == PyKind.Str
         ? this.Refuse(node, PythonFrontend.UnsupportedStringDescriptor, $"string operation 'ordering of strings by {_symbols[op]}' is not supported by the Python frontend")
@@ -507,6 +516,10 @@ internal sealed partial class FunctionLowering {
           return fields.Select((field, index) => this.ElementEquality(node, new IrFieldLoad(x, field), new IrFieldLoad(y, field), type.Items[index]))
             .Aggregate((IrExpr)Bool(true), (all, next) => Binary(IrBinaryOp.LogicalAnd, all, next));
         }));
+      case PyKind.Dict:
+        return this.Effect(this.Helpers.DictEqual(left, right, PyTypes.Ir(type), (x, y) => this.ElementEquality(node, x, y, type.Element!)));
+      case PyKind.Set:
+        return this.Effect(this.Helpers.SetEqual(left, right, PyTypes.Ir(type)));
       case PyKind.Object:
         return type.Class!.IrMethods.TryGetValue("__eq__", out var equals)
           ? this.Effect(new IrMethodCall(IrType.Bool, equals, left, [right]))
@@ -563,6 +576,8 @@ internal sealed partial class FunctionLowering {
   /// </summary>
   private IrExpr Membership(PyNode node, (IrExpr Value, PyType Type) element, (IrExpr Value, PyType Type) sequence) {
     switch (sequence.Type.Kind) {
+      case PyKind.Dict or PyKind.Set:
+        return this.Contains(node, element, sequence);
       case PyKind.Str when element.Type.Kind == PyKind.Str:
         return this.Effect(this.Helpers.StrContains(element.Value, sequence.Value));
       case PyKind.Bytes or PyKind.ByteArray when ExpressionTypes.Value(element.Type) is { Kind: PyKind.Int or PyKind.Bool }:

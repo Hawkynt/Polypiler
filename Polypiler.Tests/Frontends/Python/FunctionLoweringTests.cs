@@ -53,8 +53,8 @@ public sealed class FunctionLoweringTests {
     Assert.That(PythonOutcome.Interpreted(result.Module!, new PythonCall("f", [3L])), Is.EqualTo("float 1.5"));
   }
 
-  [TestCase("x: list", "error PLY1801: the type hint 'list' of 'x' is not supported; supported are int, float, bool, str, bytes, bytearray, list[T], tuple[…], T | None and the classes of the module")]
-  [TestCase("x: None", "error PLY1801: the type hint 'None' of 'x' is not supported; supported are int, float, bool, str, bytes, bytearray, list[T], tuple[…], T | None and the classes of the module")]
+  [TestCase("x: list", "error PLY1801: the type hint 'list' of 'x' is not supported; supported are int, float, bool, str, bytes, bytearray, list[T], tuple[…], dict[K, V], set[K] (K an int, a bool, a str or a plain class), T | None and the classes of the module")]
+  [TestCase("x: None", "error PLY1801: the type hint 'None' of 'x' is not supported; supported are int, float, bool, str, bytes, bytearray, list[T], tuple[…], dict[K, V], set[K] (K an int, a bool, a str or a plain class), T | None and the classes of the module")]
   [TestCase("x: 'float'", null)]
   public void ParameterHints_AreTheSupportedTypes(string parameter, string? diagnostic) {
     var source = $"def f({parameter}) -> float:\n    return x + 1\n";
@@ -103,8 +103,8 @@ public sealed class FunctionLoweringTests {
 
   [Test]
   public void UnsupportedReturnHint_IsRefused()
-    => Assert.That(PythonSnippet.Refusals("def f(x: int) -> dict[str, int]:\n    return x\n"),
-      Has.Some.Contains("error PLY1801: the return type hint 'dict[str, int]' of 'f' is not supported; supported are int, float, bool, str, bytes, bytearray, list[T], tuple[…], T | None and the classes of the module and None"));
+    => Assert.That(PythonSnippet.Refusals("def f(x: int) -> set[float]:\n    return x\n"),
+      Has.Some.Contains("error PLY1801: the return type hint 'set[float]' of 'f' is not supported; supported are int, float, bool, str, bytes, bytearray, list[T], tuple[…], dict[K, V], set[K] (K an int, a bool, a str or a plain class), T | None and the classes of the module and None"));
 
   [Test]
   public void ParameterOfTwoKindsOfCalls_IsTheWiderOne() {

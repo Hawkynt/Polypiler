@@ -73,6 +73,7 @@ internal sealed class TypeInference(IReadOnlyList<ModuleModel> modules, IReadOnl
         diagnostics.Add(this.File.At(variable.Node, PythonFrontend.MissingTypeDescriptor,
           $"the type of '{variable.Name}' in '{function.Qualified}' is not known: "
           + (variable.Type.Kind == PyKind.List ? "nothing tells the type of its elements; add a type hint such as 'list[int]'"
+            : variable.Type.Kind is PyKind.Dict or PyKind.Set ? $"nothing tells the type of its {(variable.Type.Kind == PyKind.Dict ? "keys and values; add a type hint such as 'dict[str, int]'" : "elements; add a type hint such as 'set[int]'")}"
             : !parameter ? "no value of a known type reaches it"
             : uncalled ? $"it has no type hint and nothing in the import calls '{function.Qualified}'; add a type hint such as '{variable.Name}: int'"
             : "it has no type hint and no call of the import passes it a value of a known type")));
@@ -381,8 +382,13 @@ internal sealed class TypeInference(IReadOnlyList<ModuleModel> modules, IReadOnl
         this.Field(target, type, scope);
         break;
       case "Subscript" when !target.Node("slice")!.Is("Slice"):
-        // a[i] = v: a list takes the type of its elements from what is stored.
-        this.Container(target.Node("value")!, type, scope, function);
+        // a[i] = v: a list takes the type of its elements from what is stored, a dict the types of its keys and values.
+        if (ExpressionTypes.Of(target.Node("value")!, scope) is { Kind: PyKind.Dict, IsIncomplete: true } dict
+            && PyTypes.Join(dict, PyType.Dict(ExpressionTypes.Of(target.Node("slice")!, scope), type)) is { } completed)
+          this.Target(function, target.Node("value")!, completed);
+        else
+          this.Container(target.Node("value")!, type, scope, function);
+
         break;
     }
   }
@@ -401,16 +407,16 @@ internal sealed class TypeInference(IReadOnlyList<ModuleModel> modules, IReadOnl
       this.Merge($"{owner.Class.Name}.{field.Name}", field.Type, type, target, joined => field.Type = joined, () => { });
   }
 
-  /// <summary>A container that has an element of a type stored or appended: a list variable or attribute takes the element type.</summary>
+  /// <summary>A container that has an element of a type stored, appended or added: a list or set variable or attribute takes the element type.</summary>
   private void Container(PyNode container, PyType element, Scope scope, FunctionModel function) {
     if (element.Kind == PyKind.Unknown)
       return;
 
     var current = ExpressionTypes.Of(container, scope);
-    if (current.Kind != PyKind.List || !current.Element!.IsIncomplete)
+    if (current.Kind is not (PyKind.List or PyKind.Set) || !current.Element!.IsIncomplete)
       return;
 
-    this.Target(function, container, PyType.List(element));
+    this.Target(function, container, current.Kind == PyKind.List ? PyType.List(element) : PyType.Set(element));
   }
 
   /// <summary>
@@ -428,7 +434,7 @@ internal sealed class TypeInference(IReadOnlyList<ModuleModel> modules, IReadOnl
         case "NamedExpr" when function is not null:
           this.Target(function, node.Node("target")!, ExpressionTypes.Of(node.Node("value")!, scope));
           break;
-        case "ListComp" or "GeneratorExp":
+        case "ListComp" or "GeneratorExp" or "DictComp" or "SetComp":
           foreach (var generator in node.Nodes("generators"))
             this.Iteration(function, generator.Node("target")!, generator.Node("iter")!);
 
@@ -471,6 +477,8 @@ internal sealed class TypeInference(IReadOnlyList<ModuleModel> modules, IReadOnl
       var method = callee.Text("attr")!;
       var receiver = ExpressionTypes.Of(callee.Node("value")!, scope);
       if (receiver.Kind == PyKind.List && method == "append" && arguments.Count == 1)
+        this.Container(callee.Node("value")!, ExpressionTypes.Of(arguments[0], scope), scope, function);
+      else if (receiver.Kind == PyKind.Set && method == "add" && arguments.Count == 1)
         this.Container(callee.Node("value")!, ExpressionTypes.Of(arguments[0], scope), scope, function);
       else if (receiver.Kind == PyKind.List && method == "extend" && arguments.Count == 1 && ExpressionTypes.Element(ExpressionTypes.Of(arguments[0], scope)) is { } extended)
         this.Container(callee.Node("value")!, extended, scope, function);

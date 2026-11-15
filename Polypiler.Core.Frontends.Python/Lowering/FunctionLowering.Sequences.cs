@@ -89,6 +89,9 @@ internal sealed partial class FunctionLowering {
       throw this.Unsupported(subscript, $"the index {this.Quote(index)} of a tuple of {container.Type.Items.Count} items; a tuple is indexed by a constant within it");
     }
 
+    if (container.Type.Kind == PyKind.Dict)
+      return this.DictItem(subscript, container, this.Value(index, container.Type.Key));
+
     if (container.Type.Kind == PyKind.Object) {
       var getter = container.Type.Class!.IrMethods.GetValueOrDefault("__getitem__")
         ?? throw this.Unsupported(subscript, $"{this.Quote(subscript)} of an object of {container.Type.Class.Name}, which has no __getitem__, and raises TypeError");
@@ -102,6 +105,9 @@ internal sealed partial class FunctionLowering {
 
   /// <summary>The element at an index of a sequence: a negative index counts from the end, one outside raises <c>IndexError</c>.</summary>
   private (IrExpr Value, PyType Type) Index(PyNode at, (IrExpr Value, PyType Type) container, (IrExpr Value, PyType Type) index) {
+    if (container.Type.Kind == PyKind.Dict)
+      return this.DictItem(at, container, index);
+
     var position = ExpressionTypes.Value(index.Type);
     if (!position.IsNumber || position.Kind == PyKind.Float)
       throw this.Unsupported(at, $"an index of the type {index.Type}, which raises TypeError,");
@@ -141,6 +147,7 @@ internal sealed partial class FunctionLowering {
     PyKind.List => new IrCollection(IrCollectionOp.ListCount, IrType.I32, [sequence.Value]),
     PyKind.Str => Intrinsic(IrIntrinsicOp.StrLength, IrType.I32, sequence.Value),
     PyKind.Tuple => Int32(sequence.Type.Items.Count),
+    PyKind.Dict or PyKind.Set => CollectionCount(sequence),
     _ => new IrArrayLength(sequence.Value)
   };
 
@@ -149,7 +156,7 @@ internal sealed partial class FunctionLowering {
     switch (value.Type.Kind) {
       case PyKind.Str:
         return (this.Effect(this.Helpers.CodePointCount(value.Value)), PyType.Int);
-      case PyKind.List or PyKind.Bytes or PyKind.ByteArray or PyKind.Table:
+      case PyKind.List or PyKind.Bytes or PyKind.ByteArray or PyKind.Table or PyKind.Dict or PyKind.Set:
         return (Convert(IrType.I64, this.Length32(value)), PyType.Int);
       case PyKind.Tuple when value.Value is IrLocalRef or IrStructNew { Arguments.Count: 0 }:
         return (Int(value.Type.Items.Count), PyType.Int);
@@ -176,6 +183,9 @@ internal sealed partial class FunctionLowering {
         var element = container.Type.Element!;
         var index = heldIndex ?? this.Value(indexNode);
         result.Add(new IrExprStmt(this.Effect(this.Helpers.ListSet(container.Value, this.Integer(this.Plain(index, indexNode)).Item1, this.Coerce(value, element, target), PyTypes.Ir(container.Type)))));
+        return result;
+      case PyKind.Dict:
+        result.Add(this.DictStore(target, container, heldIndex ?? this.Value(indexNode, container.Type.Key), value));
         return result;
       case PyKind.ByteArray:
         var position = heldIndex ?? this.Value(indexNode);
@@ -224,6 +234,9 @@ internal sealed partial class FunctionLowering {
   /// <summary><c>+</c> and <c>*</c> of sequences: a new list, str, bytes or tuple of both, or of one repeated.</summary>
   private (IrExpr Value, PyType Type) SequenceOperation(PyNode node, string op, (IrExpr Value, PyType Type) left, (IrExpr Value, PyType Type) right) {
     var type = ExpressionTypes.Binary(op, left.Type, right.Type, node.Node("right") ?? node);
+    if (left.Type.Kind is PyKind.Dict or PyKind.Set || right.Type.Kind is PyKind.Dict or PyKind.Set)
+      throw this.DictRefusal(node, $"{_symbols.GetValueOrDefault(op, op)} of the types {left.Type} and {right.Type}");
+
     if (type.Kind == PyKind.Unknown)
       throw this.Unsupported(node, $"{_symbols.GetValueOrDefault(op, op)} of the types {left.Type} and {right.Type}, which raises TypeError,");
 
@@ -273,6 +286,8 @@ internal sealed partial class FunctionLowering {
         return (this.Effect(this.Helpers.Extend(list.Value, this.AsList(call, source, list.Type), listType)), PyType.None);
       case "copy" when arguments.Count == 0:
         return (this.Effect(this.Helpers.ListCopy(list.Value, listType)), list.Type);
+      case "remove" or "clear":
+        throw this.Refuse(call, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation '{name}' is not supported by the Python frontend");
       default:
         throw this.Refuse(call, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation '{name}' with these arguments is not supported by the Python frontend");
     }
@@ -303,6 +318,10 @@ internal sealed partial class FunctionLowering {
         return this.ExactElements(new IrSequence(IrSequenceOp.FromArray, IrType.Sequence(IrType.U8, true), [source.Value]));
       case PyKind.Str:
         return this.Effect(this.Helpers.CodePointIterator(source.Value));
+      case PyKind.Dict:
+        return this.DictIterator(source, "keys", at).Value;
+      case PyKind.Set:
+        throw this.DictRefusal(at, "iteration over a set, whose order Python leaves to the hash,", "; sorted(s) iterates it in order");
       case PyKind.Tuple when source.Type.Items.Count > 0 && source.Type.Items.All(item => item == source.Type.Items[0]) && IrType.Array(PyTypes.Held(source.Type.Items[0])).IsStorable:
         var fields = PyTypes.Ir(source.Type).StructType!.Fields;
         var element = PyTypes.Held(source.Type.Items[0]);
@@ -376,6 +395,9 @@ internal sealed partial class FunctionLowering {
 
     if (iterable.Is("GeneratorExp"))
       return this.GeneratorExpression(iterable);
+
+    if (this.DictView(iterable) is { } view)
+      return view;
 
     var value = this.Value(iterable);
     var element = ExpressionTypes.Element(value.Type) ?? throw this.Refuse(iterable, PythonFrontend.UnsupportedIterationDescriptor, $"iteration over '{this.Quote(iterable)}' of the type {value.Type} is not supported");
@@ -472,32 +494,37 @@ internal sealed partial class FunctionLowering {
     if (element.IsIncomplete)
       throw this.Refuse(expression, PythonFrontend.MissingTypeDescriptor, $"the type of the elements of '{this.Quote(expression)}' is not known");
 
-    var source = this.Iterable(generators[0].Node("iter")!);
-    return (this.Pipeline(generators, 0, source, expression.Node("elt")!, element), PyType.Iterator(element));
+    var source = this.ComprehensionSource(generators[0]);
+    var elt = expression.Node("elt")!;
+    return (this.Pipeline(generators, 0, source, () => this.Coerce(this.Value(elt, element), element, elt), PyTypes.Ir(element)), PyType.Iterator(element));
   }
 
-  private IrExpr Pipeline(IReadOnlyList<PyNode> generators, int index, (IrExpr Value, PyType Type) source, PyNode elt, PyType element) {
+  /// <summary>
+  /// The clauses of a comprehension from one on, over the sequence of its iterable: every element the
+  /// innermost clause reaches made by <paramref name="produce"/>, of the type <paramref name="produced"/>.
+  /// </summary>
+  private IrExpr Pipeline(IReadOnlyList<PyNode> generators, int index, (IrExpr Value, PyType Type) source, System.Func<IrExpr> produce, IrType produced) {
     var generator = generators[index];
     var target = generator.Node("target")!;
     var item = source.Type.Element!;
-    var (variables, bind) = this.TargetVariables(target, item);
+    var (variables, bind) = this._keyedItems.TryGetValue(source.Value, out var dict) ? this.KeyedItems(target, dict) : this.TargetVariables(target, item);
     var current = source.Value;
     foreach (var condition in generator.Nodes("ifs"))
-      current = new IrSequence(IrSequenceOp.Where, IrType.Sequence(PyTypes.Ir(item), current.Type.Restartable),
+      current = new IrSequence(IrSequenceOp.Where, IrType.Sequence(current.Type.Element!, current.Type.Restartable),
         [current, this.LambdaOf(variables, () => { this._prefix.AddRange(bind()); return this.Truth(this.Value(condition)); }, () => IrType.Bool)]);
 
     if (index == generators.Count - 1)
-      return new IrSequence(IrSequenceOp.Select, IrType.Sequence(PyTypes.Ir(element), current.Type.Restartable),
-        [current, this.LambdaOf(variables, () => { this._prefix.AddRange(bind()); return this.Coerce(this.Value(elt, element), element, elt); }, () => PyTypes.Ir(element))]);
+      return new IrSequence(IrSequenceOp.Select, IrType.Sequence(produced, current.Type.Restartable),
+        [current, this.LambdaOf(variables, () => { this._prefix.AddRange(bind()); return produce(); }, () => produced)]);
 
     IrType? inner = null;
     var flattened = this.LambdaOf(variables, () => {
       this._prefix.AddRange(bind());
-      var pipeline = this.Pipeline(generators, index + 1, this.Iterable(generators[index + 1].Node("iter")!), elt, element);
+      var pipeline = this.Pipeline(generators, index + 1, this.ComprehensionSource(generators[index + 1]), produce, produced);
       inner = pipeline.Type;
       return pipeline;
     }, () => inner!);
-    return new IrSequence(IrSequenceOp.SelectMany, IrType.Sequence(PyTypes.Ir(element), current.Type.Restartable), [current, flattened]);
+    return new IrSequence(IrSequenceOp.SelectMany, IrType.Sequence(produced, current.Type.Restartable), [current, flattened]);
   }
 
   /// <summary>
@@ -556,6 +583,8 @@ internal sealed partial class FunctionLowering {
       case "tuple" when arguments.Count == 1:
         var tuple = this.Value(arguments[0]);
         return tuple.Type.Kind == PyKind.Tuple ? tuple : throw this.Refuse(call, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation 'tuple of a value of the type {tuple.Type}, whose length is not known' is not supported by the Python frontend");
+      case "dict" or "set":
+        return this.NewCollection(call, name, expected);
       case "sorted":
         return this.Sorted(call);
       case "reversed" when arguments.Count == 1:
@@ -566,7 +595,7 @@ internal sealed partial class FunctionLowering {
       case "min" or "max":
         return this.Extreme(call, name == "min");
       case "any" or "all" when arguments.Count == 1 && keywords.Count == 0:
-        var (values, type) = this.Elements(arguments[0]);
+        var (values, type) = this.Elements(arguments[0], ExpressionTypes.Element(this.TypeOf(arguments[0])) is { } truth && (truth.IsNumber || truth.Kind == PyKind.Str));
         var item = new Variable("x", arguments[0]) { Type = type };
         var predicate = this.LambdaOf([item], () => this.Truth((Ref(this._variables[item]), type)), () => IrType.Bool);
         return name == "any"
@@ -584,7 +613,7 @@ internal sealed partial class FunctionLowering {
   /// </summary>
   private (IrExpr, PyType) Sum(PyNode call) {
     var arguments = call.Nodes("args");
-    var (values, element) = this.Elements(arguments[0]);
+    var (values, element) = this.Elements(arguments[0], true);
     var start = arguments.Count == 2 ? this.Value(arguments[1]) : (Big(0), PyType.Int);
     if (ExpressionTypes.Value(element) is not { Kind: PyKind.Int or PyKind.Bool } || ExpressionTypes.Value(start.Type) is not { Kind: PyKind.Int or PyKind.Bool })
       throw this.Refuse(call, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation 'sum of {element} values', which CPython adds with compensation, is not supported by the Python frontend");
@@ -615,7 +644,7 @@ internal sealed partial class FunctionLowering {
     IrExpr values;
     PyType element;
     if (arguments.Count == 1) {
-      (values, element) = this.Elements(arguments[0]);
+      (values, element) = this.Elements(arguments[0], KeyFunction(keywords) is null && ExpressionTypes.Element(this.TypeOf(arguments[0])) is { } member && TotallyOrdered(member));
     } else {
       element = this.TypeOf(call);
       var items = arguments.Select(argument => this.Coerce(this.Value(argument, element), element, argument)).ToList();
@@ -637,8 +666,8 @@ internal sealed partial class FunctionLowering {
     if (arguments.Count != 1)
       throw this.Refuse(call, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation '{this.Quote(call)}' is not supported by the Python frontend");
 
-    var (values, element) = this.Elements(arguments[0]);
     var keywords = call.Nodes("keywords");
+    var (values, element) = this.Elements(arguments[0], KeyFunction(keywords) is null && ExpressionTypes.Element(this.TypeOf(arguments[0])) is { } member && TotallyOrdered(member));
     var keyNode = KeyFunction(keywords);
     var keyType = element;
     IrExpr? key = keyNode is null ? null : this.FunctionValue(keyNode, [element], out keyType);
