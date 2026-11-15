@@ -46,15 +46,29 @@ public sealed class PythonDifferentialTests {
   /// </summary>
   [TestCase("py3.8"), TestCase("py3.14")]
   [RequiresToolchain("python")]
-  public async Task IntegerOperations_AgreeWithTheReference(string profile) {
+  public Task IntegerOperations_AgreeWithTheReference(string profile) => IntegerOperations(profile, IntegerCases.Seed, 200);
+
+  /// <summary>
+  /// The differential of #447 at its own size: every integer operation on every width on the
+  /// boundaries of its arguments and on 10 000 random tuples (seed 1850), against the bit-by-bit
+  /// reference, in the oldest and in the newest profile.
+  /// </summary>
+  [TestCase("py3.8"), TestCase("py3.14")]
+  [RequiresToolchain("python"), Category("Slow"), Category("Exhaustive")]
+  public Task IntegerOperations_AgreeWithTheReference_OnTheRandomTuplesOfTheIssue(string profile) => IntegerOperations(profile, 1850, 10_000);
+
+  private static async Task IntegerOperations(string profile, int seed, int random) {
     var module = IntegerCases.Module(IntegerCases.All);
-    var generator = new Random(IntegerCases.Seed);
+    var generator = new Random(seed);
     var cases = new Dictionary<PrototypeCall, IntegerCase>(ReferenceEqualityComparer.Instance);
     foreach (var @case in IntegerCases.All)
-      foreach (var call in IntegerCases.Calls(@case, generator, 200))
+      foreach (var call in IntegerCases.Calls(@case, generator, random))
         cases[call] = @case;
 
-    await Compare("integer operations", PythonFixtures.Translate(module, PythonProfile.Parse(profile)), [.. cases.Keys],
+    // Every integer operation has a Python form: a refusal here would pass the comparison by running nothing.
+    var translated = PythonFixtures.Translate(module, PythonProfile.Parse(profile));
+    Assert.That(translated.Problems, Is.Empty);
+    await Compare("integer operations", translated, [.. cases.Keys],
       call => IntegerCases.Expected(cases[call], call), call => PrototypeFixture.InterpretedOutcome(module, call));
   }
 
@@ -106,13 +120,20 @@ public sealed class PythonDifferentialTests {
     return true;
   }
 
+  /// <summary>The most calls one run of the interpreter takes.</summary>
+  private const int Part = 200_000;
+
   /// <summary>Runs the calls through the translation and compares every outcome with the oracle and the interpreter.</summary>
   private static async Task Compare(string fixture, PythonTranslation translated, IReadOnlyList<PrototypeCall> calls, Func<PrototypeCall, string> expected, Func<PrototypeCall, string> interpreted) {
     if (Refused(fixture, translated))
       return;
 
     var names = translated.Names!;
-    var outcomes = await PythonDriver.OutcomesAsync(translated.Source!, [.. calls.Select(call => call with { Method = names[call.Method] })]);
+    // The calls go to the interpreter in parts, each within the memory the sandbox grants one run.
+    var outcomes = new List<string>(calls.Count);
+    foreach (var part in calls.Chunk(Part))
+      outcomes.AddRange(await PythonDriver.OutcomesAsync(translated.Source!, [.. part.Select(call => call with { Method = names[call.Method] })]));
+
     var mismatches = new List<string>();
     for (var index = 0; index < calls.Count; ++index) {
       var oracle = expected(calls[index]);
