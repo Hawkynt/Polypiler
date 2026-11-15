@@ -29,8 +29,6 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
     "keys", "values", "items", "get", "setdefault", "update", "add", "discard", "popitem", "union", "intersection", "difference", "fromkeys"
   };
 
-  private static readonly HashSet<string> _comparisons = ["Eq", "NotEq", "Lt", "LtE", "Gt", "GtE", "Is", "IsNot", "In", "NotIn"];
-
   private FunctionModel? _function;
   private SourceFile File => module.File;
 
@@ -400,12 +398,9 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
         break;
       case "Compare":
         this.Expression(expression.Node("left")!);
-        foreach (var (op, right) in expression.Nodes("ops").Zip(expression.Nodes("comparators"))) {
-          if (!_comparisons.Contains(op.Kind))
-            this.Refuse(expression, PythonFrontend.UnsupportedDescriptor, $"'{op.Kind}' is not supported by the Python frontend");
-
+        // Every comparison operator Python has is in the subset; the operands decide.
+        foreach (var right in expression.Nodes("comparators"))
           this.Expression(right);
-        }
 
         break;
       case "IfExp":

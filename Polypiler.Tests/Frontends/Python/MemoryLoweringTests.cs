@@ -226,6 +226,32 @@ public sealed class MemoryLoweringTests {
   public void IterablesAsSequences_AreEnumeratedLazily(string expression, string expected)
     => Assert.That(PythonSnippet.Run($"def f():\n    step = 0\n    return {expression}\n", "f"), Is.EqualTo(expected));
 
+  /// <summary>Sequences of a whole module: a table copied to a list, the members of an enum class, ordered int enums, sums with a start and of truth values, an empty list of a known type.</summary>
+  [TestCase("list(T)[1]", "int 2")]
+  [TestCase("sum([m.value for m in Color])", "int 3")]
+  [TestCase("sorted([Level.HIGH, Level.LOW])[0] == Level.LOW", "bool True")]
+  [TestCase("sum([1, 2], 10)", "int 13")]
+  [TestCase("sum([True, True, False])", "int 2")]
+  [TestCase("len(empty)", "int 0")]
+  [TestCase("len(list((1, 2)))", "int 2")]
+  public void ModuleSequences_AreEnumerated(string expression, string expected)
+    => Assert.That(PythonSnippet.Run($"from enum import Enum, IntEnum\n\nclass Color(Enum):\n    RED = 1\n    GREEN = 2\n\nclass Level(IntEnum):\n    LOW = 1\n    HIGH = 2\n\nT = [1, 2]\n\ndef f():\n    empty: list[int] = list()\n    return {expression}\n", "f"), Is.EqualTo(expected));
+
+  [TestCase("x = []\n    return len(x)", "error PLY1801: the type of 'x' in 'f' is not known: nothing tells the type of its elements")]
+  [TestCase("t = ('a', 1)\n    return 0", "error PLY1802: 'a tuple of the types str, int; a tuple holds numbers, bytes, enum members, objects and tuples of them'")]
+  [TestCase("return [1, 2][1.0]", "error PLY1802: 'an index of the type float, which raises TypeError,'")]
+  [TestCase("a = [1, 2]\n    a[0:1] = [3]\n    return 0", "error PLY1821: slice form 'a[0:1] = …' is not supported; slices are imported as values only")]
+  [TestCase("for x in (1, 2.0):\n        pass\n    return 0", "error PLY1813: iteration over '(1, 2.0)' of the type tuple[int, float] is not supported")]
+  [TestCase("return len([a for a, b in [1, 2]])", "error PLY1810: statement 'unpacking a value of the type int into 2 names, which raises TypeError or ValueError,'")]
+  [TestCase("return len(sorted([]))", "error PLY1801: the type of the elements of '[]' is not known")]
+  [TestCase("return sum(['a'])", "error PLY1820: sequence operation 'sum of str values'")]
+  [TestCase("return int(sum([1.5, 2.0], 1))", "error PLY1820: sequence operation 'sum of float values', which CPython adds with compensation,")]
+  [TestCase("return sum([1], start=2)", "error PLY1802: 'sum([1], start=2)' is not supported")]
+  [TestCase("return len(list(1, 2))", "error PLY1802: 'list(1, 2)' is not supported")]
+  [TestCase("return len(sorted([ValueError(), ValueError()]))", "error PLY1802: 'ordering of values of the type ValueError, which raises TypeError,' is not supported")]
+  public void SequenceMisuse_IsRefused(string body, string diagnostic)
+    => Assert.That(PythonSnippet.Refusals($"def f() -> int:\n    {body}\n"), Has.Some.Contains(diagnostic));
+
   [TestCase("list(zip([1], (1, 2)))", "error PLY1820: sequence operation 'zip with a second argument of the type tuple[int, int]' is not supported")]
   [TestCase("list(reversed('ab'))", "error PLY1813: iteration over 'reversed of the type str' is not supported")]
   [TestCase("reversed([1])[0]", "error PLY1802: 'an index of a value of the type Iterator[int]' is not supported")]

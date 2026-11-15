@@ -172,4 +172,19 @@ public sealed class LoweringEdgeTests {
     Assert.That(result.Module!.Caveats, Is.EqualTo(new[] { PythonFrontend.ComplexPower }));
   }
 
+  /// <summary>The forms the parser accepts in a plain function but the subset does not: coroutine syntax, unpacking, slices in a tuple, odd loop targets, raising what is no exception.</summary>
+  [TestCase("await x", "error PLY1832: the function value 'f' escapes, or 'f' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported (coroutines: #752)")]
+  [TestCase("async for y in a:\n        pass", "error PLY1810: statement 'async for' is not supported")]
+  [TestCase("b = [y async for y in a]", "(coroutines: #752)")]
+  [TestCase("b = [*a]", "error PLY1820: sequence operation '*a in a display' is not supported")]
+  [TestCase("b = a[1:2, 0]", "error PLY1821: slice form 'a[1:2, 0]' is not supported")]
+  [TestCase("for a[0] in [1]:\n        pass", "error PLY1810: statement 'a loop variable other than names' is not supported")]
+  [TestCase("b = x.to_bytes(2, order)", "error PLY1823: struct format or array typecode 'order' is not supported: the byte order is a constant \"little\" or \"big\"")]
+  [TestCase("def g() -> int:\n        return 1\n    def g() -> int:\n        return 2", "error PLY1830: 'redefinition of g' is not supported for functions")]
+  [TestCase("raise C()", "error PLY1843: exception construct 'raise C(), which is no exception' is not supported")]
+  [TestCase("raise ValueError(msg='x')", "error PLY1843: exception construct 'an exception made with other arguments than a message: ValueError(msg='x')'")]
+  [TestCase("try:\n        pass\n    except C:\n        pass", "error PLY1843: exception construct 'except C, which names no exception class'")]
+  public void ParsedFormsOutsideTheSubset_AreRefused(string body, string diagnostic)
+    => Assert.That(PythonSnippet.Refusals($"class C:\n    pass\n\ndef f(a: list[int], x: int, order: str) -> int:\n    {body}\n    return 0\n"), Has.Some.Contains(diagnostic));
+
 }
