@@ -149,10 +149,8 @@ internal sealed partial class TypeChecker {
           return;
         }
 
+        // In the mutable binding mode a binding is a `&mut` to a part of the place matched.
         var bound = byReference is { } mutable ? RType.Reference(type, mutable) : type;
-        if (byReference == true)
-          this.Refuse(new Refusal(RustFrontend.UnsupportedPattern, $"binding '{identifier.Name}' by mutable reference", identifier.At));
-
         this.Declare(identifier.Name, bound, identifier.Mutable, identifier, identifier.At, true);
         return;
       }

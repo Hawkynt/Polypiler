@@ -291,27 +291,12 @@ internal sealed class RType {
     }
   }
 
-  /// <summary>Whether two resolved types are the same type, part by part.</summary>
-  public static bool Same(RType first, RType second) {
-    var a = first.Resolved;
-    var b = second.Resolved;
-    if (ReferenceEquals(a, b))
-      return true;
-
-    if (a.Kind != b.Kind || a.Kind is RKind.Variable or RKind.Integer or RKind.Float or RKind.Bool)
-      return false;
-
-    return a.Length == b.Length && a.Mutable == b.Mutable && ReferenceEquals(a.Declaration, b.Declaration)
-      && (a.Element is null) == (b.Element is null) && (a.Element is null || Same(a.Element, b.Element!))
-      && a.Elements.Count == b.Elements.Count && a.Elements.Zip(b.Elements).All(pair => Same(pair.First, pair.Second));
-  }
-
   /// <inheritdoc/>
   public override string ToString() {
     var type = this.Resolved;
     return type.Kind switch {
       RKind.Variable => type.VariableKind switch { VariableKind.Integer => "{integer}", VariableKind.Float => "{float}", _ => "_" },
-      RKind.Tuple => $"({string.Join(", ", type.Elements)})",
+      RKind.Tuple => type.Elements.Count == 1 ? $"({type.Elements[0]},)" : $"({string.Join(", ", type.Elements)})",
       RKind.Option => $"Option<{type.Element}>",
       RKind.Result => $"Result<{type.Element}, {type.Error}>",
       RKind.Array => $"[{type.Element}; {type.Length}]",

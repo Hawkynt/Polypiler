@@ -22,7 +22,7 @@ internal sealed partial class FunctionLowering {
       if (this._places.TryGetValue(binding, out var place))
         return this.Read(place);
 
-      return binding.Type.Resolved.Kind == RKind.Closure ? null : this._values[binding];
+      return this._values[binding];
     }
 
     if (this._typed.Callees.TryGetValue(path, out var function)) {
@@ -53,8 +53,7 @@ internal sealed partial class FunctionLowering {
   private IrExpr Resolved(object resolution, RType type) => resolution switch {
     "None" => new IrNone(this.Ir(type)),
     (EnumInfo enumeration, string variant) => this.Variant(enumeration, variant),
-    StructInfo structure => new IrStructNew(IrType.Struct(this._module.Struct(structure)), []),
-    _ => throw new InvalidOperationException($"no value for {resolution}")
+    _ => new IrStructNew(IrType.Struct(this._module.Struct((StructInfo)resolution)), [])
   };
 
   private IrConst Variant(EnumInfo enumeration, string variant) {

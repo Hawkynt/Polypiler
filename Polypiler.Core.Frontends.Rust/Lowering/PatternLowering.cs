@@ -216,8 +216,14 @@ internal sealed partial class FunctionLowering {
   private void Declare(IEnumerable<(IdentifierPattern Pattern, Item Item)> bindings) {
     foreach (var (pattern, item) in bindings) {
       var binding = this._typed.Bindings[pattern];
-      if (IsExclusiveValue(binding.Type) && item is PlaceItem place) {
-        this._places[binding] = place.Place;
+      if (IsExclusiveValue(binding.Type)) {
+        if (item is PlaceItem place) {
+          this._places[binding] = place.Place;
+        } else {
+          this.Refuse(RustFrontend.UnsupportedPattern, $"binding '{pattern.Name}' by mutable reference into an Option or a Result", pattern.At);
+          this._values[binding] = this.ValueOf(item, binding.Type.Dereferenced);
+        }
+
         continue;
       }
 

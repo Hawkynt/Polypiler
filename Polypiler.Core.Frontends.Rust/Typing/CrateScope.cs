@@ -224,10 +224,9 @@ internal sealed class CrateScope {
     this._report(RustFrontend.ForeignPath, string.Join("::", segments) + (path.Glob ? "::*" : ""), path.At);
   }
 
+  /// <summary>A path of a <c>use</c> that names nothing: an item of another crate, or of this one that does not exist (<c>E0432</c>).</summary>
   private void Unresolved(IReadOnlyList<string> segments, Span at) {
-    if (segments.Count > 0 && segments[0] is "std" or "core" or "alloc")
-      this._report(RustFrontend.ForeignPath, string.Join("::", segments), at);
-    else if (segments.Count > 0 && segments[0] is not ("crate" or "self" or "super") && !this.Root.Items.ContainsKey(segments[0]))
+    if (segments[0] is not ("crate" or "self" or "super") && !this.Root.Items.ContainsKey(segments[0]))
       this._report(RustFrontend.ForeignPath, string.Join("::", segments), at);
     else
       this._report(RustFrontend.InvalidSource, $"E0432: unresolved import `{string.Join("::", segments)}`", at);
@@ -266,9 +265,13 @@ internal sealed class CrateScope {
 
     var index = 0;
     ModuleScope? current = null;
-    while (index < segments.Count && segments[index] is "crate" or "self" or "super" or "") {
+    // `::other` is another crate, which names nothing of this one.
+    if (segments[0] == "")
+      return null;
+
+    while (index < segments.Count && segments[index] is "crate" or "self" or "super") {
       current = segments[index] switch {
-        "crate" or "" => this.Root,
+        "crate" => this.Root,
         "self" => current ?? from,
         _ => (current ?? from).Parent
       };

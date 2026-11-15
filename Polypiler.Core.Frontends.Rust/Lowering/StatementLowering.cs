@@ -221,7 +221,8 @@ internal sealed partial class FunctionLowering {
       LoopExpr loop => loop.Label,
       WhileExpr loop => loop.Label,
       BlockExpr block => block.Label,
-      _ => ((ForExpr)frame.Node).Label
+      ForExpr loop => loop.Label,
+      _ => "closure"
     };
     return label is null ? "" : char.ToUpperInvariant(label[0]) + label[1..];
   }

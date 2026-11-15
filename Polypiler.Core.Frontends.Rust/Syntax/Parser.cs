@@ -167,7 +167,10 @@ internal sealed class Parser {
   }
 
   /// <summary>Whether an attribute is one an item of every kind may carry.</summary>
-  private static bool IsNeutral(Attribute attribute) => _accepted.Contains(attribute.Name);
+  private static bool IsNeutral(Attribute attribute) => _accepted.Contains(attribute.Name) && !_functionOnly.Contains(attribute.Name);
+
+  /// <summary>The attributes only a function may carry; on any other item rustc rejects them (E0518).</summary>
+  private static readonly HashSet<string> _functionOnly = ["inline", "cold", "track_caller"];
 
   /// <summary>The refusal of the first attribute an item does not accept, or <see langword="null"/>.</summary>
   private static Refusal? Refused(IEnumerable<Attribute> attributes, System.Func<Attribute, bool> accepts) {
@@ -193,7 +196,7 @@ internal sealed class Parser {
     }
 
     if (this.At("fn")) {
-      var refused = Refused(attributes, attribute => attribute.Name == "test" || IsTestConfiguration(attribute));
+      var refused = Refused(attributes, attribute => attribute.Name == "test" || IsTestConfiguration(attribute) || _functionOnly.Contains(attribute.Name));
       var function = this.Function(at, qualifiers);
       if (function is FunctionItem item) {
         if (refused is not null)
@@ -238,6 +241,12 @@ internal sealed class Parser {
       case "trait":
         this.SkipItem();
         return new RefusedItem(new Refusal(RustFrontend.UnsupportedTrait, "trait " + this.NameAfter(at), at));
+      case "unsafe": {
+        // unsafe trait, unsafe impl: an unsafe fn was taken as a qualifier above.
+        var form = "unsafe " + this.PeekAt(1).Text;
+        this.SkipItem();
+        return new RefusedItem(new Refusal(RustFrontend.UnsafeConstruct, form, at));
+      }
       case "union":
         this.SkipItem();
         return new RefusedItem(new Refusal(RustFrontend.UnsafeConstruct, "union", at));
@@ -790,7 +799,7 @@ internal sealed class Parser {
       return new TypeRef("_", this.Next().At);
 
     var segments = new List<string>();
-    if (this.Accept("::"))
+    if (this.Accept("::") && this.Current.Text is not ("std" or "core" or "alloc"))
       segments.Add("");
 
     segments.Add(this.Identifier());
@@ -837,9 +846,12 @@ internal sealed class Parser {
     if (this.Accept(">"))
       return;
 
-    var token = this.Expect(">>");
-    --this._position;
-    this._tokens[this._position] = token with { Text = ">", At = new Span(token.At.Line, token.At.Column + 1) };
+    // A token that starts with the '>' closing the list - '>>', '>=', '>>=' - gives it up and keeps the rest.
+    var token = this.Current;
+    if (token.Kind != TokenKind.Punctuation || token.Text is not (">>" or ">=" or ">>="))
+      throw this.Error($"expected '>', found {token}");
+
+    this._tokens[this._position] = token with { Text = token.Text[1..], At = new Span(token.At.Line, token.At.Column + 1) };
   }
 
   // ---------------------------------------------------------------- statements and blocks
@@ -1274,6 +1286,8 @@ internal sealed class Parser {
       }
       case "|" or "||":
         return this.Closure();
+      case "::":
+        return this.Path();
       default:
         throw this.Error($"expected expression, found {token}");
     }
@@ -1320,7 +1334,8 @@ internal sealed class Parser {
   private Expr Path() {
     var at = this.Current.At;
     var segments = new List<string>();
-    if (this.Accept("::"))
+    // `::name` names an external crate (2018 edition and later); `::std` is `std`.
+    if (this.Accept("::") && this.Current.Text is not ("std" or "core" or "alloc"))
       segments.Add("");
 
     segments.Add(this.Identifier());

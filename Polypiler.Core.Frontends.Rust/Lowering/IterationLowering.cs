@@ -266,13 +266,10 @@ internal sealed partial class FunctionLowering {
 
           break;
         }
-        default: {
-          var value = this.ApplyFunction(iteration.TerminalFunction!, [item]);
-          if (value is not null && !this._diverged)
-            this.Effect(value);
-
+        default:
+          // for_each: the function returns nothing.
+          this.ApplyFunction(iteration.TerminalFunction!, [item]);
           break;
-        }
       }
 
       return null;
@@ -297,7 +294,7 @@ internal sealed partial class FunctionLowering {
     return null;
   }
 
-  private IrExpr CapturedValue(Binding binding) => this._places.TryGetValue(binding, out var place) ? this.Read(place) : this._values[binding];
+  private IrExpr CapturedValue(Binding binding) => this._values[binding];
 
   /// <summary>Calls what an iterator method was given: a closure, a closure variable, a function or a function pointer.</summary>
   private IrExpr? ApplyFunction(Expr function, IReadOnlyList<Item> arguments) {
@@ -341,12 +338,12 @@ internal sealed partial class FunctionLowering {
   /// <summary>Inlines a closure: its parameters bound to the arguments, its body lowered where it is called.</summary>
   private IrExpr? Apply(ClosureInfo info, IReadOnlyList<Item> arguments) {
     var closure = info.Expression;
-    var restore = new List<(Binding Binding, IrExpr? Value, Place? Place)>();
+    // A move closure captures Copy values only, which are values, never places.
+    var restore = new List<(Binding Binding, IrExpr Value)>();
     if (this._snapshots.TryGetValue(info, out var copies)) {
       foreach (var (binding, copy) in copies) {
-        restore.Add((binding, this._values.GetValueOrDefault(binding), this._places.GetValueOrDefault(binding)));
+        restore.Add((binding, this._values[binding]));
         this._values[binding] = copy;
-        this._places.Remove(binding);
       }
     }
 
@@ -374,13 +371,8 @@ internal sealed partial class FunctionLowering {
         this._closureResults.RemoveAt(this._closureResults.Count - 1);
       }
     } finally {
-      foreach (var (binding, value, place) in restore) {
-        if (value is not null)
-          this._values[binding] = value;
-
-        if (place is not null)
-          this._places[binding] = place;
-      }
+      foreach (var (binding, value) in restore)
+        this._values[binding] = value;
     }
   }
 

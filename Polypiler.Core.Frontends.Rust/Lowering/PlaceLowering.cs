@@ -189,7 +189,8 @@ internal sealed partial class FunctionLowering {
 
         return copy;
       }
-      case RKind.Struct or RKind.Tuple: {
+      default: {
+        // A struct or a tuple: field by field, the arrays in it copied.
         var source = this.Stable(value, "source");
         var declaration = source.Type.StructType!;
         var parts = resolved.Kind == RKind.Struct ? resolved.Struct!.Fields.Select(field => field.Type).ToList() : resolved.Elements.ToList();
@@ -199,8 +200,6 @@ internal sealed partial class FunctionLowering {
         }).ToList();
         return new IrStructNew(source.Type, fields);
       }
-      default:
-        return value;
     }
   }
 
@@ -211,20 +210,13 @@ internal sealed partial class FunctionLowering {
   /// </summary>
   private IrExpr Converted(IrExpr value, RType target, RType? source) {
     var wanted = this.Ir(target);
-    if (value.Type == wanted || wanted == IrType.Void || this._diverged)
+    if (value.Type == wanted || !wanted.IsView || this._diverged)
       return value;
 
-    if (wanted.IsView) {
-      if (value is IrConstRef table)
-        value = this.Duplicate(table, RType.Array(target.Resolved.Element!.Resolved.Element!, 0));
+    if (value.Type.IsList)
+      value = new IrCollection(IrCollectionOp.ListCopyToArray, IrType.Array(value.Type.Element!), [value]);
 
-      if (value.Type.IsList)
-        value = new IrCollection(IrCollectionOp.ListCopyToArray, IrType.Array(value.Type.Element!), [value]);
-
-      return new IrIntrinsic(IrIntrinsicOp.ViewOf, wanted, [value]);
-    }
-
-    return value;
+    return new IrIntrinsic(IrIntrinsicOp.ViewOf, wanted, [value]);
   }
 
   // ---------------------------------------------------------------- binding patterns
@@ -258,8 +250,14 @@ internal sealed partial class FunctionLowering {
 
         return;
       case IdentifierPattern identifier when this._typed.Bindings.TryGetValue(identifier, out var binding) && binding.Constant is null && !this._typed.Resolutions.ContainsKey(identifier): {
-        if (IsExclusiveValue(binding.Type) && item is PlaceItem place) {
-          this._places[binding] = place.Place;
+        if (IsExclusiveValue(binding.Type)) {
+          if (item is PlaceItem place) {
+            this._places[binding] = place.Place;
+          } else {
+            this.Refuse(RustFrontend.UnsupportedPattern, $"binding '{identifier.Name}' by mutable reference into a value", identifier.At);
+            this._values[binding] = this.ValueOf(item, binding.Type.Dereferenced);
+          }
+
           return;
         }
 

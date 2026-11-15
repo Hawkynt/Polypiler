@@ -98,7 +98,7 @@ internal sealed partial class TypeChecker {
 
     // An unknown first segment: a type of that name would be the crate's own (E0433); a lowercase one names another crate.
     if (this._crate.Lookup(this._module, path.Segments[0], new(ReferenceEqualityComparer.Instance)) is null && path.Segments[0] is not ("crate" or "self" or "super" or "Self")) {
-      if (char.IsUpper(path.Segments[0][0]))
+      if (path.Segments[0].Length > 0 && char.IsUpper(path.Segments[0][0]))
         throw this.Invalid($"E0433: failed to resolve: use of undeclared type `{path.Segments[0]}`", path.At);
 
       return this.Refused(RustFrontend.ForeignPath, path.Text, path.At);

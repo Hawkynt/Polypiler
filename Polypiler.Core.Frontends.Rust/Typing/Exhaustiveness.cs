@@ -65,9 +65,12 @@ internal static class Exhaustiveness {
     return [Wild(pattern, typed)];
   }
 
-  /// <summary>A pattern, or <see langword="null"/> when it matches every value: <c>_</c> and a binding.</summary>
+  /// <summary>
+  /// A pattern, or <see langword="null"/> when it matches every value: <c>_</c>, a binding, and a
+  /// refused one, whose refusal is the diagnostic that counts.
+  /// </summary>
   private static Pattern? Wild(Pattern? pattern, Typed typed) => pattern switch {
-    null or WildcardPattern => null,
+    null or WildcardPattern or RefusedPattern => null,
     IdentifierPattern identifier when !typed.Resolutions.ContainsKey(identifier) => null,
     _ => pattern
   };

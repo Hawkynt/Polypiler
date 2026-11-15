@@ -210,9 +210,13 @@ internal sealed partial class TypeChecker {
       }
     }
 
+    // A closure that captures nothing coerces to a function pointer, which the subset has no value of a closure for.
     if (a.Kind == RKind.Function && b.Kind == RKind.Closure && b.Declaration is ClosureInfo closure) {
       if (closure.Captures.Count > 0)
         throw this.Invalid("E0308: mismatched types: closures can only be coerced to `fn` types if they do not capture any variables", at);
+
+      this.Refuse(new Refusal(RustFrontend.EscapingClosure, "closure coerced to a function pointer", at));
+      return;
     }
 
     this.Unify(expected, found, at);
@@ -420,9 +424,6 @@ internal sealed partial class TypeChecker {
 
     return true;
   }
-
-  /// <summary>The binding of a constant checked before, or <see langword="null"/>.</summary>
-  public Binding? ConstantOf(ConstItem constant) => this._constants.GetValueOrDefault(constant);
 
   // ---------------------------------------------------------------- blocks and statements
 
@@ -726,9 +727,9 @@ internal sealed partial class TypeChecker {
       return;
 
     BigInteger? result = binary.Op switch {
-      "+" => left + right,
-      "-" => left - right,
-      "*" => left * right,
+      "+" => left.Value + right.Value,
+      "-" => left.Value - right.Value,
+      "*" => left.Value * right.Value,
       "/" or "%" => BigInteger.Divide(left.Value, right.Value),
       _ => null
     };
