@@ -26,6 +26,9 @@ public static partial class JavaScriptEmitter {
     }
 
     private (JsExpression Node, bool Atomic) Write(IrExpr expression) {
+      if (this.ForeignWrite(expression) is { } foreign)
+        return foreign;
+
       if (this.PointerWrite(expression) is { } pointer)
         return pointer;
 

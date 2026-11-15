@@ -282,6 +282,9 @@ public static class JavaScriptPrinter {
         case JsClass type:
           this.Class(type, depth);
           break;
+        case JsImport imported:
+          this._text.Append("import * as ").Append(imported.Name).Append(" from \"").Append(JavaScriptLiterals.Escape(imported.Source)).Append("\";");
+          break;
         default:
           this._text.Append("export ");
           this.Bare(((JsExport)statement).Declaration, depth);

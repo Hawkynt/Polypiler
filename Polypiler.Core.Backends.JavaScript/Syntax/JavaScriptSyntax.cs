@@ -346,6 +346,11 @@ public sealed record JsClass(string Name, IReadOnlyList<JsClassMember> Members) 
 /// <param name="Declaration">The declaration.</param>
 public sealed record JsExport(JsStatement Declaration) : JsStatement;
 
+/// <summary><c>import * as name from "source";</c>, the namespace of a module, as an ES module imports a binding module (#1332).</summary>
+/// <param name="Name">The name the namespace is bound to.</param>
+/// <param name="Source">The module specifier.</param>
+public sealed record JsImport(string Name, string Source) : JsStatement;
+
 /// <summary>A file: the lines of its header comment and its statements.</summary>
 /// <param name="Header">The header, each line without its <c>//</c>.</param>
 /// <param name="Body">The statements.</param>
