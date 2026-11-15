@@ -77,7 +77,7 @@ public static class CSharpPrinter {
     CsBinary binary => Of(binary.Operator),
     CsIsType => Relational,
     CsConditional => Conditional,
-    CsAssignment => Assignment,
+    CsAssignment or CsLambda => Assignment,
     _ => Primary
   };
 
@@ -186,6 +186,11 @@ public static class CSharpPrinter {
         case CsProperty property:
           this.Property(property, depth);
           break;
+        case CsDelegateDeclaration type:
+          this.Modifiers(type.Modifiers, depth).Append("delegate ").Append(type.ReturnType.Name).Append(' ').Append(type.Name);
+          this.Parameters(type.Parameters);
+          this._text.Append(";\n");
+          break;
         default:
           var constructor = (CsConstructor)member;
           this.Modifiers(constructor.Modifiers, depth).Append(constructor.Name);
@@ -250,7 +255,10 @@ public static class CSharpPrinter {
         if (parameter.Modifier is not null)
           this._text.Append(parameter.Modifier).Append(' ');
 
-        this._text.Append(parameter.ParameterType.Name).Append(' ').Append(parameter.Name);
+        if (parameter.ParameterType.Name.Length > 0)
+          this._text.Append(parameter.ParameterType.Name).Append(' ');
+
+        this._text.Append(parameter.Name);
       }
 
       this._text.Append(')');
@@ -411,6 +419,23 @@ public static class CSharpPrinter {
           this._text.Append("throw ");
           this.Expression(exception.Value, depth);
           this._text.Append(';');
+          break;
+        case CsTryFinally attempt:
+          this._text.Append("try ");
+          this.Braces(attempt.Body, depth);
+          this._text.Append(" finally ");
+          this.Braces(attempt.Finally, depth);
+          break;
+        case CsLocalFunction function:
+          foreach (var modifier in function.Modifiers)
+            this._text.Append(modifier).Append(' ');
+
+          this._text.Append(function.ReturnType.Name).Append(' ').Append(function.Name);
+          this.Parameters(function.Parameters);
+          this.Inner(function.Body, function.ExpressionBody, depth, " =>");
+          if (function.Body is null)
+            this._text.Append(';');
+
           break;
         default:
           var context = (CsCheckedStatement)statement;
@@ -625,10 +650,48 @@ public static class CSharpPrinter {
         case CsArrayInitializer initializer:
           this.Initializer(initializer, depth);
           break;
+        case CsLambda lambda:
+          this.Lambda(lambda, depth);
+          break;
         default:
           this._text.Append("default(").Append(((CsDefaultExpression)expression).DefaultType.Name).Append(')');
           break;
       }
+    }
+
+    /// <summary>
+    /// A lambda - one parameter without a type bare, any other list in parentheses - or an anonymous
+    /// method, whose parameters always have their types; its block is indented like a statement's.
+    /// </summary>
+    private void Lambda(CsLambda lambda, int depth) {
+      if (lambda.IsStatic)
+        this._text.Append("static ");
+
+      if (lambda.IsAnonymousMethod) {
+        this._text.Append("delegate ");
+        this.Parameters(lambda.Parameters);
+      } else if (lambda.Parameters is [{ ParameterType.Name: "", Modifier: null } single]) {
+        this._text.Append(single.Name);
+      } else {
+        this.Parameters(lambda.Parameters);
+      }
+
+      if (!lambda.IsAnonymousMethod)
+        this._text.Append(" =>");
+
+      this.Inner(lambda.Body, lambda.ExpressionBody, depth, "");
+    }
+
+    /// <summary>The body of a function inside a statement: a block after a space, or the arrow and the expression; nothing follows it.</summary>
+    private void Inner(CsBlock? body, CsExpression? expression, int depth, string arrow) {
+      if (body is null) {
+        this._text.Append(arrow).Append(' ');
+        this.Expression(expression!, depth);
+        return;
+      }
+
+      this._text.Append(' ');
+      this.Braces(body, depth);
     }
 
     private void Arguments(IReadOnlyList<CsExpression> arguments, int depth) {

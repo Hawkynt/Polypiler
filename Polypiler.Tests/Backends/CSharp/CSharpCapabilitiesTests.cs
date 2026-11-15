@@ -132,7 +132,17 @@ public sealed class CSharpCapabilitiesTests {
     ("ArraySegment<T> element place", "net2.0"),
     ("BinaryPrimitives.Read… on an ArraySegment<byte>", "net2.0"),
     ("BinaryPrimitives.Write… on an ArraySegment<byte>", "net2.0"),
-    ("BinaryPrimitives.Write… on a span, the value evaluated first", "netstandard2.1")
+    ("BinaryPrimitives.Write… on a span, the value evaluated first", "netstandard2.1"),
+    ("anonymous method", "C# 2"),
+    ("lambda expression", "C# 3"),
+    ("foreach iteration variable of its own per pass", "C# 5"),
+    ("static anonymous function", "C# 9"),
+    ("System.Action<T>", "net2.0"),
+    ("System.Action", "net3.5"),
+    ("System.Func<T1…T4, TResult>", "net3.5"),
+    ("System.Action<T1…T4>", "net3.5"),
+    ("System.Func<T1…T16, TResult>", "net4.6"),
+    ("System.Action<T1…T16>", "net4.6")
   ];
 
   /// <summary>

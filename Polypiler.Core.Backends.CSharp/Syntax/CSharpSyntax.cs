@@ -221,6 +221,24 @@ public sealed record CsArrayInitializer(IReadOnlyList<CsExpression> Elements) : 
 /// <param name="DefaultType">The type.</param>
 public sealed record CsDefaultExpression(CsType DefaultType) : CsExpression;
 
+/// <summary>
+/// A lambda, <c>(a, b) =&gt; body</c>, or an anonymous method, <c>delegate (int a) { … }</c>: a block
+/// body, or for a lambda an expression body. A parameter whose type is empty is typed by the delegate
+/// the lambda converts to.
+/// </summary>
+/// <param name="Parameters">The parameters.</param>
+/// <param name="Body">The block body, or <see langword="null"/>.</param>
+/// <param name="ExpressionBody">The expression body of a lambda, or <see langword="null"/>.</param>
+public sealed record CsLambda(IReadOnlyList<CsParameter> Parameters, CsBlock? Body, CsExpression? ExpressionBody) : CsExpression {
+
+  /// <summary>Whether the lambda is <c>static</c>: it captures nothing (C# 9).</summary>
+  public bool IsStatic { get; init; }
+
+  /// <summary>Whether it is an anonymous method of C# 2, <c>delegate (…) { … }</c>, rather than a lambda.</summary>
+  public bool IsAnonymousMethod { get; init; }
+
+}
+
 #endregion
 
 #region Statements
@@ -299,6 +317,20 @@ public sealed record CsReturn(CsExpression? Value) : CsStatement;
 /// <param name="Value">The exception.</param>
 public sealed record CsThrow(CsExpression Value) : CsStatement;
 
+/// <summary><c>try { body } finally { cleanup }</c>.</summary>
+/// <param name="Body">The block that runs first.</param>
+/// <param name="Finally">The block that runs however the first one ends.</param>
+public sealed record CsTryFinally(CsBlock Body, CsBlock Finally) : CsStatement;
+
+/// <summary>A local function: <c>modifiers T Name(parameters) { … }</c> or <c>… =&gt; expression;</c> (C# 7).</summary>
+/// <param name="Modifiers">The modifiers, such as <c>static</c>.</param>
+/// <param name="ReturnType">The return type.</param>
+/// <param name="Name">The name.</param>
+/// <param name="Parameters">The parameters.</param>
+/// <param name="Body">The block body, or <see langword="null"/>.</param>
+/// <param name="ExpressionBody">The expression body, or <see langword="null"/>.</param>
+public sealed record CsLocalFunction(IReadOnlyList<string> Modifiers, CsType ReturnType, string Name, IReadOnlyList<CsParameter> Parameters, CsBlock? Body, CsExpression? ExpressionBody) : CsStatement;
+
 /// <summary><c>checked { }</c> or <c>unchecked { }</c>.</summary>
 /// <param name="Checked">Whether overflow is checked.</param>
 /// <param name="Block">The block.</param>
@@ -351,6 +383,13 @@ public sealed record CsMethod(
   public IReadOnlyList<string> Constraints { get; init; } = [];
 
 }
+
+/// <summary>A delegate type: <c>modifiers delegate T Name(parameters);</c>.</summary>
+/// <param name="Modifiers">The modifiers.</param>
+/// <param name="ReturnType">The return type.</param>
+/// <param name="Name">The name, with the list of its type parameters for a generic one: <c>TToT&lt;T&gt;</c>.</param>
+/// <param name="Parameters">The parameters.</param>
+public sealed record CsDelegateDeclaration(IReadOnlyList<string> Modifiers, CsType ReturnType, string Name, IReadOnlyList<CsParameter> Parameters) : CsMember;
 
 /// <summary>A constructor, which may chain to another of its type: <c>: this(arguments)</c>.</summary>
 /// <param name="Modifiers">The modifiers.</param>

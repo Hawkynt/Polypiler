@@ -79,7 +79,23 @@ public enum CSharpFeature {
   UnmanagedConstraint,
 
   /// <summary>The constraint <c>where T : notnull</c> of a type parameter (C# 8).</summary>
-  NotNullConstraint
+  NotNullConstraint,
+
+  /// <summary>An anonymous method, <c>delegate (int x) { … }</c> (C# 2).</summary>
+  AnonymousMethod,
+
+  /// <summary>A lambda expression, <c>x =&gt; …</c> (C# 3).</summary>
+  LambdaExpression,
+
+  /// <summary>
+  /// The iteration variable of a <c>foreach</c> is a new variable every pass (C# 5); a closure made
+  /// in a pass of a C# 2 to 4 compiler's foreach shares one. Recorded for the table: the emitter reads
+  /// an element into a local of the loop body, which is a variable of its own every pass in every version.
+  /// </summary>
+  ForEachIterationVariable,
+
+  /// <summary>A lambda that captures nothing, marked <c>static</c> (C# 9).</summary>
+  StaticAnonymousFunction
 
 }
 
@@ -430,7 +446,10 @@ public sealed class CSharpCapabilities {
     .. CSharpViewRows.Helpers,
 
     // The string operations of #1314.
-    .. CSharpStringRows.All
+    .. CSharpStringRows.All,
+
+    // The function values of #1326.
+    .. CSharpFunctionRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>

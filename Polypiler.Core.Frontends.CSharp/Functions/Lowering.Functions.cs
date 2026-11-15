@@ -74,6 +74,9 @@ internal sealed partial class Lowering {
         return this.Lambda(function, (IMethodSymbol)model.GetSymbolInfo(function).Symbol!);
       case LiteralExpressionSyntax or DefaultExpressionSyntax when model.GetConstantValue(expression) is { HasValue: true, Value: null }:
         return new IrNull(type);
+      // A conditional of two lambdas has no type of its own; the delegate it converts to is its type.
+      case ConditionalExpressionSyntax when info.Type is null:
+        return this.Natural(expression, type);
     }
 
     if (info.Type is not null || model.GetSymbolInfo(expression).Symbol is not IMethodSymbol method)

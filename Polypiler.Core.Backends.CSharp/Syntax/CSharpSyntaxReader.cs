@@ -84,7 +84,7 @@ public static class CSharpSyntaxReader {
   private static IReadOnlyList<string> Modifiers(SyntaxTokenList modifiers) => [.. modifiers.Select(modifier => modifier.Text)];
 
   private static CsParameter Read(ParameterSyntax parameter)
-    => new(new CsType(parameter.Type!.ToString()), parameter.Identifier.Text, parameter.Modifiers.Count == 0 ? null : string.Join(' ', parameter.Modifiers.Select(modifier => modifier.Text)));
+    => new(new CsType(parameter.Type?.ToString() ?? ""), parameter.Identifier.Text, parameter.Modifiers.Count == 0 ? null : string.Join(' ', parameter.Modifiers.Select(modifier => modifier.Text)));
 
   private static IReadOnlyList<CsParameter> Read(ParameterListSyntax parameters) => [.. parameters.Parameters.Select(Read)];
 
@@ -120,6 +120,7 @@ public static class CSharpSyntaxReader {
         type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]),
       FileScopedNamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), true, [.. scope.Members.Select(Read)]),
       NamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), false, [.. scope.Members.Select(Read)]),
+      DelegateDeclarationSyntax type => new CsDelegateDeclaration(Modifiers(type.Modifiers), new CsType(type.ReturnType.ToString()), type.Identifier.Text + type.TypeParameterList, Read(type.ParameterList)),
       _ => throw Unknown(member)
     };
     return read with { Leading = Trivia(member) };
@@ -158,6 +159,10 @@ public static class CSharpSyntaxReader {
       ReturnStatementSyntax result => new CsReturn(result.Expression is null ? null : Read(result.Expression)),
       ThrowStatementSyntax { Expression: not null } exception => new CsThrow(Read(exception.Expression)),
       CheckedStatementSyntax context => new CsCheckedStatement(context.IsKind(SyntaxKind.CheckedStatement), Block(context.Block)),
+      TryStatementSyntax { Catches.Count: 0, Finally: { } cleanup } attempt => new CsTryFinally(Block(attempt.Block), Block(cleanup.Block)),
+      LocalFunctionStatementSyntax function => new CsLocalFunction(
+        Modifiers(function.Modifiers), new CsType(function.ReturnType.ToString()), function.Identifier.Text, Read(function.ParameterList),
+        function.Body is null ? null : Block(function.Body), function.ExpressionBody is null ? null : Read(function.ExpressionBody.Expression)),
       _ => throw Unknown(statement)
     };
     return read with { Leading = Trivia(statement) };
@@ -194,8 +199,18 @@ public static class CSharpSyntaxReader {
     InitializerExpressionSyntax { RawKind: (int)SyntaxKind.ArrayInitializerExpression } initializer => Initializer(initializer),
     DefaultExpressionSyntax value => new CsDefaultExpression(new CsType(value.Type.ToString())),
     DeclarationExpressionSyntax { Designation: DiscardDesignationSyntax } => new CsName("_"),
+    AnonymousMethodExpressionSyntax method => new CsLambda(method.ParameterList is null ? [] : Read(method.ParameterList), Block(method.Block), null) {
+      IsAnonymousMethod = true, IsStatic = method.Modifiers.Any(SyntaxKind.StaticKeyword)
+    },
+    SimpleLambdaExpressionSyntax lambda => Lambda([Read(lambda.Parameter)], lambda),
+    ParenthesizedLambdaExpressionSyntax lambda => Lambda(Read(lambda.ParameterList), lambda),
     _ => throw Unknown(expression)
   };
+
+  private static CsLambda Lambda(IReadOnlyList<CsParameter> parameters, LambdaExpressionSyntax lambda)
+    => new(parameters, lambda.Block is null ? null : Block(lambda.Block), lambda.ExpressionBody is null ? null : Read(lambda.ExpressionBody)) {
+      IsStatic = lambda.Modifiers.Any(SyntaxKind.StaticKeyword)
+    };
 
   private static CsArrayInitializer Initializer(InitializerExpressionSyntax initializer)
     => new([.. initializer.Expressions.Select(Read)]) { Tabulated = Apart(initializer.OpenBraceToken, initializer.CloseBraceToken) };

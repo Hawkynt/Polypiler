@@ -56,7 +56,7 @@ public sealed class ClassEdgeTests {
   [TestCase("public sealed class D { public int V; } public static class C { static int Use(D d) => d.V; public static int F() => Use(new D { V = 1 }); }", "an object initializer inside an expression")]
   [TestCase("public sealed class D { } public sealed class E { } public static class C { public static bool F() => ReferenceEquals(new D(), new E()); }", "a comparison of D with E")]
   [TestCase("public sealed record R(int A); public static class C { public static int F() => new R(1).GetHashCode(); }", "R.GetHashCode")]
-  [TestCase("public sealed class D { public System.Action A; } public static class C { public static int F() => 0; }", "System.Action")]
+  [TestCase("public sealed class D { public event System.Action A; } public static class C { public static int F() => 0; }", "an event")]
   public void CSharpConstruct_IsRefusedByName(string source, string what)
     => Assert.That(CSharpRefusal(source).Message, Is.EqualTo($"'{what}' is not supported yet"));
 

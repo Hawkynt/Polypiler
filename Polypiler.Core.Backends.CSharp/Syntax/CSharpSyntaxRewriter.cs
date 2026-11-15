@@ -31,6 +31,10 @@ public static class CSharpSyntaxRewriter {
     CsObjectCreation creation => creation.Arguments,
     CsArrayCreation creation => [.. Optional(creation.Size), .. Optional(creation.Initializer)],
     CsArrayInitializer initializer => initializer.Elements,
+    CsLambda lambda => [.. lambda.Parameters, .. Optional(lambda.Body), .. Optional(lambda.ExpressionBody)],
+    CsLocalFunction function => [.. function.Parameters, .. Optional(function.Body), .. Optional(function.ExpressionBody)],
+    CsTryFinally attempt => [attempt.Body, attempt.Finally],
+    CsDelegateDeclaration type => type.Parameters,
     CsBlock block => block.Statements,
     CsLocalDeclaration declaration => Optional(declaration.Initializer),
     CsExpressionStatement statement => [statement.Expression],
@@ -98,6 +102,9 @@ public static class CSharpSyntaxRewriter {
     CsArrayCreation creation => ArrayCreation(creation, rewrite),
     CsArrayInitializer initializer => List(initializer.Elements, rewrite) is var elements && !ReferenceEquals(elements, initializer.Elements) ? initializer with { Elements = elements } : initializer,
     CsBlock block => List(block.Statements, rewrite) is var statements && !ReferenceEquals(statements, block.Statements) ? block with { Statements = statements } : block,
+    CsLambda lambda => Lambda(lambda, rewrite),
+    CsLocalFunction function => LocalFunction(function, rewrite),
+    CsTryFinally attempt => Pair(attempt, attempt.Body, attempt.Finally, rewrite, (body, cleanup) => attempt with { Body = body, Finally = cleanup }),
     CsLocalDeclaration declaration => declaration.Initializer is null ? declaration : Same(declaration, declaration.Initializer, rewrite, value => declaration with { Initializer = value }),
     CsExpressionStatement statement => Same(statement, statement.Expression, rewrite, expression => statement with { Expression = expression }),
     CsIf conditional => If(conditional, rewrite),
@@ -218,6 +225,18 @@ public static class CSharpSyntaxRewriter {
     var accessors = property.Accessors is null ? null : List(property.Accessors, rewrite);
     var expression = Optional(property.ExpressionBody, rewrite);
     return ReferenceEquals(accessors, property.Accessors) && ReferenceEquals(expression, property.ExpressionBody) ? property : property with { Accessors = accessors, ExpressionBody = expression };
+  }
+
+  private static CsLambda Lambda(CsLambda lambda, Func<CsNode, CsNode> rewrite) {
+    var body = Optional(lambda.Body, rewrite);
+    var expression = Optional(lambda.ExpressionBody, rewrite);
+    return ReferenceEquals(body, lambda.Body) && ReferenceEquals(expression, lambda.ExpressionBody) ? lambda : lambda with { Body = body, ExpressionBody = expression };
+  }
+
+  private static CsLocalFunction LocalFunction(CsLocalFunction function, Func<CsNode, CsNode> rewrite) {
+    var body = Optional(function.Body, rewrite);
+    var expression = Optional(function.ExpressionBody, rewrite);
+    return ReferenceEquals(body, function.Body) && ReferenceEquals(expression, function.ExpressionBody) ? function : function with { Body = body, ExpressionBody = expression };
   }
 
   private static CsMethod Method(CsMethod method, Func<CsNode, CsNode> rewrite) {

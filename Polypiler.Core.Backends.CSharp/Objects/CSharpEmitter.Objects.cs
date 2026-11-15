@@ -35,6 +35,7 @@ public static partial class CSharpEmitter {
     private static CsMember Exposed(CsMember member) => member switch {
       CsField field => field with { Modifiers = [.. field.Modifiers.Select(Internal)] },
       CsMethod method => method with { Modifiers = [.. method.Modifiers.Select(Internal)] },
+      CsDelegateDeclaration type => type with { Modifiers = [.. type.Modifiers.Select(Internal)] },
       _ => member
     };
 
