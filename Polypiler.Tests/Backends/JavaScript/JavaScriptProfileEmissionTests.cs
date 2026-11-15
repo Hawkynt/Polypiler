@@ -725,7 +725,7 @@ public sealed class JavaScriptProfileEmissionTests {
   [Test, Category("Slow")]
   public void NeverEmittedCapabilities_AreInNoFile() {
     var never = JavaScriptCapabilities.Standard.Entries.Where(entry => !entry.Emitted).Select(entry => entry.Name).Where(name => name != "numeric separators").ToList();
-    Assert.That(never, Has.Count.EqualTo(11));
+    Assert.That(never, Has.Count.EqualTo(12));
     foreach (var fixture in PrototypeFixture.Names)
       foreach (var profile in new[] { _es5, _es2017, JavaScriptProfile.Default }) {
         var text = JavaScriptEmitter.Emit(PrototypeFixture.Imported(fixture), profile).Single().Content;
