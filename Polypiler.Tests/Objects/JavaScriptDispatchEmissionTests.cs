@@ -4,6 +4,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Objects;
 
@@ -81,8 +82,8 @@ public sealed class JavaScriptDispatchEmissionTests {
   ];
 
   private static string Emit(IrModule module, JavaScriptProfile profile) {
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -102,8 +103,8 @@ public sealed class JavaScriptDispatchEmissionTests {
       Emit(module, profile);
 
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     }
   }
@@ -157,7 +158,7 @@ public sealed class JavaScriptDispatchEmissionTests {
       public sealed class D : B { public D(int v) : base(v) { } public D() : this(2) { } }
       public static class C { public static int F() => new D().V; }
       """);
-    Assert.That(JavaScriptEmitter.Check(chaining, JavaScriptProfile.Default).Select(diagnostic => diagnostic.Message),
+    Assert.That(LegalizedJavaScript.Check(chaining, JavaScriptProfile.Default).Select(diagnostic => diagnostic.Message),
       Is.EqualTo(new[] { "'several constructors of a derived class' of the class 'D' cannot be expressed in JavaScript profile 'es2022'" }));
   }
 

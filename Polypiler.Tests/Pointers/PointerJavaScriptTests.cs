@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
@@ -99,14 +100,14 @@ public sealed class PointerJavaScriptTests {
     var module = EveryOperation();
     Assert.That(IrVerifier.Verify(module), Is.Empty);
     foreach (var profile in _profiles) {
-      Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, profile.ToString());
-      var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+      Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, profile.ToString());
+      var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
       Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, profile + "\n" + text);
     }
 
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile).Single().Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile).Single().Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     }
   }
@@ -114,14 +115,14 @@ public sealed class PointerJavaScriptTests {
   /// <summary>The scenario: a reinterpreting read is a DataView with little-endian get at es2022, and no typed array of the wider type is made.</summary>
   [Test]
   public void Reinterpretation_IsADataView() {
-    var text = JavaScriptEmitter.Emit(PointerFixtures.Imported("Pointers"), JavaScriptProfile.Parse("es2022")).Single().Content;
+    var text = LegalizedJavaScript.Emit(PointerFixtures.Imported("Pointers"), JavaScriptProfile.Parse("es2022")).Single().Content;
     var word = text[text.IndexOf("function Word(", System.StringComparison.Ordinal)..];
     word = word[..word.IndexOf("\n}", System.StringComparison.Ordinal)];
     Assert.That(word, Does.Contain("getUint32(").And.Contain("true"));
     Assert.That(text, Does.Not.Contain("Uint32Array("));
     Assert.That(text, Does.Contain("A pointer is a region"));
     // Below ECMAScript 2020 a region may be a plain array of halves: the helper decides at run time.
-    var es2015 = JavaScriptEmitter.Emit(PointerFixtures.Imported("Pointers"), JavaScriptProfile.Parse("es2015")).Single().Content;
+    var es2015 = LegalizedJavaScript.Emit(PointerFixtures.Imported("Pointers"), JavaScriptProfile.Parse("es2015")).Single().Content;
     var older = es2015[es2015.IndexOf("function Word(", System.StringComparison.Ordinal)..];
     Assert.That(older[..older.IndexOf("\n}", System.StringComparison.Ordinal)], Does.Contain("$pget(p, p$o + at, 4, \"Uint32\")"));
   }
@@ -129,7 +130,7 @@ public sealed class PointerJavaScriptTests {
   /// <summary>Test design 10: a pointer in its function is two variables, one passed is [region, offset], which the function called takes apart.</summary>
   [Test]
   public void PassedPointer_IsAPair() {
-    var text = JavaScriptEmitter.Emit(PointerFixtures.Imported("Pointers"), JavaScriptProfile.Parse("es2022")).Single().Content;
+    var text = LegalizedJavaScript.Emit(PointerFixtures.Imported("Pointers"), JavaScriptProfile.Parse("es2022")).Single().Content;
     Assert.That(text, Does.Contain("let x = p, x$o = p$o + i * 4;"));
     Assert.That(text, Does.Contain("return SumOf([p, p$o], a.length);"));
     Assert.That(text, Does.Contain("let p$o = p[1];").And.Contain("p = p[0];"));
@@ -140,8 +141,8 @@ public sealed class PointerJavaScriptTests {
   [Test]
   public void AddressTakenLocal_LivesInAnArray() {
     var module = PointerFixtures.Imported("Pointers");
-    Assert.That(JavaScriptEmitter.Emit(module, JavaScriptProfile.Parse("es2022")).Single().Content, Does.Contain("let d = new Float64Array([0]);"));
-    Assert.That(JavaScriptEmitter.Emit(module, JavaScriptProfile.Parse("es5")).Single().Content, Does.Contain("var d = [0];"));
+    Assert.That(LegalizedJavaScript.Emit(module, JavaScriptProfile.Parse("es2022")).Single().Content, Does.Contain("let d = new Float64Array([0]);"));
+    Assert.That(LegalizedJavaScript.Emit(module, JavaScriptProfile.Parse("es5")).Single().Content, Does.Contain("var d = [0];"));
   }
 
   /// <summary>No level has pointers: the capability is replaced by a view and an index everywhere.</summary>

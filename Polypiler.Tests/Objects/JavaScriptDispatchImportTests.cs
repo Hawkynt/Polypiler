@@ -5,6 +5,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Objects;
 
@@ -59,7 +60,7 @@ public sealed class JavaScriptDispatchImportTests {
     var module = DispatchFixtures.ImportedScript("shapes.js");
     var areas = module.Types.OfType<IrClassType>().SelectMany(type => type.Methods).Where(method => method.Name == "area").Select(method => method.Function);
     Assert.That(areas.Select(name => module.Functions.Single(function => function.Name == name).ReturnType), Has.All.EqualTo(IrType.F64));
-    var text = CSharpEmitter.Emit(module, CSharpProfile.Default)[0].Content;
+    var text = LegalizedCSharp.Emit(module, CSharpProfile.Default)[0].Content;
     Assert.That(text, Does.Contain("public class Shape {").And.Contain("public virtual double area()").And.Contain("public sealed class Rect : Shape {")
       .And.Contain("public override double area()").And.Contain("public double twice()"));
   }

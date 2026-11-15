@@ -6,6 +6,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Core.Optimize;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Recognize;
 
@@ -55,7 +56,7 @@ public sealed class SpelledAlgorithmTests {
     var mismatches = new List<string>();
     var built = new HashSet<string>();
     foreach (var profile in CSharpProfile.All) {
-      var text = CSharpEmitter.Emit(optimized, profile).Single().Content;
+      var text = LegalizedCSharp.Emit(optimized, profile).Single().Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
       if (!built.Add(text[text.IndexOf("\n\n", System.StringComparison.Ordinal)..]))
         continue;
@@ -73,8 +74,8 @@ public sealed class SpelledAlgorithmTests {
     var optimized = Optimizer.Run(Imported(fixture), RecognitionFixtures.Options).Module;
     foreach (var level in new[] { "es5", "es2015", "es2017", "es2020", "es2022" }) {
       var profile = JavaScriptProfile.Parse(level);
-      Assert.That(JavaScriptEmitter.Check(optimized, profile), Is.Empty, level);
-      Assert.That(GeneratedJavaScript.Problems(JavaScriptEmitter.Emit(optimized, profile).Single().Content, profile), Is.Empty, level);
+      Assert.That(LegalizedJavaScript.Check(optimized, profile), Is.Empty, level);
+      Assert.That(GeneratedJavaScript.Problems(LegalizedJavaScript.Emit(optimized, profile).Single().Content, profile), Is.Empty, level);
     }
   }
 

@@ -3,6 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Prototype;
 
@@ -129,7 +130,7 @@ public sealed class EcmaScriptOperationTests {
   [TestCase(IrIntrinsicOp.RoundHalfUp, "return Math.round(x);")]
   public void JavaScriptEmitter_WritesTheOperationItself(IrIntrinsicOp op, string expected) {
     var result = op == IrIntrinsicOp.ToInt32 ? IrType.I32 : op == IrIntrinsicOp.ToUint32 ? IrType.U32 : IrType.F64;
-    Assert.That(JavaScriptEmitter.Emit(Module(op, result, _x)).Single().Content, Does.Contain(expected));
+    Assert.That(LegalizedJavaScript.Emit(Module(op, result, _x)).Single().Content, Does.Contain(expected));
   }
 
   /// <summary>A coercion that is an operand is put in parentheses.</summary>
@@ -137,7 +138,7 @@ public sealed class EcmaScriptOperationTests {
   public void JavaScriptEmitter_ParenthesizesACoercionThatIsAnOperand() {
     var coerced = new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [new IrLocalRef(_x)]);
     var module = new IrModule("m", [new IrFunction("f", true, IrType.I32, [_x], [], new IrBlock([new IrReturn(new IrBinary(IrBinaryOp.Xor, coerced, coerced))]))]);
-    Assert.That(JavaScriptEmitter.Emit(module).Single().Content, Does.Contain("return (x | 0) ^ (x | 0);"));
+    Assert.That(LegalizedJavaScript.Emit(module).Single().Content, Does.Contain("return (x | 0) ^ (x | 0);"));
   }
 
 }

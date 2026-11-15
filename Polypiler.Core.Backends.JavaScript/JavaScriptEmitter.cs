@@ -325,8 +325,10 @@ public static partial class JavaScriptEmitter {
       var functions = new List<JsStatement>();
       this._members.UnionWith(module.Functions.Select(function => this.Name(function.Name)).Concat(module.Constants.Select(constant => this.Name(constant.Name))));
       this._members.UnionWith(module.Types.OfType<IrClassType>().Select(type => this.Name(type.Name)));
+      var copied = module.Implementations.Select(pair => pair.Function).ToHashSet();
       foreach (var function in module.Functions.Where(function => !this.IsMember(function) && !this.Naming.Skipped.Contains(function.Name))) {
-        functions.Add(this.Function(function));
+        // A function legalization copied in from the libraries is a helper, which the target passes may inline or remove.
+        functions.Add(copied.Contains(function.Name) ? AsHelper(this.Function(function)) : this.Function(function));
         this.Declarations[function.Name] = [functions[^1]];
       }
 
@@ -339,7 +341,7 @@ public static partial class JavaScriptEmitter {
       }
 
       // A portable implementation the legalization copied in is a helper: code of Polypiler's own the module carries.
-      var helpers = module.Implementations.Select(pair => FloatOperationSources.Helper(this.Name(pair.Function), pair.Implementation, "")).ToList();
+      var helpers = module.Implementations.Select(pair => ImplementationSources.Helper(this.Name(pair.Function), pair.Implementation, "")).ToList();
 
       // The initializers of the globals call helpers as well, which have to be known before they are declared.
       var globals = this.Globals(module);
@@ -388,7 +390,7 @@ public static partial class JavaScriptEmitter {
       if (this._underscored)
         header.Add("Private members are '_'-prefixed properties at this level.");
 
-      header.AddRange(FloatOperationSources.Notices(module.Implementations.Select(pair => pair.Implementation)));
+      header.AddRange(ImplementationSources.Notices(module.Implementations.Select(pair => pair.Implementation).Concat(module.Inlined)));
 
       var strict = new JsExpressionStatement(new JsString("use strict"));
       switch (this._profile.Module) {

@@ -6,6 +6,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -63,7 +64,7 @@ public sealed class ShiftXorRotationTests {
   private static IrModule Import(string methods) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
 
   private static string Emit(IrModule module, CSharpProfile? profile = null, CSharpCapabilities? table = null)
-    => CSharpEmitter.Emit(module, profile ?? CSharpProfile.Default, null, table).Single().Content;
+    => LegalizedCSharp.Emit(module, profile ?? CSharpProfile.Default, null, table).Single().Content;
 
   /// <summary>The statement of the function <c>F</c> of a method, the generated C# for a profile.</summary>
   private static string Body(string method, CSharpProfile? profile = null, CSharpCapabilities? table = null)

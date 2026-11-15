@@ -71,7 +71,10 @@ public static class Program {
 
     if (args[0] == FloatImplementations) {
       if (args.Length == 2)
-        return WriteFloatImplementations([.. FloatOperationSources.All.Select(source => new CSharpSource(source.Name, source.Text))], args[1], output, error);
+        return WriteImplementations(
+          [.. FloatOperationSources.All.Select(source => new CSharpSource(source.Name, source.Text))],
+          [.. HelperOperationSources.All.Select(source => new CSharpSource(source.Name, source.Text))],
+          args[1], output, error);
 
       error.WriteLine($"{Name}: '{FloatImplementations}' takes one argument, the file to write.");
       return UsageError;
@@ -122,17 +125,47 @@ public static class Program {
   /// <param name="output">Receives the name of the file written.</param>
   /// <param name="error">Receives the diagnostics of the import and what keeps the file from being written.</param>
   /// <returns><see cref="Success"/>, or <see cref="Failure"/> when the sources do not import or the file cannot be written.</returns>
-  public static int WriteFloatImplementations(IReadOnlyList<CSharpSource> sources, string file, TextWriter output, TextWriter error) {
-    var imported = CSharpFrontend.Import(sources);
+  public static int WriteFloatImplementations(IReadOnlyList<CSharpSource> sources, string file, TextWriter output, TextWriter error)
+    => Imported(sources, error) is { } module ? Write(module, file, output, error) : Failure;
+
+  /// <summary>
+  /// Imports both libraries of Polypiler's own code - the portable floating-point implementations and
+  /// the helpers, each a class of its own - and writes them as one <see cref="IrModuleFormat"/> file
+  /// (<see cref="ImplementationSources.Merge"/>); <see cref="FloatImplementations"/> does this.
+  /// </summary>
+  /// <param name="floats">The files of the floating-point implementations.</param>
+  /// <param name="helpers">The files of the helpers.</param>
+  /// <param name="file">The file to write.</param>
+  /// <param name="output">Receives the name of the file written.</param>
+  /// <param name="error">Receives the diagnostics of the imports and what keeps the file from being written.</param>
+  /// <returns><see cref="Success"/>, or <see cref="Failure"/> when a library does not import, both declare a name or the file cannot be written.</returns>
+  public static int WriteImplementations(IReadOnlyList<CSharpSource> floats, IReadOnlyList<CSharpSource> helpers, string file, TextWriter output, TextWriter error) {
+    if (Imported(floats, error) is not { } first || Imported(helpers, error, HelperOperationSources.Intrinsics) is not { } second)
+      return Failure;
+
+    IrModule merged;
+    try {
+      merged = ImplementationSources.Merge(first, second);
+    } catch (ArgumentException exception) {
+      error.WriteLine($"{Name}: {exception.Message}");
+      return Failure;
+    }
+
+    return Write(merged, file, output, error);
+  }
+
+  private static IrModule? Imported(IReadOnlyList<CSharpSource> sources, TextWriter error, IReadOnlyDictionary<string, IrIntrinsicOp>? intrinsics = null) {
+    var imported = intrinsics is null ? CSharpFrontend.Import(sources) : CSharpFrontend.ImportLibrary(sources, intrinsics);
     foreach (var diagnostic in imported.Diagnostics)
       error.WriteLine(diagnostic);
 
-    if (imported.Module is null)
-      return Failure;
+    return imported.Module;
+  }
 
+  private static int Write(IrModule module, string file, TextWriter output, TextWriter error) {
     try {
       Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(file))!);
-      File.WriteAllBytes(file, IrModuleFormat.Write(imported.Module));
+      File.WriteAllBytes(file, IrModuleFormat.Write(module));
     } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
       error.WriteLine($"{Name}: '{file}' cannot be written: {exception.Message}");
       return Failure;

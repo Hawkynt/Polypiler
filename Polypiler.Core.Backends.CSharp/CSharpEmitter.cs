@@ -183,7 +183,8 @@ public static partial class CSharpEmitter {
         // Written as other operations, the profile has to have what those are written with.
         foreach (var part in Expressions(row.Rewrite!((IrIntrinsic)expression)).Where(IsTabled))
           Ask(part);
-      else if (!row.IsIn(profile) && row.Replacement is null)
+      else if (!row.IsIn(profile) && row.Replacement is null && !(row.Total is not null && expression is IrIntrinsic total && row.IsTotal!(total.Arguments))
+        && !(expression is IrIntrinsic view && IrViews.IsEndianOnView(view)))
         problems.Add(InexpressibleDescriptor.At($"'{row.Name}' cannot be expressed in C# profile '{profile.Name}'"));
     }
 
@@ -253,7 +254,8 @@ public static partial class CSharpEmitter {
 
   /// <summary>
   /// The module with every floating-point operation the class does not write itself (<see cref="Writes"/>)
-  /// replaced by its portable implementation, copied into the class.
+  /// replaced by its portable implementation, and every operation whose row the profile lacks replaced
+  /// by its helper of the library (<see cref="CSharpCapability.Library"/>), each copied into the class.
   /// </summary>
   /// <param name="module">The module.</param>
   /// <param name="implementations">Gives the portable implementations, as the C# frontend imports <see cref="FloatOperationSources"/>; asked only when needed.</param>
@@ -262,7 +264,34 @@ public static partial class CSharpEmitter {
   /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>The module to emit.</returns>
   public static IrModule Legalize(IrModule module, Func<IrModule> implementations, CSharpProfile profile, FloatMode mode, CSharpCapabilities? capabilities = null)
-    => FloatLegalization.Lower(module, implementations, intrinsic => Writes(intrinsic, profile, mode, capabilities));
+    => LibraryLegalization.Lower(module, implementations, Rewrite(profile, mode, capabilities ?? CSharpCapabilities.Default));
+
+  /// <summary>
+  /// The module with every operation the profile has only as a helper of the library replaced by the
+  /// call of that helper, copied into the class; the floating-point operations stay as they are, for
+  /// <see cref="Legalize"/> to replace.
+  /// </summary>
+  /// <param name="module">The module.</param>
+  /// <param name="implementations">Gives the libraries as one module; asked only when needed.</param>
+  /// <param name="profile">The profile.</param>
+  /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
+  /// <returns>The module to emit.</returns>
+  public static IrModule LegalizeHelpers(IrModule module, Func<IrModule> implementations, CSharpProfile profile, CSharpCapabilities? capabilities = null)
+    => LibraryLegalization.Lower(module, implementations, Helpers(profile, capabilities ?? CSharpCapabilities.Default));
+
+  /// <summary>What legalization replaces for a profile: the floating-point operations first, then every operation the profile has only as a helper of the library.</summary>
+  private static LibraryRewrite Rewrite(CSharpProfile profile, FloatMode mode, CSharpCapabilities table) {
+    var floats = FloatLegalization.Rewrite(intrinsic => Writes(intrinsic, profile, mode, table));
+    var helpers = Helpers(profile, table);
+    return (expression, calls) => floats(expression, calls) ?? helpers(expression, calls);
+  }
+
+  /// <summary>The rewrite of the operations a profile has only as a helper of the library: the row's helper, unless the row's form for arguments that cannot trap applies.</summary>
+  private static LibraryRewrite Helpers(CSharpProfile profile, CSharpCapabilities table)
+    => (expression, calls) => IsTabled(expression) && Row(expression, table) is { } row && row.IsLibraryIn(profile)
+      && !(row.Total is not null && expression is IrIntrinsic intrinsic && row.IsTotal!(intrinsic.Arguments))
+        ? row.Library!(expression, calls)
+        : null;
 
   /// <summary>
   /// Emits the module for a profile and a floating-point mode. The header names the profile and, where
@@ -596,6 +625,9 @@ public static partial class CSharpEmitter {
     private readonly CSharpCapabilities _table;
     private readonly FloatMode _mode;
     private readonly string _class;
+    /// <summary>The functions legalization copied in from the libraries, which the target passes treat as helpers.</summary>
+    private HashSet<string> _copied = [];
+
     private readonly HashSet<CSharpHelper> _used = [];
     private readonly Dictionary<string, string> _helpers;
     private readonly HashSet<string> _taken;
@@ -688,6 +720,8 @@ public static partial class CSharpEmitter {
       IrIntrinsic intrinsic when EnumOperations.IsEnum(intrinsic.Op) => false,
       // A conversion between numbers and text computes nothing that overflows; only the digits of a radix cast the value to its bits.
       IrIntrinsic intrinsic when NumberTextOperations.IsNumberText(intrinsic.Op) && intrinsic.Op != IrIntrinsicOp.FormatRadix => false,
+      // An endian access of a view is written by the view's own forms, which cast its bytes.
+      IrIntrinsic intrinsic when IrViews.IsEndianOnView(intrinsic) => true,
       IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic => this.Rewritten(intrinsic) is { } rewritten ? Expressions(rewritten).Any(this.Wraps) : this.Form(intrinsic).Template is not null,
       _ => false
     };
@@ -721,6 +755,7 @@ public static partial class CSharpEmitter {
     /// helpers follow its functions in the order of the table, each as its source has it.
     /// </summary>
     public CsCompilationUnit Module(string? @namespace) {
+      this._copied = [.. this._module.Implementations.Select(pair => pair.Function)];
       var members = new List<CsMember>();
       foreach (var constant in this._module.Constants)
         members.Add(this.Constant(constant));
@@ -732,12 +767,12 @@ public static partial class CSharpEmitter {
       var classes = this.Classes();
       foreach (var function in this._module.Functions.Where(function => !this.IsMember(function)))
         if (!this._generics.Generalized.TryGetValue(function.Name, out var origin))
-          members.Add(this.Function(function));
+          members.Add(this.Function(function) with { IsHelper = this._copied.Contains(function.Name) });
         else if (this._generics.Written.Contains(function.Name))
           members.Add(this.Generic(function, origin));
 
       // A portable implementation the legalization copied in is a helper: code of Polypiler's own the class carries.
-      var emitted = this._module.Implementations.Select(pair => FloatOperationSources.Helper(this._members[pair.Function].TrimStart('@'), pair.Implementation, "")).ToList();
+      var emitted = this._module.Implementations.Select(pair => ImplementationSources.Helper(this._members[pair.Function].TrimStart('@'), pair.Implementation, "")).ToList();
 
       // The table's order is the order of the helpers, whatever order the class calls them in.
       foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains)) {
@@ -769,7 +804,7 @@ public static partial class CSharpEmitter {
         .. Caveats(this._module),
         .. this.Notices(),
         .. this.PointerNotes(),
-        .. FloatOperationSources.Notices(this._module.Implementations.Select(pair => pair.Implementation))
+        .. ImplementationSources.Notices(this._module.Implementations.Select(pair => pair.Implementation).Concat(this._module.Inlined))
       ];
       if (@namespace is null)
         return new CsCompilationUnit(header, types);

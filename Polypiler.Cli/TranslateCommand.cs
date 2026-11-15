@@ -13,6 +13,7 @@ using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
 using Polypiler.Core.Optimize;
+using Polypiler.Core.Optimize.Passes;
 using Polypiler.Core.Optimize.Target;
 using Polypiler.Core.Recognize;
 using Polypiler.Core.Verification.Manifests;
@@ -245,11 +246,13 @@ public sealed class TranslateCommand : ICliCommand {
   };
 
   /// <summary>
-  /// The optimization numbers of the pipeline: the rules of the IR optimizer and the target passes of
-  /// every backend, which share one namespace, in the order of their numbers.
+  /// The optimization numbers of the pipeline: the rules of the IR optimizer, the passes over the
+  /// legalized module and the target passes of every backend, which share one namespace, in the order
+  /// of their numbers.
   /// </summary>
   private static readonly string[] _optimizations = [
-    .. RuleTable.Default.Ids.Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Distinct().Order(StringComparer.Ordinal)
+    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids)
+      .Distinct().Order(StringComparer.Ordinal)
   ];
 
   /// <summary>What is wrong with the pipeline options: an unknown level, or an optimization number the pipeline does not have; the foundation refuses an empty item.</summary>
@@ -336,6 +339,20 @@ public sealed class TranslateCommand : ICliCommand {
         context.Report(problem);
 
       return problems.Any(problem => problem.Code == IrVerifier.Code) ? InternalError : UnsupportedConstruct;
+    }
+
+    // The helpers legalization bound into the module are optimised with the code that calls them.
+    var passes = IrPassPipeline.Default.Run(module, new OptimizerOptions {
+      Level = LevelOf(options) ?? OptimizationLevel.Default,
+      Disabled = options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',').ToHashSet() : []
+    });
+    module = passes.Module;
+    if (record is not null) {
+      if (options.ContainsKey(ExplainOpt))
+        foreach (var application in passes.Applications)
+          context.Note($"{record.File}: opt {application}");
+
+      record = record with { Applications = [.. record.Applications, .. passes.Applications] };
     }
 
     // The files are written below the directory as resolved, and named on standard output as typed.

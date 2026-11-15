@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Objects;
 
@@ -22,13 +23,13 @@ internal sealed class CSharpClassEmissionTests {
        from profile in CSharpProfile.All
        select new TestCaseData(fixture.File, fixture.Class, profile.Name).SetName($"{fixture.File} for {profile.Name}");
 
-  private static string Emitted(string file, CSharpProfile profile) => CSharpEmitter.Emit(ClassFixtures.Imported(file), profile)[0].Content;
+  private static string Emitted(string file, CSharpProfile profile) => LegalizedCSharp.Emit(ClassFixtures.Imported(file), profile)[0].Content;
 
   private static string Emitted(string source, string profile) {
     var module = PrototypeFixture.Import("C.cs", source);
     var parsed = CSharpProfile.Parse(profile);
-    Assert.That(CSharpEmitter.Check(module, parsed), Is.Empty);
-    var text = CSharpEmitter.Emit(module, parsed)[0].Content;
+    Assert.That(LegalizedCSharp.Check(module, parsed), Is.Empty);
+    var text = LegalizedCSharp.Emit(module, parsed)[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, parsed.Name, parsed.LanguageVersionName), Is.Empty, text);
     return text;
   }
@@ -120,8 +121,8 @@ internal sealed class CSharpClassEmissionTests {
         }
       }
       """);
-    Assert.That(CSharpEmitter.Check(module, profile), Is.Empty);
-    var text = CSharpEmitter.Emit(module, profile)[0].Content;
+    Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty);
+    var text = LegalizedCSharp.Emit(module, profile)[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var expected = IrInterpreter.Call(module, "F", []);
     foreach (var checking in _overflowChecking)

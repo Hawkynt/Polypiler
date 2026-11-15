@@ -7,6 +7,7 @@ using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Objects;
 
@@ -82,7 +83,7 @@ public sealed class ClassEdgeTests {
       """);
     Assert.That(IrInterpreter.Call(module, "F", []), Is.EqualTo(14 + 100 + 1000));
     foreach (var profile in new[] { CSharpProfile.Parse("net2.0"), CSharpProfile.Default }) {
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
       Assert.That(text, Does.Contain("internal sealed class D").And.Contain("null == other"));
       Assert.That(GeneratedCSharp.Compile(text, false).Method("F").Invoke(null, []), Is.EqualTo(1114), text);
@@ -101,7 +102,7 @@ public sealed class ClassEdgeTests {
       }
       public static class C { public static int F() { var d = new D(); d.Sink = 3; return d.Sum(); } }
       """);
-    var text = JavaScriptEmitter.Emit(module, JavaScriptProfile.Default).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, JavaScriptProfile.Default).Single().Content;
     Assert.That(text, Does.Contain("#x = 0;").And.Contain("#x$1 = 0;").And.Contain("Point = { X: 0 };").And.Contain("set Sink(value) {"));
     Assert.That(GeneratedJavaScript.Problems(text, JavaScriptProfile.Default), Is.Empty, text);
   }
@@ -149,7 +150,7 @@ public sealed class ClassEdgeTests {
       }
       """);
     Assert.That(IrInterpreter.Instantiate(module).Call("g"), Is.EqualTo(2.0 + 5 + 8 + 3));
-    var text = CSharpEmitter.Emit(module, CSharpProfile.Default)[0].Content;
+    var text = LegalizedCSharp.Emit(module, CSharpProfile.Default)[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net10.0", "14"), Is.Empty, text);
     Assert.That(GeneratedCSharp.Compile(text, false).Method("g").Invoke(null, []), Is.EqualTo(18.0), text);
   }

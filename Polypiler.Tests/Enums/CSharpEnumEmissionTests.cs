@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Enums;
 
@@ -14,13 +15,13 @@ namespace Polypiler.Tests.Enums;
 [TestFixture]
 public sealed class CSharpEnumEmissionTests {
 
-  private static string Emitted(IrModule module, CSharpProfile profile) => CSharpEmitter.Emit(module, profile)[0].Content;
+  private static string Emitted(IrModule module, CSharpProfile profile) => LegalizedCSharp.Emit(module, profile)[0].Content;
 
   /// <summary>Test design 1, 2, 11 and 13: every operation over every underlying type in every profile is written, compiles and runs like the interpreter.</summary>
   [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
   public void EveryOperation_IsWrittenInEveryProfile_AndRunsLikeTheInterpreter(CSharpProfile profile) {
     var module = EnumFixtures.Module;
-    Assert.That(CSharpEmitter.Check(module, profile), Is.Empty);
+    Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty);
     var text = Emitted(module, profile);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);

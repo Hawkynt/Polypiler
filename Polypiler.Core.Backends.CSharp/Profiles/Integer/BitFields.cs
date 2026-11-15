@@ -14,15 +14,15 @@ internal static partial class CSharpIntegerRows {
   /// </summary>
   private static IEnumerable<CSharpCapability> BitFields => [
     .. _all.SelectMany(kind => (IEnumerable<CSharpCapability>)[
-      Helped(IrIntrinsicOp.ExtractBits, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {{1}}, {{2}}, {Digits(Width(kind))})", CSharpIntegerHelpers.ExtractBits),
-      Helped(IrIntrinsicOp.InsertBits, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {Pattern(kind, "{1}")}, {{2}}, {{3}}, {Digits(Width(kind))})", CSharpIntegerHelpers.InsertBits),
-      Helped(IrIntrinsicOp.TestBit, kind, $"{{h}}({Pattern(kind)}, {{1}}, {Digits(Width(kind))})", CSharpIntegerHelpers.TestBit)
+      Helped(IrIntrinsicOp.ExtractBits, kind),
+      Helped(IrIntrinsicOp.InsertBits, kind),
+      Helped(IrIntrinsicOp.TestBit, kind)
         .WithTotal(new CSharpForm(null, Template: $"((({{0}} >> {{1}}) & {One(kind)}) != 0)"), arguments => InWidth(arguments[1], kind)),
-      Helped(IrIntrinsicOp.SetBit, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {{1}}, {Digits(Width(kind))})", CSharpIntegerHelpers.SetBit)
+      Helped(IrIntrinsicOp.SetBit, kind)
         .WithTotal(new CSharpForm(null, Template: $"({Type(kind)})({{0}} | ({One(kind)} << {{1}}))"), arguments => InWidth(arguments[1], kind)),
-      Helped(IrIntrinsicOp.ClearBit, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {{1}}, {Digits(Width(kind))})", CSharpIntegerHelpers.ClearBit)
+      Helped(IrIntrinsicOp.ClearBit, kind)
         .WithTotal(new CSharpForm(null, Template: $"({Type(kind)})({{0}} & ~({One(kind)} << {{1}}))"), arguments => InWidth(arguments[1], kind)),
-      Helped(IrIntrinsicOp.ToggleBit, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {{1}}, {Digits(Width(kind))})", CSharpIntegerHelpers.ToggleBit)
+      Helped(IrIntrinsicOp.ToggleBit, kind)
         .WithTotal(new CSharpForm(null, Template: $"({Type(kind)})({{0}} ^ ({One(kind)} << {{1}}))"), arguments => InWidth(arguments[1], kind))
     ])
   ];

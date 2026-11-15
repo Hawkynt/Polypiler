@@ -9,6 +9,7 @@ using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Views;
 
@@ -182,7 +183,7 @@ internal sealed class MemoryTests {
   [TestCaseSource(nameof(CSharpProfiles)), Category("Slow")]
   public void Holder_ComputesInEveryCSharpProfileWhatDotNetComputes(string name) {
     var profile = CSharpProfile.Parse(name);
-    var text = CSharpEmitter.Emit(SpanFixtures.Imported("MemoryHolder"), profile).Single().Content;
+    var text = LegalizedCSharp.Emit(SpanFixtures.Imported("MemoryHolder"), profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);
     foreach (var call in SpanFixtures.HolderCalls())
@@ -195,7 +196,7 @@ internal sealed class MemoryTests {
   [TestCase("netstandard2.1", "private readonly global::System.ReadOnlyMemory<byte> _window;", "this._window = global::System.MemoryExtensions.AsMemory(data, start, length);")]
   [TestCase("net10.0", "global::System.ReadOnlySpan<byte> s = this._window.Span;", "global::System.ReadOnlyMemory<byte> whole = global::System.MemoryExtensions.AsMemory(d);")]
   public void Form_IsTheOneOfTheProfile(string name, string first, string second) {
-    var text = CSharpEmitter.Emit(SpanFixtures.Imported("MemoryHolder"), CSharpProfile.Parse(name)).Single().Content;
+    var text = LegalizedCSharp.Emit(SpanFixtures.Imported("MemoryHolder"), CSharpProfile.Parse(name)).Single().Content;
     Assert.That(text, Does.Contain(first).And.Contain(second));
   }
 
@@ -208,8 +209,8 @@ internal sealed class MemoryTests {
     ]))]);
     Assert.That(Verified(module), Is.Empty);
     Assert.That(IrInterpreter.Call(module, "F", [new byte[] { 1, 2, 3 }]), Is.EqualTo(2));
-    Assert.That(CSharpEmitter.Emit(module, CSharpProfile.Net100).Single().Content, Does.Contain("m.Span.Slice(1, 2).Length"));
-    Assert.That(CSharpEmitter.Emit(module, CSharpProfile.Net20).Single().Content, Does.Contain("ViewOf(m, 1, 2).Count").Or.Contain("Slice(m, 1, 2).Count"));
+    Assert.That(LegalizedCSharp.Emit(module, CSharpProfile.Net100).Single().Content, Does.Contain("m.Span.Slice(1, 2).Length"));
+    Assert.That(LegalizedCSharp.Emit(module, CSharpProfile.Net20).Single().Content, Does.Contain("ViewOf(m, 1, 2).Count").Or.Contain("Slice(m, 1, 2).Count"));
   }
 
   private static readonly JavaScriptProfile[] _javaScript = [
@@ -225,8 +226,8 @@ internal sealed class MemoryTests {
   public void Holder_IsWrittenInEveryJavaScriptProfile() {
     var module = SpanFixtures.Imported("MemoryHolder");
     foreach (var profile in _javaScript) {
-      Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, profile.ToString());
-      var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+      Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, profile.ToString());
+      var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
       Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
       Assert.That(text, Does.Contain(profile.TypedArrays ? "new Uint8Array(0)" : "$vobj([])"), profile.ToString());
     }
@@ -286,7 +287,7 @@ internal sealed class MemoryTests {
   [TestCase("net10.0", "public global::System.Memory<byte> bytes;")]
   [TestCase("net4.8", "public global::System.ArraySegment<byte> bytes = new global::System.ArraySegment<byte>(new byte[0]);")]
   public void EscapingView_IsDeclaredAsTheMemoryOfTheProfile(string name, string declaration)
-    => Assert.That(CSharpEmitter.Emit(Window, CSharpProfile.Parse(name)).Single().Content, Does.Contain(declaration));
+    => Assert.That(LegalizedCSharp.Emit(Window, CSharpProfile.Parse(name)).Single().Content, Does.Contain(declaration));
 
   /// <summary>The values node computes of the original: the window sums to 22, the clamped narrowings, the loops.</summary>
   [Test]
@@ -298,7 +299,7 @@ internal sealed class MemoryTests {
   public void Window_ComputesInEveryCSharpProfile(string name) {
     var profile = CSharpProfile.Parse(name);
     var module = Window;
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);
     foreach (var call in SpanFixtures.WindowCalls)

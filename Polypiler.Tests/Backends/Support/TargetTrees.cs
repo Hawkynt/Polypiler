@@ -65,10 +65,10 @@ internal static class TargetTrees {
 
       var profile = CSharpProfile.Parse(Option(variant, "--profile")!);
       var lowered = CSharpEmitter.Legalize(module, () => PrecomputedImplementations.Module, profile, mode);
-      if (CSharpEmitter.Check(lowered, profile).Count > 0)
+      if (LegalizedCSharp.Check(lowered, profile).Count > 0)
         return null;
 
-      var tree = CSharpEmitter.Build(lowered, profile, mode, Option(variant, "--namespace"), null, TargetPassOptions.Default).Tree;
+      var tree = LegalizedCSharp.Build(lowered, profile, mode, Option(variant, "--namespace"), null, TargetPassOptions.Default).Tree;
       return new(CSharpPrinter.Print(tree, profile), tree, null, profile, null);
     }
 
@@ -77,10 +77,10 @@ internal static class TargetTrees {
 
     var level = JavaScriptProfile.Parse(Option(variant, "--profile"), Option(variant, "--module"), Option(variant, "--global"), Option(variant, "--typed-arrays") is not null);
     var legalized = JavaScriptEmitter.Legalize(script, () => PrecomputedImplementations.Module, level, mode);
-    if (JavaScriptEmitter.Check(legalized, level).Count > 0)
+    if (LegalizedJavaScript.Check(legalized, level).Count > 0)
       return null;
 
-    var program = JavaScriptEmitter.Build(legalized, level, mode, null, TargetPassOptions.Default).Tree;
+    var program = LegalizedJavaScript.Build(legalized, level, mode, null, TargetPassOptions.Default).Tree;
     return new(JavaScriptPrinter.Print(program, level), null, program, null, level);
   }
 

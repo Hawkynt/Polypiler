@@ -6,6 +6,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -24,7 +25,7 @@ public sealed class CSharpEmitterProfileTests {
   private static IrModule Import(string methods) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
 
   private static string Emit(IrModule module, string profile, string? languageVersion = null, string? @namespace = null)
-    => CSharpEmitter.Emit(module, CSharpProfile.Parse(profile, languageVersion), @namespace).Single().Content;
+    => LegalizedCSharp.Emit(module, CSharpProfile.Parse(profile, languageVersion), @namespace).Single().Content;
 
   /// <summary>The file as its profile's compiler accepts it, or the test fails with what it reports.</summary>
   private static string Accepted(string text, string profile, string? languageVersion = null) {
@@ -56,9 +57,9 @@ public sealed class CSharpEmitterProfileTests {
   [Test]
   public void WithoutAProfile_TheFileIsWrittenForTheDefault() {
     var module = PrototypeFixture.Imported("wide/Library");
-    Assert.That(CSharpEmitter.Emit(module, "Demo").Single(), Is.EqualTo(CSharpEmitter.Emit(module, CSharpProfile.Default, "Demo").Single()));
-    Assert.That(CSharpEmitter.Check(module), Is.Empty);
-    Assert.That(CSharpProfile.All.Select(profile => CSharpEmitter.Check(module, profile)), Has.All.Empty);
+    Assert.That(LegalizedCSharp.Emit(module, "Demo").Single(), Is.EqualTo(LegalizedCSharp.Emit(module, CSharpProfile.Default, "Demo").Single()));
+    Assert.That(LegalizedCSharp.Check(module), Is.Empty);
+    Assert.That(CSharpProfile.All.Select(profile => LegalizedCSharp.Check(module, profile)), Has.All.Empty);
   }
 
   /// <summary>
@@ -123,7 +124,7 @@ public sealed class CSharpEmitterProfileTests {
     Assert.That(Accepted(Emit(module, "net4.6", null, "Demo.event"), "net4.6"), Does.Contain("\nnamespace Demo.@event {\n\n  public static class Snippet {\n"));
     Assert.That(Accepted(Emit(module, "net10.0", null, "Demo.event"), "net10.0"), Does.Contain("\nnamespace Demo.@event;\n\npublic static class Snippet {\n"));
     Assert.That(CSharpProfile.All.Select(profile => Emit(module, profile.Name)), Has.All.Not.Contain("namespace"));
-    Assert.That(() => CSharpEmitter.Emit(module, CSharpProfile.Net20, "2fast"), Throws.ArgumentException.With.Message.Contains("'2fast' is not a namespace name"));
+    Assert.That(() => LegalizedCSharp.Emit(module, CSharpProfile.Net20, "2fast"), Throws.ArgumentException.With.Message.Contains("'2fast' is not a namespace name"));
   }
 
   // ---------------------------------------------------------------- the body of a function
@@ -207,10 +208,10 @@ public sealed class CSharpEmitterProfileTests {
         new IrDeclare(named, new IrBinary(IrBinaryOp.Add, new IrLocalRef(x), new IrLocalRef(x))),
         new IrReturn(new IrLocalRef(named)))
     ];
-    var inside = Accepted(CSharpEmitter.Emit(new IrModule("var", functions), CSharpProfile.Net100).Single().Content, "net10.0");
+    var inside = Accepted(LegalizedCSharp.Emit(new IrModule("var", functions), CSharpProfile.Net100).Single().Content, "net10.0");
     Assert.That(inside, Does.Contain("public static class @var {").And.Contain("      int x = a + 1;\n      int var_ = x + x;\n"));
 
-    var outside = Accepted(CSharpEmitter.Emit(new IrModule("Var", functions), CSharpProfile.Net100).Single().Content, "net10.0");
+    var outside = Accepted(LegalizedCSharp.Emit(new IrModule("Var", functions), CSharpProfile.Net100).Single().Content, "net10.0");
     Assert.That(outside, Does.Contain("      var x = a + 1;\n      var var = x + x;\n"));
     foreach (var text in new[] { inside, outside })
       Assert.That(_overflowChecking.Select(checking => Run(text, checking, 20)), Has.All.EqualTo(42));
@@ -298,8 +299,8 @@ public sealed class CSharpEmitterProfileTests {
     Assert.That(modern, Does.Contain("public static uint F(uint x, int n) => global::System.Numerics.BitOperations.RotateLeft(x, n);").And.Not.Contain("private"));
 
     var legacy = Accepted(Emit(module, "net4.6"), "net4.6");
-    Assert.That(legacy, Does.Not.Contain("BitOperations").And.Contain("public static uint F(uint x, int n) => RotateLeft(x, n);")
-      .And.EndWith("\n  private static uint RotateLeft(uint value, int count) {\n    return (value << count) | (value >> (32 - (count & 31)));\n  }\n\n}\n"));
+    Assert.That(legacy, Does.Not.Contain("BitOperations").And.Contain("public static uint F(uint x, int n) => RotateLeft32(x, n);")
+      .And.EndWith("\n  private static uint RotateLeft32(uint value, int count) => unchecked((value << count) | (value >> (-count & 31)));\n\n}\n"));
     foreach (var text in new[] { modern, legacy })
       Assert.That(_overflowChecking.Select(checking => Run(text, checking, 0x12345678u, 8)), Has.All.EqualTo(878082066u));
   }
@@ -324,13 +325,14 @@ public sealed class CSharpEmitterProfileTests {
       "public static int F(uint a, ulong b, float c) => System.Numerics.BitOperations.PopCount(b) + System.Numerics.BitOperations.PopCount(a) "
       + "+ System.Numerics.BitOperations.PopCount(a + 1) + (int)System.Numerics.BitOperations.RotateLeft(a, 3) + (sbyte)c + (int)System.MathF.Sqrt(c);", "net2.0");
     var declarations = text.Split('\n').Where(line => line.StartsWith("  private static ", StringComparison.Ordinal)).ToList();
+    // The helpers of the library stand in the order legalization first needed them, each once.
     Assert.That(declarations, Is.EqualTo(new[] {
-      "  private static uint RotateLeft(uint value, int count) {",
-      "  private static int PopCount(uint value) {",
-      "  private static int PopCount(ulong value) {",
-      "  private static int Saturated(double value, int low, int high) {"
+      "  private static int PopCount64(ulong value) {",
+      "  private static int PopCount32(uint value) {",
+      "  private static uint RotateLeft32(uint value, int count) {",
+      "  private static int SaturateToInt32(double value, int low, int high) {"
     }));
-    Assert.That(text, Does.Contain("(sbyte)Saturated(c, -2147483648, 2147483647)").And.Contain("Saturated((float)global::System.Math.Sqrt(c), -2147483648, 2147483647)"));
+    Assert.That(text, Does.Contain("(sbyte)SaturateToInt32((double)c, -2147483648, 2147483647)").And.Contain("SaturateToInt32((double)(float)global::System.Math.Sqrt(c), -2147483648, 2147483647)"));
     Assert.That(_overflowChecking.Select(checking => Run(text, checking, 0xFFu, ulong.MaxValue, 300.5f)), Has.All.EqualTo(64 + 8 + 1 + 0x7F8 + 44 + 17));
   }
 
@@ -341,23 +343,23 @@ public sealed class CSharpEmitterProfileTests {
   [Test]
   public void Helper_GivesWayToAFunctionOfItsName() {
     var module = Import(
-      "public static uint RotateLeft(uint a, int n) => System.Numerics.BitOperations.RotateLeft(a, n); "
-      + "public static int PopCount_(ulong PopCount) => System.Numerics.BitOperations.PopCount(PopCount); "
+      "public static uint RotateLeft32(uint a, int n) => System.Numerics.BitOperations.RotateLeft(a, n); "
+      + "public static int PopCount32(ulong PopCount64) => System.Numerics.BitOperations.PopCount(PopCount64); "
       + "public static ulong BigMul(uint Fill, uint Clear) => System.Math.BigMul(Fill, Clear);");
     var text = Accepted(Emit(module, "net2.0"), "net2.0");
-    Assert.That(text, Does.Contain("  public static uint RotateLeft(uint a, int n) {\n    return RotateLeft_(a, n);\n  }\n")
-      .And.Contain("  public static int PopCount_(ulong PopCount__) {\n    return PopCount(PopCount__);\n  }\n")
-      .And.Contain("  public static ulong BigMul(uint Fill, uint Clear) {\n    return BigMul_(Fill, Clear);\n  }\n")
-      .And.Contain("  private static uint RotateLeft_(uint value, int count) {\n")
-      .And.Contain("  private static int PopCount(ulong value) {\n")
-      .And.Contain("  private static ulong BigMul_(uint left, uint right) {\n"));
+    Assert.That(text, Does.Contain("  public static uint RotateLeft32(uint a, int n) {\n    return RotateLeft32_(a, n);\n  }\n")
+      .And.Contain("  public static int PopCount32(ulong PopCount64_) {\n    return PopCount64(PopCount64_);\n  }\n")
+      .And.Contain("  public static ulong BigMul(uint Fill, uint Clear) {\n    unchecked {\n      return (ulong)Fill * (ulong)Clear;\n    }\n  }\n")
+      .And.Contain("  private static uint RotateLeft32_(uint value, int count) {\n")
+      .And.Contain("  private static int PopCount64(ulong value) {\n")
+      .And.Contain("PopCount32_((uint)value)"));
 
     // The newest profile calls the library; the names of the public functions are the same.
     var native = Accepted(Emit(module, "net10.0"), "net10.0");
-    Assert.That(native, Does.Not.Contain("private").And.Contain("public static uint RotateLeft(uint a, int n) =>").And.Contain("public static int PopCount_(ulong PopCount) =>"));
+    Assert.That(native, Does.Not.Contain("private").And.Contain("public static uint RotateLeft32(uint a, int n) =>").And.Contain("public static int PopCount32(ulong PopCount64) =>"));
     foreach (var build in new[] { text, native }.SelectMany(file => _overflowChecking.Select(checking => GeneratedCSharp.Compile(file, checking)))) {
-      Assert.That(build.Method("RotateLeft").Invoke(null, [0x80000001u, 1]), Is.EqualTo(3u));
-      Assert.That(build.Method("PopCount_").Invoke(null, [0xF0F0UL]), Is.EqualTo(8));
+      Assert.That(build.Method("RotateLeft32").Invoke(null, [0x80000001u, 1]), Is.EqualTo(3u));
+      Assert.That(build.Method("PopCount32").Invoke(null, [0xF0F0UL]), Is.EqualTo(8));
       Assert.That(build.Method("BigMul").Invoke(null, [uint.MaxValue, uint.MaxValue]), Is.EqualTo(0xFFFFFFFE00000001UL));
     }
   }
@@ -378,17 +380,17 @@ public sealed class CSharpEmitterProfileTests {
       "public static uint F(uint a, int n) => System.Numerics.BitOperations.RotateLeft(a, n) ^ System.Numerics.BitOperations.RotateLeft(a, 1); "
       + "public static ulong G(ulong a, int n) => System.Numerics.BitOperations.RotateLeft(a, n);");
 
-    var problems = CSharpEmitter.Check(module, CSharpProfile.Net48, table);
+    var problems = LegalizedCSharp.Check(module, CSharpProfile.Net48, table);
     Assert.That(problems.Select(problem => problem.ToString()), Is.EqualTo(new[] { "error PLY1053: 'BitOperations.RotateLeft(uint, int)' cannot be expressed in C# profile 'net4.8'" }));
     Assert.That(CSharpEmitter.Inexpressible, Is.EqualTo("PLY1053"));
-    Assert.That(() => CSharpEmitter.Emit(module, CSharpProfile.Net48, null, table),
+    Assert.That(() => LegalizedCSharp.Emit(module, CSharpProfile.Net48, null, table),
       Throws.ArgumentException.With.Message.Contains("'BitOperations.RotateLeft(uint, int)' cannot be expressed in C# profile 'net4.8'"));
 
     // On the row's first profile (the boundary) the same table writes the module, and the real table writes it everywhere.
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.NetStandard21, table), Has.Count.EqualTo(1));
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.NetCoreApp31, table), Is.Empty);
-    Assert.That(Accepted(CSharpEmitter.Emit(module, CSharpProfile.NetCoreApp31, null, table).Single().Content, "netcoreapp3.1"), Does.Not.Contain("private"));
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.Net48), Is.Empty);
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.NetStandard21, table), Has.Count.EqualTo(1));
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.NetCoreApp31, table), Is.Empty);
+    Assert.That(Accepted(LegalizedCSharp.Emit(module, CSharpProfile.NetCoreApp31, null, table).Single().Content, "netcoreapp3.1"), Does.Not.Contain("private"));
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.Net48), Is.Empty);
   }
 
   /// <summary>
@@ -411,15 +413,15 @@ public sealed class CSharpEmitterProfileTests {
     var withoutOperation = new CSharpCapabilities(rows.Where(row => row.Operation != IrIntrinsicOp.PopCount));
     var withoutOperand = new CSharpCapabilities(rows.Where(row => row.Name != "BitOperations.Log2(ulong)" && row.Saturates != IrTypeKind.I16));
     foreach (var profile in new[] { CSharpProfile.Net20, CSharpProfile.Net100 }) {
-      Assert.That(CSharpEmitter.Check(module, profile, withoutOperation).Select(problem => problem.ToString()),
+      Assert.That(LegalizedCSharp.Check(module, profile, withoutOperation).Select(problem => problem.ToString()),
         Is.EqualTo(new[] { "error PLY1052: 'PopCount' is not supported by the C# backend yet" }));
-      Assert.That(CSharpEmitter.Check(module, profile, withoutOperand).Select(problem => problem.ToString()), Is.EqualTo(new[] {
+      Assert.That(LegalizedCSharp.Check(module, profile, withoutOperand).Select(problem => problem.ToString()), Is.EqualTo(new[] {
         "error PLY1052: 'Log2 of u64' is not supported by the C# backend yet",
         "error PLY1052: 'i16 with saturation' is not supported by the C# backend yet"
       }));
-      Assert.That(() => CSharpEmitter.Emit(module, profile, null, withoutOperation), Throws.ArgumentException);
-      Assert.That(() => CSharpEmitter.Emit(module, profile, null, withoutOperand), Throws.ArgumentException);
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty);
+      Assert.That(() => LegalizedCSharp.Emit(module, profile, null, withoutOperation), Throws.ArgumentException);
+      Assert.That(() => LegalizedCSharp.Emit(module, profile, null, withoutOperand), Throws.ArgumentException);
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty);
     }
   }
 
@@ -435,7 +437,7 @@ public sealed class CSharpEmitterProfileTests {
       Function("G", IrType.I32, [a], new IrReturn(new IrIntrinsic(IrIntrinsicOp.Sqrt, IrType.I32, [new IrLocalRef(a)])))
     ]);
     foreach (var profile in CSharpProfile.All) {
-      var problems = CSharpEmitter.Check(module, profile);
+      var problems = LegalizedCSharp.Check(module, profile);
       Assert.That(problems, Is.Not.Empty);
       Assert.That(problems.Select(problem => problem.Code), Has.All.EqualTo(IrVerifier.Code));
     }
@@ -445,7 +447,7 @@ public sealed class CSharpEmitterProfileTests {
   [Test]
   public void IllTypedIr_IsRefusedInEveryProfile() {
     var module = new IrModule("M", [Function("F", IrType.I32, [], new IrReturn(new IrBinary(IrBinaryOp.Add, new IrConst(IrType.I32, 1), new IrConst(IrType.Bool, 1))))]);
-    Assert.That(CSharpProfile.All.Select(profile => CSharpEmitter.Check(module, profile).Single().Code), Has.All.EqualTo(IrVerifier.Code));
+    Assert.That(CSharpProfile.All.Select(profile => LegalizedCSharp.Check(module, profile).Single().Code), Has.All.EqualTo(IrVerifier.Code));
   }
 
   // ---------------------------------------------------------------- saturation
@@ -456,15 +458,15 @@ public sealed class CSharpEmitterProfileTests {
   /// the same on the runtime of that framework as here.
   /// </summary>
   [TestCase("int", "net10.0", "(int)a", null)]
-  [TestCase("int", "net8.0", "Saturated(a, -2147483648, 2147483647)", "private static int Saturated(double value, int low, int high) {")]
+  [TestCase("int", "net8.0", "SaturateToInt32(a, -2147483648, 2147483647)", "private static int SaturateToInt32(double value, int low, int high) => (value >= (double)high) ? high : ((value > (double)low) ? checked((int)value) : ((value <= (double)low) ? low : 0));")]
   [TestCase("uint", "net10.0", "(uint)a", null)]
-  [TestCase("uint", "net8.0", "SaturatedUInt32(a)", "private static uint SaturatedUInt32(double value) {")]
+  [TestCase("uint", "net8.0", "SaturateToUInt32(a)", "private static uint SaturateToUInt32(double value) => (value >= 4294967295.0) ? 4294967295u : ((value > 0.0) ? checked((uint)value) : 0u);")]
   [TestCase("long", "net10.0", "(long)a", null)]
-  [TestCase("long", "net2.0", "SaturatedInt64(a)", "private static long SaturatedInt64(double value) {")]
+  [TestCase("long", "net2.0", "SaturateToInt64(a)", "private static long SaturateToInt64(double value) {")]
   [TestCase("ulong", "net10.0", "(ulong)a", null)]
-  [TestCase("ulong", "netcoreapp3.1", "SaturatedUInt64(a)", "private static ulong SaturatedUInt64(double value) {")]
+  [TestCase("ulong", "netcoreapp3.1", "SaturateToUInt64(a)", "private static ulong SaturateToUInt64(double value) => (value >= 1.8446744073709552E+19) ? 18446744073709551615UL : ((value > 0.0) ? checked((ulong)value) : 0UL);")]
   [TestCase("short", "net10.0", "(short)(int)a", null)]
-  [TestCase("short", "net2.0", "(short)Saturated(a, -2147483648, 2147483647)", "private static int Saturated(double value, int low, int high) {")]
+  [TestCase("short", "net2.0", "(short)SaturateToInt32(a, -2147483648, 2147483647)", "private static int SaturateToInt32(double value, int low, int high) {")]
   public void SaturatingConversion_IsACastOnlyWhereTheFrameworkSaturates(string type, string profile, string expected, string? helper) {
     var text = Emitted($"public static {type} F(double a) => ({type})a;", profile);
     Assert.That(EmittedCSharp.Body(text), Is.EqualTo(new[] { $"return {expected};" }));

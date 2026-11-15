@@ -7,6 +7,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Enums;
 
@@ -50,7 +51,7 @@ public sealed class EnumFixtureTests {
   [TestCaseSource(nameof(FixturesAndProfiles))]
   public void CSharpFixture_CompilesForTheProfile_AndRunsLikeDotNet(string className, string file, string profileName) {
     var profile = CSharpProfile.Parse(profileName);
-    var text = CSharpEmitter.Emit(CSharpModule(file), profile)[0].Content;
+    var text = LegalizedCSharp.Emit(CSharpModule(file), profile)[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);
     foreach (var call in Calls(className))
@@ -64,8 +65,8 @@ public sealed class EnumFixtureTests {
     foreach (var level in JavaScriptProfile.LevelNames)
       foreach (var module in modules) {
         var profile = JavaScriptProfile.Parse(level, "cjs");
-        Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, $"{module.Name} at {level}");
-        var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+        Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, $"{module.Name} at {level}");
+        var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
         Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{module.Name} at {level}\n{text}");
       }
   }
@@ -79,7 +80,7 @@ public sealed class EnumFixtureTests {
     Assert.That(module.Functions.Single(function => function.Name == "weight").Parameters[0].Type.EnumType, Is.SameAs(color));
     Assert.That(module.Functions.Single(function => function.Name == "shade").Parameters[0].Type, Is.EqualTo(IrType.I32));
     foreach (var profile in CSharpProfile.All) {
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(text, Does.Contain("public enum Color : int").And.Contain("private static int weight(Color c)").And.Contain("a | (int)Color.Green"));
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     }

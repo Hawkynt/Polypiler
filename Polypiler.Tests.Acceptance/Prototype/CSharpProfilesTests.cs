@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -183,7 +184,7 @@ public sealed class CSharpProfilesTests {
       var text = Translated(profile);
       var lifted = JavaScriptFixture.Import(className + ".mjs", JavaScriptFixture.SourceOf(fixture));
       var complaints = GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName);
-      run = new(this._translation, 0, lifted, CSharpEmitter.Check(lifted, profile), this._output,
+      run = new(this._translation, 0, lifted, LegalizedCSharp.Check(lifted, profile), this._output,
         new("dotnet-sdk", $"compile {className}.cs against the reference assemblies of {profile.Name} at C# {profile.LanguageVersionName}", complaints.Count == 0 ? 0 : 1));
       Assert.That(complaints, Is.Empty, $"{profile}:\n{text}");
       if (RunBy(profile, Translated) is { } earlier) {

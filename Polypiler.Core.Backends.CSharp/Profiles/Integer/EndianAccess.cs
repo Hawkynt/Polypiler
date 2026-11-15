@@ -25,8 +25,8 @@ internal static partial class CSharpIntegerRows {
     .. _multibyte.SelectMany(kind => (IEnumerable<CSharpCapability>)[
       Load(IrIntrinsicOp.LoadLittle, kind, "LittleEndian", "true"),
       Load(IrIntrinsicOp.LoadBig, kind, "BigEndian", "false"),
-      Helped(IrIntrinsicOp.StoreLittle, kind, $"{{h}}({{0}}, {{1}}, (ulong){{2}}, {Digits(Width(kind) / 8)}, true)", CSharpIntegerHelpers.Store),
-      Helped(IrIntrinsicOp.StoreBig, kind, $"{{h}}({{0}}, {{1}}, (ulong){{2}}, {Digits(Width(kind) / 8)}, false)", CSharpIntegerHelpers.Store)
+      Helped(IrIntrinsicOp.StoreLittle, kind),
+      Helped(IrIntrinsicOp.StoreBig, kind)
     ]),
     .. new[] { IrTypeKind.F32, IrTypeKind.F64 }.SelectMany(kind => (IEnumerable<CSharpCapability>)[
       FloatLoad(IrIntrinsicOp.LoadLittle, kind, "LittleEndian"),
@@ -42,19 +42,24 @@ internal static partial class CSharpIntegerRows {
   private static CSharpCapability FloatLoad(IrIntrinsicOp op, IrTypeKind kind, string order) {
     var method = $"{Binary}Read{(kind == IrTypeKind.F32 ? "Single" : "Double")}{order}";
     return Row(op, kind, CSharpProfile.Net80, method, $"{method}(new global::System.ReadOnlySpan<byte>({{0}}, {{1}}, {(kind == IrTypeKind.F32 ? "4" : "8")}))")
-      .WithRewrite(node => new IrIntrinsic(IrIntrinsicOp.BitsFloat, node.Type, [node with { Type = IntegerOf(node.Type) }]));
+      .WithRewrite(FloatLoaded).WithLibrary((node, calls) => calls.Legalize(FloatLoaded((IrIntrinsic)node)));
   }
 
   private static CSharpCapability FloatStore(IrIntrinsicOp op, IrTypeKind kind)
-    => Row(op, kind, null, null, null).WithRewrite(node => node with {
-      Arguments = [node.Arguments[0], node.Arguments[1], new IrIntrinsic(IrIntrinsicOp.FloatBits, IntegerOf(node.Arguments[2].Type), [node.Arguments[2]])]
-    });
+    => Row(op, kind, null, null, null).WithRewrite(FloatStored).WithLibrary((node, calls) => calls.Legalize(FloatStored((IrIntrinsic)node)));
+
+  /// <summary>The load of a floating-point number as the bit cast of the load of the integer of its width.</summary>
+  private static IrExpr FloatLoaded(IrIntrinsic node) => new IrIntrinsic(IrIntrinsicOp.BitsFloat, node.Type, [node with { Type = IntegerOf(node.Type) }]);
+
+  /// <summary>The store of a floating-point number as the store of the integer its bits are.</summary>
+  private static IrExpr FloatStored(IrIntrinsic node) => node with {
+    Arguments = [node.Arguments[0], node.Arguments[1], new IrIntrinsic(IrIntrinsicOp.FloatBits, IntegerOf(node.Arguments[2].Type), [node.Arguments[2]])]
+  };
 
   private static CSharpCapability Load(IrIntrinsicOp op, IrTypeKind kind, string order, string little) {
     var method = $"{Binary}Read{Name(kind)}{order}";
     var size = Digits(Width(kind) / 8);
-    return Row(op, kind, CSharpProfile.NetStandard21, method, $"{method}(new global::System.ReadOnlySpan<byte>({{0}}, {{1}}, {size}))",
-      $"({Type(kind)}){{h}}({{0}}, {{1}}, {size}, {little})", CSharpIntegerHelpers.Load);
+    return Library(op, kind, CSharpProfile.NetStandard21, method, $"{method}(new global::System.ReadOnlySpan<byte>({{0}}, {{1}}, {size}))");
   }
 
   /// <summary>The name of an integer type in the .NET API, as <c>BinaryPrimitives</c> spells it in its methods.</summary>

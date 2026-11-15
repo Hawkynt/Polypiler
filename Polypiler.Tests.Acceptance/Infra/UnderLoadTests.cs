@@ -54,8 +54,8 @@ public sealed class UnderLoadTests {
     var steps = new IntegerOperationsSteps(scenario);
     new PrototypeSteps(scenario).CSharpMethod("public static uint F(uint x) => System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(x);");
     steps.OutputCalls("net10.0", "BinaryPrimitives.ReverseEndianness");
-    steps.OutputDeclaresAPrivateHelper("net2.0", "BinaryPrimitives");
-    steps.OutputDeclaresAHelper("es5");
+    steps.OutputInlinesTheHelperAndNames("net2.0", "BinaryPrimitives");
+    steps.OutputInlinesTheHelper("es5");
     steps.AllReturn("78563412", "F(0x12345678)");
   });
 

@@ -17,42 +17,22 @@ public static partial class JavaScriptEmitter {
     /// clamp compares numbers and <c>BigInt</c>s alike, and pairs with their signedness.
     /// </summary>
     private static IEnumerable<(IrIntrinsicOp, Func<Writer, IrIntrinsic, (JsExpression, bool)>)> BoundForms => [
-      (IrIntrinsicOp.Min, (writer, intrinsic) => writer.Ordered(intrinsic, "min")),
-      (IrIntrinsicOp.Max, (writer, intrinsic) => writer.Ordered(intrinsic, "max")),
-      (IrIntrinsicOp.Clamp, (writer, intrinsic) => writer.AsHalves(intrinsic.Type)
-        ? writer.Call("$clamp64", intrinsic, Signed(intrinsic.Type))
-        : writer.Call("$clamp", intrinsic)),
-      (IrIntrinsicOp.Abs, (writer, intrinsic) => writer.Abs(intrinsic.Arguments[0], true)),
-      (IrIntrinsicOp.AbsWrap, (writer, intrinsic) => writer.Abs(intrinsic.Arguments[0], false)),
+      (IrIntrinsicOp.Min, (writer, intrinsic) => (Invoke("Math.min", [.. intrinsic.Arguments.Select(writer.Text)]), true)),
+      (IrIntrinsicOp.Max, (writer, intrinsic) => (Invoke("Math.max", [.. intrinsic.Arguments.Select(writer.Text)]), true)),
+      (IrIntrinsicOp.Abs, (writer, intrinsic) => writer.Expression(intrinsic.Arguments[0])),
+      (IrIntrinsicOp.AbsWrap, (writer, intrinsic) => writer.AbsWrap(intrinsic.Arguments[0])),
       (IrIntrinsicOp.Sign, (writer, intrinsic) => writer.Sign(intrinsic.Arguments[0]))
     ];
 
-    private (JsExpression, bool) Ordered(IrIntrinsic intrinsic, string which) {
-      var type = intrinsic.Type;
-      var all = intrinsic.Arguments.Select(this.Text).ToList();
-      return (this.AsHalves(type) ? this.Helper((type.IsSigned ? "$s" : "$u") + which + "64", all)
-        : type.IsLong ? this.Helper($"${which}64", all)
-        : Invoke($"Math.{which}", all), true);
-    }
-
-    private (JsExpression, bool) Abs(IrExpr value, bool trap) {
-      var type = value.Type;
-      if (!type.IsSigned)
-        return this.Expression(value);
-
-      if (!trap)
-        return type.IsLong ? this.Typed(type, this.Helper("$absw64", [this.Text(value)])) : Cut(type, Invoke("Math.abs", this.Text(value)));
-
-      return (this.AsHalves(type) ? this.Helper("$abs64", [this.Text(value)]) : this.Helper("$abs", [this.Text(value), this.Range(type).Low]), true);
-    }
-
+    /// <summary>The sign of up to 32 bits by <c>Math.sign</c>; below ECMAScript 2015 the library's helper stands in.</summary>
     private (JsExpression, bool) Sign(IrExpr value) {
-      var text = this.Text(value);
-      if (this.AsHalves(value.Type))
-        return (this.Helper(value.Type.IsSigned ? "$sign64" : "$usign64", [text]), true);
-
-      return (value.Type.IsLong ? this.Helper("$sign64", [text]) : this.Native("Math.sign") ? Invoke("Math.sign", text) : this.Helper("$sign", [text]), true);
+      this.Native("Math.sign");
+      return (Invoke("Math.sign", this.Text(value)), true);
     }
+
+    /// <summary>The magnitude that wraps: an unsigned value itself, a signed one of up to 32 bits <c>Math.abs</c> cut to its type.</summary>
+    private (JsExpression, bool) AbsWrap(IrExpr value)
+      => value.Type.IsSigned ? Cut(value.Type, Invoke("Math.abs", this.Text(value))) : this.Expression(value);
 
   }
 

@@ -18,12 +18,14 @@ Feature: Backends build a target syntax tree, optimize it and print it last
     Then Roslyn at the profile's language version and Acornima at the profile's level parse each file without diagnostics
     And the parsed tree equals the printed target tree structurally
 
+  # The helper comes from the IR library (#1353); with the inlining of the IR (O0006) off, O0500 is
+  # the pass that inlines it.
   Scenario: A single-expression helper is inlined
     Given the C# method "public static uint F(uint x) => System.Numerics.BitOperations.RotateLeft(x, 8);"
-    When it is translated with "--to javascript --profile es5"
-    Then the output contains no "function $rotl" and F(0x12345678) returns 878082066
-    When it is translated with "--to javascript --profile es5 --disable-opt O0500"
-    Then the output declares "$rotl" and calls it
+    When it is translated with "--to javascript --profile es5 --disable-opt O0006"
+    Then the output contains no "function RotateLeft32" and F(0x12345678) returns 878082066
+    When it is translated with "--to javascript --profile es5 --disable-opt O0006 --disable-opt O0500"
+    Then the output declares "RotateLeft32" and calls it
 
   @Slow @Sweep
   Scenario: A helper made unused by inlining is removed

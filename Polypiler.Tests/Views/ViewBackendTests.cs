@@ -8,6 +8,7 @@ using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Core.Optimize.Target;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Views;
 
@@ -91,8 +92,8 @@ public sealed class ViewBackendTests {
     var module = EveryOperation();
     Assert.That(IrVerifier.Verify(module), Is.Empty);
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile).Single().Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile).Single().Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     }
   }
@@ -106,11 +107,11 @@ public sealed class ViewBackendTests {
   public void EveryOperation_IsWrittenInEveryJavaScriptProfile() {
     var module = EveryOperation();
     foreach (var profile in _javaScript) {
-      var refused = JavaScriptEmitter.Check(module, profile).Select(diagnostic => diagnostic.Message).ToList();
+      var refused = LegalizedJavaScript.Check(module, profile).Select(diagnostic => diagnostic.Message).ToList();
       var expected = Refusals(profile);
       Assert.That(refused, Is.EquivalentTo(expected), profile.ToString());
       if (expected.Count == 0)
-        Assert.That(GeneratedJavaScript.Problems(JavaScriptEmitter.Emit(module, profile).Single().Content, profile), Is.Empty, profile.ToString());
+        Assert.That(GeneratedJavaScript.Problems(LegalizedJavaScript.Emit(module, profile).Single().Content, profile), Is.Empty, profile.ToString());
     }
   }
 
@@ -130,13 +131,13 @@ public sealed class ViewBackendTests {
   [TestCaseSource(nameof(Profiles)), Category("Slow")]
   public void Fixture_ComputesInEveryCSharpProfileWhatDotNetComputes(string name) {
     var profile = CSharpProfile.Parse(name);
-    var text = CSharpEmitter.Emit(SpanFixtures.Imported("Spans"), profile).Single().Content;
+    var text = LegalizedCSharp.Emit(SpanFixtures.Imported("Spans"), profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);
     foreach (var call in _calls)
       Assert.That(SpanFixtures.Outcome(build.Method(call.Method), call), Is.EqualTo(SpanFixtures.DotNet("Spans", call)), $"{call} in {name}");
 
-    var adler = CSharpEmitter.Emit(SpanFixtures.Imported("Adler32Span"), profile).Single().Content;
+    var adler = LegalizedCSharp.Emit(SpanFixtures.Imported("Adler32Span"), profile).Single().Content;
     var check = new PrototypeCall("Compute", [SpanFixtures.Wikipedia, 5, 9]);
     Assert.That(SpanFixtures.Outcome(GeneratedCSharp.Compile(adler, true).Method("Compute"), check), Does.StartWith("300286872 | "));
   }
@@ -146,7 +147,7 @@ public sealed class ViewBackendTests {
   public void JavaScriptFixture_ComputesInEveryCSharpProfile(string name) {
     var profile = CSharpProfile.Parse(name);
     var module = JavaScriptFrontend.Import("views.mjs", File.ReadAllText(SpanFixtures.PathOf("views.mjs"))).Module!;
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);
     PrototypeCall[] calls = [
@@ -167,7 +168,7 @@ public sealed class ViewBackendTests {
   [TestCase("net10.0", "global::System.Span<int> t = new int[n];", "global::System.Runtime.InteropServices.MemoryMarshal.Cast<byte, uint>(")]
   [TestCase("net10.0", "a.AsSpan(0, 8).CopyTo", "global::System.MemoryExtensions.SequenceEqual(")]
   public void Form_IsTheOneOfTheProfile(string name, string first, string second) {
-    var text = CSharpEmitter.Emit(SpanFixtures.Imported("Spans"), CSharpProfile.Parse(name)).Single().Content.Replace("global::System.MemoryExtensions.AsSpan(a, 0, 8)", "a.AsSpan(0, 8)");
+    var text = LegalizedCSharp.Emit(SpanFixtures.Imported("Spans"), CSharpProfile.Parse(name)).Single().Content.Replace("global::System.MemoryExtensions.AsSpan(a, 0, 8)", "a.AsSpan(0, 8)");
     Assert.That(text, Does.Contain(first).And.Contain(second));
   }
 
@@ -177,7 +178,7 @@ public sealed class ViewBackendTests {
   /// </summary>
   [Test]
   public void TargetPasses_KeepAGenericHelperThatIsCalled() {
-    var text = CSharpEmitter.Emit(SpanFixtures.Imported("Spans"), CSharpProfile.Net20, FloatMode.Accurate, null, null, TargetPassOptions.Default).Files.Single().Content;
+    var text = LegalizedCSharp.Emit(SpanFixtures.Imported("Spans"), CSharpProfile.Net20, FloatMode.Accurate, null, null, TargetPassOptions.Default).Files.Single().Content;
     Assert.That(text, Does.Contain("private static void ViewSet<T>(").And.Contain("ViewSet<byte>(").And.Contain("private static global::System.ArraySegment<TTo> ViewCast<TFrom, TTo>("));
     Assert.That(text, Does.Not.Contain("StoreSpan"));
   }
@@ -192,7 +193,7 @@ public sealed class ViewBackendTests {
       new IrWhile(new IrConst(IrType.Bool, 0), new IrBlock([new IrAssign(t, new IrIntrinsic(IrIntrinsicOp.StackAlloc, t.Type, [new IrConst(IrType.I32, 1)]))])),
       new IrReturn(new IrIntrinsic(IrIntrinsicOp.ViewLength, IrType.I32, [new IrLocalRef(t)]))
     ]))]);
-    var text = CSharpEmitter.Emit(module, CSharpProfile.Net100).Single().Content;
+    var text = LegalizedCSharp.Emit(module, CSharpProfile.Net100).Single().Content;
     Assert.That(text.Contains($"stackalloc int[{count}]"), Is.EqualTo(onStack), text);
     Assert.That(text, Does.Contain("t = new int[1];"));
   }

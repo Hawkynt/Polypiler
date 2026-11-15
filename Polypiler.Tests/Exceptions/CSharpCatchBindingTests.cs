@@ -1,5 +1,6 @@
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Prototype.Testing;
@@ -16,7 +17,7 @@ public sealed class CSharpCatchBindingTests {
   private static string Emitted(string source, CSharpProfile profile) {
     var result = JavaScriptFrontend.Import("caught.js", source);
     Assert.That(result.Module, Is.Not.Null, string.Join("\n", result.Diagnostics));
-    return CSharpEmitter.Emit(result.Module!, profile)[0].Content;
+    return LegalizedCSharp.Emit(result.Module!, profile)[0].Content;
   }
 
   [Test]

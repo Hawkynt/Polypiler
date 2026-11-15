@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.String;
 
@@ -24,8 +25,8 @@ public sealed class JavaScriptStringEmissionTests {
   ];
 
   private static string Emit(JavaScriptProfile profile) {
-    Assert.That(JavaScriptEmitter.Check(StringModules.Operations, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(StringModules.Operations, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(StringModules.Operations, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(StringModules.Operations, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -106,7 +107,7 @@ public sealed class JavaScriptStringEmissionTests {
     var text = new IrLocal("s", IrType.String);
     IrModule Module(IrIntrinsicOp op, IrExpr needle) => new("M", [new IrFunction("F", true, IrType.String, [text], [], new IrBlock([
       new IrReturn(new IrIntrinsic(op, IrType.String, [new IrLocalRef(text), needle, new IrStrConst("$&")]))]))]);
-    string Body(IrIntrinsicOp op, IrExpr needle, string level) => JavaScriptEmitter.Emit(Module(op, needle), JavaScriptProfile.Parse(level)).Single().Content;
+    string Body(IrIntrinsicOp op, IrExpr needle, string level) => LegalizedJavaScript.Emit(Module(op, needle), JavaScriptProfile.Parse(level)).Single().Content;
     Assert.That(Body(IrIntrinsicOp.StrReplaceFirst, new IrStrConst("b"), "es5"), Does.Contain("return s.replace(\"b\", \"$$&\");"));
     Assert.That(Body(IrIntrinsicOp.StrReplaceAll, new IrStrConst("b"), "es2022"), Does.Contain("return s.replaceAll(\"b\", \"$$&\");"));
     Assert.That(Body(IrIntrinsicOp.StrReplaceAll, new IrStrConst("b"), "es2020"), Does.Contain("return s.split(\"b\").join(\"$&\");"));
@@ -117,7 +118,7 @@ public sealed class JavaScriptStringEmissionTests {
   public void LastIndexOf_FromTheLengthIsTheMethod() {
     var text = new IrLocal("s", IrType.String);
     var other = new IrLocal("t", IrType.String);
-    string Body(IrLocal measured) => JavaScriptEmitter.Emit(new IrModule("M", [new IrFunction("F", true, IrType.I32, [text, other], [], new IrBlock([
+    string Body(IrLocal measured) => LegalizedJavaScript.Emit(new IrModule("M", [new IrFunction("F", true, IrType.I32, [text, other], [], new IrBlock([
       new IrReturn(new IrIntrinsic(IrIntrinsicOp.StrLastIndexOf, IrType.I32, [new IrLocalRef(text), new IrStrConst("b"),
         new IrIntrinsic(IrIntrinsicOp.StrLength, IrType.I32, [new IrLocalRef(measured)])]))]))]), JavaScriptProfile.Default).Single().Content;
     Assert.That(Body(text), Does.Contain("return s.lastIndexOf(\"b\");"));
@@ -130,7 +131,7 @@ public sealed class JavaScriptStringEmissionTests {
     var computed = new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [new IrLocalRef(text), new IrStrConst("x")]);
     var module = new IrModule("M", [new IrFunction("F", true, IrType.I32, [text], [], new IrBlock([
       new IrReturn(new IrIntrinsic(IrIntrinsicOp.StrCompareOrdinal, IrType.I32, [computed, new IrLocalRef(text)]))]))]);
-    Assert.That(JavaScriptEmitter.Emit(module, JavaScriptProfile.Default).Single().Content, Does.Contain("return $cmp(s + \"x\", s);"));
+    Assert.That(LegalizedJavaScript.Emit(module, JavaScriptProfile.Default).Single().Content, Does.Contain("return $cmp(s + \"x\", s);"));
   }
 
   [Test]

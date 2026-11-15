@@ -20,8 +20,8 @@ internal static partial class CSharpIntegerRows {
       IrTypeKind.U32 => "(uint)(((ulong){0} * {1}) >> 32)",
       _ => $"({Type(kind)})(({{0}} * {{1}}) >> {Digits(Width(kind))})"
     })),
-    Row(IrIntrinsicOp.MulHigh, IrTypeKind.I64, CSharpProfile.Net80, Math + "BigMul", $"{Math}BigMul({{0}}, {{1}}, out _)", "{h}({0}, {1})", CSharpIntegerHelpers.MulHighSigned64),
-    Row(IrIntrinsicOp.MulHigh, IrTypeKind.U64, CSharpProfile.Net80, Math + "BigMul", $"{Math}BigMul({{0}}, {{1}}, out _)", "{h}({0}, {1})", CSharpIntegerHelpers.MulHighUnsigned64)
+    Library(IrIntrinsicOp.MulHigh, IrTypeKind.I64, CSharpProfile.Net80, Math + "BigMul", $"{Math}BigMul({{0}}, {{1}}, out _)"),
+    Library(IrIntrinsicOp.MulHigh, IrTypeKind.U64, CSharpProfile.Net80, Math + "BigMul", $"{Math}BigMul({{0}}, {{1}}, out _)")
   ];
 
 }

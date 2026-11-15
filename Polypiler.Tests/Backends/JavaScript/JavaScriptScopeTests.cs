@@ -38,7 +38,7 @@ public sealed class JavaScriptScopeTests {
 
   /// <summary>The file of a module in a profile, after it parsed at the level of the profile.</summary>
   private static string Emitted(IrModule module, JavaScriptProfile profile) {
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{profile}:\n{text}");
     return text;
   }
@@ -67,7 +67,7 @@ public sealed class JavaScriptScopeTests {
   public void Case_InterpreterAndCSharpAgree(string name) {
     var @case = Case(name);
     Assert.That(IrVerifier.Verify(@case.Module), Is.Empty);
-    var text = CSharpEmitter.Emit(@case.Module, CSharpProfile.Parse("net10.0", null)).Single().Content;
+    var text = LegalizedCSharp.Emit(@case.Module, CSharpProfile.Parse("net10.0", null)).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net10.0", "14"), Is.Empty, text);
     foreach (var (argument, result) in @case.Calls) {
       var call = new PrototypeCall("F", [argument]);

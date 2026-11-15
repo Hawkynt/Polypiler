@@ -8,6 +8,7 @@ using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 using JavaScript = Polypiler.Core.Frontends.JavaScript;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Globals;
 
@@ -29,11 +30,11 @@ public sealed class GlobalEmissionTests {
     return result.Module ?? throw new InvalidOperationException(string.Join("; ", result.Diagnostics));
   }
 
-  private static string CSharp(IrModule module, string profile = "net10.0") => CSharpEmitter.Emit(module, CSharpProfile.Parse(profile)).Single().Content;
+  private static string CSharp(IrModule module, string profile = "net10.0") => LegalizedCSharp.Emit(module, CSharpProfile.Parse(profile)).Single().Content;
 
   private static string Script(IrModule module, string level, string module_ = "esm", bool typed = false) {
     var profile = JavaScriptProfile.Parse(level, module_, module_ == "iife" ? "Rng" : null, typed);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -151,12 +152,12 @@ public sealed class GlobalEmissionTests {
   [Test]
   public void TheChecks_AcceptEveryNodeOfAGlobal() {
     var module = StateFixtures.ImportedCSharp("Xorshift32");
-    Assert.That(CSharpEmitter.Check(module, CSharpProfile.Parse("net2.0")), Is.Empty);
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es5", "cjs")), Is.Empty);
+    Assert.That(LegalizedCSharp.Check(module, CSharpProfile.Parse("net2.0")), Is.Empty);
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Parse("es5", "cjs")), Is.Empty);
     var saturating = new IrGlobal("s", IrType.I32, new IrConvert(IrType.I32, new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 1e12)), IrConversion.Saturate));
     var get = new IrFunction("Get", true, IrType.I32, [], [], new IrBlock([new IrReturn(new IrGlobalRef(saturating))]));
     var withConversion = new IrModule("Saturating", [get]) { Globals = [saturating] };
-    Assert.That(CSharpEmitter.Check(withConversion, CSharpProfile.Parse("net2.0")), Is.Empty);
+    Assert.That(LegalizedCSharp.Check(withConversion, CSharpProfile.Parse("net2.0")), Is.Empty);
     Assert.That(GeneratedCSharp.Compile(CSharp(withConversion, "net2.0"), false).Outcome(new("Get", [])), Is.EqualTo(int.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture)));
   }
 

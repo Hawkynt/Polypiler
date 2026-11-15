@@ -5,6 +5,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Generics;
 
@@ -26,8 +27,8 @@ internal sealed class JavaScriptGenericsEmissionTests {
   ];
 
   private static string Emit(IrModule module, JavaScriptProfile profile) {
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -42,7 +43,7 @@ internal sealed class JavaScriptGenericsEmissionTests {
     var modules = new[] { GenericsFixtures.Imported("Search"), GenericsFixtures.Imported("Ring"), GenericsFixtures.ImportedScript("middle.js") };
     foreach (var module in modules)
       foreach (var profile in _profiles)
-        Assert.That(JavaScriptEmitter.Check(module, profile).Where(problem => problem.Code is JavaScriptEmitter.Inexpressible), Is.Empty, $"{module.Name} in {profile}");
+        Assert.That(LegalizedJavaScript.Check(module, profile).Where(problem => problem.Code is JavaScriptEmitter.Inexpressible), Is.Empty, $"{module.Name} in {profile}");
 
     foreach (var module in modules)
       foreach (var profile in _profiles)
@@ -50,7 +51,7 @@ internal sealed class JavaScriptGenericsEmissionTests {
 
     foreach (var module in modules)
       foreach (var profile in CSharpProfile.All)
-        Assert.That(CSharpEmitter.Check(module, profile).Where(problem => problem.Code is CSharpEmitter.Inexpressible), Is.Empty, $"{module.Name} for {profile}");
+        Assert.That(LegalizedCSharp.Check(module, profile).Where(problem => problem.Code is CSharpEmitter.Inexpressible), Is.Empty, $"{module.Name} for {profile}");
   }
 
   /// <summary>Test design 4: Swap over i32 and f64 is one function, IndexOf over them two, the equality of doubles is never === alone nor indexOf.</summary>
@@ -122,8 +123,8 @@ internal sealed class JavaScriptGenericsEmissionTests {
   [Test]
   public void OrderOfAComputed64BitValue_IsInexpressibleBelowBigInt() {
     var module = PrototypeFixture.Import("Snippet.cs", "public static class Snippet { public static int F(long a, long b) => (a + b).CompareTo(b); }");
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es5", "cjs")).Single().Message, Does.Contain("the order of a 64-bit value that is no variable"));
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es2020", "esm")), Is.Empty);
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Parse("es5", "cjs")).Single().Message, Does.Contain("the order of a 64-bit value that is no variable"));
+    Assert.That(LegalizedJavaScript.Check(module, JavaScriptProfile.Parse("es2020", "esm")), Is.Empty);
   }
 
   /// <summary>The helpers of the generic definitions are listed with the others, for every profile.</summary>

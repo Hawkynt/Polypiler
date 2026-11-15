@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Polypiler.Core.Backends.CSharp.Syntax;
 using Polypiler.Core.IR;
+using Polypiler.Core.Legalize;
 
 namespace Polypiler.Core.Backends.CSharp;
 
@@ -260,7 +261,7 @@ public sealed class CSharpCapability {
   /// <returns>The row extended.</returns>
   public CSharpCapability When(Func<IrIntrinsic, bool> condition) => new(this.Name) {
     Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
-    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = this.Rewrite, Condition = condition
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = this.Rewrite, Condition = condition, Library = this.Library
   };
 
   /// <summary>The row with a form for arguments with which the operation cannot trap.</summary>
@@ -269,7 +270,7 @@ public sealed class CSharpCapability {
   /// <returns>The row extended.</returns>
   public CSharpCapability WithTotal(CSharpForm form, Func<IReadOnlyList<IrExpr>, bool> holds) => new(this.Name) {
     Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
-    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds, Rewrite = this.Rewrite, Condition = this.Condition
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = form, IsTotal = holds, Rewrite = this.Rewrite, Condition = this.Condition, Library = this.Library
   };
 
   /// <summary>The row written as other operations of the IR where the profile lacks it.</summary>
@@ -277,8 +278,34 @@ public sealed class CSharpCapability {
   /// <returns>The row extended.</returns>
   public CSharpCapability WithRewrite(Func<IrIntrinsic, IrExpr> rewrite) => new(this.Name) {
     Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
-    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = rewrite, Condition = this.Condition
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = rewrite, Condition = this.Condition, Library = this.Library
   };
+
+  /// <summary>
+  /// The operation as a call of a helper of the library (<see cref="HelperOperations"/>) where the
+  /// profile lacks the row, or <see langword="null"/>: legalization puts it in before the module is
+  /// written, so the helper is emitted, and optimised, as code of the module. It takes the node, its
+  /// operands legalized, and gives an expression of the same type.
+  /// </summary>
+  public Func<IrExpr, LibraryCalls, IrExpr?>? Library { get; private init; }
+
+  /// <summary>The row written as a call of a helper of the library where the profile lacks it.</summary>
+  /// <param name="library">The call, from the node; see <see cref="Library"/>.</param>
+  /// <returns>The row extended.</returns>
+  public CSharpCapability WithLibrary(Func<IrExpr, LibraryCalls, IrExpr?> library) => new(this.Name) {
+    Since = this.Since, Language = this.Language, Feature = this.Feature, Defect = this.Defect, Operation = this.Operation, Operands = this.Operands, Saturates = this.Saturates,
+    Native = this.Native, Replacement = this.Replacement, Helper = this.Helper, Total = this.Total, IsTotal = this.IsTotal, Rewrite = this.Rewrite, Condition = this.Condition, Library = library
+  };
+
+  /// <summary>The row written as the helper of the library of a name, with the arguments of the node, where the profile lacks it.</summary>
+  /// <param name="helper">The name of the helper in <see cref="HelperOperations"/>.</param>
+  /// <returns>The row extended.</returns>
+  public CSharpCapability WithLibrary(string helper) => this.WithLibrary((node, calls) => calls.Call(helper, node.Type, ((IrIntrinsic)node).Arguments));
+
+  /// <summary>Whether legalization replaces the operation of the row by a helper of the library in a profile.</summary>
+  /// <param name="profile">The profile.</param>
+  /// <returns><see langword="true"/> when the profile lacks the row and the row has a helper of the library.</returns>
+  public bool IsLibraryIn(CSharpProfile profile) => this.Library is not null && !this.IsIn(profile);
 
   /// <summary>Whether a profile writes the operation of the row as the others of <see cref="Rewrite"/>.</summary>
   /// <param name="profile">The profile.</param>
@@ -328,11 +355,20 @@ public sealed class CSharpCapability {
   /// <param name="name">What the row is about.</param>
   /// <param name="since">The first profile in which a cast saturates, or <see langword="null"/> when none does.</param>
   /// <param name="target">The integer type.</param>
-  /// <param name="replacement">The call that saturates elsewhere.</param>
-  /// <param name="helper">The helper the replacement calls.</param>
+  /// <param name="helper">
+  /// The helper of the library that saturates elsewhere, on the number as a <c>double</c>:
+  /// <c>SaturateToInt32</c>, told the bounds of the type, for <c>int</c> and the narrower types.
+  /// </param>
   /// <returns>The row.</returns>
-  public static CSharpCapability OfSaturation(string name, CSharpProfile? since, IrTypeKind target, CSharpForm replacement, CSharpHelper helper)
-    => new(name) { Since = since, Saturates = target, Replacement = replacement, Helper = helper };
+  public static CSharpCapability OfSaturation(string name, CSharpProfile? since, IrTypeKind target, string helper)
+    => new CSharpCapability(name) { Since = since, Saturates = target }.WithLibrary((node, calls) => {
+      var conversion = (IrConvert)node;
+      var value = conversion.Operand.Type == IrType.F64 ? conversion.Operand : new IrConvert(IrType.F64, conversion.Operand);
+      return helper != "SaturateToInt32"
+        ? calls.Call(helper, conversion.Type, value)
+        : calls.Call(helper, conversion.Type, value,
+          new IrConst(IrType.I32, (long)IrOperators.Minimum(conversion.Type)), new IrConst(IrType.I32, (long)IrOperators.Maximum(conversion.Type)));
+    });
 
   /// <summary>Whether a profile has what the row is about.</summary>
   /// <param name="profile">The profile.</param>
@@ -416,11 +452,11 @@ public sealed class CSharpCapabilities {
     // Math. Before .NET Core 3.0 the smaller and the larger of two floating-point numbers did not order the zeros.
     Call("Math.Abs", CSharpProfile.Net20, IrIntrinsicOp.Abs, _any, "Math.Abs"),
     Call("Math.Sign", CSharpProfile.Net20, IrIntrinsicOp.Sign, _any, "Math.Sign"),
-    Call("Math.Min(float, float) as the minimum of IEEE 754", CSharpProfile.NetCoreApp31, IrIntrinsicOp.Min, _single, "Math.Min", CSharpHelpers.MinSingle),
-    Call("Math.Min(double, double) as the minimum of IEEE 754", CSharpProfile.NetCoreApp31, IrIntrinsicOp.Min, _double, "Math.Min", CSharpHelpers.MinDouble),
+    Call("Math.Min(float, float) as the minimum of IEEE 754", CSharpProfile.NetCoreApp31, IrIntrinsicOp.Min, _single, "Math.Min").WithLibrary("MinimumSingle"),
+    Call("Math.Min(double, double) as the minimum of IEEE 754", CSharpProfile.NetCoreApp31, IrIntrinsicOp.Min, _double, "Math.Min").WithLibrary("MinimumDouble"),
     Call("Math.Min", CSharpProfile.Net20, IrIntrinsicOp.Min, _any, "Math.Min"),
-    Call("Math.Max(float, float) as the maximum of IEEE 754", CSharpProfile.NetCoreApp31, IrIntrinsicOp.Max, _single, "Math.Max", CSharpHelpers.MaxSingle),
-    Call("Math.Max(double, double) as the maximum of IEEE 754", CSharpProfile.NetCoreApp31, IrIntrinsicOp.Max, _double, "Math.Max", CSharpHelpers.MaxDouble),
+    Call("Math.Max(float, float) as the maximum of IEEE 754", CSharpProfile.NetCoreApp31, IrIntrinsicOp.Max, _single, "Math.Max").WithLibrary("MaximumSingle"),
+    Call("Math.Max(double, double) as the maximum of IEEE 754", CSharpProfile.NetCoreApp31, IrIntrinsicOp.Max, _double, "Math.Max").WithLibrary("MaximumDouble"),
     Call("Math.Max", CSharpProfile.Net20, IrIntrinsicOp.Max, _any, "Math.Max"),
     CSharpCapability.OfApi("Math.Clamp", CSharpProfile.NetStandard21),
     Call("Math.Sqrt(double)", CSharpProfile.Net20, IrIntrinsicOp.Sqrt, _double, "Math.Sqrt"),
@@ -432,10 +468,10 @@ public sealed class CSharpCapabilities {
       new CSharpForm(Base + "Math.Round", Further: Base + "MidpointRounding.AwayFromZero")),
 
     // ECMA-262's rounding and conversions, which no framework has: a helper in every profile.
-    Ecma("Math.round of ECMA-262 on float", IrIntrinsicOp.RoundHalfUp, _single, CSharpHelpers.RoundHalfUp, "float"),
-    Ecma("Math.round of ECMA-262", IrIntrinsicOp.RoundHalfUp, _double, CSharpHelpers.RoundHalfUp),
-    Ecma("ToInt32 of ECMA-262", IrIntrinsicOp.ToInt32, _double, CSharpHelpers.ToInt32),
-    Ecma("ToUint32 of ECMA-262", IrIntrinsicOp.ToUint32, _double, CSharpHelpers.ToUint32),
+    Ecma("Math.round of ECMA-262 on float", IrIntrinsicOp.RoundHalfUp, _single, "RoundHalfUp"),
+    Ecma("Math.round of ECMA-262", IrIntrinsicOp.RoundHalfUp, _double, "RoundHalfUp"),
+    Ecma("ToInt32 of ECMA-262", IrIntrinsicOp.ToInt32, _double, "ToInt32"),
+    Ecma("ToUint32 of ECMA-262", IrIntrinsicOp.ToUint32, _double, "ToUint32"),
 
     // MathF. Each of these is exact, so the operation on the double the float is, rounded back, has the same bits.
     Single("MathF.Sqrt(float)", IrIntrinsicOp.Sqrt, "Sqrt"),
@@ -446,36 +482,38 @@ public sealed class CSharpCapabilities {
     Single("MathF.Round(float, MidpointRounding)", IrIntrinsicOp.RoundAway, "Round", Base + "MidpointRounding.AwayFromZero"),
 
     // The bit operations.
-    Bit("BitOperations.RotateLeft(uint, int)", IrIntrinsicOp.RotateLeft, _word, CSharpHelpers.RotateLeft32),
-    Bit("BitOperations.RotateLeft(ulong, int)", IrIntrinsicOp.RotateLeft, _long, CSharpHelpers.RotateLeft64),
-    Bit("BitOperations.RotateRight(uint, int)", IrIntrinsicOp.RotateRight, _word, CSharpHelpers.RotateRight32),
-    Bit("BitOperations.RotateRight(ulong, int)", IrIntrinsicOp.RotateRight, _long, CSharpHelpers.RotateRight64),
-    Bit("BitOperations.PopCount(uint)", IrIntrinsicOp.PopCount, _word, CSharpHelpers.PopCount32),
-    Bit("BitOperations.PopCount(ulong)", IrIntrinsicOp.PopCount, _long, CSharpHelpers.PopCount64),
-    Bit("BitOperations.LeadingZeroCount(uint)", IrIntrinsicOp.LeadingZeroCount, _word, CSharpHelpers.LeadingZeroCount32),
-    Bit("BitOperations.LeadingZeroCount(ulong)", IrIntrinsicOp.LeadingZeroCount, _long, CSharpHelpers.LeadingZeroCount64),
-    Bit("BitOperations.TrailingZeroCount(uint)", IrIntrinsicOp.TrailingZeroCount, _word, CSharpHelpers.TrailingZeroCount32),
-    Bit("BitOperations.TrailingZeroCount(ulong)", IrIntrinsicOp.TrailingZeroCount, _long, CSharpHelpers.TrailingZeroCount64),
-    Bit("BitOperations.Log2(uint)", IrIntrinsicOp.Log2, _word, CSharpHelpers.Log232),
-    Bit("BitOperations.Log2(ulong)", IrIntrinsicOp.Log2, _long, CSharpHelpers.Log264),
-    Call("Math.BigMul(uint, uint)", CSharpProfile.Net100, IrIntrinsicOp.BigMul, _word, "Math.BigMul", CSharpHelpers.BigMul32),
-    CSharpCapability.OfApi("Math.BigMul(ulong, ulong, out ulong)", CSharpProfile.Net80, CSharpHelpers.BigMul64),
+    Bit("BitOperations.RotateLeft(uint, int)", IrIntrinsicOp.RotateLeft, _word, "RotateLeft"),
+    Bit("BitOperations.RotateLeft(ulong, int)", IrIntrinsicOp.RotateLeft, _long, "RotateLeft"),
+    Bit("BitOperations.RotateRight(uint, int)", IrIntrinsicOp.RotateRight, _word, "RotateRight"),
+    Bit("BitOperations.RotateRight(ulong, int)", IrIntrinsicOp.RotateRight, _long, "RotateRight"),
+    Bit("BitOperations.PopCount(uint)", IrIntrinsicOp.PopCount, _word, "PopCount"),
+    Bit("BitOperations.PopCount(ulong)", IrIntrinsicOp.PopCount, _long, "PopCount"),
+    Bit("BitOperations.LeadingZeroCount(uint)", IrIntrinsicOp.LeadingZeroCount, _word, "LeadingZeroCount"),
+    Bit("BitOperations.LeadingZeroCount(ulong)", IrIntrinsicOp.LeadingZeroCount, _long, "LeadingZeroCount"),
+    Bit("BitOperations.TrailingZeroCount(uint)", IrIntrinsicOp.TrailingZeroCount, _word, "TrailingZeroCount"),
+    Bit("BitOperations.TrailingZeroCount(ulong)", IrIntrinsicOp.TrailingZeroCount, _long, "TrailingZeroCount"),
+    Bit("BitOperations.Log2(uint)", IrIntrinsicOp.Log2, _word, "Log2"),
+    Bit("BitOperations.Log2(ulong)", IrIntrinsicOp.Log2, _long, "Log2"),
+    CSharpCapability.OfOperation("Math.BigMul(uint, uint)", CSharpProfile.Net100, IrIntrinsicOp.BigMul, _word, new CSharpForm(Base + "Math.BigMul")).WithLibrary(IntegerLibrary.Call),
+    CSharpCapability.OfApi("Math.BigMul(ulong, ulong, out ulong)", CSharpProfile.Net80),
 
     // The bits of a floating-point number.
     Call("BitConverter.DoubleToInt64Bits(double)", CSharpProfile.Net20, IrIntrinsicOp.FloatBits, _double, "BitConverter.DoubleToInt64Bits"),
-    Call("BitConverter.SingleToInt32Bits(float)", CSharpProfile.NetStandard21, IrIntrinsicOp.FloatBits, _single, "BitConverter.SingleToInt32Bits", CSharpHelpers.SingleToInt32Bits),
+    CSharpCapability.OfOperation("BitConverter.SingleToInt32Bits(float)", CSharpProfile.NetStandard21, IrIntrinsicOp.FloatBits, _single, new CSharpForm(Base + "BitConverter.SingleToInt32Bits"),
+      new CSharpForm(null, Template: Base + "BitConverter.ToInt32(" + Base + "BitConverter.GetBytes({0}), 0)")),
     Call("BitConverter.Int64BitsToDouble(long)", CSharpProfile.Net20, IrIntrinsicOp.BitsFloat, [IrTypeKind.I64], "BitConverter.Int64BitsToDouble"),
-    Call("BitConverter.Int32BitsToSingle(int)", CSharpProfile.NetStandard21, IrIntrinsicOp.BitsFloat, [IrTypeKind.I32], "BitConverter.Int32BitsToSingle", CSharpHelpers.Int32BitsToSingle),
+    CSharpCapability.OfOperation("BitConverter.Int32BitsToSingle(int)", CSharpProfile.NetStandard21, IrIntrinsicOp.BitsFloat, [IrTypeKind.I32], new CSharpForm(Base + "BitConverter.Int32BitsToSingle"),
+      new CSharpForm(null, Template: Base + "BitConverter.ToSingle(" + Base + "BitConverter.GetBytes({0}), 0)")),
 
     // A cast of a floating-point number to an integer saturates from .NET 9 on (ADR 0002), and to a type narrower than int never.
-    Narrow("sbyte", IrTypeKind.I8, "-128, 127"),
-    Narrow("byte", IrTypeKind.U8, "0, 255"),
-    Narrow("short", IrTypeKind.I16, "-32768, 32767"),
-    Narrow("ushort", IrTypeKind.U16, "0, 65535"),
-    CSharpCapability.OfSaturation("saturating cast to int", CSharpProfile.Net100, IrTypeKind.I32, new CSharpForm(null, Further: "-2147483648, 2147483647"), CSharpHelpers.Saturated),
-    CSharpCapability.OfSaturation("saturating cast to uint", CSharpProfile.Net100, IrTypeKind.U32, new CSharpForm(null), CSharpHelpers.SaturatedUInt32),
-    CSharpCapability.OfSaturation("saturating cast to long", CSharpProfile.Net100, IrTypeKind.I64, new CSharpForm(null), CSharpHelpers.SaturatedInt64),
-    CSharpCapability.OfSaturation("saturating cast to ulong", CSharpProfile.Net100, IrTypeKind.U64, new CSharpForm(null), CSharpHelpers.SaturatedUInt64),
+    Narrow("sbyte", IrTypeKind.I8),
+    Narrow("byte", IrTypeKind.U8),
+    Narrow("short", IrTypeKind.I16),
+    Narrow("ushort", IrTypeKind.U16),
+    CSharpCapability.OfSaturation("saturating cast to int", CSharpProfile.Net100, IrTypeKind.I32, "SaturateToInt32"),
+    CSharpCapability.OfSaturation("saturating cast to uint", CSharpProfile.Net100, IrTypeKind.U32, "SaturateToUInt32"),
+    CSharpCapability.OfSaturation("saturating cast to long", CSharpProfile.Net100, IrTypeKind.I64, "SaturateToInt64"),
+    CSharpCapability.OfSaturation("saturating cast to ulong", CSharpProfile.Net100, IrTypeKind.U64, "SaturateToUInt64"),
 
     // The integer and bit operations of every width, one family after the other.
     .. CSharpIntegerRows.All,
@@ -597,16 +635,16 @@ public sealed class CSharpCapabilities {
     => CSharpCapability.OfOperation(name, CSharpProfile.NetStandard21, operation, _single,
       new CSharpForm($"{Base}MathF.{method}", Further: further), new CSharpForm($"{Base}Math.{method}", "float", further));
 
-  /// <summary>A method of <c>BitOperations</c>, replaced by a helper.</summary>
-  private static CSharpCapability Bit(string name, IrIntrinsicOp operation, IrTypeKind[] operands, CSharpHelper helper)
-    => CSharpCapability.OfOperation(name, CSharpProfile.NetCoreApp31, operation, operands, new CSharpForm(Bits + helper.Name), new CSharpForm(null), helper);
+  /// <summary>A method of <c>BitOperations</c>, replaced by the helper of the library (<see cref="IntegerLibrary"/>).</summary>
+  private static CSharpCapability Bit(string name, IrIntrinsicOp operation, IrTypeKind[] operands, string method)
+    => CSharpCapability.OfOperation(name, CSharpProfile.NetCoreApp31, operation, operands, new CSharpForm(Bits + method)).WithLibrary(IntegerLibrary.Call);
 
   /// <summary>An operation of ECMA-262 that no framework has, which is its helper in every profile.</summary>
-  private static CSharpCapability Ecma(string name, IrIntrinsicOp operation, IrTypeKind[] operands, CSharpHelper helper, string? cast = null)
-    => CSharpCapability.OfOperation(name, null, operation, operands, null, new CSharpForm(null, cast), helper);
+  private static CSharpCapability Ecma(string name, IrIntrinsicOp operation, IrTypeKind[] operands, string helper)
+    => CSharpCapability.OfOperation(name, null, operation, operands, null).WithLibrary(helper);
 
   /// <summary>The saturating conversion to a type narrower than <c>int</c>, which no cast is in any profile.</summary>
-  private static CSharpCapability Narrow(string type, IrTypeKind target, string bounds)
-    => CSharpCapability.OfSaturation($"saturating cast to {type}", null, target, new CSharpForm(null, type, bounds), CSharpHelpers.Saturated);
+  private static CSharpCapability Narrow(string type, IrTypeKind target)
+    => CSharpCapability.OfSaturation($"saturating cast to {type}", null, target, "SaturateToInt32");
 
 }

@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Functions;
 
@@ -21,7 +22,7 @@ internal sealed class CSharpFunctionsEmissionTests {
        from profile in CSharpProfile.All
        select new TestCaseData(fixture.File, fixture.Class, profile.Name).SetName($"{fixture.File} for {profile.Name}");
 
-  private static string Emitted(IrModule module, string profile) => CSharpEmitter.Emit(module, CSharpProfile.Parse(profile))[0].Content;
+  private static string Emitted(IrModule module, string profile) => LegalizedCSharp.Emit(module, CSharpProfile.Parse(profile))[0].Content;
 
   private static string Compiled(IrModule module, string profile) {
     var text = Emitted(module, profile);
@@ -168,7 +169,7 @@ internal sealed class CSharpFunctionsEmissionTests {
   public void NoProfile_FindsAFunctionValueInexpressible() {
     foreach (var (file, _) in FunctionsFixtures.CSharp)
       foreach (var profile in CSharpProfile.All)
-        Assert.That(CSharpEmitter.Check(FunctionsFixtures.Imported(file), profile), Is.Empty, $"{file} for {profile.Name}");
+        Assert.That(LegalizedCSharp.Check(FunctionsFixtures.Imported(file), profile), Is.Empty, $"{file} for {profile.Name}");
   }
 
 }

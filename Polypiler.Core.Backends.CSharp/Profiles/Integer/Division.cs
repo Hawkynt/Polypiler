@@ -13,17 +13,7 @@ internal static partial class CSharpIntegerRows {
   /// compiler sees to be 0 traps at run time as well.
   /// </summary>
   private static IEnumerable<CSharpCapability> Division => [
-    .. _all.SelectMany(kind => (IEnumerable<CSharpCapability>)[
-      Divides(IrIntrinsicOp.DivFloor, kind, CSharpIntegerHelpers.FloorDivide, CSharpIntegerHelpers.DivideUnsigned),
-      Divides(IrIntrinsicOp.ModFloor, kind, CSharpIntegerHelpers.FloorModulo, CSharpIntegerHelpers.RemainderUnsigned),
-      Divides(IrIntrinsicOp.DivEuclid, kind, CSharpIntegerHelpers.EuclidDivide, CSharpIntegerHelpers.DivideUnsigned),
-      Divides(IrIntrinsicOp.ModEuclid, kind, CSharpIntegerHelpers.EuclidModulo, CSharpIntegerHelpers.RemainderUnsigned)
-    ])
+    .. _all.SelectMany(kind => new[] { IrIntrinsicOp.DivFloor, IrIntrinsicOp.ModFloor, IrIntrinsicOp.DivEuclid, IrIntrinsicOp.ModEuclid }.Select(op => Helped(op, kind)))
   ];
-
-  private static CSharpCapability Divides(IrIntrinsicOp op, IrTypeKind kind, CSharpHelper signed, CSharpHelper unsigned)
-    => IsSigned(kind)
-      ? Helped(op, kind, $"({Type(kind)}){{h}}({{0}}, {{1}}, {Type(kind)}.MinValue)", signed)
-      : Helped(op, kind, $"({Type(kind)}){{h}}({{0}}, {{1}})", unsigned);
 
 }

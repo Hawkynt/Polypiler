@@ -20,8 +20,8 @@ Feature: The complete integer and bit operation set
   Scenario: A byte swap is a library call where the library has it
     Given the C# method "public static uint F(uint x) => System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(x);"
     Then the "net10.0" output calls "BinaryPrimitives.ReverseEndianness"
-    And the "net2.0" output declares a private helper and names no "BinaryPrimitives"
-    And the "es5" output declares a helper
+    And the "net2.0" output inlines the helper ByteSwap32 and names no "BinaryPrimitives"
+    And the "es5" output inlines the helper ByteSwap32
     And all of them return 0x78563412 for F(0x12345678)
 
   Scenario: Rotating a 16-bit value by more than its width wraps the count

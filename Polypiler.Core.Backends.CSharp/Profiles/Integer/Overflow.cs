@@ -15,19 +15,19 @@ internal static partial class CSharpIntegerRows {
   private static IEnumerable<CSharpCapability> Overflow => [
     .. _all.SelectMany(kind => (kind, Width(kind) == 64) switch {
       (IrTypeKind.I64, _) => (IEnumerable<CSharpCapability>)[
-        Helped(IrIntrinsicOp.AddOverflows, kind, "{h}({0}, {1})", CSharpIntegerHelpers.AddOverflowsSigned64),
-        Helped(IrIntrinsicOp.SubOverflows, kind, "{h}({0}, {1})", CSharpIntegerHelpers.SubOverflowsSigned64),
-        Helped(IrIntrinsicOp.MulOverflows, kind, "{h}({0}, {1})", CSharpIntegerHelpers.MulOverflowsSigned64)
+        Helped(IrIntrinsicOp.AddOverflows, kind),
+        Helped(IrIntrinsicOp.SubOverflows, kind),
+        Helped(IrIntrinsicOp.MulOverflows, kind)
       ],
       (_, true) => [
-        Helped(IrIntrinsicOp.AddOverflows, kind, "{h}({0}, {1})", CSharpIntegerHelpers.AddOverflowsUnsigned64),
+        Helped(IrIntrinsicOp.AddOverflows, kind),
         Written(IrIntrinsicOp.SubOverflows, kind, "({0} < {1})"),
-        Helped(IrIntrinsicOp.MulOverflows, kind, "{h}({0}, {1})", CSharpIntegerHelpers.MulOverflowsUnsigned64)
+        Helped(IrIntrinsicOp.MulOverflows, kind)
       ],
       _ when IsSigned(kind) => [
-        Helped(IrIntrinsicOp.AddOverflows, kind, Outside(kind, "(long){0} + {1}"), CSharpIntegerHelpers.Outside),
-        Helped(IrIntrinsicOp.SubOverflows, kind, Outside(kind, "(long){0} - {1}"), CSharpIntegerHelpers.Outside),
-        Helped(IrIntrinsicOp.MulOverflows, kind, Outside(kind, "(long){0} * {1}"), CSharpIntegerHelpers.Outside)
+        Helped(IrIntrinsicOp.AddOverflows, kind),
+        Helped(IrIntrinsicOp.SubOverflows, kind),
+        Helped(IrIntrinsicOp.MulOverflows, kind)
       ],
       _ => [
         Written(IrIntrinsicOp.AddOverflows, kind, $"((ulong){{0}} + {{1}} > {Type(kind)}.MaxValue)"),
@@ -37,6 +37,5 @@ internal static partial class CSharpIntegerRows {
     })
   ];
 
-  private static string Outside(IrTypeKind kind, string exact) => $"{{h}}({exact}, {Type(kind)}.MinValue, {Type(kind)}.MaxValue)";
 
 }
