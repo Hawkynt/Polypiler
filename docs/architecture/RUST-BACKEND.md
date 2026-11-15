@@ -4,7 +4,7 @@
 [#458](https://github.com/Hawkynt/Polypiler/issues/458), [#459](https://github.com/Hawkynt/Polypiler/issues/459));
 arrays and slices, structs, enums, classes, interfaces and module state since
 [#460](https://github.com/Hawkynt/Polypiler/issues/460) and [#462](https://github.com/Hawkynt/Polypiler/issues/462);
-closures, collections, sequences and `Result` follow in phase 2. The runner that builds
+closures and function values since phase 2; collections, sequences and `Result` follow. The runner that builds
 and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/468).
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
@@ -109,6 +109,13 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | a generic method or class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
 | a global (static field) | `static NAME: AtomicI32 = AtomicI32::new(0);` read and written with `Ordering::Relaxed`, `++` as `fetch_add` - process-wide as .NET's static fields are |
 | a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it; `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32` |
+| a function type `fn(A, B) -> R` | `Rc<dyn Fn(A, B) -> R>`; `Option<Rc<dyn Fn(A, B) -> R>>` for a signature the module writes `null` of or makes an array of; see [Function values](#function-values) |
+| a lambda | `Rc::new(move \|a: A, b: B\| body)`, what it captures bound first in a block around it (`{ let f = Rc::clone(&f); move \|v: i32\| f(v) }`), `move` only where it captures |
+| a local function that captures nothing but such functions | a `fn` at the start of the function's body, called by its name, recursion included; `Rc::new(f)` where it is a value |
+| a variable a closure captures and someone assigns after its declaration | `let c = Rc::new(Cell::new(0i32));`, read `c.get()`, written `c.set(v)`, the closure's own `Rc::clone(&c)` |
+| `f(a, b)` of a function value | `f(a, b)`; `ply_non_null(&f)(a, b)` of a nullable one, the arguments bound first where they are more than variables and constants |
+| a method group, a bound method | `Rc::new(square)`, `Rc::new(Name::twice)`; `{ let receiver = s.clone().expect("NullReference"); Rc::new(move \|v1: i32\| receiver.apply(v1)) }`, the object evaluated when the value is made |
+| `f == null`, `f != null` | `f.is_none()`, `f.is_some()`; `false`, `true` of a type that never holds null |
 
 ## Objects
 
@@ -137,6 +144,30 @@ trait `PlyObject` every trait extends: `is_t(&self)` and `into_t(self: Rc<Self>)
 the module tests for or converts to, each struct answering for itself - no `Any`, no trait upcasting,
 which Rust 1.85 has not.
 
+## Function values
+
+A function value is shared: two variables, an array element and a closure may all hold one, so its
+form is an `Rc<dyn Fn(..)>`, cloned where a place takes it (`Rc::clone(&f)`, `f.clone()` of an
+`Option`), passed and returned by value. Its signature decides whether it may be `null`: the module
+writes `null` of a function type or makes an array of it, whose elements start as `null`, and every
+value of that type is then an `Option`, called through `ply_non_null`.
+
+A closure captures variables, not values (`IrLambda`). The backend sorts the variables the closures of
+a function capture:
+
+- a variable assigned after its declaration - by the function, by a closure, by a step, a loop's
+  counter - is one place: `Rc<Cell<T>>`, the function and every closure holding the same `Rc`. Only a
+  value (a number, a truth value, an enum, a struct of numbers) is shared so; another type assigned
+  and captured is refused;
+- every other variable has one value from its declaration on, which the closure copies: a value by
+  `move`, a function value or an object by cloning its `Rc`, an array or a string nothing writes by a
+  copy of its own (an array that is written and captured is refused). A variable declared in a loop's
+  body is a new one each pass, as `let` in Rust is;
+- a local function that captures nothing but such functions is a `fn` item at the start of the body.
+
+A closure is `'static`: it borrows nothing, so it may be stored and returned. The object of a method
+(`self`), which a closure would borrow, is refused as a capture.
+
 A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, `DivideByZero`,
 `ArgumentOutOfRange`, … - in every build mode; the verification reads it back with `RustTraps`
 ([exceptions](../reference/exceptions.md#rust)).
@@ -145,7 +176,9 @@ A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, 
 
 What the backend does not write yet is refused with `PLY1550`, naming the construct: pointers,
 memory, a view cast to another element type or made on the stack, optional values (`the type i32?`),
-closures (`Lambda`, `Invoke`), collections and sequences (`Collection`, `Yield`), `using`, a global
+a function value that takes or gives more than values and other function values, two function values
+compared with each other, a closure that captures the object of a method, an array it captures that is
+written, or a variable other than a value that is assigned, collections and sequences (`Collection`, `Yield`), `using`, a global
 that is no integer or truth value (`a global of the type u32[]`), a record with a floating-point field,
 a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
 array in one written variable), a struct with a field that is no value. One array passed to a call
@@ -160,7 +193,8 @@ whose Rust names are the same are `PLY1574`; an exception handler `PLY1560`.
 `clippy::almost_swapped` (the source's `let a = b; b = a;`), `clippy::empty_loop`, `clippy::eq_op`, `clippy::erasing_op`, `clippy::identity_op`,
 `clippy::manual_clamp` and `clippy::min_max` (a minimum and a maximum whose bounds may be out of
 order, where `clamp` would panic), `clippy::manual_range_contains`, `clippy::neg_cmp_op_on_partial_ord`
-and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `clippy::too_many_arguments`.
+and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `clippy::too_many_arguments`,
+`clippy::type_complexity` (a function value that takes or gives another one, a type the source named in one word).
 No group is ever allowed. Every other lint is avoided by the shape the backend writes.
 
 ## Verification
@@ -171,14 +205,14 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`: arrays, ownership and aliasing, structs, classes, traits and module state, their forms and refusals.
+- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state and function values, their forms and refusals.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
   interpreter's.
 - `RustFamilyDifferentialTests` (layer `rust`): the fixtures of the families the backend writes - bits,
-  records, strings, enums, numbers as text, classes, dispatch, generics, the floating-point view of
-  bytes - against .NET in both overflow modes.
+  records, strings, enums, numbers as text, classes, dispatch, generics, function values and closures,
+  the floating-point view of bytes - against .NET in both overflow modes.
 - `RustRoundTripTests` (layer `rust`): every Rust fixture, imported by the Rust frontend in each
   overflow mode, comes back as a crate that is built with overflow checks on and off; every outcome is
   what rustc recorded for the original in the mode of the import.

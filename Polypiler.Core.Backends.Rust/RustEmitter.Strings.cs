@@ -23,7 +23,7 @@ public static partial class RustEmitter {
 
     /// <summary>Whether a string expression is a parameter the function borrows.</summary>
     private bool IsBorrowedString(IrExpr expression)
-      => expression is IrLocalRef { Local: var local } && this._function.Parameters.Contains(local) && !this._ownedStringParameters.Contains(local);
+      => expression is IrLocalRef { Local: var local } && this._function.Parameters.Contains(local) && !this._ownedStringParameters.Contains(local) && !this._owned.Contains(local);
 
     /// <summary>A helper of the string representation the crate carries, with the helpers it calls; its name.</summary>
     private string StringHelper(string name) {

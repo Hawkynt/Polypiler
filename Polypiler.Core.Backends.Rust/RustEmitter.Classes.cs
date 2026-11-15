@@ -142,7 +142,7 @@ public static partial class RustEmitter {
     }
 
     /// <summary>Whether a variable of a class type holds the object as a reference to an <c>Rc</c>: a parameter that is not null and not assigned.</summary>
-    private bool IsObjectReference(IrLocal local) => this._function.Parameters.Contains(local) && !this.MayBeNull(local) && !this._reassigned.Contains(local) && !this.IsPolymorphic(local.Type);
+    private bool IsObjectReference(IrLocal local) => !this._owned.Contains(local) && this._function.Parameters.Contains(local) && !this.MayBeNull(local) && !this._reassigned.Contains(local) && !this.IsPolymorphic(local.Type);
 
     /// <summary>The type of a parameter of a class type: <c>&amp;Rc&lt;T&gt;</c>, or <c>Option&lt;Rc&lt;T&gt;&gt;</c> where it may be null.</summary>
     private string ObjectParameterType(IrLocal parameter)

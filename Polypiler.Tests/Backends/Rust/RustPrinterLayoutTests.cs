@@ -45,6 +45,30 @@ public sealed class RustPrinterLayoutTests {
   }
 
   [Test]
+  public void Closure_KeepsABodyOnItsLine_ElseBreaksItAsRustfmtDoes() {
+    var wide = Enumerable.Range(0, 12).Select(index => (RsExpression)P("value_" + index)).Aggregate((left, right) => new RsBinary(left, "+", right));
+    var text = Body(
+      new RsLet("a", false, null, new RsClosure(false, [new RsParameter("v", "i32")], P("v"))),
+      new RsLet("b", false, null, new RsClosure(true, [], wide)),
+      new RsLet("c", false, null, new RsClosure(true, [], new RsMatch(P("v"), [new RsMatchArm(["_"], wide)]))),
+      new RsLet("d", false, null, new RsClosure(true, [], Block())),
+      new RsItemStatement(new RsFunction("g", "", [], null, RsBlock.Empty)));
+    Assert.That(text, Does.Contain("    let a = |v: i32| v;\n"));
+    Assert.That(text, Does.Contain("    let b = move || {\n        value_0\n            + value_1"));
+    Assert.That(text, Does.Contain("    let c = move || match v {\n"));
+    Assert.That(text, Does.Contain("    let d = move || {\n        let z = 1;\n        z\n    };\n"));
+    Assert.That(text, Does.Contain("    fn g() {}\n}"));
+  }
+
+  [Test]
+  public void CallOfACallOverSeveralLines_TakesItsArgumentsOnTheLastLine() {
+    var callee = new RsCall(P("compose"), [new RsCall(P("Rc::new"), [new RsClosure(false, [new RsParameter("v", "i32")], new RsMethodCall(P("v"), "wrapping_add", [L("1")]))]),
+      new RsCall(P("Rc::new"), [new RsClosure(false, [new RsParameter("v", "i32")], new RsMethodCall(P("v"), "wrapping_mul", [L("3")]))])]);
+    Assert.That(Body(new RsExpressionStatement(new RsCall(callee, [P("x")]))), Is.EqualTo(
+      "fn f() {\n    compose(\n        Rc::new(|v: i32| v.wrapping_add(1)),\n        Rc::new(|v: i32| v.wrapping_mul(3)),\n    )(x);\n}\n"));
+  }
+
+  [Test]
   public void ExpressionThatCannotBeFlat_IsBrokenAlsoAlone()
     => Assert.That(RustPrinter.Print(Block()), Is.EqualTo("{\n    let z = 1;\n    z\n}"));
 

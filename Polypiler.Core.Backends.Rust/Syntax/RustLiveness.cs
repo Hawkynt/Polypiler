@@ -104,6 +104,9 @@ public sealed class RustLiveness {
         return result.Value is null ? [] : this.Expression(result.Value, []);
       case RsMacro { Name: "panic" or "unreachable" } macro:
         return macro.Arguments.Reverse().Aggregate(new HashSet<string>(StringComparer.Ordinal), (after, argument) => this.Expression(argument, after));
+      case RsClosure closure:
+        // A closure reads what it names whenever it is called: every name in it counts as read where it is made.
+        return Union(live, new HashSet<string>(RustSyntaxRewriter.DescendantsAndSelf(closure.Body).OfType<RsPath>().Select(path => path.Name), StringComparer.Ordinal));
       default:
         // Operands are evaluated left to right, so the analysis walks them from the right.
         return RustSyntaxRewriter.Children(expression).OfType<RsExpression>().Reverse().Aggregate(live, (after, child) => this.Expression(child, after));

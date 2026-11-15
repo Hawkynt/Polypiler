@@ -344,7 +344,7 @@ public static class RustSyntaxReader {
       var generics = this.Is("<");
       while (true) {
         var token = this.Peek();
-        if (depth == 0 && (token.Text is "," or ")" or "=" or "{" or ";" or ">" && token.Kind == Kind.Punctuation || beforeFor && token.Text == "for"))
+        if (depth == 0 && (token.Text is "," or ")" or "=" or "{" or ";" or ">" or "|" && token.Kind == Kind.Punctuation || beforeFor && token.Text == "for"))
           return text.ToString();
 
         depth += token.Text switch { "[" or "(" or "<" => 1, "]" or ")" or ">" => -1, ">>" => -2, _ => 0 };
@@ -378,6 +378,11 @@ public static class RustSyntaxReader {
             value = this.Expression();
           this.Expect(";");
           statements.Add(new RsLet(name, mutable, type, value));
+          continue;
+        }
+
+        if (this.Accept("fn")) {
+          statements.Add(new RsItemStatement(this.Function("")));
           continue;
         }
 
@@ -491,7 +496,7 @@ public static class RustSyntaxReader {
         if (this.Accept(".")) {
           var name = this.Peek().Kind == Kind.Number ? this.Next().Text : this.Identifier();
           expression = this.Is("(") ? new RsMethodCall(expression, name, this.Arguments(")")) : new RsField(expression, name);
-        } else if (this.Is("(") && expression is RsPath) {
+        } else if (this.Is("(") && expression is RsPath or RsCall or RsIndex or RsParenthesized) {
           expression = new RsCall(expression, this.Arguments(")"));
         } else if (this.Is("[")) {
           this.Expect("[");
@@ -537,6 +542,8 @@ public static class RustSyntaxReader {
         return new RsParenthesized(inner);
       }
 
+      if (this.Is("move") || this.Is("|") || this.Is("||"))
+        return this.Closure();
       if (this.Is("["))
         return this.Array();
       if (this.Is("{"))
@@ -614,6 +621,23 @@ public static class RustSyntaxReader {
       }
 
       throw new FormatException($"Unexpected '{token.Text}'.");
+    }
+
+    /// <summary><c>move |a: T, b: U| body</c>: a closure with typed parameters, its body an expression or a block.</summary>
+    private RsClosure Closure() {
+      var move = this.Accept("move");
+      var parameters = new List<RsParameter>();
+      if (!this.Accept("||")) {
+        this.Expect("|");
+        while (!this.Accept("|")) {
+          var name = this.Identifier();
+          this.Expect(":");
+          parameters.Add(new RsParameter(name, this.TypeText()));
+          this.Accept(",");
+        }
+      }
+
+      return new RsClosure(move, parameters, this.Expression());
     }
 
     /// <summary><c>[a, b, c]</c>, or <c>[value; count]</c>.</summary>

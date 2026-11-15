@@ -33,7 +33,7 @@ public static partial class RustEmitter {
       => facts.Result == ArrayHolder.Borrowed && facts.ResultParameters.All(facts.MutableParameters.Contains);
 
     /// <summary>The Rust type of the elements of an array type; refused for any but a scalar.</summary>
-    private string ElementType(IrType array) => array.Element is { } element && (TypeName(element) is not null || element.IsStruct || element.IsEnum || element.IsString) ? this.Type(element) : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
+    private string ElementType(IrType array) => array.Element is { } element && (TypeName(element) is not null || element.IsStruct || element.IsEnum || element.IsString || element.IsFunction) ? this.Type(element) : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
 
     /// <summary>The lifetime the result of a function borrows with, where Rust cannot elide it: <c>'a</c>, or empty.</summary>
     private static string Lifetime(IrFunction function, FunctionArrays facts)
@@ -91,7 +91,7 @@ public static partial class RustEmitter {
 
     /// <summary>Whether an array variable is a reference already: a parameter, or a local that borrows.</summary>
     private bool IsReference(IrLocal local)
-      => this._arrayParameters.TryGetValue(local, out var position) ? !(this._reassigned.Contains(local) && this._arrayFacts.CopiedParameters.Contains(position))
+      => !this._owned.Contains(local) && this._arrayParameters.TryGetValue(local, out var position) ? !(this._reassigned.Contains(local) && this._arrayFacts.CopiedParameters.Contains(position))
         : this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Borrowed;
 
     /// <summary>The value a local of an array type is given: the vector itself, or a borrow.</summary>
@@ -207,7 +207,8 @@ public static partial class RustEmitter {
     }
 
     /// <summary>The zero of an element type: <c>0</c>, <c>0.0</c>, <c>false</c>.</summary>
-    private RsExpression Zero(IrType element) => element.IsStruct || element.IsEnum
+    private RsExpression Zero(IrType element) => element.IsFunction ? new RsPath("None")
+      : element.IsStruct || element.IsEnum
       ? new RsCall(new RsPath(this.Type(element) + "::default"), []) { Type = element }
       : TypeName(element) is null ? this.Refuse($"an array of {element}") : Literal(new IrConst(element, 0)) with { Type = null };
 
@@ -307,7 +308,7 @@ public static partial class RustEmitter {
     }
 
     /// <summary>The value an element of an array is given: a string as a vector of its own.</summary>
-    private RsExpression ElementValue(IrExpr value) => value.Type.IsString ? this.StringValue(value) : this.Expression(value);
+    private RsExpression ElementValue(IrExpr value) => value.Type.IsString ? this.StringValue(value) : this.Argument(value);
 
     /// <summary>Whether two expressions are the same variable, table or constant.</summary>
     private static bool Same(IrExpr first, IrExpr second) => (first, second) switch {
@@ -451,7 +452,7 @@ public static partial class RustEmitter {
     /// <summary>The arguments of a call: an array borrowed as the callee's parameter takes it, refused where one array is passed twice and written.</summary>
     private IReadOnlyList<RsExpression> Arguments(IrCall call) {
       if (!this._arrays.TryGetValue(call.Function, out var callee))
-        return [.. call.Arguments.Select((argument, index) => argument.Type.IsObject ? this.ObjectArgument(call.Function, index, argument) : this.Expression(argument))];
+        return [.. call.Arguments.Select((argument, index) => argument.Type.IsObject ? this.ObjectArgument(call.Function, index, argument) : this.Argument(argument))];
 
       var arguments = new List<RsExpression>();
       for (var index = 0; index < call.Arguments.Count; ++index) {
@@ -467,7 +468,7 @@ public static partial class RustEmitter {
         }
 
         if (!argument.Type.IsArray && !argument.Type.IsString) {
-          arguments.Add(this.Expression(argument));
+          arguments.Add(this.Argument(argument));
           continue;
         }
 

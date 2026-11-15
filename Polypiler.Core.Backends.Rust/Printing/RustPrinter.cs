@@ -207,8 +207,16 @@ public static class RustPrinter {
     // rustfmt gives the operands of a returned binary operator one column less than the line has.
     RsExpressionStatement { Expression: RsReturn { Value: RsBinary } expression } => Expression(expression, indent, indent, 2) + ";",
     RsExpressionStatement { Expression: var expression } => Expression(expression, indent, indent, 1) + ";",
+    RsItemStatement { Item: var item } => NestedItem(item, indent),
     _ => throw new ArgumentException($"There is no Rust statement '{statement.GetType().Name}'.", nameof(statement))
   };
+
+  /// <summary>An item among the statements of a block, without the indentation of its first line and the line break after its last.</summary>
+  private static string NestedItem(RsItem item, int indent) {
+    var text = new StringBuilder();
+    Item(text, item, indent);
+    return text.ToString(indent, text.Length - indent - 1);
+  }
 
   private static string Let(RsLet binding, int indent) {
     var head = $"let {(binding.Mutable ? "mut " : "")}{binding.Name}{(binding.TypeName is null ? "" : ": " + binding.TypeName)}";
@@ -345,6 +353,8 @@ public static class RustPrinter {
       }
       case RsBlockExpression { Block: { Statements.Count: 0, Tail: null } }:
         return "{}";
+      case RsClosure { Body: not RsBlockExpression } closure:
+        return Flat(closure.Body) is { } closureBody ? ClosureHead(closure) + closureBody : null;
       case RsLoop { Body: { Statements.Count: 0, Tail: null } } loop:
         return Label(loop.Label) + "loop {}";
       default:
@@ -448,6 +458,10 @@ public static class RustPrinter {
     switch (expression) {
       case RsCall call: {
         var callee = Expression(call.Callee, indent, column);
+        // A callee over several lines, the call of a call's result: the arguments go on from its last line where they fit there.
+        if (callee.Contains('\n') && Arguments(call.Arguments) is { } after && callee.Length - callee.LastIndexOf('\n') - 1 + after.Length + 2 + trailing <= MaxWidth)
+          return callee + "(" + after + ")";
+
         return callee + "(" + (Overflowed(call.Arguments, indent, column + callee.Length + 1) ?? VerticalArguments(call.Arguments, indent)) + ")";
       }
       case RsMacro { Bracketed: true } macro:
@@ -580,6 +594,8 @@ public static class RustPrinter {
       }
       case RsIf choice:
         return If(choice, indent, column);
+      case RsClosure closure:
+        return Closure(closure, indent, column, trailing);
       case RsWhile loop:
         return $"{Label(loop.Label)}while {Condition(loop.Condition, indent, column + Label(loop.Label).Length + 6)}{Block(loop.Body, indent)}";
       case RsLoop loop:
@@ -607,6 +623,36 @@ public static class RustPrinter {
         return Flat(expression) ?? throw new ArgumentException($"There is no Rust expression '{expression.GetType().Name}'.", nameof(expression));
     }
   }
+
+  /// <summary><c>move |a: T, b: U| </c>: what a closure starts with, its parameters typed.</summary>
+  private static string ClosureHead(RsClosure closure)
+    => (closure.Move ? "move " : "") + "|" + string.Join(", ", closure.Parameters.Select(Parameter)) + "| ";
+
+  /// <summary>
+  /// A closure over several lines (rustfmt's <c>rewrite_closure</c>): a block body as a block; an
+  /// expression body that would take several lines stays bare only where it ends in a block itself
+  /// (a <c>match</c>, a block, a loop, a struct), any other is put in a block of its own.
+  /// </summary>
+  private static string Closure(RsClosure closure, int indent, int column, int trailing) {
+    var head = ClosureHead(closure);
+    if (closure.Body is RsBlockExpression { Block: var block })
+      return head + Block(block, indent);
+
+    var body = Expression(closure.Body, indent, column + head.Length, trailing);
+    if (!body.Contains('\n') || MultiLineBody(closure.Body))
+      return head + body;
+
+    return head + Block(new RsBlock([], closure.Body), indent);
+  }
+
+  /// <summary>Whether the body of a closure may take several lines without a block of its own (rustfmt's <c>allow_multi_line</c>).</summary>
+  private static bool MultiLineBody(RsExpression body) => body switch {
+    RsMatch or RsBlockExpression or RsLoop or RsLabeledBlock or RsStructLiteral => true,
+    RsReference reference => MultiLineBody(reference.Operand),
+    RsUnary unary => MultiLineBody(unary.Operand),
+    RsCast cast => MultiLineBody(cast.Operand),
+    _ => false
+  };
 
   /// <summary>An <c>if</c> over several lines; an <c>else</c> that is another <c>if</c> follows as <c>else if</c>.</summary>
   private static string If(RsIf choice, int indent, int column) {
@@ -675,7 +721,7 @@ public static class RustPrinter {
   /// prefix operator, a borrow or a cast as its operand may.
   /// </summary>
   private static bool Overflows(RsExpression last, int count) => last switch {
-    RsIf or RsMatch or RsWhile or RsLoop or RsFor or RsLabeledBlock or RsBlockExpression => true,
+    RsIf or RsMatch or RsWhile or RsLoop or RsFor or RsLabeledBlock or RsBlockExpression or RsClosure => true,
     RsCall or RsMacro or RsArray => count == 1,
     RsUnary unary => Overflows(unary.Operand, count),
     RsReference reference => Overflows(reference.Operand, count),

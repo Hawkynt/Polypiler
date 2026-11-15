@@ -30,7 +30,7 @@ public static partial class RustEmitter {
     public static IReadOnlyList<string> Closed { get; } = [
       "unused_assignments", "unused_comparisons", "clippy::absurd_extreme_comparisons", "clippy::almost_swapped", "clippy::approx_constant", "clippy::empty_loop",
       "clippy::eq_op", "clippy::erasing_op", "clippy::identity_op", "clippy::manual_clamp", "clippy::manual_range_contains", "clippy::min_max",
-      "clippy::neg_cmp_op_on_partial_ord", "clippy::nonminimal_bool", "clippy::too_many_arguments"
+      "clippy::neg_cmp_op_on_partial_ord", "clippy::nonminimal_bool", "clippy::too_many_arguments", "clippy::type_complexity"
     ];
 
     /// <summary>The well-known constants of <c>std::f64::consts</c> clippy compares literals with.</summary>
@@ -65,9 +65,17 @@ public static partial class RustEmitter {
             && target.Name == source.Name && value.Name == binding.Name):
             needed.Add("clippy::almost_swapped");
             break;
+          case RsLet { TypeName: { } type } when IsComplex(type):
+            needed.Add("clippy::type_complexity");
+            break;
+          case RsClosure closure when closure.Parameters.Any(parameter => IsComplex(parameter.TypeName)):
+            needed.Add("clippy::type_complexity");
+            break;
           case RsFunction function:
             if (function.Parameters.Count > 7)
               needed.Add("clippy::too_many_arguments");
+            if (function.Parameters.Any(parameter => IsComplex(parameter.TypeName)) || function.Returns is { } returns && IsComplex(returns))
+              needed.Add("clippy::type_complexity");
             if (RustLiveness.DeadStores(function).Count > 0)
               needed.Add("unused_assignments");
             break;
@@ -107,6 +115,12 @@ public static partial class RustEmitter {
         if (operands.Overlaps(new[] { second.Left, second.Right }.Select(RustPrinter.Print)))
           needed.Add("clippy::manual_range_contains");
       }
+    }
+
+    /// <summary>Whether a type is a function value that takes or gives another one, <c>Rc&lt;dyn Fn() -&gt; Rc&lt;dyn Fn() -&gt; i32&gt;&gt;</c>, which the source spelled as one name and clippy finds too complex.</summary>
+    private static bool IsComplex(string type) {
+      var first = type.IndexOf("dyn Fn", StringComparison.Ordinal);
+      return first >= 0 && type.IndexOf("dyn Fn", first + 1, StringComparison.Ordinal) > first;
     }
 
     /// <summary>Whether a literal is close to a well-known constant: within a ten-thousandth, with four digits or more.</summary>

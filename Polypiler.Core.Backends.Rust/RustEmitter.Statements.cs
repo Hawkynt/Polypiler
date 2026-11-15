@@ -42,6 +42,22 @@ public static partial class RustEmitter {
           this.Statements(block.Statements, into);
           return into.Count > before && Diverges(into[^1]);
         }
+        case IrDeclare declare when this._nested.ContainsKey(declare.Local):
+          return false;
+        case IrAssign assign when this._nested.ContainsKey(assign.Local):
+          return false;
+        case IrDeclare declare when this._shared.Contains(declare.Local):
+          into.Add(this.SharedDeclaration(declare.Local, declare.Initializer is null ? null : this.Expression(declare.Initializer)));
+          return false;
+        case IrAssign assign when this._shared.Contains(assign.Local):
+          into.Add(new RsExpressionStatement(this.SharedWrite(assign.Local, this.Expression(assign.Value))));
+          return false;
+        case IrExprStmt { Expression: IrStep { Target: IrLocalRef { Local: var stepped } } step } when this._shared.Contains(stepped):
+          into.Add(new RsExpressionStatement(this.SharedStep(stepped, step, true)));
+          return false;
+        case IrReturn result when this._closureResults.Count > 0:
+          into.Add(new RsExpressionStatement(new RsReturn(result.Value is null ? null : this.Argument(result.Value))));
+          return true;
         case IrDeclare declare:
           into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local), this.LocalType(declare.Local),
             declare.Initializer switch {
@@ -50,6 +66,7 @@ public static partial class RustEmitter {
               var value when declare.Local.Type.IsString => this.StringValue(value),
               var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
               var value when declare.Local.Type.IsView => this.ViewSource(value, this.WritesView(declare.Local)),
+              var value when declare.Local.Type.IsFunction => this.FunctionValue(value),
               var value => this.Expression(value)
             }));
           return false;
@@ -112,6 +129,7 @@ public static partial class RustEmitter {
             { Type.IsArray: true } value => this.ArrayResult(this._function, value),
             { Type.IsString: true } value => this.StringValue(value, true),
             { Type.IsObject: true } value => this.ObjectValue(value, this._nullness.ReturnsNull(this._function.Name)),
+            { Type.IsFunction: true } value => this.FunctionValue(value),
             var value => this.Expression(value)
           })));
           return true;
@@ -147,6 +165,8 @@ public static partial class RustEmitter {
         return new RsAssign(place, "=", this.StringValue(value));
       if (local.Type.IsObject)
         return new RsAssign(place, "=", this.ObjectValue(value, this.MayBeNull(local)));
+      if (local.Type.IsFunction)
+        return new RsAssign(place, "=", this.FunctionValue(value));
       if (value is IrBinary { Left: IrLocalRef self } binary && self.Local == local && Compound(binary) is { } op)
         return new RsAssign(place, op + "=", this.Operand(this.Expression(binary.Right), 2));
       if (value is IrBinary { Right: IrLocalRef other } swapped && other.Local == local && Compound(swapped) is { } bitwise && bitwise is "&" or "|" or "^")
@@ -400,7 +420,7 @@ public static partial class RustEmitter {
           return null;
       }
 
-      if (condition is not IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } || counter.Local != declare.Local || !counter.Type.IsInteger)
+      if (condition is not IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } || counter.Local != declare.Local || !counter.Type.IsInteger || this._shared.Contains(counter.Local))
         return null;
 
       var stepsByOne = step switch {
@@ -460,7 +480,7 @@ public static partial class RustEmitter {
         return null;
 
       string element;
-      if (body.Count > 0 && body[0] is IrDeclare { Initializer: IrArrayLoad { Index: IrLocalRef first } } named && first.Local == counter && named.Local.Type == array.Type.Element && !Assigns(body, named.Local)) {
+      if (body.Count > 0 && body[0] is IrDeclare { Initializer: IrArrayLoad { Index: IrLocalRef first } } named && first.Local == counter && named.Local.Type == array.Type.Element && !Assigns(body, named.Local) && !this._shared.Contains(named.Local)) {
         element = this._locals[named.Local];
         body = body.Skip(1).ToList();
       } else {

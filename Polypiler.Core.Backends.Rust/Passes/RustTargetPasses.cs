@@ -101,8 +101,10 @@ public sealed class RustHelperInlining : ITargetPass<RustCrate, RustProfile> {
   }
 
   private static RsFunction Inline(RsFunction function, Dictionary<string, (RsFunction Function, RsExpression Body)> helpers, Action<string> applied) {
-    var locals = RustSyntaxRewriter.DescendantsAndSelf(function).OfType<RsLet>().Select(binding => binding.Name)
-      .Concat(function.Parameters.Select(parameter => parameter.Name)).ToHashSet(StringComparer.Ordinal);
+    var nodes = RustSyntaxRewriter.DescendantsAndSelf(function).ToList();
+    var locals = nodes.OfType<RsLet>().Select(binding => binding.Name)
+      .Concat(nodes.OfType<RsFunction>().SelectMany(inner => inner.Parameters).Concat(nodes.OfType<RsClosure>().SelectMany(closure => closure.Parameters)).Select(parameter => parameter.Name))
+      .ToHashSet(StringComparer.Ordinal);
     return RustSyntaxRewriter.Rewrite(function, node => {
       if (node is not RsCall { Callee: RsPath { Name: var name } } call || !helpers.TryGetValue(name, out var helper) || Substituted(helper.Function, helper.Body, call, locals) is not { } inlined)
         return node;

@@ -54,6 +54,7 @@ public static partial class RustEmitter {
       this.NameTypes(module);
       this.NameGlobals(module);
       this.Classes(module);
+      this.Signatures(module);
       this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
       var items = new List<RsItem>();
@@ -170,6 +171,7 @@ public static partial class RustEmitter {
       => TypeName(type) ?? (type.IsString ? OwnedString
         : type.Declaration is IrStructType or IrEnumType && this._types.TryGetValue(type.Declaration, out var name) ? name
         : type.IsObject ? this.ObjectType(type, false)
+        : type.IsFunction ? this.FunctionType(type)
         : ((RsPath)this.Refuse($"the type {type}")).Name);
 
     /// <summary>What kind of type a declaration is, as a refusal names it.</summary>

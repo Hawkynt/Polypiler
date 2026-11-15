@@ -48,6 +48,8 @@ public static class RustSyntaxRewriter {
     RsConst constant => [constant.Value],
     RsInlineModule module => module.Items,
     RsFile file => file.Items,
+    RsClosure closure => [closure.Body],
+    RsItemStatement statement => [statement.Item],
     _ => []
   };
 
@@ -124,6 +126,8 @@ public static class RustSyntaxRewriter {
       RsFunction function => function with { Body = Next<RsBlock>() },
       RsConst constant => constant with { Value = Next<RsExpression>() },
       RsInlineModule module => module with { Items = Many<RsItem>(module.Items.Count) },
+      RsClosure closure => closure with { Body = Next<RsExpression>() },
+      RsItemStatement statement => statement with { Item = Next<RsItem>() },
       _ => ((RsFile)node) with { Items = Many<RsItem>(((RsFile)node).Items.Count) }
     };
   }

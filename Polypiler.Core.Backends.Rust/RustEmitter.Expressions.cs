@@ -99,7 +99,16 @@ public static partial class RustEmitter {
       IrStrConst or IrConstRef { Type.IsString: true } or IrConditional { Type.IsString: true } => this.StringValue(expression),
       IrArrayLoad { Array: IrConstRef table, Type.IsString: true } load => this.TableText(table, load.Index),
       IrIntrinsic operation when StringOperations.IsString(operation.Op) => this.StringOperation(operation),
+      IrLocalRef reference when this._shared.Contains(reference.Local) => this.SharedRead(reference.Local),
+      IrLocalRef { Type.IsFunction: true } reference when this._nested.ContainsKey(reference.Local) => this.FunctionValue(reference),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
+      IrLambda lambda => this.Closure(lambda),
+      IrInvoke invoke => this.Invoke(invoke),
+      IrFunctionRef reference => this.FunctionReference(reference),
+      IrBoundMethod bound => this.BoundMethod(bound),
+      IrNull { Type.IsFunction: true } => new RsPath("None") { Type = expression.Type },
+      IrReferenceEquals equality when equality.Left.Type.IsFunction || equality.Right.Type.IsFunction => this.FunctionEquals(equality.Left, equality.Right),
+      IrIsNull test when test.Value.Type.IsFunction => this.FunctionIsNull(test.Value),
       IrConstRef constant when !constant.Type.IsArray && this._constants.TryGetValue(constant.Constant.Name, out var name) => new RsPath(name) { Type = constant.Type },
       IrUnary unary => this.Unary(unary),
       IrBinary binary => this.Binary(binary),
@@ -108,6 +117,7 @@ public static partial class RustEmitter {
       IrCall call when this._members.TryGetValue(call.Function, out var member) => this.MemberCall(call, member),
       IrCall call when this._functions.TryGetValue(call.Function, out var callee)
         => new RsCall(new RsPath(callee), this.Arguments(call)) { Type = call.Type },
+      IrStep { Target: IrLocalRef target } step when this._shared.Contains(target.Local) => this.SharedStep(target.Local, step, false),
       IrStep { Target: IrLocalRef target } step => this.StepExpression(target, step),
       IrStep { Target: IrGlobalRef global } step when Atomic(global.Type) is not null => this.GlobalStep(step, global),
       IrStep { Target: IrArrayLoad load } step => this.ElementStep(load, step, false),
@@ -218,6 +228,8 @@ public static partial class RustEmitter {
           return Literal(new IrConst(IrType.Bool, constant.Value == 0 ? 1 : 0));
         case IrTypeTest test when test.Value.Type.IsAssignableTo(test.Target) && this.MayBeNull(test.Value):
           return this.IsNull(test.Value);
+        case IrReferenceEquals equality when (equality.Left is IrNull || equality.Right is IrNull) && (equality.Left.Type.IsFunction || equality.Right.Type.IsFunction):
+          return this.FunctionIsSome(equality.Left is IrNull ? equality.Right : equality.Left);
         case IrBinary { Op: IrBinaryOp.Equal or IrBinaryOp.NotEqual } equality:
           return this.Binary(equality with { Op = equality.Op == IrBinaryOp.Equal ? IrBinaryOp.NotEqual : IrBinaryOp.Equal });
         case IrBinary { Op: >= IrBinaryOp.Less and <= IrBinaryOp.GreaterOrEqual } order when !order.Left.Type.IsFloat:

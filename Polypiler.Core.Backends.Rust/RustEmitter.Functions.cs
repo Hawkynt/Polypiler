@@ -92,6 +92,9 @@ public static partial class RustEmitter {
           : new RsPath(this._locals[parameter])));
       }
 
+      foreach (var parameter in function.Parameters.Where(this._shared.Contains))
+        statements.Add(this.SharedDeclaration(parameter, new RsPath(this._locals[parameter]) { Type = parameter.Type }));
+      statements.AddRange(this.NestedFunctions());
       this.Statements(function.Body.Statements, statements);
       var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void);
       return new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) { Generics = generics.Length > 0 ? generics : Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
@@ -123,6 +126,22 @@ public static partial class RustEmitter {
         if (binding.Count > 1 || binding.Looped)
           this._reassigned.Add(parameter);
 
+      // The bodies of the lambdas, whose own bindings need mut as a function's do.
+      this._lambdaReassigned = [];
+      foreach (var lambda in Lambdas(function.Body)) {
+        var lambdaParameters = lambda.Parameters.ToDictionary(parameter => parameter, _ => new Binding(null, 0) { Count = 1 });
+        foreach (var (parameter, binding) in lambdaParameters)
+          bindings[parameter] = binding;
+
+        this.Count(lambda.Body.Statements, bindings, 0);
+        foreach (var (parameter, binding) in lambdaParameters)
+          if (binding.Count > 1 || binding.Looped)
+            this._lambdaReassigned.Add(parameter);
+      }
+
+      this.Closures(function);
+      this._reassigned.ExceptWith(this._shared);
+
       this._ownedStringParameters = [.. this._reassigned.Where(parameter => parameter.Type.IsString)];
       this._fieldWritten = FieldWrites(function);
       foreach (var parameter in function.Parameters.Where(this._fieldWritten.Contains))
@@ -130,7 +149,7 @@ public static partial class RustEmitter {
 
       var taken = new HashSet<string>(StringComparer.Ordinal);
       this._locals = [];
-      var declared = function.Parameters.Concat(function.Locals).Distinct().ToList();
+      var declared = function.Parameters.Concat(function.Locals).Concat(Lambdas(function.Body).SelectMany(lambda => lambda.Parameters.Concat(lambda.Locals))).Distinct().ToList();
       foreach (var local in declared)
         this._locals[local] = RustNames.Unique([local.Name], name => (this._read.Contains(local) ? "" : "_") + RustNames.Snake(name, this.Edition).Replace("r#", "", StringComparison.Ordinal), taken)[0];
 

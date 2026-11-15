@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
 /// The fixtures of the prototype's families through the Rust backend (#460, #462): bit operations,
-/// value records, strings, enums, numbers as text, classes, dispatch, generics, views,
+/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, views,
 /// floating-point views of bytes. Every fixture of a family that the backend writes is
 /// built by the pinned toolchain and called on the family's cases with overflow checks on and off;
 /// every outcome, the arrays a call was given included, must be what .NET computes of the original
@@ -78,6 +78,10 @@ public sealed class RustFamilyDifferentialTests {
     foreach (var (file, className) in GenericsFixtures.CSharp)
       yield return new($"generics/{file}", () => GenericsFixtures.Imported(file), () => [.. GenericsFixtures.Calls().Where(call => call.File == file).Select(call => call.Call)],
         call => PrototypeFixture.InvokedOutcome(GenericsFixtures.Compiled(className, call.Method), call));
+
+    foreach (var (file, className) in FunctionsFixtures.CSharp)
+      yield return new($"functions/{file}", () => FunctionsFixtures.Imported(file), () => [.. FunctionsFixtures.Calls().Where(call => call.File == file).Select(call => call.Call)],
+        call => PrototypeFixture.InvokedOutcome(FunctionsFixtures.Compiled(className, call.Method), call));
 
     yield return new("spans/Adler32Span", () => SpanFixtures.Imported("Adler32Span"),
       () => [.. new (int Offset, int Length)[] { (5, 9), (0, 20), (20, 0), (19, 2), (-1, 3), (3, -1) }
