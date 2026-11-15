@@ -86,7 +86,14 @@ public enum IrTypeKind {
   Map,
 
   /// <summary>A set of keys with an identity and an order of enumeration: <c>HashSet&lt;T&gt;</c> of C#, <c>Set</c> of JavaScript.</summary>
-  Set
+  Set,
+
+  /// <summary>
+  /// A function value: a closure over variables, a function of the module or a method bound to its
+  /// receiver, of an <see cref="IrFunctionType"/>; or <c>null</c>. It is a reference: every copy names
+  /// the same function and the same captured variables.
+  /// </summary>
+  Function
 
 }
 
@@ -277,8 +284,25 @@ public sealed record IrType {
   /// <summary>Whether the type is a list.</summary>
   public bool IsList => this.Kind == IrTypeKind.List;
 
-  /// <summary>Whether a value of the type is a reference that may be <c>null</c>: an object or an array.</summary>
-  public bool IsNullable => this.IsObject || this.IsArray;
+  /// <summary>Whether a value of the type is a reference that may be <c>null</c>: an object, an array or a function value.</summary>
+  public bool IsNullable => this.IsObject || this.IsArray || this.IsFunction;
+
+  /// <summary>The type of the function values of a signature.</summary>
+  /// <param name="signature">The parameters and the result.</param>
+  /// <returns>The function type.</returns>
+  public static IrType Function(IrFunctionType signature) => new(IrTypeKind.Function, null) { Signature = signature };
+
+  /// <summary>The type of the function values that take parameters of the given types and return a value of another.</summary>
+  /// <param name="result">The type of the result, or <see cref="Void"/>.</param>
+  /// <param name="parameters">The types of the parameters, in call order.</param>
+  /// <returns>The function type.</returns>
+  public static IrType Function(IrType result, params IrType[] parameters) => Function(new IrFunctionType(parameters, result));
+
+  /// <summary>The signature of a function type, otherwise <see langword="null"/>.</summary>
+  public IrFunctionType? Signature { get; private init; }
+
+  /// <summary>Whether the type is a function type, whose values may be <c>null</c>.</summary>
+  public bool IsFunction => this.Kind == IrTypeKind.Function;
 
   /// <summary>Whether the type is the string type <c>str</c>.</summary>
   public bool IsString => this.Kind == IrTypeKind.String;
@@ -335,12 +359,13 @@ public sealed record IrType {
   /// </summary>
   public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue
     : this.IsCollection ? IrCollections.IsElement(this)
-    : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && (this.Element.IsStruct || this.Element.IsString)));
+    : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && (this.Element.IsStruct || this.Element.IsString || this.Element.IsFunction)));
 
   /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c>, <c>i32?</c> or the name of a struct.</summary>
   public override string ToString()
     => this.Underlying is { } underlying ? $"{underlying}?"
       : this.Declaration is { } declaration ? declaration.Name
+      : this.Signature is { } signature ? signature.ToString()
       : this.IsString ? "str"
       : this.Element is null ? this.Kind.ToString().ToLowerInvariant()
       : this.Kind == IrTypeKind.Span ? $"span<{this.Element}>"

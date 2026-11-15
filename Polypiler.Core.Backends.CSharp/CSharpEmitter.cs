@@ -320,6 +320,13 @@ public static partial class CSharpEmitter {
     while (scalar.Element is not null)
       scalar = scalar.Element;
 
+    if (scalar.Signature is { } signature) {
+      foreach (var part in signature.Parameters.Append(signature.Result))
+        Known(part, unknown);
+
+      return;
+    }
+
     if (!_types.ContainsKey(scalar.Kind) && !scalar.IsStruct && !scalar.IsObject)
       unknown.Add(type.ToString());
   }
@@ -352,6 +359,13 @@ public static partial class CSharpEmitter {
 
     foreach (var operand in operands ?? [])
       Known(operand, table, unknown);
+
+    if (expression is IrLambda lambda) {
+      foreach (var variable in lambda.Parameters.Concat(lambda.Locals))
+        Known(variable.Type, unknown);
+
+      Known(lambda.Body, table, unknown);
+    }
   }
 
   /// <summary>
@@ -406,6 +420,7 @@ public static partial class CSharpEmitter {
     IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast or IrGenericEquals or IrGenericCompare => IrTree.Operands(expression),
     IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrThrowExpression => IrTree.Operands(expression),
     IrCollection => IrTree.Operands(expression),
+    IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke => IrTree.Operands(expression),
     _ => null
   };
 
@@ -416,7 +431,7 @@ public static partial class CSharpEmitter {
   }
 
   private static IEnumerable<IrExpr> Expressions(IrExpr expression)
-    => Operands(expression)!.SelectMany(Expressions).Prepend(expression);
+    => Operands(expression)!.SelectMany(Expressions).Concat(expression is IrLambda lambda ? Expressions(lambda.Body) : []).Prepend(expression);
 
   /// <summary>Every local a statement or one in it sets to a value, with the value.</summary>
   private static IEnumerable<(IrLocal Local, IrExpr Value)> Definitions(IrStmt statement) {
@@ -686,6 +701,9 @@ public static partial class CSharpEmitter {
 
       members.AddRange(this.CollectionClasses());
 
+      // The delegate types are known once everything that names one is written.
+      members.InsertRange(0, this.Delegates());
+
       // The classes of the module reach its constants, globals, functions and helpers, which are then no private members of the static class.
       if (classes.Count > 0)
         members = [.. members.Select(Exposed)];
@@ -739,7 +757,8 @@ public static partial class CSharpEmitter {
     /// </summary>
     private (List<CsParameter> Parameters, CsBlock? Body, CsExpression? Expression) Body(IrFunction function, int skipped, IrBlock statements, bool arrow) {
       // A variable spelled like a member or a helper would hide it, so their names are taken.
-      this._spellings = Names(function.Parameters.Skip(skipped).Concat(function.Locals).Select(variable => variable.Name), this._taken);
+      this._spellings = Names(function.Parameters.Skip(skipped).Concat(function.Locals).Concat(LambdaVariables(statements)).Select(variable => variable.Name), this._taken);
+      this._localFunctions = this.LocalFunctions(statements);
       this._names = [.. this._taken.Concat(this._spellings.Values).Select(name => name.TrimStart('@'))];
       this._complements = Complements(function);
       this._scopes.Clear();
@@ -761,6 +780,7 @@ public static partial class CSharpEmitter {
         : type.ClassType is { IsLibrary: true } library ? this.ClassTypeName(library)
         : type.Declaration is { } declared ? this._generics.Parameters.ContainsKey(declared) ? declared.Name : this._typeNames[declared.Name] : type.IsView ? this.ViewTypeName(type)
         : type.IsCollection ? this.CollectionTypeName(type)
+        : type.IsFunction ? this.FunctionTypeName(type)
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
@@ -810,6 +830,9 @@ public static partial class CSharpEmitter {
     private CsName Variable(IrLocal local) => new(this.Local(local)) { Type = local.Type };
 
     private void Statement(IrStmt statement, List<CsStatement> statements) {
+      if (this.FunctionStatement(statement, statements))
+        return;
+
       switch (statement) {
         case IrBlock block:
           statements.Add(new CsBlock(this.Statements(block)));
@@ -874,7 +897,7 @@ public static partial class CSharpEmitter {
     /// <c>int</c> unasked. Inside a class named <c>var</c> the word is that class.
     /// </summary>
     private bool Infers(IrDeclare declare)
-      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView && !declare.Local.Type.IsOptional
+      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView && !declare.Local.Type.IsOptional && !declare.Local.Type.IsFunction
         && this.ClassName != "var" && this.Has(CSharpFeature.ImplicitlyTypedLocal);
 
     /// <summary>
@@ -1114,6 +1137,8 @@ public static partial class CSharpEmitter {
           return this.Optional(expression);
         case IrThrowExpression thrown:
           return this.ThrowExpression(thrown);
+        case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke or IrConditional { Type.IsFunction: true } or IrReferenceEquals { Left.Type.IsFunction: true }:
+          return this.FunctionNode(expression);
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrFieldLoad { Target.Type.IsObject: true } or IrStructEquals { Left.Type.IsObject: true }:
           return this.Object(expression);
         case IrTypeTest or IrCast or IrAsCast:

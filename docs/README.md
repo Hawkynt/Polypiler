@@ -28,6 +28,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Collections](reference/collections.md) — lists, maps and sets: the two orders of enumeration, the equality of keys and the key kept, what a change does to a loop, and how each profile writes them.
 - [Exceptions](reference/exceptions.md) — the exception classes of the IR, the class every trap throws in C# and JavaScript, and the generated error classes of each profile.
 - [Generics](reference/generics.md) — generic methods and classes monomorphized in the IR: the instantiations, their equality and order, the JavaScript copies, and how each profile writes them back.
+- [Functions and closures](reference/functions-and-closures.md) — delegates, lambdas, local functions and nested functions as function values of the IR: closures over shared variables, the variables of every pass of a loop, and how each profile writes them.
 - [Module state](reference/module-state.md) — static fields and module variables shared by every call: their initialisation rule, what each frontend imports or refuses and how each profile and module format writes them.
 - [Views](reference/views.md) — `Span<T>`, `ReadOnlySpan<T>`, `stackalloc` and `subarray`: the view of the IR, its traps, what each frontend imports and how each profile writes it.
 - [String operations](reference/string-operations.md) — strings of UTF-16 code units: every operation with its ordinal meaning, the two white-space sets, what each frontend imports or refuses and how each profile writes it.

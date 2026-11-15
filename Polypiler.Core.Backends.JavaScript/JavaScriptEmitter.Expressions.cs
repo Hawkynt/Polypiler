@@ -35,6 +35,10 @@ public static partial class JavaScriptEmitter {
           return (new JsString(text.Value), true);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
+        case IrLocalRef reference when reference.Local == this._receiver && this._functionDepth > 0 && !this.Arrows:
+          // A function expression has a this of its own; the method's is kept in a variable.
+          this._self = true;
+          return (Id(Self), true);
         case IrLocalRef reference when reference.Local == this._receiver:
           return (new JsThis(), true);
         case IrLocalRef reference:
@@ -70,6 +74,9 @@ public static partial class JavaScriptEmitter {
           if (element.StructType is { } elements)
             return (Invoke(this.StructHelper("newArray", elements), count), true);
 
+          if (element.IsFunction)
+            return (this.Helper("$new", [count, new JsNull()]), true);
+
           return (this.Native(Storage(element)) ? new JsNew(Id(Storage(element)), [count]) : this.Helper("$new", [count, this.Zero(element)]), true);
         case IrStep step:
           return this.Step(step);
@@ -95,6 +102,8 @@ public static partial class JavaScriptEmitter {
           return this.Collection(operation);
         case IrCall chained when this._owners.ContainsKey(chained.Function):
           return (this.Chained(chained), true);
+        case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
+          return this.FunctionValue(expression);
         default:
           var call = (IrCall)expression;
           return (new JsCall(Id(this.Name(call.Function)), [.. call.Arguments.Select(this.Value)]), true);
@@ -107,7 +116,7 @@ public static partial class JavaScriptEmitter {
 
       var arguments = intrinsic.Arguments;
       switch (intrinsic.Op) {
-        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct || intrinsic.Type.Element.IsString:
+        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct || intrinsic.Type.Element.IsString || intrinsic.Type.Element.IsFunction:
           // Typed arrays hold numbers: an array of structs or of strings is an Array of objects.
           return (new JsArray([.. arguments.Select(this.Value)]), true);
         case IrIntrinsicOp.ArrayOf:

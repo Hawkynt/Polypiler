@@ -124,7 +124,7 @@ internal sealed partial class Lowering {
 
   /// <summary>A temporary that holds a value, so that it is computed exactly here.</summary>
   private IrExpr Temporary(IrExpr value, List<IrStmt> into) {
-    var temporary = this.Local($"$t{this._locals.Count}", value.Type);
+    var temporary = this.Local($"$t{this._localBase + this._locals.Count}", value.Type);
     into.Add(new IrDeclare(temporary, value));
     return new IrLocalRef(temporary);
   }

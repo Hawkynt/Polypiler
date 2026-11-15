@@ -155,7 +155,17 @@ public sealed class CSharpCapabilitiesTests {
     ("TryGetValue of the slots as a reference or null", "net2.0"),
     ("Dictionary<TKey,TValue> enumeration of .NET Core 3.0", "netstandard2.1"),
     ("EqualityComparer<double>.Default normalising NaN and -0", "netstandard2.1"),
-    ("OrderedDictionary<TKey,TValue>", "net10.0")
+    ("OrderedDictionary<TKey,TValue>", "net10.0"),
+    ("anonymous method", "C# 2"),
+    ("lambda expression", "C# 3"),
+    ("foreach iteration variable of its own per pass", "C# 5"),
+    ("static anonymous function", "C# 9"),
+    ("System.Action<T>", "net2.0"),
+    ("System.Action", "net3.5"),
+    ("System.Func<T1…T4, TResult>", "net3.5"),
+    ("System.Action<T1…T4>", "net3.5"),
+    ("System.Func<T1…T16, TResult>", "net4.6"),
+    ("System.Action<T1…T16>", "net4.6")
   ];
 
   /// <summary>

@@ -51,12 +51,13 @@ is -1: neither `===` alone nor `indexOf`/`includes` is ever written for it.
 | generic class beside the static class (no base class or interface), its fields, constructors, methods and properties | one `IrClassType` per instantiation, `Ring<i64>` | supported |
 | constraints `struct`, `class`, `unmanaged`, `notnull`, `new()`, `IEquatable<T>`, `IComparable<T>`, an interface of the file | checked by the compiler, kept in the origin | supported |
 | `default(T)`, `default` of a type parameter | the default of the argument: zero, `false`, the default struct, `null` | supported |
+| a parameter of a function type (`Func<T, bool>`, `Action<T>`) | the function type of the instantiation ([functions and closures](functions-and-closures.md)) | supported |
 | `new T()` under `new()` | `IrNew` of a class by its constructor without parameters, the default of a value type | supported |
 | `a.Equals(b)` of `IEquatable<T>` or of a number with one of its type, `EqualityComparer<T>.Default.Equals` | `IrGenericEquals` | supported |
 | `a.CompareTo(b)` of `IComparable<T>` or of a number with one of its type, `Comparer<T>.Default.Compare` | `IrGenericCompare` | supported |
 | a public generic method that nothing in the module instantiates | - | `PLY1002`: "'IndexOf' has no instantiation; name one with --instantiate" |
 | polymorphic recursion (`Depth<T>` calls `Depth<T[]>`), instantiations that do not end | - | `PLY1002`: "the instantiations of 'Depth<T>' do not end" |
-| generic math (a constraint of `System.Numerics`), `typeof(T)`, `is T`, `as T`, a generic delegate (`Func<T>`), variance, another constraint, a generic method of a class, a static field of a generic class, a generic class in a hierarchy | - | `PLY1002` naming it |
+| generic math (a constraint of `System.Numerics`), `typeof(T)`, `is T`, `as T`, variance, another constraint, a generic method of a class, a static field of a generic class, a generic class in a hierarchy | - | `PLY1002` naming it |
 
 Instantiations are collected from the module's own code: from every method that is not generic, from
 the bodies of the instantiations, and from `--instantiate`. A private generic method nothing calls is

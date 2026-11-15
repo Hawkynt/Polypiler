@@ -381,7 +381,7 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>The zero of an element type, which a new or a cleared array holds.</summary>
-    private JsExpression Zero(IrType element) => !element.IsLong ? Number("0") : this.Halves ? Zero64 : new JsBigInt(0);
+    private JsExpression Zero(IrType element) => element.IsFunction ? new JsNull() : !element.IsLong ? Number("0") : this.Halves ? Zero64 : new JsBigInt(0);
 
     /// <summary>What a value of an IR type is in JavaScript, as the header of a function states it.</summary>
     private string Describe(IrType type) {
@@ -391,9 +391,11 @@ public static partial class JavaScriptEmitter {
         case IrTypeKind.Bool:
           return "boolean";
         case IrTypeKind.Array:
-          return !type.Element!.IsStruct && !type.Element.IsString && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
+          return !type.Element!.IsStruct && !type.Element.IsString && !type.Element.IsFunction && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
         case IrTypeKind.String:
           return "string";
+        case IrTypeKind.Function:
+          return "function";
         case IrTypeKind.Struct:
           return type.Declaration!.Name;
         case IrTypeKind.Optional:
@@ -467,13 +469,14 @@ public static partial class JavaScriptEmitter {
       this._renamed.Clear();
       this._names.Clear();
       this._names.UnionWith(this._members);
-      this._names.UnionWith(function.Parameters.Skip(skipped).Concat(function.Locals).Select(variable => this.Name(variable.Name)));
+      this._names.UnionWith(function.Parameters.Skip(skipped).Concat(function.Locals).Concat(IrTree.Nodes(function.Body).OfType<IrLambda>().SelectMany(lambda => lambda.Parameters.Concat(lambda.Locals))).Select(variable => this.Name(variable.Name)));
       foreach (var parameter in function.Parameters.Skip(skipped))
         this._taken[this.Name(parameter.Name)] = parameter;
 
       var parameters = function.Parameters.Skip(skipped).Select(parameter => this.Name(parameter.Name)).ToList();
       var statements = new List<JsStatement>();
       this._liveness = Liveness.Of(function);
+      this.Prepare(function.Body);
       foreach (var parameter in this._liveness.CopiedOnEntry)
         statements.Add(new JsExpressionStatement(new JsAssignment(Id(this.Local(parameter)), "=", this.Copy(new IrLocalRef(parameter)))));
 
@@ -487,6 +490,8 @@ public static partial class JavaScriptEmitter {
 
       if (this._coalesced)
         statements.Insert(start, new JsVariableDeclaration(this.Let, [new JsDeclarator(Coalesced, null)]));
+
+      statements.InsertRange(start, this.Prologue());
 
       return (parameters, new JsBlock(statements));
     }
@@ -504,8 +509,13 @@ public static partial class JavaScriptEmitter {
     /// </summary>
     private void Statements(IrBlock block, List<JsStatement> statements) {
       var outer = this._taken.Keys.ToHashSet();
-      foreach (var statement in block.Statements)
-        this.Statement(statement, statements);
+      for (var index = 0; index < block.Statements.Count; ++index) {
+        var headed = this.HeadedFor(block, index, statements);
+        if (headed > 0)
+          index += headed - 1;
+        else
+          this.Statement(block.Statements[index], statements);
+      }
 
       foreach (var name in this._taken.Keys.Where(name => !outer.Contains(name)).ToList())
         this._taken.Remove(name);
@@ -538,13 +548,16 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>The name a parameter or local is read and assigned with.</summary>
-    private string Local(IrLocal local) => this._renamed.TryGetValue(local, out var name) ? name : this.Name(local.Name);
+    private string Local(IrLocal local) => this.InEnvironment(local) ?? (this._renamed.TryGetValue(local, out var name) ? name : this.Name(local.Name));
 
     /// <summary>A parameter or local as an expression of its type.</summary>
-    private JsIdentifier Variable(IrLocal local) => new(this.Local(local)) { Type = local.Type };
+    private JsExpression Variable(IrLocal local) => Dotted(this.Local(local)) with { Type = local.Type };
 
     private void Statement(IrStmt statement, List<JsStatement> statements) {
       this._construct = statement;
+      if (this.FunctionStatement(statement, statements))
+        return;
+
       switch (statement) {
         case IrBlock block:
           statements.Add(new JsBlock(this.Statements(block)));
@@ -582,10 +595,10 @@ public static partial class JavaScriptEmitter {
           break;
         case IrWhile loop:
           var test = this.Text(loop.Condition);
-          statements.Add(new JsWhile(test, new JsBlock(this.Statements(loop.Body))));
+          statements.Add(new JsWhile(test, new JsBlock(this.LoopBody(loop, loop.Body))));
           break;
         case IrDoWhile loop:
-          var body = this.Statements(loop.Body);
+          var body = this.LoopBody(loop, loop.Body);
           statements.Add(new JsDoWhile(new JsBlock(body), this.Text(loop.Condition)));
           break;
         case IrFor loop:
@@ -623,7 +636,7 @@ public static partial class JavaScriptEmitter {
     /// either. That part is an expression, so the step is written as a list of expressions and the
     /// temporaries it declares are declared in front of the loop, in a block of their own with it.
     /// </summary>
-    private void For(IrFor loop, List<JsStatement> statements) {
+    private void For(IrFor loop, List<JsStatement> statements, JsVariableDeclaration? header = null) {
       var scoped = loop.Step.Statements.Any(step => step is IrDeclare);
       var outer = this._taken.Keys.ToHashSet();
       var target = scoped ? new List<JsStatement>() : statements;
@@ -661,7 +674,7 @@ public static partial class JavaScriptEmitter {
         1 => parts[0],
         _ => new JsSequence(parts)
       };
-      target.Add(new JsFor(null, test, update, new JsBlock(this.Statements(loop.Body))));
+      target.Add(new JsFor(header, test, update, new JsBlock(this.LoopBody(loop, loop.Body))));
       if (scoped)
         statements.Add(new JsBlock(target));
 

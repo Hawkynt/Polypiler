@@ -174,6 +174,12 @@ public sealed record JsNull : JsExpression;
 /// <param name="Body">The body.</param>
 public sealed record JsFunctionExpression(string? Name, IReadOnlyList<string> Parameters, JsBlock Body) : JsExpression;
 
+/// <summary>An arrow function, <c>(a, b) =&gt; body</c>: a block body, or an expression whose value it returns (ECMAScript 2015).</summary>
+/// <param name="Parameters">The names of the parameters.</param>
+/// <param name="Body">The block body, or <see langword="null"/>.</param>
+/// <param name="ExpressionBody">The expression body, or <see langword="null"/>.</param>
+public sealed record JsArrowFunction(IReadOnlyList<string> Parameters, JsBlock? Body, JsExpression? ExpressionBody) : JsExpression;
+
 #endregion
 
 #region Statements

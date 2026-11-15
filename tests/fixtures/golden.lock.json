@@ -522,6 +522,66 @@
       "bytes": 2562974
     },
     {
+      "path": "tests/fixtures/backend/golden/functions/Accumulate.cs.csharp.golden",
+      "sha256": "3c471d1c188112f24676583ace3af5db5a849c6817d31779b091233d3bdc1fe8",
+      "bytes": 36703
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/Accumulate.cs.javascript.golden",
+      "sha256": "36eb6ef78b288a7d415ed805599549ad464cf0dafbb9ee28762cbf2d59b805f7",
+      "bytes": 37004
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/Closures.cs.csharp.golden",
+      "sha256": "f9695d25f2e029b38ea294acf68a85f80cba45495390eb7c956a7ee84c8414b0",
+      "bytes": 149658
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/Closures.cs.javascript.golden",
+      "sha256": "da8f5fb887c76cceda5c5e3b2609aaae5dce01c023aa75dc768ba9c5083d2803",
+      "bytes": 158026
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/Sort.cs.csharp.golden",
+      "sha256": "3598fa8868100a6058cea95ed8508edb52a7f557efc0f4f9887e001ff16af14c",
+      "bytes": 34736
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/Sort.cs.javascript.golden",
+      "sha256": "d3d28418ea418abaf10250f417efcddd2f2b7d0cc5bdb4f74224029f143649d7",
+      "bytes": 46408
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/accumulate.js.csharp.golden",
+      "sha256": "df797498473d07a8399503b382273ffa09e9d57190f985f8c2ca5ed957c29e24",
+      "bytes": 34166
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/accumulate.js.javascript.golden",
+      "sha256": "6cc375c0a65f448c25040658fbcd4be242c90d378e05ce9da9838e7559c8e4a9",
+      "bytes": 43152
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/closures.js.csharp.golden",
+      "sha256": "88565292a8616aa5a21fdc5ea922e947033378353136bb80db9b3e2ae027122b",
+      "bytes": 97486
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/closures.js.javascript.golden",
+      "sha256": "c1c3c19d83ea83ecf3d9c7f6b46975a36565d131e5c0d4a3e4ced8d74836d3e8",
+      "bytes": 90176
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/sort.js.csharp.golden",
+      "sha256": "209819de1af60d439f720f16e7dc425f2a4c794d0b9ff6324fc751f6b401b417",
+      "bytes": 38864
+    },
+    {
+      "path": "tests/fixtures/backend/golden/functions/sort.js.javascript.golden",
+      "sha256": "cacddafc0b6a4f907080c4cef169e8a79e24d0cc343eb1a02db08c875e596007",
+      "bytes": 53440
+    },
+    {
       "path": "tests/fixtures/backend/golden/generics/Recursion.cs.csharp.golden",
       "sha256": "5c0ab9627d410fee69e954ab399786bcf3ce260b6de469e3e6d69152e655b7e4",
       "bytes": 1122

@@ -203,6 +203,10 @@ public static class JavaScriptSyntaxReader {
           return new JsObject([.. literal.Properties.Select(this.Property)]) { Multiline = this.Text(literal).Contains('\n') };
         case FunctionExpression function:
           return new JsFunctionExpression(function.Id?.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body));
+        case ArrowFunctionExpression arrow:
+          return arrow.Body is FunctionBody body
+            ? new JsArrowFunction(this.Parameters(arrow), this.Block(body, body.Body), null)
+            : new JsArrowFunction(this.Parameters(arrow), null, this.Expression(arrow.Body));
         default:
           throw Unknown(expression);
       }

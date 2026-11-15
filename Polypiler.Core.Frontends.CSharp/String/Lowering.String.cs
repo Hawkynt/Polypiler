@@ -292,7 +292,7 @@ internal sealed partial class Lowering {
         selector = new IrConditional(matches, new IrConst(IrType.I32, index), selector);
     }
 
-    var chosen = this.Local($"$t{this._locals.Count}", IrType.I32);
+    var chosen = this.Local($"$t{this._localBase + this._locals.Count}", IrType.I32);
     before.Add(new IrDeclare(chosen, selector));
     return new IrLocalRef(chosen);
   }

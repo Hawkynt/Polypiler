@@ -124,7 +124,8 @@ internal sealed partial class TypeInference {
         return this._scope!.Bindings.GetValueOrDefault(identifier) switch {
           Variable variable => variable.Type,
           ModuleConstant constant => constant.Type,
-          _ => identifier.Name == "undefined" ? JsType.UndefinedValue : JsType.Unknown
+          _ => identifier.Name == "undefined" ? JsType.UndefinedValue
+            : this._scope.FunctionValues.TryGetValue(identifier, out var function) ? JsType.Function(function.Shape) : JsType.Unknown
         };
       case ChainExpression chain:
         // a?.b is undefined where a is null or undefined.
@@ -158,7 +159,9 @@ internal sealed partial class TypeInference {
         var either = JsType.Join(this.Of(choice.Consequent), this.Of(choice.Alternate));
         return either.Kind == JsKind.Conflict ? JsType.Unknown : either;
       case ThisExpression:
-        return this._scope!.Candidate is { Class: { } owner, IsStatic: false } ? JsType.Object(owner) : JsType.Unknown;
+        return this._scope!.Candidate.ThisClass is { } owner ? JsType.Object(owner) : JsType.Unknown;
+      case ArrowFunctionExpression or FunctionExpression or FunctionDeclaration when this._scope!.Nested.TryGetValue(node, out var nested):
+        return JsType.Function(nested.Shape);
       case NullLiteral:
         return JsType.Null;
       case NewExpression creation when this.Names.ClassNamed(creation.Callee) is { } created:
@@ -262,6 +265,8 @@ internal sealed partial class TypeInference {
       case null when this.Names.Callee(call.Callee) is { } callee:
         var model = this.ModelOf(callee);
         return this.ResultOf(model);
+      case null when this.Of(call.Callee) is { Kind: JsKind.Function } function:
+        return function.Callable!.Members.Select(member => this.ResultOf(this.ModelOf(member))).Aggregate(JsType.Join);
       default:
         return JsType.Unknown;
     }

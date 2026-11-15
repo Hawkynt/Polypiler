@@ -148,9 +148,13 @@ internal sealed partial class Lowering(TypeInference types) {
 
   private IrBlock Block(IEnumerable<Statement> statements) {
     var into = new List<IrStmt>();
-    foreach (var statement in statements)
+    var list = statements.ToList();
+    var hoisted = this.Hoisted(list, into);
+    var start = into.Count;
+    foreach (var statement in list.Where(statement => statement is not FunctionDeclaration))
       this.Statement(statement, into);
 
+    this.Assign(hoisted, into, start);
     return new IrBlock(into);
   }
 
@@ -281,6 +285,10 @@ internal sealed partial class Lowering(TypeInference types) {
     else if (loop.Init is Expression initializer)
       this.Effect(initializer, statements);
 
+    // A let or a const of the header is a variable of every pass; a var is one variable of the loop.
+    var perPass = loop.Init is VariableDeclaration { Kind: VariableDeclarationKind.Let or VariableDeclarationKind.Const }
+      ? statements.OfType<IrDeclare>().Select(declare => declare.Local).ToList() : [];
+
     var before = this._assigned;
     var condition = loop.Test is null ? new IrConst(IrType.Bool, 1) : this.Condition(loop.Test);
     var body = this.Body(loop.Body);
@@ -290,8 +298,9 @@ internal sealed partial class Lowering(TypeInference types) {
       this.Effect(loop.Update, step);
 
     this._assigned = before;
-    statements.Add(Contains(loop.Body, node => node is ContinueStatement)
-      ? new IrFor(condition, body, new IrBlock(step))
+    var renewed = PerIteration(perPass, condition, body, step);
+    statements.Add(renewed.Count > 0 ? new IrFor(condition, body, new IrBlock(step)) { PerIteration = renewed }
+      : Contains(loop.Body, node => node is ContinueStatement) ? new IrFor(condition, body, new IrBlock(step))
       : new IrWhile(condition, new IrBlock([.. body.Statements, .. step])));
     return new IrBlock(statements);
   }

@@ -167,7 +167,10 @@ internal enum FlowKind {
   /// The key (<see cref="Flow.Index"/> 0) or the value (1) of an entry of a <c>Map</c> that a
   /// <c>for…of</c> destructures into a variable (#1328).
   /// </summary>
-  Entry
+  Entry,
+
+  /// <summary>The node is a call of a function value, whose arguments reach the parameters of every function the value may be.</summary>
+  Invoke
 
 }
 
@@ -218,6 +221,12 @@ internal sealed class FunctionModel(Candidate candidate) {
 
   /// <summary>The functions of the file the body calls, each once.</summary>
   public List<Candidate> Callees { get; } = [];
+
+  /// <summary>The functions nested in the body - arrows, function expressions, function declarations - by their node.</summary>
+  public Dictionary<Node, Candidate> Nested { get; } = [];
+
+  /// <summary>The names of functions of the file the body uses as values, by the identifier.</summary>
+  public Dictionary<Node, Candidate> FunctionValues { get; } = [];
 
   /// <summary>The type JSDoc states for the result, or <see langword="null"/>.</summary>
   public IrType? DeclaredResult { get; set; }

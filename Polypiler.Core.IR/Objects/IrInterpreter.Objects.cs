@@ -37,7 +37,7 @@ public static partial class IrInterpreter {
   /// <summary>The value a field of a new object holds before its constructor runs.</summary>
   private static object FieldDefault(IrType type)
     => type.StructType is { } nested ? Default(nested)
-      : type.IsObject || type.IsArray || type.IsString ? NullReference.Value
+      : type.IsNullable || type.IsArray || type.IsString ? NullReference.Value
       : Constant(type, 0);
 
   /// <summary>

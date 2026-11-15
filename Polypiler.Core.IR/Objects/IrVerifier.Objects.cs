@@ -181,7 +181,7 @@ public static partial class IrVerifier {
 
     /// <summary>A reference type the module declares: of a class or of an interface.</summary>
     private void Reference(IrType type) {
-      this.Require(type.IsObject, $"a reference to an object is expected, not the type {type}");
+      this.Require(type.IsNullable, $"a reference to an object is expected, not the type {type}");
       this.Declared(type);
     }
 

@@ -219,7 +219,7 @@ public static class Optimizer {
       IrIf => new IrIf((IrExpr)parts[0], (IrBlock)parts[1], parts.Count > 2 ? (IrBlock)parts[2] : null),
       IrWhile => new IrWhile((IrExpr)parts[0], (IrBlock)parts[1]),
       IrDoWhile => new IrDoWhile((IrBlock)parts[0], (IrExpr)parts[1]),
-      IrFor => new IrFor((IrExpr)parts[0], (IrBlock)parts[1], (IrBlock)parts[2]),
+      IrFor loop => new IrFor((IrExpr)parts[0], (IrBlock)parts[1], (IrBlock)parts[2]) { PerIteration = loop.PerIteration },
       IrSwitch choice => new IrSwitch((IrExpr)parts[0], [.. choice.Sections.Select((section, position) => section with { Body = (IrBlock)parts[position + 1] })]),
       IrReturn returned => returned with { Value = parts.Count > 0 ? (IrExpr)parts[0] : null },
       IrThrow => new IrThrow((IrExpr)parts[0]),

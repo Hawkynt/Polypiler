@@ -356,7 +356,6 @@ public sealed class JavaScriptInferenceTests {
   [TestCase("const C = null;")]
   [TestCase("const C = new Map([1]);")]
   [TestCase("const C = 36893488147419103232n;")]
-  [TestCase("(function () { const C = 1; })(); function C() { }")]
   [TestCase("const { C } = { C: 1 };")]
   [TestCase("{ const C = 2; }")]
   [TestCase("(function () { const C = 1; if (true) { } })(); const C = 2;")]

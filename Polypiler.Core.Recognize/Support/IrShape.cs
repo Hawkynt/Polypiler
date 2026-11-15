@@ -96,6 +96,8 @@ public static class IrShape {
     IrGenericCompare order => [order.Left, order.Right],
     IrThrowExpression thrown => [thrown.Exception],
     IrCollection operation => operation.Arguments,
+    IrInvoke invocation => [invocation.Callee, .. invocation.Arguments],
+    IrBoundMethod { Receiver: { } receiver } => [receiver],
     _ => []
   };
 
@@ -119,7 +121,7 @@ public static class IrShape {
   /// <param name="expression">The expression.</param>
   /// <returns><see langword="true"/> when it has no effect.</returns>
   public static bool IsSideEffectFree(IrExpr expression) => Nodes(expression).All(node => node switch {
-    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression => false,
+    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod => false,
     IrFieldLoad load => !load.Target.Type.IsObject,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
@@ -220,6 +222,8 @@ public static class IrShape {
     IrGenericCompare => new IrGenericCompare(operands[0], operands[1]),
     IrThrowExpression thrown => thrown with { Exception = operands[0] },
     IrCollection operation => operation with { Arguments = operands },
+    IrInvoke invocation => invocation with { Callee = operands[0], Arguments = [.. operands.Skip(1)] },
+    IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
     _ => expression
   };
 

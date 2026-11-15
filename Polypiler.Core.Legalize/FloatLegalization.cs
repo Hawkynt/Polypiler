@@ -133,7 +133,7 @@ public static class FloatLegalization {
       IrIf conditional => new IrIf(this.Expression(conditional.Condition), this.Block(conditional.Then), conditional.Else is null ? null : this.Block(conditional.Else)),
       IrWhile loop => new IrWhile(this.Expression(loop.Condition), this.Block(loop.Body)),
       IrDoWhile loop => new IrDoWhile(this.Block(loop.Body), this.Expression(loop.Condition)),
-      IrFor loop => new IrFor(this.Expression(loop.Condition), this.Block(loop.Body), this.Block(loop.Step)),
+      IrFor loop => new IrFor(this.Expression(loop.Condition), this.Block(loop.Body), this.Block(loop.Step)) { PerIteration = loop.PerIteration },
       IrSwitch choice => new IrSwitch(this.Expression(choice.Value), choice.Sections.Select(section => section with { Body = this.Block(section.Body) }).ToList()),
       IrReturn result => new IrReturn(result.Value is null ? null : this.Expression(result.Value)),
       IrThrow thrown => new IrThrow(this.Expression(thrown.Exception)),
@@ -181,6 +181,12 @@ public static class FloatLegalization {
           return new IrGenericEquals(this.Expression(equality.Left), this.Expression(equality.Right));
         case IrGenericCompare order:
           return new IrGenericCompare(this.Expression(order.Left), this.Expression(order.Right));
+        case IrLambda lambda:
+          return lambda with { Body = this.Block(lambda.Body) };
+        case IrBoundMethod { Receiver: { } receiver } bound:
+          return bound with { Receiver = this.Expression(receiver) };
+        case IrInvoke invocation:
+          return invocation with { Callee = this.Expression(invocation.Callee), Arguments = [.. invocation.Arguments.Select(this.Expression)] };
         case IrTypeTest test:
           return test with { Value = this.Expression(test.Value) };
         case IrCast cast:

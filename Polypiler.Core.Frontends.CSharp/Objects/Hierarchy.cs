@@ -283,7 +283,7 @@ internal sealed partial class Lowering {
 
     var value = this.ObjectValue(pattern.Expression);
     if (value is not IrLocalRef) {
-      var temporary = this.Local($"$t{this._locals.Count}", value.Type);
+      var temporary = this.Local($"$t{this._localBase + this._locals.Count}", value.Type);
       into.Add(new IrDeclare(temporary, value));
       value = new IrLocalRef(temporary);
     }

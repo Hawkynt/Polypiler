@@ -48,7 +48,10 @@ internal enum JsKind {
   Map,
 
   /// <summary>A <c>Set</c> of elements of <see cref="JsType.Element"/> (#1328).</summary>
-  Set
+  Set,
+
+  /// <summary>A function value: one of the functions of a <see cref="FunctionShape"/>.</summary>
+  Function
 
 }
 
@@ -109,6 +112,12 @@ internal sealed record JsType {
 
   /// <summary>The type with the absent values that reach another place.</summary>
   public JsType AbsentAs(JsType other) => this with { MayBeNull = other.MayBeNull, MayBeUndefined = other.MayBeUndefined };
+
+  /// <summary>The functions a function value may be.</summary>
+  public FunctionShape? Callable { get; private init; }
+
+  /// <summary>The type of the values of a shape of functions.</summary>
+  public static JsType Function(FunctionShape shape) => new(JsKind.Function) { Callable = shape.Root };
 
   /// <summary>The two kinds of a conflict, as a diagnostic names them.</summary>
   public (string First, string Second) Kinds { get; private init; }
@@ -242,7 +251,8 @@ internal sealed record JsType {
     JsKind.String => IrType.String,
     JsKind.Array when this.IsView => IrType.Span(this.Element!.Ir is { IsNumeric: true } viewed ? viewed : IrType.F64),
     JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection) ? listed : IrType.F64),
-    JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString) ? element : IrType.F64),
+    JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString || element.IsFunction) ? element : IrType.F64),
+    JsKind.Function => this.Callable!.Signature,
     JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
     JsKind.Map => IrType.Map(Held(this.Key!), Held(this.Element!), MapOrder.Insertion),
     JsKind.Set => IrType.Set(Held(this.Element!), MapOrder.Insertion),
@@ -264,6 +274,7 @@ internal sealed record JsType {
     JsKind.Set => $"a Set of {this.Element!.Describe()}",
     JsKind.Object => this.Class!.Name,
     JsKind.Null => Absence(this),
+    JsKind.Function => "a function",
     _ => "nothing"
   };
 
@@ -344,6 +355,9 @@ internal sealed record JsType {
         return MapOf(Join(first.Key!, second.Key!), Join(first.Element!, second.Element!));
       case JsKind.Set:
         return SetOf(Join(first.Element!, second.Element!));
+      case JsKind.Function:
+        // A value that reaches both places is a member of either shape: they are one.
+        return Function(FunctionShape.Merge(first.Callable!, second.Callable!));
       case JsKind.Object:
         // Objects of several classes are objects of the nearest class of the file they all derive from.
         return first.Class!.Lineage.FirstOrDefault(second.Class!.Lineage.Contains) is { } common ? Object(common) : Conflict(first, second);

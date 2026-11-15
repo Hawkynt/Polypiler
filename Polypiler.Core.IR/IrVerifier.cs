@@ -78,6 +78,12 @@ public static partial class IrVerifier {
     private readonly HashSet<IrLocal> _visible = [];
     private int _loops;
 
+    /// <summary>The locals of the function or lambda whose body is being checked.</summary>
+    private IReadOnlyList<IrLocal> _locals = function.Locals;
+
+    /// <summary>The result type of the function or lambda whose body is being checked.</summary>
+    private IrType _returnType = function.ReturnType;
+
     /// <summary>The globals the code checked may name: every one of the module in a function, the earlier ones in an initializer.</summary>
     public IReadOnlySet<IrGlobal> Globals { get; init; } = new HashSet<IrGlobal>();
     private int _breakable;
@@ -118,6 +124,9 @@ public static partial class IrVerifier {
         return;
       }
 
+      if ((type.Element ?? type).Signature is { } signature)
+        this.Signature(signature);
+
       var named = (type.Underlying ?? type.Element ?? type).Declaration;
       this.Require(named is null || types.Declares(named), $"the type {named} is not among the types of the module");
     }
@@ -136,7 +145,7 @@ public static partial class IrVerifier {
           this.Block(block);
           break;
         case IrDeclare declare:
-          this.Require(function.Locals.Contains(declare.Local),
+          this.Require(this._locals.Contains(declare.Local),
             $"local '{declare.Local.Name}' is not among the locals of the function");
           if (declare.Initializer is not null)
             this.Value(declare.Initializer, declare.Local.Type, $"the initializer of '{declare.Local.Name}'");
@@ -188,6 +197,7 @@ public static partial class IrVerifier {
           this.Value(loop.Condition, IrType.Bool, "the condition of a do");
           break;
         case IrFor loop:
+          this.PerIteration(loop);
           this.Value(loop.Condition, IrType.Bool, "the condition of a for");
           this.Loop(loop.Body);
           foreach (var step in loop.Step.Statements)
@@ -210,9 +220,9 @@ public static partial class IrVerifier {
         case IrReturn result:
           this.Require(this._finally == 0, "a return inside a finally block");
           if (result.Value is null)
-            this.Require(function.ReturnType == IrType.Void, "a return without a value in a function that returns one");
+            this.Require(this._returnType == IrType.Void, "a return without a value in a function that returns one");
           else
-            this.Value(result.Value, function.ReturnType, "the value returned");
+            this.Value(result.Value, this._returnType, "the value returned");
 
           break;
         case IrUsing scope:
@@ -406,6 +416,9 @@ public static partial class IrVerifier {
         case IrCollection operation:
           this.Collection(operation);
           break;
+        case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
+          this.FunctionValue(expression);
+          break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
             if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind == IrTypeKind.ReadOnlySpan)))
@@ -498,7 +511,7 @@ public static partial class IrVerifier {
 
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional => false,
+      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

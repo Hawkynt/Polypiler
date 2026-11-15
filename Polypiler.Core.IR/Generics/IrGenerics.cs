@@ -187,6 +187,7 @@ public static class IrGenerics {
 
     var functions = module.Functions.ToDictionary(function => function.Name);
     IrType Type(IrType type) => type.Declaration is { } declared && map.TryGetValue(declared, out var argument) ? argument
+      : type.Signature is { } signature ? IrType.Function(new IrFunctionType([.. signature.Parameters.Select(Type)], Type(signature.Result)))
       : type.Element is { } element ? type.Kind switch {
         IrTypeKind.Span => IrType.Span(Type(element)),
         IrTypeKind.ReadOnlySpan => IrType.ReadOnlySpan(Type(element)),
@@ -305,7 +306,7 @@ public static class IrGenerics {
       IrIf conditional => new IrIf(this.Expression(conditional.Condition), this.Block(conditional.Then), conditional.Else is null ? null : this.Block(conditional.Else)),
       IrWhile loop => new IrWhile(this.Expression(loop.Condition), this.Block(loop.Body)),
       IrDoWhile loop => new IrDoWhile(this.Block(loop.Body), this.Expression(loop.Condition)),
-      IrFor loop => new IrFor(this.Expression(loop.Condition), this.Block(loop.Body), this.Block(loop.Step)),
+      IrFor loop => new IrFor(this.Expression(loop.Condition), this.Block(loop.Body), this.Block(loop.Step)) { PerIteration = [.. loop.PerIteration.Select(this.Local)] },
       IrSwitch choice => new IrSwitch(this.Expression(choice.Value), [.. choice.Sections.Select(section => section with { Body = this.Block(section.Body) })]),
       IrReturn result => new IrReturn(result.Value is null ? null : this.Expression(result.Value)),
       IrForEachCollection loop => new IrForEachCollection(this.Expression(loop.Collection), loop.Mode,
@@ -344,6 +345,10 @@ public static class IrGenerics {
         IrGenericEquals equality => new IrGenericEquals(this.Expression(equality.Left), this.Expression(equality.Right)),
         IrGenericCompare order => new IrGenericCompare(this.Expression(order.Left), this.Expression(order.Right)),
         IrCollection operation => new IrCollection(operation.Op, type(operation.Type), this.Expressions(operation.Arguments)),
+        IrLambda lambda => new IrLambda(type(lambda.Type), [.. lambda.Captures.Select(this.Local)], [.. lambda.Parameters.Select(this.Local)], [.. lambda.Locals.Select(this.Local)], this.Block(lambda.Body)),
+        IrFunctionRef reference => new IrFunctionRef(type(reference.Type), call(reference.Function)),
+        IrBoundMethod bound => bound with { Type = type(bound.Type), Receiver = bound.Receiver is null ? null : this.Expression(bound.Receiver) },
+        IrInvoke invocation => new IrInvoke(type(invocation.Type), this.Expression(invocation.Callee), this.Expressions(invocation.Arguments)),
         _ => expression
       };
       return special(expression) is { } replaced ? replaced : rebuilt;
