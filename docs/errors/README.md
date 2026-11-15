@@ -41,7 +41,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0032](PLY0032.md) | error | 10 (BudgetExceeded) | `memory limit of <bytes> bytes exceeded` | INFRA-RUNNER |
 | [PLY0033](PLY0033.md) | error | 10 (BudgetExceeded) | `output limit of <bytes> bytes exceeded` | INFRA-RUNNER |
 | [PLY0034](PLY0034.md) | error | 1 (EnvironmentError) | `isolation is unavailable on this host; untrusted input was not executed` | INFRA-RUNNER |
-| [PLY0036](PLY0036.md) (reserved) | error | 1 (EnvironmentError) | `rebuild not deterministic: '<path>' differs at byte <offset>` | INFRA-REBUILD |
+| [PLY0036](PLY0036.md) | error | 1 (EnvironmentError) | `rebuild not deterministic: '<path>' differs at byte <offset>` | INFRA-REBUILD |
 | [PLY0037](PLY0037.md) (reserved) | error | 8 (LicenseBlocker) | `SBOM component '<component>' lacks a licence` | INFRA-SBOM |
 | [PLY0038](PLY0038.md) | error | 1 (EnvironmentError) | `<from> must not reference <to> (rule: <rule>)` | INFRA-MODULES |
 | [PLY0040](PLY0040.md) | error | 1 (EnvironmentError) | `<json pointer>: <schema keyword message>` | SPEC-META |

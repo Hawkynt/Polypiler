@@ -8,6 +8,7 @@ using Polypiler.Tooling.Bench;
 using Polypiler.Tooling.Commands;
 using Polypiler.Tooling.Fuzz;
 using Polypiler.Tooling.Permutations;
+using Polypiler.Tooling.Rebuild;
 using Polypiler.Tooling.Report;
 
 namespace Polypiler.Tooling;
@@ -63,6 +64,8 @@ public static class Program {
       output.WriteLine($"       {Name} {BenchCommand.Verb} compare --baseline <dir> --current <dir> [--budgets <file>] [--out <file.md>]");
       output.WriteLine($"       {Name} {CatalogCommand.Verb} audit-adapter --audit <file> [--touch <path>]... [--corpus <dir>]");
       output.WriteLine($"       {Name} {ImportBitPermCommand.Verb} {ImportBitPermCommand.Import} [--fixtures <dir>] [--out <dir>] [--check]");
+      output.WriteLine($"       {Name} {RebuildCommand.Verb} check --output <dir> [--runs <n>] [--input <path>]... [--wall-time <seconds>] [--memory <MiB>] -- <toolchain key> <args>");
+      output.WriteLine($"       {Name} {RebuildCommand.Verb} compare <first dir> <second dir>");
       return Success;
     }
 
@@ -103,6 +106,8 @@ public static class Program {
 
     if (args[0] == CiCommand.Verb)
       return CiCommand.Run(args[1..], output, error);
+    if (args[0] == RebuildCommand.Verb)
+      return new RebuildCommand().Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;
@@ -126,6 +131,7 @@ public static class Program {
       return Failure;
 
     try {
+      Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(file))!);
       File.WriteAllBytes(file, IrModuleFormat.Write(imported.Module));
     } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException) {
       error.WriteLine($"{Name}: '{file}' cannot be written: {exception.Message}");
