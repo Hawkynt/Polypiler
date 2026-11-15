@@ -477,7 +477,10 @@ public sealed class CSharpCapabilitiesTests {
       if (row.Native is { } form)
         Assert.That(function.Contains(form.Method + "("), Is.EqualTo(native), $"{profile}:\n{text}");
 
-      Assert.That(declarations, Is.EqualTo(native || row.Helper is null ? [] : new[] { "  " + row.Helper.Lines(row.Helper.Name)[0] }), $"{profile}:\n{text}");
+      // A row of the IR library is the call of its helper, a function of the module, or an operation of the
+      // IR where one does it (the product of two widened uint); the outcomes below check it.
+      if (!row.IsLibraryIn(profile))
+        Assert.That(declarations, Is.EqualTo(native || row.Helper is null ? [] : new[] { "  " + row.Helper.Lines(row.Helper.Name)[0] }), $"{profile}:\n{text}");
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
       if (profile == row.Since && Before(profile) is { } before && row.Native is not null && !_sameNameOtherResult.Contains(name))
         Assert.That(GeneratedCSharp.ComplaintsFor(text, before.Name, profile.LanguageVersionName), Is.Not.Empty, $"{before.Name} has '{name}' too:\n{text}");
