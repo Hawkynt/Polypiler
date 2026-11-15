@@ -128,19 +128,21 @@ public sealed class JavaScriptInferenceTests {
   [TestCase("function f(n) { if (n > 1) return 1; return; }", "'f' holds both number and undefined", 38)]
   [TestCase("function f(n) { if (n > 1) return; return 1; }", "'f' holds both undefined and number", 43)]
   [TestCase("/** @param {boolean} t */ function f(t) { t = 1; return 1; }", "'t' holds both boolean and number", 47)]
-  [TestCase("function g(x) { return 1; } export function f() { return g(1) + g(true); }", "'x' holds both number and boolean", 67)]
   public void ValuesOfTwoKinds_AreRefused(string source, string message, int column) {
     var diagnostics = JavaScriptFrontend.Import("snippet.mjs", source).Diagnostics;
     Assert.That(diagnostics.Select(diagnostic => diagnostic.ToString()), Does.Contain($"snippet.mjs(1,{column}): error PLY1105: {message}"));
   }
 
-  /// <summary>A function whose parameter the callers disagree on is refused, and so is every call of it.</summary>
+  /// <summary>
+  /// A function the file does not export whose callers disagree on a parameter is copied per kind
+  /// (docs/reference/generics.md); an exported one is refused, and so is every call of it.
+  /// </summary>
   [Test]
   public void CalleeTheCallersDisagreeOn_IsRefusedWithItsCalls() {
-    Assert.That(JavaScriptFrontend.Import("snippet.mjs", "function g(x) { return 1; } export function f() { return g(1) + g(true); }").Diagnostics.Select(diagnostic => diagnostic.Message), Is.EqualTo(new[] {
-      "'a call of g, which cannot be imported' is not supported yet",
-      "'x' holds both number and boolean"
-    }));
+    Assert.That(JavaScriptFrontend.Import("snippet.mjs", "function g(x) { return 1; } export function f() { return g(1) + g(true); }").Module!.Functions.Select(function => function.Name),
+      Is.EqualTo(new[] { "g<i32>", "g<bool>", "f" }));
+    Assert.That(JavaScriptFrontend.Import("snippet.mjs", "export function g(x) { return x; } export function f() { return g(1) + g(true); }").Diagnostics.Select(diagnostic => diagnostic.Message),
+      Has.Some.Contains("'a call of g, which cannot be imported' is not supported yet"));
 
     // A parameter that is handed nothing has no type either.
     Assert.That(JavaScriptFrontend.Import("snippet.mjs", "function h() { } function g(x) { return 1; } export function f() { return g(h()); }").Diagnostics.Select(diagnostic => diagnostic.Message), Is.EqualTo(new[] {
