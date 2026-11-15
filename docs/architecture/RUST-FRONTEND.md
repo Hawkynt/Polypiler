@@ -2,8 +2,10 @@
 
 **Status:** implemented for the scalar subset (#466, #463), functions, modules, closures and
 `#[test]` (#464), arrays, slices, `Vec`, references and slice iterators (#465), structs, inherent
-methods, field-less enums and `Option`/`Result` with `?` (#467). Traits, generics, enums with data,
-text and the smart pointers are the next issues of epic #456.
+methods, field-less enums and `Option`/`Result` with `?` (#467), and of epic #456 text (`String`,
+`&str`, `char`, `format!`), traits of the crate's types with static dispatch, generic functions,
+the operator traits and `HashMap`/`BTreeMap`/`HashSet`/`BTreeSet`. Trait objects, generic structs,
+enums with data and the smart pointers are next.
 
 ```mermaid
 flowchart LR
@@ -17,9 +19,9 @@ flowchart LR
 
 `Polypiler.Core.Frontends.Rust` imports a subset of Rust (2024 edition) into the IR: functions
 and inherent methods over the primitive numeric types, `bool`, tuples, fixed arrays, slices, `Vec`,
-structs, field-less enums, `Option` and `Result`, with their operators, casts and overflow methods,
-the control flow around them, closures and iterator chains over slices and ranges, across the
-modules of one crate. `polypiler translate <file>.rs --from rust` runs it, in the overflow mode of
+structs, field-less enums, `Option`, `Result`, text, maps and sets, with their operators, casts and
+overflow methods, the control flow around them, closures and iterator chains over slices, ranges and
+text, traits and generic functions, across the modules of one crate. `polypiler translate <file>.rs --from rust` runs it, in the overflow mode of
 `--overflow-checks <panic|wrap>` or of the Cargo profile that applies; `--debug-assertions on|off`
 decides `debug_assert!` (without it a source using one is `PLY1536`). Related: [IR](IR.md) · [pipeline](PIPELINE.md) ·
 [exceptions](../reference/exceptions.md) · [integer operations](../reference/integer-operations.md).
@@ -161,6 +163,59 @@ position, `map` and `filter` stream the item through, and the chain ends in a `f
 names them and they are no part of the exported surface; `assert!`, `assert_eq!`, `assert_ne!` and
 their `debug_` forms panic as rustc does.
 
+## Text
+
+`String` and `&str` are the IR's string, which is immutable: a `String`'s value is its text, and
+`push_str`, `push`, `clear` and `+=` write the place it lives in. A `char` is its code point as a
+`u32`. Rust's text is UTF-8 and the IR's UTF-16, so every byte quantity is computed, never
+approximated: `len()` is the UTF-8 length, `as_bytes()` and `bytes()` the UTF-8 bytes, `chars()` the
+code points, `&s[a..b]` the code units between the char boundaries at those byte offsets - off a
+boundary, past the end or with `a > b` it panics as Rust's slicing does - and `find()` a byte offset.
+Strings order by code point (UTF-8's byte order), not by UTF-16 unit, which parts at the surrogates;
+`trim` uses Rust's `White_Space` set, not ECMAScript's; `parse::<integer>` reads digits as `core`'s
+`from_str_radix` does in base 10 and checks the range of the type.
+
+The helpers computing these (`Lowering/TextHelpers.cs`) are Rust, written in the subset with the
+IR's string operations as five functions only their source can name, and lowered with the module, so
+every backend emits them through its ordinary path; their names take a prefix no function of the
+crate starts with.
+
+`format!` writes Display of integers, `bool`, `char` and text, Debug of integers and `bool`, the
+radix traits of integers in two's complement, with fill, alignment, sign, `#`, `0` and a width counted
+in chars, and positional, indexed, named and captured arguments. The IR holds strings in lists and
+arrays but in no struct and no optional value, so a `String` field, `Option<&str>`, a result or a
+tuple of text and a `&mut String` parameter are refused.
+
+## Traits and generics
+
+Traits are resolved at compile time, as rustc resolves static dispatch (`Typing/TypeChecker.Traits.cs`).
+`impl Trait for T` gives `T` - a struct, an enum, a primitive, text or a tuple - the trait's methods,
+found after `T`'s own methods and those the language gives a primitive. A provided method the impl
+does not override is checked and lowered once for that type; supertraits, associated functions
+(`T::new()`), associated types of impls (`Self::Output`) and the operator traits of `core::ops` and
+`PartialEq` implemented for a struct or an enum, which make the operators call the impl's method,
+are imported.
+
+A generic function is monomorphised: every call infers its type arguments (or takes the
+turbofish's), and once the caller's types are decided the call is bound to the instance for those
+arguments, made once - the item parsed anew from its file, since the checker keeps what it learns in
+tables keyed by the node, its types resolved with the arguments, its bounds checked (`E0277`), its
+body checked like any function. Its IR name is the function's name followed by its type arguments
+(`larger_u8`). Bounds may name the crate's traits and `Copy`, `Clone`, `PartialEq`, `Eq`,
+`PartialOrd`, `Ord`, `Default`, `Display`, `Debug`, the operator traits with their `Output` and
+the compound assignment traits; `where` clauses on type parameters join them.
+
+## Maps and sets
+
+`HashMap`, `BTreeMap`, `HashSet` and `BTreeSet`, named through `use std::collections::...` or their
+full path, are the IR's maps and sets. A Rust collection is moved, never shared, so the IR's map,
+a reference, holds it exactly, and a `&mut` to one is passed as the reference. `insert` hands back
+the value it replaces, `get`, `contains_key` and `remove` look the key up by reference, `map[&k]`
+panics on an absent key, and `entry(k).or_insert(v)` is a place the caller writes through. A
+`HashMap` enumerates in an order Rust leaves unspecified and that differs between runs, so iterating
+one is refused; so is a `BTreeMap`'s sorted iteration until the IR has a sorted map. Keys are
+integers, `bool`, `char` and text; values are what an IR optional holds.
+
 ## Panics
 
 A panic is the throw of an exception class of the IR ([exceptions](../reference/exceptions.md)):
@@ -204,20 +259,20 @@ assignment before its place.
 | `PLY1512` | a `for` or a chain over `..` or `a..` |
 | `PLY1513` | `async`, `.await`, `try`, `gen`, `yield` |
 | `PLY1520` | nested arrays, a slice or a `Vec` of anything but numbers, `bool`, tuples and structs of them, a slice pattern, an array length no constant gives |
-| `PLY1521` | `char`, `&str`, `String` |
+| `PLY1521` | `&mut str`, `&mut String` parameters |
 | `PLY1522` | `unsafe` blocks, `unsafe trait`, `unsafe impl`, raw pointers and borrows, `static mut`, `union`, `ManuallyDrop` |
 | `PLY1523` | `Box`, `Rc`, `Arc`, `Cell`, `RefCell`, `Mutex` |
 | `PLY1524` | slice methods outside the subset (`sort`, `binary_search`, `get` with a range, ...) |
-| `PLY1525` | `HashMap`, `HashSet`, `BTreeMap`, `BTreeSet`, `VecDeque`, `BinaryHeap` |
+| `PLY1525` | `VecDeque`, `BinaryHeap`, `LinkedList`; iterating a map or a set; map keys and values the IR cannot hold |
 | `PLY1530` | generic, `unsafe`, `extern` and variadic functions, `where`, `impl Trait`, a typed `self`, a function without a body, nested items |
-| `PLY1531` | macros but `assert!`, `assert_eq!`, `assert_ne!`, their `debug_` forms, `panic!`, `todo!`, `unimplemented!`, `unreachable!` and `vec!`; format arguments |
+| `PLY1531` | macros but `assert!`, `assert_eq!`, `assert_ne!`, their `debug_` forms, `panic!`, `todo!`, `unimplemented!`, `unreachable!`, `vec!` and `format!`; format arguments of the panicking macros, float formatting, Debug of text, precision and width arguments |
 | `PLY1532` | a closure that escapes, a move of a captured non-`Copy` value, a `move` closure assigning its capture |
 | `PLY1533` | attributes but the lint levels, `inline`, `must_use`, `cold`, `track_caller`, `derive`, `repr`, `test`, `cfg(test)` and documentation |
 | `PLY1534` | a path to another crate or outside the supported standard-library subset |
 | `PLY1535` | iterator methods outside the subset, an adapter in an order the lowering does not stream, a chain stored as a value |
 | `PLY1536` | `debug_assert!` without `--debug-assertions` |
-| `PLY1540` | traits, trait impls, trait objects |
-| `PLY1541` | generic structs, enums and impls |
+| `PLY1540` | trait objects (`dyn Trait`), impls of library traits outside the operator traits, `PartialEq`, `Default` and `Clone`, bounds on other library traits |
+| `PLY1541` | generic structs, enums, impls, methods and traits, public generic functions, const generics |
 | `PLY1542` | lifetime parameters, reference fields, reference results |
 | `PLY1543` | enums with data |
 | `PLY1544` | derives and `repr` forms outside the list above |
@@ -230,7 +285,8 @@ assignment before its place.
 `control.rs` (the control forms and all twelve range forms over bound pairs and steps),
 `functions.rs` (calls, recursion, `pub`), `memory.rs` (arrays, slices, `Vec`, references,
 copy-in/copy-out), `types.rs` (structs, methods, enums, `Option`, `Result`, `?`), `closures.rs`
-(closures and iterator chains), `edges.rs` (the rarer forms) and the package `modgraph/` (file
+(closures and iterator chains), `edges.rs` (the rarer forms), `strings.rs` (text), `traits.rs`
+(traits and generic functions), `collections.rs` (maps and sets) and the package `modgraph/` (file
 modules, `use`, re-exports, `#[test]`). `recorded/` holds what rustc did with each, per overflow
 mode, for the calls of `RustCases`; `RustDifferentialTests` in `Polypiler.Tests` holds the
 interpreter to the recordings, `RustFrontendDifferentialTests` in `Polypiler.Tests.Acceptance`

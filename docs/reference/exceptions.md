@@ -188,9 +188,9 @@ its kind: an arithmetic overflow, a shift amount out of range, `MIN / -1` and `M
 `OverflowException`; a zero divisor `DivideByZeroException`; an index or a range outside a slice, an
 array or a `Vec` `IndexOutOfRangeException`; `unwrap()` of a `None` or an `Err`, `expect("msg")`,
 `step_by(0)`, `assert!` and its relatives, `panic!`, `todo!`, `unimplemented!`, `unreachable!` and
-unequal lengths of `copy_from_slice` `InvalidOperationException` with Rust's message; `clamp` with
-`min > max` the
-`Clamp` trap (`ArithmeticException`). The class is compared with rustc's panic, the message is not
+unequal lengths of `copy_from_slice`, a byte range of text off a char boundary, past its end or reversed
+and `to_digit` with a radix above 36 `InvalidOperationException` with Rust's message; indexing a map by
+an absent key the IR's `KeyNotFound` trap; `clamp` with `min > max` the `Clamp` trap (`ArithmeticException`). The class is compared with rustc's panic, the message is not
 ([the Rust frontend](../architecture/RUST-FRONTEND.md)).
 
 **Backend.** Generated Rust has no exception objects: a trap is a panic whose message is the name of the IR trap,

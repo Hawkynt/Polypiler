@@ -177,7 +177,7 @@ public static class RustFrontend {
 
   /// <summary>The registered diagnostic of <see cref="TextType"/>.</summary>
   [Diagnostic]
-  public static readonly DiagnosticDescriptor TextTypeDescriptor = new(TextType, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "text type '{0}' is not supported; use byte slices", "rust.text");
+  public static readonly DiagnosticDescriptor TextTypeDescriptor = new(TextType, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "text type '{0}' is not supported", "rust.text");
 
   /// <summary>The code for <c>unsafe</c> blocks, raw pointers, <c>transmute</c>, <c>union</c>, <c>static mut</c> and <c>MaybeUninit</c>.</summary>
   public const string UnsafeConstruct = "PLY1522";

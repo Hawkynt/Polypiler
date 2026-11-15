@@ -1059,8 +1059,8 @@ codes:
   - code: PLY1521
     severity: error
     exit: UnsupportedConstruct
-    title: Rust text type not supported
-    message: "text type '<type>' is not supported; use byte slices"
+    title: Rust text form not supported
+    message: "text type '<type>' is not supported"
     rule: rust.text
     area: rust
     owner: "#465"
