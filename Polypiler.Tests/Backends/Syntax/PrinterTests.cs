@@ -234,7 +234,7 @@ public sealed class PrinterTests {
 
   [Test]
   public void Readers_RefuseWhatTheTreeDoesNotHave() {
-    Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Expression("x?.y"));
+    Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Expression("x switch { _ => 1 }"));
     Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Expression("a +"));
     Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Member("event System.Action E;"));
     Assert.Throws<System.ArgumentException>(() => CSharpSyntaxReader.Member("void M( {"));

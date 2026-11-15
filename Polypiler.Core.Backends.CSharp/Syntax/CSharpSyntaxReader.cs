@@ -169,7 +169,6 @@ public static class CSharpSyntaxReader {
         clause.Filter is null ? null : Read(clause.Filter.FilterExpression), Block(clause.Block)))],
         attempt.Finally is null ? null : Block(attempt.Finally.Block)),
       CheckedStatementSyntax context => new CsCheckedStatement(context.IsKind(SyntaxKind.CheckedStatement), Block(context.Block)),
-      TryStatementSyntax { Catches.Count: 0, Finally: { } cleanup } attempt => new CsTryFinally(Block(attempt.Block), Block(cleanup.Block)),
       LocalFunctionStatementSyntax function => new CsLocalFunction(
         Modifiers(function.Modifiers), new CsType(function.ReturnType.ToString()), function.Identifier.Text, Read(function.ParameterList),
         function.Body is null ? null : Block(function.Body), function.ExpressionBody is null ? null : Read(function.ExpressionBody.Expression)),

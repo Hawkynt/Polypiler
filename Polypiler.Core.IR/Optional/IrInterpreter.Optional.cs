@@ -42,7 +42,7 @@ public static partial class IrInterpreter {
         default:
           var bind = (IrBind)expression;
           var bound = this.Evaluate(bind.Value, frame);
-          frame.Locals[bind.Local] = bound;
+          frame.Set(bind.Local, bound);
           return Copied(bound);
       }
     }

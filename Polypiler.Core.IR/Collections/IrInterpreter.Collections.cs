@@ -262,7 +262,7 @@ public static partial class IrInterpreter {
           if (index >= list.Items.Count)
             return Flow.Next;
 
-          frame.Locals[loop.Element!] = Copied(list.Items[index]);
+          frame.Declare(loop.Element!, Copied(list.Items[index]));
           var pass = this.Run(loop.Body, frame);
           if (pass is Flow.Break or Flow.Return)
             return pass & Flow.Return;
@@ -282,10 +282,10 @@ public static partial class IrInterpreter {
           continue;
 
         if (loop.Element is { } element)
-          frame.Locals[element] = entry.Key;
+          frame.Declare(element, entry.Key);
 
         if (loop.Value is { } value)
-          frame.Locals[value] = Copied(entry.Value!);
+          frame.Declare(value, Copied(entry.Value!));
 
         var pass = this.Run(loop.Body, frame);
         if (pass is Flow.Break or Flow.Return)

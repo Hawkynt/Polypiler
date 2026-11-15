@@ -361,11 +361,6 @@ public sealed record CsTry(CsBlock Body, IReadOnlyList<CsCatch> Catches, CsBlock
 /// <param name="Body">The block.</param>
 public sealed record CsCatch(CsType? Type, string? Name, CsExpression? Filter, CsBlock Body) : CsNode;
 
-/// <summary><c>try { body } finally { cleanup }</c>.</summary>
-/// <param name="Body">The block that runs first.</param>
-/// <param name="Finally">The block that runs however the first one ends.</param>
-public sealed record CsTryFinally(CsBlock Body, CsBlock Finally) : CsStatement;
-
 /// <summary>A local function: <c>modifiers T Name(parameters) { … }</c> or <c>… =&gt; expression;</c> (C# 7).</summary>
 /// <param name="Modifiers">The modifiers, such as <c>static</c>.</param>
 /// <param name="ReturnType">The return type.</param>

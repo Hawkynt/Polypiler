@@ -246,7 +246,7 @@ public static partial class JavaScriptEmitter {
       foreach (var name in this._taken.Keys.Where(name => !outer.Contains(name)).ToList())
         this._taken.Remove(name);
 
-      return back.Count == 0 ? [.. copies, .. statements] : [.. copies, new JsTryFinally(new JsBlock(statements), new JsBlock(back))];
+      return back.Count == 0 ? [.. copies, .. statements] : [.. copies, new JsTry(new JsBlock(statements), null, null, new JsBlock(back))];
     }
 
     private List<JsStatement> InEnvironment(Environment environment, IrBlock body) {
@@ -262,7 +262,7 @@ public static partial class JavaScriptEmitter {
       var back = environment.Variables.Where(variable => variable.PerIteration && CSharpLikeWrites(body, variable.Local))
         .Select(variable => (JsStatement)new JsExpressionStatement(new JsAssignment(this.Variable(variable.Local), "=", new JsMember(Id(environment.Name), variable.Key)))).ToList();
       var made = new JsExpressionStatement(new JsAssignment(Id(environment.Name), "=", new JsObject(properties)));
-      return back.Count == 0 ? [made, .. statements] : [made, new JsTryFinally(new JsBlock(statements), new JsBlock(back))];
+      return back.Count == 0 ? [made, .. statements] : [made, new JsTry(new JsBlock(statements), null, null, new JsBlock(back))];
     }
 
     /// <summary>Whether a body writes a variable: assigns it or steps it, also inside a lambda.</summary>

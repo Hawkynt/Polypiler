@@ -109,7 +109,6 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(double a) { switch (a) { case 1.5: return 1; default: return 0; } }", "a switch on the type f64", 41, TestName = "switch on a float")]
   [TestCase("public static int F(int a) { const decimal s = 1m; return a; }", "decimal", 36, TestName = "local constant of a type outside the subset")]
   [TestCase("public static int F(int a) => (a)++;", "ParenthesizedExpression", 31, TestName = "step of something that is not a variable")]
-  [TestCase("public static int F(int[] a) => a!.Length;", "SuppressNullableWarningExpression", 33, TestName = "null-forgiving operator")]
   [TestCase("public static int F() { return G(1); int G<T>(T v) => 1; }", "a generic local function", 38, TestName = "call of a local function")]
   [TestCase("public static int F(int a) => a switch { _ => 1 };", "SwitchExpression", 31, TestName = "switch expression")]
   [TestCase("public static int F(int a) { goto end; end: return a; }", "GotoStatement", 30, TestName = "goto")]

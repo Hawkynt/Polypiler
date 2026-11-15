@@ -57,7 +57,7 @@ public static partial class IrInterpreter {
           continue;
 
         if (clause.Local is { } local)
-          frame.Locals[local] = exception;
+          frame.Declare(local, exception);
 
         if (clause.Filter is null)
           return clause;

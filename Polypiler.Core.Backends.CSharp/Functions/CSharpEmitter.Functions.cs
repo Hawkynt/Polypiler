@@ -324,7 +324,7 @@ public static partial class CSharpEmitter {
       var body = this.Body(loop.Body, null);
       this._scopes.RemoveAt(this._scopes.Count - 1);
       this._scopes[^1].Within.UnionWith(scope.Within);
-      List<CsStatement> pass = back.Count == 0 ? [.. copies, .. body] : [.. copies, new CsTryFinally(new CsBlock(body), new CsBlock(back))];
+      List<CsStatement> pass = back.Count == 0 ? [.. copies, .. body] : [.. copies, new CsTry(new CsBlock(body), [], new CsBlock(back))];
       return new CsFor(null, condition, incrementors, new CsBlock(pass));
     }
 

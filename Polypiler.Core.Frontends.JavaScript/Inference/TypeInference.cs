@@ -60,7 +60,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     // returns a value and can also end without one returns undefined there.
     if (!model.Flows.Exists(flow => flow.Kind == FlowKind.Return))
       model.Result = JsType.Undefined;
-    else if (model.Problem is null && Completes.MayComplete(((FunctionBody)candidate.Function.Body).Body))
+    else if (model.Problem is null && candidate.Function.Body is FunctionBody block && Completes.MayComplete(block.Body))
       model.Result = JsType.UndefinedValue;
 
     return model;
