@@ -435,6 +435,9 @@ public sealed record CsTypeDeclaration(
   /// <summary>Layout: an empty line follows the opening brace whatever the first member asks for.</summary>
   public bool OpenBlank { get; init; }
 
+  /// <summary>The type parameters of a generic type, such as <c>TKey</c>; empty for none.</summary>
+  public IReadOnlyList<string> TypeParameters { get; init; } = [];
+
 }
 
 /// <summary>A namespace: one that holds the rest of the file, <c>namespace N;</c>, or a block.</summary>

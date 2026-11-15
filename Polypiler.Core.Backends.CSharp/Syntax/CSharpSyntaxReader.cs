@@ -117,7 +117,9 @@ public static class CSharpSyntaxReader {
         type.Identifier.Text,
         type.ParameterList is null ? null : Read(type.ParameterList),
         type.BaseList is null ? [] : [.. type.BaseList.Types.Select(baseType => new CsType(baseType.Type.ToString()))],
-        type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]),
+        type.OpenBraceToken.IsKind(SyntaxKind.None) ? null : [.. type.Members.Select(Read)]) {
+        TypeParameters = type.TypeParameterList is null ? [] : [.. type.TypeParameterList.Parameters.Select(parameter => parameter.Identifier.Text)]
+      },
       FileScopedNamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), true, [.. scope.Members.Select(Read)]),
       NamespaceDeclarationSyntax scope => new CsNamespace(scope.Name.ToString(), false, [.. scope.Members.Select(Read)]),
       _ => throw Unknown(member)

@@ -60,7 +60,7 @@ public static partial class CSharpEmitter {
   private sealed partial class Writer {
 
     /// <summary>The C# type of a collection: <c>List&lt;T&gt;</c> from <c>System.Collections.Generic</c>.</summary>
-    private string CollectionTypeName(IrType type) => $"{CollectionsNamespace}List<{this.TypeName(type.Element!)}>";
+    private string CollectionTypeName(IrType type) => type.IsList ? $"{CollectionsNamespace}List<{this.TypeName(type.Element!)}>" : this.KeyedTypeName(type);
 
     /// <summary>A name no variable of the function has, for a variable the backend declares in the innermost block.</summary>
     private string Fresh(string stem) {
@@ -78,6 +78,9 @@ public static partial class CSharpEmitter {
     /// through helpers.
     /// </summary>
     private (CsExpression Node, int Binding) Collection(IrCollection operation) {
+      if (IrCollections.Kind(operation.Op) != IrTypeKind.List)
+        return this.Keyed(operation);
+
       var arguments = operation.Arguments;
       switch (operation.Op) {
         case IrCollectionOp.ListNew:
@@ -124,7 +127,9 @@ public static partial class CSharpEmitter {
       var scope = new Scope();
       this._scopes.Add(scope);
       var element = loop.Element!;
-      if (loop.Mode == EnumerationMode.Checked) {
+      if (!loop.Collection.Type.IsList) {
+        this.KeyedLoop(loop, statements, collection);
+      } else if (loop.Mode == EnumerationMode.Checked) {
         var name = this.Declare(element);
         var body = this.Body(loop.Body, null);
         statements.Add(new CsForEach(new CsType(this.TypeName(element.Type)), name, collection, new CsBlock(body)));

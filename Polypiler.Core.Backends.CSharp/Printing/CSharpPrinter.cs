@@ -282,6 +282,9 @@ public static class CSharpPrinter {
 
     private void Type(CsTypeDeclaration type, int depth) {
       this.Modifiers(type.Modifiers, depth).Append(type.Keyword).Append(' ').Append(type.Name);
+      if (type.TypeParameters.Count > 0)
+        this._text.Append('<').AppendJoin(", ", type.TypeParameters).Append('>');
+
       if (type.Parameters is not null)
         this.Parameters(type.Parameters);
 
