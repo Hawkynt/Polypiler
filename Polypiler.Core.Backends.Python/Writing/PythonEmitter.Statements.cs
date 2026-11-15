@@ -175,6 +175,7 @@ public static partial class PythonEmitter {
       "NullReferenceException" => "AttributeError",
       "InvalidCastException" => "TypeError",
       "InvalidOperationException" => "RuntimeError",
+      "AssertionException" => "AssertionError",
       "KeyNotFoundException" => "KeyError",
       "FormatException" or "ArgumentException" or "ArgumentOutOfRangeException" => "ValueError",
       _ => "Exception"

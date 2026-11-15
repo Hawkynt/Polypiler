@@ -26,7 +26,7 @@ public sealed class IrExceptionClassTests {
   /// <summary>The classes stand as they stand in .NET, <c>SystemException</c> left out.</summary>
   [Test]
   public void Hierarchy_IsThatOfDotNet() {
-    foreach (var type in IrExceptionClass.All) {
+    foreach (var type in IrExceptionClass.All.Where(type => type != IrExceptionClass.AssertionException)) {
       var host = HostType(type);
       Assert.That(host, Is.Not.Null, type.Name);
       // SystemException, which stands between in .NET, is no class of the IR: the nearest ancestor the IR has is the base.
@@ -38,6 +38,17 @@ public sealed class IrExceptionClassTests {
       Assert.That(type.Base?.Name, Is.EqualTo(expected), type.Name);
       Assert.That(type.IsLibrary && IrExceptionClass.IsLibrary(type) && IrExceptionClass.IsException(type), Is.True, type.Name);
     }
+  }
+
+  /// <summary>The one library class .NET has none of: a failed assertion of the source, derived from Exception, with a message of its own.</summary>
+  [Test]
+  public void AssertionException_IsALibraryClassBelowException() {
+    var type = IrExceptionClass.AssertionException;
+    Assert.That(type.Base, Is.SameAs(IrExceptionClass.Exception));
+    Assert.That(type.IsLibrary && IrExceptionClass.IsLibrary(type) && IrExceptionClass.IsException(type), Is.True);
+    Assert.That(IrExceptionClass.DefaultMessage(type), Is.EqualTo("Assertion failed."));
+    Assert.That(IrExceptionClass.Parameters(IrExceptionClass.Constructor(type, 1)), Is.EqualTo(new[] { IrType.String }));
+    Assert.That(IrExceptionClass.All, Does.Contain(type));
   }
 
   [Test]
@@ -92,7 +103,7 @@ public sealed class IrExceptionClassTests {
   /// <summary>The message of a parameterless constructor is .NET 10's own text.</summary>
   [Test]
   public void DefaultMessage_IsThatOfDotNet() {
-    foreach (var type in IrExceptionClass.All.Where(type => type.Name is not "ArgumentOutOfRangeException")) {
+    foreach (var type in IrExceptionClass.All.Where(type => type.Name is not ("ArgumentOutOfRangeException" or "AssertionException"))) {
       var host = (Exception)Activator.CreateInstance(HostType(type))!;
       Assert.That(IrExceptionClass.DefaultMessage(type), Is.EqualTo(host.Message), type.Name);
     }
