@@ -29,6 +29,13 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase(">>> 0", 5, null)]
   [TestCase("object literal", 5, null)]
   [TestCase("shorthand property", 2015, "key: key")]
+  [TestCase("class", 2015, "function")]
+  [TestCase("class accessor", 2015, "Object.defineProperty")]
+  [TestCase("class fields", 2022, "constructor assignments")]
+  [TestCase("#private", 2022, "_name")]
+  [TestCase("static fields", 2022, "assignment after the class")]
+  [TestCase("Object", 5, null)]
+  [TestCase("Object.defineProperty", 5, null)]
   [TestCase("NaN", 5, null)]
   [TestCase("Infinity", 5, null)]
   [TestCase("RangeError", 5, null)]
@@ -229,7 +236,7 @@ public sealed class JavaScriptCapabilitiesTests {
   public void Globals_AreTheIdentifiersTheEntriesStartWith()
     => Assert.That(_table.Globals(), Is.EquivalentTo(new[] {
       "NaN", "Infinity", "RangeError", "Math", "Number", "globalThis", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array",
-      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String"
+      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String", "Object"
     }));
 
   [Test]

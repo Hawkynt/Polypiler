@@ -45,7 +45,9 @@ public static class CSharpSyntaxRewriter {
     CsCheckedStatement context => [context.Block],
     CsField field => Optional(field.Initializer),
     CsMethod method => [.. Optional(method.Body), .. Optional(method.ExpressionBody)],
-    CsConstructor constructor => [constructor.Body],
+    CsConstructor constructor => [.. constructor.Chained ?? [], constructor.Body],
+    CsAccessor accessor => [.. Optional(accessor.Body), .. Optional(accessor.ExpressionBody)],
+    CsProperty property => [.. property.Accessors ?? [], .. Optional(property.ExpressionBody)],
     CsTypeDeclaration type => type.Members ?? [],
     CsNamespace scope => scope.Members,
     CsCompilationUnit unit => unit.Members,
@@ -109,7 +111,9 @@ public static class CSharpSyntaxRewriter {
     CsCheckedStatement context => Same(context, context.Block, rewrite, block => context with { Block = block }),
     CsField { Initializer: { } initializer } field => Same(field, initializer, rewrite, value => field with { Initializer = value }),
     CsMethod method => Method(method, rewrite),
-    CsConstructor constructor => Same(constructor, constructor.Body, rewrite, body => constructor with { Body = body }),
+    CsConstructor constructor => Constructor(constructor, rewrite),
+    CsAccessor accessor => Accessor(accessor, rewrite),
+    CsProperty property => Property(property, rewrite),
     CsTypeDeclaration { Members: { } members } type => List(members, rewrite) is var rewritten && !ReferenceEquals(rewritten, members) ? type with { Members = rewritten } : type,
     CsNamespace scope => List(scope.Members, rewrite) is var members && !ReferenceEquals(members, scope.Members) ? scope with { Members = members } : scope,
     CsCompilationUnit unit => List(unit.Members, rewrite) is var members && !ReferenceEquals(members, unit.Members) ? unit with { Members = members } : unit,
@@ -196,6 +200,24 @@ public static class CSharpSyntaxRewriter {
     return labels.SequenceEqual(section.Labels, ReferenceEqualityComparer.Instance) && ReferenceEquals(statements, section.Statements)
       ? section
       : section with { Labels = labels, Statements = statements };
+  }
+
+  private static CsConstructor Constructor(CsConstructor constructor, Func<CsNode, CsNode> rewrite) {
+    var chained = constructor.Chained is null ? null : List(constructor.Chained, rewrite);
+    var body = (CsBlock)Visit(constructor.Body, rewrite);
+    return ReferenceEquals(chained, constructor.Chained) && ReferenceEquals(body, constructor.Body) ? constructor : constructor with { Chained = chained, Body = body };
+  }
+
+  private static CsAccessor Accessor(CsAccessor accessor, Func<CsNode, CsNode> rewrite) {
+    var body = Optional(accessor.Body, rewrite);
+    var expression = Optional(accessor.ExpressionBody, rewrite);
+    return ReferenceEquals(body, accessor.Body) && ReferenceEquals(expression, accessor.ExpressionBody) ? accessor : accessor with { Body = body, ExpressionBody = expression };
+  }
+
+  private static CsProperty Property(CsProperty property, Func<CsNode, CsNode> rewrite) {
+    var accessors = property.Accessors is null ? null : List(property.Accessors, rewrite);
+    var expression = Optional(property.ExpressionBody, rewrite);
+    return ReferenceEquals(accessors, property.Accessors) && ReferenceEquals(expression, property.ExpressionBody) ? property : property with { Accessors = accessors, ExpressionBody = expression };
   }
 
   private static CsMethod Method(CsMethod method, Func<CsNode, CsNode> rewrite) {

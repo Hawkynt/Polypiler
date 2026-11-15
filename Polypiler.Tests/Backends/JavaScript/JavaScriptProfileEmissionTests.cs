@@ -635,6 +635,11 @@ public sealed class JavaScriptProfileEmissionTests {
       [".setUint32"] = (bits, "$view.setUint32(0, value.hi);", "function $float64(value) {\n  var exponent"),
       [".getUint32"] = (bits, "hi: $view.getUint32(0)", "function $bits64(value) {\n  if (value !== value)"),
       [".fill"] = ("public static void F(int[] a) { System.Array.Fill(a, 7); }", "a.fill(7)", "$fill(a, 7)"),
+      ["class"] = ("public sealed class K { public int V; } public static int F() => new K().V;", "class K {", "function K("),
+      ["class accessor"] = ("public sealed class K { public int V => 1; } public static int F() => new K().V;", "get V() {", "Object.defineProperty(K.prototype, \"V\""),
+      ["class fields"] = ("public sealed class K { public int V; } public static int F() => new K().V;", "\n  V = 0;", "this.V = 0;"),
+      ["#private"] = ("public sealed class K { private int _v; public int Get() => _v; } public static int F() => new K().Get();", "this.#v", "this._v"),
+      ["static fields"] = ("public sealed class K { public static int S = 2; } public static int F() => K.S;", "static S = 2;", "K.S = 2;"),
       ["shorthand property"] = ("public struct V { public double X; public V(double x) { X = x; } } public static V F(double X) => new V(X);", "return { X };", "return { X: X };"),
       ["BigInt"] = ("public static long F(int a) => a;", "BigInt(a)", "$sx64(a)"),
       ["BigInt.asIntN"] = ("public static long F(long a) => a + a;", "BigInt.asIntN(64, a + a)", "$add64(a, a)"),
@@ -659,8 +664,8 @@ public sealed class JavaScriptProfileEmissionTests {
       var (source, native, replacement) = cases[entry.Name];
       // The pair of halves has two forms itself: a typed array of 32-bit halves needs the level that brought the
       // typed arrays, so what is native from ECMAScript 2020 is compared with ECMAScript 2017, the rest with ECMAScript 5.
-      var first = entry.Since == 2020 ? _es2020 : entry.Name is ".setUint32" or ".getUint32" ? _es2017 : _es2015;
-      var last = entry.Since == 2020 ? _es2017 : _es5;
+      var first = entry.Since == 2022 ? JavaScriptProfile.Default : entry.Since == 2020 ? _es2020 : entry.Name is ".setUint32" or ".getUint32" ? _es2017 : _es2015;
+      var last = entry.Since == 2022 ? _es2020 : entry.Since == 2020 ? _es2017 : _es5;
       Assert.That(Emit(source, first), Does.Contain(native), $"{entry.Name} is native in {first}");
       Assert.That(Emit(source, last), Does.Not.Contain(native).And.Contain(replacement), $"{entry.Name} is replaced in {last}");
       if (entry.TypedArray)

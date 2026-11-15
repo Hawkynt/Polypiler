@@ -139,7 +139,16 @@ internal enum FlowKind {
   Argument,
 
   /// <summary>The node is a property of a destructuring declaration: the variable gets the value of that key of the record the source holds.</summary>
-  Field
+  Field,
+
+  /// <summary>The node is an assignment to a property of an object: a field, or the value of a setter.</summary>
+  FieldStore,
+
+  /// <summary>The node steps a field of an object.</summary>
+  FieldStep,
+
+  /// <summary>The node is an argument of a call of a method on an object, whose class decides the method.</summary>
+  MethodArgument
 
 }
 

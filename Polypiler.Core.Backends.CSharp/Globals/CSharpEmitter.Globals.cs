@@ -30,7 +30,13 @@ public static partial class CSharpEmitter {
     }
 
     /// <summary>A global of the module as an expression of its type.</summary>
-    private CsName GlobalName(IrGlobal global) => new(this._members[global.Name]) { Type = global.Type };
+    private CsExpression GlobalName(IrGlobal global) {
+      // A static field of a class is a member of that class.
+      if (this._module.Types.OfType<IrClassType>().FirstOrDefault(type => type.StaticFields.Contains(global)) is { } owner)
+        return new CsMemberAccess(new CsName(this._typeNames[owner.Name]), this.MemberNames(owner)[global]) { Type = global.Type };
+
+      return this.Qualified(this._members[global.Name]) with { Type = global.Type };
+    }
 
   }
 

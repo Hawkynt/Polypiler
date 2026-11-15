@@ -40,6 +40,7 @@ internal sealed partial class Lowering(TypeInference types) {
     this._model = model;
     this._locals.Clear();
     this._assigned = [];
+    this._receiver = null;
     types.Enter(model);
     try {
       if (model.Problem is { } problem)
@@ -65,11 +66,14 @@ internal sealed partial class Lowering(TypeInference types) {
       }
 
       this._returnType = model.ReturnType;
-      var body = new IrBlock([.. entry, .. this.Block(((FunctionBody)model.Candidate.Function.Body).Body).Statements]);
+      var (receiver, prologue) = this.Member(model);
+      var body = new IrBlock([.. entry, .. prologue, .. this.Block(((FunctionBody)model.Candidate.Function.Body).Body).Statements]);
       if (this._returnType != IrType.Void && !AlwaysReturns(body))
         throw this.Unsupported(model.Candidate.Anchor, "a function that can end without returning its value");
 
-      return new IrFunction(model.Candidate.Name, model.IsPublic, this._returnType, model.Parameters.Select(parameter => parameter.Parameter!).ToList(), this._locals.ToList(), body);
+      // A member is reached through its class, never by its name from outside the module.
+      List<IrLocal> parameters = [.. receiver is null ? [] : (IrLocal[])[receiver], .. model.Parameters.Select(parameter => parameter.Parameter!)];
+      return new IrFunction(model.Candidate.Name, model.IsPublic && model.Candidate.Class is null, this._returnType, parameters, this._locals.ToList(), body);
     } catch (Refusal refusal) {
       diagnostics.Add(refusal.Diagnostic);
       return null;
@@ -78,6 +82,7 @@ internal sealed partial class Lowering(TypeInference types) {
 
   /// <summary>Refuses a place that values of two kinds reach, and a <c>BigInt</c> that nothing bounds.</summary>
   private void CheckType(JsType type, string name, Node evidence) {
+
     if (type.Kind == JsKind.Conflict)
       throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"'{name}' holds both {type.Kinds.First} and {type.Kinds.Second}");
 
@@ -228,7 +233,9 @@ internal sealed partial class Lowering(TypeInference types) {
       return new IrReturn(this.Value(result.Argument, this._returnType));
 
     // The value has no type: the expression is refused for what it is, or it is a call that returns nothing.
-    this.Expression(result.Argument);
+    if (this.Expression(result.Argument) is IrNull)
+      throw this.Unsupported(result.Argument, "null");
+
     throw this.Unsupported(result.Argument, "void as the value returned");
   }
 
@@ -409,6 +416,9 @@ internal sealed partial class Lowering(TypeInference types) {
     if (compound is null && assignment.Operator != Operator.Assignment)
       throw this.Unsupported(assignment, OperatorText(assignment.Operator));
 
+    if (this.ObjectAssignment(assignment, compound, into))
+      return;
+
     switch (assignment.Left) {
       case Identifier { Name: var name } target when this._model.Bindings.GetValueOrDefault(target) is Variable variable:
         if (variable.IsConstant)
@@ -479,6 +489,9 @@ internal sealed partial class Lowering(TypeInference types) {
   /// store into that array does, which is the step of the IR.
   /// </summary>
   private void Step(UpdateExpression step, List<IrStmt> into) {
+    if (this.ObjectStep(step, into))
+      return;
+
     if (step.Argument is not Identifier { Name: var name } target) {
       into.Add(new IrExprStmt(this.StepElement(step)));
       return;

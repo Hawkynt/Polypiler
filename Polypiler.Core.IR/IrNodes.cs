@@ -276,9 +276,10 @@ public sealed record IrStructDefault(IrType Type) : IrExpr(Type);
 /// <summary>
 /// The value of a field. The target is evaluated first; when it is a place - a variable, a
 /// parameter, an array element or a field of a place - the field is read there, and only the field
-/// is copied, as every read of a struct value is.
+/// is copied, as every read of a struct value is. The target may also be a reference to an object,
+/// whose field is read in the object; a <c>null</c> reference traps (see <see cref="IrNew"/>).
 /// </summary>
-/// <param name="Target">A value of a struct type that has the field.</param>
+/// <param name="Target">A value of a struct type or a reference to a class that has the field.</param>
 /// <param name="Field">The field, one of the target type's own.</param>
 public sealed record IrFieldLoad(IrExpr Target, IrField Field) : IrExpr(Field.Type);
 
@@ -287,6 +288,9 @@ public sealed record IrFieldLoad(IrExpr Target, IrField Field) : IrExpr(Field.Ty
 /// numbers of an integer type and truth values by value, floating-point numbers as
 /// <c>double.Equals</c> compares them - a NaN equals a NaN, and <c>+0.0</c> equals <c>-0.0</c> -
 /// a struct field recursively, and an array field by identity. Both operands are evaluated, left first.
+/// Of a record class (<see cref="IrClassType.IsRecord"/>) two references are compared: two <c>null</c>s
+/// are equal, <c>null</c> and an object are not, and two objects are when their fields are, an object
+/// field by this same equality.
 /// </summary>
 /// <param name="Left">The value evaluated first.</param>
 /// <param name="Right">The value evaluated second.</param>
@@ -862,7 +866,9 @@ public sealed record IrStore(IrExpr Array, IrExpr Index, IrExpr Value) : IrStmt;
 
 /// <summary>
 /// A write to a field of a place: of a variable or parameter, of an array element, or of a field of
-/// such a place. The target place is evaluated first - for an array element its array and index,
+/// such a place - or to a field of the object a reference names, which every copy of the reference
+/// sees; there the value is evaluated before a <c>null</c> reference traps (see <see cref="IrNew"/>),
+/// and a read-only field is written only by a constructor of its class through its new object. The target place is evaluated first - for an array element its array and index,
 /// which are checked - then the value; the write changes that place alone (see <see cref="IrStructNew"/>).
 /// A read-only field is never written this way.
 /// </summary>

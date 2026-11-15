@@ -55,7 +55,13 @@ public enum IrTypeKind {
   ReadOnlySpan,
 
   /// <summary>An immutable sequence of UTF-16 code units, never null; compared and searched by code unit.</summary>
-  String
+  String,
+
+  /// <summary>
+  /// A reference to an object of a class, an <see cref="IrClassType"/>, or <c>null</c>: the object has an
+  /// identity, and every copy of the reference names the same object.
+  /// </summary>
+  Object
 
 }
 
@@ -152,6 +158,17 @@ public sealed record IrType {
 
   /// <summary>The struct of a struct type, otherwise <see langword="null"/>.</summary>
   public IrStructType? StructType => this.Declaration as IrStructType;
+
+  /// <summary>The type of the references to objects of a class.</summary>
+  /// <param name="declaration">The class.</param>
+  /// <returns>The reference type.</returns>
+  public static IrType Object(IrClassType declaration) => new(IrTypeKind.Object, null, declaration);
+
+  /// <summary>The class of a reference type, otherwise <see langword="null"/>.</summary>
+  public IrClassType? ClassType => this.Declaration as IrClassType;
+
+  /// <summary>Whether the type is a reference to an object of a class, which may be <c>null</c>.</summary>
+  public bool IsObject => this.Kind == IrTypeKind.Object;
 
   /// <summary>Whether the type is the string type <c>str</c>.</summary>
   public bool IsString => this.Kind == IrTypeKind.String;

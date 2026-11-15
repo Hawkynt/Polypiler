@@ -43,6 +43,8 @@ public static class IrShape {
       (IrStructDefault, IrStructDefault) => true,
       (IrFieldLoad a, IrFieldLoad b) => ReferenceEquals(a.Field, b.Field) && Same(a.Target, b.Target),
       (IrStructEquals a, IrStructEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
+      (IrNull, IrNull) => true,
+      (IrReferenceEquals a, IrReferenceEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       _ => false
     };
   }
@@ -67,6 +69,10 @@ public static class IrShape {
     IrStructNew creation => creation.Arguments,
     IrFieldLoad load => [load.Target],
     IrStructEquals equality => [equality.Left, equality.Right],
+    IrNew creation => creation.Arguments,
+    IrMethodCall { Target: { } target } call => [target, .. call.Arguments],
+    IrMethodCall call => call.Arguments,
+    IrReferenceEquals equality => [equality.Left, equality.Right],
     _ => []
   };
 
@@ -84,12 +90,14 @@ public static class IrShape {
   /// variable, allocates nothing and writes no array. Evaluated twice it yields the same value or the
   /// same trap, and evaluated once fewer it is missed by nobody. A read of a global of the module
   /// counts as an effect: what it yields depends on where it stands among the calls and the
-  /// assignments of the function, so no rule may move, merge or drop it.
+  /// assignments of the function, so no rule may move, merge or drop it. So does a read of a field of
+  /// an object, which a write through another reference to the object changes.
   /// </summary>
   /// <param name="expression">The expression.</param>
   /// <returns><see langword="true"/> when it has no effect.</returns>
   public static bool IsSideEffectFree(IrExpr expression) => Nodes(expression).All(node => node switch {
-    IrCall or IrStep or IrNewArray or IrGlobalRef => false,
+    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall => false,
+    IrFieldLoad load => !load.Target.Type.IsObject,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
   });
@@ -172,6 +180,10 @@ public static class IrShape {
     IrStructNew creation => creation with { Arguments = operands },
     IrFieldLoad load => load with { Target = operands[0] },
     IrStructEquals => new IrStructEquals(operands[0], operands[1]),
+    IrNew creation => creation with { Arguments = operands },
+    IrMethodCall { Target: not null } call => call with { Target = operands[0], Arguments = [.. operands.Skip(1)] },
+    IrMethodCall call => call with { Arguments = operands },
+    IrReferenceEquals => new IrReferenceEquals(operands[0], operands[1]),
     _ => expression
   };
 

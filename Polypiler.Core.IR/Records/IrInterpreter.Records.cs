@@ -30,7 +30,7 @@ public static partial class IrInterpreter {
   /// sure it does; found by identity, as a field of another struct may have the same name and type.
   /// </summary>
   private static int Position(IrField field, IrType owner) {
-    var fields = owner.StructType!.Fields;
+    var fields = owner.Declaration!.Fields;
     var index = 0;
     while (!ReferenceEquals(fields[index], field))
       ++index;
@@ -71,8 +71,11 @@ public static partial class IrInterpreter {
         case IrLocalRef reference:
           return frame.Locals[reference.Local];
         case IrArrayLoad load:
-          var array = (Array)this.Evaluate(load.Array, frame);
+          var array = (Array)NotNull(this.Evaluate(load.Array, frame));
           return Load(array, Checked(array, (long)this.Evaluate(load.Index, frame)));
+        case IrFieldLoad load when load.Target.Type.IsObject:
+          // A struct field of an object is a place in the object, which every reference to it shares.
+          return ((Instance)NotNull(this.Evaluate(load.Target, frame))).Fields[Position(load.Field, load.Target.Type)];
         case IrFieldLoad load:
           return ((Record)this.Place(load.Target, frame)).Fields[Position(load.Field, load.Target.Type)];
         default:

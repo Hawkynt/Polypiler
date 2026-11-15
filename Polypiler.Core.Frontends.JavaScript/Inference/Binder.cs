@@ -23,6 +23,25 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   /// <summary>The variables of the module, which every name of a function that no local or parameter hides names.</summary>
   public IReadOnlyDictionary<string, Variable> Globals { get; init; } = new Dictionary<string, Variable>();
 
+  /// <summary>The classes of the file by name, which a name that nothing else of the function names names.</summary>
+  public IReadOnlyDictionary<string, ClassModel> Classes { get; init; } = new Dictionary<string, ClassModel>();
+
+  /// <summary>The class a name names: one of the file, where no local, parameter, variable or constant of its name hides it.</summary>
+  public ClassModel? ClassNamed(Node node)
+    => node is Identifier { Name: var name } && !this._scope.ContainsKey(name) && !this.Globals.ContainsKey(name) && !constants.ContainsKey(name)
+      && this.Classes.TryGetValue(name, out var type) ? type : null;
+
+  /// <summary>The key of a member as the source spells it - a name, or <c>#name</c> for a private one - or <see langword="null"/> for a computed one.</summary>
+  public static string? KeyOf(MemberExpression member) => member switch {
+    { Computed: false, Property: Identifier { Name: var name } } => name,
+    { Computed: false, Property: PrivateIdentifier { Name: var name } } => "#" + name,
+    _ => null
+  };
+
+  /// <summary>The static field a member expression names, <c>Class.key</c>, or <see langword="null"/>.</summary>
+  private Variable? StaticField(Node node)
+    => node is MemberExpression member && this.ClassNamed(member.Object) is { } owner && KeyOf(member) is { } key && owner.Statics.TryGetValue(key, out var field) ? field : null;
+
   /// <summary>
   /// Binds the initializers of the variables of the module, in source order. Each sees the variables
   /// declared before it and the constants; a later variable it names is in its temporal dead zone.
@@ -44,6 +63,13 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
 
   /// <summary>Binds the parameters and the body.</summary>
   public void Bind() {
+    // The fields a class declares with a value get it when its constructor starts, before its parameters are seen.
+    if (model.Candidate is { Member: MemberKind.Constructor, Class: { } owner })
+      foreach (var field in owner.Fields.Where(field => field.Initializer is not null)) {
+        this.Expression(field.Initializer!);
+        model.Flows.Add(new Flow(FlowKind.Assign, field.Initializer!, field.Variable));
+      }
+
     foreach (var parameter in model.Parameters)
       this._scope[parameter.Name] = parameter;
 
@@ -222,6 +248,32 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       case AssignmentExpression assignment:
         this.Assignment(assignment);
         break;
+      case UpdateExpression { Argument: MemberExpression stepping } step when this.StaticField(stepping) is { } field:
+        model.Bindings[stepping] = field;
+        field.Uses.Add((Coercion.None, step));
+        model.Flows.Add(new Flow(FlowKind.Step, step, field));
+        break;
+      case UpdateExpression { Argument: MemberExpression { Computed: false } property } step when KeyOf(property) is not null:
+        this.Expression(property);
+        model.Flows.Add(new Flow(FlowKind.FieldStep, step, Source: property.Object));
+        break;
+      case NewExpression creation when this.ClassNamed(creation.Callee) is { } created:
+        foreach (var argument in creation.Arguments)
+          this.Expression(argument);
+
+        if (created.Constructor is { } constructor) {
+          if (!model.Callees.Contains(constructor))
+            model.Callees.Add(constructor);
+
+          for (var index = 0; index < creation.Arguments.Count; ++index)
+            model.Flows.Add(new Flow(FlowKind.Argument, creation.Arguments[index], null, constructor, index));
+        }
+
+        break;
+      case MemberExpression member when this.StaticField(member) is { } field:
+        model.Bindings[member] = field;
+        field.Uses.Add((coercion, parent ?? member));
+        break;
       case UpdateExpression step:
         if (step.Argument is Identifier stepped) {
           this.Read(stepped, Coercion.None, step);
@@ -301,6 +353,22 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
 
         this.Expression(assignment.Right, op is { } applied ? Operands(applied).Right : Coercion.None, assignment);
         break;
+      case MemberExpression element when this.StaticField(element) is { } field:
+        model.Bindings[element] = field;
+        if (op is { } combined) {
+          field.Uses.Add((Operands(combined).Left, assignment));
+          model.Flows.Add(new Flow(FlowKind.Compound, assignment, field));
+        } else {
+          model.Flows.Add(new Flow(FlowKind.Assign, assignment.Right, field));
+        }
+
+        this.Expression(assignment.Right);
+        break;
+      case MemberExpression { Computed: false } element when KeyOf(element) is not null:
+        this.Expression(element);
+        this.Expression(assignment.Right);
+        model.Flows.Add(new Flow(FlowKind.FieldStore, assignment, Source: element.Object));
+        break;
       case MemberExpression element:
         this.Expression(element);
         this.Expression(assignment.Right);
@@ -379,6 +447,12 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       this.Expression(call.Arguments[index], coercion, call);
     }
 
+    // A method called on an object is one of the class of the object, which only the types say.
+    if (builtin is null && this.Callee(call.Callee) is null && call.Callee is MemberExpression { Computed: false } invoked && KeyOf(invoked) is not null
+        && this.ClassNamed(invoked.Object) is null)
+      for (var index = 0; index < call.Arguments.Count; ++index)
+        model.Flows.Add(new Flow(FlowKind.MethodArgument, call.Arguments[index], null, null, index, call));
+
     if (builtin is not null || this.Callee(call.Callee) is not { } callee)
       return;
 
@@ -418,6 +492,8 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   /// </summary>
   public Candidate? Callee(Node callee) {
     switch (callee) {
+      case MemberExpression member when this.ClassNamed(member.Object) is { } owner && KeyOf(member) is { } key:
+        return owner.Member(MemberKind.Method, key, true);
       case Identifier { Name: var name } identifier when !model.Bindings.ContainsKey(identifier):
         return candidates.Find(candidate => !candidate.IsProperty && candidate.Name == name);
       case MemberExpression { Computed: false, Property: Identifier { Name: var property } } member when Path(member.Object) is { } path && !model.Bindings.ContainsKey(path.Root):

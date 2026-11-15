@@ -35,7 +35,8 @@ public static partial class JavaScriptEmitter {
     /// </summary>
     private List<JsStatement> Globals(IrModule module) {
       var declarations = new List<JsStatement>();
-      foreach (var global in module.Globals) {
+      var owned = module.Types.OfType<IrClassType>().SelectMany(type => type.StaticFields).ToHashSet();
+      foreach (var global in module.Globals.Where(global => !owned.Contains(global))) {
         var name = this._globals[global];
         this._construct = $"the global '{global.Name}'";
         this.Describe(global.Type);
@@ -50,7 +51,7 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>A global of the module as an expression of its type.</summary>
-    private JsIdentifier GlobalName(IrGlobal global) => new(this._globals[global]) { Type = global.Type };
+    private JsExpression GlobalName(IrGlobal global) => Dotted(this._globals[global]) with { Type = global.Type };
 
     /// <summary>An assignment to a global of the module.</summary>
     private JsAssignment GlobalAssignment(IrGlobalAssign assign) {

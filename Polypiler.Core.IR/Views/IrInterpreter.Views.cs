@@ -213,11 +213,11 @@ public static partial class IrInterpreter {
 
   /// <summary>An element of an array or of a view, read after its index is checked.</summary>
   private static object LoadElement(object sequence, long index)
-    => sequence is View view ? view.Get(Checked(view, index)) : Internal(((Array)sequence).GetValue(CheckedIndex((Array)sequence, index))!);
+    => NotNull(sequence) is View view ? view.Get(Checked(view, index)) : Internal(((Array)sequence).GetValue(CheckedIndex((Array)sequence, index))!);
 
   /// <summary>An element of an array or of a view, written after its index is checked.</summary>
   private static void StoreElement(object sequence, long index, object value) {
-    if (sequence is View view) {
+    if (NotNull(sequence) is View view) {
       view.Set(Checked(view, index), value);
       return;
     }

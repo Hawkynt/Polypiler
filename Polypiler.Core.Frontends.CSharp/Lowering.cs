@@ -35,13 +35,15 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     var name = "";
     var classes = new List<(string Path, SemanticModel Model, ClassDeclarationSyntax Type)>();
     var structs = new List<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)>();
+    var objects = new List<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)>();
     foreach (var part in parts) {
       path = part.Path;
       model = part.Model;
       try {
         var found = new List<TypeDeclarationSyntax>();
         var type = this.TheClass(part.Root, found);
-        structs.AddRange(found.Select(declaration => (part.Path, part.Model, declaration)));
+        structs.AddRange(found.Where(IsStruct).Select(declaration => (part.Path, part.Model, declaration)));
+        objects.AddRange(found.Where(IsClass).Select(declaration => (part.Path, part.Model, declaration)));
         var symbol = model.GetDeclaredSymbol(type);
         if (this._class is not null && !SymbolEqualityComparer.Default.Equals(this._class, symbol))
           throw new UnsupportedException(type, "files that declare different classes");
@@ -55,6 +57,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     }
 
     this.DeclareStructs(structs);
+    this.DeclareClasses(objects);
     this.FindWrittenArrays(classes);
     foreach (var (file, semantics, type) in classes) {
       path = file;
@@ -73,7 +76,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     foreach (var (file, semantics, type) in classes) {
       path = file;
       model = semantics;
-      foreach (var member in type.Members.Where(member => member is not FieldDeclarationSyntax && !IsStruct(member))) {
+      foreach (var member in type.Members.Where(member => member is not FieldDeclarationSyntax && !IsStruct(member) && !IsClass(member))) {
         try {
           if (member is not MethodDeclarationSyntax method)
             throw new UnsupportedException(member, member switch {
@@ -92,6 +95,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       }
     }
 
+    functions.AddRange(this.ClassBodies());
     if (this._diagnostics.Count == 0)
       this.CheckInitializers(name, functions);
 
@@ -185,11 +189,14 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (members.Count == 1 && members[0] is BaseNamespaceDeclarationSyntax scope)
       members = scope.Members;
 
-    var types = members.Where(member => !IsStruct(member)).ToList();
+    var types = members.Where(member => !IsStruct(member) && !IsClass(member)).ToList();
+    if (types.Count == 0 && members.FirstOrDefault(IsClass) is { } instance)
+      throw new UnsupportedException(instance, "a class that is not static");
+
     if (types.Count != 1 || types[0] is not ClassDeclarationSyntax type)
       throw new UnsupportedException(types.Count > 1 ? types[1] : root, "a file that is not exactly one static class");
 
-    structs.AddRange(members.Concat(type.Members).Where(IsStruct).Cast<TypeDeclarationSyntax>());
+    structs.AddRange(members.Concat(type.Members).Where(member => IsStruct(member) || IsClass(member)).Cast<TypeDeclarationSyntax>());
 
     if (!type.Modifiers.Any(SyntaxKind.StaticKeyword))
       throw new UnsupportedException(type, "a class that is not static");
@@ -208,52 +215,59 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
     if (method.TypeParameterList is not null)
       throw new UnsupportedException(method.TypeParameterList, "a generic method");
 
+    var symbol = model.GetDeclaredSymbol(method)!;
+    return this.Function(symbol.Name, symbol.DeclaredAccessibility == Accessibility.Public, symbol, method, method.ParameterList.Parameters, null, null, method.Body, method.ExpressionBody?.Expression);
+  }
+
+  /// <summary>
+  /// A function: of the static class, or the body of a member of another class, which takes the
+  /// receiver first and may begin with statements of its own - the chained constructor or the field
+  /// initializers of a constructor.
+  /// </summary>
+  private IrFunction Function(
+    string name, bool isPublic, IMethodSymbol symbol, SyntaxNode node, IEnumerable<ParameterSyntax> declared,
+    IrLocal? receiver, Func<List<IrStmt>>? prologue, BlockSyntax? block, ExpressionSyntax? expressionBody) {
     this._variables.Clear();
     this._locals.Clear();
     this._read.Clear();
-    var symbol = model.GetDeclaredSymbol(method)!;
-    var returnType = this.Map(symbol.ReturnType, method.ReturnType);
-    var parameters = new List<IrLocal>();
-    foreach (var parameter in method.ParameterList.Parameters) {
-      if (parameter.Modifiers.Count > 0)
-        throw new UnsupportedException(parameter, parameter.Modifiers[0].Text);
+    this._receiver = receiver;
+    var returnType = symbol.MethodKind == MethodKind.Constructor ? IrType.Void : this.Map(symbol.ReturnType, node is MethodDeclarationSyntax method ? method.ReturnType : node);
+    var parameters = receiver is null ? new List<IrLocal>() : [receiver];
+    var syntax = declared.ToList();
+    for (var index = 0; index < symbol.Parameters.Length; ++index) {
+      var parameterSymbol = symbol.Parameters[index];
+      if (index < syntax.Count) {
+        var parameter = syntax[index];
+        if (parameter.Modifiers.Count > 0)
+          throw new UnsupportedException(parameter, parameter.Modifiers[0].Text);
 
-      if (parameter.Default is not null)
-        throw new UnsupportedException(parameter.Default, "a default parameter value");
+        if (parameter.Default is not null)
+          throw new UnsupportedException(parameter.Default, "a default parameter value");
+      }
 
-      var parameterSymbol = model.GetDeclaredSymbol(parameter)!;
-      var variable = new IrLocal(parameterSymbol.Name, this.Map(parameterSymbol.Type, parameter));
+      var variable = new IrLocal(parameterSymbol.Name, this.Map(parameterSymbol.Type, index < syntax.Count ? syntax[index] : node));
       this._variables[parameterSymbol] = variable;
       parameters.Add(variable);
     }
 
-    IrBlock body;
-    if (method.Body is not null) {
-      body = this.Block(method.Body);
-    } else {
-      var statements = new List<IrStmt>();
-      var expression = method.ExpressionBody!.Expression;
+    var statements = prologue?.Invoke() ?? [];
+    if (block is not null) {
+      statements.AddRange(this.Block(block).Statements);
+    } else if (expressionBody is not null) {
       if (returnType == IrType.Void)
-        this.Effect(expression, statements);
+        this.Effect(expressionBody, statements);
       else
-        statements.Add(new IrReturn(this.Initialized(expression, statements).Value));
-
-      body = new IrBlock(statements);
+        statements.Add(new IrReturn(this.Initialized(expressionBody, statements).Value));
     }
 
     // In the generated module a constant is a name of the module, which a variable of the same name
     // would hide from the function that reads it.
     var hiding = parameters.Concat(this._locals).FirstOrDefault(variable => this._read.Contains(variable.Name));
     if (hiding is not null)
-      throw new UnsupportedException(method, $"a variable with the name of the field '{hiding.Name}' it is used next to");
+      throw new UnsupportedException(node, $"a variable with the name of the field '{hiding.Name}' it is used next to");
 
-    return new IrFunction(
-      symbol.Name,
-      symbol.DeclaredAccessibility == Accessibility.Public,
-      returnType,
-      parameters,
-      this._locals.ToList(),
-      body);
+    this._receiver = null;
+    return new IrFunction(name, isPublic, returnType, parameters, this._locals.ToList(), new IrBlock(statements));
   }
 
   private IrType Map(ITypeSymbol? type, SyntaxNode node) {
@@ -291,6 +305,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
     if (type is INamedTypeSymbol named && this._structs.TryGetValue(named, out var declared))
       return IrType.Struct(declared);
+
+    if (this.ClassOf(type) is { } owner)
+      return IrType.Object(owner);
 
     if (type is IArrayTypeSymbol { Rank: 1 } array) {
       var element = this.Map(array.ElementType, node);
@@ -552,6 +569,7 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       case InvocationExpressionSyntax when this.Paired(expression, into):
         break;
       case InvocationExpressionSyntax:
+      case BaseObjectCreationExpressionSyntax when this.ClassOf(model.GetTypeInfo(expression).Type) is not null:
         into.Add(new IrExprStmt(this.Value(expression)));
         break;
       default:
@@ -642,6 +660,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
   /// than a variable or a constant are evaluated once into a temporary, as C# evaluates them once.
   /// </summary>
   private (Func<IrExpr> Read, Func<IrExpr, IrStmt> Write) Target(ExpressionSyntax target, List<IrStmt> into, bool alsoRead) {
+    if (this.ObjectTarget(target, into, alsoRead) is { } objectMember)
+      return objectMember;
+
     switch (target) {
       case IdentifierNameSyntax or MemberAccessExpressionSyntax when this.GlobalOf(target) is { } global:
         if (global.Type.IsArray)
@@ -691,6 +712,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
       throw this.Reference(reference);
 
     var info = model.GetTypeInfo(expression);
+    if (this.ClassOf(info.ConvertedType) is { } nulled && expression is LiteralExpressionSyntax or DefaultExpressionSyntax && model.GetConstantValue(expression) is { HasValue: true, Value: null })
+      return new IrNull(IrType.Object(nulled));
+
     if (expression is StackAllocArrayCreationExpressionSyntax stack)
       return this.StackAlloc(stack, info.ConvertedType);
     if (info.ConvertedType?.SpecialType == SpecialType.System_String && model.GetConstantValue(expression) is { HasValue: true, Value: null })
@@ -729,6 +753,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
     if (model.GetConstantValue(expression) is { HasValue: true, Value: { } folded })
       return new IrConst(type, Carried(folded));
+
+    if (this.ObjectNatural(expression, type) is { } objectNode)
+      return objectNode;
 
     switch (expression) {
       case ParenthesizedExpressionSyntax parenthesized:
@@ -875,6 +902,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
     if (this.StringBinary(binary) is { } text)
       return text;
+
+    if (this.ObjectEquality(binary) is { } identity)
+      return identity;
 
     var left = this.Value(binary.Left);
     var right = this.Value(binary.Right);
