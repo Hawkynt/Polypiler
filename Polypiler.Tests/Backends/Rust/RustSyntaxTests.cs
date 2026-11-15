@@ -185,6 +185,23 @@ public sealed class RustSyntaxTests {
       Assert.That(RustPrinter.Print(RustSyntaxReader.Read(file.Content)), Is.EqualTo(file.Content), file.Path);
   }
 
+  private static IEnumerable<TestCaseData> RustFixtures()
+    => RustFixture.Names.SelectMany(fixture => RustFixture.Modes.Select(mode => new TestCaseData(fixture, mode).SetArgDisplayNames(fixture, RustFixture.NameOf(mode))));
+
+  /// <summary>
+  /// The parse-back sweep over the Rust fixtures, Rust to IR to Rust: every one is written in both
+  /// overflow modes, and every file reads back into a tree that prints the same text. That the crates
+  /// compute what rustc computed is the round trip of the acceptance tests.
+  /// </summary>
+  [TestCaseSource(nameof(RustFixtures))]
+  [Category("Slow")]
+  public void GeneratedFileOfARustFixture_ReadsBackToItsText(string fixture, Polypiler.Core.Frontends.Rust.OverflowChecks mode) {
+    var module = RustFixture.Import(fixture, mode);
+    Assert.That(RustCrates.Check(module), Is.Empty);
+    foreach (var file in RustCrates.Emit(module).Where(file => file.Path.EndsWith(".rs", StringComparison.Ordinal)))
+      Assert.That(RustPrinter.Print(RustSyntaxReader.Read(file.Content)), Is.EqualTo(file.Content), file.Path);
+  }
+
   [Test]
   public void Precedence_RanksEveryKind() {
     Assert.That(RustEmitter.Precedence(L("-1")), Is.EqualTo(13));
