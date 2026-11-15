@@ -11,17 +11,28 @@
 #                answers --version with the commit it was built from and passes everything else on.
 #   dosbox-x     the runner distribution's package: upstream publishes no Linux binaries, and the
 #                Flathub build cannot start inside the runner's bubblewrap sandbox.
-#   vice         from Flathub (net.sf.VICE), which ships the ROM images; the distribution's package
-#                does not. Commands: x64sc, x128, xvic, petcat, c1541.
+#   llvm         llvm-config, llvm-as and opt from the official release archive of the pinned version,
+#                which checks the modules pbc emits.
+#   vice         VICE built from the release source of the pinned version, which carries the ROM
+#                images, with the headless user interface, and installed under /usr/local: the
+#                distribution's package ships no ROMs, and the Flathub build cannot start inside the
+#                sandbox. Commands: x64sc, x128, xvic, petcat, c1541. xvfb-run (the distribution's
+#                xvfb, with xdpyinfo for the probe) is the display the runner starts the emulators under.
+#   pcbasic      the PyPI release in a virtual environment at <prefix>/pcbasic, the folder the caller
+#                exports as PCBASIC_HOME.
 #
-# Usage: install.sh <env file> <prefix>
+# llvm and the VICE build are kept in <cache>, which the job restores and saves with actions/cache
+# under a key of their versions; a filled cache is used as it is.
+#
+# Usage: install.sh <env file> <prefix> <cache>
 set -euo pipefail
 
 env_file=$1
 prefix=$2
+cache=$3
 version() { sed -n "s/^$1=//p" "$env_file"; }
 
-mkdir -p "$prefix/bin"
+mkdir -p "$prefix/bin" "$cache"
 
 # pb-compiler
 pin=$(version pb-compiler)
@@ -47,22 +58,49 @@ EOF
 chmod +x "$prefix/pb-compiler/pbc.sh"
 ln -sfn "$prefix/pb-compiler/pbc.sh" "$prefix/bin/pbc"
 
-# dosbox-x: the distribution's package, a native binary. The runner's bubblewrap sandbox cannot start
-# a Flatpak application: Flatpak's own bubblewrap is refused a nested user namespace there.
+# The distribution's packages: dosbox-x, the display of the VICE emulators, what VICE is built with,
+# and the venv module of the runner's Python. A Flatpak application cannot start in the runner's
+# bubblewrap sandbox: Flatpak's own bubblewrap is refused a nested user namespace there.
 sudo apt-get update -qq
-sudo apt-get install -y -qq dosbox-x flatpak > /dev/null
+sudo apt-get install -y -qq dosbox-x xvfb x11-utils xa65 dos2unix bison flex libpng-dev zlib1g-dev python3-venv > /dev/null
 ln -sfn "$(command -v dosbox-x)" "$prefix/bin/dosbox-x"
 dpkg-query -W -f='dosbox-x ${Version}\n' dosbox-x
 
-# vice: Flathub, which ships the ROM images. The probe runs outside the sandbox; running VICE inside
-# it needs a native build, for the same reason as DOSBox-X (FMT-CBMBASIC-ORACLE).
-sudo flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-sudo flatpak install --system -y --noninteractive flathub net.sf.VICE
-for command in x64sc x128 xvic petcat c1541; do
-  cat > "$prefix/bin/$command" <<EOF
-#!/bin/sh
-exec flatpak run --system --filesystem=host --filesystem=/tmp --command=$command net.sf.VICE "\$@"
-EOF
-  chmod +x "$prefix/bin/$command"
+# llvm: three tools of the release archive. The archive is large; only these members are unpacked.
+llvm=$(version llvm)
+if [ ! -x "$cache/llvm-$llvm/bin/opt" ]; then
+  name="LLVM-$llvm-Linux-X64"
+  curl -fsSL --retry 3 -o "$prefix/llvm.tar.xz" "https://github.com/llvm/llvm-project/releases/download/llvmorg-$llvm/$name.tar.xz"
+  mkdir -p "$cache/llvm-$llvm"
+  tar -xJf "$prefix/llvm.tar.xz" -C "$cache/llvm-$llvm" --strip-components 1 "$name/bin/llvm-config" "$name/bin/llvm-as" "$name/bin/opt"
+  rm "$prefix/llvm.tar.xz"
+fi
+for tool in llvm-config llvm-as opt; do
+  if ldd "$cache/llvm-$llvm/bin/$tool" 2>/dev/null | grep 'not found'; then
+    echo "$tool needs a library the archive's three tools do not bring" >&2
+    exit 1
+  fi
+  ln -sfn "$cache/llvm-$llvm/bin/$tool" "$prefix/bin/$tool"
 done
-flatpak info --system net.sf.VICE | sed -n 's/^ *\(Version\|Commit\):/vice \1:/p'
+
+# vice: built once per version into <cache>/vice-<version>, then copied to /usr/local, where the
+# emulators look for their ROM images.
+vice=$(version vice)
+if [ ! -x "$cache/vice-$vice/usr/local/bin/x64sc" ]; then
+  build="$prefix/vice-src"
+  rm -rf "$build" && mkdir -p "$build"
+  curl -fsSL --retry 3 -o "$prefix/vice.tar.gz" "https://sourceforge.net/projects/vice-emu/files/releases/vice-$vice.tar.gz/download"
+  tar -xzf "$prefix/vice.tar.gz" -C "$build" --strip-components 1
+  rm "$prefix/vice.tar.gz"
+  (cd "$build" \
+    && ./configure --prefix=/usr/local --enable-headlessui --disable-pdf-docs --disable-html-docs --without-pulse --without-alsa --without-oss --without-libcurl > configure.log \
+    && make -j"$(nproc)" > make.log \
+    && make install DESTDIR="$cache/vice-$vice" > install.log)
+  rm -rf "$build"
+fi
+sudo cp -a "$cache/vice-$vice/usr/local/." /usr/local/
+
+# pcbasic
+python3 -m venv "$prefix/pcbasic"
+"$prefix/pcbasic/bin/pip" install --quiet --disable-pip-version-check "pcbasic==$(version pcbasic)"
+ln -sfn "$prefix/pcbasic/bin/pcbasic" "$prefix/bin/pcbasic"
