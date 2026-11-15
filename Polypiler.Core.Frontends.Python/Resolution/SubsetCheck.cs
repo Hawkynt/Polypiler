@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Polypiler.Core.Frontends.Python.Ast;
+using Polypiler.Core.Frontends.Python.Lowering;
 using Polypiler.Core.Frontends.Python.Model;
 
 namespace Polypiler.Core.Frontends.Python.Resolution;
@@ -8,37 +9,79 @@ namespace Polypiler.Core.Frontends.Python.Resolution;
 /// <summary>
 /// Refuses, with the diagnostic of its family, every construct of a function outside the subset the
 /// import supports, before any type is inferred: so that what follows sees only constructs it knows.
+/// What only the types decide - a method a receiver does not have, an operation of two types - the
+/// lowering refuses.
 /// </summary>
-internal sealed class SubsetCheck(SourceFile file, IReadOnlyDictionary<string, FunctionModel> functions, List<Diagnostic> diagnostics) {
+internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode, Variable> bound, List<Diagnostic> diagnostics) {
 
-  private static readonly HashSet<string> _comparisons = ["Eq", "NotEq", "Lt", "LtE", "Gt", "GtE"];
+  /// <summary>The methods of lists the import refuses, by name.</summary>
+  public static readonly IReadOnlySet<string> RefusedSequenceMethods = new HashSet<string> { "insert", "remove", "index", "count", "clear", "sort", "reverse" };
 
-  private static readonly Dictionary<string, string> _operators = new() {
-    ["MatMult"] = "@", ["Is"] = "is", ["IsNot"] = "is not", ["In"] = "in", ["NotIn"] = "not in"
+  /// <summary>The methods of strings and bytes the import refuses, by name.</summary>
+  public static readonly IReadOnlySet<string> RefusedStringMethods = new HashSet<string> {
+    "join", "split", "rsplit", "splitlines", "format", "decode", "upper", "lower", "strip", "lstrip", "rstrip", "startswith", "endswith", "find", "rfind",
+    "replace", "hex", "fromhex", "isdigit", "isalpha", "isalnum", "isspace", "isupper", "islower", "zfill", "ljust", "rjust", "center", "title",
+    "capitalize", "partition", "rpartition", "casefold", "swapcase", "expandtabs", "translate", "maketrans", "removeprefix", "removesuffix"
   };
 
-  private FunctionModel _function = null!;
+  /// <summary>The methods of dicts and sets the import refuses, by name.</summary>
+  public static readonly IReadOnlySet<string> RefusedDictMethods = new HashSet<string> {
+    "keys", "values", "items", "get", "setdefault", "update", "add", "discard", "popitem", "union", "intersection", "difference", "fromkeys"
+  };
 
-  /// <summary>Checks the body of a function; every construct outside the subset adds a diagnostic.</summary>
+  private FunctionModel? _function;
+  private SourceFile File => module.File;
+
+  /// <summary>Whether the statement being checked stands in an <c>except</c> clause, where a bare <c>raise</c> raises again.</summary>
+  private int _handlers;
+
+  /// <summary>How deep the statement being checked stands in loops and conditionals, where a nested <c>def</c> is refused.</summary>
+  private int _conditional;
+
+  /// <summary>Whether the statement being checked stands in a <c>finally</c> block, which nothing may leave.</summary>
+  private int _finally;
+
+  /// <summary>Checks the expressions of the module's own statements, which run once, at import.</summary>
+  public void CheckModule() {
+    this._function = null;
+    foreach (var statement in module.Statements.Where(statement => statement.Kind is "Assign" or "AnnAssign" or "AugAssign"))
+      foreach (var expression in ScopeResolver.Expressions(statement).Where(expression => !expression.Is("Name") || statement.Is("AugAssign")))
+        this.Expression(expression);
+  }
+
+  /// <summary>Checks the body of a function and of the functions nested in it; every construct outside the subset adds a diagnostic.</summary>
   public void Check(FunctionModel function) {
     this._function = function;
     foreach (var statement in function.Body)
       this.Statement(statement);
+
+    foreach (var nested in function.Nested.Values)
+      this.Check(nested);
   }
 
-  private void Refuse(PyNode node, DiagnosticDescriptor descriptor, string message) => diagnostics.Add(file.At(node, descriptor, message));
+  private void Refuse(PyNode node, DiagnosticDescriptor descriptor, string message) => diagnostics.Add(this.File.At(node, descriptor, message));
+
+  private string Quote(PyNode node) => this.File.Quote(node);
 
   private void Statement(PyNode statement) {
     switch (statement.Kind) {
       case "Expr":
-        // A string or another constant as a statement is a docstring or does nothing.
-        if (!statement.Node("value")!.Is("Constant"))
-          this.Expression(statement.Node("value")!);
+        var value = statement.Node("value")!;
+        // A string or another constant as a statement is a docstring or does nothing; yield is a statement of a generator.
+        if (value.Is("Yield") || value.Is("YieldFrom")) {
+          if (value.Node("value") is { } yielded)
+            this.Expression(yielded);
+        } else if (!value.Is("Constant")) {
+          this.Expression(value);
+        }
 
         break;
       case "Return":
-        if (statement.Node("value") is { } value && !(value.Is("Constant") && value.Text("kind") == "none"))
-          this.Expression(value);
+        if (this._finally > 0)
+          this.Refuse(statement, PythonFrontend.UnsupportedExceptionDescriptor, "exception construct 'return in finally' is not supported by the Python frontend");
+
+        if (statement.Node("value") is { } returned && !(returned.Is("Constant") && returned.Text("kind") == "none"))
+          this.Expression(returned);
 
         break;
       case "Assign":
@@ -58,10 +101,16 @@ internal sealed class SubsetCheck(SourceFile file, IReadOnlyDictionary<string, F
       case "If":
       case "While":
         this.Expression(statement.Node("test")!);
+        ++this._conditional;
         this.Statements(statement);
+        --this._conditional;
         break;
       case "For":
-        this.For(statement);
+        this.Target(statement.Node("target")!, true);
+        this.Expression(statement.Node("iter")!);
+        ++this._conditional;
+        this.Statements(statement);
+        --this._conditional;
         break;
       case "Match":
         this.Match(statement);
@@ -72,13 +121,51 @@ internal sealed class SubsetCheck(SourceFile file, IReadOnlyDictionary<string, F
           this.Refuse(message, PythonFrontend.UnsupportedStatementDescriptor, "statement 'assert' with a message other than a string literal is not supported by the Python frontend");
 
         break;
-      case "Break" or "Continue" or "Pass":
+      case "Break" or "Continue":
+        if (this._finally > 0)
+          this.Refuse(statement, PythonFrontend.UnsupportedExceptionDescriptor, $"exception construct '{statement.Kind.ToLowerInvariant()} in finally' is not supported by the Python frontend");
+
         break;
-      case "FunctionDef" or "AsyncFunctionDef":
-        this.Refuse(statement, PythonFrontend.UnsupportedFunctionDescriptor, $"'nested function {statement.Text("name")}' is not supported for functions by the Python frontend");
+      case "Pass":
         break;
-      case "Global" or "Nonlocal":
-        this.Refuse(statement, PythonFrontend.UnsupportedFunctionDescriptor, $"'{file.Quote(statement)}' is not supported for functions by the Python frontend");
+      case "Raise":
+        this.Raise(statement);
+        break;
+      case "Try":
+        this.Try(statement);
+        break;
+      case "FunctionDef":
+        this.Nested(statement);
+        break;
+      case "AsyncFunctionDef":
+        this.Refuse(statement, PythonFrontend.EscapingFunctionDescriptor, Escaping(statement.Text("name")!) + " (coroutines: #752)");
+        break;
+      case "Global":
+        foreach (var name in statement.Texts("names").Where(name => !module.GlobalVariables.ContainsKey(name)))
+          this.Refuse(statement, PythonFrontend.UnresolvedDescriptor, $"'global {name}' is neither part of this import nor in the Python call map: '{name}' is assigned at no module level");
+
+        break;
+      case "Nonlocal":
+        foreach (var name in statement.Texts("names").Where(name => this._function!.Parent?.Find(name) is null))
+          this.Refuse(statement, PythonFrontend.UnresolvedDescriptor, $"'nonlocal {name}' is neither part of this import nor in the Python call map: no enclosing function binds '{name}'");
+
+        break;
+      case "With" or "AsyncWith":
+        this.Refuse(statement, PythonFrontend.UnsupportedExceptionDescriptor, "exception construct 'with' is not supported by the Python frontend");
+        break;
+      case "TryStar":
+        this.Refuse(statement, PythonFrontend.UnsupportedExceptionDescriptor, "exception construct 'except*' is not supported by the Python frontend");
+        break;
+      case "Delete":
+        foreach (var target in statement.Nodes("targets"))
+          this.Delete(target);
+
+        break;
+      case "Import" or "ImportFrom":
+        this.Refuse(statement, PythonFrontend.UnresolvedDescriptor, $"'{this.Quote(statement)}' is neither part of this import nor in the Python call map: an import inside a function");
+        break;
+      case "ClassDef":
+        this.Refuse(statement, PythonFrontend.UnsupportedClassDescriptor, $"'nested class {statement.Text("name")}' is outside the first Python subset (dataclasses, simple final classes, enums)");
         break;
       default:
         this.Refuse(statement, PythonFrontend.UnsupportedStatementDescriptor, $"statement '{Keyword(statement)}' is not supported by the Python frontend");
@@ -93,67 +180,139 @@ internal sealed class SubsetCheck(SourceFile file, IReadOnlyDictionary<string, F
   }
 
   private static string Keyword(PyNode statement) => statement.Kind switch {
-    "TryStar" => "try",
-    "Delete" => "del",
-    "ImportFrom" => "import",
-    "ClassDef" => "class",
     "TypeAlias" => "type",
+    "AsyncFor" => "async for",
     _ => statement.Kind.ToLowerInvariant()
   };
 
-  private void Assign(PyNode statement) {
-    var targets = statement.Nodes("targets");
-    var value = statement.Node("value")!;
-    if (targets is [{ Kind: "Tuple" or "List" } tuple]) {
-      var names = tuple.Nodes("elts");
-      foreach (var element in names)
-        this.Target(element, false);
+  /// <summary>The message of a function value that escapes, a generator or a coroutine.</summary>
+  public static string Escaping(string name)
+    => $"the function value '{name}' escapes, or '{name}' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported";
 
-      if (value is { Kind: "Tuple" or "List" } && value.Nodes("elts").Count == names.Count) {
-        foreach (var element in value.Nodes("elts"))
-          this.Expression(element);
-      } else if (this.IsBuiltInCall(value, "divmod") && names.Count == 2) {
-        this.Arguments(value, 2);
-      } else {
-        this.Refuse(statement, PythonFrontend.UnsupportedStatementDescriptor, "statement 'tuple assignment whose right side is no tuple of as many values' is not supported by the Python frontend");
+  private void Nested(PyNode statement) {
+    var name = statement.Text("name")!;
+    if (this._conditional > 0)
+      this.Refuse(statement, PythonFrontend.UnsupportedFunctionDescriptor, $"'def {name} inside a loop or conditional' is not supported for functions by the Python frontend");
+    else if (Collector.Feature(statement) is { } feature)
+      this.Refuse(statement, PythonFrontend.UnsupportedFunctionDescriptor, $"'{feature}' is not supported for functions by the Python frontend");
+    else if (this._function!.Nested.TryGetValue(name, out var nested) && !ReferenceEquals(nested.Node, statement))
+      this.Refuse(statement, PythonFrontend.UnsupportedFunctionDescriptor, $"'redefinition of {name}' is not supported for functions by the Python frontend");
+  }
+
+  private void Raise(PyNode statement) {
+    if (statement.Node("cause") is not null) {
+      this.Refuse(statement, PythonFrontend.UnsupportedExceptionDescriptor, "exception construct 'raise … from' is not supported by the Python frontend");
+      return;
+    }
+
+    if (statement.Node("exc") is not { } raised) {
+      if (this._handlers == 0)
+        this.Refuse(statement, PythonFrontend.UnsupportedExceptionDescriptor, "exception construct 'raise outside an except clause' is not supported by the Python frontend");
+
+      return;
+    }
+
+    var callee = raised.Is("Call") ? raised.Node("func")! : raised;
+    if (callee.Is("Name") && this.Resolve(callee) == Binding.Class) {
+      if (Classes.Of(module, callee.Text("id")!) is { IsException: false })
+        this.Refuse(raised, PythonFrontend.UnsupportedExceptionDescriptor, $"exception construct 'raise {this.Quote(raised)}, which is no exception' is not supported by the Python frontend");
+
+      if (raised.Is("Call")) {
+        if (raised.Nodes("keywords").Count > 0 || raised.Nodes("args").Count > 1)
+          this.Refuse(raised, PythonFrontend.UnsupportedExceptionDescriptor, $"exception construct 'an exception made with other arguments than a message: {this.Quote(raised)}' is not supported by the Python frontend");
+
+        foreach (var argument in raised.Nodes("args"))
+          this.Expression(argument);
       }
 
       return;
     }
 
-    foreach (var target in targets)
-      this.Target(target, false);
+    this.Expression(raised);
+  }
 
-    this.Expression(value);
+  private void Try(PyNode statement) {
+    foreach (var inner in statement.Nodes("body"))
+      this.Statement(inner);
+
+    foreach (var handler in statement.Nodes("handlers")) {
+      if (handler.Node("type") is { } type) {
+        var names = type.Is("Tuple") ? type.Nodes("elts") : [type];
+        foreach (var name in names) {
+          if (!name.Is("Name") || this.Resolve(name) != Binding.Class || Classes.Of(module, name.Text("id")!) is { IsException: false })
+            this.Refuse(name, PythonFrontend.UnsupportedExceptionDescriptor, $"exception construct 'except {this.Quote(name)}, which names no exception class' is not supported by the Python frontend");
+        }
+      }
+
+      ++this._handlers;
+      foreach (var inner in handler.Nodes("body"))
+        this.Statement(inner);
+
+      --this._handlers;
+    }
+
+    foreach (var inner in statement.Nodes("orelse"))
+      this.Statement(inner);
+
+    ++this._finally;
+    foreach (var inner in statement.Nodes("finalbody"))
+      this.Statement(inner);
+
+    --this._finally;
+  }
+
+  private void Delete(PyNode target) {
+    switch (target.Kind) {
+      case "Subscript" when target.Node("slice") is { Kind: "Slice" }:
+        this.Refuse(target, PythonFrontend.UnsupportedSliceDescriptor, $"slice form 'del {this.Quote(target)}' is not supported; slices are imported as values only");
+        break;
+      case "Subscript":
+        this.Refuse(target, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation 'del {this.Quote(target)}' is not supported by the Python frontend");
+        break;
+      case "Attribute":
+        this.Refuse(target, PythonFrontend.DynamicAttributeDescriptor, $"attribute '{target.Text("attr")}' of class '{this.Quote(target.Node("value")!)}' is created dynamically; only attributes assigned in __init__ or declared as dataclass fields are imported (del)");
+        break;
+      default:
+        this.Refuse(target, PythonFrontend.UnsupportedStatementDescriptor, "statement 'del' is not supported by the Python frontend");
+        break;
+    }
+  }
+
+  private void Assign(PyNode statement) {
+    foreach (var target in statement.Nodes("targets")) {
+      this.Target(target, false);
+      if (target.Kind is "Tuple" or "List" && statement.Node("value") is { Kind: "Tuple" or "List" } values && values.Nodes("elts").Count != target.Nodes("elts").Count)
+        this.Refuse(statement, PythonFrontend.UnsupportedStatementDescriptor, "statement 'tuple assignment whose right side is no tuple of as many values' is not supported by the Python frontend");
+    }
+
+    this.Expression(statement.Node("value")!);
   }
 
   private void Target(PyNode target, bool loop) {
-    if (target.Is("Name"))
-      return;
+    switch (target.Kind) {
+      case "Name":
+        return;
+      case "Tuple" or "List":
+        foreach (var element in target.Nodes("elts")) {
+          if (!element.Is("Name"))
+            this.Refuse(element, PythonFrontend.UnsupportedStatementDescriptor, $"statement '{(element.Is("Starred") ? "starred assignment target" : "nested tuple assignment")}' is not supported by the Python frontend");
+        }
 
-    var what = target.Kind switch {
-      "Starred" => "starred assignment target",
-      "Tuple" or "List" => loop ? "a tuple as loop variable" : "nested tuple assignment",
-      "Subscript" => "assignment to an element",
-      _ => "assignment to an attribute"
-    };
-    this.Refuse(target, PythonFrontend.UnsupportedStatementDescriptor, $"statement '{what}' is not supported by the Python frontend");
-  }
+        return;
+      case "Subscript" when !loop:
+        if (target.Node("slice")!.Is("Slice"))
+          this.Refuse(target, PythonFrontend.UnsupportedSliceDescriptor, $"slice form '{this.Quote(target)} = …' is not supported; slices are imported as values only");
+        else
+          this.Subscript(target);
 
-  private void For(PyNode statement) {
-    this.Target(statement.Node("target")!, true);
-    var iterable = statement.Node("iter")!;
-    if (this.IsBuiltInCall(iterable, "range")) {
-      var count = iterable.Nodes("args").Count;
-      if (count is < 1 or > 3 || iterable.Nodes("keywords").Count > 0)
-        this.Refuse(iterable, PythonFrontend.UnsupportedIterationDescriptor, $"iteration over '{file.Quote(iterable)}' is not supported");
-      else
-        this.Arguments(iterable, count);
-    } else {
-      this.Refuse(iterable, PythonFrontend.UnsupportedIterationDescriptor, $"iteration over '{file.Quote(iterable)}' is not supported");
+        return;
+      case "Attribute" when !loop:
+        this.Expression(target.Node("value")!);
+        return;
+      default:
+        this.Refuse(target, PythonFrontend.UnsupportedStatementDescriptor, $"statement '{(target.Is("Starred") ? "starred assignment target" : loop ? "a loop variable other than names" : "assignment to " + this.Quote(target))}' is not supported by the Python frontend");
+        return;
     }
-
-    this.Statements(statement);
   }
 
   private void Match(PyNode statement) {
@@ -163,15 +322,18 @@ internal sealed class SubsetCheck(SourceFile file, IReadOnlyDictionary<string, F
       if (matchCase.Node("guard") is { } guard)
         this.Expression(guard);
 
+      ++this._conditional;
       foreach (var inner in matchCase.Nodes("body"))
         this.Statement(inner);
+
+      --this._conditional;
     }
   }
 
-  /// <summary>Checks a pattern: literals, alternatives of literals, a capture, the wildcard.</summary>
+  /// <summary>Checks a pattern: literals, members of an enum, alternatives of them, a capture, the wildcard.</summary>
   private void Pattern(PyNode pattern, bool top) {
     switch (pattern.Kind) {
-      case "MatchValue" when Literal(pattern.Node("value")!):
+      case "MatchValue" when Literal(pattern.Node("value")!) || this.Member(pattern.Node("value")!):
       case "MatchSingleton":
         return;
       case "MatchAs" when pattern.Node("pattern") is null && (top || pattern.Text("name") is null):
@@ -182,43 +344,44 @@ internal sealed class SubsetCheck(SourceFile file, IReadOnlyDictionary<string, F
 
         return;
       default:
-        this.Refuse(pattern, PythonFrontend.UnsupportedPatternDescriptor, $"match pattern '{file.Quote(pattern)}' is not supported; supported are literals, '|', captures, '_' and guards");
+        this.Refuse(pattern, PythonFrontend.UnsupportedPatternDescriptor, $"match pattern '{this.Quote(pattern)}' is not supported; supported are literals, members of an enum, '|', captures, '_' and guards");
         return;
     }
   }
 
-  /// <summary>Whether a value pattern is a number literal, possibly negated.</summary>
+  /// <summary>Whether a value pattern is a number or string literal, possibly negated.</summary>
   private static bool Literal(PyNode value) {
     if (value.Is("UnaryOp") && value.Operator() == "USub")
       value = value.Node("operand")!;
 
-    return value.Is("Constant") && value.Text("kind") is "int" or "float";
+    return value.Is("Constant") && value.Text("kind") is "int" or "float" or "str";
   }
 
-  private bool IsBuiltInCall(PyNode node, string name)
-    => node.Is("Call") && node.Node("func") is { Kind: "Name" } callee && callee.Text("id") == name
-      && ScopeResolver.Resolve(this._function, functions, name) == Binding.BuiltIn;
-
-  private void Arguments(PyNode call, int count) {
-    foreach (var argument in call.Nodes("args").Take(count))
-      this.Expression(argument);
-  }
+  /// <summary>Whether a value pattern is a member of an enum of the module: <c>E.A</c>.</summary>
+  private bool Member(PyNode value)
+    => value.Is("Attribute") && value.Node("value") is { Kind: "Name" } owner && module.Classes.TryGetValue(owner.Text("id")!, out var type)
+      && type.IsEnum && type.Members.Any(member => member.Name == value.Text("attr"));
 
   private void Operator(PyNode node, string op) {
-    if (_operators.TryGetValue(op, out var text))
-      this.Refuse(node, PythonFrontend.UnsupportedDescriptor, $"'{text}' is not supported by the Python frontend");
+    if (op == "MatMult")
+      this.Refuse(node, PythonFrontend.UnsupportedDescriptor, "'@' is not supported by the Python frontend");
   }
+
+  private Binding Resolve(PyNode name) => ScopeResolver.Resolve(this._function, module, name.Text("id")!, bound, name);
 
   private void Expression(PyNode expression) {
     switch (expression.Kind) {
       case "Constant":
         var kind = expression.Text("kind");
-        if (kind is not ("int" or "float" or "bool"))
-          this.Refuse(expression, PythonFrontend.UnsupportedDescriptor, $"'{file.Quote(expression)}' is not supported by the Python frontend");
+        if (kind is not ("int" or "float" or "bool" or "none" or "str" or "bytes"))
+          this.Refuse(expression, PythonFrontend.UnsupportedDescriptor, $"'{this.Quote(expression)}' is not supported by the Python frontend");
+        else if (expression.Flag("surrogatePair"))
+          this.Refuse(expression, PythonFrontend.UnsupportedStringDescriptor,
+            "string operation 'a str of a lone high surrogate before a lone low one, which the UTF-16 of the IR holds as one code point,' is not supported by the Python frontend");
 
         break;
       case "Name":
-        this.Name(expression, false);
+        this.Name(expression);
         break;
       case "BinOp":
         this.Expression(expression.Node("left")!);
@@ -235,12 +398,9 @@ internal sealed class SubsetCheck(SourceFile file, IReadOnlyDictionary<string, F
         break;
       case "Compare":
         this.Expression(expression.Node("left")!);
-        foreach (var (op, right) in expression.Nodes("ops").Zip(expression.Nodes("comparators"))) {
-          if (!_comparisons.Contains(op.Kind))
-            this.Operator(expression, op.Kind);
-
+        // Every comparison operator Python has is in the subset; the operands decide.
+        foreach (var right in expression.Nodes("comparators"))
           this.Expression(right);
-        }
 
         break;
       case "IfExp":
@@ -251,62 +411,297 @@ internal sealed class SubsetCheck(SourceFile file, IReadOnlyDictionary<string, F
       case "Call":
         this.Call(expression);
         break;
-      case "Lambda":
-        this.Refuse(expression, PythonFrontend.EscapingFunctionDescriptor, $"the function value '{file.Quote(expression)}' escapes, or '{file.Quote(expression)}' is a generator or coroutine; only direct calls of the module's functions are imported");
+      case "List" or "Tuple":
+        foreach (var element in expression.Nodes("elts")) {
+          if (element.Is("Starred"))
+            this.Refuse(element, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation '{this.Quote(element)} in a display' is not supported by the Python frontend");
+          else
+            this.Expression(element);
+        }
+
         break;
-      case "Yield" or "YieldFrom" or "Await":
-        this.Refuse(expression, PythonFrontend.EscapingFunctionDescriptor, $"the function value '{this._function.Name}' escapes, or '{this._function.Name}' is a generator or coroutine; only direct calls of the module's functions are imported");
+      case "Subscript":
+        this.Subscript(expression);
+        break;
+      case "Attribute":
+        this.Attribute(expression);
+        break;
+      case "ListComp" or "GeneratorExp":
+        this.Comprehension(expression);
+        break;
+      case "NamedExpr":
+        this.Expression(expression.Node("value")!);
+        break;
+      case "Lambda":
+        this.Refuse(expression, PythonFrontend.EscapingFunctionDescriptor, Escaping(this.Quote(expression)) + " (escaping function values: #753)");
+        break;
+      case "Yield" or "YieldFrom":
+        this.Refuse(expression, PythonFrontend.EscapingFunctionDescriptor, Escaping(this._function!.Name) + " (a yield used as a value: #760)");
+        break;
+      case "Await":
+        this.Refuse(expression, PythonFrontend.EscapingFunctionDescriptor, Escaping(this._function!.Name) + " (coroutines: #752)");
+        break;
+      case "JoinedStr" or "TemplateStr":
+        this.Refuse(expression, PythonFrontend.UnsupportedStringDescriptor, "string operation 'f-string' is not supported by the Python frontend");
+        break;
+      case "Dict" or "Set" or "DictComp" or "SetComp":
+        this.Refuse(expression, PythonFrontend.UnsupportedDictDescriptor, $"dict or set operation '{this.Quote(expression)}' is not supported by the Python frontend");
+        break;
+      case "Starred":
+        this.Refuse(expression, PythonFrontend.UnsupportedFunctionDescriptor, $"'unpacked arguments in {this.Quote(expression)}' is not supported for functions by the Python frontend");
         break;
       default:
-        this.Refuse(expression, PythonFrontend.UnsupportedDescriptor, $"'{file.Quote(expression)}' is not supported by the Python frontend");
+        this.Refuse(expression, PythonFrontend.UnsupportedDescriptor, $"'{this.Quote(expression)}' is not supported by the Python frontend");
         break;
     }
   }
 
-  private void Name(PyNode name, bool called) {
+  private void Comprehension(PyNode comprehension) {
+    foreach (var generator in comprehension.Nodes("generators")) {
+      if (generator.Number("is_async") == 1)
+        this.Refuse(generator, PythonFrontend.EscapingFunctionDescriptor, Escaping(this._function!.Name) + " (coroutines: #752)");
+
+      this.Target(generator.Node("target")!, true);
+      this.Expression(generator.Node("iter")!);
+      foreach (var condition in generator.Nodes("ifs"))
+        this.Expression(condition);
+    }
+
+    this.Expression(comprehension.Node("elt")!);
+  }
+
+  private void Subscript(PyNode subscript) {
+    this.Expression(subscript.Node("value")!);
+    var index = subscript.Node("slice")!;
+    switch (index.Kind) {
+      case "Slice":
+        foreach (var bound in new[] { "lower", "upper", "step" })
+          if (index.Node(bound) is { } part)
+            this.Expression(part);
+
+        break;
+      case "Tuple" when index.Nodes("elts").Any(element => element.Is("Slice")):
+        this.Refuse(index, PythonFrontend.UnsupportedSliceDescriptor, $"slice form '{this.Quote(subscript)}' is not supported; slices are imported as values only");
+        break;
+      default:
+        this.Expression(index);
+        break;
+    }
+  }
+
+  private void Attribute(PyNode attribute) {
+    var owner = attribute.Node("value")!;
+    // math.pi, E.A, C.f: a name of the module or of an import, read as an attribute.
+    if (owner.Is("Name") && this.Resolve(owner) is Binding.Import or Binding.Class) {
+      if (this.Resolve(owner) == Binding.Import && module.Imports[owner.Text("id")!] is { User: null, Name: null } library && !LibraryCallMap.Has(library.Module, attribute.Text("attr")!))
+        this.Refuse(attribute, PythonFrontend.UnresolvedDescriptor, $"'{this.Quote(attribute)}' is neither part of this import nor in the Python call map");
+
+      return;
+    }
+
+    if (attribute.Text("attr") is "__dict__" or "__class__")
+      this.Refuse(attribute, PythonFrontend.DynamicAttributeDescriptor, $"attribute '{attribute.Text("attr")}' of class '{this.Quote(owner)}' is created dynamically; only attributes assigned in __init__ or declared as dataclass fields are imported");
+
+    this.Expression(owner);
+  }
+
+  private void Name(PyNode name) {
     var id = name.Text("id")!;
-    switch (ScopeResolver.Resolve(this._function, functions, id)) {
-      case Binding.Local when called:
-      case Binding.Function or Binding.BuiltIn when !called:
-        this.Refuse(name, PythonFrontend.EscapingFunctionDescriptor, $"the function value '{id}' escapes, or '{id}' is a generator or coroutine; only direct calls of the module's functions are imported");
+    switch (this.Resolve(name)) {
+      case Binding.Function or Binding.Nested:
+        this.Refuse(name, PythonFrontend.EscapingFunctionDescriptor, Escaping(id) + " (escaping function values: #753)");
         break;
       case Binding.Unknown:
         this.Refuse(name, PythonFrontend.UnresolvedDescriptor, $"'{id}' is neither part of this import nor in the Python call map");
         break;
+      case Binding.BuiltIn when id is not "None":
+        if (!Classes.IsBuiltinException(id))
+          this.Refuse(name, PythonFrontend.EscapingFunctionDescriptor, Escaping(id) + " (escaping function values: #753)");
+
+        break;
+    }
+  }
+
+  /// <summary>Whether an argument is a function value in a place that takes one: a lambda or the name of a function.</summary>
+  private bool FunctionValue(PyNode argument)
+    => argument.Is("Lambda") || (argument.Is("Name") && this.Resolve(argument) is Binding.Function or Binding.Nested);
+
+  private void FunctionArgument(PyNode argument) {
+    if (argument.Is("Lambda")) {
+      if (argument.Node("args")!.Nodes("args").Count != 1 || argument.Node("args")!.Nodes("defaults").Count > 0)
+        this.Refuse(argument, PythonFrontend.EscapingFunctionDescriptor, Escaping(this.Quote(argument)) + " (a lambda of other than one parameter)");
+      else
+        this.Expression(argument.Node("body")!);
     }
   }
 
   private void Call(PyNode call) {
     var callee = call.Node("func")!;
-    if (!callee.Is("Name")) {
-      this.Refuse(callee, PythonFrontend.UnresolvedDescriptor, $"'{file.Quote(callee)}' is neither part of this import nor in the Python call map");
-      return;
-    }
-
-    var name = callee.Text("id")!;
-    this.Name(callee, true);
     var arguments = call.Nodes("args");
-    if (call.Nodes("keywords").Count > 0 || arguments.Any(argument => argument.Is("Starred"))) {
-      this.Refuse(call, PythonFrontend.UnsupportedFunctionDescriptor, $"'keyword or unpacked arguments in {file.Quote(call)}' is not supported for functions by the Python frontend");
+    var keywords = call.Nodes("keywords");
+    if (arguments.Any(argument => argument.Is("Starred")) || keywords.Any(keyword => keyword.Text("arg") is null)) {
+      this.Refuse(call, PythonFrontend.UnsupportedFunctionDescriptor, $"'*args and **kwargs in {this.Quote(call)}' is not supported for functions by the Python frontend");
       return;
     }
 
-    var binding = ScopeResolver.Resolve(this._function, functions, name);
-    if (binding == Binding.Function && arguments.Count != functions[name].Parameters.Count)
-      this.Refuse(call, PythonFrontend.UnsupportedFunctionDescriptor, $"'a call of {name} with {arguments.Count} of its {functions[name].Parameters.Count} arguments' is not supported for functions by the Python frontend");
+    var name = callee.Is("Name") ? callee.Text("id")! : null;
+    var binding = name is null ? Binding.Unknown : this.Resolve(callee);
+    if (this._function is null && binding is Binding.Function or Binding.Nested || this._function is null && binding == Binding.Class && Classes.Of(module, name!) is { IsEnum: false, IsException: false }) {
+      this.Refuse(call, PythonFrontend.UnsupportedStatementDescriptor, $"statement 'module-level call of {name}, which runs code of the module when it is imported,' is not supported by the Python frontend");
+      return;
+    }
 
-    if (binding == Binding.BuiltIn && !BuiltInArity(name, arguments.Count))
-      this.Refuse(call, PythonFrontend.UnsupportedDescriptor, $"'{file.Quote(call)}' is not supported by the Python frontend");
+    if (name is not null && binding == Binding.BuiltIn) {
+      switch (name) {
+        case "map" or "filter":
+          if (arguments.Count != 2 || keywords.Count > 0 || !this.FunctionValue(arguments[0])) {
+            this.Refuse(call, PythonFrontend.EscapingFunctionDescriptor, Escaping(name) + " (map and filter take a lambda or a function of the module and one sequence)");
+            return;
+          }
+
+          this.FunctionArgument(arguments[0]);
+          this.Expression(arguments[1]);
+          return;
+        case "sorted" or "min" or "max":
+          foreach (var argument in arguments)
+            this.Expression(argument);
+
+          foreach (var keyword in keywords) {
+            if (keyword.Text("arg") == "key" && this.FunctionValue(keyword.Node("value")!))
+              this.FunctionArgument(keyword.Node("value")!);
+            else if (keyword.Text("arg") is "reverse" or "default" or "key")
+              this.Expression(keyword.Node("value")!);
+            else
+              this.Refuse(keyword, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation '{name}({keyword.Text("arg")}=…)' is not supported by the Python frontend");
+          }
+
+          return;
+        case "str" when arguments.Count <= 1 && keywords.Count == 0:
+          foreach (var argument in arguments)
+            this.Expression(argument);
+
+          return;
+        case "isinstance" when arguments.Count == 2 && keywords.Count == 0:
+          this.Expression(arguments[0]);
+          foreach (var named in arguments[1].Is("Tuple") ? arguments[1].Nodes("elts") : [arguments[1]])
+            if (!named.Is("Name"))
+              this.Expression(named);
+
+          return;
+        case "zip" when arguments.Count != 2:
+          this.Refuse(call, PythonFrontend.UnsupportedSequenceDescriptor, "sequence operation 'zip of other than two sequences' is not supported by the Python frontend");
+          return;
+        case "enumerate" when arguments.Count is 0 or > 2:
+          this.Refuse(call, PythonFrontend.UnsupportedIterationDescriptor, $"iteration over '{this.Quote(call)}' is not supported");
+          return;
+        case "str":
+          this.Refuse(call, PythonFrontend.UnsupportedStringDescriptor, $"string operation '{this.Quote(call)}' is not supported by the Python frontend");
+          return;
+      }
+    } else if (name is not null && binding == Binding.Unknown) {
+      var (descriptor, message) = name switch {
+        "getattr" or "setattr" or "hasattr" or "delattr" or "vars" => (PythonFrontend.DynamicAttributeDescriptor,
+          $"attribute '{name}' of class '{(arguments.Count > 0 ? this.Quote(arguments[0]) : "")}' is created dynamically; only attributes assigned in __init__ or declared as dataclass fields are imported"),
+        "dict" or "set" or "frozenset" => (PythonFrontend.UnsupportedDictDescriptor, $"dict or set operation '{this.Quote(call)}' is not supported by the Python frontend"),
+        "repr" or "format" or "hex" or "oct" or "bin" or "ascii" => (PythonFrontend.UnsupportedStringDescriptor, $"string operation '{this.Quote(call)}' is not supported by the Python frontend"),
+        "memoryview" or "iter" or "next" => (PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation '{name}' is not supported by the Python frontend"),
+        "super" => (PythonFrontend.UnsupportedClassDescriptor, "'super()' is outside the first Python subset (dataclasses, simple final classes, enums)"),
+        _ => (PythonFrontend.UnresolvedDescriptor, $"'{name}' is neither part of this import nor in the Python call map")
+      };
+      this.Refuse(callee, descriptor, message);
+      return;
+    } else if (name is null && callee.Is("Attribute")) {
+      if (!this.Method(call, callee))
+        return;
+    } else if (name is null) {
+      this.Refuse(callee, PythonFrontend.UnresolvedDescriptor, $"'{this.Quote(callee)}' is neither part of this import nor in the Python call map");
+      return;
+    } else if (binding is Binding.Local or Binding.Captured or Binding.Constant or Binding.Global) {
+      this.Refuse(callee, PythonFrontend.EscapingFunctionDescriptor, Escaping(name) + " (a function value held by a variable: #753)");
+      return;
+    }
 
     foreach (var argument in arguments)
       this.Expression(argument);
+
+    foreach (var keyword in keywords)
+      this.Expression(keyword.Node("value")!);
   }
 
-  /// <summary>Whether a built-in is supported with a number of arguments; <c>range</c> and <c>divmod</c> only where a statement takes them apart.</summary>
-  private static bool BuiltInArity(string name, int count) => name switch {
-    "pow" => count == 2,
-    "range" or "divmod" => false,
-    _ => count == 1
-  };
+  /// <summary>
+  /// The format of a call of <c>struct</c>: a constant of explicit byte order and the supported letters,
+  /// with as many values as it packs; <see langword="false"/> where it was refused.
+  /// </summary>
+  private bool Layout(PyNode call, string method) {
+    if (call.Nodes("args") is not [var formatNode, ..])
+      return true;
+
+    var (format, problem) = StructFormat.Parse(formatNode);
+    if (format is null) {
+      this.Refuse(formatNode, PythonFrontend.UnsupportedLayoutDescriptor, $"struct format or array typecode '{this.Quote(formatNode)}' is not supported: {problem}");
+      return false;
+    }
+
+    if (method == "pack" && call.Nodes("args").Count - 1 != format.Fields.Count) {
+      this.Refuse(call, PythonFrontend.UnsupportedLayoutDescriptor,
+        $"struct format or array typecode '{format.Text}' is not supported: it packs {format.Fields.Count} values, the call gives {call.Nodes("args").Count - 1}, which raises struct.error");
+      return false;
+    }
+
+    return true;
+  }
+
+  /// <summary>The byte order of <c>int.from_bytes</c> or <c>to_bytes</c>: a constant <c>"little"</c> or <c>"big"</c>, by position or by name; <see langword="false"/> where it was refused.</summary>
+  private bool ByteOrder(PyNode call, int position) {
+    var order = call.Nodes("args").ElementAtOrDefault(position) ?? call.Nodes("keywords").FirstOrDefault(keyword => keyword.Text("arg") == "byteorder")?.Node("value");
+    if (order is null || (order.Is("Constant") && order.Text("value") is "little" or "big"))
+      return true;
+
+    this.Refuse(order, PythonFrontend.UnsupportedLayoutDescriptor, $"struct format or array typecode '{this.Quote(order)}' is not supported: the byte order is a constant \"little\" or \"big\"");
+    return false;
+  }
+
+  /// <summary>Checks the callee of a call of a method; <see langword="false"/> where it was refused.</summary>
+  private bool Method(PyNode call, PyNode callee) {
+    var method = callee.Text("attr")!;
+    var owner = callee.Node("value")!;
+    if (owner.Is("Name") && this.Resolve(owner) == Binding.Import) {
+      var binding = module.Imports[owner.Text("id")!];
+      if (binding.User is null && !LibraryCallMap.Has(binding.Module, method)) {
+        this.Refuse(callee, PythonFrontend.UnresolvedDescriptor, $"'{this.Quote(callee)}' is neither part of this import nor in the Python call map");
+        return false;
+      }
+
+      return binding.User is not null || binding.Module != "struct" || this.Layout(call, method);
+    }
+
+    if (owner.Is("Name") && this.Resolve(owner) == Binding.Class)
+      return true;
+
+    if (owner.Is("Name") && owner.Text("id") == "int" && this.Resolve(owner) == Binding.BuiltIn)
+      return method != "from_bytes" || this.ByteOrder(call, 1);
+
+    var declared = module.Classes.Values.Any(type => type.Methods.ContainsKey(method));
+    if (method == "to_bytes" && !declared && !this.ByteOrder(call, 1))
+      return false;
+
+    if (!declared && RefusedSequenceMethods.Contains(method)) {
+      this.Refuse(callee, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation '{method}' is not supported by the Python frontend");
+      return false;
+    }
+
+    if (!declared && RefusedStringMethods.Contains(method)) {
+      this.Refuse(callee, PythonFrontend.UnsupportedStringDescriptor, $"string operation '{method}' is not supported by the Python frontend");
+      return false;
+    }
+
+    if (!declared && RefusedDictMethods.Contains(method)) {
+      this.Refuse(callee, PythonFrontend.UnsupportedDictDescriptor, $"dict or set operation '{method}' is not supported by the Python frontend");
+      return false;
+    }
+
+    this.Expression(owner);
+    return true;
+  }
 
 }

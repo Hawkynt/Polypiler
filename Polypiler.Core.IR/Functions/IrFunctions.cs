@@ -112,12 +112,13 @@ public static class IrClosures {
     return own.Concat(IrTree.Expressions(statement).SelectMany(Named)).Concat(inner.SelectMany(Named));
   }
 
-  /// <summary>Every variable an expression reads or captures, a nested lambda's captures included.</summary>
+  /// <summary>Every variable an expression reads, writes or captures, a nested lambda's captures included.</summary>
   /// <param name="expression">The expression.</param>
   /// <returns>The variables, with repetitions.</returns>
   public static IEnumerable<IrLocal> Named(IrExpr expression) => expression switch {
     IrLocalRef reference => [reference.Local],
     IrLambda lambda => lambda.Captures,
+    IrBind bind => IrTree.Operands(expression).SelectMany(Named).Prepend(bind.Local),
     _ => IrTree.Operands(expression).SelectMany(Named)
   };
 

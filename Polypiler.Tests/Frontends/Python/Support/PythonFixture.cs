@@ -21,7 +21,7 @@ namespace Polypiler.Prototype.Testing;
 internal static class PythonFixture {
 
   /// <summary>The fixtures, which are also the names of their modules.</summary>
-  public static readonly string[] Names = ["scalars", "control", "functions"];
+  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "modules"];
 
   /// <summary>The directory of the fixtures.</summary>
   public static string Directory { get; } = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "prototype", "python");
@@ -56,8 +56,17 @@ internal static class PythonFixture {
     File.WriteAllText(path, string.Join('\n', lines) + "\n");
   }
 
-  /// <summary>Imports a fixture from its recorded tree; fails with the diagnostics when it is refused.</summary>
-  public static IrModule Import(string fixture) => Module(Import(fixture + ".py", SourceOf(fixture)));
+  /// <summary>Imports a fixture from its recorded tree, the modules it imports from theirs; fails with the diagnostics when it is refused.</summary>
+  public static IrModule Import(string fixture) => Module(Import(fixture + ".py", SourceOf(fixture), new PythonImportOptions { Modules = Sibling }));
+
+  /// <summary>A module a fixture imports: a file beside it, with its recorded tree.</summary>
+  public static (string Path, string Source, string? Dump)? Sibling(string name) {
+    if (!File.Exists(PathOf(name)))
+      return null;
+
+    var source = SourceOf(name);
+    return (name + ".py", source, Dump(name + ".py", source));
+  }
 
   /// <summary>The module of a result; fails with the diagnostics when there is none.</summary>
   public static IrModule Module(PythonImportResult result)
@@ -65,7 +74,7 @@ internal static class PythonFixture {
 
   /// <summary>Imports a source from its recorded tree.</summary>
   public static PythonImportResult Import(string path, string source, PythonImportOptions? options = null)
-    => PythonFrontend.ImportDump(path, source, Dump(path, source), options);
+    => PythonFrontend.ImportDump(path, source, Dump(path, source), options ?? new PythonImportOptions { Modules = _ => null });
 
   /// <summary>
   /// The file of the recorded tree of a source: named after the hash of its text, so that a changed

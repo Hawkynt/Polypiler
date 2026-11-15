@@ -689,7 +689,7 @@ public static partial class CSharpEmitter {
       this._helpers = Names(helpers.Select(helper => helper.Name), taken);
       this._taken = [.. taken, .. this._helpers.Values];
       // The nested classes of the collections give way to every name of the module and its helpers.
-      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName],
+      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName, CSharpCollectionClasses.AssertionExceptionName],
         [.. this._taken, .. this._typeNames.Values]);
     }
 

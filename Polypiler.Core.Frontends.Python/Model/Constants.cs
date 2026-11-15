@@ -24,6 +24,22 @@ internal static class Constants {
   }
 
   /// <summary>
+  /// The text of a str constant, exactly: from its code points where it holds a surrogate - a lone
+  /// surrogate is one UTF-16 code unit of its own - otherwise its value.
+  /// </summary>
+  public static string Text(PyNode node) {
+    var points = node.Numbers("codePoints");
+    if (points.Count == 0)
+      return node.Text("value")!;
+
+    var text = new System.Text.StringBuilder();
+    foreach (var point in points)
+      text.Append(point is >= 0xD800 and <= 0xDFFF ? ((char)point).ToString() : char.ConvertFromUtf32(point));
+
+    return text.ToString();
+  }
+
+  /// <summary>
   /// The number <c>float.hex()</c> writes, such as <c>-0x1.8000000000000p+1</c>, <c>inf</c> or <c>nan</c>.
   /// The digits are at most 53 significant bits, so the number they make is exact before it is scaled.
   /// </summary>

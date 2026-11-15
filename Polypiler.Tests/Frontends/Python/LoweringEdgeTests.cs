@@ -113,21 +113,20 @@ public sealed class LoweringEdgeTests {
   [Test]
   public void NegativeHugeLiteral_IsExact_AndMultiLineConstruct_IsRefused() {
     Assert.That(PythonSnippet.Run("def f() -> int:\n    return -18446744073709551616\n", "f"), Is.EqualTo("int -18446744073709551616"));
-    Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return [1,\n            2]\n"), Has.Some.Contains("error PLY1802: '[1,…' is not supported by the Python frontend"));
+    Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return {1:\n            2}\n"), Has.Some.Contains("error PLY1842: dict or set operation '{1:…' is not supported by the Python frontend"));
   }
 
-  /// <summary>A conditional expression of None and a number has no type.</summary>
+  /// <summary>A conditional expression of a number and a call that returns None is refused: the call could not run before its None is given.</summary>
   [Test]
   public void ConditionalOfNoneAndANumber_IsRefused()
     => Assert.That(PythonSnippet.Refusals("def g() -> None:\n    pass\n\ndef f(a: int) -> int:\n    return a if a else g()\n"),
-      Has.Some.Contains("error PLY1803: 'a if a else g()' gives values of types no type of the import holds both of"));
+      Has.Some.Contains("error PLY1802: 'the value None of g()' is not supported by the Python frontend"));
 
-  [TestCase("    try:\n        pass\n    except* ValueError:\n        pass\n", "statement 'try'")]
-  [TestCase("    try:\n        pass\n    finally:\n        pass\n", "statement 'try'")]
-  [TestCase("    from math import floor\n", "statement 'import'")]
-  [TestCase("    class C:\n        pass\n", "statement 'class'")]
+  [TestCase("    try:\n        pass\n    except* ValueError:\n        pass\n", "exception construct 'except*'")]
+  [TestCase("    from math import floor\n", "an import inside a function")]
+  [TestCase("    class C:\n        pass\n", "error PLY1840: 'nested class C' is outside the first Python subset")]
   [TestCase("    type T = int\n", "statement 'type'")]
-  [TestCase("    nonlocal x\n", "'nonlocal x' is not supported for functions")]
+  [TestCase("    nonlocal x\n", "error PLY1833: 'nonlocal x' is neither part of this import nor in the Python call map: no enclosing function binds 'x'")]
   [TestCase("    match x:\n        case [z] as y:\n            pass\n", "match pattern '[z] as y' is not supported")]
   public void MoreUnsupportedStatements_AreRefused(string body, string diagnostic)
     => Assert.That(PythonSnippet.Refusals("def f(x: int) -> int:\n" + body + "    return 0\n"), Has.Some.Contains(diagnostic));
@@ -172,5 +171,20 @@ public sealed class LoweringEdgeTests {
     Assert.That(result.Caveats.Select(caveat => caveat.Id), Is.EqualTo(new[] { PythonFrontend.ComplexPower }));
     Assert.That(result.Module!.Caveats, Is.EqualTo(new[] { PythonFrontend.ComplexPower }));
   }
+
+  /// <summary>The forms the parser accepts in a plain function but the subset does not: coroutine syntax, unpacking, slices in a tuple, odd loop targets, raising what is no exception.</summary>
+  [TestCase("await x", "error PLY1832: the function value 'f' escapes, or 'f' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported (coroutines: #752)")]
+  [TestCase("async for y in a:\n        pass", "error PLY1810: statement 'async for' is not supported")]
+  [TestCase("b = [y async for y in a]", "(coroutines: #752)")]
+  [TestCase("b = [*a]", "error PLY1820: sequence operation '*a in a display' is not supported")]
+  [TestCase("b = a[1:2, 0]", "error PLY1821: slice form 'a[1:2, 0]' is not supported")]
+  [TestCase("for a[0] in [1]:\n        pass", "error PLY1810: statement 'a loop variable other than names' is not supported")]
+  [TestCase("b = x.to_bytes(2, order)", "error PLY1823: struct format or array typecode 'order' is not supported: the byte order is a constant \"little\" or \"big\"")]
+  [TestCase("def g() -> int:\n        return 1\n    def g() -> int:\n        return 2", "error PLY1830: 'redefinition of g' is not supported for functions")]
+  [TestCase("raise C()", "error PLY1843: exception construct 'raise C(), which is no exception' is not supported")]
+  [TestCase("raise ValueError(msg='x')", "error PLY1843: exception construct 'an exception made with other arguments than a message: ValueError(msg='x')'")]
+  [TestCase("try:\n        pass\n    except C:\n        pass", "error PLY1843: exception construct 'except C, which names no exception class'")]
+  public void ParsedFormsOutsideTheSubset_AreRefused(string body, string diagnostic)
+    => Assert.That(PythonSnippet.Refusals($"class C:\n    pass\n\ndef f(a: list[int], x: int, order: str) -> int:\n    {body}\n    return 0\n"), Has.Some.Contains(diagnostic));
 
 }

@@ -50,6 +50,9 @@ internal static class PythonCases {
   public static IReadOnlyList<PythonCall> For(string fixture, IrModule module) => fixture switch {
     "scalars" => Scalars(module),
     "control" => Control,
+    "memory" => Memory,
+    "types" => Types,
+    "modules" => Modules,
     _ => Functions
   };
 
@@ -132,6 +135,133 @@ internal static class PythonCases {
     .. Each("checked", -1, 0, 5),
     .. Each("trap_in_loop", 0, 1, 2, 3, 4),
     .. new long[] { 0, 12, 18, -12, 1071 }.SelectMany(a => new long[] { 0, 8, 462, -18 }.Select(b => Call("gcd", a, b)))
+  ];
+
+  private static IEnumerable<PythonCall> Pairs(string function, params (long, long)[] pairs) => pairs.Select(pair => Call(function, pair.Item1, pair.Item2));
+
+  /// <summary>The calls of <c>memory</c> (#451): each sequence operation on its boundaries - indices on and beyond both ends, empty sequences, counts below one, values at the limits of their fields.</summary>
+  private static readonly IReadOnlyList<PythonCall> Memory = [
+    .. Each("index", -6, -5, -1, 0, 4, 5),
+    .. Pairs("store", (-4, 1), (-3, 1), (-1, 7), (0, 5), (2, 9), (3, 1)),
+    .. Each("augmented_store", -4, -1, 0, 1, 2, 3),
+    .. new (long, long, long)[] { (0, 5, 1), (1, 3, 1), (-2, 10, 1), (10, 20, 1), (4, -6, -1), (0, 5, 2), (5, 0, -2), (0, 5, 0), (-100, 100, 3), (1, 1, 1), (3, 1, 1), (-1, -6, -2) }
+      .Select(bounds => Call("slice_sum", bounds.Item1, bounds.Item2, bounds.Item3)),
+    .. Each("slice_open", -1, 0, 2, 5, 7),
+    .. Each("repeat", -1, 0, 1, 1000),
+    Call("aliased_rows", false), Call("aliased_rows", true),
+    .. Each("append_pop", 0, 1, 5),
+    .. Each("pop_empty", 1),
+    .. Each("extend_self", 0, 1, 3),
+    .. Each("concat_copy", 4),
+    .. Each("contains", 1, 2, 3, 7, 9),
+    .. Pairs("list_equal", (1, 2), (2, 1), (3, 3), (1, 1)),
+    .. Each("iterate_growing", 0, 1, 5),
+    .. Each("enumerated", -3, 0, 1, long.MaxValue - 2, long.MaxValue - 1),
+    .. Each("zipped", 0, 30),
+    .. Each("reversed_loop", 0, 3, 4),
+    Call("sorted_values", false), Call("sorted_values", true),
+    .. Each("sorted_by_key", -3, 0, 2, 5),
+    .. Each("folds", -10, 0, 1, 100),
+    .. Each("min_empty", 0, 3),
+    .. Pairs("max_args", (1, 2), (5, 4), (3, 3), (-1, -1)),
+    .. Each("sum_start", -2, 0, 3, 10),
+    .. Each("comprehension", 0, 1, 5, 6),
+    .. Each("nested_comprehension", 0, 3, 5),
+    .. Each("generator_any", 0, 5, 9),
+    .. Each("list_of", 0, 1, 5),
+    .. Each("bytes_index", -5, -4, -1, 0, 3, 4),
+    .. Each("bytes_slice", 0, 2, 4),
+    .. Each("bytearray_store", -1, 0, 255, 256),
+    .. Each("bytes_of_list", -1, 0, 255, 256),
+    .. Each("bytes_ops", 0, 2),
+    Call("from_bytes", false), Call("from_bytes", true),
+    .. Each("from_bytes_signed", 0, 1, 2, 8, 9, 10),
+    .. Each("to_bytes", -32769, -32768, 0, 255, 32767, 32768),
+    .. Each("to_bytes_unsigned", -1, 0, 4294967295, 4294967296),
+    .. Each("struct_unpack", -1, 0, 65535, 65536),
+    .. Each("struct_big", 0, 5, 32768, 32769),
+    .. Each("struct_from", -5, -4, -3, -1, 0, 1, 2, 3),
+    .. new[] { 0.5, -1.25, 1e300, double.NaN, double.PositiveInfinity, 3.4028234663852886e38 }.Select(value => Call("struct_floats", value)),
+    .. Each("struct_short", 3, 4, 5),
+    .. Each("struct_range", -1, 0, 255, 256),
+    .. Each("adler32", 0, 1, 3),
+    .. Pairs("tuples", (1, 2), (0, 0)),
+    .. Pairs("swap_return", (1, 2), (7, 3)),
+    .. Pairs("divmod_tuple", (7, 2), (-7, 2), (7, 0)),
+    .. Each("strings", 0, 1, 3),
+    .. Each("string_iteration", 0, 1, 2),
+    .. Each("encode", 0, 1, 2),
+    .. Each("encode_surrogate", 0, 1),
+    .. Each("characters", -1, 0, 65, 233, 0xD800, 0x10FFFF, 0x110000),
+    .. Each("string_in", 0, 1, 2, 3),
+    .. new[] { 0.0, 2.0, double.NaN, double.NegativeInfinity }.Select(value => Call("float_list", value))
+  ];
+
+  private static IEnumerable<PythonCall> Flagged(string function, params (long, bool)[] pairs) => pairs.Select(pair => Call(function, pair.Item1, pair.Item2));
+
+  /// <summary>The calls of <c>types</c> (#453): every class kind, enum, optional and exception form on the values that choose each branch.</summary>
+  private static readonly IReadOnlyList<PythonCall> Types = [
+    .. Pairs("point", (3, 4), (-2, 0), (0, 0)),
+    .. Each("dataclass_equality", 1, 3),
+    .. Each("plain_equality", 1),
+    .. Each("frozen", -2, 1),
+    .. Each("identity", 1),
+    .. Each("counter", 0, 1, 4),
+    .. Pairs("grid", (0, 5), (5, 255), (6, 1), (-1, 7), (2, 256)),
+    .. Pairs("money", (1, 1), (1, 2)),
+    .. Each("sharing", 0, 5),
+    .. Pairs("named_tuple", (1, 2), (3, 3)),
+    .. Each("enum_value", 0, 1, 2, 3, 4),
+    .. Each("enum_compare", 1, 2),
+    .. Each("enum_iteration", 0),
+    .. Each("int_enum", 0, 1, 2, 3),
+    .. Flagged("optional_value", (5, false), (5, true), (0, false)),
+    .. Flagged("optional_truth", (0, false), (0, true), (7, false)),
+    .. Flagged("optional_arithmetic", (1, false), (1, true)),
+    .. Each("optional_object", 0, 3),
+    .. Each("none_attribute", 0, 3),
+    .. Each("maybe", -1, 0, 4),
+    .. Each("raises", -1, 0, 5),
+    .. Pairs("catches", (6, 3), (1, 0), (-1, 1)),
+    .. Each("handlers", -4, 0, 1, 2, 3),
+    .. Each("lookup", -3, 0, 2),
+    .. Each("else_finally", 0, 1, 2),
+    .. Each("user_errors", 0, 1, 2, 3),
+    .. Each("reraise", 0, 2),
+    .. Each("nested_try", 0, 1, 2, 3),
+    .. Each("uncaught", 1, 2, 3, 4),
+    .. Each("loop_finally", 0, 1, 2, 5),
+    .. Each("bare_except", 0, 5),
+    .. Each("raise_in_handler", 0, 5),
+    .. Each("not_implemented", 0, 1),
+    .. Each("instance_check", 0, 1),
+    .. Each("raised_object", 0, 1)
+  ];
+
+  /// <summary>The calls of <c>modules</c> (#450): defaults and keywords, closures, lambdas, module state, the call map, walrus and generators.</summary>
+  private static readonly IReadOnlyList<PythonCall> Modules = [
+    .. Flagged("defaults", (5, true), (5, false)),
+    .. Each("call_kinds", 0, 1),
+    .. Each("order", 0),
+    .. Pairs("closure", (10, 7), (10, 12)),
+    .. Each("late_binding", 3),
+    .. Each("counter_closure", 0, 4),
+    .. Each("two_levels", 1),
+    .. Each("recursive_nested", 0, 5, 20, 21),
+    .. Each("square", -3, 3037000500),
+    .. Each("lambdas", -4, 0, 5),
+    .. Each("map_function", -3, 0, 4),
+    .. Each("module_table", -7, -6, 0, 5, 6),
+    .. Each("weights", 0, 2),
+    .. Each("global_counter", 3),
+    .. new[] { 0.0, -0.0, -2.25, double.NaN, double.PositiveInfinity, double.NegativeInfinity }.Select(value => Call("math_calls", value)),
+    .. new[] { 2.5, -2.5, 0.5, -0.5, 1e300, double.NaN, double.PositiveInfinity }.Select(value => Call("math_ints", value)),
+    .. new[] { 4.0, 2.0, -1.0, -0.0, double.NaN, double.PositiveInfinity }.Select(value => Call("math_sqrt", value)),
+    .. Pairs("integer_math", (12, 18), (0, 0), (-12, 8), (long.MinValue, 0), (99, long.MaxValue)),
+    .. Each("walrus", 0, 1, 5),
+    .. Each("generators", 0, 1, 4),
+    .. Each("generator_early", 3, 11),
+    .. Each("imported", 0, 4)
   ];
 
   private static readonly IReadOnlyList<PythonCall> Functions = [

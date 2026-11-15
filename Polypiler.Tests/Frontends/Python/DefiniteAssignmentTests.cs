@@ -39,9 +39,12 @@ public sealed class DefiniteAssignmentTests {
   public void AssignedOnEveryPath_Imports(string body, long n, string expected)
     => Assert.That(PythonSnippet.Run(F(body), "f", n), Is.EqualTo(expected));
 
-  /// <summary>A function whose end is reachable returns None there; one that returns a value on another path is refused.</summary>
+  /// <summary>A function whose end is reachable returns None there; one that returns a value on another path returns an optional.</summary>
   [Test]
-  public void ValueOnSomePathsAndNoneOnOthers_IsRefused()
-    => Assert.That(PythonSnippet.Refusals("def f(n: int) -> int:\n    if n:\n        return 1\n"), Has.Some.Contains("error PLY1803: 'f result' holds values of the types int and None"));
+  public void ValueOnSomePathsAndNoneOnOthers_IsAnOptional() {
+    const string source = "def f(n: int) -> int:\n    if n:\n        return 1\n";
+    Assert.That(PythonSnippet.Run(source, "f", 0L), Is.EqualTo("None"));
+    Assert.That(PythonSnippet.Run(source, "f", 2L), Is.EqualTo("int 1"));
+  }
 
 }

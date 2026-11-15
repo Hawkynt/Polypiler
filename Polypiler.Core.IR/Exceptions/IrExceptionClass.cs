@@ -10,7 +10,9 @@ namespace Polypiler.Core.IR;
 /// <c>Exception</c> ← <c>IndexOutOfRangeException</c>, <c>NullReferenceException</c>,
 /// <c>InvalidCastException</c>, <c>InvalidOperationException</c>;
 /// <c>Exception</c> ← <c>ArgumentException</c> ← <c>ArgumentOutOfRangeException</c>;
-/// <c>Exception</c> ← <c>KeyNotFoundException</c>, <c>FormatException</c>.
+/// <c>Exception</c> ← <c>KeyNotFoundException</c>, <c>FormatException</c>;
+/// <c>Exception</c> ← <c>AssertionException</c>, a failed assertion of the source (Python's
+/// <c>AssertionError</c>), which .NET has no class of its own for.
 /// <para>
 /// They are classes (<see cref="IrClassType"/>) that no module declares and every module may name: a
 /// class of a module derives from one of them, a catch clause names one, and every trap of the IR is
@@ -41,9 +43,11 @@ public static class IrExceptionClass {
     ArgumentOutOfRangeException = Library("ArgumentOutOfRangeException", ArgumentException, "Specified argument was out of the range of valid values.");
     KeyNotFoundException = Library("KeyNotFoundException", Exception, "The given key was not present in the dictionary.");
     FormatException = Library("FormatException", Exception, "One of the identified items was in an invalid format.");
+    AssertionException = Library("AssertionException", Exception, "Assertion failed.");
     All = [
       Exception, ArithmeticException, DivideByZeroException, OverflowException, IndexOutOfRangeException, NullReferenceException,
-      InvalidCastException, InvalidOperationException, ArgumentException, ArgumentOutOfRangeException, KeyNotFoundException, FormatException
+      InvalidCastException, InvalidOperationException, ArgumentException, ArgumentOutOfRangeException, KeyNotFoundException, FormatException,
+      AssertionException
     ];
   }
 
@@ -76,6 +80,12 @@ public static class IrExceptionClass {
 
   /// <summary>The class of <see cref="IrTrap.InvalidFormat"/>: a text that is no number of the grammar it is parsed by.</summary>
   public static IrClassType FormatException { get; }
+
+  /// <summary>
+  /// A failed assertion of the source: Python's <c>AssertionError</c>. No trap of the IR throws it; a
+  /// frontend throws it where the source asserts.
+  /// </summary>
+  public static IrClassType AssertionException { get; }
 
   /// <summary>An argument a method does not accept; the class of <see cref="IrTrap.DuplicateKey"/> and <see cref="IrTrap.UnknownName"/>.</summary>
   public static IrClassType ArgumentException { get; }

@@ -28,6 +28,14 @@ public sealed record PythonImportOptions {
   /// <summary>Whether <c>assert</c> statements are left out, as <c>python -O</c> leaves them out (the profile key <c>assertions</c>: <c>keep</c>, or <c>strip</c>).</summary>
   public bool StripAssertions { get; init; }
 
+  /// <summary>
+  /// How a module the source imports is found, by its name such as <c>pkg.helper</c>: its path, its
+  /// text and, where one is recorded, the tree the helper printed for it; <see langword="null"/> where
+  /// there is no such module. Without a locator modules are files under the directory of the source
+  /// (the profile key <c>searchPath</c>).
+  /// </summary>
+  public System.Func<string, (string Path, string Source, string? Dump)?>? Modules { get; init; }
+
 }
 
 /// <summary>What importing a Python source produced: a module, or the reasons there is none.</summary>
@@ -125,6 +133,76 @@ public static class PythonFrontend {
   [Diagnostic]
   public static readonly DiagnosticDescriptor UnsupportedIterationDescriptor = new(UnsupportedIteration, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.iteration");
 
+  /// <summary>The code for a sequence operation outside the subset: a list method such as <c>sort</c>, <c>del a[i]</c>, <c>is</c> between lists.</summary>
+  public const string UnsupportedSequence = "PLY1820";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedSequence"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedSequenceDescriptor = new(UnsupportedSequence, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.sequences");
+
+  /// <summary>The code for a slice that is no value: slice assignment and deletion, a stored slice object, several dimensions.</summary>
+  public const string UnsupportedSlice = "PLY1821";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedSlice"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedSliceDescriptor = new(UnsupportedSlice, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.slices");
+
+  /// <summary>The code for a string operation outside the subset: f-strings, formatting, <c>join</c>, <c>split</c>, <c>decode</c>.</summary>
+  public const string UnsupportedString = "PLY1822";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedString"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedStringDescriptor = new(UnsupportedString, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.strings");
+
+  /// <summary>The code for a <c>struct</c> format or an <c>array</c> typecode outside the portable subset.</summary>
+  public const string UnsupportedLayout = "PLY1823";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedLayout"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedLayoutDescriptor = new(UnsupportedLayout, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.layouts");
+
+  /// <summary>The code for a parameter default of a mutable type, one object shared across calls.</summary>
+  public const string MutableDefault = "PLY1834";
+
+  /// <summary>The registered diagnostic of <see cref="MutableDefault"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor MutableDefaultDescriptor = new(MutableDefault, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.defaults");
+
+  /// <summary>The code for a class feature outside dataclasses, simple final classes and enums: bases, <c>super()</c>, <c>@classmethod</c>, operator methods.</summary>
+  public const string UnsupportedClass = "PLY1840";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedClass"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedClassDescriptor = new(UnsupportedClass, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.classes");
+
+  /// <summary>The code for a generic declaration: <c>Generic[T]</c>, <c>TypeVar</c>, type parameters.</summary>
+  public const string UnsupportedGeneric = "PLY1841";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedGeneric"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedGenericDescriptor = new(UnsupportedGeneric, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.generics");
+
+  /// <summary>The code for a <c>dict</c> or <c>set</c> operation.</summary>
+  public const string UnsupportedDict = "PLY1842";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedDict"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedDictDescriptor = new(UnsupportedDict, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.dicts");
+
+  /// <summary>The code for an exception construct outside the subset: <c>raise … from</c>, <c>with</c>, exception groups, exception classes with members.</summary>
+  public const string UnsupportedException = "PLY1843";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedException"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedExceptionDescriptor = new(UnsupportedException, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.exceptions");
+
+  /// <summary>The code for an attribute created outside <c>__init__</c>, and for <c>setattr</c>, <c>getattr</c> and their kin.</summary>
+  public const string DynamicAttribute = "PLY1844";
+
+  /// <summary>The registered diagnostic of <see cref="DynamicAttribute"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor DynamicAttributeDescriptor = new(DynamicAttribute, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "python.attributes");
+
   /// <summary>The code for a feature of functions outside the subset: defaults, keyword arguments, decorators, nested functions.</summary>
   public const string UnsupportedFunction = "PLY1830";
 
@@ -155,12 +233,29 @@ public static class PythonFrontend {
   /// <summary>The caveat of a module that raises a <c>float</c> to a power.</summary>
   public const string ComplexPower = "py-complex-power";
 
+  /// <summary>The caveat of a module that compares floats inside lists and tuples, or searches for one.</summary>
+  public const string FloatIdentity = "py-float-identity";
+
+  /// <summary>The caveat of a module that sorts floats.</summary>
+  public const string SortNaN = "py-sort-nan";
+
+  /// <summary>The caveat of a module that makes characters with <c>chr</c>.</summary>
+  public const string Surrogates = "py-str-surrogates";
+
+  /// <summary>The caveat of a module that keeps an <c>int</c> where the IR holds one in 64 bits: a field, a tuple, an optional, a table, an index.</summary>
+  public const string HeldInt = "py-int-held-64";
+
   private static readonly Dictionary<string, string> _caveats = new() {
     [Widened] = "a bool or int stored where a variable, an argument or a result also holds wider numbers is converted to the wider type "
       + "when it is stored; Python keeps the narrower value, which compares equal but has its own type",
     [PowerSign] = "an int raised to an int power whose sign the import does not know is an int, and a negative power raises ValueError, "
       + "where Python gives a float",
-    [ComplexPower] = "a negative float raised to a fractional power raises ArithmeticError, where Python gives a complex number"
+    [ComplexPower] = "a negative float raised to a fractional power raises ArithmeticError, where Python gives a complex number",
+    [FloatIdentity] = "a NaN inside a list or tuple, or searched for with in, is unequal to itself; CPython finds the very same NaN object equal to itself",
+    [SortNaN] = "floats sorted with a NaN among them are ordered by a stable merge sort; CPython's timsort may order them otherwise",
+    [Surrogates] = "a str is held as UTF-16: a lone high surrogate followed by a lone low surrogate made with chr is one code point, where Python has two",
+    [HeldInt] = "an int kept in an attribute, a tuple, an optional, a module table or variable, or used as an index, a count or an argument of the "
+      + "byte and struct operations, is a 64-bit integer there: one outside -2**63 .. 2**63 - 1 raises OverflowError, where Python keeps it exact"
   };
 
   /// <summary>Imports one Python source file, parsed by the installed CPython.</summary>
@@ -198,39 +293,92 @@ public static class PythonFrontend {
     if (parsed.Error is var (message, line, column))
       return Refused(path, message, line, column, parsed.Python);
 
-    var file = new SourceFile(path, source);
+    var previous = (Tuples.Current, Classes.Current);
+    Tuples.Current = new();
+    Classes.Current = new();
+    try {
+      return Run(path, source, parsed, options);
+    } finally {
+      (Tuples.Current, Classes.Current) = previous;
+    }
+  }
+
+  private static PythonImportResult Run(string path, string source, ParsedSource parsed, PythonImportOptions options) {
     var diagnostics = new List<Diagnostic>();
-    var functions = Collect(file, parsed.Module!, diagnostics);
-    var check = new SubsetCheck(file, functions, diagnostics);
-    foreach (var function in functions.Values)
-      check.Check(function);
+    var bound = new Dictionary<PyNode, Variable>(ReferenceEqualityComparer.Instance);
+    var name = Path.GetFileNameWithoutExtension(path);
+    var locate = Locator(path, options, diagnostics);
+    var collector = new Collector(locate, bound, diagnostics);
+    var main = collector.Collect(new ModuleSource(name, new SourceFile(path, source), parsed.Module!), true);
+    var modules = collector.Modules;
+    if (main.Functions.Count == 0 && main.Classes.Count == 0 && diagnostics.Count == 0)
+      diagnostics.Add(main.File.At(main.Node, UnsupportedStatementDescriptor, "statement 'a module without a function' is not supported by the Python frontend"));
 
-    if (diagnostics.Count == 0)
-      foreach (var function in functions.Values)
-        new DefiniteAssignment(file, function, diagnostics).Run();
-
-    if (diagnostics.Count == 0)
-      new TypeInference(file, functions, diagnostics).Run();
+    foreach (var module in modules) {
+      ScopeResolver.ModuleScopes(module, bound);
+      var check = new SubsetCheck(module, bound, diagnostics);
+      check.CheckModule();
+      foreach (var function in module.Functions.Values.Concat(module.Classes.Values.SelectMany(type => type.Methods.Values)))
+        check.Check(function);
+    }
 
     var notes = new LoweringNotes();
-    var helpers = new PythonHelpers(functions.Keys.ToHashSet());
-    var lowered = new List<IrFunction>();
+    var helpers = new PythonHelpers(modules.SelectMany(module => module.AllFunctions.Select(function => function.Name).Concat(module.Classes.Keys)).ToHashSet());
+    var context = new LoweringContext(bound, helpers, notes, options);
     if (diagnostics.Count == 0) {
-      foreach (var function in functions.Values) {
-        try {
-          lowered.Add(new FunctionLowering(file, function, functions, helpers, notes, options).Lower());
-        } catch (Refusal refusal) {
-          diagnostics.Add(refusal.Diagnostic);
+      foreach (var module in modules) {
+        Names(module);
+        ClassDeclarations.Signatures(module);
+        ClassDeclarations.Enums(module, context);
+      }
+
+      var evaluation = new ModuleEvaluation(context, new TypeInference(modules, bound, diagnostics), diagnostics);
+      foreach (var module in modules)
+        evaluation.Run(module);
+    }
+
+    if (diagnostics.Count == 0)
+      foreach (var module in modules)
+        foreach (var function in module.AllFunctions)
+          new DefiniteAssignment(module.File, function, bound, diagnostics).Run();
+
+    if (diagnostics.Count == 0)
+      new TypeInference(modules, bound, diagnostics).Run();
+
+    var lowered = new List<IrFunction>();
+    var globals = new List<IrGlobal>();
+    if (diagnostics.Count == 0) {
+      foreach (var module in modules) {
+        ClassDeclarations.Records(module, context, diagnostics);
+        foreach (var global in module.GlobalVariables.Values) {
+          var initial = global.Initial!;
+          // A variable of the module holds an int as a field does (PyTypes.Held); a bool or an int a float variable starts with is that float.
+          var value = initial.Type == global.Type ? initial.Value! : initial.Value is IrBigConst integer ? Ir.Float((double)integer.Value) : Ir.Float(((IrConst)initial.Value!).Value);
+          global.Ir = new IrGlobal(Unique(module, global.Name, globals), PyTypes.Held(global.Type), Ir.Fit(value, PyTypes.Held(global.Type)));
+          globals.Add(global.Ir);
+        }
+      }
+    }
+
+    if (diagnostics.Count == 0) {
+      foreach (var module in modules) {
+        ClassDeclarations.Members(module, context, new FunctionLowering(context, module, null));
+        foreach (var function in module.Functions.Values.Concat(module.Classes.Values.Where(type => type.Ir is not null).SelectMany(type => type.Methods.Values))) {
+          try {
+            lowered.Add(new FunctionLowering(context, module, function).Lower());
+          } catch (Refusal refusal) {
+            diagnostics.Add(refusal.Diagnostic);
+          }
         }
       }
     }
 
     if (diagnostics.Count > 0)
-      return new(null, [.. diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column)], [], []) { Python = parsed.Python };
+      return new(null, [.. diagnostics.OrderBy(diagnostic => diagnostic.File == path ? 0 : 1).ThenBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column)], [], []) { Python = parsed.Python };
 
     var caveats = new List<string>();
 
-    if (notes.Widens || functions.Values.Any(function => function.Parameters.Concat(function.Locals.Values).Any(variable => variable.Widened)))
+    if (notes.Widens || modules.SelectMany(module => module.AllFunctions).Any(function => function.Parameters.Concat(function.Locals.Values).Any(variable => variable.Widened)))
       caveats.Add(Widened);
 
     if (notes.PowersBySignUnknown)
@@ -239,9 +387,84 @@ public static class PythonFrontend {
     if (notes.PowersFloats)
       caveats.Add(ComplexPower);
 
-    var module = new IrModule(Path.GetFileNameWithoutExtension(path), [.. lowered, .. helpers.Functions]) { Caveats = caveats };
-    var contracts = options.RecordAnnotations ? Contracts(file, functions.Values, notes) : [];
-    return new(module, [], [.. caveats.Select(id => new PythonCaveat(id, _caveats[id]))], contracts) { Python = parsed.Python };
+    if (notes.SearchesFloats)
+      caveats.Add(FloatIdentity);
+
+    if (notes.SortsFloats)
+      caveats.Add(SortNaN);
+
+    if (notes.Characters)
+      caveats.Add(Surrogates);
+
+    IrFunction[] functions = [.. lowered, .. context.Made, .. helpers.Functions];
+    if (functions.SelectMany(function => IrTree.Nodes(function.Body)).Any(node => node is IrConvert { Contract: IrConversion.Trap, Operand.Type.IsBigInt: true }))
+      caveats.Add(HeldInt);
+
+    var imported = new IrModule(name, functions) {
+      Caveats = caveats,
+      Types = [.. Tuples.Current.Structs, .. context.Types],
+      Globals = [.. context.Tables, .. globals]
+    };
+    var contracts = options.RecordAnnotations ? Contracts(modules, notes) : [];
+    return new(imported, [], [.. caveats.Select(id => new PythonCaveat(id, _caveats[id]))], contracts) { Python = parsed.Python };
+  }
+
+  /// <summary>The names the functions of a module have in the IR: their own in the module the import started from, the module's before them in another.</summary>
+  private static void Names(ModuleModel module) {
+    var prefix = module.IsMain ? "" : module.Name.Replace('.', '_') + "_";
+    foreach (var function in module.Functions.Values)
+      function.IrName = prefix + function.Name;
+  }
+
+  private static string Unique(ModuleModel module, string name, List<IrGlobal> globals) {
+    var candidate = (module.IsMain ? "" : module.Name.Replace('.', '_') + "_") + name;
+    while (globals.Any(global => global.Name == candidate) || module.Functions.ContainsKey(candidate))
+      candidate += "_";
+
+    return candidate;
+  }
+
+  /// <summary>
+  /// How the modules a source imports are found: by the options' locator, or as files under the
+  /// directory of the source - <c>a/b.py</c> for <c>a.b</c>, or <c>a/b/__init__.py</c> for a package -
+  /// parsed by the same interpreter, never imported or run.
+  /// </summary>
+  private static System.Func<string, ModuleSource?> Locator(string path, PythonImportOptions options, List<Diagnostic> diagnostics) {
+    var cache = new Dictionary<string, ModuleSource?>();
+    return name => {
+      if (cache.TryGetValue(name, out var known))
+        return known;
+
+      ModuleSource? found = null;
+      if (options.Modules?.Invoke(name) is { } given) {
+        found = Parse(name, given.Path, given.Source, given.Dump ?? AstHelper.Run(given.Path, given.Source, options.Interpreter).Json, given.Path.EndsWith("__init__.py", System.StringComparison.Ordinal), diagnostics);
+      } else if (options.Modules is null) {
+        var root = Path.GetDirectoryName(Path.GetFullPath(path))!;
+        var relative = Path.Combine([root, .. name.Split('.')]);
+        foreach (var (file, package) in new[] { (relative + ".py", false), (Path.Combine(relative, "__init__.py"), true) }) {
+          if (!File.Exists(file))
+            continue;
+
+          var text = File.ReadAllText(file);
+          found = Parse(name, file, text, AstHelper.Run(file, text, options.Interpreter).Json, package, diagnostics);
+          break;
+        }
+      }
+
+      cache[name] = found;
+      return found;
+    };
+  }
+
+  private static ModuleSource? Parse(string name, string path, string source, string? dump, bool package, List<Diagnostic> diagnostics) {
+    var parsed = dump is null ? null : AstReader.Read(dump);
+    if (parsed?.Module is null) {
+      var (message, line, column) = parsed?.Error ?? ($"the Python helper could not parse {path}", 1, 1);
+      diagnostics.Add(SyntaxErrorDescriptor.At(message, path, line, column));
+      return null;
+    }
+
+    return new ModuleSource(name, new SourceFile(path, source), parsed.Module, package);
   }
 
   /// <summary>The description of a caveat, by its name.</summary>
@@ -253,86 +476,20 @@ public static class PythonFrontend {
     => new(null, [SyntaxErrorDescriptor.At(message, path, line, column)], [], []) { Python = python };
 
   /// <summary>The contracts the hints of parameters, results and locals state, function by function.</summary>
-  private static List<string> Contracts(SourceFile file, IEnumerable<FunctionModel> functions, LoweringNotes notes) {
+  private static List<string> Contracts(IEnumerable<ModuleModel> modules, LoweringNotes notes) {
     var contracts = new List<string>();
-    foreach (var function in functions) {
-      foreach (var parameter in function.Parameters.Where(parameter => parameter.Hint is not null))
-        contracts.Add($"{function.Name}.{parameter.Name}: {file.Quote(parameter.Hint!)}");
+    foreach (var module in modules)
+      foreach (var function in module.AllFunctions) {
+        foreach (var parameter in function.Parameters.Where(parameter => parameter.Hint is not null))
+          contracts.Add($"{function.Qualified}.{parameter.Name}: {module.File.Quote(parameter.Hint!)}");
 
-      if (function.ReturnHint is { } returns)
-        contracts.Add($"{function.Name}.return: {file.Quote(returns)}");
+        if (function.ReturnHint is { } returns)
+          contracts.Add($"{function.Qualified}.return: {module.File.Quote(returns)}");
 
-      contracts.AddRange(notes.Contracts.Where(contract => contract.StartsWith(function.Name + ".", System.StringComparison.Ordinal)));
-    }
+        contracts.AddRange(notes.Contracts.Where(contract => contract.StartsWith(function.Qualified + ".", System.StringComparison.Ordinal)));
+      }
 
     return contracts;
   }
-
-  /// <summary>
-  /// The functions of the module, by name in source order. A module-level statement other than a
-  /// <c>def</c>, a docstring, <c>from __future__ import</c> and the block under
-  /// <c>if __name__ == "__main__":</c>, which a translation does not run, is refused.
-  /// </summary>
-  private static Dictionary<string, FunctionModel> Collect(SourceFile file, PyNode module, List<Diagnostic> diagnostics) {
-    var functions = new Dictionary<string, FunctionModel>();
-    foreach (var statement in module.Nodes("body")) {
-      switch (statement.Kind) {
-        case "FunctionDef":
-          if (Feature(statement) is { } feature) {
-            diagnostics.Add(file.At(statement, UnsupportedFunctionDescriptor, $"'{feature}' is not supported for functions by the Python frontend"));
-            break;
-          }
-
-          var function = new FunctionModel(statement);
-          if (!functions.TryAdd(function.Name, function)) {
-            diagnostics.Add(file.At(statement, UnsupportedFunctionDescriptor, $"'redefinition of {function.Name}' is not supported for functions by the Python frontend"));
-            break;
-          }
-
-          ScopeResolver.CollectLocals(function);
-          break;
-        case "AsyncFunctionDef":
-          diagnostics.Add(file.At(statement, EscapingFunctionDescriptor,
-            $"the function value '{statement.Text("name")}' escapes, or '{statement.Text("name")}' is a generator or coroutine; only direct calls of the module's functions are imported"));
-          break;
-        case "Expr" when statement.Node("value") is { Kind: "Constant" } docstring && docstring.Text("kind") == "str":
-        case "ImportFrom" when statement.Text("module") == "__future__":
-        case "If" when IsMainGuard(statement):
-          break;
-        case "Import" or "ImportFrom":
-          var names = statement.Text("module") ?? string.Join(", ", statement.Nodes("names").Select(alias => alias.Text("name")));
-          diagnostics.Add(file.At(statement, UnresolvedDescriptor, $"'{names}' is neither part of this import nor in the Python call map"));
-          break;
-        default:
-          diagnostics.Add(file.At(statement, UnsupportedStatementDescriptor, $"statement 'module-level {file.Quote(statement)}' is not supported by the Python frontend"));
-          break;
-      }
-    }
-
-    if (functions.Count == 0 && diagnostics.Count == 0)
-      diagnostics.Add(file.At(module, UnsupportedStatementDescriptor, "statement 'a module without a function' is not supported by the Python frontend"));
-
-    return functions;
-  }
-
-  /// <summary>The first feature of a <c>def</c> outside the subset, or <see langword="null"/>.</summary>
-  private static string? Feature(PyNode function) {
-    var arguments = function.Node("args")!;
-    var name = function.Text("name");
-    return function.Nodes("decorator_list").Count > 0 ? $"a decorator of {name}"
-      : arguments.Nodes("defaults").Count > 0 ? $"a default value of a parameter of {name}"
-      : arguments.Nodes("posonlyargs").Count > 0 ? $"a positional-only parameter of {name}"
-      : arguments.Nodes("kwonlyargs").Count > 0 ? $"a keyword-only parameter of {name}"
-      : arguments.Node("vararg") is not null ? $"*{arguments.Node("vararg")!.Text("arg")} of {name}"
-      : arguments.Node("kwarg") is not null ? $"**{arguments.Node("kwarg")!.Text("arg")} of {name}"
-      : function.Nodes("type_params").Count > 0 ? $"a type parameter of {name}"
-      : null;
-  }
-
-  /// <summary>Whether a statement is <c>if __name__ == "__main__":</c>.</summary>
-  private static bool IsMainGuard(PyNode statement)
-    => statement.Node("test") is { Kind: "Compare" } test && test.Nodes("ops") is [{ Kind: "Eq" }]
-      && test.Node("left") is { Kind: "Name" } left && left.Text("id") == "__name__"
-      && test.Nodes("comparators") is [{ Kind: "Constant" } main] && main.Text("value") == "__main__";
 
 }

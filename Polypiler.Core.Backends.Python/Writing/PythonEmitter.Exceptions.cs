@@ -29,6 +29,7 @@ public static partial class PythonEmitter {
       "NullReferenceException" => "AttributeError",
       "InvalidCastException" => "InvalidCastError",
       "InvalidOperationException" => "RuntimeError",
+      "AssertionException" => "AssertionError",
       "KeyNotFoundException" => "KeyError",
       "ArgumentException" => "ValueError",
       "ArgumentOutOfRangeException" => "ArgumentOutOfRangeError",

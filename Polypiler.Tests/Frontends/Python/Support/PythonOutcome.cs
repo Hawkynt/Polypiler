@@ -31,7 +31,13 @@ internal static class PythonOutcome {
     "OverflowException" or "OverflowError" => "OverflowError",
     "ArgumentException" or "ArgumentError" => "ValueError",
     "InvalidCastException" or "InvalidCastError" => "TypeError",
-    "InvalidOperationException" or "InvalidOperationError" => "AssertionError",
+    "InvalidOperationException" or "InvalidOperationError" => "RuntimeError",
+    "AssertionException" or "AssertionError" => "AssertionError",
+    "IndexOutOfRangeException" or "IndexOutOfRangeError" => "IndexError",
+    "KeyNotFoundException" or "KeyNotFoundError" => "KeyError",
+    "NullReferenceException" => "AttributeError",
+    "StructError" => "error",
+    "ArgumentOutOfRangeException" or "ArgumentOutOfRangeError" => "ValueError",
     "ArithmeticException" or "ArithmeticError" => "ArithmeticError",
     _ => irClass
   };

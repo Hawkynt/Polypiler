@@ -76,7 +76,7 @@ public sealed class ControlLoweringTests {
   [Test]
   public void SequencePattern_IsRefused()
     => Assert.That(PythonSnippet.Refusals("def f(x: int) -> int:\n    match x:\n        case [a, b]:\n            return a\n    return 0\n"),
-      Is.EqualTo(new[] { "snippet.py(3,14): error PLY1812: match pattern '[a, b]' is not supported; supported are literals, '|', captures, '_' and guards" }));
+      Is.EqualTo(new[] { "snippet.py(3,14): error PLY1812: match pattern '[a, b]' is not supported; supported are literals, members of an enum, '|', captures, '_' and guards" }));
 
   /// <summary>Test design 1 to 5: range forms, empty and one-element ranges, steps around the span, bounds near 64 bits.</summary>
   [TestCase(0L, 10L, 1L, "int 10")]
@@ -215,21 +215,20 @@ public sealed class ControlLoweringTests {
   [TestCase("    match x:\n        case int():\n            return 1\n", "error PLY1812: match pattern 'int()' is not supported")]
   [TestCase("    match x:\n        case 1 as y:\n            return y\n", "error PLY1812: match pattern '1 as y' is not supported")]
   [TestCase("    match x:\n        case 1 | y:\n            return 1\n", "error PLY1812: match pattern 'y' is not supported")]
-  [TestCase("    match x:\n        case 'a':\n            return 1\n", "error PLY1812: match pattern ''a'' is not supported")]
-  [TestCase("    for a in [1, 2]:\n        pass\n", "error PLY1813: iteration over '[1, 2]' is not supported")]
+  [TestCase("    for a in 3:\n        pass\n", "error PLY1813: iteration over '3' of the type int is not supported")]
   [TestCase("    for a in range(1, 2, 3, 4):\n        pass\n", "error PLY1813: iteration over 'range(1, 2, 3, 4)' is not supported")]
-  [TestCase("    for a, b in range(3):\n        pass\n", "error PLY1810: statement 'a tuple as loop variable' is not supported")]
-  [TestCase("    with x:\n        pass\n", "error PLY1810: statement 'with' is not supported")]
+  [TestCase("    for a, b in range(3):\n        pass\n", "error PLY1810: statement 'unpacking a value of the type int into 2 names, which raises TypeError or ValueError,' is not supported")]
+  [TestCase("    with x:\n        pass\n", "error PLY1843: exception construct 'with' is not supported")]
   [TestCase("    del x\n", "error PLY1810: statement 'del' is not supported")]
-  [TestCase("    raise ValueError()\n", "error PLY1810: statement 'raise' is not supported")]
-  [TestCase("    import math\n", "error PLY1810: statement 'import' is not supported")]
+  [TestCase("    raise ValueError() from None\n", "error PLY1843: exception construct 'raise … from' is not supported")]
+  [TestCase("    import math\n", "error PLY1833: 'import math' is neither part of this import nor in the Python call map: an import inside a function")]
   [TestCase("    *a, b = 1, 2\n", "error PLY1810: statement 'starred assignment target' is not supported")]
   [TestCase("    a, b = 1, 2, 3\n", "error PLY1810: statement 'tuple assignment whose right side is no tuple of as many values' is not supported")]
   [TestCase("    (a, b), c = (1, 2), 3\n", "error PLY1810: statement 'nested tuple assignment' is not supported")]
-  [TestCase("    x[0] = 1\n", "error PLY1810: statement 'assignment to an element' is not supported")]
-  [TestCase("    x.y = 1\n", "error PLY1810: statement 'assignment to an attribute' is not supported")]
-  [TestCase("    global x\n", "error PLY1830: 'global x' is not supported for functions by the Python frontend")]
-  [TestCase("    def g():\n        pass\n", "error PLY1830: 'nested function g' is not supported for functions by the Python frontend")]
+  [TestCase("    x[0] = 1\n", "error PLY1802: 'assignment to an element of a value of the type int, which raises TypeError,' is not supported")]
+  [TestCase("    x.y = 1\n", "error PLY1802: 'assignment to the attribute y of a value of the type int, which raises AttributeError,' is not supported")]
+  [TestCase("    global x\n", "error PLY1833: 'global x' is neither part of this import nor in the Python call map: 'x' is assigned at no module level")]
+  [TestCase("    if x:\n        def g() -> int:\n            return 1\n", "error PLY1830: 'def g inside a loop or conditional' is not supported for functions by the Python frontend")]
   public void UnsupportedStatement_IsRefused(string body, string diagnostic)
     => Assert.That(PythonSnippet.Refusals("def f(x: int) -> int:\n" + body + "    return 0\n"), Has.Some.Contains(diagnostic));
 

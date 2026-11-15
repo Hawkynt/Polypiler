@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Polypiler.Core.IR;
 using static Polypiler.Core.Frontends.Python.Lowering.Ir;
 
@@ -23,7 +24,7 @@ namespace Polypiler.Core.Frontends.Python.Lowering;
 /// nearest integer. The true division of integers is the correctly rounded quotient, found by long
 /// division to 55 significant bits and a sticky bit, so that the one rounding to binary64 is the only one.
 /// </remarks>
-internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
+internal sealed partial class PythonHelpers(IReadOnlySet<string> taken) {
 
   /// <summary>The comparison a call of <see cref="CompareIntFloat"/> makes, by the code it passes.</summary>
   public static readonly IReadOnlyDictionary<string, int> Comparisons = new Dictionary<string, int> {
@@ -91,7 +92,9 @@ internal sealed class PythonHelpers(IReadOnlySet<string> taken) {
       this._made[key] = make(name);
     }
 
-    return new IrCall(name, type, arguments);
+    // An int goes in as the parameter holds it: exact, or as the i64 of an index or a count.
+    var parameters = this._made[key].Parameters;
+    return new IrCall(name, type, [.. arguments.Select((argument, index) => index < parameters.Count ? Fit(argument, parameters[index].Type) : argument)]);
   }
 
   private static IrFunction Function(string name, IrType returns, IReadOnlyList<IrLocal> parameters, IReadOnlyList<IrLocal> locals, params IReadOnlyList<IrStmt> body)

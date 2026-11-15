@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using Polypiler.Core.IR;
 
@@ -12,6 +13,32 @@ internal static class Ir {
 
   /// <summary>A constant of Python's <c>int</c>: an arbitrary-precision integer.</summary>
   public static IrBigConst Big(BigInteger value) => new(value);
+
+  /// <summary>An integer of a fixed width as Python's <c>int</c>, exactly; a constant is converted here.</summary>
+  public static IrExpr Exact(IrExpr value)
+    => value is IrConst { Type: { IsInteger: true, IsEnum: false } } constant ? Big(IrBigInts.Of(constant.Type, constant.Value))
+      : Convert(IrType.BigInt, value.Type.IsEnum ? Convert(IrType.I64, value) : value);
+
+  /// <summary>
+  /// Python's <c>int</c> as the <c>i64</c> a held place keeps - a field, a tuple, an optional, a table, an
+  /// index, a count: exact, or <c>OverflowError</c> beyond 64 bits; a constant that fits is converted here.
+  /// </summary>
+  public static IrExpr Word(IrExpr value) => value switch {
+    IrBigConst constant when constant.Value >= long.MinValue && constant.Value <= long.MaxValue => Int((long)constant.Value),
+    IrConvert { Type.IsBigInt: true, Operand.Type: var inner } converted when inner == IrType.I64 => converted.Operand,
+    { Type.IsBigInt: true } => new IrConvert(IrType.I64, value, IrConversion.Trap),
+    _ => value
+  };
+
+  /// <summary>A value as one of the type the place it goes to has, where the two differ only in how an <c>int</c> is held.</summary>
+  public static IrExpr Fit(IrExpr value, IrType type)
+    => type == IrType.BigInt && value.Type.IsInteger ? Exact(value)
+      : value.Type.IsBigInt && type.IsInteger ? (type == IrType.I64 ? Word(value) : new IrConvert(type, Word(value), IrConversion.Trap))
+      : value;
+
+  /// <summary>A struct - a tuple - made of values, each as its field holds it.</summary>
+  public static IrStructNew MakeStruct(IrType type, IEnumerable<IrExpr> values)
+    => new(type, [.. type.StructType!.Fields.Zip(values).Select(pair => Fit(pair.Second, pair.First.Type))]);
 
   /// <summary>An <c>i32</c> constant.</summary>
   public static IrConst Int32(int value) => new(IrType.I32, value);
