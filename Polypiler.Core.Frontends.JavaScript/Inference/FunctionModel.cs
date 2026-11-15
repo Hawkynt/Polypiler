@@ -54,6 +54,9 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// <summary>The type JSDoc states for a parameter, or <see langword="null"/>.</summary>
   public JsType? Declared { get; set; }
 
+  /// <summary>The literal a parameter takes when a call leaves it out, <c>f(a = 1)</c>, or <see langword="null"/> (#1365).</summary>
+  public Expression? Default { get; init; }
+
   /// <summary>The type of every value that reaches the variable.</summary>
   public JsType Type { get; set; } = JsType.Unknown;
 

@@ -468,7 +468,7 @@ internal sealed partial class Lowering {
       arguments.Add(this.Value(call.Arguments[index], target.Parameters[index].Parameter?.Type ?? this.Storable(target.Parameters[index].Entry, call.Arguments[index])));
 
     // A parameter no argument is given for is undefined.
-    arguments.AddRange(this.Missing(call, target));
+    arguments.AddRange(this.Missing(call, target, call.Arguments.Count));
 
     return new IrCall(callee.Name, target.ReturnType, arguments);
   }

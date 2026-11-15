@@ -649,7 +649,7 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("outer: while (t) { } return a;", "a label")]
   [TestCase("debugger; return a;", "debugger")]
   [TestCase("class X { } return a;", "class")]
-  [TestCase("function g(x = 1) { return x; } return g();", "a default parameter value")]
+  [TestCase("function g(x = 1) { return x; } return g();", "a call of g with 0 arguments for 1 parameters")]
   [TestCase("switch (d) { } return a;", "a switch on uint8[]")]
   [TestCase("switch (a / 2) { } return a;", "a switch on number")]
   [TestCase("switch (t) { } return a;", "a switch on boolean")]
@@ -675,7 +675,7 @@ public sealed class JavaScriptFrontendTests {
   /// <summary>Test design 11: what makes a whole function unsupported, reported at the function or the parameter.</summary>
   [TestCase("async function* f() { }", "an async generator", 1)]
   [TestCase("function f() { const g = async () => 1; }", "an async lambda", 26)]
-  [TestCase("function f(a = 1) { }", "a default parameter value", 12)]
+  [TestCase("function f(...a) { }", "a rest parameter", 12)]
   [TestCase("function f(...a) { }", "a rest parameter", 12)]
   [TestCase("function f({ a }) { }", "a destructured parameter", 12)]
   [TestCase("/** @param {int32} a */ function f(a, a) { }", "a second parameter named a", 39)]
@@ -924,9 +924,9 @@ public sealed class JavaScriptFrontendTests {
     Assert.That(Refusal(source, ["h"]).Line, Is.EqualTo(2));
 
     // A function that cannot be imported whatever its body is, is refused for that, and so is every call of it.
-    Assert.That(JavaScriptFrontend.Import("snippet.js", "function g(a = 1) { } function f() { g(1); }", ["f"]).Diagnostics.Select(diagnostic => diagnostic.ToString()), Is.EqualTo(new[] {
-      "snippet.js(1,12): error PLY1102: 'a default parameter value' is not supported yet",
-      "snippet.js(1,38): error PLY1102: 'a call of g, which cannot be imported' is not supported yet"
+    Assert.That(JavaScriptFrontend.Import("snippet.js", "function g(...a) { } function f() { g(1); }", ["f"]).Diagnostics.Select(diagnostic => diagnostic.ToString()), Is.EqualTo(new[] {
+      "snippet.js(1,12): error PLY1102: 'a rest parameter' is not supported yet",
+      "snippet.js(1,37): error PLY1102: 'a call of g, which cannot be imported' is not supported yet"
     }));
   }
 

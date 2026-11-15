@@ -694,9 +694,10 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
     for (var index = 0; index < call.Arguments.Count; ++index)
       model.Flows.Add(new Flow(FlowKind.Argument, call.Arguments[index], null, callee, index, call));
 
-    // A parameter no argument is given for is undefined.
+    // A parameter no argument is given for is undefined, unless it has a default.
     for (var index = call.Arguments.Count; index < callee.Function.Params.Count; ++index)
-      model.Flows.Add(new Flow(FlowKind.Argument, call, null, callee, index, call) { Missing = true });
+      if (callee.Function.Params[index] is not AssignmentPattern)
+        model.Flows.Add(new Flow(FlowKind.Argument, call, null, callee, index, call) { Missing = true });
   }
 
   /// <summary>
