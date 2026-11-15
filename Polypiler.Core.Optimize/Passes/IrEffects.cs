@@ -234,6 +234,15 @@ public sealed class IrEffectTable {
     return walker.Result;
   }
 
+  /// <summary>What one node of an expression of a function may do itself, its operands aside, its variables included.</summary>
+  /// <param name="node">The node.</param>
+  public IrEffects Node(IrExpr node) {
+    ArgumentNullException.ThrowIfNull(node);
+    var walker = new Walker(this.Function, _ => true);
+    walker.Node(node);
+    return walker.Result;
+  }
+
   /// <summary>
   /// Whether an expression may be evaluated anywhere, any number of times or not at all: every node has
   /// no effect and never traps (<see cref="IrPassSupport.IsPure(IrExpr)"/>), or is a call of a function
@@ -252,6 +261,21 @@ public sealed class IrEffectTable {
       : IrShape.IsSideEffectFreeNode(expression) && IrShape.IsTrapFreeNode(expression)) && IrTree.Operands(expression).All(this.IsPure);
     this._purity.AddOrUpdate(expression, new StrongBox<bool>(pure));
     return pure;
+  }
+
+  /// <summary>
+  /// Whether an expression whose value nobody reads may go unevaluated: it is pure
+  /// (<see cref="IsPure(IrExpr)"/>), or its calls are of functions that write nothing, cannot trap and
+  /// end (<see cref="IrEffects.IsRemovable"/>) and its other nodes have no effect and never trap.
+  /// </summary>
+  /// <param name="expression">The expression.</param>
+  public bool IsRemovable(IrExpr expression) {
+    ArgumentNullException.ThrowIfNull(expression);
+    if (this.IsPure(expression))
+      return true;
+
+    return (expression is IrCall call ? this.Function(call.Function).IsRemovable : IrShape.IsSideEffectFreeNode(expression) && IrShape.IsTrapFreeNode(expression))
+      && IrTree.Operands(expression).All(this.IsRemovable);
   }
 
   /// <summary>The functions a function calls directly, outside the bodies of its closures, which do not run where they are made.</summary>
@@ -478,7 +502,7 @@ public sealed class IrEffectTable {
       this.Node(expression);
     }
 
-    private void Node(IrExpr node) {
+    public void Node(IrExpr node) {
       switch (node) {
         case IrLocalRef reference:
           this.Local(reference.Local, false);
@@ -520,7 +544,7 @@ public sealed class IrEffectTable {
         case IrNew creation:
           // A class of the library - an exception - only keeps what it is given; one of the module runs its constructor.
           this._allocates = true;
-          if (creation.Type.ClassType is not { IsLibrary: true })
+          if (!creation.Type.ClassType!.IsLibrary)
             this.Add(callee(creation.Constructor.Function));
 
           return;

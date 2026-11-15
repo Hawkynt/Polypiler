@@ -12,8 +12,10 @@ namespace Polypiler.Core.Optimize.Passes;
 /// throw, a break or a continue in its block; a nested block that declares nothing is spliced into
 /// the one around it. A variable nothing reads goes with its declaration and
 /// its assignments where their values may go unevaluated, as does an empty choice on such a value.
-/// A function legalization copied in from the libraries, or one specialisation (O0463) made, that
-/// nothing calls any more goes as well.
+/// A call whose value nothing uses goes where its function's effect summary (<see cref="IrEffects"/>)
+/// says it writes nothing, cannot trap and ends, and so does such a call in a value that may go
+/// unevaluated. A function legalization copied in from the libraries, or one specialisation (O0463)
+/// made, that nothing calls any more goes as well.
 /// </summary>
 public sealed class O0005DeadCode : IIrPass {
 
@@ -29,11 +31,12 @@ public sealed class O0005DeadCode : IIrPass {
     ArgumentNullException.ThrowIfNull(scope);
     ArgumentNullException.ThrowIfNull(applied);
     var changed = false;
+    var effects = IrEffects.Of(module);
     var functions = module.Functions.Select(function => {
       if (!scope(function))
         return function;
 
-      var run = new Walk(function, applied);
+      var run = new Walk(function, effects, applied);
       var body = run.Body();
       if (!run.Changed)
         return function;
@@ -75,10 +78,13 @@ public sealed class O0005DeadCode : IIrPass {
     _ => null
   }).OfType<string>();
 
-  private sealed class Walk(IrFunction function, Action<string, string> applied) {
+  private sealed class Walk(IrFunction function, IrEffectTable effects, Action<string, string> applied) {
 
     private readonly HashSet<IrLocal> _shared = IrPassSupport.Shared(function);
     private readonly HashSet<IrLocal> _parameters = [.. function.Parameters];
+
+    // A variable an expression binds stays declared, read or not: the binding assigns it where it stands.
+    private readonly HashSet<IrLocal> _bound = [.. IrPassSupport.Nodes(function.Body).OfType<IrBind>().Select(bind => bind.Local)];
     private readonly List<int> _position = [];
     private Dictionary<IrLocal, int> _reads = [];
     private bool _dropped;
@@ -128,6 +134,10 @@ public sealed class O0005DeadCode : IIrPass {
         case IrDoWhile { Condition: IrConst { Value: 0 } } loop when !IrPassSupport.Statements(loop.Body).Any(inner => inner is IrBreak or IrContinue):
           this.Applied();
           return Spliced(this.Block(loop.Body));
+        case IrExprStmt { Expression: IrCall call } when effects.IsRemovable(call):
+          // A call whose value nothing uses, of a function that writes nothing, cannot trap and ends.
+          this.Applied();
+          return [];
         case IrBlock inner when !inner.Statements.Any(statement => statement is IrDeclare):
           // A block that declares nothing scopes nothing: its statements stand in the block around it.
           this.Changed = true;
@@ -184,9 +194,9 @@ public sealed class O0005DeadCode : IIrPass {
       for (var index = statements.Count - 1; index >= 0; --index) {
         var statement = statements[index];
         var dead = statement switch {
-          IrAssign assign => declared.Contains(assign.Local) && !read.Contains(assign.Local) && IrPassSupport.IsPure(assign.Value),
+          IrAssign assign => declared.Contains(assign.Local) && !read.Contains(assign.Local) && effects.IsRemovable(assign.Value),
           IrDeclare declare => declared.Contains(declare.Local) && !read.Contains(declare.Local) && !written.Contains(declare.Local)
-            && (declare.Initializer is null || IrPassSupport.IsPure(declare.Initializer)),
+            && (declare.Initializer is null || effects.IsRemovable(declare.Initializer)),
           _ => false
         };
         if (statement is IrDeclare { Local: var local })
@@ -212,14 +222,14 @@ public sealed class O0005DeadCode : IIrPass {
 
     /// <summary>Whether a statement may go: it writes a variable nothing reads with a value that may go unevaluated, or it is an empty block or an empty choice on such a value.</summary>
     private bool Drops(IrStmt statement) => statement switch {
-      IrDeclare declare => this.Unread(declare.Local) && (declare.Initializer is null || IrPassSupport.IsPure(declare.Initializer)),
-      IrAssign assign => this.Unread(assign.Local) && IrPassSupport.IsPure(assign.Value),
+      IrDeclare declare => this.Unread(declare.Local) && (declare.Initializer is null || effects.IsRemovable(declare.Initializer)),
+      IrAssign assign => this.Unread(assign.Local) && effects.IsRemovable(assign.Value),
       IrBlock { Statements.Count: 0 } => true,
-      IrIf { Then.Statements.Count: 0, Else: null or { Statements.Count: 0 } } conditional => IrPassSupport.IsPure(conditional.Condition),
+      IrIf { Then.Statements.Count: 0, Else: null or { Statements.Count: 0 } } conditional => effects.IsRemovable(conditional.Condition),
       _ => false
     };
 
-    private bool Unread(IrLocal local) => !this._parameters.Contains(local) && !this._shared.Contains(local) && this._reads.GetValueOrDefault(local) == 0;
+    private bool Unread(IrLocal local) => !this._parameters.Contains(local) && !this._shared.Contains(local) && !this._bound.Contains(local) && this._reads.GetValueOrDefault(local) == 0;
 
   }
 

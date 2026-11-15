@@ -128,6 +128,103 @@ internal sealed class EffectSummaryTests {
     Assert.That(IrEffects.Describe(IrEffectKinds.Allocates | IrEffectKinds.Reads), Is.EqualTo("reads, allocates"));
   }
 
+  // ---------------------------------------------------------------- built by hand: what no frontend makes yet
+
+  private static readonly IrLocal _i = new("i", IrType.I32);
+  private static readonly IrLocal _n = new("n", IrType.I32);
+  private static readonly IrLocal _a = new("a", IrType.Array(IrType.I32));
+
+  private static IrExpr Ref(IrLocal local) => new IrLocalRef(local);
+
+  private static IrConst Int(long value) => new(IrType.I32, value);
+
+  private static IrExpr Op(IrBinaryOp op, IrExpr left, IrExpr right) => new IrBinary(op, left, right);
+
+  /// <summary>The summary of a function <c>F(n, a)</c> with locals <c>i</c> of a body.</summary>
+  private static IrEffects Body(params IrStmt[] statements)
+    => IrEffects.Of(new IrModule("M", [new IrFunction("F", true, IrType.I32, [_n, _a], [_i], new IrBlock([.. statements, new IrReturn(Int(0))]))]), "F");
+
+  private static IrStmt Up => new IrAssign(_i, Op(IrBinaryOp.Add, Ref(_i), Int(1)));
+
+  private static IEnumerable<TestCaseData> Loops() {
+    IrStmt For(IrExpr condition, IrStmt step, params IrStmt[] body) => new IrFor(condition, new IrBlock(body), new IrBlock([step]));
+    var less = Op(IrBinaryOp.Less, Ref(_i), Ref(_n));
+    yield return new TestCaseData(For(less, Up), true).SetName("Loop_ForWithItsStep_Ends");
+    yield return new TestCaseData(For(less, new IrExprStmt(new IrStep(Ref(_i), true, false, false))), true).SetName("Loop_ForWithAnIncrement_Ends");
+    yield return new TestCaseData(For(Op(IrBinaryOp.Greater, Ref(_i), Int(0)), new IrExprStmt(new IrStep(Ref(_i), false, true, false))), true).SetName("Loop_ForWithADecrement_Ends");
+    yield return new TestCaseData(For(Op(IrBinaryOp.Greater, Ref(_i), Int(0)), new IrExprStmt(new IrStep(Ref(_i), true, true, false))), false).SetName("Loop_ForCountingAwayFromItsBound_MayNotEnd");
+    yield return new TestCaseData(For(less, new IrAssign(_i, Op(IrBinaryOp.AddChecked, Ref(_i), Int(1)))), true).SetName("Loop_ForWithACheckedStep_Ends");
+    yield return new TestCaseData(For(less, new IrAssign(_i, Op(IrBinaryOp.Subtract, Ref(_i), Int(1)))), false).SetName("Loop_ForCountingDownToAnUpperBound_MayNotEnd");
+    yield return new TestCaseData(For(less, new IrAssign(_n, Op(IrBinaryOp.Add, Ref(_i), Int(1)))), false).SetName("Loop_ForStepOfAnotherVariable_MayNotEnd");
+    yield return new TestCaseData(For(less, new IrAssign(_i, Op(IrBinaryOp.Add, Ref(_n), Int(1)))), false).SetName("Loop_ForStepFromAnotherVariable_MayNotEnd");
+    yield return new TestCaseData(For(less, new IrExprStmt(Int(0)), Up), false).SetName("Loop_ForStepNotLast_MayNotEnd");
+    yield return new TestCaseData(For(Op(IrBinaryOp.Less, Ref(_i), new IrConvert(IrType.I32, Op(IrBinaryOp.ShiftLeft, new IrArrayLength(Ref(_a)), Int(1)), IrConversion.Wrap)), Up), true)
+      .SetName("Loop_ForBoundOfArithmetic_Ends");
+    yield return new TestCaseData(For(Op(IrBinaryOp.Less, Ref(_i), Op(IrBinaryOp.Divide, Ref(_n), Int(2))), Up), false).SetName("Loop_ForBoundThatMayTrap_MayNotEnd");
+    yield return new TestCaseData(For(Op(IrBinaryOp.Less, Ref(_i), new IrArrayLength(Ref(_a))), Up, new IrAssign(_a, new IrNull(_a.Type))), false).SetName("Loop_ForArrayReplaced_MayNotEnd");
+    yield return new TestCaseData(For(Op(IrBinaryOp.LessOrEqual, Ref(_i), Ref(_n)), Up), false).SetName("Loop_ForInclusive_MayNotEnd");
+    yield return new TestCaseData(For(new IrConst(IrType.Bool, 1), Up), false).SetName("Loop_ForWithoutACompare_MayNotEnd");
+    yield return new TestCaseData(For(less, Up, new IrExprStmt(IrLambda.Of([], IrType.I32, [], new IrBlock([new IrReturn(Ref(_i))])))), false).SetName("Loop_ForCounterCaptured_MayNotEnd");
+    yield return new TestCaseData(new IrDoWhile(new IrBlock([Up]), less), false).SetName("Loop_DoWhile_MayNotEnd");
+    yield return new TestCaseData(new IrWhile(less, new IrBlock([new IrIf(Ref(_n), new IrBlock([new IrContinue()]), null), Up])), false).SetName("Loop_WhileThatContinues_MayNotEnd");
+    var real = new IrLocal("r", IrType.F64);
+    yield return new TestCaseData(new IrBlock([new IrDeclare(real, new IrConst(IrType.F64, 0)), new IrWhile(new IrBinary(IrBinaryOp.Less, Ref(real), new IrConst(IrType.F64, 0)), new IrBlock([]))]), false)
+      .SetName("Loop_OfAFloat_MayNotEnd");
+  }
+
+  /// <summary>The loops the analysis proves end, and those it does not, built as the IR has them.</summary>
+  [TestCaseSource(nameof(Loops))]
+  public void Loop(IrStmt loop, bool ends) => Assert.That(Body(new IrDeclare(_i, Int(0)), loop).MayNotTerminate, Is.EqualTo(!ends));
+
+  private static IrStructType Point() {
+    var point = new IrStructType("P");
+    point.Define([new IrField("X", IrType.I32, false)]);
+    return point;
+  }
+
+  /// <summary>The places a step and a field store write: an array element, a global, a field of a struct in an array, and storage the analysis cannot name.</summary>
+  [Test]
+  public void Stores_NameTheirPlace() {
+    var g = new IrGlobal("g", IrType.I32, null);
+    var point = Point();
+    var points = new IrLocal("ps", IrType.Array(IrType.Struct(point)));
+    var x = point.Fields[0];
+    var module = new IrModule("M", [new IrFunction("F", true, IrType.I32, [_a, points], [], new IrBlock([
+      new IrExprStmt(new IrStep(new IrArrayLoad(Ref(_a), Int(0)), true, false, false)),
+      new IrExprStmt(new IrStep(new IrGlobalRef(g), true, false, false)),
+      new IrFieldStore(new IrArrayLoad(Ref(points), Int(0)), x, Int(1)),
+      new IrReturn(Int(0))]))]) { Globals = [g], Types = [point] };
+    Assert.That(IrEffects.Of(module, "F").ToString(), Is.EqualTo("writes, traps reading P[], g, i32[] writing P[], g, i32[]"));
+    var nowhere = new IrModule("M", [new IrFunction("F", true, IrType.I32, [], [], new IrBlock([
+      new IrFieldStore(new IrStructNew(IrType.Struct(point), [Int(0)]), x, Int(1)), new IrReturn(Int(0))]))]) { Types = [point] };
+    Assert.That(IrEffects.Of(nowhere, "F").WritesEverything, Is.True);
+  }
+
+  /// <summary>What is thrown: a new exception of the library is a trap only; any other exception is evaluated as it is, a trap all the same.</summary>
+  [Test]
+  public void Throw_OfAVariable() {
+    var e = new IrLocal("e", IrType.Object(IrExceptionClass.Exception));
+    var module = new IrModule("M", [new IrFunction("F", true, IrType.I32, [_n], [e], new IrBlock([
+      new IrDeclare(e, new IrNull(e.Type)),
+      new IrIf(Ref(_n), new IrBlock([new IrThrow(Ref(e))]), null),
+      new IrReturn(new IrThrowExpression(IrType.I32, Ref(e)))]))]);
+    Assert.That(IrEffects.Of(module, "F").Kinds, Is.EqualTo(IrEffectKinds.Traps));
+  }
+
+  /// <summary>The operations of the IR: one that writes or works on a view is the worst case, one that makes an array allocates, one given an array reads its elements.</summary>
+  [Test]
+  public void Intrinsics() {
+    var span = new IrLocal("s", IrType.Span(IrType.I32));
+    var bytes = new IrLocal("b", IrType.Array(IrType.U8));
+    IrEffects Of(IrExpr expression, params IrLocal[] parameters)
+      => IrEffects.Of(new IrModule("M", [new IrFunction("F", true, IrType.I32, parameters, [], new IrBlock([new IrExprStmt(expression), new IrReturn(Int(0))]))]), "F");
+    Assert.That(Of(new IrIntrinsic(IrIntrinsicOp.ArrayFill, IrType.Void, [Ref(_a), Int(1)]), _a).WritesEverything, Is.True);
+    Assert.That(Of(new IrIntrinsic(IrIntrinsicOp.ViewLength, IrType.I32, [Ref(span)]), span).ReadsEverything, Is.True);
+    Assert.That(Of(new IrIntrinsic(IrIntrinsicOp.LoadLittle, IrType.U32, [Ref(bytes), Int(0)]), bytes).ToString(), Is.EqualTo("reads, traps reading u8[]"));
+    Assert.That(Of(new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(IrType.I32), [Int(1), Int(2)])).Kinds, Is.EqualTo(IrEffectKinds.Allocates | IrEffectKinds.Traps));
+    Assert.That(Of(new IrIntrinsic(IrIntrinsicOp.PopCount, IrType.I32, [Ref(_n)]), _n).Kinds, Is.EqualTo(IrEffectKinds.None));
+  }
+
   /// <summary>The purity of an expression with calls: a call of a pure function that ends and cannot trap is as pure as arithmetic; any other call is not.</summary>
   [Test]
   public void IsPure_OfCalls() {
