@@ -110,7 +110,7 @@ public sealed class JavaScriptDispatchImportTests {
   }
 
   /// <summary>Test design 10: what the construct table refuses, by name.</summary>
-  [TestCase("export class P extends Error { } export function f() { return 1; }", "extends Error, which is no class of the file")]
+  [TestCase("export class P extends Map { } export function f() { return 1; }", "extends Map, which is no class of the file")]
   [TestCase("function g() { return class { }; } export class P extends g() { } export function f() { return 1; }", "extends g()")]
   [TestCase("export class P extends Q { } export class Q extends P { } export function f() { return 1; }", "a class that extends itself")]
   [TestCase("function A() { this.a = 1; } function B() { this.b = 1; } Object.setPrototypeOf(B.prototype, A.prototype); export function f() { return new B().b; }", "Object.setPrototypeOf")]

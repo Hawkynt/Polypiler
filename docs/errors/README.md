@@ -130,6 +130,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1104](PLY1104.md) | error | 3 (UnsupportedConstruct) | `the file has no function '<name>' to export` | PROTOTYPE |
 | [PLY1105](PLY1105.md) | error | 3 (UnsupportedConstruct) | `<reason>` | PROTOTYPE |
 | [PLY1106](PLY1106.md) | error | 3 (UnsupportedConstruct) | `<reason>` | PROTOTYPE |
+| [PLY1107](PLY1107.md) | error | 3 (UnsupportedConstruct) | `a thrown value that is not an Error reaches <place>, which observes it` | #1323 |
 | [PLY1152](PLY1152.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in JavaScript profile '<profile>'` | PROTOTYPE |
 
 ## PLY3900–PLY3999 · tokenized-basic

@@ -55,6 +55,12 @@ public static partial class JavaScriptEmitter {
 
     /// <summary>Whether a reference is an object of a class or an interface: <c>x instanceof C</c>, or the marker of the interface on it.</summary>
     private JsExpression IsOf(JsExpression value, IrType type) {
+      if (type.ClassType is { IsLibrary: true } library) {
+        // Every exception of the IR is an Error in JavaScript; the other library classes test as a catch clause does.
+        this.Native("instanceof");
+        return this.CatchTest(library, value) ?? Infix(value, "instanceof", Id(this.Error(library)));
+      }
+
       if (type.ClassType is { } owner) {
         this.Native("instanceof");
         return Infix(value, "instanceof", Id(this.Name(owner.Name)));

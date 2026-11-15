@@ -187,7 +187,44 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
           this.Expression(result.Argument);
 
         break;
+      case ThrowStatement thrown:
+        this.Expression(thrown.Argument);
+        break;
+      case TryStatement attempt:
+        this.Try(attempt);
+        break;
     }
+  }
+
+  /// <summary>
+  /// A try: its blocks, and the binding of its catch, which holds an exception - an object of
+  /// <c>Error</c> (<see cref="ErrorLibrary"/>) - and lives until the catch block ends.
+  /// </summary>
+  private void Try(TryStatement attempt) {
+    this.Block(attempt.Block.Body);
+    if (attempt.Handler is { } handler) {
+      var outer = this._declared;
+      this._declared = [];
+      if (handler.Param is Identifier caught) {
+        if (this._scope.ContainsKey(caught.Name)) {
+          model.Refused[caught] = $"a second declaration of {caught.Name}";
+        } else if (this.Classes.Values.FirstOrDefault(type => type.Ir == Polypiler.Core.IR.IrExceptionClass.Exception) is { } error) {
+          var variable = new Variable(caught.Name, caught, false) { Type = JsType.Object(error) };
+          model.Locals.Add(variable);
+          model.Bindings[caught] = variable;
+          this._scope[caught.Name] = variable;
+          this._declared.Add(caught.Name);
+        }
+      }
+
+      foreach (var statement in handler.Body.Body)
+        this.Statement(statement);
+
+      this.Leave(outer);
+    }
+
+    if (attempt.Finalizer is { } finalizer)
+      this.Block(finalizer.Body);
   }
 
   private void Declaration(VariableDeclaration declaration) {

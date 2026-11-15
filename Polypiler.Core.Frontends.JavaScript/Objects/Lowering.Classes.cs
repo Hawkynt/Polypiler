@@ -47,6 +47,9 @@ internal sealed partial class Lowering {
     if (Inheritance.Of(node, this._model.Candidate.Class, types.Names.ClassNamed) is { } inherited)
       return this.Inherited(inherited, node);
 
+    if (this.ErrorExpression(node) is { } error)
+      return error;
+
     switch (node) {
       case BinaryExpression { Operator: Operator.InstanceOf } test when types.Names.ClassNamed(test.Right) is { } tested:
         var value = this.Expression(test.Left);
@@ -178,7 +181,8 @@ internal sealed partial class Lowering {
       if (this._model.Candidate.Member != MemberKind.Constructor)
         throw this.Unsupported(node, "a call of the constructor of the base class outside a constructor");
 
-      return new IrCall(reference.Owner.Creator!.Function, IrType.Void, [self, .. this.Arguments(node, reference.Arguments, reference.Member)]);
+      return reference.Owner.IsLibrary ? this.LibraryConstructor(reference, node, self)
+        : new IrCall(reference.Owner.Creator!.Function, IrType.Void, [self, .. this.Arguments(node, reference.Arguments, reference.Member)]);
     }
 
     if (reference.Member is not { } method)

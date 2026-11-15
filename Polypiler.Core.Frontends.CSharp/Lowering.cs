@@ -322,6 +322,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         return IrType.Array(element);
     }
 
+    if (IsException(type))
+      throw new UnsupportedException(node, $"the library exception class {type!.Name}");
+
     throw new UnsupportedException(node, type?.ToDisplayString() ?? node.Kind().ToString());
   }
 
