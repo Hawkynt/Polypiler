@@ -157,7 +157,7 @@ comparison with `null` and an iterator, the captures by value and in cells, the 
 limit and one over, the growth on and one over, a checked overflow, a division by zero and an index
 out of range inside a predicate with the calls before it counted, the switches, the local functions
 that stay closures, and the optimised modules of the LINQ fixtures call by call against .NET and of
-the JavaScript fixtures against the unoptimised ones. `LambdaScopeFormTests` checks the forms of the
-table per profile. The acceptance scenarios of `tests/features/optimize/opt-lambda-specialisation.feature`
-compile the output for every C# profile and run it in `node` at `es5` and `es2022`, and the LINQ
-acceptance tests run every fixture call in every profile of both backends with the pass on.
+the JavaScript fixtures against the unoptimised ones. The acceptance scenarios of
+`tests/features/optimize/opt-lambda-specialisation.feature` check the forms of the table per profile,
+compile the output for every C# profile and run it in `node` at every level, and the LINQ acceptance
+tests run every fixture call in every profile of both backends with the pass on.
