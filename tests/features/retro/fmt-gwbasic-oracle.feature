@@ -1,4 +1,4 @@
-@Layer.core
+@Layer.basic
 Feature: PC-BASIC oracle for GW-BASIC token files
 
   PC-BASIC (tooling/toolchains.lock key "pcbasic") lists, tokenizes and runs GW-BASIC token files as an

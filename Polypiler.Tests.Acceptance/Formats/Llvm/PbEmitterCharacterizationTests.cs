@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Formats.Llvm;
 /// checks run everywhere.
 /// </summary>
 [TestFixture]
-[Layer("core")]
+[Layer("basic")]
 public sealed class PbEmitterCharacterizationTests {
 
   private const string ExternalInterop = "ExternalInterop";

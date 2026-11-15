@@ -19,7 +19,7 @@ namespace Polypiler.Tests.Acceptance.Retro;
 /// availability table is checked everywhere.
 /// </summary>
 [TestFixture]
-[Layer("core")]
+[Layer("basic")]
 public sealed class PcBasicTests {
 
   private const string ExternalInterop = "ExternalInterop";

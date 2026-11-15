@@ -1,4 +1,4 @@
-@ExternalInterop @Layer.core
+@ExternalInterop @Layer.basic
 Feature: Audit of the PB-Compiler LLVM emitter
 
   Scenario: A module pbc emits is accepted by the LLVM assembler and verifier
