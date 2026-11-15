@@ -65,6 +65,38 @@ public sealed class SequenceTests {
     }
   }
 
+  /// <summary>The calls of the JavaScript fixture and what node computes of the original.</summary>
+  private (List<PrototypeCall> Calls, IReadOnlyList<string> Expected) Original() {
+    var calls = SequenceFixtures.ScriptCalls().ToList();
+    var copy = Path.Combine(this._directory, "iterators.mjs");
+    File.WriteAllText(copy, SequenceFixtures.SourceOf("iterators.js"));
+    return (calls, Toolchain.NodeOutcomes(this._directory, Path.GetFileName(copy), calls, true));
+  }
+
+  /// <summary>Test design 1 to 7: the JavaScript fixture in every C# profile computes what node computes of the original.</summary>
+  [Test]
+  public void JavaScriptFixture_RunsInEveryCSharpProfileLikeNode() {
+    var (calls, expected) = this.Original();
+    foreach (var profile in CSharpProfile.All) {
+      var text = this.Translate(SequenceFixtures.PathOf("iterators.js"), "csharp", "iterators.cs", profile.Name, "--profile", profile.Name);
+      Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
+      Assert.That(calls.Select(GeneratedCSharp.Compile(text, false).Outcome), Is.EqualTo(expected), $"{profile.Name}\n{text}");
+    }
+  }
+
+  /// <summary>Test design 1 to 7: the JavaScript fixture at every JavaScript level computes in node what the original computes.</summary>
+  [Test]
+  public void JavaScriptFixture_RunsInEveryJavaScriptProfileLikeNode() {
+    var (calls, expected) = this.Original();
+    foreach (var profile in ProfileCase.All) {
+      var output = "js-" + Guid.NewGuid().ToString("N");
+      var text = this.Translate(SequenceFixtures.PathOf("iterators.js"), "javascript", "iterators" + profile.Parsed.Extension, output, profile.Arguments);
+      Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, text);
+      Assert.That(Toolchain.NodeOutcomes(Path.Combine(this._directory, output), "iterators" + profile.Parsed.Extension, calls, true, profile.Mode, profile.Global),
+        Is.EqualTo(expected), $"{profile}\n{text}");
+    }
+  }
+
   /// <summary>The calls of the module of iterators, each with the type it returns.</summary>
   private static List<PrototypeCall> Calls()
     => [.. SequenceModules.Calls().Select(call => call with { Returns = call.Method == "Longs" ? typeof(long) : typeof(int) })];
