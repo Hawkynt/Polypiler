@@ -18,6 +18,10 @@ Related: [repository README](../../README.md) · [pointers](pointers.md) · [rec
 - **Effect.** A foreign call has the unknown external effect of #73: it is evaluated exactly once where it stands,
   after its arguments left to right; no optimization moves, folds, merges or drops it. The interpreter never runs
   it: it traps `InvalidOperation` (`IrForeign.Trap`, "foreign call") - it is no oracle for native code.
+- **In async functions.** A native call is synchronous: it runs to its end where it stands, so an
+  [async function](async.md) may make one between its awaits - P/Invoke in C#, the call of the binding in JavaScript.
+  Its effects are outside the module, so a function that makes one is not isolated, and a `Task.WhenAll` or
+  `Promise.all` of it is refused as one whose order depends on timing.
 - **Character sets.** `CharSet.Ansi` keeps its platform meaning - UTF-8 in .NET on Linux (`strlen("Grüße")` is 7),
   the system code page in .NET Framework on Windows; `Utf8` is UTF-8 everywhere. No character set is rewritten into
   another.

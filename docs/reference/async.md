@@ -45,8 +45,8 @@ Verifier rules: an `IrAwait` stands in the body of an async function itself, nev
 operand is the call of an async function of the module or an `IrAsync`; every async value is awaited
 where it is created; the operands of `WhenAll` are calls of async functions of one result type; a
 `WhenAll` of a function that writes more than its own locals - a global, an array element, a field of
-an object, a collection, a method or a function value - is refused, because its interleaving would
-show (`IrAsyncFunctions.Timed`).
+an object, a collection, a method, a function value, or native code through a [foreign call](foreign-calls.md)
+or the error one left - is refused, because its interleaving would show (`IrAsyncFunctions.Timed`).
 
 The interpreter runs the subset in the one order both runtimes agree on: an awaited call runs to its
 end before the caller goes on. It uses no task, thread or scheduler. At the boundary of

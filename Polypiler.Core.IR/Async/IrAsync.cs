@@ -88,7 +88,8 @@ public static class IrAsyncFunctions {
   /// functions: their effects cannot interleave with those of another call, so <see cref="IrAsyncOp.WhenAll"/>
   /// may run them in any order. A function that throws is isolated still - the fault is chosen by
   /// argument order - but one that writes an array, a field or a global, that calls a method, a
-  /// function value or another function that is not isolated, or that touches a collection is not.
+  /// function value, native code or another function that is not isolated, that reads the error a
+  /// native call left, or that touches a collection is not.
   /// </summary>
   /// <param name="module">The module.</param>
   /// <returns>The names of the isolated functions.</returns>
@@ -143,6 +144,8 @@ public static class IrAsyncFunctions {
   /// <summary>Whether a part of a function writes, or may write, anything but a local of its own.</summary>
   private static bool Writes(object part) => part switch {
     IrGlobalAssign or IrStore or IrMethodCall or IrInvoke or IrCollection or IrLambda => true,
+    // A native call (#1332) has effects outside the module, and the error one left is state another call changes.
+    IrForeignCall or IrLastError => true,
     // An exception of the library is made without code of the module; a constructor of the module writes the fields of its object.
     IrNew creation => creation.Type.ClassType is not { IsLibrary: true },
     IrFieldStore store => store.Target.Type.IsObject || !IsLocal(store.Target),
