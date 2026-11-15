@@ -233,7 +233,7 @@ public sealed class RustFunctionTests {
   [TestCase("use std::collections::HashMap; pub fn f() -> u32 { 1 }", RustFrontend.ForeignPath)]
   [TestCase("pub fn f(a: &[u32]) -> u32 { *a.iter().max().unwrap() }", RustFrontend.UnsupportedIteratorMethod)]
   [TestCase("pub fn f(a: &[u32]) -> usize { a.iter().collect::<Vec<_>>().len() }", RustFrontend.UnsupportedIteratorMethod)]
-  [TestCase("pub fn f(a: &[u32]) -> u32 { a.iter().map(|x| x + 1).rev().sum() }", RustFrontend.UnsupportedIteratorMethod)]
+  [TestCase("pub fn f() -> u32 { (0..3u32).map(|x| x + 1).enumerate().rev().count() as u32 }", RustFrontend.UnsupportedIteratorMethod)]
   public void Construct_IsRefusedWithItsCode(string source, string code) => Assert.That(Codes(source), Does.Contain(code));
 
   [TestCase("mod m { fn hidden() -> u32 { 1 } } pub fn f() -> u32 { m::hidden() }", "E0603")]

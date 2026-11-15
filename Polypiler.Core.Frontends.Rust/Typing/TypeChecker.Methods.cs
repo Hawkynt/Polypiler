@@ -428,6 +428,21 @@ internal sealed partial class TypeChecker {
         if (name == "step_by")
           this.Unify(RType.Usize, this.Value(call.Arguments[0], RType.Usize), call.Arguments[0].At);
 
+        // rev() after map and filter: they keep the order and run item by item, so reversing the
+        // positions before them is the same sequence with their functions called in the same order
+        // as Rust's next_back calls them.
+        var streamed = iterator.Adapters.ToList().FindIndex(adapter => adapter.Name is "map" or "filter");
+        if (name == "rev" && streamed >= 0 && iterator.Adapters.Skip(streamed).All(adapter => adapter.Name is "map" or "filter")) {
+          var before = iterator with { Adapters = [.. iterator.Adapters.Take(streamed)] };
+          if (before.Adapters.Any(adapter => adapter.Name == "rev") || before.Kind == SourceKind.Range && before.Adapters.Any(adapter => adapter.Name != "step_by"))
+            return this.Refused(RustFrontend.UnsupportedIteratorMethod, "rev after rev", call.At);
+
+          if (before.Kind == SourceKind.Range)
+            before = before with { Range = this.RangeAdapter(call, before) };
+
+          return RType.Iterator(iterator with { Range = before.Range, Adapters = [.. before.Adapters, new Adapter(name, call, null, null), .. iterator.Adapters.Skip(streamed)] });
+        }
+
         if (!iterator.Positional || iterator.Adapters.Any(adapter => adapter.Name == name)
             || (iterator.Kind == SourceKind.Range && iterator.Adapters.Any(adapter => adapter.Name is not ("rev" or "step_by"))))
           return this.Refused(RustFrontend.UnsupportedIteratorMethod, $"{name} after {string.Join(", ", iterator.Adapters.Select(adapter => adapter.Name))}", call.At);

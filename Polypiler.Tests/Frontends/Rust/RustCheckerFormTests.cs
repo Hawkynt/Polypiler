@@ -45,7 +45,6 @@ public sealed class RustCheckerFormTests {
   [TestCase("pub fn f() -> u8 { 20u8 * 30 }", "arithmetic_overflow")]
   [TestCase("pub fn f() -> u8 { 1u8 / 0 }", "unconditional_panic")]
   [TestCase("pub fn f() -> i8 { -128i8 / -1 }", "arithmetic_overflow")]
-  [TestCase("pub fn f() -> u32 { (0..3u32).map(|x| x).rev().sum() }", "rev after map")]
   [TestCase("pub unsafe trait T {} pub fn f() -> u8 { 1 }", "unsafe trait")]
   [TestCase("pub fn f() -> u8 { 1 } unsafe impl Send for S {} struct S;", "unsafe impl")]
   [TestCase("pub fn f() -> u8 { let x: Option<Vec<u8>>= None; 1 }", "'Option<Vec<u8>>'")]
@@ -70,6 +69,13 @@ public sealed class RustCheckerFormTests {
     var result = Import(source);
     Assert.That(result.Module, Is.Null);
     Assert.That(result.Diagnostics.Single().Message, Does.Contain(expected));
+  }
+
+  /// <summary>A closure used other than called is one refusal, however often it is used.</summary>
+  [Test]
+  public void EscapingClosure_IsReportedOnce() {
+    var result = Import("pub fn f() -> bool { let a = |x: u8| x; let b = a; true }");
+    Assert.That(result.Diagnostics.Count(diagnostic => diagnostic.Code == RustFrontend.EscapingClosure), Is.EqualTo(1));
   }
 
   /// <summary>A refused binding inside a pattern is the one diagnostic: the pattern is not also called refutable.</summary>
@@ -100,6 +106,10 @@ public sealed class RustCheckerFormTests {
   [TestCase("pub fn f() -> u32 { [1u32, 2].into_iter().sum() }", "3")]
   [TestCase("pub fn f() -> u64 { (0..=3u64).sum() }", "6")]
   [TestCase("pub fn f() -> u16 { (0..=3u16).sum() }", "6")]
+  [TestCase("pub fn f() -> u8 { let _x = return 1; }", "1")]
+  [TestCase("pub fn f() -> u32 { let mut r = 0; for x in (0..4u32).map(|x| x * 10).rev() { r = r * 100 + x; } r }", "30201000")]
+  [TestCase("pub fn f() -> u32 { (1..4u32).map(|x| x * x).rev().fold(0, |a, x| a * 100 + x) }", "90401")]
+  [TestCase("pub fn f() -> u32 { (0..10u32).filter(|x| x % 3 == 0).rev().map(|x| x + 1).fold(0, |a, x| a * 100 + x) }", "10070401")]
   public void Form_HasTheValueRustGives(string source, string expected) {
     var result = Import(source);
     Assert.That(result.Diagnostics, Is.Empty);

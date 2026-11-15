@@ -19,7 +19,7 @@ internal sealed partial class TypeChecker {
       if (this.Lookup(name) is { } binding) {
         this._typed.Bindings[path] = binding;
         // A closure variable is called where the call names it, or handed to an iterator method; anything else lets it escape.
-        if (binding.Type.Resolved.Kind == RKind.Closure && !this._closureArgument)
+        if (binding.Type.Resolved.Kind == RKind.Closure && !this._closureArgument && this._escaped.Add(binding))
           this.Refuse(new Refusal(RustFrontend.EscapingClosure, $"closure '{name}' used other than called", path.At));
 
         return binding.Type;
@@ -232,6 +232,9 @@ internal sealed partial class TypeChecker {
   // ---------------------------------------------------------------- calls
 
   private bool _closureArgument;
+
+  /// <summary>The closure variables already refused for escaping: one refusal for each.</summary>
+  private readonly HashSet<Binding> _escaped = new(ReferenceEqualityComparer.Instance);
 
   private RType Call(CallExpr call, RType? expected) {
     if (call.Callee is not PathExpr path) {

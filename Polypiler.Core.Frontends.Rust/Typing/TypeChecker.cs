@@ -496,7 +496,7 @@ internal sealed partial class TypeChecker {
       this._splitInitializer = null;
       diverges = initializer.Resolved.Kind == RKind.Never;
       if (type is null)
-        type = initializer.Resolved.Kind == RKind.Never ? this.Fresh(VariableKind.Any) : initializer;
+        type = initializer;
       else
         this.Coerce(type, initializer, let.Initializer.At);
     }
