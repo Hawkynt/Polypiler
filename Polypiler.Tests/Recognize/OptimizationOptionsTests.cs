@@ -52,8 +52,8 @@ public sealed class OptimizationOptionsTests {
   [TestCase("none", false)]
   [TestCase("default", true)]
   public void Opt_ChoosesTheLevel(string level, bool rotated) {
-    // The helper inlining of the backend (O0500) would write the rotation as shifts again.
-    var (exitCode, text, _) = this.Translate(Rotate, "javascript", "--opt", level, "--disable-opt", "O0500");
+    // The inlining of the helper - in the IR (O0006) and in the backend (O0500) - would write the rotation as shifts again.
+    var (exitCode, text, _) = this.Translate(Rotate, "javascript", "--opt", level, "--disable-opt", "O0006,O0500");
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     Assert.That(text.Contains("<< 8", StringComparison.Ordinal), Is.EqualTo(!rotated));
   }
@@ -79,9 +79,11 @@ public sealed class OptimizationOptionsTests {
     var (exitCode, _, error) = this.Translate(Rotate + " public static int G(int x) => x < 0 ? -x : x;", "javascript", "--explain-opt", "--disable-opt", "O0500,O0501");
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     var lines = error.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => line.TrimEnd('\r')).ToList();
-    Assert.That(lines, Has.Count.EqualTo(2));
+    // The rules first, in the order they applied; then the passes over the helpers legalization bound in.
     Assert.That(lines[0], Does.EndWith("Snippet.cs: opt O0100 rotate from a shift pair: 'F' statement 1"));
     Assert.That(lines[1], Does.EndWith("Snippet.cs: opt O0121 wrapping absolute value from a sign mask or a selection: 'G' statement 1"));
+    Assert.That(lines[2], Does.EndWith("Snippet.cs: opt O0006 inlining: 'F' statement 1"));
+    Assert.That(lines.Skip(2), Has.All.Matches<string>(line => System.Text.RegularExpressions.Regex.IsMatch(line, @"Snippet\.cs: opt O00(01|03|05|06|23) ")));
   }
 
   [Test]
@@ -100,7 +102,7 @@ public sealed class OptimizationOptionsTests {
   [TestCase("--opt", "None", "unknown optimization level 'None'")]
   [TestCase("--disable-opt", "O9999x", "'O9999x' is not an optimization number of the form O####")]
   [TestCase("--disable-opt", "o0100", "'o0100' is not an optimization number")]
-  [TestCase("--disable-opt", "O9999", "unknown optimization 'O9999'; the pipeline has O0100, O0101")]
+  [TestCase("--disable-opt", "O9999", "unknown optimization 'O9999'; the pipeline has O0001, O0003, O0005, O0006, O0023, O0100, O0101")]
   [TestCase("--disable-opt", "", "option '--disable-opt' has an empty list element")]
   [TestCase("--disable-opt", "O0100,,O0106", "option '--disable-opt' has an empty list element")]
   [TestCase("--disable-opt", "O0100,", "option '--disable-opt' has an empty list element")]

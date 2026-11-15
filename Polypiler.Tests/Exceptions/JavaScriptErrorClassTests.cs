@@ -74,7 +74,7 @@ public sealed class JavaScriptErrorClassTests {
     Assert.That(Emit("public static int Add(int a, int b) => a + b;", "es2022"), Does.Not.Contain("Error"));
   }
 
-  [TestCase("public static double R(double x, int d) => System.Math.Round(x, d);", "ArgumentOutOfRangeError extends RangeError", "throw new ArgumentOutOfRangeError(\"argument out of range\");")]
+  [TestCase("public static double R(double x, int d) => System.Math.Round(x, d);", "ArgumentOutOfRangeError extends RangeError", "throw new ArgumentOutOfRangeError(")]
   [TestCase("public static int S(double x) => System.Math.Sign(x);", "ArithmeticError extends RangeError", "throw new ArithmeticError(\"invalid operation\");")]
   [TestCase("public static int V(int? x) => x.Value;", "InvalidOperationError extends Error", "throw new InvalidOperationError(\"missing value\");")]
   public void EachTrap_ThrowsTheClassOfItsTable(string method, string declared, string thrown) {

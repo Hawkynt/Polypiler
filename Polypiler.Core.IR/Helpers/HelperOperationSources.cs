@@ -17,6 +17,14 @@ public static class HelperOperationSources {
 
   private static readonly LibrarySources _sources = new(Folder, "Polypiler.Core.IR.Helpers.Operations.", new Dictionary<string, string[]>(StringComparer.Ordinal));
 
+  /// <summary>
+  /// The methods of the library that stand for an operation of the IR C# has no method for, by their
+  /// names: the C# frontend imports a call of one as the operation, and the method as no function.
+  /// </summary>
+  public static IReadOnlyDictionary<string, IrIntrinsicOp> Intrinsics { get; } = new Dictionary<string, IrIntrinsicOp>(StringComparer.Ordinal) {
+    [nameof(HelperOperations.IntrinsicRoundHalfUp)] = IrIntrinsicOp.RoundHalfUp
+  };
+
   /// <summary>Every file as its name and its text, in the order of the names.</summary>
   public static IReadOnlyList<(string Name, string Text)> All => _sources.All;
 

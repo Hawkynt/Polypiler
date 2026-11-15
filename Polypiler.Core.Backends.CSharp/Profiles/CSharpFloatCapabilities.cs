@@ -78,13 +78,13 @@ internal static class CSharpFloatCapabilities {
     // The two operations that trap: Math.Clamp, and before it a helper that throws as it does; the
     // rounding to digits always a helper, since a mode is an int in the IR and an enumeration in C#.
     rows.Add(CSharpCapability.OfOperation("Math.Clamp(double, double, double)", CSharpProfile.NetStandard21, IrIntrinsicOp.Clamp, _double,
-      new CSharpForm(Base + "Math.Clamp"), new CSharpForm(null), CSharpFloatHelpers.ClampDouble));
+      new CSharpForm(Base + "Math.Clamp")).WithLibrary("Clamp"));
     rows.Add(CSharpCapability.OfOperation("Math.Clamp(float, float, float)", CSharpProfile.NetStandard21, IrIntrinsicOp.Clamp, _single,
-      new CSharpForm(Base + "Math.Clamp"), new CSharpForm(null), CSharpFloatHelpers.ClampSingle));
+      new CSharpForm(Base + "Math.Clamp")).WithLibrary("ClampF"));
     rows.Add(CSharpCapability.OfOperation("Math.Round(double, int, MidpointRounding) of a mode given as an int", null, IrIntrinsicOp.RoundDigits, _double,
-      null, new CSharpForm(null), CSharpFloatHelpers.RoundDigitsDouble));
+      null).WithLibrary("RoundDigits"));
     rows.Add(CSharpCapability.OfOperation("MathF.Round(float, int, MidpointRounding) of a mode given as an int", null, IrIntrinsicOp.RoundDigits, _single,
-      null, new CSharpForm(null), CSharpFloatHelpers.RoundDigitsSingle));
+      null).WithLibrary("RoundDigitsF"));
     return rows;
   }
 

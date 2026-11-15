@@ -11,7 +11,7 @@ namespace Polypiler.Core.Backends.JavaScript;
 /// The helper functions of generated code: the operations that can trap or need more than an
 /// expression, and the replacements for what a language level lacks. A helper is written once, in a
 /// notation that leaves open what differs between levels: <c>@let</c> and <c>@const</c> stand for
-/// the keyword that declares a variable, <c>@imul(</c>, <c>@clz32(</c>, <c>@fround(</c> and
+/// the keyword that declares a variable, <c>@imul(</c>, <c>@fround(</c> and
 /// <c>@trunc(</c> for the function of <c>Math</c> or the helper that replaces it. Where a level
 /// changes the whole body — 64-bit integers as <c>BigInt</c>s or as pairs of halves, the bits of a
 /// floating-point number through a <c>DataView</c> or by arithmetic — a helper has one body per case.
@@ -34,7 +34,7 @@ internal static partial class JavaScriptHelpers {
   /// <summary>The names of all helpers, in the order a module lists the ones it uses.</summary>
   public static readonly IReadOnlyList<string> Order = [
     .. ErrorOrder,
-    "$imul", "$clz32", "$f32a", "$fround", "$trunc",
+    "$imul", "$f32a", "$fround", "$trunc",
     "$add64", "$sub64", "$neg64", "$not64", "$and64", "$or64", "$xor64", "$shl64", "$shr64", "$sar64",
     "$eq64", "$ucmp64", "$scmp64", "$mulw", "$mul64", "$mag64", "$udm64",
     "$div", "$rem", "$udiv", "$urem", "$div64", "$rem64", "$udiv64", "$urem64", "$ck",
@@ -42,7 +42,6 @@ internal static partial class JavaScriptHelpers {
     "$sx64", "$ul2d", "$l2d", "$d2l",
     "$f2i", "$f2l", "$f2ic", "$f2lc", "$f32", "$ul2f", "$l2f",
     "$get", "$set", "$new", "$fill",
-    "$fsign", "$round", "$rounda", "$roundd", "$roundd32",
     "$view", "$bits64", "$bits32", "$float64", "$float32", "$key64",
     "$copy", "$copya", "$step", "$stepi", "$stepf", "$step64", "$stepck", "$stepck64s", "$stepck64u", "$len",
     .. ViewOrder,
@@ -58,7 +57,7 @@ internal static partial class JavaScriptHelpers {
   private static readonly HashSet<string> _names = [.. Order];
 
   /// <summary>What a helper leaves open for the level to decide.</summary>
-  private static readonly Regex _placeholder = new(@"@let|@const|@imul\(|@clz32\(|@fround\(|@trunc\(", RegexOptions.CultureInvariant);
+  private static readonly Regex _placeholder = new(@"@let|@const|@imul\(|@fround\(|@trunc\(", RegexOptions.CultureInvariant);
 
   /// <summary>Every helper as read into the syntax tree, by its text for a profile: read once, shared by every module.</summary>
   private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, IReadOnlyList<JsStatement>> _read = new(StringComparer.Ordinal);
@@ -105,7 +104,6 @@ internal static partial class JavaScriptHelpers {
       "@let" => native("let") ? "let" : "var",
       "@const" => native("const") ? "const" : "var",
       "@imul(" => native("Math.imul") ? "Math.imul(" : "$imul(",
-      "@clz32(" => native("Math.clz32") ? "Math.clz32(" : "$clz32(",
       "@fround(" => native("Math.fround") ? "Math.fround(" : "$fround(",
       _ => native("Math.trunc") ? "Math.trunc(" : "$trunc("
     });
@@ -119,18 +117,6 @@ internal static partial class JavaScriptHelpers {
         @const high = (a >>> 16) & 0xFFFF;
         @const low = a & 0xFFFF;
         return (low * (b & 0xFFFF) + (((high * (b & 0xFFFF) + low * ((b >>> 16) & 0xFFFF)) << 16) >>> 0)) | 0;
-      }
-      """,
-    "$clz32" => """
-      function $clz32(value) {
-        value >>>= 0;
-        if (value === 0) return 32;
-        @let count = 0;
-        if ((value & 0xFFFF0000) === 0) { count += 16; value <<= 16; }
-        if ((value & 0xFF000000) === 0) { count += 8; value <<= 8; }
-        if ((value & 0xF0000000) === 0) { count += 4; value <<= 4; }
-        if ((value & 0xC0000000) === 0) { count += 2; value <<= 2; }
-        return (value & 0x80000000) === 0 ? count + 1 : count;
       }
       """,
     "$f32a" => "@const $f32a = new Float32Array(1);",
@@ -504,43 +490,6 @@ internal static partial class JavaScriptHelpers {
       """,
 
     // The base library.
-    "$roundd" => """
-      function $roundd(value, digits, mode) {
-        if (digits < 0 || digits > 15) throw new ArgumentOutOfRangeError("argument out of range");
-        if (Math.abs(value) < 1e16) {
-          @let power10 = 1;
-          for (@let index = 0; index < digits; ++index) power10 *= 10;
-          @const scaled = value * power10;
-          value = (mode === 1 ? $rounda(scaled) : mode === 2 ? @trunc(scaled) : mode === 3 ? Math.floor(scaled) : mode === 4 ? Math.ceil(scaled) : $round(scaled)) / power10;
-        }
-        return value;
-      }
-      """,
-    "$roundd32" => """
-      function $roundd32(value, digits, mode) {
-        if (digits < 0 || digits > 6) throw new ArgumentOutOfRangeError("argument out of range");
-        if (Math.abs(value) < 1e8) {
-          @let power10 = 1;
-          for (@let index = 0; index < digits; ++index) power10 *= 10;
-          @const scaled = @fround(value * power10);
-          value = @fround((mode === 1 ? $rounda(scaled) : mode === 2 ? @trunc(scaled) : mode === 3 ? Math.floor(scaled) : mode === 4 ? Math.ceil(scaled) : $round(scaled)) / power10);
-        }
-        return value;
-      }
-      """,
-    "$fsign" => """
-      function $fsign(value) {
-        if (value !== value) throw new ArithmeticError("invalid operation");
-        return value < 0 ? -1 : value > 0 ? 1 : 0;
-      }
-      """,
-    "$round" => """
-      function $round(value) {
-        @const rounded = Math.round(value);
-        return rounded - value === 0.5 && rounded % 2 !== 0 ? rounded - 1 : rounded;
-      }
-      """,
-    "$rounda" => Lines("function $rounda(value) {", "  return value < 0 ? -Math.round(-value) : Math.round(value);", "}"),
 
     // The bits of a floating-point number: through a DataView, or taken apart by arithmetic that is
     // exact because it only multiplies and divides by two.

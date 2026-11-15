@@ -21,8 +21,14 @@ public static partial class JavaScriptEmitter {
       (IrIntrinsicOp.Max, (writer, intrinsic) => (Invoke("Math.max", [.. intrinsic.Arguments.Select(writer.Text)]), true)),
       (IrIntrinsicOp.Abs, (writer, intrinsic) => writer.Expression(intrinsic.Arguments[0])),
       (IrIntrinsicOp.AbsWrap, (writer, intrinsic) => writer.AbsWrap(intrinsic.Arguments[0])),
-      (IrIntrinsicOp.Sign, (writer, intrinsic) => (Invoke("Math.sign", writer.Text(intrinsic.Arguments[0])), true))
+      (IrIntrinsicOp.Sign, (writer, intrinsic) => writer.Sign(intrinsic.Arguments[0]))
     ];
+
+    /// <summary>The sign of up to 32 bits by <c>Math.sign</c>; below ECMAScript 2015 the library's helper stands in.</summary>
+    private (JsExpression, bool) Sign(IrExpr value) {
+      this.Native("Math.sign");
+      return (Invoke("Math.sign", this.Text(value)), true);
+    }
 
     /// <summary>The magnitude that wraps: an unsigned value itself, a signed one of up to 32 bits <c>Math.abs</c> cut to its type.</summary>
     private (JsExpression, bool) AbsWrap(IrExpr value)

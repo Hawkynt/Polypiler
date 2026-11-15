@@ -26,22 +26,25 @@ internal static partial class JavaScriptLibrary {
       IrIntrinsicOp.LowMask, IrIntrinsicOp.IsolateLowestSet, IrIntrinsicOp.ClearLowestSet, IrIntrinsicOp.MaskToLowestSet,
       IrIntrinsicOp.SignExtend, IrIntrinsicOp.ZeroExtend
     }.Select(op => (op, Always)),
-    (IrIntrinsicOp.LeadingZeroCount, new Row((node, context) => Bits(node) == 64 || !context.Native("Math.clz32"), IntegerLibrary.Call)),
-    (IrIntrinsicOp.Log2, new Row((node, context) => Bits(node) == 64 || !context.Native("Math.clz32"), IntegerLibrary.Call)),
-    (IrIntrinsicOp.BigMul, new Row((_, context) => !context.BigInt, IntegerLibrary.Call)),
-    (IrIntrinsicOp.MulHigh, new Row((node, context) => Bits(node) == 32 || (Bits(node) == 64 && !context.BigInt), IntegerLibrary.Call)),
-    (IrIntrinsicOp.Min, new Row((node, _) => Bits(node) == 64, IntegerLibrary.Call)),
-    (IrIntrinsicOp.Max, new Row((node, _) => Bits(node) == 64, IntegerLibrary.Call)),
-    (IrIntrinsicOp.Abs, new Row((node, _) => node.Arguments[0].Type.IsSigned, IntegerLibrary.Call)),
-    (IrIntrinsicOp.AbsWrap, new Row((node, _) => node.Arguments[0].Type.IsSigned && Bits(node) == 64, IntegerLibrary.Call)),
-    (IrIntrinsicOp.Sign, new Row((node, context) => Bits(node) == 64 || !context.Native("Math.sign"), IntegerLibrary.Call)),
+    (IrIntrinsicOp.LeadingZeroCount, new Row((node, context) => IsInteger(node) && (Bits(node) == 64 || context.Replaces("Math.clz32")), IntegerLibrary.Call)),
+    (IrIntrinsicOp.Log2, new Row((node, context) => IsInteger(node) && (Bits(node) == 64 || context.Replaces("Math.clz32")), IntegerLibrary.Call)),
+    (IrIntrinsicOp.BigMul, new Row((node, context) => IsInteger(node) && !context.BigInt, IntegerLibrary.Call)),
+    (IrIntrinsicOp.MulHigh, new Row((node, context) => IsInteger(node) && Bits(node) == 32 || (IsInteger(node) && Bits(node) == 64 && !context.BigInt), IntegerLibrary.Call)),
+    (IrIntrinsicOp.Min, new Row((node, _) => IsInteger(node) && Bits(node) == 64, IntegerLibrary.Call)),
+    (IrIntrinsicOp.Max, new Row((node, _) => IsInteger(node) && Bits(node) == 64, IntegerLibrary.Call)),
+    (IrIntrinsicOp.Abs, new Row((node, _) => IsInteger(node) && node.Arguments[0].Type.IsSigned, IntegerLibrary.Call)),
+    (IrIntrinsicOp.AbsWrap, new Row((node, _) => IsInteger(node) && node.Arguments[0].Type.IsSigned && Bits(node) == 64, IntegerLibrary.Call)),
+    (IrIntrinsicOp.Sign, new Row((node, context) => IsInteger(node) && (Bits(node) == 64 || context.Replaces("Math.sign")), IntegerLibrary.Call)),
     .. new[] { IrIntrinsicOp.AddCarry, IrIntrinsicOp.CarryOut, IrIntrinsicOp.SubBorrow, IrIntrinsicOp.BorrowOut }
-      .Select(op => (op, new Row((node, context) => Bits(node) == 64 && !context.BigInt, IntegerLibrary.Call))),
+      .Select(op => (op, new Row((node, context) => IsInteger(node) && Bits(node) == 64 && !context.BigInt, IntegerLibrary.Call))),
     .. new[] { IrIntrinsicOp.LoadLittle, IrIntrinsicOp.LoadBig, IrIntrinsicOp.StoreLittle, IrIntrinsicOp.StoreBig }
       .Select(op => (op, new Row((node, _) => node.Arguments[0].Type.IsArray, Endian)))
   ];
 
-  private static Row Always { get; } = new((_, _) => true, IntegerLibrary.Call);
+  private static Row Always { get; } = new((node, _) => IsInteger(node), IntegerLibrary.Call);
+
+  /// <summary>Whether a node is one of an integer operation: one whose operand that chooses the helper is an integer.</summary>
+  private static bool IsInteger(IrIntrinsic node) => IntegerLibrary.Operand(node).IsInteger;
 
   private static int Bits(IrIntrinsic node) => IntegerLibrary.Operand(node).Bits;
 

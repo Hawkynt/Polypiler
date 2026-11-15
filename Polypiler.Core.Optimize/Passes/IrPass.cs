@@ -18,11 +18,12 @@ public interface IIrPass {
   /// <summary>What the pass does, as <c>--explain-opt</c> names it.</summary>
   string Name { get; }
 
-  /// <summary>Runs the pass once over every function of a module.</summary>
+  /// <summary>Runs the pass once over the functions of a module it is to look at.</summary>
   /// <param name="module">The module.</param>
+  /// <param name="scope">Whether the pass looks at a function; inlining, which brings a helper into a function, looks at every one.</param>
   /// <param name="applied">Receives every change: the function and the position of the statement it was made at.</param>
   /// <returns>The module, the same object when nothing changed.</returns>
-  IrModule Run(IrModule module, Action<string, string> applied);
+  IrModule Run(IrModule module, Func<IrFunction, bool> scope, Action<string, string> applied);
 
 }
 
@@ -32,7 +33,9 @@ public interface IIrPass {
 /// (O0003), constant folding (O0001), dead-code removal (O0005) and full unrolling (O0023). Each
 /// makes work for the next - an inlined helper has constant parameters, a constant condition a dead
 /// branch, an unrolled loop constant indices - and none of them changes what a module computes, its
-/// traps and the point they happen at included.
+/// traps and the point they happen at included. They look at the functions legalization copied in
+/// from the libraries and at every function a helper was inlined into; the rest of the program stays
+/// as the frontend made it.
 /// </summary>
 public sealed class IrPassPipeline {
 
@@ -70,10 +73,16 @@ public sealed class IrPassPipeline {
       return new(module, applications);
 
     var passes = this.Passes.Where(pass => !options.Disabled.Contains(pass.Id)).ToList();
+    var scope = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
     for (var round = 0; round < RoundLimit; ++round) {
       var before = applications.Count;
       foreach (var pass in passes) {
-        module = pass.Run(module, (function, position) => applications.Add(new(pass.Id, pass.Name, function, position)));
+        var inlining = pass is O0006Inlining;
+        module = pass.Run(module, function => inlining || scope.Contains(function.Name), (function, position) => {
+          applications.Add(new(pass.Id, pass.Name, function, position));
+          if (inlining)
+            scope.Add(function);
+        });
         if (options.Verify && IrVerifier.Verify(module) is { Count: > 0 } problems)
           throw new InvalidOperationException($"{pass.Id} {pass.Name} left the module ill-typed: {string.Join("; ", problems)}");
       }

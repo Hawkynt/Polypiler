@@ -140,7 +140,7 @@ public static class Program {
   /// <param name="error">Receives the diagnostics of the imports and what keeps the file from being written.</param>
   /// <returns><see cref="Success"/>, or <see cref="Failure"/> when a library does not import, both declare a name or the file cannot be written.</returns>
   public static int WriteImplementations(IReadOnlyList<CSharpSource> floats, IReadOnlyList<CSharpSource> helpers, string file, TextWriter output, TextWriter error) {
-    if (Imported(floats, error) is not { } first || Imported(helpers, error) is not { } second)
+    if (Imported(floats, error) is not { } first || Imported(helpers, error, HelperOperationSources.Intrinsics) is not { } second)
       return Failure;
 
     IrModule merged;
@@ -154,8 +154,8 @@ public static class Program {
     return Write(merged, file, output, error);
   }
 
-  private static IrModule? Imported(IReadOnlyList<CSharpSource> sources, TextWriter error) {
-    var imported = CSharpFrontend.Import(sources);
+  private static IrModule? Imported(IReadOnlyList<CSharpSource> sources, TextWriter error, IReadOnlyDictionary<string, IrIntrinsicOp>? intrinsics = null) {
+    var imported = intrinsics is null ? CSharpFrontend.Import(sources) : CSharpFrontend.ImportLibrary(sources, intrinsics);
     foreach (var diagnostic in imported.Diagnostics)
       error.WriteLine(diagnostic);
 

@@ -665,21 +665,23 @@ public sealed class CSharpEmitterWideTests {
   public void SaturationToANarrowInteger_IsAHelper() {
     var d = new IrLocal("d", IrType.F64);
     var f = new IrLocal("f", IrType.F32);
-    var shadow = new IrLocal("Saturated", IrType.F64);
+    var shadow = new IrLocal("SaturateToInt32", IrType.F64);
     var narrow = new[] { IrType.I8, IrType.U8, IrType.I16, IrType.U16 };
     var module = new IrModule("Narrow", [
       .. narrow.Select(type => Function("Double" + type, type, [d], new IrReturn(new IrConvert(type, Ref(d), IrConversion.Saturate)))),
       .. narrow.Select(type => Function("Single" + type, type, [f], new IrReturn(new IrConvert(type, Ref(f), IrConversion.Saturate)))),
       Function("Constant", IrType.U8, [], new IrReturn(new IrConvert(IrType.U8, Real(300.5), IrConversion.Saturate))),
-      Function("Saturated", IrType.I32, [shadow], new IrReturn(new IrConvert(IrType.I32, new IrConvert(IrType.I8, Ref(shadow), IrConversion.Saturate))))
+      Function("SaturateToInt32", IrType.I32, [shadow], new IrReturn(new IrConvert(IrType.I32, new IrConvert(IrType.I8, Ref(shadow), IrConversion.Saturate))))
     ]);
     var text = EmittedCSharp.WithStatementBodies(Emit(module));
-    Assert.That(text, Does.Contain("return (sbyte)Saturated_(d, -128, 127);")
-      .And.Contain("return (ushort)Saturated_(f, 0, 65535);")
-      .And.Contain("return (byte)Saturated_(300.5, 0, 255);")
-      .And.Contain("public static int Saturated(double Saturated__) {")
-      .And.Contain("return (sbyte)Saturated_(Saturated__, -128, 127);")
-      .And.EndWith("\n  private static int Saturated_(double value, int low, int high) {\n    return value >= high ? high : value > low ? (int)value : value <= low ? low : 0;\n  }\n\n}\n"));
+    // The helper of the library gives way to the module's function of its name.
+    Assert.That(text, Does.Contain("return (sbyte)SaturateToInt32_(d, -128, 127);")
+      .And.Contain("return (ushort)SaturateToInt32_((double)f, 0, 65535);")
+      .And.Contain("return (byte)SaturateToInt32_(300.5, 0, 255);")
+      .And.Contain("public static int SaturateToInt32(double SaturateToInt32__) {")
+      .And.Contain("return (sbyte)SaturateToInt32_(SaturateToInt32__, -128, 127);")
+      .And.EndWith("\n  private static int SaturateToInt32_(double value, int low, int high) {\n"
+        + "    return (value >= (double)high) ? high : ((value > (double)low) ? checked((int)value) : ((value <= (double)low) ? low : 0));\n  }\n\n}\n"));
     Assert.That(Regex.Matches(text, "private static"), Has.Count.EqualTo(1));
 
     var calls = narrow.SelectMany(type => _numbers.SelectMany(number => new[] { Call("Double" + type, number), Call("Single" + type, (float)number) }))
@@ -688,13 +690,13 @@ public sealed class CSharpEmitterWideTests {
     Assert.That((outcomes["Doublei8(NaN)"], outcomes["Doublei8(f:c060300000000000)"], outcomes["Doubleu8(f:406ff00000000000)"], outcomes["Doubleu8(256)"], outcomes["Constant()"]),
       Is.EqualTo(("0", "-128", "255", "255", "255")));
     // The function is still called by its own name; it is the helper that was given another.
-    Assert.That(Builds(module).Select(build => build.Outcome(Call("Saturated", -1e9))),
-      Has.All.EqualTo(PrototypeFixture.InterpretedOutcome(module, Call("Saturated", -1e9))).And.All.EqualTo("-128"));
+    Assert.That(Builds(module).Select(build => build.Outcome(Call("SaturateToInt32", -1e9))),
+      Has.All.EqualTo(PrototypeFixture.InterpretedOutcome(module, Call("SaturateToInt32", -1e9))).And.All.EqualTo("-128"));
 
     var plain = Emit(new IrModule("Wide", [
-      Function("Saturated", IrType.I32, [d, shadow], new IrReturn(new IrConvert(IrType.I32, Op(IrBinaryOp.Add, Ref(d), Ref(shadow)), IrConversion.Saturate)))
+      Function("SaturateToInt32", IrType.I32, [d, shadow], new IrReturn(new IrConvert(IrType.I32, Op(IrBinaryOp.Add, Ref(d), Ref(shadow)), IrConversion.Saturate)))
     ]));
-    Assert.That(plain, Does.Contain("public static int Saturated(double d, double Saturated_) => unchecked((int)(d + Saturated_));").And.Not.Contain("private"));
+    Assert.That(plain, Does.Contain("public static int SaturateToInt32(double d, double SaturateToInt32_) => unchecked((int)(d + SaturateToInt32_));").And.Not.Contain("private"));
   }
 
   /// <summary>
@@ -718,10 +720,12 @@ public sealed class CSharpEmitterWideTests {
     Assert.That(text, Does.Contain("public static int Signed(double d) => ToInt32_(d);")
       .And.Contain("public static uint Unsigned(double d) => ToUint32(d);")
       .And.Contain("public static double Rounded(double d) => RoundHalfUp(d);")
-      .And.Contain("public static float RoundedSingle(float f) => (float)RoundHalfUp(f);")
+      .And.Contain("public static float RoundedSingle(float f) => (float)RoundHalfUp((double)f);")
       .And.Contain("public static int ToInt32(double ToInt32__) => ToInt32_(ToInt32__) ^ 1;")
-      .And.Contain("  private static int ToInt32_(double value) {\n    return double.IsNaN(value) || double.IsInfinity(value) ? 0 : unchecked((int)(long)(global::System.Math.Truncate(value) % 4294967296.0));\n  }\n")
-      .And.Contain("  private static uint ToUint32(double value) {\n    return double.IsNaN(value) || double.IsInfinity(value) ? 0u : unchecked((uint)(long)(global::System.Math.Truncate(value) % 4294967296.0));\n  }\n"));
+      .And.Contain("  private static int ToInt32_(double value) => unchecked((global::System.Double.IsNaN(value) || global::System.Double.IsInfinity(value)) ? 0 "
+        + ": (int)checked((long)(global::System.Math.Truncate(value) % 4294967296.0)));\n")
+      .And.Contain("  private static uint ToUint32(double value) => unchecked((global::System.Double.IsNaN(value) || global::System.Double.IsInfinity(value)) ? 0u "
+        + ": (uint)checked((long)(global::System.Math.Truncate(value) % 4294967296.0)));\n"));
     Assert.That(Regex.Matches(text, "private static"), Has.Count.EqualTo(3));
 
     double[] numbers = [

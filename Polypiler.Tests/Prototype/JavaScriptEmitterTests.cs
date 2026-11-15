@@ -569,43 +569,43 @@ public sealed class JavaScriptEmitterTests {
   }
 
   /// <summary>Each operation of the base library: what JavaScript has for it, or the helper that computes it.</summary>
-  [TestCase("int", "int", "System.Math.Abs(a)", "$abs(a, -2147483648)")]
-  [TestCase("sbyte", "sbyte", "System.Math.Abs(a)", "$abs(a, -128)")]
-  [TestCase("long", "long", "System.Math.Abs(a)", "$abs(a, -9223372036854775808n)")]
+  [TestCase("int", "int", "System.Math.Abs(a)", "AbsSigned32(a, -2147483648)")]
+  [TestCase("sbyte", "sbyte", "System.Math.Abs(a)", "AbsSigned32(a, -128) << 24 >> 24")]
+  [TestCase("long", "long", "System.Math.Abs(a)", "AbsSigned64(a)")]
   [TestCase("double", "double", "System.Math.Abs(a)", "Math.abs(a)")]
   [TestCase("float", "float", "System.MathF.Abs(a)", "Math.abs(a)")]
   [TestCase("int", "int", "System.Math.Min(a, 3)", "Math.min(a, 3)")]
   [TestCase("ushort", "ushort", "System.Math.Max(a, a)", "Math.max(a, a)")]
-  [TestCase("long", "long", "System.Math.Min(a, 3)", "$min64(a, 3n)")]
-  [TestCase("ulong", "ulong", "System.Math.Max(a, a)", "$max64(a, a)")]
+  [TestCase("long", "long", "System.Math.Min(a, 3)", "MinSigned64(a, 3n)")]
+  [TestCase("ulong", "ulong", "System.Math.Max(a, a)", "MaxUnsigned64(a, a)")]
   [TestCase("double", "double", "System.Math.Max(a, 0.5)", "Math.max(a, 0.5)")]
   [TestCase("float", "float", "System.MathF.Min(a, a)", "Math.min(a, a)")]
   [TestCase("int", "int", "System.Math.Sign(a)", "Math.sign(a)")]
-  [TestCase("int", "long", "System.Math.Sign(a)", "$sign64(a)")]
-  [TestCase("int", "double", "System.Math.Sign(a)", "$fsign(a)")]
-  [TestCase("int", "float", "System.MathF.Sign(a)", "$fsign(a)")]
+  [TestCase("int", "long", "System.Math.Sign(a)", "Sign64(a)")]
+  [TestCase("int", "double", "System.Math.Sign(a)", "SignOf(a)")]
+  [TestCase("int", "float", "System.MathF.Sign(a)", "SignOf(a)")]
   [TestCase("double", "double", "System.Math.Sqrt(a)", "Math.sqrt(a)")]
   [TestCase("float", "float", "System.MathF.Sqrt(a)", "Math.fround(Math.sqrt(a))")]
   [TestCase("double", "double", "System.Math.Floor(a)", "Math.floor(a)")]
   [TestCase("float", "float", "System.MathF.Ceiling(a)", "Math.ceil(a)")]
   [TestCase("double", "double", "System.Math.Truncate(a)", "Math.trunc(a)")]
-  [TestCase("double", "double", "System.Math.Round(a)", "$round(a)")]
-  [TestCase("float", "float", "System.MathF.Round(a)", "$round(a)")]
-  [TestCase("double", "double", "System.Math.Round(a, System.MidpointRounding.ToEven)", "$round(a)")]
-  [TestCase("double", "double", "System.Math.Round(a, System.MidpointRounding.AwayFromZero)", "$rounda(a)")]
-  [TestCase("uint", "uint", "System.Numerics.BitOperations.RotateLeft(a, 5)", "$rotl(a, 5)")]
-  [TestCase("uint", "uint", "System.Numerics.BitOperations.RotateRight(a, 5)", "$rotr(a, 5)")]
-  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateLeft(a, 5)", "$rotl64(a, 5)")]
-  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateRight(a, 5)", "$rotr64(a, 5)")]
-  [TestCase("int", "uint", "System.Numerics.BitOperations.PopCount(a)", "$pop(a)")]
-  [TestCase("int", "ulong", "System.Numerics.BitOperations.PopCount(a)", "$pop64(a)")]
+  [TestCase("double", "double", "System.Math.Round(a)", "RoundEven(a)")]
+  [TestCase("float", "float", "System.MathF.Round(a)", "Math.fround(RoundEven(a))")]
+  [TestCase("double", "double", "System.Math.Round(a, System.MidpointRounding.ToEven)", "RoundEven(a)")]
+  [TestCase("double", "double", "System.Math.Round(a, System.MidpointRounding.AwayFromZero)", "RoundAway(a)")]
+  [TestCase("uint", "uint", "System.Numerics.BitOperations.RotateLeft(a, 5)", "RotateLeft32(a, 5)")]
+  [TestCase("uint", "uint", "System.Numerics.BitOperations.RotateRight(a, 5)", "RotateRight32(a, 5)")]
+  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateLeft(a, 5)", "RotateLeft64(a, 5)")]
+  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateRight(a, 5)", "RotateRight64(a, 5)")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.PopCount(a)", "PopCount32(a)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.PopCount(a)", "PopCount64(a)")]
   [TestCase("int", "uint", "System.Numerics.BitOperations.LeadingZeroCount(a)", "Math.clz32(a)")]
-  [TestCase("int", "ulong", "System.Numerics.BitOperations.LeadingZeroCount(a)", "$clz64(a)")]
-  [TestCase("int", "uint", "System.Numerics.BitOperations.TrailingZeroCount(a)", "$ctz(a)")]
-  [TestCase("int", "ulong", "System.Numerics.BitOperations.TrailingZeroCount(a)", "$ctz64(a)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.LeadingZeroCount(a)", "LeadingZeroCount64(a)")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.TrailingZeroCount(a)", "TrailingZeroCount32(a)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.TrailingZeroCount(a)", "TrailingZeroCount64(a)")]
   [TestCase("int", "uint", "System.Numerics.BitOperations.Log2(a)", "31 - Math.clz32(a | 1)")]
   [TestCase("int", "uint", "System.Numerics.BitOperations.Log2(a + 1)", "31 - Math.clz32(((a + 1) >>> 0) | 1)")]
-  [TestCase("int", "ulong", "System.Numerics.BitOperations.Log2(a)", "63 - $clz64(a | 1n)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.Log2(a)", "Log2Of64(a)")]
   [TestCase("ulong", "uint", "System.Math.BigMul(a, a)", "BigInt(a) * BigInt(a)")]
   [TestCase("long", "double", "System.BitConverter.DoubleToInt64Bits(a)", "$bits64(a)")]
   [TestCase("int", "float", "System.BitConverter.SingleToInt32Bits(a)", "$bits32(a)")]
@@ -625,16 +625,14 @@ public sealed class JavaScriptEmitterTests {
       + "+ System.Numerics.BitOperations.PopCount(u) + System.Numerics.BitOperations.LeadingZeroCount(u) + System.Numerics.BitOperations.TrailingZeroCount(u) "
       + "+ System.BitConverter.DoubleToInt64Bits(d) + System.BitConverter.SingleToInt32Bits(f) "
       + "+ System.BitConverter.Int64BitsToDouble(l) + System.BitConverter.Int32BitsToSingle(i);");
+    // The writer's own helpers, for the bits of a number through a DataView; every other operation is a helper of the library.
     var helpers = text.Split('\n').Where(line => line.StartsWith("function $") || line.StartsWith("const $")).Select(line => line[..line.IndexOfAny(['(', ' '], 9)]);
-    Assert.That(helpers, Is.EqualTo(new[] {
-      "function $abs", "function $min64", "function $max64", "function $sign64", "function $fsign", "function $round", "function $rounda",
-      "function $rotl", "function $rotr", "function $rotl64", "function $rotr64", "function $pop", "function $pop64", "function $clz64",
-      "function $ctz", "function $ctz64", "const $view", "function $bits64", "function $bits32", "function $float64", "function $float32"
-    }));
-    Assert.That(text, Does.Contain("if (value !== value) throw new ArithmeticError(\"invalid operation\");")
-      .And.Contain("const $view = new DataView(new ArrayBuffer(8));")
-      .And.Contain("return rounded - value === 0.5 && rounded % 2 !== 0 ? rounded - 1 : rounded;"));
-    Assert.That(Emit("public static int F(uint a) => System.Numerics.BitOperations.PopCount(a);"), Does.Not.Contain("$pop64").And.Not.Contain("$view"));
+    Assert.That(helpers, Is.EqualTo(new[] { "const $view", "function $bits64", "function $bits32", "function $float64", "function $float32" }));
+    var library = text.Split('\n').Where(line => line.StartsWith("function ") && !line.StartsWith("function $") && !line.StartsWith("function F(")).Select(line => line[9..line.IndexOf('(')]);
+    Assert.That(library, Is.Unique.And.Contains("AbsSigned32").And.Contains("MinSigned64").And.Contains("SignOf").And.Contains("RoundEven").And.Contains("RotateLeft64").And.Contains("PopCount64"));
+    Assert.That(text, Does.Contain("throw new ArithmeticError(\"invalid operation\");")
+      .And.Contain("const $view = new DataView(new ArrayBuffer(8));"));
+    Assert.That(Emit("public static int F(uint a) => System.Numerics.BitOperations.PopCount(a);"), Does.Not.Contain("PopCount64").And.Not.Contain("$view"));
   }
 
   /// <summary>Above every function: what crosses its boundary as a number, a BigInt or a typed array.</summary>

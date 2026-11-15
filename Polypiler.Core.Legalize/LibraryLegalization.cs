@@ -95,12 +95,14 @@ public static class LibraryLegalization {
     ArgumentNullException.ThrowIfNull(module);
     ArgumentNullException.ThrowIfNull(rewrite);
     var run = new Run(module, implementations, rewrite);
+    var globals = run.Globals();
     var functions = module.Functions.Select(run.Function).ToList();
     if (run.Names.Count == 0 && !run.Changed)
       return module;
 
     var helpers = run.Helpers();
     return module with {
+      Globals = globals,
       Functions = [.. functions, .. helpers.Functions],
       Constants = [.. module.Constants, .. helpers.Constants],
       Implementations = [.. module.Implementations, .. run.Names.Select(pair => (pair.Value, pair.Key))]
@@ -117,6 +119,10 @@ public static class LibraryLegalization {
       .. module.Functions.Select(function => function.Name), .. module.Constants.Select(constant => constant.Name), .. module.Globals.Select(global => global.Name)
     ];
     private readonly Dictionary<IrModuleConst, IrModuleConst> _tables = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<string, IrGlobal> _globals = new(StringComparer.Ordinal);
+
+    /// <summary>How many expressions were replaced or made to name a new global so far.</summary>
+    private int _edits;
     private LibraryCalls? _calls;
     private bool _inHelper;
     private string? _current;
@@ -130,6 +136,27 @@ public static class LibraryLegalization {
     private LibraryCalls Calls => this._calls ??= new(this.CallOf, this.Signature, this.Expression);
 
     public IrFunction Function(IrFunction function) => function with { Body = this.Block(function.Body) };
+
+    /// <summary>
+    /// The globals with their initializers legalized, in their order, which is the order they are
+    /// initialised in: a global whose initializer changes is a new one, and every reference to it - in
+    /// a later initializer, in a function - is made to name the new one.
+    /// </summary>
+    public IReadOnlyList<IrGlobal> Globals() {
+      var globals = new List<IrGlobal>();
+      foreach (var global in module.Globals) {
+        var before = this._edits;
+        var initializer = global.Initializer is null ? null : this.Expression(global.Initializer);
+        var legalized = this._edits == before ? global : global with { Initializer = initializer };
+        this.Changed |= !ReferenceEquals(legalized, global);
+        this._globals[global.Name] = legalized;
+        globals.Add(legalized);
+      }
+
+      return globals;
+    }
+
+    private IrGlobal Global(IrGlobal global) => this._globals.TryGetValue(global.Name, out var legalized) ? legalized : global;
 
     /// <summary>The functions the module calls, each legalized itself, and the tables they read.</summary>
     public (List<IrFunction> Functions, List<IrModuleConst> Constants) Helpers() {
@@ -194,7 +221,7 @@ public static class LibraryLegalization {
       IrBlock block => this.Block(block),
       IrDeclare declare => declare with { Initializer = declare.Initializer is null ? null : this.Expression(declare.Initializer) },
       IrAssign assign => assign with { Value = this.Expression(assign.Value) },
-      IrGlobalAssign assign => assign with { Value = this.Expression(assign.Value) },
+      IrGlobalAssign assign => assign with { Global = this.Global(assign.Global), Value = this.Expression(assign.Value) },
       IrStore store => new IrStore(this.Expression(store.Array), this.Expression(store.Index), this.Expression(store.Value)),
       IrFieldStore store => store with { Target = this.Expression(store.Target), Value = this.Expression(store.Value) },
       IrExprStmt expression => new IrExprStmt(this.Expression(expression.Expression)),
@@ -218,6 +245,7 @@ public static class LibraryLegalization {
       try {
         if (rewrite(operands, this.Calls) is { } replaced) {
           this.Changed = true;
+          ++this._edits;
           return replaced;
         }
       } catch (SelfReference) {
@@ -231,6 +259,9 @@ public static class LibraryLegalization {
       switch (expression) {
         case IrConstRef reference:
           return new IrConstRef(this.Table(reference.Constant));
+        case IrGlobalRef reference when !ReferenceEquals(this.Global(reference.Global), reference.Global):
+          ++this._edits;
+          return new IrGlobalRef(this.Global(reference.Global));
         case IrUnary unary:
           return new IrUnary(unary.Op, this.Expression(unary.Operand));
         case IrBinary binary:

@@ -32,8 +32,9 @@ public sealed class O0006Inlining : IIrPass {
   public string Name => "inlining";
 
   /// <inheritdoc/>
-  public IrModule Run(IrModule module, Action<string, string> applied) {
+  public IrModule Run(IrModule module, Func<IrFunction, bool> scope, Action<string, string> applied) {
     ArgumentNullException.ThrowIfNull(module);
+    ArgumentNullException.ThrowIfNull(scope);
     ArgumentNullException.ThrowIfNull(applied);
     var library = module.Implementations.ToDictionary(pair => pair.Function, pair => pair.Implementation, StringComparer.Ordinal);
     if (library.Count == 0)
@@ -49,6 +50,9 @@ public sealed class O0006Inlining : IIrPass {
     var inlined = new List<string>();
     var changed = false;
     var functions = module.Functions.Select(function => {
+      if (!scope(function))
+        return function;
+
       var run = new Walk(function, candidates, applied);
       var result = run.Function();
       if (run.Inlined.Count == 0)

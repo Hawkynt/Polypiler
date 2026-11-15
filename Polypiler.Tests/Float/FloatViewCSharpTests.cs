@@ -70,19 +70,19 @@ public sealed class FloatViewCSharpTests {
   [TestCase("LoadLittle_f32", "net8.0", Binary + "ReadSingleLittleEndian(new global::System.ReadOnlySpan<byte>(a, b, 4))")]
   [TestCase("LoadLittle_f32", "netcoreapp3.1", Converter + "Int32BitsToSingle(" + Binary + "ReadInt32LittleEndian(new global::System.ReadOnlySpan<byte>(a, b, 4)))")]
   [TestCase("LoadBig_f32", "netstandard2.1", Converter + "Int32BitsToSingle(" + Binary + "ReadInt32BigEndian(new global::System.ReadOnlySpan<byte>(a, b, 4)))")]
-  [TestCase("LoadBig_f32", "netstandard2.0", "Int32BitsToSingle((int)Load(a, b, 4, false))")]
+  [TestCase("LoadBig_f32", "netstandard2.0", Converter + "ToSingle(" + Converter + "GetBytes(((int)Load32(a, b, 4, false))), 0)")]
   [TestCase("LoadBig_f64", "net10.0", Binary + "ReadDoubleBigEndian(new global::System.ReadOnlySpan<byte>(a, b, 8))")]
   [TestCase("LoadLittle_f64", "netstandard2.1", Converter + "Int64BitsToDouble(" + Binary + "ReadInt64LittleEndian(new global::System.ReadOnlySpan<byte>(a, b, 8)))")]
-  [TestCase("LoadLittle_f64", "net2.0", Converter + "Int64BitsToDouble((long)Load(a, b, 8, true))")]
-  [TestCase("StoreLittle_f32", "net10.0", "Store(a, b, (ulong)" + Converter + "SingleToInt32Bits(c), 4, true);")]
-  [TestCase("StoreLittle_f32", "netstandard2.1", "Store(a, b, (ulong)" + Converter + "SingleToInt32Bits(c), 4, true);")]
-  [TestCase("StoreBig_f32", "netstandard2.0", "Store(a, b, (ulong)SingleToInt32Bits(c), 4, false);")]
-  [TestCase("StoreBig_f64", "net2.0", "Store(a, b, (ulong)" + Converter + "DoubleToInt64Bits(c), 8, false);")]
-  [TestCase("StoreLittle_f64", "net10.0", "Store(a, b, (ulong)" + Converter + "DoubleToInt64Bits(c), 8, true);")]
+  [TestCase("LoadLittle_f64", "net2.0", Converter + "Int64BitsToDouble((long)Load64(a, b, true))")]
+  [TestCase("StoreLittle_f32", "net10.0", "Store32(a, b, (uint)" + Converter + "SingleToInt32Bits(c), 4, true);")]
+  [TestCase("StoreLittle_f32", "netstandard2.1", "Store32(a, b, (uint)" + Converter + "SingleToInt32Bits(c), 4, true);")]
+  [TestCase("StoreBig_f32", "netstandard2.0", "Store32(a, b, (uint)" + Converter + "ToInt32(" + Converter + "GetBytes(c), 0), 4, false);")]
+  [TestCase("StoreBig_f64", "net2.0", "Store64(a, b, (ulong)" + Converter + "DoubleToInt64Bits(c), false);")]
+  [TestCase("StoreLittle_f64", "net10.0", "Store64(a, b, (ulong)" + Converter + "DoubleToInt64Bits(c), true);")]
   public void Form_IsTheOneOfTheProfile(string function, string profile, string form) {
     var text = Emit(function, CSharpProfile.Parse(profile));
     Assert.That(Body(text, function), Does.Contain(form), text);
-    if (!form.Contains("Load(") && !form.Contains("Store("))
+    if (!form.Contains("Load32(") && !form.Contains("Load64(") && !form.Contains("Store32(") && !form.Contains("Store64("))
       Assert.That(text, Does.Not.Contain("private static"), "no helper where the base library has the form");
   }
 

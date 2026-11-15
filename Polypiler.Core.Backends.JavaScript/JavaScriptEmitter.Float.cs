@@ -59,7 +59,7 @@ public static partial class JavaScriptEmitter {
   public static IrModule Legalize(IrModule module, System.Func<IrModule> implementations, JavaScriptProfile profile, FloatMode mode, JavaScriptCapabilities? capabilities = null) {
     var table = capabilities ?? JavaScriptCapabilities.Standard;
     var floats = FloatLegalization.Rewrite(intrinsic => Writes(intrinsic, profile, mode, table));
-    var helpers = JavaScriptLibrary.Rewrite(name => table.Has(name, profile));
+    var helpers = JavaScriptLibrary.Rewrite(profile, table);
     return LibraryLegalization.Lower(module, implementations, (expression, calls) => floats(expression, calls) ?? helpers(expression, calls));
   }
 
@@ -75,7 +75,7 @@ public static partial class JavaScriptEmitter {
   /// <returns>The module to emit.</returns>
   public static IrModule LegalizeHelpers(IrModule module, System.Func<IrModule> implementations, JavaScriptProfile profile, JavaScriptCapabilities? capabilities = null) {
     var table = capabilities ?? JavaScriptCapabilities.Standard;
-    return LibraryLegalization.Lower(module, implementations, JavaScriptLibrary.Rewrite(name => table.Has(name, profile)));
+    return LibraryLegalization.Lower(module, implementations, JavaScriptLibrary.Rewrite(profile, table));
   }
 
   private sealed partial class Writer {
@@ -89,12 +89,6 @@ public static partial class JavaScriptEmitter {
       var format = intrinsic.Arguments[0].Type;
       if (!format.IsFloat || FloatOperationTable.Of(intrinsic.Op) is not { Double: not null })
         return null;
-
-      if (intrinsic.Op == IrIntrinsicOp.Clamp)
-        return (this.Helper("$clamp", all), true);
-
-      if (intrinsic.Op == IrIntrinsicOp.RoundDigits)
-        return (this.Helper(format == IrType.F32 ? "$roundd32" : "$roundd", all), true);
 
       // An operation without a function of Math is the portable implementation, which legalization puts in.
       if (!_natives.TryGetValue(intrinsic.Op, out var name)) {

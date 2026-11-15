@@ -299,8 +299,8 @@ public sealed class CSharpEmitterProfileTests {
     Assert.That(modern, Does.Contain("public static uint F(uint x, int n) => global::System.Numerics.BitOperations.RotateLeft(x, n);").And.Not.Contain("private"));
 
     var legacy = Accepted(Emit(module, "net4.6"), "net4.6");
-    Assert.That(legacy, Does.Not.Contain("BitOperations").And.Contain("public static uint F(uint x, int n) => RotateLeft(x, n);")
-      .And.EndWith("\n  private static uint RotateLeft(uint value, int count) {\n    return (value << count) | (value >> (32 - (count & 31)));\n  }\n\n}\n"));
+    Assert.That(legacy, Does.Not.Contain("BitOperations").And.Contain("public static uint F(uint x, int n) => RotateLeft32(x, n);")
+      .And.EndWith("\n  private static uint RotateLeft32(uint value, int count) => unchecked((value << count) | (value >> (-count & 31)));\n\n}\n"));
     foreach (var text in new[] { modern, legacy })
       Assert.That(_overflowChecking.Select(checking => Run(text, checking, 0x12345678u, 8)), Has.All.EqualTo(878082066u));
   }
@@ -325,13 +325,14 @@ public sealed class CSharpEmitterProfileTests {
       "public static int F(uint a, ulong b, float c) => System.Numerics.BitOperations.PopCount(b) + System.Numerics.BitOperations.PopCount(a) "
       + "+ System.Numerics.BitOperations.PopCount(a + 1) + (int)System.Numerics.BitOperations.RotateLeft(a, 3) + (sbyte)c + (int)System.MathF.Sqrt(c);", "net2.0");
     var declarations = text.Split('\n').Where(line => line.StartsWith("  private static ", StringComparison.Ordinal)).ToList();
+    // The helpers of the library stand in the order legalization first needed them, each once.
     Assert.That(declarations, Is.EqualTo(new[] {
-      "  private static uint RotateLeft(uint value, int count) {",
-      "  private static int PopCount(uint value) {",
-      "  private static int PopCount(ulong value) {",
-      "  private static int Saturated(double value, int low, int high) {"
+      "  private static int PopCount64(ulong value) {",
+      "  private static int PopCount32(uint value) {",
+      "  private static uint RotateLeft32(uint value, int count) {",
+      "  private static int SaturateToInt32(double value, int low, int high) {"
     }));
-    Assert.That(text, Does.Contain("(sbyte)Saturated(c, -2147483648, 2147483647)").And.Contain("Saturated((float)global::System.Math.Sqrt(c), -2147483648, 2147483647)"));
+    Assert.That(text, Does.Contain("(sbyte)SaturateToInt32((double)c, -2147483648, 2147483647)").And.Contain("SaturateToInt32((double)(float)global::System.Math.Sqrt(c), -2147483648, 2147483647)"));
     Assert.That(_overflowChecking.Select(checking => Run(text, checking, 0xFFu, ulong.MaxValue, 300.5f)), Has.All.EqualTo(64 + 8 + 1 + 0x7F8 + 44 + 17));
   }
 
@@ -342,23 +343,23 @@ public sealed class CSharpEmitterProfileTests {
   [Test]
   public void Helper_GivesWayToAFunctionOfItsName() {
     var module = Import(
-      "public static uint RotateLeft(uint a, int n) => System.Numerics.BitOperations.RotateLeft(a, n); "
-      + "public static int PopCount_(ulong PopCount) => System.Numerics.BitOperations.PopCount(PopCount); "
+      "public static uint RotateLeft32(uint a, int n) => System.Numerics.BitOperations.RotateLeft(a, n); "
+      + "public static int PopCount32(ulong PopCount64) => System.Numerics.BitOperations.PopCount(PopCount64); "
       + "public static ulong BigMul(uint Fill, uint Clear) => System.Math.BigMul(Fill, Clear);");
     var text = Accepted(Emit(module, "net2.0"), "net2.0");
-    Assert.That(text, Does.Contain("  public static uint RotateLeft(uint a, int n) {\n    return RotateLeft_(a, n);\n  }\n")
-      .And.Contain("  public static int PopCount_(ulong PopCount__) {\n    return PopCount(PopCount__);\n  }\n")
-      .And.Contain("  public static ulong BigMul(uint Fill, uint Clear) {\n    return BigMul_(Fill, Clear);\n  }\n")
-      .And.Contain("  private static uint RotateLeft_(uint value, int count) {\n")
-      .And.Contain("  private static int PopCount(ulong value) {\n")
-      .And.Contain("  private static ulong BigMul_(uint left, uint right) {\n"));
+    Assert.That(text, Does.Contain("  public static uint RotateLeft32(uint a, int n) {\n    return RotateLeft32_(a, n);\n  }\n")
+      .And.Contain("  public static int PopCount32(ulong PopCount64_) {\n    return PopCount64(PopCount64_);\n  }\n")
+      .And.Contain("  public static ulong BigMul(uint Fill, uint Clear) {\n    unchecked {\n      return (ulong)Fill * (ulong)Clear;\n    }\n  }\n")
+      .And.Contain("  private static uint RotateLeft32_(uint value, int count) {\n")
+      .And.Contain("  private static int PopCount64(ulong value) {\n")
+      .And.Contain("PopCount32_((uint)value)"));
 
     // The newest profile calls the library; the names of the public functions are the same.
     var native = Accepted(Emit(module, "net10.0"), "net10.0");
-    Assert.That(native, Does.Not.Contain("private").And.Contain("public static uint RotateLeft(uint a, int n) =>").And.Contain("public static int PopCount_(ulong PopCount) =>"));
+    Assert.That(native, Does.Not.Contain("private").And.Contain("public static uint RotateLeft32(uint a, int n) =>").And.Contain("public static int PopCount32(ulong PopCount64) =>"));
     foreach (var build in new[] { text, native }.SelectMany(file => _overflowChecking.Select(checking => GeneratedCSharp.Compile(file, checking)))) {
-      Assert.That(build.Method("RotateLeft").Invoke(null, [0x80000001u, 1]), Is.EqualTo(3u));
-      Assert.That(build.Method("PopCount_").Invoke(null, [0xF0F0UL]), Is.EqualTo(8));
+      Assert.That(build.Method("RotateLeft32").Invoke(null, [0x80000001u, 1]), Is.EqualTo(3u));
+      Assert.That(build.Method("PopCount32").Invoke(null, [0xF0F0UL]), Is.EqualTo(8));
       Assert.That(build.Method("BigMul").Invoke(null, [uint.MaxValue, uint.MaxValue]), Is.EqualTo(0xFFFFFFFE00000001UL));
     }
   }
@@ -457,15 +458,15 @@ public sealed class CSharpEmitterProfileTests {
   /// the same on the runtime of that framework as here.
   /// </summary>
   [TestCase("int", "net10.0", "(int)a", null)]
-  [TestCase("int", "net8.0", "Saturated(a, -2147483648, 2147483647)", "private static int Saturated(double value, int low, int high) {")]
+  [TestCase("int", "net8.0", "SaturateToInt32(a, -2147483648, 2147483647)", "private static int SaturateToInt32(double value, int low, int high) => (value >= (double)high) ? high : ((value > (double)low) ? checked((int)value) : ((value <= (double)low) ? low : 0));")]
   [TestCase("uint", "net10.0", "(uint)a", null)]
-  [TestCase("uint", "net8.0", "SaturatedUInt32(a)", "private static uint SaturatedUInt32(double value) {")]
+  [TestCase("uint", "net8.0", "SaturateToUInt32(a)", "private static uint SaturateToUInt32(double value) => (value >= 4294967295.0) ? 4294967295u : ((value > 0.0) ? checked((uint)value) : 0u);")]
   [TestCase("long", "net10.0", "(long)a", null)]
-  [TestCase("long", "net2.0", "SaturatedInt64(a)", "private static long SaturatedInt64(double value) {")]
+  [TestCase("long", "net2.0", "SaturateToInt64(a)", "private static long SaturateToInt64(double value) {")]
   [TestCase("ulong", "net10.0", "(ulong)a", null)]
-  [TestCase("ulong", "netcoreapp3.1", "SaturatedUInt64(a)", "private static ulong SaturatedUInt64(double value) {")]
+  [TestCase("ulong", "netcoreapp3.1", "SaturateToUInt64(a)", "private static ulong SaturateToUInt64(double value) => (value >= 1.8446744073709552E+19) ? 18446744073709551615UL : ((value > 0.0) ? checked((ulong)value) : 0UL);")]
   [TestCase("short", "net10.0", "(short)(int)a", null)]
-  [TestCase("short", "net2.0", "(short)Saturated(a, -2147483648, 2147483647)", "private static int Saturated(double value, int low, int high) {")]
+  [TestCase("short", "net2.0", "(short)SaturateToInt32(a, -2147483648, 2147483647)", "private static int SaturateToInt32(double value, int low, int high) {")]
   public void SaturatingConversion_IsACastOnlyWhereTheFrameworkSaturates(string type, string profile, string expected, string? helper) {
     var text = Emitted($"public static {type} F(double a) => ({type})a;", profile);
     Assert.That(EmittedCSharp.Body(text), Is.EqualTo(new[] { $"return {expected};" }));

@@ -22,11 +22,15 @@ public sealed class O0005DeadCode : IIrPass {
   public string Name => "dead-code removal";
 
   /// <inheritdoc/>
-  public IrModule Run(IrModule module, Action<string, string> applied) {
+  public IrModule Run(IrModule module, Func<IrFunction, bool> scope, Action<string, string> applied) {
     ArgumentNullException.ThrowIfNull(module);
+    ArgumentNullException.ThrowIfNull(scope);
     ArgumentNullException.ThrowIfNull(applied);
     var changed = false;
     var functions = module.Functions.Select(function => {
+      if (!scope(function))
+        return function;
+
       var run = new Walk(function, applied);
       var body = run.Body();
       if (!run.Changed)

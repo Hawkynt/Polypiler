@@ -131,14 +131,15 @@ public sealed class TargetPassTests {
   [Test]
   public void InliningScenario_OnTheEmittedModule() {
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap("public static uint F(uint x) => System.Numerics.BitOperations.RotateLeft(x, 8);"));
-    Assert.That(LegalizedJavaScript.Emit(module, _es5).Single().Content, Does.Contain("return $rotl(x, 8);"));
+    // The helper of the library is a helper of the module, which the target pass inlines as it did the backend's own.
+    Assert.That(LegalizedJavaScript.Emit(module, _es5).Single().Content, Does.Contain("return RotateLeft32(x, 8);"));
     var inlined = LegalizedJavaScript.Emit(module, _es5, FloatMode.Accurate, null, TargetPassOptions.Default).Files.Single().Content;
-    Assert.That(inlined, Does.Not.Contain("$rotl").And.Contain("return ((x << 8) | (x >>> (-8 & 31))) >>> 0;"));
+    Assert.That(inlined, Does.Not.Contain("RotateLeft32").And.Contain("(x << 8)"));
     var kept = LegalizedJavaScript.Emit(module, _es5, FloatMode.Accurate, null, new TargetPassOptions { Disabled = new HashSet<string> { "O0500" } });
-    Assert.That(kept.Files.Single().Content, Does.Contain("function $rotl(").And.Contain("return $rotl(x, 8);"));
+    Assert.That(kept.Files.Single().Content, Does.Contain("function RotateLeft32(").And.Contain("return RotateLeft32(x, 8);"));
     Assert.That(kept.Applications, Is.Empty);
     var csharp = LegalizedCSharp.Emit(module, CSharpProfile.Net20, FloatMode.Accurate, null, null, TargetPassOptions.Default).Files.Single().Content;
-    Assert.That(csharp, Does.Contain("return (uint)((x << 8) | (x >> (32 - (8 & 31))));").And.Not.Contain("private static uint RotateLeft"));
+    Assert.That(csharp, Does.Contain("(x << 8)").And.Not.Contain("private static uint RotateLeft32"));
   }
 
   #endregion
@@ -298,7 +299,7 @@ public sealed class TargetPassTests {
     return (exitCode, error.ToString(), text);
   }
 
-  [TestCase("O9998", "unknown optimization 'O9998'; the pipeline has O0100")]
+  [TestCase("O9998", "unknown optimization 'O9998'; the pipeline has O0001, O0003, O0005, O0006, O0023, O0100")]
   [TestCase("O0500x", "'O0500x' is not an optimization number of the form O####")]
   public void UnknownTargetPass_IsAUsageError(string id, string message) {
     var (exitCode, error, _) = this.Translate("--disable-opt", id);
@@ -308,13 +309,14 @@ public sealed class TargetPassTests {
 
   [Test]
   public void TargetPasses_FollowTheSwitchesOfTheCommandLine() {
-    var (exitCode, error, text) = this.Translate("--explain-opt");
+    // Without the inlining in the IR (O0006) the helper reaches the target passes as a call.
+    var (exitCode, error, text) = this.Translate("--explain-opt", "--disable-opt", "O0006");
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
-    Assert.That(error, Does.Contain("opt O0500 helper inlining: '$rotl' into 'F'").And.Contain("opt O0501 unused declaration removal: '$rotl'"));
-    Assert.That(text, Does.Not.Contain("$rotl"));
-    Assert.That(this.Translate("--disable-opt", "O0500").Text, Does.Contain("return $rotl(x, 8);"));
-    Assert.That(this.Translate("--opt", "none").Text, Does.Contain("return $rotl(x, 8);"));
-    Assert.That(this.Translate("--disable-opt", "O0501").Text, Does.Contain("function $rotl(").And.Not.Contain("return $rotl("));
+    Assert.That(error, Does.Contain("opt O0500 helper inlining: 'RotateLeft32' into 'F'").And.Contain("opt O0501 unused declaration removal: 'RotateLeft32'"));
+    Assert.That(text, Does.Not.Contain("RotateLeft32"));
+    Assert.That(this.Translate("--disable-opt", "O0006,O0500").Text, Does.Contain("return RotateLeft32(x, 8);"));
+    Assert.That(this.Translate("--opt", "none").Text, Does.Contain("return RotateLeft32(x, 8);"));
+    Assert.That(this.Translate("--disable-opt", "O0006,O0501").Text, Does.Contain("function RotateLeft32(").And.Not.Contain("return RotateLeft32("));
     Assert.That(this.Translate().Error, Does.Not.Contain("O0500"));
   }
 

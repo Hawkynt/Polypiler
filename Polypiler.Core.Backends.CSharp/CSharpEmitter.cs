@@ -183,7 +183,8 @@ public static partial class CSharpEmitter {
         // Written as other operations, the profile has to have what those are written with.
         foreach (var part in Expressions(row.Rewrite!((IrIntrinsic)expression)).Where(IsTabled))
           Ask(part);
-      else if (!row.IsIn(profile) && row.Replacement is null && !(row.Total is not null && expression is IrIntrinsic total && row.IsTotal!(total.Arguments)))
+      else if (!row.IsIn(profile) && row.Replacement is null && !(row.Total is not null && expression is IrIntrinsic total && row.IsTotal!(total.Arguments))
+        && !(expression is IrIntrinsic view && IrViews.IsEndianOnView(view)))
         problems.Add(InexpressibleDescriptor.At($"'{row.Name}' cannot be expressed in C# profile '{profile.Name}'"));
     }
 
@@ -716,6 +717,8 @@ public static partial class CSharpEmitter {
       IrIntrinsic intrinsic when EnumOperations.IsEnum(intrinsic.Op) => false,
       // A conversion between numbers and text computes nothing that overflows; only the digits of a radix cast the value to its bits.
       IrIntrinsic intrinsic when NumberTextOperations.IsNumberText(intrinsic.Op) && intrinsic.Op != IrIntrinsicOp.FormatRadix => false,
+      // An endian access of a view is written by the view's own forms, which cast its bytes.
+      IrIntrinsic intrinsic when IrViews.IsEndianOnView(intrinsic) => true,
       IrIntrinsic { Op: not IrIntrinsicOp.ArrayOf } intrinsic => this.Rewritten(intrinsic) is { } rewritten ? Expressions(rewritten).Any(this.Wraps) : this.Form(intrinsic).Template is not null,
       _ => false
     };

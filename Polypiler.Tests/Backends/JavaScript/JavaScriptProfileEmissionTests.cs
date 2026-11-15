@@ -332,18 +332,18 @@ public sealed class JavaScriptProfileEmissionTests {
     => Assert.That(Body($"public static {to} F({from} a) => {expression};", _es2017), Is.EqualTo(new[] { $"return {expected};" }));
 
   /// <summary>Each operation of the base library on pairs of halves.</summary>
-  [TestCase("long", "long", "System.Math.Abs(a)", "$abs64(a)")]
-  [TestCase("long", "long", "System.Math.Min(a, 3)", "$smin64(a, { hi: 0, lo: 3 })")]
-  [TestCase("long", "long", "System.Math.Max(a, a)", "$smax64(a, a)")]
-  [TestCase("ulong", "ulong", "System.Math.Min(a, a)", "$umin64(a, a)")]
-  [TestCase("ulong", "ulong", "System.Math.Max(a, a)", "$umax64(a, a)")]
-  [TestCase("int", "long", "System.Math.Sign(a)", "$sign64(a)")]
-  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateLeft(a, 5)", "$rotl64(a, 5)")]
-  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateRight(a, 5)", "$rotr64(a, 5)")]
-  [TestCase("int", "ulong", "System.Numerics.BitOperations.PopCount(a)", "$pop64(a)")]
-  [TestCase("int", "ulong", "System.Numerics.BitOperations.LeadingZeroCount(a)", "$clz64(a)")]
-  [TestCase("int", "ulong", "System.Numerics.BitOperations.TrailingZeroCount(a)", "$ctz64(a)")]
-  [TestCase("int", "ulong", "System.Numerics.BitOperations.Log2(a)", "63 - $clz64($or64(a, { hi: 0, lo: 1 }))")]
+  [TestCase("long", "long", "System.Math.Abs(a)", "AbsSigned64(a)")]
+  [TestCase("long", "long", "System.Math.Min(a, 3)", "MinSigned64(a, { hi: 0, lo: 3 })")]
+  [TestCase("long", "long", "System.Math.Max(a, a)", "MaxSigned64(a, a)")]
+  [TestCase("ulong", "ulong", "System.Math.Min(a, a)", "MinUnsigned64(a, a)")]
+  [TestCase("ulong", "ulong", "System.Math.Max(a, a)", "MaxUnsigned64(a, a)")]
+  [TestCase("int", "long", "System.Math.Sign(a)", "Sign64(a)")]
+  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateLeft(a, 5)", "RotateLeft64(a, 5)")]
+  [TestCase("ulong", "ulong", "System.Numerics.BitOperations.RotateRight(a, 5)", "RotateRight64(a, 5)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.PopCount(a)", "PopCount64(a)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.LeadingZeroCount(a)", "LeadingZeroCount64(a)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.TrailingZeroCount(a)", "TrailingZeroCount64(a)")]
+  [TestCase("int", "ulong", "System.Numerics.BitOperations.Log2(a)", "Log2Of64(a)")]
   [TestCase("ulong", "uint", "System.Math.BigMul(a, a)", "$mul64({ hi: 0, lo: a }, { hi: 0, lo: a })")]
   [TestCase("long", "double", "System.BitConverter.DoubleToInt64Bits(a)", "$bits64(a)")]
   [TestCase("double", "long", "System.BitConverter.Int64BitsToDouble(a)", "$float64(a)")]
@@ -513,14 +513,14 @@ public sealed class JavaScriptProfileEmissionTests {
   /// <summary>What ECMAScript 2015 added to Math, and what stands in for it at ECMAScript 5.</summary>
   [TestCase("int", "int", "a * a", "Math.imul(a, a)", "$imul(a, a)")]
   [TestCase("uint", "uint", "a * a", "Math.imul(a, a) >>> 0", "$imul(a, a) >>> 0")]
-  [TestCase("int", "uint", "System.Numerics.BitOperations.LeadingZeroCount(a)", "Math.clz32(a)", "$clz32(a)")]
-  [TestCase("int", "uint", "System.Numerics.BitOperations.Log2(a)", "31 - Math.clz32(a | 1)", "31 - $clz32(a | 1)")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.LeadingZeroCount(a)", "Math.clz32(a)", "LeadingZeroCount32(a)")]
+  [TestCase("int", "uint", "System.Numerics.BitOperations.Log2(a)", "31 - Math.clz32(a | 1)", "Log2Of32(a)")]
   [TestCase("float", "float", "a + a", "Math.fround(a + a)", "$fround(a + a)")]
   [TestCase("float", "float", "System.MathF.Sqrt(a)", "Math.fround(Math.sqrt(a))", "$fround(Math.sqrt(a))")]
   [TestCase("float", "int", "a", "Math.fround(a)", "$fround(a)")]
   [TestCase("float", "float", "++a", "a = Math.fround(a + 1)", "a = $fround(a + 1)")]
-  [TestCase("double", "double", "System.Math.Truncate(a)", "Math.trunc(a)", "$trunc(a)")]
-  [TestCase("int", "int", "System.Math.Sign(a)", "Math.sign(a)", "$sign(a)")]
+  [TestCase("double", "double", "System.Math.Truncate(a)", "Math.trunc(a)", "Truncate(a)")]
+  [TestCase("int", "int", "System.Math.Sign(a)", "Math.sign(a)", "Sign32(a)")]
   [TestCase("double", "double", "System.Math.Floor(a) + System.Math.Ceiling(a) + System.Math.Abs(a) + System.Math.Sqrt(a) + System.Math.Min(a, a) + System.Math.Max(a, a)",
     "((((Math.floor(a) + Math.ceil(a)) + Math.abs(a)) + Math.sqrt(a)) + Math.min(a, a)) + Math.max(a, a)",
     "((((Math.floor(a) + Math.ceil(a)) + Math.abs(a)) + Math.sqrt(a)) + Math.min(a, a)) + Math.max(a, a)")]
@@ -536,10 +536,9 @@ public sealed class JavaScriptProfileEmissionTests {
   public void Helpers_AreWrittenForTheLevel() {
     const string source = "public static int F(uint a, ulong b, float f) => System.Numerics.BitOperations.PopCount(a) + System.Numerics.BitOperations.TrailingZeroCount(b) + (int)f + (int)(f * f);";
     var old = Emit(source, _es5);
-    Assert.That(Helpers(old), Is.EqualTo(new[] { "imul", "clz32", "fround", "trunc", "f2i", "pop", "ctz", "ctz64" }));
-    Assert.That(old, Does.Contain("return $imul((value + (value >>> 4)) & 0x0F0F0F0F, 0x01010101) >>> 24;")
-      .And.Contain("return value === 0 ? 32 : 31 - $clz32(value & -value);")
-      .And.Contain("return value.lo !== 0 ? $ctz(value.lo) : 32 + $ctz(value.hi);")
+    // The counts are helpers of the library, written at the level as every function is; the writer's own helpers are what the level lacks.
+    Assert.That(Helpers(old), Is.EqualTo(new[] { "imul", "fround", "trunc", "shr64", "f2i" }));
+    Assert.That(old, Does.Contain("function PopCount32(value) {").And.Contain("function TrailingZeroCount64(value) {").And.Contain("$imul(")
       .And.Contain("return value <= low ? low : value >= high ? high : $trunc(value) + 0;")
       .And.Contain("  var whole = Math.floor(rest);\n"));
 
@@ -548,12 +547,10 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(typed, Does.Contain("var $f32a = new Float32Array(1);\n\nfunction $fround(value) {\n  $f32a[0] = value;\n  return $f32a[0];\n}\n"));
 
     var modern = Emit(source, _es2017);
-    Assert.That(Helpers(modern), Is.EqualTo(new[] { "f2i", "pop", "ctz", "ctz64" }));
-    Assert.That(modern, Does.Contain("return Math.imul((value + (value >>> 4)) & 0x0F0F0F0F, 0x01010101) >>> 24;")
-      .And.Contain("return value === 0 ? 32 : 31 - Math.clz32(value & -value);")
-      .And.Contain("return value.lo !== 0 ? $ctz(value.lo) : 32 + $ctz(value.hi);"));
+    Assert.That(Helpers(modern), Is.EqualTo(new[] { "shr64", "f2i" }));
+    Assert.That(modern, Does.Contain("function PopCount32(value) {").And.Contain("Math.imul(").And.Not.Contain("$imul("));
 
-    Assert.That(Emit(source, _es2020), Does.Contain("  const low = Number(value & 0xFFFFFFFFn);\n  return low !== 0 ? $ctz(low) : 32 + $ctz(Number(value >> 32n));"));
+    Assert.That(Emit(source, _es2020), Does.Contain("function TrailingZeroCount64(value) {").And.Not.Contain("$shr64"));
   }
 
   /// <summary>The helpers of the arithmetic on pairs of halves, in their order, each with what it calls.</summary>
@@ -570,8 +567,7 @@ public sealed class JavaScriptProfileEmissionTests {
     Assert.That(Helpers(text), Is.EqualTo(new[] {
       "add64", "sub64", "neg64", "not64", "and64", "or64", "xor64", "shl64", "shr64", "sar64", "eq64", "ucmp64", "scmp64", "mulw", "mag64", "udm64",
       "div64", "rem64", "udiv64", "urem64", "addck64s", "addck64u", "subck64s", "subck64u", "mulck64s", "mulck64u", "ck64s", "ck64u", "sx64", "ul2d", "l2d", "d2l",
-      "f2l", "f2lc", "ul2f", "l2f", "abs64", "smin64", "umin64", "smax64", "umax64", "sign64", "rotl64", "rotr64", "pop", "pop64", "clz64", "ctz", "ctz64",
-      "bits64", "float64", "step64", "stepck64s", "stepck64u"
+      "f2l", "f2lc", "ul2f", "l2f", "bits64", "float64", "step64", "stepck64s", "stepck64u"
     }));
     Assert.That(text, Does.Contain("const $view = new DataView(new ArrayBuffer(8));")
       .And.Contain("  return { hi: $view.getUint32(0), lo: $view.getUint32(4) };")
@@ -631,10 +627,10 @@ public sealed class JavaScriptProfileEmissionTests {
       ["Math.tanh"] = ("public static float F(float a) => System.MathF.Tanh(a);", "Math.tanh(", "Float"),
       ["Math.cbrt"] = ("public static float F(float a) => System.MathF.Cbrt(a);", "Math.cbrt(", "Float"),
       ["Math.hypot"] = ("public static float F(float a) => System.Single.Hypot(a, a);", "Math.hypot(", "Float"),
-      ["Math.clz32"] = ("public static int F(uint a) => System.Numerics.BitOperations.LeadingZeroCount(a);", "Math.clz32(a)", "$clz32(a)"),
+      ["Math.clz32"] = ("public static int F(uint a) => System.Numerics.BitOperations.LeadingZeroCount(a);", "Math.clz32(a)", "LeadingZeroCount32(a)"),
       ["Math.fround"] = ("public static float F(float a) => a + a;", "Math.fround(a + a)", "$fround(a + a)"),
-      ["Math.trunc"] = ("public static double F(double a) => System.Math.Truncate(a);", "Math.trunc(a)", "$trunc(a)"),
-      ["Math.sign"] = ("public static int F(int a) => System.Math.Sign(a);", "Math.sign(a)", "$sign(a)"),
+      ["Math.trunc"] = ("public static double F(double a) => System.Math.Truncate(a);", "Math.trunc(a)", "Truncate(a)"),
+      ["Math.sign"] = ("public static int F(int a) => System.Math.Sign(a);", "Math.sign(a)", "Sign32(a)"),
       ["Int8Array"] = (Array("sbyte"), "new Int8Array($len(n))", "$new($len(n), 0)"),
       ["Uint8Array"] = (Array("byte"), "new Uint8Array($len(n))", "$new($len(n), 0)"),
       ["Int16Array"] = (Array("short"), "new Int16Array($len(n))", "$new($len(n), 0)"),

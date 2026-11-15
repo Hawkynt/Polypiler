@@ -508,47 +508,13 @@ public sealed class CSharpCapabilitiesTests {
     // The helpers of the collections take the nested classes of the collections (#1328), which are C# 2 as well.
     string[] classes = [CSharpCollectionClasses.KeyedSlots, CSharpCollectionClasses.FloatKeys, CSharpCollectionClasses.SingleKeys];
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))).Concat(classes))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(127));
+    // The operations are helpers of the library now; what stays with the backend is the language and the runtime it stands in for.
+    Assert.That(helpers, Has.Count.EqualTo(48));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);
     foreach (var checking in _overflowChecking)
       Assert.That(() => GeneratedCSharp.Compile(text, checking), Throws.Nothing);
-  }
-
-  /// <summary>
-  /// Test design 6 for the one helper no operation of the IR calls yet: the product of two 64-bit
-  /// numbers in four partial products has the two halves <c>Math.BigMul</c> has, at 0, 1, all ones,
-  /// the top bit and the carries between the halves, and on a thousand random pairs (seed 2026), as
-  /// a property: a differing pair is shrunk operand by operand and recorded with its seed.
-  /// </summary>
-  [Test]
-  public void FullProductOfTwo64BitNumbers_IsWhatTheLibraryComputes() {
-    var helper = CSharpCapabilities.Default.Rows.Single(row => row.Name == "Math.BigMul(ulong, ulong, out ulong)").Helper!;
-    var text = $"public static class Product {{\n\n  {string.Join("\n  ", helper.Lines(helper.Name))}\n\n}}\n";
-    ulong[] edges = [0, 1, 2, 0xFFFFFFFF, 0x100000000, 0x100000001, 0x7FFFFFFFFFFFFFFF, 0x8000000000000000, 0xFFFFFFFF00000000, ulong.MaxValue];
-    IEnumerable<(ulong Left, ulong Right)> Pairs(ulong seed) {
-      var random = new SeededRandom(seed);
-      return edges.SelectMany(left => edges.Select(right => (left, right)))
-        .Concat(Enumerable.Range(0, 1000).Select(_ => (random.NextUInt64(), random.NextUInt64())));
-    }
-
-    static IEnumerable<(ulong Left, ulong Right)> Smaller((ulong Left, ulong Right) pair)
-      => Shrink.Integer(pair.Left).Select(left => (left, pair.Right)).Concat(Shrink.Integer(pair.Right).Select(right => (pair.Left, right)));
-
-    var checkedPairs = 0;
-    foreach (var checking in _overflowChecking) {
-      var product = GeneratedCSharp.Compile(text, checking).Method("BigMul");
-      Property.ForAll(2026, 1100, Pairs, Smaller, pair => {
-        ++checkedPairs;
-        object?[] arguments = [pair.Left, pair.Right, null];
-        var high = product.Invoke(null, arguments);
-        return Equals((high, arguments[2]), ((object)Math.BigMul(pair.Left, pair.Right, out var low), (object)low));
-      }, $"{nameof(this.FullProductOfTwo64BitNumbers_IsWhatTheLibraryComputes)}_CheckOverflow_{checking}");
-    }
-
-    Assert.That(Pairs(2026).ToList(), Has.Count.EqualTo(1100));
-    Assert.That(checkedPairs, Is.EqualTo(1100 * _overflowChecking.Length));
   }
 
 }

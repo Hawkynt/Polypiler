@@ -138,7 +138,7 @@ public static partial class JavaScriptEmitter {
         return this.EnumOperation(intrinsic);
 
       // An operation the profile has only as a helper of the library reaches the writer only where the module was not legalized.
-      if (JavaScriptLibrary.Covers(intrinsic, name => this._capabilities.Has(name, this._profile))) {
+      if (JavaScriptLibrary.Covers(intrinsic, this._profile, this._capabilities)) {
         if (this._refused.Add(intrinsic.Op.ToString()))
           this._problems.Add(InexpressibleDescriptor.At($"'{intrinsic.Op}' needs its helper of the library in JavaScript profile '{this._profile.LevelName}'; the module was not legalized"));
 
@@ -161,8 +161,6 @@ public static partial class JavaScriptEmitter {
           return (Invoke("Math.min", all), true);
         case IrIntrinsicOp.Max:
           return (Invoke("Math.max", all), true);
-        case IrIntrinsicOp.Sign:
-          return (this.Helper("$fsign", all), true);
         case IrIntrinsicOp.Sqrt:
           return (type == IrType.F32 ? this.Fround(Invoke("Math.sqrt", all)) : Invoke("Math.sqrt", all), true);
         case IrIntrinsicOp.Floor:
@@ -170,11 +168,9 @@ public static partial class JavaScriptEmitter {
         case IrIntrinsicOp.Ceiling:
           return (Invoke("Math.ceil", all), true);
         case IrIntrinsicOp.Truncate:
-          return (this.Native("Math.trunc") ? Invoke("Math.trunc", all) : this.Helper("$trunc", all), true);
-        case IrIntrinsicOp.RoundEven:
-          return (this.Helper("$round", all), true);
-        case IrIntrinsicOp.RoundAway:
-          return (this.Helper("$rounda", all), true);
+          // Below ECMAScript 2015 the library's truncation stands in; without it the level has no form.
+          this.Native("Math.trunc");
+          return (Invoke("Math.trunc", all), true);
         case IrIntrinsicOp.FloatBits:
           return (this.Helper(type == IrType.F64 ? "$bits64" : "$bits32", all), true);
         case IrIntrinsicOp.RoundHalfUp:

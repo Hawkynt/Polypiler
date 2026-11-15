@@ -147,22 +147,32 @@ public static partial class FloatOperations {
   /// <summary>
   /// The value within two bounds as <c>Math.Clamp</c> computes it: the lower bound when the value is
   /// below it, the upper bound when above, otherwise the value itself - also a NaN value, and the
-  /// value when a bound is a NaN. A lower bound above the upper one is an error the operation traps
-  /// on before it calls this method; here it gives what the comparisons give.
+  /// value when a bound is a NaN. A lower bound above the upper one traps as an invalid operation,
+  /// as the operation of the IR does: the method is the operation's helper where a target lacks it.
   /// </summary>
   /// <param name="value">The value.</param>
   /// <param name="low">The lower bound.</param>
   /// <param name="high">The upper bound.</param>
   /// <returns>The value within the bounds.</returns>
-  public static double Clamp(double value, double low, double high)
-    => value < low ? low : value > high ? high : value;
+  /// <exception cref="ArithmeticException">The lower bound is above the upper one.</exception>
+  public static double Clamp(double value, double low, double high) {
+    if (low > high)
+      throw new ArithmeticException("invalid operation");
+
+    return value < low ? low : value > high ? high : value;
+  }
 
   /// <summary>The value within two bounds of <c>float</c>; see <see cref="Clamp"/>.</summary>
   /// <param name="value">The value.</param>
   /// <param name="low">The lower bound.</param>
   /// <param name="high">The upper bound.</param>
   /// <returns>The value within the bounds.</returns>
-  public static float ClampF(float value, float low, float high)
-    => value < low ? low : value > high ? high : value;
+  /// <exception cref="ArithmeticException">The lower bound is above the upper one.</exception>
+  public static float ClampF(float value, float low, float high) {
+    if (low > high)
+      throw new ArithmeticException("invalid operation");
+
+    return value < low ? low : value > high ? high : value;
+  }
 
 }

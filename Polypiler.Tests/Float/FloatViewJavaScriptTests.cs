@@ -63,26 +63,26 @@ public sealed class FloatViewJavaScriptTests {
   }
 
   /// <summary>Test design 7: a module carries the helpers its one operation needs in its profile, and no other.</summary>
-  [TestCase("LoadLittle_f32", "es5", false, new[] { "$float32", "$load" })]
-  [TestCase("LoadLittle_f32", "es5", true, new[] { "$loadf32" })]
-  [TestCase("LoadBig_f64", "es5", false, new[] { "$float64", "$load64" })]
-  [TestCase("LoadBig_f64", "es2015", false, new[] { "$loadf64" })]
-  [TestCase("StoreBig_f32", "es5", false, new[] { "$bits32", "$store" })]
-  [TestCase("StoreBig_f32", "es2017", false, new[] { "$storef32" })]
-  [TestCase("StoreLittle_f64", "es5", false, new[] { "$bits64", "$store64" })]
-  [TestCase("StoreLittle_f64", "es2022", false, new[] { "$storef64" })]
+  [TestCase("LoadLittle_f32", "es5", false, new[] { "$get", "$float32" })]
+  [TestCase("LoadLittle_f32", "es5", true, new[] { "$get", "$float32" })]
+  [TestCase("LoadBig_f64", "es5", false, new[] { "$or64", "$shl64", "$get", "$float64" })]
+  [TestCase("LoadBig_f64", "es2015", false, new[] { "$or64", "$shl64", "$get", "$float64" })]
+  [TestCase("StoreBig_f32", "es5", false, new[] { "$imul", "$set", "$bits32" })]
+  [TestCase("StoreBig_f32", "es2017", false, new[] { "$set", "$bits32" })]
+  [TestCase("StoreLittle_f64", "es5", false, new[] { "$imul", "$shr64", "$set", "$bits64" })]
+  [TestCase("StoreLittle_f64", "es2022", false, new[] { "$set", "$bits64" })]
   public void Module_CarriesTheHelpersItCalls(string function, string level, bool typed, string[] helpers)
     => Assert.That(Helpers(Emit(function, Profile(level, typed))), Is.EqualTo(helpers));
 
   /// <summary>The forms of the lowering table of the issue.</summary>
-  [TestCase("LoadLittle_f32", "es5", false, "return $float32(($load(a, b, 4, true)) | 0);")]
-  [TestCase("LoadBig_f64", "es5", false, "return $float64($load64(a, b, false));")]
-  [TestCase("StoreBig_f32", "es5", false, "$store(a, b, $bits32(c), 4, false);")]
-  [TestCase("StoreLittle_f64", "es5", false, "$store64(a, b, $bits64(c), true);")]
-  [TestCase("LoadLittle_f32", "es5", true, "return $loadf32(a, b, true);")]
-  [TestCase("LoadBig_f64", "es2020", false, "return $loadf64(a, b, false);")]
-  [TestCase("StoreBig_f32", "es2015", false, "$storef32(a, b, c, false);")]
-  [TestCase("StoreLittle_f64", "es2022", false, "$storef64(a, b, c, true);")]
+  [TestCase("LoadLittle_f32", "es5", false, "return $float32(Load32(a, b, 4, true) | 0);")]
+  [TestCase("LoadBig_f64", "es5", false, "return $float64(Load64(a, b, false));")]
+  [TestCase("StoreBig_f32", "es5", false, "Store32(a, b, $bits32(c) >>> 0, 4, false);")]
+  [TestCase("StoreLittle_f64", "es5", false, "Store64(a, b, $bits64(c), true);")]
+  [TestCase("LoadLittle_f32", "es5", true, "return $float32(Load32(a, b, 4, true) | 0);")]
+  [TestCase("LoadBig_f64", "es2020", false, "return $float64(BigInt.asIntN(64, Load64(a, b, false)));")]
+  [TestCase("StoreBig_f32", "es2015", false, "Store32(a, b, $bits32(c) >>> 0, 4, false);")]
+  [TestCase("StoreLittle_f64", "es2022", false, "Store64(a, b, BigInt.asUintN(64, $bits64(c)), true);")]
   public void Form_IsTheOneOfTheProfile(string function, string level, bool typed, string body) {
     var lines = Emit(function, Profile(level, typed)).Split('\n');
     var start = Array.FindIndex(lines, line => line.Contains($"function {function}("));
@@ -91,13 +91,10 @@ public sealed class FloatViewJavaScriptTests {
 
   /// <summary>A helper on a <c>DataView</c> checks the whole range before it makes the view, with the error the other endian helpers throw.</summary>
   [Test]
-  public void DataViewHelper_ChecksTheRangeFirst() {
+  public void LibraryHelper_ChecksTheRangeFirst() {
     var text = Emit("StoreBig_f64", Profile("es2022"));
-    Assert.That(text, Does.Contain(string.Join("\n",
-      "function $storef64(array, index, value, little) {",
-      "  if (index < 0 || index + 8 > array.length) throw new IndexOutOfRangeError(\"index out of range\");",
-      "  new DataView(array.buffer, array.byteOffset, array.byteLength).setFloat64(index, value, little);",
-      "}")));
+    Assert.That(text, Does.Contain("function Store64(array, index, value, little) {\n  CheckBytes(array, index, 8);\n")
+      .And.Contain("throw new IndexOutOfRangeError(\"index out of range\");"));
   }
 
 }
