@@ -179,6 +179,23 @@ No JavaScript level a profile targets has Explicit Resource Management, so `try`
   (recovering `using` from it is O0257). A `using` or `await using` declaration is the parser's syntax
   error (`PLY1100`), a `[Symbol.dispose]` or `[Symbol.asyncDispose]` method of a class `PLY1102`.
 
+## Rust
+
+Generated Rust has no exception objects: a trap is a panic whose message is the name of the IR trap,
+in every build mode, and a crate has no handler for it. The verification classifies the panic by its
+first line (`RustTraps`), which also reads the messages of Rust's own panics.
+
+| IR trap | Rust | Message |
+| --- | --- | --- |
+| `IntegerOverflow` | `checked_add(…).expect(…)`, `checked_neg`, `checked_abs`, `T::try_from(…).expect(…)`, `ply_f2i_trap_<t>`, `checked_div`/`checked_rem` of `MIN / -1` | `IntegerOverflow` (a `try_from` adds `: TryFromIntError(())`) |
+| `DivideByZero` | `ply_div_<t>`, `ply_rem_<t>` | `DivideByZero` |
+| any trap a library helper throws | `panic!("<trap>")` for the throw of a library exception | the trap's name; for a class several traps share, the first of them (`InvalidOperationException` is `MissingValue`, `ArgumentException` `DuplicateKey`) |
+
+An `IrTry` is refused with `PLY1560` ("exception handling"): catching needs `Result` propagation,
+which the trap policy `result` of phase 2 brings. Rust's own messages (`attempt to divide by zero`,
+`index out of bounds`, `called Option::unwrap() on a None value`, …) map to the traps their class
+stands for.
+
 ## Known differences
 
 - .NET names a class in a namespace with it in the default message ("Exception of type 'N.X' was

@@ -1,0 +1,501 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Polypiler.Core.Backends.Rust.Syntax;
+
+/// <summary>
+/// Reads Rust source back into the syntax tree: the subset the printer writes, by The Rust Reference's
+/// grammar of items, statements and expressions and its table of operator precedence. The parse-back
+/// sweep reads every generated file with it and prints the tree again; the text must come back byte
+/// for byte, which shows that the tree the printer was given is the tree the text means. The reader
+/// keeps no IR types; parentheses are nodes, as the printer writes them.
+/// </summary>
+public static class RustSyntaxReader {
+
+  /// <summary>Reads a source file.</summary>
+  /// <param name="text">The source.</param>
+  /// <returns>The tree.</returns>
+  /// <exception cref="FormatException">The text is not in the subset.</exception>
+  public static RsFile Read(string text) {
+    ArgumentNullException.ThrowIfNull(text);
+    return new Parser(Tokenize(text)).File();
+  }
+
+  private enum Kind { Identifier, Number, String, Lifetime, Punctuation, InnerDoc, OuterDoc, InnerAttribute, OuterAttribute, End }
+
+  private sealed record Token(Kind Kind, string Text);
+
+  private static readonly string[] _punctuation = [
+    "<<=", ">>=", "..=", "::", "->", "=>", "==", "!=", "<=", ">=", "&&", "||", "<<", ">>", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "..",
+    "+", "-", "*", "/", "%", "^", "!", "&", "|", "=", "<", ">", "(", ")", "[", "]", "{", "}", ",", ";", ":", ".", "_", "#"
+  ];
+
+  private static List<Token> Tokenize(string text) {
+    var tokens = new List<Token>();
+    var index = 0;
+    while (index < text.Length) {
+      var c = text[index];
+      if (char.IsWhiteSpace(c)) {
+        ++index;
+        continue;
+      }
+
+      if (text.AsSpan(index).StartsWith("//")) {
+        var end = text.IndexOf('\n', index);
+        end = end < 0 ? text.Length : end;
+        var line = text[index..end];
+        if (line.StartsWith("//!", StringComparison.Ordinal))
+          tokens.Add(new(Kind.InnerDoc, line[3..].TrimStart(' ')));
+        else if (line.StartsWith("///", StringComparison.Ordinal))
+          tokens.Add(new(Kind.OuterDoc, line[3..].TrimStart(' ')));
+        index = end;
+        continue;
+      }
+
+      if (c == '#') {
+        var inner = index + 1 < text.Length && text[index + 1] == '!';
+        var open = text.IndexOf('[', index);
+        var depth = 0;
+        var close = open;
+        for (; close < text.Length; ++close) {
+          depth += text[close] switch { '[' => 1, ']' => -1, _ => 0 };
+          if (depth == 0)
+            break;
+        }
+
+        // An attribute broken over lines reads as the one line it stands for.
+        var content = string.Join(" ", text[(open + 1)..close].Split('\n').Select(line => line.Trim()).Where(line => line.Length > 0))
+          .Replace("( ", "(", StringComparison.Ordinal).Replace(" )", ")", StringComparison.Ordinal);
+        tokens.Add(new(inner ? Kind.InnerAttribute : Kind.OuterAttribute, content));
+        index = close + 1;
+        continue;
+      }
+
+      if (c == '"') {
+        var value = new StringBuilder();
+        ++index;
+        while (text[index] != '"') {
+          if (text[index] == '\\')
+            ++index;
+          value.Append(text[index++]);
+        }
+
+        ++index;
+        tokens.Add(new(Kind.String, value.ToString()));
+        continue;
+      }
+
+      if (c == '\'') {
+        var start = ++index;
+        while (index < text.Length && (char.IsAsciiLetterOrDigit(text[index]) || text[index] == '_'))
+          ++index;
+        tokens.Add(new(Kind.Lifetime, text[start..index]));
+        continue;
+      }
+
+      if (char.IsAsciiDigit(c)) {
+        var start = index;
+        while (index < text.Length && (char.IsAsciiLetterOrDigit(text[index]) || text[index] == '_'
+          || (text[index] == '.' && index + 1 < text.Length && char.IsAsciiDigit(text[index + 1]))
+          || ((text[index] is '-' or '+') && (text[index - 1] is 'e' or 'E') && !text.AsSpan(start, index - start).StartsWith("0x"))))
+          ++index;
+        tokens.Add(new(Kind.Number, text[start..index]));
+        continue;
+      }
+
+      if (char.IsAsciiLetter(c) || (c == '_' && index + 1 < text.Length && (char.IsAsciiLetterOrDigit(text[index + 1]) || text[index + 1] == '_'))) {
+        var start = index;
+        if (text.AsSpan(index).StartsWith("r#"))
+          index += 2;
+        while (index < text.Length && (char.IsAsciiLetterOrDigit(text[index]) || text[index] == '_'))
+          ++index;
+        tokens.Add(new(Kind.Identifier, text[start..index]));
+        continue;
+      }
+
+      var symbol = _punctuation.FirstOrDefault(candidate => text.AsSpan(index).StartsWith(candidate))
+        ?? throw new FormatException($"Unexpected character '{c}' at offset {index}.");
+      tokens.Add(new(Kind.Punctuation, symbol));
+      index += symbol.Length;
+    }
+
+    tokens.Add(new(Kind.End, ""));
+    return tokens;
+  }
+
+  private sealed class Parser(List<Token> tokens) {
+
+    private int _index;
+
+    private Token Peek(int offset = 0) => tokens[Math.Min(this._index + offset, tokens.Count - 1)];
+
+    private Token Next() => tokens[this._index++];
+
+    private bool Is(string text, int offset = 0) => this.Peek(offset) is { Kind: Kind.Punctuation or Kind.Identifier } token && token.Text == text;
+
+    private bool Accept(string text) {
+      if (!this.Is(text))
+        return false;
+
+      ++this._index;
+      return true;
+    }
+
+    private void Expect(string text) {
+      if (!this.Accept(text))
+        throw new FormatException($"Expected '{text}', found '{this.Peek().Text}'.");
+    }
+
+    private string Identifier() {
+      var token = this.Next();
+      return token.Kind == Kind.Identifier || token.Text == "_" ? token.Text : throw new FormatException($"Expected a name, found '{token.Text}'.");
+    }
+
+    public RsFile File() {
+      var docs = new List<string>();
+      var attributes = new List<string>();
+      while (this.Peek().Kind is Kind.InnerDoc or Kind.InnerAttribute) {
+        var token = this.Next();
+        (token.Kind == Kind.InnerDoc ? docs : attributes).Add(token.Text);
+      }
+
+      var items = new List<RsItem>();
+      while (this.Peek().Kind != Kind.End)
+        items.Add(this.Item());
+
+      return new RsFile(docs, attributes, items);
+    }
+
+    private RsItem Item() {
+      var docs = new List<string>();
+      var attributes = new List<string>();
+      while (this.Peek().Kind is Kind.OuterDoc or Kind.OuterAttribute) {
+        var token = this.Next();
+        (token.Kind == Kind.OuterDoc ? docs : attributes).Add(token.Text);
+      }
+
+      var visibility = "";
+      if (this.Accept("pub")) {
+        visibility = "pub";
+        if (this.Is("(")) {
+          this.Expect("(");
+          visibility = $"pub({this.Identifier()})";
+          this.Expect(")");
+        }
+      }
+
+      RsItem item;
+      if (this.Accept("fn"))
+        item = this.Function(visibility);
+      else if (this.Accept("const")) {
+        var name = this.Identifier();
+        this.Expect(":");
+        var type = this.TypeText();
+        this.Expect("=");
+        var value = this.Expression();
+        this.Expect(";");
+        item = new RsConst(name, visibility, type, value);
+      } else if (this.Accept("mod")) {
+        var name = this.Identifier();
+        if (this.Accept(";"))
+          item = new RsModuleDeclaration(name, visibility);
+        else {
+          this.Expect("{");
+          var items = new List<RsItem>();
+          while (!this.Accept("}"))
+            items.Add(this.Item());
+          item = new RsInlineModule(name, items);
+        }
+      } else if (this.Accept("use")) {
+        var path = new StringBuilder();
+        while (!this.Is(";"))
+          path.Append(this.Next().Text);
+        this.Expect(";");
+        item = new RsUse(path.ToString());
+      } else {
+        throw new FormatException($"Expected an item, found '{this.Peek().Text}'.");
+      }
+
+      return item with { Docs = docs, Attributes = attributes };
+    }
+
+    private RsFunction Function(string visibility) {
+      var name = this.Identifier();
+      this.Expect("(");
+      var parameters = new List<RsParameter>();
+      while (!this.Accept(")")) {
+        var parameter = this.Identifier();
+        this.Expect(":");
+        parameters.Add(new RsParameter(parameter, this.TypeText()));
+        this.Accept(",");
+      }
+
+      string? returns = null;
+      if (this.Accept("->"))
+        returns = this.TypeText();
+
+      return new RsFunction(name, visibility, parameters, returns, this.Block());
+    }
+
+    /// <summary>A type as the printer writes it: the tokens up to a separator, with a space after <c>;</c>.</summary>
+    private string TypeText() {
+      var text = new StringBuilder();
+      var depth = 0;
+      while (true) {
+        var token = this.Peek();
+        if (depth == 0 && token.Text is "," or ")" or "=" or "{" or ";" && token.Kind == Kind.Punctuation)
+          return text.ToString();
+
+        depth += token.Text switch { "[" or "(" => 1, "]" or ")" => -1, _ => 0 };
+        this.Next();
+        text.Append(token.Text).Append(token.Text == ";" ? " " : "");
+      }
+    }
+
+    private RsBlock Block() {
+      this.Expect("{");
+      var statements = new List<RsStatement>();
+      RsExpression? tail = null;
+      while (!this.Accept("}")) {
+        if (this.Accept("let")) {
+          var mutable = this.Accept("mut");
+          var name = this.Identifier();
+          string? type = null;
+          if (this.Accept(":"))
+            type = this.TypeText();
+
+          RsExpression? value = null;
+          if (this.Accept("="))
+            value = this.Expression();
+          this.Expect(";");
+          statements.Add(new RsLet(name, mutable, type, value));
+          continue;
+        }
+
+        var expression = this.Expression();
+        if (this.Accept(";"))
+          statements.Add(new RsExpressionStatement(expression));
+        else if (this.Is("}"))
+          tail = expression;
+        else if (Printing.RustPrinter.IsBlockLike(expression))
+          statements.Add(new RsExpressionStatement(expression));
+        else
+          throw new FormatException($"Expected ';' after an expression, found '{this.Peek().Text}'.");
+      }
+
+      return new RsBlock(statements, tail);
+    }
+
+    private RsExpression Expression(int minimum = 0) {
+      var left = this.Prefix();
+      while (true) {
+        var token = this.Peek();
+        if (token.Kind != Kind.Punctuation && token.Text != "as")
+          return left;
+
+        if (token.Text == "as") {
+          if (12 < minimum)
+            return left;
+          this.Next();
+          left = new RsCast(left, this.Identifier());
+          continue;
+        }
+
+        if (token.Text is "=" or "+=" or "-=" or "*=" or "/=" or "%=" or "^=" or "&=" or "|=" or "<<=" or ">>=") {
+          if (minimum > 1)
+            return left;
+          this.Next();
+          left = new RsAssign(left, token.Text, this.Expression(1));
+          continue;
+        }
+
+        if (token.Text is ".." or "..=") {
+          if (minimum > 2)
+            return left;
+          this.Next();
+          left = new RsRange(left, this.Expression(3), token.Text == "..=");
+          continue;
+        }
+
+        var precedence = token.Text switch {
+          "*" or "/" or "%" => 11,
+          "+" or "-" => 10,
+          "<<" or ">>" => 9,
+          "&" => 8,
+          "^" => 7,
+          "|" => 6,
+          "==" or "!=" or "<" or ">" or "<=" or ">=" => 5,
+          "&&" => 4,
+          "||" => 3,
+          _ => -1
+        };
+        if (precedence < 0 || precedence < minimum)
+          return left;
+
+        this.Next();
+        left = new RsBinary(left, token.Text, this.Expression(precedence + 1));
+      }
+    }
+
+    private RsExpression Prefix() {
+      if (this.Is("-") || this.Is("!")) {
+        var op = this.Next().Text;
+        return new RsUnary(op, this.Postfix(this.Prefix13()));
+      }
+
+      return this.Postfix(this.Primary());
+    }
+
+    /// <summary>The operand of a prefix operator: another prefix operator, or a primary with its postfix forms.</summary>
+    private RsExpression Prefix13() {
+      if (this.Is("-") || this.Is("!")) {
+        var op = this.Next().Text;
+        return new RsUnary(op, this.Postfix(this.Prefix13()));
+      }
+
+      return this.Primary();
+    }
+
+    private RsExpression Postfix(RsExpression expression) {
+      while (true) {
+        if (this.Accept(".")) {
+          var name = this.Identifier();
+          expression = new RsMethodCall(expression, name, this.Arguments(")"));
+        } else if (this.Is("(") && expression is RsPath) {
+          expression = new RsCall(expression, this.Arguments(")"));
+        } else if (this.Is("[") && expression is not RsArray) {
+          this.Expect("[");
+          var index = this.Expression();
+          this.Expect("]");
+          expression = new RsIndex(expression, index);
+        } else {
+          return expression;
+        }
+      }
+    }
+
+    private List<RsExpression> Arguments(string close) {
+      this.Expect(close == ")" ? "(" : "[");
+      var arguments = new List<RsExpression>();
+      while (!this.Accept(close)) {
+        arguments.Add(this.Expression());
+        this.Accept(",");
+      }
+
+      return arguments;
+    }
+
+    private RsExpression Primary() {
+      var token = this.Peek();
+      switch (token.Kind) {
+        case Kind.Number:
+          this.Next();
+          return new RsLiteral(token.Text);
+        case Kind.String:
+          this.Next();
+          return new RsString(token.Text);
+        case Kind.Lifetime: {
+          this.Next();
+          this.Expect(":");
+          return this.Is("{") ? new RsLabeledBlock(token.Text, this.Block()) : this.Loop(token.Text);
+        }
+      }
+
+      if (this.Accept("(")) {
+        var inner = this.Expression();
+        this.Expect(")");
+        return new RsParenthesized(inner);
+      }
+
+      if (this.Is("["))
+        return new RsArray(this.Arguments("]"));
+      if (this.Is("{"))
+        return new RsBlockExpression(this.Block());
+      if (this.Is("if"))
+        return this.If();
+      if (this.Is("while") || this.Is("loop") || this.Is("for"))
+        return this.Loop(null);
+      if (this.Accept("match")) {
+        var scrutinee = this.Expression();
+        this.Expect("{");
+        var arms = new List<RsMatchArm>();
+        while (!this.Accept("}")) {
+          var patterns = new List<string> { "" };
+          while (!this.Is("=>")) {
+            var part = this.Next().Text;
+            if (part == "|")
+              patterns.Add("");
+            else
+              patterns[^1] += part;
+          }
+
+          this.Expect("=>");
+          var body = this.Is("{") ? new RsBlockExpression(this.Block()) : this.Expression();
+          this.Accept(",");
+          arms.Add(new RsMatchArm(patterns, body));
+        }
+
+        return new RsMatch(scrutinee, arms);
+      }
+
+      if (this.Accept("break")) {
+        string? label = null;
+        if (this.Peek().Kind == Kind.Lifetime)
+          label = this.Next().Text;
+        return new RsBreak(label, this.Is(";") || this.Is("}") || this.Is(",") ? null : this.Expression());
+      }
+
+      if (this.Accept("continue"))
+        return new RsContinue(this.Peek().Kind == Kind.Lifetime ? this.Next().Text : null);
+      if (this.Accept("return"))
+        return new RsReturn(this.Is(";") || this.Is("}") || this.Is(",") ? null : this.Expression());
+      if (token.Text is "true" or "false") {
+        this.Next();
+        return new RsLiteral(token.Text);
+      }
+
+      if (token.Kind == Kind.Identifier) {
+        var path = new StringBuilder(this.Next().Text);
+        while (this.Accept("::"))
+          path.Append("::").Append(this.Identifier());
+        if (this.Is("!") && this.Is("(", 1)) {
+          this.Next();
+          return new RsMacro(path.ToString(), this.Arguments(")"));
+        }
+
+        return new RsPath(path.ToString());
+      }
+
+      throw new FormatException($"Unexpected '{token.Text}'.");
+    }
+
+    private RsIf If() {
+      this.Expect("if");
+      var condition = this.Expression();
+      var then = this.Block();
+      RsExpression? otherwise = null;
+      if (this.Accept("else"))
+        otherwise = this.Is("if") ? this.If() : new RsBlockExpression(this.Block());
+      return new RsIf(condition, then, otherwise);
+    }
+
+    private RsExpression Loop(string? label) {
+      if (this.Accept("loop"))
+        return new RsLoop(label, this.Block());
+      if (this.Accept("while")) {
+        var condition = this.Expression();
+        return new RsWhile(label, condition, this.Block());
+      }
+
+      this.Expect("for");
+      var pattern = this.Identifier();
+      this.Expect("in");
+      var iterator = this.Expression();
+      return new RsFor(label, pattern, iterator, this.Block());
+    }
+
+  }
+
+}

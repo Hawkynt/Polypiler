@@ -966,6 +966,60 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY1550
+    severity: error
+    exit: UnsupportedConstruct
+    title: IR construct inexpressible in the Rust profile
+    message: "'<construct>' cannot be expressed in Rust profile '<profile>' (in <place>)"
+    rule: rust.backend.profile
+    area: rust
+    owner: "#461"
+    surfaces: standard error of polypiler translate --to rust, one line per refused construct
+  - code: PLY1560
+    severity: error
+    exit: UnsupportedConstruct
+    title: exception region under the panic trap policy
+    message: "exception region in <function> cannot be emitted under the trap policy 'panic': 'exception handling' is not supported by the Rust backend"
+    rule: rust.backend.exceptions
+    area: rust
+    owner: "#458"
+    surfaces: standard error of polypiler translate --to rust
+  - code: PLY1574
+    severity: error
+    exit: UnsupportedConstruct
+    title: exported Rust names collide
+    message: "exported names '<first>' and '<second>' both map to '<rust name>'"
+    rule: rust.backend.names
+    area: rust
+    owner: "#459"
+    surfaces: standard error of polypiler translate --to rust
+  - code: PLY1591
+    severity: error
+    exit: TargetBuildFailure
+    title: Rust compiler rejected the input
+    message: "the Rust compiler rejected the input: <every error with its code, text and location>"
+    rule: rust.runner.compile
+    area: rust
+    owner: "#468"
+    surfaces: the diagnostics of RustRunner, after PLY0030
+  - code: PLY1592
+    severity: error
+    exit: OracleFailure
+    title: Rust driver died
+    message: "the Rust driver died with exit code <code>: <standard error>"
+    rule: rust.runner.crash
+    area: rust
+    owner: "#468"
+    surfaces: the diagnostics of RustRunner.ExecuteAsync for a driver that aborted, overflowed its stack or was killed by a signal
+  - code: PLY1595
+    severity: error
+    exit: OracleFailure
+    title: Rust driver protocol error
+    message: "<reason>"
+    rule: rust.runner.protocol
+    area: rust
+    owner: "#468"
+    surfaces: "the diagnostics of RustRunner.ExecuteAsync: a signature that does not fit the declaration or has no pairing, an unknown export, an answer that is no output image"
   - code: PLY3935
     severity: error
     exit: OracleFailure

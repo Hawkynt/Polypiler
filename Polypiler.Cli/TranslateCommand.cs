@@ -7,11 +7,13 @@ using System.Text;
 using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
+using Polypiler.Core.Backends.Rust.Passes;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Optimize.Passes;
 using Polypiler.Core.Optimize.Target;
@@ -22,12 +24,13 @@ namespace Polypiler.Cli;
 
 /// <summary>
 /// The <c>translate</c> command of the prototype:
-/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript&gt; --to &lt;javascript|csharp&gt; --output &lt;directory&gt;</c>.
+/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript&gt; --to &lt;javascript|csharp|rust&gt; --output &lt;directory&gt;</c>.
 /// A target language may take a profile. <c>--profile</c> is one option that every target reads its
 /// own way: for C# it names the target framework, and <c>--langversion</c> raises the version of the
 /// language above the one the profile brings; for JavaScript it names the language level, and
 /// <c>--module</c>, <c>--global</c> and <c>--typed-arrays</c> say how the file is packaged and what
-/// an ECMAScript 5 engine has. The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
+/// an ECMAScript 5 engine has; for Rust it names the edition, and <c>--rust-version</c> raises the
+/// minimum supported Rust version above the one the edition brings. The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
 /// <c>--explain-opt</c> (ADR 0004) apply to every pair: the optimizer runs between the frontend and
 /// the backend, and the target passes between the backend's syntax tree and its printer (#1336),
 /// unless <c>--opt none</c> says otherwise; the rules of the one and the passes of the other share
@@ -69,6 +72,7 @@ public sealed class TranslateCommand : ICliCommand {
   private const string DisableOpt = "--disable-opt";
   private const string ExplainOpt = "--explain-opt";
   private const string Instantiate = "--instantiate";
+  private const string RustVersion = "--rust-version";
 
   private static readonly string[] _required = [From, To, Output];
 
@@ -85,14 +89,15 @@ public sealed class TranslateCommand : ICliCommand {
     [ExplainOpt] = "write every optimization applied to standard error",
     [Export] = "JavaScript: the functions to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, an edition of Rust",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
     [Float] = "the floating-point mode",
     [Namespace] = "C#: the namespace of the generated code",
     [Instantiate] = "C#: an instantiation of a public generic method that the class itself does not use",
-    [LangVersion] = "C#: the language version, above the one of the profile"
+    [LangVersion] = "C#: the language version, above the one of the profile",
+    [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -121,7 +126,8 @@ public sealed class TranslateCommand : ICliCommand {
   /// <summary>The target languages; another one is another entry.</summary>
   private static readonly Backend[] _backends = [
     JavaScript(JavaScriptCapabilities.Standard, Implementations),
-    CSharp(CSharpCapabilities.Default, Implementations)
+    CSharp(CSharpCapabilities.Default, Implementations),
+    Rust(RustCapabilities.Default, Implementations)
   ];
 
   /// <summary>
@@ -172,7 +178,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Rust(RustCapabilities.Default, Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -184,7 +190,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Rust(RustCapabilities.Default, implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -251,7 +257,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// of their numbers.
   /// </summary>
   private static readonly string[] _optimizations = [
-    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids)
+    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(RustTargetPasses.Pipeline.Ids)
       .Distinct().Order(StringComparer.Ordinal)
   ];
 
@@ -370,6 +376,8 @@ public sealed class TranslateCommand : ICliCommand {
       foreach (var generated in emission.Files) {
         helpers.AddRange(generated.Helpers);
         var bytes = _utf8.GetBytes(generated.Content);
+        // A crate's sources lie in a folder of the output (src/lib.rs).
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(full, generated.Path))!);
         File.WriteAllBytes(Path.Combine(full, generated.Path), bytes);
         outputs.Add(new(ManifestWriter.PortablePath(generated.Path), ManifestWriter.Sha256(bytes), ManifestOutputRole.Source));
         context.Output.WriteLine(Path.Combine(directory, generated.Path));
@@ -507,6 +515,23 @@ public sealed class TranslateCommand : ICliCommand {
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
     (module, options, passes) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
 
+  /// <summary>The Rust backend with a capability table; <c>--profile</c> names the edition, <c>--rust-version</c> the MSRV.</summary>
+  private static Backend Rust(RustCapabilities capabilities, Func<IrModule> implementations) => new("rust",
+    "rust",
+    options => RustProfileOf(options).Profile!.ToString(),
+    new RuleTarget(false),
+    [new(Profile, "<name>"), new(RustVersion, "<version>"), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? RustProfileOf(options).Error,
+    (module, options) => RustEmitter.Legalize(module, implementations, RustProfileOf(options).Profile!, capabilities),
+    (module, options) => RustEmitter.Check(module, RustProfileOf(options).Profile!, capabilities),
+    (module, options, passes) => RustEmitter.Emit(module, RustProfileOf(options).Profile!, capabilities, passes, new RustEmitOptions { Mode = FloatModeOf(options) }));
+
+  /// <summary>The Rust profile the options of a command line name, or what is wrong with them.</summary>
+  private static (RustProfile? Profile, string? Error) RustProfileOf(IReadOnlyDictionary<string, string> options) {
+    RustProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(RustVersion), out var profile, out var error);
+    return (profile, error);
+  }
+
   /// <summary>The values <c>--float</c> takes.</summary>
   private static string FloatChoice => Choice(["strict", "accurate"]);
 
@@ -540,7 +565,11 @@ public sealed class TranslateCommand : ICliCommand {
 
   private static string Choice(IEnumerable<string> names) => $"<{string.Join('|', names)}>";
 
-  private static string Listed(IEnumerable<string> names) => string.Join(" and ", names.Select(name => $"'{name}'"));
+  /// <summary>Names in quotes, the last joined by "and", the others by commas: 'a', 'b' and 'c'.</summary>
+  private static string Listed(IEnumerable<string> names) {
+    var quoted = names.Select(name => $"'{name}'").ToList();
+    return quoted.Count < 2 ? string.Concat(quoted) : string.Join(", ", quoted.Take(quoted.Count - 1)) + " and " + quoted[^1];
+  }
 
   /// <summary>Reports a command line the command cannot carry out as <c>PLY0003</c>.</summary>
   private static int Refuse(CliContext context, string message) {

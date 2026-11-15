@@ -1,6 +1,6 @@
 # Backends: tree, passes, printer
 
-**Status:** implemented for the C# and the JavaScript backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)); stage 8 of the [pipeline](PIPELINE.md). The helpers are one IR library since [#1353](https://github.com/Hawkynt/Polypiler/issues/1353).
+**Status:** implemented for the C#, the JavaScript and the Rust backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)); stage 8 of the [pipeline](PIPELINE.md). The helpers are one IR library since [#1353](https://github.com/Hawkynt/Polypiler/issues/1353).
 
 A backend does not write text. It builds a syntax tree of its target language from the IR, runs the
 target passes over that tree and hands the result to its printer, the only place where generated code
@@ -14,13 +14,15 @@ flowchart LR
   Print --> File["Generated file"]
 ```
 
-| | C# | JavaScript |
-| --- | --- | --- |
-| Tree | `Polypiler.Core.Backends.CSharp/Syntax/CSharpSyntax.cs`: compilation unit, namespaces, types, members, statements, expressions | `Polypiler.Core.Backends.JavaScript/Syntax/JavaScriptSyntax.cs`: ESTree-shaped program, statements, expressions |
-| Printer | `CSharpPrinter.Print(CsCompilationUnit, CSharpProfile)` | `JavaScriptPrinter.Print(JsProgram, JavaScriptProfile)` |
-| Reader | `CSharpSyntaxReader` (Roslyn) | `JavaScriptSyntaxReader` (Acornima) |
-| Passes | `CSharpTargetPasses.Pipeline` | `JavaScriptTargetPasses.Pipeline` |
-| Tree after the passes | `CSharpEmitter.Build(…)` | `JavaScriptEmitter.Build(…)` |
+| | C# | JavaScript | Rust |
+| --- | --- | --- | --- |
+| Tree | `Polypiler.Core.Backends.CSharp/Syntax/CSharpSyntax.cs`: compilation unit, namespaces, types, members, statements, expressions | `Polypiler.Core.Backends.JavaScript/Syntax/JavaScriptSyntax.cs`: ESTree-shaped program, statements, expressions | `Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`: files, items, statements, expressions; a crate is `RustCrate` |
+| Printer | `CSharpPrinter.Print(CsCompilationUnit, CSharpProfile)` | `JavaScriptPrinter.Print(JsProgram, JavaScriptProfile)` | `RustPrinter.Print(RsFile)`, rustfmt's default layout |
+| Reader | `CSharpSyntaxReader` (Roslyn) | `JavaScriptSyntaxReader` (Acornima) | `RustSyntaxReader` (recursive descent over the printed subset) |
+| Passes | `CSharpTargetPasses.Pipeline` | `JavaScriptTargetPasses.Pipeline` | `RustTargetPasses.Pipeline` |
+| Tree after the passes | `CSharpEmitter.Build(…)` | `JavaScriptEmitter.Build(…)` | `RustEmitter.Build(…)` |
+
+The Rust backend is described on [its own page](RUST-BACKEND.md).
 
 ## The tree
 
@@ -116,7 +118,10 @@ and why:
 Outside the folders the emitters keep a few more of the same kind: the C# `Throw<T>` of a throw
 expression before C# 7, the C# `SinglePass<T>` that makes the one cursor of an iterator a sequence
 enumerated once (a `yield return` over an `IEnumerator<T>`, which the IR has no type for), the
-JavaScript `$sameValueZero` and `$compare` of the generic equality and order.
+JavaScript `$sameValueZero` and `$compare` of the generic equality and order, and the Rust spelling
+functions, built as trees by the emitter: `ply_div_<t>` and `ply_rem_<t>`, the IR's division with its
+traps named as every generated panic is, `ply_f2i_trap_<t>`, the checked conversion from floating
+point Rust has no method for, and `ply_i2i_trap_<from>_<to>`, the checked narrowing below Rust 1.34.
 
 ## Target passes
 

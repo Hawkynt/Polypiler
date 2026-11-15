@@ -199,6 +199,23 @@ A stored NaN is compared by class, not by its bytes ([ADR 0005](../adr/0005-floa
 NaN read by `getFloat32` comes back quieted (`7fa00000` → `7fe00000`), and the bit casts of plain ES5 write
 the canonical quiet NaN. Every other value, the zeros and the subnormals among them, is compared bit for bit.
 
+### Rust
+
+Every integer type is the Rust type of its width and signedness. The operations Rust has a method of
+the IR's meaning for are written as that method, in every profile; every other one is the helper of
+the library, copied into the module (see [the Rust backend](../architecture/RUST-BACKEND.md)):
+
+| Operation | Form | Profiles |
+| --- | --- | --- |
+| `RotateLeft`, `RotateRight` | `a.rotate_left(n as u32)` - Rust takes the count modulo the width, which a negative count as `u32` keeps | all |
+| `PopCount`, `LeadingZeroCount`, `TrailingZeroCount` | `count_ones`, `leading_zeros`, `trailing_zeros`, cast to `i32` | all |
+| `ByteSwap`, `BitReverse` | `swap_bytes`, `reverse_bits` | all (`reverse_bits` from Rust 1.37) |
+| `IsPow2` of an unsigned type | `is_power_of_two` | all |
+| `Min`, `Max` | `Ord::min`, `Ord::max` | all |
+| `AddSaturate`, `SubSaturate`, `MulSaturate` | `saturating_add`, `saturating_sub`, `saturating_mul` | all |
+| `Abs`, `AbsWrap` of a signed type | `checked_abs().expect("IntegerOverflow")`, `wrapping_abs` | all |
+| every other operation | the helper of `IntegerLibrary` | all |
+
 ## How it is tested
 
 - A bit-by-bit reference in the test project - a ripple-carry adder, a shift-and-add multiplier, a

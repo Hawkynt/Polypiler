@@ -1,0 +1,263 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Polypiler.Core.Backends.Rust.Naming;
+using Polypiler.Core.Backends.Rust.Syntax;
+using Polypiler.Core.IR;
+
+namespace Polypiler.Core.Backends.Rust;
+
+public static partial class RustEmitter {
+
+  private sealed partial class Writer {
+
+    /// <summary>The Rust name of every variable of the function being written.</summary>
+    private Dictionary<IrLocal, string> _locals = [];
+
+    /// <summary>The declarations whose binding is assigned more than once on some path, or again in a loop: <c>let mut</c>.</summary>
+    private HashSet<IrDeclare> _mutable = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>The variables of the function some expression reads.</summary>
+    private HashSet<IrLocal> _read = [];
+
+    /// <summary>The loops and switches around the statement being written, innermost last.</summary>
+    private readonly List<Breakable> _breakables = [];
+
+    private int _labels;
+
+    /// <summary>A loop, a switch or a labelled block the statements inside may leave.</summary>
+    /// <param name="Kind">What it is.</param>
+    /// <param name="Label">The label it has once a <c>break</c> or <c>continue</c> named it.</param>
+    /// <param name="Step">The statements a <c>continue</c> of a <c>for</c> runs first, already written.</param>
+    private sealed class Breakable(BreakableKind kind, string label, IReadOnlyList<RsStatement>? step = null) {
+
+      public BreakableKind Kind { get; } = kind;
+
+      public string Label { get; } = label;
+
+      public IReadOnlyList<RsStatement>? Step { get; } = step;
+
+      /// <summary>Whether a statement named the label, so that the node has to carry it.</summary>
+      public bool Used { get; set; }
+
+      /// <summary>Whether a <c>continue</c> of the loop left the labelled block of a <c>do</c>-<c>while</c> body.</summary>
+      public bool Continued { get; set; }
+
+    }
+
+    private enum BreakableKind { Loop, Switch, ContinueBlock }
+
+    /// <summary>A function: its signature, the parameters it reassigns bound again as <c>let mut</c>, its body with the value of its last statement as the tail.</summary>
+    private RsFunction Function(IrFunction function) {
+      this._construct = $"the function '{function.Name}'";
+      this._labels = 0;
+      this._breakables.Clear();
+      this.Analyse(function);
+      var name = this._functions[function.Name];
+      var parameters = function.Parameters.Select(parameter => new RsParameter(this._locals[parameter], this.Type(parameter.Type))).ToList();
+      var returns = function.ReturnType == IrType.Void ? null : this.Type(function.ReturnType);
+      var statements = new List<RsStatement>();
+      foreach (var parameter in function.Parameters.Where(this._reassigned.Contains))
+        statements.Add(new RsLet(this._locals[parameter], true, null, new RsPath(this._locals[parameter])));
+
+      this.Statements(function.Body.Statements, statements);
+      var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void);
+      return new RsFunction(name, function.IsPublic ? "pub" : "", parameters, returns, body);
+    }
+
+    /// <summary>The parameters the body assigns.</summary>
+    private HashSet<IrLocal> _reassigned = [];
+
+    /// <summary>
+    /// Names the variables of a function and finds out which are read and which bindings need
+    /// <c>mut</c>: a binding is assigned at most once on every path through the function unless an
+    /// assignment stands in a loop that the declaration is outside of, or two assignments follow one
+    /// another. A variable nothing reads takes a leading underscore, as a binding Rust need not warn about.
+    /// </summary>
+    private void Analyse(IrFunction function) {
+      this._read = [];
+      this._mutable = new(ReferenceEqualityComparer.Instance);
+      this._reassigned = [];
+      var bindings = new Dictionary<IrLocal, Binding>();
+      foreach (var parameter in function.Parameters)
+        bindings[parameter] = new Binding(null, 0) { Count = 1 };
+
+      var parameterBindings = function.Parameters.ToDictionary(parameter => parameter, parameter => bindings[parameter]);
+      this.Count(function.Body.Statements, bindings, 0);
+      foreach (var (parameter, binding) in parameterBindings)
+        if (binding.Count > 1 || binding.Looped)
+          this._reassigned.Add(parameter);
+
+      var taken = new HashSet<string>(StringComparer.Ordinal);
+      this._locals = [];
+      var declared = function.Parameters.Concat(function.Locals).Distinct().ToList();
+      foreach (var local in declared)
+        this._locals[local] = RustNames.Unique([local.Name], name => (this._read.Contains(local) ? "" : "_") + RustNames.Snake(name, this.Edition).Replace("r#", "", StringComparison.Ordinal), taken)[0];
+
+      this._locals = this._locals.ToDictionary(pair => pair.Key, pair => RustNames.IsKeyword(pair.Value, this.Edition) ? "r#" + pair.Value : pair.Value);
+    }
+
+    /// <summary>One binding of a variable: its declaration and how often it is assigned on the worst path.</summary>
+    private sealed class Binding(IrDeclare? declaration, int depth) {
+
+      public IrDeclare? Declaration { get; } = declaration;
+
+      public int Depth { get; } = depth;
+
+      public int Count { get; set; }
+
+      public bool Looped { get; set; }
+
+    }
+
+    /// <summary>Counts the assignments of the bindings along a list of statements, one after the other.</summary>
+    private void Count(IReadOnlyList<IrStmt> statements, Dictionary<IrLocal, Binding> bindings, int depth) {
+      foreach (var statement in statements)
+        this.Count(statement, bindings, depth);
+    }
+
+    private void Count(IrStmt statement, Dictionary<IrLocal, Binding> bindings, int depth) {
+      switch (statement) {
+        case IrBlock block:
+          this.Count(block.Statements, bindings, depth);
+          break;
+        case IrDeclare declare: {
+          if (declare.Initializer is { } initializer)
+            this.CountIn(initializer, bindings, depth);
+          var binding = new Binding(declare, depth) { Count = declare.Initializer is null ? 0 : 1 };
+          bindings[declare.Local] = binding;
+          break;
+        }
+        case IrAssign assign:
+          this.CountIn(assign.Value, bindings, depth);
+          this.Assigned(assign.Local, bindings, depth);
+          break;
+        case IrExprStmt expression:
+          this.CountIn(expression.Expression, bindings, depth);
+          break;
+        case IrStore store:
+          this.CountIn(store.Array, bindings, depth);
+          this.CountIn(store.Index, bindings, depth);
+          this.CountIn(store.Value, bindings, depth);
+          break;
+        case IrIf choice: {
+          this.CountIn(choice.Condition, bindings, depth);
+          var before = Snapshot(bindings);
+          this.Count(choice.Then.Statements, bindings, depth);
+          var afterThen = Snapshot(bindings);
+          Restore(bindings, before);
+          if (choice.Else is { } otherwise)
+            this.Count(otherwise.Statements, bindings, depth);
+          Merge(bindings, afterThen);
+          break;
+        }
+        case IrSwitch choice: {
+          this.CountIn(choice.Value, bindings, depth);
+          var before = Snapshot(bindings);
+          var worst = Snapshot(bindings);
+          foreach (var section in choice.Sections) {
+            Restore(bindings, before);
+            this.Count(section.Body.Statements, bindings, depth);
+            Merge(worst, bindings);
+          }
+
+          Restore(bindings, worst);
+          break;
+        }
+        case IrWhile loop:
+          this.CountIn(loop.Condition, bindings, depth + 1);
+          this.Count(loop.Body.Statements, bindings, depth + 1);
+          break;
+        case IrDoWhile loop:
+          this.Count(loop.Body.Statements, bindings, depth + 1);
+          this.CountIn(loop.Condition, bindings, depth + 1);
+          break;
+        case IrFor loop:
+          this.CountIn(loop.Condition, bindings, depth + 1);
+          this.Count(loop.Body.Statements, bindings, depth + 1);
+          this.Count(loop.Step.Statements, bindings, depth + 1);
+          break;
+        case IrReturn { Value: { } value }:
+          this.CountIn(value, bindings, depth);
+          break;
+        case IrThrow thrown:
+          this.CountIn(thrown.Exception, bindings, depth);
+          break;
+      }
+    }
+
+    private static Dictionary<Binding, (int, bool)> Snapshot(Dictionary<IrLocal, Binding> bindings)
+      => bindings.Values.Distinct().ToDictionary(binding => binding, binding => (binding.Count, binding.Looped));
+
+    private static void Restore(Dictionary<IrLocal, Binding> bindings, Dictionary<Binding, (int Count, bool Looped)> snapshot) {
+      foreach (var (binding, (count, looped)) in snapshot) {
+        binding.Count = count;
+        binding.Looped = looped;
+      }
+    }
+
+    /// <summary>Takes for every binding the larger count of the current state and a snapshot: the worse of two paths.</summary>
+    private static void Merge(Dictionary<IrLocal, Binding> bindings, Dictionary<Binding, (int Count, bool Looped)> other) {
+      foreach (var (binding, (count, looped)) in other) {
+        binding.Count = Math.Max(binding.Count, count);
+        binding.Looped |= looped;
+      }
+    }
+
+    private static void Merge(Dictionary<Binding, (int Count, bool Looped)> worst, Dictionary<IrLocal, Binding> bindings) {
+      foreach (var binding in bindings.Values.Distinct())
+        worst[binding] = worst.TryGetValue(binding, out var known) ? (Math.Max(known.Count, binding.Count), known.Looped | binding.Looped) : (binding.Count, binding.Looped);
+    }
+
+    /// <summary>An assignment to a variable: one more on this path, and a loop's if the declaration is outside the loop.</summary>
+    private void Assigned(IrLocal local, Dictionary<IrLocal, Binding> bindings, int depth) {
+      if (!bindings.TryGetValue(local, out var binding)) {
+        binding = new Binding(null, 0);
+        bindings[local] = binding;
+      }
+
+      binding.Count++;
+      if (depth > binding.Depth)
+        binding.Looped = true;
+
+      if (binding.Declaration is { } declaration && (binding.Count > 1 || binding.Looped))
+        this._mutable.Add(declaration);
+    }
+
+    /// <summary>The reads and the assignments (steps) of an expression.</summary>
+    private void CountIn(IrExpr expression, Dictionary<IrLocal, Binding> bindings, int depth) {
+      foreach (var node in Nodes(expression)) {
+        if (node is IrLocalRef reference)
+          this._read.Add(reference.Local);
+        if (node is IrStep { Target: IrLocalRef target })
+          this.Assigned(target.Local, bindings, depth);
+      }
+    }
+
+    /// <summary>Every expression below an expression and the expression itself.</summary>
+    private static IEnumerable<IrExpr> Nodes(IrExpr expression) {
+      yield return expression;
+      IEnumerable<IrExpr> children = expression switch {
+        IrUnary unary => [unary.Operand],
+        IrBinary binary => [binary.Left, binary.Right],
+        IrConvert convert => [convert.Operand],
+        IrConditional choice => [choice.Condition, choice.WhenTrue, choice.WhenFalse],
+        IrArrayLoad load => [load.Array, load.Index],
+        IrArrayLength length => [length.Array],
+        IrNewArray array => [array.Length],
+        IrCall call => call.Arguments,
+        IrStep step => [step.Target],
+        IrIntrinsic intrinsic => intrinsic.Arguments,
+        _ => []
+      };
+      foreach (var child in children)
+        foreach (var node in Nodes(child))
+          yield return node;
+    }
+
+    /// <summary>A new label of the function, <c>l0</c>, <c>s1</c>, …</summary>
+    private string NewLabel(string prefix) => prefix + this._labels++;
+
+  }
+
+}
