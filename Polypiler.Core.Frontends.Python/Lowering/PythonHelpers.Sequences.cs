@@ -429,19 +429,6 @@ internal sealed partial class PythonHelpers {
           Block(new IrYield(Get(Ref(l), Ref(i), listType.Element!)), Assign(i, Binary(IrBinaryOp.Subtract, Ref(i), Int32(1))))));
     });
 
-  /// <summary><c>list(reversed(a))</c>: a new list of the elements from the last to the first.</summary>
-  public IrCall ReversedCopy(IrExpr sequence, IrType type, IrType listType)
-    => this.Call($"PyReversed_{Name(type)}", listType, [sequence], name => {
-      var (s, result, i) = (Local("sequence", type), Local("result", listType), Local("i", IrType.I32));
-      IrExpr length = type.IsList ? Count(Ref(s)) : new IrArrayLength(Ref(s));
-      IrExpr at = type.IsList ? Get(Ref(s), Ref(i), listType.Element!) : new IrArrayLoad(Ref(s), Ref(i));
-      return Function(name, listType, [s], [result, i],
-        new IrDeclare(result, NewList(listType)),
-        new IrDeclare(i, Binary(IrBinaryOp.Subtract, length, Int32(1))),
-        new IrWhile(Binary(IrBinaryOp.GreaterOrEqual, Ref(i), Int32(0)), Block(Add(Ref(result), at), Assign(i, Binary(IrBinaryOp.Subtract, Ref(i), Int32(1))))),
-        Return(Ref(result)));
-    });
-
   /// <summary>The code points of a str as a sequence of strs.</summary>
   public IrCall CodePointIterator(IrExpr text)
     => this.Call("PyStrIterator", IrType.Sequence(IrType.String, false), [text], name => {

@@ -556,10 +556,8 @@ internal sealed partial class FunctionLowering {
       case "sorted":
         return this.Sorted(call);
       case "reversed" when arguments.Count == 1:
-        var reversed = this.Value(arguments[0]);
-        return reversed.Type.Kind is PyKind.List or PyKind.Table
-          ? (this.Effect(this.Helpers.ReversedCopy(reversed.Value, PyTypes.Ir(reversed.Type), PyTypes.Ir(PyType.List(reversed.Type.Element!)))), PyType.List(reversed.Type.Element!))
-          : throw this.Refuse(call, PythonFrontend.UnsupportedSequenceDescriptor, $"sequence operation 'reversed of a value of the type {reversed.Type}' is not supported by the Python frontend");
+        // reversed() is an iterator, never a list: python indexes none.
+        return this.Iterable(call);
       case "sum" when keywords.Count == 0 && arguments.Count is 1 or 2:
         return this.Sum(call);
       case "min" or "max":

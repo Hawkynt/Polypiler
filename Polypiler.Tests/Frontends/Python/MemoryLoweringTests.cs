@@ -190,8 +190,48 @@ public sealed class MemoryLoweringTests {
   [TestCase("'😀b'[1] == 'b' and len('😀') == 1", "bool True")]
   [TestCase("'abc'[3]", "raise IndexError")]
   [TestCase("str('x') == 'x' and str() == ''", "bool True")]
+  [TestCase("'\\ud800'.encode()", "raise UnicodeEncodeError")]
   public void StringOperations_WorkOnCodePoints(string expression, string expected)
     => Assert.That(PythonSnippet.Run($"def f():\n    return {expression}\n", "f"), Is.EqualTo(expected));
+
+  /// <summary>
+  /// Test design 15: a lone surrogate is a code point of its own, but a lone high surrogate before a
+  /// lone low one would be one code point in UTF-16 where Python has two, and is refused.
+  /// </summary>
+  [Test]
+  public void LoneSurrogates_AreCodePointsAndAPairOfThemIsRefused() {
+    Assert.That(PythonSnippet.Run("def f() -> int:\n    return len('\\ud800') * 10 + len('😀')\n", "f"), Is.EqualTo("int 11"));
+    Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return len('\\ud83d\\ude00')\n"),
+      Has.Some.Contains("error PLY1822: string operation 'a str of a lone high surrogate before a lone low one"));
+  }
+
+  /// <summary>Iterables as lazy sequences: bytes, tuples, strs, enumerate and zip in comprehensions, map and filter, range with every step.</summary>
+  [TestCase("sum(b'\\x01\\x02')", "int 3")]
+  [TestCase("list(b'ab')[1]", "int 98")]
+  [TestCase("max((3, 1, 2))", "int 3")]
+  [TestCase("sum([x for x in (1, 2)])", "int 3")]
+  [TestCase("list(enumerate([5, 6], 1))[1][0]", "int 2")]
+  [TestCase("sum([i * x for i, x in enumerate([3, 4])])", "int 4")]
+  [TestCase("len(list(zip([1, 2], [3, 4, 5])))", "int 2")]
+  [TestCase("sum([a * b for a, b in zip(range(3), [4, 5, 6])])", "int 17")]
+  [TestCase("list(reversed([1, 2, 3]))[0]", "int 3")]
+  [TestCase("list(map(lambda v: v > 1, [1, 2]))[1]", "bool True")]
+  [TestCase("len(list(filter(lambda v: v, [0, 1, 2])))", "int 2")]
+  [TestCase("any(x for x in 'ab' if x == 'b')", "bool True")]
+  [TestCase("list(range(1, 10, 3))[-1] * 10 + list(range(10, 0, -3))[-1]", "int 71")]
+  [TestCase("list(range(0, 5, 0))", "raise ValueError")]
+  [TestCase("list(range(0, 5, step))", "raise ValueError")]
+  [TestCase("tuple((1, 2))[1]", "int 2")]
+  [TestCase("sorted('cab')[0] == 'a'", "bool True")]
+  public void IterablesAsSequences_AreEnumeratedLazily(string expression, string expected)
+    => Assert.That(PythonSnippet.Run($"def f():\n    step = 0\n    return {expression}\n", "f"), Is.EqualTo(expected));
+
+  [TestCase("list(zip([1], (1, 2)))", "error PLY1820: sequence operation 'zip with a second argument of the type tuple[int, int]' is not supported")]
+  [TestCase("list(reversed('ab'))", "error PLY1813: iteration over 'reversed of the type str' is not supported")]
+  [TestCase("reversed([1])[0]", "error PLY1802: 'an index of a value of the type Iterator[int]' is not supported")]
+  [TestCase("list(enumerate(1))", "error PLY1813: iteration over '1' of the type int is not supported")]
+  public void IterableMisuse_IsRefused(string expression, string diagnostic)
+    => Assert.That(PythonSnippet.Refusals($"def f() -> int:\n    {expression}\n    return 0\n"), Has.Some.Contains(diagnostic));
 
   /// <summary>Test design 17: the operations outside the subset, each with its code.</summary>
   [TestCase("a.sort()", "error PLY1820: sequence operation 'sort' is not supported")]

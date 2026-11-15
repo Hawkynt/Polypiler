@@ -251,7 +251,7 @@ internal static class ExpressionTypes {
       case "list" or "sorted":
         return types.Count == 0 ? PyType.List(PyType.Unknown) : Element(First()) is { } element ? PyType.List(element.Kind == PyKind.Bool && First().IsBytes ? PyType.Int : element) : PyType.Unknown;
       case "reversed":
-        return Element(First()) is { } reversed ? PyType.List(reversed) : PyType.Unknown;
+        return Element(First()) is { } reversed ? PyType.Iterator(reversed) : PyType.Unknown;
       case "tuple":
         return First().Kind == PyKind.Tuple ? First() : PyType.Unknown;
       case "sum":
