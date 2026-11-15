@@ -105,15 +105,16 @@ internal sealed partial class TypeInference {
   /// </summary>
   private JsType AwaitedType(AwaitExpression awaited) {
     var operand = awaited.Argument;
-    if (IsPromiseCall(operand, out var member) && operand is CallExpression call) {
-      if (member == "resolve")
-        return call.Arguments.Count == 0 ? JsType.Undefined : this.Of(call.Arguments[0]);
+    // Of the members of Promise only resolve and Promise.all of an array literal pass the check of the function.
+    if (!IsPromiseCall(operand, out var member))
+      return this.Of(operand);
 
-      if (member == "all" && call.Arguments is [ArrayExpression array])
-        return JsType.ArrayOf(array.Elements.Select(element => this.Of(element!)).Aggregate(JsType.Unknown, JsType.Join), true);
-    }
+    var call = (CallExpression)operand;
+    if (member == "resolve")
+      return call.Arguments.Count == 0 ? JsType.Undefined : this.Of(call.Arguments[0]);
 
-    return this.Of(operand);
+    var array = (ArrayExpression)call.Arguments[0];
+    return JsType.ArrayOf(array.Elements.Select(element => this.Of(element!)).Aggregate(JsType.Unknown, JsType.Join), true);
   }
 
 }

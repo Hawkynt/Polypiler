@@ -126,6 +126,12 @@ public sealed class IrAsyncTests {
   }
 
   [Test]
+  public void AsyncOperation_OfATypeThatIsNoAsyncType_IsIllTyped() {
+    var wrong = Async("G", IrType.Async(IrType.Void), new IrExprStmt(new IrAwait(new IrAsync(IrAsyncOp.Completed, IrType.I32, []))));
+    Assert.That(Problems(wrong), Has.Some.Contains("Completed has the type i32, expected async<void>"));
+  }
+
+  [Test]
   public void Return_OfAnAsyncFunction_IsOfItsResult() {
     Assert.That(Problems(Async("G", Ints, new IrReturn(null))), Has.Some.Contains("a return without a value in a function that returns one"));
     Assert.That(Problems(Async("G", Ints, new IrReturn(new IrStrConst("x")))), Has.Some.Contains("the value returned has the type str, expected i32"));
@@ -151,8 +157,19 @@ public sealed class IrAsyncTests {
     var stepped = new IrFunction("S", false, Ints, [x], [], B(new IrExprStmt(new IrStep(new IrLocalRef(x), true, false, false)), new IrReturn(new IrLocalRef(x))));
     var copied = new IrFunction("C", false, IrType.Void, [], [], B(new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.ArrayCopy, IrType.Void, []))));
     var faulty = new IrFunction("E", false, Ints, [], [], B(new IrThrow(new IrNew(IrType.Object(IrExceptionClass.Exception), IrExceptionClass.Exception.Constructors[0], []))));
-    var isolated = IrAsyncFunctions.Isolated(new IrModule("M", [stepped, copied, faulty]));
-    Assert.That(isolated, Is.EquivalentTo(new[] { "S", "E" }));
+    var point = new IrStructType("P");
+    point.Define([new IrField("X", IrType.I32, false)]);
+    var held = new IrLocal("p", IrType.Struct(point));
+    var own = new IrFunction("O", false, Ints, [held], [], B(new IrFieldStore(new IrLocalRef(held), point.Fields[0], I(1)), new IrReturn(new IrFieldLoad(new IrLocalRef(held), point.Fields[0]))));
+    var points = new IrLocal("ps", IrType.Array(IrType.Struct(point)));
+    var element = new IrFunction("A", false, Ints, [points], [], B(new IrFieldStore(new IrArrayLoad(new IrLocalRef(points), I(0)), point.Fields[0], I(1)), new IrReturn(I(1))));
+    var box = new IrClassType("Box");
+    var value = new IrField("V", IrType.I32, false);
+    box.Define([value]);
+    var reference = new IrLocal("b", IrType.Object(box));
+    var shared = new IrFunction("B", false, Ints, [reference], [], B(new IrFieldStore(new IrLocalRef(reference), value, I(1)), new IrReturn(I(1))));
+    var isolated = IrAsyncFunctions.Isolated(new IrModule("M", [stepped, copied, faulty, own, element, shared]));
+    Assert.That(isolated, Is.EquivalentTo(new[] { "S", "E", "O" }));
   }
 
   /// <summary>Which functions can fault: a throw, a trapping operation, or a call of one that can.</summary>
@@ -165,8 +182,15 @@ public sealed class IrAsyncTests {
     var calls = new IrFunction("C", false, Ints, [x], [], B(new IrReturn(new IrAwait(new IrCall("D", Ints, [new IrLocalRef(x)])))));
     var throws = new IrFunction("T", false, Ints, [], [], B(new IrThrow(new IrNew(IrType.Object(IrExceptionClass.Exception), IrExceptionClass.Exception.Constructors[0], []))));
     var waits = new IrFunction("W", false, Ints, [x], [], B(new IrReturn(new IrAwait(new IrCall("P", Ints, [new IrLocalRef(x)])))));
-    var free = IrAsyncFunctions.FaultFree(new IrModule("M", [pure, divides, checkedSum, calls, throws, waits]));
-    Assert.That(free, Is.EquivalentTo(new[] { "P", "W" }));
+    var point = new IrStructType("P");
+    point.Define([new IrField("X", IrType.I32, false)]);
+    var held = new IrLocal("p", IrType.Struct(point));
+    var field = new IrFunction("F", false, Ints, [held], [], B(new IrReturn(new IrFieldLoad(new IrLocalRef(held), point.Fields[0]))));
+    var stepped = new IrFunction("S", false, Ints, [x], [], B(new IrExprStmt(new IrStep(new IrLocalRef(x), true, false, false)), new IrReturn(new IrLocalRef(x))));
+    var negated = new IrFunction("N", false, Ints, [x], [], B(new IrReturn(new IrUnary(IrUnaryOp.NegateChecked, new IrLocalRef(x)))));
+    var converted = new IrFunction("V", false, Ints, [], [], B(new IrReturn(new IrConvert(IrType.I32, new IrConst(IrType.I64, 1), IrConversion.Trap))));
+    var free = IrAsyncFunctions.FaultFree(new IrModule("M", [pure, divides, checkedSum, calls, throws, waits, field, stepped, negated, converted]));
+    Assert.That(free, Is.EquivalentTo(new[] { "P", "W", "F", "S" }));
   }
 
   [Test]

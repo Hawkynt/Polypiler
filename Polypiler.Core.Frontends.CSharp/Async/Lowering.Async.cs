@@ -125,7 +125,7 @@ internal sealed partial class Lowering {
         return Outer(configured).Parent is AwaitExpressionSyntax;
       case ArgumentSyntax { Parent: ArgumentListSyntax { Parent: InvocationExpressionSyntax all } } when expression is InvocationExpressionSyntax
         && this.Unclosed.GetSymbolInfo(all).Symbol is IMethodSymbol { Name: "WhenAll" } whenAll && IsTask(whenAll.ContainingType):
-        return IsTask(this.Unclosed.GetTypeInfo(all).Type) && this.IsAwaitedWhereCreated(all);
+        return this.IsAwaitedWhereCreated(all);
       default:
         return false;
     }
@@ -186,11 +186,8 @@ internal sealed partial class Lowering {
   /// <summary><c>Task.WhenAll(F(a), G(b), …)</c> of calls of async methods of the class, each listed as an argument.</summary>
   private IrAsync WhenAll(InvocationExpressionSyntax invocation) {
     var arguments = new List<IrExpr>();
+    // A collection of tasks has no type of the IR: an array or a list of them is refused where it is declared.
     foreach (var argument in invocation.ArgumentList.Arguments) {
-      var type = model.GetTypeInfo(argument.Expression).Type;
-      if (!IsTask(type))
-        throw new UnsupportedException(argument, "Task.WhenAll over a collection of tasks");
-
       if (argument.Expression is not InvocationExpressionSyntax call || model.GetSymbolInfo(call).Symbol is not IMethodSymbol called
           || !SymbolEqualityComparer.Default.Equals(called.ContainingType, this._class))
         throw new UnsupportedException(argument, IrAsyncFunctions.NotAwaited);

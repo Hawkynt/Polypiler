@@ -78,6 +78,8 @@ internal sealed class JavaScriptAsyncImportTests {
   [TestCase("export class C { async m() { return 1; } }", "'an async method'")]
   [TestCase("async function* g() { yield 1; } export async function m() { for await (const x of g()) { } return 1; }", "'an async generator'")]
   [TestCase("export async function m(xs) { for await (const x of xs) { } return 1; }", "'for await'")]
+  [TestCase("function* g() { yield 1; } export async function m() { await 0; return g(); }", "as the result of an async function")]
+  [TestCase("async function a() { await 0; return 1; } async function s() { await 0; return \"x\"; } export async function m() { return await Promise.all([a(), s()]); }", "'Promise.all: WhenAll takes async values of one result type'")]
   [TestCase("let n = 0; async function f() { await 0; n = n + 1; return n; } export async function m() { return await Promise.all([f(), f()]); }", "whose order depends on timing")]
   [TestCase("async function a(x) { await 0; if (x > 0) throw new Error(\"A\"); return x; } async function b(x) { if (x > 0) throw new Error(\"B\"); return x; } export async function m() { return await Promise.all([a(1), b(1)]); }", "'Promise.all whose rejection depends on timing'")]
   public void UnorderedConstruct_IsRefusedByName(string source, string words) {
@@ -92,6 +94,15 @@ internal sealed class JavaScriptAsyncImportTests {
     var result = JavaScriptFrontend.Import("snippet.mjs", source);
     Assert.That(result.Diagnostics, Is.Empty);
     Assert.That(IrInterpreter.Call(result.Module!, "m", []), Is.EqualTo(new double[] { 4, 1 }).Or.EqualTo(new int[] { 4, 1 }));
+  }
+
+  /// <summary>A function inside an async function is checked by itself; a resolved promise without a value is awaited as a statement.</summary>
+  [Test]
+  public void NestedFunctionAndEmptyResolve_AreImported() {
+    const string source = "async function g() { await Promise.resolve(); return 2; } export async function m() { const f = x => x + 1; await Promise.resolve(); return f(await g()); }";
+    var result = JavaScriptFrontend.Import("snippet.mjs", source);
+    Assert.That(result.Diagnostics, Is.Empty);
+    Assert.That(IrInterpreter.Call(result.Module!, "m", []), Is.EqualTo(3.0));
   }
 
   [Test]

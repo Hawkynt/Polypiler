@@ -91,9 +91,24 @@ internal sealed class CSharpAsyncImportTests {
   [TestCase("static async Task<int> F() { await Task.CompletedTask; return 1; } public static async Task M() { await F().ConfigureAwait(Flag()); } static bool Flag() => false;", "ConfigureAwait with an argument that is no constant")]
   [TestCase("static int s; static async Task<int> F() { await Task.CompletedTask; s = s + 1; return s; } public static async Task<int[]> M() => await Task.WhenAll(F(), F());", "whose order depends on timing")]
   [TestCase("static async Task<int> F(int[] a) { await Task.CompletedTask; a[0] = 1; return 1; } public static async Task<int[]> M(int[] a) => await Task.WhenAll(F(a), F(a));", "whose order depends on timing")]
+  [TestCase("public static async Task<int[]> M(Task<int>[] all) => await Task.WhenAll(all);", "'System.Threading.Tasks.Task<int>[]'")]
+  [TestCase("public static async Task<int[]> M() => await Task.WhenAll(Task.FromResult(1));", "not awaited where it is created")]
+  [TestCase("public static async Task<string> M() => await System.IO.File.ReadAllTextAsync(\"x\");", "'File.ReadAllTextAsync'")]
+  [TestCase("public static async Task<int> M() => await default(Task<int>);", "not awaited where it is created")]
+  [TestCase("public static async Task M() { await ValueTask.CompletedTask; }", "not awaited where it is created")]
+  [TestCase("static async Task<System.Collections.Generic.IEnumerable<int>> F() { await Task.CompletedTask; return new int[0]; }", "IEnumerable<int>>'")]
+  [TestCase("static async System.Collections.Generic.IAsyncEnumerable<int> G() { await Task.CompletedTask; yield return 1; } public static async Task M() { await foreach (var x in G()) { } }", "'await foreach'")]
+  [TestCase("static int s; static async Task<T> G<T>(T x) { await Task.CompletedTask; s = s + 1; return x; } static async Task<T[]> W<T>(T x) => await Task.WhenAll(G(x), G(x)); public static async Task<int[]> M() => await W(1);", "whose order depends on timing")]
   public void UnorderedConstruct_IsRefusedByName(string methods, string words) {
     var diagnostics = Refused(methods);
     Assert.That(diagnostics, Does.Contain("PLY1002").And.Contain(words), diagnostics);
+  }
+
+  /// <summary>Parentheses around an awaited call and a lambda that returns no task change nothing.</summary>
+  [Test]
+  public void ParenthesesAndPlainLambdas_AreImported() {
+    var module = Accepted("static async Task<int> F() { await Task.CompletedTask; return 2; } public static async Task<int> M() { System.Func<int, int> g = x => x + 1; return g(await (F())); }");
+    Assert.That(IrInterpreter.Call(module, "M", []), Is.EqualTo(3));
   }
 
   /// <summary>Test design 10: a task in a field is refused.</summary>

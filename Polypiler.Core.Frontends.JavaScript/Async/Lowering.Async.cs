@@ -72,7 +72,7 @@ internal sealed partial class Lowering {
   /// </summary>
   public IEnumerable<Diagnostic> WhenAllProblems(IrModule module) {
     Diagnostic At(IrAsync operation, string what)
-      => types.Diagnose(this._whenAll.TryGetValue(operation, out var node) ? node : this._whenAll.Values.First(), JavaScriptFrontend.UnsupportedDescriptor, $"'{what}' is not supported yet");
+      => types.Diagnose(this._whenAll[operation], JavaScriptFrontend.UnsupportedDescriptor, $"'{what}' is not supported yet");
 
     foreach (var (_, operation, callee) in IrAsyncFunctions.Timed(module))
       yield return At(operation, $"Promise.all of '{callee}', which writes more than its own locals, whose order depends on timing");

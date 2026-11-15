@@ -69,7 +69,8 @@ C# (`CSharpAsyncApi`), refused with **PLY1002**:
 | `.Result`, `.Wait()`, `GetAwaiter().GetResult()` | "blocking on a task" |
 | `Task.Run`, `Task.Delay`, `Task.Yield`, `.ContinueWith`, `Task.WhenAny` | the member, `Task.Run` |
 | `async void`, an async lambda or local function, `await foreach` | named |
-| `Task.WhenAll` over a collection; of a method that writes more than its locals | "… whose order depends on timing" |
+| an array or a list of tasks, so `Task.WhenAll` over a collection | the type, `Task<int>[]` |
+| `Task.WhenAll` of a method that writes more than its locals | "… whose order depends on timing" |
 
 JavaScript (`JavaScriptAsyncApi`), refused with **PLY1102**:
 

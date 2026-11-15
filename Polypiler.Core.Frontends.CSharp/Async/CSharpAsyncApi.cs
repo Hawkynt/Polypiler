@@ -29,7 +29,7 @@ public static class CSharpAsyncApi {
     new("an async lambda, an async local function", "", "an async lambda"),
     new("await foreach, IAsyncEnumerable<T>", "", "await foreach"),
     new("Task.WhenAll of a method that writes more than its own locals", "", "whose order depends on timing"),
-    new("Task.WhenAll over a collection of tasks", "", "Task.WhenAll over a collection of tasks")
+    new("Task.WhenAll over a collection of tasks, an array or a list of tasks", "", "Task<int>[]")
   ];
 
   /// <summary>The entries the frontend imports.</summary>
