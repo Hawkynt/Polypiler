@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/baseking.js",
+ "algorithms": [
+  {
+   "name": "BaseKing",
+   "vectors": [
+    {
+     "text": "All zeros test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"38014f256f53468810426df18e7304b8a3084a5da3d01a94"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All ones test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"44509d632a2e7ecca77202ab8caaf43f9c77d1205a8b6cd1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Sequential pattern test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011121314151617"},
+     "expected": {"t":"bytes","v":"a56cc31ee5510c41ed66d01b5d0622444625c974147a7328"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

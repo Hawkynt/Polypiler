@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzrle.js",
+ "algorithms": [
+  {
+   "name": "LZRLE",
+   "vectors": [
+    {
+     "text": "Minimum zero run (4 bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"040000008000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Literals only - no compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243"},
+     "expected": {"t":"bytes","v":"0300000003414243"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

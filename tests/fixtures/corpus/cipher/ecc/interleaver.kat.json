@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/interleaver.js",
+ "algorithms": [
+  {
+   "name": "Interleaver",
+   "vectors": [
+    {
+     "text": "4x4 block interleaving test",
+     "inverse": false,
+     "steps": [
+      {"set":"rows","value":{"t":"number","v":4}},
+      {"set":"cols","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"},
+     "expected": {"t":"bytes","v":"0105090d02060a0e03070b0f04080c10"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Sequential interleaving pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"rows","value":{"t":"number","v":4}},
+      {"set":"cols","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"0004080c0105090d02060a0e03070b0f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "3x3 interleaving test",
+     "inverse": false,
+     "steps": [
+      {"set":"rows","value":{"t":"number","v":3}},
+      {"set":"cols","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"010203040506070809"},
+     "expected": {"t":"bytes","v":"010407020508030609"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

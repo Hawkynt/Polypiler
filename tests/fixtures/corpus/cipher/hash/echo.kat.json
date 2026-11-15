@@ -1,0 +1,141 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/echo.js",
+ "algorithms": [
+  {
+   "name": "ECHO",
+   "vectors": [
+    {
+     "text": "sphlib NIST-style test vector (0-bit / empty message) - ECHO-224",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":28}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"17da087595166f733fff7cdb0bca6438f303d0e00c48b5e7a3075905"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (8-bit message 0xCC) - ECHO-224",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":28}}
+     ],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"34d81c434b63c8fbcf023b6417af87d906942ebd7b56c1d7b08baddc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (0-bit / empty message) - ECHO-256",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"4496cd09d425999aefa75189ee7fd3c97362aa9e4ca898328002d20a4b519788"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (8-bit message 0xCC) - ECHO-256",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"01c382b5b9d7d10ec36c98785c27eaccfb2f772a7e58b6b97bf62212b8584ae5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (0-bit / empty message) - ECHO-384",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":48}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"134040763f840559b84b7a1ae5d6d64fc3659821a789cc64a7f1444c09ee7f81a54d72beee8273bae5ef18ec43aa5f34"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (8-bit message 0xCC) - ECHO-384",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":48}}
+     ],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"90875a2649cab90018ff8aecd334482c92b15d76b378574eeaacd3b7598020db11e2c7480614eea8793de3daf2093f73"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (0-bit / empty message) - ECHO-512",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"158f58cc79d300a9aa292515049275d051a28ab931726d0ec44bdd9faef4a702c36db9e7922fff077402236465833c5cc76af4efc352b4b44c7fa15aa0ef234e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "sphlib NIST-style test vector (8-bit message 0xCC) - ECHO-512",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"dfce37ca6f32ba4c3a72e77bca20e511a39b31a6075815f083db2ecfd5c32cfd6a4e0dd9bd51921199758edd2fe8ed0fa31e06aa821c7030653d15408e8728dd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 Round 2 KAT, ShortMsgKAT_256 Len = 1392 (174 bytes, extra padding block) - ECHO-256",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"bebd4f1a84fc8b15e4452a54bd02d69e304b7f32616aadd90537937106ae4e28de9d8aab02d19bc3e2fde1d651559e296453e4dba94370a14dbbb2d1d4e2022302ee90e208321efcd8528ad89e46dc839ea9df618ea8394a6bff308e7726bae0c19bcd4be52da6258e2ef4e96aa21244429f49ef5cb486d7ff35cac1bacb7e95711944bccb2ab34700d42d1eb38b5d536b947348a458ede3dc6bd6ec547b1b0cae5b257be36a7124e1060c170ffa"},
+     "expected": {"t":"bytes","v":"45e8685857b7abffa9cf6c0379ffa563bb3b39a6b049f949adf10ecea718be77"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 Round 2 KAT, ShortMsgKAT_512 Len = 880 (110 bytes, extra padding block) - ECHO-512",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"47c6e0c2b74948465921868804f0f7bd50dd323583dc784f998a93cd1ca4c6ef84d41dc81c2c40f34b5bee6a93867b3bdba0052c5f59e6f3657918c382e771d33109122cc8bb0e1e53c4e3d13b43ce44970f5e0c079d2ad7d7a3549cd75760c21bb15b447589e86e8d76b1e9ced2"},
+     "expected": {"t":"bytes","v":"9067514f1d82ddbae543c634013e613c558d9ff5d26e4c47ea124088a2c5a32fa58b3592a5b71c48b6bf36e2b8ab6ec6815f5b17dfc204fe3be1f91cda1257e6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

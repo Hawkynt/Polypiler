@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/mersenne-twister.js",
+ "algorithms": [
+  {
+   "name": "Mersenne Twister (MT19937)",
+   "vectors": [
+    {
+     "text": "MT19937 with seed 5489 (default seed, first 10 outputs)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"71150000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"5cbb91d0f69eae22eefae1e7791fc3d52c358220dfb707f80500d3e9e1af9538ba4be2a12b09e44e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MT19937 with seed 1 (common test seed, first 10 outputs)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"01000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"25f4c16aeb8047ff8c2f67b84814bceeff7e070089c3cc20cbaa654d851ec1ff4fcb9125c053703c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MT19937 with seed 123456789 (validation test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"15cd5b07"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b8be67889c2e9bfd322dbd88d9175e035a117282"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

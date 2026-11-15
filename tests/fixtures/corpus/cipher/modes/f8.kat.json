@@ -1,0 +1,27 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/f8.js",
+ "algorithms": [
+  {
+   "name": "F8",
+   "vectors": [
+    {
+     "text": "RFC 3711 B.1 AES-f8 (39 bytes, 'pseudorandomness is the next best thing')",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"234829008467be186c3de14aae72d62c"}},
+      {"set":"iv","value":{"t":"bytes","v":"006e5cba50681de55c621599d462564a"}},
+      {"set":"saltKey","value":{"t":"bytes","v":"32f2870d"}}
+     ],
+     "input": {"t":"bytes","v":"70736575646f72616e646f6d6e65737320697320746865206e6578742062657374207468696e67"},
+     "expected": {"t":"bytes","v":"019ce7a26e7854014a6366aa95d4eefd1ad4172a14f9faf455b7f1d4b62bd08f562c0eef7c4802"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

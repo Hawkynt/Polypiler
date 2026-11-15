@@ -1,0 +1,771 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/crc.js",
+ "algorithms": [
+  {
+   "name": "CRC-8-SMBUS",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"20"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"f4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-8-MAXIM",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"3b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Catalogue check value for CRC-8/MAXIM-DOW",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"a1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-8-AUTOSAR",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"07"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"df"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-8-CDMA2000",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"ff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"4c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"da"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-16-CCITT",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte A",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"58e5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 123456789",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"31c3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-16-ARC",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Standard test string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"bb3d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-16-IBM",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"e8c1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"9738"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-16-ANSI",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"ffff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"a87e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"5749"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-16-XMODEM",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'A'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"58e5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"31c3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-24-OPENPGP",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"b704ce"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"f25713"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"21cf02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-24-FLEXRAY",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"fedcba"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"8fe324"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"7979bd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-24-INTERLAKEN",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"d80156"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"b4f3e6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-32-IEEE",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"e8b7be43"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"352441c2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"cbf43926"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-32-POSIX",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"ffffffff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Check value '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"765e7680"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-32-BZIP2",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"19939b6b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"fc891918"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-64-XZ",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"330284772e652b05"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Catalogue check value for CRC-64/XZ",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"995dc9bbdf1939fa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-64-ECMA182",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"548f120162451c62"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"6c40df5f0b497347"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-64-WE",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"ce73f427acc0a99a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"62ec59e3f1a4f00a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-128-STANDARD",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"000000000000000000000000000031a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String '123456789'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"000000000000180e870396109919b42f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-128-HPC",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"80000001b86e00006e000000000072fb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "CRC-128-BIGDATA",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Big data sample",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"626967206461746120696e746567726974792074657374"},
+     "expected": {"t":"bytes","v":"a9d63dcd9e4b92530cb8861b98fdcef8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

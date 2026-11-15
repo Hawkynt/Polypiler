@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/special/gimli.js",
+ "algorithms": [
+  {
+   "name": "Gimli",
+   "vectors": [
+    {
+     "text": "Gimli permutation test vector from C reference",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000ba79379e7af36e3c466da6da24e7dd781a6115172edb4cb566558453c8cfbbf15a4af38f22c52a2e264062cc"},
+     "expected": {"t":"bytes","v":"5ac811ba19d1ba9180e80c38682c4cd2eaffce3e1c927a27bda0734fd89c5adaf073b684f72fe53449ef2b9ed6b81bf4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Gimli all-zeros input test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"c4d867643bf8dc07d4b00b3b4c36211bdc3134088ebefb0e84e8540055d98b642eb45d4acb4106cac2d2738609d8302e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

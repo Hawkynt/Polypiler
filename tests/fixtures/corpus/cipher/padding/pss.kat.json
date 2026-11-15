@@ -1,0 +1,41 @@
+{
+ "schema": 1,
+ "file": "algorithms/padding/pss.js",
+ "algorithms": [
+  {
+   "name": "PSS",
+   "vectors": [
+    {
+     "text": "PSS padding with 11-byte input",
+     "inverse": false,
+     "steps": [
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}},
+      {"set":"keySize","value":{"t":"number","v":2048}},
+      {"set":"saltLength","value":{"t":"number","v":20}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"4c7e44412ff1f63ebb446bc23e89347c50f4120b4c7e44432ff1f63ebb446bc23e89347c50f4120b4c7e44452ff1f63ebb446bc23e89347c50f4120b4c7e44472ff1f63ebb446bc23e89347c50f4120b4c7e44492ff1f63ebb446bc23e89347c50f4120b4c7e444b2ff1f63ebb446bc23e89347c50f4120b4c7e444d2ff1f63ebb446bc23e89347c50f4120b4c7e444f2ff1f63ebb446bc23e89347c50f4120b4c7e44512ff1f63ebb446bc23e89347c50f4120b4c7e44532ff1f63ebb446bc23e89347c50f4120b4c7e44552ff1f63ebb446bc23e8935561f808bb5af766905586d37d8b0743eb8a14dddc5844ef358a09b762c58376a8cd8be139d44cfcabc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PSS padding with 20-byte SHA-1 hash",
+     "inverse": false,
+     "steps": [
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-1"}},
+      {"set":"keySize","value":{"t":"number","v":2048}},
+      {"set":"saltLength","value":{"t":"number","v":20}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"},
+     "expected": {"t":"bytes","v":"c155e9eec927c1488c28ce44b3efcb62b411b4fcc155e9ecc927c1488c28ce44b3efcb62b411b4fcc155e9eac927c1488c28ce44b3efcb62b411b4fcc155e9e8c927c1488c28ce44b3efcb62b411b4fcc155e9e6c927c1488c28ce44b3efcb62b411b4fcc155e9e4c927c1488c28ce44b3efcb62b411b4fcc155e9e2c927c1488c28ce44b3efcb62b411b4fcc155e9e0c927c1488c28ce44b3efcb62b411b4fcc155e9fec927c1488c28ce44b3efcb62b411b4fcc155e9fcc927c1488c28ce44b3efcb62b411b4fcc155e9fac927c1488c28ce44b3efca48fb652d42225dc4aabebb00ae87189b3e2c2b22a64e25182bcb004db76ee5294aeb411cefb69c31bc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

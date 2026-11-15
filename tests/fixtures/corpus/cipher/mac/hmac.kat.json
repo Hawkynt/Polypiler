@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/hmac.js",
+ "algorithms": [
+  {
+   "name": "HMAC",
+   "vectors": [
+    {
+     "text": "HMAC-MD5 Botan Vector 1 - 'Hi There'",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b"}},
+      {"set":"hashFunction","value":{"t":"string","v":"MD5"}}
+     ],
+     "input": {"t":"bytes","v":"4869205468657265"},
+     "expected": {"t":"bytes","v":"9294727a3638bb1c13f48ef8158bfc9d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HMAC-MD5 Botan Vector 2 - 'Test With Truncation'",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c"}},
+      {"set":"hashFunction","value":{"t":"string","v":"MD5"}}
+     ],
+     "input": {"t":"bytes","v":"546573742057697468205472756e636174696f6e"},
+     "expected": {"t":"bytes","v":"56461ef2342edc00f9bab995690efd4c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

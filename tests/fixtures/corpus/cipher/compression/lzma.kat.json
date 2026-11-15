@@ -1,0 +1,110 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzma.js",
+ "algorithms": [
+  {
+   "name": "LZMA",
+   "vectors": [
+    {
+     "text": "Empty input - properties, zero size and the end marker only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"5d00001000000000000083fffbffffc0000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte literal",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"5d00001000010000000020c1fbffffffe0000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hello string - five literals",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f"},
+     "expected": {"t":"bytes","v":"5d00001000050000000024194986e7dc81a809fffc917000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ABABAB pattern - two literals then a distance-2 match",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414241424142"},
+     "expected": {"t":"bytes","v":"5d00001000060000000020909e06107bdffffef84000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AAAA repetition - self-referential distance-1 match",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "expected": {"t":"bytes","v":"5d00001000040000000020e8bdffffffffe0000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hello World text",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"5d000010000b0000000024194986e7d5e56ab57f1092370048ffffc2c00000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive run (24 bytes) - overlapping match longer than its distance",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"5d00001000180000000030ee0707ffffffff80000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating pattern (16 bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61626162616261626162616261626162"},
+     "expected": {"t":"bytes","v":"5d0000100010000000003098a60307bfffffff84000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Binary sample with high-bit-set bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff80ab007f80fffe0180818200ff7e10"},
+     "expected": {"t":"bytes","v":"5d0000100010000000007fa0116003f9139ae212a38c4f9550a246d60ba22fffff853a0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

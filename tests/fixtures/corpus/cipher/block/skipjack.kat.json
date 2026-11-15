@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/skipjack.js",
+ "algorithms": [
+  {
+   "name": "Skipjack",
+   "vectors": [
+    {
+     "text": "DarkCrypt Skipjack vector 1/zero",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"aaae8ede6764143d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Skipjack vector 2/incr",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00010203040506070809"}}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"f62e83484fe30190"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Skipjack vector 3/incr2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a"}}
+     ],
+     "input": {"t":"bytes","v":"1011121314151617"},
+     "expected": {"t":"bytes","v":"20ab989c85456b03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Bouncy Castle SkipjackTest reference vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00998877665544332211"}}
+     ],
+     "input": {"t":"bytes","v":"33221100ddccbbaa"},
+     "expected": {"t":"bytes","v":"2587cae27a12d300"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LibTomCrypt skipjack.c reference vector (two identical blocks)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00998877665544332211"}}
+     ],
+     "input": {"t":"bytes","v":"33221100ddccbbaa33221100ddccbbaa"},
+     "expected": {"t":"bytes","v":"2587cae27a12d3002587cae27a12d300"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

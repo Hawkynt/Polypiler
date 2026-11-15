@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/sparkle-hash.js",
+ "algorithms": [
+  {
+   "name": "SparkleHash",
+   "vectors": [
+    {
+     "text": "Esch256: Empty message (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"c0e815d78b875dc768c6c8b3afa51987cd69e5c087d387368628a511cfad5730"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch256: Single byte 0x00 (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"d515fd9c2852d9d6f00c9cf01d858af467eedf21ff68cc14c005b3eff7a6ecd3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch256: Two bytes 0x0001 (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"fbcad7ab77fd4cc844534d2716d08c092b40b86e00647ecaa429afdfe3b3fc43"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch256: Three bytes 0x000102 (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"f33561ba7dcf690e4e1c519b28712a878028417a3974873f188ae33b289fcab6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch256: Four bytes 0x00010203 (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"649d3e5258e504ef842a7176108d36a823e751d5e0ee31e3faf111415bb9bbc2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch256: 16 bytes (full rate) (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"acff841e2a526d83d6e94ab5564d6d64c98f5e8016bb1c2950386ed156c6c174"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch256: 32 bytes (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"78b905b2e2d4110b76ef8afd2495f58ad6ffd6b9727377f3e5dfceebf3031e24"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

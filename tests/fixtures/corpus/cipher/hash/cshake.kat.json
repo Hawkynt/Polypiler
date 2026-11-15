@@ -1,0 +1,132 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/cshake.js",
+ "algorithms": [
+  {
+   "name": "cSHAKE128",
+   "vectors": [
+    {
+     "text": "cSHAKE128: 00010203, S='Email Signature', 32 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"customization","value":{"t":"bytes","v":"456d61696c205369676e6174757265"}}
+     ],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"c1c36925b6409a04f1b504fcbca9d82b4017277cb5ed2b2065fc1d3814d5aaf5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "cSHAKE128: 200 bytes, S='Email Signature', 32 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"customization","value":{"t":"bytes","v":"456d61696c205369676e6174757265"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7"},
+     "expected": {"t":"bytes","v":"c5221d50e4f822d96a2e8881a961420f294b7b24fe3d2094baed2c6524cc166b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "cSHAKE128: NIST ACVP tc25 - N='KMAC', 5-byte message, 39-byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":39}},
+      {"set":"functionName","value":{"t":"bytes","v":"4b4d4143"}},
+      {"set":"customization","value":{"t":"bytes","v":"606b6945466026492929375d7971303f2a734b612071295b6a506034523d296c565f3974797654246b4162482429317d705d2e6262656f6d622e"}}
+     ],
+     "input": {"t":"bytes","v":"ca88f708fa"},
+     "expected": {"t":"bytes","v":"bebb534ccfccd300f731d2911fb4351d5fcc95ac2509e9abae8f9dc51106e28d7f25ae11738334"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "cSHAKE128: NIST ACVP tc27 - N='KMAC', empty message, 34-byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":34}},
+      {"set":"functionName","value":{"t":"bytes","v":"4b4d4143"}},
+      {"set":"customization","value":{"t":"bytes","v":"60503b757c2a606a4b40357e65243655787662453829426f2a7e2e4466732f7a64583e26406d2a4e626e733c487d35723c6b49447a6526572e4b6b7d7b3b2457313a3b2c6431362b6d3463483427462b693a297a496a207d5265767421"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"1e5ca2a14cc46de9a6510003516cddcf4fd6f3dc073f64633bfe5c43172e97c7d63a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "cSHAKE256",
+   "vectors": [
+    {
+     "text": "cSHAKE256: 00010203, S='Email Signature', 64 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"customization","value":{"t":"bytes","v":"456d61696c205369676e6174757265"}}
+     ],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"d008828e2b80ac9d2218ffee1d070c48b8e4c87bff32c9699d5b6896eee0edd164020e2be0560858d9c00c037e34a96937c561a74c412bb4c746469527281c8c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "cSHAKE256: 200 bytes, S='Email Signature', 64 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"customization","value":{"t":"bytes","v":"456d61696c205369676e6174757265"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7"},
+     "expected": {"t":"bytes","v":"07dc27b11e51fbac75bc7b3c1d983e8b4b85fb1defaf218912ac86430273091727f42b17ed1df63e8ec118f04b23633c1dfb1574c8fb55cb45da8e25afb092bb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "cSHAKE256: NIST ACVP tc50 - N='TupleHash', 65-byte message, 32-byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"functionName","value":{"t":"bytes","v":"5475706c6548617368"}},
+      {"set":"customization","value":{"t":"bytes","v":"5d4d725b69572d3e277b734925693a79566164457b7021575e593c563e523d677378583a2e4555614530575d6374697d59426664603e216c4b3a7d2f3b5420535e2d542b317e6c312c23206c38447368703e7c7a6b582854776c6e73474746702f257d56405f6d595554575e3e3553"}}
+     ],
+     "input": {"t":"bytes","v":"31a5b91183d04c3f2adf8a92507e44515ce6cb5bb8129862da36b773f692a01183576b88da8a1f21741c6fbfaaad821edb05e3e3f5b29e9d2e949ba2f2c05b9a9e"},
+     "expected": {"t":"bytes","v":"fae091032fc8c74b7d3912a783eb6c0598e65e576fe71e5ded3c057120bd6022"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "cSHAKE256: NIST ACVP tc58 - N='ParallelHash', 5-byte message, 39-byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":39}},
+      {"set":"functionName","value":{"t":"bytes","v":"506172616c6c656c48617368"}},
+      {"set":"customization","value":{"t":"bytes","v":"76442d313e542c662e522a56255a413c4e7457302433555a445b245825515651452c4836453b787159514934636f5e462353663a435521646d516b625052625a7b563178332c76337b665450694276547d5b554f6b3c2f6f2a6447724e3740286e6d372c5e6434765d523e5b204f794a"}}
+     ],
+     "input": {"t":"bytes","v":"d5d7e7517f"},
+     "expected": {"t":"bytes","v":"442be69b2afd7c8282839920a8446aaf16a5049d3d018eac87e04cf9225870efca6f88db415829"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,57 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/ice.js",
+ "algorithms": [
+  {
+   "name": "ICE",
+   "vectors": [
+    {
+     "text": "Thin-ICE (8 rounds) Official Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"deadbeef01234567"}},
+      {"set":"rounds","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"fedcba9876543210"},
+     "expected": {"t":"bytes","v":"de240d83a00a9cc0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ICE (16 rounds) Official Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"deadbeef01234567"}},
+      {"set":"rounds","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"fedcba9876543210"},
+     "expected": {"t":"bytes","v":"7d6ef1ef30d47a96"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "ICE-2",
+   "vectors": [
+    {
+     "text": "ICE-2 Official Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff"}}
+     ],
+     "input": {"t":"bytes","v":"fedcba9876543210"},
+     "expected": {"t":"bytes","v":"f94840d86972f21c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

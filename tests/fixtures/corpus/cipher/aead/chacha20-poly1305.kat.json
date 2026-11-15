@@ -1,0 +1,56 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/chacha20-poly1305.js",
+ "algorithms": [
+  {
+   "name": "ChaCha20-Poly1305",
+   "vectors": [
+    {
+     "text": "RFC 8439 Section 2.8.2 - ChaCha20-Poly1305 AEAD Encryption",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"070000004041424344454647"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"50515253c0c1c2c3c4c5c6c7"}}
+     ],
+     "input": {"t":"bytes","v":"4c616469657320616e642047656e746c656d656e206f662074686520636c617373206f66202739393a204966204920636f756c64206f6666657220796f75206f6e6c79206f6e652074697020666f7220746865206675747572652c2073756e73637265656e20776f756c642062652069742e"},
+     "expected": {"t":"bytes","v":"d31a8d34648e60db7b86afbc53ef7ec2a4aded51296e08fea9e2b5a736ee62d63dbea45e8ca9671282fafb69da92728b1a71de0a9e060b2905d6a5b67ecd3b3692ddbd7f2d778b8c9803aee328091b58fab324e4fad675945585808b4831d7bc3ff4def08e4b7a9de576d26586cec64b61161ae10b594f09e26a7e902ecbd0600691"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ Test Vector - Empty Plaintext with AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"dba2f48661bd70602fde23f98a587224d955c9b97657b624fe366ea473c9ac12"}},
+      {"set":"nonce","value":{"t":"bytes","v":"dc528938373b4440d5eac33d"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0e500b992193f9b002bf02b0b293c6f7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ Test Vector - Empty Plaintext with 1-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4ab9ae9d538d74ba03eb61625e023102287ef897aa108ea19ad35005c1d40a30"}},
+      {"set":"nonce","value":{"t":"bytes","v":"a3ddd97f558b7e408451a1e6"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"05"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"bca86ed1dbbdf0693867adb0438b83de"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

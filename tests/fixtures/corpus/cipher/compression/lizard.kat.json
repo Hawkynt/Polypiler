@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lizard.js",
+ "algorithms": [
+  {
+   "name": "Lizard",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All literals - no matches (ABCD)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424344"},
+     "expected": {"t":"bytes","v":"040000004041424344"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple repetition - AAAAA (5 A's, too short to search for a match)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141414141"},
+     "expected": {"t":"bytes","v":"05000000504141414141"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern ABCABC (6 bytes, too short to search for a match)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243"},
+     "expected": {"t":"bytes","v":"0600000060414243414243"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample with a real match - 'the quick brown fox...' x4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"b4000000f01074686520717569636b2062726f776e20666f78206a756d7073206f766572201f00916c617a7920646f672e0e000f2d0070"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

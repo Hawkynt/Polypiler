@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/cmac.js",
+ "algorithms": [
+  {
+   "name": "CMAC",
+   "vectors": [
+    {
+     "text": "NIST SP 800-38B Example 1 - Empty Message",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"bb1d6929e95937287fa37d129b756746"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-38B Example 2 - Single Block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"070a16b46b4d4144f79bdd9dd04a287c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-38B Example 3 - Multi Block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411"},
+     "expected": {"t":"bytes","v":"dfa66747de9ae63030ca32611497c827"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

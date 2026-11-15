@@ -1,0 +1,153 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/check-digit.js",
+ "algorithms": [
+  {
+   "name": "Luhn-Check-Digit",
+   "vectors": [
+    {
+     "text": "Valid test Visa card number",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"04000000000000000000000000000002"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Invalid test Visa card number",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"04000000000000000000000000000003"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Valid 12-digit number",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"070909020703090807010308"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Verhoeff-Check-Digit",
+   "vectors": [
+    {
+     "text": "Rosetta Code: 2363 validates",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"02030603"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rosetta Code: 2369 does not validate",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"02030609"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rosetta Code: 123451 validates",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010203040501"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rosetta Code: 123459 does not validate",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010203040509"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rosetta Code: 1234567890120 validates",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020304050607080900010200"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rosetta Code: 1234567890129 does not validate",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020304050607080900010209"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Damm-Check-Digit",
+   "vectors": [
+    {
+     "text": "Valid 7-digit number",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"05070204030403"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Invalid 7-digit number",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"05070204030404"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Valid 12-digit number",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"090102030405060708090009"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

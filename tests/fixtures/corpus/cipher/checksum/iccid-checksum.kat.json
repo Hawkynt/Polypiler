@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/iccid-checksum.js",
+ "algorithms": [
+  {
+   "name": "ICCID",
+   "vectors": [
+    {
+     "text": "Official ICCID 89148000005339755555",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"38393134383030303030353333393735353535"},
+     "expected": {"t":"bytes","v":"05"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "US AT&T ICCID pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"38393031343130313233343536373839303132"},
+     "expected": {"t":"bytes","v":"02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DE Vodafone ICCID pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"38393439313031323334353637383930313233"},
+     "expected": {"t":"bytes","v":"02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/romuduo.js",
+ "algorithms": [
+  {
+   "name": "RomuDuo",
+   "vectors": [
+    {
+     "text": "Seed (1,1): First four 64-bit outputs from RomuDuo",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"01000000000000000100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"01000000000000004b574c4f803e83d30080a52ba6279859b76f895d29aa8955"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (0,1): First four 64-bit outputs from RomuDuo",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000000000000100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00000000000000004b574c4f803e83d300000000000058ba8b12582028b07c07"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed via SplitMix64(0): First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"afcd1d7b39a820e27cca66f3b3f1fc552917cf7337129456e29bccc704bef429"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed via SplitMix64(1): First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c15c0289ec2d0a912d43ca4aaebed118d469b2b764d4a9a2985f245643c8a42f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

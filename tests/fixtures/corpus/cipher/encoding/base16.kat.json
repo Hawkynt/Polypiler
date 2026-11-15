@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/base16.js",
+ "algorithms": [
+  {
+   "name": "Base16",
+   "vectors": [
+    {
+     "text": "Base16 empty string test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base16 single character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"66"},
+     "expected": {"t":"bytes","v":"3636"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base16 two character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f"},
+     "expected": {"t":"bytes","v":"36363646"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base16 three character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f"},
+     "expected": {"t":"bytes","v":"363636463646"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base16 four character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f62"},
+     "expected": {"t":"bytes","v":"3636364636463632"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base16 five character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f6261"},
+     "expected": {"t":"bytes","v":"36363646364636323631"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base16 six character test - RFC 4648",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f626172"},
+     "expected": {"t":"bytes","v":"363636463646363236313732"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

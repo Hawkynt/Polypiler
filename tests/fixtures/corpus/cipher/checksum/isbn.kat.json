@@ -1,0 +1,82 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/isbn.js",
+ "algorithms": [
+  {
+   "name": "ISBN-10",
+   "vectors": [
+    {
+     "text": "Valid ISBN-10: 0-306-40615-9",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00030006040006010509"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Invalid ISBN-10: 0-306-40615-3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00030006040006010503"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Valid ISBN-10: 0-19-605688-3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010906000506080803"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "ISBN-13",
+   "vectors": [
+    {
+     "text": "Valid ISBN-13: 978-0-306-40615-7",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"09070800030006040006010507"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Invalid ISBN-13: 978-0-306-40615-3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"09070800030006040006010503"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Valid ISBN-13: 979-0-19-605688-2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"09070900010906000506080802"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

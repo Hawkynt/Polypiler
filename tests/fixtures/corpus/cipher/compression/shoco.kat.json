@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/shoco.js",
+ "algorithms": [
+  {
+   "name": "Shoco",
+   "vectors": [
+    {
+     "text": "Empty string compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single word 'test'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74657374"},
+     "expected": {"t":"bytes","v":"04000000c579"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Word 'compression' - validates multi-pack encoding",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"636f6d7072657373696f6e"},
+     "expected": {"t":"bytes","v":"0b00000063e329d1f798"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Phrase 'test compression' - validates multiple packs and a literal space",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"7465737420636f6d7072657373696f6e"},
+     "expected": {"t":"bytes","v":"10000000c5792063e329d1f798"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

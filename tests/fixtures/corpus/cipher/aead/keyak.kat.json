@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/keyak.js",
+ "algorithms": [
+  {
+   "name": "Lake Keyak",
+   "vectors": [
+    {
+     "text": "Lake Keyak: 3-byte message with metadata, empty nonce",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"322b241d160f0801faf3ece5ded7d0c9"}},
+      {"set":"nonce","value":{"t":"bytes","v":""}},
+      {"set":"aad","value":{"t":"bytes","v":"414243"}}
+     ],
+     "input": {"t":"bytes","v":"444546"},
+     "expected": {"t":"bytes","v":"b60b8e873cfb3393a2b01180bb493b24b53516"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Lake Keyak: 3-byte message with metadata and 1-byte nonce",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"332c251e17100902fbf4ede6dfd8d1ca"}},
+      {"set":"nonce","value":{"t":"bytes","v":"f7"}},
+      {"set":"aad","value":{"t":"bytes","v":"414243"}}
+     ],
+     "input": {"t":"bytes","v":"444546"},
+     "expected": {"t":"bytes","v":"96c21e0e7ebc5630c61c626624f00f6bbe745d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Lake Keyak: 3-byte message with metadata and 2-byte nonce",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"342d261f18110a03fcf5eee7e0d9d2cb"}},
+      {"set":"nonce","value":{"t":"bytes","v":"995a"}},
+      {"set":"aad","value":{"t":"bytes","v":"414243"}}
+     ],
+     "input": {"t":"bytes","v":"444546"},
+     "expected": {"t":"bytes","v":"5058e692a71dae88d4e80116f9e9167071c124"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Lake Keyak: 169-byte message spanning two blocks, 150-byte nonce, no metadata",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"dccdbeafa09182736455463728190afb"}},
+      {"set":"nonce","value":{"t":"bytes","v":"55d656d757d858d959da5adb5bdc5cdd5dde5edf5fe060e161e262e363e464e565e666e767e868e969ea6aeb6bec6ced6dee6eef6ff070f171f272f373f474f575f676f777f878f979fa7afb7bfc7cfd7dfe7eff7f00800181028203830484058506860787088809890a8a0b8b0c8c0d8d0e8e0f8f10901191129213931494159516961797189819991a9a1b9b1c9c1d9d1e9e1f9f20"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"bfb0a192837465564738291a0bfceddecebfb0a192837465564738291a0bfcedddcebfb0a192837465564738291a0bfcecddcebfb0a192837465564738291a0bfbecddcebfb0a192837465564738291a0afbecddcebfb0a19283746556473829190afbecddcebfb0a19283746556473828190afbecddcebfb0a19283746556473728190afbecddcebfb0a19283746556463728190afbecddcebfb0a19283746555463728190afbecdd"},
+     "expected": {"t":"bytes","v":"cce31783d03068c70a4625663f5f9f703d718b32d81f4d2334ee83d3695c8665b07ae40082fd44ea28dbfe0bde36fc3368780de260f38d6157920d807fb5d1451b4d19318266765b3a45c1a52250694abf4d6a307e2e735aad4d87b20ee48fea37e2bbb5949dd0baaad734501412f433c75d11defaed36071ec0beec1e4c4676f8b043c99fa6baa4dafc5ad4386bf1925b1e05ca7f3af7d393f3a0f1f688f888505e8b08456331182364f176345ba37b07828da7898e9ccb81"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Lake Keyak: empty message with 193-byte metadata spanning two blocks",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"05e6c7a8896a4b2c0cedceaf90715233"}},
+      {"set":"nonce","value":{"t":"bytes","v":"5c1dde9f5f20e1a26223e4a56526e7a86829eaab6b2cedae6e2ff0b17132f3b47435f6b77738f9ba7a3bfcbd7d3effc0804102c3834405c6864708c9894a0bcc8c4d0ecf8f5011d2925314d5955617d898591adb9b5c1dde9e5f20e1a16223e4a46526e7a76829eaaa6b2cedad6e2ff0b07132f3b37435f6b67738f9b97a3bfcbc7d3effbf804102c2834405c5864708c8894a0bcb8c"}},
+      {"set":"aad","value":{"t":"bytes","v":"2304e5c6a788694a2a0beccdae8f70513112f3d4b59677583819fadbbc9d7e5f3f2001e2c3a48566462708e9caab8c6d4d2e0ff0d1b29374543516f7d8b99a7b5b3c1dfedfc0a18262432405e6c7a889694a2b0cedceaf9070513213f4d5b6977758391afbdcbd9e7e5f402102e3c4a58566472809eacbac8c6d4e2f10f1d2b39374553617f8d9ba9a7b5c3d1effe0c1a18263442506e7c8a8896a4b2c0deecfaf9071523314f5d6b69778593a1bfcddbd9e7f60412203e4c4a5866748290aebcb"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"a8652fdc09a7d4036ccf04658db6b83f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,164 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/md.js",
+ "algorithms": [
+  {
+   "name": "MD2",
+   "vectors": [
+    {
+     "text": "RFC 1319 Test Vector - Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"8350e5a3e24c153df2275c9f80692773"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1319 Test Vector - 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"32ec01ec4a6dac72c0ab96fb34c0b5d1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1319 Test Vector - 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"da853b0d3f88d99b30283a69e6ded6bb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "MD4",
+   "vectors": [
+    {
+     "text": "RFC 1320 Test Vector - Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"31d6cfe0d16ae931b73c59d7e0c089c0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1320 Test Vector - 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"bde52cb31de33e46245e05fbdbd6fb24"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1320 Test Vector - 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"a448017aaf21d8525fc10ae87aa6729d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "MD5",
+   "vectors": [
+    {
+     "text": "RFC 1321 Test Vector - Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"d41d8cd98f00b204e9800998ecf8427e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1321 Test Vector - 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"0cc175b9c0f1b6a831c399e269772661"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1321 Test Vector - 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"900150983cd24fb0d6963f7d28e17f72"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1321 Test Vector - 'message digest'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6d65737361676520646967657374"},
+     "expected": {"t":"bytes","v":"f96b697d7cb7938d525a2f31aaf161d0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1321 Test Vector - alphabet",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a"},
+     "expected": {"t":"bytes","v":"c3fcd3d76192e4007dfb496cca67e13b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1321 Test Vector - alphanumeric",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839"},
+     "expected": {"t":"bytes","v":"d174ab98d277d9f5a5611c2c9f419d9f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 1321 Test Vector - numeric sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930"},
+     "expected": {"t":"bytes","v":"57edf4a22be3c955ac49da2e2107b67a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

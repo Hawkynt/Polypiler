@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-cobra128576.js",
+ "algorithms": [
+  {
+   "name": "COBRA-128-576 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Cobra128 -- zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"324b3eb95a184327b23cefd83d8e330b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Cobra128 -- incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f4041424344454647"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"56730009366ee99eb8c4375eb94bed1a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Cobra128 -- shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"cdb50a1858e9968de5a562073a74ead6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Cobra128 -- random key/plaintext #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0826181ab27ae68c63f4760fb1a483a4fb4a492e8a5750cf191602e84441d14ade46bd13cab2adfcb07d8769657dce7d0e97e7a164eed0561f58780e4b814509c274f74eb710da07"}}
+     ],
+     "input": {"t":"bytes","v":"af8c2de23857e7cdd85c7e1a2599d2f7"},
+     "expected": {"t":"bytes","v":"1c9fe1280acbeb6807840a517864d03c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Cobra128 -- random key/plaintext #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3adcf85d3144fb1c28844dd151324434fd371fe213b4feefc54b231c67d9d111fe49523a1c2bb5a440a768bc9853e5ebabe059a5b307ca81de6892504304254b6b66b40eccc65d18"}}
+     ],
+     "input": {"t":"bytes","v":"71d64f6ee14c98cdacea12511fc52921"},
+     "expected": {"t":"bytes","v":"d7f7bfe852a0e28c20cfa4c3472e395b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/dmc.js",
+ "algorithms": [
+  {
+   "name": "DMC",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"00000000"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive input - 'AAAAAAAAAA'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141414141414141"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"0a00000041562b38fe748dbbdf97388cfc"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample - 'the quick brown fox'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"13000000747042461806ada494e86458c496a9091919a9053b3200"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/darkcrypt-skein.js",
+ "algorithms": [
+  {
+   "name": "Skein (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "Skein 1.1 Appendix C.2 - Skein-512-512, 1 byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"8fca8d2705f99a56904308a4004c64efb668818b58b0895bf7296a2c5a54f9301483d622c4a5aec855ac30087e1eb0e83940906e7b055d70d446c8d285f27f01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Skein 1.1 Appendix C.2 - Skein-512-512, 64 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0dfdedddcdbdad9d8d7d6d5d4d3d2d1d0cfcecdcccbcac9c8c7c6c5c4c3c2c1c0"},
+     "expected": {"t":"bytes","v":"0fc42e100b2cd0b0c69f39383f9d2d17af6cf74e2aa8d4e2d91cbf94a59935a3123b7f9250f982224bf0c3e190be10ab41add8c1e35cbec4b1b3c35dbba5869c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Skein 1.1 Appendix C.2 - Skein-512-512, 128 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0efeeedecebeae9e8e7e6e5e4e3e2e1e0dfdedddcdbdad9d8d7d6d5d4d3d2d1d0cfcecdcccbcac9c8c7c6c5c4c3c2c1c0bfbebdbcbbbab9b8b7b6b5b4b3b2b1b0afaeadacabaaa9a8a7a6a5a4a3a2a1a09f9e9d9c9b9a999897969594939291908f8e8d8c8b8a89888786858483828180"},
+     "expected": {"t":"bytes","v":"0f019e7c1849167cecb9a0d8f1b00ccd5b14159c5aaee449dab55a1bc6c85103e8378454912e46af63067950f863043ccfa3699887a2577337caa66531bdbf9e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Skein 1.1 ShortMsgKAT_512 - Len = 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"d3f7263a09837f4ce5c8ef70a5ddffac7b92d6c2ace5a12265bd5b593260a3ff20d8b4b4c5494e945448b37abb1fc526f6b46089208fde938d7f23724c4bdfb7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Skein 1.1 ShortMsgKAT_512 - Len = 8",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"a37fa71a4bff725887fd1e3c087a0d9c427e475962d4d4abfa45f098ec16a18c1e2f957c0ec343f7e910ec30e34aecfa703f6d2a334250e5446cdce71a99c222"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Skein \"abc\"",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"c52438c670f3d580dc4cb8d085141a19643668f82a6ad5f4ecb9292f04b8f38f1b9dcc8dc4108f72e6ec81fc6cbcd6edf1867fc4f0beafa692957a4adc1183e3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Skein incremental 64-byte message",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"df2624902ccc7e042541952126f94750802b3a1e61fa6e22f8bc981066874095883455ddd2b0c96a28f1074b4f151829ffc65415503f504e76f362c312120644"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,82 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xorshift.js",
+ "algorithms": [
+  {
+   "name": "XorShift128",
+   "vectors": [
+    {
+     "text": "Seed (1,2,3,4): First 5 outputs (20 bytes) - verified against reference C implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001000000020000000300000004"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000080d0000181f00000004000020200040004d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (123456789, 362436069, 521288629, 88675123): First 10 outputs - Marsaglia's standard test seed",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"075bcd15159a55e51f123bb505491333"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"dca345ea1b5116e6951049aad88d00b01ec7825e8db241469af814432ac00f2c0837ad5817906569"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (1,1,1,1): First 8 outputs - all identical seed values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001000000010000000100000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000080800000001000008080000000100400841004000400000080800000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (1000000, 2000000, 3000000, 4000000): First 5 outputs - large seed values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"000f4240001e8480002dc6c0003d0900"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"7a5a56058e94e74ae0e12b9e087c4b8ba03edeff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (1,2,3,4): Outputs 11-15 - verifies long-term state progression",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"skip","value":{"t":"number","v":10}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001000000020000000300000004"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00c28a0f004ed75811c11a8922431ffe36c57b4b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

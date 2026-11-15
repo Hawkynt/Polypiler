@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/deal.js",
+ "algorithms": [
+  {
+   "name": "DEAL",
+   "vectors": [
+    {
+     "text": "DEAL-128 All Zeros Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"74169b48b45345a9109c60f817f38860"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DEAL-128 Pattern Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"fedcba9876543210fedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef0123456789abcdef"},
+     "expected": {"t":"bytes","v":"79828f5a2ed701b6d0b0a0cff6781950"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DEAL-256 Extended Key Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000111111111111111122222222222222223333333333333333"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"9f74751d6a2dbfcfd1d1d254cb1c003d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

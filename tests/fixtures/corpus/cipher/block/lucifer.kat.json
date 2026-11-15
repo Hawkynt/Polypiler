@@ -1,0 +1,89 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/lucifer.js",
+ "algorithms": [
+  {
+   "name": "Lucifer",
+   "vectors": [
+    {
+     "text": "Applied Cryptography LUCIFER2 TESTS vector 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"a201fc18d62c85ef5965a58295bbf609"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Applied Cryptography LUCIFER2 TESTS vector 2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdeffedcba9876543210"},
+     "expected": {"t":"bytes","v":"9d14fe4377aa87dd07cc8a14522c21ed"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Applied Cryptography LUCIFER2 TESTS vector 3",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"97f1c104b0f120d194c07024f14815ed"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Applied Cryptography LUCIFER2 TESTS vector 4",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdeffedcba9876543210"},
+     "expected": {"t":"bytes","v":"d442a34dd70e2b4156eb0f2a8aded1a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Applied Cryptography LUCIFER2 TESTS vector 5",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdeffedcba9876543210"},
+     "expected": {"t":"bytes","v":"cf46622fa98546bb9a5bc00239eb0c92"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Applied Cryptography LUCIFER2 TESTS vector 6",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"fedcba98765432100123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdeffedcba9876543210"},
+     "expected": {"t":"bytes","v":"7faf65bfc5458fd2dc9cc2266012ef44"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

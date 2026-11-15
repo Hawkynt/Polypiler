@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/imei-checksum.js",
+ "algorithms": [
+  {
+   "name": "IMEI",
+   "vectors": [
+    {
+     "text": "Example IMEI",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3439303135343230333233373531"},
+     "expected": {"t":"bytes","v":"08"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Another IMEI",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3335323039393030313736313438"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IMEI test 864586030236528",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3836343538363033303233363532"},
+     "expected": {"t":"bytes","v":"08"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

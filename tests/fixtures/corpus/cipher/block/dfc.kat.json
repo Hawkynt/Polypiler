@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/dfc.js",
+ "algorithms": [
+  {
+   "name": "DFC",
+   "vectors": [
+    {
+     "text": "DFC 128-bit test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"d4afd7ffa1faec7940528fddb189401d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

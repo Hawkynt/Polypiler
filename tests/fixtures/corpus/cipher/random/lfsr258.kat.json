@@ -1,0 +1,95 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/lfsr258.js",
+ "algorithms": [
+  {
+   "name": "LFSR258",
+   "vectors": [
+    {
+     "text": "Default seed (123456789123456789 for all 5 components) - First 8 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"01b69b4bacd05f1501b69b4bacd05f1501b69b4bacd05f1501b69b4bacd05f1501b69b4bacd05f15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"456e698a9b4e9cf5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Default seed (123456789123456789 for all 5 components) - First 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"seed","value":{"t":"bytes","v":"01b69b4bacd05f1501b69b4bacd05f1501b69b4bacd05f1501b69b4bacd05f1501b69b4bacd05f15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"456e698a9b4e9cf59b773ded05a86848"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Custom seed [12345, 23456, 34567, 131072, 8388608] - First 8 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000000030390000000000005ba0000000000000870700000000000200000000000000800000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0011000083000080"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Minimum valid seeds [2, 512, 4096, 131072, 8388608] - First 8 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000000000020000000000000200000000000000100000000000000200000000000000800000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0003000080000080"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Maximum seeds (all 0xFFFFFFFFFFFFFFFF) - First 8 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c3efffff80ffff7f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Default seed - First 32 bytes (sequence test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"01b69b4bacd05f1501b69b4bacd05f1501b69b4bacd05f1501b69b4bacd05f1501b69b4bacd05f15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"456e698a9b4e9cf59b773ded05a8684851a18de9815ffd298274805f0797f5f3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/nmea-0183.js",
+ "algorithms": [
+  {
+   "name": "NMEA-0183",
+   "vectors": [
+    {
+     "text": "GPRMC sentence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4750524d432c3132333531392c412c343830372e3033382c4e2c30313133312e3030302c452c3032322e342c3038342e342c3233303339342c3030332e312c57"},
+     "expected": {"t":"bytes","v":"6a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GPGGA sentence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"47504747412c3132333531392c343830372e3033382c4e2c30313133312e3030302c452c312c30382c302e392c3534352e342c4d2c34362e392c4d2c2c"},
+     "expected": {"t":"bytes","v":"47"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54455354"},
+     "expected": {"t":"bytes","v":"16"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

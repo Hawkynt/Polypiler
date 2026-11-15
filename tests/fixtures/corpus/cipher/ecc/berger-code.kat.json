@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/berger-code.js",
+ "algorithms": [
+  {
+   "name": "Berger Code",
+   "vectors": [
+    {
+     "text": "Berger (12,8) all zeros - count=8",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"000000000000000001000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Berger (12,8) all ones - count=0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101010101010101"},
+     "expected": {"t":"bytes","v":"010101010101010100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Berger (12,8) pattern 11010100 - count=4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101000100010000"},
+     "expected": {"t":"bytes","v":"010100010001000000010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Berger (12,8) pattern 00001111 - count=4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000001010101"},
+     "expected": {"t":"bytes","v":"000000000101010100010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Berger (12,8) pattern 10101010 - count=4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100010001000100"},
+     "expected": {"t":"bytes","v":"010001000100010000010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Berger (12,8) pattern 01010101 - count=4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001000100010001"},
+     "expected": {"t":"bytes","v":"000100010001000100010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Berger (12,8) single one - count=7",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000001"},
+     "expected": {"t":"bytes","v":"000000000000000100010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Berger (12,8) single zero - count=1",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101010101010100"},
+     "expected": {"t":"bytes","v":"010101010101010000000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

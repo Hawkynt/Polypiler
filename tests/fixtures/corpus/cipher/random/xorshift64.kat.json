@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xorshift64.js",
+ "algorithms": [
+  {
+   "name": "Xorshift64",
+   "vectors": [
+    {
+     "text": "Seed 1: First 5 outputs (40 bytes) - verified against reference C implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000040822041100041060c0114419b1e842f6e862629f554f503555d8025860c1fb090599265"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 88172645463325252: First 3 outputs (24 bytes) - from Marsaglia's examples",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"seed","value":{"t":"bytes","v":"0139408dcbbf7a44"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"79690975fbde15b02a337357ae2cc59b2fef107a27529ad0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 12345: First 5 outputs (40 bytes) - common test seed",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000003039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00000c163a391e199c0eb9542f03ca65a228090ad781f4b120f578d6eaf5fb187b76f0b8e8e1d6ee"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0 (becomes 1): First 5 outputs (40 bytes) - zero seed handling",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000040822041100041060c0114419b1e842f6e862629f554f503555d8025860c1fb090599265"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 9223372036854775807 (max int64): First 5 outputs - large seed value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"7fffffffffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"810000003f801fc08ffdbffe03feefffce8fc004c67d0de0ba17a467eef88ffb901172f84eb1e024"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

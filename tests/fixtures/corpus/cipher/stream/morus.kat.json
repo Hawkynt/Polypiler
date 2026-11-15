@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/morus.js",
+ "algorithms": [
+  {
+   "name": "MORUS",
+   "vectors": [
+    {
+     "text": "MORUS-640-128 Test Vector - Empty",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff"}},
+      {"set":"nonce","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"36114c3337ab27d84eeb88efadc5a5a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MORUS-640-128 Test Vector - Small",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff"}},
+      {"set":"nonce","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"01020304"},
+     "expected": {"t":"bytes","v":"72585912a2802959514d13f11dbad73d4eea8999"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

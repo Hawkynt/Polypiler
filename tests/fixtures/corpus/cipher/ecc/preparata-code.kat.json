@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/preparata-code.js",
+ "algorithms": [
+  {
+   "name": "Preparata Code",
+   "vectors": [
+    {
+     "text": "Preparata (16,7) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Preparata (16,7) pattern 1",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000000001"},
+     "expected": {"t":"bytes","v":"01010101010101010101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Preparata (16,7) pattern 2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000010000"},
+     "expected": {"t":"bytes","v":"00000000010101010000000001010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Preparata (16,7) pattern 3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000001000000"},
+     "expected": {"t":"bytes","v":"00000101000001010000010100000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/pcg-xsl-rr.js",
+ "algorithms": [
+  {
+   "name": "PCG-XSL-RR-64-32",
+   "vectors": [
+    {
+     "text": "PCG32 (XSH-RR-64-32) seed=0, first 21 x 32-bit outputs (Abseil golden vector)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":84}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"7a7ecbd989fd6c06ae646aa8cd3cf9456204b303198c858549fce611d1e9297a142d9440ee75f56b473a9117e3a45903bce807a1e54e5f4d497d6c5161829166a740474b031912a89de3defad266dbf10f38bebb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

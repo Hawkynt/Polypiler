@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/rar.js",
+ "algorithms": [
+  {
+   "name": "RAR3 (classic)",
+   "vectors": [
+    {
+     "text": "Empty input - length header only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'A' - one literal",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"01000000008000000000000000085b3ff516085480"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated byte run - one literal then a match",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"10000000008000000000000000086b3fe691cb042a4100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Periodic text - literals then a match carrying extra length bits",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636162636162636162636162636162636162"},
+     "expected": {"t":"bytes","v":"14000000199000000000000000082b54fe3306edcbb82f101b00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

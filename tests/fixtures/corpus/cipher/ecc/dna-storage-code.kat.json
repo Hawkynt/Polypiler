@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/dna-storage-code.js",
+ "algorithms": [
+  {
+   "name": "DNA Storage Code",
+   "vectors": [
+    {
+     "text": "RS(7,3) over GF(4) - All zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"00000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RS(7,3) over GF(4) - Pattern ACG",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"00010202030103"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RS(7,3) over GF(4) - Maximum values TTT",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"030303"},
+     "expected": {"t":"bytes","v":"03030300030000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RS(7,3) over GF(4) - Alternating CAT",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010003"},
+     "expected": {"t":"bytes","v":"01000302020103"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RS(7,3) over GF(4) - GC-rich CGG",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010202"},
+     "expected": {"t":"bytes","v":"01020203010300"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RS(7,3) encoding verification - GCA",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"020100"},
+     "expected": {"t":"bytes","v":"02010002030301"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

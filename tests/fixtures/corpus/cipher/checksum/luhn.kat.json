@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/luhn.js",
+ "algorithms": [
+  {
+   "name": "Luhn",
+   "vectors": [
+    {
+     "text": "Rosetta Code test vector 49927398716",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"34393932373339383731"},
+     "expected": {"t":"bytes","v":"06"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rosetta Code test vector 1234567812345670",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373831323334353637"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple Luhn test 12345674",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"31323334353637"},
+     "expected": {"t":"bytes","v":"04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

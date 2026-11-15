@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/ean8-checksum.js",
+ "algorithms": [
+  {
+   "name": "EAN-8",
+   "vectors": [
+    {
+     "text": "Standard EAN-8",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"39363338353037"},
+     "expected": {"t":"bytes","v":"04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "EAN-8 product",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"32303132333435"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"31323334353637"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

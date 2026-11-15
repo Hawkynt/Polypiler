@@ -1,0 +1,128 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/magenta.js",
+ "algorithms": [
+  {
+   "name": "MAGENTA",
+   "vectors": [
+    {
+     "text": "NIST AES round-1 ecb_int.txt, 128-bit key (non-zero key and plaintext)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"0909105491f0ef3d363eae828a504e2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round-1 ecb_tbl.txt I=1, 128-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"ca7d2b729ff35fbd75e8c72e8049f7d4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round-1 ecb_vt.txt I=1, 128-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"80000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f6b50c496e9a97abe925da2e7c891974"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round-1 ecb_vk.txt I=1, 128-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"d923ff2b95212ca5581693f71137aafa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round-1 ecb_vk.txt I=2, 128-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"40000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"462e3204fcee82beae4fa8cb66696502"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round-1 ecb_tbl.txt I=1, 192-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"ca7d2b729ff35fbd75e8c72e8049f7d4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round-1 ecb_vk.txt I=1, 192-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"800000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"588ebee01ddf366998f50d3ff58beaec"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round-1 ecb_tbl.txt I=1, 256-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f0f66c085c77ca9433c95e0300c71891"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round-1 ecb_vk.txt I=1, 256-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"9a199e39c2df1f1c17cea243f8e5147e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

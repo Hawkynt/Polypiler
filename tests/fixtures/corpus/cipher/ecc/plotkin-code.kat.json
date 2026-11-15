@@ -1,0 +1,193 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/plotkin-code.js",
+ "algorithms": [
+  {
+   "name": "Plotkin Code",
+   "vectors": [
+    {
+     "text": "Plotkin [2,2,1] base case - bits 00",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":0}}
+     ],
+     "input": {"t":"bytes","v":"0000"},
+     "expected": {"t":"bytes","v":"0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [2,2,1] base case - bits 01",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":0}}
+     ],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"0001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [2,2,1] base case - bits 10",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":0}}
+     ],
+     "input": {"t":"bytes","v":"0100"},
+     "expected": {"t":"bytes","v":"0100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [2,2,1] base case - bits 11",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":0}}
+     ],
+     "input": {"t":"bytes","v":"0101"},
+     "expected": {"t":"bytes","v":"0101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [4,3,2] level 1 - all zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [4,3,2] level 1 - pattern 001",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"000001"},
+     "expected": {"t":"bytes","v":"00000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [4,3,2] level 1 - pattern 010",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"000100"},
+     "expected": {"t":"bytes","v":"00010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [4,3,2] level 1 - pattern 011",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"000101"},
+     "expected": {"t":"bytes","v":"00010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [4,3,2] level 1 - pattern 100",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"010000"},
+     "expected": {"t":"bytes","v":"01000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [4,3,2] level 1 - all ones",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"010101"},
+     "expected": {"t":"bytes","v":"01010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [8,5,4] level 2 - all zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"0000000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [8,5,4] level 2 - pattern 00001",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"0000000001"},
+     "expected": {"t":"bytes","v":"0000000000010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [8,5,4] level 2 - pattern 10000",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"0100000000"},
+     "expected": {"t":"bytes","v":"0100010001000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plotkin [8,5,4] level 2 - all ones",
+     "inverse": false,
+     "steps": [
+      {"set":"level","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"0101010101"},
+     "expected": {"t":"bytes","v":"0101000100000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

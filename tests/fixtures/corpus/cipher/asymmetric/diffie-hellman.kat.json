@@ -1,0 +1,179 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/diffie-hellman.js",
+ "algorithms": [
+  {
+   "name": "Diffie-Hellman",
+   "vectors": [
+    {
+     "text": "RFC 5114 Appendix A.1 - 1024-bit MODP Group with 160-bit Prime Order Subgroup - party A derives the shared secret Z from yB and xA",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp1024s160"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"b9a3b3ae8fefc1a2930496507086f8455d48943e"}}
+     ],
+     "input": {"t":"bytes","v":"717a6cb053371ff4a3b932941c1e5663f861a1d6ad34ae66576dfb98f6c6cbf9ddd5a56c7833f6bcfdff095582ad868e440e8d09fd769e3ceccdc3d3b1e4cfa057776caaf9739b6a9fee8e7411f8d6dac09d6a4edb46cc2b5d5203090eae6126311e53fd2c14b574e6a3109a3da1be41bdceaa186f5ce06716a2b6a07b3c33fe"},
+     "expected": {"t":"bytes","v":"5c804f454d30d9c4df85271f93528c91df6b48ab5f80b3b59caac1b28f8acba9cd3e39f3cb614525d9521d2e644c53b807b810f340062f257d7d6fbfe8d5e8f072e9b6e9afda9413eafb2e8b0699b1fb5a0caceddeaead7e9cfbb36ae2b420835bd83a19fb0b5e96bf8fa4d09e345525167ecd9155416f46f408ed31b63c6e6d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.1 - 1024-bit MODP Group with 160-bit Prime Order Subgroup - party B derives the same shared secret Z from yA and xB",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp1024s160"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"9392c9f9eb6a7a6a9022f7d83e7223c6835bbdda"}}
+     ],
+     "input": {"t":"bytes","v":"2a853b3d92197501b9015b2deb3ed84f5e021dcc3e52f109d3273d2b7521281cbabe0e76ff5727fa8acce26956ba9a1fca26f20228d8693feb10841d84a7360054ece5a7f5b7a61ad3dfb3c60d2e43106d8727da37df9cce95b478755d06bcea8f9d45965f75a5f3d1df3701165fc9e50c4279ceb07f989540ae96d5d88ed776"},
+     "expected": {"t":"bytes","v":"5c804f454d30d9c4df85271f93528c91df6b48ab5f80b3b59caac1b28f8acba9cd3e39f3cb614525d9521d2e644c53b807b810f340062f257d7d6fbfe8d5e8f072e9b6e9afda9413eafb2e8b0699b1fb5a0caceddeaead7e9cfbb36ae2b420835bd83a19fb0b5e96bf8fa4d09e345525167ecd9155416f46f408ed31b63c6e6d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.1 - 1024-bit MODP Group with 160-bit Prime Order Subgroup - party A public value yA from private exponent xA",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp1024s160"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"b9a3b3ae8fefc1a2930496507086f8455d48943e"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"2a853b3d92197501b9015b2deb3ed84f5e021dcc3e52f109d3273d2b7521281cbabe0e76ff5727fa8acce26956ba9a1fca26f20228d8693feb10841d84a7360054ece5a7f5b7a61ad3dfb3c60d2e43106d8727da37df9cce95b478755d06bcea8f9d45965f75a5f3d1df3701165fc9e50c4279ceb07f989540ae96d5d88ed776"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.1 - 1024-bit MODP Group with 160-bit Prime Order Subgroup - party B public value yB from private exponent xB",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp1024s160"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"9392c9f9eb6a7a6a9022f7d83e7223c6835bbdda"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"717a6cb053371ff4a3b932941c1e5663f861a1d6ad34ae66576dfb98f6c6cbf9ddd5a56c7833f6bcfdff095582ad868e440e8d09fd769e3ceccdc3d3b1e4cfa057776caaf9739b6a9fee8e7411f8d6dac09d6a4edb46cc2b5d5203090eae6126311e53fd2c14b574e6a3109a3da1be41bdceaa186f5ce06716a2b6a07b3c33fe"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.2 - 2048-bit MODP Group with 224-bit Prime Order Subgroup - party A derives the shared secret Z from yB and xA",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp2048s224"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"22e62601dbffd06708a680f747f361f76d8f4f721a0548e483294b0c"}}
+     ],
+     "input": {"t":"bytes","v":"4dcee992a9762a13f2f83844ad3d77ee0e31c9718b3db6c2035d3961182c3e0ba247ec4182d760cd48d99599970622a1881bba2dc822939c78c3912c6661fa5438b20766222b75e24c2e3ad0c7287236129525ee15b5dd7998aa04c4a9696cacd7172083a97a81664ead2c479e444e4c0654cc19e28d7703cee8dacd6126f5d665ec52c67255db92014b037eb621a2ac8e365de071ffc1400acf077a12913dd8de89473437ab7ba346743c1b215dd9c12164a7e4053118d199bec8ef6fc561170c84c87d10ee9a674a1fa8ffe13bdfba1d44de48946d68dc0cdd777635a7ab5bfb1e4bb7b856f96827734c184138e915d9c3002ebce53120546a7e2002142b6c"},
+     "expected": {"t":"bytes","v":"34d9bddc1b42176c313fea034c21034d074a6313bb4ecdb3703fff424567a46bdf75530ede0a9da5229de7d76732286cbc0f91da4c3c852fc099c679531d94c78ab03d9decb0a4e4ca8b2bb4591c4021cf8ce3a20a541d33994017d0200ae2c9516e2ff5145779269e862b0fb474a2d56dc31ed569a7700b4c4ab16b22a45513531ef523d71212077b5a169bdeffad7ad9608284c7795b6d5a5183b87066de17d8d671c9ebd8ec89544d45ec061593d442c62ab9ce3b1cb9943a1d23a5ea3bcf21a01471e67e003e7f8a69c728be490b2fc88cfeb92db6a215e5d03c17c464c9ac1a46e203e13f952995fb03c69d3cc47fcb510b6998ffd3aa6de73cf9f63869"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.2 - 2048-bit MODP Group with 224-bit Prime Order Subgroup - party B derives the same shared secret Z from yA and xB",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp2048s224"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"4ff3bc96c7fc6a6d71d3b363800a7cdfef6fc41b4417ea15353b7590"}}
+     ],
+     "input": {"t":"bytes","v":"1b3a63451bd886e699e67b494e288bd7f8e0d370badda7a0efd2fde7d8f66145cc9f280419975eb808877c8a4c0c8e0bd48d4a5401eb1e8776bfeee134c03831ac273cd9d635ab0ce006a42a887e3f52fb8766b650f38078bc8ee8580cefe243968cfc4f8dc3db084554171d41bf2e861b7bb4d69dd0e01ea387cbaa5ca672afcbe8bdb9d62d4ce15f17dd36f91ed1eedd65ca4a06455cb94cd40a52ec360e84b3c926e22c4380a3bf309d56849768b7f52cfdf655fd053a7ef706979e7e5806b17dfae53ad2a5bc568ebb529a7a61d68d256f8fc97c074a861d827e2ebc8c6134553115b70e7103920aa16d85e52bcbab8d786a68178fa8ff7c2f5c71648d6f"},
+     "expected": {"t":"bytes","v":"34d9bddc1b42176c313fea034c21034d074a6313bb4ecdb3703fff424567a46bdf75530ede0a9da5229de7d76732286cbc0f91da4c3c852fc099c679531d94c78ab03d9decb0a4e4ca8b2bb4591c4021cf8ce3a20a541d33994017d0200ae2c9516e2ff5145779269e862b0fb474a2d56dc31ed569a7700b4c4ab16b22a45513531ef523d71212077b5a169bdeffad7ad9608284c7795b6d5a5183b87066de17d8d671c9ebd8ec89544d45ec061593d442c62ab9ce3b1cb9943a1d23a5ea3bcf21a01471e67e003e7f8a69c728be490b2fc88cfeb92db6a215e5d03c17c464c9ac1a46e203e13f952995fb03c69d3cc47fcb510b6998ffd3aa6de73cf9f63869"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.2 - 2048-bit MODP Group with 224-bit Prime Order Subgroup - party A public value yA from private exponent xA",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp2048s224"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"22e62601dbffd06708a680f747f361f76d8f4f721a0548e483294b0c"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"1b3a63451bd886e699e67b494e288bd7f8e0d370badda7a0efd2fde7d8f66145cc9f280419975eb808877c8a4c0c8e0bd48d4a5401eb1e8776bfeee134c03831ac273cd9d635ab0ce006a42a887e3f52fb8766b650f38078bc8ee8580cefe243968cfc4f8dc3db084554171d41bf2e861b7bb4d69dd0e01ea387cbaa5ca672afcbe8bdb9d62d4ce15f17dd36f91ed1eedd65ca4a06455cb94cd40a52ec360e84b3c926e22c4380a3bf309d56849768b7f52cfdf655fd053a7ef706979e7e5806b17dfae53ad2a5bc568ebb529a7a61d68d256f8fc97c074a861d827e2ebc8c6134553115b70e7103920aa16d85e52bcbab8d786a68178fa8ff7c2f5c71648d6f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.2 - 2048-bit MODP Group with 224-bit Prime Order Subgroup - party B public value yB from private exponent xB",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp2048s224"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"4ff3bc96c7fc6a6d71d3b363800a7cdfef6fc41b4417ea15353b7590"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"4dcee992a9762a13f2f83844ad3d77ee0e31c9718b3db6c2035d3961182c3e0ba247ec4182d760cd48d99599970622a1881bba2dc822939c78c3912c6661fa5438b20766222b75e24c2e3ad0c7287236129525ee15b5dd7998aa04c4a9696cacd7172083a97a81664ead2c479e444e4c0654cc19e28d7703cee8dacd6126f5d665ec52c67255db92014b037eb621a2ac8e365de071ffc1400acf077a12913dd8de89473437ab7ba346743c1b215dd9c12164a7e4053118d199bec8ef6fc561170c84c87d10ee9a674a1fa8ffe13bdfba1d44de48946d68dc0cdd777635a7ab5bfb1e4bb7b856f96827734c184138e915d9c3002ebce53120546a7e2002142b6c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.3 - 2048-bit MODP Group with 256-bit Prime Order Subgroup - party A derives the shared secret Z from yB and xA",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp2048s256"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"0881382cdb87660c6dc13e614938d5b9c8b2f248581cc5e31b35454397fce50e"}}
+     ],
+     "input": {"t":"bytes","v":"575f0351bd2b1b817448bdf87a6c362c1e289d3903a30b9832c5741fa250363e7acbc7f77f3dacbc1f131add8e03367eff8fbbb3e1c5784424809b25afe4d2262a1a6fd2fab64105ca30a674e07f7809852088632fc049233791ad4edd083a978b883ee618bc5e0dd047415f2d95e683cf14826b5fbe10d3ce41c6c120c78ab20008c698bf7f0bcab9d7f407bed0f43afb2970f57f8d12043963e66ddd320d599ad9936c8f44137c08b180ec5e985cebe186f3d549677e80607331ee17af3380a725b0782317d7dd43f59d7af9568a9bb63a84d365f92244ed120988219302f42924c7ca90b89d24f71b0ab697823d7deb1aff5b0e8e4a45d49f7f53757e1913"},
+     "expected": {"t":"bytes","v":"86c70bf8d0bb81bb01078a17219cb7d27203db2a19c877f1d1f19fd7d77ef22546a68f005ad52dc84553b78fc60330be51ea7c0672cac1515e4b35c047b9a551b88f39dc26da14a09ef74774d47c762dd177f9ed5bc2f11e52c879bd95098504cd9eecd8a8f9b3efbd1f008ac5853097d9d1837f2b18f77cd7be01af80a7c7b5ea3ca54cc02d0c116fee3f95bb87399385875d7e86747e676e728938acbff7098e05be4dcfb24052b83aeffb14783f029adbde7f53fae92084224090e007cee94d4bf2bace9ffd4b57d2af7c724d0caa19bf0501f6f17b4aa10f425e3ea76080b4b9d6b3cefea115b2ceb8789bb8a3b0ea87febe63b6c8f846ec6db0c26c5d7c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.3 - 2048-bit MODP Group with 256-bit Prime Order Subgroup - party B derives the same shared secret Z from yA and xB",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp2048s256"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"7d62a7e3ef36de617b13d1afb82c780d83a23bd4ee6705645121f371f546a53d"}}
+     ],
+     "input": {"t":"bytes","v":"2e9380c8323af97545bc4941deb0ec3742c62fe0ece824a6abdbe66c59bee0242911bfb967235ceba35ae13e4ec752be630b92dc4bde2847a9c62cb8152745421fb7eb60a63c0fe9159fcce726ce7cd8523d7450667ef840e4919121eb5f01c8c9b0d3d648a93bfb75689e8244ac134af544711ce79a02dcc34226684780dddcb498594106c37f5bc79856487af5ab022a2e5e42f09897c1a85a11ea0212af04d9b4cebc937c3c1a3e15a8a0342e337615c84e7fe3b8b9b87fb1e73a15af12a30d746e06dfc34f290d797ce51aa13aa785bf6658aff5e4b093003cbeaf665b3c2e113a3a4e905269341dc0711426685f4ef37e868a8126ff3f2279b57ca67e29"},
+     "expected": {"t":"bytes","v":"86c70bf8d0bb81bb01078a17219cb7d27203db2a19c877f1d1f19fd7d77ef22546a68f005ad52dc84553b78fc60330be51ea7c0672cac1515e4b35c047b9a551b88f39dc26da14a09ef74774d47c762dd177f9ed5bc2f11e52c879bd95098504cd9eecd8a8f9b3efbd1f008ac5853097d9d1837f2b18f77cd7be01af80a7c7b5ea3ca54cc02d0c116fee3f95bb87399385875d7e86747e676e728938acbff7098e05be4dcfb24052b83aeffb14783f029adbde7f53fae92084224090e007cee94d4bf2bace9ffd4b57d2af7c724d0caa19bf0501f6f17b4aa10f425e3ea76080b4b9d6b3cefea115b2ceb8789bb8a3b0ea87febe63b6c8f846ec6db0c26c5d7c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.3 - 2048-bit MODP Group with 256-bit Prime Order Subgroup - party A public value yA from private exponent xA",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp2048s256"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"0881382cdb87660c6dc13e614938d5b9c8b2f248581cc5e31b35454397fce50e"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"2e9380c8323af97545bc4941deb0ec3742c62fe0ece824a6abdbe66c59bee0242911bfb967235ceba35ae13e4ec752be630b92dc4bde2847a9c62cb8152745421fb7eb60a63c0fe9159fcce726ce7cd8523d7450667ef840e4919121eb5f01c8c9b0d3d648a93bfb75689e8244ac134af544711ce79a02dcc34226684780dddcb498594106c37f5bc79856487af5ab022a2e5e42f09897c1a85a11ea0212af04d9b4cebc937c3c1a3e15a8a0342e337615c84e7fe3b8b9b87fb1e73a15af12a30d746e06dfc34f290d797ce51aa13aa785bf6658aff5e4b093003cbeaf665b3c2e113a3a4e905269341dc0711426685f4ef37e868a8126ff3f2279b57ca67e29"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5114 Appendix A.3 - 2048-bit MODP Group with 256-bit Prime Order Subgroup - party B public value yB from private exponent xB",
+     "inverse": false,
+     "steps": [
+      {"set":"group","value":{"t":"string","v":"modp2048s256"}},
+      {"set":"privateKey","value":{"t":"bytes","v":"7d62a7e3ef36de617b13d1afb82c780d83a23bd4ee6705645121f371f546a53d"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"575f0351bd2b1b817448bdf87a6c362c1e289d3903a30b9832c5741fa250363e7acbc7f77f3dacbc1f131add8e03367eff8fbbb3e1c5784424809b25afe4d2262a1a6fd2fab64105ca30a674e07f7809852088632fc049233791ad4edd083a978b883ee618bc5e0dd047415f2d95e683cf14826b5fbe10d3ce41c6c120c78ab20008c698bf7f0bcab9d7f407bed0f43afb2970f57f8d12043963e66ddd320d599ad9936c8f44137c08b180ec5e985cebe186f3d549677e80607331ee17af3380a725b0782317d7dd43f59d7af9568a9bb63a84d365f92244ed120988219302f42924c7ca90b89d24f71b0ab697823d7deb1aff5b0e8e4a45d49f7f53757e1913"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

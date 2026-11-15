@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/fastlz.js",
+ "algorithms": [
+  {
+   "name": "FastLZ",
+   "vectors": [
+    {
+     "text": "Literal run - 3 bytes (FastLZ spec example)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243"},
+     "expected": {"t":"bytes","v":"0300000002414243"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Literal run - 2 bytes (no match possible)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4445"},
+     "expected": {"t":"bytes","v":"02000000014445"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long match with repeating pattern (DEDEDEDE...)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"444544454445444544454445"},
+     "expected": {"t":"bytes","v":"0c000000014445e00101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple repetition - AAAA",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "expected": {"t":"bytes","v":"0400000000412000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern repetition - ABCABC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243"},
+     "expected": {"t":"bytes","v":"06000000024142432002"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "No repetition - worst case",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424344"},
+     "expected": {"t":"bytes","v":"040000000341424344"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

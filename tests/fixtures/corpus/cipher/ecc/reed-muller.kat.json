@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/reed-muller.js",
+ "algorithms": [
+  {
+   "name": "Reed-Muller Code",
+   "vectors": [
+    {
+     "text": "RM(1,3) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RM(1,3) all ones",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010101"},
+     "expected": {"t":"bytes","v":"0100000100010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RM(1,3) pattern test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000000"},
+     "expected": {"t":"bytes","v":"0101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

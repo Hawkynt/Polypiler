@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/ariawrap.js",
+ "algorithms": [
+  {
+   "name": "ARIA-Wrap",
+   "vectors": [
+    {
+     "text": "ARIA-128 Key Wrap - 128-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"a93f148d4909d85f1aae656909879275ae597b3acf9d60db"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ARIA-192 Key Wrap - 128-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011121314151617"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"62c0cc597cea0a97c1ddfd9384ba51a9f4ec7aac30f7cedc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ARIA-256 Key Wrap - 128-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"1f68ac246e2519b0235e1474867b08f606bcf85bef006eba"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ARIA-128 Key Wrap - 192-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff0001020304050607"},
+     "expected": {"t":"bytes","v":"07f372824d4c9aafffd45f628c5aa433328624051b249ec9fe10c4d49ab5ff8f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ARIA-128 Key Wrap - 256-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"a5d920a3169b4934f2f4f3d03de0c9f33eff79590e1f8b9de4653eca2d8c5edb72bed41ec44d800e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

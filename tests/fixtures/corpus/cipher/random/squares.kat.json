@@ -1,0 +1,95 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/squares.js",
+ "algorithms": [
+  {
+   "name": "Squares",
+   "vectors": [
+    {
+     "text": "Squares 3-round: counter=0, key=0xea3742c76bf95d47 - FlorisSteenkamp reference",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"475df96bc74237ea"}},
+      {"set":"outputSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"63b29228"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Squares 3-round: counter=1, key=0xea3742c76bf95d47",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"475df96bc74237ea"}},
+      {"set":"outputSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"0100000000000000"},
+     "expected": {"t":"bytes","v":"42e3a3d8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Squares 3-round: counter=100, key=0xea3742c76bf95d47 - Known test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"475df96bc74237ea"}},
+      {"set":"outputSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"6400000000000000"},
+     "expected": {"t":"bytes","v":"7b2c9b40"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Squares 3-round: counter=42, key=0xea3742c76bf95d47",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"475df96bc74237ea"}},
+      {"set":"outputSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"2a00000000000000"},
+     "expected": {"t":"bytes","v":"79a8cc24"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Squares 3-round: counter=0xFFFFFFFF, key=0xea3742c76bf95d47 - Max 32-bit counter",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"475df96bc74237ea"}},
+      {"set":"outputSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"ffffffff00000000"},
+     "expected": {"t":"bytes","v":"c9604e43"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Squares 3-round: counter=12345, key=0xea3742c76bf95d47",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"475df96bc74237ea"}},
+      {"set":"outputSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"3930000000000000"},
+     "expected": {"t":"bytes","v":"907d8ec2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

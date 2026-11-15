@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xxhash32.js",
+ "algorithms": [
+  {
+   "name": "XXHash32 PRNG",
+   "vectors": [
+    {
+     "text": "Seed 0: First 5 outputs (20 bytes) - verified against XXHash32 reference",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0ab656ac82724c0ed3671dd6a0f55055643a0950"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1: First 5 outputs (20 bytes) - single-bit seed difference",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"457f061bdc17b1d66cf5b9c576cdea3599019835"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 42: First 5 outputs (20 bytes) - commonly used test seed",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"0000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"05b53c5f98e65c749afbb51ee4975debe497495f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0xDEADBEEF: First 5 outputs (20 bytes) - edge case",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"deadbeef"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ec99cb63b2f96d4d93c66585be27dfa9682cbb3f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 12345: First 5 outputs (20 bytes) - larger seed value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00003039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"6357aaafbb22dcb3f7142ec87c349aa117d64c25"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

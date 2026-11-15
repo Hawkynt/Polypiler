@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/aes-gcm-siv.js",
+ "algorithms": [
+  {
+   "name": "AES-GCM-SIV",
+   "vectors": [
+    {
+     "text": "Educational test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f"},
+     "expected": {"t":"bytes","v":"6c85af6353"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

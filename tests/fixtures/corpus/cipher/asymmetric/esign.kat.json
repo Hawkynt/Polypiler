@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/esign.js",
+ "algorithms": [
+  {
+   "name": "ESIGN",
+   "vectors": [
+    {
+     "text": "ESIGN-D 1536-bit, NESSIE test vector key block 0 (first attempt counter accepted)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0600"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"2e83553dc834d60e5d7d76b7a1ddf61c243791a029bd6d528392706c58dd5e15bccd89400311a8692e67415056b456854cbe348835af7189768f92fe65bbcaaf91814b01d06a59e09244d36614c4a43eaae8906ff5e9bef25fe1cc17cb5361065c38abe407d6b72dd3f0e5fbfeff7eb224d90ec2b81dddd8d3cabcf8bc3476b17b33e17101cc5df98614150684070905b07f69ddca7655dee2e11867631bb93f45948e172821398352e522c1ef6a5097db442b6e4de3c17a1b67b965f983f1ea00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ESIGN-D 1536-bit, NESSIE test vector key block 4 (three attempt counters rejected by the w1 bound)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0604"}}
+     ],
+     "input": {"t":"bytes","v":"55555555555555555555555555555555"},
+     "expected": {"t":"bytes","v":"32541abb879bc26dc5ffee0d9ad6079da1ae44b559d015ed41de51366480f55fc74b8b94aebd4c1a0a5fd469c77a755a7e770fa306f6b2dd37e9a49374d4fc780d724dbbff7550de7f3eb6a38ecfef0bc7b59ed0269bdb85d63ec065aaa76d91c0778a28333b3912153daa1f945e605216a331fddd28ce24c29a4736483f0d10ac8a4743b1239b481fb37219f5c305fa3aac655ca4c88966b0be2253a26f70e7904981254280fda91a3ce0a651adf5e89211e37747b5fb9e6023ab7a8b22dccb55555555555555555555555555555555"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ESIGN-D 3072-bit, NESSIE test vector key block 10 (first attempt counter accepted)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0c0a"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"432eb5256ff762e565b578d650b0ea6c4487739916a55a9cbb0aab8676c6fa4bc2abc3280507665df8f9c1e7138e1bf3845687468c9bf6a5f630d525a2e5e701ea60e8974d2c74b58d3c3e8306b6856eeb4c7a2cac2f0c0c62a5df052ff6a006aa560c4d73f71e13d55f1a0cc5b21dc1135d1b8dafa5bbae94ce9f29e0ec255597f06cc56912b79b45e452a0d905e6b52e37506ebbbdf405684165bfcd77b23bba14d5bdabb719559e8714ce259b3e66aad5b6c9f10bc1d21e4425c8a1c67b0edde4fefaad4546b3bdd7ea9924f1a5cffe6495e227fbbc1f5fa10bb54ac2f4512b51248a114acb6bf37b33f760f41e9289c51422eca59fd2ad739097c3ea114ece93234a18f44903abc9478fe0af3ca4d975a85dfd4dd951e73fd5dc6cfb6fffde6434eaa748457f4be781c99428e69a8dc44f9e8b06cf8d3c9f1f16359534e3278a7beb89c637394936c2398468f925a95f2bb75871e2503fce805f8e23da3bd820497dfa0176ec4cc7ea76cb39c2477e78bc71be48d8fca437d13451ef1ff500000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ESIGN-D 3072-bit, NESSIE test vector key block 12 (three attempt counters rejected by the w1 bound)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0c0c"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"5cf1e3078f51be24433c0c991df43000d4cceb7154b7e9cadb78d343d2ed67c248aefe254172c270d4ba2ada0ad03387773b1deebccc931267be0deaf03d19ad604b03c29ed85a37e99c6d8df8166d1cb606bf0e43d8c55a1d3d59f3f156193aeb3bbdf4b0ef74e3f501cac14ebe31222e6eebd076c207c974a7e0ceecb690d001d40cf99aacb397c2f968de86bb5ddc4d19b04e72b1635aee7dfd4b42c8d3fc517a7c3cbe4bcd5722efa5d182096e771ab0fce04c13ec7b76ee8102a025d779087457dd449567d9012a5728c6bedae67b9552917957f0999b8064894d9ed63e1c9731678fb43a8b0b81e443e3bfe6950c548f50c17a7cd4f88c6181e4983de49a71f08f23b515746667cf2ca063972afc03c2e859cc85d3d2838d495379da57a9a80d61dc1abf3316c2ad251654130a1f3d089d9151556afa557bd203f74aa872b6136eb1d5e61c952fe0df3026398a7f2ba0ced91e36c293c7401b08836b5cf94e7e4068f0933fda3825af706b9a931c20934f4d6bb23b0b095cb324c99f67ffffffffffffffffffffffffffffffff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

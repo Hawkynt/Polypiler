@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/goppa-code.js",
+ "algorithms": [
+  {
+   "name": "Goppa Code",
+   "vectors": [
+    {
+     "text": "Goppa [7,3] all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Goppa [7,3] codeword 1001011",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000001000101"},
+     "expected": {"t":"bytes","v":"01000001000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Goppa [7,3] codeword 0101110",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010001010100"},
+     "expected": {"t":"bytes","v":"00010001010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Goppa [7,3] codeword 1100101",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010000010001"},
+     "expected": {"t":"bytes","v":"01010000010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

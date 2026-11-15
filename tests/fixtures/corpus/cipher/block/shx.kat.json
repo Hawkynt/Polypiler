@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/shx.js",
+ "algorithms": [
+  {
+   "name": "SHX (Serpent Extended)",
+   "vectors": [
+    {
+     "text": "SHX 256-bit key test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"380fb7897f9c7c2d4f88a36df031dc93"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SHX 512-bit key test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"01010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"d6a065a5a52d5c9d307a5be514c884dc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

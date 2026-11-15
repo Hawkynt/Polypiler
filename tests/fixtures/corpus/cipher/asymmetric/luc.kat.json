@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/luc.js",
+ "algorithms": [
+  {
+   "name": "LUC",
+   "vectors": [
+    {
+     "text": "LUC-1024 round-trip - c = V_e(m, 1) mod n recovered through InverseLucas",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0400"}}
+     ],
+     "input": {"t":"bytes","v":"74657374"},
+     "expected": {"t":"bytes","v":"74657374"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"281139a23a0565830e0ff25324616b6e360b099664d07d515a3313058fce93eb6923a2df535c010331afce5fe0e6937d8d61a22526f072d12d57184ee0423e4869541ce935ac962235e2ad7eee2bfdce651f3a470f82a9b6533f878168cfe02486a8b5dd3ae446113e03b41a6d8b0922d0741ea371c658e2e36f8dee3b80f87a"},
+      "deterministic": false
+     }
+    },
+    {
+     "text": "LUC-2048 round-trip with leading zero octets",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0800"}}
+     ],
+     "input": {"t":"bytes","v":"0000000102030405"},
+     "expected": {"t":"bytes","v":"0000000102030405"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"d38e81aa6d4029e79cf1e5af2268fac4beba528f08c3603fa1a969e59994c00c77a1ae59fb63dc4078b593bb644bd93032820c77f3f81df27bee01b295a0cf0c046d7d399352d672b9e18d24cdc1c6dcadbfef5919e0431069649f0dcfd216e4ec39f46136b9a883bf1ad05ddd4402ce5b7bdd09292d03998bc031a522396392abdab25bac4649ade4b4249d6a5cb5fbc581375be277149d5996343fb088a6a9b0ba51783a1f1b7d42c5108210194b9f3627da153569039cc80b6faa09bc3718a5a092464019ac36581b0271418ea44df369ee6d4a47b2f86809f936dc1306dd1044fbc432d2c1117ef1947680a8fcd1e0259f67dc8ecd0e68d05a3e055b5a0f"},
+      "deterministic": false
+     }
+    }
+   ]
+  }
+ ]
+}

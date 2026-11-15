@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/multi-edge-ldpc.js",
+ "algorithms": [
+  {
+   "name": "Multi-Edge Type LDPC Code",
+   "vectors": [
+    {
+     "text": "ME-LDPC all-zero codeword (2-edge type, rate 1/2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ME-LDPC single-bit test - edge type 1",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100000000000000"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01000000000000000101000000010100"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ME-LDPC alternating pattern - demonstrating edge type interaction",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100010001000100"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01000100010001000001010000010100"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ME-LDPC block pattern - edge type 2 dominance",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101010100000000"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01010101000000000001010001010000"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ME-LDPC all-ones information",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01010101010101010100010001000100"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

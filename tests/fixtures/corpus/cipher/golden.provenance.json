@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "provenance": {
+    "kind": "reference-run",
+    "source": "node",
+    "detail": "node tooling/cipher/record-kats.mjs --corpus <Cipher/AlgorithmFramework.js of the fixture cipher.algorithms, Hawkynt/Hawkynt.github.io at 48928fc1013dc7d3d42f76b05d0f200dbae23dd1> --out tests/fixtures/corpus/cipher: node runs every algorithm file and records the known-answer tests of every algorithm it registers, each applied by the corpus's own TestEngine.ConfigureInstance",
+    "generatedBy": "node"
+  }
+}

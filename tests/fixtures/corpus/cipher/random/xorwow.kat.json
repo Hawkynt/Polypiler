@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xorwow.js",
+ "algorithms": [
+  {
+   "name": "XorWow",
+   "vectors": [
+    {
+     "text": "Seed (1): First 5 outputs - verified against C# implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"acbed487b97556a081f6278d17aec601c87f3b27"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (123456789): First 5 outputs - verified against C# implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000075bcd15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"f43c1487a09d56a0450e278d8d50c6016e23fb27"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (0xDEADBEEF): First 5 outputs - common test value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000deadbeef"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3416e0475731bd202a80e40d8042ec81fa2c61e7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (1000000): First 5 outputs - large seed value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000000f4240"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"780c3c87e80af6a073acc78df627660119333327"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

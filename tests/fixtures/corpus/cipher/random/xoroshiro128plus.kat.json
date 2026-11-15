@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xoroshiro128plus.js",
+ "algorithms": [
+  {
+   "name": "Xoroshiro128+",
+   "vectors": [
+    {
+     "text": "Seed=0: First four 64-bit outputs from xoroshiro128+",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"1e4c37c8688527892e36f5cee7d6e1c9e155f41286c4260d4cefb1612219f897"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=1: First four 64-bit outputs from xoroshiro128+",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"dfbd3bfdf4d84bef9114e6ea7c358e4c711c063ae9ccf7432d15e6a0f88f4e78"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=12345: First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"3930000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"dfce102c79e21e26220cf0ea6baca21a7cab5c2e2d7f5a87e5f01a10f78bee25"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=0xDEADBEEF: First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"efbeadde00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"e781e0a656fcb46978eba13167201a7dc7b3940db918a1fd48e5552a046db39f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

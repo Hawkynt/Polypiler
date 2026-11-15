@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/cascade.js",
+ "algorithms": [
+  {
+   "name": "Cascade(Serpent,Twofish)",
+   "vectors": [
+    {
+     "text": "Botan cascade.vec - Cascade(Serpent,Twofish) vector 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"b50638f695afa16f9378d43374ca8568600135ecd1e513838722366346bc4b2101422291558faa30a3196cbeb42e67f4c075882482897f72a8a30ae9b3ad426d"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"e78516d21d23da501939c24c48bcc79de78516d21d23da501939c24c48bcc79d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan cascade.vec - Cascade(Serpent,Twofish) vector 2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"9e8f6bc09768aed8f533fa4fc35ff6feb8020ffbc8350ddfd20aca7ecf1889cfbfcd78e261b9a3cd825401afa7adcdfa88dba8230fb92d4b942c25ee92f27a02"}}
+     ],
+     "input": {"t":"bytes","v":"47cb8147c5290d6f94fbf3351777087fa731610a3f66e3ccfa6d9b18f980e687"},
+     "expected": {"t":"bytes","v":"f234e056923b3db26aabc8f604f0ce2c1a7f4c35b0b74958014d791668ff6bf4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan cascade.vec - Cascade(Serpent,Twofish) vector 3",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"1ef34e47005028f2d95120052855c6001225200a333ca4d7d5a356b5554ee2ae7ebc9ba57bada0dafc84c2187c51cb3ccb5eee40f27c00537fffca2851dd8bd8"}}
+     ],
+     "input": {"t":"bytes","v":"b9a28d32734ef678bacd5539ff9ff951af81f44afe223256e5d8898fb862a767b90bd2d95e17e4411d02d49481cce4191ee2c7ae8ebdf6312bdc66317ad42140"},
+     "expected": {"t":"bytes","v":"065e390c4fd10e9929f30d89a67e0d4cfa3af90bef46b2b435b53cbe0b7dd1b612d4c5e2d03028b488000c06517434fc70f7b62c273ca5debd9ca7034d853087"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Cascade(Serpent,AES-256)",
+   "vectors": [
+    {
+     "text": "Botan cascade.vec - Cascade(Serpent,AES-256) vector 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ee426051d1adce09ac02e2023331f273bb1b2c4c5905deda3e1032ccd0db56115b011f05688f781e3f790364968e06dc6e7bd5fa38db068cbd34a85b6b3a9458"}}
+     ],
+     "input": {"t":"bytes","v":"06ceb2b4fd2f0a27b3c90d77d2e9bbd3665a8dcac9187b1ee9f6a60d39042a9d3719883b3e87845b9d4a8be258379959775969cbf5768a359797b2fa19fc2fcc"},
+     "expected": {"t":"bytes","v":"05ffbf6e8097fc746ffad8c3306e6db668148796180f26ca5de06ae76de16d078a0e72b259982423ed96ff95719deb160cefe7697752b0cfa984a18ddcef2ec0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan cascade.vec - Cascade(Serpent,AES-256) vector 2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"cdcd23f5518db5dae8c69b56eb352d4f3c4a64a5ffc8e5bc2511b8310993c48efa30a0f9e2b98a0fb1fe64173e6a8038047aebae22e17392fe32cf1d0de3bb76"}}
+     ],
+     "input": {"t":"bytes","v":"fbaf0de6c09d10eb31f21a7c784bf453f82f51effa8b363ee6b33df15204f43445170ded1e39ab922548ed82aaaded6bf470a5226b69d025fe3d532aadda069c464d2c8a65e1a18698bd521afb3053229c1539626392031f8c36229ff3178a7f5c716e30dbefddd4ac2113071977b795a8b29da7f467471a996fb63136387c28"},
+     "expected": {"t":"bytes","v":"7ed1f730eed52dfb63e073a40eae404e443aceb9a3b55132e740ace1eedf99d0f22b3f2326e2e124594e75ed1915c8d155f24269254b22b6e8c53e9f64e70552d5e3004782c6c47341ebf8716b59dab49b512b6df7f9d7fb914ffa56f7f89b561b6a5dfe9334b7561144b25fe0f57bebb4058ec7d9eea57ab62825a86312bbc3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Cascade(Serpent,CAST-128)",
+   "vectors": [
+    {
+     "text": "Botan cascade.vec - Cascade(Serpent,CAST-128) vector 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"efa9cc5f3e245ab463cc60a5015cb0f663676760832cee6c633a518112e518d45dd4b627e9507cdb03a1add870e28362"}}
+     ],
+     "input": {"t":"bytes","v":"27ede4b2a3784a33898fa330167317bf7354072672d49dd03d13d3f0856cf3d9c17c1237565e7320bdd23c03bde195a4fe58623a983db9c308d5a976d92cd6a2"},
+     "expected": {"t":"bytes","v":"2d7096a03bab4dbdabedb9f069fe68c3e12ed65acce43ecf7f6d810b5eec36a522b605715be12003e324436652bea06bd289dbe886a5de9e51cff6c065a21f2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

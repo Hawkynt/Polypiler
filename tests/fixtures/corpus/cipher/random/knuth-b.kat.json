@@ -1,0 +1,54 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/knuth-b.js",
+ "algorithms": [
+  {
+   "name": "Knuth-B",
+   "vectors": [
+    {
+     "text": "C++ std::knuth_b with seed=1, first 10 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"09189c643113c3982278fd06795056c43bd814d710b1d72c061351336a5d128c38532fd146fc9a81"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "C++ std::knuth_b canonical test: 10,000th value from seed=1 = 1112339016",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"count","value":{"t":"number","v":10000}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"424cf248"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "C++ std::knuth_b with seed=123456789, first 5 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"075bcd15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"704f3a22744474f72de9c635557bd4a46c9e4484"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

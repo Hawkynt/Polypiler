@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/secded.js",
+ "algorithms": [
+  {
+   "name": "SECDED",
+   "vectors": [
+    {
+     "text": "SECDED (8,4) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SECDED (8,4) all ones",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010101"},
+     "expected": {"t":"bytes","v":"0101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SECDED (8,4) pattern test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000100"},
+     "expected": {"t":"bytes","v":"0001000101000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SECDED (8,4) alternating pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010001"},
+     "expected": {"t":"bytes","v":"0100010000010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

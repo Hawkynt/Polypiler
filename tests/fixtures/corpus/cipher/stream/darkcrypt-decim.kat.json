@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-decim.js",
+ "algorithms": [
+  {
+   "name": "DECIM (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Decim — keystream from incrementing key, zero IV, zero input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"535799e1c601fbac6025a80feeeed2fed772c4ff3b48341777ff80737e59cfb5ebce023453a3d2cfb25c6889931b6cb1fc4541969c1ff6420617673d47e77b94fc345b80e5540e094005f1218310d793ae24a0ae51d0c3347bdda0e82e70875494555c05451c7f1ee71db7d3f5fd7de727bfcd1ff70521a9e132286dc6f8ce42"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Decim — incrementing plaintext, incrementing key, zero IV",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"53569be2c204fdab682ca204e2e3dcf1c763d6ec2f5d22006fe69a686244d1aacbef20177786f4e89a7542a2bf36429ecc7473a5a82ac0753e2e5d067bda45ab"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Decim — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e33587da2c7ec1136"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457aafe4194e83b8ed22"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"2f4c1ad6d5531fab2b1038c8c7bbada4319eeb78ff89d07df1fdee992f94393173738121332bf38dbc162908afc81ed9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

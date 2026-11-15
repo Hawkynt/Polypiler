@@ -1,0 +1,347 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/highway-hash.js",
+ "algorithms": [
+  {
+   "name": "HighwayHash",
+   "vectors": [
+    {
+     "text": "HighwayHash-64, size 0 (empty)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"536ec222de567a90"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"78ddcdc7aa43ab7e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"623db5b09a56d0b8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 3",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"803d468aabef6b5c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 4 (size_mod4 boundary)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"da7e009368a405f2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 7",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"00010203040506"},
+     "expected": {"t":"bytes","v":"8294f53817ae024d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 8",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"71315fe5085120e1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 15",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e"},
+     "expected": {"t":"bytes","v":"3bf349a4863f7940"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 16 (16-byte remainder branch boundary)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"32b87ef98934abcf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 17",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10"},
+     "expected": {"t":"bytes","v":"e2c0c5c8d267fe19"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 31 (one below a full packet)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e"},
+     "expected": {"t":"bytes","v":"685a03cf7c00c79f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 32 (exactly one packet, no remainder)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"fc80d5ecd964c9a0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 33 (one over a full packet)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"},
+     "expected": {"t":"bytes","v":"fc8131a03cf7902c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 63",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e"},
+     "expected": {"t":"bytes","v":"a03921bfe9eb8eab"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-64, size 64 (exactly two packets)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"ffa6d24c5d2c5475"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-128, size 0 (empty)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"c7fe8f9d8f26ed0f6f3e097f765e5633"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-128, size 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"a8e7813689a8b0d6b4dc9cebf91d29dc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-128, size 32 (exactly one packet)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"aa4a43c166df8419b9e4b3f95819fc16"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-128, size 33",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"},
+     "expected": {"t":"bytes","v":"6cc3c6e0af7816119d84a2e59db558f9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-128, size 64",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"f2c4d498711fbb98c88f91de7105bce0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-256, size 0 (empty)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":32}]}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"f574c8c22a4844dd1f35c713730146d9ff1487b9ccbeaeb3f41d75453123da41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-256, size 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":32}]}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"54825fe4bc41b9ed0fc6ca3def440de2474a32cb9b1b657284e475b24c627320"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-256, size 32 (exactly one packet)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":32}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"fec3a139908ce3bc8912c1a32663d542a9aefc64f79555e3995a47c96b3cb0c9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "HighwayHash-256, size 64",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"call":"setOutputSize","args":[{"t":"number","v":32}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"7524c16affe6d890f2c1da6e192a421a02b08e1ffe65379ebecf51c3c4d7bdc1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

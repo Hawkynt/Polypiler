@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/lblock.js",
+ "algorithms": [
+  {
+   "name": "LBlock",
+   "vectors": [
+    {
+     "text": "LBlock-80 Test Vector #1 (all zeros) - specification Appendix I",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"c218185308e75bcd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LBlock-80 Test Vector #2 - specification Appendix I",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdeffedc"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"4b7179d8ebee0c26"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

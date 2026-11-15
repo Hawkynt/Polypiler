@@ -1,0 +1,185 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/redoc.js",
+ "algorithms": [
+  {
+   "name": "REDOC II",
+   "vectors": [
+    {
+     "text": "REDOC II reference - sample key and block of the reference source (\"ABCDEFGHIJ\")",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"724d3e0e5b71e9aa3898ffde1a9bd5f80c6d4e5f"}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748494a"},
+     "expected": {"t":"bytes","v":"d3e1b40d11f4c81224ca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC II reference - zero key, zero block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000"},
+     "expected": {"t":"bytes","v":"f00bb85e8f9205917b57"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC II reference - incrementing key and block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"}}
+     ],
+     "input": {"t":"bytes","v":"00010203040506070809"},
+     "expected": {"t":"bytes","v":"98b8a06b23bf702b729e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC II reference - all-ones key and block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"cba888ddd1b273eb965e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC II reference - mixed key and block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c762e7160"}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d"},
+     "expected": {"t":"bytes","v":"0f78543ed2e217aaa2bf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC II reference - single set bit in the block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdeffedcba987654321000112233"}}
+     ],
+     "input": {"t":"bytes","v":"80000000000000000000"},
+     "expected": {"t":"bytes","v":"d1d49c32755140ea71ca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "REDOC III",
+   "vectors": [
+    {
+     "text": "REDOC III reference - sample key of the reference source, zero block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"594280e7122b"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"d907f979f2477825"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC III reference - 1-byte key (minimum)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"c96886528fbdd43e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC III reference - 16-byte key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96"},
+     "expected": {"t":"bytes","v":"ab6a95c7fc7fd581"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC III reference - zero 32-byte key, zero block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"4f83a9591536d9bd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC III reference - incrementing 32-byte key and block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"731624c431837ac5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC III reference - all-ones 32-byte key and block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffff"},
+     "expected": {"t":"bytes","v":"3485b3877f608773"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "REDOC III reference - 34-byte key (maximum)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"e0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff0001"}}
+     ],
+     "input": {"t":"bytes","v":"fedcba9876543210"},
+     "expected": {"t":"bytes","v":"8c81eb7f3db7776e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

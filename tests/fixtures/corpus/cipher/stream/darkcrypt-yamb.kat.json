@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-yamb.js",
+ "algorithms": [
+  {
+   "name": "Yamb (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "eSTREAM Yamb reference algorithm — key repeats the eSTREAM 128-bit test key to 256 bits, IV extends the eSTREAM 32-bit test IV with zero bytes to 128 bits (verified against the official yamb.c reference)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"20212223000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0f94b44a299f77f9f11f448247813b1fd9f71e8a4e60d40b950f64ff49d6ff65c7b7aa7ecaf85dde6c81c1d56ac649c3755e25b5442e4e06f9f24d80bb920afc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Yamb — keystream (256-bit incrementing key, zero IV, zero input)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"ae5f58527e8a046ba09c11bcca824afbac617b8555e084e64552f718d0adcc5098fc8bd5e656529bcaaf4da24319e86f0c789e003a3650b94ebced8aac7bea69ead427b76f3b04fe3382d829e3f890c3f0e2fa45d8f1843e0cc5f77947a205e5f0915f7f51e3e8a1b867d346f8af8940b3d8746d086bd0975181f08a3c6f49ab"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Yamb — encryption (256-bit incrementing key, zero IV, incrementing plaintext)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"ae5e5a517a8f026ca8951bb7c68f44f4bc70699641f592f15d4bed03ccb0d24fb8dda9f6c27374bce28667896f34c6403c49ac330e03668e7685d7b19046d456"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,89 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/saferp.js",
+ "algorithms": [
+  {
+   "name": "SAFER+",
+   "vectors": [
+    {
+     "text": "NIST AES round 1 SAFER+ ecb_int.txt - 128-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"78ae8da840f61247136ec75a68a71cae"}}
+     ],
+     "input": {"t":"bytes","v":"45d77c9a652c7eaaaf3b87bcfd794825"},
+     "expected": {"t":"bytes","v":"388e5d6b3c64c75299b494cb9f933299"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round 1 SAFER+ ecb_int.txt - 192-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"89786756453423bc78ae8da840f61247136ec75a68a71cae"}}
+     ],
+     "input": {"t":"bytes","v":"45d77c9a652c7eaaaf3b87bcfd794825"},
+     "expected": {"t":"bytes","v":"5344adcc26adaf7c1e90aa9d90eae140"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round 1 SAFER+ ecb_int.txt - 256-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"2312efdecdbcab9089786756453423bc78ae8da840f61247136ec75a68a71cae"}}
+     ],
+     "input": {"t":"bytes","v":"45d77c9a652c7eaaaf3b87bcfd794825"},
+     "expected": {"t":"bytes","v":"9375a16f58a4c0a702f65b37e03aa46e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round 1 SAFER+ ecb_vk.txt I=1 - 128-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"aa9d022ed60e43a3f359265217775b5b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round 1 SAFER+ ecb_vk.txt I=1 - 192-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"800000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"c5e13fff9751c82f5bbea00cb7e2929a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST AES round 1 SAFER+ ecb_vt.txt I=1 - 256-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"80000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"c183c03087415dfcda4d425a06ee8523"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

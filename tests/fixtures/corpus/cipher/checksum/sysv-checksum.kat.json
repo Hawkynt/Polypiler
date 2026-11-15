@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/sysv-checksum.js",
+ "algorithms": [
+  {
+   "name": "SYSV-Checksum",
+   "vectors": [
+    {
+     "text": "Simple ASCII",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"68656c6c6f"},
+     "expected": {"t":"bytes","v":"0214"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"42"},
+     "expected": {"t":"bytes","v":"0042"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Multiple bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020304"},
+     "expected": {"t":"bytes","v":"000a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

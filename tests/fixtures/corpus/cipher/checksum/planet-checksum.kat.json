@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/planet-checksum.js",
+ "algorithms": [
+  {
+   "name": "PLANET",
+   "vectors": [
+    {
+     "text": "PLANET 12-digit",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839303132"},
+     "expected": {"t":"bytes","v":"02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PLANET 14-digit",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3132333435363738393031323334"},
+     "expected": {"t":"bytes","v":"05"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"303030303030303030303030"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

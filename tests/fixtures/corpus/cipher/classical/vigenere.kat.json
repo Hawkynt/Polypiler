@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/vigenere.js",
+ "algorithms": [
+  {
+   "name": "Vigenère Cipher",
+   "vectors": [
+    {
+     "text": "Classic Vigenère example from textbooks",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4c454d4f4e"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"4c58464f50564546524e4852"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GeeksforGeeks educational example",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4159555348"}}
+     ],
+     "input": {"t":"bytes","v":"4745454b53464f524745454b53"},
+     "expected": {"t":"bytes","v":"474359435a464d4c594c45494d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Trinity College Computer Science example",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"52454c4154494f4e53"}}
+     ],
+     "input": {"t":"bytes","v":"544f42454f524e4f54544f42455448415449535448455155455354494f4e"},
+     "expected": {"t":"bytes","v":"4b534d45485a42424c4b534d454d504f47414a5853454a4353464c5a5359"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Short key pattern test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"41424344"}}
+     ],
+     "input": {"t":"bytes","v":"43525950544f495353484f5254464f5243525950544f475241504859"},
+     "expected": {"t":"bytes","v":"4353415354504b565349515554475155435341535450495541514a42"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Classic pangram with simple key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4b4559"}}
+     ],
+     "input": {"t":"bytes","v":"544845515549434b42524f574e464f584a554d50534f5645525448454c415a59444f47"},
+     "expected": {"t":"bytes","v":"444c434159474d4f5a425355584a4d484e53575451595a434258464f50594a4342594b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

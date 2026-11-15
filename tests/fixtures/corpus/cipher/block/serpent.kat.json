@@ -1,0 +1,89 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/serpent.js",
+ "algorithms": [
+  {
+   "name": "Serpent",
+   "vectors": [
+    {
+     "text": "libgcrypt serpent_test - Serpent-128",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"d29d576fcea3a3a7ed9099f29273d78e"},
+     "expected": {"t":"bytes","v":"b2288b968ae8b08648d1ce9606fd992d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "libgcrypt serpent_test - Serpent-192",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"d29d576fceaba3a7ed9899f2927bd78e"},
+     "expected": {"t":"bytes","v":"130e353e1037c22405e8faefb2c3c3e9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "libgcrypt serpent_test - Serpent-256",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"d095576fcea3e3a7ed98d9f29073d78e"},
+     "expected": {"t":"bytes","v":"b90ee5862de69168f2bdd5125b45472b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "libgcrypt serpent_test - Serpent-256, counting plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000010000000200000003000000"},
+     "expected": {"t":"bytes","v":"2061a42782bd52ec691ec383b03ba77c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan serpent.vec - variable key, single bit 0x80 in last byte",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000080"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"ddd26b98a5ffd82c05345a9dadbfaf49"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan serpent.vec - variable key, single bit 0x01 in last byte",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000001"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f668c7091f81b2827da77dd419b708e1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

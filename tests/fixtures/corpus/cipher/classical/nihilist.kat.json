@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/nihilist.js",
+ "algorithms": [
+  {
+   "name": "Nihilist Cipher",
+   "vectors": [
+    {
+     "text": "Wikipedia worked example - square keyed ZEBRAS, additive key RUSSIAN, plaintext DYNAMITE WINTER PALACE",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5a45425241532c5255535349414e"}}
+     ],
+     "input": {"t":"bytes","v":"44594e414d49544557494e54455250414c414345"},
+     "expected": {"t":"bytes","v":"33372031303620363220333620363720343720383620323620313034203533203632203737203237203535203537203636203535203336203534203237"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plain A-Z square, key NIHILIST. No published source carries this value; it covers the unkeyed square",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4e4948494c495354"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"3434203638203637203335203434203439203534203838203437203335203735203537"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plain A-Z square, key RUSSIAN. No published source carries this value; it covers a key shorter than the message",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5255535349414e"}}
+     ],
+     "input": {"t":"bytes","v":"5245564f4c5554494f4e"},
+     "expected": {"t":"bytes","v":"3834203630203934203737203535203536203737203636203739203736"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Plain A-Z square, key CZAR. No published source carries this value; it covers a key longer than half the message",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"435a4152"}}
+     ],
+     "input": {"t":"bytes","v":"534543524554"},
+     "expected": {"t":"bytes","v":"3536203730203234203834203238203939"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

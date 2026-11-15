@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/stabilizer-quantum-code.js",
+ "algorithms": [
+  {
+   "name": "Stabilizer Quantum Code",
+   "vectors": [
+    {
+     "text": "Five-qubit code encode logical |0⟩",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"0000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Five-qubit code encode logical |1⟩",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"0101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Encode two logical qubits",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"00000000000101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

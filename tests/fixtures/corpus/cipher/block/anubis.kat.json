@@ -1,0 +1,141 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/anubis.js",
+ "algorithms": [
+  {
+   "name": "Anubis",
+   "vectors": [
+    {
+     "text": "DarkCrypt Anubis-tweaked-256 vector 1/zero",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"e5391940ae209c9ed3f26bb9b272d084"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Anubis-tweaked-256 vector 2/incr",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"25167975ba15a98c648d6f5e4e8bdb39"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Anubis-tweaked-256 vector 3/incr2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"c093290cd5240a55042f5550ee8403ca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LibTomCrypt Tweaked Vector - 128-bit key (0x80 prefix)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"b835bdc334829d8371bfa371e4b3c4fd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LibTomCrypt Tweaked Vector - 160-bit key (0x80 prefix)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"9759794b5ca0707324efb35867cad4b3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LibTomCrypt Tweaked Vector - 192-bit key (0x80 prefix)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"800000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"7d623b52c74c64d8ebc72d579785438f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LibTomCrypt Tweaked Vector - 224-bit key (0x80 prefix)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"689e05946a94438fe78e373d249792f5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LibTomCrypt Tweaked Vector - 256-bit key (0x80 prefix)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"9600f07691692987f5e597dbdbaf1b0a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LibTomCrypt Tweaked Vector - 288-bit key (0x80 prefix)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"800000000000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0fc7a2c01117ac43525edf6cf396336c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LibTomCrypt Tweaked Vector - 320-bit key (0x80 prefix)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"fee20e2a9dc583baa3a6d6a6f2e806a5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

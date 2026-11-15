@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/wyrand.js",
+ "algorithms": [
+  {
+   "name": "Wyrand",
+   "vectors": [
+    {
+     "text": "Seed 0: First 8 outputs (verified against reference C implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"111cb3a78f59a58eceabd938ff4e856d61fb51318f47d2a478bd03c4919097607c003d7fb14820de8769964729356b1fe214284dc87f982929a283ebb1b295a2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1: First 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"cdef1695e1f8ed2c61d6d24b1c9aad408cf880c22eebfadf05b3a992fedc4f8a01942e5b0cb4ae64"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 42: First 5 outputs (commonly used test seed)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ae4a7cbfdda9b434e9cc09d33d38d9d2cb5756512b93433aeb29b2a1320e1a715a3bd6480ed396c0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1234567: First 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000012d687"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0e6c0d75670e37cc6c97c0b827352c64d0cd28cec7470d39a51d2a195ac69861e09117771f95f935"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0x123456789ABCDEF: First 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0123456789abcdef"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"58b962217aafc627d7488e0f880dbd37a175b746466eac63159c6469d42795c0cc2ec3081b141be7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

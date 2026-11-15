@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/well.js",
+ "algorithms": [
+  {
+   "name": "WELL512a",
+   "vectors": [
+    {
+     "text": "WELL512a with seed 0: First 10 outputs (32-bit values)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"87444164a8607ff9624d61346854fe557283578efd970258c78bac851a0fe68748935f9b5c57c8f9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "WELL512a with seed 1: First 10 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c7798c5c7229bbe39682a4ffc440c989053f46bfdd305a688e2be560d398fc58739f16364958d47e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "WELL512a with seed 42: First 8 outputs (common test seed)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"536aad71d41b1b0565f1897e75290c673bf21b5f6a4c54d447944ab981c19822"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "WELL512a with seed 123456789: First 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000075bcd15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"6a9c9afe9c8a2699b868fd39f4118aa1dec59614"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/turbo-code.js",
+ "algorithms": [
+  {
+   "name": "Turbo Code",
+   "vectors": [
+    {
+     "text": "Turbo code all zeros - K=4 rate 1/3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Turbo code single bit - K=4 rate 1/3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000000"},
+     "expected": {"t":"bytes","v":"010101000101000000000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Turbo code pattern 1100 - K=4 rate 1/3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010000"},
+     "expected": {"t":"bytes","v":"010101010001000101000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Turbo code alternating - K=4 rate 1/3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000100"},
+     "expected": {"t":"bytes","v":"010101000100010101000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

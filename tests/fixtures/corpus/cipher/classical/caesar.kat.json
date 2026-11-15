@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/caesar.js",
+ "algorithms": [
+  {
+   "name": "Caesar Cipher",
+   "vectors": [
+    {
+     "text": "Historical Caesar Example",
+     "inverse": false,
+     "steps": [
+      {"set":"shift","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"4b484f4f52"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Classic Educational Test",
+     "inverse": false,
+     "steps": [
+      {"set":"shift","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"44575744464e445747445a51"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Full Alphabet Shift",
+     "inverse": false,
+     "steps": [
+      {"set":"shift","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a"},
+     "expected": {"t":"bytes","v":"4445464748494a4b4c4d4e4f505152535455565758595a414243"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed case text",
+     "inverse": false,
+     "steps": [
+      {"set":"shift","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"4b686f6f72205a72756f67"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text with numbers",
+     "inverse": false,
+     "steps": [
+      {"set":"shift","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"54657374313233"},
+     "expected": {"t":"bytes","v":"57687677313233"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

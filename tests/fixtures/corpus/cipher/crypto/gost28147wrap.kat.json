@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/gost28147wrap.js",
+ "algorithms": [
+  {
+   "name": "GOST 28147-89 Key Wrap",
+   "vectors": [
+    {
+     "text": "GOST 28147-89 Key Wrap - 32-byte key material with UKM",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"546d203368656c326973652073736e62206167796967747473656865202c3d73"}},
+      {"set":"ukm","value":{"t":"bytes","v":"1234567890abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"c38aa7f55384318ae9cf31fd318321eb9b8c95186ecfb5daec6b76079ddbea7c37650afa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

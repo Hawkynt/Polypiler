@@ -1,0 +1,56 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/raptor-enhanced.js",
+ "algorithms": [
+  {
+   "name": "Raptor (Enhanced)",
+   "vectors": [
+    {
+     "text": "RFC 5053 K=4 systematic encoding with J(K)=10",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":4}},
+      {"set":"symbolSize","value":{"t":"number","v":1}},
+      {"set":"targetOverhead","value":{"t":"number","v":0.25}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c"},
+     "expected": {"t":"bytes","v":"48656c6c00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5053 K=8 systematic encoding with J(K)=11",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"symbolSize","value":{"t":"number","v":1}},
+      {"set":"targetOverhead","value":{"t":"number","v":0.125}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f576f72"},
+     "expected": {"t":"bytes","v":"48656c6c6f576f7200"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5053 K=16 systematic encoding with J(K)=12",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":16}},
+      {"set":"symbolSize","value":{"t":"number","v":1}},
+      {"set":"targetOverhead","value":{"t":"number","v":0.0625}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

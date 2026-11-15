@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzo.js",
+ "algorithms": [
+  {
+   "name": "LZO",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character literal",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"010000001041"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hello World string (no match, too short)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"0b000000b048656c6c6f20576f726c64"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ABCDEFGH sequence (no match, too short)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142434445464748"},
+     "expected": {"t":"bytes","v":"08000000804142434445464748"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,92 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/rabbit.js",
+ "algorithms": [
+  {
+   "name": "Rabbit",
+   "vectors": [
+    {
+     "text": "RFC 4503 Appendix A.1 - keystream without IV, key 1 (all zero), S[0]..S[2]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"b15754f036a5d6ecf56b45261c4af70288e8d815c59c0c397b696c4789c68aa7f416a1c3700cd451da68d1881673d696"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 4503 Appendix A.1 - keystream without IV, key 2, S[0]..S[2]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"912813292e3d36fe3bfc62f1dc51c3ac"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"3d2df3c83ef627a1e97fc38487e2519cf576cd61f4405b8896bf53aa8554fc19e5547473fbdb43508ae53b20204d4c5e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 4503 Appendix A.1 - keystream without IV, key 3, S[0]..S[2]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8395741587e0c733e9e9ab01c09b0043"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0cb10dcda041cdac32eb5cfd02d0609b95fc9fca0f17015a7b7092114cff3ead9649e5de8bfc7f3f924147ad3a947428"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 4503 Appendix A.2 - keystream with IV setup, IV 1 (all zero), S[0]..S[2]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"c6a7275ef85495d87ccd5d376705b7ed5f29a6ac04f5efd47b8f293270dc4a8d2ade822b29de6c1ee52bdb8a47bf8f66"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 4503 Appendix A.2 - keystream with IV setup, IV 2, S[0]..S[2]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"c373f575c1267e59"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"1fcd4eb9580012e2e0dccc9222017d6da75f4e10d12125017b2499ffed936f2eebc112c393e738392356bdd012029ba7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 4503 Appendix A.2 - keystream with IV setup, IV 3, S[0]..S[2]",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"a6eb561ad2f41727"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"445ad8c805858dbf70b6af23a151104d96c8f27947f42c5baeae67c6acc35b039fcbfc895fa71c17313df034f01551cb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

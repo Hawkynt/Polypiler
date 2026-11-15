@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/manchester.js",
+ "algorithms": [
+  {
+   "name": "Manchester Encoding",
+   "vectors": [
+    {
+     "text": "Manchester empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single zero byte encoding test - Manchester",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00010001000100010001000100010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte with LSB set - Manchester",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"00010001000100010001000100010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

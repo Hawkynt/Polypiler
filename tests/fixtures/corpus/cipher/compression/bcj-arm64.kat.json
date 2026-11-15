@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bcj-arm64.js",
+ "algorithms": [
+  {
+   "name": "BCJ ARM64",
+   "vectors": [
+    {
+     "text": "Empty buffer",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two consecutive BL instructions (top 6 bits 100101, little-endian words)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000009401000095"},
+     "expected": {"t":"bytes","v":"0000009402000095"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ADRP instructions within one 4 KiB page (guard leaves them unchanged)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000009001000091"},
+     "expected": {"t":"bytes","v":"0000009001000091"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

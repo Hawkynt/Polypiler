@@ -1,0 +1,56 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/speed.js",
+ "algorithms": [
+  {
+   "name": "SPEED",
+   "vectors": [
+    {
+     "text": "Paper certification data — w=64, l=64, r=64",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"blockSize","value":{"t":"number","v":8}},
+      {"set":"rounds","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"2e008019bc26856d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Paper certification data — w=128, l=128, r=128",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}},
+      {"set":"blockSize","value":{"t":"number","v":16}},
+      {"set":"rounds","value":{"t":"number","v":128}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"6c13e4b9c3171571ab54d816915bc4e8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Paper certification data — w=256, l=256, r=256",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"605f5e5d5c5b5a595857565554535251504f4e4d4c4b4a494847464544434241"}},
+      {"set":"blockSize","value":{"t":"number","v":32}},
+      {"set":"rounds","value":{"t":"number","v":256}}
+     ],
+     "input": {"t":"bytes","v":"1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100"},
+     "expected": {"t":"bytes","v":"3de16cfa9a626847434e1574693fec1b3faa558a296b61d708b131ccba311068"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

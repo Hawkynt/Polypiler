@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/achterbahn.js",
+ "algorithms": [
+  {
+   "name": "Achterbahn-128/80",
+   "vectors": [
+    {
+     "text": "Achterbahn-80 reference keystream: key 01..0a, IV 01..0a",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a"}},
+      {"set":"iv","value":{"t":"bytes","v":"0102030405060708090a"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"e59cd632f3f1af7da47e19ff46651f38103a29f2f655edc07f5d6d2dd62a96aa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Achterbahn-128 reference keystream: key 01..10, IV 01..10",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}},
+      {"set":"iv","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"df71f042738f6d9ec21d896d0cc12baf54c8ce55a6507a1243b471c2cdf0ec42"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Achterbahn-128 — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e33587da2c7ec1136"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457aafe4194e83b8ed22"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"6dd3c8f5a6d34d8fb506c8d60b6b61078079cdca88da26e16427f60a9d02e0cf30524272d3b3f951a7a7076cb4ed211b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,26 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/eme.js",
+ "algorithms": [
+  {
+   "name": "EME",
+   "vectors": [
+    {
+     "text": "EME round-trip test - single block",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"DummyBlockCipherInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"6ac0bbe72749929bf82c6b046a8a0a37"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

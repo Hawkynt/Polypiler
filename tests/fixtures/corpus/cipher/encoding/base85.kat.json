@@ -1,0 +1,110 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/base85.js",
+ "algorithms": [
+  {
+   "name": "Base85",
+   "vectors": [
+    {
+     "text": "Base85 empty string test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base85 all-zero group test - no 'z' shortcut (this alphabet uses 'z' as a normal digit)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"3030303030"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base85 high-bit-set leading byte test - regression for signed-32-bit packing overflow",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff000000"},
+     "expected": {"t":"bytes","v":"7b7b523330"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base85 all 256 byte values regression test - exercises every leading digit including 'z' as an ordinary character",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "expected": {"t":"bytes","v":"3030394336314f297e4d326e682d63333d49777335445e6a2b36637258313723534b4839333337584152215f6e4271622625434043727b45473b664346666c535347264d466949357c32794a55753d3f4b745621374c60366e4e4e4a2661644f69664e74502a47412d52383e7d3253586f2b495477507659557d30696f574d795626586c5a497c593b41364461422a5e54626169256a637a4a717a65305f64406650735238676f54454f683e3431656a45233c756b6463793b6c24446d336e333c5a4a6f536d4d5a70724e397071407c7b28734876297d74675775457528376855773628556b7856674821797548345e7a603f4039234b702450246a517066252b31637628397a503c29596144342a7842304b2b7d2b3b613b4e6a78713c6d4b6b293d3b60587e3f43744c4640625538565e2134606c60312428237b5164735f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base85 four character test - 'Man '",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d616e20"},
+     "expected": {"t":"bytes","v":"4f3c605e7a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base85 single character test - 'M'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d"},
+     "expected": {"t":"bytes","v":"4f23"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base85 two character test - 'Ma'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d61"},
+     "expected": {"t":"bytes","v":"4f3c40"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base85 three character test - 'Man'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d616e"},
+     "expected": {"t":"bytes","v":"4f3c605e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base85 five character test - 'sure.'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"737572652e"},
+     "expected": {"t":"bytes","v":"623948694d4526"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

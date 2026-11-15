@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-lili.js",
+ "algorithms": [
+  {
+   "name": "LILI-128 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Lili — keystream from incrementing key, zero input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"612cca9a6cd85262a7232e4e636bb12591244ada79631ed367c0c09422bbe4549bb92dea46bb75096c01d8a2ff3c2444ed5389894c6e738ca710ce03aeb52473063f554bfb63ce58d6b0a7c651276e8dc2210c73ef0737035d863658ec8749535c87c9338412bf8b16f2228cd54317c2a0be7f888b995cc88ec7fae592ffd044"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Lili — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"612dc89968dd5465af2a24456f66bf2a813558c96d7608c47fd9da8f3ea6fa4bbb980fc9629e532e4428f289d3110a6bdd62bbba785b45bb9f29f43892881a4c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

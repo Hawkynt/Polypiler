@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-hierocrypt3.js",
+ "algorithms": [
+  {
+   "name": "Hierocrypt-3 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "Toshiba Hierocrypt-3 specification test data, 256-bit key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"11a180269a78dda4994746213b5a6dd6e34ffe0cc465d583aff66e1329419c94"}}
+     ],
+     "input": {"t":"bytes","v":"c16d7efca1cbafc7625cbe9c2593de2d"},
+     "expected": {"t":"bytes","v":"c86cd3b4a3185232e3457d638c6515c9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Hierocrypt-3 — zero key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"a509d3d04066cd974d72135b0b44f64c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Hierocrypt-3 — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"b1921a8d0f1a281b0f7660064c586279"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Hierocrypt-3 — shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"e220dfc4b0b3e8464b518f9cb48038f2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/unicorn-a.js",
+ "algorithms": [
+  {
+   "name": "CIPHERUNICORN-A",
+   "vectors": [
+    {
+     "text": "Regression vector (does not match the CRYPTREC specification)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0f0e0d0c0b0a09080706050403020100"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"9fc26f56ca7752ee45a3141a869551c4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

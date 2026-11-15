@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/color-code.js",
+ "algorithms": [
+  {
+   "name": "Topological Color Code",
+   "vectors": [
+    {
+     "text": "Color code [[7,1,3]] encode logical |0⟩",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Color code [[7,1,3]] encode logical |1⟩",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"01010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

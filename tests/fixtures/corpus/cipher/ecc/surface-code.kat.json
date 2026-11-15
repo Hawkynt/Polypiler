@@ -1,0 +1,106 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/surface-code.js",
+ "algorithms": [
+  {
+   "name": "Topological Surface Code",
+   "vectors": [
+    {
+     "text": "Distance-3 planar surface code - no errors",
+     "inverse": false,
+     "steps": [
+      {"set":"distance","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Distance-3 planar surface code - X error detection via stabilizers",
+     "inverse": false,
+     "steps": [
+      {"set":"distance","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"0001000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Distance-3 planar surface code - Z error detection via stabilizers",
+     "inverse": false,
+     "steps": [
+      {"set":"distance","value":{"t":"number","v":3}},
+      {"set":"errorType","value":{"t":"string","v":"Z"}}
+     ],
+     "input": {"t":"bytes","v":"0001000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Encode logical |0> state in distance-3 surface code",
+     "inverse": false,
+     "steps": [
+      {"set":"distance","value":{"t":"number","v":3}},
+      {"set":"logicalState","value":{"t":"number","v":0}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Encode logical |1> state in distance-3 surface code",
+     "inverse": false,
+     "steps": [
+      {"set":"distance","value":{"t":"number","v":3}},
+      {"set":"logicalState","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"0101010101010101010101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Distance-5 planar surface code - no errors",
+     "inverse": false,
+     "steps": [
+      {"set":"distance","value":{"t":"number","v":5}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Syndrome extraction for X stabilizer violation",
+     "inverse": false,
+     "steps": [
+      {"set":"distance","value":{"t":"number","v":3}},
+      {"set":"syndromeExtraction","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"0000010000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0001010000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

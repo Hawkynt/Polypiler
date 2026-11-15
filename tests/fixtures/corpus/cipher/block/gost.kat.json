@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/gost.js",
+ "algorithms": [
+  {
+   "name": "GOST 28147-89",
+   "vectors": [
+    {
+     "text": "Crypto++ validation vector 1 (TestParam S-box)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"be5ec2006cff9dcf52354959f1ff0cbfe95061b5a648c10387069c25997c0672"}}
+     ],
+     "input": {"t":"bytes","v":"0df82802b741a292"},
+     "expected": {"t":"bytes","v":"07f9027df7f7df89"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ validation vector 4 (TestParam S-box)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"728fee32f04b4c654ad7f607d71c660c2c2670d7c999713233149a1c0c17a1f0"}}
+     ],
+     "input": {"t":"bytes","v":"d4c05323a4f7a7b5"},
+     "expected": {"t":"bytes","v":"4d1f2e6b0d9de2ce"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ validation vector 9 (TestParam S-box)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"620153ee18096e622b6bfe4ff26bd6c4a3c8f4ed705feb5943cc3b5ab93fc11c"}}
+     ],
+     "input": {"t":"bytes","v":"40140a581d78bb49"},
+     "expected": {"t":"bytes","v":"d48adce9ae2df9a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "GOST R 34.12-2015 (Kuznyechik)",
+   "vectors": [
+    {
+     "text": "GOST R 34.12-2015 (Kuznyechik) test vector from RFC 7801",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8899aabbccddeeff0011223344556677fedcba98765432100123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"1122334455667700ffeeddccbbaa9988"},
+     "expected": {"t":"bytes","v":"7f679d90bebc24305a468d42b9d4edcd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GOST R 34.12-2015 (Kuznyechik) test vector 2 from RFC 7801",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8899aabbccddeeff0011223344556677fedcba98765432100123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbcceeff0a"},
+     "expected": {"t":"bytes","v":"b429912c6e0032f9285452d76718d08b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

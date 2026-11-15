@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/pcg.js",
+ "algorithms": [
+  {
+   "name": "PCG (Permuted Congruential Generator)",
+   "vectors": [
+    {
+     "text": "PCG64 seed=0, first 9 x 64-bit outputs (Abseil golden vector)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":72}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"01070196e695f8f1703ec840c59f4493e54954914b3a44fa96130ff204b9285e7d9fdef535ceb21a666feed42e1219a0981f685721c8326fad80710d6eab4ddae202c480b037a029"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

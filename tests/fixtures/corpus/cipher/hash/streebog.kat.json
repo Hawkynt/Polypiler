@@ -1,0 +1,192 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/streebog.js",
+ "algorithms": [
+  {
+   "name": "Streebog-256",
+   "vectors": [
+    {
+     "text": "RFC 6986 example 1 - M1, 63 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132"},
+     "expected": {"t":"bytes","v":"9d151eefd8590b89daa6ba6cb74af9275dd051026bb149a452fd84e5e57b5500"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6986 example 2 - M2, 72 bytes spanning two blocks",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"d1e520e2e5f2f0e82c20d1f2f0e8e1eee6e820e2edf3f6e82c20e2e5fef2fa20f120eceef0ff20f1f2f0e5ebe0ece820ede020f5f0e0e1f0fbff20efebfaeafb20c8e3eef0e5e2fb"},
+     "expected": {"t":"bytes","v":"9dd2fe4e90409e5da87f53976d7405b0c0cac628fc669a741d50063c557e8f50"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - empty message",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3f539a213e97c802cc229d474c6aa32a825a360b2a933a949fd925208d9ce1bb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - one byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"c6"},
+     "expected": {"t":"bytes","v":"d907b672d09f48d27ad06c26647921c9e25d063c038eaaefac81e749dc1d98b5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - 64 bytes, exactly the block size, forcing an all-padding block",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00b7d1c42da82cc055affead5924db662e5a080081697f8287c687fe91d32b4254fbb961725559a32c43c3f8114e05c2991108228ed83edc476fb9a62874fab1"},
+     "expected": {"t":"bytes","v":"68367c34ad8441a48ac7fc65657ac73aa51e1a36c5346c0bf011945bcb9ef773"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - 65 bytes, one over the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"89e8a4ccd6285add12b0c46506e91c09a3c2dd30951eb72818b58187f1a608edebf569fa81254970ad7f04ae9a25827fa6482829fdc0797a5cff6f7446d14576d2"},
+     "expected": {"t":"bytes","v":"64f56da108ea18571aacb6852b5be57999ec5de82a7d1f719fcddfc7ec1b0ad1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - 127 bytes, one under two blocks",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"c1c065c63b1b848430326ded0cd23cffc644296813df0f968275492026737fd8d26f8690f19512e5a7c936050fc6b011d0538a6d5c1e75f839af3b0237d4a1accb497de6733f9717326260401a77a564e7bca93ae9fe7d257060e44ea08c350c9f64a78ce095fe29a7d1fc23de9350a47b71eda31514d134d84b5180930e29"},
+     "expected": {"t":"bytes","v":"1ef768f7ae820c2966b7c60b0cf208ab89c1f7b60f9b2cab61253c38d1f2c987"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - 128 bytes, an exact multiple of the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"290f597702e009d86f49d5362346309e26919eacbcb86165be4906056d43f95a1e181b2b0c12785c929f17a3d25943f5313641c915bf5dd38882d587da1da65d6658f89764e28ee13a24ac9349e6803579baa17d6ca571793c13f7a0fe46043deeed08922fb2e2353d8718c5f1c7f1fba2df54e9cbbad54a750da656863d2843"},
+     "expected": {"t":"bytes","v":"c9c82e740ccc34fc0c14c61ab4eb037542d77ffda00d484aff97c1144346704f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Streebog-512",
+   "vectors": [
+    {
+     "text": "RFC 6986 example 1 - M1, 63 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132"},
+     "expected": {"t":"bytes","v":"1b54d01a4af5b9d5cc3d86d68d285462b19abc2475222f35c085122be4ba1ffa00ad30f8767b3a82384c6574f024c311e2a481332b08ef7f41797891c1646f48"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6986 example 2 - M2, 72 bytes spanning two blocks",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"d1e520e2e5f2f0e82c20d1f2f0e8e1eee6e820e2edf3f6e82c20e2e5fef2fa20f120eceef0ff20f1f2f0e5ebe0ece820ede020f5f0e0e1f0fbff20efebfaeafb20c8e3eef0e5e2fb"},
+     "expected": {"t":"bytes","v":"1e88e62226bfca6f9994f1f2d51569e0daf8475a3b0fe61a5300eee46d961376035fe83549ada2b8620fcd7c496ce5b33f0cb9dddc2b6460143b03dabac9fb28"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - empty message",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"8e945da209aa869f0455928529bcae4679e9873ab707b55315f56ceb98bef0a7362f715528356ee83cda5f2aac4c6ad2ba3a715c1bcd81cb8e9f90bf4c1c1a8a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - one byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3b"},
+     "expected": {"t":"bytes","v":"18ff357b3d82838113a6f34d5bedd966990959e215d6793bcaf09a007dcbcc40b141b268ec3356117914ce9da1278f824d6192ff497f7394592f5c01ec64907a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - 64 bytes, exactly the block size, forcing an all-padding block",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6277ed0cbcd95d4f45f94ac9525effda8b823da886942c662eaa25ac8cfefbc826046c5d017d96d0cbc3fa28e5f46c466432ad3b7e204eb181cba531f4f289c2"},
+     "expected": {"t":"bytes","v":"04a8f7eb4feccf00281bca12576779aaa0fd81307679a76366b6ad726f4cbf0a9e16f03d435b561a25338c931750ab812cac1bfc4716de0a408fe132a7d5c9cf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - 65 bytes, one over the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"44d2459c2ed212173625fc921fdd05a0f2d6593515944bfc5ca37ef9b75ae3e66234d124722ba75feb698ffe11c319e53726456d9417e396928d8519a3e6898195"},
+     "expected": {"t":"bytes","v":"0cbfeaf77ca3c157be6a367b0fda771ba5aa465f27c4a446fa5e23356006aa43cf2a0d1aa8803a2b85a34298ecb99936d8e4e986dce6fd698dbb097b7e3ed8ab"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - 127 bytes, one under two blocks",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0079ce89a3bb7209563a1fab751a5b80e6c424b2996d241d601e255d601b81943eb05b44523f1c1b0cde018fe08dca199ab809c05b03ed281d7f4cfb16b978047695a98e7a01ff35c498c7214b9f6c401342d356fd2818036f786236d85211acdeeb7bbe7d669f168737f437d004d9783d4203213c52d178f1787efeb2ee3c"},
+     "expected": {"t":"bytes","v":"a7bcd688131c97b57dedc7aebd845e0042ea9f8d3a425f11f57ddfef8eaec040e93d9219b68ab919ac4c5c5c1522ed9cbb50951bace6499e2cd0db13ff57e136"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan streebog.vec - 128 bytes, an exact multiple of the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"25894e39aef06148d682f48a34f100ea694e446bbf79caa7806c7c6f3f8a60a94b9c8b2877c617fead17ac576d8dafd3f8514e49825d54dc9a8916330dc560204bd795d0ce00a49ba3c25c7921381c057bc6a1abb362db79497c878321c2a71793f2bfb7ad211700fecd486241cc6197a50075560147b20b9cbe2f992f516c61"},
+     "expected": {"t":"bytes","v":"b4ce87a416b83be3417ccbd7000d658acce2a5c3b57c92aa8ca3d912f20580748c2534a157b4ead16059499b9b11ae8ff07cca94a2a5a314b4ac4faaddcb0162"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

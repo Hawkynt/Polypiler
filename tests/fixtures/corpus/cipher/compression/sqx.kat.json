@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/sqx.js",
+ "algorithms": [
+  {
+   "name": "SQX",
+   "vectors": [
+    {
+     "text": "Empty input - length header only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'A' - one literal",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"0100000000010100000000000000001b67fefd280000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated byte run - one literal then a length-4-or-more match",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"1000000000020100000000000000001d67fd721548c00000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Periodic text - literals then a match carrying extra length bits",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636162636162636162636162636162636162"},
+     "expected": {"t":"bytes","v":"140000000004332000000000000000156a9fcb604db910da800000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

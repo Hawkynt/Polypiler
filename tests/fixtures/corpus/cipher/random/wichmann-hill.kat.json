@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/wichmann-hill.js",
+ "algorithms": [
+  {
+   "name": "Wichmann-Hill",
+   "vectors": [
+    {
+     "text": "Modernized 64-bit variant, seed=1 - First 5 values (8 bytes each)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0657c71cd00132e59be711b3d64ccd31a5c923bdd09ac22a4ec5b77f8af1e2a8164d1e21fc54f174"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Modernized 64-bit variant, seed=42 - First 5 values (8 bytes each)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"2b77e25e13f294543f54be2cb9ed2c4b9753deeaedce96af456610eb40b08e515a4bf254af2dd91b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Modernized 64-bit variant, seed=12345 - First 5 values (8 bytes each)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000003039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b60daf6198914a4e0e408acd97013b5b7f61c25c0fb4e029a647db70cc8d51ea1a632a25e20f99a6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Modernized 64-bit variant, seed=1000000 - First 5 values (8 bytes each)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000000f4240"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"321e08c3a86eb0b0de16241ceed7a4f1b99dafa2c41ec0c856b8244ab00a908c731d999437b7ba88"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Modernized 64-bit variant, seed=0xDEADBEEF - First 5 values (8 bytes each)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000deadbeef"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"40c8cd72a36b85bb0a9004ff6b8dedb30a88e02dbbd1b206ebabb900fc54a2c9bd136837299fd960"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}
