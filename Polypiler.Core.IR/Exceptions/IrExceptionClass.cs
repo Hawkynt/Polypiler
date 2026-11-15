@@ -77,7 +77,7 @@ public static class IrExceptionClass {
   /// <summary>The class of <see cref="IrTrap.InvalidFormat"/>: a text that is no number of the grammar it is parsed by.</summary>
   public static IrClassType FormatException { get; }
 
-  /// <summary>An argument a method does not accept; the class of <see cref="IrTrap.DuplicateKey"/>.</summary>
+  /// <summary>An argument a method does not accept; the class of <see cref="IrTrap.DuplicateKey"/> and <see cref="IrTrap.UnknownName"/>.</summary>
   public static IrClassType ArgumentException { get; }
 
   /// <summary>The class of <see cref="IrTrap.ArgumentOutOfRange"/>.</summary>
@@ -108,7 +108,7 @@ public static class IrExceptionClass {
     IrTrap.InvalidCast => InvalidCastException,
     IrTrap.MissingValue or IrTrap.CollectionModified => InvalidOperationException,
     IrTrap.KeyNotFound => KeyNotFoundException,
-    IrTrap.DuplicateKey => ArgumentException,
+    IrTrap.DuplicateKey or IrTrap.UnknownName => ArgumentException,
     IrTrap.InvalidFormat => FormatException,
     _ => throw new ArgumentOutOfRangeException(nameof(trap), trap, "The trap has no exception class.")
   };

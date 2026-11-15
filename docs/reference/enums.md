@@ -134,7 +134,8 @@ The emitter never writes `Enum.HasFlag`, which boxes before .NET Core 2.1 (the r
 
 The helpers trim with .NET's white space (`$trimNet`), read numbers by .NET's grammar (`$parseNetInt`,
 `$parseNet64`), compare names ignoring case as `OrdinalIgnoreCase` does (one code unit at a time) and
-throw the `RangeError` of the IR's traps.
+throw the IR's traps: an unknown name is `UnknownName`, an `ArgumentError` as .NET throws an
+`ArgumentException`, and a number outside the underlying type `IntegerOverflow`.
 
 ## Checks
 

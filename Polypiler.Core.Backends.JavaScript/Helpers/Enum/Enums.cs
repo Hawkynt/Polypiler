@@ -58,7 +58,7 @@ internal static partial class JavaScriptHelpers {
       "}")),
     Same("$enumNumber", Lines(
       "function $enumNumber(t) {",
-      "  if (t === \"\") throw new RangeError(\"invalid format\");",
+      "  if (t === \"\") throw new ArgumentError(\"unknown name\");",
       "  @const c = t.charAt(0);",
       "  if ((c < \"0\" || c > \"9\") && c !== \"-\" && c !== \"+\") return false;",
       "  @let end = t.length;",
@@ -90,7 +90,7 @@ internal static partial class JavaScriptHelpers {
       "    @const name = $trimNet(parts[k], true, true);",
       "    @let found = -1;",
       "    for (@let j = 0; j < table.length && found < 0; ++j) if ($enumSame(table[j][0], name, ignoreCase)) found = j;",
-      "    if (found < 0) throw new RangeError(\"invalid format\");",
+      "    if (found < 0) throw new ArgumentError(\"unknown name\");",
       "    low = (low | table[found][1]) >>> 0;",
       "    high = (high | (table[found].length > 2 ? table[found][2] : 0)) >>> 0;",
       "  }",

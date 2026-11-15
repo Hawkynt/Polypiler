@@ -47,7 +47,10 @@ public enum IrTrap {
   CollectionModified,
 
   /// <summary>A text that is not a number of the grammar it is parsed by.</summary>
-  InvalidFormat
+  InvalidFormat,
+
+  /// <summary>A text that names no member of an enum (<see cref="IrIntrinsicOp.EnumParse"/>), for which .NET throws an <c>ArgumentException</c>.</summary>
+  UnknownName
 
 }
 
@@ -105,6 +108,7 @@ public sealed class IrTrapException : IrException {
     IrTrap.DuplicateKey => "duplicate key",
     IrTrap.CollectionModified => "collection modified",
     IrTrap.InvalidFormat => "invalid format",
+    IrTrap.UnknownName => "unknown name",
     _ => "integer overflow"
   };
 

@@ -49,6 +49,7 @@ tests: a trap without a row fails them, so a trap a later change introduces adds
 | `InvalidOperationException` (`CollectionModified`) | `System.InvalidOperationException` | Collection was modified; enumeration operation may not execute. | `InvalidOperationError` | `Error` | collection modified |
 | `KeyNotFoundException` (`KeyNotFound`) | `System.Collections.Generic.KeyNotFoundException` | The given key 'k' was not present in the dictionary. | `KeyNotFoundError` | `Error` | key not found |
 | `ArgumentException` (`DuplicateKey`) | `System.ArgumentException` | An item with the same key has already been added. Key: k | `ArgumentError` | `Error` | duplicate key |
+| `ArgumentException` (`UnknownName`) | `System.ArgumentException` | Requested value 'x' was not found. | `ArgumentError` | `Error` | unknown name |
 | `FormatException` (`InvalidFormat`) | `System.FormatException` | The input string 'x' was not in a correct format. | `FormatError` | `RangeError` | invalid format |
 
 - **JavaScript.** A generated class is declared in a module only where it is used, with the classes

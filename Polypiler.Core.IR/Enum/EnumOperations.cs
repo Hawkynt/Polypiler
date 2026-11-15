@@ -117,7 +117,7 @@ public static class EnumOperations {
   /// commas, each without white space at both ends, every one the name of a member, ordinal or ignoring
   /// case as <c>OrdinalIgnoreCase</c> does - the first member in .NET's order whose name matches - and
   /// the result the bits of all of them. Any enum takes a list, also one without <c>[Flags]</c>. An
-  /// empty text, an empty name and an unknown one trap <see cref="IrTrap.InvalidFormat"/>.
+  /// empty text, an empty name and an unknown one trap <see cref="IrTrap.UnknownName"/>, as .NET throws an <c>ArgumentException</c>.
   /// </summary>
   /// <param name="type">The enum.</param>
   /// <param name="text">The text.</param>
@@ -127,7 +127,7 @@ public static class EnumOperations {
   public static long Parse(IrEnumType type, string text, bool ignoreCase) {
     var trimmed = StringOperations.Trim(text, WhitespaceSet.DotNet, true, false);
     if (trimmed.Length == 0)
-      throw new IrTrapException(IrTrap.InvalidFormat);
+      throw new IrTrapException(IrTrap.UnknownName);
 
     if (char.IsAsciiDigit(trimmed[0]) || trimmed[0] is '-' or '+') {
       try {
@@ -143,7 +143,7 @@ public static class EnumOperations {
     foreach (var part in trimmed.Split(',')) {
       var name = StringOperations.Trim(part, WhitespaceSet.DotNet, true, true);
       var member = ordered.FirstOrDefault(candidate => string.Equals(candidate.Name, name, comparison))
-        ?? throw new IrTrapException(IrTrap.InvalidFormat);
+        ?? throw new IrTrapException(IrTrap.UnknownName);
       bits |= type.Unsigned(member.Value);
     }
 

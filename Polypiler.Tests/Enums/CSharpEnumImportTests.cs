@@ -95,7 +95,7 @@ public sealed class CSharpEnumImportTests {
     try {
       return PrototypeFixture.Show(call());
     } catch (TargetInvocationException exception) when (exception.InnerException is ArgumentException or OverflowException) {
-      return exception.InnerException is OverflowException ? "integer overflow" : "invalid format";
+      return exception.InnerException is OverflowException ? "integer overflow" : "unknown name";
     } catch (IrTrapException trap) {
       return IrTrapException.Describe(trap.Trap);
     }

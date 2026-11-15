@@ -235,7 +235,7 @@ public sealed class IrEnumTests {
     } catch (OverflowException) {
       return nameof(IrTrap.IntegerOverflow);
     } catch (ArgumentException) {
-      return nameof(IrTrap.InvalidFormat);
+      return nameof(IrTrap.UnknownName);
     }
   }
 
@@ -263,7 +263,7 @@ public sealed class IrEnumTests {
     Assert.That(Run(perm, new IrIntrinsic(IrIntrinsicOp.EnumHasFlag, IrType.Bool, [new IrLocalRef(x), new IrLocalRef(f)]), [x, f], 6, 5), Is.False);
     var parse = new IrIntrinsic(IrIntrinsicOp.EnumParse, type, [new IrLocalRef(s), new IrConst(IrType.Bool, 0)]);
     Assert.That(Run(perm, parse, [s], "Read, Exec"), Is.EqualTo(5));
-    Assert.That(() => Run(perm, parse, [s], "read"), Throws.TypeOf<IrTrapException>().With.Property(nameof(IrTrapException.Trap)).EqualTo(IrTrap.InvalidFormat));
+    Assert.That(() => Run(perm, parse, [s], "read"), Throws.TypeOf<IrTrapException>().With.Property(nameof(IrTrapException.Trap)).EqualTo(IrTrap.UnknownName));
     Assert.That(Run(perm, EnumOperations.Listing(IrIntrinsicOp.EnumNames, perm), []), Is.EqualTo(new[] { "None", "Read", "Write", "ReadWrite", "Exec" }));
     Assert.That(Run(perm, EnumOperations.Listing(IrIntrinsicOp.EnumValues, perm), []), Is.EqualTo(new[] { 0, 1, 2, 3, 4 }));
     var color = Of<Color>();

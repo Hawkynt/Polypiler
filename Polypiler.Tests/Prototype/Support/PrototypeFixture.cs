@@ -212,6 +212,7 @@ internal static class PrototypeFixture {
     System.Collections.Generic.KeyNotFoundException => IrTrap.KeyNotFound,
     ArgumentOutOfRangeException when exception.StackTrace?.Contains("System.Collections.Generic.List", StringComparison.Ordinal) == true => IrTrap.ArgumentOutOfRange,
     ArgumentException when exception.Message.StartsWith("An item with the same key", StringComparison.Ordinal) => IrTrap.DuplicateKey,
+    ArgumentException when exception.StackTrace?.Contains("System.Enum.", StringComparison.Ordinal) == true => IrTrap.UnknownName,
     InvalidOperationException when exception.Message.StartsWith("Collection was modified", StringComparison.Ordinal) => IrTrap.CollectionModified,
     IndexOutOfRangeException or ArgumentException => IrTrap.IndexOutOfRange,
     OverflowException => IrTrap.IntegerOverflow,

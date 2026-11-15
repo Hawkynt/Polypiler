@@ -36,8 +36,8 @@ culture or a runtime version.
 
 Every parse is correctly rounded. `ParseDotNet` traps `InvalidFormat` (new) on a malformed text and
 `IntegerOverflow` on an integer out of its type, the format first: `"99999999999x"` is
-`InvalidFormat`. A backend throws `FormatException` and `RangeError("invalid format")` for
-`InvalidFormat`, until the traps are mapped to catchable exceptions.
+`InvalidFormat`. A backend throws `FormatException` for `InvalidFormat`, in JavaScript the
+generated `FormatError`, a `RangeError` ([exceptions](exceptions.md)).
 
 The verifier checks the constants: the digits of a fixed notation within the bounds of its rule, and
 the radix, padding (0 to 99), case and mode of `FormatRadix`.
