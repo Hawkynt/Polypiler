@@ -375,22 +375,15 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
     }
 
     /// <summary>
-    /// Whether a variable is used other than by a call of it or as an argument a check admits, written,
-    /// or captured by a lambda; <paramref name="lambdas"/> says whether the bodies of the lambdas are
-    /// looked into, which a capture makes unnecessary.
+    /// Whether a variable is used other than by a call of it or as an argument a check admits, assigned
+    /// other than by its <paramref name="definition"/>, or captured by a lambda; <paramref name="lambdas"/>
+    /// says whether the bodies of the lambdas are looked into, which a capture makes unnecessary. A
+    /// parameter, or a local of a function type no lambda captures, is never the variable of a loop over
+    /// a sequence, a resource, a caught exception or a struct, nor one a loop copies into every pass.
     /// </summary>
     private bool Leaves(IrBlock body, IrLocal variable, bool lambdas, Func<IrCall, int, bool> passed, IrStmt? definition = null) {
       var statements = lambdas ? IrClosures.Within(body).ToList() : IrPassSupport.Statements(body).ToList();
-      if (statements.Any(statement => !ReferenceEquals(statement, definition) && statement switch {
-            IrAssign assign => assign.Local == variable,
-            IrUsing scope => scope.Resource == variable,
-            IrForEachSequence loop => loop.Element == variable,
-            IrForEachCollection loop => loop.Element == variable || loop.Value == variable,
-            IrFor loop => loop.PerIteration.Contains(variable),
-            IrTry attempt => attempt.Catches.Any(clause => clause.Local == variable),
-            IrFieldStore store => IrStatements.Root(store.Target) == variable,
-            _ => false
-          }))
+      if (statements.Any(statement => statement is IrAssign assign && assign.Local == variable && !ReferenceEquals(statement, definition)))
         return true;
 
       bool Leaves(IrExpr expression) {
@@ -539,13 +532,12 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
 
       // The values passed at the calls that are made, in the original lambdas' identity.
       var bindings = new Dictionary<IrExpr, Binding>(ReferenceEqualityComparer.Instance);
-      foreach (var (_, value) in made.Values.SelectMany(bound => bound))
-        if (!bindings.ContainsKey(value))
-          bindings[value] = value switch {
-            IrLambda lambda => this.Lifted(function, lambda, cells, "Lambda"),
-            IrFunctionRef reference => new Binding(reference.Function, [], []),
-            _ => liftedHeld[((IrLocalRef)value).Local]
-          };
+      foreach (var value in made.Values.SelectMany(bound => bound).Select(pair => pair.Value).Distinct(ReferenceEqualityComparer.Instance).Cast<IrExpr>())
+        bindings[value] = value switch {
+          IrLambda lambda => this.Lifted(function, lambda, cells, "Lambda"),
+          IrFunctionRef reference => new Binding(reference.Function, [], []),
+          _ => liftedHeld[((IrLocalRef)value).Local]
+        };
 
       var mapper = new Mapper(
         (original, node) => original switch {
@@ -588,28 +580,21 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
         yield return node;
     }
 
-    /// <summary>Whether a method group is a function of the module a call can bind.</summary>
-    private bool Targets(IrFunctionRef reference)
-      => this._functions.TryGetValue(reference.Function, out var target) && target.Origin is null && !this._members.Contains(target.Name)
-        && reference.Type.Signature is { } signature && target.ReturnType == signature.Result
-        && target.Parameters.Select(parameter => parameter.Type).SequenceEqual(signature.Parameters);
+    /// <summary>Whether a method group - a function of the module, of the signature the verifier holds it to - may be bound: one that is no instance of a generic function.</summary>
+    private bool Targets(IrFunctionRef reference) => this._functions[reference.Function].Origin is null;
 
     /// <summary>Whether an argument of a call of the function looked at may be bound: the callee is another function whose parameter keeps it.</summary>
     private bool Passable(IrFunction function, IrCall call, int argument) => call.Function != function.Name && !this.Escapes(call.Function, argument);
 
     /// <summary>
     /// Whether a variable a lambda writes may go into a cell: a number or a truth value the function
-    /// declares once, outside its lambdas, and that nothing binds, steps through a field or takes as a
-    /// variable of a loop.
+    /// declares once, outside its lambdas - so no parameter and no variable a loop or a catch declares -
+    /// that nothing binds and no loop copies into every pass.
     /// </summary>
     private static bool CellableIn(IrFunction function, IrLocal variable, IReadOnlyList<IrStmt> statements)
-      => Cellable(variable.Type) && !function.Parameters.Contains(variable)
-        && statements.OfType<IrDeclare>().Count(declare => declare.Local == variable) == 1
+      => Cellable(variable.Type) && statements.OfType<IrDeclare>().Count(declare => declare.Local == variable) == 1
         && !IrPassSupport.Nodes(function.Body).OfType<IrBind>().Any(bind => bind.Local == variable)
-        && !IrClosures.Within(function.Body).Any(statement => statement is IrFor loop && loop.PerIteration.Contains(variable)
-          || statement is IrUsing scope && scope.Resource == variable || statement is IrForEachSequence each && each.Element == variable
-          || statement is IrForEachCollection collection && (collection.Element == variable || collection.Value == variable)
-          || statement is IrTry attempt && attempt.Catches.Any(clause => clause.Local == variable));
+        && !statements.OfType<IrFor>().Any(loop => loop.PerIteration.Contains(variable));
 
     /// <summary>Drops every literal lambda that captures a variable in a cell which a lambda that is not lifted captures too, until none does.</summary>
     private static void Settle(IReadOnlyList<IrLambda> outermost, Dictionary<IrLambda, Candidate> literals) {
@@ -671,7 +656,7 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
       var candidate = value is IrLambda lambda ? literals[lambda] : held[((IrLocalRef)value).Local];
       var cells = candidate.Written.ToDictionary(variable => variable, variable => new IrLocal(variable.Name, IrType.Array(variable.Type)));
       var text = Text(Form(candidate.Lambda, cells));
-      return text is not null && this.Known().TryGetValue(text, out var name) ? name : "λ" + (text ?? Guid.NewGuid().ToString("N"));
+      return this.Known().TryGetValue(text, out var name) ? name : "λ" + text;
     }
 
     /// <summary>The copies a call needs that do not exist yet: of its callee, and of every function the callee passes a bound value on to.</summary>
@@ -756,15 +741,14 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
       var captures = lifted.Parameters.Skip(lambda.Parameters.Count).ToList();
       var text = Text(lifted);
       var arguments = captures.Select(capture => (IrExpr)new IrLocalRef(capture)).ToList();
-      if (text is not null && this.Known().TryGetValue(text, out var existing))
+      if (this.Known().TryGetValue(text, out var existing))
         return new Binding(existing, captures, arguments);
 
       var name = IrPassSupport.Fresh(scope.Name + "_" + suffix, this.Names());
       this._functions[name] = lifted with { Name = name };
       this._order.Add(name);
       this._scopeFunctions.Add(new IrScopeFunction(scope.Name, name, captures.Any(cells.ContainsValue) ? IrCaptureClass.Capturing : IrCaptureClass.Static, true));
-      if (text is not null)
-        this.Known()[text] = name;
+      this.Known()[text] = name;
 
       return new Binding(name, captures, arguments);
     }
@@ -772,8 +756,7 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
     /// <summary>The functions lifted before, by their text without their name.</summary>
     private Dictionary<string, string> Known()
       => this._lifted ??= this._scopeFunctions.Where(known => known.IsLifted && this._functions.ContainsKey(known.Name))
-        .Select(known => (Text: this.Text(this._functions[known.Name] with { Name = "" }), known.Name)).Where(pair => pair.Text is not null)
-        .GroupBy(pair => pair.Text!).ToDictionary(group => group.Key, group => group.First().Name);
+        .GroupBy(known => this.Text(this._functions[known.Name] with { Name = "" })).ToDictionary(group => group.Key, group => group.First().Name);
 
     /// <summary>A lambda as a function without a name: its parameters, then what it captures, those in cells as their cells, which its body reads and writes through.</summary>
     private static IrFunction Form(IrLambda lambda, Dictionary<IrLocal, IrLocal> cells) {
@@ -786,14 +769,8 @@ public sealed class O0463LambdaSpecialisation : IIrPass {
       return new IrFunction("", false, lambda.ReturnType, [.. lambda.Parameters, .. captures], lambda.Locals, mapper.Block(lambda.Body));
     }
 
-    /// <summary>The text of a function in the module's format, which equal functions share; <see langword="null"/> for one the format cannot write.</summary>
-    private string? Text(IrFunction function) {
-      try {
-        return Convert.ToBase64String(IrModuleFormat.Write(this._module with { Functions = [function] }));
-      } catch (ArgumentException) {
-        return null;
-      }
-    }
+    /// <summary>The text of a function in the module's format, which equal functions share: the module is verified, so the format writes every node of it.</summary>
+    private string Text(IrFunction function) => Convert.ToBase64String(IrModuleFormat.Write(this._module with { Functions = [function] }));
 
     /// <summary>A block without the declarations and assignments of the variables, at any depth.</summary>
     private static IrBlock Without(IrBlock block, HashSet<IrLocal> variables)
