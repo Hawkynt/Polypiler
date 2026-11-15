@@ -85,6 +85,18 @@ internal static class GoldenOutputs {
        ])
   ];
 
+  /// <summary>
+  /// The representative slice of the full matrix: every source in one variant of each target, the
+  /// variants taken in turn along <see cref="All"/>, so that every source and, as there are more
+  /// sources than variants, every variant is in it once at least. The per-OS test jobs run it; the
+  /// full matrix of every source in every variant is the <c>Sweep</c> category, run once.
+  /// </summary>
+  public static IReadOnlyList<(string Source, GoldenVariant Variant)> Slice { get; } = [
+    .. from target in Targets
+       from item in All.Select((source, index) => (source, index))
+       select (item.source, Variants(target)[item.index % Variants(target).Count])
+  ];
+
   /// <summary>The source language of a source file, by its extension.</summary>
   public static string LanguageOf(string source) => source.EndsWith(".cs", StringComparison.Ordinal) ? "csharp" : "javascript";
 

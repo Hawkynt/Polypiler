@@ -14,6 +14,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 [Layer("core")]
+[Category("Prototype")]
 public sealed class NodeWorkerTests {
 
   private static readonly PrototypeCall[] _calls = [new("f", [20]), new("f", [-3])];

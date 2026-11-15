@@ -17,6 +17,7 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 [Layer("core")]
+[Category("Prototype")]
 public sealed class InProcessTranslationTests {
 
   private string _directory = "";

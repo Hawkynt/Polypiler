@@ -23,6 +23,15 @@ public sealed class AdrNumberingTests {
     Assert.That(Check(tree), Is.Empty);
   }
 
+  /// <summary>The catalogue block takes its area in either spelling.</summary>
+  [TestCase("catalogue")]
+  [TestCase("catalog")]
+  public void CatalogueRecord_InEitherSpelling_IsFine(string area) {
+    using var tree = new CiTree();
+    tree.Write("docs/adr/0030-one.md", $"# ADR 0030 - One\n\nArea: {area}\n").Write("docs/adr/README.md", "| [0030](0030-one.md) | One |\n");
+    Assert.That(Check(tree), Is.Empty);
+  }
+
   [TestCase("docs/adr/1-short.md", "# ADR\n\nArea: foundation\n", "PLY0075: ADR file 1-short.md does not follow <nnnn>-<slug>.md")]
   [TestCase("docs/adr/0002-two.md", "# ADR 0002\n\nThe decision.\n", "PLY0075: ADR file 0002-two.md has no line 'Area: <area>' after its title")]
   [TestCase("docs/adr/0002-two.md", "# ADR 0002\n\nArea: weather\n", "PLY0075: ADR file 0002-two.md names the unknown area 'weather'")]

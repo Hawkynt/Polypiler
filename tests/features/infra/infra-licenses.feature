@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Licence scanner and policy gate
 
   Scenario: A corpus file without a header inherits the nearest licence file

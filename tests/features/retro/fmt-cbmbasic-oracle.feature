@@ -1,4 +1,4 @@
-@ExternalInterop
+@ExternalInterop @Layer.core
 Feature: VICE and petcat oracles for Commodore BASIC
 
   Scenario: A program's screen output is captured

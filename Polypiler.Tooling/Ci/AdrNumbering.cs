@@ -25,7 +25,7 @@ public static partial class AdrNumbering {
   /// <summary>The blocks of numbers per area, and the names an <c>Area:</c> line may give each.</summary>
   public static IReadOnlyList<(int First, int Last, string[] Areas)> Blocks { get; } = [
     (1, 29, ["foundation", "infrastructure", "cli", "verification", "specs"]),
-    (30, 59, ["catalogue", "packaging", "adapters", "upstream"]),
+    (30, 59, ["catalogue", "catalog", "packaging", "adapters", "upstream"]),
     (60, 99, ["retro"]),
     (100, 199, ["ir", "types", "base"]),
     (200, 299, ["intrinsics", "analysis"]),

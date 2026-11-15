@@ -18,6 +18,8 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
+[Category("Prototype")]
 public sealed class StringsTests {
 
   private string _directory = "";

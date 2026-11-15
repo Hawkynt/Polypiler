@@ -54,13 +54,23 @@ public sealed record CiLayer(string Name, string File, IReadOnlyList<string> Too
     return this.Always || this.Paths.Any(glob => GlobPattern.Parse(glob).IsMatch(normalized));
   }
 
-  /// <summary>Reads every layer file of a repository.</summary>
+  /// <summary>
+  /// Whether a file of <see cref="Folder"/> is a layer file: <c>&lt;name&gt;.yaml</c>. A file whose name
+  /// has a further dot, such as <c>basic.oracles.yaml</c>, belongs to a layer without being one.
+  /// </summary>
+  /// <param name="file">The file name or path.</param>
+  public static bool IsLayerFile(string file) {
+    var name = Path.GetFileName(file);
+    return name.EndsWith(".yaml", StringComparison.Ordinal) && !Path.GetFileNameWithoutExtension(name).Contains('.', StringComparison.Ordinal);
+  }
+
+  /// <summary>Reads every layer file of a repository; the companion files of a layer are left out (<see cref="IsLayerFile"/>).</summary>
   /// <param name="root">The repository root.</param>
   /// <returns>The valid layers, sorted by name, and a <c>PLY0075</c> for every file that is not valid; no layer file at all is one <c>PLY0075</c> too.</returns>
   public static (IReadOnlyList<CiLayer> Layers, IReadOnlyList<Diagnostic> Problems) LoadAll(string root) {
     ArgumentNullException.ThrowIfNull(root);
     var folder = Path.Combine(root, Folder);
-    var files = Directory.Exists(folder) ? Directory.GetFiles(folder, "*.yaml").Order(StringComparer.Ordinal).ToArray() : [];
+    var files = Directory.Exists(folder) ? Directory.GetFiles(folder, "*.yaml").Where(IsLayerFile).Order(StringComparer.Ordinal).ToArray() : [];
     if (files.Length == 0)
       return ([], [CiDiagnostics.InconsistentWith($"no layer files found in {Folder}")]);
 

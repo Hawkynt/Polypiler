@@ -86,6 +86,21 @@ public sealed class CiLayerTests {
     Assert.That(problems.Select(problem => problem.Message), Has.All.StartWith("tooling/ci/layers/broken.yaml: "));
   }
 
+  [Test]
+  public void LoadAll_CompanionFileOfALayer_IsNoLayerFile() {
+    using var tree = new CiTree();
+    tree.Write("tooling/ci/layers/core.oracles.yaml", "schema: 1\noracles: []\n");
+    var (layers, problems) = CiLayer.LoadAll(tree.Root);
+    Assert.That((layers.Select(layer => layer.Name), problems), Is.EqualTo((new[] { "core", "rust" }, new object[0])));
+  }
+
+  [TestCase("core.yaml", true)]
+  [TestCase("tooling/ci/layers/basic.yaml", true)]
+  [TestCase("basic.oracles.yaml", false)]
+  [TestCase("basic.yml", false)]
+  public void IsLayerFile_NameWithOneDotBeforeYaml_IsALayerFile(string file, bool expected)
+    => Assert.That(CiLayer.IsLayerFile(file), Is.EqualTo(expected));
+
   /// <summary>Test design 9: <c>**</c> matches a file at the root and a deeply nested one.</summary>
   [TestCase("a")]
   [TestCase("a/b/c/d.cs")]

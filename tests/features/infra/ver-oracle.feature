@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Oracle and differential comparison framework
 
   @EndToEnd

@@ -89,4 +89,5 @@ packages:
   - { id: Reqnroll.NUnit, version: 3.3.4, licence: BSD-3-Clause }
   - { id: SharpFuzz, version: 2.3.0, licence: MIT }
   - { id: System.CommandLine, version: 2.0.15, licence: MIT }
+  - { id: System.Reflection.MetadataLoadContext, version: 10.0.0, licence: MIT }
   - { id: YamlDotNet, version: 18.1.0, licence: MIT }
