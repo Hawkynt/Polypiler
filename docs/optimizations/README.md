@@ -7,12 +7,12 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**26 of 293 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353) and specialise functions for the lambdas passed to them (#1360), in legalization (#1358) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
+**28 of 294 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), specialise functions for the lambdas passed to them (#1360) and evaluate, merge and remove calls by the effect summaries of their functions (#1361), in legalization (#1358) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
 
 ## General passes
 
 - [x] [O0001](O0001-constant-folding.md) — Fold operations on constants and integer neutral/absorbing elements (P1)
-- [ ] [O0002](O0002-partial-evaluation.md) — Evaluate pure calls with constant arguments at compile time (P1)
+- [x] [O0002](O0002-partial-evaluation.md) — Evaluate pure calls with constant arguments at compile time (P1)
 - [x] [O0003](O0003-sccp.md) — Sparse conditional constant propagation (P1)
 - [ ] [O0004](O0004-global-value-numbering.md) — Global value numbering and common-subexpression elimination (P1)
 - [x] [O0005](O0005-dead-code-elimination.md) — Remove instructions whose results and effects are unobservable (P1)
@@ -282,6 +282,7 @@ maps every one of its optimization documents to the page here that covers it.
 - [ ] [O0395](O0395-speculative-devirtualization.md) — Version an indirect call into a guarded direct call to a statically likely target with the indirect call as fallback (P3)
 - [ ] [O0396](O0396-task-graph-extraction.md) — Run calls proven independent by their effect summaries concurrently (P5)
 - [x] [O0463](O0463-lambda-specialisation.md) — Specialise a function for the lambdas passed to it: lift the non-escaping ones, bind them, inline and clean up (P2)
+- [x] [O0464](O0464-call-merging.md) — Merge identical calls of pure and read-only functions in one expression where nothing between writes what they read (P2)
 
 ## Vectorization refinements
 

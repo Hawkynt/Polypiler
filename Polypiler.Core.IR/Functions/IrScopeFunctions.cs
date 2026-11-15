@@ -14,6 +14,30 @@ public enum IrCaptureClass {
 
 }
 
+/// <summary>The kinds of effect a function has, as its effect summary finds them; none is a pure function that ends.</summary>
+[System.Flags]
+public enum IrEffectKinds {
+
+  /// <summary>No effect: it reads nothing that can change, writes and makes nothing, never traps and ends.</summary>
+  None = 0,
+
+  /// <summary>It reads storage outside its own variables that can change: a captured variable, a global, a field, an array element.</summary>
+  Reads = 1,
+
+  /// <summary>It writes storage outside its own variables.</summary>
+  Writes = 2,
+
+  /// <summary>It makes a new array, object or closure.</summary>
+  Allocates = 4,
+
+  /// <summary>It may trap or throw.</summary>
+  Traps = 8,
+
+  /// <summary>It may run forever: a loop without a proven bound, recursion, or a call of a function that may.</summary>
+  MayNotTerminate = 16
+
+}
+
 /// <summary>
 /// A function of a scope: a lambda, an anonymous method or a local function whose value never leaves
 /// the function it is made in - it is only called there, or passed to a parameter that only calls it
@@ -28,7 +52,16 @@ public enum IrCaptureClass {
 /// <param name="Name">For a lifted one the function of the module; for one that stays a closure the variable of <paramref name="Scope"/> that holds it.</param>
 /// <param name="Class">What it captures.</param>
 /// <param name="IsLifted">Whether it was lifted into a function of the module.</param>
-public sealed record IrScopeFunction(string Scope, string Name, IrCaptureClass Class, bool IsLifted);
+public sealed record IrScopeFunction(string Scope, string Name, IrCaptureClass Class, bool IsLifted) {
+
+  /// <summary>
+  /// What it does by its effect summary, found when it was classified; <see langword="null"/> before.
+  /// Lifted, it is the summary of its function of the module; held in a variable, that of its body with
+  /// the variables it captures as storage of its scope.
+  /// </summary>
+  public IrEffectKinds? Effects { get; init; }
+
+}
 
 /// <summary>
 /// A copy of a function made for the function values a call passes it: in the copy the parameters

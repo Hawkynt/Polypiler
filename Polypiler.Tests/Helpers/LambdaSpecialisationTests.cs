@@ -268,7 +268,7 @@ internal sealed class LambdaSpecialisationTests {
     const string methods = "public static int H(int a, int k) { Func<int, int> sq = x => x * x + k; return sq(a) + sq(a + 1); }";
     var module = Legalized(methods);
     var (result, _) = Specialised(module);
-    Assert.That(result.ScopeFunctions, Is.EqualTo(new[] { new IrScopeFunction("H", "H_sq", IrCaptureClass.Static, true) }));
+    Assert.That(result.ScopeFunctions, Is.EqualTo(new[] { new IrScopeFunction("H", "H_sq", IrCaptureClass.Static, true) { Effects = IrEffectKinds.None } }));
     Assert.That(Function(result, "H").Locals.Select(local => local.Name), Has.None.EqualTo("sq"));
     Assert.That(Function(result, "H_sq").Parameters.Select(parameter => parameter.Name), Is.EqualTo(new[] { "x", "k" }));
     SameOutcomes(methods, module, Optimized(module).Module, "H", [[2, 3], [-1, 0]]);
@@ -280,7 +280,7 @@ internal sealed class LambdaSpecialisationTests {
     const string methods = "public static int W(int k) { int n = k; Action inc = () => { n++; }; inc(); inc(); return n; }";
     var module = Legalized(methods);
     var (result, _) = Specialised(module);
-    Assert.That(result.ScopeFunctions, Is.EqualTo(new[] { new IrScopeFunction("W", "inc", IrCaptureClass.Capturing, false) }));
+    Assert.That(result.ScopeFunctions, Is.EqualTo(new[] { new IrScopeFunction("W", "inc", IrCaptureClass.Capturing, false) { Effects = IrEffectKinds.Reads | IrEffectKinds.Writes } }));
     Assert.That(HasLambda(result, "W"), Is.True);
     Assert.That(Specialised(result).Module.ScopeFunctions, Has.Count.EqualTo(1), "classified once");
     SameOutcomes(methods, module, Optimized(module).Module, "W", [[0], [5]]);
@@ -324,7 +324,7 @@ internal sealed class LambdaSpecialisationTests {
     const string methods = "public static int L(int a) { if (a > 0) { int k = a * 2; int Sq(int x) => x * x + k; return Sq(a) + Sq(a + 1); } return 0; }";
     var module = Legalized(methods);
     var (result, _) = Specialised(module);
-    Assert.That(result.ScopeFunctions, Is.EqualTo(new[] { new IrScopeFunction("L", "L_Sq", IrCaptureClass.Static, true) }));
+    Assert.That(result.ScopeFunctions, Is.EqualTo(new[] { new IrScopeFunction("L", "L_Sq", IrCaptureClass.Static, true) { Effects = IrEffectKinds.None } }));
     Assert.That(HasLambda(result, "L"), Is.False);
     SameOutcomes(methods, module, Optimized(module).Module, "L", [[3], [-1]]);
   }
@@ -485,7 +485,7 @@ internal sealed class LambdaSpecialisationTests {
   [Test]
   public void Budget_NoteIsWrittenOnce() {
     var module = Legalized(Distinct(O0463LambdaSpecialisation.CloneLimit + 1));
-    Assert.That(Optimized(module).Notes, Has.Count.EqualTo(1));
+    Assert.That(Optimized(module).Notes.Where(note => note.Contains("passes its function values", StringComparison.Ordinal)), Has.Exactly(1).Items);
     var (text, error) = Translate(Distinct(O0463LambdaSpecialisation.CloneLimit + 1), "csharp", "--explain-opt");
     Assert.That(Regex.Matches(error, "passes its function values to 'Apply' as they are"), Has.Count.EqualTo(1), error);
     Assert.That(text, Does.Contain("Apply("));

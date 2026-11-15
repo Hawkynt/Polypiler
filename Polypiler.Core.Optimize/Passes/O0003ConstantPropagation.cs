@@ -171,6 +171,18 @@ public sealed class O0003ConstantPropagation : IIrPass {
       if (known.Count == 0)
         return expression;
 
+      // A variable the expression itself binds or steps holds another value in its later reads: none of them is replaced.
+      var changing = IrTree.Nodes(expression).Select(node => node switch {
+        IrBind bind => bind.Local,
+        IrStep { Target: IrLocalRef { Local: var stepped } } => stepped,
+        _ => null
+      }).OfType<IrLocal>().Where(known.ContainsKey).ToList();
+      if (changing.Count > 0) {
+        known = new Dictionary<IrLocal, IrConst>(known);
+        foreach (var local in changing)
+          known.Remove(local);
+      }
+
       var result = Replace(expression, known);
       if (!ReferenceEquals(result, expression))
         this.Applied();
