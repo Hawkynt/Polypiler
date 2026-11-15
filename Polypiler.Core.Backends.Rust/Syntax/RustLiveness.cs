@@ -90,7 +90,7 @@ public sealed class RustLiveness {
       case RsLoop loop:
         return this.Loop(loop.Label, live, head => this.Block(loop.Body, head));
       case RsFor loop: {
-        var head = this.Loop(loop.Label, live, start => Without(this.Block(loop.Body, Union(start, live)), loop.Pattern));
+        var head = this.Loop(loop.Label, live, start => Without(this.Block(loop.Body, Union(start, live)), loop.Pattern.TrimStart('&')));
         return this.Expression(loop.Iterator, Union(head, live));
       }
       case RsBreak exit: {

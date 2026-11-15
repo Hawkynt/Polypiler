@@ -101,6 +101,30 @@ public sealed class RustRunnerUnitTests {
     Assert.That(driver, Does.Contain("std::panic::catch_unwind"));
   }
 
+  /// <summary>#460: a sequence is a vector passed borrowed, an inout one exclusively and written after the result; a sequence result is read as a slice.</summary>
+  [Test]
+  public void Driver_PassesSequencesThroughACursor() {
+    var signature = new CallSignature([
+      new CallParameter("a", ImageType.I32, ParameterMode.In), new CallParameter("b", ImageType.Seq(ImageType.U8), ParameterMode.In),
+      new CallParameter("c", ImageType.Seq(ImageType.F64), ParameterMode.InOut), new CallParameter("d", ImageType.Seq(ImageType.Bool), ParameterMode.InOut)
+    ], ImageType.Seq(ImageType.I16));
+    var driver = RustDriverGenerator.Generate("k", [new RustExport("m::f", signature), new RustExport("m::g", new CallSignature([new CallParameter("x", ImageType.Seq(ImageType.U32), ParameterMode.InOut)], null))]);
+    Assert.That(driver, Does.Contain("fn take<'a>(input: &'a [u8], at: &mut usize, n: usize) -> &'a [u8] {"));
+    Assert.That(driver, Does.Contain("let a0: i32 = i32::from_le_bytes(take(input, &mut at, 4).try_into().unwrap());"));
+    Assert.That(driver, Does.Contain("let a1: Vec<u8> = (0..count).map(|_| u8::from_le_bytes(take(input, &mut at, 1).try_into().unwrap())).collect();"));
+    Assert.That(driver, Does.Contain("let mut a2: Vec<f64> = (0..count).map(|_| f64::from_bits(u64::from_le_bytes(take(input, &mut at, 8).try_into().unwrap()))).collect();"));
+    Assert.That(driver, Does.Contain("let mut a3: Vec<bool> = (0..count).map(|_| take(input, &mut at, 1)[0] != 0).collect();"));
+    Assert.That(driver, Does.Contain("let result = k::m::f(a0, &a1, &mut a2, &mut a3);"));
+    Assert.That(driver, Does.Contain("let values: &[i16] = &result;"));
+    Assert.That(driver, Does.Contain("let values: &[f64] = &a2;"));
+    Assert.That(driver, Does.Contain("image.extend_from_slice(&value.to_bits().to_le_bytes());"));
+    Assert.That(driver, Does.Contain("image.extend_from_slice(&[u8::from(value)]);"));
+    Assert.That(driver, Does.Contain("let () = result;\n            let values: &[u32] = &a0;"));
+    Assert.That(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([new CallParameter("a", ImageType.Seq(ImageType.U8), ParameterMode.Out)], null))]), Throws.ArgumentException);
+    Assert.That(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([], ImageType.Seq(ImageType.Utf8)))]), Throws.ArgumentException);
+    Assert.That(RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([], ImageType.Seq(ImageType.U8)))]), Does.Contain("let mut at = 0;\n            if at != input.len() {"));
+  }
+
   [Test]
   public void Driver_RefusesWhatItCannotPass() {
     Assert.Throws<ArgumentException>(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([new CallParameter("a", ImageType.Bytes, ParameterMode.In)], null))]));

@@ -189,14 +189,15 @@ public static class RustSyntaxReader {
       RsItem item;
       if (this.Accept("fn"))
         item = this.Function(visibility);
-      else if (this.Accept("const")) {
+      else if (this.Is("const") || this.Is("static")) {
+        var isStatic = this.Next().Text == "static";
         var name = this.Identifier();
         this.Expect(":");
         var type = this.TypeText();
         this.Expect("=");
         var value = this.Expression();
         this.Expect(";");
-        item = new RsConst(name, visibility, type, value);
+        item = new RsConst(name, visibility, type, value) { IsStatic = isStatic };
       } else if (this.Accept("mod")) {
         var name = this.Identifier();
         if (this.Accept(";"))
@@ -223,6 +224,7 @@ public static class RustSyntaxReader {
 
     private RsFunction Function(string visibility) {
       var name = this.Identifier();
+      var generics = this.Is("<") ? this.TypeText() : "";
       this.Expect("(");
       var parameters = new List<RsParameter>();
       while (!this.Accept(")")) {
@@ -236,21 +238,34 @@ public static class RustSyntaxReader {
       if (this.Accept("->"))
         returns = this.TypeText();
 
-      return new RsFunction(name, visibility, parameters, returns, this.Block());
+      return new RsFunction(name, visibility, parameters, returns, this.Block()) { Generics = generics };
     }
 
-    /// <summary>A type as the printer writes it: the tokens up to a separator, with a space after <c>;</c>.</summary>
+    /// <summary>
+    /// A type as the printer writes it: the tokens up to a separator outside brackets, with a space
+    /// after <c>;</c>, <c>,</c>, <c>mut</c>, <c>dyn</c>, <c>impl</c>, a lifetime and around <c>-&gt;</c>;
+    /// a list of generic parameters, <c>&lt;'a&gt;</c>, ends at its closing bracket.
+    /// </summary>
     private string TypeText() {
       var text = new StringBuilder();
       var depth = 0;
+      var generics = this.Is("<");
       while (true) {
         var token = this.Peek();
-        if (depth == 0 && token.Text is "," or ")" or "=" or "{" or ";" && token.Kind == Kind.Punctuation)
+        if (depth == 0 && token.Text is "," or ")" or "=" or "{" or ";" or ">" && token.Kind == Kind.Punctuation)
           return text.ToString();
 
-        depth += token.Text switch { "[" or "(" => 1, "]" or ")" => -1, _ => 0 };
+        depth += token.Text switch { "[" or "(" or "<" => 1, "]" or ")" or ">" => -1, ">>" => -2, _ => 0 };
         this.Next();
-        text.Append(token.Text).Append(token.Text == ";" ? " " : "");
+        if (token.Kind == Kind.Lifetime)
+          text.Append('\'').Append(token.Text).Append(this.Is(">") || this.Is(",") ? "" : " ");
+        else if (token.Text == "->")
+          text.Append(" -> ");
+        else
+          text.Append(token.Text).Append(token.Text is ";" or "," or ":" or "mut" or "dyn" or "impl" ? " " : "");
+
+        if (generics && depth == 0)
+          return text.ToString();
       }
     }
 
@@ -274,8 +289,11 @@ public static class RustSyntaxReader {
           continue;
         }
 
-        var expression = this.Expression();
-        if (this.Accept(";"))
+        // An expression statement that starts with a block ends with it (The Rust Reference, "Expression statements").
+        var expression = this.StartsBlock() ? this.Primary() : this.Expression();
+        if (this.StartsBlock(expression) && !this.Is("}") && !this.Is(";") && !this.Is("."))
+          statements.Add(new RsExpressionStatement(expression));
+        else if (this.Accept(";"))
           statements.Add(new RsExpressionStatement(expression));
         else if (this.Is("}"))
           tail = expression;
@@ -287,6 +305,12 @@ public static class RustSyntaxReader {
 
       return new RsBlock(statements, tail);
     }
+
+    /// <summary>Whether the next token starts an expression that ends in a block: a control-flow expression, a block or a label.</summary>
+    private bool StartsBlock() => this.Is("if") || this.Is("while") || this.Is("loop") || this.Is("for") || this.Is("match") || this.Is("{") || this.Peek().Kind == Kind.Lifetime;
+
+    /// <summary>Whether an expression read at the start of a statement is one that ends in a block.</summary>
+    private bool StartsBlock(RsExpression expression) => Printing.RustPrinter.IsBlockLike(expression);
 
     private RsExpression Expression(int minimum = 0) {
       var left = this.Prefix();
@@ -315,7 +339,7 @@ public static class RustSyntaxReader {
           if (minimum > 2)
             return left;
           this.Next();
-          left = new RsRange(left, this.Expression(3), token.Text == "..=");
+          left = new RsRange(left, this.RangeEnd() ? null : this.Expression(3), token.Text == "..=");
           continue;
         }
 
@@ -339,10 +363,20 @@ public static class RustSyntaxReader {
       }
     }
 
+    /// <summary>Whether a range has no end: what follows it closes an index, a group or an argument.</summary>
+    private bool RangeEnd() => this.Is("]") || this.Is(")") || this.Is(",") || this.Is(";") || this.Is("{");
+
     private RsExpression Prefix() {
-      if (this.Is("-") || this.Is("!")) {
+      if (this.Is("..") || this.Is("..=")) {
+        var inclusive = this.Next().Text == "..=";
+        return new RsRange(null, this.RangeEnd() ? null : this.Expression(3), inclusive);
+      }
+
+      if (this.Is("-") || this.Is("!") || this.Is("&")) {
         var op = this.Next().Text;
-        return new RsUnary(op, this.Postfix(this.Prefix13()));
+        var mutable = op == "&" && this.Accept("mut");
+        var operand = this.Postfix(this.Prefix13());
+        return op == "&" ? new RsReference(mutable, operand) : new RsUnary(op, operand);
       }
 
       return this.Postfix(this.Primary());
@@ -350,9 +384,11 @@ public static class RustSyntaxReader {
 
     /// <summary>The operand of a prefix operator: another prefix operator, or a primary with its postfix forms.</summary>
     private RsExpression Prefix13() {
-      if (this.Is("-") || this.Is("!")) {
+      if (this.Is("-") || this.Is("!") || this.Is("&")) {
         var op = this.Next().Text;
-        return new RsUnary(op, this.Postfix(this.Prefix13()));
+        var mutable = op == "&" && this.Accept("mut");
+        var operand = this.Postfix(this.Prefix13());
+        return op == "&" ? new RsReference(mutable, operand) : new RsUnary(op, operand);
       }
 
       return this.Primary();
@@ -361,11 +397,11 @@ public static class RustSyntaxReader {
     private RsExpression Postfix(RsExpression expression) {
       while (true) {
         if (this.Accept(".")) {
-          var name = this.Identifier();
-          expression = new RsMethodCall(expression, name, this.Arguments(")"));
+          var name = this.Peek().Kind == Kind.Number ? this.Next().Text : this.Identifier();
+          expression = this.Is("(") ? new RsMethodCall(expression, name, this.Arguments(")")) : new RsField(expression, name);
         } else if (this.Is("(") && expression is RsPath) {
           expression = new RsCall(expression, this.Arguments(")"));
-        } else if (this.Is("[") && expression is not RsArray) {
+        } else if (this.Is("[")) {
           this.Expect("[");
           var index = this.Expression();
           this.Expect("]");
@@ -410,7 +446,7 @@ public static class RustSyntaxReader {
       }
 
       if (this.Is("["))
-        return new RsArray(this.Arguments("]"));
+        return this.Array();
       if (this.Is("{"))
         return new RsBlockExpression(this.Block());
       if (this.Is("if"))
@@ -465,10 +501,38 @@ public static class RustSyntaxReader {
           return new RsMacro(path.ToString(), this.Arguments(")"));
         }
 
+        if (this.Is("!") && this.Is("[", 1)) {
+          this.Next();
+          return new RsMacro(path.ToString(), [this.Array()]) { Bracketed = true };
+        }
+
         return new RsPath(path.ToString());
       }
 
       throw new FormatException($"Unexpected '{token.Text}'.");
+    }
+
+    /// <summary><c>[a, b, c]</c>, or <c>[value; count]</c>.</summary>
+    private RsArray Array() {
+      this.Expect("[");
+      if (this.Accept("]"))
+        return new RsArray([]);
+
+      var first = this.Expression();
+      if (this.Accept(";")) {
+        var count = this.Expression();
+        this.Expect("]");
+        return new RsArray([first]) { Count = count };
+      }
+
+      var elements = new List<RsExpression> { first };
+      this.Accept(",");
+      while (!this.Accept("]")) {
+        elements.Add(this.Expression());
+        this.Accept(",");
+      }
+
+      return new RsArray(elements);
     }
 
     private RsIf If() {
@@ -490,7 +554,7 @@ public static class RustSyntaxReader {
       }
 
       this.Expect("for");
-      var pattern = this.Identifier();
+      var pattern = (this.Accept("&") ? "&" : "") + this.Identifier();
       this.Expect("in");
       var iterator = this.Expression();
       return new RsFor(label, pattern, iterator, this.Block());

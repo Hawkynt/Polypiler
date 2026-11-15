@@ -26,7 +26,42 @@ public static partial class RustEmitter {
     }
 
     /// <summary>Every block of a block tidied: late initializations joined, bottom-up.</summary>
-    private static RsBlock Bodies(RsBlock block) => RustSyntaxRewriter.Rewrite(block, node => node is RsBlock inner ? LateInitialized(inner) : node);
+    private static RsBlock Bodies(RsBlock block) => RustSyntaxRewriter.Rewrite(block, node => node is RsBlock inner ? Swapped(LateInitialized(inner)) : node);
+
+    /// <summary>
+    /// Three statements that exchange two elements of one array through a binding,
+    /// <c>let t = a[i]; a[i] = a[j]; a[j] = t;</c>, as <c>a.swap(i, j)</c> (clippy's <c>manual_swap</c>):
+    /// where nothing after them names the binding, and the indices can neither panic nor change
+    /// anything, so that evaluating each once and checking both before either store means the same.
+    /// </summary>
+    private static RsBlock Swapped(RsBlock block) {
+      var statements = block.Statements.ToList();
+      for (var index = 0; index + 2 < statements.Count; ++index) {
+        if (statements[index] is not RsLet { Initializer: RsIndex { Target: RsPath array, Index: var first } } held
+          || statements[index + 1] is not RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsIndex { Target: RsPath into, Index: var at }, Value: RsIndex { Target: RsPath from, Index: var second } } }
+          || statements[index + 2] is not RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsIndex { Target: RsPath back, Index: var other }, Value: RsPath restored } }
+          || new[] { into.Name, from.Name, back.Name }.Any(name => name != array.Name) || restored.Name != held.Name
+          || RustPrinter.Print(first) != RustPrinter.Print(at) || RustPrinter.Print(second) != RustPrinter.Print(other)
+          || !Pure(first) || !Pure(second) || Names(new RsBlock([.. statements.Skip(index + 3)], block.Tail), held.Name))
+          continue;
+
+        statements[index] = new RsExpressionStatement(new RsMethodCall(array, "swap", [first, second]));
+        statements.RemoveRange(index + 1, 2);
+      }
+
+      return statements.Count == block.Statements.Count ? block : block with { Statements = statements };
+    }
+
+    /// <summary>Whether an expression can neither panic nor change anything: variables, literals, casts, wrapping arithmetic and the operators that cannot fail.</summary>
+    private static bool Pure(RsExpression expression) => expression switch {
+      RsPath or RsLiteral => true,
+      RsCast cast => Pure(cast.Operand),
+      RsParenthesized parenthesized => Pure(parenthesized.Inner),
+      RsUnary { Operator: "!" } unary => Pure(unary.Operand),
+      RsBinary { Operator: not ("/" or "%" or "+" or "-" or "*" or "<<" or ">>") } binary => Pure(binary.Left) && Pure(binary.Right),
+      RsMethodCall call when call.Name.StartsWith("wrapping_", System.StringComparison.Ordinal) => Pure(call.Receiver) && call.Arguments.All(Pure),
+      _ => false
+    };
 
     /// <summary>
     /// A block in tail position with its last statement as its value: <c>return v;</c> as <c>v</c>, an
@@ -105,8 +140,18 @@ public static partial class RustEmitter {
     /// <summary>A block whose last statement makes a binding the block's value is: the value itself.</summary>
     private static RsBlock LetAndReturn(RsBlock block)
       => block is { Tail: RsPath { Name: var name }, Statements: [.., RsLet { Initializer: { } value } binding] } && binding.Name == name
-        ? new RsBlock([.. block.Statements.Take(block.Statements.Count - 1)], value)
+        ? new RsBlock([.. block.Statements.Take(block.Statements.Count - 1)], Returned(value))
         : block;
+
+    /// <summary>A value made the function's tail: a branch of a <c>match</c> or an <c>if</c> that returns gives its value instead (clippy's <c>needless_return</c>).</summary>
+    private static RsExpression Returned(RsExpression value) => value switch {
+      RsMatch choice => choice with { Arms = [.. choice.Arms.Select(arm => arm with { Body = arm.Body is RsReturn { Value: { } returned } ? returned : arm.Body })] },
+      RsIf { Then: { Statements: [RsExpressionStatement { Expression: RsReturn { Value: { } returned } }], Tail: null } } choice
+        => Returned(choice with { Then = new RsBlock([], returned) }),
+      RsIf { Else: RsBlockExpression { Block: { Statements: [RsExpressionStatement { Expression: RsReturn { Value: { } returned } }], Tail: null } } } choice
+        => choice with { Else = new RsBlockExpression(new RsBlock([], returned)) },
+      _ => value
+    };
 
     /// <summary>
     /// A block with each binding declared without a value joined with the statement that follows it,
@@ -160,13 +205,29 @@ public static partial class RustEmitter {
 
       var arms = new List<RsMatchArm>();
       foreach (var arm in choice.Arms) {
-        if (arm.Body is not RsBlockExpression { Block: var block } || Assigning(block, name) is not { } assigned)
+        if (arm.Body is not RsBlockExpression { Block: var block })
           return null;
 
-        arms.Add(arm with { Body = Unwrapped(assigned) });
+        if (Assigning(block, name) is { } assigned)
+          arms.Add(arm with { Body = Unwrapped(assigned) });
+        else if (Leaving(block, name) is { } left)
+          arms.Add(arm with { Body = left });
+        else
+          return null;
       }
 
-      return choice with { Arms = arms };
+      return arms.Any(arm => arm.Body is not (RsReturn or RsBreak or RsContinue or RsMacro { Name: "panic" or "unreachable" })) ? choice with { Arms = arms } : null;
+    }
+
+    /// <summary>
+    /// A block that never ends and names a binding nowhere, as the value of a branch that gives none:
+    /// its one statement itself, or the block; otherwise <see langword="null"/>.
+    /// </summary>
+    private static RsExpression? Leaving(RsBlock block, string name) {
+      if (block.Tail is not null || block.Statements.Count == 0 || !RustEmitter.Writer.Diverges(block.Statements[^1]) || Names(block, name))
+        return null;
+
+      return block.Statements is [RsExpressionStatement { Expression: var only }] ? only : new RsBlockExpression(block);
     }
 
     /// <summary>A block that ends assigning a binding and names it nowhere before, as the block giving the value; otherwise <see langword="null"/>.</summary>

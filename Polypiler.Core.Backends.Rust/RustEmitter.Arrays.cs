@@ -1,0 +1,377 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using Polypiler.Core.Backends.Rust.Emit;
+using Polypiler.Core.Backends.Rust.Syntax;
+using Polypiler.Core.IR;
+
+namespace Polypiler.Core.Backends.Rust;
+
+public static partial class RustEmitter {
+
+  /// <summary>The code for two views of one array passed where one of them is written, which safe Rust cannot borrow twice.</summary>
+  public const string MayAlias = "PLY1566";
+
+  /// <summary>The registered diagnostic of <see cref="MayAlias"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor MayAliasDescriptor = new(MayAlias, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "rust.backend.aliasing");
+
+  private sealed partial class Writer {
+
+    /// <summary>What every function of the module does with arrays.</summary>
+    private IReadOnlyDictionary<string, FunctionArrays> _arrays = new Dictionary<string, FunctionArrays>();
+
+    /// <summary>The facts of the function being written.</summary>
+    private FunctionArrays _arrayFacts = new();
+
+    /// <summary>The parameters of the function being written that are arrays, with their positions.</summary>
+    private Dictionary<IrLocal, int> _arrayParameters = [];
+
+    /// <summary>Whether the array a function returns is borrowed exclusively.</summary>
+    private static bool ResultIsMutable(IrFunction function, FunctionArrays facts)
+      => facts.Result == ArrayHolder.Borrowed && facts.ResultParameters.All(facts.MutableParameters.Contains);
+
+    /// <summary>The Rust type of the elements of an array type; refused for any but a scalar.</summary>
+    private string ElementType(IrType array) => array.Element is { } element && TypeName(element) is { } name ? name : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
+
+    /// <summary>The lifetime the result of a function borrows with, where Rust cannot elide it: <c>'a</c>, or empty.</summary>
+    private static string Lifetime(IrFunction function, FunctionArrays facts)
+      => facts.Result == ArrayHolder.Borrowed && function.Parameters.Count(parameter => parameter.Type.IsArray) > 1 ? "'a " : "";
+
+    /// <summary>The type of a parameter: an array borrowed shared or exclusive, with the result's lifetime where it borrows from it.</summary>
+    private string ParameterType(IrFunction function, int index) {
+      var parameter = function.Parameters[index];
+      if (!parameter.Type.IsArray)
+        return this.Type(parameter.Type);
+
+      var lifetime = this._arrayFacts.ResultParameters.Contains(index) ? Lifetime(function, this._arrayFacts) : "";
+      return $"&{lifetime}{(this._arrayFacts.MutableParameters.Contains(index) ? "mut " : "")}[{this.ElementType(parameter.Type)}]";
+    }
+
+    /// <summary>The result type of a function, <see langword="null"/> for none.</summary>
+    private string? ResultType(IrFunction function) {
+      if (function.ReturnType == IrType.Void)
+        return null;
+      if (!function.ReturnType.IsArray)
+        return this.Type(function.ReturnType);
+
+      var element = this.ElementType(function.ReturnType);
+      return this._arrayFacts.Result == ArrayHolder.Borrowed
+        ? $"&{Lifetime(function, this._arrayFacts)}{(ResultIsMutable(function, this._arrayFacts) ? "mut " : "")}[{element}]"
+        : $"Vec<{element}>";
+    }
+
+    /// <summary>The type of a local: an array owned as a vector or borrowed.</summary>
+    private string LocalType(IrLocal local) {
+      if (!local.Type.IsArray)
+        return this.Type(local.Type);
+
+      var element = this.ElementType(local.Type);
+      return this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Borrowed
+        ? $"&{(this._arrayFacts.MutableLocals.Contains(local) ? "mut " : "")}[{element}]"
+        : $"Vec<{element}>";
+    }
+
+    /// <summary>Whether a local is an owned array that is written, which needs <c>let mut</c>.</summary>
+    private bool IsWrittenVector(IrLocal local)
+      => local.Type.IsArray && this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Owned && this._arrayFacts.MutableLocals.Contains(local);
+
+    /// <summary>Whether an array variable is a reference already: a parameter, or a local that borrows.</summary>
+    private bool IsReference(IrLocal local)
+      => this._arrayParameters.ContainsKey(local) || this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Borrowed;
+
+    /// <summary>The value a local of an array type is given: the vector itself, or a borrow.</summary>
+    private RsExpression ArrayInitial(IrLocal local, IrExpr value)
+      => this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Owned ? this.Vector(value) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
+
+    /// <summary>The array a function returns: a vector it owns, or the borrow of a parameter.</summary>
+    private RsExpression ArrayResult(IrFunction function, IrExpr value)
+      => this._arrayFacts.Result == ArrayHolder.Owned ? this.Vector(value) : this.Borrow(value, ResultIsMutable(function, this._arrayFacts));
+
+    /// <summary>An array as a vector the receiving place owns: a new one, the result of a call that makes one, an owned local moved.</summary>
+    private RsExpression Vector(IrExpr array) {
+      switch (array) {
+        case IrNewArray creation:
+          return new RsMacro("vec", [new RsArray([this.Zero(creation.Type.Element!)]) { Count = this.Length(creation.Length) }]) { Bracketed = true, Type = array.Type };
+        case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf, Arguments.Count: 0 }:
+          return new RsCall(new RsPath("Vec::new"), []) { Type = array.Type };
+        case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal:
+          return new RsMacro("vec", [new RsArray([.. literal.Arguments.Select(this.Expression)])]) { Bracketed = true, Type = array.Type };
+        case IrLocalRef { Local: var local } when !this.IsReference(local):
+          return new RsPath(this._locals[local]) { Type = array.Type };
+        case IrCall call when this._arrays.TryGetValue(call.Function, out var callee) && callee.Result == ArrayHolder.Owned:
+          return this.Expression(call);
+        case IrConditional choice:
+          return this.Choice(choice, this.Vector);
+        default:
+          return this.Refuse("an array that is both owned and borrowed");
+      }
+    }
+
+    /// <summary>
+    /// An array as a borrow, <c>&amp;[T]</c> or <c>&amp;mut [T]</c>: a reference as it is, a vector
+    /// or a table borrowed (a table only where it is read: the source of a copy, an element loop), a
+    /// temporary array borrowed for the statement.
+    /// </summary>
+    private RsExpression Borrow(IrExpr array, bool mutable) {
+      switch (array) {
+        case IrLocalRef { Local: var local } when this.IsReference(local):
+          return new RsPath(this._locals[local]) { Type = array.Type };
+        case IrLocalRef reference:
+          return new RsReference(mutable, new RsPath(this._locals[reference.Local]) { Type = array.Type }) { Type = array.Type };
+        case IrConstRef table when this._constants.TryGetValue(table.Constant.Name, out var name):
+          return new RsReference(false, new RsPath(name) { Type = array.Type }) { Type = array.Type };
+        case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal:
+          return new RsReference(mutable, new RsArray([.. literal.Arguments.Select(argument => Suffixed(this.Expression(argument)))]) { Type = array.Type }) { Type = array.Type };
+        case IrCall call when this._arrays.TryGetValue(call.Function, out var callee) && callee.Result != ArrayHolder.Owned:
+          return this.Expression(call);
+        case IrConditional choice:
+          return this.Choice(choice, branch => this.Borrow(branch, mutable));
+        default:
+          return new RsReference(mutable, this.Vector(array)) { Type = array.Type };
+      }
+    }
+
+    /// <summary>An array as the target of an index or a method: a variable or a table as it is, a literal as an array, anything else borrowed.</summary>
+    private RsExpression ArrayTarget(IrExpr array, bool mutable = false) => array switch {
+      IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = array.Type },
+      IrConstRef table when this._constants.TryGetValue(table.Constant.Name, out var name) => new RsPath(name) { Type = array.Type },
+      IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal when !mutable => new RsArray([.. literal.Arguments.Select(argument => Suffixed(this.Expression(argument)))]) { Type = array.Type },
+      IrCall => this.Expression(array),
+      IrNewArray => this.Vector(array),
+      _ => new RsParenthesized(this.Borrow(array, mutable)) { Type = array.Type }
+    };
+
+    /// <summary>
+    /// An array an element loop runs over: a shared borrow as it is, an exclusive one through
+    /// <c>iter()</c>, which leaves the borrow usable after the loop, a vector or a table borrowed.
+    /// </summary>
+    private RsExpression Iterated(IrExpr array) => array switch {
+      IrLocalRef { Local: var local } when this._arrayParameters.TryGetValue(local, out var position) && this._arrayFacts.MutableParameters.Contains(position)
+        || this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Borrowed && this._arrayFacts.MutableLocals.Contains(local)
+        => new RsMethodCall(new RsPath(this._locals[local]), "iter", []),
+      _ => this.Borrow(array, false)
+    };
+
+    /// <summary><c>if c { a } else { b }</c> of two arrays written the same way.</summary>
+    private RsIf Choice(IrConditional choice, Func<IrExpr, RsExpression> branch) {
+      var otherwise = branch(choice.WhenFalse);
+      return new RsIf(this.Expression(choice.Condition), new RsBlock([], branch(choice.WhenTrue)),
+        otherwise is RsIf nested ? nested : new RsBlockExpression(new RsBlock([], otherwise))) { Type = choice.Type };
+    }
+
+    /// <summary>The zero of an element type: <c>0</c>, <c>0.0</c>, <c>false</c>.</summary>
+    private RsExpression Zero(IrType element) => TypeName(element) is null ? this.Refuse($"an array of {element}") : Literal(new IrConst(element, 0)) with { Type = null };
+
+    /// <summary>A length as a <c>usize</c>: a constant as it is, the length of an array as <c>len()</c>, a negative one trapping with an overflow, as a new array's does.</summary>
+    private RsExpression Length(IrExpr length) {
+      switch (length) {
+        case IrConst { Value: >= 0 } constant:
+          return new RsLiteral(constant.Value.ToString(CultureInfo.InvariantCulture));
+        case IrArrayLength measured:
+          return new RsMethodCall(this.ArrayTarget(measured.Array), "len", []);
+      }
+
+      var value = this.Expression(length);
+      if (!length.Type.IsSigned)
+        return this.Cast(value, IrType.U64) with { Target = "usize" };
+
+      return Expect(new RsCall(new RsPath("usize::try_from"), [Suffixed(value)]), IrTrap.IntegerOverflow);
+    }
+
+    /// <summary>The number of elements of an array, as the IR's <c>i32</c>.</summary>
+    private RsExpression ArrayLength(IrArrayLength length)
+      => this.Cast(new RsMethodCall(this.ArrayTarget(length.Array), "len", []), length.Type);
+
+    /// <summary>
+    /// <c>a[i] = v</c>. Rust evaluates the value before the place, the IR the index first: an index
+    /// that is no variable or constant, beside a value that is none either, is bound before.
+    /// </summary>
+    private void Store(IrStore store, List<RsStatement> into) {
+      var target = this.ArrayTarget(store.Array, true);
+      RsExpression index;
+      if (store.Index is IrStep { Target: IrLocalRef counter } step) {
+        // a[i++] = v: the index, then the step, as statements of their own.
+        var name = this.Temporary("index");
+        if (step.Postfix)
+          into.Add(new RsLet(name, false, null, this.Index(counter)));
+        into.Add(new RsExpressionStatement(this.StepAssignment(counter, step)));
+        if (!step.Postfix)
+          into.Add(new RsLet(name, false, null, this.Index(counter)));
+        index = new RsPath(name);
+      } else if (store.Index is not (IrLocalRef or IrConst) && (store.Value is not (IrLocalRef or IrConst or IrConstRef) || HasEffect(store.Index))) {
+        var name = this.Temporary("index");
+        into.Add(new RsLet(name, false, null, this.Index(store.Index)));
+        index = new RsPath(name);
+      } else {
+        index = this.Index(store.Index);
+      }
+
+      var element = new RsIndex(target, index) { Type = store.Value.Type };
+      if (store.Value is IrBinary { Left: IrArrayLoad self } binary && Same(self.Array, store.Array) && Same(self.Index, store.Index) && store.Index is IrLocalRef or IrConst
+        && Compound(binary) is { } op) {
+        into.Add(new RsExpressionStatement(new RsAssign(element, op + "=", this.Operand(this.Expression(binary.Right), 2))));
+        return;
+      }
+
+      into.Add(new RsExpressionStatement(new RsAssign(element, "=", this.Expression(store.Value))));
+    }
+
+    /// <summary>
+    /// A step of an element: the index evaluated once into a binding, the element read, stepped and
+    /// written back; as an expression a block that gives the old or the new value.
+    /// </summary>
+    private RsExpression ElementStep(IrArrayLoad load, IrStep step, bool statement) {
+      var statements = new List<RsStatement>();
+      var index = this.Index(load.Index);
+      if (load.Index is not (IrLocalRef or IrConst)) {
+        var name = this.Temporary("index");
+        statements.Add(new RsLet(name, false, null, index));
+        index = new RsPath(name);
+      }
+
+      var element = new RsIndex(this.ArrayTarget(load.Array, true), index) { Type = load.Type };
+      if (statement && load.Type.IsFloat) {
+        statements.Add(new RsExpressionStatement(new RsAssign(element, step.Increment ? "+=" : "-=", Literal(new IrConst(load.Type, IrOperators.Bits(load.Type, 1.0))))));
+        return new RsBlockExpression(new RsBlock(statements, null));
+      }
+
+      if (statement) {
+        statements.Add(new RsExpressionStatement(new RsAssign(element, "=", this.Stepped(element, step))));
+        return new RsBlockExpression(new RsBlock(statements, null));
+      }
+
+      var old = this.Temporary("old");
+      statements.Add(new RsLet(old, false, null, element));
+      var oldValue = new RsPath(old) { Type = load.Type };
+      var stepped = this.Stepped(oldValue, step);
+      statements.Add(new RsExpressionStatement(new RsAssign(element, "=", stepped)));
+      return new RsBlockExpression(new RsBlock(statements, step.Postfix ? oldValue : element)) { Type = load.Type };
+    }
+
+    /// <summary>Whether two expressions are the same variable, table or constant.</summary>
+    private static bool Same(IrExpr first, IrExpr second) => (first, second) switch {
+      (IrLocalRef a, IrLocalRef b) => a.Local == b.Local,
+      (IrConstRef a, IrConstRef b) => a.Constant == b.Constant,
+      (IrConst a, IrConst b) => a == b,
+      _ => false
+    };
+
+    /// <summary>Whether evaluating an expression may change a variable or call a function.</summary>
+    private static bool HasEffect(IrExpr expression) => IrTree.Nodes(expression).Any(node => node is IrStep or IrCall or IrMethodCall or IrInvoke);
+
+    /// <summary>A name for a binding the translation adds, unused by the function.</summary>
+    private string Temporary(string stem) {
+      var name = stem;
+      for (var suffix = 1; this._taken.Contains(name); ++suffix)
+        name = stem + suffix.ToString(CultureInfo.InvariantCulture);
+
+      this._taken.Add(name);
+      return name;
+    }
+
+    /// <summary>The names the function being written has taken.</summary>
+    private HashSet<string> _taken = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// <c>Array.Copy</c>: within one array the spelling function <c>ply_copy_within</c>
+    /// (<c>copy_within</c>), between two <c>ply_copy</c> (<c>copy_from_slice</c>); each checks both
+    /// ranges with <c>ply_range</c> before it copies anything.
+    /// </summary>
+    private RsExpression ArrayCopy(IrIntrinsic copy) {
+      var (source, sourceIndex, target, targetIndex, count) = (copy.Arguments[0], copy.Arguments[1], copy.Arguments[2], copy.Arguments[3], copy.Arguments[4]);
+      if (source is IrLocalRef { Local: var a } && target is IrLocalRef { Local: var b } && a == b)
+        return new RsCall(new RsPath(this.CopyHelper(true)), [this.Borrow(target, true), this.Expression(sourceIndex), this.Expression(targetIndex), this.Expression(count)]);
+
+      return new RsCall(new RsPath(this.CopyHelper(false)), [this.Borrow(source, false), this.Expression(sourceIndex), this.Borrow(target, true), this.Expression(targetIndex), this.Expression(count)]);
+    }
+
+    /// <summary>The spelling function of a copy between two arrays, or within one.</summary>
+    private string CopyHelper(bool within) {
+      var name = within ? "ply_copy_within" : "ply_copy";
+      var range = this.RangeHelper();
+      this.Spell(name, () => {
+        RsExpression Range(string start, string array) => new RsCall(new RsPath(range), [new RsPath(start), new RsPath("length"), new RsMethodCall(new RsPath(array), "len", [])]);
+        if (within)
+          return new RsFunction(name, "", [new RsParameter("data", "&mut [T]"), new RsParameter("from", "i32"), new RsParameter("to", "i32"), new RsParameter("length", "i32")], null, new RsBlock([
+            new RsLet("source", false, null, Range("from", "data")),
+            new RsLet("target", false, null, Range("to", "data")),
+            new RsExpressionStatement(new RsMethodCall(new RsPath("data"), "copy_within", [new RsPath("source"), new RsField(new RsPath("target"), "start")]))
+          ], null)) { Generics = "<T: Copy>" };
+
+        return new RsFunction(name, "", [new RsParameter("source", "&[T]"), new RsParameter("from", "i32"), new RsParameter("target", "&mut [T]"), new RsParameter("to", "i32"), new RsParameter("length", "i32")], null, new RsBlock([
+          new RsLet("from", false, null, Range("from", "source")),
+          new RsLet("to", false, null, Range("to", "target")),
+          new RsExpressionStatement(new RsMethodCall(new RsIndex(new RsPath("target"), new RsPath("to")), "copy_from_slice", [new RsReference(false, new RsIndex(new RsPath("source"), new RsPath("from")))]))
+        ], null)) { Generics = "<T: Copy>" };
+      });
+      return name;
+    }
+
+    /// <summary>The spelling function <c>ply_range</c>: the range of <c>length</c> elements from <c>start</c> in a sequence of <c>size</c>, which panics with <c>IndexOutOfRange</c> unless it lies inside.</summary>
+    private string RangeHelper() {
+      const string name = "ply_range";
+      this.Spell(name, () => {
+        RsExpression Converted(string value) => Expect(new RsCall(new RsPath("usize::try_from"), [new RsPath(value)]), IrTrap.IndexOutOfRange);
+        var (start, length, size) = (new RsPath("start"), new RsPath("length"), new RsPath("size"));
+        var outside = new RsBinary(new RsBinary(length, ">", size), "||", new RsBinary(start, ">", new RsBinary(size, "-", length)));
+        return new RsFunction(name, "", [new RsParameter("start", "i32"), new RsParameter("length", "i32"), new RsParameter("size", "usize")], "std::ops::Range<usize>", new RsBlock([
+          new RsLet("start", false, null, Converted("start")),
+          new RsLet("length", false, null, Converted("length")),
+          new RsExpressionStatement(new RsIf(outside, new RsBlock([new RsExpressionStatement(Panic(IrTrap.IndexOutOfRange))], null), null))
+        ], new RsRange(start, new RsBinary(start, "+", length), false)));
+      });
+      return name;
+    }
+
+    /// <summary>Whether two array arguments are the same variable, where one of them is written.</summary>
+    private bool Aliases(IrExpr first, IrExpr second)
+      => first is IrLocalRef { Local: var a } && second is IrLocalRef { Local: var b } && a == b;
+
+    /// <summary>Records that one array is passed twice where it is written, and returns a stand-in.</summary>
+    private RsExpression Alias(IrExpr read, IrExpr written) {
+      var what = $"views '{((IrLocalRef)read).Local.Name}' and '{((IrLocalRef)written).Local.Name}'";
+      if (this._refused.Add(what))
+        this._problems.Add(MayAliasDescriptor.At($"{what} may alias and '{((IrLocalRef)written).Local.Name}' is written in {this._construct}; safe Rust cannot express this - provide a no-alias fact or select a copying target profile"));
+
+      return new RsPath("_refused");
+    }
+
+    /// <summary><c>Array.Fill</c> and <c>Array.Clear</c>: <c>fill</c> with the value or the zero.</summary>
+    private RsExpression ArrayFill(IrIntrinsic fill) {
+      var array = fill.Arguments[0];
+      var value = fill.Op == IrIntrinsicOp.ArrayClear ? this.Zero(array.Type.Element!) : this.Expression(fill.Arguments[1]);
+      return new RsMethodCall(this.ArrayTarget(array, true), "fill", [value]);
+    }
+
+    /// <summary>The arguments of a call: an array borrowed as the callee's parameter takes it, refused where one array is passed twice and written.</summary>
+    private IReadOnlyList<RsExpression> Arguments(IrCall call) {
+      if (!this._arrays.TryGetValue(call.Function, out var callee))
+        return [.. call.Arguments.Select(this.Expression)];
+
+      var arguments = new List<RsExpression>();
+      for (var index = 0; index < call.Arguments.Count; ++index) {
+        var argument = call.Arguments[index];
+        if (!argument.Type.IsArray) {
+          arguments.Add(this.Expression(argument));
+          continue;
+        }
+
+        var mutable = callee.MutableParameters.Contains(index);
+        var other = call.Arguments.Select((value, position) => (value, position))
+          .FirstOrDefault(pair => pair.position != index && pair.value.Type.IsArray && (mutable || callee.MutableParameters.Contains(pair.position)) && this.Aliases(argument, pair.value));
+        if (other.value is not null) {
+          arguments.Add(mutable ? this.Alias(other.value, argument) : this.Alias(argument, other.value));
+          continue;
+        }
+
+        arguments.Add(this.Borrow(argument, mutable));
+      }
+
+      return arguments;
+    }
+
+  }
+
+}

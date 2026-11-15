@@ -52,6 +52,7 @@ public static partial class RustEmitter {
         this.Refuse("declared types (structs, classes, enums)");
 
       this.NameItems(module);
+      this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
       var items = new List<RsItem>();
       foreach (var constant in module.Constants)
@@ -118,7 +119,7 @@ public static partial class RustEmitter {
       this._construct = $"the constant '{constant.Name}'";
       var name = this._constants[constant.Name];
       if (constant.Type.IsArray && constant.Type.Element is { } element && TypeName(element) is { } elementName && constant.Strings.Count == 0)
-        return new RsConst(name, "", $"[{elementName}; {constant.Values.Count}]", new RsArray([.. constant.Values.Select(value => Literal(new IrConst(element, value)))]));
+        return new RsConst(name, "", $"[{elementName}; {constant.Values.Count}]", new RsArray([.. constant.Values.Select(value => Literal(new IrConst(element, value)))])) { IsStatic = true };
 
       if (TypeName(constant.Type) is { } typeName && constant.Strings.Count == 0 && constant.Values.Count == 1)
         return new RsConst(name, "", typeName, Literal(new IrConst(constant.Type, constant.Values[0])));

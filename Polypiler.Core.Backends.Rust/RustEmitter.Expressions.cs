@@ -23,8 +23,8 @@ public static partial class RustEmitter {
   /// </summary>
   public static int Precedence(RsExpression expression) => expression switch {
     RsLiteral literal when literal.Text.StartsWith('-') => 13,
-    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray => 15,
-    RsUnary => 13,
+    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField => 15,
+    RsUnary or RsReference => 13,
     RsCast => 12,
     RsBinary binary => RustPrinter.Precedence(binary.Operator),
     RsRange => 2,
@@ -98,15 +98,17 @@ public static partial class RustEmitter {
       IrConvert convert => this.Convert(convert),
       IrConditional choice => this.Conditional(choice),
       IrCall call when this._functions.TryGetValue(call.Function, out var callee)
-        => new RsCall(new RsPath(callee), [.. call.Arguments.Select(this.Expression)]) { Type = call.Type },
+        => new RsCall(new RsPath(callee), this.Arguments(call)) { Type = call.Type },
       IrStep { Target: IrLocalRef target } step => this.StepExpression(target, step),
-      IrArrayLoad { Array: IrConstRef table } load when this._constants.TryGetValue(table.Constant.Name, out var tableName)
-        => new RsIndex(new RsPath(tableName), this.Index(load.Index)) { Type = load.Type },
-      IrArrayLength { Array: IrConstRef table } when this._constants.TryGetValue(table.Constant.Name, out var tableName)
-        => this.Cast(new RsMethodCall(new RsPath(tableName), "len", []), IrType.I32),
+      IrStep { Target: IrArrayLoad load } step => this.ElementStep(load, step, false),
+      IrArrayLoad { Index: IrLocalRef counter } when this._elements.TryGetValue(counter.Local, out var element) => new RsPath(element) { Type = expression.Type },
+      IrArrayLoad load => new RsIndex(this.ArrayTarget(load.Array), this.Index(load.Index)) { Type = load.Type },
+      IrArrayLength length => this.ArrayLength(length),
+      IrNewArray or IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } => this.Vector(expression),
+      IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy => this.ArrayCopy(copy),
+      IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear } fill => this.ArrayFill(fill),
       IrIntrinsic intrinsic => this.Intrinsic(intrinsic),
       IrThrowExpression thrown => this.Throw(thrown.Exception),
-      IrArrayLoad or IrArrayLength or IrNewArray => this.Refuse("arrays and views"),
       IrStrConst => this.Refuse("strings"),
       _ => this.Refuse(expression.GetType().Name[2..])
     };
@@ -244,7 +246,7 @@ public static partial class RustEmitter {
     /// <summary>A step of a variable as an expression: a block that steps it and yields the old or the new value.</summary>
     private RsExpression StepExpression(IrLocalRef target, IrStep step) {
       var place = new RsPath(this._locals[target.Local]) { Type = target.Type };
-      var assign = new RsExpressionStatement(new RsAssign(place, "=", this.Stepped(place, step)));
+      var assign = new RsExpressionStatement(this.StepAssignment(target, step));
       if (!step.Postfix)
         return new RsBlockExpression(new RsBlock([assign], place)) { Type = target.Type };
 

@@ -20,7 +20,9 @@ public sealed record RustExport(string Path, CallSignature Signature);
 /// a panic hook that prints nothing. It writes one line per call: the output image in hex, or
 /// <c>!</c> and the first line of the panic message. Since each argument is declared with the type the
 /// signature names, a signature that does not fit the declaration does not compile, with the error in
-/// the driver. A line it cannot read ends it with exit code 2.
+/// the driver. A line it cannot read ends it with exit code 2. A <c>seq</c> of scalars is a vector,
+/// passed borrowed as <c>&amp;v</c>, or as <c>&amp;mut v</c> where it is <c>inout</c>, whose contents
+/// after the call follow the result in the output image; a <c>seq</c> result is read as a slice.
 /// </summary>
 public static class RustDriverGenerator {
 
@@ -34,7 +36,7 @@ public static class RustDriverGenerator {
   /// <param name="crate">The name of the library crate, the package name with <c>-</c> as <c>_</c>.</param>
   /// <param name="exports">The functions, numbered in order.</param>
   /// <returns>The source.</returns>
-  /// <exception cref="ArgumentException">A signature has a parameter that is not <c>in</c>, or an image type that is no scalar.</exception>
+  /// <exception cref="ArgumentException">A signature has an <c>out</c> parameter, an <c>inout</c> one that is no <c>seq</c>, or an image type that is neither a scalar nor a <c>seq</c> of scalars.</exception>
   public static string Generate(string crate, IReadOnlyList<RustExport> exports) {
     ArgumentNullException.ThrowIfNull(crate);
     ArgumentNullException.ThrowIfNull(exports);
@@ -42,10 +44,20 @@ public static class RustDriverGenerator {
     text.Append("use std::io::{self, BufRead, Write};\n\n");
     text.Append("fn hex(bytes: &[u8]) -> String {\n    bytes.iter().map(|b| format!(\"{:02x}\", b)).collect()\n}\n\n");
     text.Append("fn unhex(text: &str) -> Vec<u8> {\n    (0..text.len() / 2).map(|i| u8::from_str_radix(&text[2 * i..2 * i + 2], 16).unwrap_or_else(|_| std::process::exit(2))).collect()\n}\n\n");
+    if (exports.Any(export => Sequences(export.Signature)))
+      text.Append("fn take<'a>(input: &'a [u8], at: &mut usize, n: usize) -> &'a [u8] {\n    let bytes = input.get(*at..*at + n).unwrap_or_else(|| std::process::exit(2));\n    *at += n;\n    bytes\n}\n\n");
+
     text.Append("fn call(export: usize, input: &[u8]) -> String {\n    match export {\n");
     for (var index = 0; index < exports.Count; ++index) {
       var export = exports[index];
       var signature = export.Signature;
+      if (Sequences(signature)) {
+        text.Append(CultureInfo.InvariantCulture, $"        {index} => {{\n");
+        Sequenced(text, crate, export);
+        text.Append("        }\n");
+        continue;
+      }
+
       var width = signature.Parameters.Sum(parameter => Width(parameter));
       text.Append(CultureInfo.InvariantCulture, $"        {index} => {{\n");
       text.Append(CultureInfo.InvariantCulture, $"            if input.len() != {width} {{\n                std::process::exit(2);\n            }}\n");
@@ -81,6 +93,88 @@ public static class RustDriverGenerator {
     text.Append("            }\n        }\n        out.flush().unwrap();\n    }\n}\n");
     return text.ToString();
   }
+
+  /// <summary>Whether a signature passes or gives a <c>seq</c>, whose width is known only from its image.</summary>
+  private static bool Sequences(CallSignature signature)
+    => signature.Parameters.Any(parameter => parameter.Type.Kind == ImageKind.Sequence) || signature.Result?.Kind == ImageKind.Sequence;
+
+  /// <summary>
+  /// The arm of an export with a <c>seq</c>: every argument read from a cursor into the input image,
+  /// the image read to its end, the call, then the result and the <c>inout</c> sequences written one
+  /// after the other.
+  /// </summary>
+  private static void Sequenced(StringBuilder text, string crate, RustExport export) {
+    const string Pad = "            ";
+    text.Append(Pad).Append("let mut at = 0;\n");
+    var arguments = new List<string>();
+    var outputs = new List<(string Name, ImageType Type)>();
+    foreach (var parameter in export.Signature.Parameters) {
+      var name = "a" + arguments.Count.ToString(CultureInfo.InvariantCulture);
+      if (parameter.Type.Kind != ImageKind.Sequence) {
+        Width(parameter);
+        text.Append(CultureInfo.InvariantCulture, $"{Pad}let {name}: {RustType(parameter.Type)} = {Taken(parameter.Type)};\n");
+        arguments.Add(name);
+        continue;
+      }
+
+      if (parameter.Mode == ParameterMode.Out)
+        throw new ArgumentException($"The parameter '{parameter.Name}' has mode {parameter.Mode}; the Rust driver passes 'in' and 'inout' parameters.", nameof(export));
+
+      var element = parameter.Type.Element!;
+      var mutable = parameter.Mode == ParameterMode.InOut;
+      text.Append(CultureInfo.InvariantCulture, $"{Pad}let count = u32::from_le_bytes(take(input, &mut at, 4).try_into().unwrap());\n");
+      text.Append(CultureInfo.InvariantCulture, $"{Pad}let {(mutable ? "mut " : "")}{name}: Vec<{RustType(element)}> = (0..count).map(|_| {Taken(element)}).collect();\n");
+      arguments.Add((mutable ? "&mut " : "&") + name);
+      if (mutable)
+        outputs.Add((name, parameter.Type));
+    }
+
+    text.Append(Pad).Append("if at != input.len() {\n").Append(Pad).Append("    std::process::exit(2);\n").Append(Pad).Append("}\n");
+    text.Append(CultureInfo.InvariantCulture, $"{Pad}let result = {crate}::{export.Path}({string.Join(", ", arguments)});\n");
+    text.Append(Pad).Append("let mut image: Vec<u8> = Vec::new();\n");
+    if (export.Signature.Result is { } result)
+      Written(text, Pad, "result", result);
+    else
+      text.Append(Pad).Append("let () = result;\n");
+
+    foreach (var (name, type) in outputs)
+      Written(text, Pad, name, type);
+
+    text.Append(Pad).Append("hex(&image)\n");
+  }
+
+  /// <summary>A scalar read at the cursor, which moves past it.</summary>
+  private static string Taken(ImageType type) {
+    var size = Scalar(type);
+    var bytes = $"take(input, &mut at, {size.ToString(CultureInfo.InvariantCulture)})";
+    return type.Kind switch {
+      ImageKind.Boolean => $"{bytes}[0] != 0",
+      ImageKind.Float => $"{RustType(type)}::from_bits(u{(size * 8).ToString(CultureInfo.InvariantCulture)}::from_le_bytes({bytes}.try_into().unwrap()))",
+      _ => $"{RustType(type)}::from_le_bytes({bytes}.try_into().unwrap())"
+    };
+  }
+
+  /// <summary>A value appended to the output image: a scalar's bytes, a sequence's count and then its elements.</summary>
+  private static void Written(StringBuilder text, string pad, string value, ImageType type) {
+    if (type.Kind != ImageKind.Sequence) {
+      text.Append(pad).Append("image.extend_from_slice(&").Append(Bytes(type, value)).Append(");\n");
+      return;
+    }
+
+    var element = type.Element!;
+    text.Append(pad).Append(CultureInfo.InvariantCulture, $"let values: &[{RustType(element)}] = &{value};\n");
+    text.Append(pad).Append("image.extend_from_slice(&(values.len() as u32).to_le_bytes());\n");
+    text.Append(pad).Append("for &value in values {\n");
+    text.Append(pad).Append("    image.extend_from_slice(&").Append(Bytes(element, "value")).Append(");\n");
+    text.Append(pad).Append("}\n");
+  }
+
+  /// <summary>The little-endian bytes of a scalar.</summary>
+  private static string Bytes(ImageType type, string value) => type.Kind switch {
+    ImageKind.Boolean => $"[u8::from({value})]",
+    ImageKind.Float => $"{value}.to_bits().to_le_bytes()",
+    _ => $"{value}.to_le_bytes()"
+  };
 
   /// <summary>The bytes an <c>in</c> parameter takes in the input image.</summary>
   private static int Width(CallParameter parameter) {

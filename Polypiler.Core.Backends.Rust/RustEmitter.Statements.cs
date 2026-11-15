@@ -43,8 +43,14 @@ public static partial class RustEmitter {
           return into.Count > before && Diverges(into[^1]);
         }
         case IrDeclare declare:
-          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare), this.Type(declare.Local.Type),
-            declare.Initializer is null ? null : this.Expression(declare.Initializer)));
+          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local), this.LocalType(declare.Local),
+            declare.Initializer is null ? null : declare.Local.Type.IsArray ? this.ArrayInitial(declare.Local, declare.Initializer) : this.Expression(declare.Initializer)));
+          return false;
+        case IrStore store:
+          this.Store(store, into);
+          return false;
+        case IrExprStmt { Expression: IrStep { Target: IrArrayLoad load } step }:
+          into.AddRange(((RsBlockExpression)this.ElementStep(load, step, true)).Block.Statements);
           return false;
         case IrAssign assign:
           into.Add(new RsExpressionStatement(this.Assignment(assign.Local, assign.Value)));
@@ -79,7 +85,11 @@ public static partial class RustEmitter {
           into.AddRange(this.Continue());
           return true;
         case IrReturn result:
-          into.Add(new RsExpressionStatement(new RsReturn(result.Value is null ? null : this.Expression(result.Value))));
+          into.Add(new RsExpressionStatement(new RsReturn(result.Value switch {
+            null => null,
+            { Type.IsArray: true } value => this.ArrayResult(this._function, value),
+            var value => this.Expression(value)
+          })));
           return true;
         case IrThrow thrown:
           into.Add(new RsExpressionStatement(this.Throw(thrown.Exception)));
@@ -105,6 +115,8 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Assignment(IrLocal local, IrExpr value) {
       var place = new RsPath(this._locals[local]) { Type = local.Type };
+      if (local.Type.IsArray)
+        return new RsAssign(place, "=", this.ArrayInitial(local, value));
       if (value is IrBinary { Left: IrLocalRef self } binary && self.Local == local && Compound(binary) is { } op)
         return new RsAssign(place, op + "=", this.Operand(this.Expression(binary.Right), 2));
       if (value is IrBinary { Right: IrLocalRef other } swapped && other.Local == local && Compound(swapped) is { } bitwise && bitwise is "&" or "|" or "^")
@@ -331,19 +343,36 @@ public static partial class RustEmitter {
 
     /// <summary>
     /// A counted loop as <c>for i in a..b</c>: the declaration of an integer variable and a
-    /// <c>while</c> that tests it against a bound with <c>&lt;</c> and whose body ends with the step by one.
-    /// The bound is a constant or a variable the body does not assign, the body assigns the counter
-    /// nowhere else and has no <c>continue</c> of the loop, and nothing after the loop reads the counter,
-    /// which the <c>for</c> keeps to itself. <see langword="null"/> for any other pair of statements.
+    /// <c>while</c> that tests it against a bound with <c>&lt;</c> and whose body ends with the step by
+    /// one, or a <c>for</c> whose step is that step alone. The bound is a constant, a variable the body
+    /// does not assign or the length of an array the body does not assign, the body assigns the
+    /// counter nowhere else and, where it is a <c>while</c>, has no <c>continue</c> of the loop, and
+    /// nothing after the loop reads the counter, which the <c>for</c> keeps to itself. A loop from 0 to
+    /// the length of an array that reads only its elements with the counter and writes none of them is
+    /// an element loop (<see cref="ElementLoop"/>). <see langword="null"/> for any other pair of statements.
     /// </summary>
     private RsStatement? CountedLoop(IReadOnlyList<IrStmt> statements, int index) {
-      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare
-        || statements[index + 1] is not IrWhile { Condition: IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } } loop
-        || counter.Local != declare.Local || !counter.Type.IsInteger || loop.Body.Statements.Count == 0)
+      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare)
         return null;
 
-      var body = loop.Body.Statements;
-      var stepsByOne = body[^1] switch {
+      IrExpr condition;
+      List<IrStmt> rest;
+      IrStmt step;
+      switch (statements[index + 1]) {
+        case IrWhile { Body.Statements.Count: > 0 } loop when !ContinuesLoop(loop.Body.Statements.Take(loop.Body.Statements.Count - 1)):
+          (condition, rest, step) = (loop.Condition, [.. loop.Body.Statements.Take(loop.Body.Statements.Count - 1)], loop.Body.Statements[^1]);
+          break;
+        case IrFor { Step.Statements: [var only] } loop:
+          (condition, rest, step) = (loop.Condition, [.. loop.Body.Statements], only);
+          break;
+        default:
+          return null;
+      }
+
+      if (condition is not IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } || counter.Local != declare.Local || !counter.Type.IsInteger)
+        return null;
+
+      var stepsByOne = step switch {
         IrAssign { Value: IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.AddChecked, Left: IrLocalRef self, Right: IrConst { Value: 1 } } } assign => assign.Local == declare.Local && self.Local == declare.Local,
         IrExprStmt { Expression: IrStep { Target: IrLocalRef self, Increment: true } } => self.Local == declare.Local,
         _ => false
@@ -351,10 +380,13 @@ public static partial class RustEmitter {
       if (!stepsByOne)
         return null;
 
-      var rest = body.Take(body.Count - 1).ToList();
-      var invariant = bound is IrConst || bound is IrConstRef || (bound is IrLocalRef limit && limit.Local != declare.Local && !Assigns(rest, limit.Local));
-      if (!invariant || Assigns(rest, declare.Local) || ContinuesLoop(rest) || statements.Skip(index + 2).Any(after => Mentions(after, declare.Local)))
+      var invariant = bound is IrConst || bound is IrConstRef || (bound is IrLocalRef limit && limit.Local != declare.Local && !Assigns(rest, limit.Local))
+        || (bound is IrArrayLength { Array: IrConstRef or IrLocalRef } length && (length.Array is not IrLocalRef array || !Assigns(rest, array.Local)));
+      if (!invariant || Assigns(rest, declare.Local) || statements.Skip(index + 2).Any(after => Mentions(after, declare.Local)))
         return null;
+
+      if (start is IrConst { Value: 0 } && bound is IrArrayLength { Array: var iterated } && this.ElementLoop(declare.Local, iterated, rest) is { } elements)
+        return elements;
 
       var label = this.NewLabel("l");
       var breakable = new Breakable(BreakableKind.Loop, label);
@@ -369,6 +401,52 @@ public static partial class RustEmitter {
       var pattern = rest.Any(statement => Mentions(statement, declare.Local)) ? this._locals[declare.Local] : "_";
       return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, pattern, new RsRange(this.Operand(from, 3), this.Operand(to, 3), false), block));
     }
+
+    /// <summary>The element of an array an element loop reads in place of <c>a[i]</c>, by the loop's counter.</summary>
+    private readonly Dictionary<IrLocal, string> _elements = [];
+
+    /// <summary>
+    /// An element loop, <c>for &amp;x in data { … }</c>: a counted loop from 0 to the length of an array
+    /// whose body uses the counter only to read elements of that array and writes none of them. The
+    /// element is the variable the body's first statement declares with it, unless the body assigns
+    /// that variable; otherwise a binding of its own. <see langword="null"/> for any other loop.
+    /// </summary>
+    private RsStatement? ElementLoop(IrLocal counter, IrExpr array, List<IrStmt> body) {
+      var nodes = body.SelectMany(IrTree.Nodes).ToList();
+      var loads = nodes.Count(node => node is IrArrayLoad { Index: IrLocalRef index } load && index.Local == counter && SameArray(load.Array, array));
+      var uses = nodes.Count(node => node is IrLocalRef reference && reference.Local == counter);
+      if (loads == 0 || loads != uses || body.SelectMany(Walk).Any(statement => statement is IrStore store && SameArray(store.Array, array))
+        || nodes.Any(node => node is IrStep { Target: IrArrayLoad stepped } && SameArray(stepped.Array, array)
+          || node is IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy && SameArray(copy.Arguments[2], array)
+          || node is IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear } fill && SameArray(fill.Arguments[0], array)
+          || node is IrCall call && this._arrays.TryGetValue(call.Function, out var callee) && callee.MutableParameters.Any(position => SameArray(call.Arguments[position], array)))
+        || array is IrLocalRef { Local: var variable } && Assigns(body, variable))
+        return null;
+
+      string element;
+      if (body.Count > 0 && body[0] is IrDeclare { Initializer: IrArrayLoad { Index: IrLocalRef first } } named && first.Local == counter && named.Local.Type == array.Type.Element && !Assigns(body, named.Local)) {
+        element = this._locals[named.Local];
+        body = body.Skip(1).ToList();
+      } else {
+        element = this.Temporary("element");
+      }
+
+      this._elements[counter] = element;
+      var label = this.NewLabel("l");
+      var breakable = new Breakable(BreakableKind.Loop, label);
+      this._breakables.Add(breakable);
+      var block = this.Block(body);
+      this._breakables.RemoveAt(this._breakables.Count - 1);
+      this._elements.Remove(counter);
+      return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, "&" + element, this.Iterated(array), block));
+    }
+
+    /// <summary>Whether two expressions name the same array: one variable or one table.</summary>
+    private static bool SameArray(IrExpr first, IrExpr second) => (first, second) switch {
+      (IrLocalRef a, IrLocalRef b) => a.Local == b.Local,
+      (IrConstRef a, IrConstRef b) => a.Constant == b.Constant,
+      _ => false
+    };
 
     /// <summary>Whether statements assign a variable, also by a step.</summary>
     private static bool Assigns(IEnumerable<IrStmt> statements, IrLocal local)

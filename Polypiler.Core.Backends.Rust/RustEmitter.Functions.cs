@@ -52,18 +52,27 @@ public static partial class RustEmitter {
       this._construct = $"the function '{function.Name}'";
       this._labels = 0;
       this._breakables.Clear();
+      this._function = function;
+      this._arrayFacts = this._arrays.GetValueOrDefault(function.Name) ?? new();
+      this._arrayParameters = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsArray).ToDictionary(pair => pair.parameter, pair => pair.index);
+      if (this._arrayFacts.Problem is { } problem)
+        this.Refuse(problem);
+
       this.Analyse(function);
       var name = this._functions[function.Name];
-      var parameters = function.Parameters.Select(parameter => new RsParameter(this._locals[parameter], this.Type(parameter.Type))).ToList();
-      var returns = function.ReturnType == IrType.Void ? null : this.Type(function.ReturnType);
+      var parameters = function.Parameters.Select((parameter, index) => new RsParameter(this._locals[parameter], this.ParameterType(function, index))).ToList();
+      var returns = this.ResultType(function);
       var statements = new List<RsStatement>();
       foreach (var parameter in function.Parameters.Where(this._reassigned.Contains))
         statements.Add(new RsLet(this._locals[parameter], true, null, new RsPath(this._locals[parameter])));
 
       this.Statements(function.Body.Statements, statements);
       var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void);
-      return new RsFunction(name, function.IsPublic ? "pub" : "", parameters, returns, body);
+      return new RsFunction(name, function.IsPublic ? "pub" : "", parameters, returns, body) { Generics = Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
     }
+
+    /// <summary>The function being written.</summary>
+    private IrFunction _function = new("", false, IrType.Void, [], [], new IrBlock([]));
 
     /// <summary>The parameters the body assigns.</summary>
     private HashSet<IrLocal> _reassigned = [];
@@ -95,6 +104,7 @@ public static partial class RustEmitter {
         this._locals[local] = RustNames.Unique([local.Name], name => (this._read.Contains(local) ? "" : "_") + RustNames.Snake(name, this.Edition).Replace("r#", "", StringComparison.Ordinal), taken)[0];
 
       this._locals = this._locals.ToDictionary(pair => pair.Key, pair => RustNames.IsKeyword(pair.Value, this.Edition) ? "r#" + pair.Value : pair.Value);
+      this._taken = taken;
     }
 
     /// <summary>One binding of a variable: its declaration and how often it is assigned on the worst path.</summary>

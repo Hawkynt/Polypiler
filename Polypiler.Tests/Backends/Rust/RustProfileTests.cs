@@ -136,8 +136,6 @@ public sealed class RustProfileTests {
   public void ModuleState_AndTypes_AreRefusedByName() {
     var problems = RustCrates.Check(RustCrates.Import("static int counter; public static int F() => ++counter;"));
     Assert.That(problems.Select(problem => problem.Message), Has.Some.Contain("'module state (globals)'"));
-    var arrays = RustCrates.Check(RustCrates.Import("public static int F(int[] a) => a[0];"));
-    Assert.That(arrays.Select(problem => problem.Message), Has.Some.Contain("'arrays and views'"));
     var strings = RustCrates.Check(RustCrates.Import("public static int F(string a) => a.Length;"));
     Assert.That(strings.Select(problem => problem.Message), Has.Some.Contain("'the type str'"));
   }
@@ -145,7 +143,7 @@ public sealed class RustProfileTests {
   [Test]
   public void ConstantTable_IsAnArrayConstant() {
     var text = RustCrates.ModuleText(RustCrates.Emit(RustCrates.Import("static readonly uint[] Table = { 1, 2, 3 }; public static uint F(int i) => Table[i] + (uint)Table.Length;")));
-    Assert.That(text, Does.Contain("const TABLE: [u32; 3] = [1, 2, 3];"));
+    Assert.That(text, Does.Contain("static TABLE: [u32; 3] = [1, 2, 3];"));
     Assert.That(text, Does.Contain("TABLE[i as usize]"));
   }
 

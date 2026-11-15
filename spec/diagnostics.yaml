@@ -1092,6 +1092,15 @@ codes:
     area: rust
     owner: "#458"
     surfaces: standard error of polypiler translate --to rust
+  - code: PLY1566
+    severity: error
+    exit: UnsupportedConstruct
+    title: aliasing views in safe Rust
+    message: "views '<first>' and '<second>' may alias and '<second>' is written in <place>; safe Rust cannot express this - provide a no-alias fact or select a copying target profile"
+    rule: rust.backend.aliasing
+    area: rust
+    owner: "#460"
+    surfaces: standard error of polypiler translate --to rust, for one array passed to a call twice where it is written
   - code: PLY1574
     severity: error
     exit: UnsupportedConstruct

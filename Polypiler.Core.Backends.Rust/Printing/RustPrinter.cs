@@ -25,6 +25,7 @@ public static class RustPrinter {
   private const int ChainWidth = 60;
   private const int IfElseWidth = 50;
   private const int ArrayWidth = 60;
+  private const int ShortElement = 10;
   private const int AttributeWidth = 70;
   private const int Indent = 4;
 
@@ -87,7 +88,7 @@ public static class RustPrinter {
         Function(text, function, indent);
         break;
       case RsConst constant: {
-        var head = $"{pad}{Visibility(constant.Visibility)}const {constant.Name}: {constant.TypeName} = ";
+        var head = $"{pad}{Visibility(constant.Visibility)}{(constant.IsStatic ? "static" : "const")} {constant.Name}: {constant.TypeName} = ";
         text.Append(head).Append(Expression(constant.Value, indent, head.Length, 1)).Append(";\n");
         break;
       }
@@ -129,7 +130,7 @@ public static class RustPrinter {
   /// </summary>
   private static void Function(StringBuilder text, RsFunction function, int indent) {
     var pad = new string(' ', indent);
-    var head = $"{pad}{Visibility(function.Visibility)}fn {function.Name}(";
+    var head = $"{pad}{Visibility(function.Visibility)}fn {function.Name}{function.Generics}(";
     var result = function.Returns is null ? "" : " -> " + function.Returns;
     var parameters = string.Join(", ", function.Parameters.Select(parameter => $"{parameter.Name}: {parameter.TypeName}"));
     var empty = function.Body.Statements.Count == 0 && function.Body.Tail is null;
@@ -226,8 +227,12 @@ public static class RustPrinter {
         return Flat(parenthesized.Inner) is { } inner ? $"({inner})" : null;
       case RsCall call:
         return Flat(call.Callee) is { } callee && Arguments(call.Arguments) is { } arguments ? $"{callee}({arguments})" : null;
+      case RsMacro { Bracketed: true } macro:
+        return Flat(macro.Arguments[0]) is { } bracketed ? $"{macro.Name}!{bracketed}" : null;
       case RsMacro macro:
         return Arguments(macro.Arguments) is { } macroArguments ? $"{macro.Name}!({macroArguments})" : null;
+      case RsReference reference:
+        return Flat(reference.Operand) is { } borrowed ? (reference.Mutable ? "&mut " : "&") + borrowed : null;
       case RsMethodCall call: {
         var (receiver, links) = Chain(call);
         if (Flat(receiver) is not { } start)
@@ -245,10 +250,15 @@ public static class RustPrinter {
       }
       case RsIndex index:
         return Flat(index.Target) is { } target && Flat(index.Index) is { } at ? $"{target}[{at}]" : null;
+      case RsField field:
+        return Flat(field.Target) is { } owner ? $"{owner}.{field.Name}" : null;
       case RsAssign assign:
         return Flat(assign.Target) is { } place && Flat(assign.Value) is { } value2 ? $"{place} {assign.Operator} {value2}" : null;
-      case RsRange range:
-        return Flat(range.Start) is { } from && Flat(range.End) is { } to ? $"{from}{(range.Inclusive ? "..=" : "..")}{to}" : null;
+      case RsRange range: {
+        var from = range.Start is null ? "" : Flat(range.Start);
+        var to = range.End is null ? "" : Flat(range.End);
+        return from is null || to is null ? null : $"{from}{(range.Inclusive ? "..=" : "..")}{to}";
+      }
       case RsBreak exit: {
         var keyword = "break" + (exit.Label is null ? "" : " '" + exit.Label);
         return exit.Value is null ? keyword : Flat(exit.Value) is { } flatValue ? keyword + " " + flatValue : null;
@@ -257,6 +267,8 @@ public static class RustPrinter {
         return "continue" + (next.Label is null ? "" : " '" + next.Label);
       case RsReturn result:
         return result.Value is null ? "return" : Flat(result.Value) is { } returned ? "return " + returned : null;
+      case RsArray { Count: { } count } repeated:
+        return Flat(repeated.Elements[0]) is { } repeatedValue && Flat(count) is { } times ? $"[{repeatedValue}; {times}]" : null;
       case RsArray array: {
         var elements = array.Elements.Select(Flat).ToList();
         if (elements.Any(element => element is null))
@@ -315,8 +327,14 @@ public static class RustPrinter {
         var callee = Expression(call.Callee, indent, column);
         return callee + "(" + (Overflowed(call.Arguments, indent, column + callee.Length + 1) ?? VerticalArguments(call.Arguments, indent)) + ")";
       }
+      case RsMacro { Bracketed: true } macro:
+        return macro.Name + "!" + Expression(macro.Arguments[0], indent, column + macro.Name.Length + 1, trailing);
       case RsMacro macro:
         return macro.Name + "!(" + (Overflowed(macro.Arguments, indent, column + macro.Name.Length + 2) ?? VerticalArguments(macro.Arguments, indent)) + ")";
+      case RsReference reference: {
+        var prefix = reference.Mutable ? "&mut " : "&";
+        return prefix + Expression(reference.Operand, indent, column + prefix.Length, trailing);
+      }
       case RsMethodCall call: {
         // The root on the first line, then one call on each line one step in - or at the root's own
         // indentation where the root ends a block of lines; a root no wider than one indentation
@@ -345,7 +363,7 @@ public static class RustPrinter {
           text.Append('\n').Append(' ', linkIndent).Append(head);
           text.Append(arguments is not null && linkIndent + head.Length + arguments.Length + 1 + (index == links.Count - 1 ? trailing : 0) <= MaxWidth
             ? arguments
-            : VerticalArguments(link.Arguments, linkIndent));
+            : Overflowed(link.Arguments, linkIndent, linkIndent + head.Length) ?? VerticalArguments(link.Arguments, linkIndent));
           text.Append(')');
         }
 
@@ -354,6 +372,9 @@ public static class RustPrinter {
       case RsBinary binary: {
         var operands = new List<(string? Operator, RsExpression Operand)>();
         Flatten(binary, binary.Operator, operands);
+        if (operands.Count == 2 && Paired(operands[0].Operand, binary.Operator, operands[1].Operand, indent, column, trailing) is { } paired)
+          return paired;
+
         var text = new StringBuilder(Expression(operands[0].Operand, indent, column));
         foreach (var (op, operand) in operands.Skip(1)) {
           var head = op + " ";
@@ -379,10 +400,28 @@ public static class RustPrinter {
         return keyword + Expression(value, indent, column + keyword.Length, trailing);
       case RsIndex index:
         return Expression(index.Target, indent, column) + "[" + Expression(index.Index, indent, column) + "]";
+      case RsField field:
+        return Expression(field.Target, indent, column) + "." + field.Name;
       case RsRange range:
-        return Expression(range.Start, indent, column) + (range.Inclusive ? "..=" : "..") + Expression(range.End, indent, column);
+        return (range.Start is null ? "" : Expression(range.Start, indent, column)) + (range.Inclusive ? "..=" : "..") + (range.End is null ? "" : Expression(range.End, indent, column));
       case RsArray array: {
         var text = new StringBuilder("[");
+        var flat = array.Elements.Select(Flat).ToList();
+        if (array.Count is null && flat.All(element => element is not null && element.Length <= ShortElement)) {
+          // Short elements fill the lines, as many on each as fit: rustfmt's mixed layout.
+          var line = new StringBuilder();
+          foreach (var element in flat) {
+            if (line.Length > 0 && indent + Indent + line.Length + 1 + element!.Length + 1 >= MaxWidth) {
+              text.Append('\n').Append(inner).Append(line);
+              line.Clear();
+            }
+
+            line.Append(line.Length > 0 ? " " : "").Append(element).Append(',');
+          }
+
+          return text.Append('\n').Append(inner).Append(line).Append('\n').Append(pad).Append(']').ToString();
+        }
+
         foreach (var element in array.Elements)
           text.Append('\n').Append(inner).Append(Expression(element, indent + Indent, indent + Indent, 1)).Append(',');
         return text.Append('\n').Append(pad).Append(']').ToString();
@@ -390,7 +429,7 @@ public static class RustPrinter {
       case RsIf choice:
         return If(choice, indent, column);
       case RsWhile loop:
-        return $"{Label(loop.Label)}while {Expression(loop.Condition, indent, column + Label(loop.Label).Length + 6, 2)} {Block(loop.Body, indent)}";
+        return $"{Label(loop.Label)}while {Condition(loop.Condition, indent, column + Label(loop.Label).Length + 6)}{Block(loop.Body, indent)}";
       case RsLoop loop:
         return $"{Label(loop.Label)}loop {Block(loop.Body, indent)}";
       case RsFor loop:
@@ -419,7 +458,7 @@ public static class RustPrinter {
 
   /// <summary>An <c>if</c> over several lines; an <c>else</c> that is another <c>if</c> follows as <c>else if</c>.</summary>
   private static string If(RsIf choice, int indent, int column) {
-    var text = new StringBuilder("if ").Append(Expression(choice.Condition, indent, column + 3, 2)).Append(' ').Append(Block(choice.Then, indent));
+    var text = new StringBuilder("if ").Append(Condition(choice.Condition, indent, column + 3)).Append(Block(choice.Then, indent));
     switch (choice.Else) {
       case RsIf next:
         text.Append(" else ").Append(If(next, indent, column));
@@ -430,6 +469,34 @@ public static class RustPrinter {
     }
 
     return text.ToString();
+  }
+
+  /// <summary>
+  /// The condition of an <c>if</c> or a <c>while</c> and what separates it from the block: a space,
+  /// or, where the condition takes several lines and its last one is more than closing brackets, a
+  /// line break, the block's brace standing alone at the indentation (rustfmt's <c>last_line_extendable</c>).
+  /// </summary>
+  private static string Condition(RsExpression condition, int indent, int column) {
+    var text = Expression(condition, indent, column, 2);
+    var last = text[(text.LastIndexOf('\n') + 1)..].Trim();
+    return text.Contains('\n') && last.Any(c => c is not (')' or ']' or '}' or '?' or '>'))
+      ? text + "\n" + new string(' ', indent)
+      : text + " ";
+  }
+
+  /// <summary>
+  /// Two operands of a binary operator as rustfmt's <c>rewrite_pair</c> writes them where they do not
+  /// fit one line: the right one after the left one's last line where it is one line, or its first
+  /// line opens a block, and fits; <see langword="null"/> otherwise, for one operand on each line.
+  /// </summary>
+  private static string? Paired(RsExpression left, string op, RsExpression right, int indent, int column, int trailing) {
+    var lhs = Expression(left, indent, column);
+    var lastLine = lhs[(lhs.LastIndexOf('\n') + 1)..];
+    var lastColumn = lhs.Contains('\n') ? lastLine.Length : column + lhs.Length;
+    var rhs = Expression(right, indent, lastColumn + op.Length + 2, trailing);
+    var firstLine = rhs.Split('\n')[0];
+    var sameLine = !rhs.Contains('\n') || lhs.Length <= Indent || firstLine.EndsWith('{');
+    return sameLine && lastColumn + op.Length + 2 + firstLine.Length + (rhs.Contains('\n') ? 0 : trailing) <= MaxWidth ? $"{lhs} {op} {rhs}" : null;
   }
 
   /// <summary>A block whose braces stand at an indentation: <c>{}</c> when empty.</summary>
@@ -448,7 +515,7 @@ public static class RustPrinter {
   /// it; <see langword="null"/> for any other arguments.
   /// </summary>
   private static string? Overflowed(IReadOnlyList<RsExpression> arguments, int indent, int column) {
-    if (arguments.Count == 0 || !IsBlockLike(arguments[^1]))
+    if (arguments.Count == 0 || !Overflows(arguments[^1], arguments.Count))
       return null;
 
     var others = arguments.Take(arguments.Count - 1).Select(Flat).ToList();
@@ -459,6 +526,20 @@ public static class RustPrinter {
     var last = Expression(arguments[^1], indent, column + head.Length, 1);
     return column + head.Length + last.Split('\n')[0].Length <= MaxWidth ? head + last : null;
   }
+
+  /// <summary>
+  /// Whether the last of some arguments may overflow the call (rustfmt's <c>can_be_overflowed_expr</c>):
+  /// a block or a control-flow expression; a call, a macro or an array only as the one argument, never a method chain; a
+  /// prefix operator, a borrow or a cast as its operand may.
+  /// </summary>
+  private static bool Overflows(RsExpression last, int count) => last switch {
+    RsIf or RsMatch or RsWhile or RsLoop or RsFor or RsLabeledBlock or RsBlockExpression => true,
+    RsCall or RsMacro or RsArray => count == 1,
+    RsUnary unary => Overflows(unary.Operand, count),
+    RsReference reference => Overflows(reference.Operand, count),
+    RsCast cast => Overflows(cast.Operand, count),
+    _ => false
+  };
 
   /// <summary>Arguments one on each line, each followed by a comma, the closing parenthesis back at the indentation.</summary>
   private static string VerticalArguments(IReadOnlyList<RsExpression> arguments, int indent) {

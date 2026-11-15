@@ -14,9 +14,9 @@ namespace Polypiler.Tests.Acceptance.Rust;
 /// <summary>
 /// Every prototype fixture through the Rust backend: a fixture whose constructs the backend writes is
 /// built by the pinned toolchain and called on every case of <see cref="PrototypeCases"/>, with
-/// overflow checks on and off - the outcome of every call must be what the C# compiler's build of the
-/// fixture and the interpreter give. A fixture with constructs the backend does not write yet (arrays,
-/// strings, types, module state) is refused with <c>PLY1550</c>, which names them.
+/// overflow checks on and off - the outcome of every call, the final contents of every array it was
+/// given included, must be what the C# compiler's build of the fixture and the interpreter give. A
+/// fixture with constructs the backend does not write is refused with a code of the backend that names them.
 /// </summary>
 [TestFixture]
 [Layer("rust")]
@@ -31,7 +31,7 @@ public sealed class RustDifferentialTests {
     var module = PrototypeFixture.Imported(fixture);
     var problems = RustCrates.Check(module);
     if (problems.Count > 0) {
-      Assert.That(problems.Select(problem => problem.Code), Has.All.AnyOf(RustEmitter.Inexpressible, RustEmitter.ExceptionRegion));
+      Assert.That(problems.Select(problem => problem.Code), Has.All.AnyOf(RustEmitter.Inexpressible, RustEmitter.ExceptionRegion, RustEmitter.MayAlias));
       Assert.That(problems.Select(problem => problem.Message), Has.All.Match("'[^']+'"));
       return;
     }
@@ -48,10 +48,9 @@ public sealed class RustDifferentialTests {
     }
   }
 
-  /// <summary>The fixtures the backend writes today: the scalar ones. The list grows with the families; it never shrinks unnoticed.</summary>
+  /// <summary>Every fixture of the prototype is written: the scalar ones, and since #460 those with arrays and tables. The list never shrinks unnoticed.</summary>
   [Test]
-  public void ScalarFixtures_AreWritten()
-    => Assert.That(PrototypeFixture.Names.Where(name => RustCrates.Check(PrototypeFixture.Imported(name)).Count == 0),
-      Is.SupersetOf(new[] { "Numbers", "Operators", "wide/Conversions", "wide/Library", "wide/OperatorsWide", "wide/SplitMix64", "wide/Xorshift64", "wide/DigitSum" }));
+  public void EveryFixture_IsWritten()
+    => Assert.That(PrototypeFixture.Names.Where(name => RustCrates.Check(PrototypeFixture.Imported(name)).Count > 0), Is.Empty);
 
 }

@@ -27,7 +27,7 @@ public static partial class RustEmitter {
 
     /// <summary>Every lint the backend may allow, in the order the attribute lists them.</summary>
     public static IReadOnlyList<string> Closed { get; } = [
-      "unused_assignments", "unused_comparisons", "clippy::absurd_extreme_comparisons", "clippy::approx_constant", "clippy::empty_loop",
+      "unused_assignments", "unused_comparisons", "clippy::absurd_extreme_comparisons", "clippy::almost_swapped", "clippy::approx_constant", "clippy::empty_loop",
       "clippy::eq_op", "clippy::erasing_op", "clippy::identity_op", "clippy::manual_clamp", "clippy::manual_range_contains", "clippy::min_max",
       "clippy::neg_cmp_op_on_partial_ord", "clippy::nonminimal_bool", "clippy::too_many_arguments"
     ];
@@ -59,6 +59,10 @@ public static partial class RustEmitter {
             break;
           case RsLoop { Body: { Statements.Count: 0, Tail: null } }:
             needed.Add("clippy::empty_loop");
+            break;
+          case RsBlock block when block.Statements.Zip(block.Statements.Skip(1)).Any(pair => pair is (RsLet { Initializer: RsPath source } binding, RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath target, Value: RsPath value } })
+            && target.Name == source.Name && value.Name == binding.Name):
+            needed.Add("clippy::almost_swapped");
             break;
           case RsFunction function:
             if (function.Parameters.Count > 7)
