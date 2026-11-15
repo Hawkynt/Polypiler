@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Sequences;
@@ -37,6 +38,19 @@ public sealed class JavaScriptSequenceEmissionTests {
     Assert.That(text, Does.Contain("return { [Symbol.iterator]: () => $make(t) };"));
     Assert.That(text, Does.Contain("yield* Up(2);"));
     Assert.That(text, Does.Contain("for (const v of s) {"));
+  }
+
+  /// <summary>A yield inside a loop over a list is not cut into resume points: refused at ECMAScript 5, written from ECMAScript 2015.</summary>
+  [Test]
+  public void YieldInsideACollectionLoop_IsRefusedAtEs5Only() {
+    var list = IrType.List(IrType.I32);
+    var l = new IrLocal("l", list);
+    var x = new IrLocal("x", IrType.I32);
+    var body = new IrBlock([new IrForEachCollection(new IrLocalRef(l), EnumerationMode.Checked, x, null, new IrBlock([new IrYield(new IrLocalRef(x))]))]);
+    var module = new IrModule("M", [new IrFunction("G", true, IrType.Sequence(IrType.I32, true), [l], [x], body)]);
+    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es5", "cjs")).Select(diagnostic => diagnostic.Message),
+      Is.EqualTo(new[] { "'a yield inside a loop over a collection' cannot be expressed in JavaScript profile 'es5'" }));
+    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es2015", "esm")), Is.Empty);
   }
 
   /// <summary>Test design 8: at ECMAScript 5 no generator syntax, a state machine on $generator, a loop over next().</summary>
