@@ -312,6 +312,46 @@
       "bytes": 39546
     },
     {
+      "path": "tests/fixtures/backend/golden/collections/Collections.cs.csharp.golden",
+      "sha256": "9fc09cddc6b9b40c4c5a2d5db9ed09ea7a653fdd972ed7c4cfae1c5641b6df98",
+      "bytes": 591790
+    },
+    {
+      "path": "tests/fixtures/backend/golden/collections/Collections.cs.javascript.golden",
+      "sha256": "75bc33f6ed5386cd85212e93f79b30bbe779901b699358328516cba535ca60e8",
+      "bytes": 646586
+    },
+    {
+      "path": "tests/fixtures/backend/golden/collections/WordFrequency.cs.csharp.golden",
+      "sha256": "1940f474342f8dfb73e57bb5a0f1a7800a59362d7ebae52d51d8f35a83a7405d",
+      "bytes": 157778
+    },
+    {
+      "path": "tests/fixtures/backend/golden/collections/WordFrequency.cs.javascript.golden",
+      "sha256": "dcc176109a38652f2866a1a4fae340818b7f2bc93798745a78ff0216e3374a6b",
+      "bytes": 180536
+    },
+    {
+      "path": "tests/fixtures/backend/golden/collections/collections.js.csharp.golden",
+      "sha256": "b4c4908c6ce214532ea4081430bcd14cf546e4564492909b22f14347b6f43fb8",
+      "bytes": 474446
+    },
+    {
+      "path": "tests/fixtures/backend/golden/collections/collections.js.javascript.golden",
+      "sha256": "3a31c6e26433bc28165d031aacb644dd77cc1e4164e378bb779c6fd363949119",
+      "bytes": 281884
+    },
+    {
+      "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.csharp.golden",
+      "sha256": "ba9ce43ccb331d7a0a9803803149420c04b7918ceb5080131e5b00c0ac84257a",
+      "bytes": 251590
+    },
+    {
+      "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.javascript.golden",
+      "sha256": "9f2d339ad02f8b3ee7f1573d48d93d3e583544590af6f2f8647b4646f099ea8b",
+      "bytes": 99548
+    },
+    {
       "path": "tests/fixtures/backend/golden/dispatch/Animals.cs.csharp.golden",
       "sha256": "94870d2ac25ff5085531260878976bb72a9bd774458186c67b0a0abf4420d5ad",
       "bytes": 25986
@@ -1038,8 +1078,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeSingleBit.cs.javascript.golden",
-      "sha256": "5a0e8a70b96d64805745029a8917ed2d3176e46753b06fdf53f814217e4f748f",
-      "bytes": 109576
+      "sha256": "267585762d227be57629de15e3431eadd1155887ce07722e584663b442e56163",
+      "bytes": 109688
     },
     {
       "path": "tests/fixtures/backend/golden/recognize/RecognizeZeroCount.cs.csharp.golden",
