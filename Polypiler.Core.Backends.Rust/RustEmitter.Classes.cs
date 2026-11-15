@@ -35,6 +35,8 @@ public static partial class RustEmitter {
       Reference,
       /// <summary><c>&amp;self</c>: the object without its <c>Rc</c>.</summary>
       Self,
+      /// <summary>A reference to the object without its <c>Rc</c>: the object of a function of a hierarchy.</summary>
+      Borrowed,
       /// <summary>A new <c>Option&lt;Rc&gt;</c>.</summary>
       OptionalValue,
       /// <summary>A variable of type <c>Option&lt;Rc&gt;</c>.</summary>
@@ -63,8 +65,22 @@ public static partial class RustEmitter {
     /// </summary>
     private void Classes(IrModule module) {
       this._classes = [.. module.Types.OfType<IrClassType>().Where(type => !type.IsLibrary)];
+      this.Hierarchies(module);
       var functions = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
       foreach (var type in this._classes) {
+        // A class of a hierarchy keeps only its makers in its impl; its methods are functions of the module.
+        if (this._hierarchy.Contains(type)) {
+          foreach (var (constructor, index) in type.Constructors.Select((constructor, index) => (constructor, index)).Where(_ => !type.IsAbstract)) {
+            var name = "new" + (index == 0 ? "" : "_" + (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            if (functions.ContainsKey(ObjectLowering.NewPrefix + constructor.Function)) {
+              this._members[ObjectLowering.NewPrefix + constructor.Function] = new Member(type, name, MemberKind.Maker, constructor);
+              this._functions[ObjectLowering.NewPrefix + constructor.Function] = name;
+            }
+          }
+
+          continue;
+        }
+
         var members = new List<(string Function, string Name, MemberKind Kind, IrConstructor? Constructor)>();
         foreach (var (constructor, index) in type.Constructors.Select((constructor, index) => (constructor, index))) {
           var suffix = index == 0 ? "" : "_" + (index + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -86,7 +102,7 @@ public static partial class RustEmitter {
       }
 
       var receivers = this._members.Where(pair => pair.Value.Kind == MemberKind.Instance).Select(pair => pair.Key).ToHashSet(StringComparer.Ordinal);
-      this._nullness = Nullness.Of(module, receivers);
+      this._nullness = Nullness.Of(module, new HashSet<string>(receivers.Concat(this._free.Keys), StringComparer.Ordinal));
       for (var changed = true; changed;) {
         changed = false;
         foreach (var name in receivers.Where(name => !this._sharedSelf.Contains(name)))
@@ -114,8 +130,8 @@ public static partial class RustEmitter {
     private bool MayBeNull(IrExpr value) => this._nullness.MayBeNull(this._function.Name, value);
 
     /// <summary>The Rust name of a class.</summary>
-    private string ClassName(IrType type) => type.ClassType is { } declaration && this._types.TryGetValue(declaration, out var name)
-      ? name
+    private string ClassName(IrType type) => type.Declaration is { } declaration && this._types.TryGetValue(declaration, out var name)
+      ? this._traits.Contains(declaration) ? "dyn " + name : this.StructName((IrClassType)declaration)
       : ((RsPath)this.Refuse($"the type {type}")).Name;
 
     /// <summary><c>Rc&lt;Name&gt;</c>, or <c>Option&lt;Rc&lt;Name&gt;&gt;</c> for a reference that may be null.</summary>
@@ -126,11 +142,11 @@ public static partial class RustEmitter {
     }
 
     /// <summary>Whether a variable of a class type holds the object as a reference to an <c>Rc</c>: a parameter that is not null and not assigned.</summary>
-    private bool IsObjectReference(IrLocal local) => this._function.Parameters.Contains(local) && !this.MayBeNull(local) && !this._reassigned.Contains(local);
+    private bool IsObjectReference(IrLocal local) => this._function.Parameters.Contains(local) && !this.MayBeNull(local) && !this._reassigned.Contains(local) && !this.IsPolymorphic(local.Type);
 
     /// <summary>The type of a parameter of a class type: <c>&amp;Rc&lt;T&gt;</c>, or <c>Option&lt;Rc&lt;T&gt;&gt;</c> where it may be null.</summary>
     private string ObjectParameterType(IrLocal parameter)
-      => this.MayBeNull(parameter) ? this.ObjectType(parameter.Type, true) : "&" + this.ObjectType(parameter.Type, false);
+      => this.MayBeNull(parameter) || this.IsPolymorphic(parameter.Type) ? this.ObjectType(parameter.Type, this.MayBeNull(parameter)) : "&" + this.ObjectType(parameter.Type, false);
 
     /// <summary>The members of the module whose object is the first parameter: the function being written, if it is one.</summary>
     private Member? CurrentMember => this._members.GetValueOrDefault(this._function.Name);
@@ -142,6 +158,12 @@ public static partial class RustEmitter {
           return (new RsPath("None") { Type = value.Type }, Held.Null);
         case IrLocalRef reference when this.CurrentMember is { Kind: MemberKind.Instance } && this._function.Parameters[0] == reference.Local:
           return (new RsPath("self") { Type = value.Type }, this._sharedSelf.Contains(this._function.Name) ? Held.Reference : Held.Self);
+        case IrLocalRef reference when this._free.ContainsKey(this._function.Name) && this._function.Parameters[0] == reference.Local:
+          return (new RsPath(this._locals[reference.Local]) { Type = value.Type }, Held.Borrowed);
+        case IrCast cast:
+          return this.Conversion(cast.Value, cast.Type, true);
+        case IrAsCast cast:
+          return this.Conversion(cast.Value, cast.Type, false);
         case IrLocalRef reference: {
           var path = new RsPath(this._locals[reference.Local]) { Type = value.Type };
           return (path, this.MayBeNull(reference.Local) ? Held.OptionalPlace : this.IsObjectReference(reference.Local) ? Held.Reference : Held.Place);
@@ -164,6 +186,20 @@ public static partial class RustEmitter {
     private RsExpression Cloned(RsExpression shared) {
       this._uses.Add("std::rc::Rc");
       return new RsCall(new RsPath("Rc::clone"), [shared]) { Type = shared.Type };
+    }
+
+    /// <summary>
+    /// A value of a class type as a place of a type owns it: as <see cref="ObjectValue(IrExpr, bool)"/>
+    /// does, converted to the place's trait where the value's own is another (an interface of its
+    /// class, a base class), which an <c>Rc</c> of a struct is by itself.
+    /// </summary>
+    private RsExpression ObjectValue(IrExpr value, bool optional, IrType target) {
+      if (!this.IsPolymorphic(target) || !this.IsPolymorphic(value.Type) || value.Type == target || value is IrNull)
+        return this.ObjectValue(value, optional);
+      if (optional)
+        return this.Method(this.ObjectValue(value, true), "and_then", target, new RsPath($"{ObjectTrait}::{this.Conversion("into_", target)}"));
+
+      return Expect(this.Method(this.ObjectValue(value, false), this.Conversion("into_", target), target), IrTrap.InvalidCast);
     }
 
     /// <summary>A value of a class type as a place owns it: <c>Rc&lt;T&gt;</c>, or <c>Option&lt;Rc&lt;T&gt;&gt;</c> where it may be null.</summary>
@@ -215,11 +251,20 @@ public static partial class RustEmitter {
     }
 
     /// <summary>A value of a class type as an argument: a reference to the <c>Rc</c>, or the <c>Option</c> where the parameter may be null.</summary>
-    private RsExpression ObjectArgument(string callee, int index, IrExpr value)
-      => index == 0 && this._members.TryGetValue(callee, out var member) && member.Kind == MemberKind.Instance ? new RsPath("self")
-      : this._module.Functions.FirstOrDefault(function => function.Name == callee) is { } function && index < function.Parameters.Count && this._nullness.MayBeNull(callee, function.Parameters[index])
-        ? this.ObjectValue(value, true)
-        : this.ObjectBorrow(value);
+    private RsExpression ObjectArgument(string callee, int index, IrExpr value) {
+      if (index == 0 && this._members.TryGetValue(callee, out var member) && member.Kind == MemberKind.Instance)
+        return new RsPath("self");
+      if (index == 0 && this._free.TryGetValue(callee, out var owner))
+        return this.ObjectRef(value, this._traits.Contains(owner));
+
+      var function = this._module.Functions.FirstOrDefault(function => function.Name == callee);
+      if (function is null || index >= function.Parameters.Count)
+        return this.ObjectBorrow(value);
+
+      var parameter = function.Parameters[index];
+      var optional = this._nullness.MayBeNull(callee, parameter);
+      return optional || this.IsPolymorphic(parameter.Type) ? this.ObjectValue(value, optional, parameter.Type) : this.ObjectBorrow(value);
+    }
 
     /// <summary>A value of a class type as one comparison operand of two: an <c>Option&lt;&amp;Rc&lt;T&gt;&gt;</c>, or the reference itself where both are never null.</summary>
     private RsExpression ObjectOperand(IrExpr value, bool optional) {
@@ -297,13 +342,14 @@ public static partial class RustEmitter {
       return field.Type switch {
         { IsObject: true } => $"RefCell<{this.ObjectType(field.Type, true)}>",
         { IsString: true } => $"RefCell<{OwnedString}>",
+        { IsArray: true } => $"RefCell<Vec<{this.ElementType(field.Type)}>>",
         _ => $"RefCell<{((RsPath)this.Refuse($"a field of the type {field.Type}")).Name}>"
       };
     }
 
     /// <summary>A field of an object read: <c>o.f.get()</c> of a value, a copy of anything else.</summary>
     private RsExpression ObjectField(IrFieldLoad load) {
-      var field = new RsField(this.ObjectReceiver(load.Target), this.FieldName(load.Field));
+      var field = this.FieldCell(load.Target, load.Field);
       return IsCellField(load.Field)
         ? new RsMethodCall(field, "get", []) { Type = load.Type }
         : new RsMethodCall(new RsMethodCall(field, "borrow", []), "clone", []) { Type = load.Type };
@@ -314,13 +360,15 @@ public static partial class RustEmitter {
     /// then <c>*o.f.borrow_mut() = v</c>, so that no borrow the value takes is still held.
     /// </summary>
     private void ObjectFieldStore(IrFieldStore store, List<RsStatement> into) {
-      var field = new RsField(this.ObjectReceiver(store.Target), this.FieldName(store.Field));
+      var field = this.FieldCell(store.Target, store.Field);
       if (IsCellField(store.Field)) {
         into.Add(new RsExpressionStatement(new RsMethodCall(field, "set", [this.Expression(store.Value)])));
         return;
       }
 
-      var value = store.Field.Type.IsObject ? this.ObjectValue(store.Value, true) : this.StringValue(store.Value);
+      var value = store.Field.Type.IsObject ? this.ObjectValue(store.Value, true, store.Field.Type)
+        : store.Field.Type.IsArray ? this.Vector(store.Value, false)
+        : this.StringValue(store.Value);
       if (IrTree.Nodes(store.Value).Any(node => node is IrFieldLoad or IrCall)) {
         var name = RustNames.Unique(["value"], name => name, this._taken)[0];
         into.Add(new RsLet(name, false, null, value));
@@ -330,11 +378,18 @@ public static partial class RustEmitter {
       into.Add(new RsExpressionStatement(new RsAssign(new RsUnary("*", new RsMethodCall(field, "borrow_mut", [])), "=", value)));
     }
 
+    /// <summary>An array a field of an object holds, borrowed from its <c>RefCell</c>: <c>o.f.borrow()</c>, <c>o.f.borrow_mut()</c>.</summary>
+    private RsExpression FieldArray(IrFieldLoad load, bool mutable)
+      => new RsMethodCall(this.FieldCell(load.Target, load.Field), mutable ? "borrow_mut" : "borrow", []) { Type = load.Type };
+
+    /// <summary>Whether an array is the one a field of an object holds.</summary>
+    private static bool IsFieldArray(IrExpr array) => array is IrFieldLoad { Target.Type.IsObject: true };
+
     /// <summary>A call of a member of a class: <c>Name::new(..)</c>, <c>Name::f(..)</c>, <c>object.f(..)</c>.</summary>
     private RsExpression MemberCall(IrCall call, Member member) {
       var arguments = this.Arguments(call);
       if (member.Kind != MemberKind.Instance)
-        return new RsCall(new RsPath($"{this._types[member.Class]}::{member.Name}"), arguments) { Type = call.Type };
+        return new RsCall(new RsPath($"{this.StructName(member.Class)}::{member.Name}"), arguments) { Type = call.Type };
 
       var receiver = this._sharedSelf.Contains(call.Function) ? this.Receiver(this.ObjectBorrow(call.Arguments[0])) : this.ObjectReceiver(call.Arguments[0]);
       return new RsMethodCall(receiver, member.Name, [.. arguments.Skip(1)]) { Type = call.Type };
@@ -350,8 +405,6 @@ public static partial class RustEmitter {
     private IEnumerable<RsItem> Class(IrClassType type, IReadOnlyDictionary<string, RsFunction> written) {
       this._construct = $"the class '{type.Name}'";
       var name = this._types[type];
-      if (type.Base is not null || type.Interfaces.Count > 0 || this._classes.Any(other => other.Base == type))
-        this.Refuse("inheritance");
 
       var fields = type.AllFields.Select(field => new RsFieldDeclaration(this.FieldName(field), "", this.ClassFieldType(field))).ToList();
       var derives = new List<string> { "Default" };
@@ -375,10 +428,21 @@ public static partial class RustEmitter {
 
     /// <summary><c>pub fn new(..) -&gt; Rc&lt;Self&gt;</c>: the object made with every field at its default, the constructor's body run on it.</summary>
     private RsFunction Maker(RsFunction written, Member member) {
-      var init = this._members.First(pair => pair.Value.Kind == MemberKind.Instance && pair.Value.Constructor == member.Constructor).Value;
       var self = new RsPath("this");
-      var make = new RsLet("this", false, null, new RsCall(new RsPath("Rc::new"), [new RsCall(new RsPath("Self::default"), [])]));
-      var run = new RsExpressionStatement(new RsMethodCall(self, init.Name, [.. written.Parameters.Select(parameter => (RsExpression)new RsPath(parameter.Name))]));
+      // A class without fields is a unit struct, which is its own value (clippy's default_constructed_unit_structs).
+      RsExpression empty = member.Class.AllFields.Count == 0 ? new RsPath("Self") : new RsCall(new RsPath("Self::default"), []);
+      var make = new RsLet("this", false, null, new RsCall(new RsPath("Rc::new"), [empty]));
+      var arguments = written.Parameters.Select(parameter => (RsExpression)new RsPath(parameter.Name)).ToList();
+      RsStatement run;
+      if (this._free.TryGetValue(member.Constructor!.Function, out var owner)) {
+        // The constructor of a hierarchy is a function of the module, generic over the class's trait where it has one.
+        var target = this._traits.Contains(owner) ? new RsReference(false, new RsUnary("*", self)) : new RsReference(false, self);
+        run = new RsExpressionStatement(new RsCall(new RsPath(this._functions[member.Constructor.Function]), [target, .. arguments]));
+      } else {
+        var init = this._members.First(pair => pair.Value.Kind == MemberKind.Instance && pair.Value.Constructor == member.Constructor).Value;
+        run = new RsExpressionStatement(new RsMethodCall(self, init.Name, arguments));
+      }
+
       return written with { Visibility = "pub", Returns = "Rc<Self>", Body = new RsBlock([make, run], self) };
     }
 

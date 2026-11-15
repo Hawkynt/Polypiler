@@ -118,6 +118,8 @@ public static partial class RustEmitter {
           return new RsMethodCall(new RsPath(this._locals[local]), "to_vec", []) { Type = array.Type };
         case IrCall call when this._arrays.TryGetValue(call.Function, out var callee) && callee.Result == ArrayHolder.Owned:
           return this.Expression(call);
+        case IrFieldLoad { Target.Type.IsObject: true } load:
+          return new RsMethodCall(this.FieldArray(load, false), "clone", []) { Type = array.Type };
         case IrIntrinsic { Op: IrIntrinsicOp.StrSplit or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues }:
           return this.Expression(array);
         case IrCall call:
@@ -136,6 +138,8 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Borrow(IrExpr array, bool mutable) {
       switch (array) {
+        case IrFieldLoad { Target.Type.IsObject: true } load:
+          return new RsReference(mutable, this.FieldArray(load, mutable)) { Type = array.Type };
         case IrLocalRef { Local: var local } when this.IsReference(local):
           return new RsPath(this._locals[local]) { Type = array.Type };
         case IrLocalRef reference:
@@ -161,6 +165,7 @@ public static partial class RustEmitter {
     /// <summary>An array as the target of an index or a method: a variable or a table as it is, a literal as an array, anything else borrowed.</summary>
     private RsExpression ArrayTarget(IrExpr array, bool mutable = false) => array switch {
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = array.Type },
+      IrFieldLoad { Target.Type.IsObject: true } load => this.FieldArray(load, mutable),
       IrConstRef table when this._constants.TryGetValue(table.Constant.Name, out var name) => new RsPath(name) { Type = array.Type },
       IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal when !mutable => new RsArray([.. literal.Arguments.Select(argument => Suffixed(this.Expression(argument)))]) { Type = array.Type },
       IrCall => this.Expression(array),
@@ -239,12 +244,20 @@ public static partial class RustEmitter {
         if (!step.Postfix)
           into.Add(new RsLet(name, false, null, this.Index(counter)));
         index = new RsPath(name);
-      } else if (store.Index is not (IrLocalRef or IrConst) && (store.Value is not (IrLocalRef or IrConst or IrConstRef) || HasEffect(store.Index))) {
+      } else if (store.Index is not (IrLocalRef or IrConst) && (store.Value is not (IrLocalRef or IrConst or IrConstRef) || HasEffect(store.Index) || IsFieldArray(store.Array))) {
         var name = this.Temporary("index");
         into.Add(new RsLet(name, false, null, this.Index(store.Index)));
         index = new RsPath(name);
       } else {
         index = this.Index(store.Index);
+      }
+
+      // The value of an element of a field first, so that it holds no borrow of the field when the element is written.
+      if (IsFieldArray(store.Array) && store.Value is not (IrLocalRef or IrConst or IrConstRef)) {
+        var name = this.Temporary("value");
+        into.Add(new RsLet(name, false, null, this.ElementValue(store.Value)));
+        into.Add(new RsExpressionStatement(new RsAssign(new RsIndex(target, index) { Type = store.Value.Type }, "=", new RsPath(name))));
+        return;
       }
 
       var element = new RsIndex(target, index) { Type = store.Value.Type };

@@ -47,7 +47,7 @@ public static partial class RustEmitter {
       this._module = module;
       var moduleName = ModuleName(module.Name, this._profile);
       var package = this._options.PackageName ?? moduleName;
-      foreach (var type in module.Types.Where(type => type is not (IrStructType or IrEnumType or IrClassType)))
+      foreach (var type in module.Types.Where(type => type is not (IrStructType or IrEnumType or IrClassType or IrInterfaceType)))
         this.Refuse($"declared types ({Kind(type)})");
 
       this.NameItems(module);
@@ -63,14 +63,17 @@ public static partial class RustEmitter {
       var written = module.Functions.Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
       var members = written.Where(pair => this._members.ContainsKey(pair.Source.Name))
         .ToDictionary(pair => pair.Source.Name, pair => this.AsMember(pair.Written, pair.Source, this._members[pair.Source.Name]), StringComparer.Ordinal);
-      var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name)).Select(pair => pair.Written).ToList();
+      var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name) && !this._bodiless.Contains(pair.Source.Name)).Select(pair => pair.Written).ToList();
+      this._written = members;
       foreach (var type in module.Types)
         items.AddRange(type switch {
           IrStructType structType => this.Struct(structType),
           IrEnumType enumType => this.EnumItems(enumType),
-          IrClassType classType when !classType.IsLibrary => this.Class(classType, members),
+          IrClassType classType when !classType.IsLibrary && !this._hierarchy.Contains(classType) => this.Class(classType, members),
           _ => []
         });
+
+      items.AddRange(this.HierarchyItems());
 
       this._construct = "the module";
       items.InsertRange(0, this._uses.Select(path => new RsUse(path)));
@@ -108,7 +111,7 @@ public static partial class RustEmitter {
     private void NameItems(IrModule module) {
       var taken = new HashSet<string>(StringComparer.Ordinal);
       var exported = new Dictionary<string, string>(StringComparer.Ordinal);
-      foreach (var function in module.Functions.Where(function => function.IsPublic)) {
+      foreach (var function in module.Functions.Where(function => function.IsPublic && !IrGenerics.IsInstance(function.Name))) {
         var name = RustNames.Snake(function.Name, this.Edition);
         if (exported.TryGetValue(name, out var other)) {
           this._problems.Add(ExportCollisionDescriptor.At($"exported names '{other}' and '{function.Name}' both map to '{name}'"));
@@ -121,13 +124,25 @@ public static partial class RustEmitter {
       }
 
       // A colliding export, refused above, is named like a private function so that the rest can still be checked.
-      var others = module.Functions.Where(function => !this._functions.ContainsKey(function.Name)).Select(function => function.Name).ToList();
-      foreach (var (name, rust) in others.Zip(RustNames.Unique(others, name => RustNames.Snake(name, this.Edition), taken)))
-        this._functions[name] = rust;
+      var others = module.Functions.Where(function => !this._functions.ContainsKey(function.Name)).ToList();
+      foreach (var (function, rust) in others.Zip(RustNames.Unique([.. others.Select(function => function.Name)], name => this.FunctionName(others.First(other => other.Name == name)), taken)))
+        this._functions[function.Name] = rust;
 
       var constants = module.Constants.Select(constant => constant.Name).ToList();
       foreach (var (name, rust) in constants.Zip(RustNames.Unique(constants, name => RustNames.Screaming(name, this.Edition), new HashSet<string>(StringComparer.Ordinal))))
         this._constants[name] = rust;
+    }
+
+    /// <summary>
+    /// The name of a function that is no export: its own in snake case; an instantiation of a generic
+    /// method, <c>Max&lt;f64&gt;</c>, the method's with its type arguments after it, <c>max_f64</c>.
+    /// </summary>
+    private string FunctionName(IrFunction function) {
+      if (function.Origin is not { } origin || !IrGenerics.IsInstance(function.Name))
+        return RustNames.Snake(function.Name, this.Edition);
+
+      var arguments = origin.TypeArguments.Select(type => TypeName(type) ?? RustNames.Snake(type.Declaration?.Name[(type.Declaration.Name.LastIndexOf('.') + 1)..] ?? type.ToString(), this.Edition).Replace("r#", "", StringComparison.Ordinal));
+      return RustNames.Snake(IrGenerics.SourceName(function.Name), this.Edition) + "_" + string.Join("_", arguments);
     }
 
     /// <summary>A constant of the module: a scalar, or a table as an array constant.</summary>

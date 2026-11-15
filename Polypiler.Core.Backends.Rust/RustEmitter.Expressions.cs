@@ -122,8 +122,13 @@ public static partial class RustEmitter {
       IrStructDefault creation when creation.Type.StructType is not null => new RsCall(new RsPath(this.Type(creation.Type) + "::default"), []) { Type = creation.Type },
       IrFieldLoad load when load.Target.Type.IsStruct => new RsField(this.Place(load.Target, false), this.FieldName(load.Field)) { Type = load.Type },
       IrFieldLoad load when load.Target.Type.IsObject => this.ObjectField(load),
+      IrMethodCall { Kind: IrMethodCallKind.Virtual or IrMethodCallKind.Interface, Target: not null } call => this.VirtualCall(call),
+      IrTypeTest test => this.TypeTest(test.Value, test.Target),
+      IrCast { Type.IsObject: true } or IrAsCast { Type.IsObject: true } => this.Object(expression).Expression,
       IrStructEquals equality when equality.Left.Type.IsObject || equality.Right.Type.IsObject => this.ObjectEquals(equality.Left, equality.Right),
       IrReferenceEquals equality => this.SameObject(equality.Left, equality.Right),
+      IrGenericEquals equality => this.GenericEquals(equality),
+      IrGenericCompare comparison => this.GenericCompare(comparison),
       IrIsNull test when test.Value.Type.IsObject => this.IsNull(test.Value),
       IrNull { Type.IsObject: true } => new RsPath("None") { Type = expression.Type },
       IrGlobalRef global when !global.Type.IsArray => this.GlobalValue(global),
@@ -131,6 +136,45 @@ public static partial class RustEmitter {
       IrThrowExpression thrown => this.Throw(thrown.Exception),
       _ => this.Refuse(expression.GetType().Name[2..])
     };
+
+    /// <summary>
+    /// The equality of a generic definition at its instantiated type: the operator of integers and
+    /// truth values; of floating-point numbers <c>ply_same_value</c>, under which a NaN equals a NaN
+    /// and the zeros are equal; identity of objects, the fields of a record.
+    /// </summary>
+    private RsExpression GenericEquals(IrGenericEquals equality) {
+      var type = equality.Left.Type;
+      if (type.IsObject)
+        return type.ClassType is { IsRecord: true } ? this.ObjectEquals(equality.Left, equality.Right) : this.SameObject(equality.Left, equality.Right);
+      if (type.IsFloat)
+        return new RsCall(new RsPath(this.StringHelper(type == IrType.F32 ? "ply_same_value_f32" : "ply_same_value_f64")), [this.Expression(equality.Left), this.Expression(equality.Right)]) { Type = IrType.Bool };
+      if (TypeName(type) is null)
+        return this.Refuse($"the equality of a generic definition at {type}");
+
+      return this.Binary(this.Expression(equality.Left), "==", this.Expression(equality.Right), IrType.Bool);
+    }
+
+    /// <summary>
+    /// The order of a generic definition at its instantiated type, as .NET's <c>CompareTo</c> gives it:
+    /// the difference of two values of a type narrower than <c>int</c>; -1, 0 or 1 of a wider integer
+    /// or a truth value, <c>Ordering as i32</c>; of floating-point numbers <c>ply_compare</c>, which puts a NaN below every number.
+    /// </summary>
+    private RsExpression GenericCompare(IrGenericCompare comparison) {
+      var type = comparison.Left.Type;
+      var left = this.Expression(comparison.Left);
+      var right = this.Expression(comparison.Right);
+      if (type.IsInteger && type.Bits < 32) {
+        RsExpression Wide(RsExpression value) => new RsCall(new RsPath("i32::from"), [Suffixed(value)]) { Type = IrType.I32 };
+        return this.Binary(Wide(left), "-", Wide(right), IrType.I32);
+      }
+
+      if (type.IsFloat)
+        return new RsCall(new RsPath(this.StringHelper(type == IrType.F32 ? "ply_compare_f32" : "ply_compare_f64")), [left, right]) { Type = IrType.I32 };
+      if (TypeName(type) is null)
+        return this.Refuse($"the order of a generic definition at {type}");
+
+      return new RsCast(new RsMethodCall(this.Receiver(left), "cmp", [new RsReference(false, right)]), "i32") { Type = IrType.I32 };
+    }
 
     /// <summary>An index into a table: <c>usize</c>, a negative one becoming one no table reaches.</summary>
     private RsExpression Index(IrExpr index) => index is IrConst { Value: >= 0 } constant
@@ -170,6 +214,8 @@ public static partial class RustEmitter {
           return this.Expression(inner.Operand);
         case IrConst { Type.Kind: IrTypeKind.Bool } constant:
           return Literal(new IrConst(IrType.Bool, constant.Value == 0 ? 1 : 0));
+        case IrTypeTest test when test.Value.Type.IsAssignableTo(test.Target) && this.MayBeNull(test.Value):
+          return this.IsNull(test.Value);
         case IrBinary { Op: IrBinaryOp.Equal or IrBinaryOp.NotEqual } equality:
           return this.Binary(equality with { Op = equality.Op == IrBinaryOp.Equal ? IrBinaryOp.NotEqual : IrBinaryOp.Equal });
         case IrBinary { Op: >= IrBinaryOp.Less and <= IrBinaryOp.GreaterOrEqual } order when !order.Left.Type.IsFloat:

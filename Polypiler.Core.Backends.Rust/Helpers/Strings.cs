@@ -255,6 +255,54 @@ internal static class Strings {
           value.as_ref().expect("NullReference")
       }
       """, []),
+    ["ply_cast"] = ("""
+      fn ply_cast<T: ?Sized, U: ?Sized>(value: Option<Rc<T>>, cast: fn(Rc<T>) -> Option<Rc<U>>) -> Option<Rc<U>> {
+          match value.map(cast) {
+              Some(None) => panic!("InvalidCast"),
+              cast => cast.flatten(),
+          }
+      }
+      """, []),
+    ["ply_same_value_f64"] = ("""
+      fn ply_same_value_f64(a: f64, b: f64) -> bool {
+          a == b || (a.is_nan() && b.is_nan())
+      }
+      """, []),
+    ["ply_same_value_f32"] = ("""
+      fn ply_same_value_f32(a: f32, b: f32) -> bool {
+          a == b || (a.is_nan() && b.is_nan())
+      }
+      """, []),
+    ["ply_compare_f64"] = ("""
+      fn ply_compare_f64(a: f64, b: f64) -> i32 {
+          if a < b {
+              -1
+          } else if a > b {
+              1
+          } else if a == b || (a.is_nan() && b.is_nan()) {
+              0
+          } else if a.is_nan() {
+              -1
+          } else {
+              1
+          }
+      }
+      """, []),
+    ["ply_compare_f32"] = ("""
+      fn ply_compare_f32(a: f32, b: f32) -> i32 {
+          if a < b {
+              -1
+          } else if a > b {
+              1
+          } else if a == b || (a.is_nan() && b.is_nan()) {
+              0
+          } else if a.is_nan() {
+              -1
+          } else {
+              1
+          }
+      }
+      """, []),
     ["ply_layout"] = ("""
       fn ply_layout(scientific: &str, negative: bool, ecma: bool, high: i32) -> Vec<u16> {
           let at = scientific.find('e').unwrap_or(scientific.len());

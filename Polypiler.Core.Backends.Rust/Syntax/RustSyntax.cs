@@ -187,6 +187,9 @@ public sealed record RsBlock(IReadOnlyList<RsStatement> Statements, RsExpression
   /// <summary>A block with neither statements nor a value.</summary>
   public static RsBlock Empty { get; } = new([], null);
 
+  /// <summary>Whether the block stands for no body at all, the <c>;</c> of a required method of a trait.</summary>
+  public bool IsDeclaration { get; init; }
+
 }
 
 #endregion
@@ -276,6 +279,13 @@ public sealed record RsStruct(string Name, string Visibility, IReadOnlyList<RsFi
 /// <param name="TypeName">The type the items belong to.</param>
 /// <param name="Items">The items: functions and constants.</param>
 public sealed record RsImpl(string? Trait, string TypeName, IReadOnlyList<RsItem> Items) : RsItem;
+
+/// <summary><c>pub trait Name: Super + Other { items }</c>.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Visibility">The visibility as written.</param>
+/// <param name="Supertraits">The traits every type of this one has.</param>
+/// <param name="Items">The methods, a required one with a declaration block (<see cref="RsBlock.IsDeclaration"/>).</param>
+public sealed record RsTrait(string Name, string Visibility, IReadOnlyList<string> Supertraits, IReadOnlyList<RsItem> Items) : RsItem;
 
 /// <summary><c>pub mod name;</c>, the declaration of a module whose items are in a file of its own.</summary>
 /// <param name="Name">The module.</param>

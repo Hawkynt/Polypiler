@@ -117,6 +117,16 @@ public static class RustPrinter {
           text.Append(pad).Append(' ', Indent).Append(Visibility(field.Visibility)).Append(field.Name).Append(": ").Append(field.TypeName).Append(",\n");
         text.Append(pad).Append("}\n");
         break;
+      case RsTrait trait:
+        text.Append(pad).Append(Visibility(trait.Visibility)).Append("trait ").Append(trait.Name)
+          .Append(trait.Supertraits.Count == 0 ? "" : ": " + string.Join(" + ", trait.Supertraits))
+          .Append(trait.Items.Count == 0 ? " {}\n" : " {\n");
+        if (trait.Items.Count > 0) {
+          Items(text, trait.Items, indent + Indent, false);
+          text.Append(pad).Append("}\n");
+        }
+
+        break;
       case RsImpl implementation:
         text.Append(pad).Append("impl ").Append(implementation.Trait is null ? "" : implementation.Trait + " for ").Append(implementation.TypeName)
           .Append(implementation.Items.Count == 0 ? " {}\n" : " {\n");
@@ -157,14 +167,15 @@ public static class RustPrinter {
     var result = function.Returns is null ? "" : " -> " + function.Returns;
     var parameters = string.Join(", ", function.Parameters.Select(Parameter));
     var empty = function.Body.Statements.Count == 0 && function.Body.Tail is null;
-    var line = head + parameters + ")" + result + (empty ? " {}" : " {");
+    var close = function.Body.IsDeclaration ? ";" : empty ? " {}" : " {";
+    var line = head + parameters + ")" + result + close;
     if (line.Length <= MaxWidth || function.Parameters.Count == 0)
       text.Append(line);
     else {
       text.Append(head).Append('\n');
       foreach (var parameter in function.Parameters)
         text.Append(pad).Append(' ', Indent).Append(Parameter(parameter)).Append(",\n");
-      text.Append(pad).Append(')').Append(result).Append(empty ? " {}" : " {");
+      text.Append(pad).Append(')').Append(result).Append(close);
     }
 
     if (empty) {

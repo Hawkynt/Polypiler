@@ -29,7 +29,7 @@ public static class RustSyntaxReader {
 
   private static readonly string[] _punctuation = [
     "<<=", ">>=", "..=", "::", "->", "=>", "==", "!=", "<=", ">=", "&&", "||", "<<", ">>", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "..",
-    "+", "-", "*", "/", "%", "^", "!", "&", "|", "=", "<", ">", "(", ")", "[", "]", "{", "}", ",", ";", ":", ".", "_", "#"
+    "+", "-", "*", "/", "%", "^", "!", "&", "|", "=", "<", ">", "(", ")", "[", "]", "{", "}", ",", ";", ":", ".", "_", "#", "?"
   ];
 
   private static List<Token> Tokenize(string text) {
@@ -231,6 +231,20 @@ public static class RustSyntaxReader {
         }
       } else if (this.Accept("struct")) {
         item = this.Struct(visibility);
+      } else if (this.Accept("trait")) {
+        var name = this.Identifier();
+        var supertraits = new List<string>();
+        if (this.Accept(":")) {
+          supertraits.Add(this.Identifier());
+          while (this.Accept("+"))
+            supertraits.Add(this.Identifier());
+        }
+
+        this.Expect("{");
+        var items = new List<RsItem>();
+        while (!this.Accept("}"))
+          items.Add(this.Item());
+        item = new RsTrait(name, visibility, supertraits, items);
       } else if (this.Accept("impl")) {
         var first = this.TypeText(true);
         string? trait = null;
@@ -314,7 +328,9 @@ public static class RustSyntaxReader {
       if (this.Accept("->"))
         returns = this.TypeText();
 
-      return new RsFunction(name, visibility, parameters, returns, this.Block()) { Generics = generics };
+      // A required method of a trait has no body: a declaration block.
+      var body = this.Accept(";") ? new RsBlock([], null) { IsDeclaration = true } : this.Block();
+      return new RsFunction(name, visibility, parameters, returns, body) { Generics = generics };
     }
 
     /// <summary>
@@ -338,7 +354,7 @@ public static class RustSyntaxReader {
         else if (token.Text == "->")
           text.Append(" -> ");
         else
-          text.Append(token.Text).Append(token.Text is ";" or "," or ":" or "mut" or "dyn" or "impl" ? " " : "");
+          text.Append(token.Text == "+" ? " + " : token.Text).Append(token.Text is ";" or "," or ":" or "mut" or "dyn" or "impl" ? " " : "");
 
         if (generics && depth == 0)
           return text.ToString();
@@ -448,7 +464,7 @@ public static class RustSyntaxReader {
         return new RsRange(null, this.RangeEnd() ? null : this.Expression(3), inclusive);
       }
 
-      if (this.Is("-") || this.Is("!") || this.Is("&")) {
+      if (this.Is("-") || this.Is("!") || this.Is("&") || this.Is("*")) {
         var op = this.Next().Text;
         var mutable = op == "&" && this.Accept("mut");
         var operand = this.Postfix(this.Prefix13());
@@ -460,7 +476,7 @@ public static class RustSyntaxReader {
 
     /// <summary>The operand of a prefix operator: another prefix operator, or a primary with its postfix forms.</summary>
     private RsExpression Prefix13() {
-      if (this.Is("-") || this.Is("!") || this.Is("&")) {
+      if (this.Is("-") || this.Is("!") || this.Is("&") || this.Is("*")) {
         var op = this.Next().Text;
         var mutable = op == "&" && this.Accept("mut");
         var operand = this.Postfix(this.Prefix13());

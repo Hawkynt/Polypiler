@@ -64,7 +64,18 @@ public static partial class RustEmitter {
       if (member is { Kind: MemberKind.Instance })
         this._locals[function.Parameters[0]] = "self";
 
+      if (this._bodiless.Contains(function.Name))
+        return new RsFunction(name, "", [], null, RsBlock.Empty);
+
       var parameters = function.Parameters.Select((parameter, index) => new RsParameter(this._locals[parameter], this.ParameterType(function, index))).ToList();
+      var generics = "";
+      if (this._free.TryGetValue(function.Name, out var owner)) {
+        // The object of a method of a hierarchy: a reference to its struct, or to any type of its class's trait.
+        var polymorphic = this._traits.Contains(owner);
+        parameters[0] = parameters[0] with { TypeName = polymorphic ? "&T" : "&" + this.StructName(owner) };
+        generics = polymorphic ? $"<T: {this._types[owner]} + ?Sized>" : "";
+      }
+
       if (member is { Kind: MemberKind.Maker })
         return this.Maker(new RsFunction(name, "pub", parameters, null, new RsBlock([], null)), member);
 
@@ -83,7 +94,7 @@ public static partial class RustEmitter {
 
       this.Statements(function.Body.Statements, statements);
       var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void);
-      return new RsFunction(name, function.IsPublic ? "pub" : "", parameters, returns, body) { Generics = Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
+      return new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) { Generics = generics.Length > 0 ? generics : Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
     }
 
     /// <summary>The function being written.</summary>
