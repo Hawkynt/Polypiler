@@ -116,7 +116,21 @@ public static class CSharpFrontend {
   /// <param name="instantiations">The instantiations to lower besides those the module uses.</param>
   /// <returns>The module, or the diagnostics that explain why there is none.</returns>
   /// <exception cref="ArgumentException">An instantiation names no generic method of the class, a type that is no type, or another number of type arguments.</exception>
-  public static ImportResult Import(IReadOnlyList<CSharpSource> files, bool checkedByDefault, IReadOnlyList<CSharpInstantiation> instantiations) {
+  public static ImportResult Import(IReadOnlyList<CSharpSource> files, bool checkedByDefault, IReadOnlyList<CSharpInstantiation> instantiations)
+    => Import(files, checkedByDefault, instantiations, new Dictionary<string, IrIntrinsicOp>());
+
+  /// <summary>
+  /// Imports a library of Polypiler's own: the files as <see cref="Import(IReadOnlyList{CSharpSource}, bool)"/>
+  /// imports them, the methods <paramref name="intrinsics"/> names being operations of the IR - a call of
+  /// one is the operation, and the method is no function of the module.
+  /// </summary>
+  /// <param name="files">The files of the library, each declaring part of one static class.</param>
+  /// <param name="intrinsics">The methods that stand for an operation of the IR, by their names.</param>
+  /// <returns>The module, or the diagnostics of what keeps it from being imported.</returns>
+  public static ImportResult ImportLibrary(IReadOnlyList<CSharpSource> files, IReadOnlyDictionary<string, IrIntrinsicOp> intrinsics)
+    => Import(files, false, [], intrinsics);
+
+  private static ImportResult Import(IReadOnlyList<CSharpSource> files, bool checkedByDefault, IReadOnlyList<CSharpInstantiation> instantiations, IReadOnlyDictionary<string, IrIntrinsicOp> intrinsics) {
     ArgumentNullException.ThrowIfNull(instantiations);
     var trees = files
       .Select(file => CSharpSyntaxTree.ParseText(file.Text, new CSharpParseOptions(LanguageVersion.Latest), file.Path))
@@ -142,7 +156,7 @@ public static class CSharpFrontend {
       return new(null, errors);
 
     var parts = trees.Select(tree => (tree.FilePath, new BoundModel(compilation.GetSemanticModel(tree)), tree.GetCompilationUnitRoot())).ToList();
-    return new Lowering(parts[0].FilePath, parts[0].Item2) { Requested = instantiations }.Run(parts);
+    return new Lowering(parts[0].FilePath, parts[0].Item2) { Requested = instantiations, Intrinsics = intrinsics }.Run(parts);
   }
 
   /// <summary>

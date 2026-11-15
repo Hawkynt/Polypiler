@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.String;
 
@@ -23,8 +24,8 @@ public sealed class JavaScriptNumberTextEmissionTests {
 
   private static string Emit(JavaScriptProfile profile, IrModule? module = null) {
     module ??= NumberTextModules.Operations;
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -78,7 +79,7 @@ public sealed class JavaScriptNumberTextEmissionTests {
   [Test]
   public void Header_NamesTheCaveatsOfTheImport() {
     var module = NumberTextModules.Operations with { Caveats = ["cs-invariant-culture"] };
-    Assert.That(JavaScriptEmitter.Emit(module, JavaScriptProfile.Parse("es2022")).Single().Content, Does.Contain("// Caveats of the import: cs-invariant-culture."));
+    Assert.That(LegalizedJavaScript.Emit(module, JavaScriptProfile.Parse("es2022")).Single().Content, Does.Contain("// Caveats of the import: cs-invariant-culture."));
   }
 
 }

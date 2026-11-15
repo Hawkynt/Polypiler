@@ -111,7 +111,12 @@ public sealed class CSharpHelperInlining : ITargetPass<CsCompilationUnit, CSharp
     if (!method.IsHelper || method.TypeParameters.Count > 0 || method.ReturnType == CsType.Void || method.Parameters.Any(parameter => parameter.Modifier is not null))
       return null;
 
-    var body = method.ExpressionBody ?? (method.Body is { Statements: [CsReturn { Value: { } value }] } ? value : null);
+    // A body that is one return - also one in a context of its own, which a helper of the library has where its arithmetic wraps - is one expression.
+    var body = method.ExpressionBody ?? method.Body switch {
+      { Statements: [CsReturn { Value: { } value }] } => value,
+      { Statements: [CsCheckedStatement { Block.Statements: [CsReturn { Value: { } inner }] } context] } => new CsCheckedExpression(context.Checked, inner) { Type = inner.Type },
+      _ => null
+    };
     if (body is null || CSharpTargetPasses.Size(body) > Budget(profile))
       return null;
 

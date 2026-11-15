@@ -10,6 +10,9 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Core.Optimize.Target;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
+using Polypiler.Core.Optimize;
+using Polypiler.Core.Optimize.Passes;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -233,8 +236,10 @@ public sealed class TranslateToCSharpTests {
     var text = File.ReadAllText(output.Trim());
     var parsed = CSharpProfile.Parse(profile ?? "net10.0", languageVersion);
     Assert.That(text, Does.Contain($"\n// Profile: {header}.\n"));
-    // translate runs the target passes, which the emitter runs when it is told to.
-    Assert.That(text, Is.EqualTo(CSharpEmitter.Emit(PrototypeFixture.Imported("wide/Library"), parsed, FloatMode.Accurate, "Demo", null, TargetPassOptions.Default).Files.Single().Content));
+    // translate legalizes, runs the passes over the legalized module and the target passes, which the emitter runs when it is told to.
+    var lowered = CSharpEmitter.Legalize(PrototypeFixture.Imported("wide/Library"), () => PrecomputedImplementations.Module, parsed, FloatMode.Accurate);
+    var optimized = IrPassPipeline.Default.Run(lowered, new OptimizerOptions()).Module;
+    Assert.That(text, Is.EqualTo(CSharpEmitter.Emit(optimized, parsed, FloatMode.Accurate, "Demo", null, TargetPassOptions.Default).Files.Single().Content));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, parsed.Name, parsed.LanguageVersionName), Is.Empty);
   }
 
@@ -254,9 +259,9 @@ public sealed class TranslateToCSharpTests {
   [Test]
   public void Emit_TakesTheProfileFromTheOptions() {
     var module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap("public static uint F(uint a) => System.Numerics.BitOperations.RotateLeft(a, 3);"));
-    var (exitCode, output, error) = this.Emit(module, ("--profile", "net4.6"), ("--langversion", "7.3"), ("--disable-opt", "O0500"));
+    var (exitCode, output, error) = this.Emit(module, ("--profile", "net4.6"), ("--langversion", "7.3"), ("--disable-opt", "O0006,O0500"));
     Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
-    Assert.That(File.ReadAllText(output.Trim()), Does.Contain("\n// Profile: net4.6, C# 7.3.\n").And.Contain("private static uint RotateLeft(uint value, int count) {"));
+    Assert.That(File.ReadAllText(output.Trim()), Does.Contain("\n// Profile: net4.6, C# 7.3.\n").And.Contain("private static uint RotateLeft32(uint value, int count) =>"));
   }
 
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
@@ -106,7 +107,7 @@ public sealed class SequenceTests {
   public void IteratorModule_RunsInNodeLikeTheInterpreter(ProfileCase profile) {
     var module = SequenceModules.Module();
     var calls = Calls();
-    var text = JavaScriptEmitter.Emit(module, profile.Parsed).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, profile.Parsed).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty, text);
     File.WriteAllText(Path.Combine(this._directory, module.Name + profile.Parsed.Extension), text);
     var outcomes = Toolchain.NodeOutcomes(this._directory, module.Name + profile.Parsed.Extension, calls, true, profile.Mode, profile.Global);

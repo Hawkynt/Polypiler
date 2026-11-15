@@ -15,22 +15,19 @@ public static partial class JavaScriptEmitter {
     /// comparison; a pair of halves has a helper per operation.
     /// </summary>
     private static IEnumerable<(IrIntrinsicOp, Func<Writer, IrIntrinsic, (JsExpression, bool)>)> CarryForms => [
-      (IrIntrinsicOp.AddCarry, (writer, intrinsic) => writer.Carried(intrinsic, "$adc64",
+      (IrIntrinsicOp.AddCarry, (writer, intrinsic) => writer.Carried(intrinsic,
         (sum, _) => writer.Typed(intrinsic.Type, Infix(Infix(sum.Left, "+", sum.Right), "+", sum.Bit)))),
-      (IrIntrinsicOp.CarryOut, (writer, intrinsic) => writer.Carried(intrinsic, "$adcout64",
+      (IrIntrinsicOp.CarryOut, (writer, intrinsic) => writer.Carried(intrinsic,
         (sum, max) => (Infix(Infix(Infix(sum.Left, "+", sum.Right), "+", sum.Bit), ">", max), false))),
-      (IrIntrinsicOp.SubBorrow, (writer, intrinsic) => writer.Carried(intrinsic, "$sbb64",
+      (IrIntrinsicOp.SubBorrow, (writer, intrinsic) => writer.Carried(intrinsic,
         (sum, _) => writer.Typed(intrinsic.Type, Infix(Infix(sum.Left, "-", sum.Right), "-", sum.Bit)))),
-      (IrIntrinsicOp.BorrowOut, (writer, intrinsic) => writer.Carried(intrinsic, "$sbbout64",
+      (IrIntrinsicOp.BorrowOut, (writer, intrinsic) => writer.Carried(intrinsic,
         (sum, _) => (Infix(sum.Left, "<", Infix(sum.Right, "+", sum.Bit)), false)))
     ];
 
     private (JsExpression, bool) Carried(
-      IrIntrinsic intrinsic, string halves, Func<(JsExpression Left, JsExpression Right, JsExpression Bit), JsExpression, (JsExpression, bool)> form) {
+      IrIntrinsic intrinsic, Func<(JsExpression Left, JsExpression Right, JsExpression Bit), JsExpression, (JsExpression, bool)> form) {
       var type = intrinsic.Arguments[0].Type;
-      if (this.AsHalves(type))
-        return this.Call(halves, intrinsic);
-
       JsExpression one = type.IsLong ? new JsBigInt(1) : Number("1");
       JsExpression zero = type.IsLong ? new JsBigInt(0) : Number("0");
       var bit = Parenthesized(new JsConditional(this.Operand(intrinsic.Arguments[2]), one, zero));

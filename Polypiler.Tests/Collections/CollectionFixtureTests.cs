@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Collections;
 
@@ -36,8 +37,8 @@ internal sealed class CollectionFixtureTests {
   public void EveryCSharpProfile_WritesTheFixture(string file) {
     var module = CollectionFixtures.Imported(file);
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile.Name}\n{text}");
     }
   }
@@ -47,8 +48,8 @@ internal sealed class CollectionFixtureTests {
   public void EveryJavaScriptLevel_WritesTheFixture(string file) {
     var module = CollectionFixtures.Imported(file);
     foreach (var profile in _levels) {
-      Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, profile.ToString());
-      var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+      Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, profile.ToString());
+      var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
       Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{profile}\n{text}");
     }
   }

@@ -13,13 +13,13 @@ internal static partial class CSharpIntegerRows {
   /// </summary>
   private static IEnumerable<CSharpCapability> Masks => [
     .. _all.SelectMany(kind => (IEnumerable<CSharpCapability>)[
-      Helped(IrIntrinsicOp.LowMask, kind, $"({Type(kind)}){{h}}({{0}}, {Digits(Width(kind))})", CSharpIntegerHelpers.LowMask),
-      Helped(IrIntrinsicOp.IsolateLowestSet, kind, $"({Type(kind)}){{h}}({Pattern(kind)})", CSharpIntegerHelpers.IsolateLowestSet),
-      Helped(IrIntrinsicOp.ClearLowestSet, kind, $"({Type(kind)}){{h}}({Pattern(kind)})", CSharpIntegerHelpers.ClearLowestSet),
-      Helped(IrIntrinsicOp.MaskToLowestSet, kind, $"({Type(kind)}){{h}}({Pattern(kind)})", CSharpIntegerHelpers.MaskToLowestSet),
-      Helped(IrIntrinsicOp.SignExtend, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {{1}}, {Digits(Width(kind))})", CSharpIntegerHelpers.SignExtend)
+      Helped(IrIntrinsicOp.LowMask, kind),
+      Helped(IrIntrinsicOp.IsolateLowestSet, kind),
+      Helped(IrIntrinsicOp.ClearLowestSet, kind),
+      Helped(IrIntrinsicOp.MaskToLowestSet, kind),
+      Helped(IrIntrinsicOp.SignExtend, kind)
         .WithTotal(new CSharpForm(null, Template: Extended(kind)), arguments => arguments[1] is IrConst bits && bits.Value >= 1 && bits.Value <= Width(kind)),
-      Helped(IrIntrinsicOp.ZeroExtend, kind, $"({Type(kind)}){{h}}({Pattern(kind)}, {{1}}, {Digits(Width(kind))})", CSharpIntegerHelpers.ZeroExtend)
+      Helped(IrIntrinsicOp.ZeroExtend, kind)
     ])
   ];
 

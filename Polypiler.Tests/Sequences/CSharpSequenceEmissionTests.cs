@@ -1,5 +1,6 @@
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
@@ -20,8 +21,8 @@ public sealed class CSharpSequenceEmissionTests {
     var calls = SequenceModules.Calls().Select(call => call with { Returns = call.Method == "Longs" ? typeof(long) : typeof(int) }).ToList();
     var expected = calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call)).ToList();
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile.Name}\n{text}");
       Assert.That(calls.Select(GeneratedCSharp.Compile(text, false).Outcome), Is.EqualTo(expected), $"{profile.Name}\n{text}");
     }
@@ -38,7 +39,7 @@ public sealed class CSharpSequenceEmissionTests {
 
   [Test]
   public void Iterator_IsAnIteratorMethod() {
-    var text = CSharpEmitter.Emit(SequenceModules.Module(), CSharpProfile.Parse("net2.0"))[0].Content;
+    var text = LegalizedCSharp.Emit(SequenceModules.Module(), CSharpProfile.Parse("net2.0"))[0].Content;
     Assert.That(text, Does.Contain("static global::System.Collections.Generic.IEnumerable<int> Traced(int[] t)"));
     Assert.That(text, Does.Contain("yield return 1;"));
     Assert.That(text, Does.Contain("yield break;"));

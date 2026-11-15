@@ -1095,11 +1095,19 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   public IReadOnlyList<IrTypeDeclaration> Types { get; init; } = [];
 
   /// <summary>
-  /// The functions legalization copied into the module from the portable floating-point
-  /// implementations: the name each has in the module and the name of the implementation it is, in the
-  /// order they were copied. A backend emits them as helpers (<see cref="FloatOperationSources.Origin"/>).
+  /// The functions legalization copied into the module from the libraries of Polypiler's own code -
+  /// the portable floating-point implementations and the helpers: the name each has in the module and
+  /// the name of the function in its library, in the order they were copied. A backend emits them as
+  /// helpers (<see cref="ImplementationSources.Origin"/>).
   /// </summary>
   public IReadOnlyList<(string Function, string Implementation)> Implementations { get; init; } = [];
+
+  /// <summary>
+  /// The functions of the libraries whose code an optimization copied into a function of the module,
+  /// by their names in their libraries, each once: the code stays in the output where the function
+  /// itself may be gone, so its notices stay too (<see cref="ImplementationSources.Notices"/>).
+  /// </summary>
+  public IReadOnlyList<string> Inlined { get; init; } = [];
 
   /// <summary>
   /// The globals of the module, in source order, which is the order they are initialised in. Every

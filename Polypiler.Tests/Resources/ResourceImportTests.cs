@@ -11,6 +11,7 @@ using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Float.Support;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Resources;
 
@@ -95,7 +96,7 @@ internal sealed class ResourceImportTests {
     Assert.That(IrInterpreter.Call(module, "F", [false]), Is.EqualTo(1));
     Assert.That(IrInterpreter.Call(module, "F", [true]), Is.EqualTo(0));
     foreach (var profile in new[] { CSharpProfile.Net20, CSharpProfile.Net100 }) {
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
       Assert.That(text, Does.Contain("using (global::System.IDisposable d = "), text);
     }
@@ -109,7 +110,7 @@ internal sealed class ResourceImportTests {
     var inner = (IrBlock)function.Body.Statements[1];
     var moved = function with { Body = new IrBlock([function.Body.Statements[0], new IrBlock([.. inner.Statements, new IrExprStmt(new IrConst(IrType.I32, 0))]), .. function.Body.Statements.Skip(2)]) };
     module = module with { Functions = [.. module.Functions.Select(candidate => candidate == function ? moved : candidate)] };
-    var text = CSharpEmitter.Emit(module, CSharpProfile.Net100)[0].Content;
+    var text = LegalizedCSharp.Emit(module, CSharpProfile.Net100)[0].Content;
     Assert.That(text, Does.Contain("using (var r = new R(log)) {").And.Not.Contain("using var"), text);
   }
 
@@ -120,7 +121,7 @@ internal sealed class ResourceImportTests {
     Assert.That(IrInterpreter.Call(module, "F", [1]), Is.EqualTo(40));
     Assert.That(IrInterpreter.Call(module, "F", [2]), Is.EqualTo(101));
     foreach (var profile in new[] { CSharpProfile.Net20, CSharpProfile.Net100 }) {
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
       Assert.That(GeneratedCSharp.Compile(text, false).Outcome(new PrototypeCall("F", [1])), Is.EqualTo("40"), text);
     }
@@ -197,7 +198,7 @@ internal sealed class ResourceImportTests {
   [Test]
   public void Scope_SurvivesThePasses() {
     var module = CSharp(Resource + "public static class C { public static double F(double x) { var log = new int[1]; using (var r = new R(log)) { uint u = (uint)log[0]; u = (u << 3) | (u >> 29); x = System.Math.Sin(x) + u + log[0]; } return x + log[0]; } }");
-    var text = JavaScriptEmitter.Emit(module, JavaScriptProfile.Parse("es2022", "esm")).Single().Content;
+    var text = LegalizedJavaScript.Emit(module, JavaScriptProfile.Parse("es2022", "esm")).Single().Content;
     Assert.That(text, Does.Contain("const r = new R(log);").And.Contain("if (r != null) r.Dispose();"), text);
     Assert.That(IrInterpreter.Call(module, "F", [0.0]), Is.EqualTo(1.0));
     var optimized = Polypiler.Core.Optimize.Optimizer.Run(module, new Polypiler.Core.Optimize.OptimizerOptions()).Module;

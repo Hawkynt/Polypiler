@@ -11,6 +11,7 @@ using Polypiler.Core.Verification.Manifests;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Acceptance.Support;
 using Reqnroll;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
 
@@ -82,7 +83,7 @@ public sealed class CSharpScopesSteps(PrototypeScenario scenario) {
 
   /// <summary>Emits the IR of the scenario as C# for a profile.</summary>
   [When(@"^it is emitted as C# for (\S+)$")]
-  public void EmittedFor(string profile) => this._text = CSharpEmitter.Emit(this._module!, CSharpProfile.Parse(profile)).Single().Content;
+  public void EmittedFor(string profile) => this._text = LegalizedCSharp.Emit(this._module!, CSharpProfile.Parse(profile)).Single().Content;
 
   /// <summary>The local declared inside the block has the name of the step, and the outer one keeps its own.</summary>
   [Then("^the inner local is written as " + StepText.Quoted + "$")]
@@ -97,7 +98,7 @@ public sealed class CSharpScopesSteps(PrototypeScenario scenario) {
     Assert.That(calls.Select(call => PrototypeFixture.InterpretedOutcome(this._module!, call)), Is.EqualTo(expected), "interpreter");
     Assert.That(calls.Select(call => Compiled(this._text, call)), Is.EqualTo(expected), "C#");
     foreach (var profile in new[] { new ProfileCase("es2022", "esm", false, null), new ProfileCase("es5", "cjs", false, null) }) {
-      var file = JavaScriptEmitter.Emit(this._module!, profile.Parsed).Single();
+      var file = LegalizedJavaScript.Emit(this._module!, profile.Parsed).Single();
       scenario.Workspace.Write(file.Path, file.Content);
       Assert.That(Toolchain.NodeOutcomes(scenario.Workspace.Path, file.Path, calls, true, profile.Mode), Is.EqualTo(expected), $"{profile}:\n{file.Content}");
     }

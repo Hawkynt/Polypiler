@@ -15,6 +15,13 @@ namespace Polypiler.Core.Frontends.CSharp;
 /// </summary>
 internal sealed partial class Lowering(string path, BoundModel model) {
 
+  /// <summary>
+  /// The methods of the class that stand for an operation of the IR, by their names: a call of one is
+  /// that operation, and the method itself is no function of the module. A library of Polypiler's own
+  /// names this way an operation C# has no method for, and gives it a body that computes it in .NET.
+  /// </summary>
+  public IReadOnlyDictionary<string, IrIntrinsicOp> Intrinsics { get; init; } = new Dictionary<string, IrIntrinsicOp>();
+
   private readonly List<Diagnostic> _diagnostics = [];
   private readonly Dictionary<ISymbol, IrLocal> _variables = new(SymbolEqualityComparer.Default);
   private readonly List<IrLocal> _locals = [];
@@ -106,6 +113,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
           if (!seen.Add(method.Identifier.Text))
             throw new UnsupportedException(method, "method overloading");
+
+          if (this.Intrinsics.ContainsKey(method.Identifier.Text))
+            continue;
 
           if (method.TypeParameterList is not null) {
             this.Generic(method);
@@ -1116,6 +1126,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       return number;
     if (this.StringCall(invocation, method, operands) is { } text)
       return text;
+
+    if (SymbolEqualityComparer.Default.Equals(method.ContainingType, this._class) && this.Intrinsics.TryGetValue(method.Name, out var standsFor))
+      return this.Exact(standsFor, type, operands) ?? throw new UnsupportedException(invocation, $"{standsFor} on these operands");
 
     if (SymbolEqualityComparer.Default.Equals(method.ContainingType, this._class))
       return new IrCall(method.IsGenericMethod ? this.Instance(method, invocation) : method.Name, type, operands.Select(this.Value).ToList());

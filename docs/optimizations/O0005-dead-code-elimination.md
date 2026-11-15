@@ -1,61 +1,83 @@
 # O0005 — Remove instructions whose results and effects are unobservable
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#156](https://github.com/Hawkynt/Polypiler/issues/156). Once implemented it is switched off with `--disable-opt O0005`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** `O0005DeadCode` runs among the passes over the legalized module ([#1353](https://github.com/Hawkynt/Polypiler/issues/1353)), over the library functions and every function a helper was inlined into, and removes the library functions nothing calls any more. Removal on SSA with effect summaries is its target state. Switched off with `--disable-opt O0005`.
 
 ## What it does
 
-Every other pass leaves debris: the operands of a folded expression, the copy GVN replaced, the temporaries of
-a recognized idiom. Unremoved, they are emitted, compiled and executed. DCE is also the pass most easily made
-wrong — the difference between "unused" and "unobservable" is exactly the set of effects PRD §17.1 lists.
-PRD §4.8 (DCE), §8 P1, §17.5 (stores to unknown memory, volatile reads).
+- A choice on a constant keeps the branch it takes - in a block of its own where the branch declares a
+  variable, whose scope must not grow - and a loop whose condition is false from the start goes.
+- Every statement after a return, a throw, a break or a continue in its block goes.
+- A variable nothing reads goes with its declaration and its assignments, where their values may go
+  unevaluated; an empty block, and an empty choice on such a value, goes.
+- A store into a variable its block declares goes where no later statement of the block reads it - the
+  last value of a counter an unrolled loop leaves - and so does the declaration no later statement
+  names, even where a variable of the same name in another block is read.
+- A nested block that declares nothing is spliced into the block around it.
+- A function legalization copied in from the libraries that nothing calls any more - everything it did
+  was inlined - goes, and with it its entry in `IrModule.Implementations`; its licence notice stays.
 
 ## Example
 
+A 64-bit big-endian load for `net2.0`, after inlining, propagation and unrolling.
+
 ### Before
 
-```
-%t = Mul.u32[wrap] %x, %x        // unused
-%u = Add.u32[wrap] %t, 1         // unused
-%d = UDiv.u32 %x, %y             // unused, traps when %y = 0
-%v = Load.u8[volatile] 0xD012    // unused, device read
-Ret.u32 %x
+With `--disable-opt O0005`:
+
+```csharp
+int index = 0;
+bool little = false;
+int index2 = 0;
+int size = 8;
+if (0 > (a.Length - 8)) {
+  throw new global::System.IndexOutOfRangeException("index out of range");
+}
+ulong value = 0;
+{
+  {
+    value = (ulong)a[0];
+  }
+  ...
+  int offset = 8;
+}
+return value;
 ```
 
 ### After
 
+```csharp
+if (0 > (a.Length - 8)) {
+  throw new global::System.IndexOutOfRangeException("index out of range");
+}
+ulong value = 0;
+value = (ulong)a[0];
+value = (value << 8) | (ulong)a[1];
+...
+return value;
 ```
-%d = UDiv.u32 %x, %y
-%v = Load.u8[volatile] 0xD012
-Ret.u32 %x
-```
-
-## When it applies
-
-An instruction is deleted iff it is not marked. Marked initially: every terminator; every instruction whose
-[#114](https://github.com/Hawkynt/Polypiler/issues/114) set contains `Memory.Write`, `Memory.Unknown`, `Memory.ExecutableWrite`, `Device.*`,
-`External.Call`, `Synchronize`, `Runtime.State`, `Timing`, `Stack`, or a volatile `Memory.Read`; every
-instruction with a `Trap`/`Exception` effect ([#115](https://github.com/Hawkynt/Polypiler/issues/115)) unless a fact on the instruction proves the
-condition false (divisor non-zero, no overflow in range, index in bounds, pointer non-null). Then every
-operand of a marked instruction is marked, transitively. A non-volatile load without a trap possibility is
-pure and removable.
-
-## How it is proven
-
-`structural+effect-facts`: an unmarked instruction has no path to an observable effect or to the returned value. No solver, no timeout path.
 
 ## When it must not fire
 
-- Unused `UDiv.u32 %x, %y` with `y` possibly 0 — removing it removes a division-by-zero trap.
-- Unused `Load.u8[volatile] 0xD012` (C64 raster register) — the read itself is a device interaction.
-- Unused result of `Call.u32 @send(%p)` — the call has `External.Call`.
-- Unused `Load.u32 %p` where `%p` may be null and the profile traps on null: the trap is observable.
-- `while (i != 0) {}` with no effect: deleting the loop turns a hang into a return.
+- `int t = a / b;` with `t` unread: the division may trap, so the declaration stays.
+- An assignment of a call to an unread variable: the call has an effect.
+- A parameter, or a variable a lambda names, is never removed.
+- A store into a variable declared outside its block - the loop around it may read it in the next pass -
+  or one a later statement of the block reads, and a store before the declaration of its name in the block.
+- A function of the program nothing calls: the prototype removes only what the libraries put in.
 
 ## Switching it off
 
-`--disable-opt O0005`; active at `--opt balanced`, `speed`, `size` and `memory`, off at `--opt none`.
+`--disable-opt O0005`; on at `--opt default`, off at `--opt none`.
 
 ## Interactions with other passes
 
-runs last in each iteration of phase `optimize` and once in `legalize` after helper expansion; enabled by every other pass. Preserves the CFG and all CFG-based analyses.
+After [O0001](O0001-constant-folding.md), whose folded conditions it decides; the target pass
+[O0501](O0501-target-unused-declaration-removal.md) removes what the target passes leave unused.
+
+## How it is proven
+
+`IrPassTests` checks the branch of a constant choice with and without a declaration, a false loop, the
+statements after a return, an unread variable with a value that may trap and one without, a store
+nothing reads before its block ends and the stores that may be read, and the library function nothing
+calls; `HelperEquivalenceTests` checks every helper after all passes.

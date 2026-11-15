@@ -113,14 +113,17 @@ public sealed class IntegerOperationsSteps(PrototypeScenario scenario) {
   [Then("^the " + StepText.Quoted + " output calls " + StepText.Quoted + "$")]
   public void OutputCalls(string profile, string member) => Assert.That(this.Output(profile), Does.Contain(member));
 
-  /// <summary>The output of a profile declares a private helper, the byte swap's, and does not name the library type.</summary>
-  [Then("^the " + StepText.Quoted + " output declares a private helper and names no " + StepText.Quoted + "$")]
-  public void OutputDeclaresAPrivateHelper(string profile, string type)
-    => Assert.That(this.Output(profile), Does.Contain("private static ulong ByteSwapBits(").And.Not.Contain(type));
+  /// <summary>
+  /// The output of a C# profile computes the byte swap with the helper of the IR library inlined (#1353): it
+  /// declares no helper and does not name the library type.
+  /// </summary>
+  [Then("^the " + StepText.Quoted + " output inlines the helper ByteSwap32 and names no " + StepText.Quoted + "$")]
+  public void OutputInlinesTheHelperAndNames(string profile, string type)
+    => Assert.That(this.Output(profile), Does.Not.Contain("ByteSwap32(").And.Not.Contain(type));
 
-  /// <summary>The output of a JavaScript profile declares the byte swap's helper function.</summary>
-  [Then("^the " + StepText.Quoted + " output declares a helper$")]
-  public void OutputDeclaresAHelper(string profile) => Assert.That(this.Output(profile), Does.Contain("function $bswap("));
+  /// <summary>The output of a JavaScript profile computes the byte swap with the helper of the IR library inlined.</summary>
+  [Then("^the " + StepText.Quoted + " output inlines the helper ByteSwap32$")]
+  public void OutputInlinesTheHelper(string profile) => Assert.That(this.Output(profile), Does.Not.Contain("ByteSwap32("));
 
   /// <summary>Every profile of both backends computes the byte swap.</summary>
   [Then(@"^all of them return 0x([0-9A-Fa-f]+) for (F\(.*\))$")]

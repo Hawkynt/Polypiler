@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.String;
 
@@ -19,12 +20,12 @@ namespace Polypiler.Tests.String;
 [TestFixture]
 public sealed class CSharpNumberTextEmissionTests {
 
-  private static string Emitted(CSharpProfile profile) => CSharpEmitter.Emit(NumberTextModules.Operations, profile)[0].Content;
+  private static string Emitted(CSharpProfile profile) => LegalizedCSharp.Emit(NumberTextModules.Operations, profile)[0].Content;
 
   /// <summary>Test design 1, 13 and 14: every operation in every profile is written, compiles and runs like the interpreter.</summary>
   [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
   public void EveryOperation_IsWrittenInEveryProfile_AndRunsLikeTheInterpreter(CSharpProfile profile) {
-    Assert.That(CSharpEmitter.Check(NumberTextModules.Operations, profile), Is.Empty);
+    Assert.That(LegalizedCSharp.Check(NumberTextModules.Operations, profile), Is.Empty);
     var text = Emitted(profile);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
     var build = GeneratedCSharp.Compile(text, true);
@@ -77,13 +78,13 @@ public sealed class CSharpNumberTextEmissionTests {
   [Test]
   public void Module_WithoutARow_IsUnsupported() {
     var table = new CSharpCapabilities(CSharpCapabilities.Default.Rows.Where(row => row.Operation != IrIntrinsicOp.ParseFloatEcma));
-    Assert.That(CSharpEmitter.Check(NumberTextModules.Operations, CSharpProfile.Default, table).Select(diagnostic => diagnostic.Code), Is.EqualTo(new[] { CSharpEmitter.Unsupported }));
+    Assert.That(LegalizedCSharp.Check(NumberTextModules.Operations, CSharpProfile.Default, table).Select(diagnostic => diagnostic.Code), Is.EqualTo(new[] { CSharpEmitter.Unsupported }));
   }
 
   [Test]
   public void Header_NamesTheCaveatsOfTheImport() {
     var module = NumberTextModules.Operations with { Caveats = ["cs-invariant-culture"] };
-    Assert.That(CSharpEmitter.Emit(module, CSharpProfile.Default)[0].Content, Does.Contain("// Caveats of the import: cs-invariant-culture."));
+    Assert.That(LegalizedCSharp.Emit(module, CSharpProfile.Default)[0].Content, Does.Contain("// Caveats of the import: cs-invariant-culture."));
     Assert.That(Emitted(CSharpProfile.Default), Does.Not.Contain("Caveats"));
   }
 

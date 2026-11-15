@@ -5,6 +5,7 @@ using Polypiler.Core.Backends.JavaScript.Printing;
 using Polypiler.Core.Backends.JavaScript.Syntax;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Optional;
 
@@ -26,8 +27,8 @@ public sealed class JavaScriptOptionalEmissionTests {
 
   private static string Emit(JavaScriptProfile profile) {
     var module = OptionalFixtures.Imported();
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -70,9 +71,9 @@ public sealed class JavaScriptOptionalEmissionTests {
       new IrIf(new IrBinary(IrBinaryOp.Greater, new IrUnwrap(new IrLocalRef(x)), new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 0))), new IrBlock([new IrReturn(new IrSome(new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 1))))]), null),
       new IrReturn(new IrLocalRef(x))
     ])) { Absent = IrAbsent.Undefined };
-    var text = JavaScriptEmitter.Emit(new IrModule("M", [g]), JavaScriptProfile.Parse("es2022", "esm")).Single().Content;
+    var text = LegalizedJavaScript.Emit(new IrModule("M", [g]), JavaScriptProfile.Parse("es2022", "esm")).Single().Content;
     Assert.That(text, Does.Contain("return void 0;").And.Contain("return 1;").And.Contain("return $undef(x);").And.Contain("function $undef(value)"));
-    var internalOnly = JavaScriptEmitter.Emit(new IrModule("M", [g with { Absent = IrAbsent.Null }]), JavaScriptProfile.Parse("es2022", "esm")).Single().Content;
+    var internalOnly = LegalizedJavaScript.Emit(new IrModule("M", [g with { Absent = IrAbsent.Null }]), JavaScriptProfile.Parse("es2022", "esm")).Single().Content;
     Assert.That(internalOnly, Does.Not.Contain("$undef").And.Contain("return null;"));
   }
 

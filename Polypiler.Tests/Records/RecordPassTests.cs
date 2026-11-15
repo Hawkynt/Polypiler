@@ -7,6 +7,7 @@ using Polypiler.Core.Legalize;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Recognize;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Records;
 
@@ -84,7 +85,7 @@ public sealed class RecordPassTests {
     Assert.That(lowered.Types, Is.EqualTo(sine.Types));
     Assert.That(lowered.Functions.Select(function => function.Name), Has.Some.StartsWith("Float"));
     Assert.That(IrVerifier.Verify(lowered), Is.Empty);
-    Assert.That(JavaScriptEmitter.Check(JavaScriptEmitter.Legalize(sine, () => Polypiler.Tests.Float.Support.FloatImplementations.Module, JavaScriptProfile.Default, FloatMode.Strict), JavaScriptProfile.Default), Is.Empty);
+    Assert.That(LegalizedJavaScript.Check(JavaScriptEmitter.Legalize(sine, () => Polypiler.Tests.Float.Support.FloatImplementations.Module, JavaScriptProfile.Default, FloatMode.Strict), JavaScriptProfile.Default), Is.Empty);
   }
 
 }

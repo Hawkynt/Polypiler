@@ -23,25 +23,16 @@ public static partial class JavaScriptEmitter {
       (IrIntrinsicOp.MulHigh, (writer, intrinsic) => writer.MulHigh(intrinsic))
     ];
 
-    private (JsExpression, bool) BigMul(IrIntrinsic intrinsic) {
-      var signed = intrinsic.Arguments[0].Type.IsSigned;
-      if (this.Halves)
-        return (this.Helper("$mul64", intrinsic.Arguments.Select(argument => signed ? this.Helper("$sx64", [this.Text(argument)]) : (JsExpression)Halves(Number("0"), this.Text(argument)))), true);
+    /// <summary>The full product of two 32-bit integers as the product of their <c>BigInt</c>s; on the halves it is the library's.</summary>
+    private (JsExpression, bool) BigMul(IrIntrinsic intrinsic)
+      => (Infix(Invoke("BigInt", this.Text(intrinsic.Arguments[0])), "*", Invoke("BigInt", this.Text(intrinsic.Arguments[1]))), false);
 
-      return (Infix(Invoke("BigInt", this.Text(intrinsic.Arguments[0])), "*", Invoke("BigInt", this.Text(intrinsic.Arguments[1]))), false);
-    }
-
+    /// <summary>The upper half of a product of 8 or 16 bits, exact as a number, or of 64 bits as a <c>BigInt</c>; of 32 bits and on the halves it is the library's.</summary>
     private (JsExpression, bool) MulHigh(IrIntrinsic intrinsic) {
       var (left, right) = (intrinsic.Arguments[0], intrinsic.Arguments[1]);
       var type = left.Type;
-      if (this.AsHalves(type))
-        return this.Call("$mulhi64", intrinsic, Signed(type));
-
       if (type.IsLong)
         return Cut64(type, Infix(Infix(this.Operand(left), "*", this.Operand(right)), ">>", new JsBigInt(64)));
-
-      if (type.Bits == 32)
-        return (this.Helper(type.IsSigned ? "$smulhi" : "$mulhi", [this.Text(left), this.Text(right)]), true);
 
       return Cut(type, Invoke("Math.floor", Infix(Infix(this.Operand(left), "*", this.Operand(right)), "/", Number((1 << type.Bits).ToString(CultureInfo.InvariantCulture)))));
     }

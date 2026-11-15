@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="..\tests\shared\Properties\*.cs" LinkBase="Properties" />
     <Compile Include="..\tests\shared\Cli\*.cs" LinkBase="Cli\Support" />
+    <Compile Include="..\tests\shared\Backends\*.cs" LinkBase="Backends\Legalized" />
   </ItemGroup>
 
   <ItemGroup>

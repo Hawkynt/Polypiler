@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Enums;
 
@@ -26,8 +27,8 @@ public sealed class JavaScriptEnumEmissionTests {
 
   private static string Emit(JavaScriptProfile profile, IrModule? module = null) {
     module ??= EnumFixtures.Module;
-    Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty);
-    var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+    Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty);
+    var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
     return text;
   }
@@ -81,10 +82,10 @@ public sealed class JavaScriptEnumEmissionTests {
     var function = new IrFunction("F", true, IrType.Bool, [], [], new IrBlock([new IrReturn(new IrBinary(IrBinaryOp.Equal, new IrConst(big.Type, -1), new IrConst(big.Type, -1)))]));
     var module = new IrModule("M", [function]) { Types = [big] };
     var profile = JavaScriptProfile.Parse(level, "cjs");
-    var problems = JavaScriptEmitter.Check(module, profile).Select(problem => (problem.Code, problem.Message)).ToList();
+    var problems = LegalizedJavaScript.Check(module, profile).Select(problem => (problem.Code, problem.Message)).ToList();
     if (refused) {
       Assert.That(problems, Is.EqualTo(new[] { (JavaScriptEmitter.Inexpressible, $"'the public 64-bit enum Big' cannot be expressed in JavaScript profile '{level}'") }));
-      Assert.That(() => JavaScriptEmitter.Emit(module, profile), Throws.ArgumentException.With.Message.Contains("PLY1152").Or.Message.Contains("the public 64-bit enum Big"));
+      Assert.That(() => LegalizedJavaScript.Emit(module, profile), Throws.ArgumentException.With.Message.Contains("PLY1152").Or.Message.Contains("the public 64-bit enum Big"));
     } else {
       Assert.That(problems, Is.Empty);
       Assert.That(Emit(profile, module), Does.Contain("exports.Big = Big;"));

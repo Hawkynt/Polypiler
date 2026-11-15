@@ -8,6 +8,7 @@ using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Backends.CSharp;
 
@@ -55,7 +56,7 @@ public sealed class CSharpScopeTests {
   /// <summary>The module's file for a profile, after the C# compiler built it for the reference assemblies of the profile without complaint.</summary>
   private static string Emitted(IrModule module, CSharpProfile profile) {
     Assert.That(IrVerifier.Verify(module), Is.Empty);
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile}:\n{text}");
     return text;
   }
@@ -67,12 +68,15 @@ public sealed class CSharpScopeTests {
     return outcomes[0];
   }
 
-  /// <summary>Translates a fixture with the <c>translate</c> command inside the test process and returns the text written.</summary>
+  /// <summary>
+  /// Translates a fixture with the <c>translate</c> command inside the test process and returns the text
+  /// written; the helpers stay calls (no O0006), so that the scopes asked about are the source's own.
+  /// </summary>
   private string Translate(string source, string from, string profile) {
     var output = Path.Combine(this._directory, "out-" + Guid.NewGuid().ToString("N"));
     using var printed = new StringWriter();
     using var error = new StringWriter();
-    var exitCode = Program.Run(["translate", source, "--from", from, "--to", "csharp", "--profile", profile, "--output", output], printed, error);
+    var exitCode = Program.Run(["translate", source, "--from", from, "--to", "csharp", "--profile", profile, "--output", output, "--disable-opt", "O0006"], printed, error);
     Assert.That((exitCode, error.ToString()), Is.EqualTo(((int)ExitCode.Success, "")));
     return File.ReadAllText(Directory.GetFiles(output, "*.cs").Single());
   }
@@ -244,9 +248,7 @@ public sealed class CSharpScopeTests {
       "    return s;",
       "  }",
       "",
-      "  private static int ToInt32(double value) {",
-      "    return double.IsNaN(value) || double.IsInfinity(value) ? 0 : unchecked((int)(long)(global::System.Math.Truncate(value) % 4294967296.0));",
-      "  }",
+      "  private static int ToInt32(double value) => unchecked((global::System.Double.IsNaN(value) || global::System.Double.IsInfinity(value)) ? 0 : (int)checked((long)(global::System.Math.Truncate(value) % 4294967296.0)));",
       "",
       "}",
       "")));

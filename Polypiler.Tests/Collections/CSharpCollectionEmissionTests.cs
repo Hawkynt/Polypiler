@@ -23,8 +23,8 @@ public sealed class CSharpCollectionEmissionTests {
     Assert.That(IrVerifier.Verify(module), Is.Empty);
     var expected = CollectionModules.ListCalls().Select(call => PrototypeFixture.InterpretedOutcome(module, call)).ToList();
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile.Name}\n{text}");
       Assert.That(CollectionModules.ListCalls().Select(GeneratedCSharp.Compile(text, false).Outcome), Is.EqualTo(expected), $"{profile.Name}\n{text}");
     }
@@ -37,8 +37,8 @@ public sealed class CSharpCollectionEmissionTests {
     Assert.That(IrVerifier.Verify(module), Is.Empty);
     var expected = CollectionModules.MapCalls().Select(call => PrototypeFixture.InterpretedOutcome(module, call)).ToList();
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile.Name}\n{text}");
       Assert.That(CollectionModules.MapCalls().Select(GeneratedCSharp.Compile(text, false).Outcome), Is.EqualTo(expected), $"{profile.Name}\n{text}");
     }
@@ -54,7 +54,7 @@ public sealed class CSharpCollectionEmissionTests {
     var source = PrototypeFixture.Wrap(body);
     var result = Core.Frontends.CSharp.CSharpFrontend.Import("Snippet.cs", source);
     Assert.That(result.Module, Is.Not.Null, string.Join("\n", result.Diagnostics));
-    var text = CSharpEmitter.Emit(result.Module!, CSharpProfile.Parse(profile))[0].Content;
+    var text = LegalizedCSharp.Emit(result.Module!, CSharpProfile.Parse(profile))[0].Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile, CSharpProfile.Parse(profile).LanguageVersionName), Is.Empty, text);
     return text;
   }
@@ -107,7 +107,7 @@ public sealed class CSharpCollectionEmissionTests {
   /// <summary>A checked loop is C#'s foreach, a live one a for loop that reads the count before every pass.</summary>
   [Test]
   public void Loops_AreForEachOrForByMode() {
-    var text = CSharpEmitter.Emit(CollectionModules.Lists(), CSharpProfile.Default)[0].Content;
+    var text = LegalizedCSharp.Emit(CollectionModules.Lists(), CSharpProfile.Default)[0].Content;
     Assert.That(text, Does.Contain("foreach (int each in target) {")
       .And.Contain("for (int index = 0; index < grown.Count; ++index) {\n        int item = grown[index];")
       .And.Contain("PopValue(list)").And.Contain("PopReference(bag)").And.Contain("IndexOfStrictDouble(numbers, double.NaN)").And.Contain("IndexOfStrictSingle(floats, 0.5f)"));

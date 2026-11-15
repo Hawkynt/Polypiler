@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Integer;
 
@@ -66,7 +67,7 @@ public sealed class IntegerCSharpTests {
   public void EveryOperation_HasAFormInEveryProfile() {
     var module = IntegerCases.Module(IntegerCases.All);
     foreach (var profile in CSharpProfile.All)
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
   }
 
   /// <summary>One row per operation and width, named after both, beginning at the profile the .NET API reference names.</summary>
@@ -76,11 +77,10 @@ public sealed class IntegerCSharpTests {
     var row = RowOf(@case);
     Assert.That(row, Is.Not.Null);
     Assert.That(row.Since?.Name ?? "never", Is.EqualTo(First(@case)), row.Name);
-    Assert.That(row.Native is not null || row.Replacement is not null, Is.True);
+    Assert.That(row.Native is not null || row.Library is not null, Is.True);
     Assert.That(row.Since is null || row.Native is not null, Is.True, "a row with a first profile has a native form");
-    Assert.That(row.Since == CSharpProfile.Net20 || row.Replacement is not null, Is.True, "a row without a form in every profile has a replacement");
-    if (row.Replacement?.Template is { } template)
-      Assert.That(template.Contains("{h}"), Is.EqualTo(row.Helper is not null), "a replacement calls the helper of its row");
+    Assert.That(row.Since == CSharpProfile.Net20 || row.Library is not null, Is.True, "a row without a form in every profile has a helper of the library");
+    Assert.That(row.Helper, Is.Null, "no integer row has a helper of its own");
   }
 
   /// <summary>The integer rows are named apart from each other and from every other row of the table.</summary>
@@ -108,8 +108,8 @@ public sealed class IntegerCSharpTests {
         continue;
 
       var module = IntegerCases.Module([@case], "Snippet");
-      var native = CSharpEmitter.Emit(module, since).Single().Content;
-      var replaced = CSharpEmitter.Emit(module, before).Single().Content;
+      var native = LegalizedCSharp.Emit(module, since).Single().Content;
+      var replaced = LegalizedCSharp.Emit(module, before).Single().Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(native, since.Name, since.LanguageVersionName), Is.Empty, native);
       Assert.That(GeneratedCSharp.ComplaintsFor(replaced, before.Name, before.LanguageVersionName), Is.Empty, replaced);
       if (row.Native!.Method is { } method) {
@@ -139,10 +139,10 @@ public sealed class IntegerCSharpTests {
     var module = _referenceModule.Value;
     var (calls, expected) = _referenceCalls.Value;
     var profile = CSharpProfile.All.Single(candidate => candidate.Name == name);
-    var text = CSharpEmitter.Emit(module, profile).Single().Content;
+    var text = LegalizedCSharp.Emit(module, profile).Single().Content;
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, profile.Name);
     var earlier = CSharpProfile.All.TakeWhile(candidate => candidate != profile)
-      .FirstOrDefault(candidate => Code(CSharpEmitter.Emit(module, candidate).Single().Content) == Code(text));
+      .FirstOrDefault(candidate => Code(LegalizedCSharp.Emit(module, candidate).Single().Content) == Code(text));
     if (earlier is not null) {
       TestContext.Out.WriteLine($"{profile.Name}: the code of {earlier.Name}, which runs it");
       return;
@@ -176,10 +176,10 @@ public sealed class IntegerCSharpTests {
   [Test]
   public void ByteSwap_IsALibraryCallWhereTheLibraryHasIt() {
     var swap = IntegerCases.Module([IntegerCases.All.Single(@case => @case.Function == "ByteSwap_u32")], "Snippet");
-    var modern = CSharpEmitter.Emit(swap, CSharpProfile.Net100).Single().Content;
-    var old = CSharpEmitter.Emit(swap, CSharpProfile.Net20).Single().Content;
+    var modern = LegalizedCSharp.Emit(swap, CSharpProfile.Net100).Single().Content;
+    var old = LegalizedCSharp.Emit(swap, CSharpProfile.Net20).Single().Content;
     Assert.That(modern, Does.Contain("global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(a)").And.Not.Contain("private static"));
-    Assert.That(old, Does.Contain("private static ulong ByteSwapBits(ulong value, int bits)").And.Not.Contain("BinaryPrimitives"));
+    Assert.That(old, Does.Contain("private static uint ByteSwap32(uint value)").And.Not.Contain("BinaryPrimitives"));
     foreach (var text in new[] { modern, old })
       Assert.That(GeneratedCSharp.Compile(text, true).Outcome(new PrototypeCall("ByteSwap_u32", [0x12345678u])), Is.EqualTo("2018915346"));
   }
@@ -193,7 +193,7 @@ public sealed class IntegerCSharpTests {
     var sum = new IrBinary(IrBinaryOp.AddChecked, popCount, new IrLocalRef(b));
     var module = new IrModule("Snippet", [new IrFunction("F", true, IrType.I32, [a, b], [], new IrBlock([new IrReturn(sum)]))]);
     foreach (var profile in new[] { CSharpProfile.Net20, CSharpProfile.Net100 }) {
-      var text = CSharpEmitter.Emit(module, profile).Single().Content;
+      var text = LegalizedCSharp.Emit(module, profile).Single().Content;
       foreach (var checking in _overflowChecking) {
         var build = GeneratedCSharp.Compile(text, checking);
         Assert.That(build.Outcome(new PrototypeCall("F", [-1, 0])), Is.EqualTo("32"), text);

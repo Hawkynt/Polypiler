@@ -5,6 +5,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Resources;
 
@@ -94,8 +95,8 @@ internal sealed class ResourceFixtureTests {
   public void EveryCSharpProfile_WritesTheFixture() {
     var module = ResourceFixtures.Imported();
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile.Name}\n{text}");
     }
   }
@@ -105,8 +106,8 @@ internal sealed class ResourceFixtureTests {
   public void EveryJavaScriptLevel_WritesTheFixture() {
     var module = ResourceFixtures.Imported();
     foreach (var profile in _levels) {
-      Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, profile.ToString());
-      var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+      Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, profile.ToString());
+      var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
       Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{profile}\n{text}");
       var keyword = profile.LevelName == "es5" ? "var" : "const";
       Assert.That(text, Does.Contain($"{keyword} first = new Res(log, 1, false);").And.Contain("if (first != null)").And.Contain("first.Dispose();").And.Contain("} finally {"), $"{profile}\n{text}");
@@ -121,7 +122,7 @@ internal sealed class ResourceFixtureTests {
   [TestCase("net10.0", true)]
   public void UsingDeclaration_KeepsItsFormOnlyFromCSharp8(string name, bool declaration) {
     var profile = CSharpProfile.Parse(name);
-    var text = CSharpEmitter.Emit(ResourceFixtures.Imported(), profile)[0].Content;
+    var text = LegalizedCSharp.Emit(ResourceFixtures.Imported(), profile)[0].Content;
     var nest = text[text.IndexOf("Declarations(", System.StringComparison.Ordinal)..];
     nest = nest[..nest.IndexOf("Nest(", System.StringComparison.Ordinal)];
     if (declaration)
@@ -138,7 +139,7 @@ internal sealed class ResourceFixtureTests {
     var module = ResourceFixtures.ImportedScript();
     string[] expected = ["1,2,5,-2,-1|", "1,5,-1|body", "1,5,-1|dispose 1", "5|", "1,2,5,-2,-1|dispose 1"];
     Assert.That(ResourceFixtures.ScriptCalls().Select(call => PrototypeFixture.InterpretedOutcome(module, call)), Is.EqualTo(expected));
-    var text = CSharpEmitter.Emit(module, CSharpProfile.Net100)[0].Content;
+    var text = LegalizedCSharp.Emit(module, CSharpProfile.Net100)[0].Content;
     Assert.That(text, Does.Contain("finally").And.Not.Contain("using ("), text);
   }
 

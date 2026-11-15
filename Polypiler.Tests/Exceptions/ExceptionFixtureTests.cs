@@ -5,6 +5,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Exceptions;
 
@@ -51,8 +52,8 @@ internal sealed class ExceptionFixtureTests {
   public void EveryCSharpProfile_WritesTheFixture(string file) {
     var module = ExceptionFixtures.Imported(file);
     foreach (var profile in CSharpProfile.All) {
-      Assert.That(CSharpEmitter.Check(module, profile), Is.Empty, profile.Name);
-      var text = CSharpEmitter.Emit(module, profile)[0].Content;
+      Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty, profile.Name);
+      var text = LegalizedCSharp.Emit(module, profile)[0].Content;
       Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, $"{profile.Name}\n{text}");
     }
   }
@@ -62,8 +63,8 @@ internal sealed class ExceptionFixtureTests {
   public void EveryJavaScriptLevel_WritesTheFixture(string file) {
     var module = ExceptionFixtures.Imported(file);
     foreach (var profile in _levels) {
-      Assert.That(JavaScriptEmitter.Check(module, profile), Is.Empty, profile.ToString());
-      var text = JavaScriptEmitter.Emit(module, profile).Single().Content;
+      Assert.That(LegalizedJavaScript.Check(module, profile), Is.Empty, profile.ToString());
+      var text = LegalizedJavaScript.Emit(module, profile).Single().Content;
       Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, $"{profile}\n{text}");
     }
   }
@@ -73,7 +74,7 @@ internal sealed class ExceptionFixtureTests {
   public void FilterWithAnEffect_IsNativeFromCSharp6AndRefusedElsewhere() {
     var module = ExceptionFixtures.Imported("order");
     foreach (var profile in CSharpProfile.All) {
-      var problems = CSharpEmitter.Check(module, profile).Select(problem => problem.ToString()).ToList();
+      var problems = LegalizedCSharp.Check(module, profile).Select(problem => problem.ToString()).ToList();
       if (profile.LanguageVersion >= new System.Version(6, 0))
         Assert.That(problems, Is.Empty, profile.Name);
       else
@@ -81,7 +82,7 @@ internal sealed class ExceptionFixtureTests {
     }
 
     foreach (var profile in _levels)
-      Assert.That(JavaScriptEmitter.Check(module, profile).Select(problem => problem.ToString()), Has.One.Contains(JavaScriptEmitter.Inexpressible).And.Contains("runs before finally blocks"));
+      Assert.That(LegalizedJavaScript.Check(module, profile).Select(problem => problem.ToString()), Has.One.Contains(JavaScriptEmitter.Inexpressible).And.Contains("runs before finally blocks"));
   }
 
 }
