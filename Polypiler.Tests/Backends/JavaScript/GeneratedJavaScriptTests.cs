@@ -50,7 +50,6 @@ public sealed class GeneratedJavaScriptTests {
   [TestCase("es2017", "esm", false, "export function F(a) { return a.getBigInt64(0); }", "'.getBigInt64' is not available in es2017, esm")]
   [TestCase("es5", "cjs", false, "function F(a) { return Math.cbrt(a); }", "'Math.cbrt' is not available in es5, cjs")]
   [TestCase("es2022", "esm", false, "export function F(a) { return Number.isNaN(a); }", "'Number.isNaN' is never to be emitted")]
-  [TestCase("es2022", "esm", false, "export const F = a => a;", "'=>' is never to be emitted")]
   [TestCase("es2022", "esm", false, "export function F(a) { return a ** 2; }", "'**' is never to be emitted")]
   [TestCase("es2022", "esm", false, "export function F() { return 1_000; }", "'numeric separators' is never to be emitted")]
   [TestCase("es2022", "esm", false, "export function F() { return globalThis; }", "'globalThis' is never to be emitted")]

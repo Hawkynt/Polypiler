@@ -55,6 +55,31 @@ internal sealed class Candidate(string name, Node anchor, IFunction function) {
   /// <summary>The key of a member as the source spells it, with <c>#</c> when it is private.</summary>
   public string Key { get; init; } = "";
 
+  /// <summary>The function a nested function stands in - an arrow, a function expression or a function declaration inside a function - or <see langword="null"/>.</summary>
+  public FunctionModel? Parent { get; init; }
+
+  /// <summary>Whether the function stands inside another one: it is lowered as a lambda of that one.</summary>
+  public bool IsNested => this.Parent is not null;
+
+  /// <summary>The variables of the functions around a nested function that its body sees, by name.</summary>
+  public IReadOnlyDictionary<string, Variable>? Scope { get; init; }
+
+  /// <summary>
+  /// The class whose object <c>this</c> is in the body: that of a method or a constructor, and of the
+  /// function an arrow stands in; <see langword="null"/> where <c>this</c> is no object of a class.
+  /// </summary>
+  public ClassModel? ThisClass => this.Parent is { } parent
+    ? this.Function is ArrowFunctionExpression ? parent.Candidate.ThisClass : null
+    : this.IsStatic ? null : this.Class;
+
+  /// <summary>Whether a value of this function has been made: its shape exists.</summary>
+  public bool HasShape => this._shape is not null;
+
+  private FunctionShape? _shape;
+
+  /// <summary>The shape of the function values that are this function.</summary>
+  public FunctionShape Shape => this._shape ??= new FunctionShape(this);
+
 }
 
 /// <summary>

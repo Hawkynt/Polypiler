@@ -38,7 +38,10 @@ internal enum JsKind {
   Null,
 
   /// <summary>Values of two kinds reach the place, which no type of the IR holds.</summary>
-  Conflict
+  Conflict,
+
+  /// <summary>A function value: one of the functions of a <see cref="FunctionShape"/>.</summary>
+  Function
 
 }
 
@@ -84,6 +87,12 @@ internal sealed record JsType {
 
   /// <summary>The class of a reference to an object.</summary>
   public ClassModel? Class { get; private init; }
+
+  /// <summary>The functions a function value may be.</summary>
+  public FunctionShape? Callable { get; private init; }
+
+  /// <summary>The type of the values of a shape of functions.</summary>
+  public static JsType Function(FunctionShape shape) => new(JsKind.Function) { Callable = shape.Root };
 
   /// <summary>The two kinds of a conflict, as a diagnostic names them.</summary>
   public (string First, string Second) Kinds { get; private init; }
@@ -185,7 +194,8 @@ internal sealed record JsType {
     JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
     JsKind.String => IrType.String,
     JsKind.Array when this.IsView => IrType.Span(this.Element!.Ir is { IsNumeric: true } viewed ? viewed : IrType.F64),
-    JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString) ? element : IrType.F64),
+    JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString || element.IsFunction) ? element : IrType.F64),
+    JsKind.Function => this.Callable!.Signature,
     JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
     JsKind.Object => IrType.Object(this.Class!.Ir),
     _ => null
@@ -202,6 +212,7 @@ internal sealed record JsType {
     JsKind.Record => this.Shape!.ToString(),
     JsKind.Object => this.Class!.Name,
     JsKind.Null => "null",
+    JsKind.Function => "a function",
     _ => "nothing"
   };
 
@@ -268,6 +279,9 @@ internal sealed record JsType {
 
         var joined = a.Types.Zip(b.Types, Join).ToList();
         return joined.Exists(type => type.Kind == JsKind.Conflict) ? Conflict(first, second) : Record(new RecordShape(a.Registry, a.Keys, joined));
+      case JsKind.Function:
+        // A value that reaches both places is a member of either shape: they are one.
+        return Function(FunctionShape.Merge(first.Callable!, second.Callable!));
       case JsKind.Object:
         // Objects of several classes are objects of the nearest class of the file they all derive from.
         return first.Class!.Lineage.FirstOrDefault(second.Class!.Lineage.Contains) is { } common ? Object(common) : Conflict(first, second);

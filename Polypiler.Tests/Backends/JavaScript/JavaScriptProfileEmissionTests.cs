@@ -602,6 +602,8 @@ public sealed class JavaScriptProfileEmissionTests {
       ["let"] = ("public static int F(int a) { int b = a; return b; }", "let b = a;", "var b = a;"),
       ["const"] = ("const int K = 2; public static int F() => K;", "const K = 2;", "var K = 2;"),
       ["export"] = ("public static int F() => 1;", "export function F() {", "exports.F = F;"),
+      ["=>"] = ("public static int F(int a) { System.Func<int, int> f = null; f = v => v + a; return f(a); }", "f = (v) => ", "f = function (v) {"),
+      ["let per-iteration binding"] = ("public static int F(int[] a) { System.Func<int> g = null; foreach (var v in a) g = () => v; return g(); }", "let v = ", "$c1.v = "),
       ["Math.imul"] = ("public static int F(int a) => a * a;", "Math.imul(a, a)", "$imul(a, a)"),
       ["Math.log2"] = ("public static float F(float a) => System.MathF.Log2(a);", "Math.log2(", "Float"),
       ["Math.log10"] = ("public static float F(float a) => System.MathF.Log10(a);", "Math.log10(", "Float"),
@@ -680,7 +682,7 @@ public sealed class JavaScriptProfileEmissionTests {
   [Test, Category("Slow")]
   public void NeverEmittedCapabilities_AreInNoFile() {
     var never = JavaScriptCapabilities.Standard.Entries.Where(entry => !entry.Emitted).Select(entry => entry.Name).Where(name => name != "numeric separators").ToList();
-    Assert.That(never, Has.Count.EqualTo(12));
+    Assert.That(never, Has.Count.EqualTo(11));
     foreach (var fixture in PrototypeFixture.Names)
       foreach (var profile in new[] { _es5, _es2017, JavaScriptProfile.Default }) {
         var text = JavaScriptEmitter.Emit(PrototypeFixture.Imported(fixture), profile).Single().Content;

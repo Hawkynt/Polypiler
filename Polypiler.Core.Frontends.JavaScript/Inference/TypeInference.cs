@@ -116,16 +116,17 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       if (models.Contains(model))
         continue;
 
-      model.IsPublic = isPublic(candidate);
+      model.IsPublic = !candidate.IsNested && isPublic(candidate);
       models.Add(model);
-      foreach (var callee in model.Callees)
+      foreach (var callee in model.Callees.Concat(model.Nested.Values))
         pending.Enqueue(callee);
     }
 
     var called = this.Flowing(models).SelectMany(model => model.Flows).Where(flow => flow.Kind == FlowKind.Argument).Select(flow => flow.Callee).ToHashSet();
+    // A nested function is called through its values only: its parameters take what those calls pass.
     foreach (var model in models)
       foreach (var parameter in model.Parameters)
-        this.Seed(model, parameter, model.IsPublic || !called.Contains(model.Candidate));
+        this.Seed(model, parameter, !model.Candidate.IsNested && (model.IsPublic || !called.Contains(model.Candidate)));
 
     do {
       for (var changed = true; changed;) {
@@ -139,6 +140,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         changed |= this.Unify();
       }
     } while (this.Promote([.. this.Flowing(models)]));
+
+    this.Sign(models);
 
     // Nothing in the file says what array a parameter is that no call passes one to; calls that pass arrays of two kinds say two.
     foreach (var model in models)
@@ -208,7 +211,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         return flow.Target!.Type is { Kind: JsKind.Array, IsPlain: true } stepped
           && this.Reach(flow.Target, JsType.ArrayOf(Stepped(stepped.Element!), true), flow.Node);
       case FlowKind.Return:
-        var argument = ((ReturnStatement)flow.Node).Argument;
+        var argument = Returned(flow);
         var result = JsType.Join(model.Result, argument is null ? JsType.Undefined : this.Of(argument));
         if (result == model.Result)
           return false;
@@ -224,6 +227,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         return this.Of(flow.Source!).Shape?.TypeOf(key) is { } value && this.Reach(flow.Target!, value, flow.Node);
       case FlowKind.FieldStore or FlowKind.FieldStep or FlowKind.MethodArgument:
         return this.ApplyMember(flow);
+      case FlowKind.Invoke:
+        return this.Invoke((CallExpression)flow.Node);
       default:
         return this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Declared: null } parameter && this.Pass(parameter, this.Of(flow.Node), flow.Node);
     }
@@ -284,7 +289,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
           promoted |= this.Pass(parameter, JsType.F64, flow.Node);
         else if (flow.Kind is FlowKind.Assign or FlowKind.Compound or FlowKind.Step && flow.Target!.Type.Kind == JsKind.Unknown)
           promoted |= this.Reach(flow.Target, JsType.F64, flow.Node);
-        else if (flow.Kind == FlowKind.Return && model.Result.Kind == JsKind.Unknown && ((ReturnStatement)flow.Node).Argument is { } argument) {
+        else if (flow.Kind == FlowKind.Return && model.Result.Kind == JsKind.Unknown && Returned(flow) is { } argument) {
           model.Result = JsType.F64;
           model.ResultEvidence = argument;
           this._known.Clear();

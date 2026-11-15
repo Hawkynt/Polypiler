@@ -24,7 +24,7 @@ public static partial class JavaScriptFrontend {
   private static Dictionary<Node, (IFunction Function, int Copy)> Wanted(TypeInference inference, List<FunctionModel> models) {
     var wanted = new Dictionary<Node, (IFunction Function, int Copy)>();
     var initialized = inference.Initializers.Flows.Where(flow => flow.Kind == FlowKind.Argument).Select(flow => flow.Callee).ToHashSet();
-    foreach (var model in models.Where(model => !model.IsPublic && model.Candidate is { Class: null, IsProperty: false } && !initialized.Contains(model.Candidate)
+    foreach (var model in models.Where(model => !model.IsPublic && model.Candidate is { Class: null, IsProperty: false, IsNested: false } && !initialized.Contains(model.Candidate)
         && model.Parameters.Exists(parameter => parameter.Entry.Kind == JsKind.Conflict))) {
       var calls = models
         .SelectMany(caller => caller.Flows.Where(flow => flow.Kind == FlowKind.Argument && flow.Callee == model.Candidate && flow.Source is CallExpression).Select(flow => (Caller: caller, Call: (CallExpression)flow.Source!)))

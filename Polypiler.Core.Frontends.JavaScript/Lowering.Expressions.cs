@@ -56,6 +56,8 @@ internal sealed partial class Lowering {
         return this.New(creation, types.Of(creation).Ir!);
       case ArrayExpression literal:
         return this.ArrayLiteral(literal, types.Of(literal).Ir!.Element!);
+      case ArrowFunctionExpression or FunctionExpression when this._model.Nested.TryGetValue(node, out var nested):
+        return this.Lambda(nested);
       case ObjectExpression literal when types.Of(literal).Kind == JsKind.Record:
         return this.ObjectLiteral(literal, types.Of(literal).Ir!);
       case ObjectExpression literal:
@@ -91,7 +93,8 @@ internal sealed partial class Lowering {
         this.Constants.Add(constant);
         return new IrConstRef(constant.Constant);
       default:
-        throw this.Unsupported(identifier, types.IsGlobal(identifier.Name) ? $"reading the variable {identifier.Name} before its declaration" : identifier.Name);
+        return this.FunctionValue(identifier)
+          ?? throw this.Unsupported(identifier, types.IsGlobal(identifier.Name) ? $"reading the variable {identifier.Name} before its declaration" : identifier.Name);
     }
   }
 
@@ -415,7 +418,7 @@ internal sealed partial class Lowering {
 
   private IrExpr CallFunction(CallExpression call) {
     if (types.Names.Callee(call.Callee) is not { } callee)
-      throw this.Unsupported(call, $"a call of {types.Text(call.Callee)}");
+      return this.Invocation(call);
 
     var target = types.ModelOf(callee);
     if (target.Problem is not null || target.Parameters.Exists(parameter => parameter.Entry.Kind == JsKind.Conflict || parameter.Entry.Ir is { IsStorable: false }))
@@ -553,7 +556,7 @@ internal sealed partial class Lowering {
   /// </summary>
   private IrExpr To(Typed value, IrType type, Node node) {
     if (value.Expr is IrNull { Type.Kind: IrTypeKind.Void })
-      return type.IsObject ? new IrNull(type) : throw this.Unsupported(node, "null");
+      return type.IsNullable ? new IrNull(type) : throw this.Unsupported(node, "null");
 
     var from = value.Expr.Type;
     if (from == type || from.IsAssignableTo(type))

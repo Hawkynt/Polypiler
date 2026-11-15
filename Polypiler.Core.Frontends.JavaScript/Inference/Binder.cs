@@ -20,6 +20,18 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   private readonly Dictionary<string, Variable> _scope = [];
   private List<string> _declared = [];
 
+  /// <summary>The names the scope has from the functions around a nested function, which a declaration of its own may hide.</summary>
+  private readonly HashSet<string> _inherited = [];
+
+  /// <summary>The variables of the functions around that a declaration of the body hides, by name, until its block ends.</summary>
+  private readonly Dictionary<string, Variable> _hidden = [];
+
+  /// <summary>The callee of the call being read, which is no use of a function as a value.</summary>
+  private Node? _callee;
+
+  /// <summary>Makes the candidate of a function nested in the body and binds it, with the variables it sees.</summary>
+  public System.Func<FunctionModel, IFunction, string, IReadOnlyDictionary<string, Variable>, Candidate>? Nest { get; init; }
+
   /// <summary>The variables of the module, which every name of a function that no local or parameter hides names.</summary>
   public IReadOnlyDictionary<string, Variable> Globals { get; init; } = new Dictionary<string, Variable>();
 
@@ -73,10 +85,26 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         model.Flows.Add(new Flow(FlowKind.Assign, field.Initializer!, field.Variable));
       }
 
-    foreach (var parameter in model.Parameters)
+    // A nested function sees the variables of the functions around it, which its own may hide.
+    foreach (var (name, outer) in model.Candidate.Scope ?? new Dictionary<string, Variable>()) {
+      this._scope[name] = outer;
+      this._inherited.Add(name);
+    }
+
+    foreach (var parameter in model.Parameters) {
       this._scope[parameter.Name] = parameter;
+      this._inherited.Remove(parameter.Name);
+    }
+
+    // The concise body of an arrow is the value it returns.
+    if (model.Candidate.Function.Body is Expression concise) {
+      model.Flows.Add(new Flow(FlowKind.Return, concise));
+      this.Expression(concise);
+      return;
+    }
 
     var body = ((FunctionBody)model.Candidate.Function.Body).Body;
+    var functions = this.Hoist(body);
     var rest = body.SkipWhile(this.IsPrologue).ToList();
     foreach (var statement in body.Take(body.Count - rest.Count))
       this.Statement(statement);
@@ -87,6 +115,40 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
 
     foreach (var statement in rest)
       this.Statement(statement);
+
+    this.Bind(functions);
+  }
+
+  /// <summary>
+  /// The function declarations of a block, each declared as a variable before anything of the block
+  /// is read: a declaration is hoisted to the start of its block (ECMA-262 §10.2.11), so that the
+  /// block may call it before it stands.
+  /// </summary>
+  private List<(FunctionDeclaration Function, Variable? Variable)> Hoist(IEnumerable<Statement> statements) {
+    var found = new List<(FunctionDeclaration, Variable?)>();
+    foreach (var function in statements.OfType<FunctionDeclaration>())
+      found.Add((function, function.Id is { } id ? this.Declare(id, false, false) : null));
+
+    return found;
+  }
+
+  /// <summary>Binds the hoisted function declarations of a block once the block is read: each sees every variable of the block.</summary>
+  private void Bind(List<(FunctionDeclaration Function, Variable? Variable)> functions) {
+    foreach (var (function, variable) in functions) {
+      var nested = this.Nested(function, function.Id?.Name ?? "function");
+      if (variable is not null && nested is not null)
+        model.Flows.Add(new Flow(FlowKind.Assign, function, variable));
+    }
+  }
+
+  /// <summary>The candidate of a function nested in the body, bound with the variables visible here.</summary>
+  private Candidate? Nested(IFunction function, string name) {
+    if (this.Nest is not { } nest)
+      return null;
+
+    var candidate = nest(model, function, name, new Dictionary<string, Variable>(this._scope));
+    model.Nested[(Node)function] = candidate;
+    return candidate;
   }
 
   /// <summary>
@@ -113,15 +175,23 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   private void Block(IEnumerable<Statement> statements) {
     var outer = this._declared;
     this._declared = [];
-    foreach (var statement in statements)
+    var list = statements.ToList();
+    var functions = this.Hoist(list);
+    foreach (var statement in list)
       this.Statement(statement);
 
+    this.Bind(functions);
     this.Leave(outer);
   }
 
   private void Leave(List<string> outer) {
-    foreach (var name in this._declared)
+    foreach (var name in this._declared) {
       this._scope.Remove(name);
+      if (this._hidden.Remove(name, out var hidden)) {
+        this._scope[name] = hidden;
+        this._inherited.Add(name);
+      }
+    }
 
     this._declared = outer;
   }
@@ -215,15 +285,26 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   }
 
   /// <summary>Declares a local, or records that the scoping rules refuse a second declaration of its name.</summary>
-  private Variable? Declare(Identifier id, VariableDeclaration declaration, Node? initializer) {
-    if (this._scope.ContainsKey(id.Name)) {
-      model.Refused[id] = $"a second declaration of {id.Name}";
-      return null;
+  private Variable? Declare(Identifier id, VariableDeclaration declaration, Node? initializer)
+    => this.Declare(id, declaration.Kind == VariableDeclarationKind.Const, initializer is null);
+
+  /// <summary>
+  /// Declares a local, or records that the scoping rules refuse a second declaration of its name. A
+  /// variable of a function around a nested one is hidden until the block of the declaration ends.
+  /// </summary>
+  private Variable? Declare(Identifier id, bool constant, bool uninitialized) {
+    if (this._scope.TryGetValue(id.Name, out var visible)) {
+      if (!this._inherited.Remove(id.Name)) {
+        model.Refused[id] = $"a second declaration of {id.Name}";
+        return null;
+      }
+
+      this._hidden[id.Name] = visible;
     }
 
     var variable = new Variable(id.Name, id, false) {
-      IsConstant = declaration.Kind == VariableDeclarationKind.Const,
-      IsUninitialized = initializer is null
+      IsConstant = constant,
+      IsUninitialized = uninitialized
     };
     model.Locals.Add(variable);
     model.Bindings[id] = variable;
@@ -237,6 +318,10 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
     switch (node) {
       case Identifier identifier:
         this.Read(identifier, coercion, parent ?? identifier);
+        break;
+      case ArrowFunctionExpression or FunctionExpression:
+        // A nested function: its body is bound as a function of its own, which sees the variables here.
+        this.Nested((IFunction)node, parent is VariableDeclarator { Id: Identifier named } ? named.Name : "lambda");
         break;
       case IFunction or ClassExpression:
         // Nothing of the subset; what stands inside belongs to another scope.
@@ -351,6 +436,11 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
       variable.Uses.Add((coercion, use));
     } else if (constants.TryGetValue(identifier.Name, out var constant)) {
       model.Bindings[identifier] = constant;
+    } else if (!ReferenceEquals(identifier, this._callee) && candidates.Find(candidate => candidate is { IsProperty: false, Class: null } && candidate.Name == identifier.Name) is { } function) {
+      // A function of the file named where no call is: the function as a value.
+      model.FunctionValues[identifier] = function;
+      if (!model.Callees.Contains(function))
+        model.Callees.Add(function);
     }
   }
 
@@ -451,7 +541,9 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         && StringMethods.Contains(name) && this._scope.TryGetValue(receiver.Name, out var text))
       text.UsedAsString ??= access;
 
+    this._callee = call.Callee;
     this.Expression(call.Callee);
+    this._callee = null;
     var builtin = this.Builtin(call);
     for (var index = 0; index < call.Arguments.Count; ++index) {
       var coercion = builtin switch {
@@ -471,6 +563,10 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         && this.ClassNamed(invoked.Object) is null)
       for (var index = 0; index < call.Arguments.Count; ++index)
         model.Flows.Add(new Flow(FlowKind.MethodArgument, call.Arguments[index], null, null, index, call));
+
+    // A call of anything else that is no method is a call of a function value, whose functions the types say.
+    if (builtin is null && this.Callee(call.Callee) is null && call.Callee is not MemberExpression { Computed: false })
+      model.Flows.Add(new Flow(FlowKind.Invoke, call));
 
     if (builtin is not null || this.Callee(call.Callee) is not { } callee)
       return;

@@ -220,7 +220,8 @@ public static partial class JavaScriptFrontend {
       return Refused(diagnostics.OrderBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column).ToList());
 
     var functions = new Dictionary<Candidate, IrFunction>();
-    foreach (var model in models)
+    // A nested function is lowered inside the function it stands in.
+    foreach (var model in models.Where(model => !model.Candidate.IsNested))
       if (lowering.Function(model, diagnostics) is { } function)
         functions[model.Candidate] = function;
 
@@ -257,7 +258,7 @@ public static partial class JavaScriptFrontend {
     if (lowering.Divides)
       caveats.Add(_divisionByZero);
 
-    var ordered = models.OrderBy(model => model.Candidate.Anchor.Start).ToList();
+    var ordered = models.Where(model => !model.Candidate.IsNested).OrderBy(model => model.Candidate.Anchor.Start).ToList();
     var integers = Signatures(ordered, parameter => parameter.IsIntegerByUse && parameter.Parameter!.Type.IsWord);
     if (integers.Length > 0)
       caveats.Add(new ImportCaveat(
