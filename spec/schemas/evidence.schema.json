@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/evidence.schema.json",
+  "title": "Polypiler evidence bundle",
+  "description": "evidence.json in artifacts/evidence/<feature-slug>/<scenario-slug>/: what one BDD scenario attached (PRD §6.6). Written by EvidenceWriter after every scenario, passed or failed; paths are relative to the bundle directory. A hash is null when the file was gone when the bundle was written. Which items a scenario must have depends on its tags and is checked by EvidenceValidator (PLY0060), not by this schema.",
+  "type": "object",
+  "required": ["schemaVersion", "feature", "scenario", "tags", "outcome", "sources", "targetCode", "manifest", "toolVersions", "fixtureValues", "processes", "reference", "target", "diff", "exactness", "optDiagnostics", "files", "ciLink"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "feature": { "type": "string", "minLength": 1, "description": "The feature's title." },
+    "scenario": { "type": "string", "minLength": 1, "description": "The scenario's title." },
+    "tags": { "type": "array", "items": { "type": "string", "pattern": "^[^@\\s]\\S*$" }, "description": "The tags of the scenario and its feature, without '@'." },
+    "outcome": { "enum": ["passed", "failed"] },
+    "sources": { "type": "array", "items": { "$ref": "#/$defs/copy" }, "description": "PRD §6.6 'source hash': the source files, copied to source/<name>." },
+    "targetCode": { "type": "array", "items": { "$ref": "#/$defs/copy" }, "description": "PRD §6.6 'target code hash': the generated files, copied to target/<name>." },
+    "manifest": {
+      "description": "PRD §6.6 'generated manifest', copied to polypiler.manifest.json; state is null when it is not a valid manifest.",
+      "type": ["object", "null"],
+      "required": ["path", "sha256", "state"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/hash" },
+        "state": { "enum": ["generated", "built", "executed", "verified", null] }
+      }
+    },
+    "toolVersions": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 }, "description": "PRD §6.6 'tool versions', by toolchain key." },
+    "fixtureValues": { "type": "object", "additionalProperties": { "type": "string" }, "description": "PRD §6.6 'fixture values', by name." },
+    "processes": {
+      "type": "array",
+      "description": "PRD §6.6 'stdout/stderr/exit code'.",
+      "items": {
+        "type": "object",
+        "required": ["label", "exitCode", "stdout", "stderr"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+          "exitCode": { "type": "integer" },
+          "stdout": { "$ref": "#/$defs/relativePath" },
+          "stderr": { "$ref": "#/$defs/relativePath" }
+        }
+      }
+    },
+    "reference": { "$ref": "#/$defs/results", "description": "PRD §6.6 'reference result': the reference output of each vector." },
+    "target": { "$ref": "#/$defs/results", "description": "PRD §6.6 'target result': the target's output of each vector." },
+    "diff": { "$ref": "#/$defs/optionalPath", "description": "PRD §6.6 'diff': diff.txt, one line per failed vector." },
+    "exactness": {
+      "description": "PRD §6.6 'exactness/tolerance policy', as the vector file declares it.",
+      "type": ["object", "null"],
+      "required": ["mode", "specialValues"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["exact", "ulp", "relative", "absolute"] },
+        "bound": { "type": "number", "exclusiveMinimum": 0 },
+        "policy": { "type": "string" },
+        "reason": { "type": "string" },
+        "format": { "enum": ["f32", "f64"] },
+        "specialValues": { "enum": ["bitwise", "signed-zero", "class"] }
+      }
+    },
+    "optDiagnostics": { "$ref": "#/$defs/optionalPath", "description": "PRD §6.6 'opt diagnostics': opt-report.txt." },
+    "files": {
+      "type": "array",
+      "description": "Any other file, copied to files/<role>/<name>.",
+      "items": {
+        "type": "object",
+        "required": ["role", "path", "sha256"],
+        "additionalProperties": false,
+        "properties": {
+          "role": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+          "path": { "$ref": "#/$defs/relativePath" },
+          "sha256": { "$ref": "#/$defs/hash" }
+        }
+      }
+    },
+    "ciLink": { "type": ["string", "null"], "description": "PRD §6.6 'CI link': $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID, or 'local' outside CI." }
+  },
+  "$defs": {
+    "relativePath": { "type": "string", "pattern": "^[^/\\\\:][^\\\\:]*$" },
+    "optionalPath": { "type": ["string", "null"], "pattern": "^[^/\\\\:][^\\\\:]*$" },
+    "hash": { "type": ["string", "null"], "pattern": "^[0-9a-f]{64}$" },
+    "copy": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "$ref": "#/$defs/relativePath" },
+        "sha256": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "results": { "type": ["object", "null"], "additionalProperties": { "type": "string", "pattern": "^([0-9a-f]{2})*$" } }
+  }
+}
