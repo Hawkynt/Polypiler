@@ -29,6 +29,7 @@ internal static partial class RustCases {
     "types" => Types(),
     "closures" => Closures(),
     "edges" => Edges(),
+    "strings" => Text(),
     _ => Functions()
   };
 

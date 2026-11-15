@@ -99,7 +99,7 @@ public sealed class RustEdgeCaseTests {
   [Test]
   public void RefusalsInAnUncheckedBody_AreReported() {
     var codes = Codes("""
-      pub fn f(a: &str) -> u32 {
+      pub fn f(a: &mut str) -> u32 {
         let [x] = [1];
         let y = -!(1 as u8).count_ones() + g(|| 1, (2, 3)) + { 0..1; 5 } + match a { Some(v) | [v] if v.await => 1, _ => 2 };
         z = (*a).field;
@@ -164,9 +164,9 @@ public sealed class RustEdgeCaseTests {
   [TestCase("pub fn f<A: Into<Vec<u8>>>() -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
   [TestCase("pub fn f() -> u32 { async move { 1 }; 1 }", RustFrontend.Coroutine)]
   [TestCase("pub fn f() -> u32 { for x in .. { } 1 }", RustFrontend.UnsupportedIterable)]
-  [TestCase("pub fn f(x: u32) -> u32 { match x { \"a\" => 1, _ => 0 } }", RustFrontend.TextType)]
+  [TestCase("pub fn f(x: u32) -> u32 { match x { \"a\" => 1, _ => 0 } }", RustFrontend.InvalidSource)]
   [TestCase("pub fn f(x: f64) -> u32 { match x { 1.0..=2.0 => 1, _ => 0 } }", RustFrontend.UnsupportedPattern)]
-  [TestCase("pub fn f(x: u32) -> u32 { match x { 'a'..='z' => 1, _ => 0 } }", RustFrontend.TextType)]
+  [TestCase("pub fn f(x: u32) -> u32 { match x { 'a'..='z' => 1, _ => 0 } }", RustFrontend.InvalidSource)]
   [TestCase("pub fn f(x: u32) -> u32 { match x { [[a]] => 1, _ => 0 } }", RustFrontend.UnsupportedElement)]
   public void RareConstruct_IsRefused(string source, string code) => Assert.That(Codes(source), Does.Contain(code));
 

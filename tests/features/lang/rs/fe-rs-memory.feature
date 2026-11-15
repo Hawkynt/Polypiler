@@ -60,7 +60,7 @@ Feature: Rust frontend: arrays, slices, Vec, borrows and slice iterators
     Then the import fails with diagnostic PLY1522 at line 1
     And no IR is produced
 
-  Scenario: Text types are rejected with a stable code
-    Given the Rust source "fn n(s: &str) -> usize { s.len() }"
+  Scenario: Text the IR cannot hold exactly is rejected with a stable code
+    Given the Rust source "fn n(s: &mut str) -> usize { s.len() }"
     When it is imported with overflowChecks panic
     Then the import fails with diagnostic PLY1521 at line 1, column 9

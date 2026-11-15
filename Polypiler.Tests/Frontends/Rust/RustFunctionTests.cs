@@ -217,7 +217,7 @@ public sealed class RustFunctionTests {
   [TestCase("unsafe fn g() {} pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
   [TestCase("extern \"C\" fn g() {} pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedFunction)]
   [TestCase("pub fn f() -> u32 { println!(\"x\"); 1 }", RustFrontend.UnsupportedMacro)]
-  [TestCase("pub fn f() -> u32 { let s = format!(\"{}\", 1); 1 }", RustFrontend.UnsupportedMacro)]
+  [TestCase("pub fn f() -> u32 { println!(\"{}\", 1); 1 }", RustFrontend.UnsupportedMacro)]
   [TestCase("pub fn f(v: u32) -> u32 { assert!(v > 0, \"v = {}\", v); 1 }", RustFrontend.UnsupportedMacro)]
   [TestCase("pub fn f(v: u32) -> u32 { assert!(v > 0, \"v = {v}\"); 1 }", RustFrontend.UnsupportedMacro)]
   [TestCase("macro_rules! m { () => {} } pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedMacro)]

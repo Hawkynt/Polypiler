@@ -20,6 +20,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 [Binding, Scope(Feature = "Rust frontend: arrays, slices, Vec, borrows and slice iterators")]
 [Scope(Feature = "Rust frontend: structs, enums, Option, Result and the ? operator")]
 [Scope(Feature = "Rust frontend: functions, modules, closures and iterator closures")]
+[Scope(Feature = "Rust frontend: String, &str and char")]
 public sealed class RustPhaseTwoSteps {
 
   private string _source = "";

@@ -107,7 +107,7 @@ public sealed class RustMemoryTests {
   public void UnsafeAndText_AreRejected() {
     var result = Import("fn peek(p: *const u8) -> u8 { unsafe { *p } }");
     Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Code, diagnostic.Line)), Does.Contain((RustFrontend.UnsafeConstruct, 1)));
-    var text = Import("fn n(s: &str) -> usize { s.len() }");
+    var text = Import("fn n(s: &mut str) -> usize { s.len() }");
     Assert.That(text.Diagnostics.Select(diagnostic => (diagnostic.Code, diagnostic.Line, diagnostic.Column)), Does.Contain((RustFrontend.TextType, 1, 9)));
   }
 
@@ -268,8 +268,8 @@ public sealed class RustMemoryTests {
     => Assert.That(Run($"fn inc(x: &mut u32) {{ *x += 1; }} fn read(x: &u32) -> u32 {{ *x }} pub fn f() -> u32 {{ {body} }}", "f"), Is.EqualTo(expected));
 
   /// <summary>Test design 18: text, unsafe, smart pointers, other methods, other collections, unsupported element types.</summary>
-  [TestCase("pub fn f(s: &str) -> u32 { 1 }", RustFrontend.TextType)]
-  [TestCase("pub fn f(s: String) -> u32 { 1 }", RustFrontend.TextType)]
+  [TestCase("pub fn f(s: &mut str) -> u32 { 1 }", RustFrontend.TextType)]
+  [TestCase("pub fn f(s: &mut String) -> u32 { 1 }", RustFrontend.TextType)]
   [TestCase("pub fn f(p: *const u8) -> u32 { 1 }", RustFrontend.UnsafeConstruct)]
   [TestCase("pub fn f() -> u32 { unsafe { 1 } }", RustFrontend.UnsafeConstruct)]
   [TestCase("static mut X: u32 = 1; pub fn f() -> u32 { 1 }", RustFrontend.UnsafeConstruct)]

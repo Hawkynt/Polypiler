@@ -23,13 +23,13 @@ namespace Polypiler.Prototype.Testing;
 internal static class RustFixture {
 
   /// <summary>The fixtures, which are also the names of their modules.</summary>
-  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "closures", "edges"];
+  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "closures", "edges", "strings"];
 
   /// <summary>
   /// The fixtures whose constructs the Rust backend does not write yet - arrays, slices, structs,
   /// enums, Option and Result - which the round trip through the Rust backend leaves out until it does.
   /// </summary>
-  public static readonly string[] BackendPending = ["memory", "types", "closures", "edges"];
+  public static readonly string[] BackendPending = ["memory", "types", "closures", "edges", "strings"];
 
   /// <summary>Both overflow modes.</summary>
   public static readonly OverflowChecks[] Modes = [OverflowChecks.Panic, OverflowChecks.Wrap];
@@ -68,7 +68,10 @@ internal static class RustFixture {
   public static IrModule Import(string fixture, OverflowChecks mode) => Import(fixture + ".rs", SourceOf(fixture), mode);
 
   /// <summary>One line of a recording: the call and its outcome.</summary>
-  public static string Line(PrototypeCall call, string outcome) => $"{call} => {outcome}";
+  public static string Line(PrototypeCall call, string outcome)
+    => string.Concat($"{call} => {outcome}".Select(character => char.IsControl(character) || character is '\u2028' or '\u2029'
+      ? $"\\u{{{(int)character:x}}}"
+      : character.ToString()));
 
   /// <summary>The lines of a recording, whatever line ending the checkout gave the file.</summary>
   public static string[] RecordedLines(string fixture, OverflowChecks mode)

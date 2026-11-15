@@ -66,7 +66,7 @@ public sealed class RustSyntaxFormTests {
   [TestCase("const C: u8 = 1; pub fn f() -> u8 { C = 2; 1 }", "E0070")]
   [TestCase("fn g() {} pub fn f() -> u8 { g = 2; 1 }", "E0070")]
   [TestCase("pub fn f() -> u8 { 1 = 2; 1 }", "E0070")]
-  [TestCase("pub fn f() -> u8 { \"a\" = 2; 1 }", RustFrontend.TextType)]
+  [TestCase("pub fn f() -> u8 { \"a\" = 2; 1 }", "E0070")]
   [TestCase("pub fn f() -> u8 { let mut k = 1u8; let g = move || { k = 2; }; 1 }", RustFrontend.EscapingClosure)]
   [TestCase("pub fn f(x: &u8) -> u8 { *x = 2; 1 }", "E0594")]
   [TestCase("pub fn f() -> u8 { let x = Some(1u8); let Some(y) = x else { 0 }; y }", "does not diverge")]
@@ -145,22 +145,24 @@ public sealed class RustSyntaxFormTests {
   [Test]
   public void RefusalsInAnUncheckedBody_AreFoundInEveryForm() {
     var result = Import("""
-      pub fn f(a: &str) -> u32 {
-        fn g() { 'a'; }
-        let S { x: 'b', .. } = s;
-        let &y = 'c';
-        let z = a['d'];
-        let w = ['e'; 'f'];
-        let v = S { x: 'g', ..'h' };
-        let u = 'i'..'j';
-        if let 'k' = 'l' { 'm' } else { 'n' };
-        while let 'o' = 'p' { }
-        let t = 'q'?;
+      pub fn f(a: &mut str) -> u32 {
+        fn g() { unsafe {}; }
+        let S { x: b"b", .. } = s;
+        let &y = unsafe { 0 };
+        let z = a[unsafe { 0 }];
+        let w = [unsafe { 0 }; unsafe { 0 }];
+        let v = S { x: unsafe { 0 }, ..unsafe { 0 } };
+        let u = unsafe { 0 }..unsafe { 0 };
+        if let b"k" = unsafe { 0 } { unsafe { 0 } } else { unsafe { 0 } };
+        while let b"o" = unsafe { 0 } { }
+        let t = unsafe { 0 }?;
         trait T {}
         1
       }
       """);
-    Assert.That(result.Diagnostics.Count(diagnostic => diagnostic.Code == RustFrontend.TextType), Is.EqualTo(18));
+    Assert.That(result.Diagnostics.Count(diagnostic => diagnostic.Code == RustFrontend.TextType), Is.EqualTo(1));
+    Assert.That(result.Diagnostics.Count(diagnostic => diagnostic.Code == RustFrontend.UnsafeConstruct), Is.EqualTo(14));
+    Assert.That(result.Diagnostics.Count(diagnostic => diagnostic.Code == RustFrontend.UnsupportedPattern), Is.EqualTo(3));
     Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code), Does.Contain(RustFrontend.UnsupportedTrait));
   }
 

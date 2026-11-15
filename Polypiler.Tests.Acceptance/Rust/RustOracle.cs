@@ -35,6 +35,9 @@ internal static class RustOracle {
     impl Show for f32 { fn show(&self) -> String { float(*self as f64) } }
     impl Show for f64 { fn show(&self) -> String { float(*self) } }
     impl Show for () { fn show(&self) -> String { "void".to_string() } }
+    impl Show for String { fn show(&self) -> String { self.clone() } }
+    impl Show for &str { fn show(&self) -> String { self.to_string() } }
+    impl Show for char { fn show(&self) -> String { (*self as u32).to_string() } }
     impl<A: Show, B: Show> Show for (A, B) { fn show(&self) -> String { format!("{{{},{}}}", self.0.show(), self.1.show()) } }
     impl<A: Show, B: Show, C: Show> Show for (A, B, C) { fn show(&self) -> String { format!("{{{},{},{}}}", self.0.show(), self.1.show(), self.2.show()) } }
     fn slice<T: Show>(v: &[T]) -> String { format!("[{}]", v.iter().map(|x| x.show()).collect::<Vec<_>>().join(",")) }
@@ -155,10 +158,11 @@ internal static class RustOracle {
     return $"vec![{string.Join(", ", items)}]";
   }
 
-  private static string RustType(IrType type) => type == IrType.Bool ? "bool" : type.ToString();
+  private static string RustType(IrType type) => type == IrType.Bool ? "bool" : type == IrType.String ? "&'static str" : type.ToString();
 
   private static string Literal(object value) => value switch {
     bool truth => truth ? "true" : "false",
+    string text => $"\"{string.Concat(text.EnumerateRunes().Select(rune => rune.Value is >= 0x20 and < 0x7F && rune.Value is not ('"' or '\\') ? ((char)rune.Value).ToString() : $"\\u{{{rune.Value:x}}}"))}\"",
     float single => $"f32::from_bits(0x{BitConverter.SingleToUInt32Bits(single):x}u32)",
     double number => $"f64::from_bits(0x{BitConverter.DoubleToUInt64Bits(number):x}u64)",
     _ => Convert.ToString(value, CultureInfo.InvariantCulture)!
