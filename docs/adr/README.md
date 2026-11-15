@@ -18,6 +18,7 @@ Probe programs and recorded output a record measured live under `docs/adr/eviden
 | [0004](0004-cli-design.md) | Command-line grammar, option naming and output conventions | accepted | [#16](https://github.com/Hawkynt/Polypiler/issues/16) |
 | [0005](0005-floating-point-tolerance.md) | Floating-point tolerance policy | accepted | [#18](https://github.com/Hawkynt/Polypiler/issues/18) |
 | [0006](0006-performance-budgets.md) | Performance budgets | accepted | [#22](https://github.com/Hawkynt/Polypiler/issues/22) |
+| [0007](0007-javascript-native-calls.md) | Native calls in JavaScript through a user-supplied binding | accepted | [#1332](https://github.com/Hawkynt/Polypiler/issues/1332) |
 | [0030](0030-cipher-source-licence.md) | Cipher source licence and its lowest pin | accepted | [#588](https://github.com/Hawkynt/Polypiler/issues/588) |
 
 Related: [documentation index](../README.md) · [IR and analysis contracts](../architecture/IR.md) · [compilation pipeline](../architecture/PIPELINE.md).
