@@ -237,6 +237,8 @@ public sealed class PythonFixtureTests {
     IrTypeKind.U16 => typeof(ushort),
     IrTypeKind.I32 => typeof(int),
     IrTypeKind.U32 => typeof(uint),
+    IrTypeKind.I64 => typeof(long),
+    IrTypeKind.U64 => typeof(ulong),
     IrTypeKind.F32 => typeof(float),
     IrTypeKind.F64 => typeof(double),
     IrTypeKind.String => typeof(string),
