@@ -498,8 +498,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/generics/Ring.cs.javascript.golden",
-      "sha256": "74147ca41f48dedab187cf08ff96cff5b3078a731184010ab952ebab348f644a",
-      "bytes": 86172
+      "sha256": "6b77c52d9c0bbe068cf5b3cc07433dd145efbf49f8f98470137b8882b629ee91",
+      "bytes": 109588
     },
     {
       "path": "tests/fixtures/backend/golden/generics/Search.cs.csharp.golden",
@@ -508,8 +508,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/generics/Search.cs.javascript.golden",
-      "sha256": "2f8cfdd75d5cf6afb89ffd0fa75fc1ab75ebcc7a96f7578d2c8742a9f100f8be",
-      "bytes": 137946
+      "sha256": "e29ad236c8acc70d93a3598fa3a3fff0add493c4557a5a6d0e0585ba286fabb4",
+      "bytes": 144426
     },
     {
       "path": "tests/fixtures/backend/golden/generics/middle.js.csharp.golden",
@@ -518,8 +518,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/generics/middle.js.javascript.golden",
-      "sha256": "e7c023bf3744c6af421ca93a5c8a4c039fd249a10d1689660a351d2fd388ea1f",
-      "bytes": 20240
+      "sha256": "648333639ede38d539cb67a41069b4df1e5bbc83ea2395709de6480e2d46d98d",
+      "bytes": 26401
     },
     {
       "path": "tests/fixtures/backend/golden/js/FloatView.js.csharp.golden",
