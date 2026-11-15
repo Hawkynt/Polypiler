@@ -83,6 +83,15 @@ public static partial class CSharpEmitter {
     }
 
     /// <summary>
+    /// A list of elements as <c>new List&lt;T&gt;(new T[] { … })</c>, which every profile has: a
+    /// collection initializer would need C# 3.
+    /// </summary>
+    private CsObjectCreation ListOf(IrCollection operation) {
+      var elements = new CsArrayInitializer([.. operation.Arguments.Select(this.Stored)]);
+      return new CsObjectCreation(new CsType(this.TypeName(operation.Type)), [new CsArrayCreation(new CsType(this.TypeName(operation.Type.Element!)), null, elements)]);
+    }
+
+    /// <summary>
     /// An operation on a list as the methods, the indexer and the properties of <c>List&lt;T&gt;</c>,
     /// which every profile has; <c>pop</c> and JavaScript's <c>indexOf</c> on floating-point numbers
     /// through helpers.
@@ -97,6 +106,8 @@ public static partial class CSharpEmitter {
           return (new CsObjectCreation(new CsType(this.TypeName(operation.Type)), []), Primary);
         case IrCollectionOp.ListFromArray:
           return (new CsObjectCreation(new CsType(this.TypeName(operation.Type)), [this.Stored(arguments[0])]), Primary);
+        case IrCollectionOp.ListOf:
+          return (this.ListOf(operation), Primary);
         case IrCollectionOp.ListCount:
           return (new CsMemberAccess(this.Operand(arguments[0], Primary), "Count"), Primary);
         case IrCollectionOp.ListGet:

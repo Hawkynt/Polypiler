@@ -221,7 +221,9 @@ internal sealed record JsType {
   public JsType Stored() => this.IsView ? this with { IsMemory = true } : this;
 
   /// <summary>An array type.</summary>
-  public static JsType ArrayOf(JsType element, bool plain) => new(JsKind.Array) { Element = element, IsPlain = plain };
+  public static JsType ArrayOf(JsType element, bool plain)
+    // An Array of objects, of arrays or of collections is a list (#1365): no array of the IR holds a reference.
+    => plain && element.Kind is JsKind.Object or JsKind.Array or JsKind.Map or JsKind.Set ? ListOf(element) : new(JsKind.Array) { Element = element, IsPlain = plain };
 
   /// <summary>
   /// Whether a JavaScript <c>Array</c> changes its length - <c>push</c>, <c>pop</c>, <c>splice</c>, a
@@ -282,7 +284,7 @@ internal sealed record JsType {
       JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
       JsKind.String => IrType.String,
       JsKind.Array when this.IsView => this.IsMemory ? IrType.Memory(this.ViewedElement) : IrType.Span(this.ViewedElement),
-      JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection) ? listed : IrType.F64),
+      JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection || listed.IsArray) ? listed : IrType.F64),
       JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString || element.IsFunction) ? element : IrType.F64),
       JsKind.Function => this.Callable!.Signature,
       JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),

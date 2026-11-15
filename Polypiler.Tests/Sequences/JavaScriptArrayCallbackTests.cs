@@ -77,7 +77,6 @@ internal sealed class JavaScriptArrayCallbackTests {
   [TestCase("export function f() { return new Int32Array(2).map((x) => x / 2)[0]; }", "map of")]
   [TestCase("export function f() { return [1, 2].filter((x) => \"a\").length; }", "a callback of filter that returns")]
   [TestCase("export function f() { return [1, 2].flatMap((x) => x).length; }", "a callback of flatMap that returns")]
-  [TestCase("export function f() { return [1, 2].map((x) => [x]).length; }", "a callback of map that returns int32[]")]
   [TestCase("export function f() { const s = \"ab\"; return [1, 2].map((x, i, a) => s)[0]; }", null)]
   [TestCase("/** @param {string} s */ function g(s) { return s.length; } export function f() { return [1].map(g)[0]; }", "a callback of map whose parameter 1 is string, not")]
   [TestCase("export function f() { let n = 0; const a = [2, 1]; a.sort((x, y) => x - y + (n++) * 0); return a[0]; }", "a sort comparator with effects")]

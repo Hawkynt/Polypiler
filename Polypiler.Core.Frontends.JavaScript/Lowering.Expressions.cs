@@ -389,6 +389,9 @@ internal sealed partial class Lowering {
         return view;
       case null:
         return this.CallFunction(call);
+      case "Array.isArray":
+        Takes(1);
+        return this.IsArray(arguments[0]);
       case "Math.imul":
         Takes(2);
         return new IrBinary(IrBinaryOp.Multiply, this.Int32(arguments[0]), this.Int32(arguments[1]));
@@ -537,9 +540,35 @@ internal sealed partial class Lowering {
         return new IrBinary(IrBinaryOp.Greater, magnitude, new IrConst(IrType.F64, 0));
       case JsKind.BigInt when value.Type.Ir is { } wide:
         return new IrBinary(IrBinaryOp.NotEqual, Convert(value.Expr, wide), new IrConst(wide, 0));
+      // An object, an array or a function counts as true unless it is null (#1365).
+      case JsKind.Object or JsKind.Array or JsKind.Function when value.Expr.Type.IsNullable:
+        return new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(value.Expr));
+      // A list, a map or a set is never null in the IR: present, it counts as true; read without an effect, it is nothing but that.
+      case JsKind.Array or JsKind.Map or JsKind.Set when value.Expr.Type.IsCollection && !IrTree.Nodes(value.Expr).Any(part => part is IrCall or IrStep or IrMethodCall or IrNew or IrCollection):
+        return new IrConst(IrType.Bool, 1);
       default:
         throw this.Unsupported(node, $"{value.Type.Describe()} as a condition");
     }
+  }
+
+  /// <summary>
+  /// <c>Array.isArray</c> of a value whose type says what it is (#1365): an <c>Array</c> - a list - is
+  /// one where it is not null, a typed array, a string, a number or an object never is. The value is
+  /// read only where it may be null, and it may have no effect where it is not read.
+  /// </summary>
+  private IrExpr IsArray(Node node) {
+    var value = this.Evaluate(node);
+    if (value.Type.Kind == JsKind.Array && value.Type.IsPlain && value.Expr.Type.IsNullable)
+      return new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(value.Expr));
+
+    if (IrTree.Nodes(value.Expr).Any(part => part is IrCall or IrStep or IrMethodCall or IrNew or IrCollection))
+      throw this.Unsupported(node, "Array.isArray of an operand with an effect");
+
+    // A typed array is no Array, but JSDoc's uint8[] that made it one may have meant an Array: what the program passes decides, which the types do not say.
+    if (value.Type.Kind == JsKind.Array && !value.Type.IsPlain)
+      throw this.Unsupported(node, $"Array.isArray of {value.Type.Describe()}, which JSDoc may have meant as an Array");
+
+    return new IrConst(IrType.Bool, value.Type.Kind == JsKind.Array && value.Type.IsPlain ? 1 : 0);
   }
 
   /// <summary>A number as a double: an integer of up to 32 bits and a binary32 number are doubles exactly.</summary>

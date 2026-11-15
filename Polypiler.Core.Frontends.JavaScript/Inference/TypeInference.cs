@@ -220,6 +220,9 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         return this.Reach(flow.Target!, this.Of(flow.Node), flow.Node) | this.Alias(model, flow.Node, flow.Target!.Type);
       case FlowKind.Grow:
         return this.Grow(flow);
+      case FlowKind.FieldGrow:
+        var member = (MemberExpression)flow.Source!;
+        return this.Of(member.Object).Class?.Field(Binder.KeyOf(member)!) is { } grown && this.Grow(flow with { Kind = FlowKind.Grow, Target = grown.Variable });
       case FlowKind.Entry:
         return this.Entry(flow);
       case FlowKind.Compound:

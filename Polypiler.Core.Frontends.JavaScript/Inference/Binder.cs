@@ -555,6 +555,11 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         this.Expression(assignment.Right);
         model.Flows.Add(new Flow(FlowKind.Grow, assignment, resized));
         break;
+      case MemberExpression { Computed: false, Object: MemberExpression truncatedField, Property: Identifier { Name: "length" } } fieldLength when KeyOf(truncatedField) is not null:
+        this.Expression(fieldLength);
+        this.Expression(assignment.Right);
+        model.Flows.Add(new Flow(FlowKind.FieldGrow, assignment, Source: truncatedField));
+        break;
       case MemberExpression { Computed: false } element when KeyOf(element) is not null:
         this.Expression(element);
         this.Expression(assignment.Right);
@@ -651,6 +656,11 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         && model.Bindings.GetValueOrDefault(grown) is Variable list)
       model.Flows.Add(new Flow(FlowKind.Grow, call, list));
 
+    // The same through a field, of this object or another, whose class only the types say (#1365).
+    if (call.Callee is MemberExpression { Computed: false, Object: MemberExpression field, Property: Identifier { Name: "push" or "pop" or "splice" or "indexOf" or "includes" or "set" or "add" } }
+        && KeyOf(field) is not null)
+      model.Flows.Add(new Flow(FlowKind.FieldGrow, call, Source: field));
+
     var builtin = this.Builtin(call);
     for (var index = 0; index < call.Arguments.Count; ++index) {
       var coercion = builtin switch {
@@ -709,6 +719,7 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
   public string? Library(MemberExpression member) => member switch {
     { Computed: false, Object: Identifier { Name: "Math" or "Number" or "BigInt" or "String" } library, Property: Identifier property } when !model.Bindings.ContainsKey(library)
       => $"{library.Name}.{property.Name}",
+    { Computed: false, Object: Identifier { Name: "Array" } array, Property: Identifier { Name: "isArray" } } when !model.Bindings.ContainsKey(array) => "Array.isArray",
     _ => null
   };
 

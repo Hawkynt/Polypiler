@@ -169,6 +169,12 @@ internal enum FlowKind {
   /// </summary>
   Entry,
 
+  /// <summary>
+  /// A <see cref="Grow"/> of the array a field holds - <c>o.items.push(x)</c>, <c>this.buffer.length = 0</c>
+  /// - whose class the type of the object says; <see cref="Flow.Source"/> is the member that names the field (#1365).
+  /// </summary>
+  FieldGrow,
+
   /// <summary>The node is a call of a function value, whose arguments reach the parameters of every function the value may be.</summary>
   Invoke,
 

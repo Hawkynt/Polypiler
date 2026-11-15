@@ -140,7 +140,13 @@ public enum IrCollectionOp {
   SetContains,
 
   /// <summary>Removes every element.</summary>
-  SetClear
+  SetClear,
+
+  /// <summary>
+  /// A new list of the operands, in order: a literal of elements no array of the IR holds, such as
+  /// objects or arrays (#1365). Last of all the operations, so that the numbers of the others stay.
+  /// </summary>
+  ListOf
 
 }
 
@@ -203,7 +209,7 @@ public static class IrCollections {
   /// <param name="op">The operation.</param>
   /// <returns>The kind of the collection the operation acts on.</returns>
   public static IrTypeKind Kind(IrCollectionOp op) => op switch {
-    <= IrCollectionOp.ListFromArray => IrTypeKind.List,
+    <= IrCollectionOp.ListFromArray or IrCollectionOp.ListOf => IrTypeKind.List,
     <= IrCollectionOp.MapClear => IrTypeKind.Map,
     _ => IrTypeKind.Set
   };
@@ -221,6 +227,8 @@ public static class IrCollections {
     var key = collection.Key ?? element;
     return op switch {
       IrCollectionOp.ListNew or IrCollectionOp.MapNew or IrCollectionOp.SetNew => ([], collection),
+      // ListOf takes any number of elements, which the verifier counts.
+      IrCollectionOp.ListOf => ([], collection),
       IrCollectionOp.ListFromArray => ([IrType.Array(element)], collection),
       IrCollectionOp.ListCount or IrCollectionOp.MapCount or IrCollectionOp.SetCount => ([], IrType.I32),
       IrCollectionOp.ListGet => ([IrType.I32], element),
@@ -243,7 +251,7 @@ public static class IrCollections {
   /// <summary>Whether an operation makes a new collection and takes no collection first.</summary>
   /// <param name="op">The operation.</param>
   /// <returns><see langword="true"/> for the constructions.</returns>
-  public static bool Constructs(IrCollectionOp op) => op is IrCollectionOp.ListNew or IrCollectionOp.ListFromArray or IrCollectionOp.MapNew or IrCollectionOp.SetNew;
+  public static bool Constructs(IrCollectionOp op) => op is IrCollectionOp.ListNew or IrCollectionOp.ListFromArray or IrCollectionOp.ListOf or IrCollectionOp.MapNew or IrCollectionOp.SetNew;
 
   /// <summary>
   /// Whether an operation changes the collection in a way that a <see cref="EnumerationMode.Checked"/>

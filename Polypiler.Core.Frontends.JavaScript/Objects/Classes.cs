@@ -35,7 +35,7 @@ internal static class Classes {
           diagnostics.Add(inference.Diagnose(field.Variable.Evidence ?? field.Variable.Declaration, JavaScriptFrontend.MixedKindsDescriptor, $"'{field.Key}' holds both {type.Kinds.First} and {type.Kinds.Second}"));
 
         var ir = type.Kind == JsKind.Conflict ? IrType.F64 : type.Ir ?? IrType.F64;
-        if (ir.IsString || ir.IsView || ir.Element is { IsNumeric: false })
+        if (ir.IsView)
           diagnostics.Add(Unsupported(field.Variable.Declaration, $"a field of the type {type.Describe()}"));
 
         field.Ir = new IrField(ClassModel.IrName(field.Key), ir, false) { Visibility = field.IsPrivate ? IrVisibility.Private : IrVisibility.Public };

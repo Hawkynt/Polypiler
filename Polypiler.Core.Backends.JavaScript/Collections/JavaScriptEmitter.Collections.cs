@@ -48,6 +48,8 @@ public static partial class JavaScriptEmitter {
           return (Invoke("Array.prototype.map.call", this.Text(arguments[0]), Id(this.StructHelper("copy", copied))), true);
         case IrCollectionOp.ListFromArray:
           return (Invoke("Array.prototype.slice.call", this.Text(arguments[0])), true);
+        case IrCollectionOp.ListOf:
+          return (new JsArray([.. arguments.Select(this.Value)]), true);
         case IrCollectionOp.ListCount:
           return (new JsMember(this.Operand(arguments[0]), "length"), true);
         case IrCollectionOp.ListGet:

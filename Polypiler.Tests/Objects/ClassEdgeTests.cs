@@ -118,7 +118,6 @@ public sealed class ClassEdgeTests {
   [TestCase("function F() { this.a = 1; } Object.defineProperty(F.prototype, \"x\", { value: 1 }); export function f() { return new F().a; }", "a property descriptor other than get, set, configurable and enumerable")]
   [TestCase("function F() { this.a = 1; } Object.defineProperty(F.prototype, \"x\", descriptor()); function descriptor() { return 1; } export function f() { return new F().a; }", "prototype mutation")]
   [TestCase("export class P { x = 1; } export function f() { return new P().x; }", "a class field with a value in a class without a constructor")]
-  [TestCase("export class P { constructor() { this.s = \"a\"; } } export function f() { return 1; }", "a field of the type string")]
   [TestCase("export class P { constructor() { this.a = 1; } } export function f() { return new P().a.b; }", "new P().a.b")]
   public void JavaScriptConstruct_IsRefusedByName(string source, string what)
     => Assert.That(JavaScriptRefusal(source).Message, Is.EqualTo($"'{what}' is not supported yet"));
