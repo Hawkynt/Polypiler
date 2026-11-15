@@ -11,7 +11,7 @@ namespace Polypiler.Tests.BigInt;
 /// One module that uses every operation and conversion of the arbitrary-precision integer, the
 /// operands every backend runs it on, and the interpreter's outcome of a call as the oracle: the
 /// interpreter's arithmetic is .NET's <see cref="BigInteger"/>, checked against CPython in
-/// <see cref="IrBigIntTests"/>.
+/// <c>IrBigIntTests</c>.
 /// </summary>
 internal static class BigIntCases {
 

@@ -187,7 +187,9 @@ public sealed class CSharpCapabilitiesTests {
     ("Enum.HasFlag(Enum)", "net4.6"),
     ("iterator (yield)", "C# 2"),
     ("IEnumerable<T>", "net2.0"),
-    ("generator object of ECMA-262 as a single-pass IEnumerable<T>", "net2.0")
+    ("generator object of ECMA-262 as a single-pass IEnumerable<T>", "net2.0"),
+    ("System.Numerics.BigInteger", "net4.6"),
+    ("BigInteger to double, rounded to nearest", "net4.6")
   ];
 
   /// <summary>
@@ -528,7 +530,9 @@ public sealed class CSharpCapabilitiesTests {
   [Test]
   public void EveryHelper_IsCSharp2ForNetFramework20() {
     // The store on a span is the one helper only a profile with spans calls; it is C# 8 for .NET Standard 2.1.
-    var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(helper => helper != CSharpViewHelpers.StoreSpan).ToList();
+    // The conversion of a BigInteger only a profile with the type calls; it is C# 2 for .NET Framework 4.6.
+    var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct()
+      .Where(helper => helper != CSharpViewHelpers.StoreSpan && helper != CSharpBigIntegerHelpers.BigToDouble).ToList();
     // The helpers of the collections take the nested classes of the collections (#1328), which are C# 2 as well.
     string[] classes = [CSharpCollectionClasses.KeyedSlots, CSharpCollectionClasses.FloatKeys, CSharpCollectionClasses.SingleKeys];
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))).Concat(classes))}\n\n}}\n";
@@ -536,6 +540,8 @@ public sealed class CSharpCapabilitiesTests {
     Assert.That(helpers, Has.Count.EqualTo(49));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
+    var big = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpBigIntegerHelpers.BigToDouble.Lines("BigToDouble"))}\n\n}}\n";
+    Assert.That(GeneratedCSharp.ComplaintsFor(big, "net4.6", "2"), Is.Empty, big);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);
     foreach (var checking in _overflowChecking)
       Assert.That(() => GeneratedCSharp.Compile(text, checking), Throws.Nothing);
