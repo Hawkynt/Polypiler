@@ -64,11 +64,11 @@ public sealed class CSharpProfilesSteps(PrototypeScenario scenario) {
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile, LanguageVersionOf(profile)), Is.Empty, text);
   }
 
-  /// <summary>The last output names no library member and declares the rotate helper.</summary>
+  /// <summary>The last output names no library member and declares the rotate helper of the IR library.</summary>
   [Then("^the output contains no " + StepText.Quoted + " and declares a private rotate helper$")]
   public void OutputDeclaresTheHelper(string member) {
     var (profile, text) = this._outputs[^1];
-    Assert.That(text, Does.Not.Contain(member).And.Contain("  private static uint RotateLeft(uint value, int count) {\n"));
+    Assert.That(text, Does.Not.Contain(member).And.Contain("  private static uint RotateLeft32(uint value, int count) => "));
     Assert.That(GeneratedCSharp.ComplaintsFor(text, profile, LanguageVersionOf(profile)), Is.Empty, text);
   }
 

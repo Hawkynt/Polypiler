@@ -2,11 +2,8 @@
 namespace Polypiler.Core.Backends.CSharp;
 
 /// <summary>
-/// The helpers the capability table names. The bit counts follow Warren, <i>Hacker's Delight</i>,
-/// 2nd edition: the population count of §5-1, the binary searches for the leading zeros of §5-3 and
-/// the trailing zeros of §5-4, and the 64-bit product in four partial products of §8-2. The smaller
-/// and the larger of two floating-point numbers are the <c>minimum</c> and <c>maximum</c> of
-/// IEEE 754-2019, which order -0 before +0 and return a NaN when either operand is one.
+/// The helpers the C# backend writes itself, for the forms that are no operation of the IR helper library:
+/// a discard, <c>Array.Fill</c> and <c>Array.Clear</c>.
 /// </summary>
 internal static class CSharpHelpers {
 
