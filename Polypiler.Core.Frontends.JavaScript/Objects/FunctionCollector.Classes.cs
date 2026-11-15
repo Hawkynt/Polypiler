@@ -207,8 +207,10 @@ internal sealed partial class FunctionCollector {
         case ExpressionStatement { Expression: AssignmentExpression { Operator: Operator.Assignment, Left: MemberExpression { Computed: false, Object: Identifier { Name: var name }, Property: Identifier { Name: var member } } target, Right: var value } }
           when this.ClassNamed(name) is { Declaration: FunctionDeclaration } owner:
           this.ClassStatements.Add(statement);
-          if (member == "prototype" && value is CallExpression { Callee: MemberExpression { Object: Identifier { Name: "Object" }, Property: Identifier { Name: "create" } },
-              Arguments: [MemberExpression { Object: Identifier { Name: var inherited }, Property: Identifier { Name: "prototype" } }] }
+          if (member == "prototype" && value is CallExpression {
+            Callee: MemberExpression { Object: Identifier { Name: "Object" }, Property: Identifier { Name: "create" } },
+            Arguments: [MemberExpression { Object: Identifier { Name: var inherited }, Property: Identifier { Name: "prototype" } }]
+          }
               && owner.BaseName is null && owner.Members.Count == 0)
             owner.BaseName = inherited;
           else if (member == "prototype")
@@ -242,8 +244,12 @@ internal sealed partial class FunctionCollector {
           this.ClassStatements.Add(statement);
           owner.Problem ??= "prototype mutation";
           break;
-        case ExpressionStatement { Expression: CallExpression { Callee: MemberExpression { Object: Identifier { Name: "Object" }, Property: Identifier { Name: "setPrototypeOf" } },
-            Arguments: [var target, ..] } } when (target is MemberExpression { Object: Identifier changed } ? changed : target as Identifier) is { } chained && this.ClassNamed(chained.Name) is { } owner:
+        case ExpressionStatement {
+          Expression: CallExpression {
+            Callee: MemberExpression { Object: Identifier { Name: "Object" }, Property: Identifier { Name: "setPrototypeOf" } },
+            Arguments: [var target, ..]
+          }
+        } when (target is MemberExpression { Object: Identifier changed } ? changed : target as Identifier) is { } chained && this.ClassNamed(chained.Name) is { } owner:
           this.ClassStatements.Add(statement);
           owner.Problem ??= "Object.setPrototypeOf";
           break;

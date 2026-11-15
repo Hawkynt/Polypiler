@@ -151,7 +151,7 @@ public sealed class IrObjectTests {
   /// <summary>Test design 9: a null receiver traps on a field read, a field write, a method call and an array field without an array.</summary>
   [Test]
   public void NullReceiver_TrapsBeforeTheArgumentsOfACallButAfterTheValueOfAStore() {
-    var built = new Built(new IrBlock([]) );
+    var built = new Built(new IrBlock([]));
     var counter = new IrGlobal("hits", IrType.I32, null);
     var hit = new IrFunction("Hit", false, IrType.I32, [], [], new IrBlock([
       new IrGlobalAssign(counter, new IrBinary(IrBinaryOp.Add, new IrGlobalRef(counter), new IrConst(IrType.I32, 1))),

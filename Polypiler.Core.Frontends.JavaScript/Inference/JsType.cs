@@ -266,24 +266,24 @@ internal sealed record JsType {
   public IrType? Ir => this.IsAbsent && this.Kind is JsKind.Number or JsKind.Boolean or JsKind.BigInt
     ? (this.Present.Ir is { } present ? IrType.Optional(present) : null)
     : this.Kind switch {
-    JsKind.Undefined => IrType.Void,
-    JsKind.Boolean => IrType.Bool,
-    JsKind.Number when this.Float == 32 => IrType.F32,
-    JsKind.Number when this.Float == 64 => IrType.F64,
-    JsKind.Number when this.Enum is { } named => named.Type,
-    JsKind.Number => (this.IsLiteral ? _words.Skip(4) : _words).First(this.Within),
-    JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
-    JsKind.String => IrType.String,
-    JsKind.Array when this.IsView => this.IsMemory ? IrType.Memory(this.ViewedElement) : IrType.Span(this.ViewedElement),
-    JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection) ? listed : IrType.F64),
-    JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString || element.IsFunction) ? element : IrType.F64),
-    JsKind.Function => this.Callable!.Signature,
-    JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
-    JsKind.Map => IrType.Map(Held(this.Key!), Held(this.Element!), MapOrder.Insertion),
-    JsKind.Set => IrType.Set(Held(this.Element!), MapOrder.Insertion),
-    JsKind.Object => IrType.Object(this.Class!.Ir),
-    _ => null
-  };
+      JsKind.Undefined => IrType.Void,
+      JsKind.Boolean => IrType.Bool,
+      JsKind.Number when this.Float == 32 => IrType.F32,
+      JsKind.Number when this.Float == 64 => IrType.F64,
+      JsKind.Number when this.Enum is { } named => named.Type,
+      JsKind.Number => (this.IsLiteral ? _words.Skip(4) : _words).First(this.Within),
+      JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
+      JsKind.String => IrType.String,
+      JsKind.Array when this.IsView => this.IsMemory ? IrType.Memory(this.ViewedElement) : IrType.Span(this.ViewedElement),
+      JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection) ? listed : IrType.F64),
+      JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString || element.IsFunction) ? element : IrType.F64),
+      JsKind.Function => this.Callable!.Signature,
+      JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
+      JsKind.Map => IrType.Map(Held(this.Key!), Held(this.Element!), MapOrder.Insertion),
+      JsKind.Set => IrType.Set(Held(this.Element!), MapOrder.Insertion),
+      JsKind.Object => IrType.Object(this.Class!.Ir),
+      _ => null
+    };
 
   /// <summary>The IR type of the elements of a view: a number type, a double where nothing better is known.</summary>
   private IrType ViewedElement => this.Element!.Ir is { IsNumeric: true } viewed ? viewed : IrType.F64;

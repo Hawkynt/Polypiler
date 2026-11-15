@@ -262,8 +262,16 @@ public sealed class IrNumberTextTests {
   [TestCase("9223372036854775808", "i64", "trap: integer overflow")]
   public void ParseDotNet_FollowsDotNet(string text, string type, string expected) {
     var target = type switch {
-      "f64" => IrType.F64, "f32" => IrType.F32, "i32" => IrType.I32, "u32" => IrType.U32, "u8" => IrType.U8, "i8" => IrType.I8,
-      "u16" => IrType.U16, "i16" => IrType.I16, "u64" => IrType.U64, _ => IrType.I64
+      "f64" => IrType.F64,
+      "f32" => IrType.F32,
+      "i32" => IrType.I32,
+      "u32" => IrType.U32,
+      "u8" => IrType.U8,
+      "i8" => IrType.I8,
+      "u16" => IrType.U16,
+      "i16" => IrType.I16,
+      "u64" => IrType.U64,
+      _ => IrType.I64
     };
     string outcome;
     try {

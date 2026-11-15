@@ -158,8 +158,7 @@ public static class IrGenerics {
   /// <param name="type">A number, a truth value, a struct or a reference type.</param>
   /// <returns>The value.</returns>
   /// <exception cref="ArgumentException">The type has no default value in the IR.</exception>
-  public static IrExpr DefaultOf(IrType type) => type switch {
-    { IsNumeric: true } or { Kind: IrTypeKind.Bool } => new IrConst(type, 0),
+  public static IrExpr DefaultOf(IrType type) => type switch { { IsNumeric: true } or { Kind: IrTypeKind.Bool } => new IrConst(type, 0),
     { IsStruct: true } => new IrStructDefault(type),
     { IsObject: true } => new IrNull(type),
     _ => throw new ArgumentException($"The type {type} has no default value.", nameof(type))
