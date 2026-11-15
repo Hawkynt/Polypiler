@@ -43,27 +43,37 @@ public static partial class RustEmitter {
 
     /// <summary>The crate: manifest, root and module.</summary>
     public RustCrate Crate(IrModule module) {
-      module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(module);
+      module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(module));
       this._module = module;
       var moduleName = ModuleName(module.Name, this._profile);
       var package = this._options.PackageName ?? moduleName;
-      if (module.Globals.Count > 0)
-        this.Refuse("module state (globals)");
-      foreach (var type in module.Types.Where(type => type is not (IrStructType or IrEnumType)))
+      foreach (var type in module.Types.Where(type => type is not (IrStructType or IrEnumType or IrClassType)))
         this.Refuse($"declared types ({Kind(type)})");
 
       this.NameItems(module);
       this.NameTypes(module);
+      this.NameGlobals(module);
+      this.Classes(module);
       this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
       var items = new List<RsItem>();
       foreach (var constant in module.Constants)
         items.Add(this.Constant(constant));
+      items.AddRange(this.Globals(module));
+      var written = module.Functions.Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
+      var members = written.Where(pair => this._members.ContainsKey(pair.Source.Name))
+        .ToDictionary(pair => pair.Source.Name, pair => this.AsMember(pair.Written, pair.Source, this._members[pair.Source.Name]), StringComparer.Ordinal);
+      var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name)).Select(pair => pair.Written).ToList();
       foreach (var type in module.Types)
-        items.AddRange(type switch { IrStructType structType => this.Struct(structType), IrEnumType enumType => this.EnumItems(enumType), _ => [] });
+        items.AddRange(type switch {
+          IrStructType structType => this.Struct(structType),
+          IrEnumType enumType => this.EnumItems(enumType),
+          IrClassType classType when !classType.IsLibrary => this.Class(classType, members),
+          _ => []
+        });
 
-      var functions = module.Functions.Select(function => this.Function(function) with { IsHelper = copied.Contains(function.Name) }).ToList();
       this._construct = "the module";
+      items.InsertRange(0, this._uses.Select(path => new RsUse(path)));
       items.AddRange(this._enumTableItems);
       items.AddRange(this._whitespace.Values);
       items.AddRange(this._spellings.Values);
@@ -144,6 +154,7 @@ public static partial class RustEmitter {
     private string Type(IrType type)
       => TypeName(type) ?? (type.IsString ? OwnedString
         : type.Declaration is IrStructType or IrEnumType && this._types.TryGetValue(type.Declaration, out var name) ? name
+        : type.IsObject ? this.ObjectType(type, false)
         : ((RsPath)this.Refuse($"the type {type}")).Name);
 
     /// <summary>What kind of type a declaration is, as a refusal names it.</summary>

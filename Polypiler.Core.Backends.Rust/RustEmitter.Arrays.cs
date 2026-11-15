@@ -44,6 +44,8 @@ public static partial class RustEmitter {
       var parameter = function.Parameters[index];
       if (parameter.Type.IsString)
         return BorrowedString;
+      if (parameter.Type.IsObject)
+        return this.ObjectParameterType(parameter);
       if (!parameter.Type.IsArray)
         return this.Type(parameter.Type);
 
@@ -55,6 +57,8 @@ public static partial class RustEmitter {
     private string? ResultType(IrFunction function) {
       if (function.ReturnType == IrType.Void)
         return null;
+      if (function.ReturnType.IsObject)
+        return this.ObjectType(function.ReturnType, this._nullness.ReturnsNull(function.Name));
       if (!function.ReturnType.IsArray)
         return this.Type(function.ReturnType);
 
@@ -66,6 +70,8 @@ public static partial class RustEmitter {
 
     /// <summary>The type of a local: an array owned as a vector or borrowed.</summary>
     private string LocalType(IrLocal local) {
+      if (local.Type.IsObject)
+        return this.ObjectType(local.Type, this.MayBeNull(local));
       if (!local.Type.IsArray)
         return this.Type(local.Type);
 
@@ -428,11 +434,16 @@ public static partial class RustEmitter {
     /// <summary>The arguments of a call: an array borrowed as the callee's parameter takes it, refused where one array is passed twice and written.</summary>
     private IReadOnlyList<RsExpression> Arguments(IrCall call) {
       if (!this._arrays.TryGetValue(call.Function, out var callee))
-        return [.. call.Arguments.Select(this.Expression)];
+        return [.. call.Arguments.Select((argument, index) => argument.Type.IsObject ? this.ObjectArgument(call.Function, index, argument) : this.Expression(argument))];
 
       var arguments = new List<RsExpression>();
       for (var index = 0; index < call.Arguments.Count; ++index) {
         var argument = call.Arguments[index];
+        if (argument.Type.IsObject) {
+          arguments.Add(this.ObjectArgument(call.Function, index, argument));
+          continue;
+        }
+
         if (!argument.Type.IsArray && !argument.Type.IsString) {
           arguments.Add(this.Expression(argument));
           continue;

@@ -103,9 +103,11 @@ public static partial class RustEmitter {
       IrBinary binary => this.Binary(binary),
       IrConvert convert => this.Convert(convert),
       IrConditional choice => this.Conditional(choice),
+      IrCall call when this._members.TryGetValue(call.Function, out var member) => this.MemberCall(call, member),
       IrCall call when this._functions.TryGetValue(call.Function, out var callee)
         => new RsCall(new RsPath(callee), this.Arguments(call)) { Type = call.Type },
       IrStep { Target: IrLocalRef target } step => this.StepExpression(target, step),
+      IrStep { Target: IrGlobalRef global } step when Atomic(global.Type) is not null => this.GlobalStep(step, global),
       IrStep { Target: IrArrayLoad load } step => this.ElementStep(load, step, false),
       IrArrayLoad { Index: IrLocalRef counter } when this._elements.TryGetValue(counter.Local, out var element) => new RsPath(element) { Type = expression.Type },
       IrArrayLoad load => new RsIndex(this.ArrayTarget(load.Array), this.Index(load.Index)) { Type = load.Type },
@@ -119,6 +121,12 @@ public static partial class RustEmitter {
       IrStructNew creation when creation.Type.StructType is not null => this.StructNew(creation),
       IrStructDefault creation when creation.Type.StructType is not null => new RsCall(new RsPath(this.Type(creation.Type) + "::default"), []) { Type = creation.Type },
       IrFieldLoad load when load.Target.Type.IsStruct => new RsField(this.Place(load.Target, false), this.FieldName(load.Field)) { Type = load.Type },
+      IrFieldLoad load when load.Target.Type.IsObject => this.ObjectField(load),
+      IrStructEquals equality when equality.Left.Type.IsObject || equality.Right.Type.IsObject => this.ObjectEquals(equality.Left, equality.Right),
+      IrReferenceEquals equality => this.SameObject(equality.Left, equality.Right),
+      IrIsNull test when test.Value.Type.IsObject => this.IsNull(test.Value),
+      IrNull { Type.IsObject: true } => new RsPath("None") { Type = expression.Type },
+      IrGlobalRef global when !global.Type.IsArray => this.GlobalValue(global),
       IrStructEquals equality when equality.Left.Type.IsStruct => this.Binary(this.Expression(equality.Left), "==", this.Expression(equality.Right), IrType.Bool),
       IrThrowExpression thrown => this.Throw(thrown.Exception),
       _ => this.Refuse(expression.GetType().Name[2..])
@@ -173,8 +181,12 @@ public static partial class RustEmitter {
               _ => IrBinaryOp.Less
             }
           });
-        default:
-          return new RsUnary("!", this.Operand(this.Expression(condition), 13)) { Type = IrType.Bool };
+        default: {
+          var operand = this.Expression(condition);
+          return operand is RsLiteral { Text: "true" or "false" } truth
+            ? new RsLiteral(truth.Text == "true" ? "false" : "true") { Type = IrType.Bool }
+            : new RsUnary("!", this.Operand(operand, 13)) { Type = IrType.Bool };
+        }
       }
     }
 
@@ -195,6 +207,11 @@ public static partial class RustEmitter {
 
       var a = this.Expression(binary.Left);
       var b = this.Expression(binary.Right);
+      // A truth value an operand is known to be: true and x, false or x are x (a test of a reference that is never null).
+      var neutral = binary.Op == IrBinaryOp.LogicalAnd ? "true" : "false";
+      if (binary.Op is IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr && (a is RsLiteral { Text: var first } && first == neutral || b is RsLiteral { Text: var second } && second == neutral))
+        return a is RsLiteral { Text: var known } && known == neutral ? b : a;
+
       string Infix() => binary.Op switch {
         IrBinaryOp.Add => "+",
         IrBinaryOp.Subtract => "-",

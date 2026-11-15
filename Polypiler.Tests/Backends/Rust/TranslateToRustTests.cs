@@ -72,7 +72,7 @@ public sealed class TranslateToRustTests {
   public void UnsupportedConstruct_IsNamed() {
     var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("dispatch/Animals"), "--from", "csharp", "--to", "rust", "--output", this._out);
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.UnsupportedConstruct));
-    Assert.That(error, Does.Contain("PLY1550").And.Contain("'declared types (classes)'"));
+    Assert.That(error, Does.Contain("PLY1550").And.Contain("'inheritance'"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 

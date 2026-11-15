@@ -250,6 +250,11 @@ internal static class Strings {
           true
       }
       """, ["ply_utf16", "ply_upper"]),
+    ["ply_non_null"] = ("""
+      fn ply_non_null<T>(value: &Option<T>) -> &T {
+          value.as_ref().expect("NullReference")
+      }
+      """, []),
     ["ply_layout"] = ("""
       fn ply_layout(scientific: &str, negative: bool, ecma: bool, high: i32) -> Vec<u16> {
           let at = scientific.find('e').unwrap_or(scientific.len());

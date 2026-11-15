@@ -60,15 +60,25 @@ public static partial class RustEmitter {
 
       this.Analyse(function);
       var name = this._functions[function.Name];
+      var member = this._members.GetValueOrDefault(function.Name);
+      if (member is { Kind: MemberKind.Instance })
+        this._locals[function.Parameters[0]] = "self";
+
       var parameters = function.Parameters.Select((parameter, index) => new RsParameter(this._locals[parameter], this.ParameterType(function, index))).ToList();
+      if (member is { Kind: MemberKind.Maker })
+        return this.Maker(new RsFunction(name, "pub", parameters, null, new RsBlock([], null)), member);
+
       var returns = this.ResultType(function);
       var statements = new List<RsStatement>();
       foreach (var parameter in function.Parameters.Where(this._reassigned.Contains)) {
         // A parameter given a string or a new array of its own holds a copy it owns from the start.
         var copied = parameter.Type.IsString || parameter.Type.IsArray && !this.IsReference(parameter);
         var type = parameter.Type.IsString ? OwnedString : parameter.Type.IsArray && copied ? $"Vec<{this.ElementType(parameter.Type)}>" : null;
+        var own = parameter.Type.IsObject && !this.MayBeNull(parameter);
         statements.Add(new RsLet(this._locals[parameter], true, type,
-          copied ? new RsMethodCall(new RsPath(this._locals[parameter]), "to_vec", []) : new RsPath(this._locals[parameter])));
+          copied ? new RsMethodCall(new RsPath(this._locals[parameter]), "to_vec", [])
+          : own ? this.Cloned(new RsPath(this._locals[parameter]))
+          : new RsPath(this._locals[parameter])));
       }
 
       this.Statements(function.Body.Statements, statements);

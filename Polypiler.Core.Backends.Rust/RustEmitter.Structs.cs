@@ -96,8 +96,8 @@ public static partial class RustEmitter {
 
     /// <summary>The variable a place of fields and elements is rooted in, or <see langword="null"/>.</summary>
     private static IrLocal? Root(IrExpr place) => place switch {
-      IrLocalRef reference => reference.Local,
-      IrFieldLoad load => Root(load.Target),
+      IrLocalRef reference when !reference.Type.IsObject => reference.Local,
+      IrFieldLoad load when !load.Target.Type.IsObject => Root(load.Target),
       _ => null
     };
 

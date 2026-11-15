@@ -298,7 +298,8 @@ public static class RustSyntaxReader {
           if (this.Accept("mut"))
             receiver.Append("mut ");
           this.Expect("self");
-          parameters.Add(new RsParameter(receiver.Append("self").ToString(), ""));
+          // self: &Rc<Self>, a receiver with its type.
+          parameters.Add(receiver.Length == 0 && this.Accept(":") ? new RsParameter("self", this.TypeText()) : new RsParameter(receiver.Append("self").ToString(), ""));
           this.Accept(",");
           continue;
         }

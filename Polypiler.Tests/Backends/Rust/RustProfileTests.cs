@@ -133,9 +133,20 @@ public sealed class RustProfileTests {
   }
 
   [Test]
-  public void ModuleState_AndTypes_AreRefusedByName() {
-    var problems = RustCrates.Check(RustCrates.Import("static int counter; public static int F() => ++counter;"));
-    Assert.That(problems.Select(problem => problem.Message), Has.Some.Contain("'module state (globals)'"));
+  public void ModuleState_IsAnAtomicStatic() {
+    var module = RustCrates.Import("static int counter = 5; static bool seen; public static int F() { seen = true; return ++counter; }");
+    Assert.That(RustCrates.Check(module), Is.Empty);
+    var text = RustCrates.ModuleText(RustCrates.Emit(module));
+    Assert.That(text, Does.Contain("static COUNTER: AtomicI32 = AtomicI32::new(5);"));
+    Assert.That(text, Does.Contain("static SEEN: AtomicBool = AtomicBool::new(false);"));
+    Assert.That(text, Does.Contain("SEEN.store(true, Ordering::Relaxed);"));
+    Assert.That(text, Does.Contain("COUNTER.fetch_add(1, Ordering::Relaxed).wrapping_add(1)"));
+  }
+
+  [Test]
+  public void ModuleState_OfAnotherType_IsRefusedByName() {
+    var problems = RustCrates.Check(RustCrates.Import("static double scale; public static double F(double x) { scale = x; return scale; }"));
+    Assert.That(problems.Select(problem => problem.Message), Has.Some.Contain("'a global of the type f64'"));
   }
 
   [Test]

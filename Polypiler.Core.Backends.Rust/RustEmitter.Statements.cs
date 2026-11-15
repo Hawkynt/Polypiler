@@ -48,6 +48,7 @@ public static partial class RustEmitter {
               null => null,
               var value when declare.Local.Type.IsArray => this.ArrayInitial(declare.Local, value),
               var value when declare.Local.Type.IsString => this.StringValue(value),
+              var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
               var value => this.Expression(value)
             }));
           return false;
@@ -56,6 +57,12 @@ public static partial class RustEmitter {
           return false;
         case IrFieldStore store when store.Target.Type.IsStruct:
           this.FieldStore(store, into);
+          return false;
+        case IrFieldStore store when store.Target.Type.IsObject:
+          this.ObjectFieldStore(store, into);
+          return false;
+        case IrGlobalAssign assign:
+          into.Add(new RsExpressionStatement(this.GlobalStore(assign)));
           return false;
         case IrExprStmt { Expression: IrStep { Target: IrArrayLoad load } step }:
           into.AddRange(((RsBlockExpression)this.ElementStep(load, step, true)).Block.Statements);
@@ -103,6 +110,7 @@ public static partial class RustEmitter {
             null => null,
             { Type.IsArray: true } value => this.ArrayResult(this._function, value),
             { Type.IsString: true } value => this.StringValue(value, true),
+            { Type.IsObject: true } value => this.ObjectValue(value, this._nullness.ReturnsNull(this._function.Name)),
             var value => this.Expression(value)
           })));
           return true;
@@ -136,6 +144,8 @@ public static partial class RustEmitter {
         return new RsAssign(place, "=", this.ArrayInitial(local, value));
       if (local.Type.IsString)
         return new RsAssign(place, "=", this.StringValue(value));
+      if (local.Type.IsObject)
+        return new RsAssign(place, "=", this.ObjectValue(value, this.MayBeNull(local)));
       if (value is IrBinary { Left: IrLocalRef self } binary && self.Local == local && Compound(binary) is { } op)
         return new RsAssign(place, op + "=", this.Operand(this.Expression(binary.Right), 2));
       if (value is IrBinary { Right: IrLocalRef other } swapped && other.Local == local && Compound(swapped) is { } bitwise && bitwise is "&" or "|" or "^")

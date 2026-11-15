@@ -103,7 +103,7 @@ internal static class AliasSpecialization {
   }
 
   /// <summary>A block with every expression in it rewritten bottom-up; the block itself where nothing changed.</summary>
-  private static IrBlock Rewrite(IrBlock block, Func<IrExpr, IrExpr> rewrite) {
+  internal static IrBlock Rewrite(IrBlock block, Func<IrExpr, IrExpr> rewrite) {
     var statements = block.Statements.Select(statement => Rewrite(statement, rewrite)).ToList();
     return statements.SequenceEqual(block.Statements, ReferenceEqualityComparer.Instance) ? block : new IrBlock(statements);
   }
