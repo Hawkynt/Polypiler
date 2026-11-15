@@ -79,7 +79,7 @@ public static class CSharpPrinter {
   public static int Precedence(CsExpression expression) => expression switch {
     CsIntegerLiteral { Value.Sign: < 0 } or CsRealLiteral { Value: < 0 } => Unary,
     CsRealLiteral real when !double.IsNaN(real.Value) && double.IsNegative(real.Value) => Unary,
-    CsPrefixUnary or CsCast => Unary,
+    CsPrefixUnary or CsCast or CsAwait => Unary,
     CsBinary binary => Of(binary.Operator),
     CsIsType => Relational,
     CsConditional => Conditional,
@@ -663,6 +663,10 @@ public static class CSharpPrinter {
         case CsCast cast:
           this._text.Append('(').Append(cast.TargetType.Name).Append(')');
           this.Operand(cast.Operand, IsTight(cast.Operand, null), depth);
+          break;
+        case CsAwait awaited:
+          this._text.Append("await ");
+          this.Operand(awaited.Operand, IsTight(awaited.Operand, null), depth);
           break;
         case CsPrefixUnary unary:
           this._text.Append(unary.Operator);

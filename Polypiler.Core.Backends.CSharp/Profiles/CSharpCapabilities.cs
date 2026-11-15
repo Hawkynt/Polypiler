@@ -132,7 +132,13 @@ public enum CSharpFeature {
   UnsafeCode,
 
   /// <summary><c>T* p = stackalloc T[n];</c> (C# 1); without it the pointer is that of a pinned <c>new T[n]</c>.</summary>
-  StackAllocPointer
+  StackAllocPointer,
+
+  /// <summary>
+  /// An <c>async</c> method and <c>await</c> (C# 5, with the builders of .NET Framework 4.5); a profile without
+  /// it refuses a module with async functions (#1330).
+  /// </summary>
+  AsyncAwait
 
 }
 
@@ -544,7 +550,10 @@ public sealed class CSharpCapabilities {
     .. CSharpEnumRows.All,
 
     // The lazy sequences of #1327.
-    .. CSharpSequenceRows.All
+    .. CSharpSequenceRows.All,
+
+    // The async functions of #1330.
+    .. CSharpAsyncRows.All
   ]) { RemainderFromQuotient = true };
 
   /// <summary>Makes a table of rows.</summary>

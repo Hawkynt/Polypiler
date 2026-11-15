@@ -195,6 +195,7 @@ public static partial class CSharpEmitter {
 
     problems.AddRange(FilterProblems(module, profile, table));
     problems.AddRange(PointerProblems(module, profile, table));
+    problems.AddRange(AsyncProblems(module, profile, table));
     return problems.Distinct().ToList();
   }
 
@@ -486,6 +487,7 @@ public static partial class CSharpEmitter {
     IrCollection => IrTree.Operands(expression),
     IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke => IrTree.Operands(expression),
     IrArraySequence => IrTree.Operands(expression),
+    IrAwait or IrAsync => IrTree.Operands(expression),
     _ => null
   };
 
@@ -806,6 +808,7 @@ public static partial class CSharpEmitter {
         .. Caveats(this._module),
         .. this.Notices(),
         .. this.PointerNotes(),
+        .. this.AsyncNotes(),
         .. ImplementationSources.Notices(this._module.Implementations.Select(pair => pair.Implementation).Concat(this._module.Inlined))
       ];
       if (@namespace is null)
@@ -839,7 +842,7 @@ public static partial class CSharpEmitter {
     }
 
     private CsMethod Function(IrFunction function) {
-      var modifiers = Unsafe([function.IsPublic ? "public" : "private", "static"], function);
+      var modifiers = Asynchronous(Unsafe([function.IsPublic ? "public" : "private", "static"], function), function);
       var returns = new CsType(this.TypeName(function.ReturnType));
       var (parameters, body, expression) = this.Body(function, 0, function.Body, true);
       return new CsMethod(modifiers, returns, this._members[function.Name], [], parameters, body, expression);
@@ -861,7 +864,7 @@ public static partial class CSharpEmitter {
       this._scopes.Add(new Scope());
       var parameters = function.Parameters.Skip(skipped).Select(parameter => new CsParameter(new CsType(this.TypeName(parameter.Type)), this.Declare(parameter))).ToList();
       var wraps = Expressions(statements).Any(this.Wraps);
-      if (arrow && statements.Statements is [IrReturn { Value: { } result }] && this.Has(CSharpFeature.ExpressionBody)) {
+      if (arrow && statements.Statements is [IrReturn { Value: { } result }] && this.Has(CSharpFeature.ExpressionBody) && !Unawaited(function)) {
         // A result that is itself a checked expression sets the context of everything in it.
         var value = this.Stored(result);
         return (parameters, null, wraps && !Traps(Promoted(result)) ? new CsCheckedExpression(false, value) { Type = value.Type } : value);
@@ -869,6 +872,7 @@ public static partial class CSharpEmitter {
 
       var body = this.Statements(statements);
       this.Ended(body);
+      this.Awaiting(function, body);
       return (parameters, new CsBlock(wraps ? [new CsCheckedStatement(false, new CsBlock(body))] : body), null);
     }
 
@@ -880,6 +884,7 @@ public static partial class CSharpEmitter {
         : type.IsFunction ? this.FunctionTypeName(type)
         : type.IsLazySequence ? this.SequenceTypeName(type)
         : type.IsPointer ? this.TypeName(type.Element!) + "*"
+        : type.IsAsync ? this.AsyncTypeName(type)
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
@@ -1225,6 +1230,9 @@ public static partial class CSharpEmitter {
     private (CsExpression Node, int Binding) Plain(IrExpr expression) {
       if (this.SequenceNode(expression) is { } sequence)
         return sequence;
+
+      if (this.AsyncNode(expression) is { } awaited)
+        return awaited;
 
       switch (expression) {
         case IrConst { Type.IsEnum: true } constant:

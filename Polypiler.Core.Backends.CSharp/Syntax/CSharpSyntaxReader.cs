@@ -197,6 +197,7 @@ public static class CSharpSyntaxReader {
     ConditionalAccessExpressionSyntax { WhenNotNull: ElementBindingExpressionSyntax { ArgumentList.Arguments: [var at] } } access
       => new CsElementAccess(Read(access.Expression), Read(at.Expression)) { Conditional = true },
     CastExpressionSyntax cast => new CsCast(new CsType(cast.Type.ToString()), Read(cast.Expression)),
+    AwaitExpressionSyntax awaited => new CsAwait(Read(awaited.Expression)),
     PrefixUnaryExpressionSyntax unary => new CsPrefixUnary(unary.OperatorToken.Text, Read(unary.Operand)),
     PostfixUnaryExpressionSyntax unary => new CsPostfixUnary(Read(unary.Operand), unary.OperatorToken.Text),
     BinaryExpressionSyntax { RawKind: (int)SyntaxKind.IsExpression } test => new CsIsType(Read(test.Left), new CsType(test.Right.ToString())),
