@@ -192,6 +192,8 @@ internal sealed partial class TypeInference {
         return array.Element!.Float == 32 ? JsType.F64 : array.Element;
       case CallExpression call:
         return this.Call(call);
+      case AwaitExpression awaited:
+        return this.AwaitedType(awaited);
       case NewExpression creation:
         return creation.Callee is Identifier { Name: var name } constructor && !this._scope!.Bindings.ContainsKey(constructor)
           ? TypedArrays.TryGetValue(name, out var element) ? JsType.ArrayOf(JsType.Of(element), false)
