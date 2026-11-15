@@ -254,4 +254,180 @@ internal static class CollectionModules {
   /// <summary>The calls of <see cref="Lists"/>.</summary>
   public static IEnumerable<PrototypeCall> ListCalls() => ListFunctions.Select(function => new PrototypeCall(function, []) { Returns = typeof(int) });
 
+  /// <summary>The names of the functions of <see cref="Maps"/>.</summary>
+  public static readonly string[] MapFunctions = [
+    "InsertionRemoved", "InsertionLive", "InsertionSet", "Lookups", "ObjectKeys", "LongKeys", "SingleKeys", "StructValues", "ValuesOnly", "SlotsLive"
+  ];
+
+  /// <summary>
+  /// A module of maps and sets: JavaScript's order with removals and a live loop that inserts, sets of
+  /// both orders, the trapping and the trying lookups of values and references, object, 64-bit and
+  /// binary32 keys, struct values, loops over the values alone, and a live loop over .NET's order.
+  /// </summary>
+  public static IrModule Maps() {
+    var functions = new List<IrFunction>();
+    IrFunction F(string name, IReadOnlyList<IrLocal> locals, params IrStmt[] statements)
+      => new(name, true, IrType.I32, [], [.. locals], new IrBlock(statements));
+
+    var insertion = IrType.Map(IrType.I32, IrType.I32, MapOrder.Insertion);
+    var slots = IrType.Map(IrType.I32, IrType.I32, MapOrder.SlotReuse);
+    IrStmt Put(IrLocal map, long key, long value) => Do(IrCollectionOp.MapPut, R(map), I(key), I(value));
+    IrStmt Remove(IrLocal map, long key) => new IrExprStmt(Op(IrCollectionOp.MapRemove, IrType.Bool, R(map), I(key)));
+    IrStmt Digit(IrLocal sum, IrExpr value) => new IrAssign(sum, Plus(Times(R(sum), 10), value));
+
+    // JavaScript's order with removals: 1, 2, 3, remove 1 and 3, then 4, 5, 6 is 2456.
+    var m = new IrLocal("m", insertion);
+    var k = new IrLocal("k", IrType.I32);
+    var sum = new IrLocal("sum", IrType.I32);
+    functions.Add(F("InsertionRemoved", [m, k, sum],
+      new IrDeclare(m, Op(IrCollectionOp.MapNew, insertion)),
+      new IrDeclare(sum, I(0)),
+      Put(m, 1, 1), Put(m, 2, 2), Put(m, 3, 3), Remove(m, 1), Remove(m, 3), Put(m, 4, 4), Put(m, 5, 5), Put(m, 6, 6),
+      new IrForEachCollection(R(m), EnumerationMode.Live, k, null, new IrBlock([Digit(sum, R(k))])),
+      new IrReturn(R(sum))));
+
+    // A live loop that inserts and clears: 1, then 3 inserted, then cleared and 5 inserted, is 135.
+    var live = new IrLocal("live", insertion);
+    var lk = new IrLocal("lk", IrType.I32);
+    var lv = new IrLocal("lv", IrType.I32);
+    var seen = new IrLocal("seen", IrType.I32);
+    functions.Add(F("InsertionLive", [live, lk, lv, seen],
+      new IrDeclare(live, Op(IrCollectionOp.MapNew, insertion)),
+      new IrDeclare(seen, I(0)),
+      Put(live, 1, 1),
+      new IrForEachCollection(R(live), EnumerationMode.Live, lk, lv, new IrBlock([
+        Digit(seen, R(lv)),
+        new IrIf(new IrBinary(IrBinaryOp.Equal, R(lk), I(1)), new IrBlock([Put(live, 3, 3)]), null),
+        new IrIf(new IrBinary(IrBinaryOp.Equal, R(lk), I(3)), new IrBlock([Do(IrCollectionOp.MapClear, R(live)), Put(live, 5, 5)]), null)])),
+      new IrReturn(R(seen))));
+
+    // Sets of JavaScript's order: add, a second add, remove, contains, count.
+    var setType = IrType.Set(IrType.I32, MapOrder.Insertion);
+    var set = new IrLocal("set", setType);
+    var item = new IrLocal("item", IrType.I32);
+    var digits = new IrLocal("digits", IrType.I32);
+    functions.Add(F("InsertionSet", [set, item, digits],
+      new IrDeclare(set, Op(IrCollectionOp.SetNew, setType)),
+      new IrDeclare(digits, I(0)),
+      new IrExprStmt(Op(IrCollectionOp.SetAdd, IrType.Bool, R(set), I(3))),
+      new IrExprStmt(Op(IrCollectionOp.SetAdd, IrType.Bool, R(set), I(1))),
+      new IrIf(Op(IrCollectionOp.SetAdd, IrType.Bool, R(set), I(3)), new IrBlock([new IrReturn(I(-1))]), null),
+      new IrExprStmt(Op(IrCollectionOp.SetRemove, IrType.Bool, R(set), I(3))),
+      new IrExprStmt(Op(IrCollectionOp.SetAdd, IrType.Bool, R(set), I(3))),
+      new IrForEachCollection(R(set), EnumerationMode.Live, item, null, new IrBlock([Digit(digits, R(item))])),
+      new IrReturn(Plus(Times(R(digits), 10), Plus(Op(IrCollectionOp.SetCount, IrType.I32, R(set)), Bit(Op(IrCollectionOp.SetContains, IrType.Bool, R(set), I(9))))))));
+
+    // Lookups: a present and a missing key tried, a key added twice, try-add, the trap of a missing key.
+    var look = new IrLocal("look", slots);
+    var optional = IrType.Optional(IrType.I32);
+    functions.Add(F("Lookups", [look],
+      new IrDeclare(look, Op(IrCollectionOp.MapNew, slots)),
+      Do(IrCollectionOp.MapAdd, R(look), I(1), I(7)),
+      new IrIf(Op(IrCollectionOp.MapTryAdd, IrType.Bool, R(look), I(1), I(8)), new IrBlock([new IrReturn(I(-1))]), null),
+      new IrIf(new IrUnary(IrUnaryOp.LogicalNot, Op(IrCollectionOp.MapTryAdd, IrType.Bool, R(look), I(2), I(8))), new IrBlock([new IrReturn(I(-2))]), null),
+      new IrTry(new IrBlock([Do(IrCollectionOp.MapAdd, R(look), I(2), I(9))]),
+        [new IrCatch(IrExceptionClass.ArgumentException, null, null, new IrBlock([Put(look, 3, 3)]))], null),
+      new IrTry(new IrBlock([new IrExprStmt(Op(IrCollectionOp.MapGet, IrType.I32, R(look), I(4)))]),
+        [new IrCatch(IrExceptionClass.KeyNotFoundException, null, null, new IrBlock([Put(look, 4, 4)]))], null),
+      new IrReturn(Plus(Times(new IrCoalesce(Op(IrCollectionOp.MapTryGet, optional, R(look), I(1)), I(0)), 1000),
+        Plus(Times(new IrCoalesce(Op(IrCollectionOp.MapTryGet, optional, R(look), I(9)), I(5)), 100),
+          Plus(Times(Op(IrCollectionOp.MapGet, IrType.I32, R(look), I(4)), 10), Op(IrCollectionOp.MapCount, IrType.I32, R(look))))))));
+
+    // Object keys by identity, object values tried.
+    var box = new IrClassType("Cell");
+    var content = new IrField("Content", IrType.I32, false);
+    box.Define([content]);
+    var make = new IrConstructor("Cell..ctor");
+    box.DefineMembers([make], [], [], []);
+    var self = new IrLocal("this", IrType.Object(box));
+    var start = new IrLocal("start", IrType.I32);
+    functions.Add(new IrFunction("Cell..ctor", false, IrType.Void, [self, start], [], new IrBlock([new IrFieldStore(R(self), content, R(start))])));
+    var cells = IrType.Map(IrType.Object(box), IrType.Object(box), MapOrder.SlotReuse);
+    var byCell = new IrLocal("byCell", cells);
+    var first = new IrLocal("first", IrType.Object(box));
+    functions.Add(F("ObjectKeys", [byCell, first],
+      new IrDeclare(first, new IrNew(IrType.Object(box), make, [I(2)])),
+      new IrDeclare(byCell, Op(IrCollectionOp.MapNew, cells)),
+      Do(IrCollectionOp.MapPut, R(byCell), R(first), R(first)),
+      Do(IrCollectionOp.MapPut, R(byCell), new IrNew(IrType.Object(box), make, [I(2)]), R(first)),
+      new IrReturn(Plus(Times(Op(IrCollectionOp.MapCount, IrType.I32, R(byCell)), 100),
+        Plus(Times(new IrFieldLoad(Op(IrCollectionOp.MapTryGet, IrType.Object(box), R(byCell), R(first)), content), 10),
+          Bit(new IrIsNull(Op(IrCollectionOp.MapTryGet, IrType.Object(box), R(byCell), new IrNew(IrType.Object(box), make, [I(2)])))))))));
+
+    // 64-bit keys, which JavaScript below ECMAScript 2020 holds as pairs of halves.
+    var longs = IrType.Set(IrType.I64, MapOrder.SlotReuse);
+    var wide = new IrLocal("wide", longs);
+    functions.Add(F("LongKeys", [wide],
+      new IrDeclare(wide, Op(IrCollectionOp.SetNew, longs)),
+      new IrExprStmt(Op(IrCollectionOp.SetAdd, IrType.Bool, R(wide), new IrConst(IrType.I64, 1L << 40))),
+      new IrExprStmt(Op(IrCollectionOp.SetAdd, IrType.Bool, R(wide), new IrConst(IrType.I64, 1L << 40))),
+      new IrExprStmt(Op(IrCollectionOp.SetAdd, IrType.Bool, R(wide), new IrConst(IrType.I64, 1))),
+      new IrReturn(Plus(Times(Op(IrCollectionOp.SetCount, IrType.I32, R(wide)), 10), Bit(Op(IrCollectionOp.SetContains, IrType.Bool, R(wide), new IrConst(IrType.I64, 1L << 40)))))));
+
+    // binary32 keys: -0 kept, every NaN one key.
+    var singles = IrType.Map(IrType.F32, IrType.I32, MapOrder.SlotReuse);
+    var single = new IrLocal("single", singles);
+    var keyed = new IrLocal("keyed", IrType.F32);
+    var sign = new IrLocal("sign", IrType.I32);
+    var negativeZero = new IrConst(IrType.F32, IrOperators.Bits(IrType.F32, -0.0));
+    var nan = new IrConst(IrType.F32, IrOperators.Bits(IrType.F32, double.NaN));
+    functions.Add(F("SingleKeys", [single, keyed, sign],
+      new IrDeclare(single, Op(IrCollectionOp.MapNew, singles)),
+      new IrDeclare(sign, I(0)),
+      Do(IrCollectionOp.MapPut, R(single), negativeZero, I(1)),
+      Do(IrCollectionOp.MapPut, R(single), new IrConst(IrType.F32, 0), I(2)),
+      Do(IrCollectionOp.MapPut, R(single), nan, I(3)),
+      Do(IrCollectionOp.MapPut, R(single), new IrBinary(IrBinaryOp.Divide, new IrConst(IrType.F32, 0), new IrConst(IrType.F32, 0)), I(4)),
+      new IrForEachCollection(R(single), EnumerationMode.Checked, keyed, null, new IrBlock([
+        new IrIf(new IrBinary(IrBinaryOp.Less, new IrBinary(IrBinaryOp.Divide, new IrConst(IrType.F32, IrOperators.Bits(IrType.F32, 1.0)), R(keyed)), new IrConst(IrType.F32, 0)),
+          new IrBlock([new IrAssign(sign, Plus(R(sign), I(100)))]), null)])),
+      new IrReturn(Plus(R(sign), Plus(Times(Op(IrCollectionOp.MapCount, IrType.I32, R(single)), 10), Op(IrCollectionOp.MapGet, IrType.I32, R(single), nan))))));
+
+    // Struct values are copied out of a map.
+    var point = new IrStructType("Spot");
+    var x = new IrField("X", IrType.I32, false);
+    point.Define([x]);
+    var spots = IrType.Map(IrType.String, IrType.Struct(point), MapOrder.Insertion);
+    var where = new IrLocal("where", spots);
+    var spot = new IrLocal("spot", IrType.Struct(point));
+    functions.Add(F("StructValues", [where, spot],
+      new IrDeclare(where, Op(IrCollectionOp.MapNew, spots)),
+      Do(IrCollectionOp.MapPut, R(where), new IrStrConst("a"), new IrStructNew(IrType.Struct(point), [I(1)])),
+      new IrDeclare(spot, Op(IrCollectionOp.MapGet, IrType.Struct(point), R(where), new IrStrConst("a"))),
+      new IrFieldStore(R(spot), x, I(5)),
+      new IrReturn(Plus(Times(new IrFieldLoad(Op(IrCollectionOp.MapGet, IrType.Struct(point), R(where), new IrStrConst("a")), x), 10),
+        new IrFieldLoad(new IrUnwrap(Op(IrCollectionOp.MapTryGet, IrType.Optional(IrType.Struct(point)), R(where), new IrStrConst("a"))), x)))));
+
+    // Loops over the values alone and over the keys alone, checked.
+    var values = new IrLocal("values", slots);
+    var value = new IrLocal("value", IrType.I32);
+    var other = new IrLocal("other", IrType.I32);
+    var total = new IrLocal("total", IrType.I32);
+    functions.Add(F("ValuesOnly", [values, value, other, total],
+      new IrDeclare(values, Op(IrCollectionOp.MapNew, slots)),
+      new IrDeclare(total, I(0)),
+      Put(values, 1, 5), Put(values, 2, 6),
+      new IrForEachCollection(R(values), EnumerationMode.Checked, null, value, new IrBlock([Digit(total, R(value))])),
+      new IrForEachCollection(R(values), EnumerationMode.Checked, other, null, new IrBlock([Digit(total, R(other))])),
+      new IrReturn(R(total))));
+
+    // A live loop over .NET's order, removed and taken again in the loop: the freed slot is taken.
+    var slotted = new IrLocal("slotted", slots);
+    var at = new IrLocal("at", IrType.I32);
+    var walked = new IrLocal("walked", IrType.I32);
+    functions.Add(F("SlotsLive", [slotted, at, walked],
+      new IrDeclare(slotted, Op(IrCollectionOp.MapNew, slots)),
+      new IrDeclare(walked, I(0)),
+      Put(slotted, 1, 1), Put(slotted, 2, 2), Put(slotted, 3, 3),
+      new IrForEachCollection(R(slotted), EnumerationMode.Live, at, null, new IrBlock([
+        Digit(walked, R(at)),
+        new IrIf(new IrBinary(IrBinaryOp.Equal, R(at), I(2)), new IrBlock([Remove(slotted, 1), Put(slotted, 9, 9)]), null)])),
+      new IrReturn(R(walked))));
+
+    return new IrModule("Maps", functions) { Types = [box, point] };
+  }
+
+  /// <summary>The calls of <see cref="Maps"/>.</summary>
+  public static IEnumerable<PrototypeCall> MapCalls() => MapFunctions.Select(function => new PrototypeCall(function, []) { Returns = typeof(int) });
+
 }

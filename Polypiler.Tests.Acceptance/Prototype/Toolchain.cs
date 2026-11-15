@@ -92,7 +92,7 @@ internal static class Toolchain {
         } catch (error) {
           // The traps of the generated code are its error classes (#1323): most of them RangeErrors, the
           // InvalidCastError a TypeError and the InvalidOperationError of a missing value an Error.
-          if (!(error instanceof RangeError) && !['InvalidCastError', 'InvalidOperationError'].includes(error.name)) throw error;
+          if (!(error instanceof RangeError) && !['InvalidCastError', 'InvalidOperationError', 'KeyNotFoundError', 'ArgumentError'].includes(error.name)) throw error;
           lines.push('trap: ' + error.message);
         }
       }

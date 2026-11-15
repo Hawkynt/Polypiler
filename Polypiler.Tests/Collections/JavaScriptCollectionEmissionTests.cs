@@ -44,6 +44,24 @@ public sealed class JavaScriptCollectionEmissionTests {
       Assert.That(Emit(module, profile), Does.Contain("function $lget(list, index)"), profile.ToString());
   }
 
+  /// <summary>Test design 9 and 13: every operation on maps and sets in every profile and module format; nothing is inexpressible.</summary>
+  [Test]
+  public void EveryMapOperation_IsWrittenInEveryProfile() {
+    var module = CollectionModules.Maps();
+    foreach (var profile in _profiles)
+      Assert.That(Emit(module, profile), Does.Contain("function $mget(map, key)"), profile.ToString());
+  }
+
+  /// <summary>Test design 9: Map and Set from ECMAScript 2015; $Keyed below, for pairs of halves, and for .NET's order where a removal or float keys need it.</summary>
+  [TestCase("es5", "new $Keyed(false, 0)", "new $Keyed(true, 2)", "new $Keyed(true, 1)")]
+  [TestCase("es2017", "new Map()", "new $Keyed(true, 2)", "new Map()")]
+  [TestCase("es2020", "new Map()", "new Set()", "new Map()")]
+  public void Maps_AreNativeWhereTheOrderAndTheKeysAllow(string level, string insertion, string longs, string objects) {
+    var text = Emit(CollectionModules.Maps(), level);
+    Assert.That(text, Does.Contain($"let live = {insertion};".Replace("let", level == "es5" ? "var" : "let")).Or.Contain($"var live = {insertion};"), text);
+    Assert.That(text, Does.Contain(longs).And.Contain(objects).And.Contain("new $Keyed(true, 0)"), text);
+  }
+
   /// <summary>Test design 9: includes of an array from ECMAScript 2016, the first level of the profiles es2017; the helper at es2015.</summary>
   [TestCase("es2015", false)]
   [TestCase("es2017", true)]

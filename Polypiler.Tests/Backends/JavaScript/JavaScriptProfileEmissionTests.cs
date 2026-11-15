@@ -677,6 +677,13 @@ public sealed class JavaScriptProfileEmissionTests {
       ["?."] = ("public static int F(int[] a) => a?.Length ?? -1;", "a?.length", "(a == null) ? null : a.length"),
       ["??="] = ("public static int F(int? a) { a ??= 3; return a.Value; }", "a ??= 3;", "if (a == null) {"),
       ["optional catch binding"] = ("public static int F() { try { return 1; } catch { return 2; } }", "} catch {", "} catch ($e) {"),
+      ["Map"] = ("public static int F() { var d = new System.Collections.Generic.Dictionary<int, int>(); d[1] = 2; return d.Count; }", "new Map()", "new $Keyed(true, 0)"),
+      ["Set"] = ("public static int F() { var s = new System.Collections.Generic.HashSet<int>(); s.Add(1); return s.Count; }", "new Set()", "new $Keyed(true, 0)"),
+      [".entries"] = ("public static int F() { var d = new System.Collections.Generic.Dictionary<int, int>(); int s = 0; foreach (var e in d) s += e.Key + e.Value; return s; }",
+        "d.entries()", "d.$u.length"),
+      [".keys"] = ("public static int F() { var d = new System.Collections.Generic.Dictionary<int, int>(); int s = 0; foreach (var k in d.Keys) s += k; return s; }", "d.keys()", "d.$u.length"),
+      [".values"] = ("public static int F() { var d = new System.Collections.Generic.HashSet<int>(); int s = 0; foreach (var k in d) s += k; return s; }", "d.values()", "d.$u.length"),
+      [".next"] = ("public static int F() { var d = new System.Collections.Generic.HashSet<int>(); int s = 0; foreach (var k in d) s += k; return s; }", "iterator.next()", "d.$u.length"),
       ["Error cause"] = ("public class X : System.Exception { public X(string m, System.Exception i) : base(m, i) { } } public static string F() => new X(\"a\", null).Message;",
         "super(m, { cause: i });", "this.cause = i;")
     };

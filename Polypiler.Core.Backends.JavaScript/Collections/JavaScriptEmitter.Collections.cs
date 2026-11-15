@@ -35,6 +35,9 @@ public static partial class JavaScriptEmitter {
     /// <c>ArgumentOutOfRangeError</c> - and for the searches JavaScript has no method of.
     /// </summary>
     private (JsExpression Node, bool Atomic) Collection(IrCollection operation) {
+      if (IrCollections.Kind(operation.Op) != IrTypeKind.List)
+        return this.Keyed(operation);
+
       var arguments = operation.Arguments;
       var element = (IrCollections.Constructs(operation.Op) ? operation.Type : arguments[0].Type).Element!;
       var versioned = this.Versioned;
@@ -117,6 +120,15 @@ public static partial class JavaScriptEmitter {
         var temporary = this.Declare(new IrLocal("list", loop.Collection.Type));
         target.Add(new JsVariableDeclaration(this.Let, [new JsDeclarator(temporary, this.Text(loop.Collection))]));
         list = Id(temporary);
+      }
+
+      if (!loop.Collection.Type.IsList) {
+        this.KeyedLoop(loop, target, list);
+        statements.Add(target.Count == 1 ? target[0] : new JsBlock(target));
+        foreach (var declared in this._taken.Keys.Where(taken => !outer.Contains(taken)).ToList())
+          this._taken.Remove(declared);
+
+        return;
       }
 
       var index = this.Declare(new IrLocal("index", IrType.I32));

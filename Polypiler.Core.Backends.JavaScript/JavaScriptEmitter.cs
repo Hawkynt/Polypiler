@@ -404,6 +404,10 @@ public static partial class JavaScriptEmitter {
           return this.DescribeView(type);
         case IrTypeKind.List:
           return $"Array<{this.Describe(type.Element!)}>";
+        case IrTypeKind.Map:
+          return $"Map<{this.Describe(type.Key!)}, {this.Describe(type.Element!)}>";
+        case IrTypeKind.Set:
+          return $"Set<{this.Describe(type.Element!)}>";
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)
             return "bigint";

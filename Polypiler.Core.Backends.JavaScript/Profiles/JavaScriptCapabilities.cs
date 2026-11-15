@@ -191,7 +191,19 @@ public sealed class JavaScriptCapabilities {
     new(".push", 5),
     new(".pop", 5),
     new(".splice", 5),
-    new(".includes of an array", 2016, "$lincludes")
+    new(".includes of an array", 2016, "$lincludes"),
+    // The maps and sets of #1328: Map and Set, or the slots of $Keyed, which share these methods.
+    new("Map", 2015, "$Keyed"),
+    new("Set", 2015, "$Keyed"),
+    new(".get", 5),
+    new(".has", 5),
+    new(".delete", 5),
+    new(".clear", 5),
+    new(".add", 5),
+    new(".entries", 2015, "$Keyed"),
+    new(".keys", 2015, "$Keyed"),
+    new(".values", 2015, "$Keyed"),
+    new(".next", 2015, "$Keyed")
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>
