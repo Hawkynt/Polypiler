@@ -111,6 +111,7 @@ flowchart LR
 | a lambda | `lambda a: e` where it returns one expression and writes nothing it captures; otherwise a nested `def` in front of the statement, with `nonlocal` for what it assigns |
 | a variable a closure captures that every pass of a loop has anew | a cell `[v]` made anew where the IR makes the variable, which the nested function binds as the default of a parameter when it is made |
 | a local whose address is taken | a cell, the region of its pointers |
+| an async function (#1330) | `async def name(p: int) -> int:` typed with its result; `await f(…)` of a call, the value of `FromResult(v)`, nothing for `Completed`, `await asyncio.gather(…)` for `WhenAll`; see [async functions](../reference/async.md) |
 | an iterator function | a generator function (`yield`, `yield from`, `return`); a restartable one returns `_PlySequence(_make, args)` |
 | a pipeline of sequence operations | the loops of `SequenceFusion` (#1329), with `StableSort` and `RangeCount` from the library |
 | a string operation | `len`, `ord(s[i])`, `+`, `find`, `rfind`, `in`, `startswith`, `replace`, `join`; helpers where the IR traps and Python would count from the end or clamp, and for .NET's and ECMA-262's trims, splits and pads |
@@ -128,7 +129,7 @@ flowchart LR
 | Code | When |
 | --- | --- |
 | `PLY1850` | a type Python cannot carry in this backend |
-| `PLY1851` | a construct the backend does not write, named: an intrinsic left after legalization, two constructors of one arity, an exception filter that must run before the `finally` blocks inside its try, a call of a class's own only constructor |
+| `PLY1851` | a construct the backend does not write, named: an intrinsic left after legalization, a native call and the last error of one ([foreign calls](../reference/foreign-calls.md#python)), two constructors of one arity, an exception filter that must run before the `finally` blocks inside its try, a call of a class's own only constructor |
 | `PLY1858` | a `continue` inside a switch that stands in a loop of one pass |
 | `PLY1874` | two public functions whose snake_case names are the same, or a name nothing of is left |
 
