@@ -260,10 +260,9 @@ public static partial class PythonEmitter {
           return this.Helper(PythonHelpers.MapTryAdd, Arg(0), Key(1), Arg(2));
         case IrCollectionOp.MapRemove or IrCollectionOp.SetRemove:
           return this.Helper(PythonHelpers.MapRemove, Arg(0), Key(1));
-        case IrCollectionOp.SetAdd:
-          return this.Helper(PythonHelpers.MapTryAdd, Arg(0), Key(1), new PyNone());
         default:
-          return this.Inexpressible(operation.Op.ToString());
+          // SetAdd, the last operation of IrCollectionOp: whether the element was absent.
+          return this.Helper(PythonHelpers.MapTryAdd, Arg(0), Key(1), new PyNone());
       }
     }
 

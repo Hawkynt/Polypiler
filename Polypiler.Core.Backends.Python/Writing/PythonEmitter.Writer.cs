@@ -135,7 +135,6 @@ public static partial class PythonEmitter {
 
     /// <summary>The names of the public types of the module, which <c>__all__</c> lists with its public functions.</summary>
     private IEnumerable<string> PublicTypes(IrModule module) => module.Types.Where(declaration => declaration switch {
-      IrClassType { IsLibrary: true } => false,
       IrClassType type => type.Visibility == IrVisibility.Public,
       IrInterfaceType contract => contract.Visibility == IrVisibility.Public,
       IrEnumType enumeration => enumeration.IsPublic,

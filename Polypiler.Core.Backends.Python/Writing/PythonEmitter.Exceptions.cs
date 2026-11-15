@@ -58,12 +58,6 @@ public static partial class PythonEmitter {
       return name;
     }
 
-    /// <summary>The class a trap raises, as <see cref="LibraryClass"/> names it.</summary>
-    private string TrapClass(IrTrap trap) => this.LibraryClass(IrExceptionClass.Of(trap));
-
-    /// <summary>A raise of a trap: the Python class of its exception with the trap's own text, which tells two traps of one class apart.</summary>
-    private PyStatement RaiseTrap(IrTrap trap) => new PyRaise(new PyCall(Name(this.TrapClass(trap)), [new PyString(IrTrapException.Describe(trap))]));
-
     /// <summary>The declarations of the library exception classes the module uses, each after its base.</summary>
     private IEnumerable<PyStatement> ExceptionClasses() {
       foreach (var (name, @base) in _declaredExceptions.Where(declared => this._exceptions.Contains(declared.Name)))

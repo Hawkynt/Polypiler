@@ -63,10 +63,8 @@ public static partial class PythonEmitter {
       foreach (var function in module.Functions)
         this._byName.TryAdd(function.Name, function);
 
+      // The library's exception classes are no types of a module: Python's own exceptions stand for them.
       foreach (var declaration in module.Types) {
-        if (declaration is IrClassType { IsLibrary: true })
-          continue;
-
         this._declaresTypes = true;
         var wanted = TypeName(declaration.Name);
         this._typeNames[declaration] = this.Take(wanted);
@@ -85,7 +83,7 @@ public static partial class PythonEmitter {
 
       // A class is named after its base, whose names it may not take.
       var taken = new Dictionary<IrClassType, HashSet<string>>(ReferenceEqualityComparer.Instance);
-      foreach (var type in module.Types.OfType<IrClassType>().Where(type => !type.IsLibrary).OrderBy(type => type.Lineage.Count())) {
+      foreach (var type in module.Types.OfType<IrClassType>().OrderBy(type => type.Lineage.Count())) {
         foreach (var function in type.Functions)
           this._owners[function] = type;
 
@@ -226,11 +224,7 @@ public static partial class PythonEmitter {
         return this.MemberName(property);
 
       // An accessor of an interface property.
-      foreach (var contract in this._module.Types.OfType<IrInterfaceType>())
-        if (contract.PropertyOf(method) is { } member)
-          return this.MemberName(member);
-
-      return this.MemberName(method);
+      return this.MemberName(this._module.Types.OfType<IrInterfaceType>().Select(contract => contract.PropertyOf(method)).First(property => property is not null)!);
     }
 
     /// <summary>
@@ -261,7 +255,7 @@ public static partial class PythonEmitter {
         declared.Add(this.Interface(next));
       }
 
-      foreach (var type in module.Types.OfType<IrClassType>().Where(type => !type.IsLibrary).OrderBy(type => type.Lineage.Count()))
+      foreach (var type in module.Types.OfType<IrClassType>().OrderBy(type => type.Lineage.Count()))
         declared.Add(this.Class(type));
 
       this._class = null;
@@ -397,18 +391,12 @@ public static partial class PythonEmitter {
       var body = new List<PyStatement>();
       body.AddRange(this.Constructors(type));
       foreach (var method in type.Methods.Where(method => method.Kind == IrMethodKind.Method && method.Dispatch != IrDispatch.Abstract)) {
-        if (this._byName.GetValueOrDefault(method.Function) is not { } function)
-          continue;
-
-        var written = this.Member(function, type, method.IsStatic) with { Name = this.MemberName(method) };
+        var written = this.Member(this._byName[method.Function], type, method.IsStatic) with { Name = this.MemberName(method) };
         body.Add(method.IsStatic ? written with { Decorators = [new PyName("staticmethod")] } : written);
       }
 
       foreach (var method in type.Methods.Where(method => method.Kind == IrMethodKind.Method && method.Dispatch == IrDispatch.Abstract)) {
-        if (this._byName.GetValueOrDefault(method.Function) is not { } function)
-          continue;
-
-        var written = this.Member(function with { Body = new IrBlock([]) }, type, false);
+        var written = this.Member(this._byName[method.Function] with { Body = new IrBlock([]) }, type, false);
         body.Add(written with { Name = this.MemberName(method), Body = [new PyRaise(new PyName("NotImplementedError"))] });
       }
 
@@ -572,42 +560,25 @@ public static partial class PythonEmitter {
 
     /// <summary>
     /// A method call. A static method is called on its class, an instance method on its receiver -
-    /// Python selects the override as a virtual call does; a direct call of a method that a class
-    /// overrides, and a base call, name the method of its own class with the receiver as the first
-    /// argument. An accessor reads or writes its property.
+    /// Python selects the override as a virtual call does - and a base call on <c>super()</c>. A getter
+    /// reads its property.
     /// </summary>
     private PyExpression MethodCall(IrMethodCall call) {
-      var owner = this._owners.GetValueOrDefault(call.Method.Function);
       var name = this.MethodName(call.Method);
-      if (call.Target is null) {
-        var holder = Name(owner is null ? "object" : this.TypeNameOf(owner));
-        return call.Method.Kind == IrMethodKind.Getter ? new PyAttribute(holder, name) : new PyCall(new PyAttribute(holder, name), [.. call.Arguments.Select(this.Expression)]);
-      }
+      // A static method, of a class of the module: the frontends have no static accessors.
+      if (call.Target is null)
+        return new PyCall(new PyAttribute(Name(this.TypeNameOf(this._owners[call.Method.Function])), name), [.. call.Arguments.Select(this.Expression)]);
 
-      var receiver = this.Place(call.Target);
-      var exact = call.Kind == IrMethodCallKind.Base || (call.Kind == IrMethodCallKind.Direct && call.Method.IsVirtual && owner is not null && this.Overridden(call.Method));
-      switch (call.Method.Kind) {
-        case IrMethodKind.Getter when exact && owner is not null:
-          return new PyCall(new PyAttribute(new PyAttribute(Name(this.TypeNameOf(owner)), name), "fget"), [receiver]);
-        case IrMethodKind.Getter:
-          return new PyAttribute(receiver, name);
-        case IrMethodKind.Setter:
-          return new PyCall(Name("setattr"), [receiver, new PyString(name), this.Expression(call.Arguments[0])]);
-      }
+      // A base call is a call of the method of the base class on the receiver, which only a member of
+      // the class makes, outside any closure (the frontends refuse base in a lambda): super().
+      var receiver = call.Kind == IrMethodCallKind.Base ? new PyCall(Name("super"), []) : this.Place(call.Target);
 
-      if (exact && owner is not null) {
-        if (call.Kind == IrMethodCallKind.Base && call.Target is IrLocalRef { Local: var local } && local == this._receiver && this._lambdaDepth == 0)
-          return new PyCall(new PyAttribute(new PyCall(Name("super"), []), name), [.. call.Arguments.Select(this.Expression)]);
-
-        return new PyCall(new PyAttribute(Name(this.TypeNameOf(owner)), name), [receiver, .. call.Arguments.Select(this.Expression)]);
-      }
+      // A setter returns nothing, so it is a statement (ObjectStatement), never a value.
+      if (call.Method.Kind == IrMethodKind.Getter)
+        return new PyAttribute(receiver, name);
 
       return new PyCall(new PyAttribute(receiver, name), [.. call.Arguments.Select(this.Expression)]);
     }
-
-    /// <summary>Whether a class of the module overrides a method.</summary>
-    private bool Overridden(IrMethod method)
-      => this._module.Types.OfType<IrClassType>().SelectMany(type => type.Methods).Any(other => other.Overrides is { } overridden && ReferenceEquals(overridden.Root, method.Root) && !ReferenceEquals(other, method));
 
     /// <summary>
     /// The statements of objects: a field write, a setter, and the call of a constructor of the base class
@@ -627,13 +598,10 @@ public static partial class PythonEmitter {
           return true;
         case IrExprStmt { Expression: IrCall call } when this._owners.TryGetValue(call.Function, out var owner) && this._class is not null && owner.Constructors.Any(constructor => constructor.Function == call.Function):
           var arguments = call.Arguments.Skip(1).Select(this.Expression).ToList();
-          if (owner != this._class) {
-            written.Add(new PyExpressionStatement(new PyCall(new PyAttribute(new PyCall(Name("super"), []), "__init__"), arguments)));
-          } else if (owner.Constructors.Count > 1) {
-            written.Add(new PyExpressionStatement(new PyCall(new PyAttribute(Name("self"), this.Initializer(owner, call.Function)), arguments)));
-          } else {
-            this.Refuse(InexpressibleDescriptor, $"'the call of the constructor of '{owner.Name}' from itself' cannot be expressed in Python profile '{profile.Name}'");
-          }
+          // A constructor calls one of its base or, : this(…), another of its own class, which then has several.
+          written.Add(new PyExpressionStatement(owner != this._class
+            ? new PyCall(new PyAttribute(new PyCall(Name("super"), []), "__init__"), arguments)
+            : new PyCall(new PyAttribute(Name("self"), this.Initializer(owner, call.Function)), arguments)));
 
           return true;
         default:

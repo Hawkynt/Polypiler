@@ -190,9 +190,8 @@ public static partial class PythonEmitter {
         case IrFunctionRef reference when this._functions.TryGetValue(reference.Function, out var function):
           return Name(function);
         case IrBoundMethod bound:
-          var owner = this._owners.GetValueOrDefault(bound.Method.Function);
           if (bound.Receiver is null)
-            return new PyAttribute(Name(owner is null ? "object" : this.TypeNameOf(owner)), this.MethodName(bound.Method));
+            return new PyAttribute(Name(this.TypeNameOf(this._owners[bound.Method.Function])), this.MethodName(bound.Method));
 
           return new PyAttribute(this.Place(bound.Receiver), this.MethodName(bound.Method));
         case IrBind bind:
