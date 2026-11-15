@@ -149,7 +149,7 @@ export function throwInside() {
     for (const v of traced(t)) {
       throw new Error("in the body");
     }
-  } catch {
+  } catch (e) {
     t[0] = t[0] * 10 + 4;
   }
   return t[0];
