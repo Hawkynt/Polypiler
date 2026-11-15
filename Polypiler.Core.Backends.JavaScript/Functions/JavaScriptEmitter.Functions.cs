@@ -171,12 +171,12 @@ public static partial class JavaScriptEmitter {
 
     /// <summary>
     /// A function of the scope that writes what it captures as a nested function declaration at the top
-    /// of its function, which ECMAScript 5 admits there: <c>function f(…) { … }</c>. One whose closure
-    /// needs the environments of loop passes keeps the form of <see cref="Held"/>.
+    /// of its function, which ECMAScript 5 admits there: <c>function f(…) { … }</c>. No loop is around
+    /// it, so its closure needs no environment of a pass and is a plain function expression.
     /// </summary>
-    private JsStatement Nested(string name, IrLambda lambda) {
-      var (node, _) = this.Lambda(lambda, false);
-      return node is JsFunctionExpression function ? new JsFunctionDeclaration(name, function.Parameters, function.Body) : new JsVariableDeclaration(this.Native("const") ? "const" : "var", [new JsDeclarator(name, node)]);
+    private JsFunctionDeclaration Nested(string name, IrLambda lambda) {
+      var function = (JsFunctionExpression)this.Lambda(lambda, false).Node;
+      return new JsFunctionDeclaration(name, function.Parameters, function.Body);
     }
 
     private JsVariableDeclaration Held(string name, IrLambda lambda) {

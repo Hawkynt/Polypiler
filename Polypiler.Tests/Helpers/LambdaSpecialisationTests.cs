@@ -88,6 +88,8 @@ internal sealed class LambdaSpecialisationTests {
       .SetName("Escape_Returned_IsNotSpecialised");
     yield return new TestCaseData("static Func<int, int> Plus(Func<int, int> f) => y => f(y) + 1; public static int G(int[] a, int k) => Plus(x => x * k)(a.Length);", false)
       .SetName("Escape_CapturedByAnEscapingLambda_IsNotSpecialised");
+    yield return new TestCaseData("static int Again(int[] a, Func<int, int> f) { f = x => x - 1; return f(a.Length); } public static int G(int[] a, int k) => Again(a, x => x * k);", false)
+      .SetName("Escape_Reassigned_IsNotSpecialised");
     yield return new TestCaseData("static int Rec(int n, Func<int, int> f) => n <= 0 ? 0 : f(n) + Rec(n - 1, f); public static int G(int[] a, int k) => Rec(a.Length, x => x * k);", false)
       .SetName("Escape_Recursion_IsNotSpecialised");
   }
@@ -125,6 +127,8 @@ internal sealed class LambdaSpecialisationTests {
     yield return new TestCaseData(Apply + "public static int G(int[] a, int k) => Apply(a, x => x * k);", new[] { IrCaptureClass.Static }, 0).SetName("Capture_ReadOnly_IsByValue");
     yield return new TestCaseData("static int Count(int[] a, Func<int, bool> p) { int c = 0; foreach (var x in a) if (p(x)) c++; return c; } public static int G(int[] a, int k) { int n = k; int c = Count(a, x => { n++; return x > 0; }); return c * 100 + n; }",
       new[] { IrCaptureClass.Capturing }, 1).SetName("Capture_WrittenInside_IsInACell");
+    yield return new TestCaseData("static int Count(int[] a, Func<int, bool> p) { int c = 0; foreach (var x in a) if (p(x)) c++; return c; } public static int G(int[] a, int k) { int n; n = k; int c = Count(a, x => { n++; return x > 0; }); return c * 100 + n; }",
+      new[] { IrCaptureClass.Capturing }, 1).SetName("Capture_DeclaredWithoutAValue_IsInACell");
     yield return new TestCaseData("static int Two(int[] a, Func<int, int> f, Action g) { int s = 0; foreach (var x in a) { s += f(x); g(); } return s; } public static int G(int[] a, int k) { int m = k; int s = Two(a, x => x * m, () => m++); return s * 100 + m; }",
       new[] { IrCaptureClass.Capturing, IrCaptureClass.Capturing }, 1).SetName("Capture_WrittenOutsideBetweenCalls_IsInACell");
     yield return new TestCaseData(Apply + "public static int G(int[] a, int k) { int s = Apply(a, x => x * k); k = 5; return s + Apply(a, x => x * k); }", new[] { IrCaptureClass.Static }, 0)
@@ -201,6 +205,15 @@ internal sealed class LambdaSpecialisationTests {
     var (result, notes) = Specialised(module, new O0463LambdaSpecialisation(O0463LambdaSpecialisation.CloneLimit, size - over));
     Assert.That(result.Clones, Has.Count.EqualTo(clones));
     Assert.That(notes, Has.Count.EqualTo(1 - clones));
+  }
+
+  /// <summary>A call the budget refuses keeps its lambda, and a variable only that lambda writes gets no cell.</summary>
+  [Test]
+  public void Budget_RefusedCall_MakesNoCell() {
+    const string methods = "static int Count(int[] a, Func<int, bool> p) { int c = 0; foreach (var x in a) if (p(x)) c++; return c; } public static int G(int[] a, int k) { int n = k; int c = Count(a, x => { n++; return x > 0; }); return c * 100 + n; }";
+    var (result, notes) = Specialised(Legalized(methods), new O0463LambdaSpecialisation(O0463LambdaSpecialisation.CloneLimit, 0));
+    Assert.That((result.Clones.Count, Cells(result), notes.Count), Is.EqualTo((0, 0, 1)));
+    Assert.That(HasLambda(result, "G"), Is.True);
   }
 
   // ---------------------------------------------------------------- traps (row 5)
@@ -298,10 +311,267 @@ internal sealed class LambdaSpecialisationTests {
   /// <summary>A function the copies replaced at every call goes when it is private; a public one stays.</summary>
   [Test]
   public void ReplacedCallee_GoesWhenPrivate() {
-    var (result, _) = Specialised(Legalized(Apply + "public static int G(int[] a, int k) => Apply(a, x => x * k);"));
+    var (result, _) = Specialised(Legalized(Apply + "static int Twice(int x) => x * 2; public static int U() { Func<int, int> t = Twice; return t(3); } public static int G(int[] a, int k) => Apply(a, x => x * k);"));
     Assert.That(result.Functions.Select(function => function.Name), Has.None.EqualTo("Apply"));
+    Assert.That(result.Functions.Select(function => function.Name), Has.One.EqualTo("Twice"), "a function named as a value stays");
     var (kept, _) = Specialised(Legalized(Apply.Replace("static int Apply", "public static int Apply") + "public static int G(int[] a, int k) => Apply(a, x => x * k);"));
     Assert.That(kept.Functions.Select(function => function.Name), Has.One.EqualTo("Apply"));
+  }
+
+  /// <summary>A local function - declared at the top of its block, assigned once what it captures is declared - is lifted from its assignment, inside a nested block too.</summary>
+  [Test]
+  public void Held_LocalFunction_IsLiftedFromItsAssignment() {
+    const string methods = "public static int L(int a) { if (a > 0) { int k = a * 2; int Sq(int x) => x * x + k; return Sq(a) + Sq(a + 1); } return 0; }";
+    var module = Legalized(methods);
+    var (result, _) = Specialised(module);
+    Assert.That(result.ScopeFunctions, Is.EqualTo(new[] { new IrScopeFunction("L", "L_Sq", IrCaptureClass.Static, true) }));
+    Assert.That(HasLambda(result, "L"), Is.False);
+    SameOutcomes(methods, module, Optimized(module).Module, "L", [[3], [-1]]);
+  }
+
+  /// <summary>A local assigned a second lambda, or assigned in two branches, holds no lambda for good: it stays.</summary>
+  [TestCase("Func<int, int> f = x => x; f = x => x + 1; return f(a);")]
+  [TestCase("Func<int, int> f; if (a > 0) f = x => x; else f = x => -x; return f(a);")]
+  public void Held_AssignedTwice_IsLeftAlone(string body) {
+    var methods = $"public static int L(int a) {{ {body} }}";
+    var module = Legalized(methods);
+    Assert.That(Specialised(module).Module.ScopeFunctions, Is.Empty);
+    SameOutcomes(methods, module, Optimized(module).Module, "L", [[3], [-1]]);
+  }
+
+  /// <summary>A held lambda passed to a parameter that keeps it binds the copy to its lifted function, and its own calls are direct.</summary>
+  [Test]
+  public void Held_PassedToACallee_IsBound() {
+    const string methods = Apply + "public static int G(int[] a, int k) { Func<int, int> sq = x => x * k; return Apply(a, sq) + sq(2); }";
+    var module = Legalized(methods);
+    var (result, _) = Specialised(module);
+    Assert.That(result.Clones.Single().Key, Is.EqualTo("1=G_sq"));
+    Assert.That(HasLambda(result, "G"), Is.False);
+    SameOutcomes(methods, module, Optimized(module).Module, "G", Arrays(3));
+  }
+
+  /// <summary>A function that passes a lambda to itself keeps that call; a caller's call of it is still bound.</summary>
+  [Test]
+  public void Recursive_CallOfItself_IsKept() {
+    const string methods = "static int Down(int n, Func<int, int> f) => n <= 0 ? 0 : f(n) + Down(n - 1, x => x * 2); public static int G(int[] a, int k) => Down(a.Length, x => x + k);";
+    var module = Legalized(methods);
+    var (result, _) = Specialised(module);
+    Assert.That(HasLambda(result, "G"), Is.False);
+    Assert.That(HasLambda(result, "Down"), Is.True);
+    SameOutcomes(methods, module, Optimized(module).Module, "G", Arrays(3));
+  }
+
+  /// <summary>
+  /// A captured variable a lambda writes by a binding - the IR's assignment inside an expression, which
+  /// no frontend makes of a captured variable yet - gets no cell, and the lambda stays; built by hand.
+  /// </summary>
+  [Test]
+  public void Capture_WrittenByABinding_IsNotLifted() {
+    var a = new IrLocal("a", IrType.Array(IrType.I32));
+    var p = new IrLocal("p", IrType.Function(IrType.Bool, IrType.I32));
+    var c = new IrLocal("c", IrType.I32);
+    var k = new IrLocal("k", IrType.I32);
+    var n = new IrLocal("n", IrType.I32);
+    var x = new IrLocal("x", IrType.I32);
+    IrExpr Ref(IrLocal local) => new IrLocalRef(local);
+    IrExpr Add(IrExpr left, IrExpr right) => new IrBinary(IrBinaryOp.Add, left, right);
+    var count = new IrFunction("count", false, IrType.I32, [a, p], [c, k], new IrBlock([
+      new IrDeclare(c, new IrConst(IrType.I32, 0)),
+      new IrDeclare(k, new IrConst(IrType.I32, 0)),
+      new IrWhile(new IrBinary(IrBinaryOp.Less, Ref(k), new IrArrayLength(Ref(a))), new IrBlock([
+        new IrIf(new IrInvoke(IrType.Bool, Ref(p), [new IrArrayLoad(Ref(a), Ref(k))]), new IrBlock([new IrAssign(c, Add(Ref(c), new IrConst(IrType.I32, 1)))]), null),
+        new IrAssign(k, Add(Ref(k), new IrConst(IrType.I32, 1)))])),
+      new IrReturn(Ref(c))]));
+    var lambda = IrLambda.Of([x], IrType.Bool, [], new IrBlock([new IrReturn(new IrBinary(IrBinaryOp.Greater, new IrBind(n, Add(Ref(n), Ref(x))), new IrConst(IrType.I32, 3)))]));
+    var g = new IrFunction("g", true, IrType.I32, [a], [n, c], new IrBlock([
+      new IrDeclare(n, new IrConst(IrType.I32, 0)),
+      new IrDeclare(c, new IrCall("count", IrType.I32, [Ref(a), lambda])),
+      new IrReturn(Add(new IrBinary(IrBinaryOp.Multiply, Ref(c), new IrConst(IrType.I32, 100)), Ref(n)))]));
+    var module = new IrModule("M", [g, count]);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    var (result, _) = Specialised(module);
+    Assert.That(result.Clones, Is.Empty);
+    var call = new PrototypeCall("g", [new[] { 1, 5, 7 }]);
+    Assert.That(PrototypeFixture.InterpretedOutcome(Optimized(module).Module, call), Is.EqualTo(PrototypeFixture.InterpretedOutcome(module, call)).And.StartsWith("213"));
+  }
+
+  /// <summary>A JavaScript module imported and legalized for ECMAScript 2022.</summary>
+  private static IrModule Script(string source) {
+    var imported = Polypiler.Core.Frontends.JavaScript.JavaScriptFrontend.Import("script.mjs", source);
+    Assert.That(imported.Module, Is.Not.Null, string.Join(Environment.NewLine, imported.Diagnostics));
+    return JavaScriptEmitter.Legalize(imported.Module!, () => PrecomputedImplementations.Module, JavaScriptProfile.Parse("es2022"), FloatMode.Accurate);
+  }
+
+  /// <summary>
+  /// JavaScript: a variable of every pass of a <c>for (let …)</c> that a lambda writes gets no cell, and
+  /// that lambda stays; a function value declared in the header of such a loop that nothing captures is
+  /// a local like any other and is lifted.
+  /// </summary>
+  [Test]
+  public void Capture_VariablesOfEveryPass_StayInJavaScript() {
+    const string source = """
+      /** @param {number[]} a */
+      function count(a, p) { let c = 0; for (let k = 0; k < a.length; k++) if (p(a[k])) c++; return c; }
+      /** @param {number[]} a */
+      export function t(a) { let s = 0; for (let i = 0; i < 2; i++) { s += count(a, x => { i++; return x > 0; }); } return s; }
+      export function u() { let s = 0; for (let f = x => x + 1, i = 0; i < 3; i++) s += f(i); return s; }
+      """;
+    var module = Script(source);
+    var (result, _) = Specialised(module);
+    Assert.That(HasLambda(result, "t"), Is.True);
+    Assert.That(HasLambda(result, "u"), Is.False);
+    var optimized = Optimized(module).Module;
+    foreach (var call in new[] { new PrototypeCall("t", [new[] { 1.0, -2, 3 }]), new PrototypeCall("u", []) })
+      Assert.That(PrototypeFixture.InterpretedOutcome(optimized, call), Is.EqualTo(PrototypeFixture.InterpretedOutcome(module, call)), call.Method);
+  }
+
+  /// <summary>
+  /// In a method of a class, a lambda that captures the receiver stays, and one that does not is lifted;
+  /// the methods, the constructor, the property and the interface of the class are no callee.
+  /// </summary>
+  [Test]
+  public void Member_ReceiverStays() {
+    const string source = """
+      using System;
+      public interface IShape { int Area(); }
+      public sealed class Box : IShape {
+        public int Side { get; set; }
+        public Box(int side) { this.Side = side; }
+        public int Area() => Snippet.Apply(new[] { 1, 2 }, x => x * this.Side);
+        public int Twice() => Snippet.Apply(new[] { 1, 2 }, x => x * 2);
+      }
+      public static class Snippet {
+        public static int Apply(int[] a, Func<int, int> f) { int s = 0; foreach (var x in a) s += f(x); return s; }
+        public static int G(int k) => new Box(k).Area() + new Box(k).Twice();
+      }
+      """;
+    var imported = CSharpFrontend.Import("Box.cs", source);
+    Assert.That(imported.Module, Is.Not.Null, string.Join(Environment.NewLine, imported.Diagnostics));
+    var module = CSharpEmitter.Legalize(imported.Module!, () => PrecomputedImplementations.Module, CSharpProfile.Default, FloatMode.Accurate);
+    var (result, _) = Specialised(module);
+    Assert.That(result.Clones, Has.Count.EqualTo(1));
+    Assert.That(result.Functions.Count(function => IrTree.Nodes(function.Body).Any(node => node is IrLambda)), Is.EqualTo(1));
+    var expected = GeneratedCSharp.CompileSource(source).Outcome(new PrototypeCall("G", [3]));
+    Assert.That(PrototypeFixture.InterpretedOutcome(Optimized(module).Module, new PrototypeCall("G", [3])), Is.EqualTo(expected));
+  }
+
+  /// <summary>
+  /// A one-element array a function only reads and writes the element of is a variable again, a lambda
+  /// beside it notwithstanding; one read whole, one of two elements and an element of an array of a
+  /// call stay as they are.
+  /// </summary>
+  [Test]
+  public void Cell_OfTheProgram_IsAVariableAgain() {
+    const string methods = "static int[] Arr() => new int[] { 7 }; public static int U(int k) { int[] box = new int[1]; int[] two = new int[2]; two[1] = 5; box[0] = k + two[1]; Func<int, int> f = y => y + two[0]; box[0] = f(box[0]); int[] keep = new int[1]; keep[0] = 1; int[] dyn = new int[1]; dyn[k & 0] = 2; return box[0] + Arr()[0] + keep.Length + keep[0] + dyn[0]; }";
+    var module = Legalized(methods);
+    var (result, _) = Specialised(module);
+    var declared = Function(result, "U").Body.Statements.SelectMany(IrStatementsProbe.All).OfType<IrDeclare>().ToDictionary(declare => declare.Local.Name, declare => declare.Local.Type);
+    Assert.That(declared["box"], Is.EqualTo(IrType.I32));
+    Assert.That(declared["keep"], Is.EqualTo(IrType.Array(IrType.I32)));
+    Assert.That(declared["dyn"], Is.EqualTo(IrType.Array(IrType.I32)));
+    SameOutcomes(methods, module, Optimized(module).Module, "U", [[3], [-4]]);
+  }
+
+  /// <summary>The pass without a receiver of notes, as every pass of the pipeline is called.</summary>
+  [Test]
+  public void Pass_RunsWithoutNotes() {
+    IIrPass pass = new O0463LambdaSpecialisation();
+    var module = Legalized(Distinct(O0463LambdaSpecialisation.CloneLimit + 1));
+    var result = pass.Run(module, _ => true, (_, _) => { });
+    Assert.That((pass.Id, pass.Name, result.Clones.Count), Is.EqualTo(("O0463", "lambda specialisation", O0463LambdaSpecialisation.CloneLimit)));
+  }
+
+  /// <summary>A call the budget leaves is noted once, however many rounds meet it, and <c>--explain-opt</c> writes the note.</summary>
+  [Test]
+  public void Budget_NoteIsWrittenOnce() {
+    var module = Legalized(Distinct(O0463LambdaSpecialisation.CloneLimit + 1));
+    Assert.That(Optimized(module).Notes, Has.Count.EqualTo(1));
+    var (text, error) = Translate(Distinct(O0463LambdaSpecialisation.CloneLimit + 1), "csharp", "--explain-opt");
+    Assert.That(Regex.Matches(error, "passes its function values to 'Apply' as they are"), Has.Count.EqualTo(1), error);
+    Assert.That(text, Does.Contain("Apply("));
+  }
+
+  // ---------------------------------------------------------------- the forms of the functions of a scope
+
+  private const string Mix = "x => { int y = x * x + 3 * x; y = y ^ (y >> 2); y = y * 7 + 1; y = y - (x << 1); return y - x; }";
+
+  /// <summary>Translates methods with the usings, in process, and gives the generated text and the error stream.</summary>
+  private static (string Text, string Error) Translate(string methods, string to, params string[] options) {
+    var directory = Path.Combine(Path.GetTempPath(), "polypiler-o0463-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try {
+      var source = Path.Combine(directory, "Snippet.cs");
+      File.WriteAllText(source, Source(methods));
+      using var standard = new StringWriter();
+      using var error = new StringWriter();
+      var exitCode = Program.Run(["translate", source, "--from", "csharp", "--to", to, "--output", Path.Combine(directory, "out"), .. options], standard, error);
+      Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success), error.ToString());
+      var file = Directory.GetFiles(Path.Combine(directory, "out")).Single(path => Path.GetFileName(path) != Manifest.FileName);
+      return (File.ReadAllText(file), error.ToString());
+    } finally {
+      Directory.Delete(directory, true);
+    }
+  }
+
+  /// <summary>A lifted function only its scope calls is a static local function from C# 8, a local function in C# 7.3 and a private method below.</summary>
+  [TestCase("net10.0", @"^ {4}static int H_mix\(int x\)")]
+  [TestCase("netcoreapp3.1", @"^ {4}static int H_mix\(int x\)")]
+  [TestCase("net4.8", @"^ {4}int H_mix\(int x\)")]
+  [TestCase("net4.6", @"^  private static int H_mix\(int x\)")]
+  [TestCase("net2.0", @"^  private static int H_mix\(int x\)")]
+  public void Form_StaticScopeFunction(string profile, string form) {
+    var methods = $"public static int H(int a, int b) {{ Func<int, int> mix = {Mix}; return mix(a) + mix(b) + mix(a + b); }}";
+    var (text, _) = Translate(methods, "csharp", "--profile", profile);
+    Assert.That(Regex.IsMatch(text, form, RegexOptions.Multiline), Is.True, text);
+    var call = new PrototypeCall("H", [3, 4]);
+    Assert.That(GeneratedCSharp.Compile(text, false).Outcome(call), Is.EqualTo(GeneratedCSharp.CompileSource(Source(methods)).Outcome(call)));
+  }
+
+  /// <summary>Two lifted functions of one scope with a block body are both its local functions.</summary>
+  [Test]
+  public void Form_TwoScopeFunctionsInABlock() {
+    var methods = $"public static int H(int a, int b) {{ Func<int, int> mix = {Mix}; Func<int, int> mux = {Mix.Replace("3 * x", "5 * x")}; int t = mix(a) + mix(b) + mix(a + b); if (t > 0) t = t + mux(a) + mux(b) + mux(t); return t; }}";
+    var (text, _) = Translate(methods, "csharp");
+    Assert.That(Regex.Matches(text, @"^ {4}static int H_m[iu]x\(int x\)", RegexOptions.Multiline), Has.Count.EqualTo(2), text);
+    var call = new PrototypeCall("H", [3, 4]);
+    Assert.That(GeneratedCSharp.Compile(text, false).Outcome(call), Is.EqualTo(GeneratedCSharp.CompileSource(Source(methods)).Outcome(call)));
+  }
+
+  /// <summary>
+  /// What stays a private method: a lifted function whose parameter shares a name with its scope before
+  /// C# 8, one two functions call, and one lifted in a function that is itself written inside another.
+  /// </summary>
+  [TestCase("net4.8", "public static int H(int a) { int k = a + 1; Func<int, int> mix = x => { int y = x * x + 3 * x + k; y = y ^ (y >> 2); y = y * 7 + 1; y = y - (x << 1); return y - x; }; return mix(a) + mix(a + 1) + mix(a + 2); }", "H_mix")]
+  [TestCase("net10.0", "public static int H(int a) { Func<int, int> mix = " + Mix + "; return mix(a) + mix(a + 1) + mix(a + 2); } public static int H2(int a) { Func<int, int> mix = " + Mix + "; return mix(a) + mix(a + 2) + mix(a + 4); }", "H_mix")]
+  [TestCase("net10.0", "public static int H(int a) { Func<int, int> outer = x => { Func<int, int> mix = " + Mix + "; return mix(x) + mix(x + 1) + mix(x + 2) + mix(x * 3) + mix(x - 1) + mix(x ^ 5) + mix(x << 1) + mix(x >> 1); }; return outer(a) + outer(a + 1) + outer(a + 2); }", "H_outer_mix")]
+  public void Form_StaysAPrivateMethod(string profile, string methods, string name) {
+    var (text, _) = Translate(methods, "csharp", "--profile", profile);
+    Assert.That(Regex.IsMatch(text, $@"^  private static int {name}\(", RegexOptions.Multiline), Is.True, text);
+    var call = new PrototypeCall("H", [3]);
+    Assert.That(GeneratedCSharp.Compile(text, false).Outcome(call), Is.EqualTo(GeneratedCSharp.CompileSource(Source(methods)).Outcome(call)));
+  }
+
+  /// <summary>
+  /// A capturing C# local function, which the IR declares and then assigns, is a nested function
+  /// declaration from its assignment; one in a nested block keeps the form of a function value.
+  /// </summary>
+  [Test]
+  public void Form_CapturingLocalFunction() {
+    const string methods = "public static int W(int k) { int n = 0; void Inc() { n++; } Inc(); Inc(); if (k > 0) { int m = k; Action dec = () => { m--; }; dec(); n = n + m; } return n; }";
+    var (script, _) = Translate(methods, "javascript");
+    Assert.That(Regex.IsMatch(script, @"^  function Inc\(\) \{", RegexOptions.Multiline), Is.True, script);
+    Assert.That(script, Does.Match(@"(let|const) dec = ").And.Not.Contain("function dec("), script);
+  }
+
+  /// <summary>A capturing local function is a nested function declaration in JavaScript at every level, a closure of its function in C#.</summary>
+  [TestCase("es5")]
+  [TestCase("es2022")]
+  public void Form_CapturingScopeFunction(string level) {
+    const string methods = "public static int W() { int n = 0; Action inc = () => { n++; }; inc(); inc(); return n; }";
+    var (script, _) = Translate(methods, "javascript", "--profile", level);
+    Assert.That(Regex.IsMatch(script, @"^  function inc\(\) \{", RegexOptions.Multiline), Is.True, script);
+    var (csharp, _) = Translate(methods, "csharp");
+    Assert.That(csharp, Does.Contain("void inc()").And.Not.Contain("static void inc()"), csharp);
   }
 
   // ---------------------------------------------------------------- the LINQ fixtures (rows 1 and 7)
