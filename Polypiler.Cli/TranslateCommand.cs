@@ -9,6 +9,7 @@ using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
+using Polypiler.Core.Frontends.Rust;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
@@ -69,6 +70,7 @@ public sealed class TranslateCommand : ICliCommand {
   private const string DisableOpt = "--disable-opt";
   private const string ExplainOpt = "--explain-opt";
   private const string Instantiate = "--instantiate";
+  private const string OverflowChecksOption = "--overflow-checks";
 
   private static readonly string[] _required = [From, To, Output];
 
@@ -92,6 +94,7 @@ public sealed class TranslateCommand : ICliCommand {
     [Float] = "the floating-point mode",
     [Namespace] = "C#: the namespace of the generated code",
     [Instantiate] = "C#: an instantiation of a public generic method that the class itself does not use",
+    [OverflowChecksOption] = "Rust: what an overflowing operator does, as rustc -C overflow-checks: panic (debug) or wrap (release)",
     [LangVersion] = "C#: the language version, above the one of the profile"
   };
 
@@ -115,7 +118,8 @@ public sealed class TranslateCommand : ICliCommand {
   /// <summary>The source languages; another one is another entry.</summary>
   private static readonly Frontend[] _frontends = [
     new("csharp", [new(Instantiate, "<method[type,...]>")], InstantiateMisuse, ImportCSharp),
-    new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript)
+    new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript),
+    new("rust", [new(OverflowChecksOption, "<panic|wrap>")], OverflowChecksMisuse, ImportRust)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -434,6 +438,26 @@ public sealed class TranslateCommand : ICliCommand {
   }
 
   private static string[] Names(string list) => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+  /// <summary>
+  /// Imports Rust with the overflow mode of <c>--overflow-checks</c>; without it the frontend refuses
+  /// the import (<c>PLY1503</c>), because the source alone does not say what <c>a + b</c> does.
+  /// </summary>
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportRust(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    OverflowChecks? mode = options.TryGetValue(OverflowChecksOption, out var value) ? value == "panic" ? OverflowChecks.Panic : OverflowChecks.Wrap : null;
+    var imported = RustFrontend.Import(file, source, mode);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    var failure = imported.Diagnostics.Select(diagnostic => diagnostic.ExitCode).FirstOrDefault(code => code is ExitCode.InvalidSource or ExitCode.UsageError) ?? ExitCode.UnsupportedConstruct;
+    return (imported.Module, (int)failure, []);
+  }
+
+  /// <summary>What is wrong with <c>--overflow-checks</c>: a value other than <c>panic</c> or <c>wrap</c>.</summary>
+  private static string? OverflowChecksMisuse(IReadOnlyDictionary<string, string> options)
+    => options.TryGetValue(OverflowChecksOption, out var mode) && mode is not ("panic" or "wrap")
+      ? $"unknown overflow mode '{mode}'; the modes are panic and wrap"
+      : null;
 
   /// <summary>
   /// The instantiations of <c>--instantiate</c>, whose values the command line gives joined by commas:

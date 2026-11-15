@@ -966,6 +966,114 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY1500
+    severity: error
+    exit: InvalidSource
+    title: Rust source the compiler rejects
+    message: "<E####: the error, or the denied lint and its name>"
+    rule: rust.compiler
+    area: rust
+    owner: "#466"
+    surfaces: standard error of polypiler translate --from rust, for a syntax error, a type error rustc reports with that code, or a deny-by-default lint (overflowing_literals, arithmetic_overflow, unconditional_panic)
+  - code: PLY1501
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust type not supported
+    message: "type '<type>' is not supported by the Rust frontend"
+    rule: rust.types
+    area: rust
+    owner: "#466"
+    surfaces: standard error of polypiler translate --from rust, for i128, u128, f16, f128, char, str and every type but the integers, f32, f64, bool, () and !
+  - code: PLY1502
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust construct not supported
+    message: "'<construct>' is not supported by the Rust frontend"
+    rule: rust.subset
+    area: rust
+    owner: "#466"
+    surfaces: standard error of polypiler translate --from rust, one line per refused construct
+  - code: PLY1503
+    severity: error
+    exit: UsageError
+    title: Rust overflow mode not set
+    message: "the source profile does not set 'overflowChecks' (panic or wrap)"
+    rule: rust.overflow-checks
+    area: rust
+    owner: "#466"
+    surfaces: standard error of polypiler translate --from rust without --overflow-checks
+  - code: PLY1504
+    severity: error
+    exit: InvalidSource
+    title: Rust type not inferable
+    message: "the type of '<name>' could not be resolved"
+    rule: rust.inference
+    area: rust
+    owner: "#466"
+    surfaces: standard error of polypiler translate --from rust, for a local whose type nothing decides (rustc's E0282)
+  - code: PLY1510
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust conditional binding not supported
+    message: "'<construct>' is not supported by the Rust frontend"
+    rule: rust.conditional-binding
+    area: rust
+    owner: "#463"
+    surfaces: standard error of polypiler translate --from rust, for if let, while let and let ... else
+  - code: PLY1511
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust pattern not supported
+    message: "pattern '<pattern>' is not supported"
+    rule: rust.patterns
+    area: rust
+    owner: "#463"
+    surfaces: standard error of polypiler translate --from rust, for @ bindings, slice, struct, enum, reference and const block patterns and a match on a float
+  - code: PLY1512
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust iterable not supported
+    message: "iterating over '<iterable>' is not supported; only integer ranges with rev() and step_by() are"
+    rule: rust.iterables
+    area: rust
+    owner: "#463"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1513
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust coroutine not supported
+    message: "'<construct>' requires coroutine lowering, which the Rust frontend does not provide"
+    rule: rust.coroutines
+    area: rust
+    owner: "#463"
+    surfaces: standard error of polypiler translate --from rust, for async fn, async, gen and try blocks, .await and yield
+  - code: PLY1530
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust function form not supported
+    message: "function form '<form>' is not supported"
+    rule: rust.functions
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust, for generic, unsafe and extern functions, where clauses, parameter patterns and nested items
+  - code: PLY1531
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust macro not supported
+    message: "macro '<name>!' is not supported"
+    rule: rust.macros
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1533
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust attribute not supported
+    message: "attribute '<name>' is not supported"
+    rule: rust.attributes
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust, for every attribute but the lint levels, inline, must_use, cold, track_caller and documentation
   - code: PLY3935
     severity: error
     exit: OracleFailure

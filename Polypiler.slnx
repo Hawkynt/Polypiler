@@ -10,6 +10,7 @@
   <Project Path="Polypiler.Core.BinaryFormats/Polypiler.Core.BinaryFormats.csproj" />
   <Project Path="Polypiler.Core.Frontends.CSharp/Polypiler.Core.Frontends.CSharp.csproj" />
   <Project Path="Polypiler.Core.Frontends.JavaScript/Polypiler.Core.Frontends.JavaScript.csproj" />
+  <Project Path="Polypiler.Core.Frontends.Rust/Polypiler.Core.Frontends.Rust.csproj" />
   <Project Path="Polypiler.Core.IR/Polypiler.Core.IR.csproj" />
   <Project Path="Polypiler.Core.Legalize/Polypiler.Core.Legalize.csproj" />
   <Project Path="Polypiler.Core.MachineSemantics/Polypiler.Core.MachineSemantics.csproj" />
