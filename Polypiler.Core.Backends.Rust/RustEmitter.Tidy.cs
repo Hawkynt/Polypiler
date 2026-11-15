@@ -150,6 +150,7 @@ public static partial class RustEmitter {
         => Returned(choice with { Then = new RsBlock([], returned) }),
       RsIf { Else: RsBlockExpression { Block: { Statements: [RsExpressionStatement { Expression: RsReturn { Value: { } returned } }], Tail: null } } } choice
         => choice with { Else = new RsBlockExpression(new RsBlock([], returned)) },
+      RsIf { Else: RsIf nested } choice => choice with { Else = Returned(nested) },
       _ => value
     };
 
@@ -187,13 +188,20 @@ public static partial class RustEmitter {
     }
 
     /// <summary>An <c>if</c> every branch of which ends assigning a binding as the <c>if</c> giving the values, or <see langword="null"/>.</summary>
-    private static RsIf? AssignedIf(RsIf choice, string name) {
-      if (choice.Else is null || Names(choice.Condition, name) || Assigning(choice.Then, name) is not { } then)
+    private static RsIf? AssignedIf(RsIf choice, string name, bool assigned = false) {
+      if (choice.Else is null || Names(choice.Condition, name))
         return null;
 
+      // A branch that never ends gives no value and may stand beside those that do, as long as one does.
+      var then = Assigning(choice.Then, name) ?? (Leaving(choice.Then, name) is not null ? choice.Then : null);
+      if (then is null)
+        return null;
+
+      assigned |= then.Tail is not null;
       RsExpression? otherwise = choice.Else switch {
-        RsIf nested => AssignedIf(nested, name),
-        RsBlockExpression { Block: var block } => Assigning(block, name) is { } assigned ? new RsBlockExpression(assigned) : null,
+        RsIf nested => AssignedIf(nested, name, assigned),
+        RsBlockExpression { Block: var block } when Assigning(block, name) is { } value => new RsBlockExpression(value),
+        RsBlockExpression { Block: var block } when assigned && Leaving(block, name) is not null => new RsBlockExpression(block),
         _ => null
       };
       return otherwise is null ? null : choice with { Then = then, Else = otherwise };

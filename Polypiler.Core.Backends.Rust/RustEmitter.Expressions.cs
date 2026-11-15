@@ -117,7 +117,6 @@ public static partial class RustEmitter {
       IrStructDefault creation when creation.Type.StructType is not null => new RsCall(new RsPath(this.Type(creation.Type) + "::default"), []) { Type = creation.Type },
       IrFieldLoad load when load.Target.Type.IsStruct => new RsField(this.Place(load.Target, false), this.FieldName(load.Field)) { Type = load.Type },
       IrStructEquals equality when equality.Left.Type.IsStruct => this.Binary(this.Expression(equality.Left), "==", this.Expression(equality.Right), IrType.Bool),
-      IrStep { Target: IrFieldLoad load } step when load.Target.Type.IsStruct => this.FieldStep(load, step, false),
       IrThrowExpression thrown => this.Throw(thrown.Exception),
       _ => this.Refuse(expression.GetType().Name[2..])
     };

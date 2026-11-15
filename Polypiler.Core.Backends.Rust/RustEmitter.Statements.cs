@@ -57,9 +57,6 @@ public static partial class RustEmitter {
         case IrFieldStore store when store.Target.Type.IsStruct:
           this.FieldStore(store, into);
           return false;
-        case IrExprStmt { Expression: IrStep { Target: IrFieldLoad load } step } when load.Target.Type.IsStruct:
-          into.AddRange(((RsBlockExpression)this.FieldStep(load, step, true)).Block.Statements);
-          return false;
         case IrExprStmt { Expression: IrStep { Target: IrArrayLoad load } step }:
           into.AddRange(((RsBlockExpression)this.ElementStep(load, step, true)).Block.Statements);
           return false;
@@ -437,7 +434,6 @@ public static partial class RustEmitter {
       var uses = nodes.Count(node => node is IrLocalRef reference && reference.Local == counter);
       if (loads == 0 || loads != uses || body.SelectMany(Walk).Any(statement => statement is IrStore store && SameArray(store.Array, array)
           || statement is IrFieldStore field && ElementArray(field.Target) is { } written && SameArray(written, array))
-        || nodes.Any(node => node is IrStep { Target: IrFieldLoad stepped } && ElementArray(stepped) is { } steppedArray && SameArray(steppedArray, array))
         || nodes.Any(node => node is IrStep { Target: IrArrayLoad stepped } && SameArray(stepped.Array, array)
           || node is IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy && SameArray(copy.Arguments[2], array)
           || node is IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear } fill && SameArray(fill.Arguments[0], array)

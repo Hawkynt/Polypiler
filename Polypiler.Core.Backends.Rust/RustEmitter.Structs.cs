@@ -126,30 +126,6 @@ public static partial class RustEmitter {
       into.Add(new RsExpressionStatement(new RsAssign(place, "=", this.Expression(store.Value))));
     }
 
-    /// <summary>A step of a field: as a statement the field stepped in place, as an expression a block that gives the old or the new value.</summary>
-    private RsExpression FieldStep(IrFieldLoad load, IrStep step, bool statement) {
-      if (ElementArray(load) is not null && !SettledPlace(load.Target))
-        this.Refuse("a step of a field of an array element whose index may trap or have an effect");
-
-      var place = new RsField(this.Place(load.Target, true), this.FieldName(load.Field)) { Type = load.Type };
-      var statements = new List<RsStatement>();
-      if (statement && load.Type.IsFloat) {
-        statements.Add(new RsExpressionStatement(new RsAssign(place, step.Increment ? "+=" : "-=", Literal(new IrConst(load.Type, IrOperators.Bits(load.Type, 1.0))))));
-        return new RsBlockExpression(new RsBlock(statements, null));
-      }
-
-      if (statement) {
-        statements.Add(new RsExpressionStatement(new RsAssign(place, "=", this.Stepped(place, step))));
-        return new RsBlockExpression(new RsBlock(statements, null));
-      }
-
-      var old = this.Temporary("old");
-      statements.Add(new RsLet(old, false, null, place));
-      var oldValue = new RsPath(old) { Type = load.Type };
-      statements.Add(new RsExpressionStatement(new RsAssign(place, "=", this.Stepped(oldValue, step))));
-      return new RsBlockExpression(new RsBlock(statements, step.Postfix ? oldValue : place)) { Type = load.Type };
-    }
-
     /// <summary>Whether two places are the same: one variable, field or element of a constant or variable index.</summary>
     private static bool SamePlace(IrExpr first, IrExpr second) => (first, second) switch {
       (IrLocalRef a, IrLocalRef b) => a.Local == b.Local,
@@ -182,16 +158,12 @@ public static partial class RustEmitter {
       _ => false
     };
 
-    /// <summary>The locals and parameters a function writes a field of, directly or through a field of a field.</summary>
+    /// <summary>The locals and parameters a function writes a field of, directly or through a field of a field; the IR steps no field.</summary>
     private static HashSet<IrLocal> FieldWrites(IrFunction function) {
       var written = new HashSet<IrLocal>();
-      foreach (var statement in Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Statements(function.Body)) {
+      foreach (var statement in Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Statements(function.Body))
         if (statement is IrFieldStore store && Root(store.Target) is { } local)
           written.Add(local);
-        foreach (var node in IrTree.Expressions(statement).SelectMany(IrTree.Nodes))
-          if (node is IrStep { Target: IrFieldLoad load } && Root(load.Target) is { } stepped)
-            written.Add(stepped);
-      }
 
       return written;
     }

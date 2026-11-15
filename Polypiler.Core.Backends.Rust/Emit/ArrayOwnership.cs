@@ -173,9 +173,6 @@ internal static class ArrayOwnership {
           case IrStep { Target: IrArrayLoad load }:
             Write(load.Array);
             break;
-          case IrStep { Target: IrFieldLoad field } when RustEmitter.ElementOf(field) is { } stepped:
-            Write(stepped);
-            break;
           case IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy:
             Write(copy.Arguments[2]);
             break;
