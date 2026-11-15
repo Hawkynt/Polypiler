@@ -179,6 +179,7 @@ public static partial class CSharpEmitter {
     foreach (var expression in module.Functions.SelectMany(function => Expressions(function.Body)).Concat(initializers).Where(IsTabled))
       Ask(expression);
 
+    problems.AddRange(FilterProblems(module, profile, table));
     return problems.Distinct().ToList();
   }
 
@@ -380,6 +381,7 @@ public static partial class CSharpEmitter {
     IrSwitch choice => ([choice.Value], choice.Sections.Select(section => section.Body).ToList()),
     IrBreak or IrContinue => ([], []),
     IrReturn result => (result.Value is null ? [] : [result.Value], []),
+    IrThrow or IrRethrow or IrTry => (IrTree.Expressions(statement), IrTree.Blocks(statement)),
     _ => null
   };
 
@@ -401,7 +403,7 @@ public static partial class CSharpEmitter {
     IrFieldLoad load => [load.Target],
     IrStructEquals equality => [equality.Left, equality.Right],
     IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast => IrTree.Operands(expression),
-    IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind => IrTree.Operands(expression),
+    IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrThrowExpression => IrTree.Operands(expression),
     _ => null
   };
 
@@ -476,6 +478,7 @@ public static partial class CSharpEmitter {
     IrBreak => true,
     IrBlock block => block.Statements.Any(Breaks),
     IrIf conditional => Breaks(conditional.Then) || (conditional.Else is not null && Breaks(conditional.Else)),
+    IrTry attempt => IrTree.Blocks(attempt).Any(Breaks),
     _ => false
   };
 
@@ -485,7 +488,8 @@ public static partial class CSharpEmitter {
   /// that cannot, so the emitter has to know before it writes a <c>break</c> or the step of a loop.
   /// </summary>
   private static bool Completes(IrStmt statement) => statement switch {
-    IrBreak or IrContinue or IrReturn => false,
+    IrBreak or IrContinue or IrReturn or IrThrow or IrRethrow => false,
+    IrTry attempt => (Completes(attempt.Body) || attempt.Catches.Any(clause => Completes(clause.Body))) && (attempt.Finally is null || Completes(attempt.Finally)),
     IrBlock block => block.Statements.All(Completes),
     IrIf conditional => Completes(conditional.Then) || conditional.Else is null || Completes(conditional.Else),
     IrWhile loop => !Always(loop.Condition) || Breaks(loop.Body),
@@ -739,6 +743,7 @@ public static partial class CSharpEmitter {
 
     private string TypeName(IrType type)
       => type.Underlying is { } underlying ? this.TypeName(underlying) + "?"
+        : type.ClassType is { IsLibrary: true } library ? this.ClassTypeName(library)
         : type.Declaration is { } declared ? this._typeNames[declared.Name] : type.IsView ? this.ViewTypeName(type)
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
@@ -833,9 +838,11 @@ public static partial class CSharpEmitter {
 
           statements.Add(new CsContinue());
           break;
-        default:
-          var result = (IrReturn)statement;
+        case IrReturn result:
           statements.Add(new CsReturn(result.Value is null ? null : this.Stored(result.Value)));
+          break;
+        default:
+          this.ExceptionStatement(statement, statements);
           break;
       }
     }
@@ -1083,6 +1090,8 @@ public static partial class CSharpEmitter {
           return (this.GlobalName(reference.Global), Primary);
         case IrNull { Type.IsArray: true } or IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrConditional { Condition: IrIsNull or IrIsNone }:
           return this.Optional(expression);
+        case IrThrowExpression thrown:
+          return this.ThrowExpression(thrown);
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrFieldLoad { Target.Type.IsObject: true } or IrStructEquals { Left.Type.IsObject: true }:
           return this.Object(expression);
         case IrTypeTest or IrCast or IrAsCast:

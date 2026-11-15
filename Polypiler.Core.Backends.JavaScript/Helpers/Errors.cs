@@ -31,6 +31,9 @@ internal static partial class JavaScriptHelpers {
   /// <summary>The names of the error classes, in the order a module declares them; no name of the module may take one.</summary>
   public static IEnumerable<string> ErrorOrder => _errors.Select(error => error.Name);
 
+  /// <summary>The helpers of exceptions, in their order.</summary>
+  private static IEnumerable<string> ExceptionOrder => ["$throw", "$cause", "$caused"];
+
   /// <summary>
   /// The JavaScript class an exception class of the IR's library is: a generated class, or
   /// <c>Error</c> for <c>Exception</c> and <c>TypeError</c> for <c>NullReferenceException</c>, which the
@@ -57,6 +60,15 @@ internal static partial class JavaScriptHelpers {
 
   /// <summary>The text of an error class for the profile; <see langword="null"/> for any other name.</summary>
   private static string? ErrorSource(string name, System.Func<string, bool> native) {
+    switch (name) {
+      case "$throw":
+        return Lines("function $throw(error) {", "  throw error;", "}");
+      case "$cause":
+        return Lines("function $cause(error) {", "  return error.cause === void 0 ? null : error.cause;", "}");
+      case "$caused":
+        return Lines("function $caused(error, inner) {", "  error.cause = inner;", "  return error;", "}");
+    }
+
     if (_errors.FirstOrDefault(error => error.Name == name) is not { Name: not null } entry)
       return null;
 

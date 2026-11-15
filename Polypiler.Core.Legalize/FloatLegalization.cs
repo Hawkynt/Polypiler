@@ -136,6 +136,10 @@ public static class FloatLegalization {
       IrFor loop => new IrFor(this.Expression(loop.Condition), this.Block(loop.Body), this.Block(loop.Step)),
       IrSwitch choice => new IrSwitch(this.Expression(choice.Value), choice.Sections.Select(section => section with { Body = this.Block(section.Body) }).ToList()),
       IrReturn result => new IrReturn(result.Value is null ? null : this.Expression(result.Value)),
+      IrThrow thrown => new IrThrow(this.Expression(thrown.Exception)),
+      IrTry attempt => new IrTry(this.Block(attempt.Body),
+        [.. attempt.Catches.Select(clause => clause with { Filter = clause.Filter is null ? null : this.Expression(clause.Filter), Body = this.Block(clause.Body) })],
+        attempt.Finally is null ? null : this.Block(attempt.Finally)),
       _ => statement
     };
 
@@ -189,6 +193,8 @@ public static class FloatLegalization {
           return new IrIsNull(this.Expression(test.Value));
         case IrBind bind:
           return bind with { Value = this.Expression(bind.Value) };
+        case IrThrowExpression thrown:
+          return thrown with { Exception = this.Expression(thrown.Exception) };
         case IrCall call:
           var arguments = call.Arguments.Select(this.Expression).ToList();
           return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);

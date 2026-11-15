@@ -380,7 +380,7 @@ public static partial class IrInterpreter {
           frame.Result = result.Value is null ? null : this.Evaluate(result.Value, frame);
           return Flow.Return;
         default:
-          throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
+          return this.ExceptionStatement(statement, frame) ?? throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
       }
     }
 
@@ -444,7 +444,9 @@ public static partial class IrInterpreter {
           var right = this.Evaluate(equality.Right, frame);
           return equality.Left.Type.IsObject ? SameObject(left, right) : Same(left, right);
         case IrNew creation:
-          return this.New(creation, frame);
+          return creation.Type.ClassType!.IsLibrary ? this.NewLibraryException(creation, frame) : this.New(creation, frame);
+        case IrThrowExpression thrown:
+          throw this.Throw(thrown.Exception, frame);
         case IrNull:
           return NullReference.Value;
         case IrMethodCall call:
@@ -454,6 +456,8 @@ public static partial class IrInterpreter {
         case IrReferenceEquals identity:
           var first = this.Evaluate(identity.Left, frame);
           return ReferenceEquals(first, this.Evaluate(identity.Right, frame));
+        case IrCall call when this.LibraryConstructor(call, frame):
+          return null!;
         case IrCall call:
           var arguments = call.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
           return this.Invoke(program.Functions[call.Function], arguments)!;

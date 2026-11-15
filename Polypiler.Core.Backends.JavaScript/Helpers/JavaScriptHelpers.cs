@@ -44,7 +44,8 @@ internal static partial class JavaScriptHelpers {
     .. IntegerOrder,
     .. ViewOrder,
     .. StringOrder,
-    .. OptionalOrder
+    .. OptionalOrder,
+    .. ExceptionOrder
   ];
 
   private static readonly HashSet<string> _names = [.. Order];

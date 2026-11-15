@@ -154,7 +154,12 @@ public static class CSharpSyntaxReader {
       BreakStatementSyntax => new CsBreak(),
       ContinueStatementSyntax => new CsContinue(),
       ReturnStatementSyntax result => new CsReturn(result.Expression is null ? null : Read(result.Expression)),
-      ThrowStatementSyntax { Expression: not null } exception => new CsThrow(Read(exception.Expression)),
+      ThrowStatementSyntax exception => new CsThrow(exception.Expression is null ? null : Read(exception.Expression)),
+      TryStatementSyntax attempt => new CsTry(Block(attempt.Block), [.. attempt.Catches.Select(clause => new CsCatch(
+        clause.Declaration is null ? null : new CsType(clause.Declaration.Type.ToString()),
+        clause.Declaration is { Identifier.Text: { Length: > 0 } name } ? name : null,
+        clause.Filter is null ? null : Read(clause.Filter.FilterExpression), Block(clause.Block)))],
+        attempt.Finally is null ? null : Block(attempt.Finally.Block)),
       CheckedStatementSyntax context => new CsCheckedStatement(context.IsKind(SyntaxKind.CheckedStatement), Block(context.Block)),
       _ => throw Unknown(statement)
     };
@@ -196,6 +201,7 @@ public static class CSharpSyntaxReader {
     InitializerExpressionSyntax { RawKind: (int)SyntaxKind.ArrayInitializerExpression } initializer => Initializer(initializer),
     DefaultExpressionSyntax value => new CsDefaultExpression(new CsType(value.Type.ToString())),
     DeclarationExpressionSyntax { Designation: DiscardDesignationSyntax } => new CsName("_"),
+    ThrowExpressionSyntax thrown => new CsThrowExpression(Read(thrown.Expression)),
     _ => throw Unknown(expression)
   };
 

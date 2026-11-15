@@ -47,6 +47,8 @@ public sealed class CSharpCapabilitiesTests {
     ("null-conditional operator", "C# 6"),
     ("null-coalescing assignment", "C# 8"),
     ("nullable reference types", "C# 8"),
+    ("exception filter", "C# 6"),
+    ("throw expression", "C# 7"),
     ("IEquatable<T>", "net2.0"),
     ("EqualityComparer<T>.Default", "net2.0"),
     ("HashCode.Combine", "netstandard2.1"),
@@ -470,7 +472,7 @@ public sealed class CSharpCapabilitiesTests {
     // The store on a span is the one helper only a profile with spans calls; it is C# 8 for .NET Standard 2.1.
     var helpers = CSharpCapabilities.Default.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(helper => helper != CSharpViewHelpers.StoreSpan).ToList();
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))))}\n\n}}\n";
-    Assert.That(helpers, Has.Count.EqualTo(112));
+    Assert.That(helpers, Has.Count.EqualTo(113));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);

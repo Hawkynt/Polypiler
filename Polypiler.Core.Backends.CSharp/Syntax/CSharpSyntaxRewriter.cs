@@ -41,7 +41,10 @@ public static class CSharpSyntaxRewriter {
     CsSwitch choice => [choice.Value, .. choice.Sections],
     CsSwitchSection section => [.. section.Labels.OfType<CsExpression>(), .. section.Statements],
     CsReturn result => Optional(result.Value),
-    CsThrow exception => [exception.Value],
+    CsThrow exception => Optional(exception.Value),
+    CsTry attempt => [attempt.Body, .. attempt.Catches, .. Optional(attempt.Finally)],
+    CsCatch clause => [.. Optional(clause.Filter), clause.Body],
+    CsThrowExpression thrown => [thrown.Value],
     CsCheckedStatement context => [context.Block],
     CsField field => Optional(field.Initializer),
     CsMethod method => [.. Optional(method.Body), .. Optional(method.ExpressionBody)],
@@ -107,7 +110,10 @@ public static class CSharpSyntaxRewriter {
     CsSwitch choice => Switch(choice, rewrite),
     CsSwitchSection section => Section(section, rewrite),
     CsReturn { Value: { } value } result => Same(result, value, rewrite, rewritten => result with { Value = rewritten }),
-    CsThrow exception => Same(exception, exception.Value, rewrite, value => exception with { Value = value }),
+    CsThrow { Value: { } value } exception => Same(exception, value, rewrite, rewritten => exception with { Value = rewritten }),
+    CsThrowExpression thrown => Same(thrown, thrown.Value, rewrite, value => thrown with { Value = value }),
+    CsTry attempt => Try(attempt, rewrite),
+    CsCatch clause => Catch(clause, rewrite),
     CsCheckedStatement context => Same(context, context.Block, rewrite, block => context with { Block = block }),
     CsField { Initializer: { } initializer } field => Same(field, initializer, rewrite, value => field with { Initializer = value }),
     CsMethod method => Method(method, rewrite),
@@ -152,6 +158,20 @@ public static class CSharpSyntaxRewriter {
     var target = (CsExpression)Visit(call.Target, rewrite);
     var arguments = List(call.Arguments, rewrite);
     return ReferenceEquals(target, call.Target) && ReferenceEquals(arguments, call.Arguments) ? call : call with { Target = target, Arguments = arguments };
+  }
+
+  private static CsTry Try(CsTry attempt, Func<CsNode, CsNode> rewrite) {
+    var body = (CsBlock)Visit(attempt.Body, rewrite);
+    var catches = List(attempt.Catches, rewrite);
+    var final = Optional(attempt.Finally, rewrite);
+    return ReferenceEquals(body, attempt.Body) && ReferenceEquals(catches, attempt.Catches) && ReferenceEquals(final, attempt.Finally)
+      ? attempt : attempt with { Body = body, Catches = catches, Finally = final };
+  }
+
+  private static CsCatch Catch(CsCatch clause, Func<CsNode, CsNode> rewrite) {
+    var filter = Optional(clause.Filter, rewrite);
+    var body = (CsBlock)Visit(clause.Body, rewrite);
+    return ReferenceEquals(filter, clause.Filter) && ReferenceEquals(body, clause.Body) ? clause : clause with { Filter = filter, Body = body };
   }
 
   private static CsConditional Conditional(CsConditional choice, Func<CsNode, CsNode> rewrite) {

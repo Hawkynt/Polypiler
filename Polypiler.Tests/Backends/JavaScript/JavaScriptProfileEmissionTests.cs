@@ -675,7 +675,10 @@ public sealed class JavaScriptProfileEmissionTests {
       [".setBigUint64"] = (Write("UInt64", "ulong"), "\"setBigUint64\"", "$store64("),
       ["??"] = ("public static int F(int? a) => a ?? 5;", "a ?? 5", "a != null ? a : 5"),
       ["?."] = ("public static int F(int[] a) => a?.Length ?? -1;", "a?.length", "(a == null) ? null : a.length"),
-      ["??="] = ("public static int F(int? a) { a ??= 3; return a.Value; }", "a ??= 3;", "if (a == null) {")
+      ["??="] = ("public static int F(int? a) { a ??= 3; return a.Value; }", "a ??= 3;", "if (a == null) {"),
+      ["optional catch binding"] = ("public static int F() { try { return 1; } catch { return 2; } }", "} catch {", "} catch ($e) {"),
+      ["Error cause"] = ("public class X : System.Exception { public X(string m, System.Exception i) : base(m, i) { } } public static string F() => new X(\"a\", null).Message;",
+        "super(m, { cause: i });", "this.cause = i;")
     };
     // The methods of strings begin at levels this test does not compare; JavaScriptStringEmissionTests checks each at its first level and the one before.
     var replaceable = JavaScriptCapabilities.Standard.Entries
@@ -685,8 +688,8 @@ public sealed class JavaScriptProfileEmissionTests {
       var (source, native, replacement) = cases[entry.Name];
       // The pair of halves has two forms itself: a typed array of 32-bit halves needs the level that brought the
       // typed arrays, so what is native from ECMAScript 2020 is compared with ECMAScript 2017, the rest with ECMAScript 5.
-      var first = entry.Since >= 2021 ? JavaScriptProfile.Default : entry.Since == 2020 ? _es2020 : entry.Name is ".setUint32" or ".getUint32" ? _es2017 : _es2015;
-      var last = entry.Since >= 2021 ? _es2020 : entry.Since == 2020 ? _es2017 : _es5;
+      var first = entry.Since >= 2021 ? JavaScriptProfile.Default : entry.Since is 2019 or 2020 ? _es2020 : entry.Name is ".setUint32" or ".getUint32" ? _es2017 : _es2015;
+      var last = entry.Since >= 2021 ? _es2020 : entry.Since is 2019 or 2020 ? _es2017 : _es5;
       Assert.That(Emit(source, first), Does.Contain(native), $"{entry.Name} is native in {first}");
       Assert.That(Emit(source, last), Does.Not.Contain(native).And.Contain(replacement), $"{entry.Name} is replaced in {last}");
       if (entry.TypedArray)

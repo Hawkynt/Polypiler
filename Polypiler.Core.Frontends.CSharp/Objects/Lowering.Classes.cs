@@ -389,7 +389,7 @@ internal sealed partial class Lowering {
   }
 
   /// <summary>The class a type symbol names, or <see langword="null"/>.</summary>
-  private IrClassType? ClassOf(ITypeSymbol? type) => type is INamedTypeSymbol named ? this._classes.GetValueOrDefault(named) : null;
+  private IrClassType? ClassOf(ITypeSymbol? type) => type is INamedTypeSymbol named ? this._classes.GetValueOrDefault(named) ?? LibraryClass(named) : null;
 
   /// <summary>The reference type of a class or an interface of the file a type symbol names, or <see langword="null"/>.</summary>
   private IrType? ReferenceOf(ITypeSymbol? type)

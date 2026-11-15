@@ -389,7 +389,10 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
         into.Add(new IrReturn(result.Expression is null ? null : this.Initialized(result.Expression, into).Value));
         break;
       default:
-        throw new UnsupportedException(statement, statement.Kind().ToString());
+        if (!this.ExceptionStatement(statement, into))
+          throw new UnsupportedException(statement, statement.Kind().ToString());
+
+        break;
     }
   }
 
@@ -777,6 +780,9 @@ internal sealed partial class Lowering(string path, SemanticModel model) {
 
     if (model.GetConstantValue(expression) is { HasValue: true, Value: { } folded })
       return new IrConst(type, Carried(folded));
+
+    if (this.ExceptionNatural(expression, type) is { } exceptionNode)
+      return exceptionNode;
 
     if (this.OptionalNatural(expression, type) is { } optionalNode)
       return optionalNode;

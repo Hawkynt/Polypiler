@@ -266,6 +266,13 @@ public sealed record JsReturn(JsExpression? Value) : JsStatement;
 /// <param name="Value">The exception.</param>
 public sealed record JsThrow(JsExpression Value) : JsStatement;
 
+/// <summary><c>try { } catch (e) { } finally { }</c>; a catch without a parameter is <c>catch { }</c> (ECMAScript 2019).</summary>
+/// <param name="Block">The protected block.</param>
+/// <param name="Parameter">The name the catch binds the exception to, or <see langword="null"/>.</param>
+/// <param name="Handler">The catch block, or <see langword="null"/> for none.</param>
+/// <param name="Finalizer">The finally block, or <see langword="null"/>.</param>
+public sealed record JsTry(JsBlock Block, string? Parameter, JsBlock? Handler, JsBlock? Finalizer) : JsStatement;
+
 /// <summary><c>function name(parameters) { body }</c>.</summary>
 /// <param name="Name">The name.</param>
 /// <param name="Parameters">The names of the parameters.</param>

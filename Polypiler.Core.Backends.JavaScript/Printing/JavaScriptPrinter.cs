@@ -249,6 +249,20 @@ public static class JavaScriptPrinter {
           this.Expression(exception.Value, depth);
           this._text.Append(';');
           break;
+        case JsTry attempt:
+          this._text.Append("try ");
+          this.Bare(attempt.Block, depth);
+          if (attempt.Handler is { } handler) {
+            this._text.Append(attempt.Parameter is null ? " catch " : $" catch ({attempt.Parameter}) ");
+            this.Bare(handler, depth);
+          }
+
+          if (attempt.Finalizer is { } final) {
+            this._text.Append(" finally ");
+            this.Bare(final, depth);
+          }
+
+          break;
         case JsFunctionDeclaration function:
           this.Function(function.Name, function.Parameters, function.Body, depth);
           break;

@@ -195,6 +195,7 @@ public static partial class IrVerifier {
           this.Require(this._loops > 0, "a continue outside a loop");
           break;
         case IrReturn result:
+          this.Require(this._finally == 0, "a return inside a finally block");
           if (result.Value is null)
             this.Require(function.ReturnType == IrType.Void, "a return without a value in a function that returns one");
           else
@@ -202,7 +203,9 @@ public static partial class IrVerifier {
 
           break;
         default:
-          this.Require(false, $"unknown statement {statement.GetType().Name}");
+          if (!this.ExceptionStatement(statement))
+            this.Require(false, $"unknown statement {statement.GetType().Name}");
+
           break;
       }
     }
@@ -359,8 +362,15 @@ public static partial class IrVerifier {
           this.Require(equality.Right.Type == equality.Left.Type, $"a struct of the type {equality.Left.Type} is compared with one of the type {equality.Right.Type}");
           break;
         case IrCall call:
+          var chains = function.Body.Statements is [IrExprStmt { Expression: var first }, ..] && ReferenceEquals(first, call);
+          if (this.LibraryCall(call, chains))
+            break;
+
           this.Call(call);
-          this.CallOfMember(call, function.Body.Statements is [IrExprStmt { Expression: var first }, ..] && ReferenceEquals(first, call));
+          this.CallOfMember(call, chains);
+          break;
+        case IrThrowExpression thrown:
+          this.ThrowExpression(thrown);
           break;
         case IrNull { Type.IsArray: true } value:
           this.Require(value.Type.IsStorable, $"null of the type {value.Type}");

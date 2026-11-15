@@ -222,7 +222,8 @@ internal sealed partial class Lowering {
         ?? throw new UnsupportedException(node, "a constructor without base(...) in a class whose base class has no constructor without parameters");
     }
 
-    return [new IrExprStmt(new IrCall(this._creators[target].Function, IrType.Void, [new IrLocalRef(this._receiver!), .. arguments]))];
+    var function = LibraryClass(target.ContainingType) is { } library ? this.LibraryConstructor(library, target, initializer ?? node).Function : this._creators[target].Function;
+    return [new IrExprStmt(new IrCall(function, IrType.Void, [new IrLocalRef(this._receiver!), .. arguments]))];
   }
 
   /// <summary>A reference as its own type, for a type test or a cast.</summary>

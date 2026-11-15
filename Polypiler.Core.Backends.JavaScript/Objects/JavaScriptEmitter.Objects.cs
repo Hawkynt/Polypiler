@@ -123,15 +123,17 @@ public static partial class JavaScriptEmitter {
         if (arities.Distinct().Count() != arities.Count && this._refused.Add("constructors of one arity"))
           this._problems.Add(InexpressibleDescriptor.At($"'constructors of one arity' of the class '{type.Name}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
 
-        // super(…) stands in the constructor itself, never in a method it calls.
-        if (type.Base is not null && classes && this._refused.Add("several constructors of a derived class"))
+        // super(…) stands in the constructor itself, never in a method it calls: each constructor of a derived class is a branch of it.
+        var inline = type.Base is not null && classes;
+        if (inline && type.Constructors.Any(constructor => this.ChainsWithin(type, functions[constructor.Function])) && this._refused.Add("several constructors of a derived class"))
           this._problems.Add(InexpressibleDescriptor.At($"'several constructors of a derived class' of the class '{type.Name}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
 
         parameters = [.. Enumerable.Range(0, arities.Max()).Select(index => $"a{index}")];
         JsStatement? choice = null;
         for (var index = type.Constructors.Count - 1; index >= 0; --index) {
-          var call = new JsExpressionStatement(new JsCall(new JsMember(new JsThis(), this.Initializer(type, type.Constructors[index].Function)), [.. parameters.Take(arities[index]).Select(Id)]));
-          choice = choice is null ? new JsBlock([call]) : new JsIf(Infix(new JsMember(Id("arguments"), "length"), "===", Number(arities[index])), new JsBlock([call]), choice);
+          var branch = inline ? this.InlineConstructor(type, functions[type.Constructors[index].Function], parameters, defaults)
+            : new JsBlock([new JsExpressionStatement(new JsCall(new JsMember(new JsThis(), this.Initializer(type, type.Constructors[index].Function)), [.. parameters.Take(arities[index]).Select(Id)]))]);
+          choice = choice is null ? branch : new JsIf(Infix(new JsMember(Id("arguments"), "length"), "===", Number(arities[index])), branch, choice);
         }
 
         body.Add(choice!);
@@ -149,7 +151,7 @@ public static partial class JavaScriptEmitter {
 
       members.Add(new JsClassMember(JsClassMemberKind.Constructor, "constructor", false, parameters, new JsBlock(body), null));
       JsExpression Prototype() => new JsMember(Id(name), "prototype");
-      if (type.Constructors.Count > 1)
+      if (type.Constructors.Count > 1 && !(type.Base is not null && classes))
         foreach (var constructor in type.Constructors) {
           var (written, block) = this.Member(functions[constructor.Function], type);
           var initializer = this.Initializer(type, constructor.Function);
@@ -195,7 +197,7 @@ public static partial class JavaScriptEmitter {
       }
 
       JsStatement declaration;
-      var baseName = type.Base is { } inherited ? this.Name(inherited.Name) : null;
+      var baseName = type.Base is { } inherited ? this.ClassName(inherited) : null;
       if (classes) {
         this.Native("extends");
         declaration = new JsClass(name, members) { Base = baseName };
@@ -220,6 +222,30 @@ public static partial class JavaScriptEmitter {
         this._exported.Add(name);
 
       return [(exported ? new JsExport(declaration) : declaration) with { Leading = new JsTrivia(1, [$"class {name}"]) }, .. after];
+    }
+
+    /// <summary>Whether a constructor begins with the call of another constructor of its own class, <c>: this(…)</c>.</summary>
+    private bool ChainsWithin(IrClassType type, IrFunction function)
+      => function.Body.Statements is [IrExprStmt { Expression: IrCall call }, ..] && this._owners.GetValueOrDefault(call.Function) == type;
+
+    /// <summary>
+    /// A constructor of a derived class as a branch of the one constructor of JavaScript: its
+    /// parameters taken from the arguments, the call of the base constructor, the fields' defaults, the rest.
+    /// </summary>
+    private JsBlock InlineConstructor(IrClassType type, IrFunction function, List<string> arguments, List<JsStatement> defaults) {
+      var (written, block) = this.Member(function, type);
+      var statements = new List<JsStatement>();
+      for (var index = 0; index < written.Count; ++index)
+        statements.Add(new JsVariableDeclaration(this.Let, [new JsDeclarator(written[index], Id(arguments[index]))]));
+
+      // The base constructor's call, with the name and the cause a library class's call sets after it, comes before the defaults.
+      var split = block.Statements.Count > 0 && block.Statements[0] is JsExpressionStatement { Expression: JsCall { Callee: JsIdentifier { Name: "super" } } }
+        ? 1 + block.Statements.Skip(1).TakeWhile(statement => statement is JsExpressionStatement { Expression: JsAssignment { Left: JsMember { Target: JsThis, Property: "name" or "cause" } } }).Count()
+        : 0;
+      statements.AddRange(block.Statements.Take(split));
+      statements.AddRange(defaults);
+      statements.AddRange(block.Statements.Skip(split));
+      return new JsBlock(statements);
     }
 
     /// <summary>The value a field of a new object has before its constructor runs: zero, false, the default struct or <c>null</c>.</summary>

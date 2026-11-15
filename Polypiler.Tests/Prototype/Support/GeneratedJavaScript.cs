@@ -74,6 +74,9 @@ internal static class GeneratedJavaScript {
       case ClassDeclaration { Id: { } type }:
         declared.Add(type.Name);
         break;
+      case CatchClause { Param: Identifier caught }:
+        declared.Add(caught.Name);
+        break;
       // A method of a class of the file, also one put on a prototype or a constructor function, is no method of the library.
       case MethodDefinition { Key: Identifier method }:
         declared.Add("." + method.Name);
@@ -121,6 +124,9 @@ internal static class GeneratedJavaScript {
         break;
       case ClassDeclaration:
         report("class");
+        break;
+      case CatchClause { Param: null }:
+        report("optional catch binding");
         break;
       case MethodDefinition { Kind: PropertyKind.Get or PropertyKind.Set }:
         report("class accessor");

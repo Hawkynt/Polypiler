@@ -283,6 +283,7 @@ public static partial class JavaScriptEmitter {
     public JsProgram Module(IrModule module) {
       this.NameGlobals(module);
       this.NameClasses(module);
+      this.NameExceptions(module);
       var functions = new List<JsStatement>();
       this._members.UnionWith(module.Functions.Select(function => this.Name(function.Name)).Concat(module.Constants.Select(constant => this.Name(constant.Name))));
       this._members.UnionWith(module.Types.OfType<IrClassType>().Select(type => this.Name(type.Name)));
@@ -548,6 +549,9 @@ public static partial class JavaScriptEmitter {
         case IrFieldStore store:
           statements.Add(new JsExpressionStatement(this.FieldStore(store)));
           break;
+        case IrExprStmt { Expression: IrCall call } when IrExceptionClass.ConstructorOf(call.Function) is not null:
+          this.ExceptionStatement(statement, statements);
+          break;
         case IrExprStmt expression:
           // An object literal at the start of a statement would be read as a block; the printer puts it in parentheses.
           statements.Add(new JsExpressionStatement(this.Text(expression.Expression)));
@@ -581,9 +585,11 @@ public static partial class JavaScriptEmitter {
         case IrReturn { Value: { } value } when this._undefined:
           statements.Add(new JsReturn(this.Undefined(value)));
           break;
-        default:
-          var result = (IrReturn)statement;
+        case IrReturn result:
           statements.Add(new JsReturn(result.Value is null ? null : this.Value(result.Value)));
+          break;
+        default:
+          this.ExceptionStatement(statement, statements);
           break;
       }
     }

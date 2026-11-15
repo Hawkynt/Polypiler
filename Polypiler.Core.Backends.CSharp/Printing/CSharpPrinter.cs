@@ -321,6 +321,30 @@ public static class CSharpPrinter {
       this.Line(depth).Append('}');
     }
 
+    /// <summary>A try with its catch clauses and its finally block, each block after a space as K&amp;R has it: <c>} catch (T e) when (c) {</c>.</summary>
+    private void Try(CsTry attempt, int depth) {
+      this._text.Append("try ");
+      this.Braces(attempt.Body, depth);
+      foreach (var clause in attempt.Catches) {
+        this._text.Append(" catch ");
+        if (clause.Type is { } type)
+          this._text.Append('(').Append(type.Name).Append(clause.Name is null ? "" : " " + clause.Name).Append(") ");
+
+        if (clause.Filter is { } filter) {
+          this._text.Append("when (");
+          this.Expression(filter, depth);
+          this._text.Append(") ");
+        }
+
+        this.Braces(clause.Body, depth);
+      }
+
+      if (attempt.Finally is { } final) {
+        this._text.Append(" finally ");
+        this.Braces(final, depth);
+      }
+    }
+
     /// <summary>A statement where another one stands - the body of a loop, a branch of an if - after a space, without a line break at its end.</summary>
     private void Embedded(CsStatement statement, int depth) {
       if (statement is CsBlock block)
@@ -410,10 +434,16 @@ public static class CSharpPrinter {
 
           this._text.Append(';');
           break;
+        case CsThrow { Value: null }:
+          this._text.Append("throw;");
+          break;
         case CsThrow exception:
           this._text.Append("throw ");
-          this.Expression(exception.Value, depth);
+          this.Expression(exception.Value!, depth);
           this._text.Append(';');
+          break;
+        case CsTry attempt:
+          this.Try(attempt, depth);
           break;
         default:
           var context = (CsCheckedStatement)statement;
@@ -581,6 +611,10 @@ public static class CSharpPrinter {
           this.Operand(assignment.Left, Precedence(assignment.Left) > Assignment, depth);
           this._text.Append(' ').Append(assignment.Operator).Append(' ');
           this.Operand(assignment.Right, true, depth);
+          break;
+        case CsThrowExpression thrown:
+          this._text.Append("throw ");
+          this.Expression(thrown.Value, depth);
           break;
         case CsConditional choice:
           this.Operand(choice.Condition, Precedence(choice.Condition) > Conditional, depth);

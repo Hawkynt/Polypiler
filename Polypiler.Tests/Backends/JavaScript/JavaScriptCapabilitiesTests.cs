@@ -52,6 +52,8 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("Error.prototype", 5, null)]
   [TestCase("RangeError.prototype", 5, null)]
   [TestCase("TypeError.prototype", 5, null)]
+  [TestCase("optional catch binding", 2019, "catch (e)")]
+  [TestCase("Error cause", 2022, ".cause =")]
   [TestCase("Math", 5, null)]
   [TestCase("Math.abs", 5, null)]
   [TestCase("Math.min", 5, null)]

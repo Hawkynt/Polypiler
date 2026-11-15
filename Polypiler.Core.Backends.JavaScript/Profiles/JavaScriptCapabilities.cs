@@ -90,6 +90,9 @@ public sealed class JavaScriptCapabilities {
     new("Error.prototype", 5),
     new("RangeError.prototype", 5),
     new("TypeError.prototype", 5),
+    // Exceptions (#1323).
+    new("optional catch binding", 2019, "catch (e)"),
+    new("Error cause", 2022, ".cause ="),
     new("Math", 5),
     new("Math.abs", 5),
     new("Math.min", 5),
