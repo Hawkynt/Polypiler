@@ -49,6 +49,7 @@ public static partial class RustEmitter {
               var value when declare.Local.Type.IsArray => this.ArrayInitial(declare.Local, value),
               var value when declare.Local.Type.IsString => this.StringValue(value),
               var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
+              var value when declare.Local.Type.IsView => this.ViewSource(value, this.WritesView(declare.Local)),
               var value => this.Expression(value)
             }));
           return false;

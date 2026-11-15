@@ -303,6 +303,38 @@ internal static class Strings {
           }
       }
       """, []),
+    ["ply_view"] = ("""
+      fn ply_view<T>(source: &[T], start: i32, length: i32) -> &[T] {
+          if start < 0 || length < 0 || start as usize + length as usize > source.len() {
+              panic!("ArgumentOutOfRange");
+          }
+          &source[start as usize..start as usize + length as usize]
+      }
+      """, []),
+    ["ply_view_from"] = ("""
+      fn ply_view_from<T>(source: &[T], start: i32) -> &[T] {
+          if start < 0 || start as usize > source.len() {
+              panic!("ArgumentOutOfRange");
+          }
+          &source[start as usize..]
+      }
+      """, []),
+    ["ply_view_mut"] = ("""
+      fn ply_view_mut<T>(source: &mut [T], start: i32, length: i32) -> &mut [T] {
+          if start < 0 || length < 0 || start as usize + length as usize > source.len() {
+              panic!("ArgumentOutOfRange");
+          }
+          &mut source[start as usize..start as usize + length as usize]
+      }
+      """, []),
+    ["ply_view_from_mut"] = ("""
+      fn ply_view_from_mut<T>(source: &mut [T], start: i32) -> &mut [T] {
+          if start < 0 || start as usize > source.len() {
+              panic!("ArgumentOutOfRange");
+          }
+          &mut source[start as usize..]
+      }
+      """, []),
     ["ply_layout"] = ("""
       fn ply_layout(scientific: &str, negative: bool, ecma: bool, high: i32) -> Vec<u16> {
           let at = scientific.find('e').unwrap_or(scientific.len());

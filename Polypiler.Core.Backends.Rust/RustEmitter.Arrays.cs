@@ -46,6 +46,8 @@ public static partial class RustEmitter {
         return BorrowedString;
       if (parameter.Type.IsObject)
         return this.ObjectParameterType(parameter);
+      if (parameter.Type.IsView)
+        return this.ViewType(parameter.Type, this.WritesView(parameter));
       if (!parameter.Type.IsArray)
         return this.Type(parameter.Type);
 
@@ -72,6 +74,8 @@ public static partial class RustEmitter {
     private string LocalType(IrLocal local) {
       if (local.Type.IsObject)
         return this.ObjectType(local.Type, this.MayBeNull(local));
+      if (local.Type.IsView)
+        return this.ViewType(local.Type, this.WritesView(local));
       if (!local.Type.IsArray)
         return this.Type(local.Type);
 
@@ -120,7 +124,7 @@ public static partial class RustEmitter {
           return this.Expression(call);
         case IrFieldLoad { Target.Type.IsObject: true } load:
           return new RsMethodCall(this.FieldArray(load, false), "clone", []) { Type = array.Type };
-        case IrIntrinsic { Op: IrIntrinsicOp.StrSplit or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues }:
+        case IrIntrinsic { Op: IrIntrinsicOp.StrSplit or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues or IrIntrinsicOp.ViewToArray }:
           return this.Expression(array);
         case IrCall call:
           return new RsMethodCall(this.Expression(call), "to_vec", []) { Type = array.Type };
@@ -169,7 +173,7 @@ public static partial class RustEmitter {
       IrConstRef table when this._constants.TryGetValue(table.Constant.Name, out var name) => new RsPath(name) { Type = array.Type },
       IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal when !mutable => new RsArray([.. literal.Arguments.Select(argument => Suffixed(this.Expression(argument)))]) { Type = array.Type },
       IrCall => this.Expression(array),
-      IrNewArray => this.Vector(array),
+      IrNewArray or IrIntrinsic { Op: IrIntrinsicOp.ViewToArray } => this.Vector(array),
       // A listing of an enum only read is an array, not a vector (clippy's useless_vec).
       IrIntrinsic { Op: IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues } listing when this.Expression(listing) is RsMacro { Bracketed: true } vector => vector.Arguments[0],
       IrConditional choice when this.HoldsNew(choice) && !mutable => new RsParenthesized(this.Choice(choice, branch => this.Vector(branch, false))) { Type = array.Type },
@@ -454,6 +458,11 @@ public static partial class RustEmitter {
         var argument = call.Arguments[index];
         if (argument.Type.IsObject) {
           arguments.Add(this.ObjectArgument(call.Function, index, argument));
+          continue;
+        }
+
+        if (argument.Type.IsView) {
+          arguments.Add(this.ViewSource(argument, this.ViewParameterWritten(call.Function, index)));
           continue;
         }
 

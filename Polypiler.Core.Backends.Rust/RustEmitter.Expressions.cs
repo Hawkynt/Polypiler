@@ -94,6 +94,8 @@ public static partial class RustEmitter {
       IrConst { Type.IsEnum: true } constant => this.EnumConstant(constant),
       IrIntrinsic operation when EnumOperations.IsEnum(operation.Op) => this.EnumOperation(operation),
       IrIntrinsic operation when NumberTextOperations.IsNumberText(operation.Op) => this.NumberText(operation),
+      IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewFill } operation
+        => this.ViewOperation(operation),
       IrStrConst or IrConstRef { Type.IsString: true } or IrConditional { Type.IsString: true } => this.StringValue(expression),
       IrArrayLoad { Array: IrConstRef table, Type.IsString: true } load => this.TableText(table, load.Index),
       IrIntrinsic operation when StringOperations.IsString(operation.Op) => this.StringOperation(operation),

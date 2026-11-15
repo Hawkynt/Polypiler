@@ -62,6 +62,20 @@ internal sealed class FunctionArrays {
 /// </summary>
 internal static class ArrayOwnership {
 
+  /// <summary>The array a view of it is made of, through views of views, or <see langword="null"/>.</summary>
+  private static IrExpr? ViewRoot(IrExpr view) => view switch {
+    IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice } operation => operation.Arguments[0].Type.IsArray ? operation.Arguments[0] : ViewRoot(operation.Arguments[0]),
+    _ => null
+  };
+
+  /// <summary>Whether a function writes the elements of a writable view variable: a store, a step, a copy into it or a fill of it.</summary>
+  internal static bool WritesView(IrFunction function, IrLocal local) => local.Type.Kind == IrTypeKind.Span && Statements(function.Body).Any(statement => statement switch {
+    IrStore { Array: IrLocalRef target } => target.Local == local,
+    IrExprStmt { Expression: IrStep { Target: IrArrayLoad { Array: IrLocalRef target } } } => target.Local == local,
+    _ => false
+  } || IrTree.Expressions(statement).SelectMany(IrTree.Nodes).Any(node => node is IrIntrinsic { Op: IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy or IrIntrinsicOp.ViewFill } operation
+    && operation.Arguments[operation.Op == IrIntrinsicOp.ViewFill ? 0 : 1] is IrLocalRef target && target.Local == local));
+
   private static readonly object _result = new();
 
   /// <summary>The facts of every function of a module, by name.</summary>
@@ -70,12 +84,13 @@ internal static class ArrayOwnership {
     var facts = module.Functions.ToDictionary(function => function.Name, _ => new FunctionArrays(), StringComparer.Ordinal);
     // The functions whose borrowed result a caller writes through: their result is an exclusive borrow.
     var writtenResults = new HashSet<string>(StringComparer.Ordinal);
+    var byName = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
     for (var round = 0; round <= 2 * module.Functions.Count + 1; ++round) {
       var changed = false;
       foreach (var function in module.Functions) {
         var before = facts[function.Name].Key;
         var results = writtenResults.Count;
-        facts[function.Name] = Analyse(function, facts, writtenResults);
+        facts[function.Name] = Analyse(function, facts, writtenResults, byName);
         changed |= facts[function.Name].Key != before || writtenResults.Count != results;
       }
 
@@ -96,7 +111,7 @@ internal static class ArrayOwnership {
     }
   }
 
-  private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults) {
+  private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName) {
     var result = new FunctionArrays();
     var groups = new Groups();
     var written = new List<object>();
@@ -182,9 +197,21 @@ internal static class ArrayOwnership {
           case IrCall call when facts.TryGetValue(call.Function, out var callee):
             foreach (var index in callee.MutableParameters)
               Write(call.Arguments[index]);
+            // A writable view of an array the callee writes through writes the array.
+            if (byName.TryGetValue(call.Function, out var target))
+              for (var index = 0; index < call.Arguments.Count && index < target.Parameters.Count; ++index)
+                if (ViewRoot(call.Arguments[index]) is { } viewed && WritesView(target, target.Parameters[index]))
+                  Write(viewed);
+            break;
+          case IrIntrinsic { Op: IrIntrinsicOp.ViewFill or IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy } operation
+            when ViewRoot(operation.Arguments[operation.Op == IrIntrinsicOp.ViewFill ? 0 : 1]) is { } viewed:
+            Write(viewed);
             break;
         }
       }
+
+      if (statement is IrDeclare { Local.Type.IsView: true, Initializer: { } view } viewDeclare && ViewRoot(view) is { } root && WritesView(function, viewDeclare.Local))
+        Write(root);
     }
 
     if (writtenResults.Contains(function.Name))

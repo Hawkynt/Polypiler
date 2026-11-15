@@ -221,7 +221,8 @@ public static class RustPrinter {
   /// broken from the head's line on - rustfmt's choice for a right-hand side.
   /// </summary>
   private static string Right(string head, RsExpression value, int indent) {
-    var column = indent + head.Length + 1;
+    // A head over several lines (a chain broken before the operator) goes on from the end of its last one.
+    var column = (head.Contains('\n') ? head.Length - head.LastIndexOf('\n') - 1 : indent + head.Length) + 1;
     var flat = Flat(value);
     if (flat is not null && column + flat.Length + 1 <= MaxWidth)
       return head + " " + flat;

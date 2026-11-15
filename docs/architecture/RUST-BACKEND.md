@@ -2,7 +2,9 @@
 
 **Status:** implemented for scalar code ([#461](https://github.com/Hawkynt/Polypiler/issues/461),
 [#458](https://github.com/Hawkynt/Polypiler/issues/458), [#459](https://github.com/Hawkynt/Polypiler/issues/459));
-arrays and slices, structs and enums, closures and `Result` follow in phase 2. The runner that builds
+arrays and slices, structs, enums, classes, interfaces and module state since
+[#460](https://github.com/Hawkynt/Polypiler/issues/460) and [#462](https://github.com/Hawkynt/Polypiler/issues/462);
+closures, collections, sequences and `Result` follow in phase 2. The runner that builds
 and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/468).
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
@@ -93,6 +95,47 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `StructNew`, `StructDefault`, a field read or written | `Name { a, b: x }`, `Name::default()`, `p.x`, `p.x = v;` (`let mut` for the variable, a parameter rebound) |
 | a string | its UTF-16 code units: `Vec<u16>` owned, `&[u16]` as a parameter; a literal `ply_utf16("text")`, a constant `static NAME: &str` |
 | string operations | `len`, indexing, `==`, `starts_with`, `ends_with`, `repeat`, `cmp`, `[a, b].concat()`, `parts.join(sep)`, `push`/`extend_from_slice` for `s += …`; the helpers of `Helpers/Strings.cs` for searching, replacing, splitting, trimming and padding |
+| an enum | a newtype over its underlying integer, `#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)] pub struct Color(pub u8);` with a constant per member and `From` both ways - open as a C# enum is, so any value of the integer is one of it; the bitwise operators on `.0`; its text and parse through `ply_enum_text`/`ply_enum_parse` over the statics `COLOR_VALUES`/`COLOR_NAMES` |
+| numbers as text | integers by `to_string`; floating-point numbers by the shortest digits of `{:e}` laid out as .NET or ECMA-262 does (`ply_layout`); `F<n>` by `{:.n}`; radix digits by `{:x}`, `{:o}`, `{:b}`; .NET's `Parse` by `ply_parse_integer`, `ply_parse_f64` |
+| a class (#462) | `#[derive(Default)] pub struct Name { count: Cell<i32>, name: RefCell<Vec<u16>>, items: RefCell<Vec<T>>, next: RefCell<Option<Rc<Other>>> }` - a value in a `Cell`, anything else in a `RefCell` - and its objects `Rc<Name>`; see [Objects](#objects) |
+| `new T(..)`, a constructor | `Name::new(..) -> Rc<Self>`: `Rc::new(Self::default())` (`Rc::new(Self)` without fields), then the constructor's body, `init`, on it |
+| a method, a property accessor | a method of the `impl`: `&self`, or `self: &Rc<Self>` where it passes the object on; called `o.next()` |
+| a field of an object | `o.count.get()`, `o.count.set(v)`; `o.name.borrow().clone()`; `*o.next.borrow_mut() = v` after the value is bound; an array field `o.items.borrow()[i]`, `o.items.borrow_mut()[i] = v` (index and value bound first) |
+| a reference that may be null | `Option<Rc<Name>>` where the nullness analysis cannot rule null out; a member through it `ply_non_null(&o)`, which panics with `NullReference` |
+| `ReferenceEquals`, `==` of a record, `is null` | `Rc::ptr_eq(&a, &b)` (the addresses `a.as_ref().map(Rc::as_ptr)` where one may be null); `a == b` of the derived `PartialEq`; `o.is_none()`, `false` of a reference that never is null |
+| an interface, a class something derives from | a trait, its values `Rc<dyn Trait>`; see [Objects](#objects) |
+| a virtual or interface call | `Trait::method(&*o, ..)` of the trait of the method's slot |
+| `is T`, `as T`, `(T)` | `o.is_t()`, `Rc::clone(&o).into_t()`, `….into_t().expect("InvalidCast")` of the trait `PlyObject`; `ply_cast` keeps a null |
+| a generic method or class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
+| a global (static field) | `static NAME: AtomicI32 = AtomicI32::new(0);` read and written with `Ordering::Relaxed`, `++` as `fetch_add` - process-wide as .NET's static fields are |
+| a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it; `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32` |
+
+## Objects
+
+A class instance has an identity: every variable that holds it reads and writes one object. Safe Rust
+has two forms for that, and the backend picks by what the module does with the class:
+
+- **One owner at a time** - an object created, passed on by move or borrowed, never stored twice -
+  is a plain struct with an `impl` block. (The ownership analysis that proves this for a class is the
+  next step; until it lands every class takes the shared form, which is correct for one owner too.)
+- **Shared** - an object two variables may hold, or that may be null - is an `Rc<Name>`, its fields
+  each in a `Cell` (a value) or a `RefCell` (a string, an array, another object). A cell per field
+  rather than one `RefCell<Name>` around the whole object: a `RefCell` borrow lives to the end of the
+  statement that takes it, so a method that writes the object while an expression of its caller still
+  holds a borrow would panic where .NET runs on; a `Cell` is never borrowed, and a `RefCell` field is
+  borrowed for one access, the value of a store bound first. No `unsafe`.
+
+A hierarchy is flattened into traits. Every interface and every class something derives from is a
+trait; a value of it is an `Rc<dyn Trait>`. A class with objects of its own is a struct with every field
+of its lineage (`AnimalObject` where `Animal` names the trait). A trait of a class has an accessor per
+field the class declares (`field_x`) and a method per slot it opens, with the class's body as its
+default; each struct implements every trait of its lineage and interfaces, overriding the slots whose
+method for it is another. The methods themselves are functions of the module that take the object as a
+reference, generic over the trait of their class (`fn shape_twice<T: Shape + ?Sized>(this: &T)`), so that
+a base call (`base.M()`) calls the base's function. A test or a conversion to a type goes through the
+trait `PlyObject` every trait extends: `is_t(&self)` and `into_t(self: Rc<Self>) -> Option<…>` per type
+the module tests for or converts to, each struct answering for itself - no `Any`, no trait upcasting,
+which Rust 1.85 has not.
 
 A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, `DivideByZero`,
 `ArgumentOutOfRange`, … - in every build mode; the verification reads it back with `RustTraps`
@@ -100,10 +143,11 @@ A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, 
 
 ## Refused
 
-What the backend does not write yet is refused with `PLY1550`, naming the construct: views and
-pointers, classes, interfaces and enums (`declared types (classes)` …), module state
-(`module state (globals)`), closures, collections and sequences, the conversions between numbers and
-text; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
+What the backend does not write yet is refused with `PLY1550`, naming the construct: pointers,
+memory, a view cast to another element type or made on the stack, optional values (`the type i32?`),
+closures (`Lambda`, `Invoke`), collections and sequences (`Collection`, `Yield`), `using`, a global
+that is no integer or truth value (`a global of the type u32[]`), a record with a floating-point field,
+a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
 array in one written variable), a struct with a field that is no value. One array passed to a call
 twice where it is written and the callee swaps its parameters is `PLY1566`. Two exported functions
 whose Rust names are the same are `PLY1574`; an exception handler `PLY1560`.
@@ -127,13 +171,14 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `MemoryEmitTests`, `TypeEmitTests`: arrays, ownership and aliasing, structs, their forms and refusals.
+- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`: arrays, ownership and aliasing, structs, classes, traits and module state, their forms and refusals.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
   interpreter's.
 - `RustFamilyDifferentialTests` (layer `rust`): the fixtures of the families the backend writes - bits,
-  records, strings, the floating-point view of bytes - against .NET in both overflow modes.
+  records, strings, enums, numbers as text, classes, dispatch, generics, the floating-point view of
+  bytes - against .NET in both overflow modes.
 - `RustRoundTripTests` (layer `rust`): every Rust fixture, imported by the Rust frontend in each
   overflow mode, comes back as a crate that is built with overflow checks on and off; every outcome is
   what rustc recorded for the original in the mode of the import.

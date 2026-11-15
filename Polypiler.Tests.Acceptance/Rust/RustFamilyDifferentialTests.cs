@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
 /// The fixtures of the prototype's families through the Rust backend (#460, #462): bit operations,
-/// value records, strings, enums, numbers as text, optionals, classes, dispatch, generics, exceptions,
+/// value records, strings, enums, numbers as text, classes, dispatch, generics, views,
 /// floating-point views of bytes. Every fixture of a family that the backend writes is
 /// built by the pinned toolchain and called on the family's cases with overflow checks on and off;
 /// every outcome, the arrays a call was given included, must be what .NET computes of the original
@@ -67,8 +67,6 @@ public sealed class RustFamilyDifferentialTests {
         () => [.. NumberTextFixtures.CSharpCalls().Where(call => call.Class == className).Select(call => call.Call)],
         call => PrototypeFixture.InvokedOutcome(NumberTextFixtures.Compiled(className, call.Method), call));
 
-    yield return new("optional/Find", OptionalFixtures.Imported, () => [.. OptionalFixtures.Calls()], call => PrototypeFixture.InvokedOutcome(OptionalFixtures.Compiled(call.Method), call));
-
     foreach (var (file, className) in ClassFixtures.CSharp)
       yield return new($"classes/{file}", () => ClassFixtures.Imported(file), () => [.. ClassFixtures.Calls().Where(call => call.File == file).Select(call => call.Call)],
         call => PrototypeFixture.InvokedOutcome(ClassFixtures.Compiled(className, call.Method), call));
@@ -81,14 +79,31 @@ public sealed class RustFamilyDifferentialTests {
       yield return new($"generics/{file}", () => GenericsFixtures.Imported(file), () => [.. GenericsFixtures.Calls().Where(call => call.File == file).Select(call => call.Call)],
         call => PrototypeFixture.InvokedOutcome(GenericsFixtures.Compiled(className, call.Method), call));
 
-    foreach (var (file, className) in ExceptionFixtures.CSharp)
-      yield return new($"exceptions/{file}", () => ExceptionFixtures.Imported(file), () => [.. ExceptionFixtures.Calls().Where(call => call.File == file).Select(call => call.Call)],
-        call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled(className, call.Method), call));
+    yield return new("spans/Adler32Span", () => SpanFixtures.Imported("Adler32Span"),
+      () => [.. new (int Offset, int Length)[] { (5, 9), (0, 20), (20, 0), (19, 2), (-1, 3), (3, -1) }
+        .Select(range => new PrototypeCall("Compute", [SpanFixtures.Wikipedia, range.Offset, range.Length]) { Returns = typeof(uint) })],
+      call => SpanFixtures.DotNet("Adler32Span", call));
 
     yield return new("float/FloatView", () => PrototypeFixture.Imported("float/FloatView"),
       () => [.. FloatViewCases.FixtureMethods.SelectMany(method => FloatViewCases.FixtureCalls(method, new Random(2026), 20))],
       call => PrototypeFixture.CompiledOutcome("float/FloatView", call),
       (call, expected, actual) => FloatViewCases.FixtureMatches(call.Method, call, expected, actual));
+  }
+
+  /// <summary>The fixtures of the families the backend refuses still, each with the construct its refusal names.</summary>
+  private static IEnumerable<TestCaseData> Refusals() {
+    yield return new TestCaseData("optional/Find", "'the type i32?'");
+    yield return new TestCaseData("exceptions/Traps", "'exception handling'");
+    yield return new TestCaseData("exceptions/Classes", "'exception handling'");
+  }
+
+  [TestCaseSource(nameof(Refusals))]
+  public void Fixture_IsRefusedByName(string name, string construct) {
+    var module = name switch {
+      "optional/Find" => OptionalFixtures.Imported(),
+      _ => ExceptionFixtures.Imported(name["exceptions/".Length..])
+    };
+    Assert.That(RustCrates.Check(module).Select(problem => problem.Message), Has.Some.Contain(construct));
   }
 
   private static IEnumerable<TestCaseData> Cases() => Families().Select(family => new TestCaseData(family.Name));
