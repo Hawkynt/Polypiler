@@ -213,6 +213,60 @@ public sealed class SpansAndMemorySteps(PrototypeScenario scenario) {
     Assert.That(Result(this.Generated([call]).Single()), Is.EqualTo(value));
   }
 
+  // ---------------------------------------------------------------- Memory
+
+  /// <summary>What every target of the sweep computes of the scenario's C# source for calls: compiled C#, or node.</summary>
+  private IReadOnlyList<string> Translated(TargetCase target, IReadOnlyList<PrototypeCall> calls) {
+    var from = Language(scenario.Source);
+    if (target.CSharp is { } profile) {
+      var (_, text) = scenario.Translate(scenario.Source, from, "csharp", "--profile", profile.Name);
+      Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
+      var build = GeneratedCSharp.Compile(text, true);
+      return [.. calls.Select(call => SpanFixtures.Outcome(build.Method(call.Method), call))];
+    }
+
+    var generated = scenario.Translate(scenario.Source, from, "javascript", target.JavaScript!.Arguments);
+    Assert.That(GeneratedJavaScript.Problems(generated.Text, target.JavaScript.Parsed), Is.Empty, generated.Text);
+    return Node(generated.Path, target.JavaScript, calls);
+  }
+
+  [Then(@"^Window\(d, 4, 4\) returns (\d+) in \.NET, in the interpreter and in every profile of both backends$")]
+  public void WindowEverywhere(string sum) {
+    PrototypeCall[] calls = [new("Window", [SpanFixtures.D, 4, 4])];
+    Assert.That(Result(SpanFixtures.DotNet(SpanFixtures.Holder, calls[0])), Is.EqualTo(sum));
+    Assert.That(Result(PrototypeFixture.InterpretedOutcome(SpanFixtures.Imported("MemoryHolder"), calls[0])), Is.EqualTo(sum));
+    Sweep.Each(TargetCase.All, target => Assert.That(Result(this.Translated(target, calls).Single()), Is.EqualTo(sum), target.ToString()));
+  }
+
+  [Then("^every call of the memory fixture computes what .NET computes in every profile of both backends$")]
+  public void HolderEverywhere() {
+    var calls = SpanFixtures.HolderCalls().ToList();
+    var expected = calls.Select(call => SpanFixtures.DotNet(SpanFixtures.Holder, call)).ToList();
+    Sweep.Each(TargetCase.All, target => Assert.That(this.Translated(target, calls), Is.EqualTo(expected), target.ToString()));
+  }
+
+  [Then("^the output declares " + StepText.Quoted + "$")]
+  public void Declares(string declaration) => Assert.That(this._generated.Text, Does.Contain(declaration));
+
+  [Then(@"^windowSum\(d, 4, 4\) returns (\d+) and every call of the window fixture computes what node computes$")]
+  public void WindowAsInNode(string sum) {
+    var calls = SpanFixtures.WindowCalls;
+    var expected = this.Original(calls);
+    Assert.That(Result(expected[0]), Is.EqualTo(sum));
+    Assert.That(this.Generated(calls), Is.EqualTo(expected), this._generated.Text);
+  }
+
+  [Then("^every call of the window fixture computes what node computes, translated to JavaScript at every level$")]
+  public void WindowInEveryLevel() {
+    var calls = SpanFixtures.WindowCalls;
+    var expected = this.Original(calls);
+    Sweep.Each(ProfileCase.All, profile => {
+      var generated = scenario.Translate(scenario.Source, "javascript", "javascript", profile.Arguments);
+      Assert.That(GeneratedJavaScript.Problems(generated.Text, profile.Parsed), Is.Empty, generated.Text);
+      Assert.That(Node(generated.Path, profile, calls), Is.EqualTo(expected), profile.ToString());
+    });
+  }
+
   // ---------------------------------------------------------------- refusals
 
   [Given("^the JavaScript function " + StepText.Quoted + " with b a Uint8Array$")]

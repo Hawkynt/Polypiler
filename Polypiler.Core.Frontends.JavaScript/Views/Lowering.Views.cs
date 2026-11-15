@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Acornima.Ast;
 using Polypiler.Core.Frontends.JavaScript.Inference;
 using Polypiler.Core.IR;
@@ -38,7 +39,7 @@ internal sealed partial class Lowering {
           throw this.Unsupported(call, $"set with {arguments.Count} arguments");
 
         var copied = this.Expression(arguments[0]);
-        if (copied.Type.Element != element || !copied.Type.IsSequence || types.Of(arguments[0]).IsPlain)
+        if (copied.Type.Element != element || !(copied.Type.IsSequence || copied.Type.IsMemory) || types.Of(arguments[0]).IsPlain)
           throw this.Unsupported(arguments[0], $"set of {types.Of(arguments[0]).Describe()} into {receiver.Describe()}");
 
         IrExpr target = arguments.Count == 1 ? view : new IrIntrinsic(IrIntrinsicOp.Slice, view.Type, [view, Word(this.Position(arguments[1]))]);
@@ -59,9 +60,56 @@ internal sealed partial class Lowering {
     }
   }
 
-  /// <summary>An array or a view as a writable view: the view itself, or a view of the whole array.</summary>
+  /// <summary>
+  /// <c>for (const x of v)</c> over a typed array or a view: a loop over its elements by their index. The
+  /// index moves on before the body runs, so that a <c>continue</c> goes on with the next element; the
+  /// length of a typed array never changes, so it is read again at every step as JavaScript's iterator does.
+  /// </summary>
+  private IrBlock ElementsOf(ForOfStatement loop, string name, Variable variable) {
+    var statements = new List<IrStmt>();
+    var sequence = this.Once(this.Array(loop.Right), statements);
+    var at = new IrLocal($"$t{this._locals.Count}", IrType.I32);
+    this._locals.Add(at);
+    statements.Add(new IrDeclare(at, Zero));
+    var local = new IrLocal(name, this.Storable(variable.Type, loop.Left));
+    variable.Local = local;
+    this._locals.Add(local);
+    var element = new Typed(Read(new IrArrayLoad(sequence, new IrLocalRef(at))), types.Of(loop));
+    this.AccessesElements = true;
+    IrStmt[] pass = [
+      new IrDeclare(local, this.To(element, local.Type, loop.Right)),
+      new IrAssign(at, new IrBinary(IrBinaryOp.Add, new IrLocalRef(at), new IrConst(IrType.I32, 1)))
+    ];
+    var before = this._assigned;
+    var body = this.Body(loop.Body);
+    this._assigned = before;
+    IrExpr length = sequence.Type.IsView ? new IrIntrinsic(IrIntrinsicOp.ViewLength, IrType.I32, [sequence]) : new IrArrayLength(sequence);
+    statements.Add(new IrWhile(new IrBinary(IrBinaryOp.Less, new IrLocalRef(at), length), new IrBlock([.. pass, .. body.Statements])));
+    return new IrBlock(statements);
+  }
+
+  /// <summary>An array, a view or a memory as a writable view: the view itself, or a view of the whole array or memory.</summary>
   private static IrExpr AsView(IrExpr sequence)
     => sequence.Type.IsView ? sequence : new IrIntrinsic(IrIntrinsicOp.ViewOf, IrType.Span(sequence.Type.Element!), [sequence]);
+
+  /// <summary>A memory as the span of its elements, through which they are read and written; anything else as it is.</summary>
+  private static IrExpr Spanned(IrExpr value) => value.Type.IsMemory ? AsView(value) : value;
+
+  /// <summary>
+  /// A view as the memory a field keeps (#1325): the view of a typed array, or of a memory, or a part of
+  /// such a view, made again as a memory of the same elements. A memory read as a span is that memory. A
+  /// view that is not made where it is stored - a parameter - is refused: it could be of the stack.
+  /// </summary>
+  private IrExpr Memoried(IrExpr view, IrType memory, Node node) {
+    // The source of a view of the frontend is an array, a memory or another view.
+    if (view is IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice, Arguments: [var source, ..] } part) {
+      var origin = source.Type.IsView ? this.Memoried(source, memory, node) : source;
+      var rest = part.Arguments.Skip(1).ToList();
+      return rest.Count == 0 && origin.Type == memory ? origin : new IrIntrinsic(origin.Type.IsArray ? IrIntrinsicOp.ViewOf : IrIntrinsicOp.Slice, memory, [origin, .. rest]);
+    }
+
+    throw this.Unsupported(node, $"{types.Text(node)} kept in a field, which is a view not made of a typed array here");
+  }
 
   /// <summary>
   /// A position as ECMA-262's <c>ToIntegerOrInfinity</c> makes it: a proven 32-bit integer as it is, any
@@ -127,9 +175,11 @@ internal sealed partial class Lowering {
       new IrIntrinsic(IrIntrinsicOp.Min, type, [position, measured]));
   }
 
-  /// <summary>Whether evaluating an expression again gives the same value and has no effect: a variable, a constant, wrapping arithmetic of them, a view of one.</summary>
+  /// <summary>Whether evaluating an expression again gives the same value and has no effect: a variable, a field of one, a constant, wrapping arithmetic of them, a view of one.</summary>
   private static bool Repeatable(IrExpr expression) => expression switch {
     IrLocalRef or IrConst => true,
+    // A field of an object in a variable, which nothing between the reads writes.
+    IrFieldLoad { Target: IrLocalRef } => true,
     IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply or IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor } binary => Repeatable(binary.Left) && Repeatable(binary.Right),
     IrBinary { Op: IrBinaryOp.Divide or IrBinaryOp.Remainder, Type.IsFloat: true } quotient => Repeatable(quotient.Left) && Repeatable(quotient.Right),
     IrConvert { Contract: not IrConversion.Trap } conversion => Repeatable(conversion.Operand),

@@ -320,7 +320,7 @@ internal sealed partial class Lowering {
     }
 
     var array = this.Evaluate(node);
-    return array.Type.Kind == JsKind.Array ? array.Expr : throw this.Unsupported(node, $"{types.Text(node)} as an array, which is {array.Type.Describe()}");
+    return array.Type.Kind == JsKind.Array ? Spanned(array.Expr) : throw this.Unsupported(node, $"{types.Text(node)} as an array, which is {array.Type.Describe()}");
   }
 
   /// <summary>
@@ -599,6 +599,9 @@ internal sealed partial class Lowering {
     var from = value.Expr.Type;
     if (from == type || from.IsAssignableTo(type))
       return value.Expr;
+
+    if (from.IsView && type.IsMemory && from.Element == type.Element)
+      return this.Memoried(value.Expr, type, node);
 
     if (type.IsStruct && this.Reshaped(value, type, node) is { } reshaped)
       return reshaped;

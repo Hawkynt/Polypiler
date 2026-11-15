@@ -170,7 +170,7 @@ public static class IrModuleFormat {
 
     private void Type(IrType type) {
       writer.Write((byte)type.Kind);
-      if (type.Kind is IrTypeKind.Array or IrTypeKind.Span or IrTypeKind.ReadOnlySpan)
+      if (type.Kind is IrTypeKind.Array or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory)
         this.Type(type.Element!);
       else if (type.Kind == IrTypeKind.Struct)
         this.Count(this._declarations.TryGetValue(type.Declaration!, out var index) ? index : throw new ArgumentException($"The struct '{type.Declaration}' is not one of the module's types.", nameof(module)));
@@ -502,6 +502,8 @@ public static class IrModuleFormat {
         IrTypeKind.Struct => IrType.Struct(Of(this._declarations, this.Count(), "struct")),
         IrTypeKind.Span => IrType.Span(this.Type()),
         IrTypeKind.ReadOnlySpan => IrType.ReadOnlySpan(this.Type()),
+        IrTypeKind.Memory => IrType.Memory(this.Type()),
+        IrTypeKind.ReadOnlyMemory => IrType.ReadOnlyMemory(this.Type()),
         IrTypeKind.String => IrType.String,
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")

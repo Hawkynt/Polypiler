@@ -242,7 +242,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         var key = ((Identifier)((Property)flow.Node).Key).Name;
         return this.Of(flow.Source!).Shape?.TypeOf(key) is { } value && this.Reach(flow.Target!, value, flow.Node);
       case FlowKind.FieldStore or FlowKind.FieldStep or FlowKind.MethodArgument:
-        return this.ApplyMember(flow);
+        return this.ApplyMember(model, flow);
       case FlowKind.Invoke:
         return this.Invoke((CallExpression)flow.Node);
       default:

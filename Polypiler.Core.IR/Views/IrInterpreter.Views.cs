@@ -233,6 +233,9 @@ public static partial class IrInterpreter {
     return (int)index;
   }
 
+  /// <summary>A view of no elements, which a memory field holds before anything is stored into it.</summary>
+  private static View EmptyView(IrType element) => View.Of(Array.CreateInstance(HostType(element), 0), element);
+
   /// <summary>The views a host value of a list crosses as; only an array is taken, as a view of the whole of it.</summary>
   private static object? AcceptedView(IrType type, object? value)
     => value is Array array && TypeOf(array.GetType()) is { } host && host.Element == type.Element ? View.Of(array, type.Element!) : null;

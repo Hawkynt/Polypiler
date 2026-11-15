@@ -402,7 +402,7 @@ public static partial class JavaScriptEmitter {
           return this.Describe(type.Underlying!) + " | null";
         case IrTypeKind.Object:
           return this.Name(type.Declaration!.Name);
-        case IrTypeKind.Span or IrTypeKind.ReadOnlySpan:
+        case IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory:
           return this.DescribeView(type);
         case IrTypeKind.List:
           return $"Array<{this.Describe(type.Element!)}>";

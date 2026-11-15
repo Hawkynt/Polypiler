@@ -180,6 +180,9 @@ internal sealed partial class Lowering {
           throw new UnsupportedException(variable, "a static field of a generic class");
 
         if (fieldSymbol.IsStatic) {
+          if (fieldType.IsMemory)
+            throw new UnsupportedException(member, $"a static field of the type {fieldSymbol.Type.ToDisplayString()}");
+
           this._staticOwners[fieldSymbol] = declared;
           this.State(member, variable, fieldSymbol, fieldType, true);
           statics.Add(fieldSymbol);
@@ -291,9 +294,15 @@ internal sealed partial class Lowering {
       owner.DefineMembers(constructors, methods, properties, [.. statics.Select(field => this._globals.GetValueOrDefault(field)).OfType<IrGlobal>()]);
   }
 
-  /// <summary>The type of a field of a class: a truth value, a number, a struct, an array of numbers or a reference to an object.</summary>
+  /// <summary>
+  /// The type of a field of a class: a truth value, a number, a struct, an array of numbers, a reference to an
+  /// object, or outside a record a <c>Memory&lt;T&gt;</c> or <c>ReadOnlyMemory&lt;T&gt;</c> of a number type.
+  /// </summary>
   private IrType ClassFieldType(ITypeSymbol type, SyntaxNode node) {
     var mapped = this.Map(type, node);
+    if (mapped.IsMemory && node.FirstAncestorOrSelf<TypeDeclarationSyntax>() is RecordDeclarationSyntax)
+      throw new UnsupportedException(node, $"a field of the type {type.ToDisplayString()} in a record, which compares it");
+
     return mapped.IsString || mapped.Element is { IsNumeric: false } ? throw new UnsupportedException(node, $"a field of the type {mapped}") : mapped;
   }
 

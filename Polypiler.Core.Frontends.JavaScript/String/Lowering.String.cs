@@ -340,6 +340,9 @@ internal sealed partial class Lowering {
     if (loop.Left is not VariableDeclaration { Declarations: [{ Id: Identifier { Name: var name } id }] } || this._model.Bindings.GetValueOrDefault(id) is not Variable variable)
       throw this.Unsupported(loop.Left, "a for...of that does not declare one variable");
 
+    if (types.Of(loop.Right) is { Kind: JsKind.Array, IsPlain: false })
+      return this.ElementsOf(loop, name, variable);
+
     if (types.Of(loop.Right).Kind != JsKind.String)
       throw this.Unsupported(loop.Right, $"a for...of over {types.Of(loop.Right).Describe()}");
 

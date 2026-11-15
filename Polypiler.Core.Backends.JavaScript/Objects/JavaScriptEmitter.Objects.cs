@@ -248,10 +248,11 @@ public static partial class JavaScriptEmitter {
       return new JsBlock(statements);
     }
 
-    /// <summary>The value a field of a new object has before its constructor runs: zero, false, the default struct or <c>null</c>.</summary>
+    /// <summary>The value a field of a new object has before its constructor runs: zero, false, the default struct, an empty view or <c>null</c>.</summary>
     private JsExpression FieldDefault(IrType type)
       => type.StructType is { } nested ? this.Default(nested)
         : type == IrType.Bool ? new JsBoolean(false)
+        : type.IsMemory ? this.EmptyView(type)
         : type.IsObject || type.IsArray ? new JsNull()
         : this.Zero(type);
 

@@ -12,7 +12,8 @@ namespace Polypiler.Core.Frontends.CSharp;
 public sealed record CSharpViewMember(string Type, string Member, IReadOnlyList<int> Arguments, string Ir, string Note = "");
 
 /// <summary>
-/// The members of <c>Span&lt;T&gt;</c>, <c>ReadOnlySpan&lt;T&gt;</c>, <c>MemoryExtensions</c> and
+/// The members of <c>Span&lt;T&gt;</c>, <c>ReadOnlySpan&lt;T&gt;</c>, <c>Memory&lt;T&gt;</c>,
+/// <c>ReadOnlyMemory&lt;T&gt;</c>, <c>MemoryExtensions</c> and
 /// <c>MemoryMarshal</c> the C# frontend maps to the views of the IR (#1325) - the table the frontend reads
 /// and the tests check - and the constructs it refuses by name. The syntax of views - the indexer,
 /// <c>Length</c>, <c>IsEmpty</c>, ranges, <c>foreach</c>, <c>stackalloc</c> and the conversion of an array -
@@ -22,6 +23,8 @@ public static class CSharpViewApi {
 
   private const string Span = "System.Span<T>";
   private const string ReadOnly = "System.ReadOnlySpan<T>";
+  private const string Memory = "System.Memory<T>";
+  private const string ReadOnlyMemory = "System.ReadOnlyMemory<T>";
   private const string Extensions = "System.MemoryExtensions";
   private const string Marshal = "System.Runtime.InteropServices.MemoryMarshal";
   private const string Bounds = "a range outside the source traps with ArgumentOutOfRange";
@@ -33,6 +36,11 @@ public static class CSharpViewApi {
       new(type, "Slice", [2, 3], "Slice", Bounds),
       new(type, "CopyTo", [2], "ViewCopy", "memmove; a shorter destination throws ArgumentException in .NET, the trap ArgumentOutOfRange in the IR"),
       new(type, "TryCopyTo", [2], "ViewTryCopy", "false and nothing copied for a shorter destination"),
+      new(type, "ToArray", [1], "ViewToArray")
+    ]),
+    new(Extensions, "AsMemory", [1, 2, 3], "ViewOf", "of an array, as a memory, at int positions; " + Bounds),
+    .. new[] { Memory, ReadOnlyMemory }.SelectMany(type => (CSharpViewMember[])[
+      new(type, "Slice", [2, 3], "Slice", "a memory; " + Bounds),
       new(type, "ToArray", [1], "ViewToArray")
     ]),
     new(Span, "Fill", [2], "ViewFill"),
@@ -58,7 +66,11 @@ public static class CSharpViewApi {
     ("array[a..b]", "ViewToArray of a Slice: a copy"),
     ("foreach over a view", "a counted loop"),
     ("stackalloc T[n] into a span", "StackAlloc"),
-    ("BinaryPrimitives.Read…/Write… on any span of bytes", "LoadLittle, LoadBig, StoreLittle, StoreBig")
+    ("BinaryPrimitives.Read…/Write… on any span of bytes", "LoadLittle, LoadBig, StoreLittle, StoreBig"),
+    ("Memory<T>, ReadOnlyMemory<T> of the same number types, as locals, parameters, results and fields of a class that is no record", "IrType.Memory, IrType.ReadOnlyMemory"),
+    ("implicit conversion of an array to a memory, of a memory to a read-only memory; new Memory<T>(array[, start, length])", "ViewOf"),
+    ("memory.Span", "ViewOf as a span"),
+    ("memory.Length, memory.IsEmpty", "ViewLength")
   ];
 
   /// <summary>The constructs of views the frontend refuses with <c>PLY1002</c>, each with the text the diagnostic names.</summary>
@@ -70,7 +82,10 @@ public static class CSharpViewApi {
     ("Span<char>", "System.Span<char>"),
     ("a ref local", "MemoryMarshal.GetReference"),
     ("stackalloc with an initializer", "stackalloc with an initializer"),
-    ("a member of the span types the table does not list, such as MemoryExtensions.Reverse", "MemoryExtensions.Reverse")
+    ("a member of the span types the table does not list, such as MemoryExtensions.Reverse", "MemoryExtensions.Reverse"),
+    ("a member of the memory types the table does not list, such as Memory<T>.CopyTo", "Memory.CopyTo"),
+    ("a Memory<T> field of a record", "in a record"),
+    ("a static Memory<T> field", "a static field of the type")
   ];
 
   private static readonly Dictionary<(string, string), CSharpViewMember> _byName = Members.ToDictionary(member => (member.Type, member.Member));

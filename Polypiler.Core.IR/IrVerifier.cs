@@ -36,7 +36,7 @@ public static partial class IrVerifier {
 
       Require(names.Add(constant.Name), "the module declares the name twice");
       Require(!OnHeap(constant.Type), Stored);
-      Require(constant.Type.IsStorable && !element.IsStruct && !constant.Type.IsView && !constant.Type.IsOptional, $"a constant of the type {constant.Type}");
+      Require(constant.Type.IsStorable && !element.IsStruct && !constant.Type.IsView && !constant.Type.IsOptional && !constant.Type.IsMemory, $"a constant of the type {constant.Type}");
       var count = element.IsString ? constant.Strings.Count : constant.Values.Count;
       Require(constant.Type.IsArray || count == 1, $"a constant of the type {constant.Type} with {count} values");
       Require(element.IsString ? constant.Values.Count == 0 : constant.Strings.Count == 0, $"a constant of the type {constant.Type} with values of another type");
@@ -421,7 +421,7 @@ public static partial class IrVerifier {
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
-            if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind == IrTypeKind.ReadOnlySpan)))
+            if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind is IrTypeKind.ReadOnlySpan or IrTypeKind.ReadOnlyMemory)))
               this.Readable(intrinsic.Arguments[index]);
             else
               this.Expression(intrinsic.Arguments[index]);
@@ -511,7 +511,7 @@ public static partial class IrVerifier {
 
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function => false,
+      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

@@ -136,4 +136,37 @@ internal static class SpanFixtures {
     }
   }
 
+  /// <summary>The static class of <c>MemoryHolder.cs</c>.</summary>
+  public const string Holder = "MemoryHolderDemo";
+
+  /// <summary>
+  /// The calls of <c>MemoryHolder.cs</c> every implementation is compared on: the window of the test design, the
+  /// aliasing both ways, the slices on, inside and outside the window, the copy, the empty field and a memory local.
+  /// </summary>
+  public static IEnumerable<PrototypeCall> HolderCalls() {
+    PrototypeCall Call(string method, params object[] arguments) => new(method, arguments) { Returns = Compiled(Holder, method).ReturnType };
+
+    yield return Call("Window", D, 4, 4);
+    yield return Call("Window", D, 16, 0);
+    yield return Call("Window", D, 13, 4);
+    yield return Call("Window", D, -1, 2);
+    yield return Call("SeesLaterWrites", D);
+    foreach (var (start, length) in new[] { (0, 8), (2, 3), (8, 0), (7, 2), (-1, 1), (0, 9) })
+      yield return Call("Part", D, start, length);
+
+    foreach (var start in new[] { 0, 16, 17, -1 })
+      yield return Call("Rest", D, start);
+
+    yield return Call("Copied", D);
+    yield return Call("Empty");
+    yield return Call("Scratch", D, 300);
+    yield return Call("Local", D);
+  }
+
+  /// <summary>The calls of <c>window.mjs</c> every implementation is compared on with node.</summary>
+  public static IReadOnlyList<PrototypeCall> WindowCalls { get; } = [
+    new("windowSum", [D, 4, 4]), new("windowSum", [D, 14, 5]), new("shared", [D]),
+    new("narrowed", [D, 1, 3]), new("narrowed", [D, 3, 1]), new("narrowed", [D, -3, 9]), new("loops", [D])
+  ];
+
 }

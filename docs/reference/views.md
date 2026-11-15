@@ -8,8 +8,8 @@ profile has.
 Related: [repository README](../../README.md) · [IR and analysis](../architecture/IR.md) ·
 [integer and bit operations](integer-operations.md) · [value records](records.md).
 
-`Memory<T>` and `ReadOnlyMemory<T>`, the views a class can keep in a field, come with classes (#1319).
-Until then a view lives on the stack only.
+`Memory<T>` and `ReadOnlyMemory<T>` are the views a [class](classes.md) can keep in a field: the IR has them
+as `IrTypeKind.Memory` and `IrTypeKind.ReadOnlyMemory`.
 
 ## Semantics
 
@@ -17,6 +17,12 @@ Until then a view lives on the stack only.
   local, a parameter or a result. It is never stored in an array, a field or a constant: the verifier
   reports "a span is stored outside the stack". Nothing is written through a read-only view: the
   verifier reports "an element of a read-only span is written".
+- **Memory.** `memory<T>` and `readonly memory<T>` are the same window, but storable: besides a local,
+  a parameter and a result, a memory is a field of a class that is no record. It is no global, no
+  constant, no element of an array and no field of a struct or a record, which would compare it. A
+  memory is made of an array or of another memory, never of a span; `ViewOf` of a memory is its span,
+  through which its elements are read and written. A memory field nothing was stored into is empty, as
+  `default(Memory<T>)` is.
 - **Bounds.** A view or slice outside its source traps with `ArgumentOutOfRange`, which is new in
   `IrTrap`, as do a negative start or length, `AsSpan(-1, 2)` included. An element outside a view
   traps with `IndexOutOfRange`, and a copy into a shorter view with `ArgumentOutOfRange`.
@@ -40,16 +46,16 @@ Until then a view lives on the stack only.
 
 | IR | Arguments | Trap |
 | --- | --- | --- |
-| `ViewOf` | `(source)`, `(source, start)`, `(source, start, length)` of an array or a view | `ArgumentOutOfRange` outside the source |
-| `Slice` | `(view, start)`, `(view, start, length)` | `ArgumentOutOfRange` outside the view |
-| `ViewLength` | `(view)` | — |
+| `ViewOf` | `(source)`, `(source, start)`, `(source, start, length)` of an array, a view or a memory: a view, or a memory of an array or a memory | `ArgumentOutOfRange` outside the source |
+| `Slice` | `(view, start)`, `(view, start, length)`, of a memory too | `ArgumentOutOfRange` outside the view |
+| `ViewLength` | `(view)`, of a memory too | — |
 | element load and store | `IrArrayLoad`, `IrStore`, `IrStep` on a view | `IndexOutOfRange` |
 | `StackAlloc` | `(length)` | `IntegerOverflow` when negative |
 | `ViewCopy` | `(source, target)` | `ArgumentOutOfRange` for a shorter target, before anything is copied |
 | `ViewTryCopy` | `(source, target)` | none: false, and nothing is copied |
 | `ViewFill` | `(view, value)` | — |
 | `ViewEqual` | `(a, b)` | — |
-| `ViewToArray` | `(view)` | — |
+| `ViewToArray` | `(view)`, of a memory too | — |
 | `Reinterpret` | `(view)` | — |
 
 ## C# frontend
@@ -68,11 +74,15 @@ Until then a view lives on the stack only.
 | `CopyTo`, `TryCopyTo`, `Fill`, `Clear`, `SequenceEqual`, `ToArray` | `ViewCopy`, `ViewTryCopy`, `ViewFill`, `ViewEqual`, `ViewToArray` |
 | `MemoryMarshal.Cast<TFrom, TTo>`, `AsBytes` into a read-only span | `Reinterpret` |
 | `MemoryMarshal.Read<T>`, `Write<T>` of a number of more than one byte; `BinaryPrimitives.Read…`/`Write…` on any span of bytes | `LoadLittle`, `StoreLittle`, … |
+| `Memory<T>`, `ReadOnlyMemory<T>` of the same number types as locals, parameters, results and fields of a class that is no record | the memory types |
+| `array.AsMemory()`, `AsMemory(start)`, `AsMemory(start, length)`, `new Memory<T>(array[, start, length])`, an array converted to a memory, a memory to a read-only one | `ViewOf` |
+| `m.Span`, `m.Slice(a)`, `m.Slice(a, n)`, `m.Length`, `m.IsEmpty`, `m.ToArray()` | `ViewOf` as a span, `Slice`, `ViewLength`, `ViewToArray` |
 
 The frontend refuses each of these with `PLY1002`, naming it: `MemoryMarshal.GetReference`,
 `CreateSpan` and `CreateReadOnlySpan`; a `ref` local; a span of anything but a number; `stackalloc`
 with an initializer; a cast into a writable span; and any member of the span types the table does not
-list, such as `MemoryExtensions.Reverse`. A `[SkipLocalsInit]` method needs unsafe code, which the
+list, such as `MemoryExtensions.Reverse`; a member of the memory types the table does not list, such as
+`Memory<T>.CopyTo`; a memory field of a record and a static memory field. A `[SkipLocalsInit]` method needs unsafe code, which the
 compiler refuses (`PLY1000`).
 
 ## JavaScript frontend
@@ -85,6 +95,8 @@ compiler refuses (`PLY1000`).
 | `typed.fill(value[, start[, end]])` | `ViewFill` of the clamped part |
 | `.length`, element access of a view | `ViewLength`, element load and store |
 | `new DataView(v.buffer, v.byteOffset, v.byteLength)` of a view | the endian loads and stores on the view |
+| `for (const x of v)` over a typed array or a view | a loop over the elements by index |
+| a view stored into a field of a class | a memory |
 
 A position is clamped by explicit arithmetic: `p < 0 ? Max(length + p, 0) : Min(p, length)`, and an
 end before the begin leaves nothing. The exact slice of the IR then never traps where JavaScript does
@@ -95,14 +107,19 @@ positions more than once, so each has to be a variable, a constant or arithmetic
 The frontend refuses each of these with `PLY1102`: `new Uint32Array(b.buffer, …)`, which reads in the
 host's byte order and needs an aligned offset; `b.buffer` used other than in the `DataView` form;
 `new DataView(v.buffer)` of a view, which would see the whole buffer; and a view of a plain `Array`.
-`for…of` over a view is not imported yet.
+A view escapes when it is stored into a field of a class: the field is a memory, and so is the variable the
+stored view is read from, and every view that reaches the same place. A view that stays in its function is
+a span. A view kept in a field has to be made of a typed array or of a memory where it is stored - a
+conditional between two views is refused with `PLY1102`. A view that escapes into a variable of the module
+or a closure is not imported yet. `for…of` over a plain `Array` is refused.
 
 ## C# backend
 
 | IR | `net2.0` … `netstandard2.0` | `netstandard2.1` and later |
 | --- | --- | --- |
 | the view types | `global::System.ArraySegment<T>` | `Span<T>`, `ReadOnlySpan<T>` |
-| `ViewOf`, `Slice` | `new ArraySegment<T>(a)`, helpers `ViewOf`, `ViewFrom`, `Slice`, `SliceFrom` throwing `ArgumentOutOfRangeException` | `MemoryExtensions.AsSpan(a, s, n)`, `v.Slice(s, n)` |
+| the memory types | `global::System.ArraySegment<T>`; a field starts as the segment of an empty array | `Memory<T>`, `ReadOnlyMemory<T>` |
+| `ViewOf`, `Slice` | `new ArraySegment<T>(a)`, helpers `ViewOf`, `ViewFrom`, `Slice`, `SliceFrom` throwing `ArgumentOutOfRangeException`; the span of a memory is the segment | `MemoryExtensions.AsSpan(a, s, n)`, `MemoryExtensions.AsMemory(a, s, n)`, `v.Slice(s, n)`, `m.Span` |
 | `ViewLength` | `v.Count` | `v.Length` |
 | element load, store, step | helpers `ViewGet`, `ViewSet<T>`, `v.Array[ViewIndex(v, i)]`, throwing `IndexOutOfRangeException` | the indexer |
 | `StackAlloc` | `new ArraySegment<T>(new T[n])` | `stackalloc T[n]` for a constant length below 1024 bytes outside every loop, `new T[n]` otherwise |
@@ -119,7 +136,7 @@ non-negative: .NET 10 ends the process on `stackalloc int[-1]` instead of throwi
 
 | IR | Element type in a plain array (ES5 without `--typed-arrays`; 64-bit integers below ES2020) | Element type in a typed array |
 | --- | --- | --- |
-| the view types | an object `{ a, o, n }`: the array, the first element, the length | the `subarray` of the typed array |
+| the view types, the memory types | an object `{ a, o, n }`: the array, the first element, the length; a field starts as `$vobj([])` | the `subarray` of the typed array; a field starts as an empty typed array |
 | `ViewOf`, `Slice` | `$vobj`, `$vsub` | `$slice`, which checks the range first: `subarray` would clamp silently |
 | element load and store | `$vget`, `$vset`, `$vix` | `$get`, `$set` |
 | `StackAlloc` | `$vobj($new($len(n), 0))` | `new Int32Array($len(n))` and its kin |
@@ -132,3 +149,10 @@ non-negative: .NET 10 ends the process on `stackalloc int[-1]` instead of throwi
 
 A trap is the `RangeError` of its message: `argument out of range`, `index out of range`,
 `integer overflow`.
+
+## Known differences
+
+- Below .NET Standard 2.1 a memory is the same `ArraySegment<T>` as a span; nothing in the IR can tell
+  them apart. An auto-property of a memory type that no constructor writes is `default(ArraySegment<T>)`
+  at `net3.5`, whose array is `null`: slicing it throws `ArgumentNullException` where .NET slices an empty
+  memory. A field is given an empty segment and has no such difference.

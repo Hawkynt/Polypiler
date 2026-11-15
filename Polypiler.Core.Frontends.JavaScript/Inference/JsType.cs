@@ -192,6 +192,15 @@ internal sealed record JsType {
   /// <summary>Whether the value is a view of a typed array, made by <c>subarray</c>, rather than an array of its own.</summary>
   public bool IsView { get; private init; }
 
+  /// <summary>
+  /// Whether a view escapes the stack of the function that holds it: it is stored into a field, or reaches a
+  /// place a stored view reaches. Such a view is a <c>Memory</c> of the IR (#1325), every other one a <c>Span</c>.
+  /// </summary>
+  public bool IsMemory { get; private init; }
+
+  /// <summary>The type of a value stored into a field: a view that escapes, which is a memory; any other type as it is.</summary>
+  public JsType Stored() => this.IsView ? this with { IsMemory = true } : this;
+
   /// <summary>An array type.</summary>
   public static JsType ArrayOf(JsType element, bool plain) => new(JsKind.Array) { Element = element, IsPlain = plain };
 
@@ -249,7 +258,7 @@ internal sealed record JsType {
     JsKind.Number => (this.IsLiteral ? _words.Skip(4) : _words).First(this.Within),
     JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
     JsKind.String => IrType.String,
-    JsKind.Array when this.IsView => IrType.Span(this.Element!.Ir is { IsNumeric: true } viewed ? viewed : IrType.F64),
+    JsKind.Array when this.IsView => this.IsMemory ? IrType.Memory(this.ViewedElement) : IrType.Span(this.ViewedElement),
     JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection) ? listed : IrType.F64),
     JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString || element.IsFunction) ? element : IrType.F64),
     JsKind.Function => this.Callable!.Signature,
@@ -259,6 +268,9 @@ internal sealed record JsType {
     JsKind.Object => IrType.Object(this.Class!.Ir),
     _ => null
   };
+
+  /// <summary>The IR type of the elements of a view: a number type, a double where nothing better is known.</summary>
+  private IrType ViewedElement => this.Element!.Ir is { IsNumeric: true } viewed ? viewed : IrType.F64;
 
   /// <summary>The type as a diagnostic names it: the kind, and for an array its elements.</summary>
   public string Describe() => this.Kind != JsKind.Null && this.IsAbsent ? $"{this.Present.Describe()} or {Absence(this)}" : this.Kind switch {
@@ -296,7 +308,7 @@ internal sealed record JsType {
     IrTypeKind.F32 => "float32",
     IrTypeKind.F64 => "float64",
     IrTypeKind.Struct => type.Declaration!.Name,
-    IrTypeKind.Span or IrTypeKind.ReadOnlySpan => Spell(type.Element!) + " view",
+    IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory => Spell(type.Element!) + " view",
     IrTypeKind.String => "string",
     IrTypeKind.List => Spell(type.Element!) + " list",
     IrTypeKind.Map => $"Map<{Spell(type.Key!)}, {Spell(type.Element!)}>",
@@ -341,6 +353,10 @@ internal sealed record JsType {
         // A list and a typed array: no type of the IR is both.
         if (first.IsGrowable || second.IsGrowable)
           return Conflict(first, second);
+
+        // A view that escapes makes every view that reaches the same place one that escapes.
+        if (first.IsView && second.IsView && first.ViewedElement == second.ViewedElement)
+          return first.IsMemory ? first : second;
 
         return first.IsPlain == second.IsPlain && first.Ir == second.Ir ? first : Conflict(first, second);
       case JsKind.Record:

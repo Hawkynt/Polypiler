@@ -778,7 +778,7 @@ public static partial class CSharpEmitter {
     private string TypeName(IrType type)
       => type.Underlying is { } underlying ? this.TypeName(underlying) + "?"
         : type.ClassType is { IsLibrary: true } library ? this.ClassTypeName(library)
-        : type.Declaration is { } declared ? this._generics.Parameters.ContainsKey(declared) ? declared.Name : this._typeNames[declared.Name] : type.IsView ? this.ViewTypeName(type)
+        : type.Declaration is { } declared ? this._generics.Parameters.ContainsKey(declared) ? declared.Name : this._typeNames[declared.Name] : type.IsView || type.IsMemory ? this.ViewTypeName(type)
         : type.IsCollection ? this.CollectionTypeName(type)
         : type.IsFunction ? this.FunctionTypeName(type)
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
@@ -897,7 +897,7 @@ public static partial class CSharpEmitter {
     /// <c>int</c> unasked. Inside a class named <c>var</c> the word is that class.
     /// </summary>
     private bool Infers(IrDeclare declare)
-      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView && !declare.Local.Type.IsOptional && !declare.Local.Type.IsFunction
+      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView && !declare.Local.Type.IsMemory && !declare.Local.Type.IsOptional && !declare.Local.Type.IsFunction
         && this.ClassName != "var" && this.Has(CSharpFeature.ImplicitlyTypedLocal);
 
     /// <summary>
