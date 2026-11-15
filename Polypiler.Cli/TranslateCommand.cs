@@ -58,6 +58,7 @@ public sealed class TranslateCommand : ICliCommand {
   private const string Opt = "--opt";
   private const string DisableOpt = "--disable-opt";
   private const string ExplainOpt = "--explain-opt";
+  private const string Instantiate = "--instantiate";
 
   private static readonly string[] _required = [From, To, Output];
 
@@ -80,6 +81,7 @@ public sealed class TranslateCommand : ICliCommand {
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
     [Float] = "the floating-point mode",
     [Namespace] = "C#: the namespace of the generated code",
+    [Instantiate] = "C#: an instantiation of a public generic method that the class itself does not use",
     [LangVersion] = "C#: the language version, above the one of the profile"
   };
 
@@ -102,7 +104,7 @@ public sealed class TranslateCommand : ICliCommand {
 
   /// <summary>The source languages; another one is another entry.</summary>
   private static readonly Frontend[] _frontends = [
-    new("csharp", [], _ => null, ImportCSharp),
+    new("csharp", [new(Instantiate, "<method[type,...]>")], InstantiateMisuse, ImportCSharp),
     new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript)
   ];
 
@@ -140,7 +142,7 @@ public sealed class TranslateCommand : ICliCommand {
       return new Option<bool>(option.Name) { Description = description };
 
     var helpName = option.Value[1..option.Value.IndexOf('>')];
-    return option.Name is DisableOpt or Export
+    return option.Name is DisableOpt or Export or Instantiate
       ? new Option<string[]>(option.Name) { Description = description, HelpName = helpName }
       : new Option<string>(option.Name) { Description = description, HelpName = helpName, Required = _required.Contains(option.Name) };
   }
@@ -345,7 +347,14 @@ public sealed class TranslateCommand : ICliCommand {
   }
 
   private static (IrModule? Module, int ExitCode) ImportCSharp(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
-    var imported = CSharpFrontend.Import(file, source);
+    Polypiler.Core.Frontends.CSharp.ImportResult imported;
+    try {
+      imported = CSharpFrontend.Import([new CSharpSource(file, source)], false, options.TryGetValue(Instantiate, out var list) ? Instantiations(list)! : []);
+    } catch (ArgumentException unknown) {
+      // An instantiation that names no generic method of the class, or a type that is none, is a mistake of the command line.
+      return (null, Refuse(context, unknown.Message));
+    }
+
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
 
@@ -379,6 +388,44 @@ public sealed class TranslateCommand : ICliCommand {
   }
 
   private static string[] Names(string list) => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+  /// <summary>
+  /// The instantiations of <c>--instantiate</c>, whose values the command line gives joined by commas:
+  /// split again at the commas outside brackets; <see langword="null"/> when one is not of the form
+  /// <c>Method[type,…]</c>.
+  /// </summary>
+  private static List<CSharpInstantiation>? Instantiations(string list) {
+    var items = new List<string>();
+    var (depth, start) = (0, 0);
+    for (var index = 0; index <= list.Length; ++index) {
+      if (index < list.Length && list[index] != ',') {
+        depth += list[index] switch { '[' => 1, ']' => -1, _ => 0 };
+        continue;
+      }
+
+      if (depth != 0 && index < list.Length)
+        continue;
+
+      items.Add(list[start..index]);
+      start = index + 1;
+    }
+
+    var parsed = new List<CSharpInstantiation>();
+    foreach (var item in items) {
+      if (!CSharpInstantiation.TryParse(item, out var instantiation))
+        return null;
+
+      parsed.Add(instantiation!);
+    }
+
+    return parsed;
+  }
+
+  /// <summary>What is wrong with <c>--instantiate</c>: an item that is not of the form <c>Method[type,…]</c>.</summary>
+  private static string? InstantiateMisuse(IReadOnlyDictionary<string, string> options)
+    => options.TryGetValue(Instantiate, out var list) && Instantiations(list) is null
+      ? $"the option '{Instantiate}' takes instantiations of the form Method[type,...], not '{list}'"
+      : null;
 
   private static string? ExportMisuse(IReadOnlyDictionary<string, string> options)
     => options.TryGetValue(Export, out var names) && Names(names).Length == 0 ? $"the option '{Export}' names no function" : null;
