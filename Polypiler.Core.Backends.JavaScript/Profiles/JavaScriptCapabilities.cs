@@ -76,6 +76,10 @@ public sealed class JavaScriptCapabilities {
     new("instanceof", 5),
     new(".call", 5),
     new("TypeError", 5),
+    // Optional values (#1322): below its level each is a conditional on a test with == null, never ||.
+    new("??", 2020, "!= null ?"),
+    new("?.", 2020, "== null ?"),
+    new("??=", 2021, "!= null ?"),
 
     // Globals and the functions of Math.
     new("NaN", 5),

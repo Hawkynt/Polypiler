@@ -125,8 +125,6 @@ public sealed class JavaScriptInferenceTests {
   [TestCase("function f(n) { let t = n > 1; t++; return 1; }", "'t' holds both boolean and number", 32)]
   [TestCase("function f(n) { let t = n > 1; return t++; }", "'t' holds both boolean and number", 39)]
   [TestCase("function f(n) { if (n > 1) return 1; return true; }", "'f' holds both number and boolean", 45)]
-  [TestCase("function f(n) { if (n > 1) return 1; return; }", "'f' holds both number and undefined", 38)]
-  [TestCase("function f(n) { if (n > 1) return; return 1; }", "'f' holds both undefined and number", 43)]
   [TestCase("/** @param {boolean} t */ function f(t) { t = 1; return 1; }", "'t' holds both boolean and number", 47)]
   [TestCase("function g(x) { return 1; } export function f() { return g(1) + g(true); }", "'x' holds both number and boolean", 67)]
   public void ValuesOfTwoKinds_AreRefused(string source, string message, int column) {

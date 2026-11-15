@@ -579,7 +579,8 @@ public sealed class IrTests {
     Assert.That(() => IrInterpreter.Call(module, "F", [3, 4, true, new int[0]]), Throws.ArgumentException.With.Message.Contains("'u' is not a value of u32"));
     Assert.That(() => IrInterpreter.Call(module, "F", [3, 4u, 1, new int[0]]), Throws.ArgumentException.With.Message.Contains("'flag' is not a value of bool"));
     Assert.That(() => IrInterpreter.Call(module, "F", [3, 4u, true, new uint[0]]), Throws.ArgumentException.With.Message.Contains("'data' is not a value of i32[]"));
-    Assert.That(() => IrInterpreter.Call(module, "F", [3, 4u, true, null!]), Throws.ArgumentException.With.Message.Contains("'data' is not a value of i32[]"));
+    // An array may be null (#1322).
+    Assert.That(IrInterpreter.Call(module, "F", [3, 4u, true, null!]), Is.EqualTo(3));
   }
 
   /// <summary>The interpreter does not make up a result for IR it does not know or that never returns one.</summary>

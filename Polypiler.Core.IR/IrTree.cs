@@ -30,6 +30,12 @@ public static class IrTree {
     IrTypeTest test => [test.Value],
     IrCast cast => [cast.Value],
     IrAsCast cast => [cast.Value],
+    IrSome some => [some.Value],
+    IrIsNone test => [test.Value],
+    IrUnwrap unwrap => [unwrap.Value],
+    IrCoalesce coalesce => [coalesce.Value, coalesce.Fallback],
+    IrIsNull test => [test.Value],
+    IrBind bind => [bind.Value],
     _ => []
   };
 

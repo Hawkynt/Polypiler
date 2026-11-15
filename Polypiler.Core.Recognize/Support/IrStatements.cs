@@ -78,6 +78,7 @@ public static class IrStatements {
 
     written.AddRange(AllExpressions(statement).SelectMany(IrShape.Nodes).OfType<IrStep>()
       .Select(step => step.Target).OfType<IrLocalRef>().Select(reference => reference.Local));
+    written.AddRange(AllExpressions(statement).SelectMany(IrShape.Nodes).OfType<IrBind>().Select(bind => bind.Local));
     return written.Distinct().ToList();
   }
 

@@ -64,7 +64,14 @@ public enum IrTypeKind {
   /// <see cref="IrInterfaceType"/>, or <c>null</c>: the object has an identity, and every copy of the
   /// reference names the same object.
   /// </summary>
-  Object
+  Object,
+
+  /// <summary>
+  /// An optional value <c>T?</c>: a value of its <see cref="IrType.Underlying"/> type, or none. Lifted
+  /// operations are no part of the type: the IR spells them out with <see cref="IrIsNone"/>,
+  /// <see cref="IrUnwrap"/> and <see cref="IrSome"/>.
+  /// </summary>
+  Optional
 
 }
 
@@ -81,6 +88,8 @@ public sealed record IrType {
     this.Element = element;
     this.Declaration = declaration;
   }
+
+  private IrType(IrType underlying, IrTypeKind kind) : this(kind, null, null) => this.Underlying = underlying;
 
   /// <summary>The shape of the type.</summary>
   public IrTypeKind Kind { get; }
@@ -201,6 +210,26 @@ public sealed record IrType {
   /// <summary>Whether the type is a reference to an object of a class, which may be <c>null</c>.</summary>
   public bool IsObject => this.Kind == IrTypeKind.Object;
 
+  /// <summary>The type of the value an optional type holds when it holds one, otherwise <see langword="null"/>.</summary>
+  public IrType? Underlying { get; }
+
+  /// <summary>
+  /// The optional type over a type: a scalar - a truth value or a number - or a struct. References
+  /// have no optional type: they are <c>null</c> already (<see cref="IrNull"/>).
+  /// </summary>
+  /// <param name="underlying">The type of the value it holds when it holds one.</param>
+  /// <returns>The optional type <c>T?</c>.</returns>
+  public static IrType Optional(IrType underlying) => new(underlying, IrTypeKind.Optional);
+
+  /// <summary>Whether the type is an optional value <c>T?</c>.</summary>
+  public bool IsOptional => this.Kind == IrTypeKind.Optional;
+
+  /// <summary>Whether a type may be the underlying type of an optional one: a truth value, a number or a struct.</summary>
+  public bool IsOptionalValue => this == Bool || this.IsNumeric || this.IsStruct;
+
+  /// <summary>Whether a value of the type is a reference that may be <c>null</c>: an object or an array.</summary>
+  public bool IsNullable => this.IsObject || this.IsArray;
+
   /// <summary>Whether the type is the string type <c>str</c>.</summary>
   public bool IsString => this.Kind == IrTypeKind.String;
 
@@ -254,11 +283,12 @@ public sealed record IrType {
   /// Whether the type can be the type of a local: not void, an array only of numbers, of structs or of
   /// strings, and a view only of numbers.
   /// </summary>
-  public bool IsStorable => this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && (this.Element.IsStruct || this.Element.IsString)));
+  public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && (this.Element.IsStruct || this.Element.IsString)));
 
-  /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c> or the name of a struct.</summary>
+  /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c>, <c>i32?</c> or the name of a struct.</summary>
   public override string ToString()
-    => this.Declaration is { } declaration ? declaration.Name
+    => this.Underlying is { } underlying ? $"{underlying}?"
+      : this.Declaration is { } declaration ? declaration.Name
       : this.IsString ? "str"
       : this.Element is null ? this.Kind.ToString().ToLowerInvariant()
       : this.Kind == IrTypeKind.Span ? $"span<{this.Element}>"

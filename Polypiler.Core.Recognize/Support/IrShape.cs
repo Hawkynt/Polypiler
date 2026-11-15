@@ -45,6 +45,13 @@ public static class IrShape {
       (IrStructEquals a, IrStructEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       (IrNull, IrNull) => true,
       (IrReferenceEquals a, IrReferenceEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
+      (IrNone a, IrNone b) => a.Type == b.Type,
+      (IrSome a, IrSome b) => Same(a.Value, b.Value),
+      (IrIsNone a, IrIsNone b) => Same(a.Value, b.Value),
+      (IrUnwrap a, IrUnwrap b) => a.IsTested == b.IsTested && Same(a.Value, b.Value),
+      (IrCoalesce a, IrCoalesce b) => Same(a.Value, b.Value) && Same(a.Fallback, b.Fallback),
+      (IrIsNull a, IrIsNull b) => Same(a.Value, b.Value),
+      (IrBind a, IrBind b) => a.Local == b.Local && Same(a.Value, b.Value),
       _ => false
     };
   }
@@ -76,6 +83,12 @@ public static class IrShape {
     IrTypeTest test => [test.Value],
     IrCast cast => [cast.Value],
     IrAsCast cast => [cast.Value],
+    IrSome some => [some.Value],
+    IrIsNone test => [test.Value],
+    IrUnwrap unwrap => [unwrap.Value],
+    IrCoalesce coalesce => [coalesce.Value, coalesce.Fallback],
+    IrIsNull test => [test.Value],
+    IrBind bind => [bind.Value],
     _ => []
   };
 
@@ -99,7 +112,7 @@ public static class IrShape {
   /// <param name="expression">The expression.</param>
   /// <returns><see langword="true"/> when it has no effect.</returns>
   public static bool IsSideEffectFree(IrExpr expression) => Nodes(expression).All(node => node switch {
-    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall => false,
+    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind => false,
     IrFieldLoad load => !load.Target.Type.IsObject,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
@@ -190,6 +203,12 @@ public static class IrShape {
     IrTypeTest test => test with { Value = operands[0] },
     IrCast cast => cast with { Value = operands[0] },
     IrAsCast cast => cast with { Value = operands[0] },
+    IrSome => new IrSome(operands[0]),
+    IrIsNone => new IrIsNone(operands[0]),
+    IrUnwrap unwrap => unwrap with { Value = operands[0] },
+    IrCoalesce => new IrCoalesce(operands[0], operands[1]),
+    IrIsNull => new IrIsNull(operands[0]),
+    IrBind bind => bind with { Value = operands[0] },
     _ => expression
   };
 

@@ -61,6 +61,8 @@ internal sealed partial class Lowering {
       case ObjectExpression literal:
         // A literal the inference gave no type has a property the subset does not take, or a key twice.
         return this.ObjectLiteral(literal, IrType.Void);
+      case ChainExpression chain:
+        return this.Chain(chain);
       default:
         throw this.Unsupported(node, Describe(node) ?? types.Text(node));
     }
@@ -91,6 +93,9 @@ internal sealed partial class Lowering {
         this.Constants.Add(constant);
         return new IrConstRef(constant.Constant);
       default:
+        if (types.Names.IsAbsentLiteral(identifier))
+          return AbsentValue;
+
         throw this.Unsupported(identifier, types.IsGlobal(identifier.Name) ? $"reading the variable {identifier.Name} before its declaration" : identifier.Name);
     }
   }
@@ -115,6 +120,8 @@ internal sealed partial class Lowering {
     switch (unary.Operator) {
       case Operator.LogicalNot:
         return new IrUnary(IrUnaryOp.LogicalNot, this.Condition(unary.Argument));
+      case Operator.Void when unary.Argument is Literal:
+        return AbsentValue;
       case Operator.BitwiseNot when type.Kind == JsKind.BigInt:
         return new IrUnary(IrUnaryOp.BitNot, this.Big(unary.Argument, coercion, type.Ir ?? throw this.Unbounded(unary)));
       case Operator.BitwiseNot:
@@ -146,7 +153,7 @@ internal sealed partial class Lowering {
   /// </summary>
   private IrExpr Logical(LogicalExpression logical) {
     if (logical.Operator == Operator.NullishCoalescing)
-      throw this.Unsupported(logical, OperatorText(logical.Operator));
+      return this.Coalesce(logical);
 
     var or = logical.Operator == Operator.LogicalOr;
     var (left, right) = (types.Of(logical.Left), types.Of(logical.Right));
@@ -170,6 +177,9 @@ internal sealed partial class Lowering {
 
   /// <summary>Applies a binary operator the way <see cref="TypeInference.Decide"/> says it is computed; a compound assignment comes here as well.</summary>
   private Typed Binary(Operator op, Node left, Node right, Coercion coercion, Node whole) {
+    if (this.AbsentTest(op, left, right) is { } absent)
+      return new Typed(absent, JsType.Boolean);
+
     var operation = types.Decide(op, left, right, coercion);
     var operand = operation.Operand!;
     IrExpr expression;
@@ -262,7 +272,9 @@ internal sealed partial class Lowering {
       throw this.Unsupported(choice, $"?: on {types.Of(choice.Consequent).Describe()} and {types.Of(choice.Alternate).Describe()}");
     }
 
-    var (consequent, alternate) = (this.Value(choice.Consequent, type), this.Value(choice.Alternate, type));
+    var (whenTrue, whenFalse) = this.Narrowed(choice.Test);
+    var consequent = this.Within(whenTrue, choice.Consequent, () => this.Value(choice.Consequent, type));
+    var alternate = this.Within(whenFalse, choice.Alternate, () => this.Value(choice.Alternate, type));
     return consequent.Type == alternate.Type ? new IrConditional(condition, consequent, alternate)
       : throw this.Unsupported(choice, "a conditional expression whose branches are objects of two classes");
   }
@@ -310,7 +322,7 @@ internal sealed partial class Lowering {
   /// imported code takes a double without its fraction and traps outside the array.
   /// </summary>
   private IrExpr Index(Node node) {
-    var index = this.Evaluate(node);
+    var index = this.Present(this.Evaluate(node), node);
     if (index.Type.Kind != JsKind.Number)
       throw this.Unsupported(node, $"{index.Type.Describe()} as an index");
 
@@ -324,6 +336,7 @@ internal sealed partial class Lowering {
   /// saturating conversion; a negative length is refused by both.
   /// </summary>
   private IrExpr Length(Typed length, Node node) {
+    length = this.Present(length, node);
     if (length.Type.Kind != JsKind.Number)
       throw this.Unsupported(node, $"an array of the length {length.Type.Describe()}");
 
@@ -421,12 +434,15 @@ internal sealed partial class Lowering {
     if (target.Problem is not null || target.Parameters.Exists(parameter => parameter.Entry.Kind == JsKind.Conflict || parameter.Entry.Ir is { IsStorable: false }))
       throw this.Unsupported(call, $"a call of {callee.Name}, which cannot be imported");
 
-    if (call.Arguments.Count != target.Parameters.Count)
+    if (call.Arguments.Count > target.Parameters.Count)
       throw this.Unsupported(call, $"a call of {callee.Name} with {call.Arguments.Count} arguments for {target.Parameters.Count} parameters");
 
     var arguments = new List<IrExpr>();
     for (var index = 0; index < call.Arguments.Count; ++index)
       arguments.Add(this.Value(call.Arguments[index], target.Parameters[index].Parameter?.Type ?? this.Storable(target.Parameters[index].Entry, call.Arguments[index])));
+
+    // A parameter no argument is given for is undefined.
+    arguments.AddRange(this.Missing(call, target));
 
     return new IrCall(callee.Name, target.ReturnType, arguments);
   }
@@ -473,10 +489,14 @@ internal sealed partial class Lowering {
   /// <c>BigInt</c> unless it is zero. <c>&amp;&amp;</c> and <c>||</c> combine what their operands count as.
   /// </summary>
   private IrExpr Condition(Node node) {
-    if (node is LogicalExpression { Operator: Operator.LogicalAnd or Operator.LogicalOr } logical)
-      return new IrBinary(logical.Operator == Operator.LogicalOr ? IrBinaryOp.LogicalOr : IrBinaryOp.LogicalAnd, this.Condition(logical.Left), this.Condition(logical.Right));
+    if (node is LogicalExpression { Operator: Operator.LogicalAnd or Operator.LogicalOr } logical) {
+      var or = logical.Operator == Operator.LogicalOr;
+      var (whenTrue, whenFalse) = this.Narrowed(logical.Left);
+      var first = this.Condition(logical.Left);
+      return new IrBinary(or ? IrBinaryOp.LogicalOr : IrBinaryOp.LogicalAnd, first, this.Within(or ? whenFalse : whenTrue, logical.Right, () => this.Condition(logical.Right)));
+    }
 
-    var value = this.Evaluate(node);
+    var value = this.Present(this.Evaluate(node), node);
     switch (value.Type.Kind) {
       case JsKind.Boolean:
         return value.Expr;
@@ -496,6 +516,7 @@ internal sealed partial class Lowering {
 
   /// <summary>A number as a double: an integer of up to 32 bits and a binary32 number are doubles exactly.</summary>
   private IrExpr Float(Typed value, Node node) {
+    value = this.Present(value, node);
     if (value.Type.Kind != JsKind.Number)
       throw this.Unsupported(node, $"{value.Type.Describe()} as a number");
 
@@ -505,19 +526,21 @@ internal sealed partial class Lowering {
   private IrExpr Float(Node node) => this.Float(this.Evaluate(node), node);
 
   /// <summary><c>ToInt32</c> of a number: of a proven integer its value modulo 2^32, of a double the operation ECMA-262 defines.</summary>
-  private IrExpr Int32(Typed value, Node node)
-    => value.Type.IsInteger ? Convert(value.Expr, IrType.I32) : new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [this.Float(value, node)]);
+  private IrExpr Int32(Typed value, Node node) {
+    value = this.Present(value, node);
+    return value.Type.IsInteger ? Convert(value.Expr, IrType.I32) : new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [this.Float(value, node)]);
+  }
 
   private IrExpr Int32(Node node) => this.Int32(this.Evaluate(node, Coercion.Int32), node);
 
   /// <summary><c>ToUint32</c> of a number.</summary>
   private IrExpr Uint32(Node node) {
-    var value = this.Evaluate(node, Coercion.Uint32);
+    var value = this.Present(this.Evaluate(node, Coercion.Uint32), node);
     return value.Type.IsInteger ? Convert(value.Expr, IrType.U32) : new IrIntrinsic(IrIntrinsicOp.ToUint32, IrType.U32, [this.Float(value, node)]);
   }
 
   /// <summary>An operand of a wrapped sum: a 32-bit integer of which only the value modulo 2^32 matters.</summary>
-  private IrExpr Word(Node node, Coercion coercion, IrType type) => Convert(this.Expression(node, TypeInference.Modulo(coercion)), type);
+  private IrExpr Word(Node node, Coercion coercion, IrType type) => Convert(this.Present(this.Evaluate(node, TypeInference.Modulo(coercion)), node).Expr, type);
 
   /// <summary>An operand of a 64-bit operation under a wrapper: a <c>BigInt</c> of which only the value modulo 2^64 matters.</summary>
   private IrExpr Big(Node node, Coercion coercion, IrType type) {
@@ -552,8 +575,8 @@ internal sealed partial class Lowering {
   /// that JSDoc states does not bend, and a value it does not hold is refused, as is one of another kind.
   /// </summary>
   private IrExpr To(Typed value, IrType type, Node node) {
-    if (value.Expr is IrNull { Type.Kind: IrTypeKind.Void })
-      return type.IsObject ? new IrNull(type) : throw this.Unsupported(node, "null");
+    if (this.ToOptional(value, type, node) is { } optional)
+      return optional;
 
     var from = value.Expr.Type;
     if (from == type || from.IsAssignableTo(type))

@@ -67,19 +67,28 @@ internal sealed partial class Lowering(TypeInference types) {
 
       this._returnType = model.ReturnType;
       var (receiver, prologue) = this.Member(model);
+      this._bound.Clear();
       var statements = this.Block(((FunctionBody)model.Candidate.Function.Body).Body).Statements;
       var inherited = model.Candidate is { Member: MemberKind.Constructor, Class.Base: { } @base } ? @base : null;
       // A constructor of a derived class calls that of its base class first; the fields of its own class get their values after it.
       if (inherited is not null && !(statements is [IrExprStmt { Expression: IrCall { Function: var first } }, ..] && first == inherited.Creator!.Function))
         throw this.Unsupported(model.Candidate.Anchor, "a constructor of a derived class that does not begin with the call of the constructor of its base class");
 
-      var body = new IrBlock(inherited is null ? [.. entry, .. prologue, .. statements] : [.. entry, statements[0], .. prologue, .. statements.Skip(1)]);
-      if (this._returnType != IrType.Void && !AlwaysReturns(body))
-        throw this.Unsupported(model.Candidate.Anchor, "a function that can end without returning its value");
+      var bound = this.TakeBound();
+      var body = new IrBlock(inherited is null ? [.. entry, .. bound, .. prologue, .. statements] : [.. entry, statements[0], .. bound, .. prologue, .. statements.Skip(1)]);
+      if (this._returnType != IrType.Void && !AlwaysReturns(body)) {
+        // A function that can end without its value returns undefined there (#1322).
+        if (!this._returnType.IsOptional && !this._returnType.IsNullable)
+          throw this.Unsupported(model.Candidate.Anchor, "a function that can end without returning its value");
+
+        body = new IrBlock([.. body.Statements, new IrReturn(this._returnType.IsOptional ? new IrNone(this._returnType) : new IrNull(this._returnType))]);
+      }
 
       // A member is reached through its class, never by its name from outside the module.
       List<IrLocal> parameters = [.. receiver is null ? [] : (IrLocal[])[receiver], .. model.Parameters.Select(parameter => parameter.Parameter!)];
-      return new IrFunction(model.Candidate.Name, model.IsPublic && model.Candidate.Class is null, this._returnType, parameters, this._locals.ToList(), body);
+      return new IrFunction(model.Candidate.Name, model.IsPublic && model.Candidate.Class is null, this._returnType, parameters, this._locals.ToList(), body) {
+        Absent = this._returnType.IsOptional ? AbsentResult(model) : IrAbsent.Null
+      };
     } catch (Refusal refusal) {
       diagnostics.Add(refusal.Diagnostic);
       return null;
@@ -94,6 +103,10 @@ internal sealed partial class Lowering(TypeInference types) {
 
     if (type.Kind == JsKind.BigInt && type.Ir is null)
       throw this.Unbounded(evidence);
+
+    // A string or an object literal that may be absent has no type of the IR: neither is ever null there.
+    if (type.IsAbsent && type.Kind is JsKind.String or JsKind.Record)
+      throw this.Unsupported(evidence, $"'{name}', a {type.Present.Describe()} that may be {(type.MayBeNull && type.MayBeUndefined ? "null or undefined" : type.MayBeNull ? "null" : "undefined")}");
   }
 
   /// <summary>The IR type of a variable; a place nothing reached is a number.</summary>
@@ -202,14 +215,15 @@ internal sealed partial class Lowering(TypeInference types) {
   /// </summary>
   private IrIf If(IfStatement conditional) {
     var condition = this.Condition(conditional.Test);
+    var (whenTrue, whenFalse) = this.Narrowed(conditional.Test);
     var before = this._assigned;
-    var then = this.Body(conditional.Consequent);
+    var then = this.Within(whenTrue, conditional.Consequent, () => this.Body(conditional.Consequent));
     var afterThen = Leaves(conditional.Consequent) ? null : this._assigned;
     this._assigned = before;
     IrBlock? otherwise = null;
     var afterElse = before;
     if (conditional.Alternate is not null) {
-      otherwise = this.Body(conditional.Alternate);
+      otherwise = this.Within(whenFalse, conditional.Alternate, () => this.Body(conditional.Alternate));
       afterElse = Leaves(conditional.Alternate) ? null : this._assigned;
     }
 
@@ -232,8 +246,8 @@ internal sealed partial class Lowering(TypeInference types) {
     => matches(node) || (node is not IFunction && node.ChildNodes.Any(child => Contains(child, matches)));
 
   private IrReturn Return(ReturnStatement result) {
-    if (result.Argument is null)
-      return new IrReturn(null);
+    if (result.Argument is null || (this._returnType == IrType.Void && types.Names.IsAbsentLiteral(result.Argument) && result.Argument is not NullLiteral))
+      return new IrReturn(this._returnType.IsOptional ? new IrNone(this._returnType) : this._returnType.IsNullable ? new IrNull(this._returnType) : null);
 
     if (this._returnType != IrType.Void)
       return new IrReturn(this.Value(result.Argument, this._returnType));
@@ -418,6 +432,9 @@ internal sealed partial class Lowering(TypeInference types) {
   }
 
   private void Assignment(AssignmentExpression assignment, List<IrStmt> into) {
+    if (this.CoalescingAssignment(assignment, into))
+      return;
+
     var compound = Binder.Compound(assignment.Operator);
     if (compound is null && assignment.Operator != Operator.Assignment)
       throw this.Unsupported(assignment, OperatorText(assignment.Operator));

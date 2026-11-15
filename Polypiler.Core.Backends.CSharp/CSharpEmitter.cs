@@ -315,7 +315,7 @@ public static partial class CSharpEmitter {
   }
 
   private static void Known(IrType type, List<string> unknown) {
-    var scalar = type;
+    var scalar = type.Underlying ?? type;
     while (scalar.Element is not null)
       scalar = scalar.Element;
 
@@ -401,6 +401,7 @@ public static partial class CSharpEmitter {
     IrFieldLoad load => [load.Target],
     IrStructEquals equality => [equality.Left, equality.Right],
     IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast => IrTree.Operands(expression),
+    IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind => IrTree.Operands(expression),
     _ => null
   };
 
@@ -737,7 +738,8 @@ public static partial class CSharpEmitter {
     }
 
     private string TypeName(IrType type)
-      => type.Declaration is { } declared ? this._typeNames[declared.Name] : type.IsView ? this.ViewTypeName(type)
+      => type.Underlying is { } underlying ? this.TypeName(underlying) + "?"
+        : type.Declaration is { } declared ? this._typeNames[declared.Name] : type.IsView ? this.ViewTypeName(type)
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
@@ -802,6 +804,9 @@ public static partial class CSharpEmitter {
         case IrAssign or IrGlobalAssign or IrStore or IrFieldStore or IrExprStmt:
           statements.Add(new CsExpressionStatement(this.Effect(statement)));
           break;
+        case IrIf conditional when this.CoalescingAssignment(conditional) is { } assigned:
+          statements.Add(new CsExpressionStatement(assigned));
+          break;
         case IrIf conditional:
           statements.Add(this.If(conditional));
           break;
@@ -842,7 +847,7 @@ public static partial class CSharpEmitter {
     /// <c>int</c> unasked. Inside a class named <c>var</c> the word is that class.
     /// </summary>
     private bool Infers(IrDeclare declare)
-      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView
+      => declare.Initializer is { } initializer and not IrConst and not IrStructDefault and not IrNull && Promoted(initializer) == initializer && initializer.Type == declare.Local.Type && !declare.Local.Type.IsView && !declare.Local.Type.IsOptional
         && this.ClassName != "var" && this.Has(CSharpFeature.ImplicitlyTypedLocal);
 
     /// <summary>
@@ -969,6 +974,9 @@ public static partial class CSharpEmitter {
     /// </summary>
     private CsExpression Stored(IrExpr expression) => expression switch {
       IrConst constant => Bare(constant.Type, constant.Value),
+      // Where the type is given, none is null and a value converts to the optional type by itself.
+      IrNone or IrNull => new CsNullLiteral { Type = expression.Type },
+      IrSome some => this.Stored(some.Value) with { Type = expression.Type },
       // The literal default takes the type of the place it goes to.
       IrStructDefault when this.Has(CSharpFeature.DefaultLiteral) => new CsDefaultLiteral { Type = expression.Type },
       _ => this.Text(Promoted(expression))
@@ -1073,6 +1081,8 @@ public static partial class CSharpEmitter {
           return (this.Variable(reference.Local), Primary);
         case IrGlobalRef reference:
           return (this.GlobalName(reference.Global), Primary);
+        case IrNull { Type.IsArray: true } or IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrConditional { Condition: IrIsNull or IrIsNone }:
+          return this.Optional(expression);
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrFieldLoad { Target.Type.IsObject: true } or IrStructEquals { Left.Type.IsObject: true }:
           return this.Object(expression);
         case IrTypeTest or IrCast or IrAsCast:

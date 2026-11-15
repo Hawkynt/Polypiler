@@ -44,6 +44,9 @@ public sealed class CSharpCapabilitiesTests {
     ("init accessor", "C# 9"),
     ("record class", "C# 9"),
     ("pattern declaration", "C# 7"),
+    ("null-conditional operator", "C# 6"),
+    ("null-coalescing assignment", "C# 8"),
+    ("nullable reference types", "C# 8"),
     ("IEquatable<T>", "net2.0"),
     ("EqualityComparer<T>.Default", "net2.0"),
     ("HashCode.Combine", "netstandard2.1"),
@@ -379,6 +382,9 @@ public sealed class CSharpCapabilitiesTests {
   [TestCase(CSharpFeature.NativeInteger, "static class C { static long F(int x) { nint y = x; return y; } }")]
   [TestCase(CSharpFeature.FileScopedNamespace, "namespace N; static class C { }")]
   [TestCase(CSharpFeature.UnsignedRightShift, "static class C { static int F(int x) { return x >>> 1; } }")]
+  [TestCase(CSharpFeature.NullConditional, "static class C { static int? F(int[] a) { return a?.Length; } }")]
+  [TestCase(CSharpFeature.NullCoalescingAssignment, "static class C { static int F(int? a) { a ??= 1; return a.Value; } }")]
+  [TestCase(CSharpFeature.NullableReferenceTypes, "#nullable enable\nstatic class C { static int F(string? s) { return 1; } }")]
   public void LanguageRow_IsTheCompilersVersion(CSharpFeature feature, string source) {
     var version = CSharpCapabilities.Default.Of(feature)!.Language!;
     var before = CSharpProfile.LanguageVersions.TakeWhile(candidate => candidate < version).Last();

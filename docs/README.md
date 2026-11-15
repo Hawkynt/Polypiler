@@ -24,6 +24,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Exit codes](cli/exit-codes.md) — the exit code of every failure category of `polypiler`, generated from the code; `polypiler help exit-codes` prints the same table.
 - [Value records](reference/records.md) — structs, record structs and fixed-shape object literals: their value semantics, what each frontend imports and how each profile writes them.
 - [Classes](reference/classes.md) — sealed classes, record classes, JavaScript classes and constructor functions: the object model of the IR, what each frontend imports and how each profile writes them.
+- [Optional values](reference/optional-values.md) — `T?`, `null` and `undefined`: the optional type of the IR, C#'s lifted operators and JavaScript's coercion written out, and how each profile writes `??`, `?.` and `??=`.
 - [Module state](reference/module-state.md) — static fields and module variables shared by every call: their initialisation rule, what each frontend imports or refuses and how each profile and module format writes them.
 - [Views](reference/views.md) — `Span<T>`, `ReadOnlySpan<T>`, `stackalloc` and `subarray`: the view of the IR, its traps, what each frontend imports and how each profile writes it.
 - [String operations](reference/string-operations.md) — strings of UTF-16 code units: every operation with its ordinal meaning, the two white-space sets, what each frontend imports or refuses and how each profile writes it.

@@ -168,6 +168,10 @@ public static class CSharpSyntaxReader {
     MemberAccessExpressionSyntax { RawKind: (int)SyntaxKind.SimpleMemberAccessExpression } access => new CsMemberAccess(Read(access.Expression), access.Name.ToString()),
     InvocationExpressionSyntax call => new CsInvocation(Read(call.Expression), Arguments(call.ArgumentList)),
     ElementAccessExpressionSyntax { ArgumentList.Arguments: [var index] } element => new CsElementAccess(Read(element.Expression), Read(index.Expression)),
+    ConditionalAccessExpressionSyntax { WhenNotNull: MemberBindingExpressionSyntax member } access
+      => new CsMemberAccess(Read(access.Expression), member.Name.ToString()) { Conditional = true },
+    ConditionalAccessExpressionSyntax { WhenNotNull: ElementBindingExpressionSyntax { ArgumentList.Arguments: [var at] } } access
+      => new CsElementAccess(Read(access.Expression), Read(at.Expression)) { Conditional = true },
     CastExpressionSyntax cast => new CsCast(new CsType(cast.Type.ToString()), Read(cast.Expression)),
     PrefixUnaryExpressionSyntax unary => new CsPrefixUnary(unary.OperatorToken.Text, Read(unary.Operand)),
     PostfixUnaryExpressionSyntax unary => new CsPostfixUnary(Read(unary.Operand), unary.OperatorToken.Text),

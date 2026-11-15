@@ -42,6 +42,9 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("instanceof", 5, null)]
   [TestCase(".call", 5, null)]
   [TestCase("TypeError", 5, null)]
+  [TestCase("??", 2020, "!= null ?")]
+  [TestCase("?.", 2020, "== null ?")]
+  [TestCase("??=", 2021, "!= null ?")]
   [TestCase("NaN", 5, null)]
   [TestCase("Infinity", 5, null)]
   [TestCase("RangeError", 5, null)]
@@ -196,6 +199,12 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("numeric separators", "es2022", true)]
   [TestCase(".fill", "es5", false)]
   [TestCase(".fill", "es2015", true)]
+  [TestCase("??", "es2017", false)]
+  [TestCase("??", "es2020", true)]
+  [TestCase("?.", "es2017", false)]
+  [TestCase("?.", "es2020", true)]
+  [TestCase("??=", "es2020", false)]
+  [TestCase("??=", "es2022", true)]
   public void Has_FollowsTheLevel(string name, string level, bool expected)
     => Assert.That(_table.Has(name, Profile(level)), Is.EqualTo(expected));
 
