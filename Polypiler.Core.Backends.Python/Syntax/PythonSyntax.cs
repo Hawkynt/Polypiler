@@ -121,6 +121,10 @@ public sealed record PyLambda(IReadOnlyList<string> Parameters, PyExpression Bod
 /// <param name="From">Whether the values of an iterable are yielded one by one.</param>
 public sealed record PyYield(PyExpression? Value, bool From) : PyExpression;
 
+/// <summary><c>await value</c>: the result of an awaitable, in the body of an <c>async def</c> (Python 3.5).</summary>
+/// <param name="Value">The awaitable, a primary.</param>
+public sealed record PyAwait(PyExpression Value) : PyExpression;
+
 /// <summary>A prefix operator: <c>-</c>, <c>+</c>, <c>~</c> or <c>not</c>.</summary>
 /// <param name="Operator">The operator.</param>
 /// <param name="Operand">The operand.</param>
@@ -307,12 +311,15 @@ public sealed record PyParameter(string Name, PyExpression? Annotation) : PyNode
 
 }
 
-/// <summary><c>def name(parameters) -&gt; returns:</c> with its body.</summary>
+/// <summary><c>def name(parameters) -&gt; returns:</c> with its body, or <c>async def</c>.</summary>
 /// <param name="Name">The name.</param>
 /// <param name="Parameters">The parameters, in call order.</param>
 /// <param name="Returns">The type of the result; <c>None</c> for a function without one.</param>
 /// <param name="Body">The statements.</param>
 public sealed record PyFunctionDef(string Name, IReadOnlyList<PyParameter> Parameters, PyExpression Returns, IReadOnlyList<PyStatement> Body) : PyStatement {
+
+  /// <summary>Whether the function is a coroutine function, <c>async def</c>, whose body may <c>await</c>.</summary>
+  public bool IsAsync { get; init; }
 
   /// <summary>Whether the function is a helper the backend or legalization added, which the target passes may remove.</summary>
   public bool IsHelper { get; init; }

@@ -51,6 +51,9 @@ public static partial class PythonEmitter {
 
     public PyModule Module(IrModule module) {
       this.Reserve();
+      foreach (var foreign in module.ForeignFunctions)
+        this._foreign.TryAdd(foreign.Name, foreign);
+
       this.NameTypes(module);
       this.NameFunctions(module);
       foreach (var constant in module.Constants)
@@ -112,7 +115,7 @@ public static partial class PythonEmitter {
       if (this._declaresTypes || this._lazyAnnotations)
         imports.Add(new PyImportFrom("__future__", ["annotations"]) { Leading = PyTrivia.Blank });
 
-      foreach (var library in new[] { "copy", "dataclasses", "enum", "math", "struct" }.Where(names.Contains))
+      foreach (var library in new[] { "asyncio", "copy", "dataclasses", "enum", "math", "struct" }.Where(names.Contains))
         imports.Add(new PyImport(library) { Leading = imports.Count == 0 ? PyTrivia.Blank : PyTrivia.None });
 
       foreach (var (library, members) in new[] { ("collections.abc", new[] { "Callable", "Iterable", "Iterator" }), ("dataclasses", ["dataclass", "field"]), ("typing", ["List"]) }) {
@@ -157,7 +160,7 @@ public static partial class PythonEmitter {
     /// <summary>Takes the names of the helpers and of what the module imports, which nothing of the module may have.</summary>
     private void Reserve() {
       this._moduleNames.UnionWith(PythonHelpers.Order);
-      this._moduleNames.UnionWith(["math", "struct", "List", "__all__", "copy", "dataclasses", "dataclass", "field", "enum", "Callable", "Iterable", "Iterator", "annotations"]);
+      this._moduleNames.UnionWith(["asyncio", "math", "struct", "List", "__all__", "copy", "dataclasses", "dataclass", "field", "enum", "Callable", "Iterable", "Iterator", "annotations"]);
     }
 
     /// <summary>A name at the level of the module that no other name there has.</summary>
@@ -285,7 +288,8 @@ public static partial class PythonEmitter {
 
     /// <summary>
     /// A function with its parameters and result typed; a trailing <c>return</c> of a function without
-    /// result is left out. The receiver of a method is <c>self</c>, without a type.
+    /// result is left out. The receiver of a method is <c>self</c>, without a type. An async function
+    /// (#1330) is an <c>async def</c> typed with the result its returns give.
     /// </summary>
     private PyFunctionDef Function(IrFunction function, IrLocal? receiver) {
       this.BeginFunction(function.Name);
@@ -307,21 +311,22 @@ public static partial class PythonEmitter {
       foreach (var local in function.Locals)
         this.LocalName(local);
 
-      var returns = this.Annotation(function.ReturnType);
+      var result = function.IsAsync ? function.ReturnType.Element! : function.ReturnType;
+      var returns = this.Annotation(result);
       var body = new List<PyStatement>();
       // A parameter a closure captures in a cell of its own is put into one first.
       foreach (var parameter in function.Parameters.Where(this.IsCell))
         body.Add(new PyAssign(Name(this.LocalName(parameter)), new PyList([Name(this.LocalName(parameter))])));
 
       body.AddRange(this.FunctionBody(function));
-      if (function.ReturnType == IrType.Void && body.Count > 0 && body[^1] is PyReturn { Value: null })
+      if (result == IrType.Void && body.Count > 0 && body[^1] is PyReturn { Value: null })
         body.RemoveAt(body.Count - 1);
 
       if (this._assignedGlobals.Count > 0)
         body.Insert(0, new PyGlobal([.. this._assignedGlobals.Order(StringComparer.Ordinal)]));
 
       var written = this._functions.TryGetValue(function.Name, out var known) ? known : PythonNaming.Local(function.Name);
-      return new PyFunctionDef(written, parameters, returns, body);
+      return new PyFunctionDef(written, parameters, returns, body) { IsAsync = function.IsAsync };
     }
 
   }

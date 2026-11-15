@@ -39,8 +39,9 @@ public static class PythonPrinter {
     Multiplicative = 11,
     Unary = 12,
     Power = 13,
-    Primary = 14,
-    Atom = 15
+    Await = 14,
+    Primary = 15,
+    Atom = 16
   }
 
   /// <summary>Prints a module.</summary>
@@ -241,11 +242,11 @@ public static class PythonPrinter {
     Decorators(function.Decorators, level, text);
     var parameters = function.Parameters.Select(parameter => Parameter(parameter, level)).ToList();
     var returns = " -> " + Expression(function.Returns, Precedence.Conditional, level) + ":";
-    var line = $"{pad}def {function.Name}({string.Join(", ", parameters)}){returns}";
+    var line = $"{pad}{(function.IsAsync ? "async " : "")}def {function.Name}({string.Join(", ", parameters)}){returns}";
     if (line.Length <= LineWidth || parameters.Count == 0) {
       text.Append(line).Append('\n');
     } else {
-      text.Append(pad).Append("def ").Append(function.Name).Append("(\n");
+      text.Append(pad).Append(function.IsAsync ? "async def " : "def ").Append(function.Name).Append("(\n");
       foreach (var parameter in parameters)
         text.Append(Pad(level + 1)).Append(parameter).Append(",\n");
 
@@ -265,6 +266,7 @@ public static class PythonPrinter {
     PyBoolOp => Precedence.And,
     PyUnary { Operator: "not" } => Precedence.Not,
     PyUnary => Precedence.Unary,
+    PyAwait => Precedence.Await,
     PyCompare => Precedence.Comparison,
     PyBinary binary => OfOperator(binary.Operator),
     PyAttribute or PySubscript or PyCall => Precedence.Primary,
@@ -328,12 +330,14 @@ public static class PythonPrinter {
         return "yield";
       case PyYield yielded:
         return (yielded.From ? "yield from " : "yield ") + Expression(yielded.Value!, Precedence.Conditional, level);
+      case PyAwait awaited:
+        return "await " + Expression(awaited.Value, Precedence.Primary, level);
       case PyUnary { Operator: "not" } negation:
         return "not " + Expression(negation.Operand, Precedence.Not, level);
       case PyUnary unary:
         return unary.Operator + Expression(unary.Operand, Precedence.Power, level);
       case PyBinary { Operator: "**" } power:
-        return Expression(power.Left, Precedence.Primary, level) + " ** " + Expression(power.Right, Precedence.Unary, level);
+        return Expression(power.Left, Precedence.Await, level) + " ** " + Expression(power.Right, Precedence.Unary, level);
       case PyBinary binary:
         var strength = OfOperator(binary.Operator);
         return Operand(binary.Left, binary.Operator, strength, level) + " " + binary.Operator + " " + Operand(binary.Right, binary.Operator, strength + 1, level);

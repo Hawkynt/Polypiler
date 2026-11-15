@@ -106,6 +106,12 @@ binding meant for every level converts what it receives with `typeof`, as
 the manifest records each such function as the caveat `unverified-external` and each library under
 `nativeDependencies`.
 
+## Python
+
+Python has no binding for a native function yet: a foreign call is refused with `PLY1851` in every profile, as
+`'the native call of strlen (libc.so.6)' cannot be expressed in Python profile 'py3.14'`, and so is the last error,
+`'the last error of a native call (Marshal.GetLastWin32Error)'`. A `ctypes` binding is future work.
+
 ## Not supported yet
 
 Callbacks into translated code (#640), varargs (#638), dynamic loading with `NativeLibrary` (#642), COM (#641),

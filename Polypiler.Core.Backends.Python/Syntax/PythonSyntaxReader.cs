@@ -265,7 +265,7 @@ public static class PythonSyntaxReader {
         return this.IsKeyword("class") ? this.Class() with { Decorators = decorators } : this.Function() with { Decorators = decorators };
       }
 
-      if (this.IsKeyword("def"))
+      if (this.IsKeyword("def") || this.IsKeyword("async"))
         return this.Function();
 
       if (this.IsKeyword("class"))
@@ -386,6 +386,7 @@ public static class PythonSyntaxReader {
     }
 
     private PyFunctionDef Function() {
+      var isAsync = this.Accept(TokenKind.Name, "async");
       this.Expect(TokenKind.Name, "def");
       var name = this.Expect(TokenKind.Name).Text;
       this.Expect(TokenKind.Operator, "(");
@@ -401,7 +402,7 @@ public static class PythonSyntaxReader {
 
       this.Expect(TokenKind.Operator, "->");
       var returns = this.Expression();
-      return new PyFunctionDef(name, parameters, returns, this.Block());
+      return new PyFunctionDef(name, parameters, returns, this.Block()) { IsAsync = isAsync };
     }
 
     private PyIf If() {
@@ -541,7 +542,7 @@ public static class PythonSyntaxReader {
     }
 
     private PyExpression Power() {
-      var left = this.Primary();
+      var left = this.Accept(TokenKind.Name, "await") ? new PyAwait(this.Primary()) : this.Primary();
       return this.Accept(TokenKind.Operator, "**") ? new PyBinary(left, "**", this.Unary()) : left;
     }
 
@@ -601,7 +602,7 @@ public static class PythonSyntaxReader {
           return new PyBool(false);
         case TokenKind.Name when token.Text == "None":
           return new PyNone();
-        case TokenKind.Name when token.Text is "if" or "else" or "and" or "or" or "not" or "in" or "is" or "def" or "class" or "return" or "while" or "for" or "try" or "except" or "finally" or "lambda" or "yield" or "raise":
+        case TokenKind.Name when token.Text is "if" or "else" or "and" or "or" or "not" or "in" or "is" or "def" or "class" or "return" or "while" or "for" or "try" or "except" or "finally" or "lambda" or "yield" or "raise" or "async" or "await":
           throw new FormatException($"line {token.Line}: the keyword '{token.Text}' stands where an expression is expected");
         case TokenKind.Name:
           return new PyName(token.Text);

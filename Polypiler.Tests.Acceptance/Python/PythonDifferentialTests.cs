@@ -97,6 +97,20 @@ public sealed class PythonDifferentialTests {
     await Compare(fixture, PythonFixtures.Translate(module), calls, call => PrototypeFixture.InterpretedOutcome(module, call), call => PrototypeFixture.InterpretedOutcome(module, call));
   }
 
+  /// <summary>
+  /// The async fixture (#1330): every async function is an <c>async def</c> the driver runs with
+  /// <c>asyncio.run</c>, and every outcome - the staged sum, the completed tasks, the gathered squares,
+  /// the first fault in argument order, the faults before and after the first await - is .NET's.
+  /// </summary>
+  [Test]
+  [RequiresToolchain("python")]
+  public async Task AsyncFixture_AgreesWithDotNet() {
+    var module = AsyncFixtures.Imported();
+    var translated = PythonFixtures.Translate(module);
+    Assert.That(translated.Problems, Is.Empty);
+    await Compare("async/Pipeline", translated, [.. AsyncFixtures.Calls()], AsyncFixtures.DotNetOutcome, call => AsyncFixtures.InterpretedOutcome(module, call));
+  }
+
   /// <summary>The state of a module lives from one call to the next: a sequence of calls on one import has the outcomes the fixture's issue states.</summary>
   [TestCaseSource(typeof(StateFixtures), nameof(StateFixtures.All))]
   [RequiresToolchain("python")]
