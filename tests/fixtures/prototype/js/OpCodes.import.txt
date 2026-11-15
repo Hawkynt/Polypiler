@@ -64,7 +64,7 @@ BytesToAnsi	imported
 AsciiToBytes	OpCodes.js(2272,9): error PLY1102: 'a call of bytes.push' is not supported yet
 BytesToChars	OpCodes.js(2293,16): error PLY1102: 'a call of String.fromCharCode.apply' is not supported yet
 DoubleToBytes	imported
-BytesToDouble	OpCodes.js(2326,9): error PLY1102: 'throw' is not supported yet
+BytesToDouble	imported
 Hex4ToBytes	OpCodes.js(2343,11): error PLY1102: 'typeof' is not supported yet
 HexCharCodeToValue	imported
 Hex8ToBytes	OpCodes.js(2380,11): error PLY1102: 'typeof' is not supported yet

@@ -88,6 +88,9 @@ public static partial class CSharpEmitter {
     /// </summary>
     private string ObjectFieldName(IrField field, IrExpr target) {
       var owner = target.Type.ClassType!.OwnerOf(field)!;
+      if (owner.IsLibrary)
+        return field.Name;
+
       return !this.AutoProperties && owner.PropertyOf(field) is { } property && !(target is IrLocalRef reference && reference.Local == this._receiver)
         ? this.MemberNames(owner)[property]
         : this.MemberNames(owner)[field];
@@ -138,7 +141,7 @@ public static partial class CSharpEmitter {
       }
 
       IReadOnlyList<string> declared = [Visibility(type.Visibility), .. type.IsAbstract ? ["abstract"] : this.Derived(type) ? (string[])[] : ["sealed"]];
-      List<CsType> bases = [.. type.Base is { } @base ? [new CsType(this._typeNames[@base.Name])] : (CsType[])[], .. type.Interfaces.Select(contract => new CsType(this._typeNames[contract.Name]))];
+      List<CsType> bases = [.. type.Base is { } @base ? [new CsType(this.ClassTypeName(@base))] : (CsType[])[], .. type.Interfaces.Select(contract => new CsType(this._typeNames[contract.Name]))];
       if (positional is not null)
         return new CsTypeDeclaration(declared, "record", name, positional, [], members.Count == 0 ? null : [.. members.Select(member => member with { Leading = CsTrivia.Blank })]) {
           OpenBlank = false
@@ -235,8 +238,8 @@ public static partial class CSharpEmitter {
     /// </summary>
     private CsConstructor Constructor(IrClassType type, IrConstructor constructor, IrFunction function) {
       this._receiver = function.Parameters[0];
-      var chain = function.Body.Statements is [IrExprStmt { Expression: IrCall call }, ..] && this.Owners.ContainsKey(call.Function) ? call : null;
-      var toBase = chain is not null && this.Owners[chain.Function] != type;
+      var chain = function.Body.Statements is [IrExprStmt { Expression: IrCall call }, ..] && (this.Owners.ContainsKey(call.Function) || IrExceptionClass.ConstructorOf(call.Function) is not null) ? call : null;
+      var toBase = chain is not null && this.Owners.GetValueOrDefault(chain.Function) != type;
       var statements = chain is null ? function.Body : new IrBlock([.. function.Body.Statements.Skip(1)]);
       var (parameters, body, _) = this.Body(function, 1, statements, false);
       IReadOnlyList<CsExpression>? chained = chain is null ? null : [.. chain.Arguments.Skip(1).Select(argument => {

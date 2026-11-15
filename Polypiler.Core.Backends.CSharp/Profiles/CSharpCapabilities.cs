@@ -91,7 +91,16 @@ public enum CSharpFeature {
   UnmanagedConstraint,
 
   /// <summary>The constraint <c>where T : notnull</c> of a type parameter (C# 8).</summary>
-  NotNullConstraint
+  NotNullConstraint,
+
+  /// <summary>
+  /// An exception filter <c>catch (T e) when (c)</c> (C# 6; CS8026 at C# 5); below, the test at the
+  /// start of the catch block where the filter may run late (<see cref="IrExceptionFilter.MayRunLate"/>).
+  /// </summary>
+  ExceptionFilter,
+
+  /// <summary>A throw expression <c>x ?? throw e</c>, <c>c ? v : throw e</c> (C# 7; CS8059 at C# 6); below, the helper <c>Throw&lt;T&gt;(e)</c>.</summary>
+  ThrowExpression
 
 }
 
@@ -351,6 +360,8 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfLanguage("nullable reference types", CSharpFeature.NullableReferenceTypes, new Version(8, 0)),
     CSharpCapability.OfLanguage("generic constraint unmanaged", CSharpFeature.UnmanagedConstraint, new Version(7, 3)),
     CSharpCapability.OfLanguage("generic constraint notnull", CSharpFeature.NotNullConstraint, new Version(8, 0)),
+    CSharpCapability.OfLanguage("exception filter", CSharpFeature.ExceptionFilter, new Version(6, 0)),
+    CSharpCapability.OfLanguage("throw expression", CSharpFeature.ThrowExpression, new Version(7, 0), CSharpEmitter.ThrowHelper),
 
     // The equality members of a struct written out where the language has no record struct.
     CSharpCapability.OfApi("IEquatable<T>", CSharpProfile.Net20),

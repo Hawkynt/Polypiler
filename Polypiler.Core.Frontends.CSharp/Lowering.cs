@@ -329,6 +329,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         return IrType.Array(element);
     }
 
+    if (IsException(type))
+      throw new UnsupportedException(node, $"the library exception class {type!.Name}");
+
     throw new UnsupportedException(node, type?.ToDisplayString() ?? node.Kind().ToString());
   }
 
@@ -396,7 +399,10 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         into.Add(new IrReturn(result.Expression is null ? null : this.Initialized(result.Expression, into).Value));
         break;
       default:
-        throw new UnsupportedException(statement, statement.Kind().ToString());
+        if (!this.ExceptionStatement(statement, into))
+          throw new UnsupportedException(statement, statement.Kind().ToString());
+
+        break;
     }
   }
 
@@ -788,6 +794,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
     if (model.GetConstantValue(expression) is { HasValue: true, Value: { } folded })
       return new IrConst(type, Carried(folded));
+
+    if (this.ExceptionNatural(expression, type) is { } exceptionNode)
+      return exceptionNode;
 
     if (this.OptionalNatural(expression, type) is { } optionalNode)
       return optionalNode;

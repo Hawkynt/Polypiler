@@ -225,6 +225,12 @@ public sealed class IrClassType : IrTypeDeclaration {
   /// </summary>
   public bool IsRecord { get; init; }
 
+  /// <summary>
+  /// Whether the class is one of the library's (<see cref="IrExceptionClass"/>), which no module declares
+  /// and every module may name; a target writes it as its own library class.
+  /// </summary>
+  public bool IsLibrary { get; init; }
+
   /// <summary>Who may name the class.</summary>
   public IrVisibility Visibility { get; init; } = IrVisibility.Public;
 

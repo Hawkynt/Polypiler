@@ -4,8 +4,8 @@ namespace Polypiler.Core.Backends.JavaScript;
 
 /// <summary>
 /// The helpers of optional values: the value of one that traps when it holds none, as the IR's
-/// <c>MissingValue</c> - a <c>RangeError</c> with the trap's message, as every other trap of the IR
-/// throws until the exceptions of 12-exceptions-and-traps give it a class of its own - and the absent
+/// <c>MissingValue</c> - the generated <c>InvalidOperationError</c> with the trap's message, the class
+/// of <c>InvalidOperationException</c> (<see cref="ErrorClass"/>) - and the absent
 /// result an exported function spells <c>undefined</c>.
 /// </summary>
 internal static partial class JavaScriptHelpers {
@@ -15,7 +15,7 @@ internal static partial class JavaScriptHelpers {
 
   /// <summary>The text of a helper of optional values, the same at every level; <see langword="null"/> for any other name.</summary>
   private static string? OptionalSource(string name) => name switch {
-    "$unwrap" => Lines("function $unwrap(value) {", "  if (value == null) throw new RangeError(\"missing value\");", "  return value;", "}"),
+    "$unwrap" => Lines("function $unwrap(value) {", "  if (value == null) throw new InvalidOperationError(\"missing value\");", "  return value;", "}"),
     "$undef" => Lines("function $undef(value) {", "  return value == null ? void 0 : value;", "}"),
     _ => null
   };

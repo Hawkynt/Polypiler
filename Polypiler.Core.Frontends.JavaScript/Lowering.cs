@@ -71,7 +71,8 @@ internal sealed partial class Lowering(TypeInference types) {
       var statements = this.Block(((FunctionBody)model.Candidate.Function.Body).Body).Statements;
       var inherited = model.Candidate is { Member: MemberKind.Constructor, Class.Base: { } @base } ? @base : null;
       // A constructor of a derived class calls that of its base class first; the fields of its own class get their values after it.
-      if (inherited is not null && !(statements is [IrExprStmt { Expression: IrCall { Function: var first } }, ..] && first == inherited.Creator!.Function))
+      if (inherited is not null && !(statements is [IrExprStmt { Expression: IrCall { Function: var first } }, ..]
+          && (inherited.IsLibrary ? IrExceptionClass.ConstructorOf(first) is { } library && inherited.Ir.Constructors.Contains(library) : first == inherited.Creator!.Function)))
         throw this.Unsupported(model.Candidate.Anchor, "a constructor of a derived class that does not begin with the call of the constructor of its base class");
 
       var bound = this.TakeBound();
@@ -120,7 +121,8 @@ internal sealed partial class Lowering(TypeInference types) {
   /// nothing breaks out of. Then no call ends without its value.
   /// </summary>
   private static bool AlwaysReturns(IrBlock block) => block.Statements.Any(statement => statement switch {
-    IrReturn => true,
+    IrReturn or IrThrow or IrRethrow => true,
+    IrTry attempt => (AlwaysReturns(attempt.Body) && attempt.Catches.All(clause => AlwaysReturns(clause.Body))) || (attempt.Finally is { } final && AlwaysReturns(final)),
     IrBlock inner => AlwaysReturns(inner),
     IrIf { Else: not null } choice => AlwaysReturns(choice.Then) && AlwaysReturns(choice.Else),
     IrSwitch choice => choice.Sections.Any(section => section.IsDefault) && choice.Sections.All(section => AlwaysReturns(section.Body)),
@@ -161,6 +163,8 @@ internal sealed partial class Lowering(TypeInference types) {
         break;
       case VariableDeclaration declaration:
         this.Declaration(declaration, into);
+        break;
+      case ExpressionStatement { Expression: AssignmentExpression named } when this.NamesError(named):
         break;
       case ExpressionStatement expression:
         this.Effect(expression.Expression, into);
@@ -204,6 +208,9 @@ internal sealed partial class Lowering(TypeInference types) {
         into.Add(this.Return(result));
         break;
       default:
+        if (this.ExceptionStatement(statement, into))
+          break;
+
         // Every other statement that can stand in a function has a name of its own.
         throw this.Unsupported(statement, Describe(statement)!);
     }

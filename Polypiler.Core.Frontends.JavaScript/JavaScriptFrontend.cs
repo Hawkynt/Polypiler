@@ -101,6 +101,16 @@ public static partial class JavaScriptFrontend {
   public static readonly DiagnosticDescriptor ReadBeforeAssignmentDescriptor = new(ReadBeforeAssignment, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.definite-assignment");
 
   /// <summary>
+  /// The code for a thrown value that is no <c>Error</c> where something observes it: a catch that reads
+  /// it, or the caller it can leave the function to. A property of the data flow, not of a construct.
+  /// </summary>
+  public const string NonErrorThrow = "PLY1107";
+
+  /// <summary>The registered diagnostic of <see cref="NonErrorThrow"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor NonErrorThrowDescriptor = new(NonErrorThrow, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.non-error-throw");
+
+  /// <summary>
   /// The caveat of a module that accesses array elements: at anything but the index of an element
   /// JavaScript reads <c>undefined</c>, the imported code traps or drops the fraction.
   /// </summary>
@@ -168,13 +178,16 @@ public static partial class JavaScriptFrontend {
   private static ImportResult Imported(string path, string source, Program program, List<Comment> comments, IReadOnlyCollection<string>? exports,
       Dictionary<Node, (IFunction Function, int Copy)> copies, out Dictionary<Node, (IFunction Function, int Copy)> wanted) {
     wanted = [];
-    var collector = new FunctionCollector(source, comments);
+    var errors = new ErrorLibrary(program);
+    var collector = new FunctionCollector(source, comments) { Errors = errors };
     var candidates = collector.Collect(program);
     var redirects = Copies(candidates, copies);
     var constants = collector.Constants;
     var classes = collector.Classes;
     var inference = new TypeInference(path, source, candidates, constants.ToDictionary(constant => constant.Name)) {
-      Classes = classes.GroupBy(owner => owner.Name).ToDictionary(group => group.Key, group => group.First()),
+      // A native error is a class wherever no class of the file has its name.
+      Classes = classes.GroupBy(owner => owner.Name).Select(group => group.First())
+        .Concat(errors.ByName.Values.Where(error => classes.All(owner => owner.Name != error.Name))).ToDictionary(owner => owner.Name),
       Redirects = redirects
     };
     var globals = collector.Globals;

@@ -97,7 +97,9 @@ public static partial class IrVerifier {
           foreach (var argument in creation.Arguments)
             this.Expression(argument);
 
-          if (this.Class(creation.Type) is { } created) {
+          if (this.Class(creation.Type) is { IsLibrary: true } library) {
+            this.LibraryNew(creation, library);
+          } else if (this.Class(creation.Type) is { } created) {
             this.Require(created.Constructors.Contains(creation.Constructor), $"a constructor that is not one of {created.Name} makes an object of it");
             this.Require(!created.IsAbstract, $"an object of the abstract class {created.Name} is made");
             if (functions.TryGetValue(creation.Constructor.Function, out var body))
@@ -207,8 +209,9 @@ public static partial class IrVerifier {
         return;
 
       if (self.Owner.Base is { } @base)
-        this.Require(function.Body.Statements is [IrExprStmt { Expression: IrCall first }, ..] && this.Members.TryGetValue(first.Function, out var called)
-          && called.IsConstructor && (called.Owner == self.Owner || called.Owner == @base),
+        this.Require(function.Body.Statements is [IrExprStmt { Expression: IrCall first }, ..]
+          && ((this.Members.TryGetValue(first.Function, out var called) && called.IsConstructor && (called.Owner == self.Owner || called.Owner == @base))
+            || (IrExceptionClass.ConstructorOf(first.Function) is { } library && @base.Constructors.Contains(library))),
           $"the constructor does not begin with the call of a constructor of {@base.Name} or of {self.Owner.Name}");
 
       if (this.Chains(function.Body, self.Owner))
@@ -234,7 +237,8 @@ public static partial class IrVerifier {
 
     public void Add(IrClassType type) => this._classes.Add(type);
 
-    public bool Declares(IrClassType type) => this._classes.Contains(type);
+    /// <summary>Whether the module may name a class: one it declares, or a library class (<see cref="IrExceptionClass"/>), which every module may name.</summary>
+    public bool Declares(IrClassType type) => type.IsLibrary || this._classes.Contains(type);
 
     private readonly HashSet<IrInterfaceType> _interfaces = new(ReferenceEqualityComparer.Instance);
 

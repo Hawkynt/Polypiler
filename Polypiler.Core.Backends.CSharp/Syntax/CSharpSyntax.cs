@@ -231,6 +231,10 @@ public sealed record CsArrayInitializer(IReadOnlyList<CsExpression> Elements) : 
 /// <param name="DefaultType">The type.</param>
 public sealed record CsDefaultExpression(CsType DefaultType) : CsExpression;
 
+/// <summary><c>throw value</c> where a value stands (C# 7): the right operand of <c>??</c> or a branch of <c>?:</c>, never in parentheses.</summary>
+/// <param name="Value">The exception.</param>
+public sealed record CsThrowExpression(CsExpression Value) : CsExpression;
+
 #endregion
 
 #region Statements
@@ -305,9 +309,22 @@ public sealed record CsContinue : CsStatement;
 /// <param name="Value">The value, or <see langword="null"/>.</param>
 public sealed record CsReturn(CsExpression? Value) : CsStatement;
 
-/// <summary><c>throw value;</c>.</summary>
-/// <param name="Value">The exception.</param>
-public sealed record CsThrow(CsExpression Value) : CsStatement;
+/// <summary><c>throw value;</c>, or <c>throw;</c> in a catch clause.</summary>
+/// <param name="Value">The exception, or <see langword="null"/> to throw again the one caught.</param>
+public sealed record CsThrow(CsExpression? Value) : CsStatement;
+
+/// <summary><c>try { } catch (T e) when (c) { } finally { }</c>.</summary>
+/// <param name="Body">The protected block.</param>
+/// <param name="Catches">The catch clauses, in order.</param>
+/// <param name="Finally">The finally block, or <see langword="null"/>.</param>
+public sealed record CsTry(CsBlock Body, IReadOnlyList<CsCatch> Catches, CsBlock? Finally) : CsStatement;
+
+/// <summary>A catch clause: <c>catch</c>, <c>catch (T)</c> or <c>catch (T e)</c>, with an exception filter <c>when (c)</c> or without.</summary>
+/// <param name="Type">The class caught, or <see langword="null"/> for every exception.</param>
+/// <param name="Name">The variable that holds the exception, or <see langword="null"/>.</param>
+/// <param name="Filter">The filter, or <see langword="null"/>.</param>
+/// <param name="Body">The block.</param>
+public sealed record CsCatch(CsType? Type, string? Name, CsExpression? Filter, CsBlock Body) : CsNode;
 
 /// <summary><c>checked { }</c> or <c>unchecked { }</c>.</summary>
 /// <param name="Checked">Whether overflow is checked.</param>

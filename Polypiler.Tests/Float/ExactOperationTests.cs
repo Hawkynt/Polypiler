@@ -123,15 +123,21 @@ public sealed class ExactOperationTests {
   public void RoundDigitsOfFloat_RoundsATieToEven(float value, float expected)
     => Assert.That(FloatOperations.RoundDigitsF(value, 0, FloatOperations.RoundToEven), Is.EqualTo(expected));
 
-  /// <summary>Test design 11: digits outside the range trap, the ends of the range do not.</summary>
+  /// <summary>
+  /// Test design 11, and row 7 of #1323: digits outside the range trap with an argument out of range, as
+  /// .NET throws <c>ArgumentOutOfRangeException</c> there; the ends of the range do not.
+  /// </summary>
   [TestCase(16, 7)]
   [TestCase(-1, -1)]
   public void RoundDigits_OutsideItsRange_Traps(int digits64, int digits32) {
     var operation = FloatOperationTable.Of(IrIntrinsicOp.RoundDigits)!;
-    Assert.That(() => FloatIntrinsics.Evaluate(operation, IrType.F64, [1.5, digits64]), Throws.TypeOf<IrTrapException>().With.Property("Trap").EqualTo(IrTrap.InvalidOperation));
-    Assert.That(() => FloatIntrinsics.Evaluate(operation, IrType.F32, [1.5, digits32]), Throws.TypeOf<IrTrapException>().With.Property("Trap").EqualTo(IrTrap.InvalidOperation));
+    Assert.That(() => FloatIntrinsics.Evaluate(operation, IrType.F64, [1.5, digits64]), Throws.TypeOf<IrTrapException>().With.Property("Trap").EqualTo(IrTrap.ArgumentOutOfRange));
+    Assert.That(() => FloatIntrinsics.Evaluate(operation, IrType.F32, [1.5, digits32]), Throws.TypeOf<IrTrapException>().With.Property("Trap").EqualTo(IrTrap.ArgumentOutOfRange));
     Assert.That(FloatIntrinsics.Evaluate(operation, IrType.F64, [1.25, 15]), Is.EqualTo(1.25));
+    Assert.That(FloatIntrinsics.Evaluate(operation, IrType.F64, [1.25, 0]), Is.EqualTo(1.0));
     Assert.That(FloatIntrinsics.Evaluate(operation, IrType.F32, [1.25, 6]), Is.EqualTo(1.25f));
+    Assert.That(() => Math.Round(1.5, digits64), Throws.TypeOf<ArgumentOutOfRangeException>(), "the oracle throws the same class");
+    Assert.That(() => MathF.Round(1.5f, digits32), Throws.TypeOf<ArgumentOutOfRangeException>(), "the oracle throws the same class");
   }
 
   [Test]

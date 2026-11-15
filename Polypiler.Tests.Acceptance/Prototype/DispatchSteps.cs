@@ -170,8 +170,8 @@ public sealed class DispatchSteps(PrototypeScenario scenario) {
     foreach (var level in new[] { "es5", "es2022" }) {
       var profile = Level(level);
       var generated = scenario.Translate(scenario.Source, "csharp", "javascript", profile.Arguments);
-      Assert.That(ClassesSteps.Node(generated.Path, profile.Module == "esm", "CastToRect", "try { CastToRect(1); console.log('none'); } catch (error) { console.log(error.constructor.name + ' ' + error.message); }"),
-        Is.EqualTo("TypeError invalid cast"), level);
+      Assert.That(ClassesSteps.Node(generated.Path, profile.Module == "esm", "CastToRect", "try { CastToRect(1); console.log('none'); } catch (error) { console.log((error instanceof TypeError) + ' ' + error.name + ' ' + error.message); }"),
+        Is.EqualTo("true InvalidCastError invalid cast"), level);
     }
   }
 

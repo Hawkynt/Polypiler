@@ -121,7 +121,7 @@ public sealed class JavaScriptDispatchEmissionTests {
   [TestCase("if ($as_Tile(Make(rect)) === null) {")]
   [TestCase("(s instanceof Tile ? s : null) === null")]
   [TestCase("s != null && s.$is_INamed === true")]
-  [TestCase("function $cast_IOther(value) {\n  if (value === null || value != null && value.$is_IOther === true) return value;\n  throw new TypeError(\"invalid cast\");\n}")]
+  [TestCase("function $cast_IOther(value) {\n  if (value === null || value != null && value.$is_IOther === true) return value;\n  throw new InvalidCastError(\"invalid cast\");\n}")]
   public void Es5_WritesTheChain(string form) {
     var text = Emit(Everything, "es5");
     Assert.That(text, Does.Contain(form));
@@ -137,7 +137,11 @@ public sealed class JavaScriptDispatchEmissionTests {
   [TestCase("es2022", "class Tile extends Rect {\n  constructor() {\n    super(1);")]
   public void Es2015_WritesExtendsAndSuper(string level, string form) => Assert.That(Emit(Everything, level), Does.Contain(form));
 
-  /// <summary>Several constructors of a derived class: methods named after their class at ECMAScript 5, inexpressible where super() would stand in a method.</summary>
+  /// <summary>
+  /// Several constructors of a derived class: methods named after their class at ECMAScript 5; from
+  /// ECMAScript 2015 branches of the one constructor, each with its own super(…) (#1323), and
+  /// inexpressible only where one chains to another of its class, whose super(…) would stand in a method.
+  /// </summary>
   [Test]
   public void SeveralConstructorsOfADerivedClass_NeedTheFunctionForm() {
     var module = PrototypeFixture.Import("C.cs", """
@@ -147,7 +151,13 @@ public sealed class JavaScriptDispatchEmissionTests {
       """);
     var text = Emit(module, JavaScriptProfile.Parse("es5", "cjs"));
     Assert.That(text, Does.Contain("this.$init_B1(a0);").And.Contain("D.prototype.$init_D2 = function () {\n  B.call(this);"));
-    Assert.That(JavaScriptEmitter.Check(module, JavaScriptProfile.Default).Select(diagnostic => diagnostic.Message),
+    Assert.That(Emit(module, JavaScriptProfile.Default), Does.Contain("    if (arguments.length === 1) {\n      let v = a0;\n      super(v);\n    } else {\n      super();\n    }"));
+    var chaining = PrototypeFixture.Import("C.cs", """
+      public class B { public int V; public B(int v) { V = v; } }
+      public sealed class D : B { public D(int v) : base(v) { } public D() : this(2) { } }
+      public static class C { public static int F() => new D().V; }
+      """);
+    Assert.That(JavaScriptEmitter.Check(chaining, JavaScriptProfile.Default).Select(diagnostic => diagnostic.Message),
       Is.EqualTo(new[] { "'several constructors of a derived class' of the class 'D' cannot be expressed in JavaScript profile 'es2022'" }));
   }
 

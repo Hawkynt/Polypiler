@@ -131,6 +131,10 @@ public static class JavaScriptSyntaxReader {
           return new JsReturn(result.Argument is null ? null : this.Expression(result.Argument));
         case ThrowStatement exception:
           return new JsThrow(this.Expression(exception.Argument));
+        case TryStatement { Handler: null or { Param: null or Identifier } } attempt:
+          return new JsTry(this.Block(attempt.Block, attempt.Block.Body), (attempt.Handler?.Param as Identifier)?.Name,
+            attempt.Handler is null ? null : this.Block(attempt.Handler.Body, attempt.Handler.Body.Body),
+            attempt.Finalizer is null ? null : this.Block(attempt.Finalizer, attempt.Finalizer.Body));
         case FunctionDeclaration function:
           return new JsFunctionDeclaration(function.Id!.Name, this.Parameters(function), this.Block(function.Body, function.Body.Body));
         case ClassDeclaration { SuperClass: null or Identifier } type:

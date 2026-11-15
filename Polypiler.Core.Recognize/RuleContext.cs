@@ -136,7 +136,8 @@ public sealed class RuleContext {
         return true;
 
       var frame = this._frames[level - 1];
-      if (frame.Owner is IrWhile or IrDoWhile or IrFor)
+      // A loop runs its statements again; a catch clause or a finally block may read what a try's body wrote before it threw.
+      if (frame.Owner is IrWhile or IrDoWhile or IrFor or IrTry)
         return false;
 
       statements = frame.Statements;

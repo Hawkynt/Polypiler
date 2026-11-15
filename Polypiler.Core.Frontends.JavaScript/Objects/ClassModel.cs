@@ -47,7 +47,8 @@ internal sealed record ClassField(string Key, Variable Variable, Node? Initializ
 /// </summary>
 /// <param name="name">The name.</param>
 /// <param name="declaration">The class declaration or the constructor function.</param>
-internal sealed class ClassModel(string name, Node declaration) {
+/// <param name="library">The library class of the IR the class is - <c>Error</c> is <c>Exception</c> - or <see langword="null"/> for a class of the file.</param>
+internal sealed class ClassModel(string name, Node declaration, IrClassType? library = null) {
 
   /// <summary>The name.</summary>
   public string Name { get; } = name;
@@ -59,7 +60,10 @@ internal sealed class ClassModel(string name, Node declaration) {
   public bool IsPublic { get; set; }
 
   /// <summary>The class in the IR, declared before any type is known so that a type can name it.</summary>
-  public IrClassType Ir { get; } = new(name);
+  public IrClassType Ir { get; } = library ?? new(name);
+
+  /// <summary>Whether the class is one of the library's (<see cref="ErrorLibrary"/>), which no file declares.</summary>
+  public bool IsLibrary => this.Ir.IsLibrary;
 
   /// <summary>The instance fields, in the order the source first declares or assigns them.</summary>
   public List<ClassField> Fields { get; } = [];

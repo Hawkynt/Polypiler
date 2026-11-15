@@ -55,6 +55,12 @@ public static partial class JavaScriptEmitter {
 
     /// <summary>Whether a reference is an object of a class or an interface: <c>x instanceof C</c>, or the marker of the interface on it.</summary>
     private JsExpression IsOf(JsExpression value, IrType type) {
+      if (type.ClassType is { IsLibrary: true } library) {
+        // Every exception of the IR is an Error in JavaScript; the other library classes test as a catch clause does.
+        this.Native("instanceof");
+        return this.CatchTest(library, value) ?? Infix(value, "instanceof", Id(this.Error(library)));
+      }
+
       if (type.ClassType is { } owner) {
         this.Native("instanceof");
         return Infix(value, "instanceof", Id(this.Name(owner.Name)));
@@ -66,7 +72,7 @@ public static partial class JavaScriptEmitter {
     /// <summary>
     /// A type test, inline where its operand is read once - a test of a class, or of a variable - and
     /// through the helper <c>$is_&lt;I&gt;</c> otherwise; a cast through <c>$cast_&lt;T&gt;</c>, which
-    /// throws a <c>TypeError</c> where the IR traps; an <c>as</c> as <c>x instanceof C ? x : null</c>
+    /// throws the <c>InvalidCastError</c> (a <c>TypeError</c>) where the IR traps; an <c>as</c> as <c>x instanceof C ? x : null</c>
     /// for a variable, through <c>$as_&lt;T&gt;</c> otherwise.
     /// </summary>
     private (JsExpression Node, bool Atomic) Conversion(IrExpr expression) {
@@ -101,7 +107,7 @@ public static partial class JavaScriptEmitter {
         this.Native("TypeError");
 
       List<JsStatement> statements = kind == "cast"
-        ? [body, new JsThrow(new JsNew(Id("TypeError"), [new JsString(IrTrapException.Describe(IrTrap.InvalidCast))]))]
+        ? [body, new JsThrow(new JsNew(Id(this.Error(IrExceptionClass.InvalidCastException)), [new JsString(IrTrapException.Describe(IrTrap.InvalidCast))]))]
         : [body];
       return new JsFunctionDeclaration(name, ["value"], new JsBlock(statements));
     }

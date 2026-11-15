@@ -112,6 +112,10 @@ public static partial class JavaScriptEmitter {
         case IrReturn result:
           this.Expression(result.Value);
           break;
+        case IrThrow or IrTry:
+          // A catch clause or a finally block runs after any statement of the try: as a loop, nothing in it is the last use.
+          this.Loop([.. IrTree.Expressions(statement)], [.. IrTree.Blocks(statement)]);
+          break;
       }
     }
 

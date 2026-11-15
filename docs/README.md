@@ -25,6 +25,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Value records](reference/records.md) — structs, record structs and fixed-shape object literals: their value semantics, what each frontend imports and how each profile writes them.
 - [Classes](reference/classes.md) — sealed classes, record classes, JavaScript classes and constructor functions: the object model of the IR, what each frontend imports and how each profile writes them.
 - [Optional values](reference/optional-values.md) — `T?`, `null` and `undefined`: the optional type of the IR, C#'s lifted operators and JavaScript's coercion written out, and how each profile writes `??`, `?.` and `??=`.
+- [Exceptions](reference/exceptions.md) — the exception classes of the IR, the class every trap throws in C# and JavaScript, and the generated error classes of each profile.
 - [Generics](reference/generics.md) — generic methods and classes monomorphized in the IR: the instantiations, their equality and order, the JavaScript copies, and how each profile writes them back.
 - [Module state](reference/module-state.md) — static fields and module variables shared by every call: their initialisation rule, what each frontend imports or refuses and how each profile and module format writes them.
 - [Views](reference/views.md) — `Span<T>`, `ReadOnlySpan<T>`, `stackalloc` and `subarray`: the view of the IR, its traps, what each frontend imports and how each profile writes it.

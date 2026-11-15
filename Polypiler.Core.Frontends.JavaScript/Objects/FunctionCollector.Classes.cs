@@ -21,6 +21,9 @@ internal sealed partial class FunctionCollector {
   /// <summary>The classes of the file, in source order.</summary>
   public IReadOnlyList<ClassModel> Classes => this._classes;
 
+  /// <summary>The native errors, which a class of the file may extend: <c>Error</c> only.</summary>
+  public ErrorLibrary? Errors { get; init; }
+
   /// <summary>The statements of the top level that declare a class or give it a member, which are declarations to the check of module state.</summary>
   public HashSet<Node> ClassStatements { get; } = [];
 
@@ -164,10 +167,14 @@ internal sealed partial class FunctionCollector {
     Assigned(owner, declaration.Body);
   }
 
-  /// <summary>The fields a constructor assigns through <c>this</c>, at any depth of its body but inside another function, in source order.</summary>
+  /// <summary>
+  /// The fields a constructor assigns through <c>this</c>, at any depth of its body but inside another
+  /// function, in source order. <c>this.name = '…'</c> of a derived class is the name an error gives
+  /// itself (<see cref="Lowering"/> drops it), no field.
+  /// </summary>
   private static void Assigned(ClassModel owner, Node node) {
-    if (node is AssignmentExpression { Left: MemberExpression { Object: ThisExpression, Computed: false } member }
-        && KeyOf(member.Property) is { } key && owner.Field(key) is null)
+    if (node is AssignmentExpression { Left: MemberExpression { Object: ThisExpression, Computed: false } member } assignment
+        && KeyOf(member.Property) is { } key && owner.Field(key) is null && !(key == "name" && assignment.Right is StringLiteral && owner.BaseName is not null))
       owner.Fields.Add(new ClassField(key, new Variable(ClassModel.IrName(key), member.Property, false), null));
 
     foreach (var child in node.ChildNodes.Where(child => child is not (FunctionExpression or FunctionDeclaration or ArrowFunctionExpression)))
@@ -250,7 +257,7 @@ internal sealed partial class FunctionCollector {
   /// </summary>
   private void Hierarchy() {
     foreach (var owner in this._classes.Where(owner => owner.BaseName is not null)) {
-      owner.Base = this.ClassNamed(owner.BaseName!);
+      owner.Base = this.ClassNamed(owner.BaseName!) ?? (owner.BaseName == "Error" ? this.Errors?.Error : null);
       if (owner.Base is null)
         owner.Problem ??= $"extends {owner.BaseName}, which is no class of the file";
       else if (owner.Base.Lineage.Contains(owner))
