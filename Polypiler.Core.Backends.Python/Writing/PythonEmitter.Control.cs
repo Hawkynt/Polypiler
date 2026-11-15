@@ -162,8 +162,10 @@ public static partial class PythonEmitter {
     /// A counted loop as <c>for i in range(…)</c>: the counter is declared just before the loop, the
     /// loop compares it with a bound that does not change in it, steps it by a constant, and no
     /// statement of the body writes it. The counter's value is not read after the loop, where Python
-    /// would leave the last value of the range in it rather than the first that failed the test. A
-    /// step other than one is taken only where the counter cannot wrap past the bound. The bound and
+    /// would leave the last value of the range in it rather than the first that failed the test. The
+    /// step after the last pass stays inside the counter's type for every value the bound can have
+    /// (<see cref="Values"/>): an inclusive bound that may be the end of the type, or a step of more than
+    /// one up to a bound that may be near it, would wrap in the IR and run on. The bound and
     /// the start are evaluated once, as Python evaluates the arguments of <c>range</c>.
     /// <see langword="null"/> where the loop is no such loop.
     /// </summary>
@@ -203,17 +205,15 @@ public static partial class PythonEmitter {
       if (upward != amount > 0)
         return null;
 
-      // A counter that wraps runs on in the IR; a range stops. Only a step that cannot wrap is taken.
+      // A counter that wraps runs on in the IR; a range stops. Only a loop whose step after the last
+      // pass stays inside the type for every value the bound can have is taken: an inclusive bound
+      // that may be the end of the type, or a step of more than one up to a bound that may be near it,
+      // stays a while with the IR's own step.
       var inclusive = op is IrBinaryOp.LessOrEqual or IrBinaryOp.GreaterOrEqual;
-      var (minimum, maximum) = (Big(IrOperators.Minimum(type)), Big(IrOperators.Maximum(type)));
-      if (bound is IrConst limit) {
-        var value = Big(IrOperators.Number(limit.Type, limit.Value));
-        var last = upward ? (inclusive ? value : value - 1) + amount : (inclusive ? value : value + 1) + amount;
-        if (last > maximum || last < minimum)
-          return null;
-      } else if (BigInteger.Abs(amount) != 1) {
+      var (low, high) = Values(bound);
+      var last = upward ? (inclusive ? high : high - 1) + amount : (inclusive ? low : low + 1) + amount;
+      if (last > Big(IrOperators.Maximum(type)) || last < Big(IrOperators.Minimum(type)))
         return null;
-      }
 
       var start = this.Expression(declaration.Initializer!);
       var limitExpression = this.Expression(bound);
@@ -236,6 +236,18 @@ public static partial class PythonEmitter {
 
       return new PyFor(name, new PyCall(Name("range"), arguments), body);
     }
+
+    /// <summary>
+    /// The smallest and the largest value a bound of a counted loop can have: a constant its own, a
+    /// widening conversion of an integer the range of the type converted from, anything else every
+    /// value of its type.
+    /// </summary>
+    private static (BigInteger Low, BigInteger High) Values(IrExpr bound) => bound switch {
+      IrConst constant => (Big(IrOperators.Number(constant.Type, constant.Value)), Big(IrOperators.Number(constant.Type, constant.Value))),
+      IrConvert { Operand.Type: { IsInteger: true } from } conversion when IrOperators.Minimum(from) >= IrOperators.Minimum(conversion.Type) && IrOperators.Maximum(from) <= IrOperators.Maximum(conversion.Type)
+        => (Big(IrOperators.Minimum(from)), Big(IrOperators.Maximum(from))),
+      _ => (Big(IrOperators.Minimum(bound.Type)), Big(IrOperators.Maximum(bound.Type)))
+    };
 
     /// <summary>
     /// A loop that may be a counted one, as its test, the statements of its body and its step: a
@@ -275,13 +287,15 @@ public static partial class PythonEmitter {
       _ => null
     };
 
-    /// <summary>Whether a bound reads the same value in every pass: a constant, or a variable or the length of an array variable the loop does not write.</summary>
+    /// <summary>Whether a bound reads the same value in every pass: a constant, a variable or the length of an array variable the loop does not write, or a conversion of one.</summary>
     private static bool Invariant(IrExpr bound, HashSet<IrLocal> writes, IrLocal counter) => bound switch {
       IrConst => true,
       IrConstRef { Constant.Type.IsArray: false } => true,
       IrLocalRef { Local: var local } => local != counter && !writes.Contains(local),
       IrArrayLength { Array: IrConstRef } => true,
       IrArrayLength { Array: IrLocalRef { Local: var array } } => !writes.Contains(array),
+      // A conversion of an invariant value: the first test evaluates it, so one that traps does so before the first pass either way.
+      IrConvert { Operand: var operand } => Invariant(operand, writes, counter),
       _ => false
     };
 

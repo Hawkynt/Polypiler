@@ -35,7 +35,7 @@ public sealed class ControlEmissionTests {
   [Test]
   public void CountedLoops_BecomeRangeLoops() {
     Assert.That(Counted(I(0), IrBinaryOp.Less, R(_n), Increment), Does.Contain("    for i in range(n):\n        s = "));
-    Assert.That(Counted(I(1), IrBinaryOp.LessOrEqual, R(_n), Increment), Does.Contain("for i in range(1, n + 1):"));
+    Assert.That(Counted(I(1), IrBinaryOp.LessOrEqual, I(100), Increment), Does.Contain("for i in range(1, 101):"));
     Assert.That(Counted(R(_n), IrBinaryOp.GreaterOrEqual, I(1), new IrExprStmt(new IrStep(R(_i), false, true, false))), Does.Contain("for i in range(n, 0, -1):"));
     Assert.That(Counted(I(0), IrBinaryOp.LessOrEqual, I(10), Assign(_i, Add(R(_i), I(2)))), Does.Contain("for i in range(0, 11, 2):"));
     Assert.That(Counted(I(0), IrBinaryOp.Less, I(10), Assign(_i, Add(I(3), R(_i)))), Does.Contain("for i in range(0, 10, 3):"));
@@ -46,9 +46,9 @@ public sealed class ControlEmissionTests {
   public void ACounterComparedFromTheRight_IsCountedToo() {
     var text = Text(new IrDeclare(_s, I(0)), new IrDeclare(_i, I(0)), new IrFor(Bin(IrBinaryOp.Greater, R(_n), R(_i)), Block(Fold), Block(Increment)), new IrReturn(R(_s)));
     Assert.That(text, Does.Contain("for i in range(n):"));
-    foreach (var (compare, header) in new[] { (IrBinaryOp.Less, "range(0, 0, -1)"), (IrBinaryOp.LessOrEqual, "range(0, -1, -1)"), (IrBinaryOp.GreaterOrEqual, "range(n + 1)") }) {
+    foreach (var (compare, header) in new[] { (IrBinaryOp.Less, "range(0, 0, -1)"), (IrBinaryOp.LessOrEqual, "range(0, -1, -1)"), (IrBinaryOp.GreaterOrEqual, "range(101)") }) {
       var step = compare == IrBinaryOp.GreaterOrEqual ? Increment : new IrExprStmt(new IrStep(R(_i), false, false, false));
-      var mirrored = Text(new IrDeclare(_s, I(0)), new IrDeclare(_i, I(0)), new IrFor(Bin(compare, compare == IrBinaryOp.GreaterOrEqual ? R(_n) : I(0), R(_i)), Block(Fold), Block(step)), new IrReturn(R(_s)));
+      var mirrored = Text(new IrDeclare(_s, I(0)), new IrDeclare(_i, I(0)), new IrFor(Bin(compare, compare == IrBinaryOp.GreaterOrEqual ? I(100) : I(0), R(_i)), Block(Fold), Block(step)), new IrReturn(R(_s)));
       Assert.That(mirrored, Does.Contain("for i in " + header), compare.ToString());
     }
   }
@@ -75,6 +75,44 @@ public sealed class ControlEmissionTests {
     Assert.That(Counted(I(0), IrBinaryOp.Less, R(_s), Increment), Does.Contain("while i < s:"));
     var other = Text(new IrDeclare(_s, I(0)), new IrDeclare(_i, I(0)), new IrFor(Bin(IrBinaryOp.Less, R(_s), R(_n)), Block(Fold), Block(Increment)), new IrReturn(R(_s)));
     Assert.That(other, Does.Contain("while s < n:"));
+  }
+
+  /// <summary>
+  /// An inclusive bound that may be the largest value of the counter's type (the smallest, counting
+  /// down) leaves the IR's loop running on, the counter wrapping past it, where a range would stop:
+  /// such a loop stays a <c>while</c>. A range is written only where the values the bound can have
+  /// keep the step after the last pass inside the type.
+  /// </summary>
+  [Test]
+  public void AnInclusiveBoundThatMayBeTheEndOfTheType_StaysAWhile() {
+    Assert.That(Counted(I(1), IrBinaryOp.LessOrEqual, R(_n), Increment), Does.Contain("while i <= n:").And.Not.Contain("range"));
+    Assert.That(Counted(I(10), IrBinaryOp.GreaterOrEqual, R(_n), new IrExprStmt(new IrStep(R(_i), false, false, false))), Does.Contain("while i >= n:").And.Not.Contain("range"));
+    var mirrored = Text(new IrDeclare(_s, I(0)), new IrDeclare(_i, I(0)), new IrFor(Bin(IrBinaryOp.GreaterOrEqual, R(_n), R(_i)), Block(Fold), Block(Increment)), new IrReturn(R(_s)));
+    Assert.That(mirrored, Does.Contain("while n >= i:").And.Not.Contain("range"));
+    // The length of an array is an i32 that may be the largest one.
+    var data = L("data", IrType.Array(IrType.I32));
+    var length = Emit(new IrModule("M", [Function("f", IrType.I32, [data], new IrDeclare(_s, I(0)), new IrDeclare(_i, I(0)),
+      new IrFor(Bin(IrBinaryOp.LessOrEqual, R(_i), new IrArrayLength(R(data))), Block(Fold), Block(Increment)), new IrReturn(R(_s)))]));
+    Assert.That(length, Does.Contain("while i <= len(data):").And.Not.Contain("range"));
+  }
+
+  /// <summary>A bound converted from a narrower type is strictly inside the counter's type: the step after its last value cannot wrap.</summary>
+  [Test]
+  public void AnInclusiveBoundOfANarrowerType_IsARange() {
+    var narrow = L("h", IrType.I16);
+    string Converted(IrStmt[] body) => Emit(new IrModule("M", [Function("f", IrType.I32, [narrow], body)]));
+    var up = Converted([new IrDeclare(_s, I(0)), new IrDeclare(_i, I(1)), new IrFor(Bin(IrBinaryOp.LessOrEqual, R(_i), new IrConvert(IrType.I32, R(narrow))), Block(Fold), Block(Increment)), new IrReturn(R(_s))]);
+    Assert.That(up, Does.Contain("for i in range(1, h + 1):"));
+    var down = Converted([new IrDeclare(_s, I(0)), new IrDeclare(_i, I(10)), new IrFor(Bin(IrBinaryOp.GreaterOrEqual, R(_i), new IrConvert(IrType.I32, R(narrow))), Block(Fold), Block(new IrExprStmt(new IrStep(R(_i), false, false, false)))), new IrReturn(R(_s))]);
+    Assert.That(down, Does.Contain("for i in range(10, h - 1, -1):"));
+    // A step of two up to a narrower bound cannot wrap either; up to a full-width one it could.
+    var stepped = Converted([new IrDeclare(_s, I(0)), new IrDeclare(_i, I(0)), new IrFor(Bin(IrBinaryOp.Less, R(_i), new IrConvert(IrType.I32, R(narrow))), Block(Fold), Block(Assign(_i, Add(R(_i), I(2))))), new IrReturn(R(_s))]);
+    Assert.That(stepped, Does.Contain("for i in range(0, h, 2):"));
+    // A conversion that narrows has every value of its target type.
+    var wide = L("w", IrType.I64);
+    var narrowed = Emit(new IrModule("M", [Function("f", IrType.I32, [wide], new IrDeclare(_s, I(0)), new IrDeclare(_i, I(1)),
+      new IrFor(Bin(IrBinaryOp.LessOrEqual, R(_i), new IrConvert(IrType.I32, R(wide))), Block(Fold), Block(Increment)), new IrReturn(R(_s)))]));
+    Assert.That(narrowed, Does.Contain("while i <= ").And.Not.Contain("range"));
   }
 
   [Test]

@@ -106,7 +106,7 @@ public sealed class PythonBoundaryTests {
     Assert.That(Emit(Module(IrBinaryOp.GreaterOrEqual, R(_s))), Does.Contain("while i >= s:"));
     var free = new IrModule("M", [Function("f", IrType.I32, [data, _n, _x], [new IrDeclare(_s, I(0)), new IrDeclare(_i, R(_n)),
       new IrFor(Bin(IrBinaryOp.GreaterOrEqual, R(_i), R(_x)), Block(Assign(_s, new IrArrayLoad(R(data), R(_i)))), Block(new IrExprStmt(new IrStep(R(_i), false, false, false)))), new IrReturn(R(_s))])]);
-    Assert.That(Emit(free), Does.Contain("for i in range(n, x - 1, -1):\n        s = data[_ply_index(i)]\n"));
+    Assert.That(Emit(free), Does.Contain("while i >= x:\n        s = data[_ply_index(i)]\n"));
   }
 
   [Test]

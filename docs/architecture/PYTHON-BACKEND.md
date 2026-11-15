@@ -79,7 +79,7 @@ flowchart LR
 | a store whose value can trap or act, into a place that is no variable | the array and the index computed first, as the IR evaluates them |
 | `if`/`else` | `if`/`elif`/`else`; an empty branch disappears |
 | `while`, `do … while` | `while`; `while True:` with `if not c: break` last, a `continue` testing first |
-| a counted `for` (or a `while` that ends with its step and has no `continue`) | `for i in range(…)`: the counter declared just before, a bound that does not change in the loop, a constant step, no write of the counter in the body, no read of it after the loop; a step other than ±1 only up to a constant bound that cannot wrap |
+| a counted `for` (or a `while` that ends with its step and has no `continue`) | `for i in range(…)`: the counter declared just before, a bound that does not change in the loop, a constant step, no write of the counter in the body, no read of it after the loop, and the step after the last pass inside the counter's type for every value the bound can have (a constant, or a widening conversion of a narrower integer); otherwise a `while` with the IR's own step |
 | any other `for` | `while` with the step at the end of every pass and before every `continue` |
 | `switch` | `match` (3.10): `case 1 \| 2:`, `case _ if 3 <= x <= 9:` for a run of three or more, `case _:`; before 3.10 an `if`/`elif` chain; the `break`s of a section are taken out (a `break` in a branch moves what follows into the other branch), and where that would copy more than three statements the `match` stands in a loop of one pass |
 | a function | `def name(p: int) -> int:`; public ones in snake_case and in `__all__`, private ones behind `_` |
@@ -110,10 +110,12 @@ repository's architecture is followed:
   target, and no `src/` package, `tests/test_<module>.py`, docstrings or entry guards yet.
 - **Codes.** Refusals use the codes of the Python block (`PLY1850`, `PLY1851`, `PLY1858`, `PLY1874`),
   as the C# and JavaScript backends use their own.
-- **Counted loops at the limit.** A counted loop with an inclusive test against a variable bound that
-  equals the largest value of the counter's type (the smallest, counting down) runs on in the IR, where
-  the counter wraps; its `range` ends. A constant bound is checked, and a step other than ±1 is taken
-  only with one.
+- **Counted loops at the limit.** A counted loop with an inclusive test against a bound that may be the
+  largest value of the counter's type (the smallest, counting down) runs on in the IR, where the counter
+  wraps, and a `range` would end. Such a loop is written as `range` only where the bound's values are
+  known to keep the step after the last pass inside the type: a constant, or a widening conversion of a
+  narrower integer. Every other one (`i <= n` with `n` of the counter's type, `i <= len(a)` with an
+  `i32` counter) stays a `while` with the IR's step.
 
 ## Verification
 

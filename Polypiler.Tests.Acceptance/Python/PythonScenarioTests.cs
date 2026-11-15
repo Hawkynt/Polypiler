@@ -49,6 +49,8 @@ public sealed class PythonScenarioTests {
         }
       }
       public static int Merge(int x) { int r = 0; if (x > 0) r = 1; else for (int i = 0; i < x; i++) r = i; return r; }
+      public static int PastTheEnd(int n, int m) { int c = 0; for (int i = n; i <= m; i++) { c++; if (c == 3) return i; } return c; }
+      public static int BelowTheStart(int n, int m) { int c = 0; for (int i = n; i >= m; i--) { c++; if (c == 3) return i; } return c; }
     }
     """;
 
@@ -94,7 +96,20 @@ public sealed class PythonScenarioTests {
       new("Up", [4]), new("UpTo", [4]), new("Down", [4]), new("Even", [4]), new("PostTest", [0]), new("PostTest", [5]), new("Merge", [-1]), new("Merge", [3]), new("SumTo", [10]),
       new("Up", [0]), new("UpTo", [0]), new("Down", [0]));
     Assert.That(outcomes, Is.EqualTo(new[] { "123", "1234", "4321", "24", "1", "5", "0", "1", "55", "0", "0", "0" }));
-    Assert.That(Translated(profile).Source, Does.Contain("for i in range(n):").And.Contain("for i in range(1, n + 1):").And.Contain("for i in range(n, 0, -1):").And.Contain("for i in range(0, 5, 2):"));
+    Assert.That(Translated(profile).Source, Does.Contain("for i in range(n):").And.Contain("while i <= n:").And.Contain("for i in range(n, 0, -1):").And.Contain("for i in range(0, 5, 2):"));
+  }
+
+  /// <summary>
+  /// A counted loop whose inclusive bound is the end of the counter's type runs on in the IR, the
+  /// counter wrapping past it, where a range would stop: the third pass sees the wrapped value.
+  /// </summary>
+  [Test, RequiresToolchain("python")]
+  public async Task CountedLoop_ToTheEndOfTheType_WrapsAsTheIrDoes() {
+    var outcomes = await Run("py3.14",
+      new("PastTheEnd", [int.MaxValue - 1, int.MaxValue]), new("BelowTheStart", [int.MinValue + 1, int.MinValue]),
+      new("PastTheEnd", [1, 2]), new("BelowTheStart", [2, 1]), new("PastTheEnd", [5, 4]));
+    Assert.That(outcomes, Is.EqualTo(new[] { "-2147483648", "2147483647", "2", "2", "0" }));
+    Assert.That(Translated("py3.14").Source, Does.Contain("while i <= m:").And.Contain("while i >= m:"));
   }
 
   /// <summary>#444, "A dense switch becomes a match statement" and "The same switch is emitted as a chain when match is not available".</summary>
