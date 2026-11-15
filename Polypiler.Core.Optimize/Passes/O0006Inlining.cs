@@ -207,7 +207,7 @@ public sealed class O0006Inlining : IIrPass {
 
     /// <summary>The first call of a statement that is inlined, or <see langword="null"/>.</summary>
     private IrCall? Site(IrStmt statement) {
-      if (statement is IrWhile or IrDoWhile or IrFor or IrForEachCollection or IrBlock or IrTry or IrUsing)
+      if (statement is IrWhile or IrDoWhile or IrFor or IrForEachCollection or IrForEachSequence or IrBlock or IrTry or IrUsing)
         return null;
 
       foreach (var expression in IrTree.Expressions(statement)) {
@@ -322,6 +322,7 @@ public sealed class O0006Inlining : IIrPass {
         IrUsing scope => scope with { Resource = Of(scope.Resource) },
         IrFor loop => loop with { PerIteration = [.. loop.PerIteration.Select(Of)] },
         IrForEachCollection loop => loop with { Element = loop.Element is null ? null : Of(loop.Element), Value = loop.Value is null ? null : Of(loop.Value) },
+        IrForEachSequence loop => loop with { Element = Of(loop.Element) },
         IrTry attempt => attempt with { Catches = [.. attempt.Catches.Select(clause => clause with { Local = clause.Local is null ? null : Of(clause.Local) })] },
         _ => mapped
       };

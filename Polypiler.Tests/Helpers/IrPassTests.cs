@@ -224,6 +224,33 @@ public sealed class IrPassTests {
     SameOutcomes(module, result, 0, 3, -2);
   }
 
+  /// <summary>
+  /// A foreach over a sequence writes in its body what is unknown after it; the passes walk into it and
+  /// into the values a function yields.
+  /// </summary>
+  [Test]
+  public void Propagation_ForgetsWhatAForEachOverASequenceWrites() {
+    var count = new IrLocal("count", IrType.I32);
+    var element = new IrLocal("element", IrType.I32);
+    var sequence = new IrArraySequence(new IrNewArray(IrType.Array(IrType.I32), Op(IrBinaryOp.Add, Int(1), Int(2))));
+    var module = Module(Block(
+      new IrDeclare(count, Int(1)),
+      new IrForEachSequence(element, sequence, Block(new IrAssign(count, Op(IrBinaryOp.Add, new IrLocalRef(count), X)))),
+      new IrReturn(new IrLocalRef(count))), Block(new IrReturn(P)), [count, element]);
+    var (result, _) = Run(new O0003ConstantPropagation(), module);
+    Assert.That(result.Functions[0].Body.Statements[^1], Is.EqualTo(new IrReturn(new IrLocalRef(count))), "the loop writes count");
+    SameOutcomes(module, result, _inputs);
+    var (folded, _) = Run(new O0001ConstantFolding(), module);
+    var loop = (IrForEachSequence)folded.Functions[0].Body.Statements[1];
+    Assert.That(((IrArraySequence)loop.Sequence).Array, Is.EqualTo(new IrNewArray(IrType.Array(IrType.I32), Int(3))), "folding reaches into the sequence");
+    var iterator = new IrFunction("G", true, IrType.Sequence(IrType.I32, true), [], [],
+      Block(new IrYield(Op(IrBinaryOp.Add, Int(1), Int(2))), new IrYieldFrom(sequence)));
+    var (yields, _) = Run(new O0001ConstantFolding(), module with { Functions = [.. module.Functions, iterator] });
+    var body = yields.Functions.Single(function => function.Name == "G").Body.Statements;
+    Assert.That(body[0], Is.EqualTo(new IrYield(Int(3))));
+    Assert.That(((IrArraySequence)((IrYieldFrom)body[1]).Sequence).Array, Is.EqualTo(new IrNewArray(IrType.Array(IrType.I32), Int(3))));
+  }
+
   [Test]
   public void Propagation_MakesACopyTheOriginalAndAValueReadOnceItsUse() {
     var copy = new IrLocal("c", IrType.I32);

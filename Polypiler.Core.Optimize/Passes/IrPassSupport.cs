@@ -31,6 +31,9 @@ internal static class IrPassSupport {
       attempt.Finally is null ? null : block(attempt.Finally)),
     IrUsing scope => scope with { Initializer = expression(scope.Initializer), Body = block(scope.Body) },
     IrForEachCollection loop => loop with { Collection = expression(loop.Collection), Body = block(loop.Body) },
+    IrYield produced => new IrYield(expression(produced.Value)),
+    IrYieldFrom delegated => new IrYieldFrom(expression(delegated.Sequence)),
+    IrForEachSequence loop => loop with { Sequence = expression(loop.Sequence), Body = block(loop.Body) },
     _ => statement
   };
 
@@ -72,6 +75,8 @@ internal static class IrPassSupport {
         writes[assign.Local] = writes.GetValueOrDefault(assign.Local) + 1;
       else if (statement is IrUsing scope)
         writes[scope.Resource] = writes.GetValueOrDefault(scope.Resource) + 1;
+      else if (statement is IrForEachSequence loop)
+        writes[loop.Element] = writes.GetValueOrDefault(loop.Element) + 1;
       else if (statement is IrFieldStore { Target: var target } && IrStatements.Root(target) is { } root)
         writes[root] = writes.GetValueOrDefault(root) + 1;
 

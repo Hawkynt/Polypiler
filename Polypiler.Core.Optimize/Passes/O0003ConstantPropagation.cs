@@ -106,7 +106,7 @@ public sealed class O0003ConstantPropagation : IIrPass {
           Meet(known, IrPassSupport.Leaves(thenBlock) ? null : then, elseBlock is not null && IrPassSupport.Leaves(elseBlock) ? null : otherwise);
           return new IrIf(condition, thenBlock, elseBlock);
         }
-        case IrWhile or IrDoWhile or IrFor or IrForEachCollection or IrSwitch or IrTry or IrUsing: {
+        case IrWhile or IrDoWhile or IrFor or IrForEachCollection or IrForEachSequence or IrSwitch or IrTry or IrUsing: {
           // What the statement writes anywhere is unknown in it - a loop runs its body again - and after it.
           foreach (var written in IrStatements.Writes(statement))
             known.Remove(written);
@@ -121,6 +121,10 @@ public sealed class O0003ConstantPropagation : IIrPass {
         default: {
           var result = IrPassSupport.Map(statement, expression => this.Substitute(expression, known), block => this.Constants(block, new Dictionary<IrLocal, IrConst>(known)));
           this.Forget(result, known);
+          // Whatever else the statement writes anywhere - a statement of a kind the cases above do not know - is unknown after it.
+          foreach (var written in IrStatements.Writes(result))
+            known.Remove(written);
+
           return result;
         }
       }
@@ -324,7 +328,7 @@ public sealed class O0003ConstantPropagation : IIrPass {
     /// value reads, and the statement is no loop; otherwise <see langword="null"/>.
     /// </summary>
     private static IrStmt? Substituted(IrStmt statement, IrLocal local, IrExpr value) {
-      if (statement is IrWhile or IrDoWhile or IrFor or IrForEachCollection or IrBlock or IrTry or IrUsing)
+      if (statement is IrWhile or IrDoWhile or IrFor or IrForEachCollection or IrForEachSequence or IrBlock or IrTry or IrUsing)
         return null;
 
       var own = IrTree.Expressions(statement);
