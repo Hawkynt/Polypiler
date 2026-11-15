@@ -73,7 +73,7 @@ generated code — a row changes only in the pull request that makes it true.
 | Rust | 2024 edition | — | — | |
 | Kotlin | JVM | — | — | |
 | Perl | Perl 5 | — | — | |
-| Python | 3.x | — | — | |
+| Python | Backend, by `--profile`: `py3.8` to `py3.14` (the default) | — | ⚠️ | Backend: one typed module per IR module (PEP 484 hints, `__all__` of the public functions in snake_case, everything else private behind an underscore), standard library only. Integers of every width with masks and sign-wraps, truncating division, checked arithmetic and the conversions that saturate or trap through small helpers; `f64` IEEE 754 (division and remainder by zero included), `f32` rounded to binary32 after every operation; bit casts through `struct`; the integer operations of the library as its helpers, `int.bit_count` from 3.10; the floating-point functions as their portable implementations. Branches, `while` and post-test loops, counted loops as `for … in range(…)`, switches as `match` from 3.10 and as an `if`/`elif` chain before; arrays of numbers as lists, module constants and globals; traps as the built-in exceptions of the trap table. Refused with `PLY1850`/`PLY1851`/`PLY1858` naming the construct: strings, structs, classes, exceptions handled by `try`, closures, collections, views, pointers, enums, generics. See [the Python backend](docs/architecture/PYTHON-BACKEND.md). |
 | TypeScript | current | — | — | |
 | Java | JDK 17 / 21 | — | — | |
 | Go | current | — | — | |

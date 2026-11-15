@@ -209,7 +209,7 @@ public sealed class TranslateToCSharpTests {
 
   [Test]
   public void Help_NamesBothTargetsAndTheNamespaceOption()
-    => Assert.That(Invoke("translate", "--help").Output, Does.Contain("usage: polypiler translate <file> [options]").And.Contain("  --to <javascript|csharp> ").And.Contain("  --namespace <name> "));
+    => Assert.That(Invoke("translate", "--help").Output, Does.Contain("usage: polypiler translate <file> [options]").And.Contain("  --to <javascript|csharp|python> ").And.Contain("  --namespace <name> "));
 
   /// <summary>The help names the two options that choose what the C# is written for.</summary>
   [Test]
