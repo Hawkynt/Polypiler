@@ -36,7 +36,8 @@ public interface IIrPass {
 /// traps and the point they happen at included. They look at the functions legalization copied in
 /// from the libraries and at every function a helper was inlined into; the rest of the program stays
 /// as the frontend made it. The last round only cleans up: inlining and unrolling, which make code,
-/// sit it out, so that what they made in the round before is propagated, folded and removed.
+/// sit it out, so that what they made in the round before is propagated, folded and removed. After the
+/// first round the passes look only at the functions the round before changed and at their callers.
 /// </summary>
 public sealed class IrPassPipeline {
 
@@ -75,14 +76,16 @@ public sealed class IrPassPipeline {
 
     var passes = this.Passes.Where(pass => !options.Disabled.Contains(pass.Id)).ToList();
     var scope = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
+    HashSet<string>? dirty = null;
     for (var round = 0; round < RoundLimit; ++round) {
       var before = applications.Count;
+      var start = module.Functions;
       foreach (var pass in passes) {
         if (round == RoundLimit - 1 && pass is O0006Inlining or O0023Unrolling)
           continue;
 
         var inlining = pass is O0006Inlining;
-        module = pass.Run(module, function => inlining || scope.Contains(function.Name), (function, position) => {
+        module = pass.Run(module, function => (dirty is null || dirty.Contains(function.Name)) && (inlining || scope.Contains(function.Name)), (function, position) => {
           applications.Add(new(pass.Id, pass.Name, function, position));
           if (inlining)
             scope.Add(function);
@@ -93,9 +96,26 @@ public sealed class IrPassPipeline {
 
       if (applications.Count == before)
         break;
+
+      dirty = Dirty(start, module.Functions);
     }
 
     return new(module, applications);
+  }
+
+  /// <summary>
+  /// The functions the next round looks at: those a round changed, and those that call one of them,
+  /// whose inlining may now go differently. A function the passes left as it was they leave so again.
+  /// </summary>
+  private static HashSet<string> Dirty(IReadOnlyList<IrFunction> before, IReadOnlyList<IrFunction> after) {
+    var unchanged = new HashSet<IrFunction>(before, ReferenceEqualityComparer.Instance);
+    var changed = after.Where(function => !unchanged.Contains(function)).Select(function => function.Name).ToHashSet(StringComparer.Ordinal);
+    var dirty = new HashSet<string>(changed, StringComparer.Ordinal);
+    foreach (var function in after)
+      if (!dirty.Contains(function.Name) && IrPassSupport.Nodes(function.Body).OfType<IrCall>().Any(call => changed.Contains(call.Function)))
+        dirty.Add(function.Name);
+
+    return dirty;
   }
 
 }

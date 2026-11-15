@@ -63,7 +63,11 @@ The same module for JavaScript at `es5` has no branch and no call left in `F`, a
 
 - The callee is a function legalization copied in from the libraries, other than the caller, and calls
   itself through no chain of calls.
-- Its body has at most `O0006Inlining.Budget` statements and expression nodes - 64 - and no lambda.
+- Its body has at most `O0006Inlining.Small` statements and expression nodes - 24 - and no lambda; or
+  at most `O0006Inlining.Budget` - 64 - where the call has a constant argument the copy is specialised
+  with, or is the only call of the function in the module. A larger body copied to every call of it costs
+  more than the call: the portable multiplication of the float library would be copied 55 times into the
+  strict `Dct8` for ECMAScript 5.
 - Its returns can be made the end of their branches: a return in a choice whose branch always leaves
   takes the statements after the choice into the other branch. A return in a loop, a switch or a try
   cannot be, and keeps the call.
@@ -80,6 +84,8 @@ The same module for JavaScript at `es5` has no branch and no call left in `F`, a
 - A recursive helper, or one whose return stands in a loop: no single way out to assign the result at.
 - A function of the program: the prototype inlines only what the libraries put in.
 - A body over the budget - the portable `FusedMultiplyAddF`, for instance - stays one function.
+- A body over 24 nodes called from several places with variable arguments only: nothing folds in the
+  copies, so each would cost what the call saves many times over.
 
 ## Switching it off
 

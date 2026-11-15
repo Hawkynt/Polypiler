@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Polypiler.Core.IR;
 using Polypiler.Core.Recognize;
 
@@ -96,7 +97,17 @@ internal static class IrPassSupport {
   /// Whether an expression may be evaluated anywhere, any number of times or not at all: it has no
   /// effect and never traps (<see cref="IrShape.IsSideEffectFree"/>, <see cref="IrShape.IsTrapFree"/>).
   /// </summary>
-  public static bool IsPure(IrExpr expression) => IrShape.IsSideEffectFree(expression) && IrShape.IsTrapFree(expression);
+  public static bool IsPure(IrExpr expression) {
+    // Node by node and remembered per node: the passes ask it of an expression and of each of its parts.
+    if (_purity.TryGetValue(expression, out var known))
+      return known.Value;
+
+    var pure = IrShape.IsSideEffectFreeNode(expression) && IrShape.IsTrapFreeNode(expression) && IrShape.Operands(expression).All(IsPure);
+    _purity.AddOrUpdate(expression, new StrongBox<bool>(pure));
+    return pure;
+  }
+
+  private static readonly ConditionalWeakTable<IrExpr, StrongBox<bool>> _purity = [];
 
   /// <summary>A name not yet taken, which is then taken: the name itself, or it with the smallest number from 2 on.</summary>
   public static string Fresh(string name, HashSet<string> taken) {

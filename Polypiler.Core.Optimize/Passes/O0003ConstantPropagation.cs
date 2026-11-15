@@ -291,7 +291,8 @@ public sealed class O0003ConstantPropagation : IIrPass {
     /// </summary>
     private static int? Coalesced(List<IrStmt> statements, int index, Dictionary<IrLocal, int> writes) {
       var declare = (IrDeclare)statements[index];
-      if (declare.Initializer is { } initial && !IrPassSupport.IsPure(initial))
+      // A variable nothing assigns has no assignment to merge with: the common case, decided without a scan.
+      if (writes.GetValueOrDefault(declare.Local) < 1 || (declare.Initializer is { } initial && !IrPassSupport.IsPure(initial)))
         return null;
 
       for (var at = index + 1; at < statements.Count; ++at) {
@@ -302,7 +303,7 @@ public sealed class O0003ConstantPropagation : IIrPass {
           return null;
 
         var reads = IrTree.Nodes(assign.Value).Count(node => node is IrLocalRef reference && reference.Local == declare.Local);
-        if (reads > 1 || (reads == 1 && declare.Initializer is null) || writes.GetValueOrDefault(declare.Local) < 1)
+        if (reads > 1 || (reads == 1 && declare.Initializer is null))
           return null;
 
         if (declare.Initializer is { } value) {

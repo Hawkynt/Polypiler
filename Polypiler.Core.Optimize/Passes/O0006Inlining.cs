@@ -9,7 +9,9 @@ namespace Polypiler.Core.Optimize.Passes;
 /// <summary>
 /// O0006, inlining (prototype): a call of a function legalization copied in from the libraries - a
 /// helper or a portable floating-point implementation - becomes the body of the function where the
-/// body is no larger than <see cref="Budget"/>, never calls itself, directly or through others, and
+/// body is no larger than <see cref="Small"/>, or no larger than <see cref="Budget"/> where the call
+/// has a constant argument to specialise the copy with or is the only call of the function in the
+/// module - a larger body copied to many places costs more than the call -, never calls itself, directly or through others, and
 /// has a single way out once every return in a choice is made the end of its branch. The arguments
 /// become variables declared in their order, the returns assignments of a result variable, and the
 /// call a read of that variable. A call is inlined where its statement evaluates it first: nothing
@@ -19,8 +21,11 @@ namespace Polypiler.Core.Optimize.Passes;
 /// </summary>
 public sealed class O0006Inlining : IIrPass {
 
-  /// <summary>The largest body, in statements and expression nodes, that is inlined.</summary>
+  /// <summary>The largest body, in statements and expression nodes, that is inlined where the call has a constant argument or is the only one.</summary>
   public const int Budget = 64;
+
+  /// <summary>The largest body, in statements and expression nodes, that is inlined at every call.</summary>
+  public const int Small = 24;
 
   /// <summary>The most calls inlined into one function in one run, a bound on a body that grows.</summary>
   public const int Limit = 256;
@@ -47,13 +52,17 @@ public sealed class O0006Inlining : IIrPass {
     if (candidates.Count == 0)
       return module;
 
+    var calls = module.Functions.SelectMany(function => IrPassSupport.Nodes(function.Body)).OfType<IrCall>()
+      .GroupBy(call => call.Function, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+    var sizes = candidates.ToDictionary(pair => pair.Key, pair => IrPassSupport.Size(pair.Value.Body), StringComparer.Ordinal);
+    bool Worth(IrCall call) => sizes[call.Function] <= Small || calls.GetValueOrDefault(call.Function) == 1 || call.Arguments.Any(argument => argument is IrConst);
     var inlined = new List<string>();
     var changed = false;
     var functions = module.Functions.Select(function => {
       if (!scope(function))
         return function;
 
-      var run = new Walk(function, candidates, applied);
+      var run = new Walk(function, candidates, Worth, applied);
       var result = run.Function();
       if (run.Inlined.Count == 0)
         return function;
@@ -154,7 +163,7 @@ public sealed class O0006Inlining : IIrPass {
     _ => false
   };
 
-  private sealed class Walk(IrFunction function, Dictionary<string, IrFunction> candidates, Action<string, string> applied) {
+  private sealed class Walk(IrFunction function, Dictionary<string, IrFunction> candidates, Func<IrCall, bool> worth, Action<string, string> applied) {
 
     private readonly HashSet<string> _taken = [.. function.Parameters.Select(local => local.Name), .. function.Locals.Select(local => local.Name)];
     private readonly List<IrLocal> _locals = [.. function.Locals];
@@ -219,7 +228,7 @@ public sealed class O0006Inlining : IIrPass {
     /// cannot be, or the call stands where it may not run.
     /// </summary>
     private (IrCall? Call, bool Blocked) First(IrExpr expression) {
-      if (expression is IrCall call && candidates.ContainsKey(call.Function) && call.Function != function.Name) {
+      if (expression is IrCall call && candidates.ContainsKey(call.Function) && call.Function != function.Name && worth(call)) {
         // The arguments stay in their order before the copied body; a call within one is taken first
         // only where the arguments before it may be evaluated after it.
         foreach (var argument in call.Arguments) {

@@ -91,6 +91,27 @@ public sealed class IrPassTests {
     SameOutcomes(module, result, _inputs);
   }
 
+  /// <summary>
+  /// The cost rule: a body over <see cref="O0006Inlining.Small"/> called from two places is inlined only
+  /// where the call has a constant argument; one of <see cref="O0006Inlining.Small"/> everywhere.
+  /// </summary>
+  [TestCase(12, false, false)]
+  [TestCase(12, true, true)]
+  [TestCase(11, false, true)]
+  public void Inlining_CopiesALargerBodyOnlyWhereItPays(int additions, bool constant, bool inlined) {
+    IrExpr sum = P;
+    for (var index = 0; index < additions; ++index)
+      sum = Op(IrBinaryOp.Add, sum, Int(index));
+
+    var helper = Block(new IrReturn(sum));
+    Assert.That(IrPassSupportProbe.Size(helper) > O0006Inlining.Small, Is.EqualTo(additions > 11));
+    var module = Module(Block(new IrReturn(Op(IrBinaryOp.Add, CallH(constant ? Int(5) : X), CallH(X)))), helper);
+    var (result, _) = Run(new O0006Inlining(), module);
+    var left = result.Functions[0].Body.Statements.SelectMany(IrTree.Nodes).OfType<IrCall>().Count();
+    Assert.That(left, Is.EqualTo(inlined ? (constant ? 1 : 0) : 2), "with a constant, only the call that has it is copied");
+    SameOutcomes(module, result, _inputs);
+  }
+
   [Test]
   public void Inlining_NeverInlinesARecursiveHelper() {
     var module = Module(Block(new IrReturn(CallH(X))), Block(
