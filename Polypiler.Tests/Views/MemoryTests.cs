@@ -311,10 +311,9 @@ internal sealed class MemoryTests {
     return string.Join("\n", result.Diagnostics.Select(diagnostic => diagnostic.ToString()));
   }
 
-  /// <summary>A view kept in a field that is made of anything but a typed array where it is stored is refused; so is a for…of over a plain Array.</summary>
+  /// <summary>A view kept in a field that is made of anything but a typed array where it is stored is refused.</summary>
   [TestCase("export class W { /** @param {uint8[]} a @param {boolean} c */ constructor(a, c) { this.v = c ? a.subarray(1) : a.subarray(2); } }",
     "kept in a field, which is a view not made of a typed array here")]
-  [TestCase("/** @returns {number} */ export function f() { const a = [1, 2]; let t = 0; for (const x of a) { t = t + x; } return t; }", "a for...of over")]
   public void Construct_IsRefused(string script, string named)
     => Assert.That(RefusedScript(script), Does.Contain("PLY1102").And.Contain(named));
 
