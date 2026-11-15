@@ -352,6 +352,8 @@ public static class LibraryLegalization {
           return new IrAwait(this.Expression(awaited.Operand));
         case IrAsync operation:
           return operation with { Arguments = [.. operation.Arguments.Select(this.Expression)] };
+        case IrForeignCall call:
+          return call with { Arguments = [.. call.Arguments.Select(this.Expression)] };
         case IrCall call:
           var arguments = call.Arguments.Select(this.Expression).ToList();
           return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);
