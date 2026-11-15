@@ -1572,6 +1572,26 @@
       "bytes": 16920
     },
     {
+      "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.csharp.golden",
+      "sha256": "6c79c044bf41893221dbd3f400287949222413689744957143b065c3bb36742c",
+      "bytes": 287286
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.javascript.golden",
+      "sha256": "26c4e0b98fbb6a47551fe1ac9718291bed6f3e8e59b971108ba6d2fa00910104",
+      "bytes": 438920
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/iterators.js.csharp.golden",
+      "sha256": "08877f530e31738ce8fcb153bae33a37fa14c8f60edf024f60505509bed80994",
+      "bytes": 208034
+    },
+    {
+      "path": "tests/fixtures/backend/golden/sequences/iterators.js.javascript.golden",
+      "sha256": "a91fd6985c3e5d9f788e550abc47366960671f8d0a79a72189102ebf7ceec9a4",
+      "bytes": 229546
+    },
+    {
       "path": "tests/fixtures/backend/golden/spans/Adler32Span.cs.csharp.golden",
       "sha256": "807ad2ec4eadc9ca5d07605d845a55756b20451a33142e4d2e86e0f731020d93",
       "bytes": 37398
