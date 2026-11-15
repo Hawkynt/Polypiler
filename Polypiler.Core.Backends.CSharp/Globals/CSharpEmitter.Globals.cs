@@ -15,12 +15,13 @@ public static partial class CSharpEmitter {
     /// runtime initialises it as it initialises a constant table (<c>beforefieldinit</c>). The
     /// initializer is static, so the order cannot be observed. An array global is <c>readonly</c>:
     /// its elements change, the array does not. A global without an initializer is given its zero
-    /// all the same: the compiler warns about a field nothing assigns (CS0649).
+    /// all the same: the compiler warns about a field nothing assigns (CS0649); for a delegate that is
+    /// <c>null</c>.
     /// </summary>
     private CsField Global(IrGlobal global) {
       var name = this._members[global.Name];
       IReadOnlyList<string> modifiers = global.Type.IsArray ? ["private", "static", "readonly"] : ["private", "static"];
-      var initializer = global.Initializer ?? new IrConst(global.Type, 0);
+      var initializer = global.Initializer ?? (global.Type.IsFunction ? new IrNull(global.Type) : new IrConst(global.Type, 0));
       var value = this.Stored(initializer);
       // As in an expression-bodied method, whatever wraps around stands in an unchecked context of its own.
       if (Expressions(initializer).Any(this.Wraps) && !Traps(Promoted(initializer)))

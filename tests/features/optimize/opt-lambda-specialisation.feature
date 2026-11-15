@@ -29,10 +29,8 @@ Feature: Lambdas that stay local are bound and optimised away
     Then G contains a loop multiplying by k and no call of Apply
     And G([1, 2, 3], 2) returns 12
 
-  # The issue keeps the lambda in a static field of a function type; the C# backend cannot write one
-  # without a value yet, so it is kept in the element of a static array, which lets it out the same way.
   Scenario: An escaping lambda is left alone
-    Given "static Func<int,int>[] keep = new Func<int,int>[1]; static int H(Func<int,int> f) { keep[0] = f; return f(1); }"
+    Given "static Func<int,int> keep; static int H(Func<int,int> f) { keep = f; return f(1); }"
     When "H(x => x + 1)" is translated
     Then H is not specialised and the lambda is passed as a delegate
     And R() returns 2
