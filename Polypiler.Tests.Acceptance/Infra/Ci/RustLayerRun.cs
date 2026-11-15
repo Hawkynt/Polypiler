@@ -30,9 +30,10 @@ internal static class RustLayerRun {
   public static RustCommands Commands => _commands.Value;
 
   /// <summary>
-  /// The sandbox of the runs: bubblewrap where it works and the toolchain's folders stay visible in it;
-  /// where rustup keeps them in the caller's home or under <c>/tmp</c>, which bubblewrap hides, the host's
-  /// limiting sandbox. The crates are the repository's own, so a trusted plan may run in either.
+  /// The sandbox of the runs: bubblewrap where it works, which binds the install roots of the
+  /// toolchains and the extra roots the lock names for them (rustup's toolchains, Miri's sysroot)
+  /// read-only, wherever they lie; elsewhere the host's limiting sandbox. The crates are the
+  /// repository's own, so a trusted plan may run in either.
   /// </summary>
   public static ISandbox Sandbox => _sandbox.Value;
 
@@ -73,15 +74,10 @@ internal static class RustLayerRun {
   public static string Stderr(RunResult result) => Encoding.UTF8.GetString(result.Stderr.Span);
 
   private static ISandbox ChooseSandbox() {
-    if (Bubblewrap is { } bubblewrap && !Commands.HostFolders.Any(HiddenByBubblewrap))
+    if (Bubblewrap is { } bubblewrap)
       return bubblewrap;
 
     return OperatingSystem.IsLinux() ? Polling(new ProcFileSystemTable()) : Host;
-  }
-
-  private static bool HiddenByBubblewrap(string folder) {
-    var home = Path.TrimEndingDirectorySeparator(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
-    return new[] { "/tmp", home }.Any(root => folder == root || folder.StartsWith(root + "/", StringComparison.Ordinal));
   }
 
 }

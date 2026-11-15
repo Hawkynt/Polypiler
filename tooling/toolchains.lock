@@ -376,7 +376,7 @@ toolchains:
     platforms: [linux, windows, macos]
     licence: MIT OR Apache-2.0
     source: https://forge.rust-lang.org/infra/other-installation-methods.html
-    roots: [RUSTUP_HOME]
+    roots: [RUSTUP_HOME, MIRI_SYSROOT]
   rust-miri:
     version: "nightly-2026-11-01"
     probe: [miri, --print, sysroot]
@@ -385,6 +385,7 @@ toolchains:
     licence: MIT OR Apache-2.0
     source: https://static.rust-lang.org/dist/2026-11-01/channel-rust-nightly.toml
     home: RUST_MIRI_HOME
+    roots: [RUST_MIRI_HOME]
   typescript:
     version: "7.0.2"
     probe: [tsc, --version]
