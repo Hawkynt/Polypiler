@@ -60,6 +60,17 @@ passes of the IR before and the target passes after. A helper calls no operation
 itself; the few operations C# has no method for are named by stubs (`IntrinsicRoundHalfUp`) the frontend
 imports as the operation.
 
+Two families take the place of what the JavaScript backend once wrote as text. Below ECMAScript 2020,
+which has no `BigInt`, a 64-bit integer is two 32-bit limbs ([O0075](../optimizations/O0075-wide-integer-legalization.md),
+`WideIntegerLibrary`): the IR's `HighWord` and `JoinWords` take a value apart and put it together, and
+every operation on 64 bits - arithmetic, shifts, orders, division, the checked forms, the conversions
+from and to floating point, steps - is a helper of `Limbs.cs` written with them. The traps of the
+arithmetic on numbers, which do not trap in JavaScript, are helpers of `Traps.cs` (`TrapLibrary`): the
+division and remainder, the checked sum, difference, product and negation, the checked conversions and
+those from floating point - a check that throws the IR's exception class, then the operation on exact
+numbers through `ToInt32` or `ToUint32`. Once inlined where an operand is a constant, folding removes
+the check it proves: `x / 3` is `(x / 3) | 0`.
+
 The passes over the legalized module ([pipeline](PIPELINE.md)) make a helper cheap where its arguments
 say more than its signature: `ushort.RotateLeft(x, 3)` becomes the call of `RotateLeftNarrow(x, 3, 16)`,
 which inlining (O0006), propagation (O0003), folding (O0001) and dead-code removal (O0005) turn into
@@ -89,7 +100,7 @@ and why:
 | `Polypiler.Core.Backends.CSharp/Helpers/Collections/CSharpCollectionClasses.cs` | The nested classes the keyed collections are where .NET's do not order or compare as the IR says: a representation of the target. |
 | `Polypiler.Core.Backends.CSharp/Helpers/String/CSharpStringHelpers.cs` | The string operations of ECMA-262 in C#: operations of the IR, not yet carried into the library (a follow-up of #1353). |
 | `Polypiler.Core.Backends.CSharp/Helpers/String/CSharpNumberTextHelpers.cs` | The numbers to text and back of ECMA-262 in C# (Ryu, V8): operations of the IR, not yet carried into the library (a follow-up of #1353). |
-| `Polypiler.Core.Backends.JavaScript/Helpers/JavaScriptHelpers.cs` | The level's own form of the IR's arithmetic: `$imul`, `$fround` and `$trunc` below ECMAScript 2015, a 64-bit integer as `{ hi, lo }` (`$add64` to `$udm64`, which wait for the wide-integer legalization O0075) or as a `BigInt`, the traps of the IR's division, checked conversion, array access and steps (`$div`, `$ck`, `$f2i`, `$get`, `$step`), the bits of a number through a `DataView`. Each is the operation itself, for which the IR has no weaker operation to write it with. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/JavaScriptHelpers.cs` | The level's own form of the IR's operations: `$imul`, `$fround` and `$trunc` below ECMAScript 2015; with `BigInt` the division that traps (`$div64` to `$urem64`) and the conversions from floating point (`$f2l`, `$f2lc`, `$f32`); the bounded access, creation, filling, copying and step of an array, plain or typed (`$get`, `$set`, `$new`, `$len`, `$fill`, `$copy`, `$step` and its forms); the bits of a number through a `DataView` (`$bits64`, `$float64`), and of a pair of halves as text (`$key64`). Each is the operation itself on the target's representation, for which the IR has no weaker operation to write it with; the 64-bit arithmetic on pairs of halves (O0075) and the traps of the arithmetic on numbers are helpers of the library. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/HelperTexts.cs` | The notation of the helpers that stay: one text, or one for a `BigInt` and one for the halves. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/Errors.cs` | The error classes the exception classes of the IR become, and the helpers that throw and chain them: a representation of the target. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/Optional.cs` | How an optional value that holds none is spelled at the boundary of JavaScript: a representation. |

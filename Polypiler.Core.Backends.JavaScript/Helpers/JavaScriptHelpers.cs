@@ -8,12 +8,14 @@ using Polypiler.Core.Backends.JavaScript.Syntax;
 namespace Polypiler.Core.Backends.JavaScript;
 
 /// <summary>
-/// The helper functions of generated code: the operations that can trap or need more than an
-/// expression, and the replacements for what a language level lacks. A helper is written once, in a
+/// The helper functions of generated code that are the target's own operations: the access and step
+/// of an array, the division of <c>BigInt</c>s, and the replacements for what a language level lacks;
+/// the arithmetic of 64 bits on pairs of halves and the traps of the arithmetic on numbers are helpers
+/// of the IR's library, which legalization binds. A helper is written once, in a
 /// notation that leaves open what differs between levels: <c>@let</c> and <c>@const</c> stand for
 /// the keyword that declares a variable, <c>@imul(</c>, <c>@fround(</c> and
 /// <c>@trunc(</c> for the function of <c>Math</c> or the helper that replaces it. Where a level
-/// changes the whole body — 64-bit integers as <c>BigInt</c>s or as pairs of halves, the bits of a
+/// changes the whole body — the bits of 64 bits as a <c>BigInt</c> or as a pair of halves, the bits of a
 /// floating-point number through a <c>DataView</c> or by arithmetic — a helper has one body per case.
 /// </summary>
 internal static partial class JavaScriptHelpers {
