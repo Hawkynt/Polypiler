@@ -37,6 +37,8 @@ public static partial class RustEmitter {
     RsLiteral { Type: { } type } literal when TypeName(type) is { } name && type != IrType.Bool => literal with { Text = literal.Text + name },
     RsIf { Then.Tail: { } then, Else: RsBlockExpression { Block.Tail: { } otherwise } elseBlock } choice
       => choice with { Then = choice.Then with { Tail = Suffixed(then) }, Else = elseBlock with { Block = elseBlock.Block with { Tail = Suffixed(otherwise) } } },
+    RsIf { Then.Tail: { } then, Else: RsIf chained } choice
+      => choice with { Then = choice.Then with { Tail = Suffixed(then) }, Else = Suffixed(chained) },
     RsParenthesized parenthesized => parenthesized with { Inner = Suffixed(parenthesized.Inner) },
     _ => expression
   };
@@ -274,7 +276,7 @@ public static partial class RustEmitter {
       var operand = this.Expression(convert.Operand);
       if (source.IsInteger && target.IsInteger) {
         if (IrOperators.Contains(target, source))
-          return new RsCall(new RsPath(TypeName(target)! + "::from"), [operand]) { Type = target };
+          return new RsCall(new RsPath(TypeName(target)! + "::from"), [Suffixed(operand)]) { Type = target };
         if (convert.Contract != IrConversion.Trap)
           return this.Cast(operand, target);
         if (this.Has(RustCapabilities.TryFrom))
@@ -381,6 +383,9 @@ public static partial class RustEmitter {
         IrIntrinsicOp.AddSaturate => Call("saturating_add", arguments[1]),
         IrIntrinsicOp.SubSaturate => Call("saturating_sub", arguments[1]),
         IrIntrinsicOp.MulSaturate => Call("saturating_mul", arguments[1]),
+        IrIntrinsicOp.AddOverflows => this.Method(Call("checked_add", arguments[1]), "is_none", IrType.Bool),
+        IrIntrinsicOp.SubOverflows => this.Method(Call("checked_sub", arguments[1]), "is_none", IrType.Bool),
+        IrIntrinsicOp.MulOverflows => this.Method(Call("checked_mul", arguments[1]), "is_none", IrType.Bool),
         IrIntrinsicOp.Abs when operand.IsInteger => Expect(Call("checked_abs"), IrTrap.IntegerOverflow),
         IrIntrinsicOp.AbsWrap => Call("wrapping_abs"),
         IrIntrinsicOp.Abs => Call("abs"),

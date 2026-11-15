@@ -196,7 +196,8 @@ public static partial class RustEmitter {
       return intrinsic.Op switch {
         IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight or IrIntrinsicOp.PopCount or IrIntrinsicOp.LeadingZeroCount
           or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.ByteSwap or IrIntrinsicOp.Min or IrIntrinsicOp.Max
-          or IrIntrinsicOp.AddSaturate or IrIntrinsicOp.SubSaturate or IrIntrinsicOp.MulSaturate => true,
+          or IrIntrinsicOp.AddSaturate or IrIntrinsicOp.SubSaturate or IrIntrinsicOp.MulSaturate
+          or IrIntrinsicOp.AddOverflows or IrIntrinsicOp.SubOverflows or IrIntrinsicOp.MulOverflows => true,
         IrIntrinsicOp.BitReverse => table.Has(RustCapabilities.ReverseBits, profile),
         IrIntrinsicOp.IsPow2 => !operand.IsSigned,
         IrIntrinsicOp.Abs or IrIntrinsicOp.AbsWrap => operand.IsSigned && table.Has(RustCapabilities.CheckedAbs, profile),

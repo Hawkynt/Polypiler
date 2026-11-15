@@ -108,7 +108,30 @@ public sealed class RustScalarEmitTests {
   [Test]
   public void ChoiceAsTheOnlyArgument_OverflowsTheCall()
     => Assert.That(Emitted("public static long F(long x) => x < 0 ? -1 : x > 0 ? 1 : 0;", level: OptimizationLevel.Default),
-      Does.Contain("i64::from(if x < 0 {\n        -1\n    } else if x > 0 {\n        1\n    } else {\n        0\n    })"));
+      Does.Contain("i64::from(if x < 0 {\n        -1i32\n    } else if x > 0 {\n        1i32\n    } else {\n        0i32\n    })"));
+
+  /// <summary>
+  /// <c>T::from</c> is generic over its argument: an unsuffixed literal in it would be an <c>i32</c>,
+  /// which <c>u32</c> and <c>u64</c> do not convert from, so the literals of a choice carry their type.
+  /// </summary>
+  [TestCase("public static ulong F(bool c) => c ? 1u : 0u;", "u64::from(if c { 1u32 } else { 0u32 })")]
+  [TestCase("public static uint F(bool c, bool d) => c ? (ushort)1 : d ? (ushort)2 : (ushort)0;", "u32::from(if c {\n        1u16\n    } else if d {\n        2u16\n    } else {\n        0u16\n    })")]
+  public void LiteralsInAWideningConversion_CarryTheirType(string method, string expected)
+    => Assert.That(Emitted(method), Does.Contain(expected));
+
+  /// <summary>
+  /// The overflow flags are Rust's own <c>checked_*</c> methods at every width: the bounds test of the
+  /// IR library is a comparison clippy denies as absurd for a type of 32 bits.
+  /// </summary>
+  [TestCase("i32", "add", "a.checked_add(b).is_none()")]
+  [TestCase("u8", "sub", "a.checked_sub(b).is_none()")]
+  [TestCase("i64", "mul", "a.checked_mul(b).is_none()")]
+  [TestCase("u64", "add", "a.checked_add(b).is_none()")]
+  public void OverflowFlag_IsTheCheckedMethod(string type, string op, string expected) {
+    var imported = Polypiler.Core.Frontends.Rust.RustFrontend.Import("flags.rs", $"pub fn f(a: {type}, b: {type}) -> bool {{ a.overflowing_{op}(b).1 }}", Polypiler.Core.Frontends.Rust.OverflowChecks.Panic);
+    var text = RustCrates.ModuleText(RustCrates.Emit(imported.Module!));
+    Assert.That(text, Does.Contain(expected).And.Not.Contain("::MIN ||"));
+  }
 
   [Test]
   public void CanonicalNaN_IsTheConstant() {
