@@ -37,9 +37,13 @@ directory counts every file below it. In `build` and `run`, `{root}` is the repo
 **`process`** runs the program `warmup + runs` times through the sandboxed cross-language runner
 (`Polypiler.Core.Verification/Running`), each run in a fresh directory, and records each measured run's
 wall time, processor time and peak resident memory as one sample. Processor time and peak memory come
-from sampling the process tree every 20 ms and, on Linux, from the kernel's account of the step once it
-ends. Inside bubblewrap that account covers the program's peak memory, but its processor time only as
-far as a sample saw it: for a program of a few milliseconds the CPU time is a lower bound.
+from sampling the process tree every 20 ms - on Linux by following the tree's children in `/proc`, so
+that a sample costs what the tree holds and not what the machine runs - and, on Linux, from the
+kernel's account of the step once it ends. That account covers a program the runner started itself;
+inside bubblewrap it covers bubblewrap alone, which does not wait for the program's namespace, so
+there both figures are what the samples saw. Both are therefore lower bounds for a program of a few
+milliseconds, and a program that ends before the first sample may record 0: the numbers are recorded,
+never judged.
 
 **`dotnet`** starts a BenchmarkDotNet program once - [`Polypiler.Benchmarks`](../../Polypiler.Benchmarks)
 with `--filter` - and converts its full JSON export: each measured iteration is a sample of the time of
