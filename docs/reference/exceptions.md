@@ -69,7 +69,7 @@ tests: a trap without a row fails them, so a trap a later change introduces adds
 
 ### Python
 
-The Python backend raises the built-in exception of the trap's class; a trap is compared by its class,
+The **backend** raises the built-in exception of the trap's class; a trap is compared by its class,
 as everywhere, and the message is the trap's own text where the backend raises it (Python's own
 `ZeroDivisionError` of `//` and `%` keeps Python's message). Handling (`try`) is not written yet: a
 module with a handler is refused with `PLY1851` naming it.
@@ -88,6 +88,17 @@ module with a handler is refused with `PLY1851` naming it.
 | `ArgumentException` (`DuplicateKey`, `UnknownName`) | `ValueError` |
 | `FormatException` (`InvalidFormat`) | `ValueError` |
 | `Exception` | `Exception` |
+
+The **frontend** does not import `try`, `raise` and `except` yet (#453). An operation that fails
+raises the exception CPython raises, as the class of the IR that stands for it, with CPython's message:
+
+| Python raises | IR class | where |
+| --- | --- | --- |
+| `ZeroDivisionError` | `DivideByZeroException` | `/`, `//`, `%`, `divmod` by zero, `0.0` to a negative power |
+| `OverflowError` | `OverflowException` | an `int` beyond 64 bits (`py-int-64`), `int()`/`round()` of an infinity, a float power that overflows |
+| `ValueError` | `ArgumentException` | a negative shift count, `int()`/`round()` of a NaN, a zero step of `range`, a negative power of an `int` whose sign was not known |
+| `AssertionError` | `InvalidOperationException` | a failing `assert` |
+| a `complex` result | `ArithmeticException` | a negative float to a fractional power (`py-complex-power`) |
 
 ## Handling
 
@@ -128,6 +139,8 @@ The interpreter tests the clauses in a .NET exception filter, which gives the CL
   nothing observes it - a catch without a binding or with one it never reads - and is then the throw
   of an `Error`; where a catch reads it or it can leave the function it is refused with `PLY1107`
   ("a thrown value that is not an Error reaches {place}, which observes it").
+- **Python:** see [Python](#python) under Traps: the exceptions of the frontend and of the backend are
+  one table each there.
 
 ## Forms per profile
 

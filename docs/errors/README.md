@@ -140,6 +140,18 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 
 | Code | Severity | Exit code | Message | Owner |
 | --- | --- | --- | --- | --- |
+| [PLY1800](PLY1800.md) | error | 4 (InvalidSource) | `<python's exception class>: <python's message>` | #452 |
+| [PLY1801](PLY1801.md) | error | 3 (UnsupportedConstruct) | `<reason>` | #452 |
+| [PLY1802](PLY1802.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Python frontend` | #452 |
+| [PLY1803](PLY1803.md) | error | 3 (UnsupportedConstruct) | `<reason>` | #452 |
+| [PLY1804](PLY1804.md) | error | 3 (UnsupportedConstruct) | `the integer '<literal>' needs more than 64 bits, which the import does not hold yet` | #452 |
+| [PLY1810](PLY1810.md) | error | 3 (UnsupportedConstruct) | `statement '<statement>' is not supported by the Python frontend` | #449 |
+| [PLY1811](PLY1811.md) | error | 3 (UnsupportedConstruct) | `'<name>' may be unbound here; python would raise UnboundLocalError` | #449 |
+| [PLY1812](PLY1812.md) | error | 3 (UnsupportedConstruct) | `match pattern '<pattern>' is not supported; supported are literals, '\|', captures, '_' and guards` | #449 |
+| [PLY1813](PLY1813.md) | error | 3 (UnsupportedConstruct) | `iteration over '<iterable>' is not supported` | #449 |
+| [PLY1830](PLY1830.md) | error | 3 (UnsupportedConstruct) | `'<feature>' is not supported for functions by the Python frontend` | #450 |
+| [PLY1832](PLY1832.md) | error | 3 (UnsupportedConstruct) | `the function value '<name>' escapes, or '<name>' is a generator or coroutine; only direct calls of the module's functions are imported` | #450 |
+| [PLY1833](PLY1833.md) | error | 3 (UnsupportedConstruct) | `'<name>' is neither part of this import nor in the Python call map` | #450 |
 | [PLY1850](PLY1850.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no Python representation in profile '<profile>' (function '<function>')` | BE-PY-SCALARS |
 | [PLY1851](PLY1851.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be expressed in Python profile '<profile>' (function '<function>')` | BE-PY-SCALARS |
 | [PLY1858](PLY1858.md) | error | 3 (UnsupportedConstruct) | `control construct '<construct>' has no Python form (function '<function>')` | BE-PY-CONTROL |

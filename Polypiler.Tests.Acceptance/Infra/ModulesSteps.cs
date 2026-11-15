@@ -31,6 +31,9 @@ public sealed class ModulesSteps {
   ];
 
   /// <summary>The test and benchmark projects, which the issue does not count among its modules; <c>Polypiler.Benchmarks</c> came with the benchmark harness (#27).</summary>
+  /// <summary>The projects of the languages added after the module issue, each a frontend or a backend of its own.</summary>
+  private static readonly string[] _languages = ["Polypiler.Core.Frontends.Python"];
+
   private static readonly string[] _tests = ["Polypiler.Benchmarks", "Polypiler.Tests", "Polypiler.Tests.Acceptance", "Polypiler.Tests.Generator", "Polypiler.Tests.Probe"];
 
   private static readonly string _root = PrototypeFixture.RepositoryRoot;
@@ -69,7 +72,7 @@ public sealed class ModulesSteps {
   [Then(@"^the solution " + StepText.Quoted + @" lists each of the (\d+) projects named in this issue$")]
   public void SolutionListsTheProjects(string solution, int count) {
     Assert.That(_named, Has.Length.EqualTo(count));
-    string[] all = [.. _named.Concat(_tests).Order(System.StringComparer.Ordinal)];
+    string[] all = [.. _named.Concat(_languages).Concat(_tests).Order(System.StringComparer.Ordinal)];
     Assert.That(this._projects.Select(project => project.Name), Is.EqualTo(all));
     var listed = XDocument.Load(Path.Combine(_root, solution)).Descendants("Project").Select(project => Path.GetFileNameWithoutExtension((string)project.Attribute("Path")!));
     Assert.That(listed, Is.EquivalentTo(all));

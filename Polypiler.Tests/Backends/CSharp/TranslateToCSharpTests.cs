@@ -75,7 +75,7 @@ public sealed class TranslateToCSharpTests {
   }
 
   /// <summary>Test design 10: a command line that cannot be carried out is PLY0003, exit code 2, and writes nothing.</summary>
-  [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript' and 'csharp'", TestName = "Misuse: unknown target")]
+  [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript', 'csharp' and 'python'", TestName = "Misuse: unknown target")]
   [TestCase(new[] { "--to", "CSharp", "--output", "out" }, "unknown target language 'CSharp'", TestName = "Misuse: the target is case-sensitive")]
   [TestCase(new[] { "--to", "csharp" }, "option '--output' is required", TestName = "Misuse: missing output")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace" }, "option '--namespace' requires a value", TestName = "Misuse: namespace without a value")]

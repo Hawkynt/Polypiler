@@ -7,7 +7,7 @@ Python/Perl layer ([#454](https://github.com/Hawkynt/Polypiler/issues/454)). It 
 backend ([backends](BACKENDS.md)): the IR becomes a Python syntax tree, the target passes rewrite the
 tree, and the printer is the only place where Python becomes text.
 
-`polypiler translate <file> --from <csharp|javascript> --to python --output <directory> [--profile py3.8 … py3.14]`
+`polypiler translate <file> --from <csharp|javascript|python> --to python --output <directory> [--profile py3.8 … py3.14]`
 writes one module, `<module in snake_case>.py`, and the manifest beside it.
 
 ## Project

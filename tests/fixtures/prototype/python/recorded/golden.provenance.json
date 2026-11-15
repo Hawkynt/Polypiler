@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "provenance": {
+    "kind": "reference-run",
+    "source": "python",
+    "detail": "POLYPILER_RECORD=1 dotnet test Polypiler.Tests.Acceptance --filter Name~Recording_IsWhatCPythonDoesWithTheOriginal: CPython 3.14.8 runs every fixture of tests/fixtures/prototype/python through oracle.py on its calls and the outcomes are written here",
+    "generatedBy": "python"
+  }
+}

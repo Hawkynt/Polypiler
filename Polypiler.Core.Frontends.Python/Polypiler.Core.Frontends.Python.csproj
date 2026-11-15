@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- The helper that parses a source with the standard ast module of the installed CPython and prints
+       the tree as JSON; the frontend hands it to the interpreter as a program text, so it travels in
+       the assembly. -->
+  <ItemGroup>
+    <EmbeddedResource Include="AstDump\polypiler_ast_dump.py" LogicalName="Polypiler.Core.Frontends.Python.polypiler_ast_dump.py" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
+  </ItemGroup>
+
+</Project>

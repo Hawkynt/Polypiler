@@ -10,6 +10,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
+using Polypiler.Core.Frontends.Python;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
@@ -24,7 +25,7 @@ namespace Polypiler.Cli;
 
 /// <summary>
 /// The <c>translate</c> command of the prototype:
-/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript&gt; --to &lt;javascript|csharp|python&gt; --output &lt;directory&gt;</c>.
+/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript|python&gt; --to &lt;javascript|csharp|python&gt; --output &lt;directory&gt;</c>.
 /// A target language may take a profile. <c>--profile</c> is one option that every target reads its
 /// own way: for C# it names the target framework, and <c>--langversion</c> raises the version of the
 /// language above the one the profile brings; for JavaScript it names the language level, and
@@ -117,7 +118,8 @@ public sealed class TranslateCommand : ICliCommand {
   /// <summary>The source languages; another one is another entry.</summary>
   private static readonly Frontend[] _frontends = [
     new("csharp", [new(Instantiate, "<method[type,...]>")], InstantiateMisuse, ImportCSharp),
-    new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript)
+    new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript),
+    new("python", [], _ => null, ImportPython)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -436,6 +438,22 @@ public sealed class TranslateCommand : ICliCommand {
     return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
   }
 
+  /// <summary>
+  /// Imports Python, parsed by the installed CPython. What the imported code is known to do
+  /// differently from the original is written as a note, as it is for JavaScript.
+  /// </summary>
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportPython(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var imported = PythonFrontend.Import(file, source);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    foreach (var caveat in imported.Caveats)
+      context.Note($"{file}: note {caveat.Id}: {caveat.Description}");
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == PythonFrontend.SyntaxError) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
+  }
+
   private static string[] Names(string list) => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
   /// <summary>
@@ -560,7 +578,10 @@ public sealed class TranslateCommand : ICliCommand {
 
   private static string Choice(IEnumerable<string> names) => $"<{string.Join('|', names)}>";
 
-  private static string Listed(IEnumerable<string> names) => string.Join(" and ", names.Select(name => $"'{name}'"));
+  private static string Listed(IEnumerable<string> names) {
+    var quoted = names.Select(name => $"'{name}'").ToList();
+    return quoted.Count < 2 ? string.Concat(quoted) : $"{string.Join(", ", quoted[..^1])} and {quoted[^1]}";
+  }
 
   /// <summary>Reports a command line the command cannot carry out as <c>PLY0003</c>.</summary>
   private static int Refuse(CliContext context, string message) {
