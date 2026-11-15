@@ -184,7 +184,7 @@ internal sealed class CSharpGenericsImportTests {
   [TestCase("public static bool F() => G<int>(1); static bool G<T>(int a) => a is T;", "", "is T")]
   [TestCase("public static bool F() => G<B>(new B()); static bool G<T>(B a) where T : class => a as T == null;", "", "as T")]
   [TestCase("public static bool F() => G<B>(new B()); static bool G<T>(B a) where T : class => a is T t;", "", "is T")]
-  [TestCase("public static int F(System.Func<int> f) => 1;", "", "the generic delegate System.Func<int>")]
+  [TestCase("public static int F(System.Func<int> f) { f += f; return 1; }", "", "a multicast delegate")]
   [TestCase("public static int F() => Depth<int>(3); static int Depth<T>(int n) => n == 0 ? 0 : 1 + Depth<T[]>(n - 1);", "", "the instantiations of 'Depth<T>' do not end")]
   [TestCase("static int G<T>(T a) where T : A => 1; public static int F() => G<A>(new A());", "", "the constraint Polypiler.Snippet.A")]
   [TestCase("public static string F() => G<string>(); static T G<T>() => default;", "", "default of the type str, which is null")]

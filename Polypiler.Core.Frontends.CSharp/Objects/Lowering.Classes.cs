@@ -563,7 +563,7 @@ internal sealed partial class Lowering {
   private (IrExpr Value, List<IrStmt> After) ObjectInitialized(BaseObjectCreationExpressionSyntax creation, InitializerExpressionSyntax initializer, IrType type, List<IrStmt> into, IrLocal? declared) {
     var constructor = (IMethodSymbol)model.GetSymbolInfo(creation).Symbol!;
     var start = new IrNew(type, this._creators[constructor], [.. (creation.ArgumentList?.Arguments ?? []).Select(argument => this.Value(argument.Expression))]);
-    var target = declared ?? this.Local($"$t{this._locals.Count}", type);
+    var target = declared ?? this.Local($"$t{this._localBase + this._locals.Count}", type);
     var stores = new List<IrStmt>();
     foreach (var expression in initializer.Expressions) {
       if (expression is not AssignmentExpressionSyntax { RawKind: (int)SyntaxKind.SimpleAssignmentExpression, Left: IdentifierNameSyntax name } entry

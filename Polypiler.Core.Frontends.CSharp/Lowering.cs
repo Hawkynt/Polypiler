@@ -78,6 +78,11 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       model = semantics;
       foreach (var member in type.Members.Where(member => member is not FieldDeclarationSyntax && !IsStruct(member) && !IsClass(member))) {
         try {
+          if (member is DelegateDeclarationSyntax delegateType) {
+            this.DelegateDeclaration(delegateType);
+            continue;
+          }
+
           if (member is not MethodDeclarationSyntax method)
             throw new UnsupportedException(member, member switch {
               ConstructorDeclarationSyntax => "a static constructor",
@@ -197,7 +202,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     if (members.Count == 1 && members[0] is BaseNamespaceDeclarationSyntax scope)
       members = scope.Members;
 
-    var types = members.Where(member => !IsStruct(member) && !IsClass(member)).ToList();
+    var types = members.Where(member => !IsStruct(member) && !IsClass(member) && member is not DelegateDeclarationSyntax).ToList();
     if (types.Count == 0 && members.FirstOrDefault(IsClass) is { } instance)
       throw new UnsupportedException(instance, "a class that is not static");
 
@@ -205,6 +210,13 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       throw new UnsupportedException(types.Count > 1 ? types[1] : root, "a file that is not exactly one static class");
 
     structs.AddRange(members.Concat(type.Members).Where(member => IsStruct(member) || IsClass(member)).Cast<TypeDeclarationSyntax>());
+    foreach (var declared in members.OfType<DelegateDeclarationSyntax>()) {
+      try {
+        this.DelegateDeclaration(declared);
+      } catch (UnsupportedException unsupported) {
+        this.Report(unsupported);
+      }
+    }
 
     if (!type.Modifiers.Any(SyntaxKind.StaticKeyword))
       throw new UnsupportedException(type, "a class that is not static");
@@ -236,6 +248,8 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     this._variables.Clear();
     this._locals.Clear();
     this._read.Clear();
+    this._nested.Clear();
+    this._localBase = 0;
     this._receiver = receiver;
     var returnType = symbol.MethodKind == MethodKind.Constructor ? IrType.Void : this.Map(symbol.ReturnType, node is MethodDeclarationSyntax method ? method.ReturnType : node);
     var parameters = receiver is null ? new List<IrLocal>() : [receiver];
@@ -268,7 +282,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
     // In the generated module a constant is a name of the module, which a variable of the same name
     // would hide from the function that reads it.
-    var hiding = parameters.Concat(this._locals).FirstOrDefault(variable => this._read.Contains(variable.Name));
+    var hiding = parameters.Concat(this._locals).Concat(this._nested).FirstOrDefault(variable => this._read.Contains(variable.Name));
     if (hiding is not null)
       throw new UnsupportedException(node, $"a variable with the name of the field '{hiding.Name}' it is used next to");
 
@@ -319,9 +333,12 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     if (this.ReferenceOf(type) is { } reference)
       return reference;
 
+    if (this.FunctionType(type, node) is { } function)
+      return function;
+
     if (type is IArrayTypeSymbol { Rank: 1 } array) {
       var element = this.Map(array.ElementType, node);
-      if (element.IsNumeric || element.IsStruct || element.IsString || this.IsStandIn(element))
+      if (element.IsNumeric || element.IsStruct || element.IsString || element.IsFunction || this.IsStandIn(element))
         return IrType.Array(element);
     }
 
@@ -329,6 +346,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
   }
 
   private IrBlock Block(BlockSyntax block) {
+    if (block.Statements.OfType<LocalFunctionStatementSyntax>().ToList() is { Count: > 0 } functions)
+      return this.BlockWithFunctions(block, functions);
+
     var statements = new List<IrStmt>();
     foreach (var statement in block.Statements)
       this.Statement(statement, statements);
@@ -424,7 +444,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     var outer = new List<IrStmt>();
     // The compiler converts the collection to IEnumerable; the loop is over the array itself.
     var array = this.Once(this.Read(loop.Expression), outer);
-    var index = this.Local($"$t{this._locals.Count}", IrType.I32);
+    var index = this.Local($"$t{this._localBase + this._locals.Count}", IrType.I32);
     outer.Add(new IrDeclare(index, new IrConst(IrType.I32, 0)));
 
     var symbol = model.GetDeclaredSymbol(loop)!;
@@ -590,6 +610,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
   }
 
   private void Assignment(AssignmentExpressionSyntax assignment, List<IrStmt> into) {
+    this.RefuseMulticast(assignment);
     if (assignment.IsKind(SyntaxKind.SimpleAssignmentExpression)) {
       var simple = this.Target(assignment.Left, into, false);
       // An object initializer is stored into a temporary first, where nothing but a variable is evaluated before it.
@@ -706,7 +727,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     if (expression is IrLocalRef or IrConst or IrConstRef or IrGlobalRef { Type.IsArray: true })
       return expression;
 
-    var temporary = this.Local($"$t{this._locals.Count}", expression.Type);
+    var temporary = this.Local($"$t{this._localBase + this._locals.Count}", expression.Type);
     into.Add(new IrDeclare(temporary, expression));
     return new IrLocalRef(temporary);
   }
@@ -725,6 +746,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
     this.RefuseOpen(expression);
     var info = model.GetTypeInfo(expression);
+    if (this.FunctionValue(expression, info) is { } function)
+      return function;
+
     if (this.ReferenceOf(info.ConvertedType) is { } nulled && expression is LiteralExpressionSyntax or DefaultExpressionSyntax && model.GetConstantValue(expression) is { HasValue: true, Value: null })
       return new IrNull(nulled);
 
@@ -769,6 +793,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
     if (model.GetConstantValue(expression) is { HasValue: true, Value: { } folded })
       return new IrConst(type, Carried(folded));
+
+    if (this.DelegateOperator(expression) is { } operation)
+      return operation;
 
     if (this.GenericNatural(expression, type) is { } generic)
       return generic;
@@ -953,6 +980,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     var arguments = invocation.ArgumentList.Arguments;
     // An invocation the compiler accepted and gave a type of the subset is bound to a method.
     var method = (IMethodSymbol)model.GetSymbolInfo(invocation).Symbol!;
+    if (this.Invocation(invocation, method) is { } invoked)
+      return invoked;
+
     if (this.GenericOperation(invocation, method) is { } generic)
       return generic;
 

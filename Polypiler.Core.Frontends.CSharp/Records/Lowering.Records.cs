@@ -272,7 +272,7 @@ internal sealed partial class Lowering {
       return (this.Value(value), []);
 
     var start = this.Default(type, creation);
-    var target = declared ?? this.Local($"$t{this._locals.Count}", type);
+    var target = declared ?? this.Local($"$t{this._localBase + this._locals.Count}", type);
     var stores = this.Entries(initializer)
       .Select(entry => (IrStmt)new IrFieldStore(new IrLocalRef(target), entry.Field, Convert(this.Value(entry.Value), entry.Field.Type)))
       .ToList();

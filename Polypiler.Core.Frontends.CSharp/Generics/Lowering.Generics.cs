@@ -63,12 +63,10 @@ internal sealed partial class Lowering {
 
   /// <summary>
   /// What <see cref="Map"/> makes of a type that only a generic definition has: the stand-in of a
-  /// type parameter in a template; a type parameter outside one, a generic delegate and a generic
-  /// math interface are refused. <see langword="null"/> for every other type.
+  /// type parameter in a template; a type parameter outside one is refused. <see langword="null"/> for every other type.
   /// </summary>
   private IrType? Open(ITypeSymbol? type, SyntaxNode node) => type switch {
     ITypeParameterSymbol parameter => this._standIns?.GetValueOrDefault(parameter) ?? throw new UnsupportedException(node, $"the type parameter {parameter.Name} outside a generic definition"),
-    INamedTypeSymbol { TypeKind: TypeKind.Delegate, IsGenericType: true } => throw new UnsupportedException(node, $"the generic delegate {type.ToDisplayString()}"),
     _ => null
   };
 
