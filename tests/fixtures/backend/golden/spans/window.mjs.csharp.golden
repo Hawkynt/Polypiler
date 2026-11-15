@@ -76,10 +76,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          byte b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          byte b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -232,10 +232,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          byte b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          byte b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -389,10 +389,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            byte b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            byte b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -549,10 +549,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            byte b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            byte b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -706,10 +706,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -862,10 +862,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -1019,10 +1019,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -1179,10 +1179,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -1332,10 +1332,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -1484,10 +1484,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -1637,10 +1637,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -1793,10 +1793,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -1946,10 +1946,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -2098,10 +2098,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -2251,10 +2251,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -2407,10 +2407,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -2560,10 +2560,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -2712,10 +2712,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -2865,10 +2865,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -3021,10 +3021,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -3174,10 +3174,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -3291,10 +3291,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -3409,10 +3409,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -3530,10 +3530,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -3648,10 +3648,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -3751,10 +3751,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -3855,10 +3855,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -3962,10 +3962,10 @@ namespace Golden.Output {
       unchecked {
         double total = 0.0;
         {
-          int _t1 = 0;
-          while (_t1 < d.Length) {
-            var b = d[_t1];
-            _t1 = _t1 + 1;
+          int _t2 = 0;
+          while (_t2 < d.Length) {
+            var b = d[_t2];
+            _t2 = _t2 + 1;
             total = total + (double)b;
           }
         }
@@ -4066,10 +4066,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -4169,10 +4169,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -4273,10 +4273,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -4378,10 +4378,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -4480,10 +4480,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -4579,10 +4579,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -4679,10 +4679,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
@@ -4780,10 +4780,10 @@ public static class @window {
     unchecked {
       double total = 0.0;
       {
-        int _t1 = 0;
-        while (_t1 < d.Length) {
-          var b = d[_t1];
-          _t1 = _t1 + 1;
+        int _t2 = 0;
+        while (_t2 < d.Length) {
+          var b = d[_t2];
+          _t2 = _t2 + 1;
           total = total + (double)b;
         }
       }
