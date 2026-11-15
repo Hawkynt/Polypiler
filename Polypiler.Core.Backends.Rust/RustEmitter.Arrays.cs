@@ -33,7 +33,7 @@ public static partial class RustEmitter {
       => facts.Result == ArrayHolder.Borrowed && facts.ResultParameters.All(facts.MutableParameters.Contains);
 
     /// <summary>The Rust type of the elements of an array type; refused for any but a scalar.</summary>
-    private string ElementType(IrType array) => array.Element is { } element && (TypeName(element) is not null || element.IsStruct || element.IsString) ? this.Type(element) : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
+    private string ElementType(IrType array) => array.Element is { } element && (TypeName(element) is not null || element.IsStruct || element.IsEnum || element.IsString) ? this.Type(element) : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
 
     /// <summary>The lifetime the result of a function borrows with, where Rust cannot elide it: <c>'a</c>, or empty.</summary>
     private static string Lifetime(IrFunction function, FunctionArrays facts)
@@ -112,7 +112,7 @@ public static partial class RustEmitter {
           return new RsMethodCall(new RsPath(this._locals[local]), "to_vec", []) { Type = array.Type };
         case IrCall call when this._arrays.TryGetValue(call.Function, out var callee) && callee.Result == ArrayHolder.Owned:
           return this.Expression(call);
-        case IrIntrinsic { Op: IrIntrinsicOp.StrSplit or IrIntrinsicOp.StrToCodeUnits }:
+        case IrIntrinsic { Op: IrIntrinsicOp.StrSplit or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues }:
           return this.Expression(array);
         case IrCall call:
           return new RsMethodCall(this.Expression(call), "to_vec", []) { Type = array.Type };
@@ -159,6 +159,8 @@ public static partial class RustEmitter {
       IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal when !mutable => new RsArray([.. literal.Arguments.Select(argument => Suffixed(this.Expression(argument)))]) { Type = array.Type },
       IrCall => this.Expression(array),
       IrNewArray => this.Vector(array),
+      // A listing of an enum only read is an array, not a vector (clippy's useless_vec).
+      IrIntrinsic { Op: IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues } listing when this.Expression(listing) is RsMacro { Bracketed: true } vector => vector.Arguments[0],
       IrConditional choice when this.HoldsNew(choice) && !mutable => new RsParenthesized(this.Choice(choice, branch => this.Vector(branch, false))) { Type = array.Type },
       _ => new RsParenthesized(this.Borrow(array, mutable)) { Type = array.Type }
     };
@@ -190,7 +192,7 @@ public static partial class RustEmitter {
     }
 
     /// <summary>The zero of an element type: <c>0</c>, <c>0.0</c>, <c>false</c>.</summary>
-    private RsExpression Zero(IrType element) => element.IsStruct
+    private RsExpression Zero(IrType element) => element.IsStruct || element.IsEnum
       ? new RsCall(new RsPath(this.Type(element) + "::default"), []) { Type = element }
       : TypeName(element) is null ? this.Refuse($"an array of {element}") : Literal(new IrConst(element, 0)) with { Type = null };
 
@@ -211,8 +213,9 @@ public static partial class RustEmitter {
     }
 
     /// <summary>The number of elements of an array, as the IR's <c>i32</c>.</summary>
-    private RsExpression ArrayLength(IrArrayLength length)
-      => this.Cast(new RsMethodCall(this.ArrayTarget(length.Array), "len", []), length.Type);
+    private RsExpression ArrayLength(IrArrayLength length) => length.Array is IrIntrinsic { Op: IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues } listing
+      ? Literal(new IrConst(IrType.I32, EnumOperations.Of(listing).Members.Count))
+      : this.Cast(new RsMethodCall(this.ArrayTarget(length.Array), "len", []), length.Type);
 
     /// <summary>
     /// <c>a[i] = v</c>. Rust evaluates the value before the place, the IR the index first: an index

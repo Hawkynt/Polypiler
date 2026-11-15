@@ -99,6 +99,14 @@ public static class RustSyntaxReader {
         continue;
       }
 
+      // A character literal, 'x' or '\x', reads as the literal it is; anything else after a quote is a lifetime.
+      var quote = index + 1 < text.Length && text[index + 1] == '\\' ? index + 3 : index + 2;
+      if (c == '\'' && quote < text.Length && text[quote] == '\'') {
+        tokens.Add(new(Kind.Number, text[index..(quote + 1)]));
+        index = quote + 1;
+        continue;
+      }
+
       if (c == '\'') {
         var start = ++index;
         while (index < text.Length && (char.IsAsciiLetterOrDigit(text[index]) || text[index] == '_'))

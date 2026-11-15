@@ -130,6 +130,8 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Assignment(IrLocal local, IrExpr value) {
       var place = new RsPath(this._locals[local]) { Type = local.Type };
+      if (local.Type.IsEnum)
+        return new RsAssign(place, "=", this.Expression(value));
       if (local.Type.IsArray)
         return new RsAssign(place, "=", this.ArrayInitial(local, value));
       if (local.Type.IsString)
@@ -282,8 +284,9 @@ public static partial class RustEmitter {
     /// the <c>match</c>. One section without a default is an <c>if</c>, only a default its body alone.
     /// </summary>
     private IEnumerable<RsStatement> Switch(IrSwitch choice) {
-      var value = this.Expression(choice.Value);
-      var type = choice.Value.Type;
+      // A switch on an enum is one on its integer, whose labels are the members' values.
+      var value = choice.Value.Type.IsEnum ? this.Inner(choice.Value) : this.Expression(choice.Value);
+      var type = choice.Value.Type.IsEnum ? choice.Value.Type.EnumType!.Underlying : choice.Value.Type;
       var label = this.NewLabel("s");
       var breakable = new Breakable(BreakableKind.Switch, label);
       this._breakables.Add(breakable);

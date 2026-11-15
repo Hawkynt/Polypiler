@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
 /// The fixtures of the prototype's families through the Rust backend (#460, #462): bit operations,
-/// value records, strings, floating-point views of bytes. Every fixture of a family that the backend writes is
+/// value records, strings, enums, numbers as text, floating-point views of bytes. Every fixture of a family that the backend writes is
 /// built by the pinned toolchain and called on the family's cases with overflow checks on and off;
 /// every outcome, the arrays a call was given included, must be what .NET computes of the original
 /// fixture. A fixture the backend does not write is refused with a code of the backend that names
@@ -54,6 +54,17 @@ public sealed class RustFamilyDifferentialTests {
         () => [.. StringFixtures.CSharpCalls().Where(call => call.Class == fixture).Select(call => call.Call)],
         call => PrototypeFixture.InvokedOutcome(StringFixtures.Compiled(fixture, call.Method), call),
         (_, expected, actual) => StringFixtures.Comparable(expected) == StringFixtures.Comparable(actual));
+
+    foreach (var (className, file) in EnumFixtures.CSharp)
+      yield return new($"enums/{file}", () => PrototypeFixture.Import(file + ".cs", System.IO.File.ReadAllText(EnumFixtures.PathOf(file + ".cs"))),
+        () => [.. EnumFixtures.CSharpCalls().Where(call => call.Class == className).Select(call => call.Call)],
+        call => PrototypeFixture.InvokedOutcome(EnumFixtures.Compiled(className, call.Method), call),
+        (_, expected, actual) => EnumFixtures.Normalized(expected) == EnumFixtures.Normalized(actual));
+
+    foreach (var (className, file) in NumberTextFixtures.CSharp)
+      yield return new($"numtext/{file}", () => PrototypeFixture.Import(file + ".cs", System.IO.File.ReadAllText(NumberTextFixtures.PathOf(file + ".cs"))),
+        () => [.. NumberTextFixtures.CSharpCalls().Where(call => call.Class == className).Select(call => call.Call)],
+        call => PrototypeFixture.InvokedOutcome(NumberTextFixtures.Compiled(className, call.Method), call));
 
     yield return new("float/FloatView", () => PrototypeFixture.Imported("float/FloatView"),
       () => [.. FloatViewCases.FixtureMethods.SelectMany(method => FloatViewCases.FixtureCalls(method, new Random(2026), 20))],

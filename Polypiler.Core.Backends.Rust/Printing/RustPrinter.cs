@@ -346,8 +346,9 @@ public static class RustPrinter {
     if (flat.Any(argument => argument is null))
       return null;
 
-    // One argument stays on the line wherever the line has room (rustfmt's single-argument rule).
-    if (flat.Count == 1)
+    // One argument stays on the line wherever the line has room (rustfmt's single-argument rule), but
+    // a call within a call keeps to the width of a call's arguments, as rustfmt narrows a nested call.
+    if (flat.Count == 1 && !(Called(arguments[0]) && flat[0]!.Length > CallWidth))
       return flat[0];
 
     var joined = string.Join(", ", flat);
@@ -358,7 +359,7 @@ public static class RustPrinter {
   /// A method call as the receiver the chain starts from and the links after it, in order: the calls
   /// and the fields between them, which rustfmt counts as links of the chain as well.
   /// </summary>
-  private static (RsExpression Receiver, List<RsExpression> Links) Chain(RsMethodCall call) {
+  private static (RsExpression Receiver, List<RsExpression> Links) Chain(RsExpression call) {
     var links = new List<RsExpression>();
     RsExpression current = call;
     while (current is RsMethodCall or RsField) {
@@ -457,7 +458,8 @@ public static class RustPrinter {
 
         return text.Append('\n').Append(pad).Append('}').ToString();
       }
-      case RsMethodCall call: {
+      case RsMethodCall or RsField when expression is RsMethodCall || ((RsField)expression).Target is RsMethodCall or RsField || Expression(((RsField)expression).Target, indent, column).Contains('\n'): {
+        var call = expression;
         // The root on the first line, then one link on each line one step in - or at the root's own
         // indentation where the root ends a block of lines.
         var (receiver, links) = Chain(call);
@@ -646,7 +648,7 @@ public static class RustPrinter {
       return null;
 
     var head = string.Concat(others.Select(other => other + ", "));
-    var last = Expression(arguments[^1], indent, column + head.Length, 1);
+    var last = Called(arguments[^1]) && Flat(arguments[^1]) is { Length: > CallWidth } ? Opened(arguments[^1], indent, column + head.Length) : Expression(arguments[^1], indent, column + head.Length, 1);
     var first = last.Split('\n')[0];
     // A control-flow expression overflows only with its condition on its first line (rustfmt's try_overflow_last_item).
     if (arguments[^1] is RsIf or RsWhile or RsMatch or RsFor && last.Contains('\n') && !first.EndsWith('{'))
@@ -667,6 +669,19 @@ public static class RustPrinter {
     RsReference reference => Overflows(reference.Operand, count),
     RsCast cast => Overflows(cast.Operand, count),
     _ => false
+  };
+
+  /// <summary>Whether an argument is a call, a macro or the borrow of one: what rustfmt narrows as a nested call.</summary>
+  private static bool Called(RsExpression argument) => argument switch {
+    RsCall or RsMacro { Bracketed: false } => true,
+    RsReference reference => Called(reference.Operand),
+    _ => false
+  };
+
+  /// <summary>A nested call too wide for a call's arguments, broken even where the line would hold it.</summary>
+  private static string Opened(RsExpression argument, int indent, int column) => argument switch {
+    RsReference reference => (reference.Mutable ? "&mut " : "&") + Opened(reference.Operand, indent, column + (reference.Mutable ? 5 : 1)),
+    _ => Broken(argument, indent, column, 1)
   };
 
   /// <summary>Arguments one on each line, each followed by a comma, the closing parenthesis back at the indentation.</summary>

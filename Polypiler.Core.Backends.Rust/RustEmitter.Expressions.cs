@@ -91,6 +91,9 @@ public static partial class RustEmitter {
     /// <summary>An IR expression.</summary>
     private RsExpression Expression(IrExpr expression) => expression switch {
       IrConst constant when TypeName(constant.Type) is not null => Literal(constant),
+      IrConst { Type.IsEnum: true } constant => this.EnumConstant(constant),
+      IrIntrinsic operation when EnumOperations.IsEnum(operation.Op) => this.EnumOperation(operation),
+      IrIntrinsic operation when NumberTextOperations.IsNumberText(operation.Op) => this.NumberText(operation),
       IrStrConst or IrConstRef { Type.IsString: true } or IrConditional { Type.IsString: true } => this.StringValue(expression),
       IrArrayLoad { Array: IrConstRef table, Type.IsString: true } load => this.TableText(table, load.Index),
       IrIntrinsic operation when StringOperations.IsString(operation.Op) => this.StringOperation(operation),
@@ -131,6 +134,8 @@ public static partial class RustEmitter {
       switch (unary.Op) {
         case IrUnaryOp.LogicalNot:
           return this.Not(unary.Operand);
+        case IrUnaryOp.BitNot when type.IsEnum:
+          return this.Wrapped(type, new RsUnary("!", this.Inner(unary.Operand)) { Type = type.EnumType!.Underlying });
         case IrUnaryOp.BitNot:
           return new RsUnary("!", this.Operand(this.Expression(unary.Operand), 13)) { Type = type };
         case IrUnaryOp.Negate when type.IsFloat: {
@@ -183,6 +188,10 @@ public static partial class RustEmitter {
         if (binary.Left is IrConst left)
           return (left.Value != 0) == (binary.Op == IrBinaryOp.Equal) ? this.Expression(binary.Right) : this.Not(binary.Right);
       }
+
+      // The bitwise operators of an enum work on its integer; equality is the newtype's own.
+      if (operandType.IsEnum && binary.Op is IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor)
+        return this.Wrapped(type, this.Binary(this.Inner(binary.Left), binary.Op switch { IrBinaryOp.And => "&", IrBinaryOp.Or => "|", _ => "^" }, this.Inner(binary.Right), operandType.EnumType!.Underlying));
 
       var a = this.Expression(binary.Left);
       var b = this.Expression(binary.Right);
@@ -273,6 +282,10 @@ public static partial class RustEmitter {
     private RsExpression Convert(IrConvert convert) {
       var source = convert.Operand.Type;
       var target = convert.Type;
+      if (source.IsEnum)
+        return this.Inner(convert.Operand);
+      if (target.IsEnum)
+        return this.Wrapped(target, this.Expression(convert.Operand));
       if (TypeName(source) is null || TypeName(target) is null || source == IrType.Bool || target == IrType.Bool)
         return this.Refuse($"conversion from {source} to {target}");
 

@@ -109,7 +109,7 @@ internal static class ArrayOwnership {
           groups.Union(node, reference.Local);
           break;
         case IrNewArray:
-        case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.StrSplit or IrIntrinsicOp.ViewToArray }:
+        case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.StrSplit or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues }:
           created.Add(node);
           break;
         case IrCall call when facts.TryGetValue(call.Function, out var callee):

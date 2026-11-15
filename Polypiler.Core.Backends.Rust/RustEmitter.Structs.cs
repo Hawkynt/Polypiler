@@ -72,7 +72,7 @@ public static partial class RustEmitter {
     }
 
     /// <summary>Whether a value of a type is copied as a whole: a number, a truth value, or a struct of them.</summary>
-    private static bool IsValue(IrType type) => TypeName(type) is not null || type.StructType is { } nested && nested.Fields.All(field => IsValue(field.Type));
+    private static bool IsValue(IrType type) => TypeName(type) is not null || type.IsEnum || type.StructType is { } nested && nested.Fields.All(field => IsValue(field.Type));
 
     /// <summary>Whether a struct has a floating-point number among its fields or theirs.</summary>
     private static bool HasFloat(IrStructType type) => type.Fields.Any(field => field.Type.IsFloat || field.Type.StructType is { } nested && HasFloat(nested));

@@ -10,7 +10,16 @@ namespace Polypiler.Core.Verification.Runners;
 /// <summary>An exported function a driver calls: its path below the crate root and its signature.</summary>
 /// <param name="Path">The path, such as <c>numbers::gcd</c>; the function must be <c>pub</c> along it.</param>
 /// <param name="Signature">The images it takes and gives; the runner never derives it from the source.</param>
-public sealed record RustExport(string Path, CallSignature Signature);
+public sealed record RustExport(string Path, CallSignature Signature) {
+
+  /// <summary>
+  /// Whether the scalars go in and come out through <c>From</c>: <c>a0.into()</c> and
+  /// <c>let result: T = f(…).into();</c>, for an export whose scalars are newtypes over the integers of
+  /// the images, such as the enums of a crate.
+  /// </summary>
+  public bool Converted { get; init; }
+
+}
 
 /// <summary>
 /// Generates <c>src/bin/polypiler_driver.rs</c>, the program that calls the exports of a crate on input
@@ -67,11 +76,11 @@ public static class RustDriverGenerator {
         var size = Width(parameter);
         var name = "a" + arguments.Count.ToString(CultureInfo.InvariantCulture);
         text.Append(CultureInfo.InvariantCulture, $"            let {name}: {RustType(parameter.Type)} = {Decode(parameter.Type, offset, size)};\n");
-        arguments.Add(name);
+        arguments.Add(export.Converted ? name + ".into()" : name);
         offset += size;
       }
 
-      text.Append(CultureInfo.InvariantCulture, $"            let result = {crate}::{export.Path}({string.Join(", ", arguments)});\n");
+      text.Append(CultureInfo.InvariantCulture, $"            let result{Converted(export, signature.Result)} = {crate}::{export.Path}({string.Join(", ", arguments)}){(export.Converted && signature.Result is not null ? ".into()" : "")};\n");
       text.Append("            ").Append(Encode(signature.Result)).Append('\n');
       text.Append("        }\n");
     }
@@ -124,7 +133,7 @@ public static class RustDriverGenerator {
       if (Counted(parameter.Type) is not { } counted) {
         Width(parameter);
         text.Append(CultureInfo.InvariantCulture, $"{Pad}let {name}: {RustType(parameter.Type)} = {Taken(parameter.Type)};\n");
-        arguments.Add(name);
+        arguments.Add(export.Converted ? name + ".into()" : name);
         continue;
       }
 
@@ -153,6 +162,10 @@ public static class RustDriverGenerator {
 
     text.Append(Pad).Append("hex(&image)\n");
   }
+
+  /// <summary>The type a converted scalar result is declared with, <c>: T</c>, or nothing.</summary>
+  private static string Converted(RustExport export, ImageType? result)
+    => export.Converted && result is { Kind: ImageKind.Integer or ImageKind.Float or ImageKind.Boolean } ? ": " + RustType(result) : "";
 
   /// <summary>A scalar read at the cursor, which moves past it.</summary>
   private static string Taken(ImageType type) {

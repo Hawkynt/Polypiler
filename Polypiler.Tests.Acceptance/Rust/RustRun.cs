@@ -162,7 +162,7 @@ internal static class RustRun {
     var index = functions.Select((function, position) => (function.Name, position)).ToDictionary(pair => pair.Name, pair => pair.position, StringComparer.Ordinal);
     var crate = RustEmitter.ModuleName(module.Name, profile);
     var execution = await Runner(checks).ExecuteAsync(RustCrates.Package(files), crate,
-      [.. functions.Select(function => new RustExport(exports[function.Name], SignatureOf(function)))],
+      [.. functions.Select(function => new RustExport(exports[function.Name], SignatureOf(function)) { Converted = function.ReturnType.IsEnum || function.Parameters.Any(parameter => parameter.Type.IsEnum) })],
       [.. calls.Select(call => (index[call.Method], call.Arguments.SelectMany(Bytes).ToArray()))]);
     Assert.That(execution.Diagnostics, Is.Empty, () => string.Join("\n", execution.Diagnostics.Select(diagnostic => $"{diagnostic}: {diagnostic.Cause}")) + "\n" + RustCrates.ModuleText(files));
     return [.. calls.Zip(execution.Outcomes!).Select(pair => {

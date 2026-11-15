@@ -49,7 +49,7 @@ public static partial class RustEmitter {
       var package = this._options.PackageName ?? moduleName;
       if (module.Globals.Count > 0)
         this.Refuse("module state (globals)");
-      foreach (var type in module.Types.Where(type => type is not IrStructType))
+      foreach (var type in module.Types.Where(type => type is not (IrStructType or IrEnumType)))
         this.Refuse($"declared types ({Kind(type)})");
 
       this.NameItems(module);
@@ -59,11 +59,12 @@ public static partial class RustEmitter {
       var items = new List<RsItem>();
       foreach (var constant in module.Constants)
         items.Add(this.Constant(constant));
-      foreach (var type in module.Types.OfType<IrStructType>())
-        items.AddRange(this.Struct(type));
+      foreach (var type in module.Types)
+        items.AddRange(type switch { IrStructType structType => this.Struct(structType), IrEnumType enumType => this.EnumItems(enumType), _ => [] });
 
       var functions = module.Functions.Select(function => this.Function(function) with { IsHelper = copied.Contains(function.Name) }).ToList();
       this._construct = "the module";
+      items.AddRange(this._enumTableItems);
       items.AddRange(this._whitespace.Values);
       items.AddRange(this._spellings.Values);
       items.AddRange(functions);
@@ -142,7 +143,7 @@ public static partial class RustEmitter {
     /// <summary>The Rust type of an IR type a parameter, a local or a result has: a scalar or a struct; refused for any other.</summary>
     private string Type(IrType type)
       => TypeName(type) ?? (type.IsString ? OwnedString
-        : type.StructType is { } declared && this._types.TryGetValue(declared, out var name) ? name
+        : type.Declaration is IrStructType or IrEnumType && this._types.TryGetValue(type.Declaration, out var name) ? name
         : ((RsPath)this.Refuse($"the type {type}")).Name);
 
     /// <summary>What kind of type a declaration is, as a refusal names it.</summary>
