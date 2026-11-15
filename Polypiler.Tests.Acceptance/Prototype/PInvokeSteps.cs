@@ -37,6 +37,30 @@ public sealed class PInvokeSteps(PrototypeScenario scenario) {
     scenario.Source = InteropFixtures.LibC;
   }
 
+  /// <summary>An async class (#1330) whose async methods call <c>abs</c> of the C library of the operating system: a native call is synchronous, so it may stand between awaits.</summary>
+  [Given("^an async class that calls abs of the C library before and after an await$")]
+  public void AsyncClass() => scenario.Script("Native.cs", $$"""
+    using System.Runtime.InteropServices;
+    using System.Threading.Tasks;
+
+    public static class Native {
+
+      [DllImport("{{InteropFixtures.Library}}", EntryPoint = "abs")]
+      public static extern int Abs(int x);
+
+      public static async Task<int> Half(int x) {
+        await Task.CompletedTask;
+        return Abs(x) / 2;
+      }
+
+      public static async Task<int> Sum(int a, int b) {
+        var half = await Half(a);
+        return half + Abs(b);
+      }
+
+    }
+    """);
+
   [Given("^the C# declaration " + StepText.Quoted + "$")]
   public void Declaration(string declaration) => scenario.Snippet(StepText.Unescape(declaration));
 
@@ -148,6 +172,16 @@ public sealed class PInvokeSteps(PrototypeScenario scenario) {
     Assert.That(JsonSerializer.Deserialize<int[]>(output.Trim()), Is.EqualTo(new[] { strlen, abs, quotient, remainder }), this._generated.Text);
     var dotNet = Fields(Call(Fixture, "Div", 7, 2)!);
     Assert.That(new[] { (int)(nuint)Call(Fixture, "StrLen", "hello")!, (int)Call(Fixture, "Abs", -7)!, dotNet.Item1, dotNet.Item2 }, Is.EqualTo(new[] { strlen, abs, quotient, remainder }));
+  }
+
+  [Then(@"^in node Sum\((-?\d+), (-?\d+)\) resolves to (-?\d+)$")]
+  public void NodeResolves(int a, int b, int expected) {
+    var directory = Path.GetDirectoryName(this._generated.Path)!;
+    var runner = Path.Combine(directory, "run.mjs");
+    File.WriteAllText(runner, $"import * as m from \"./{Path.GetFileName(this._generated.Path)}\";\nconsole.log(await m.Sum({a}, {b}));\n");
+    var (exitCode, output) = Toolchain.RunNode(directory, runner);
+    Assert.That(exitCode, Is.Zero, output);
+    Assert.That(output.Trim(), Is.EqualTo(expected.ToString(System.Globalization.CultureInfo.InvariantCulture)), this._generated.Text);
   }
 
   [Then("^the manifest records every native function as an unverified external$")]

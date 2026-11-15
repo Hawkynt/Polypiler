@@ -57,6 +57,16 @@ Feature: Native calls through P/Invoke
       | es5     | cjs    |
       | es2022  | esm    |
 
+  Scenario Outline: An async method calls a native function between its awaits
+    Given an async class that calls abs of the C library before and after an await
+    When it is translated with "--from csharp --to javascript --profile <profile> --module esm" and the binding module "libc-bindings.mjs"
+    Then in node Sum(-8, -3) resolves to 7
+
+    Examples:
+      | profile |
+      | es2015  |
+      | es2022  |
+
   Scenario Outline: A binding the command line cannot use is refused
     Given the C library fixture of the operating system
     When it is translated without a binding with "--from csharp --to javascript --profile es2022 --bind <binding>"
