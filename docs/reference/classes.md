@@ -84,7 +84,7 @@ holds an object.
 | `x is T`, `x is not T`, `if (x is T t)` with `t` used in the branch, `x as T`, `(T)x`, upcasts | `IrTypeTest`, `IrAsCast`, `IrCast`; an upcast is the value | supported |
 | a virtual or interface call on `this` reachable from a constructor | - | `PLY1002`: "a virtual call on 'this' during construction" |
 | `new` or silent member hiding, a default interface method, a static abstract member, a generic interface, overriding a member of `object`, a virtual or abstract property, a record in a hierarchy, a base class or interface the file does not declare, a field initializer of a derived class that is not a constant, a conditional of objects of two classes | - | `PLY1002` naming it |
-| a generic class or method, an event, an indexer, an operator, a finalizer, a static constructor, a static property, an accessor with its own accessibility, `with`, a string field, an object initializer inside an expression | - | `PLY1002` naming it |
+| a generic method of a class, a generic class in a hierarchy ([generics](generics.md)), an event, an indexer, an operator, a finalizer, a static constructor, a static property, an accessor with its own accessibility, `with`, a string field, an object initializer inside an expression | - | `PLY1002` naming it |
 
 ## JavaScript frontend
 
