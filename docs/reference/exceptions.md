@@ -23,8 +23,15 @@ Exception
 ├── ArgumentException
 │   └── ArgumentOutOfRangeException
 ├── KeyNotFoundException
-└── FormatException
+├── FormatException
+└── AssertionException
 ```
+
+`AssertionException` is the one class .NET has none of: a failed assertion of the source, Python's
+`AssertionError`. No trap throws it; a frontend throws it where the source asserts. C# nests a
+`public sealed class AssertionException : System.Exception` with the three constructors in a class
+that names it, JavaScript declares the error class `AssertionError extends Error`, Python raises the
+built-in `AssertionError`.
 
 An exception has a `Message` (a string) and an `InnerException` (an exception or `null`), two
 read-only fields of `Exception` that its constructors write: none, the message, or the message and
@@ -87,17 +94,57 @@ module with a handler is refused with `PLY1851` naming it.
 | `KeyNotFoundException` (`KeyNotFound`) | `KeyError` |
 | `ArgumentException` (`DuplicateKey`, `UnknownName`) | `ValueError` |
 | `FormatException` (`InvalidFormat`) | `ValueError` |
+| `AssertionException` | `AssertionError` |
 | `Exception` | `Exception` |
 
-The **frontend** does not import `try`, `raise` and `except` yet (#453). An operation that fails
-raises the exception CPython raises, as the class of the IR that stands for it, with CPython's message:
+The **frontend** (#453) imports `raise E`, `raise E("message")`, `raise e` of an exception, bare
+`raise` in a handler, and `try` with `except E`, `except (A, B) as e`, bare `except`, `else` and
+`finally`. A built-in exception is the class of the IR's library that stands for it; the few the
+library has not are classes the module declares beside them, derived from the class Python derives
+them from, so that a handler matches as in Python. A class of the module derived from one of them
+(`class MyError(ValueError): pass`) is a class derived from that class. `str(e)` is the message.
+
+| Python | IR class | handler of it also catches |
+| --- | --- | --- |
+| `Exception`, `BaseException` | `Exception` | every exception |
+| `ArithmeticError` | `ArithmeticException` | `ZeroDivisionError`, `OverflowError` |
+| `ZeroDivisionError` | `DivideByZeroException` | |
+| `OverflowError` | `OverflowException` | |
+| `ValueError` | `ArgumentException` | `UnicodeEncodeError`, user classes derived from it |
+| `TypeError` | `InvalidCastException` | |
+| `IndexError` | `IndexOutOfRangeException` | |
+| `KeyError` | `KeyNotFoundException` | |
+| `AssertionError` | `AssertionException` | |
+| `RuntimeError` | `InvalidOperationException` | `NotImplementedError` |
+| `LookupError` | declared, derived from `Exception` | `IndexError` and `KeyError` (one catch clause each) |
+| `NotImplementedError` | declared, derived from `InvalidOperationException` | |
+| `UnicodeEncodeError` | declared, derived from `ArgumentException` | |
+| `AttributeError` | declared, derived from `Exception` | |
+| `struct.error` | declared `error`, derived from `Exception` | |
+
+The clauses of a `try` are the `except` clauses in source order, one catch clause per class a tuple
+names. `else` runs after the body under a flag the body's last statement sets, outside the
+protected block, so that the handlers do not catch what it raises; `finally` is the `finally` of a
+`try` around both. `return`, `break` and `continue` in a `finally` block, `raise … from`, `with` and
+`except*` are refused (`PLY1843`), and so is a `yield` inside a `try` with handlers, which the IR has
+no form for.
+
+An operation that fails raises the exception CPython raises, as the class of the IR that stands for
+it, with CPython's message:
 
 | Python raises | IR class | where |
 | --- | --- | --- |
 | `ZeroDivisionError` | `DivideByZeroException` | `/`, `//`, `%`, `divmod` by zero, `0.0` to a negative power |
 | `OverflowError` | `OverflowException` | an `int` beyond 64 bits (`py-int-64`), `int()`/`round()` of an infinity, a float power that overflows |
 | `ValueError` | `ArgumentException` | a negative shift count, `int()`/`round()` of a NaN, a zero step of `range`, a negative power of an `int` whose sign was not known |
-| `AssertionError` | `InvalidOperationException` | a failing `assert` |
+| `AssertionError` | `AssertionException` | a failing `assert` |
+| `IndexError` | `IndexOutOfRangeException` | an index outside a list, bytes, a str or a table after a negative one is counted from the end; `pop()` of an empty list |
+| `ValueError` | `ArgumentException` | a zero step of a slice, a byte outside 0 to 255 stored into a `bytearray` or made into `bytes`, `chr` outside 0 to 0x10FFFF, `min`/`max` of an empty sequence, `E(v)` of a value no member has, `math.sqrt` of a negative number |
+| `TypeError` | `InvalidCastException` | arithmetic on `None`, `ord` of a str that is not one code point |
+| `AttributeError` | declared | an attribute of `None` |
+| `UnicodeEncodeError` | declared | `str.encode` of a lone surrogate |
+| `struct.error` | declared | `struct.unpack` of a buffer of the wrong length, `struct.pack` of an integer outside its field |
+| `OverflowError` | `OverflowException` | `int.to_bytes` of a value that does not fit, `struct.pack('f', …)` of a float a binary32 cannot hold |
 | a `complex` result | `ArithmeticException` | a negative float to a fractional power (`py-complex-power`) |
 
 ## Handling
@@ -226,9 +273,8 @@ its range (C#: the helper throws `ArithmeticException`), `Clamp` with its bounds
   and `ReplaceAll` with an empty needle. .NET throws `ArgumentException` for the last two, where the
   IR and JavaScript throw the class of `InvalidOperation`; a `catch (ArgumentException)` around them
   is not translated faithfully yet.
-- The IR has no class for Python's `AssertionError`: the Python frontend raises
-  `InvalidOperationException` for a failing `assert`, which the Python backend writes as
-  `RuntimeError`, so Python translated to Python raises `RuntimeError` there (with the assertion's
-  message).
+- The message of a trap the IR raises itself - `ZeroDivisionError` of `//` on integers, an
+  `OverflowError` beyond 64 bits - is the IR's text in an imported Python module, not CPython's; a
+  handler that reads `str(e)` of one sees the IR's text.
 - ES5 constructor functions on `Object.create(Error.prototype)` are no exception classes of the
   JavaScript import yet; only `class … extends Error` is.
