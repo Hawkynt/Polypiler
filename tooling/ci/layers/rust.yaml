@@ -5,5 +5,5 @@ schema: 1
 layer: rust
 toolchains: [rust, rust-miri]
 os: [ubuntu-latest]
-paths: ["Polypiler.Core.Frontends.Rust/**", "Polypiler.Core.Backends.Rust/**", "tests/fixtures/**/*.rs", "tests/fixtures/**/Cargo.toml", "tooling/ci/layers/rust.yaml", "Polypiler.Tests.Acceptance/Infra/Ci/Rust*", "tests/features/infra/infra-ci-rust.feature"]
+paths: ["Polypiler.Core.Frontends.Rust/**", "Polypiler.Core.Backends.Rust/**", "tests/fixtures/**/*.rs", "tests/fixtures/**/Cargo.toml", "tooling/ci/layers/rust.yaml", "Polypiler.Tests.Acceptance/Infra/Ci/Rust*", "tests/features/infra/infra-ci-rust.feature", "Polypiler.Tests.Acceptance/Rust/**", "Polypiler.Tests/Frontends/Rust/**", "tests/features/lang/rs/**"]
 always: false
