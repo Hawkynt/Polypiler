@@ -1,6 +1,6 @@
 # Backends: tree, passes, printer
 
-**Status:** implemented for the C# and the JavaScript backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)); stage 8 of the [pipeline](PIPELINE.md).
+**Status:** implemented for the C# and the JavaScript backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)); stage 8 of the [pipeline](PIPELINE.md). The helpers are one IR library since [#1353](https://github.com/Hawkynt/Polypiler/issues/1353).
 
 A backend does not write text. It builds a syntax tree of its target language from the IR, runs the
 target passes over that tree and hands the result to its printer, the only place where generated code
@@ -25,7 +25,8 @@ flowchart LR
 ## The tree
 
 The nodes are immutable records, one per construct the emitter writes. Every expression carries the
-IR type it was written for (`Type`; unknown in a helper's source), so a pass can reason about types.
+IR type it was written for (`Type`; unknown only in the source of a helper that stays with a backend),
+so a pass can reason about types.
 Parentheses are nodes of their own: the emitter puts them where it always has, which keeps the output
 of the old string-building emitters byte for byte. A few properties only say how a node is laid out -
 a blank line or comment in front of a statement, a block on one line, a line break before an operator,
@@ -35,20 +36,73 @@ keeps them only on the nodes it does not replace, and a comparison of two trees 
 `CSharpSyntaxRewriter` and `JavaScriptSyntaxRewriter` walk a tree (`DescendantsAndSelf`) and rewrite it
 bottom-up (`Rewrite`); a rewrite that changes nothing returns the same tree.
 
-## Helpers and capability rows
+## Helpers: one library in the IR
 
-A helper stays readable source - C# 2 in `Helpers/` of the C# backend, ECMAScript in `Helpers/` of the
-JavaScript backend with the placeholders a level decides (`@let`, `@imul(`, …). The reader parses each
-source once, when a module first needs it, and the parsed tree is shared; Roslyn and Acornima already
-ship with the frontends, and parsing keeps the helpers editable as source rather than turning them into
-code that builds trees. The printer writes every helper back as exactly its source
-(`CSharpHelperSyntaxTests`, `JavaScriptHelperSyntaxTests`).
+What replaces an operation a profile has no native form of - a rotate before .NET Core 3.1 or in any
+ECMAScript, a saturating conversion before .NET 9, the IEEE minimum before .NET Core 3.0, the rounding
+to even of JavaScript - is a helper of **one library**, `Polypiler.Core.IR/Helpers/Operations`: ordinary
+C# in the subset the C# frontend imports, one file per family (`Rotate.cs`, `Counts.cs`, `Division.cs`,
+`Saturating.cs`, `Rounding.cs`, ...), compiled into the IR assembly so that every helper runs as .NET
+too. The build imports it beside the portable floating-point implementations
+(`polypiler-tooling float-implementations`, `ImplementationSources.Merge`) and the executable carries
+both as one precomputed module.
 
-A row of `CSharpCapabilities` still says its form in C# source - a method, a cast, further arguments or
-a template with `{0}`, `{1}` and `{h}` - and `CSharpForm.Build` makes it a tree fragment: the template
-is parsed once with its places as names, which are then replaced by the argument nodes. Adding a row
-is adding its form; nothing else changes. The JavaScript table names what each level has; the emitter
-makes the fragment for it.
+Legalization binds what a module needs: `LibraryLegalization` walks every expression - the global
+initializers included - and asks the backend's rewrite whether the profile writes it; where it does
+not, the node becomes the call of its helper, and the helper, what it calls and the tables it reads are
+copied into the module under names nothing else has (`IrModule.Implementations`). `IntegerLibrary`
+says once, for every backend, which helper computes an integer or bit operation for its width and
+signedness: a helper of 32 bits serves the narrow types with the width as an argument, one of 64 bits
+works on `ulong`. The backends only decide where they need it - the C# rows carry `WithLibrary`, the
+JavaScript rows (`Library/*.cs`) say which levels lack what. The helpers are then functions of the
+module, written through the path every function takes: typed target trees, the profile's syntax, the
+passes of the IR before and the target passes after. A helper calls no operation it implements
+itself; the few operations C# has no method for are named by stubs (`IntrinsicRoundHalfUp`) the frontend
+imports as the operation.
+
+The passes over the legalized module ([pipeline](PIPELINE.md)) make a helper cheap where its arguments
+say more than its signature: `ushort.RotateLeft(x, 3)` becomes the call of `RotateLeftNarrow(x, 3, 16)`,
+which inlining (O0006), propagation (O0003), folding (O0001) and dead-code removal (O0005) turn into
+`(x << 3) | (x >> 13)` with no branch and no call; unrolling (O0023) takes the loop of a 64-bit load
+apart into its eight bytes.
+
+The licences stay attached: a helper's file states its licence in its `SPDX-License-Identifier`
+header, the output's header names it, and the notices a file obliges an output to keep (the FreeBSD
+BSD-2-Clause of the `float` fused multiply-add) stay in the output also where the function was inlined
+and is gone (`IrModule.Inlined`).
+
+A row of `CSharpCapabilities` says its native form in C# source - a method, a cast, further arguments
+or a template with `{0}`, `{1}` - and `CSharpForm.Build` makes it a tree fragment. The JavaScript table
+names what each level has; the emitter makes the fragment for it.
+
+## Helpers that stay with a backend
+
+Some helpers are no operation of the IR but the way a target represents one, or the operation itself
+written with what a level has; they stay text of their backend, read into the tree once. Each file
+and why:
+
+| File | Why it stays |
+| --- | --- |
+| `Polypiler.Core.Backends.CSharp/Helpers/CSharpHelper.cs` | The type of a C# helper written as source lines, which the exceptions of the C# backend are made of. |
+| `Polypiler.Core.Backends.CSharp/Helpers/CSharpHelpers.cs` | `Ignore<T>` stands in for the discard C# 7 brought, `Fill<T>` and `Clear` for `Array.Fill` and `Array.Clear` on any element type: a generic of the target's language, where the library has a helper per type. |
+| `Polypiler.Core.Backends.CSharp/Helpers/Views.cs` | Below .NET Standard 2.1 a view is an `ArraySegment<T>`; its helpers work on that representation, which the IR does not see. |
+| `Polypiler.Core.Backends.CSharp/Helpers/Collections/CSharpCollectionClasses.cs` | The nested classes the keyed collections are where .NET's do not order or compare as the IR says: a representation of the target. |
+| `Polypiler.Core.Backends.CSharp/Helpers/String/CSharpStringHelpers.cs` | The string operations of ECMA-262 in C#: operations of the IR, not yet carried into the library (a follow-up of #1353). |
+| `Polypiler.Core.Backends.CSharp/Helpers/String/CSharpNumberTextHelpers.cs` | The numbers to text and back of ECMA-262 in C# (Ryu, V8): operations of the IR, not yet carried into the library (a follow-up of #1353). |
+| `Polypiler.Core.Backends.JavaScript/Helpers/JavaScriptHelpers.cs` | The level's own form of the IR's arithmetic: `$imul`, `$fround` and `$trunc` below ECMAScript 2015, a 64-bit integer as `{ hi, lo }` (`$add64` to `$udm64`, which wait for the wide-integer legalization O0075) or as a `BigInt`, the traps of the IR's division, checked conversion, array access and steps (`$div`, `$ck`, `$f2i`, `$get`, `$step`), the bits of a number through a `DataView`. Each is the operation itself, for which the IR has no weaker operation to write it with. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/HelperTexts.cs` | The notation of the helpers that stay: one text, or one for a `BigInt` and one for the halves. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/Errors.cs` | The error classes the exception classes of the IR become, and the helpers that throw and chain them: a representation of the target. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/Optional.cs` | How an optional value that holds none is spelled at the boundary of JavaScript: a representation. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/Views.cs` | A view is a `subarray` or an object `{ a, o, n }` over a plain array: its helpers work on that representation. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/ViewBytes.cs` | The bytes of a view over a plain array, by the index into the array beneath: what the view's endian access calls. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/Collections.cs` | The slots of `$Keyed`, a map or set below ECMAScript 2015, and the list operations of the arrays the lists are: a representation. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/Enum/Enums.cs` | The frozen object an enum is, looked up by name and value: a representation. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/String/Strings.cs` | The string operations of .NET and of the later levels in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
+| `Polypiler.Core.Backends.JavaScript/Helpers/String/NumberText.cs` | The numbers to text and back of .NET in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
+
+Outside the folders the emitters keep a few more of the same kind: the C# `Throw<T>` of a throw
+expression before C# 7, the JavaScript `$sameValueZero` and `$compare` of the generic equality and
+order.
 
 ## Target passes
 
@@ -63,8 +117,11 @@ with which the passes share one namespace of numbers. A pass never prints and ne
 | [O0500](../optimizations/O0500-target-helper-inlining.md) | helper inlining | a call of a single-expression helper becomes its body where the cost rule says so |
 | [O0501](../optimizations/O0501-target-unused-declaration-removal.md) | unused declaration removal | a helper or private constant nothing names any more is removed |
 
-The emitter declares only the helpers the code calls (and those they call); O0501 removes what later
-passes made unused.
+The emitter declares only the helpers the code calls (and those they call); a function legalization
+copied in from the library is a helper to these passes as well. O0501 removes what later passes made
+unused. Most helpers are inlined before, in the IR, by [O0006](../optimizations/O0006-inlining.md),
+which is not limited to one expression; O0500 takes what O0006 left - a call it was told not to inline,
+a helper over its budget whose body is one expression.
 
 ### Adding a pass
 

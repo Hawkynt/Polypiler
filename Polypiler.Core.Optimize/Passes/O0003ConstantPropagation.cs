@@ -136,8 +136,16 @@ public sealed class O0003ConstantPropagation : IIrPass {
             known.Remove(bind.Local);
     }
 
+    /// <summary>
+    /// Remembers what a variable holds after it is set: a constant, or the value of an expression of
+    /// constants alone, which the interpreter computes - the expression itself is folding's to replace,
+    /// so a chain of steps is known to its end in one run.
+    /// </summary>
     private void Learn(IrLocal local, IrExpr? value, Dictionary<IrLocal, IrConst> known) {
-      if (value is IrConst constant && !this._shared.Contains(local))
+      var constant = value as IrConst ?? (value is not null && IrPassSupport.IsPure(value) && !IrTree.Nodes(value).Any(node => node is IrLocalRef or IrConstRef)
+        ? IrPassSupport.Evaluate(value)
+        : null);
+      if (constant is not null && !this._shared.Contains(local))
         known[local] = constant;
       else
         known.Remove(local);

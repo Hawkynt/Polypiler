@@ -76,8 +76,10 @@ public sealed class O0001ConstantFolding : IIrPass {
     => IrTree.Blocks(mapped).Zip(IrTree.Blocks(statement)).All(pair => ReferenceEquals(pair.First, pair.Second))
       && IrTree.Expressions(mapped).Zip(IrTree.Expressions(statement)).All(pair => ReferenceEquals(pair.First, pair.Second));
 
-  /// <summary>What a node with its operands folded folds to, or <see langword="null"/> to keep it.</summary>
-  internal static IrExpr? Fold(IrExpr node) {
+  /// <summary>What a node, its operands folded already, folds to.</summary>
+  /// <param name="node">The node.</param>
+  /// <returns>The folded node, or <see langword="null"/> to keep it.</returns>
+  public static IrExpr? Fold(IrExpr node) {
     switch (node) {
       case IrConditional { Condition: IrConst condition } choice:
         return condition.Value != 0 ? choice.WhenTrue : choice.WhenFalse;

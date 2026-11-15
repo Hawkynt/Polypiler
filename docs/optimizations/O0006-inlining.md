@@ -1,71 +1,104 @@
 # O0006 — Inline direct calls under the cost model
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#159](https://github.com/Hawkynt/Polypiler/issues/159). Once implemented it is switched off with `--disable-opt O0006`.
+<!-- status: implemented (prototype) -->
+> **Status: implemented (prototype).** `O0006Inlining` runs among the passes over the legalized module, between legalization and the backend ([#1353](https://github.com/Hawkynt/Polypiler/issues/1353)). It inlines the helpers and portable implementations legalization copied in from the [library](../architecture/BACKENDS.md#helpers-one-library-in-the-ir); the inlining of the program's own functions, on SSA with the cost model of PRD §4.8, stays [#159](https://github.com/Hawkynt/Polypiler/issues/159). Switched off with `--disable-opt O0006`.
 
 ## What it does
 
-Algorithm libraries are written as layers of tiny helpers — Cipher's `OpCodes.RotL32`, `Pack32BE`, a
-`clamp` — and almost every recognition rule and range fact stops at a call boundary. Inlining is what lets the
-rotate inside `RotL32` be seen next to its constant amount. It is also the main source of code growth, so it
-must obey the cost model and a hard growth limit. PRD §4.8 (inlining).
+A helper of the library is written for every argument: `RotateLeftNarrow(value, count, bits)` masks, reduces
+the count and handles a count of 0. At a call site most of its arguments are often constants. The pass
+copies the body of a library function into the function that calls it - the arguments as variables
+declared in their order, every return an assignment of a result variable, the call a read of it - so that
+constant propagation ([O0003](O0003-sccp.md)), folding ([O0001](O0001-constant-folding.md)) and dead-code
+removal ([O0005](O0005-dead-code-elimination.md)) can specialise the copy to its call. A function whose
+every call was inlined is removed by O0005; its licence notice stays in the output (`IrModule.Inlined`).
 
 ## Example
 
+`polypiler translate Ex.cs --from csharp --to csharp --profile net2.0` on
+
+```csharp
+public static ushort F(ushort x) => ushort.RotateLeft(x, 3);
+```
+
 ### Before
 
-```
-@f(%x: u32) -> u32:
-  %m = Mul.u32[wrap] %x, 2
-  %r = Add.u32[wrap] %m, 1
-  Ret.u32 %r
-@g(%a: u32) -> u32:
-  %p = Call.u32 @f(%a)
-  %q = Call.u32 @f(3)
-  %s = Add.u32[wrap] %p, %q
-  Ret.u32 %s
+With `--disable-opt O0006`:
+
+```csharp
+public static ushort F(ushort x) {
+  unchecked {
+    return (ushort)RotateLeftNarrow((uint)x, 3, 16);
+  }
+}
+
+private static uint RotateLeftNarrow(uint value, int count, int bits) {
+  unchecked {
+    uint mask = (1u << bits) - 1u;
+    value = value & mask;
+    count = count & (bits - 1);
+    return ((value << count) | (value >> (bits - count))) & mask;
+  }
+}
 ```
 
 ### After
 
+By default; `--explain-opt` prints `O0006 inlining: 'F' statement 1` and the propagation, folding and
+dead-code removal that follow:
+
+```csharp
+public static ushort F(ushort x) {
+  unchecked {
+    uint value = (uint)x;
+    return (ushort)((value << 3) | (value >> 13));
+  }
+}
 ```
-@g(%a: u32) -> u32:
-  %m1 = Mul.u32[wrap] %a, 2
-  %p  = Add.u32[wrap] %m1, 1
-  %m2 = Mul.u32[wrap] 3, 2
-  %q  = Add.u32[wrap] %m2, 1        // folds to 7 in the next O0001 run
-  %s  = Add.u32[wrap] %p, %q
-  Ret.u32 %s
-```
+
+The same module for JavaScript at `es5` has no branch and no call left in `F`, and `F(0x8001)` returns
+`0x000C` either way.
 
 ## When it applies
 
-All of: (1) the call is direct, the callee body is present and is not marked `noinline` by its frontend;
-(2) caller and callee are not in the same call-graph strongly connected component; (3) the callee does not
-read its own frame identity (variadic argument access, address of a parameter slot escaping, `Stack` effect
-on return addresses — [#114](https://github.com/Hawkynt/Polypiler/issues/114)); (4) the callee has the same floating-point environment and overflow
-defaults as the caller; (5) if the source profile makes stack traces observable, the callee cannot raise
-([#115](https://github.com/Hawkynt/Polypiler/issues/115)); (6) the callee's exception regions can be nested inside the caller's region at the call
-site without changing which handler catches which exception; (7) the growth limits hold after the inline.
-Arguments are SSA values evaluated before the call, so argument evaluation order and their traps are
-unchanged by construction; callee returns become branches to a continuation block with a phi.
-
-## How it is proven
-
-`structural+effect-facts`: substitution of a function body for its call (β-reduction on SSA) with the side conditions above. No solver, no timeout path; exceeding a limit is `not applied`.
+- The callee is a function legalization copied in from the libraries, other than the caller, and calls
+  itself through no chain of calls.
+- Its body has at most `O0006Inlining.Budget` statements and expression nodes - 64 - and no lambda.
+- Its returns can be made the end of their branches: a return in a choice whose branch always leaves
+  takes the statements after the choice into the other branch. A return in a loop, a switch or a try
+  cannot be, and keeps the call.
+- The call stands in a statement that evaluates it first: everything evaluated before it in the
+  statement has no effect and cannot trap, it is not a branch of a choice nor the right side of `&&`,
+  `||` or `??`, and the statement is no loop. A call in an argument of a call is taken first where the
+  arguments before it may be moved after it.
+- At most 256 calls are inlined into one function in one run.
 
 ## When it must not fire
 
-- `@fact(n) = n * @fact(n-1)`: inlining a recursive function into itself never terminates and changes nothing semantically — refused by rule 2.
-- A callee that reads variadic arguments or returns the address of a parameter slot: the frame it refers to no longer exists.
-- A callee that throws when stack traces are observable (C# `Exception.StackTrace` printed by the program): the frame disappears from the trace.
-- A callee compiled with checked arithmetic inlined into an unchecked caller, if the instructions did not carry their own contract — they do; the test proves the `[checked]` survives.
-- A callee with a `try` region whose handler also covers the call's continuation after naive splicing: an exception from the caller's later code would be caught by the callee's handler.
+- `x / 0 + H(x)`: the division traps before `H` runs; moving `H` in front would change which happens.
+- `c ? H(x) : 0` and `H(x)` in the condition of a loop: the call runs only sometimes, or many times.
+- A recursive helper, or one whose return stands in a loop: no single way out to assign the result at.
+- A function of the program: the prototype inlines only what the libraries put in.
+- A body over the budget - the portable `FusedMultiplyAddF`, for instance - stays one function.
 
 ## Switching it off
 
-`--disable-opt O0006`; active at `--opt balanced`, `speed`, `size` and `memory`, off at `--opt none`.
+`--disable-opt O0006`; on at `--opt default`, off at `--opt none`. Without it the target pass
+[O0500](O0500-target-helper-inlining.md) still inlines a helper whose body is one expression.
 
 ## Interactions with other passes
 
-runs first in phase `optimize` (module pass, bottom-up over the call graph in deterministic order: callees before callers, ties by function name); enables [#154](https://github.com/Hawkynt/Polypiler/issues/154), [#164](https://github.com/Hawkynt/Polypiler/issues/164), [#158](https://github.com/Hawkynt/Polypiler/issues/158), range propagation and every recognition rule.
+First of the passes over the legalized module, which run round after round until a round changes
+nothing (at most 6): [O0003](O0003-sccp.md), [O0001](O0001-constant-folding.md),
+[O0005](O0005-dead-code-elimination.md) and [O0023](O0023-loop-unrolling.md) clean up the copy. Only the
+library functions and the functions something was inlined into are looked at by the others.
+
+## How it is proven
+
+`IrPassTests` inlines on hand-built IR and compares the interpreter before and after, with the budget
+on and one over it, a recursive helper, a return in a loop, a call after an operand that traps, in a
+choice and in a loop condition, a call in an argument and a call without a result. `HelperEquivalenceTests`
+runs every integer and floating-point helper as legalized and after all passes against its intrinsic -
+every value of an 8-bit operand, edges and random values of the wider ones - with the trap kind;
+`HelperScenarioTests` checks the scenario above. The differential tests of every family run the
+generated code in .NET and `node` against the interpreter.

@@ -9,7 +9,8 @@ namespace Polypiler.Core.Optimize.Passes;
 /// <summary>
 /// O0005, dead-code removal (prototype): a choice on a constant keeps the branch it takes, a loop
 /// whose condition is false from the start goes, and so does every statement after a return, a
-/// throw, a break or a continue in its block. A variable nothing reads goes with its declaration and
+/// throw, a break or a continue in its block; a nested block that declares nothing is spliced into
+/// the one around it. A variable nothing reads goes with its declaration and
 /// its assignments where their values may go unevaluated, as does an empty choice on such a value.
 /// A function legalization copied in from the libraries that nothing calls any more goes as well.
 /// </summary>
@@ -125,6 +126,10 @@ public sealed class O0005DeadCode : IIrPass {
         case IrDoWhile { Condition: IrConst { Value: 0 } } loop when !IrPassSupport.Statements(loop.Body).Any(inner => inner is IrBreak or IrContinue):
           this.Applied();
           return Spliced(this.Block(loop.Body));
+        case IrBlock inner when !inner.Statements.Any(statement => statement is IrDeclare):
+          // A block that declares nothing scopes nothing: its statements stand in the block around it.
+          this.Changed = true;
+          return this.Block(inner).Statements;
         default:
           return [IrPassSupport.Map(statement, expression => expression, this.Block)];
       }
