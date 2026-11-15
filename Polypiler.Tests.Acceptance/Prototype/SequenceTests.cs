@@ -11,7 +11,7 @@ using Polypiler.Prototype.Testing;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The differential rows of <c>tests/features/prototype/sequences.feature</c> (#1327) that need
+/// The differential rows of <c>tests/features/ir/ir-sequences.feature</c> (#1327) that need
 /// <c>node</c>: the module of iterators at every JavaScript level computes in node what the interpreter
 /// computes - the values and the event traces of laziness, restarting and closing.
 /// </summary>
