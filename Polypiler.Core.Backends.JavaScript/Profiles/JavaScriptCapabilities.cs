@@ -182,7 +182,16 @@ public sealed class JavaScriptCapabilities {
     new(".padEnd", 2017, "$pad"),
     new(".trimStart", 2019, "$trimEcma"),
     new(".trimEnd", 2019, "$trimEcma"),
-    new(".replaceAll", 2021, ".split")
+    new(".replaceAll", 2021, ".split"),
+    // The lists of #1328, which are arrays.
+    new("Array", 5),
+    new("Array.prototype", 5),
+    new(".slice", 5),
+    new(".map", 5),
+    new(".push", 5),
+    new(".pop", 5),
+    new(".splice", 5),
+    new(".includes of an array", 2016, "$lincludes")
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

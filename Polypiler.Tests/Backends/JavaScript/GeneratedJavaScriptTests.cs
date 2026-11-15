@@ -56,7 +56,7 @@ public sealed class GeneratedJavaScriptTests {
   [TestCase("es2022", "esm", false, "export function F() { return globalThis; }", "'globalThis' is never to be emitted")]
   [TestCase("es2022", "esm", false, "export function F(a) { console.log(a); }", "'console' is not in the capability table")]
   [TestCase("es2022", "esm", false, "export function F(a) { return Math.random(); }", "'Math.random' is not in the capability table")]
-  [TestCase("es2022", "esm", false, "export function F(a) { return a.slice(1); }", "'.slice' is not in the capability table")]
+  [TestCase("es2022", "esm", false, "export function F(a) { return a.sort(); }", "'.sort' is not in the capability table")]
   [TestCase("es2022", "esm", false, "function F() { }\nexports.F = F;", "'exports' is not in the capability table")]
   [TestCase("es2022", "esm", false, "export function F() { return { hi: hi }; }", "'hi' is not in the capability table")]
   public void WhatTheProfileLacks_IsFound(string level, string module, bool typedArrays, string code, string problem)

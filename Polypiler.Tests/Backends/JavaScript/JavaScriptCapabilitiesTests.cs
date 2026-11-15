@@ -148,6 +148,14 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase(".trimStart", 2019, "$trimEcma")]
   [TestCase(".trimEnd", 2019, "$trimEcma")]
   [TestCase(".replaceAll", 2021, ".split")]
+  [TestCase("Array", 5, null)]
+  [TestCase("Array.prototype", 5, null)]
+  [TestCase(".slice", 5, null)]
+  [TestCase(".map", 5, null)]
+  [TestCase(".push", 5, null)]
+  [TestCase(".pop", 5, null)]
+  [TestCase(".splice", 5, null)]
+  [TestCase(".includes of an array", 2016, "$lincludes")]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
     Assert.That((entry.Name, entry.Since, entry.Replacement), Is.EqualTo((name, since, replacement)));
@@ -257,7 +265,7 @@ public sealed class JavaScriptCapabilitiesTests {
   public void Globals_AreTheIdentifiersTheEntriesStartWith()
     => Assert.That(_table.Globals(), Is.EquivalentTo(new[] {
       "NaN", "Infinity", "RangeError", "Error", "TypeError", "Math", "Number", "globalThis", "Int8Array", "Uint8Array", "Int16Array", "Uint16Array", "Int32Array",
-      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String", "Object"
+      "Uint32Array", "Float32Array", "Float64Array", "ArrayBuffer", "DataView", "BigInt", "BigInt64Array", "BigUint64Array", "String", "Object", "Array"
     }));
 
   [Test]

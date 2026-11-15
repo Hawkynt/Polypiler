@@ -681,8 +681,10 @@ public sealed class JavaScriptProfileEmissionTests {
         "super(m, { cause: i });", "this.cause = i;")
     };
     // The methods of strings begin at levels this test does not compare; JavaScriptStringEmissionTests checks each at its first level and the one before.
+    // The collections of JavaScript have no C# source; JavaScriptCollectionEmissionTests checks them at their first level and the one before.
     var replaceable = JavaScriptCapabilities.Standard.Entries
-      .Where(entry => entry is { Emitted: true, Replacement: not null } && !Polypiler.Tests.String.JavaScriptStringEmissionTests.Methods.Contains(entry.Name)).ToList();
+      .Where(entry => entry is { Emitted: true, Replacement: not null } && !Polypiler.Tests.String.JavaScriptStringEmissionTests.Methods.Contains(entry.Name)
+        && !Polypiler.Tests.Collections.JavaScriptCollectionEmissionTests.Capabilities.Contains(entry.Name)).ToList();
     Assert.That(cases.Keys, Is.EquivalentTo(replaceable.Select(entry => entry.Name)));
     foreach (var entry in replaceable) {
       var (source, native, replacement) = cases[entry.Name];

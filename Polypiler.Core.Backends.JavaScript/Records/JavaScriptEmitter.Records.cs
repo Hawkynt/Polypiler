@@ -213,7 +213,7 @@ public static partial class JavaScriptEmitter {
     /// <summary>Whether a struct is read from a place that can be used again: a live variable or a part of one, or an array element.</summary>
     private bool NeedsCopy(IrExpr expression) => expression switch {
       IrLocalRef reference => this._liveness.Live.Contains(reference),
-      IrArrayLoad => true,
+      IrArrayLoad or IrCollection { Op: IrCollectionOp.ListGet or IrCollectionOp.MapGet } => true,
       IrFieldLoad load => load.Target.Type.IsObject || this.NeedsCopy(load.Target),
       _ => false
     };
