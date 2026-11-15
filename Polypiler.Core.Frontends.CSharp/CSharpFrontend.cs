@@ -66,6 +66,18 @@ public static class CSharpFrontend {
   /// </summary>
   private static readonly Lazy<MetadataReference> _collections = new(() => Loaded(typeof(System.Collections.Generic.SortedSet<>).Assembly));
 
+  /// <summary>
+  /// LINQ to Objects, and the parallel and queryable LINQ a source may name and the import refuses by
+  /// name, with the facade of the runtime their signatures name the core types through.
+  /// </summary>
+  private static readonly Lazy<MetadataReference[]> _linq = new(() => [
+    Loaded(typeof(System.Linq.Enumerable).Assembly),
+    Loaded(typeof(System.Linq.ParallelEnumerable).Assembly),
+    Loaded(typeof(System.Linq.Queryable).Assembly),
+    Loaded(typeof(System.Linq.Expressions.Expression).Assembly),
+    Loaded(System.Reflection.Assembly.Load("System.Runtime"))
+  ]);
+
   /// <summary>Imports one C# source file.</summary>
   /// <param name="path">The name of the file, used in diagnostics.</param>
   /// <param name="source">The text of the file.</param>
@@ -111,7 +123,7 @@ public static class CSharpFrontend {
     var compilation = CSharpCompilation.Create(
       "Imported",
       trees,
-      [_coreLibrary.Value, _collections.Value],
+      [_coreLibrary.Value, _collections.Value, .. _linq.Value],
       new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, checkOverflow: checkedByDefault, allowUnsafe: true));
 
     var errors = compilation.GetDiagnostics()
