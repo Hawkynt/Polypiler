@@ -12,7 +12,8 @@ namespace Polypiler.Core.Optimize.Passes;
 /// throw, a break or a continue in its block; a nested block that declares nothing is spliced into
 /// the one around it. A variable nothing reads goes with its declaration and
 /// its assignments where their values may go unevaluated, as does an empty choice on such a value.
-/// A function legalization copied in from the libraries that nothing calls any more goes as well.
+/// A function legalization copied in from the libraries, or one specialisation (O0463) made, that
+/// nothing calls any more goes as well.
 /// </summary>
 public sealed class O0005DeadCode : IIrPass {
 
@@ -41,8 +42,8 @@ public sealed class O0005DeadCode : IIrPass {
       return function with { Body = body };
     }).ToList();
 
-    // A function of the libraries nothing calls any more: what is left of it was inlined.
-    var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
+    // A function of the libraries or of specialisation nothing calls any more: what is left of it was inlined.
+    var copied = module.Implementations.Select(pair => pair.Function).Concat(O0006Inlining.Made(module)).ToHashSet(StringComparer.Ordinal);
     var called = functions.Where(function => !copied.Contains(function.Name)).SelectMany(function => Called(function)).ToHashSet(StringComparer.Ordinal);
     var pending = new Queue<string>(called);
     while (pending.Count > 0) {
@@ -52,7 +53,8 @@ public sealed class O0005DeadCode : IIrPass {
           pending.Enqueue(callee);
     }
 
-    var unused = copied.Where(name => !called.Contains(name)).ToHashSet(StringComparer.Ordinal);
+    var present = functions.Select(function => function.Name).ToHashSet(StringComparer.Ordinal);
+    var unused = copied.Where(name => present.Contains(name) && !called.Contains(name)).ToHashSet(StringComparer.Ordinal);
     if (unused.Count > 0) {
       foreach (var name in unused)
         applied(name, "0");
