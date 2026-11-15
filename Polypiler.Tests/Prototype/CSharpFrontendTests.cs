@@ -116,8 +116,8 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F(int[,] a) => 1;", "int[*,*]", 21, TestName = "multi-dimensional array")]
   [TestCase("public static int F(int[][] a) => 1;", "int[][]", 21, TestName = "jagged array")]
   [TestCase("public static int F(System.Span<char> a) => 1;", "System.Span<char>", 21, TestName = "span")]
-  [TestCase("public static int F<T>(T a) => 1;", "a generic method", 20, TestName = "generic method")]
-  [TestCase("public static int F() { System.Func<int, int> f = x => x; return 1; }", "System.Func<int, int>", 25, TestName = "lambda")]
+  [TestCase("public static int F() => G<int>(); static int G<T>() => typeof(T) == null ? 1 : 0;", "typeof(T)", 57, TestName = "typeof of a type parameter")]
+  [TestCase("public static int F() { System.Func<int, int> f = x => x; return 1; }", "the generic delegate System.Func<int, int>", 25, TestName = "lambda")]
   [TestCase("public static int F() { int G() => 1; return G(); }", "LocalFunctionStatement", 25, TestName = "local function")]
   [TestCase("public static int F() { throw new System.Exception(); }", "ThrowStatement", 25, TestName = "throw")]
   [TestCase("public static int F() { try { return 1; } finally { } }", "TryStatement", 25, TestName = "try")]
@@ -171,7 +171,6 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static bool F(int a) => a is > 1;", "IsPatternExpression", 32, TestName = "is pattern")]
   [TestCase("public static void F(int[] a) { (a) = a; }", "ParenthesizedExpression", 33, TestName = "parenthesized target")]
   [TestCase("public static void F(int[] a) { a.Length.ToString(); }", "Int32.ToString", 33, TestName = "member call")]
-  [TestCase("public static int F(int a) => int.MaxValue.CompareTo(a);", "Int32.CompareTo", 31, TestName = "call on a value")]
   [TestCase("public static int F(int? a) { a ??= 1; return 1; }", "int?", 21, TestName = "nullable")]
   [TestCase("public static void F(int[] a) { a ??= new int[1]; }", "CoalesceAssignmentExpression", 33, TestName = "coalescing assignment")]
   public void UnsupportedConstruct_IsRefusedWithItsPosition(string method, string what, int column) {

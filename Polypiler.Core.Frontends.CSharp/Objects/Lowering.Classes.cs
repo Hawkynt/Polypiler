@@ -25,7 +25,7 @@ internal sealed partial class Lowering {
   private readonly Dictionary<ISymbol, IrClassType> _staticOwners = new(SymbolEqualityComparer.Default);
 
   /// <summary>The members of every class whose bodies are lowered after the globals: what each function is made of.</summary>
-  private readonly List<(string Path, SemanticModel Model, IrTypeDeclaration Owner, Func<IrFunction> Lower)> _bodies = [];
+  private readonly List<(string Path, BoundModel Model, IrTypeDeclaration Owner, Func<IrFunction> Lower)> _bodies = [];
 
   /// <summary>The receiver of the member being lowered, <c>this</c>; <see langword="null"/> in a static function.</summary>
   private IrLocal? _receiver;
@@ -40,8 +40,9 @@ internal sealed partial class Lowering {
   /// Declares the classes of every file: first a type for each, so that a field may have the type of a
   /// class declared later; then their fields and the members whose bodies are lowered later.
   /// </summary>
-  private void DeclareClasses(IReadOnlyList<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)> classes) {
+  private void DeclareClasses(IReadOnlyList<(string Path, BoundModel Model, TypeDeclarationSyntax Type)> classes) {
     var names = new HashSet<string>(this._types.Select(type => type.Name));
+    classes = this.GenericClasses(classes);
     foreach (var (file, semantics, type) in classes) {
       path = file;
       model = semantics;
@@ -67,7 +68,7 @@ internal sealed partial class Lowering {
       }
     }
 
-    (string, SemanticModel, TypeDeclarationSyntax) Find(TypeDeclarationSyntax type) => classes.First(entry => entry.Type == type);
+    (string, BoundModel, TypeDeclarationSyntax) Find(TypeDeclarationSyntax type) => classes.First(entry => entry.Type == type);
     foreach (var (file, semantics, type) in hierarchy.Where(type => type is not InterfaceDeclarationSyntax).Select(Find)) {
       path = file;
       model = semantics;
@@ -112,7 +113,7 @@ internal sealed partial class Lowering {
     if (type.AttributeLists.SelectMany(list => list.Attributes).FirstOrDefault() is { } attribute)
       throw new UnsupportedException(attribute, $"the attribute {attribute.Name}");
 
-    if (type.TypeParameterList is not null)
+    if (type.TypeParameterList is not null && declared.Origin is null)
       throw new UnsupportedException(type.TypeParameterList, "a generic class");
 
     if (type is RecordDeclarationSyntax && (type.BaseList is not null || all.Any(other => other.BaseList is not null && other.BaseList.Types.Any(@base
@@ -174,6 +175,9 @@ internal sealed partial class Lowering {
         // A private field of a base class shares the name: below ES2022 both would be one property of the object.
         this.NotHiding(fieldSymbol, variable);
         var fieldType = this.ClassFieldType(fieldSymbol.Type, member.Declaration.Type);
+        if (fieldSymbol.IsStatic && declared.Origin is not null)
+          throw new UnsupportedException(variable, "a static field of a generic class");
+
         if (fieldSymbol.IsStatic) {
           this._staticOwners[fieldSymbol] = declared;
           this.State(member, variable, fieldSymbol, fieldType, true);
@@ -253,11 +257,12 @@ internal sealed partial class Lowering {
   /// class is one of them, and a body may read any.
   /// </summary>
   private List<IrFunction> ClassBodies() {
-    foreach (var (owner, (constructors, methods, properties, statics)) in this._members)
-      owner.DefineMembers(constructors, methods, properties, [.. statics.Select(field => this._globals.GetValueOrDefault(field)).OfType<IrGlobal>()]);
-
+    this._membersDefined = true;
+    this.DefineMembers();
     var functions = new List<IrFunction>();
-    foreach (var (file, semantics, _, lower) in this._bodies) {
+    // A body may instantiate a generic class, whose members are defined and whose bodies follow.
+    for (; this._lowered < this._bodies.Count; ++this._lowered) {
+      var (file, semantics, _, lower) = this._bodies[this._lowered];
       path = file;
       model = semantics;
       try {
@@ -266,9 +271,23 @@ internal sealed partial class Lowering {
         this.Report(unsupported);
         this._receiver = null;
       }
+
+      this.DefineMembers();
     }
 
     return functions;
+  }
+
+  /// <summary>The number of the bodies of <see cref="_bodies"/> that have been lowered.</summary>
+  private int _lowered;
+
+  /// <summary>Whether the classes have been given their members, after which a class instantiated later gets them at once.</summary>
+  private bool _membersDefined;
+
+  /// <summary>Gives every class that has none yet its members.</summary>
+  private void DefineMembers() {
+    foreach (var (owner, (constructors, methods, properties, statics)) in this._members.Where(entry => !entry.Key.HasMembers).ToList())
+      owner.DefineMembers(constructors, methods, properties, [.. statics.Select(field => this._globals.GetValueOrDefault(field)).OfType<IrGlobal>()]);
   }
 
   /// <summary>The type of a field of a class: a truth value, a number, a struct, an array of numbers or a reference to an object.</summary>
@@ -389,7 +408,7 @@ internal sealed partial class Lowering {
   }
 
   /// <summary>The class a type symbol names, or <see langword="null"/>.</summary>
-  private IrClassType? ClassOf(ITypeSymbol? type) => type is INamedTypeSymbol named ? this._classes.GetValueOrDefault(named) : null;
+  private IrClassType? ClassOf(ITypeSymbol? type) => type is INamedTypeSymbol named ? this._classes.GetValueOrDefault(named) ?? this.Instantiated(named) : null;
 
   /// <summary>The reference type of a class or an interface of the file a type symbol names, or <see langword="null"/>.</summary>
   private IrType? ReferenceOf(ITypeSymbol? type)
@@ -452,7 +471,10 @@ internal sealed partial class Lowering {
         if (arguments.Any(argument => argument.NameColon is not null))
           throw new UnsupportedException(creation, "a named argument");
 
-        return new IrNew(type, this._creators[constructor], [.. arguments.Select(argument => this.Value(argument.Expression))]);
+        // A class that is refused - an instantiation of a generic class among them - has no constructors.
+        return this._creators.TryGetValue(constructor, out var creator)
+          ? new IrNew(type, creator, [.. arguments.Select(argument => this.Value(argument.Expression))])
+          : throw new UnsupportedException(creation, $"a new object of {type}, which is refused");
       case IsPatternExpressionSyntax { Pattern: ConstantPatternSyntax constant } pattern when IsNull(constant.Expression):
         return this.Identity(pattern.Expression, constant.Expression, pattern);
       case IsPatternExpressionSyntax { Pattern: UnaryPatternSyntax { Pattern: ConstantPatternSyntax constant } } pattern when IsNull(constant.Expression):

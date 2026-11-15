@@ -30,7 +30,7 @@ internal sealed partial class Lowering {
   /// file does not declare, and orders the declarations so that an interface comes after those it
   /// extends and a class after its base class: a method can then name the one it overrides or implements.
   /// </summary>
-  private List<TypeDeclarationSyntax> Hierarchy(IReadOnlyList<(string Path, SemanticModel Model, TypeDeclarationSyntax Type)> declarations) {
+  private List<TypeDeclarationSyntax> Hierarchy(IReadOnlyList<(string Path, BoundModel Model, TypeDeclarationSyntax Type)> declarations) {
     var depths = new Dictionary<TypeDeclarationSyntax, int>();
     foreach (var (file, semantics, type) in declarations) {
       path = file;
@@ -77,8 +77,8 @@ internal sealed partial class Lowering {
       if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword))
         throw new UnsupportedException(type, $"a {modifier.Text} interface");
 
-    if (type.TypeParameterList is not null)
-      throw new UnsupportedException(type.TypeParameterList, "a generic interface");
+    if (type.TypeParameterList is { } parameters)
+      throw new UnsupportedException(parameters, parameters.Parameters.Any(parameter => parameter.VarianceKeyword.RawKind != 0) ? "variance (in or out on a type parameter)" : "a generic interface");
 
     if (type.AttributeLists.SelectMany(list => list.Attributes).FirstOrDefault() is { } attribute)
       throw new UnsupportedException(attribute, $"the attribute {attribute.Name}");
