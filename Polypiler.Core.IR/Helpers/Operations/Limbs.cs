@@ -310,22 +310,21 @@ public static partial class HelperOperations {
   /// <summary>A number as the nearest <c>long</c>, its fraction cut off; 0 for a NaN.</summary>
   /// <param name="value">The number.</param>
   public static long FromDouble64(double value) {
-    if (value != value)
-      return 0L;
-
     if (value >= 9223372036854775808.0)
       return long.MaxValue;
 
-    if (value <= -9223372036854775808.0)
-      return long.MinValue;
+    if (value > -9223372036854775808.0)
+      return (long)WholeToWords(Math.Truncate(value));
 
-    return (long)WholeToWords(Math.Truncate(value));
+    // Below the range, or a NaN, which compares false either way.
+    return value <= -9223372036854775808.0 ? long.MinValue : 0L;
   }
 
   /// <summary>A number as the nearest <c>ulong</c>, its fraction cut off; 0 for a NaN.</summary>
   /// <param name="value">The number.</param>
   public static ulong FromDoubleUnsigned64(double value) {
-    if (value != value || value <= 0.0)
+    // At or below 0, or a NaN, which compares false.
+    if (!(value > 0.0))
       return 0UL;
 
     if (value >= 18446744073709551616.0)
