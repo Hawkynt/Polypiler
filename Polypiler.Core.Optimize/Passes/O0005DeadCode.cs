@@ -161,7 +161,51 @@ public sealed class O0005DeadCode : IIrPass {
         statements.Add(mapped);
       }
 
-      return new IrBlock(statements);
+      return new IrBlock(this.DeadStores(statements));
+    }
+
+    /// <summary>
+    /// The statements of a block without the stores nothing reads before the variable leaves the block:
+    /// an assignment of a variable the block declares that no later statement of the block reads, and
+    /// the declaration of one no later statement names at all - where the value may go unevaluated.
+    /// The variables of the same name in other blocks, which keep it read in the function, do not
+    /// keep these.
+    /// </summary>
+    private List<IrStmt> DeadStores(List<IrStmt> statements) {
+      var declared = statements.OfType<IrDeclare>().Select(declare => declare.Local).Where(local => !this._shared.Contains(local)).ToHashSet();
+      if (declared.Count == 0)
+        return statements;
+
+      var read = new HashSet<IrLocal>();
+      var written = new HashSet<IrLocal>();
+      var kept = new List<IrStmt>();
+      for (var index = statements.Count - 1; index >= 0; --index) {
+        var statement = statements[index];
+        var dead = statement switch {
+          IrAssign assign => declared.Contains(assign.Local) && !read.Contains(assign.Local) && IrPassSupport.IsPure(assign.Value),
+          IrDeclare declare => declared.Contains(declare.Local) && !read.Contains(declare.Local) && !written.Contains(declare.Local)
+            && (declare.Initializer is null || IrPassSupport.IsPure(declare.Initializer)),
+          _ => false
+        };
+        if (statement is IrDeclare { Local: var local })
+          declared.Remove(local);
+
+        if (dead) {
+          if (!this._dropped)
+            applied(function.Name, "1");
+
+          this.Changed = this._dropped = true;
+          continue;
+        }
+
+        var single = new IrBlock([statement]);
+        read.UnionWith(IrPassSupport.Reads(single).Keys);
+        written.UnionWith(IrPassSupport.Writes(single).Keys);
+        kept.Add(statement);
+      }
+
+      kept.Reverse();
+      return kept;
     }
 
     /// <summary>Whether a statement may go: it writes a variable nothing reads with a value that may go unevaluated, or it is an empty block or an empty choice on such a value.</summary>

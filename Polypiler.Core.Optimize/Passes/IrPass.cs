@@ -35,7 +35,8 @@ public interface IIrPass {
 /// branch, an unrolled loop constant indices - and none of them changes what a module computes, its
 /// traps and the point they happen at included. They look at the functions legalization copied in
 /// from the libraries and at every function a helper was inlined into; the rest of the program stays
-/// as the frontend made it.
+/// as the frontend made it. The last round only cleans up: inlining and unrolling, which make code,
+/// sit it out, so that what they made in the round before is propagated, folded and removed.
 /// </summary>
 public sealed class IrPassPipeline {
 
@@ -77,6 +78,9 @@ public sealed class IrPassPipeline {
     for (var round = 0; round < RoundLimit; ++round) {
       var before = applications.Count;
       foreach (var pass in passes) {
+        if (round == RoundLimit - 1 && pass is O0006Inlining or O0023Unrolling)
+          continue;
+
         var inlining = pass is O0006Inlining;
         module = pass.Run(module, function => inlining || scope.Contains(function.Name), (function, position) => {
           applications.Add(new(pass.Id, pass.Name, function, position));

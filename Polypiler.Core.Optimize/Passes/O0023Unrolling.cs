@@ -11,10 +11,11 @@ namespace Polypiler.Core.Optimize.Passes;
 /// constant by a constant step while it compares with a constant - <c>for (i = c; i &lt; n; i += k)</c>
 /// as the frontends make it, a <c>while</c> whose body ends with the step - and runs at most
 /// <see cref="Limit"/> times becomes that many copies of its body, each a block of its own whose
-/// variables are new ones, the step after each. The counter is declared or assigned the constant
-/// directly before the loop; nothing else writes it, nothing in the body breaks or continues, no
-/// lambda names a variable of the loop, and the copies stay within <see cref="Budget"/>. A loop that
-/// does not run at all goes. Constant propagation then gives every copy its index.
+/// variables are new ones and in which the counter is the constant it holds in that pass; the counter
+/// is assigned the value it ends with after the last copy. The counter is declared or assigned the
+/// constant directly before the loop; nothing else writes it, nothing in the body breaks or continues,
+/// no lambda names a variable of the loop, and the copies stay within <see cref="Budget"/>. A loop that
+/// does not run at all leaves only that assignment.
 /// </summary>
 public sealed class O0023Unrolling : IIrPass {
 
@@ -91,16 +92,21 @@ public sealed class O0023Unrolling : IIrPass {
     _ => false
   };
 
-  /// <summary>How often a counted loop runs, its counter stepped as its type wraps; <see langword="null"/> beyond <see cref="Limit"/> or where a step does not fold.</summary>
-  internal static int? Trips(Counted loop) {
+  /// <summary>
+  /// The values of the counter of a counted loop, stepped as its type wraps: the one of every pass and,
+  /// last, the one it ends with; <see langword="null"/> beyond <see cref="Limit"/> passes or where a step
+  /// does not fold.
+  /// </summary>
+  internal static IReadOnlyList<IrConst>? Values(Counted loop) {
     var value = loop.Start;
+    var values = new List<IrConst> { value };
     for (var trips = 0; trips <= Limit; ++trips) {
       var test = loop.CounterLeft ? new IrBinary(loop.Compare, value, loop.Bound) : new IrBinary(loop.Compare, loop.Bound, value);
       if (IrPassSupport.Evaluate(test) is not { } holds)
         return null;
 
       if (holds.Value == 0)
-        return trips;
+        return values;
 
       foreach (var statement in loop.Step) {
         IrExpr next = statement switch {
@@ -116,6 +122,8 @@ public sealed class O0023Unrolling : IIrPass {
 
         value = stepped;
       }
+
+      values.Add(value);
     }
 
     return null;
@@ -160,16 +168,21 @@ public sealed class O0023Unrolling : IIrPass {
           || IrPassSupport.Nodes(counted.Body).Any(node => node is IrLambda))
         return null;
 
-      if (Trips(counted) is not { } trips || trips * (IrPassSupport.Size(counted.Body) + counted.Step.Count + 2) > Budget)
+      if (Values(counted) is not { } values || (values.Count - 1) * (IrPassSupport.Size(counted.Body) + 2) > Budget)
         return null;
 
       var copies = new List<IrStmt>();
-      for (var trip = 0; trip < trips; ++trip) {
-        copies.Add(this.Fresh(counted.Body));
-        copies.AddRange(counted.Step);
-      }
+      for (var trip = 0; trip < values.Count - 1; ++trip)
+        copies.Add(this.Fresh(Substituted(counted.Body, counted.Counter, values[trip])));
 
+      copies.Add(new IrAssign(counted.Counter, values[^1]));
       return copies;
+    }
+
+    /// <summary>A body in which every read of the counter is the constant it holds in one pass.</summary>
+    private static IrBlock Substituted(IrBlock body, IrLocal counter, IrConst value) {
+      IrExpr Expression(IrExpr expression) => IrShape.Map(expression, node => node is IrLocalRef reference && reference.Local == counter ? value : null);
+      return new IrBlock([.. body.Statements.Select(statement => IrPassSupport.Map(statement, Expression, inner => Substituted(inner, counter, value)))]);
     }
 
     /// <summary>A copy of a body whose every variable it declares is a new one, so that the copies side by side never declare one twice.</summary>

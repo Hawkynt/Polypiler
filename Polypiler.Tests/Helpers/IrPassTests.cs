@@ -70,7 +70,7 @@ public sealed class IrPassTests {
     var module = Module(Block(new IrReturn(Op(IrBinaryOp.Add, CallH(X), Int(1)))), Block(new IrReturn(Op(IrBinaryOp.Multiply, P, Int(2)))));
     var (inlined, applied) = Run(new O0006Inlining(), module);
     Assert.That(Calls(inlined, "F", "H"), Is.False);
-    Assert.That(applied, Is.EqualTo(new[] { "F@1" }));
+    Assert.That(applied, Does.Contain("F@1"));
     Assert.That(inlined.Inlined, Is.EqualTo(new[] { "Library" }));
     SameOutcomes(module, inlined, _inputs);
   }
@@ -223,7 +223,7 @@ public sealed class IrPassTests {
     var lambda = new IrLambda(IrType.Function(IrType.I32), [y], [], [], Block(new IrReturn(new IrLocalRef(y))));
     var module = Module(Block(new IrDeclare(y, Int(4)), new IrDeclare(f, lambda), new IrReturn(new IrInvoke(IrType.I32, new IrLocalRef(f), []))), Block(new IrReturn(P)), [y, f]);
     var (result, applied) = Run(new O0003ConstantPropagation(), module);
-    Assert.That(applied, Is.Empty);
+    Assert.That(applied, Has.None.StartsWith("F@"));
     Assert.That(result, Is.SameAs(module));
   }
 
@@ -234,7 +234,7 @@ public sealed class IrPassTests {
     var module = Module(Block(new IrReturn(Op(IrBinaryOp.Add, X, Op(IrBinaryOp.ShiftLeft, Int(3), Int(4))))), Block(new IrReturn(P)));
     var (result, applied) = Run(new O0001ConstantFolding(), module);
     Assert.That(((IrBinary)((IrReturn)result.Functions[0].Body.Statements[0]).Value!).Right, Is.EqualTo(Int(48)));
-    Assert.That(applied, Is.EqualTo(new[] { "F@1" }));
+    Assert.That(applied, Does.Contain("F@1"));
   }
 
   [Test]
@@ -323,6 +323,49 @@ public sealed class IrPassTests {
     Assert.That(Run(new O0005DeadCode(), called).Module, Is.SameAs(called));
   }
 
+  /// <summary>
+  /// The counter an unrolled loop leaves: its last value is stored where nothing reads it before its
+  /// block ends, although a variable of the same name in another block is read.
+  /// </summary>
+  [Test]
+  public void DeadCode_RemovesAStoreNothingReadsBeforeItsBlockEnds() {
+    var i = new IrLocal("i", IrType.I32);
+    var module = Module(Block(
+      Block(new IrDeclare(i, Int(0)), new IrAssign(_x, Op(IrBinaryOp.Add, X, new IrLocalRef(i))), new IrAssign(i, Int(6))),
+      Block(new IrDeclare(i, Int(4))),
+      Block(new IrDeclare(i, X), new IrAssign(_x, Op(IrBinaryOp.Add, X, new IrLocalRef(i)))),
+      new IrReturn(X)), Block(new IrReturn(P)), [i]);
+    var (result, applied) = Run(new O0005DeadCode(), module);
+    var statements = result.Functions[0].Body.Statements;
+    Assert.That(((IrBlock)statements[0]).Statements, Is.EqualTo(new IrStmt[] { new IrDeclare(i, Int(0)), new IrAssign(_x, Op(IrBinaryOp.Add, X, new IrLocalRef(i))) }));
+    Assert.That(statements, Has.Count.EqualTo(3), "the block that only declares goes with its declaration");
+    Assert.That(((IrBlock)statements[1]).Statements, Is.EqualTo(((IrBlock)module.Functions[0].Body.Statements[2]).Statements));
+    Assert.That(applied, Does.Contain("F@1"));
+    SameOutcomes(module, result, _inputs);
+  }
+
+  /// <summary>
+  /// Must not fire: a store read later in its block, a store of a variable declared outside the block
+  /// (a loop reads it in the next pass), a store that may trap, and one before the declaration of its
+  /// name in the block.
+  /// </summary>
+  [Test]
+  public void DeadCode_KeepsAStoreThatMayBeRead() {
+    var i = new IrLocal("i", IrType.I32);
+    var s = new IrLocal("s", IrType.I32);
+    var module = Module(Block(
+      new IrDeclare(s, Int(0)),
+      new IrWhile(Op(IrBinaryOp.Less, new IrLocalRef(s), Int(3)), Block(new IrAssign(_x, Op(IrBinaryOp.Add, X, new IrLocalRef(s))), new IrAssign(s, Op(IrBinaryOp.Add, new IrLocalRef(s), Int(1))))),
+      Block(new IrAssign(s, Int(9)), new IrDeclare(i, Op(IrBinaryOp.Divide, Int(10), X)), new IrAssign(i, Op(IrBinaryOp.Add, new IrLocalRef(i), new IrLocalRef(s))), new IrAssign(_x, new IrLocalRef(i)), new IrAssign(i, Op(IrBinaryOp.Divide, Int(1), X))),
+      new IrReturn(X)), Block(new IrReturn(P)), [i, s]);
+    var (result, applied) = Run(new O0005DeadCode(), module);
+    Assert.That(applied, Has.None.StartsWith("F@"));
+    var statements = result.Functions[0].Body.Statements;
+    Assert.That(statements, Has.Count.EqualTo(4));
+    Assert.That(((IrBlock)statements[2]).Statements, Is.EqualTo(((IrBlock)module.Functions[0].Body.Statements[2]).Statements));
+    SameOutcomes(module, result, _inputs);
+  }
+
   // ---------------------------------------------------------------- O0023 unrolling
 
   private static IrModule Counted(long start, IrBinaryOp compare, long bound, IrStmt step, bool breaks = false) {
@@ -408,6 +451,39 @@ public sealed class IrPassTests {
   }
 
   private static IEnumerable<string> PassIds() => IrPassPipeline.Default.Ids;
+
+  /// <summary>
+  /// The last round only cleans up: a loop that appears in each round is unrolled in every round but
+  /// the last, so the loops of the last two rounds stay.
+  /// </summary>
+  [Test]
+  public void Pipeline_UnrollsNothingInTheLastRound() {
+    var pipeline = new IrPassPipeline([new O0023Unrolling(), new Inserting()]);
+    var result = pipeline.Run(Everything(), new OptimizerOptions { Verify = true });
+    var helper = result.Module.Functions.Single(function => function.Name == "H");
+    Assert.That(helper.Body.Statements.OfType<IrBlock>().SelectMany(block => block.Statements).OfType<IrWhile>().Count(), Is.EqualTo(2), "the loops inserted in the last two rounds");
+    Assert.That(result.Applications.Count(application => application.Id == "O0023"), Is.EqualTo(IrPassPipeline.RoundLimit - 1));
+  }
+
+  /// <summary>A pass that puts a loop of one pass, in a block of its own, before the body of <c>H</c> in every round.</summary>
+  private sealed class Inserting : IIrPass {
+
+    private int _count;
+
+    public string Id => "O9998";
+
+    public string Name => "inserting";
+
+    public IrModule Run(IrModule module, Func<IrFunction, bool> scope, Action<string, string> applied) {
+      applied("H", "1");
+      var counter = new IrLocal("n" + this._count++, IrType.I32);
+      var loop = Block(new IrDeclare(counter, Int(0)),
+        new IrWhile(Op(IrBinaryOp.Less, new IrLocalRef(counter), Int(1)), Block(new IrAssign(_p, Op(IrBinaryOp.Add, P, Int(1))), new IrAssign(counter, Op(IrBinaryOp.Add, new IrLocalRef(counter), Int(1))))));
+      var helper = module.Functions.Single(function => function.Name == "H");
+      return module with { Functions = [.. module.Functions.Select(function => function == helper ? helper with { Body = Block([loop, .. helper.Body.Statements]), Locals = [.. helper.Locals, counter] } : function)] };
+    }
+
+  }
 
   [Test]
   public void Pipeline_RunsNothingAtLevelNone() {

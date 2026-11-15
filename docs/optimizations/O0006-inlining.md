@@ -89,7 +89,7 @@ The same module for JavaScript at `es5` has no branch and no call left in `F`, a
 ## Interactions with other passes
 
 First of the passes over the legalized module, which run round after round until a round changes
-nothing (at most 6): [O0003](O0003-sccp.md), [O0001](O0001-constant-folding.md),
+nothing (at most 6; the last round neither inlines nor unrolls, it only cleans up): [O0003](O0003-sccp.md), [O0001](O0001-constant-folding.md),
 [O0005](O0005-dead-code-elimination.md) and [O0023](O0023-loop-unrolling.md) clean up the copy. Only the
 library functions and the functions something was inlined into are looked at by the others.
 

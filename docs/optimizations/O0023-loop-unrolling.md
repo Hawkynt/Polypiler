@@ -8,9 +8,10 @@
 A loop that counts a variable from a constant by a constant step while it compares with a constant -
 `for (int i = c; i < n; i += k)` as the frontends make it, a `while` whose body ends with the step - and
 runs at most `O0023Unrolling.Limit` times (8) becomes that many copies of its body, each a block of its
-own whose variables are new ones, the step after each. A loop that does not run at all goes. Constant
-propagation ([O0003](O0003-sccp.md)) then gives every copy its index, folding and dead-code removal clean
-up.
+own whose variables are new ones and in which the counter is the constant it holds in that pass; after
+the last copy the counter is assigned the value it ends with. A loop that does not run at all leaves only
+that assignment. Propagation ([O0003](O0003-sccp.md)), folding and dead-code removal clean up, and
+[O0005](O0005-dead-code-elimination.md) removes the counter nothing reads any more.
 
 ## Example
 
@@ -70,6 +71,7 @@ return value;
 ## Interactions with other passes
 
 Last of the passes over the legalized module; the next round propagates, folds and removes in the copies.
+The last round does not unroll, so that a loop unrolled in the round before is cleaned up.
 
 ## How it is proven
 
