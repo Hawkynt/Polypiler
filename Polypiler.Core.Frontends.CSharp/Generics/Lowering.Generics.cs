@@ -73,7 +73,7 @@ internal sealed partial class Lowering {
   /// <summary>Takes note of a generic method of the static class, whose instantiations are lowered when the module reaches them.</summary>
   private void Generic(MethodDeclarationSyntax method) {
     foreach (var modifier in method.Modifiers)
-      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword or SyntaxKind.UnsafeKeyword))
+      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword or SyntaxKind.UnsafeKeyword or SyntaxKind.AsyncKeyword))
         throw new UnsupportedException(method, modifier.Text);
 
     var symbol = model.GetDeclaredSymbol(method)!;

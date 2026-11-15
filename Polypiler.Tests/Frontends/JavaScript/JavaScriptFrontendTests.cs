@@ -677,7 +677,7 @@ public sealed class JavaScriptFrontendTests {
 
   /// <summary>Test design 11: what makes a whole function unsupported, reported at the function or the parameter.</summary>
   [TestCase("async function* f() { }", "an async generator", 1)]
-  [TestCase("async function f() { }", "an async function", 1)]
+  [TestCase("function f() { const g = async () => 1; }", "an async lambda", 26)]
   [TestCase("function f(a = 1) { }", "a default parameter value", 12)]
   [TestCase("function f(...a) { }", "a rest parameter", 12)]
   [TestCase("function f({ a }) { }", "a destructured parameter", 12)]

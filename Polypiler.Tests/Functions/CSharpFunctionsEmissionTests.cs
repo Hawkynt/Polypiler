@@ -164,6 +164,14 @@ internal sealed class CSharpFunctionsEmissionTests {
     Assert.That((build.Outcome(new PrototypeCall("F", [4])), build.Outcome(new PrototypeCall("G", [1.5]))), Is.EqualTo(("8", PrototypeFixture.Show(3.0))), text);
   }
 
+  /// <summary>A static field of a function type without a value starts as <c>null</c> in every profile, and a lambda stored in it later runs.</summary>
+  [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
+  public void StaticFunctionField_WithoutAValue_StartsAsNull(CSharpProfile profile) {
+    var text = Snippet("static Func<int, int> keep; static int H(Func<int, int> f) { int before = keep == null ? 10 : 20; keep = f; return before + f(1); } public static int R() => H(x => x + 1) + keep(5);", profile.Name);
+    Assert.That(text, Does.Contain(" keep = null;"), text);
+    Assert.That(GeneratedCSharp.Compile(text, false).Outcome(new PrototypeCall("R", [])), Is.EqualTo("18"), text);
+  }
+
   /// <summary>Test design 13: no construct of function values is inexpressible in any profile.</summary>
   [Test]
   public void NoProfile_FindsAFunctionValueInexpressible() {

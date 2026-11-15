@@ -51,8 +51,10 @@ public static partial class IrVerifier {
     Generics(module, diagnostics);
     Disposables(types, functions, diagnostics);
     Pointers(module, diagnostics);
+    Timed(module, diagnostics);
+    var foreign = Foreign(module, names, types, diagnostics);
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures }.Run();
+      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures, ForeignFunctions = foreign }.Run();
 
     if (diagnostics.Count == 0)
       foreach (var (constructor, call) in IrConstruction.VirtualCalls(module))
@@ -91,7 +93,7 @@ public static partial class IrVerifier {
     private int _breakable;
 
     public void Run() {
-      this.Require(function.ReturnType.IsStorable || function.ReturnType == IrType.Void,
+      this.Require(function.ReturnType.IsStorable || function.ReturnType == IrType.Void || (function.IsAsync && IrAsyncFunctions.IsResult(function.ReturnType.Element!)),
         $"the return type {function.ReturnType} is not a type of the IR");
       this.Declared(function.ReturnType);
       foreach (var parameter in function.Parameters) {
@@ -111,6 +113,7 @@ public static partial class IrVerifier {
       this.Iterator();
       this.Constructed();
       this.Pointers();
+      this.Awaited();
     }
 
     private void Require(bool holds, string message) {
@@ -223,10 +226,11 @@ public static partial class IrVerifier {
           break;
         case IrReturn result:
           this.Require(this._finally == 0, "a return inside a finally block");
+          var returned = this.Returned;
           if (result.Value is null)
-            this.Require(this._returnType == IrType.Void || this._returnType.IsLazySequence, "a return without a value in a function that returns one");
+            this.Require(returned == IrType.Void || returned.IsLazySequence, "a return without a value in a function that returns one");
           else
-            this.Value(result.Value, this._returnType, "the value returned");
+            this.Value(result.Value, returned, "the value returned");
 
           break;
         case IrUsing scope:
@@ -430,6 +434,12 @@ public static partial class IrVerifier {
           break;
         case IrSequence operation:
           this.SequenceOperation(operation);
+          break;
+        case IrAwait or IrAsync:
+          this.AsyncExpression(expression);
+          break;
+        case IrForeignCall or IrLastError:
+          this.Foreign(expression);
           break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)

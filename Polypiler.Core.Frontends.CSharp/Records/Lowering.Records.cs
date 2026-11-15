@@ -41,7 +41,14 @@ internal sealed partial class Lowering {
       path = file;
       model = semantics;
       var symbol = semantics.GetDeclaredSymbol(type)!;
-      var declared = new IrStructType(symbol.Name) { IsEquatable = type is RecordDeclarationSyntax };
+      IrStructLayout? layout = null;
+      try {
+        layout = LayoutOf(symbol, type);
+      } catch (UnsupportedException unsupported) {
+        this.Report(unsupported);
+      }
+
+      var declared = new IrStructType(symbol.Name) { IsEquatable = type is RecordDeclarationSyntax, Layout = layout };
       this._structs[symbol] = declared;
       this._types.Add(declared);
       if (!names.Add(symbol.Name))
@@ -70,7 +77,7 @@ internal sealed partial class Lowering {
       if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.ReadOnlyKeyword))
         throw new UnsupportedException(type, modifier.IsKind(SyntaxKind.RefKeyword) ? "ref struct" : $"a {modifier.Text} struct");
 
-    if (type.AttributeLists.SelectMany(list => list.Attributes).FirstOrDefault() is { } attribute)
+    if (type.AttributeLists.SelectMany(list => list.Attributes).FirstOrDefault(attribute => !IsLayoutAttribute(attribute)) is { } attribute)
       throw new UnsupportedException(attribute, $"the attribute {attribute.Name}");
 
     if (type.TypeParameterList is not null)

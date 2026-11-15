@@ -187,7 +187,14 @@ public sealed class CSharpCapabilitiesTests {
     ("Enum.HasFlag(Enum)", "net4.6"),
     ("iterator (yield)", "C# 2"),
     ("IEnumerable<T>", "net2.0"),
-    ("generator object of ECMA-262 as a single-pass IEnumerable<T>", "net2.0")
+    ("generator object of ECMA-262 as a single-pass IEnumerable<T>", "net2.0"),
+    ("async/await", "C# 5"),
+    ("Task.CompletedTask", "net4.6"),
+    ("ValueTask<T>", "netstandard2.1"),
+    ("DllImportAttribute", "net2.0"),
+    ("LibraryImportAttribute", "net8.0"),
+    ("UnmanagedType.LPUTF8Str", "net4.8"),
+    ("Marshal.GetLastPInvokeError", "net8.0")
   ];
 
   /// <summary>
@@ -397,7 +404,8 @@ public sealed class CSharpCapabilitiesTests {
       Assert.That(CSharpProfile.All.Where(row.IsIn), Is.EqualTo(CSharpProfile.All.Where(profile => profile.LanguageVersion >= language)));
     } else {
       var from = row.Since is null ? CSharpProfile.All.Count : CSharpProfile.All.ToList().IndexOf(row.Since);
-      Assert.That(CSharpProfile.All.Where(row.IsIn), Is.EqualTo(CSharpProfile.All.Skip(from)));
+      // A row of an API that a later profile lacks all the same (#1332) leaves that profile out.
+      Assert.That(CSharpProfile.All.Where(row.IsIn), Is.EqualTo(CSharpProfile.All.Skip(from).Where(profile => !row.Lacking.Contains(profile))));
       Assert.That(raised.Where(row.IsIn), row.Since == CSharpProfile.Net20 ? Is.EqualTo(raised) : Is.Empty);
     }
   }
@@ -441,6 +449,7 @@ public sealed class CSharpCapabilitiesTests {
   [TestCase(CSharpFeature.NullConditional, "static class C { static int? F(int[] a) { return a?.Length; } }")]
   [TestCase(CSharpFeature.NullCoalescingAssignment, "static class C { static int F(int? a) { a ??= 1; return a.Value; } }")]
   [TestCase(CSharpFeature.NullableReferenceTypes, "#nullable enable\nstatic class C { static int F(string? s) { return 1; } }")]
+  [TestCase(CSharpFeature.AsyncAwait, "static class C { static async System.Threading.Tasks.Task<int> F() { return await G(); } static System.Threading.Tasks.Task<int> G() { return null; } }")]
   public void LanguageRow_IsTheCompilersVersion(CSharpFeature feature, string source) {
     var version = CSharpCapabilities.Default.Of(feature)!.Language!;
     var before = CSharpProfile.LanguageVersions.TakeWhile(candidate => candidate < version).Last();
@@ -456,6 +465,8 @@ public sealed class CSharpCapabilitiesTests {
   [TestCase("Math.Clamp", "static class C { static int F(int x) { return System.Math.Clamp(x, 0, 9); } }")]
   [TestCase("Math.BigMul(ulong, ulong, out ulong)", "static class C { static ulong F(ulong x, out ulong low) { return System.Math.BigMul(x, x, out low); } }")]
   [TestCase("Enum.HasFlag(Enum)", "static class C { enum E { A = 1 } static bool F(E e) { return e.HasFlag(E.A); } }")]
+  [TestCase("Task.CompletedTask", "static class C { static object F() { return System.Threading.Tasks.Task.CompletedTask; } }")]
+  [TestCase("ValueTask<T>", "static class C { static System.Threading.Tasks.ValueTask<int> F() { return default(System.Threading.Tasks.ValueTask<int>); } }")]
   public void ApiRow_IsTheFrameworksFirstProfile(string name, string source) {
     var row = CSharpCapabilities.Default.Rows.Single(candidate => candidate.Name == name);
     Assert.That((row.Operation, row.Feature, row.Saturates, row.Native), Is.EqualTo(((IrIntrinsicOp?)null, (CSharpFeature?)null, (IrTypeKind?)null, (CSharpForm?)null)));

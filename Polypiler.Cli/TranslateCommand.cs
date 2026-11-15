@@ -45,7 +45,7 @@ namespace Polypiler.Cli;
 /// header), the optimizations applied, the caveats and warnings, and the command line that writes the
 /// output again, with its paths relative to the output directory.
 /// </summary>
-public sealed class TranslateCommand : ICliCommand {
+public sealed partial class TranslateCommand : ICliCommand {
 
   /// <summary>Exit code when the source, or the IR for the chosen target, uses a construct that is not supported.</summary>
   public const int UnsupportedConstruct = (int)ExitCode.UnsupportedConstruct;
@@ -72,6 +72,7 @@ public sealed class TranslateCommand : ICliCommand {
   private const string DisableOpt = "--disable-opt";
   private const string ExplainOpt = "--explain-opt";
   private const string Instantiate = "--instantiate";
+  private const string Bind = "--bind";
 
   private static readonly string[] _required = [From, To, Output];
 
@@ -95,7 +96,8 @@ public sealed class TranslateCommand : ICliCommand {
     [Float] = "the floating-point mode",
     [Namespace] = "C#: the namespace of the generated code",
     [Instantiate] = "C#: an instantiation of a public generic method that the class itself does not use",
-    [LangVersion] = "C#: the language version, above the one of the profile"
+    [LangVersion] = "C#: the language version, above the one of the profile",
+    [Bind] = "JavaScript: the binding module or global object of a native library, repeatable"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -157,7 +159,7 @@ public sealed class TranslateCommand : ICliCommand {
       return new Option<bool>(option.Name) { Description = description };
 
     var helpName = option.Value[1..option.Value.IndexOf('>')];
-    return option.Name is DisableOpt or Export or Instantiate
+    return option.Name is DisableOpt or Export or Instantiate or Bind
       ? new Option<string[]>(option.Name) { Description = description, HelpName = helpName }
       : new Option<string>(option.Name) { Description = description, HelpName = helpName, Required = _required.Contains(option.Name) };
   }
@@ -238,6 +240,9 @@ public sealed class TranslateCommand : ICliCommand {
     var (module, exitCode, caveats) = frontend.Import(file, text.ReadToEnd(), options, context);
     if (module is null)
       return exitCode;
+
+    if (UnusedBinding(module, options) is { } unused)
+      return Refuse(context, unused);
 
     var (optimized, applications) = Optimized(file, module, options, context, backend);
     return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications));
@@ -353,9 +358,13 @@ public sealed class TranslateCommand : ICliCommand {
     });
     module = passes.Module;
     if (record is not null) {
-      if (options.ContainsKey(ExplainOpt))
+      if (options.ContainsKey(ExplainOpt)) {
         foreach (var application in passes.Applications)
           context.Note($"{record.File}: opt {application}");
+
+        foreach (var note in passes.Notes)
+          context.Note($"{record.File}: opt {note}");
+      }
 
       record = record with { Applications = [.. record.Applications, .. passes.Applications] };
     }
@@ -503,8 +512,8 @@ public sealed class TranslateCommand : ICliCommand {
     NativeAccuracy.Node,
     options => JavaScriptProfileOf(options).Profile!.ToString(),
     new RuleTarget(capabilities.RemainderFromQuotient),
-    [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null), new(Float, FloatChoice)],
-    options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error,
+    [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null), new(Float, FloatChoice), new(Bind, "<library=module-or-global>")],
+    options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error ?? BindMisuse(options),
     (module, options) => JavaScriptEmitter.Legalize(module, implementations, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities),
     (module, options) => JavaScriptEmitter.Check(module, JavaScriptProfileOf(options).Profile!, capabilities),
     (module, options, passes) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
@@ -514,7 +523,7 @@ public sealed class TranslateCommand : ICliCommand {
     JavaScriptProfile.TryParse(
       options.GetValueOrDefault(Profile), options.GetValueOrDefault(Module), options.GetValueOrDefault(Global), options.ContainsKey(TypedArrays),
       out var profile, out var error);
-    return (profile, error);
+    return (profile is null ? null : profile with { Bindings = BindingsOf(options) }, error);
   }
 
   /// <summary>The C# backend with a capability table.</summary>
@@ -630,9 +639,9 @@ public sealed class TranslateCommand : ICliCommand {
           $"INTRINSICS.{native.Op}", native.Format.ToString(), native.Contract.ToString(), native.Runtime, native.Slack, native.Bound))])
         : null,
       Helpers = [.. helpers.Select(helper => new ManifestHelper(helper.Symbol, helper.Licence, helper.Origin, helper.CallSites, helper.Size, helper.DependsOn))],
-      NativeDependencies = [],
+      NativeDependencies = [.. module.ForeignFunctions.Select(function => function.Library).Distinct().Select(library => new ManifestNativeDependency(library, "unspecified", "NOASSERTION"))],
       Licensing = new(OutputLicence.Of(OutputLicence.Header(_utf8.GetString(record.Bytes)), helpers.Select(helper => helper.Licence)), Obligations(helpers), []),
-      Caveats = record.Caveats,
+      Caveats = [.. record.Caveats, .. ForeignCaveats(module, options, backend)],
       Optimization = new(options.GetValueOrDefault(Opt, "default"), options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',') : [],
         [.. record.Applications.Select(application => application.Id).Distinct().Select(id => new ManifestPass(id, "unproven"))]),
       Warnings = ManifestMessage.WarningsOf(context.Diagnostics.Items),
