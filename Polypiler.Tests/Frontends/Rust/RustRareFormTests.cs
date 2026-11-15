@@ -143,7 +143,7 @@ public sealed class RustRareFormTests {
 
   [TestCase("pub fn f() -> u32 { let x; for i in x {} 1 }", RustFrontend.UnresolvedType)]
   [TestCase("pub fn f(x: u32) -> u32 { match x { .. => 1 } }", "not allowed here")]
-  [TestCase("pub fn f(o: &mut Option<u32>) -> u32 { if let Some(v) = o { *v } else { 0 } }", "by mutable reference")]
+  [TestCase("pub fn f(o: &mut Option<u32>) -> u32 { if let Some(v) = o { *v += 1; 1 } else { 0 } }", "by mutable reference")]
   [TestCase("const A: bool = false; const B: bool = true; pub fn f(x: bool) -> u32 { match x { A..=B => 1 } }", "E0029")]
   [TestCase("pub fn f(x: &u32) -> u32 { let &mut y = x; y }", "E0308")]
   [TestCase("pub fn f() -> u32 { let x; let &y = x; 1 }", RustFrontend.UnresolvedType)]
