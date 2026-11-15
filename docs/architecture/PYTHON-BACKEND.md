@@ -2,7 +2,10 @@
 
 **Status:** implemented for integers, floating point, control flow and functions
 ([#447](https://github.com/Hawkynt/Polypiler/issues/447), [#444](https://github.com/Hawkynt/Polypiler/issues/444),
-[#445](https://github.com/Hawkynt/Polypiler/issues/445)), checked by CPython through the runner of the
+[#445](https://github.com/Hawkynt/Polypiler/issues/445)), for arrays, strings, collections, views, pointers
+and endian accesses ([#446](https://github.com/Hawkynt/Polypiler/issues/446)) and for classes, structs,
+records, enums, optional values, exceptions, closures and iterators
+([#448](https://github.com/Hawkynt/Polypiler/issues/448)), checked by CPython through the runner of the
 Python/Perl layer ([#454](https://github.com/Hawkynt/Polypiler/issues/454)). It follows the shape of every
 backend ([backends](BACKENDS.md)): the IR becomes a Python syntax tree, the target passes rewrite the
 tree, and the printer is the only place where Python becomes text.
@@ -18,8 +21,8 @@ writes one module, `<module in snake_case>.py`, and the manifest beside it.
 | `Printing/` | `PythonPrinter`: four spaces, double quotes, LF, a final newline; parentheses exactly where precedence needs them, and around a mixed operand of a bitwise operator, so `((x + y) & 0xFF) ^ 0x80` reads as it computes; a signature over 88 columns one parameter per line; a table eight elements to a line |
 | `Profiles/` | `PythonProfile` (`py3.8` … `py3.14`, the newest by default, the version `tooling/toolchains.lock` pins) and `PythonCapabilities`, the table of what each version has |
 | `Library/` | `PythonLibrary`: which integer operations legalization binds from the IR's helper library |
-| `Helpers/` | `PythonHelpers`: the operations Python has no expression for (listed in [backends](BACKENDS.md#helpers-that-stay-with-a-backend)) |
-| `Writing/` | the writer: module, functions and names; expressions; statements; switches and counted loops |
+| `Helpers/` | `PythonHelpers` and its parts by area (objects, strings, collections, views, pointers, number text): the operations Python has no expression for and the classes that represent what Python has no type for (listed in [backends](BACKENDS.md#helpers-that-stay-with-a-backend)) |
+| `Writing/` | the writer: module, functions and names; expressions; statements; switches and counted loops; objects (classes, structs, interfaces); exceptions; functions and closures; values (strings, enums, optional values, collections); sequences; views and pointers; number text |
 | `Passes/` | `PythonTargetPasses`: O0501, which removes a helper and an `import` nothing names |
 
 ## Pipeline
@@ -55,7 +58,19 @@ flowchart LR
 | `bool` | `bool` |
 | `f64` | `float` |
 | `f32` | `float` that is always exactly a binary32 number |
-| array of numbers | `list` (`List` from `typing` before 3.9) |
+| array | `list` (`List` from `typing` before 3.9); a constant table a `tuple` |
+| `str` | `str` whose every character is one UTF-16 code unit - a character beyond the BMP is its two surrogates - so that lengths, indexes and the ordinal comparison are the IR's |
+| class | a class: `__init__` for its constructor, the fields its attributes with their defaults, methods, properties for accessors, static fields as class attributes; a base class and the interfaces the base does not implement as bases |
+| interface | a class whose methods raise `NotImplementedError`, which an implementing class derives from, so that a type test is `isinstance` |
+| struct | a `@dataclass`, `frozen=True` where nothing writes one of its fields; a mutable one is copied with `copy.copy` wherever a value is read from a place that can still be used |
+| record class, equatable struct | `__eq__` and `__hash__` field by field as `IrStructEquals` says (a float by `Equals`: NaN equal to NaN) |
+| enum | `enum.IntEnum`, members in UPPER_SNAKE_CASE; a value is an `int`, the member where the IR names one |
+| optional value | `T \| None` |
+| list, map, set | `list`, `dict`, `dict` of keys to `None`; a map or set in .NET's slot order whose keys are removed `_PlySlots` |
+| function value | a nested function or a `lambda`, a bound method, a function of the module |
+| lazy sequence | a generator; a restartable one an object of `_PlySequence` that calls the generator anew on every enumeration |
+| span, memory | `_PlyView` |
+| pointer | `_PlyPointer`, the null pointer `None` |
 
 ## Lowering
 
@@ -85,14 +100,34 @@ flowchart LR
 | `switch` | `match` (3.10): `case 1 \| 2:`, `case _ if 3 <= x <= 9:` for a run of three or more, `case _:`; before 3.10 an `if`/`elif` chain; the `break`s of a section are taken out (a `break` in a branch moves what follows into the other branch), and where that would copy more than three statements the `match` stands in a loop of one pass |
 | a function | `def name(p: int) -> int:`; public ones in snake_case and in `__all__`, private ones behind `_` |
 | constants, globals | `_NAME: int = 5`, a table as a tuple; globals assigned after every function, `global` in a function that assigns one |
-| a `throw` of a library exception | `raise` of the built-in exception of the [trap table](../reference/exceptions.md#python) |
+| a `throw` | `raise` of the Python class of the [trap table](../reference/exceptions.md#python) or of the module; `throw;` a bare `raise` |
+| `try`/`catch`/`finally` | `try`/`except`/`finally`, or one `except Exception as e:` testing the clauses in order where a clause has a filter (see the [exceptions](../reference/exceptions.md#python)) |
+| `using` | the resource, then `try:` the body `finally:` its `dispose()` unless it is `None` |
+| `new` of a class | `Class(args)`; several constructors are `__init<k>` methods `__init__` chooses by the number of arguments |
+| a field, a method call | `o.field`, `o.method(args)`; a static method `Class.method(args)`; a base call `super().method(args)`, or `Base.method(self, args)` inside a closure; a direct call of an overridden method `Class.method(o, args)` |
+| `ReferenceEquals`, `is`, a cast, `as` | `a is b`, `isinstance(o, C)`, `_ply_cast(o, C)` (`InvalidCastError`), `o if isinstance(o, C) else None` |
+| an optional value | `x is None`, never by truth; `x if x is not None else y`; `_ply_unwrap(x)` (`RuntimeError`) |
+| a lambda | `lambda a: e` where it returns one expression and writes nothing it captures; otherwise a nested `def` in front of the statement, with `nonlocal` for what it assigns |
+| a variable a closure captures that every pass of a loop has anew | a cell `[v]` made anew where the IR makes the variable, which the nested function binds as the default of a parameter when it is made |
+| a local whose address is taken | a cell, the region of its pointers |
+| an iterator function | a generator function (`yield`, `yield from`, `return`); a restartable one returns `_PlySequence(_make, args)` |
+| a pipeline of sequence operations | the loops of `SequenceFusion` (#1329), with `StableSort` and `RangeCount` from the library |
+| a string operation | `len`, `ord(s[i])`, `+`, `find`, `rfind`, `in`, `startswith`, `replace`, `join`; helpers where the IR traps and Python would count from the end or clamp, and for .NET's and ECMA-262's trims, splits and pads |
+| a list operation | `append`, `len`, `clear`, `in`; helpers for the operations that check an index (`ArgumentOutOfRangeError`), a `_PlyList` that counts its changes where a checked loop over a list has a body that may change one |
+| a map operation | `m[k]` (`KeyError`), `m[k] = v`, `k in m`, `m.get(k)`; helpers that trap or say whether they changed the map; a float key with every NaN made one NaN |
+| a loop over a collection | `for x in xs:`, `for k, v in m.items():`; a walk that traps after a new key, as .NET's, or that visits added keys, as ECMA-262's, where the body may change the collection |
+| `ArrayCopy`, `ArrayFill`, `ArrayClear` | a slice assignment from a slice, which copies first; the value stored in every element |
+| a view | `_ply_view_of(a, start, length)` (`ArgumentOutOfRangeError` outside); `len(v)`; `v[i]` checks its own bounds; `Reinterpret` reads the bytes with `struct` |
+| `LoadLittle`, `LoadBig`, `StoreLittle`, `StoreBig` | `int.from_bytes(_ply_bytes(b, o, 4), "little")`, `signed=True` for a signed type, `struct.unpack("<d", …)` for a float; `v.to_bytes(4, "big")` put in after the range check |
+| a pointer | `_ply_pin(a, "B")`, `_PlyPointer(cell, 0, 1, "i", 0)` for `&x`; `_ply_pointer_add`, `_ply_pointer_load`/`_ply_pointer_store` with the `struct` format of the type, the distance and the comparisons within one region |
+| a conversion between a number and text | `str(i)` of an integer; helpers for the layouts of .NET and ECMA-262, `toFixed` and `F<n>`, and the grammars of `Parse`, `Number`, `parseFloat` and `parseInt` |
 
 ## Refusals
 
 | Code | When |
 | --- | --- |
-| `PLY1850` | a type Python cannot carry in this backend: strings, structs, classes, enums, views, pointers, collections, functions |
-| `PLY1851` | a construct the backend does not write, named: an intrinsic, a `try`, a call of a constructor, a closure |
+| `PLY1850` | a type Python cannot carry in this backend |
+| `PLY1851` | a construct the backend does not write, named: an intrinsic left after legalization, two constructors of one arity, an exception filter that must run before the `finally` blocks inside its try, a call of a class's own only constructor |
 | `PLY1858` | a `continue` inside a switch that stands in a loop of one pass |
 | `PLY1874` | two public functions whose snake_case names are the same, or a name nothing of is left |
 
@@ -110,7 +145,16 @@ repository's architecture is followed:
   contract asserts (#445): the backend writes one module of the shape `translate` writes for every
   target, and no `src/` package, `tests/test_<module>.py`, docstrings or entry guards yet.
 - **Codes.** Refusals use the codes of the Python block (`PLY1850`, `PLY1851`, `PLY1858`, `PLY1874`),
-  as the C# and JavaScript backends use their own.
+  as the C# and JavaScript backends use their own; the codes #446 and #448 name (`PLY1866`, `PLY1867`,
+  `PLY1882`, `PLY1883`) have nothing left to refuse: the IR's pointers always know their region, its
+  reinterpretation is a view of the bytes, inheritance, interfaces, generics (monomorphized) and
+  tagged unions reach the backend as classes, and every trap has its class.
+- **Object model.** #448 asks for records as dataclasses and refuses inheritance and dispatch; the
+  IR on `main` has classes with inheritance, virtual and interface dispatch, properties and static
+  fields, which the backend writes as Python classes, and structs, which it writes as dataclasses.
+- **Arrays.** #446 writes byte arrays as `bytearray`; the IR's arrays cross the boundary as lists in the
+  drivers and the other backends' conventions, so every array is a `list`, and the endian accesses
+  take their bytes from it with `bytes(…)`.
 - **Counted loops at the limit.** A counted loop with an inclusive test against a bound that may be the
   largest value of the counter's type (the smallest, counting down) runs on in the IR, where the counter
   wraps, and a `range` would end. Such a loop is written as `range` only where the bound's values are
@@ -122,7 +166,11 @@ repository's architecture is followed:
 
 - `Polypiler.Tests/Backends/Python`: the syntax, the printer, the reader, profiles and naming, every
   lowering as text, the CLI, and every prototype source read back (`PythonParseBackTests`).
-- `Polypiler.Tests.Acceptance/Python` (layer `pyperl`, `python` from `tooling/toolchains.lock`): every
+- `Polypiler.Tests.Acceptance/Python` (layer `pyperl`, `python` from `tooling/toolchains.lock`):
+  `PythonFixtureTests` translates every C# and JavaScript source of the prototype fixtures and calls
+  every public function whose values cross the boundary with arguments from fixed sets, against .NET's
+  build of the C# fixture or node's run of the JavaScript original (the interpreter for unsafe C#),
+  leaving out the calls where the source and the IR's import already differ; every
   prototype fixture, the bit-operation fixtures, every integer operation on every width (py3.8 and
   py3.14), the floating-point algorithms and the module-state fixtures run under CPython in the sandbox
   and agree call for call with the C# compiler's build (or the bit-by-bit reference, or for floating
