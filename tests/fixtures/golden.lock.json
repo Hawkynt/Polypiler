@@ -1593,8 +1593,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.csharp.golden",
-      "sha256": "e40ec93bfcdb6ce640299da5d0d010772b6153c797928c54372a78985402c827",
-      "bytes": 437894
+      "sha256": "48b0ea96bff05270c8612631244cefa715da406b19c7ed50f8073a1fa65c1163",
+      "bytes": 439278
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/Iterators.cs.javascript.golden",
