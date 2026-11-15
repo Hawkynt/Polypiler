@@ -1,6 +1,6 @@
 # Backends: tree, passes, printer
 
-**Status:** implemented for the C# and the JavaScript backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)); stage 8 of the [pipeline](PIPELINE.md). The helpers are one IR library since [#1353](https://github.com/Hawkynt/Polypiler/issues/1353).
+**Status:** implemented for the C# and the JavaScript backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)) and for the Python backend ([Python backend](PYTHON-BACKEND.md)); stage 8 of the [pipeline](PIPELINE.md). The helpers are one IR library since [#1353](https://github.com/Hawkynt/Polypiler/issues/1353).
 
 A backend does not write text. It builds a syntax tree of its target language from the IR, runs the
 target passes over that tree and hands the result to its printer, the only place where generated code
@@ -14,13 +14,13 @@ flowchart LR
   Print --> File["Generated file"]
 ```
 
-| | C# | JavaScript |
-| --- | --- | --- |
-| Tree | `Polypiler.Core.Backends.CSharp/Syntax/CSharpSyntax.cs`: compilation unit, namespaces, types, members, statements, expressions | `Polypiler.Core.Backends.JavaScript/Syntax/JavaScriptSyntax.cs`: ESTree-shaped program, statements, expressions |
-| Printer | `CSharpPrinter.Print(CsCompilationUnit, CSharpProfile)` | `JavaScriptPrinter.Print(JsProgram, JavaScriptProfile)` |
-| Reader | `CSharpSyntaxReader` (Roslyn) | `JavaScriptSyntaxReader` (Acornima) |
-| Passes | `CSharpTargetPasses.Pipeline` | `JavaScriptTargetPasses.Pipeline` |
-| Tree after the passes | `CSharpEmitter.Build(…)` | `JavaScriptEmitter.Build(…)` |
+| | C# | JavaScript | Python |
+| --- | --- | --- | --- |
+| Tree | `Polypiler.Core.Backends.CSharp/Syntax/CSharpSyntax.cs`: compilation unit, namespaces, types, members, statements, expressions | `Polypiler.Core.Backends.JavaScript/Syntax/JavaScriptSyntax.cs`: ESTree-shaped program, statements, expressions | `Polypiler.Core.Backends.Python/Syntax/PythonSyntax.cs`: module, statements, expressions after CPython's `ast` |
+| Printer | `CSharpPrinter.Print(CsCompilationUnit, CSharpProfile)` | `JavaScriptPrinter.Print(JsProgram, JavaScriptProfile)` | `PythonPrinter.Print(PyModule)` |
+| Reader | `CSharpSyntaxReader` (Roslyn) | `JavaScriptSyntaxReader` (Acornima) | `PythonSyntaxReader` (its own, for the subset it prints) |
+| Passes | `CSharpTargetPasses.Pipeline` | `JavaScriptTargetPasses.Pipeline` | `PythonTargetPasses.Pipeline` |
+| Tree after the passes | `CSharpEmitter.Build(…)` | `JavaScriptEmitter.Build(…)` | `PythonEmitter.Build(…)` |
 
 ## The tree
 
@@ -101,6 +101,7 @@ and why:
 | `Polypiler.Core.Backends.JavaScript/Helpers/Enum/Enums.cs` | The frozen object an enum is, looked up by name and value: a representation. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/String/Strings.cs` | The string operations of .NET and of the later levels in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
 | `Polypiler.Core.Backends.JavaScript/Helpers/String/NumberText.cs` | The numbers to text and back of .NET in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
+| `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.cs` | The operations of the IR Python has no expression for, written with what Python has: it cannot raise inside an expression, so every operation that traps is a function (the checked range of an integer, the truncating division and remainder, a negative index or array length, the conversions of a float to an integer); its float division and remainder raise where IEEE 754 gives an infinity or a NaN; it has no binary32 type, so rounding to it goes through `struct`; and the operations that have no portable implementation in the IR (square root, roundings, sign, IEEE minimum and maximum) are written as Python computes them exactly. Each is the operation itself, for which the IR has no weaker operation to write it with. |
 
 Outside the folders the emitters keep a few more of the same kind: the C# `Throw<T>` of a throw
 expression before C# 7, the C# `SinglePass<T>` that makes the one cursor of an iterator a sequence
@@ -118,7 +119,7 @@ with which the passes share one namespace of numbers. A pass never prints and ne
 | Number | Pass | What it does |
 | --- | --- | --- |
 | [O0500](../optimizations/O0500-target-helper-inlining.md) | helper inlining | a call of a single-expression helper becomes its body where the cost rule says so |
-| [O0501](../optimizations/O0501-target-unused-declaration-removal.md) | unused declaration removal | a helper or private constant nothing names any more is removed |
+| [O0501](../optimizations/O0501-target-unused-declaration-removal.md) | unused declaration removal | a helper or private constant nothing names any more is removed; in Python also an `import` nothing uses |
 
 The emitter declares only the helpers the code calls (and those they call); a function legalization
 copied in from the library is a helper to these passes as well. O0501 removes what later passes made
@@ -143,4 +144,7 @@ a helper over its budget whose body is one expression.
   `--opt none` the backends must reproduce every byte (`GoldenOutputTests`).
 - **Parse-back:** every generated file is parsed by Roslyn at the profile's language version and by
   Acornima at the profile's ECMAScript version, read into the tree and compared with the tree it was
-  printed from, parentheses and layout aside (`ParseBackTests`).
+  printed from, parentheses and layout aside (`ParseBackTests`). Every prototype source translated to
+  Python in its oldest and its newest profile is read back by `PythonSyntaxReader` and compared the
+  same way (`PythonParseBackTests`); CPython itself runs the generated modules in the differential
+  tests of the Python/Perl layer.

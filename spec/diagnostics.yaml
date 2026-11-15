@@ -966,6 +966,42 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY1850
+    severity: error
+    exit: UnsupportedConstruct
+    title: type without a Python representation
+    message: "type '<type>' has no Python representation in profile '<profile>' (function '<function>')"
+    rule: python.backend.type
+    area: python
+    owner: BE-PY-SCALARS
+    surfaces: standard error of polypiler translate --to python; stops emission, no file is written
+  - code: PLY1851
+    severity: error
+    exit: UnsupportedConstruct
+    title: operation inexpressible in the Python profile
+    message: "'<construct>' cannot be expressed in Python profile '<profile>' (function '<function>')"
+    rule: python.backend.profile
+    area: python
+    owner: BE-PY-SCALARS
+    surfaces: standard error of polypiler translate --to python; stops emission, no file is written
+  - code: PLY1858
+    severity: error
+    exit: UnsupportedConstruct
+    title: control construct without a Python form
+    message: "control construct '<construct>' has no Python form (function '<function>')"
+    rule: python.backend.control
+    area: python
+    owner: BE-PY-CONTROL
+    surfaces: standard error of polypiler translate --to python; stops emission, no file is written
+  - code: PLY1874
+    severity: error
+    exit: UnsupportedConstruct
+    title: Python names of exports collide
+    message: "exports '<a>' and '<b>' both map to the Python name '<name>'; or: export '<a>' has no valid Python name"
+    rule: python.backend.names
+    area: python
+    owner: BE-PY-FUNCTIONS
+    surfaces: standard error of polypiler translate --to python; stops emission, no file is written
   - code: PLY3935
     severity: error
     exit: OracleFailure

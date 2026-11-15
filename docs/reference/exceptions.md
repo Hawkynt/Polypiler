@@ -67,6 +67,28 @@ tests: a trap without a row fails them, so a trap a later change introduces adds
 - **`RoundDigits`** with digits outside 0…15 (0…6 for `f32`) traps with `ArgumentOutOfRange`, because
   .NET throws `ArgumentOutOfRangeException` there.
 
+### Python
+
+The Python backend raises the built-in exception of the trap's class; a trap is compared by its class,
+as everywhere, and the message is the trap's own text where the backend raises it (Python's own
+`ZeroDivisionError` of `//` and `%` keeps Python's message). Handling (`try`) is not written yet: a
+module with a handler is refused with `PLY1851` naming it.
+
+| IR class (trap) | Python raises |
+| --- | --- |
+| `DivideByZeroException` (`DivideByZero`) | `ZeroDivisionError` |
+| `OverflowException` (`IntegerOverflow`) | `OverflowError` |
+| `ArithmeticException` (`InvalidOperation`) | `ArithmeticError` |
+| `IndexOutOfRangeException` (`IndexOutOfRange`) | `IndexError` (a negative index is checked first: Python would count it from the end) |
+| `ArgumentOutOfRangeException` (`ArgumentOutOfRange`) | `ValueError` |
+| `NullReferenceException` (`NullReference`) | `AttributeError` |
+| `InvalidCastException` (`InvalidCast`) | `TypeError` |
+| `InvalidOperationException` (`MissingValue`, `CollectionModified`) | `RuntimeError` |
+| `KeyNotFoundException` (`KeyNotFound`) | `KeyError` |
+| `ArgumentException` (`DuplicateKey`, `UnknownName`) | `ValueError` |
+| `FormatException` (`InvalidFormat`) | `ValueError` |
+| `Exception` | `Exception` |
+
 ## Handling
 
 The IR has `IrTry(Body, Catches, Finally)` with clauses `IrCatch(Class, Local?, Filter?, Body)`,

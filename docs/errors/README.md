@@ -136,6 +136,15 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1107](PLY1107.md) | error | 3 (UnsupportedConstruct) | `a thrown value that is not an Error reaches <place>, which observes it` | #1323 |
 | [PLY1152](PLY1152.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in JavaScript profile '<profile>'` | PROTOTYPE |
 
+## PLY1800–PLY1899 · python
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY1850](PLY1850.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no Python representation in profile '<profile>' (function '<function>')` | BE-PY-SCALARS |
+| [PLY1851](PLY1851.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be expressed in Python profile '<profile>' (function '<function>')` | BE-PY-SCALARS |
+| [PLY1858](PLY1858.md) | error | 3 (UnsupportedConstruct) | `control construct '<construct>' has no Python form (function '<function>')` | BE-PY-CONTROL |
+| [PLY1874](PLY1874.md) | error | 3 (UnsupportedConstruct) | `exports '<a>' and '<b>' both map to the Python name '<name>'; or: export '<a>' has no valid Python name` | BE-PY-FUNCTIONS |
+
 ## PLY3900–PLY3999 · tokenized-basic
 
 | Code | Severity | Exit code | Message | Owner |
