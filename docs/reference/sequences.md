@@ -7,7 +7,8 @@ enumerated **again** and runs its body afresh each time, a JavaScript generator 
 for; both run their `finally` blocks when the consumer leaves early (`Dispose`, `return()`). The IR
 states all of it, so a translation keeps the values, the order of the side effects and the cleanup.
 Related: [repository README](../../README.md) · [collections](collections.md) ·
-[exceptions](exceptions.md) · [functions and closures](functions-and-closures.md).
+[exceptions](exceptions.md) · [functions and closures](functions-and-closures.md) ·
+[sequence operations](sequence-operations.md).
 
 ## The model
 

@@ -366,6 +366,7 @@ public static class IrGenerics {
         IrBind bind => new IrBind(this.Local(bind.Local), this.Expression(bind.Value)),
         IrThrowExpression thrown => new IrThrowExpression(type(thrown.Type), this.Expression(thrown.Exception)),
         IrArraySequence sequence => new IrArraySequence(this.Expression(sequence.Array)),
+        IrSequence operation => new IrSequence(operation.Op, type(operation.Type), this.Expressions(operation.Arguments)),
         _ => expression
       };
       return special(expression) is { } replaced ? replaced : rebuilt;

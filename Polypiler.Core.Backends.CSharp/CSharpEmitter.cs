@@ -147,6 +147,7 @@ public static partial class CSharpEmitter {
   /// empty when the module can be emitted.
   /// </returns>
   public static IReadOnlyList<Diagnostic> Check(IrModule module, CSharpProfile profile, CSharpCapabilities? capabilities = null) {
+    module = SequenceFusion.Run(module);
     var table = capabilities ?? CSharpCapabilities.Default;
     var unknown = new List<string>();
     foreach (var constant in module.Constants)
@@ -262,7 +263,7 @@ public static partial class CSharpEmitter {
   /// <param name="capabilities">The capability table, or <see langword="null"/> for <see cref="CSharpCapabilities.Default"/>.</param>
   /// <returns>The module to emit.</returns>
   public static IrModule Legalize(IrModule module, Func<IrModule> implementations, CSharpProfile profile, FloatMode mode, CSharpCapabilities? capabilities = null)
-    => FloatLegalization.Lower(module, implementations, intrinsic => Writes(intrinsic, profile, mode, capabilities));
+    => FloatLegalization.Lower(SequenceFusion.Run(module), implementations, intrinsic => Writes(intrinsic, profile, mode, capabilities));
 
   /// <summary>
   /// Emits the module for a profile and a floating-point mode. The header names the profile and, where
@@ -335,6 +336,7 @@ public static partial class CSharpEmitter {
       throw new ArgumentException($"'{@namespace}' is not a namespace name.", nameof(@namespace));
 
     var table = capabilities ?? CSharpCapabilities.Default;
+    module = SequenceFusion.Run(module);
     var problems = Check(module, profile, table);
     if (problems.Count > 0)
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problems[0].Message}.", nameof(module));

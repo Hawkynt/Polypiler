@@ -513,6 +513,8 @@ public static partial class IrInterpreter {
           return this.FunctionValue(expression, frame);
         case IrArraySequence sequence:
           return ArraySequence((Array)NotNull(this.Evaluate(sequence.Array, frame)));
+        case IrSequence operation:
+          return this.SequenceOperation(operation, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }

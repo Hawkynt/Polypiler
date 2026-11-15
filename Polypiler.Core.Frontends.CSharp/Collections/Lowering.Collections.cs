@@ -110,7 +110,7 @@ internal sealed partial class Lowering {
         return CollectionOp(IrCollectionOp.ListGet, list, this.Read(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression));
       case ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element when this.CollectionOf(element.Expression) is { Kind: IrTypeKind.Map } map:
         return CollectionOp(IrCollectionOp.MapGet, map, this.Read(element.Expression), this.Value(element.ArgumentList.Arguments[0].Expression));
-      case InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax member } invocation when this.CollectionOf(member.Expression) is { } owner:
+      case InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax member } invocation when this.CollectionOf(member.Expression) is { } owner && !this.IsLinq(invocation):
         return this.CollectionCall(invocation, member, owner);
       default:
         return null;

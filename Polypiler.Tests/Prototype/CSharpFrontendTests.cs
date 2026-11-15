@@ -511,7 +511,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int F() => true;", "CS0029", TestName = "type error")]
   [TestCase("public static int F() => Missing();", "CS0103", TestName = "unknown name")]
   [TestCase("public int F() => 1;", "CS0708", TestName = "instance member of a static class")]
-  [TestCase("public static int F(int[] a) => System.Linq.Enumerable.Sum(a);", "CS0234", TestName = "LINQ, which is not referenced")]
+  [TestCase("public static int F(string s) => System.Text.RegularExpressions.Regex.Matches(s, \"a\").Count;", "CS0234", TestName = "an assembly that is not referenced")]
   public void InvalidSource_IsReportedWithTheCompilersMessage(string method, string id) {
     var result = CSharpFrontend.Import("Snippet.cs", PrototypeFixture.Wrap(method));
     Assert.That(result.Module, Is.Null);
