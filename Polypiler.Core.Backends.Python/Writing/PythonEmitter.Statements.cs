@@ -16,7 +16,12 @@ public static partial class PythonEmitter {
     /// <summary>A loop: what a <c>continue</c> of it has to do first.</summary>
     /// <param name="Test">The test of a post-test loop, which a <c>continue</c> evaluates before it goes on.</param>
     /// <param name="Step">The step of a <c>for</c> written as <c>while</c>, which a <c>continue</c> runs before it goes on.</param>
-    private sealed record LoopFrame(IrExpr? Test, IrBlock? Step) : Frame;
+    private sealed record LoopFrame(IrExpr? Test, IrBlock? Step) : Frame {
+
+      /// <summary>The cells of the variables of every pass, made anew before the step.</summary>
+      public IReadOnlyList<PyStatement> Renew { get; init; } = [];
+
+    }
 
     /// <summary>A switch; <paramref name="Wrapped"/> when it stands in a loop of one pass, which a <c>break</c> of the switch leaves.</summary>
     private sealed record SwitchFrame(bool Wrapped) : Frame;
@@ -32,6 +37,9 @@ public static partial class PythonEmitter {
     /// <summary>Forgets the names of the function written before.</summary>
     private void BeginFunction(string name) {
       this._function = name;
+      this._pending = [];
+      this._lambdaDepth = 0;
+      this._inPlace = false;
       this._locals.Clear();
       this._localNames.Clear();
       this._annotated.Clear();
@@ -76,14 +84,20 @@ public static partial class PythonEmitter {
       var flat = Flattened(statements);
       var written = new List<PyStatement>();
       for (var index = 0; index < flat.Count; ++index) {
+        var outer = this._pending;
+        this._pending = [];
+        var mark = written.Count;
         if (flat[index] is IrDeclare { Initializer: not null } declaration && index + 1 < flat.Count && Counted(flat[index + 1]) is { } loop
           && this.RangeLoop(declaration, loop.Condition, loop.Body, loop.Step, flat.Skip(index + 2).ToList()) is { } counted) {
           written.Add(counted);
           ++index;
-          continue;
+        } else {
+          this.Statement(flat[index], written);
         }
 
-        this.Statement(flat[index], written);
+        // The nested functions its expressions need are declared in front of the statement.
+        written.InsertRange(mark, this._pending);
+        this._pending = outer;
       }
 
       return written;
@@ -95,7 +109,13 @@ public static partial class PythonEmitter {
     }
 
     private void Statement(IrStmt statement, List<PyStatement> written) {
+      if (this.HeldFunction(statement, written) || this.ObjectStatement(statement, written) || this.ExceptionStatement(statement, written) || this.SequenceStatement(statement, written))
+        return;
+
       switch (statement) {
+        case IrDeclare { Initializer: null } declaration when this.IsCell(declaration.Local):
+          written.Add(this.Declare(declaration.Local, this.FieldDefault(declaration.Local.Type)));
+          break;
         case IrDeclare { Initializer: null } declaration:
           var declared = this.LocalName(declaration.Local);
           if (this._annotated.Add(declared))
@@ -103,10 +123,16 @@ public static partial class PythonEmitter {
 
           break;
         case IrDeclare declaration:
-          written.Add(this.Assign(this.LocalName(declaration.Local), this.Expression(declaration.Initializer!), declaration.Local.Type));
+          written.Add(this.Declare(declaration.Local, this.Expression(declaration.Initializer!)));
+          break;
+        case IrAssign assignment when this.IsCell(assignment.Local):
+          written.Add(new PyAssign(this.Target(assignment.Local), this.Expression(assignment.Value)));
           break;
         case IrAssign assignment:
           written.Add(this.Assign(this.LocalName(assignment.Local), this.Expression(assignment.Value), assignment.Local.Type));
+          break;
+        case IrGlobalAssign assignment when this._staticOwners.ContainsKey(assignment.Global.Name):
+          written.Add(new PyAssign(this.StaticField(assignment.Global), this.Expression(assignment.Value)));
           break;
         case IrGlobalAssign assignment:
           var global = this._globals[assignment.Global.Name];
@@ -118,6 +144,18 @@ public static partial class PythonEmitter {
           break;
         case IrExprStmt { Expression: IrStep step }:
           this.Step(step, written);
+          break;
+        case IrExprStmt { Expression: IrCollection { Op: IrCollectionOp.MapPut, Arguments: [var map, var key, var value] } }:
+          // The map and the key are evaluated before the value, as the IR evaluates them.
+          var (target, index) = (this.Expression(map), this.Key(key));
+          if ((!IsPlain(map) || !IsPlain(key)) && !IsQuiet(value)) {
+            var (mapName, keyName) = (this.Temporary(), this.Temporary());
+            written.Add(new PyAssign(Name(mapName), target));
+            written.Add(new PyAssign(Name(keyName), index));
+            (target, index) = (Name(mapName), Name(keyName));
+          }
+
+          written.Add(new PyAssign(new PySubscript(target, index), this.Expression(value)));
           break;
         case IrExprStmt expression:
           written.Add(new PyExpressionStatement(this.Expression(expression.Expression)));
@@ -138,7 +176,10 @@ public static partial class PythonEmitter {
           break;
         case IrFor loop:
           // A for whose counter is no plain range: a while whose every pass ends with the step, which a continue runs as well.
-          var passes = this.Inside(new LoopFrame(null, loop.Step), loop.Body.Statements);
+          // A variable of every pass that a closure captures is a cell made anew, holding the last value, before the step.
+          List<PyStatement> renew = [.. loop.PerIteration.Where(this.IsCell).Select(local => (PyStatement)new PyAssign(Name(this.LocalName(local)), new PyList([this.Read(local)])))];
+          var passes = this.Inside(new LoopFrame(null, loop.Step) { Renew = renew }, loop.Body.Statements);
+          passes.AddRange(renew);
           passes.AddRange(this.Statements(loop.Step.Statements));
           written.Add(new PyWhile(this.Expression(loop.Condition), passes));
           break;
@@ -152,33 +193,18 @@ public static partial class PythonEmitter {
         case IrContinue:
           this.Continue(written);
           break;
+        case IrReturn { Value: IrLocalRef } @return:
+          // A local's struct is a value of its own, which nothing reads after the return.
+          written.Add(new PyReturn(this.Place(@return.Value!)));
+          break;
         case IrReturn @return:
           written.Add(new PyReturn(@return.Value is null ? null : this.Expression(@return.Value)));
-          break;
-        case IrThrow { Exception: IrNew { Type.ClassType: { IsLibrary: true } type, Arguments: var arguments } } when arguments is [] or [IrStrConst]:
-          // An exception of the library is the built-in exception of the trap table (docs/reference/exceptions.md).
-          var message = arguments is [IrStrConst text] ? text.Value : IrExceptionClass.DefaultMessage(type);
-          written.Add(new PyRaise(new PyCall(Name(BuiltinException(type)), [new PyString(message)])));
           break;
         default:
           this.Inexpressible(KindOf(statement));
           break;
       }
     }
-
-    /// <summary>The built-in exception of Python a class of the IR's library is raised as.</summary>
-    private static string BuiltinException(IrClassType type) => type.Name switch {
-      "ArithmeticException" => "ArithmeticError",
-      "DivideByZeroException" => "ZeroDivisionError",
-      "OverflowException" => "OverflowError",
-      "IndexOutOfRangeException" => "IndexError",
-      "NullReferenceException" => "AttributeError",
-      "InvalidCastException" => "TypeError",
-      "InvalidOperationException" => "RuntimeError",
-      "KeyNotFoundException" => "KeyError",
-      "FormatException" or "ArgumentException" or "ArgumentOutOfRangeException" => "ValueError",
-      _ => "Exception"
-    };
 
     /// <summary>The statements of a loop body or a switch section, written inside its frame.</summary>
     private List<PyStatement> Inside(Frame frame, IEnumerable<IrStmt> statements) {
@@ -201,6 +227,7 @@ public static partial class PythonEmitter {
         this.Refuse(ControlUnsupportedDescriptor, "control construct 'a continue inside a switch that is left early' has no Python form");
 
       var loop = (LoopFrame)this._frames[index];
+      written.AddRange(loop.Renew);
       if (loop.Step is { } step)
         written.AddRange(this.Statements(step.Statements));
 
@@ -262,8 +289,8 @@ public static partial class PythonEmitter {
     /// <summary>A step as a statement: an assignment of the stepped value to the local or the array element, the only targets of a step.</summary>
     private void Step(IrStep step, List<PyStatement> written) {
       if (step.Target is IrLocalRef reference) {
-        var name = this.LocalName(reference.Local);
-        written.Add(new PyAssign(Name(name), this.Stepped(Name(name), step)));
+        var place = this.Read(reference.Local);
+        written.Add(new PyAssign(place, this.Stepped(place, step)));
         return;
       }
 

@@ -39,6 +39,7 @@ internal static class PythonDriver {
     sys.setrecursionlimit(20000)
     spec = importlib.util.spec_from_file_location("generated", sys.argv[1])
     module = importlib.util.module_from_spec(spec)
+    sys.modules["generated"] = module
     spec.loader.exec_module(module)
     with open(sys.argv[2], encoding="utf-8") as source:
         calls = json.load(source)
@@ -61,7 +62,9 @@ internal static class PythonDriver {
             return "true"
         if value is False:
             return "false"
-        if isinstance(value, list):
+        if isinstance(value, str):
+            return value
+        if isinstance(value, (list, tuple)) or type(value).__name__ == "_PlyView":
             return "[" + ",".join(show(element) for element in value) + "]"
         if isinstance(value, float):
             if value != value:
@@ -69,28 +72,55 @@ internal static class PythonDriver {
             if value.is_integer() and abs(value) <= 9007199254740991 and not (value == 0 and struct.pack("<d", value)[7] & 0x80):
                 return str(int(value))
             return "f:" + format(struct.unpack("<Q", struct.pack("<d", value))[0], "016x")
-        if type(value) is not int:
-            raise TypeError("a result of the type " + type(value).__name__)
-        return str(value)
+        if isinstance(value, int):
+            return str(int(value))
+        if hasattr(value, "__dict__"):
+            return "{" + ",".join(show(field) for field in vars(value).values()) + "}"
+        raise TypeError("a result of the type " + type(value).__name__)
 
 
-    TRAPS = [
-        (ZeroDivisionError, "divide by zero"),
-        (OverflowError, "integer overflow"),
-        (IndexError, "index out of range"),
-        (ArithmeticError, "invalid operation"),
-    ]
+    def trap(error):
+        kinds = [kind.__name__ for kind in type(error).__mro__]
+        text = str(error.args[0]) if error.args else ""
+        if "ZeroDivisionError" in kinds:
+            return "divide by zero"
+        if "OverflowError" in kinds:
+            return "integer overflow"
+        if "IndexError" in kinds:
+            return "index out of range"
+        if "ArgumentOutOfRangeError" in kinds:
+            return "argument out of range"
+        if "InvalidCastError" in kinds:
+            return "invalid cast"
+        if "KeyError" in kinds:
+            return "key not found"
+        if "FormatError" in kinds:
+            return "invalid format"
+        if "ValueError" in kinds:
+            return text if text in ("duplicate key", "unknown name") else "index out of range"
+        if "RuntimeError" in kinds and "RecursionError" not in kinds:
+            return "collection modified" if text == "collection modified" or "changed size during iteration" in text else "missing value"
+        if "AttributeError" in kinds or "TypeError" in kinds:
+            return "null reference"
+        if "ArithmeticError" in kinds:
+            return "invalid operation"
+        return None
+
+
     lines = []
     for name, encoded, returns in calls:
         values = [decode(value) for value in encoded]
         try:
             result = getattr(module, name)(*values)
-        except tuple(trap for trap, _ in TRAPS) as error:
-            lines.append("trap: " + next(text for trap, text in TRAPS if isinstance(error, trap)))
+        except Exception as error:
+            kind = trap(error)
+            if kind is None and type(error).__module__ != "generated":
+                raise
+            lines.append("trap: " + kind if kind is not None else "exception: " + type(error).__name__)
             continue
         shown = [show(result)] + [show(value) for value in values if isinstance(value, list)]
         lines.append(" | ".join(shown))
-    sys.stdout.write("\n".join(lines))
+    sys.stdout.write(json.dumps(lines))
     """;
 
   /// <summary>
@@ -114,7 +144,7 @@ internal static class PythonDriver {
     var stderr = PyPerlSandbox.Text(result.Stderr);
     Assert.That((result.Outcome, result.ExitCode), Is.EqualTo((RunOutcome.Completed, 0)),
       $"python failed: {string.Join("; ", result.Diagnostics.Select(diagnostic => $"{diagnostic}: {diagnostic.Cause}"))}\n{stderr}");
-    var outcomes = calls.Count == 0 ? [] : stdout.Split('\n');
+    var outcomes = calls.Count == 0 ? [] : JsonSerializer.Deserialize<string[]>(stdout)!;
     Assert.That(outcomes, Has.Length.EqualTo(calls.Count), $"python printed {outcomes.Length} outcomes for {calls.Count} calls");
     return outcomes;
   }

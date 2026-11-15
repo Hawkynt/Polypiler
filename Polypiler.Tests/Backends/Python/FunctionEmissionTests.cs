@@ -180,14 +180,20 @@ public sealed class FunctionEmissionTests {
       new IrIf(Bin(IrBinaryOp.Equal, R(_x), I(9)), Block(Throw(IrExceptionClass.Exception)), null),
       new IrReturn(null))]);
     var text = Emit(module);
-    foreach (var raised in new[] { "OverflowError(\"integer overflow\")", "ArithmeticError(", "ZeroDivisionError(", "IndexError(", "AttributeError(", "TypeError(", "RuntimeError(", "KeyError(", "ValueError(", "Exception(" })
+    foreach (var raised in new[] { "OverflowError(\"integer overflow\")", "ArithmeticError(", "ZeroDivisionError(", "IndexError(", "AttributeError(", "InvalidCastError(", "RuntimeError(", "KeyError(", "ArgumentOutOfRangeError(", "FormatError(", "ValueError(", "Exception(" })
       Assert.That(text, Does.Contain("raise " + raised));
+
+    // The classes of the library that are no built-in exception derive from the one of the nearest meaning.
+    Assert.That(text, Does.Contain("class ArgumentOutOfRangeError(ValueError):")
+      .And.Contain("class FormatError(ValueError):").And.Contain("class InvalidCastError(TypeError):"));
   }
 
   [Test]
-  public void ConstructsOutsideTheFamiliesOfThisBackend_AreRefusedByName() {
-    var module = new IrModule("M", [Function("f", IrType.I32, [_x], new IrTry(Block(new IrReturn(R(_x))), [], Block()), new IrReturn(I(0)))]);
-    Assert.That(Problems(module), Has.Some.Contains("'Try' cannot be expressed in Python profile 'py3.14'"));
+  public void AFilterThatMustRunBeforeTheFinallyBlocks_IsRefusedByName() {
+    var g = Function("g", IrType.Bool, [], new IrReturn(C(IrType.Bool, 1)));
+    var clause = new IrCatch(IrExceptionClass.Exception, null, new IrCall("g", IrType.Bool, []), Block(new IrReturn(I(1))));
+    var module = new IrModule("M", [g, Function("f", IrType.I32, [_x], new IrTry(Block(new IrReturn(R(_x))), [clause], null), new IrReturn(I(0)))]);
+    Assert.That(Problems(module), Has.Some.Contains("the exception filter of a catch of Exception runs before finally blocks; it cannot be expressed in Python profile 'py3.14'"));
   }
 
   [Test]

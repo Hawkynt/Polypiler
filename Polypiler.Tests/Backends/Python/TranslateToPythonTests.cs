@@ -68,9 +68,9 @@ public sealed class TranslateToPythonTests {
 
   [Test]
   public void AConstructOutsideTheBackend_IsRefusedWithItsName_AndNothingIsWritten() {
-    var (exitCode, _, error) = this.Translate("public static int F(string s) => s.Length;");
+    var (exitCode, _, error) = this.Translate("public static bool G() => true; public static int F() { try { return 1; } catch (System.Exception) when (G()) { return 2; } }");
     Assert.That(exitCode, Is.EqualTo(3));
-    Assert.That(error, Does.Contain("PLY1850: type 'str' has no Python representation in profile 'py3.14' (function 'F')").And.Contain("PLY1851: 'StrLength' cannot be expressed"));
+    Assert.That(error, Does.Contain("PLY1851: the exception filter of a catch of Exception runs before finally blocks; it cannot be expressed in Python profile 'py3.14' (function 'F')"));
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 

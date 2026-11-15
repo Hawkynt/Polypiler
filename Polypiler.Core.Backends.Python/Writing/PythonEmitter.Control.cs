@@ -198,7 +198,8 @@ public static partial class PythonEmitter {
         Written(statement, writes);
 
       writes.Remove(counter);
-      if (Written(new IrBlock(statements), counter) || !Invariant(bound, writes, counter) || ReadAfter(after, counter))
+      // A counter a closure captures is read after the loop through the closure, which a range leaves at its last value.
+      if (Written(new IrBlock(statements), counter) || !Invariant(bound, writes, counter) || ReadAfter(after, counter) || this._captured.Contains(counter))
         return null;
 
       var upward = op is IrBinaryOp.Less or IrBinaryOp.LessOrEqual;
