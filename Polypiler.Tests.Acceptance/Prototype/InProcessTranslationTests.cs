@@ -16,6 +16,8 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// that differ in nothing but the output directory.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
+[Layer("core")]
+[Category("Prototype")]
 public sealed class InProcessTranslationTests {
 
   private string _directory = "";
@@ -118,7 +120,7 @@ public sealed class InProcessTranslationTests {
   private string Generated(string output, params string[] further) {
     var (exitCode, text) = Toolchain.Translate(this._directory, ["translate", "Snippet.cs", "--from", "csharp", "--to", "javascript", .. further, "--output", output]);
     Assert.That(exitCode, Is.Zero, text);
-    var file = Directory.GetFiles(Path.Combine(this._directory, output)).Single();
+    var file = Directory.GetFiles(Path.Combine(this._directory, output)).Single(path => Path.GetFileName(path) != "polypiler.manifest.json");
     Assert.That(text.Trim(), Is.EqualTo(Path.Combine(output, Path.GetFileName(file))));
     return File.ReadAllText(file);
   }

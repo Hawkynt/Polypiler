@@ -18,6 +18,8 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// both backends with optimization on and off (test design 3), translated in process.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
+[Category("Prototype")]
 public sealed class RecognitionTests {
 
   private static readonly bool[] _overflowChecking = [false, true];
@@ -43,7 +45,7 @@ public sealed class RecognitionTests {
     var watch = Stopwatch.StartNew();
     var (exitCode, printed) = Toolchain.Polypiler(inProcess, this._directory, ["translate", source, "--from", from, "--to", to, "--output", output, .. further]);
     Assert.That(exitCode, Is.Zero, printed);
-    var file = Directory.GetFiles(output).Single();
+    var file = Directory.GetFiles(output).Single(path => Path.GetFileName(path) != "polypiler.manifest.json");
     return (file, File.ReadAllText(file), printed, watch.Elapsed);
   }
 

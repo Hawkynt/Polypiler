@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
@@ -14,6 +15,7 @@ using Polypiler.Core.Backends.JavaScript.Passes;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Optimize.Target;
 using Polypiler.Core.Recognize;
+using Polypiler.Core.Verification.Manifests;
 
 namespace Polypiler.Cli;
 
@@ -30,7 +32,14 @@ namespace Polypiler.Cli;
 /// unless <c>--opt none</c> says otherwise; the rules of the one and the passes of the other share
 /// one namespace of optimization numbers. The foundation checks the command line
 /// against the grammar; the command refuses, as <c>PLY0003</c>, a language it does not know and an
-/// option that does not apply to the chosen languages or has a value they do not take.
+/// option that does not apply to the chosen languages or has a value they do not take. Beside the
+/// files it writes <c>polypiler.manifest.json</c> (PRD §10.2), in the state <c>generated</c>: the
+/// input with its hash, the profiles, the exported functions, the intrinsics, the floating-point
+/// record the header of each file carries, the helpers the backend emitted with their origin and
+/// licence, the licence of the output (<see cref="OutputLicence"/>: the input's
+/// <c>SPDX-License-Identifier</c> header with the helpers' licences, <c>NOASSERTION</c> without a
+/// header), the optimizations applied, the caveats and warnings, and the command line that writes the
+/// output again, with its paths relative to the output directory.
 /// </summary>
 public sealed class TranslateCommand : ICliCommand {
 
@@ -218,9 +227,14 @@ public sealed class TranslateCommand : ICliCommand {
     if (!CliPaths.RequireInput(file, context))
       return (int)ExitCode.EnvironmentError;
 
-    var source = File.ReadAllText(context.Resolve(file));
-    var (module, exitCode) = frontend.Import(file, source, options, context);
-    return module is null ? exitCode : Emit(Optimized(file, module, options, context, backend), options, context, backend, file);
+    var bytes = File.ReadAllBytes(context.Resolve(file));
+    using var text = new StreamReader(new MemoryStream(bytes), Encoding.UTF8, true);
+    var (module, exitCode, caveats) = frontend.Import(file, text.ReadToEnd(), options, context);
+    if (module is null)
+      return exitCode;
+
+    var (optimized, applications) = Optimized(file, module, options, context, backend);
+    return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications));
   }
 
   /// <summary>The level of <c>--opt</c>, or <see langword="null"/> for a value that names none.</summary>
@@ -264,7 +278,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// Runs the pass pipeline on an imported module with the options of the command line; with
   /// <c>--explain-opt</c> every rule application is written to the error stream as a note.
   /// </summary>
-  private static IrModule Optimized(string file, IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend) {
+  private static (IrModule Module, IReadOnlyList<RuleApplication> Applications) Optimized(string file, IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend) {
     var result = Optimizer.Run(module, new OptimizerOptions {
       Level = LevelOf(options)!.Value,
       Disabled = options.TryGetValue(DisableOpt, out var list) ? list.Split(',').ToHashSet() : [],
@@ -274,7 +288,7 @@ public sealed class TranslateCommand : ICliCommand {
       foreach (var application in result.Applications)
         context.Note($"{file}: opt {application}");
 
-    return result.Module;
+    return (result.Module, result.Applications);
   }
 
   /// <summary>Checks a module and writes it in the target language into the output directory.</summary>
@@ -305,10 +319,10 @@ public sealed class TranslateCommand : ICliCommand {
     => new(output, error, "", DiagnosticsFormat.Text, false, Directory.GetCurrentDirectory());
 
   /// <summary>
-  /// Lowers, checks and writes a module; with <c>--explain-opt</c> and the name of the source file,
+  /// Lowers, checks and writes a module; with <c>--explain-opt</c> and the record of a translation,
   /// every change of a target pass is written to the error stream as a note, as the rules are.
   /// </summary>
-  private static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend, string? file = null) {
+  private static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend, Record? record = null) {
     try {
       module = backend.Lower(module, options);
     } catch (InvalidDataException exception) {
@@ -330,14 +344,22 @@ public sealed class TranslateCommand : ICliCommand {
       var full = context.Resolve(directory);
       Directory.CreateDirectory(full);
       var emission = backend.Emit(module, options, PassesOf(options));
-      if (file is not null && options.ContainsKey(ExplainOpt))
+      if (record is not null && options.ContainsKey(ExplainOpt))
         foreach (var application in emission.Applications)
-          context.Note($"{file}: opt {application}");
+          context.Note($"{record.File}: opt {application}");
 
+      var outputs = new List<ManifestOutput>();
+      var helpers = new List<EmittedHelper>();
       foreach (var generated in emission.Files) {
-        File.WriteAllText(Path.Combine(full, generated.Path), generated.Content);
+        helpers.AddRange(generated.Helpers);
+        var bytes = _utf8.GetBytes(generated.Content);
+        File.WriteAllBytes(Path.Combine(full, generated.Path), bytes);
+        outputs.Add(new(ManifestWriter.PortablePath(generated.Path), ManifestWriter.Sha256(bytes), ManifestOutputRole.Source));
         context.Output.WriteLine(Path.Combine(directory, generated.Path));
       }
+
+      if (record is not null)
+        ManifestWriter.Write(TranslationManifest(module, options, context, backend, record, full, outputs, helpers), full);
     } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException) {
       CliPaths.NotCreatable(directory, exception.Message, context);
       return (int)ExitCode.EnvironmentError;
@@ -346,13 +368,13 @@ public sealed class TranslateCommand : ICliCommand {
     return (int)ExitCode.Success;
   }
 
-  private static (IrModule? Module, int ExitCode) ImportCSharp(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportCSharp(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
     Polypiler.Core.Frontends.CSharp.ImportResult imported;
     try {
       imported = CSharpFrontend.Import([new CSharpSource(file, source)], false, options.TryGetValue(Instantiate, out var list) ? Instantiations(list)! : []);
     } catch (ArgumentException unknown) {
       // An instantiation that names no generic method of the class, or a type that is none, is a mistake of the command line.
-      return (null, Refuse(context, unknown.Message));
+      return (null, Refuse(context, unknown.Message), []);
     }
 
     foreach (var diagnostic in imported.Diagnostics)
@@ -365,14 +387,17 @@ public sealed class TranslateCommand : ICliCommand {
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code is CSharpFrontend.CompilerError or CSharpFrontend.ConstantOverflow)
       ? InvalidSource
       : UnsupportedConstruct;
-    return (imported.Module, failure);
+    IReadOnlyList<ManifestMessage> caveats = imported.Module?.Caveats.Contains(CSharpFrontend.InvariantCulture) == true
+      ? [new ManifestMessage(CSharpFrontend.InvariantCulture, CSharpFrontend.InvariantCultureDescription)]
+      : [];
+    return (imported.Module, failure, caveats);
   }
 
   /// <summary>
   /// Imports JavaScript, all of the file or the functions <c>--export</c> names. What the imported
   /// code is known to do differently from the original is written as a note; it is no error.
   /// </summary>
-  private static (IrModule? Module, int ExitCode) ImportJavaScript(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportJavaScript(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
     var imported = JavaScriptFrontend.Import(file, source, options.TryGetValue(Export, out var names) ? Names(names) : null);
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
@@ -388,7 +413,7 @@ public sealed class TranslateCommand : ICliCommand {
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == JavaScriptFrontend.SyntaxError)
       ? InvalidSource
       : UnsupportedConstruct;
-    return (imported.Module, failure);
+    return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
   }
 
   private static string[] Names(string list) => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -437,6 +462,8 @@ public sealed class TranslateCommand : ICliCommand {
   /// <summary>The JavaScript backend with a capability table; <c>--profile</c> names the language level.</summary>
   private static Backend JavaScript(JavaScriptCapabilities capabilities, Func<IrModule> implementations) => new(
     "javascript",
+    NativeAccuracy.Node,
+    options => JavaScriptProfileOf(options).Profile!.ToString(),
     new RuleTarget(capabilities.RemainderFromQuotient),
     [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error,
@@ -454,6 +481,8 @@ public sealed class TranslateCommand : ICliCommand {
 
   /// <summary>The C# backend with a capability table.</summary>
   private static Backend CSharp(CSharpCapabilities capabilities, Func<IrModule> implementations) => new("csharp",
+    NativeAccuracy.DotNet,
+    options => CSharpProfileOf(options).ToString(),
     new RuleTarget(capabilities.RemainderFromQuotient),
     [new(Namespace, "<name>"), new(Profile, "<name>"), new(LangVersion, "<version>"), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? CSharpMisuse(options),
@@ -502,6 +531,74 @@ public sealed class TranslateCommand : ICliCommand {
     return (int)ExitCode.UsageError;
   }
 
+  /// <summary>What the manifest of a translation records beyond the emitted module: the input and what the stages before the backend found.</summary>
+  /// <param name="File">The input as typed.</param>
+  /// <param name="Bytes">The bytes of the input.</param>
+  /// <param name="Language">The source language.</param>
+  /// <param name="Caveats">What the imported code is known to do differently from the source.</param>
+  /// <param name="Applications">Every rule the optimizer applied.</param>
+  private sealed record Record(string File, byte[] Bytes, string Language, IReadOnlyList<ManifestMessage> Caveats, IReadOnlyList<RuleApplication> Applications);
+
+  private static readonly UTF8Encoding _utf8 = new(false);
+
+  /// <summary>What carrying the helpers obliges to: for each licence identifier of theirs, keeping its notice.</summary>
+  private static List<string> Obligations(IReadOnlyList<EmittedHelper> helpers)
+    => [.. helpers.SelectMany(helper => helper.Licence.Split(" AND ", StringSplitOptions.TrimEntries)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)
+      .Select(licence => $"{licence}: keep the copyright and licence notice of the helpers under it ({EmittedHelper.GrantUrl} and the notices of their origins)")];
+
+  /// <summary>
+  /// The manifest of a translation, in the state <c>generated</c>. Every path in it is relative to the
+  /// output directory, so the command line it records writes the same output again when run there.
+  /// </summary>
+  private static Manifest TranslationManifest(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend, Record record, string output, IReadOnlyList<ManifestOutput> outputs, IReadOnlyList<EmittedHelper> helpers) {
+    var input = InputPath(output, context.Resolve(record.File));
+    List<string> command = ["translate", input, From, options[From], To, options[To], Output, "."];
+    foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key)))
+      command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays ? [name] : [name, value]);
+
+    var mode = FloatModeOf(options);
+    return new Manifest {
+      Compiler = new(ProductInfo.Name, ProductInfo.Version, IrModuleFormat.Version),
+      Command = command,
+      Inputs = [new(input, ManifestWriter.Sha256(record.Bytes), null)],
+      Frontend = new(record.Language, null),
+      Target = new(backend.Name, backend.ProfileName(options), backend.Runtime, "any"),
+      Outputs = outputs,
+      Api = [.. module.Functions.Where(function => function.IsPublic).Select(function => new ManifestApiSymbol(function.Name,
+        $"{function.ReturnType} {function.Name}({string.Join(", ", function.Parameters.Select(parameter => $"{parameter.Type} {parameter.Name}"))})"))],
+      Intrinsics = [.. FloatManifest.Operations(module).Select(op => $"INTRINSICS.{op}")],
+      FloatingPoint = FloatManifest.HasFloat(module)
+        ? new(mode == FloatMode.Strict ? "strict" : "accurate", [.. FloatManifest.Natives(module, mode, backend.Runtime).Select(native => new ManifestNativeFunction(
+          $"INTRINSICS.{native.Op}", native.Format.ToString(), native.Contract.ToString(), native.Runtime, native.Slack, native.Bound))])
+        : null,
+      Helpers = [.. helpers.Select(helper => new ManifestHelper(helper.Symbol, helper.Licence, helper.Origin, helper.CallSites, helper.Size, helper.DependsOn))],
+      NativeDependencies = [],
+      Licensing = new(OutputLicence.Of(OutputLicence.Header(_utf8.GetString(record.Bytes)), helpers.Select(helper => helper.Licence)), Obligations(helpers), []),
+      Caveats = record.Caveats,
+      Optimization = new(options.GetValueOrDefault(Opt, "default"), options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',') : [],
+        [.. record.Applications.Select(application => application.Id).Distinct().Select(id => new ManifestPass(id, "unproven"))]),
+      Warnings = ManifestMessage.WarningsOf(context.Diagnostics.Items),
+      Toolchains = [],
+      Commands = new(CliContext.Invocation(command), null)
+    };
+  }
+
+  /// <summary>
+  /// The path of the input relative to the output directory, with <c>/</c>; only its file name where
+  /// the relative path would climb to the root of the file system or cross to another drive, since
+  /// such a path names the host's directories as an absolute one does.
+  /// </summary>
+  /// <param name="output">The full path of the output directory.</param>
+  /// <param name="input">The full path of the input.</param>
+  /// <returns>The path the manifest records.</returns>
+  public static string InputPath(string output, string input) {
+    var relative = Path.GetRelativePath(output, input);
+    var separators = new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar };
+    var depth = output[Path.GetPathRoot(output)!.Length..].Split(separators, StringSplitOptions.RemoveEmptyEntries).Length;
+    var climbs = relative.Split(separators).TakeWhile(segment => segment == "..").Count();
+    return ManifestWriter.PortablePath(Path.IsPathRooted(relative) || climbs >= depth ? Path.GetFileName(input) : relative);
+  }
+
   /// <summary>An option of the command.</summary>
   /// <param name="Name">The option as the command line writes it.</param>
   /// <param name="Value">What the help shows as its value, or <see langword="null"/> for an option that takes none.</param>
@@ -519,7 +616,7 @@ public sealed class TranslateCommand : ICliCommand {
     string Name,
     OptionSpec[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
-    Func<string, string, IReadOnlyDictionary<string, string>, CliContext, (IrModule? Module, int ExitCode)> Import) {
+    Func<string, string, IReadOnlyDictionary<string, string>, CliContext, (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats)> Import) {
 
     /// <summary>Whether an option belongs to this language.</summary>
     public bool Has(string option) => this.Options.Any(candidate => candidate.Name == option);
@@ -528,6 +625,8 @@ public sealed class TranslateCommand : ICliCommand {
 
   /// <summary>A target language of the command.</summary>
   /// <param name="Name">The name <c>--to</c> takes.</param>
+  /// <param name="Runtime">The runtime of the generated code, by its toolchain key.</param>
+  /// <param name="ProfileName">The profile the options name, as the header of a generated file states it.</param>
   /// <param name="Target">What the capability table tells the optimizer about the costs of the target.</param>
   /// <param name="Options">The options this language reads; another target may read one of them its own way.</param>
   /// <param name="Misuse">What is wrong with the values of those options, or <see langword="null"/>.</param>
@@ -536,6 +635,8 @@ public sealed class TranslateCommand : ICliCommand {
   /// <param name="Emit">Writes a module that passed the check, running the target passes the options let run.</param>
   private sealed record Backend(
     string Name,
+    string Runtime,
+    Func<IReadOnlyDictionary<string, string>, string> ProfileName,
     RuleTarget Target,
     OptionSpec[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,

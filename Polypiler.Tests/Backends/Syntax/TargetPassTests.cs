@@ -16,6 +16,7 @@ using Polypiler.Core.Backends.JavaScript.Printing;
 using Polypiler.Core.Backends.JavaScript.Syntax;
 using Polypiler.Core.IR;
 using Polypiler.Core.Optimize.Target;
+using Polypiler.Core.Verification.Manifests;
 using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Backends.Syntax;
@@ -293,7 +294,7 @@ public sealed class TargetPassTests {
     using var printed = new StringWriter();
     using var error = new StringWriter();
     var exitCode = TranslateCommand.Run([source, "--from", "csharp", "--to", "javascript", "--profile", "es5", "--output", output, .. options], printed, error);
-    var text = Directory.Exists(output) ? File.ReadAllText(Directory.GetFiles(output).Single()) : "";
+    var text = Directory.Exists(output) ? File.ReadAllText(Directory.GetFiles(output).Single(path => Path.GetFileName(path) != Manifest.FileName)) : "";
     return (exitCode, error.ToString(), text);
   }
 

@@ -16,6 +16,11 @@ csharp_new_line_before_open_brace = none
 csharp_new_line_before_else = false
 csharp_new_line_before_catch = false
 csharp_new_line_before_finally = false
+# Several initializers of an object or an anonymous type may share a line.
+csharp_new_line_before_members_in_object_initializers = false
+csharp_new_line_before_members_in_anonymous_types = false
+# A block after a case label is indented like the statements of the case, not one level deeper.
+csharp_indent_case_contents_when_block = false
 
 [*.{md,markdown}]
 trim_trailing_whitespace = false   # trailing spaces are hard line-breaks

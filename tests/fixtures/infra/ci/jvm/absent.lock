@@ -1,0 +1,18 @@
+# The two toolchains of the Kotlin/Java layer, as on a machine that has neither: their probes name
+# executables that do not exist. JvmLayerTests checks what a test that requires them reports there.
+schema: 1
+toolchains:
+  jdk:
+    version: "27"
+    probe: [no-such-javac-polypiler, -version]
+    versionPattern: '^javac (?<version>\S+)$'
+    platforms: [linux, windows, macos]
+    licence: GPL-2.0-only WITH Classpath-exception-2.0
+    source: https://jdk.java.net/
+  kotlinc:
+    version: "2.4.21"
+    probe: [no-such-kotlinc-polypiler, -version]
+    versionPattern: 'kotlinc-jvm (?<version>\d+\.\d+\.\d+)'
+    platforms: [linux, windows, macos]
+    licence: Apache-2.0
+    source: https://github.com/JetBrains/kotlin/releases

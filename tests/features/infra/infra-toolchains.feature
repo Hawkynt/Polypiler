@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Pinned toolchains
 
   Scenario: The repository lock is valid and complete

@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: BitPerm fixtures exported from the pinned page
 
   Scenario: The export reproduces the checked-in fixtures

@@ -37,7 +37,10 @@ public static class FloatLegalization {
   /// <param name="module">The module to legalize.</param>
   /// <param name="implementations">Gives the portable implementations as one module.</param>
   /// <param name="native">Whether the target writes an intrinsic itself.</param>
-  /// <returns>The legalized module; the module itself when nothing had to be replaced.</returns>
+  /// <returns>
+  /// The legalized module, which records every implementation it copied in under
+  /// <see cref="IrModule.Implementations"/>; the module itself when nothing had to be replaced.
+  /// </returns>
   public static IrModule Lower(IrModule module, Func<IrModule> implementations, Func<IrIntrinsic, bool> native) {
     var run = new Run(module, implementations, native);
     var functions = module.Functions.Select(run.Function).ToList();
@@ -45,7 +48,11 @@ public static class FloatLegalization {
       return module;
 
     var helpers = run.Helpers();
-    return module with { Functions = [.. functions, .. helpers.Functions], Constants = [.. module.Constants, .. helpers.Constants] };
+    return module with {
+      Functions = [.. functions, .. helpers.Functions],
+      Constants = [.. module.Constants, .. helpers.Constants],
+      Implementations = [.. module.Implementations, .. run.Names.Select(pair => (pair.Value, pair.Key))]
+    };
   }
 
   /// <summary>Whether an intrinsic is one the legalization replaces where the target lacks it.</summary>

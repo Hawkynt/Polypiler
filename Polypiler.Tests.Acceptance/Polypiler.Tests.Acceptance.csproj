@@ -51,6 +51,7 @@
     <Compile Include="..\Polypiler.Tests\Verification\Running\Support\*.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Verification\Fuzzing\DemoTargets.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Tooling\Integrity\GoldenTree.cs" LinkBase="Infra\Support" />
+    <Compile Include="..\Polypiler.Tests\Tooling\Licensing\LicenceEffectTrees.cs" LinkBase="Infra\Support" />
   </ItemGroup>
 
   <ItemGroup>
@@ -64,6 +65,7 @@
     <ProjectReference Include="..\Polypiler.Permutation\Polypiler.Permutation.csproj" />
     <ProjectReference Include="..\Polypiler.Tooling\Polypiler.Tooling.csproj" />
     <ProjectReference Include="..\Polypiler.Tests.Probe\Polypiler.Tests.Probe.csproj" />
+    <ProjectReference Include="..\Polypiler.Tests.Generator\Polypiler.Tests.Generator.csproj" />
   </ItemGroup>
 
 </Project>

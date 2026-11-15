@@ -46,7 +46,13 @@
           "enum": ["tool", "package", "nuget", "external"],
           "description": "tool (default): an executable with a version command; package: a library inside the host named by 'requires', probed by a command; nuget: a NuGet package found in the global packages folder; external: not installable on a hosted runner."
         },
-        "requires": { "$ref": "#/$defs/text", "description": "The key of the host toolchain of a package." }
+        "requires": { "$ref": "#/$defs/text", "description": "The key of the host toolchain of a package." },
+        "roots": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "description": "Environment variables naming folders the toolchain reads besides its install root; the sandboxed runner shows each one that is set read-only."
+        }
       },
       "if": { "properties": { "kind": { "enum": ["package", "nuget"] } }, "required": ["kind"] },
       "then": { "required": ["requires"] }

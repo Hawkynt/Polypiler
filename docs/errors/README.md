@@ -41,7 +41,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0032](PLY0032.md) | error | 10 (BudgetExceeded) | `memory limit of <bytes> bytes exceeded` | INFRA-RUNNER |
 | [PLY0033](PLY0033.md) | error | 10 (BudgetExceeded) | `output limit of <bytes> bytes exceeded` | INFRA-RUNNER |
 | [PLY0034](PLY0034.md) | error | 1 (EnvironmentError) | `isolation is unavailable on this host; untrusted input was not executed` | INFRA-RUNNER |
-| [PLY0036](PLY0036.md) (reserved) | error | 1 (EnvironmentError) | `rebuild not deterministic: '<path>' differs at byte <offset>` | INFRA-REBUILD |
+| [PLY0036](PLY0036.md) | error | 1 (EnvironmentError) | `rebuild not deterministic: '<path>' differs at byte <offset>` | INFRA-REBUILD |
 | [PLY0037](PLY0037.md) (reserved) | error | 8 (LicenseBlocker) | `SBOM component '<component>' lacks a licence` | INFRA-SBOM |
 | [PLY0038](PLY0038.md) | error | 1 (EnvironmentError) | `<from> must not reference <to> (rule: <rule>)` | INFRA-MODULES |
 | [PLY0040](PLY0040.md) | error | 1 (EnvironmentError) | `<json pointer>: <schema keyword message>` | SPEC-META |
@@ -55,22 +55,25 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0050](PLY0050.md) | error | 7 (OracleFailure) | `reference oracle '<oracle>' failed for '<fixture>': <cause>` | VER-ORACLE |
 | [PLY0051](PLY0051.md) | error | 5 (SemanticMismatch) | `'<fixture>' vector '<name>': expected <hex>, actual <hex>, first difference at byte <offset>` | VER-ORACLE |
 | [PLY0052](PLY0052.md) | error | 5 (SemanticMismatch) | `'<fixture>' vector '<name>' element <index>: expected <hex>, actual <hex>, <distance> exceeds <mode> <bound>` | VER-ORACLE |
-| [PLY0053](PLY0053.md) (reserved) | error | 1 (EnvironmentError) | `'<path>' is not a valid manifest: <reason>` | VER-MANIFEST |
-| [PLY0054](PLY0054.md) (reserved) | error | 1 (EnvironmentError) | `'<path>' listed in the manifest is <missing\|changed>` | VER-MANIFEST |
+| [PLY0053](PLY0053.md) | error | 1 (EnvironmentError) | `manifest '<path>' is invalid: <JSON pointer>: <reason>` | VER-MANIFEST |
+| [PLY0054](PLY0054.md) | error | 1 (EnvironmentError) | `manifest '<path>' claims '<state>' but the evidence supports only '<derived>': <missing>` | VER-MANIFEST |
 | [PLY0055](PLY0055.md) (reserved) | warning | — | `proof of <rule> gave up after <budget>` | VER-SMT |
 | [PLY0056](PLY0056.md) (reserved) | error | 5 (SemanticMismatch) | `proof of <rule> refuted: <name>=<hex>[, ...]: before <hex>, after <hex>` | VER-SMT |
 | [PLY0057](PLY0057.md) (reserved) | error | 10 (BudgetExceeded) | `exhaustive proof of <rule> needs <n> input bits, budget is <m>` | VER-EXHAUSTIVE |
-| [PLY0058](PLY0058.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | VER-GATES |
+| [PLY0058](PLY0058.md) | error | 1 (EnvironmentError) | `gate record '<file>': fixture '<fixture>' claims '<state>': <reason>` | VER-GATES |
 | [PLY0059](PLY0059.md) (reserved) | error | 5 (SemanticMismatch) | `round trip '<id>' leg <leg> (<opt>): <function>(<arguments>) expected <expected>, got <actual>` | VER-ROUNDTRIP |
-| [PLY0060](PLY0060.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | VER-EVIDENCE |
+| [PLY0060](PLY0060.md) | error | 1 (EnvironmentError) | `evidence bundle '<directory>' <reason>` | VER-EVIDENCE |
 | [PLY0061](PLY0061.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | SPEC-CAPABILITIES |
 | [PLY0062](PLY0062.md) (reserved) | error | 3 (UnsupportedConstruct) | `the proof of <rule> meets the unmodelled operation <operation>` | VER-SMT |
 | [PLY0063](PLY0063.md) | error | 7 (OracleFailure) | `no independent oracle is registered for '<fixture>'` | VER-ORACLE |
+| [PLY0064](PLY0064.md) | error | 2 (UsageError) | `<reason>` | VER-IMAGES |
 | [PLY0070](PLY0070.md) | error | 1 (EnvironmentError) | `fuzz target '<target>': <kind> '<signature>' at iteration <i> (seed <seed>); minimized to <n> bytes: artifacts/fuzz/<target>/<id>.bin` | INFRA-FUZZ |
 | [PLY0071](PLY0071.md) | error | 1 (EnvironmentError) | `property '<test>' falsified after <n> inputs (seed <seed>): <shrunk> (original <original>, <k> shrink steps); replay with POLYPILER_PROPERTY_SEED=<seed>` | INFRA-PROPERTY |
 | [PLY0072](PLY0072.md) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': <reason>` | INFRA-BENCH |
 | [PLY0073](PLY0073.md) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': <metric> regressed by <p> % (baseline <b>, current <c>), budget <m> % from <budget file>` | INFRA-BENCH |
 | [PLY0074](PLY0074.md) | error | 1 (EnvironmentError) | `<file>(<line>): step '<step>' has no binding` | INFRA-BDD |
+| [PLY0075](PLY0075.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-CI-CORE |
+| [PLY0076](PLY0076.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-CI-CORE |
 | [PLY0077](PLY0077.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-FUZZ |
 | [PLY0078](PLY0078.md) | error | 1 (EnvironmentError) | `<file>(<line>,<column>): <reason naming the field>` | INFRA-BENCH |
 | [PLY0079](PLY0079.md) | error | 1 (EnvironmentError) | `benchmark '<id>/<variant>': the program exited with <code>; nothing is recorded` | INFRA-BENCH |

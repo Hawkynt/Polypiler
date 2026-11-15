@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 namespace Polypiler.Core.IR;
 
 /// <summary>Linear interpolation, defined as three operations in a fixed order.</summary>

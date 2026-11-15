@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Fuzzing harness with corpus mutation, budgets and minimization
 
   Scenario: A crashing corpus entry is reported and minimized to its cause

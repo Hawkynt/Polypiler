@@ -1,0 +1,9 @@
+# The core layer (PRD §7.3): .NET build and test, warnings as errors, format, the IR verifier, spec
+# validation and the audit of the CI itself, run by the job layer-core of .github/workflows/ci.yml.
+# Format: spec/schemas/ci-layer.schema.json. node runs the generated JavaScript of the acceptance tests.
+schema: 1
+layer: core
+toolchains: [dotnet-sdk, node]
+os: [ubuntu-latest, windows-latest]
+paths: ["**"]
+always: true

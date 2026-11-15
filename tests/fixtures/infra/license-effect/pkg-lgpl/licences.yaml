@@ -1,0 +1,4 @@
+# The package is LGPL-3.0-or-later, as its pinned input is.
+schema: 1
+declared:
+  - { glob: '**', licence: LGPL-3.0-or-later }

@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Stable exit codes
 
   The scenarios register the test-only command "raise" beside "echo" and "demand" and run them in

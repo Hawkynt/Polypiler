@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Value records
 
   Scenario Outline: A struct stays a copy in every JavaScript profile

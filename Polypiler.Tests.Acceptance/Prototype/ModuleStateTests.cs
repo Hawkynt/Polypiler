@@ -17,6 +17,8 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
+[Category("Prototype")]
 public sealed class ModuleStateTests {
 
   private string _directory = "";
@@ -37,7 +39,7 @@ public sealed class ModuleStateTests {
     var (exitCode, text) = Toolchain.Polypiler(true, this._directory, ["translate", StateFixtures.PathOf(file), "--from", from, "--to", to, "--output", output, .. further]);
     TestContext.Out.WriteLine($"translate {file} --to {to} {string.Join(' ', further)}: {clock.ElapsedMilliseconds} ms");
     Assert.That(exitCode, Is.Zero, text);
-    var generated = Directory.GetFiles(output).Single();
+    var generated = Directory.GetFiles(output).Single(path => Path.GetFileName(path) != "polypiler.manifest.json");
     return (generated, File.ReadAllText(generated));
   }
 

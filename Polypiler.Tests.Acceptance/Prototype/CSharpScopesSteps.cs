@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.IR;
+using Polypiler.Core.Verification.Manifests;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Acceptance.Support;
 using Reqnroll;
@@ -36,7 +37,7 @@ public sealed class CSharpScopesSteps(PrototypeScenario scenario) {
   }
 
   /// <summary>The file the last command wrote into <c>out</c>.</summary>
-  private string Written() => File.ReadAllText(Directory.GetFiles(scenario.Workspace.Resolve("out")).Single());
+  private string Written() => File.ReadAllText(Directory.GetFiles(scenario.Workspace.Resolve("out")).Single(path => Path.GetFileName(path) != Manifest.FileName));
 
   /// <summary>The generated file compiles against the reference assemblies of its profile.</summary>
   [Then(@"^the generated file compiles against the reference assemblies of (\S+) without diagnostics$")]

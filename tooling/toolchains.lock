@@ -16,9 +16,16 @@
 #               two probe as Mismatch.
 #   gcc, mpfr, gmp
 #               the versions tests/vectors/float/generate/versions.txt records for the reference
-#               vectors (gcc 16.2.1, MPFR 4.2.2, GMP 6.3.0).
-#   git         the development host's git (2.56.0), which imported the corpus lock
-#               (polypiler-tooling corpus import); no CI step probes it yet.
+#               vectors (gcc 16.2.1, MPFR 4.2.2, GMP 6.3.0). gcc is used on Linux only: the `gcc`
+#               of a macOS runner is Apple's clang and the one of a Windows runner MinGW's, so the
+#               native layer (tooling/ci/layers/native.yaml) builds with clang there. The layer's
+#               Linux job takes gcc, clang and bubblewrap at these versions from the Arch Linux
+#               archive snapshot of 2026-10-25, the only hosted source of gcc 16.2.1.
+#   git         the release line of the development host's git (2.56.0), which imported the corpus
+#               lock (polypiler-tooling corpus import). Pinned to major and minor: the hosted
+#               runners' git takes every patch release with the image (2.56.1 on ubuntu-latest in
+#               2026-11), and a patch release changes nothing the corpus import and the BASIC
+#               layer read with it.
 #   NuGet       acornima, roslyn and the ref-* reference assemblies are the versions the project
 #               files restore (Polypiler.Core.Frontends.*/*.csproj,
 #               Polypiler.Tests/Prototype/Support/ReferenceAssemblies.props); a test holds both in step.
@@ -30,17 +37,37 @@
 #   vice, vice-x128, vice-xvic, petcat
 #               the Commodore emulators and BASIC lister of the development host's VICE 3.10, which
 #               run the Commodore BASIC oracles (Polypiler.Core.Verification/Emulators).
-#   xvfb-run    the virtual X server the VICE emulators run under on Linux: the X.Org version
-#               xdpyinfo reports for the server xvfb-run starts (xorg-server-xvfb on the
-#               development host).
+#   xvfb-run    the virtual X server the VICE emulators run under on Linux: the release line of the
+#               X.Org version xdpyinfo reports for the server xvfb-run starts (21.1.25 of
+#               xorg-server-xvfb on the development host, 21.1.22 of Ubuntu 26.04's xvfb in the
+#               BASIC layer). Pinned to major and minor: the emulators only need a display, which a
+#               patch release of the server does not change.
 #   pcbasic     the GW-BASIC oracle (Polypiler.Core.Verification.Emulators.PcBasic): the PyPI release
 #               installed with pip into a virtual environment, whose folder PCBASIC_HOME names. Used
 #               only as an external process; none of its GPL code enters the repository.
+#   pb-compiler, dosbox-x, llvm, vice, pcbasic
+#               the BASIC/PB layer (tooling/ci/basic/install.sh, CI run of layer-basic on ubuntu-26.04).
+#               pb-compiler is built from the pinned commit; pbc prints no version of its own, so the
+#               installed command is a wrapper that answers --version with that commit. dosbox-x is
+#               the ubuntu-26.04 package (2026.01.02): upstream ships no Linux binaries, and the
+#               Flathub build (2026.10.01) cannot start inside the runner's bubblewrap sandbox. vice
+#               and its sibling emulators and petcat are built there from the VICE 3.10 release
+#               source, which carries the ROM images, llvm is three tools of the LLVM release
+#               archive, pcbasic the PyPI release in a virtual environment.
+#   rust        the stable release the Rust layer (tooling/ci/layers/rust.yaml) installs with rustup,
+#               components rustfmt and clippy. The probe asks cargo, which the layer runs and whose
+#               version a stable release shares with rustc; the development host has 1.99.0 too.
+#   rust-miri   the dated nightly the Rust layer runs Miri with, never a build: the first nightly of
+#               2026-11 whose manifest lists miri for x86_64-unknown-linux-gnu. rustup installs it with
+#               the components miri and rust-src; RUST_MIRI_HOME names its sysroot, whose folder name
+#               under rustup's toolchains carries the channel. The probe runs miri, so a nightly
+#               without the miri component is not installed (PLY0021).
+#   jdk, kotlinc, typescript, python, perl
+#               the versions the JVM, JS/TS and Python/Perl layers (tooling/ci/layers) install and
+#               probe in their jobs.
 #   others      no test runs them yet. Installed on the development host: read from the tool
-#               (clang, llvm, jdk, perl, python, ruby, rust, go). Not installed: the latest
-#               stable upstream release (aflplusplus, dosbox-x, fbc, fpc, ilspy-cli, ilverify,
-#               kotlinc, nasm, php, qemu-user, typescript, wabt, wasmtime, z3). pb-compiler is the
-#               commit backlog/README.md pins.
+#               (ruby, go). Not installed: the latest stable upstream release (aflplusplus, fbc,
+#               fpc, ilspy-cli, ilverify, nasm, php, qemu-user, wabt, wasmtime, z3).
 schema: 1
 toolchains:
   acornima:
@@ -74,7 +101,7 @@ toolchains:
     licence: Apache-2.0 WITH LLVM-exception
     source: https://github.com/llvm/llvm-project/releases
   dosbox-x:
-    version: "2026.10.01"
+    version: "2026.01.02"
     probe: [dosbox-x, --version]
     versionPattern: 'version (?<version>\d{4}\.\d{2}\.\d{2})'
     platforms: [linux, windows, macos]
@@ -107,13 +134,13 @@ toolchains:
     version: "16.2.1"
     probe: [gcc, -dumpfullversion]
     versionPattern: '^(?<version>\d+\.\d+\.\d+)$'
-    platforms: [linux, windows, macos]
+    platforms: [linux]
     licence: GPL-3.0-or-later WITH GCC-exception-3.1
     source: https://gcc.gnu.org/releases.html
   git:
-    version: "2.56.0"
+    version: "2.56"
     probe: [git, --version]
-    versionPattern: '^git version (?<version>\d+\.\d+\.\d+)'
+    versionPattern: '^git version (?<version>\d+\.\d+)'
     platforms: [linux, windows, macos]
     licence: GPL-2.0-only
     source: https://git-scm.com/downloads
@@ -165,6 +192,7 @@ toolchains:
     platforms: [linux, windows, macos]
     licence: Apache-2.0
     source: https://github.com/JetBrains/kotlin/releases
+    roots: [JAVA_HOME]
   llvm:
     version: "23.1.3"
     probe: [llvm-config, --version]
@@ -347,11 +375,21 @@ toolchains:
     source: https://www.ruby-lang.org/en/downloads/
   rust:
     version: "1.99.0"
-    probe: [rustc, --version]
-    versionPattern: '^rustc (?<version>\d+\.\d+\.\d+)'
+    probe: [cargo, --version]
+    versionPattern: '^cargo (?<version>\d+\.\d+\.\d+)'
     platforms: [linux, windows, macos]
     licence: MIT OR Apache-2.0
     source: https://forge.rust-lang.org/infra/other-installation-methods.html
+    roots: [RUSTUP_HOME, MIRI_SYSROOT]
+  rust-miri:
+    version: "nightly-2026-11-01"
+    probe: [miri, --print, sysroot]
+    versionPattern: '[\\/]toolchains[\\/](?<version>nightly-\d{4}-\d{2}-\d{2})-'
+    platforms: [linux, windows, macos]
+    licence: MIT OR Apache-2.0
+    source: https://static.rust-lang.org/dist/2026-11-01/channel-rust-nightly.toml
+    home: RUST_MIRI_HOME
+    roots: [RUST_MIRI_HOME]
   typescript:
     version: "7.0.2"
     probe: [tsc, --version]
@@ -398,9 +436,9 @@ toolchains:
     licence: Apache-2.0 WITH LLVM-exception
     source: https://github.com/bytecodealliance/wasmtime/releases
   xvfb-run:
-    version: "21.1.25"
+    version: "21.1"
     probe: [xvfb-run, -a, xdpyinfo]
-    versionPattern: '^X\.Org version: (?<version>\d+\.\d+\.\d+)$'
+    versionPattern: '^X\.Org version: (?<version>\d+\.\d+)\.\d+$'
     platforms: [linux]
     licence: MIT
     source: https://gitlab.freedesktop.org/xorg/xserver

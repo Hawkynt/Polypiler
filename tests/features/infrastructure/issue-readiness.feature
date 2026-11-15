@@ -1,3 +1,4 @@
+@Layer.core
 Feature: One canonical issue-readiness standard
   Scenario: Existing templates lead to one policy
     Given ISSUES.md and the nine kind-specific issue templates

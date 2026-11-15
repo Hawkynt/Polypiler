@@ -1,11 +1,12 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
+using System.Threading;
 using NUnit.Framework;
 
 namespace Polypiler.Tests.Acceptance.Prototype;
@@ -65,11 +66,36 @@ internal sealed class NodeWorker : IDisposable {
 
   private readonly Process _process;
   private readonly StringBuilder _errors = new();
+  private readonly BlockingCollection<string?> _lines = [];
+  private readonly Thread _errorReader;
 
+  /// <summary>
+  /// Takes the started process and serves both its outputs on threads of their own. Reading them with
+  /// the asynchronous methods of the process would make every answer wait for a thread of the pool,
+  /// and on Windows, where the pipes are synchronous handles, would also hold one blocked for as long as
+  /// a read is pending: a sweep of many targets beside other tests then starves the pool, and an answer
+  /// node gave at once arrives only after the timeout.
+  /// </summary>
   private NodeWorker(Process process, TimeSpan timeout) {
     this._process = process;
     this.Timeout = timeout;
+    Serve("node-worker-out", () => {
+      while (process.StandardOutput.ReadLine() is { } line)
+        this._lines.Add(line);
+      this._lines.Add(null);
+    }).Start();
+    this._errorReader = Serve("node-worker-err", () => {
+      while (process.StandardError.ReadLine() is { } line)
+        lock (this._errors)
+          this._errors.AppendLine(line);
+    });
+    this._errorReader.Start();
   }
+
+  /// <summary>How long the reader of standard error may take for the rest of it once the worker has ended.</summary>
+  private static readonly TimeSpan _drainTime = TimeSpan.FromSeconds(10);
+
+  private static Thread Serve(string name, ThreadStart read) => new(read) { IsBackground = true, Name = name };
 
   /// <summary>How long a request may take before the worker is stopped.</summary>
   public TimeSpan Timeout { get; }
@@ -99,14 +125,7 @@ internal sealed class NodeWorker : IDisposable {
       throw;
     }
 
-    var worker = new NodeWorker(process, timeout ?? DefaultTimeout);
-    process.ErrorDataReceived += (_, line) => {
-      if (line.Data is not null)
-        lock (worker._errors)
-          worker._errors.AppendLine(line.Data);
-    };
-    process.BeginErrorReadLine();
-    return worker;
+    return new NodeWorker(process, timeout ?? DefaultTimeout);
   }
 
   /// <summary>Runs calls through a module and returns one outcome per call.</summary>
@@ -133,17 +152,14 @@ internal sealed class NodeWorker : IDisposable {
     var stray = new StringBuilder();
     var deadline = Stopwatch.StartNew();
     while (true) {
-      var reading = this._process.StandardOutput.ReadLineAsync();
       var remaining = this.Timeout - deadline.Elapsed;
-      if (remaining <= TimeSpan.Zero || !reading.Wait(remaining)) {
+      if (remaining <= TimeSpan.Zero || !this._lines.TryTake(out var line, remaining)) {
         this.Stop();
         throw new NodeFailure($"the node worker did not answer within {this.Timeout.TotalSeconds:0.###} s and was stopped");
       }
 
-      var line = reading.Result;
-      if (line is null) {
+      if (line is null)
         throw new NodeFailure($"the node worker exited with code {this.ExitCode()}: {this.Errors()}");
-      }
 
       var marker = line.IndexOf(Marker, StringComparison.Ordinal);
       if (marker < 0) {
@@ -197,8 +213,10 @@ internal sealed class NodeWorker : IDisposable {
     return this._process.ExitCode;
   }
 
+  /// <summary>What the worker wrote to standard error, once it has ended and its reader has taken the rest.</summary>
   private string Errors() {
     this._process.WaitForExit();
+    this._errorReader.Join(_drainTime);
     lock (this._errors)
       return this._errors.ToString().Trim();
   }

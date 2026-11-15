@@ -14,10 +14,12 @@ namespace Polypiler.Tests.Backends.Golden;
 /// trees (#1336): every source of the prototype fixtures, every variant of both targets, byte for
 /// byte, refusals included. One case per source and target; a failure names every variant that
 /// differs and shows the first one. A case translates some thirty variants, which takes longer than
-/// the fast tier allows.
+/// the fast tier allows. The full matrix is the category <c>Sweep</c>, which CI runs once, in the job
+/// <c>target-sweep</c>; <see cref="GoldenOutputSliceTests"/> is its slice in every OS's test job.
 /// </summary>
 [TestFixture]
 [Category("Slow")]
+[Category("Sweep")]
 public sealed class GoldenOutputTests {
 
   private string _directory = "";
@@ -47,6 +49,46 @@ public sealed class GoldenOutputTests {
       .ToList();
     Assert.That(differing.Select(result => result.Name), Is.Empty,
       differing.Count == 0 ? "" : $"first difference, {differing[0].Name}:\n--- recorded\n{recorded[differing[0].Name]}\n--- now\n{differing[0].Now}");
+  }
+
+}
+
+/// <summary>
+/// The representative slice of <see cref="GoldenOutputTests"/> (<see cref="GoldenOutputs.Slice"/>):
+/// every source in one variant of each target, every variant at least once, byte for byte. It is in
+/// the fast tier and runs on every OS.
+/// </summary>
+[TestFixture]
+public sealed class GoldenOutputSliceTests {
+
+  private string _directory = "";
+
+  [SetUp]
+  public void CreateWorkingDirectory() {
+    this._directory = Path.Combine(Path.GetTempPath(), "polypiler-golden-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(this._directory);
+  }
+
+  [TearDown]
+  public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
+
+  private static IEnumerable<TestCaseData> Cases()
+    => GoldenOutputs.Slice.Select(item => new TestCaseData(item.Source, item.Variant.Target, item.Variant.Name).SetName($"GoldenSlice({item.Source}, {item.Variant.Target}, {item.Variant})"));
+
+  [TestCaseSource(nameof(Cases))]
+  public void TheVariant_IsByteIdentical(string source, string target, string name) {
+    var variant = GoldenOutputs.Variants(target).Single(variant => variant.Name == name);
+    Assert.That(GoldenOutputs.Translate(source, variant, this._directory), Is.EqualTo(GoldenOutputs.Recorded(source, variant.Target)[variant.Name]));
+  }
+
+  /// <summary>The slice holds every source once per target and every variant of each target at least once.</summary>
+  [Test]
+  public void TheSlice_HasEverySourceAndEveryVariant() {
+    foreach (var target in GoldenOutputs.Targets) {
+      var slice = GoldenOutputs.Slice.Where(item => item.Variant.Target == target).ToList();
+      Assert.That(slice.Select(item => item.Source), Is.EqualTo(GoldenOutputs.All), target);
+      Assert.That(slice.Select(item => item.Variant.Name).Distinct(), Is.EquivalentTo(GoldenOutputs.Variants(target).Select(variant => variant.Name)), target);
+    }
   }
 
 }

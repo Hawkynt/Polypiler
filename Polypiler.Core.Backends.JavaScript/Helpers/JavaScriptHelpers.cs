@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,9 @@ internal static partial class JavaScriptHelpers {
   private const string OutOfRange = "  if (index < 0 || index >= array.length) throw new IndexOutOfRangeError(\"index out of range\");";
   private const string RangeOutOfRange = "  if (from < 0 || to < 0 || length < 0 || from + length > source.length || to + length > target.length) throw new IndexOutOfRangeError(\"index out of range\");";
   private const string Joined = "{ hi: ((w[3] << 16) | w[2]) >>> 0, lo: ((w[1] << 16) | w[0]) >>> 0 }";
+
+  /// <summary>The folder of the repository every helper's source lies in, all of it released for outputs under <see cref="EmittedHelper.OwnLicence"/>.</summary>
+  public const string Folder = "Polypiler.Core.Backends.JavaScript/Helpers";
 
   /// <summary>The names of all helpers, in the order a module lists the ones it uses.</summary>
   public static readonly IReadOnlyList<string> Order = [

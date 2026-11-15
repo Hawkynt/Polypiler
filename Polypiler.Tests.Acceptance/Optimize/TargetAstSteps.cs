@@ -23,6 +23,10 @@ public sealed class TargetAstSteps(PrototypeScenario scenario) {
   private readonly ConcurrentBag<string> _problems = [];
   private readonly ConcurrentBag<TargetTree> _translated = [];
   private (string Path, string Text) _generated;
+  private IReadOnlyList<string?>? _parseBackProblems;
+
+  /// <summary>What the parsers say of every translated file, read once and in parallel for both steps that ask.</summary>
+  private IReadOnlyList<string?> ParseBackProblems => this._parseBackProblems ??= [.. this._translated.AsParallel().Select(TargetTrees.ParseBackProblem)];
 
   private static IEnumerable<(string Source, GoldenVariant Variant)> Everything()
     => from source in GoldenOutputs.All from target in GoldenOutputs.Targets from variant in GoldenOutputs.Variants(target) select (source, variant);
@@ -53,16 +57,16 @@ public sealed class TargetAstSteps(PrototypeScenario scenario) {
   [Then("^Roslyn at the profile's language version and Acornima at the profile's level parse each file without diagnostics$")]
   public void ParsedWithoutDiagnostics() {
     Assert.That(this._translated, Is.Not.Empty);
-    Assert.That(this._translated.Select(TargetTrees.ParseBackProblem).Where(problem => problem is not null && problem != "the text parses to another tree"), Is.Empty);
+    Assert.That(this.ParseBackProblems.Where(problem => problem is not null && problem != "the text parses to another tree"), Is.Empty);
   }
 
   [Then("^the parsed tree equals the printed target tree structurally$")]
-  public void StructurallyEqual() => Assert.That(this._translated.Select(TargetTrees.ParseBackProblem).OfType<string>(), Is.Empty);
+  public void StructurallyEqual() => Assert.That(this.ParseBackProblems.OfType<string>(), Is.Empty);
 
   [Then("^no generated file of any fixture declares a private helper that nothing references$")]
   public void NoUnreferencedHelper() {
     Assert.That(this._translated, Is.Not.Empty);
-    Assert.That(this._translated.SelectMany(TargetTrees.UnreferencedHelpers), Is.Empty);
+    Assert.That(this._translated.AsParallel().SelectMany(TargetTrees.UnreferencedHelpers), Is.Empty);
   }
 
   /// <summary>Translates the method of the scenario with the options of the step, which name the target.</summary>

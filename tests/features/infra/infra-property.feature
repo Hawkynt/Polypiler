@@ -1,3 +1,4 @@
+@Layer.core
 Feature: Property-based test harness with fixed seeds and shrinking
 
   Scenario Outline: A seed produces the published SplitMix64 sequence

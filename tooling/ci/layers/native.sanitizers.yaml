@@ -1,0 +1,12 @@
+# The sanitizers each platform and compiler of the native layer (native.yaml) builds with: a list of
+# -fsanitize= groups, or `none`. A combination marked `none` compiles and runs the positive fixtures
+# without sanitizers, does not run the sanitizer negatives, and the job summary says
+# `sanitizers: unavailable`. gcc is not used on macOS and Windows (tooling/toolchains.lock); clang on
+# Windows targets the MSVC runtime, where the undefined-behaviour runtime is incomplete.
+# Read by Polypiler.Tests.Acceptance/Infra/Ci/NativeFlags.cs and the summary step of layer-native.
+schema: 1
+sanitizers:
+  linux/gcc: address,undefined
+  linux/clang: address,undefined
+  macos/clang: address,undefined
+  windows/clang: none

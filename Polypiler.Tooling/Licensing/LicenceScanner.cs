@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Polypiler.Core;
+using Polypiler.Core.Verification.Manifests;
 using Polypiler.Tooling.Corpus;
 
 namespace Polypiler.Tooling.Licensing;
@@ -65,6 +66,90 @@ public sealed class LicenceScanner(LicencePolicy policy, LicenceTexts texts) {
     }
 
     return new(entries, diagnostics);
+  }
+
+  /// <summary>
+  /// The licence check of a generated package: when the root holds a <see cref="Manifest.FileName"/>,
+  /// the licence of every input — by its provenance and the corpus for a pinned file, by the
+  /// <see cref="LicenceDetector"/> otherwise — and of every helper is resolved, the
+  /// <see cref="EffectiveLicence"/> of them computed, and the manifest's <c>licensing.outputLicence</c>
+  /// held against it (<c>PLY0024</c> when it understates it). A local input inside the root is detected
+  /// with the root's declarations; one outside with those of its nearest ancestor that holds a
+  /// <see cref="LicenceDeclarations.FileName"/> or a <c>.git</c> entry, else of its own folder.
+  /// </summary>
+  /// <param name="root">The package root.</param>
+  /// <param name="corpus">The corpus manifest pinned inputs are looked up in, or <see langword="null"/> when there is none.</param>
+  /// <returns>The check, or <see langword="null"/> when the root holds no manifest.</returns>
+  /// <exception cref="CorpusException">A declarations file is invalid (<c>PLY0026</c>).</exception>
+  public PackageLicence? ScanPackage(string root, CorpusManifest? corpus) {
+    var top = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+    var file = Path.Combine(top, Manifest.FileName);
+    if (!File.Exists(file))
+      return null;
+
+    var bag = new DiagnosticBag();
+    if (ManifestReader.Read(file, bag) is not { } manifest)
+      return new(null, null, bag.Items);
+
+    var package = Path.GetFileName(top);
+    var detector = new LicenceDetector(policy, texts);
+    var declarations = LicenceDeclarations.Load(top);
+    var members = new List<LicensedSource>();
+    var failed = false;
+    foreach (var input in manifest.Inputs) {
+      if (Pinned(input, corpus) is { } pinned) {
+        members.Add(pinned);
+        continue;
+      }
+
+      var full = Path.GetFullPath(Path.Combine(top, input.Path));
+      var (detectionRoot, rules) = full.StartsWith(top + Path.DirectorySeparatorChar, StringComparison.Ordinal) ? (top, declarations) : DetectionRoot(full);
+      var path = Relative(detectionRoot, full);
+      var detection = detector.Detect(detectionRoot, full, path, rules.For(path));
+      if (detection.Undetermined is not null || detection.Licence is null) {
+        bag.Report(LicenceDiagnostics.Unknown(input.Path, detection.Undetermined));
+        failed = true;
+      } else if (detection.Disagreement is { } disagreement) {
+        bag.Report(LicenceDiagnostics.Refused($"'{input.Path}': {disagreement}"));
+        failed = true;
+      } else {
+        members.Add(new(input.Path, detection.Licence));
+      }
+    }
+
+    members.AddRange(manifest.Helpers.Select(helper => new LicensedSource(helper.Symbol, helper.License)));
+    var stated = manifest.Licensing.OutputLicence;
+    if (members.Count == 0) {
+      if (!failed)
+        bag.Report(LicenceDiagnostics.Unknown(package, "the manifest lists no input and no helper"));
+      return new(stated, null, bag.Items);
+    }
+
+    var effective = EffectiveLicence.Compute(members, policy, bag);
+    if (failed || effective is null)
+      return new(stated, null, bag.Items);
+
+    if (EffectiveLicence.Understates(stated, effective.Licence, policy))
+      bag.Report(LicenceDiagnostics.Refused($"'{package}': output licence '{stated}' understates the effective licence '{effective.Licence}' (because of {string.Join(", ", effective.Because)})"));
+    return new(stated, effective, bag.Items);
+  }
+
+  /// <summary>The licence of an input the corpus pins at the commit its provenance names: the declared licence of a fixture that lists the file, else the repository's.</summary>
+  private static LicensedSource? Pinned(ManifestInput input, CorpusManifest? corpus) {
+    if (input.Provenance is not { } provenance || corpus?.Repository(provenance.Repository) is not { } repository || repository.Commit != provenance.Commit)
+      return null;
+
+    var licence = corpus.Fixtures.FirstOrDefault(fixture => fixture.Repository == provenance.Repository && fixture.Files.Contains(provenance.Path))?.Licence ?? repository.Licence;
+    return new($"{provenance.Repository}@{provenance.Commit}:{provenance.Path}", licence);
+  }
+
+  /// <summary>The nearest ancestor of a file that holds declarations or a <c>.git</c> entry, with its declarations; the file's own folder when none does.</summary>
+  private static (string Root, LicenceDeclarations Declarations) DetectionRoot(string file) {
+    var own = Path.GetDirectoryName(file)!;
+    for (var folder = own; folder is not null; folder = Path.GetDirectoryName(folder))
+      if (File.Exists(Path.Combine(folder, LicenceDeclarations.FileName)) || Path.Exists(Path.Combine(folder, ".git")))
+        return (folder, LicenceDeclarations.Load(folder));
+    return (own, LicenceDeclarations.None);
   }
 
   private LicenceReportEntry Check(LicenceDetector detector, string root, string file, string path, string? declared, LicenceMode mode, List<Diagnostic> diagnostics) {

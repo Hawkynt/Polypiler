@@ -23,11 +23,16 @@ jobs:
     with:
       solution: Polypiler.slnx
       dotnet-version: '10.0.x'
-      os-matrix: '["ubuntu-latest","windows-latest"]'
+      # The tests run in the layer jobs below, on the runners of their layer files (layer-core: ubuntu
+      # and windows), and the full target sweep in target-sweep; this job keeps the build and the
+      # package and repository README checks of the shared workflow. Its test step is pointed at a
+      # project without tests, so that the suite does not run a second time.
+      os-matrix: '["ubuntu-latest"]'
+      test-target: Polypiler.Core/Polypiler.Core.csproj
       repo-readme: true
-      # Only Polypiler.Tests references the coverage collector; the acceptance tests add nothing to the
-      # report, so the coverage leg does not run them a second time on Linux.
-      coverage-target: Polypiler.Tests/Polypiler.Tests.csproj
+      # The coverage gate below measures the unit tests once and publishes the report; a second run
+      # under the collector here would only repeat it.
+      coverage: false
 
   # The documents generated from the specifications must match them: the error catalogue docs/errors
   # is what spec/diagnostics.yaml and the notes of docs/errors/notes give (PLY0091 otherwise).
@@ -45,12 +50,35 @@ jobs:
       - name: report errors --check
         run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- report errors --check
 
+  # The fence around the LGPL compiler: no GPL-derived, reference-only or denied code in a Polypiler.*
+  # folder, and every provenance-notice entry there names its origin and licence (PLY0024, PLY0029).
+  # The wall time of the scan is printed for the record, not gated.
+  licence-fence:
+    name: licence fence
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build the tooling
+        run: dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release
+      - name: licenses scan --mode project
+        run: time dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- licenses scan --mode project
+
   # Polypiler gates coverage, which the shared workflow only reports: at least 95 % of all lines AND
-  # of all conditional branches must be executed by the tests (ISSUES.md, "Test strategy").
+  # of all conditional branches must be executed by the tests (ISSUES.md, "Test strategy"). The full
+  # target sweep (category Sweep) runs in target-sweep, not under the collector: its representative
+  # slice, which stays here, reaches the same code. The category Exhaustive (the same paths up to
+  # millions of times, run by the layer jobs on every OS) stays out too: under the collector it was
+  # more than half of this job and added no line.
   coverage-gate:
     name: coverage gate
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       MIN_LINE: '95'
@@ -62,7 +90,7 @@ jobs:
           dotnet-version: '10.0.x'
       # The unit tests carry the coverage (AGENTS.md); the acceptance tests run in the test matrix.
       - name: Test with coverage
-        run: dotnet test Polypiler.Tests/Polypiler.Tests.csproj -c Debug --collect:"XPlat Code Coverage" --results-directory ./coverage
+        run: dotnet test Polypiler.Tests/Polypiler.Tests.csproj -c Debug --filter "TestCategory!=Sweep&TestCategory!=Exhaustive" --collect:"XPlat Code Coverage" --results-directory ./coverage
       - name: Enforce line and branch thresholds
         shell: python
         run: |
@@ -85,6 +113,153 @@ jobs:
               print(f"::error::{kind} coverage {rate:.2f} % is below {minimum:.0f} %")
               failed = True
           sys.exit(1 if failed else 0)
+      - name: Coverage report
+        if: ${{ !cancelled() }}
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          reportgenerator -reports:./coverage/**/coverage.cobertura.xml -targetdir:./coverage/report -reporttypes:HtmlInline_AzurePipelines
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-report
+          path: coverage/report
+          if-no-files-found: ignore
+
+  # The core layer of PRD §7.3 (tooling/ci/layers/core.yaml): warnings as errors, format, every test
+  # that belongs to no other layer, the IR verifier, spec validation and the audit that holds layer
+  # files, this workflow, the test categories and the tests to each other (tooling/ci/categories.yaml).
+  # The toolchains come at the versions tooling/toolchains.lock pins, as `ci env` prints them; format,
+  # spec validation and the audit read nothing that differs per runner and run on Linux only, in the
+  # acceptance part, the shortest. Each OS runs the tests as four parts side by side: the unit tests,
+  # the acceptance tests, and of these the end-to-end suites of the prototype (category Prototype) and
+  # the scenarios that run 20 times under a CPU load (category UnderLoad, #1347) on runners of their
+  # own - run together on one runner they compete for its cores and take twice as long, and a load
+  # test slows every test beside it. The full target sweep (category Sweep) runs once, in
+  # target-sweep; its representative slice runs here.
+  layer-core:
+    name: layer-core ${{ matrix.os }} ${{ matrix.part }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        part: [unit, acceptance, acceptance-prototype, acceptance-load]
+        include:
+          - part: unit
+            project: Polypiler.Tests/Polypiler.Tests.csproj
+          - part: acceptance
+            project: Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj
+          - part: acceptance-prototype
+            project: Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj
+          - part: acceptance-load
+            project: Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # global.json holds every later dotnet to the SDK the lock pins, whichever others the runner has.
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer core > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          sdk=$(sed -n 's/^dotnet-sdk=//p' "$RUNNER_TEMP/toolchains.env")
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.env.outputs.node }}
+      - name: toolchains
+        run: |
+          $TOOLING toolchains validate
+          $TOOLING toolchains probe --only dotnet-sdk,node
+      - name: build
+        run: dotnet build Polypiler.slnx -c Release -warnaserror
+      - name: format
+        if: runner.os == 'Linux' && matrix.part == 'acceptance'
+        # The fixtures are inputs whose exact text the tests read; tests/fixtures/infra/ci/core holds
+        # an unformatted file on purpose.
+        run: dotnet format Polypiler.slnx --verify-no-changes --no-restore --exclude tests/fixtures
+      - name: test
+        if: matrix.part == 'unit' || matrix.part == 'acceptance'
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "(TestCategory!~Layer.|TestCategory=Layer.core)&TestCategory!=Sweep&TestCategory!=Prototype&TestCategory!=UnderLoad" --logger "trx;LogFileName=tests.trx"
+      - name: test-prototype
+        if: matrix.part == 'acceptance-prototype'
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "(TestCategory!~Layer.|TestCategory=Layer.core)&TestCategory!=Sweep&TestCategory=Prototype&TestCategory!=UnderLoad" --logger "trx;LogFileName=tests.trx"
+      - name: test-load
+        if: matrix.part == 'acceptance-load'
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "(TestCategory!~Layer.|TestCategory=Layer.core)&TestCategory=UnderLoad" --logger "trx;LogFileName=tests.trx"
+      - name: ir-verifier
+        if: matrix.part == 'unit' || matrix.part == 'acceptance'
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "TestCategory=IrVerifier"
+      - name: spec validate
+        if: runner.os == 'Linux' && matrix.part == 'acceptance'
+        run: $TOOLING spec validate
+      - name: ci audit
+        if: runner.os == 'Linux' && matrix.part == 'acceptance'
+        run: $TOOLING ci audit
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.part }}
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
+
+  # The full target sweep (category Sweep): every fixture in every profile, module format and float
+  # mode of both backends, compared byte for byte with its golden output and parsed back by Roslyn and
+  # Acornima. What differs per OS shows in its representative slice, which the layer jobs run on each
+  # OS and the coverage gate under the collector, so the full matrix runs once, on Linux and without
+  # the collector. The unit and the acceptance sweep are two parts side by side, for the reason
+  # layer-core gives.
+  target-sweep:
+    name: target sweep ${{ matrix.part }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: unit
+            project: Polypiler.Tests/Polypiler.Tests.csproj
+          - part: acceptance
+            project: Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      DOTNET_NOLOGO: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: build
+        run: dotnet build ${{ matrix.project }} -c Release -warnaserror
+      - name: test
+        run: dotnet test ${{ matrix.project }} -c Release --no-build --filter "TestCategory=Sweep" --logger "trx;LogFileName=tests.trx"
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results-sweep-${{ matrix.part }}
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
 
   # Golden files (PRD 11.2): every one matches tests/fixtures/golden.lock.json and names an independent
   # source, and on a pull request no commit changes one together with code or without its line in
@@ -137,3 +312,482 @@ jobs:
       # spec/permutations/{mappings,grammars,costs}/bitperm-*.yaml are generated from those fixtures.
       - name: Check spec/permutations against the fixtures
         run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- permutations import-bitperm --fixtures tests/fixtures/bitperm --out spec/permutations --check
+
+  # The BASIC/PB layer of PRD §7.3 (tooling/ci/layers/basic.yaml): PowerBASIC programs compiled by
+  # PB-Compiler, built from its pinned commit, and run in DOSBox-X; the modules pbc emits checked by
+  # LLVM; the Commodore BASIC oracles VICE and petcat and the GW-BASIC oracle PC-BASIC.
+  # tooling/ci/basic/install.sh installs the toolchains, LLVM and the VICE build from a cache keyed by
+  # their versions and the script itself; the oracle availability table
+  # (tooling/ci/layers/basic.oracles.yaml) goes into the job summary, the record of every run into the
+  # uploaded artifacts.
+  layer-basic:
+    name: layer-basic ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer basic > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          sdk=$(sed -n 's/^dotnet-sdk=//p' "$RUNNER_TEMP/toolchains.env")
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: corpus import
+        run: $TOOLING corpus import --fixture pb.dos.arith
+      - uses: actions/cache@v4
+        with:
+          path: ~/basic-cache
+          key: layer-basic-llvm-${{ steps.env.outputs.llvm }}-vice-${{ steps.env.outputs.vice }}-${{ hashFiles('tooling/ci/basic/install.sh') }}
+      - name: install toolchains
+        run: |
+          bash tooling/ci/basic/install.sh "$RUNNER_TEMP/toolchains.env" "$RUNNER_TEMP/basic" ~/basic-cache
+          echo "$RUNNER_TEMP/basic/bin" >> "$GITHUB_PATH"
+          echo "PCBASIC_HOME=$RUNNER_TEMP/basic/pcbasic" >> "$GITHUB_ENV"
+      - name: toolchains
+        run: $TOOLING toolchains probe --only dotnet-sdk,git,pb-compiler,dosbox-x,llvm,vice,vice-x128,vice-xvic,petcat,xvfb-run,pcbasic
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.basic" --logger "console;verbosity=normal"
+      - name: oracle availability
+        if: always()
+        run: |
+          {
+            echo '### BASIC/PB oracle availability'
+            echo
+            cat artifacts/basic/oracle-availability.md 2>/dev/null || echo 'The table was not written: the test step did not reach it.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-basic-${{ matrix.os }}
+          path: artifacts/basic/
+          if-no-files-found: warn
+
+  # The JS/TS layer of PRD §7.3 (tooling/ci/layers/js.yaml): the tests tagged Layer.js run the smoke
+  # fixtures of tests/fixtures/infra/ci/js under the pinned Node, its built-in test runner and the
+  # TypeScript checker, through the sandboxed cross-language runner. Node comes at the version the lock
+  # pins, not the runner image's; TypeScript is installed outside the repository with its install
+  # scripts disabled, and the native checker of its platform package goes on PATH as `tsc`.
+  layer-js:
+    name: layer-js ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # global.json holds every later dotnet to the SDK the lock pins, as in layer-core.
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer js > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          sdk=$($TOOLING ci env --layer core | sed -n 's/^dotnet-sdk=//p')
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.env.outputs.node }}
+      - name: install typescript
+        env:
+          TYPESCRIPT: ${{ steps.env.outputs.typescript }}
+        run: |
+          prefix="$RUNNER_TEMP/typescript"
+          npm install --prefix "$prefix" --ignore-scripts --no-audit --no-fund "typescript@$TYPESCRIPT"
+          platform=$(node -p 'process.platform + "-" + process.arch')
+          echo "$prefix/node_modules/@typescript/typescript-$platform/lib" >> "$GITHUB_PATH"
+      - name: toolchains
+        run: |
+          mkdir -p artifacts
+          $TOOLING toolchains probe --only node,typescript | tee artifacts/probe.txt
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.js" --logger "trx;LogFileName=layer-js.trx" --logger "console;verbosity=detailed" --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-js-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn
+
+  # The Kotlin/Java layer of PRD §7.3 (tooling/ci/layers/jvm.yaml): the JDK and the Kotlin compiler at
+  # the versions tooling/toolchains.lock pins, as `ci env` prints them, and the acceptance tests that
+  # compile Java and Kotlin with warnings as errors, run them on that JDK and compare their outputs.
+  # The JDK is Temurin's: a lock version without a dot is the GA release, which setup-java names x.0.0.
+  # kotlinc goes to /opt, outside the home and /tmp that the runner's sandbox hides from its steps.
+  layer-jvm:
+    name: layer-jvm ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer jvm > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          jdk=$(sed -n 's/^jdk=//p' "$RUNNER_TEMP/toolchains.env")
+          [[ "$jdk" == *.* ]] || jdk="$jdk.0.0"
+          echo "temurin=$jdk" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ steps.env.outputs.temurin }}
+      - name: install kotlinc
+        env:
+          KOTLINC: ${{ steps.env.outputs.kotlinc }}
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/kotlinc.zip" "https://github.com/JetBrains/kotlin/releases/download/v$KOTLINC/kotlin-compiler-$KOTLINC.zip"
+          sudo unzip -q "$RUNNER_TEMP/kotlinc.zip" -d /opt
+          echo /opt/kotlinc/bin >> "$GITHUB_PATH"
+      - name: toolchains
+        run: $TOOLING toolchains probe --only jdk,kotlinc
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance -c Release --no-build --filter "TestCategory=Layer.jvm" --logger "console;verbosity=normal" --logger trx --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-jvm-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn
+
+  # The native layer of PRD §7.3 (tooling/ci/layers/native.yaml): C and C++ compiled by the pinned gcc
+  # and clang and executed under the sanitizers tooling/ci/layers/native.sanitizers.yaml names; a
+  # heap overflow and a signed overflow must be caught wherever there are sanitizers. No hosted
+  # runner image carries gcc 16.2.1, so the Linux leg runs in the Arch Linux image of 2026-10-25 with
+  # pacman on the archive snapshot of that day, which holds gcc 16.2.1, clang 23.1.3 and bubblewrap
+  # 0.13.1. The container is privileged so that bubblewrap can unshare its namespaces: the runner is
+  # isolated there, and the sanitizers' leak check can stop the program's threads. macOS and Windows
+  # take clang from the LLVM release of the pinned version, Windows with its lld-link (NativeFlags).
+  layer-native:
+    name: layer-native ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            container: { image: 'archlinux:base-20261025.0.616225', options: --privileged }
+          - os: macos-latest
+          - os: windows-latest
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+      ARCHIVE: https://archive.archlinux.org/repos/2026/10/25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: archive snapshot
+        if: runner.os == 'Linux'
+        run: |
+          echo "Server = $ARCHIVE/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
+          pacman -Syyuu --noconfirm
+          pacman -S --noconfirm --needed git icu gcc clang compiler-rt bubblewrap
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer native > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          sdk=$(sed -n 's/^dotnet-sdk=//p' "$RUNNER_TEMP/toolchains.env")
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: clang
+        if: runner.os != 'Linux'
+        env:
+          VERSION: ${{ steps.env.outputs.clang }}
+        run: |
+          if [ "$RUNNER_OS" = macOS ]; then
+            name="LLVM-$VERSION-macOS-ARM64"
+            members=("$name/bin/clang" "$name/bin/clang-${VERSION%%.*}" "$name/lib/clang")
+          else
+            name="clang+llvm-$VERSION-x86_64-pc-windows-msvc"
+            members=("$name/bin/clang.exe" "$name/bin/lld-link.exe" "$name/lib/clang")
+          fi
+          temp=$(cd "$RUNNER_TEMP" && pwd)
+          command -v zstd || brew install zstd
+          curl -fsSL --retry 3 -o "$temp/llvm.tar.zst" "https://github.com/llvm/llvm-project/releases/download/llvmorg-$VERSION/$name.tar.zst"
+          mkdir -p "$temp/llvm"
+          zstd -dc --long=31 "$temp/llvm.tar.zst" | (cd "$temp/llvm" && tar -xf - --strip-components 1 "${members[@]}")
+          rm "$temp/llvm.tar.zst"
+          if [ "$RUNNER_OS" = macOS ]; then
+            echo "$temp/llvm/bin" >> "$GITHUB_PATH"
+            echo "SDKROOT=$(xcrun --show-sdk-path)" >> "$GITHUB_ENV"
+          else
+            cygpath -w "$temp/llvm/bin" >> "$GITHUB_PATH"
+          fi
+      - name: toolchains
+        run: |
+          mkdir -p artifacts/layer-native
+          $TOOLING toolchains probe --only dotnet-sdk,gcc,clang,bubblewrap | tee artifacts/layer-native/probe.txt
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: >-
+          dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build
+          --filter "TestCategory=Layer.native"
+          --logger "trx;LogFileName=native.trx" --logger "console;verbosity=normal"
+          --results-directory artifacts/layer-native
+      - name: summary
+        if: always()
+        run: |
+          case "$RUNNER_OS" in Linux) platform=linux ;; macOS) platform=macos ;; *) platform=windows ;; esac
+          {
+            echo "### layer-native $platform"
+            for compiler in gcc clang; do
+              groups=$(sed -n "s|^  $platform/$compiler: ||p" tooling/ci/layers/native.sanitizers.yaml)
+              if [ -z "$groups" ]; then
+                echo "- $platform/$compiler: not used on this platform"
+              elif [ "$groups" = none ]; then
+                echo "- $platform/$compiler: sanitizers: unavailable; the positive fixtures ran without them, the sanitizer negatives were not run"
+              else
+                echo "- $platform/$compiler: sanitizers: $groups"
+              fi
+            done
+            echo
+            echo '```'
+            cat artifacts/layer-native/probe.txt 2>/dev/null || echo "no probe output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-native-${{ matrix.os }}
+          path: artifacts/layer-native
+          if-no-files-found: warn
+
+  # The layer of the interpreted languages (tooling/ci/layers/pyperl.yaml, PRD §7.3): python and perl
+  # at the versions tooling/toolchains.lock pins, installed by their setup actions and never taken from
+  # the runner image, and the acceptance tests of the layer, which run the fixtures of
+  # tests/fixtures/infra/ci/pyperl through the cross-language runner. No package comes from PyPI or CPAN.
+  layer-pyperl:
+    name: layer-pyperl ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      # The layer names no .NET toolchain of its own; the SDK is the one the core layer pins.
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer pyperl | tee -a "$GITHUB_OUTPUT"
+          sdk=$($TOOLING ci env --layer core | sed -n 's/^dotnet-sdk=//p')
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ steps.env.outputs.python }}
+      - uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: ${{ steps.env.outputs.perl }}
+      - name: toolchains
+        run: $TOOLING toolchains probe --only python,perl
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.pyperl" --logger "trx;LogFileName=layer-pyperl.trx" --logger "console;verbosity=detailed" --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-pyperl-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn
+
+  # The Rust layer of PRD §7.3 (tooling/ci/layers/rust.yaml): the stable toolchain `rust` with rustfmt
+  # and clippy, and the dated nightly `rust-miri`, which only runs Miri, at the versions
+  # tooling/toolchains.lock pins. The Miri sysroot is prepared here, where the network is allowed; the
+  # tests run cargo offline (CARGO_NET_OFFLINE) and show each tool rejecting its negative crate.
+  layer-rust:
+    name: layer-rust ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      RUSTUP_AUTO_INSTALL: '0'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer rust | tee -a "$GITHUB_OUTPUT"
+      # The stable toolchain becomes rustup's default, so `cargo` is the pinned one; the nightly is
+      # named by its channel only where Miri runs. RUST_MIRI_HOME is the nightly's sysroot, where the
+      # probe finds miri, and MIRI_SYSROOT the standard library Miri builds for itself.
+      - name: install rust
+        env:
+          STABLE: ${{ steps.env.outputs.rust }}
+          NIGHTLY: ${{ steps.env.outputs['rust-miri'] }}
+        run: |
+          rustup toolchain install "$STABLE" --profile minimal --component rustfmt,clippy
+          rustup default "$STABLE"
+          rustup toolchain install "$NIGHTLY" --profile minimal --component miri,rust-src
+          echo "RUST_MIRI_HOME=$(rustc +"$NIGHTLY" --print sysroot)" >> "$GITHUB_ENV"
+          cargo +"$NIGHTLY" miri setup
+          echo "MIRI_SYSROOT=$(cargo +"$NIGHTLY" miri setup --print-sysroot)" >> "$GITHUB_ENV"
+      - name: toolchains
+        run: $TOOLING toolchains probe --only rust,rust-miri
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: >-
+          dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build
+          --filter "TestCategory=Layer.rust"
+          --logger "console;verbosity=detailed" --logger "trx;LogFileName=layer-rust.trx" --results-directory artifacts/layer-rust
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-rust-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: ignore
+
+  # PRD §13.1 and §23.3: what Polypiler writes must come out byte for byte the same when it is generated
+  # again. `rebuild check` runs each command twice through the sandboxed runner, each run in a fresh
+  # directory, and compares the trees with tooling/ci/rebuild-ignore.yaml applied (PLY0036 otherwise):
+  # the floating-point implementations the build embeds into polypiler, and a strict float translation
+  # with its manifest. The ReadyToRun publish of polypiler cannot run inside the runner (restore needs
+  # the network and the package cache), so it is published twice, each time from a build directory
+  # deleted beforehand, into separate output directories, and the two trees are compared with
+  # `rebuild compare`. The build directory keeps its path: the regex source generator names its types
+  # after the path of the file it generates, so assemblies built under different paths differ, which
+  # is the build-path independence of #29, not run-to-run determinism.
+  rebuild-check:
+    name: deterministic rebuild
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      TOOLING: Polypiler.Tooling/bin/Release/net10.0/polypiler-tooling
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build polypiler and polypiler-tooling
+        run: dotnet build Polypiler.Cli/Polypiler.Cli.csproj -c Release
+      - name: Float implementations embedded into polypiler
+        run: |
+          "$TOOLING" rebuild check --output out --input Polypiler.Tooling/bin/Release/net10.0 \
+            -- dotnet-sdk net10.0/polypiler-tooling.dll float-implementations '{output}/float-implementations.irm'
+      - name: Strict float translation with its manifest
+        run: |
+          "$TOOLING" rebuild check --output out --input Polypiler.Cli/bin/Release/net10.0 --input tests/fixtures/prototype/float/Dct8.cs \
+            -- dotnet-sdk net10.0/polypiler.dll translate Dct8.cs --from csharp --to javascript --profile es5 --float strict --output '{output}'
+      - name: ReadyToRun publish of polypiler
+        run: |
+          for run in 1 2; do
+            rm -rf "$RUNNER_TEMP/build"
+            dotnet publish Polypiler.Cli/Polypiler.Cli.csproj -c Release -r linux-x64 -p:UseSharedCompilation=false \
+              --artifacts-path "$RUNNER_TEMP/build" -o "$RUNNER_TEMP/publish$run"
+          done
+          "$TOOLING" rebuild compare "$RUNNER_TEMP/publish1" "$RUNNER_TEMP/publish2"

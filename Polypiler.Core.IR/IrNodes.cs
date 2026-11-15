@@ -1044,6 +1044,13 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   public IReadOnlyList<IrTypeDeclaration> Types { get; init; } = [];
 
   /// <summary>
+  /// The functions legalization copied into the module from the portable floating-point
+  /// implementations: the name each has in the module and the name of the implementation it is, in the
+  /// order they were copied. A backend emits them as helpers (<see cref="FloatOperationSources.Origin"/>).
+  /// </summary>
+  public IReadOnlyList<(string Function, string Implementation)> Implementations { get; init; } = [];
+
+  /// <summary>
   /// The globals of the module, in source order, which is the order they are initialised in. Every
   /// global a function or an initializer names is one of them.
   /// </summary>

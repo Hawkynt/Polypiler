@@ -45,9 +45,12 @@ standalone:
   - Polypiler.Base
   # The program the runner tests start in the sandbox; it must reference nothing to be copied alone.
   - Polypiler.Tests.Probe
+  # The generator the rebuild-check tests run twice; copied alone into each run's directory too.
+  - Polypiler.Tests.Generator
 
 restricted:
   - { pattern: Polypiler.Base, allowedFromLayers: [7, 8, 9] }
   - { pattern: Polypiler.Core.Frontends.*, allowedFromLayers: [8, 9] }
   - { pattern: Polypiler.Core.Backends.*, allowedFromLayers: [8, 9] }
   - { pattern: Polypiler.Tests.Probe, allowedFromLayers: [9] }
+  - { pattern: Polypiler.Tests.Generator, allowedFromLayers: [9] }

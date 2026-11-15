@@ -1,0 +1,8 @@
+| job | step | runs | min s | median s | max s | RSD % | max / median |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ci / test ubuntu-latest | Restore | 40 | 2 | 13 | 24 | 45.6 | 1.85 |
+| ci / test ubuntu-latest | Build | 40 | 6 | 18 | 45 | 53.9 | 2.57 |
+| ci / test ubuntu-latest | Test | 40 | 1 | 395 | 1139 | 79.5 | 2.88 |
+| ci / test windows-latest | Restore | 39 | 11 | 31 | 55 | 41.5 | 1.77 |
+| ci / test windows-latest | Build | 39 | 9 | 21 | 44 | 37.0 | 2.10 |
+| ci / test windows-latest | Test | 39 | 6 | 468 | 1507 | 81.6 | 3.22 |

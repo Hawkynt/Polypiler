@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "compiler": {
+    "name": "polypiler",
+    "version": "0.1.0",
+    "irVersion": 1
+  },
+  "command": [
+    "translate",
+    "../src/Waves.cs",
+    "--from",
+    "csharp",
+    "--to",
+    "javascript",
+    "--output",
+    "."
+  ],
+  "inputs": [
+    {
+      "path": "../src/Waves.cs",
+      "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "provenance": {
+        "repository": "Hawkynt/Hawkynt.github.io",
+        "commit": "b3a8a8e92cbca83475986391c3cac56f0b185d29",
+        "path": "src/Waves.cs"
+      }
+    }
+  ],
+  "frontend": {
+    "language": "csharp",
+    "profile": null
+  },
+  "target": {
+    "language": "javascript",
+    "profile": "es2022, esm",
+    "runtime": "node",
+    "platform": "any"
+  },
+  "outputs": [
+    {
+      "path": "NOTICE.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "role": "notice"
+    },
+    {
+      "path": "Waves.mjs",
+      "sha256": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      "role": "source"
+    },
+    {
+      "path": "Waves.test.mjs",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "role": "test"
+    }
+  ],
+  "api": [
+    {
+      "name": "Wave",
+      "signature": "f64 Wave(f64 x)"
+    }
+  ],
+  "intrinsics": [
+    "INTRINSICS.Sin"
+  ],
+  "floatingPoint": {
+    "mode": "accurate",
+    "natives": [
+      {
+        "operation": "INTRINSICS.Sin",
+        "format": "f64",
+        "accuracy": "ulp(1)",
+        "runtime": "node",
+        "slack": 1,
+        "bound": 3
+      }
+    ]
+  },
+  "helpers": [],
+  "nativeDependencies": [],
+  "licensing": {
+    "outputLicence": "MIT",
+    "obligations": [
+      "keep the copyright notice"
+    ],
+    "modelRestrictions": []
+  },
+  "caveats": [],
+  "optimization": {
+    "level": "default",
+    "disabled": [],
+    "passes": []
+  },
+  "warnings": [],
+  "toolchains": [
+    {
+      "key": "node",
+      "version": "24.11.1"
+    }
+  ],
+  "build": {
+    "toolchain": "node",
+    "command": "node --check Waves.mjs",
+    "exitCode": 0
+  },
+  "execution": {
+    "command": "node Waves.test.mjs",
+    "exitCode": 0
+  },
+  "commands": {
+    "build": "polypiler translate ../src/Waves.cs --from csharp --to javascript --output .",
+    "run": "node Waves.test.mjs"
+  },
+  "state": "executed"
+}

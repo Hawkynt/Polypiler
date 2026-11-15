@@ -24,12 +24,17 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// </para>
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
+[Category("Prototype")]
 public sealed class JavaScriptProfileTests {
 
   /// <summary>What the compiled fixture does for every call of a fixture, computed once for all profiles.</summary>
   private static readonly ConcurrentDictionary<string, Lazy<(IReadOnlyList<PrototypeCall> Calls, string[] Compiled)>> _expected = new();
 
   private string _directory = "";
+
+  /// <summary>What the last translation wrote to its two streams.</summary>
+  private string _translation = "";
 
   [SetUp]
   public void CreateWorkingDirectory() {
@@ -78,23 +83,41 @@ public sealed class JavaScriptProfileTests {
   /// typed arrays the one fixture function that reads the bits of its operand without saying so in
   /// its name is compared on every number but NaN, as the functions that do say so are everywhere.
   /// </para>
+  /// <para>
+  /// The test records the gate state the fixture reached in this profile (<see cref="GateLog"/>):
+  /// parsing the generated file at its level is its build, the calls through <c>node</c> its
+  /// execution, and the compiled fixture the oracle it is verified against.
+  /// </para>
   /// </summary>
   [TestCaseSource(nameof(FixturesAndProfiles))]
   public void Node_AgreesWithTheCompiledFixture(string fixture, ProfileCase profile) {
-    var (calls, compiled) = Expected(fixture);
-    var watch = Stopwatch.StartNew();
-    var text = this.TranslateFixture(fixture, profile, true);
-    var translated = watch.ElapsedMilliseconds;
-    Assert.That(GeneratedJavaScript.Problems(text, profile.Parsed), Is.Empty);
+    var pair = new Polypiler.Core.Verification.Gates.PairKey("csharp", "javascript", GateLog.CSharpSource, GateLog.NodeProfile(profile));
+    var run = new GateRun();
+    try {
+      var (calls, compiled) = Expected(fixture);
+      var watch = Stopwatch.StartNew();
+      var text = this.TranslateFixture(fixture, profile, true);
+      var translated = watch.ElapsedMilliseconds;
+      var lifted = PrototypeFixture.Imported(fixture);
+      var file = PrototypeFixture.ClassOf(fixture) + profile.Parsed.Extension;
+      var problems = GeneratedJavaScript.Problems(text, profile.Parsed);
+      run = new(this._translation, 0, lifted, JavaScriptEmitter.Check(lifted, profile.Parsed), Path.Combine(this._directory, "out"),
+        new("acornima", $"parse {file} as {profile}", problems.Count == 0 ? 0 : 1));
+      Assert.That(problems, Is.Empty);
 
-    var node = this.Node(profile, PrototypeFixture.ClassOf(fixture), calls);
-    var mismatches = Enumerable.Range(0, calls.Count)
-      .Where(index => node[index] != compiled[index])
-      .Where(index => profile.Mode != "plain" || calls[index].Method != "NextUp" || calls[index].Arguments[0] is not float.NaN)
-      .Select(index => $"{calls[index]}: C# {compiled[index]}, node {node[index]}")
-      .ToList();
-    TestContext.Out.WriteLine($"{fixture} as {profile}: translated in {translated} ms, {calls.Count} calls, {mismatches.Count} mismatches");
-    Assert.That(mismatches.Take(20), Is.Empty, $"{mismatches.Count} of {calls.Count} calls differ");
+      var node = this.Node(profile, PrototypeFixture.ClassOf(fixture), calls);
+      run = run with { Execution = new($"node {file} with {calls.Count} calls", 0) };
+      var mismatches = Enumerable.Range(0, calls.Count)
+        .Where(index => node[index] != compiled[index])
+        .Where(index => profile.Mode != "plain" || calls[index].Method != "NextUp" || calls[index].Arguments[0] is not float.NaN)
+        .Select(index => $"{calls[index]}: C# {compiled[index]}, node {node[index]}")
+        .ToList();
+      run = run with { Verification = new("dotnet-sdk", "dotnet-sdk", GateLog.Exact(run.Output!, calls.Count - mismatches.Count), calls.Count, calls.Count - mismatches.Count, mismatches.Count) };
+      TestContext.Out.WriteLine($"{fixture} as {profile}: translated in {translated} ms, {calls.Count} calls, {mismatches.Count} mismatches");
+      Assert.That(mismatches.Take(20), Is.Empty, $"{mismatches.Count} of {calls.Count} calls differ");
+    } finally {
+      GateLog.Reached(pair, fixture, run);
+    }
   }
 
   /// <summary>
@@ -340,6 +363,7 @@ public sealed class JavaScriptProfileTests {
     var output = Path.Combine(this._directory, "out");
     string[] arguments = ["translate", PrototypeFixture.PathOf(fixture), "--from", "csharp", "--to", "javascript", .. profile.Arguments, "--output", output];
     var (exitCode, text) = Toolchain.Polypiler(inProcess, this._directory, arguments);
+    this._translation = text;
     Assert.That(exitCode, Is.Zero, text);
     return File.ReadAllText(Path.Combine(output, PrototypeFixture.ClassOf(fixture) + profile.Parsed.Extension));
   }

@@ -57,8 +57,12 @@ public sealed class LicenceReport {
     _ => "denied"
   };
 
-  /// <summary>The text of a mode in diagnostics and on the command line: <c>corpus</c> or <c>distribution</c>.</summary>
-  public static string Name(LicenceMode mode) => mode == LicenceMode.Corpus ? "corpus" : "distribution";
+  /// <summary>The text of a mode in diagnostics and on the command line: <c>corpus</c>, <c>distribution</c> or <c>project</c>.</summary>
+  public static string Name(LicenceMode mode) => mode switch {
+    LicenceMode.Corpus => "corpus",
+    LicenceMode.Distribution => "distribution",
+    _ => "project"
+  };
 
   /// <summary>The report as its canonical JSON text.</summary>
   public string ToJson() {

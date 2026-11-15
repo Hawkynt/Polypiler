@@ -37,9 +37,13 @@ directory counts every file below it. In `build` and `run`, `{root}` is the repo
 **`process`** runs the program `warmup + runs` times through the sandboxed cross-language runner
 (`Polypiler.Core.Verification/Running`), each run in a fresh directory, and records each measured run's
 wall time, processor time and peak resident memory as one sample. Processor time and peak memory come
-from sampling the process tree every 20 ms and, on Linux, from the kernel's account of the step once it
-ends. Inside bubblewrap that account covers the program's peak memory, but its processor time only as
-far as a sample saw it: for a program of a few milliseconds the CPU time is a lower bound.
+from sampling the process tree every 20 ms - on Linux by following the tree's children in `/proc`, so
+that a sample costs what the tree holds and not what the machine runs - and, on Linux, from the
+kernel's account of the step once it ends. That account covers a program the runner started itself;
+inside bubblewrap it covers bubblewrap alone, which does not wait for the program's namespace, so
+there both figures are what the samples saw. Both are therefore lower bounds for a program of a few
+milliseconds, and a program that ends before the first sample may record 0: the numbers are recorded,
+never judged.
 
 **`dotnet`** starts a BenchmarkDotNet program once - [`Polypiler.Benchmarks`](../../Polypiler.Benchmarks)
 with `--filter` - and converts its full JSON export: each measured iteration is a sample of the time of
@@ -97,10 +101,12 @@ the current value and the relative change:
 - a baseline of 0 is never divided by: 0 to 0 is `0 %`, 0 to more is `new value`;
 - a benchmark on one side only is `new` or `removed`, never a regression.
 
-The budget file has this form; `tooling/bench/budgets.yaml` with real numbers is ADR-PERF-BUDGETS' to
-write after a baseline was measured on the pinned CI machine, and
+The product budgets are [`tooling/bench/budgets.yaml`](../../tooling/bench/budgets.yaml), set by
+[ADR 0006](../adr/0006-performance-budgets.md) from the baseline series under
+[`baseline-p0/`](baseline-p0): only metrics that repeat exactly are gated, at no increase; wall time,
+processor time and peak memory are record only.
 [`tests/fixtures/bench/budgets-test.yaml`](../../tests/fixtures/bench/budgets-test.yaml) exists only to
-test the comparison:
+test the comparison. A budget file has this form:
 
 ```yaml
 schemaVersion: 1

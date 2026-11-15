@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "fixture": "verify.images.invalid.bad-tag",
+  "provenance": {
+    "kind": "published",
+    "source": "backlog/infra/VER-IMAGES.md",
+    "detail": "an invalid vector file: bad-tag",
+    "generatedBy": "hand"
+  },
+  "export": "f",
+  "signature": {
+    "parameters": [
+      {
+        "name": "x",
+        "type": "u32"
+      }
+    ],
+    "result": "union<null|i64|f64>"
+  },
+  "vectors": [
+    {
+      "name": "tag three",
+      "input": {
+        "hex": "07000000"
+      },
+      "expected": {
+        "hex": "03"
+      }
+    }
+  ]
+}

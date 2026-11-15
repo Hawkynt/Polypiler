@@ -1,4 +1,4 @@
-@EndToEnd
+@EndToEnd @Layer.core
 Feature: Generated C# is immune to the JIT's shift-xor rotate defect
   .NET's JIT compiles an exclusive or of a left and a logical right shift of one value by n and w - n
   to a rotation, also at n = 0, where C# computes x ^ x = 0 and the rotation gives x. The C# backend

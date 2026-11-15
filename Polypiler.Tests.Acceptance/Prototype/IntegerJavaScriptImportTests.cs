@@ -15,6 +15,8 @@ namespace Polypiler.Tests.Acceptance.Prototype;
 /// any <c>RangeError</c> of a <c>DataView</c> is the IR's index out of range.
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd"), FixtureLifeCycle(LifeCycle.InstancePerTestCase), Parallelizable(ParallelScope.All)]
+[Layer("core")]
+[Category("Prototype")]
 public sealed class IntegerJavaScriptImportTests {
 
   private string _directory = "";
