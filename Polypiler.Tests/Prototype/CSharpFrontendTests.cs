@@ -101,7 +101,7 @@ public sealed class CSharpFrontendTests {
   [TestCase("public static int[] F(long n) => new int[n];", "an array index or length of the type i64", 42, TestName = "64-bit length")]
   [TestCase("public static object F() => \"a\";", "object", 15, TestName = "object")]
   [TestCase("public static bool F(char c) => char.IsDigit(c);", "Char.IsDigit", 33, TestName = "char text operation")]
-  [TestCase("public static int F() { int s = 0; foreach (int x in new System.Collections.Generic.List<int>()) s += x; return s; }", "System.Collections.Generic.List<int>", 54, TestName = "foreach over a list")]
+  [TestCase("public static int F() { int s = 0; foreach (int x in new System.Collections.Generic.SortedSet<int>()) s += x; return s; }", "System.Collections.Generic.SortedSet<int>", 54, TestName = "foreach over a sorted set")]
   [TestCase("public static int F(int a) { switch (a) { case > 1: return 1; default: return 0; } }", "CasePatternSwitchLabel", 43, TestName = "switch with a pattern")]
   [TestCase("public static int F(int a) { switch (a) { case 1: goto default; default: return 0; } }", "GotoDefaultStatement", 51, TestName = "goto default")]
   [TestCase("public static int F(int a) { switch (a) { case 1: goto case 2; case 2: return 0; } return 1; }", "GotoCaseStatement", 51, TestName = "goto case")]

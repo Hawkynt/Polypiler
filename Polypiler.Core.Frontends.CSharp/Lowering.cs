@@ -318,6 +318,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     if (this.ViewType(type, node) is { } view)
       return view;
 
+    if (this.CollectionType(type, node) is { } collection)
+      return collection;
+
     if (type is INamedTypeSymbol named && this._structs.TryGetValue(named, out var declared))
       return IrType.Struct(declared);
 
@@ -385,7 +388,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         into.Add(this.For(loop));
         break;
       case ForEachStatementSyntax loop:
-        into.Add(this.ForEach(loop));
+        into.Add(this.CollectionForEach(loop) ?? this.ForEach(loop));
         break;
       case SwitchStatementSyntax choice:
         this.Switch(choice, into);
@@ -694,6 +697,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     if (this.ObjectTarget(target, into, alsoRead) is { } objectMember)
       return objectMember;
 
+    if (this.CollectionTarget(target, into, alsoRead) is { } listElement)
+      return listElement;
+
     switch (target) {
       case IdentifierNameSyntax or MemberAccessExpressionSyntax when this.GlobalOf(target) is { } global:
         if (global.Type.IsArray)
@@ -805,6 +811,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     if (this.GenericNatural(expression, type) is { } generic)
       return generic;
 
+    if (this.CollectionNatural(expression, type) is { } collectionNode)
+      return collectionNode;
+
     if (this.ObjectNatural(expression, type) is { } objectNode)
       return objectNode;
 
@@ -893,6 +902,8 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     IrExpr target = operand switch {
       IdentifierNameSyntax or MemberAccessExpressionSyntax when this.GlobalOf(operand) is { } global => new IrGlobalRef(global),
       IdentifierNameSyntax when this.Value(operand) is IrLocalRef variable => variable,
+      ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element when this.CollectionOf(element.Expression) is not null
+        => throw new UnsupportedException(operand, "a step of a list element whose value is used"),
       ElementAccessExpressionSyntax { ArgumentList.Arguments.Count: 1 } element
         => new IrArrayLoad(this.Written(element.Expression), this.Index(element.ArgumentList.Arguments[0].Expression)),
       _ => throw new UnsupportedException(operand, operand.Kind().ToString())

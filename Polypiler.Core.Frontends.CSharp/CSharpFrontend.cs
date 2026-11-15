@@ -47,7 +47,13 @@ public static class CSharpFrontend {
   [Diagnostic]
   public static readonly DiagnosticDescriptor ConstantOverflowDescriptor = new(ConstantOverflow, DiagnosticSeverity.Error, ExitCode.InvalidSource, "{0}", "csharp.constant-overflow");
 
-  private static readonly Lazy<MetadataReference> _coreLibrary = new(LoadCoreLibrary);
+  private static readonly Lazy<MetadataReference> _coreLibrary = new(() => Loaded(typeof(object).Assembly));
+
+  /// <summary>
+  /// The collections of .NET outside the core library - <c>SortedDictionary</c>, <c>SortedSet</c>,
+  /// <c>LinkedList</c> - which a source may name and the import refuses by name.
+  /// </summary>
+  private static readonly Lazy<MetadataReference> _collections = new(() => Loaded(typeof(System.Collections.Generic.SortedSet<>).Assembly));
 
   /// <summary>Imports one C# source file.</summary>
   /// <param name="path">The name of the file, used in diagnostics.</param>
@@ -94,7 +100,7 @@ public static class CSharpFrontend {
     var compilation = CSharpCompilation.Create(
       "Imported",
       trees,
-      [_coreLibrary.Value],
+      [_coreLibrary.Value, _collections.Value],
       new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, checkOverflow: checkedByDefault));
 
     var errors = compilation.GetDiagnostics()
@@ -116,11 +122,11 @@ public static class CSharpFrontend {
   }
 
   /// <summary>
-  /// The core library of the running process as a compiler reference. It is read from memory rather
-  /// than from a file, so it is also there in a single-file executable.
+  /// An assembly of the running process as a compiler reference. It is read from memory rather than
+  /// from a file, so it is also there in a single-file executable.
   /// </summary>
-  private static unsafe MetadataReference LoadCoreLibrary() {
-    typeof(object).Assembly.TryGetRawMetadata(out var blob, out var length);
+  private static unsafe MetadataReference Loaded(System.Reflection.Assembly assembly) {
+    assembly.TryGetRawMetadata(out var blob, out var length);
     return AssemblyMetadata.Create(ModuleMetadata.CreateFromMetadata((nint)blob, length)).GetReference();
   }
 
