@@ -162,8 +162,29 @@ public static partial class JavaScriptFrontend {
   /// public functions of the module. Without it, or with no name in it, every function of the file
   /// must import.
   /// </param>
+  /// <param name="read">
+  /// Reads a file the source requires - its text, or <see langword="null"/> when there is none - or
+  /// <see langword="null"/> to import the file alone. With it a module that requires others, a UMD
+  /// factory, a wrapper that assigns <c>module.exports</c> or a CommonJS file, is imported together
+  /// with the files it requires (<see cref="Modules.ModuleGraph"/>), and diagnostics point into the
+  /// file they are about.
+  /// </param>
   /// <returns>The module, or the diagnostics that explain why there is none.</returns>
-  public static ImportResult Import(string path, string source, IReadOnlyCollection<string>? exports = null) {
+  public static ImportResult Import(string path, string source, IReadOnlyCollection<string>? exports = null, System.Func<string, string?>? read = null) {
+    if (read is null)
+      return Import(path, source, exports);
+
+    var linked = Modules.ModuleGraph.Link(path, source, read, out var problems);
+    if (problems.Count > 0)
+      return Refused(problems);
+    if (linked is null)
+      return Import(path, source, exports);
+
+    var result = Import(path, linked.Text, exports);
+    return result with { Diagnostics = [.. result.Diagnostics.Select(linked.Locate)] };
+  }
+
+  private static ImportResult Import(string path, string source, IReadOnlyCollection<string>? exports) {
     var comments = new List<Comment>();
     if (Parse(source, comments, out var failure) is not { } program)
       return Refused([SyntaxErrorDescriptor.At(failure!.Description, path, failure.LineNumber, failure.Column + 1)]);
