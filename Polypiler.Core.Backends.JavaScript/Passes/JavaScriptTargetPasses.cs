@@ -182,7 +182,10 @@ public sealed class JavaScriptUnusedDeclarations : ITargetPass<JsProgram, JavaSc
   public JsProgram Run(JsProgram tree, JavaScriptProfile profile, Action<string> applied) {
     while (true) {
       var scope = JavaScriptTargetPasses.ModuleScope(tree);
-      var unused = scope.Where(statement => Removable(statement) is { } names && names.All(name => Count(tree, name) == Count(statement, name))).ToList();
+      // The names are counted once over the whole tree, then once in each statement that declares some.
+      var everywhere = Names(tree);
+      var unused = scope.Where(statement => Removable(statement) is { } names && Names(statement) is var own
+        && names.All(name => everywhere.GetValueOrDefault(name) == own.GetValueOrDefault(name))).ToHashSet(ReferenceEqualityComparer.Instance);
       if (unused.Count == 0)
         return tree;
 
@@ -212,6 +215,14 @@ public sealed class JavaScriptUnusedDeclarations : ITargetPass<JsProgram, JavaSc
     _ => null
   };
 
-  private static int Count(JsNode node, string name) => JavaScriptSyntaxRewriter.DescendantsAndSelf(node).Count(item => item is JsIdentifier { Name: var identifier } && identifier == name);
+  /// <summary>How often each name stands as an identifier in a node and below it.</summary>
+  private static Dictionary<string, int> Names(JsNode node) {
+    var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var item in JavaScriptSyntaxRewriter.DescendantsAndSelf(node))
+      if (item is JsIdentifier { Name: var name })
+        counts[name] = counts.GetValueOrDefault(name) + 1;
+
+    return counts;
+  }
 
 }

@@ -252,7 +252,10 @@ public sealed class CSharpUnusedDeclarations : ITargetPass<CsCompilationUnit, CS
   /// <inheritdoc/>
   public CsCompilationUnit Run(CsCompilationUnit tree, CSharpProfile profile, Action<string> applied) {
     while (CSharpTargetPasses.ModuleClass(tree) is { Members: { } members } type) {
-      var unused = members.Where(member => Removable(member) is { } name && !Named(tree, member, name)).ToList();
+      // The names are counted once over the whole file, then once in each member that declares one.
+      var everywhere = Names(tree);
+      var unused = members.Where(member => Removable(member) is { } name && everywhere.GetValueOrDefault(name) <= Names(member).GetValueOrDefault(name))
+        .ToHashSet(ReferenceEqualityComparer.Instance);
       if (unused.Count == 0)
         return tree;
 
@@ -282,22 +285,22 @@ public sealed class CSharpUnusedDeclarations : ITargetPass<CsCompilationUnit, CS
     _ => null
   };
 
-  /// <summary>Whether a name stands anywhere in the file outside the declaration itself: more often in the file than in the declaration.</summary>
-  private static bool Named(CsCompilationUnit tree, CsMember declaration, string name) => Count(tree, name) > Count(declaration, name);
-
   /// <summary>
-  /// How often a name stands in a node, also as a generic method with its type arguments stated,
+  /// How often each name stands in a node, also as a generic method with its type arguments stated,
   /// <c>name&lt;T&gt;</c>, and as a member read through a type, as a class of the module reaches a
-  /// member of the static class.
+  /// member of the static class. A name more often in the file than in its declaration is named
+  /// outside it.
   /// </summary>
-  private static int Count(CsNode node, string name)
-    => CSharpSyntaxRewriter.DescendantsAndSelf(node).Count(item => item switch {
-      CsName { Identifier: var identifier } => Is(identifier, name),
-      CsMemberAccess { Target: CsName, Member: var member } => Is(member, name),
-      _ => false
-    });
+  private static Dictionary<string, int> Names(CsNode node) {
+    var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var item in CSharpSyntaxRewriter.DescendantsAndSelf(node))
+      if (item switch { CsName { Identifier: var identifier } => identifier, CsMemberAccess { Target: CsName, Member: var member } => member, _ => null } is { } name) {
+        var generic = name.IndexOf('<', StringComparison.Ordinal);
+        var plain = generic < 0 ? name : name[..generic];
+        counts[plain] = counts.GetValueOrDefault(plain) + 1;
+      }
 
-  private static bool Is(string identifier, string name)
-    => identifier == name || (identifier.StartsWith(name, StringComparison.Ordinal) && identifier.Length > name.Length && identifier[name.Length] == '<');
+    return counts;
+  }
 
 }
