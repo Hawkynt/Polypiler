@@ -284,8 +284,60 @@ public sealed class CorpusImporterTests {
     ]);
     Assert.That(CorpusVerifier.Verify(this._root, Manifest(_mini.Manifest()), entries).Select(Text), Is.EqualTo(new[] {
       $"PLY0026: corpus manifest invalid: lock entry 'other/repo@{commit}/a.txt' names undeclared repository 'other/repo'",
-      $"PLY0026: corpus manifest invalid: lock entry '{MiniUpstream.Name}@{_mini.FirstCommit}/a.txt' is not at the pin {commit}"
+      $"PLY0026: corpus manifest invalid: lock entry '{MiniUpstream.Name}@{_mini.FirstCommit}/a.txt' is not at the pin {commit} nor at the commit of a fixture"
     }));
+  }
+
+  [Test]
+  public void Import_OfAFixtureWithACommitOfItsOwn_TakesItsFilesAndTheLicenceFilesFromThatCommit() {
+    var fixtures = MiniUpstream.Fixture("mini.early", "a.txt", commit: _mini.FirstCommit) + MiniUpstream.Fixture("mini.b", "dir/b.txt");
+    var imported = this.ImportAll(_mini, fixtures);
+    Assert.That(imported.Entries.Select(entry => entry.Location), Is.EquivalentTo(new[] {
+      $"{MiniUpstream.Name}@{_mini.FirstCommit}/LICENSE", $"{MiniUpstream.Name}@{_mini.FirstCommit}/a.txt",
+      $"{MiniUpstream.Name}@{_mini.Commit}/LICENSE", $"{MiniUpstream.Name}@{_mini.Commit}/dir/b.txt"
+    }));
+    Assert.That(File.ReadAllText(CorpusImporter.FilePath(this._root, MiniUpstream.Name, _mini.FirstCommit, "a.txt")), Is.EqualTo("hello\n"));
+    Assert.That(CorpusVerifier.Verify(this._root, Manifest(_mini.Manifest(fixtures)), imported), Is.Empty, "an entry at the commit of a fixture is at a pin");
+  }
+
+  [Test]
+  public void Import_OfTwoFixturesAtTheSameCommitOfTheirOwn_ReadsThatCommitOnce() {
+    var fixtures = MiniUpstream.Fixture("mini.a", "a.txt", commit: _mini.FirstCommit) + MiniUpstream.Fixture("mini.licence", "LICENSE", commit: _mini.FirstCommit);
+    var imported = this.ImportAll(_mini, fixtures);
+    Assert.That(imported.Entries.Select(entry => entry.Location), Is.EquivalentTo(new[] {
+      $"{MiniUpstream.Name}@{_mini.FirstCommit}/LICENSE", $"{MiniUpstream.Name}@{_mini.FirstCommit}/a.txt", $"{MiniUpstream.Name}@{_mini.Commit}/LICENSE"
+    }));
+  }
+
+  [Test]
+  public void Import_OfAPatternDependency_ImportsEveryFileItMatches() {
+    var imported = this.ImportAll(_extended, MiniUpstream.Fixture("mini.all", "a.txt", "['**/*.json', '*.txt']"));
+    Assert.That(imported.Entries.Select(entry => entry.Path), Is.EqualTo(new[] { "LICENSE", "a.txt", "crlf.txt", "empty.txt", "vectors/a.json" }));
+  }
+
+  [Test]
+  public void Import_OfAPatternThatMatchesNothing_IsRefused() {
+    var manifest = Manifest(_mini.Manifest(MiniUpstream.Fixture("mini.none", "a.txt", "['**/*.json']")));
+    var exception = Assert.Throws<CorpusException>(() => this.Importer(_mini).Import(manifest, new([]), [], true))!;
+    Assert.That(exception.Diagnostics.Select(Text), Is.EqualTo(new[] {
+      $"PLY0025: the pattern '**/*.json' matches no file of {MiniUpstream.Name} at {_mini.Commit}: "
+    }));
+  }
+
+  [Test]
+  public void Import_OfAPatternWhenTheCommitCannotBeListed_IsRefused() {
+    var git = new ListlessGit();
+    var manifest = Manifest(_mini.Manifest(MiniUpstream.Fixture("mini.any", "a.txt", "['*.txt', 'dir/*']")));
+    var exception = Assert.Throws<CorpusException>(() => this.Importer(_mini, git: git).Import(manifest, new([]), [], true))!;
+    Assert.That(exception.Diagnostics.Select(Text).Single(), Does.StartWith($"PLY0025: the files of {MiniUpstream.Name} at {_mini.Commit} cannot be listed: "));
+  }
+
+  /// <summary>A git that cannot list the files of a commit, and does everything else.</summary>
+  private sealed class ListlessGit() : GitProcess("git", DefaultTimeout) {
+
+    public override (System.Collections.Generic.IReadOnlyList<string>? Files, GitResult Result) ListFiles(string directory, string commit)
+      => (null, new(128, [], "fatal: not a tree object"));
+
   }
 
   [Test]

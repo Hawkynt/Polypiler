@@ -82,12 +82,19 @@ public sealed class CorpusImporter {
       ? manifest.Repositories
       : [.. manifest.Repositories.Where(repository => fixtures.Any(fixture => fixture.Repository == repository.Name))];
 
+    // A fixture that names a commit of its own is imported from that commit, with the licence files of the repository there.
+    var pins = repositories.Select(repository => (Pin: repository, Fixtures: fixtures.Where(fixture => fixture.Repository == repository.Name && fixture.Commit is null).ToList()))
+      .Concat(fixtures.Where(fixture => fixture.Commit is not null).GroupBy(fixture => (fixture.Repository, fixture.Commit))
+        .Select(group => (Pin: group.First().PinOf(manifest.Repository(group.Key.Repository)!), Fixtures: group.ToList())))
+      .GroupBy(pin => pin.Pin)
+      .Select(group => (Pin: group.Key, Fixtures: group.SelectMany(pin => pin.Fixtures).ToList()));
+
     var files = new List<(CorpusRepository Repository, string Path, byte[] Content)>();
     var problems = new List<Diagnostic>();
-    foreach (var repository in repositories) {
+    foreach (var (repository, owned) in pins) {
       var directory = this.Locate(repository);
       var paths = repository.LicenceFiles
-        .Concat(fixtures.Where(fixture => fixture.Repository == repository.Name).SelectMany(fixture => fixture.Files))
+        .Concat(this.Expand(directory, repository, owned.SelectMany(fixture => fixture.Files), problems))
         .Distinct(StringComparer.Ordinal)
         .Order(StringComparer.Ordinal);
       foreach (var path in paths) {
@@ -123,6 +130,34 @@ public sealed class CorpusImporter {
     var updated = new CorpusLock(kept.Concat(entries));
     this.Write([(Path.Combine(this._root, CorpusLock.RepositoryPath.Replace('/', Path.DirectorySeparatorChar)), System.Text.Encoding.UTF8.GetBytes(updated.ToJson()))], readOnly: false);
     return new(updated, files.Count);
+  }
+
+  /// <summary>The files of a commit: a path as it is, a pattern as every file of the commit it matches, at least one.</summary>
+  private IEnumerable<string> Expand(string directory, CorpusRepository repository, IEnumerable<string> paths, List<Diagnostic> problems) {
+    IReadOnlyList<string>? listed = null;
+    foreach (var path in paths) {
+      if (!CorpusFixtureEntry.IsPattern(path)) {
+        yield return path;
+        continue;
+      }
+
+      if (listed is null) {
+        var (files, result) = this._git.ListFiles(directory, repository.Commit);
+        if (files is null) {
+          problems.Add(CorpusDiagnostics.Path($"the files of {repository.Name} at {repository.Commit} cannot be listed", result.Error));
+          yield break;
+        }
+
+        listed = files;
+      }
+
+      var pattern = GlobPattern.Parse(path);
+      var matched = listed.Where(pattern.IsMatch).ToList();
+      if (matched.Count == 0)
+        problems.Add(CorpusDiagnostics.Path($"the pattern '{path}' matches no file of {repository.Name} at {repository.Commit}", ""));
+      foreach (var file in matched)
+        yield return file;
+    }
   }
 
   /// <summary>Writes every file under a temporary name, then renames them all; on a failure deletes what it wrote.</summary>

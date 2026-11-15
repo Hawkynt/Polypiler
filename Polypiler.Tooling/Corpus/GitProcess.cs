@@ -26,7 +26,7 @@ public sealed record GitResult(int ExitCode, byte[] Output, string Error) {
 /// </summary>
 /// <param name="executable">The git executable, <c>git</c> to find it on <c>PATH</c>.</param>
 /// <param name="timeout">How long one git command may run.</param>
-public sealed class GitProcess(string executable, TimeSpan timeout) {
+public class GitProcess(string executable, TimeSpan timeout) {
 
   /// <summary>How long one git command may run by default; a shallow fetch of a large repository takes minutes.</summary>
   public static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(10);
@@ -105,7 +105,7 @@ public sealed class GitProcess(string executable, TimeSpan timeout) {
 
   /// <summary>Every file of a commit, in the order git lists them.</summary>
   /// <returns>The paths, or <see langword="null"/> with the failing result.</returns>
-  public (IReadOnlyList<string>? Files, GitResult Result) ListFiles(string directory, string commit) {
+  public virtual (IReadOnlyList<string>? Files, GitResult Result) ListFiles(string directory, string commit) {
     var result = this.Run(directory, "ls-tree", "-r", "-z", "--name-only", commit);
     if (!result.Succeeded)
       return (null, result);
