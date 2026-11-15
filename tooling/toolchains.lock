@@ -36,11 +36,18 @@
 #   pcbasic     the GW-BASIC oracle (Polypiler.Core.Verification.Emulators.PcBasic): the PyPI release
 #               installed with pip into a virtual environment, whose folder PCBASIC_HOME names. Used
 #               only as an external process; none of its GPL code enters the repository.
+#   pb-compiler, dosbox-x, vice, pcbasic
+#               the BASIC/PB layer (tooling/ci/basic/install.sh, CI run of layer-basic on ubuntu-26.04).
+#               pb-compiler is built from the pinned commit; pbc prints no version of its own, so the
+#               installed command is a wrapper that answers --version with that commit. dosbox-x is
+#               the ubuntu-26.04 package (2026.01.02): upstream ships no Linux binaries, and the
+#               Flathub build (2026.10.01) cannot start inside the runner's bubblewrap sandbox. vice
+#               is the Flathub build 3.10, which carries the ROM images; pcbasic the PyPI release
+#               in a virtual environment.
 #   others      no test runs them yet. Installed on the development host: read from the tool
 #               (clang, llvm, jdk, perl, python, ruby, rust, go). Not installed: the latest
-#               stable upstream release (aflplusplus, dosbox-x, fbc, fpc, ilspy-cli, ilverify,
-#               kotlinc, nasm, php, qemu-user, typescript, wabt, wasmtime, z3). pb-compiler is the
-#               commit backlog/README.md pins.
+#               stable upstream release (aflplusplus, fbc, fpc, ilspy-cli, ilverify,
+#               kotlinc, nasm, php, qemu-user, typescript, wabt, wasmtime, z3).
 schema: 1
 toolchains:
   acornima:
@@ -74,7 +81,7 @@ toolchains:
     licence: Apache-2.0 WITH LLVM-exception
     source: https://github.com/llvm/llvm-project/releases
   dosbox-x:
-    version: "2026.10.01"
+    version: "2026.01.02"
     probe: [dosbox-x, --version]
     versionPattern: 'version (?<version>\d{4}\.\d{2}\.\d{2})'
     platforms: [linux, windows, macos]

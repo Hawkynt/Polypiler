@@ -1,0 +1,10 @@
+# The BASIC/PB layer (PRD §7.3): PowerBASIC programs compiled by PB-Compiler at its pinned commit and
+# run in DOSBox-X, run by the job layer-basic of .github/workflows/ci.yml. vice is probed here for the
+# Commodore oracles that run in this layer. Which oracles actually run is tooling/ci/layers/basic.oracles.yaml.
+# Format: spec/schemas/ci-layer.schema.json.
+schema: 1
+layer: basic
+toolchains: [dotnet-sdk, pb-compiler, dosbox-x, vice]
+os: [ubuntu-latest]
+paths: ["Polypiler.Core.Frontends.PowerBasic/**", "Polypiler.Core.Backends.PowerBasic/**", "Polypiler.Core.Frontends.C64Basic/**", "Polypiler.Core.Backends.TokenizedBasic/**", "tests/fixtures/**/*.bas", "tests/fixtures/**/*.BAS", "tests/fixtures/**/*.prg", "tooling/ci/layers/basic.*", "tooling/ci/basic/**", "Polypiler.Tests.Acceptance/Infra/Ci/**", "tests/features/infra/infra-ci-basic.feature"]
+always: false
