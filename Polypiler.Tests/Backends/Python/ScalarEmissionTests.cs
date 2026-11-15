@@ -182,6 +182,17 @@ public sealed class ScalarEmissionTests {
     Assert.That(Body(IrType.Bool, [_ux, _uy, carry], new IrIntrinsic(IrIntrinsicOp.BorrowOut, IrType.Bool, [R(_ux), R(_uy), R(carry)])), Does.Contain("return x - y - int(c) < 0"));
   }
 
+  /// <summary>The limbs of a 64-bit integer (O0075): the high one shifted down and masked, two joined into an <c>i64</c> sign-wrapped; no helper of the library stands for them.</summary>
+  [Test]
+  public void Limbs_AreShiftsAndMasks() {
+    Assert.That(Body(IrType.U32, [_lx], new IrIntrinsic(IrIntrinsicOp.HighWord, IrType.U32, [R(_lx)])), Does.Contain("return (x >> 32) & 0xFFFFFFFF"));
+    Assert.That(Body(IrType.I64, [_ux, _uy], new IrIntrinsic(IrIntrinsicOp.JoinWords, IrType.I64, [R(_ux), R(_uy)])),
+      Does.Contain("return ((((x << 32) | y) & 0xFFFF_FFFF_FFFF_FFFF) ^ 0x8000_0000_0000_0000) - 0x8000_0000_0000_0000"));
+    var module = Returning(IrType.U32, [_lx], new IrIntrinsic(IrIntrinsicOp.HighWord, IrType.U32, [R(_lx)]));
+    Assert.That(Problems(module), Is.Empty);
+    Assert.That(Legalized(module), Does.Contain("return (x >> 32) & 0xFFFFFFFF"));
+  }
+
   [TestCase(IrIntrinsicOp.Min, "_ply_fmin(x, y)")]
   [TestCase(IrIntrinsicOp.Max, "_ply_fmax(x, y)")]
   public void FloatMinimumAndMaximum_AreIeee754(IrIntrinsicOp op, string call)

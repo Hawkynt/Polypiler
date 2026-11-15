@@ -367,6 +367,11 @@ public static partial class PythonEmitter {
           return intrinsic.Op == IrIntrinsicOp.CarryOut
             ? Compare(Binary(Binary(arguments[0], "+", arguments[1]), "+", carry), ">", Largest(type))
             : Compare(Binary(Binary(arguments[0], "-", arguments[1]), "-", carry), "<", Integer(0));
+        case IrIntrinsicOp.HighWord:
+          // Python's >> of a negative int is arithmetic; the mask leaves the upper 32 bits of the two's complement.
+          return Binary(Binary(arguments[0], ">>", Integer(32)), "&", Mask(32)) with { Type = IrType.U32 };
+        case IrIntrinsicOp.JoinWords:
+          return Wrapped(Binary(Binary(arguments[0], "<<", Integer(32)), "|", arguments[1]), IrType.I64);
         case IrIntrinsicOp.Abs when type.IsFloat:
           return new PyCall(Name("abs"), arguments);
         case IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Sign or IrIntrinsicOp.Floor or IrIntrinsicOp.Ceiling

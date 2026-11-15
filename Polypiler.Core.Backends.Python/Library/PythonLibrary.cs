@@ -23,7 +23,8 @@ internal static class PythonLibrary {
       return false;
 
     return intrinsic.Op switch {
-      IrIntrinsicOp.Min or IrIntrinsicOp.Max => false,
+      // The limbs of O0075 are what the library's helpers are built from, not helpers themselves.
+      IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords => false,
       IrIntrinsicOp.PopCount => !table.Has(PythonCapabilities.BitCount, profile),
       _ => true
     };

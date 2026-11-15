@@ -41,7 +41,7 @@ flowchart LR
    where IEEE 754 gives an infinity or a NaN. Every integer operation Python lacks - rotates, counts,
    reorderings, saturating and overflow-testing arithmetic, bit fields, endian accesses - becomes the
    call of its helper of the library (`IntegerLibrary`); `min`/`max` of integers stay, and the count of
-   one bits is `int.bit_count()` from 3.10. The library's functions arrive as ordinary private
+   one bits is `int.bit_count()` from 3.10; the limbs `HighWord` and `JoinWords` the library's helpers are built from are written in place. The library's functions arrive as ordinary private
    functions of the module.
 2. **Check** (`PythonEmitter.Check`): the verifier, then everything the writer cannot carry.
 3. **Build** (`PythonEmitter.Build`), the target passes, **print**.
@@ -72,6 +72,7 @@ flowchart LR
 | integer to `f32` | `float(x)` up to 24 bits, `_ply_f32_of_int(x)` beyond, which rounds once rather than through a double |
 | float to integer | `_ply_f2i_sat` (NaN to 0, saturating) or `_ply_f2i_trap` (`OverflowError`) |
 | `FloatBits`, `BitsFloat` | `struct.unpack("<q", struct.pack("<d", x))[0]` and the reverse |
+| `HighWord`, `JoinWords` (the limbs of O0075) | `(x >> 32) & 0xFFFFFFFF`; `(high << 32) \| low` sign-wrapped to `i64` |
 | square root, floor, ceiling, truncation, the roundings, sign, IEEE minimum and maximum | helpers that keep -0 and NaN as IEEE 754 does; `abs` |
 | a constant | decimal; masks in hexadecimal, `_` every four digits beyond 32 bits; `math.inf`, `math.nan`, a NaN with payload by its bits |
 | a step as a value | `(x := new)`, or `(x, (x := new))[0]` for the old value; of an array element a tuple of assignment expressions ending in `__setitem__` |
