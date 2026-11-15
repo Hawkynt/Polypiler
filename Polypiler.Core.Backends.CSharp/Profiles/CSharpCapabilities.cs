@@ -73,7 +73,13 @@ public enum CSharpFeature {
   Record,
 
   /// <summary>A type pattern that declares a variable, <c>x is T t</c> (C# 7).</summary>
-  PatternDeclaration
+  PatternDeclaration,
+
+  /// <summary>The constraint <c>where T : unmanaged</c> of a type parameter (C# 7.3).</summary>
+  UnmanagedConstraint,
+
+  /// <summary>The constraint <c>where T : notnull</c> of a type parameter (C# 8).</summary>
+  NotNullConstraint
 
 }
 
@@ -328,6 +334,8 @@ public sealed class CSharpCapabilities {
     CSharpCapability.OfLanguage("init accessor", CSharpFeature.InitAccessor, new Version(9, 0)),
     CSharpCapability.OfLanguage("record class", CSharpFeature.Record, new Version(9, 0)),
     CSharpCapability.OfLanguage("pattern declaration", CSharpFeature.PatternDeclaration, new Version(7, 0)),
+    CSharpCapability.OfLanguage("generic constraint unmanaged", CSharpFeature.UnmanagedConstraint, new Version(7, 3)),
+    CSharpCapability.OfLanguage("generic constraint notnull", CSharpFeature.NotNullConstraint, new Version(8, 0)),
 
     // The equality members of a struct written out where the language has no record struct.
     CSharpCapability.OfApi("IEquatable<T>", CSharpProfile.Net20),

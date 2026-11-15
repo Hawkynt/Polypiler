@@ -93,7 +93,9 @@ public static class CSharpSyntaxReader {
       MethodDeclarationSyntax method => new CsMethod(
         Modifiers(method.Modifiers), new CsType(method.ReturnType.ToString()), method.Identifier.Text,
         method.TypeParameterList is null ? [] : [.. method.TypeParameterList.Parameters.Select(parameter => parameter.Identifier.Text)],
-        Read(method.ParameterList), method.Body is null ? null : Block(method.Body), method.ExpressionBody is null ? null : Read(method.ExpressionBody.Expression)),
+        Read(method.ParameterList), method.Body is null ? null : Block(method.Body), method.ExpressionBody is null ? null : Read(method.ExpressionBody.Expression)) {
+        Constraints = [.. method.ConstraintClauses.Select(clause => $"{clause.Name} : {string.Join(", ", clause.Constraints)}")]
+      },
       OperatorDeclarationSyntax @operator => new CsMethod(
         Modifiers(@operator.Modifiers), new CsType(@operator.ReturnType.ToString()), "operator " + @operator.OperatorToken.Text, [],
         Read(@operator.ParameterList), @operator.Body is null ? null : Block(@operator.Body), @operator.ExpressionBody is null ? null : Read(@operator.ExpressionBody.Expression)),
