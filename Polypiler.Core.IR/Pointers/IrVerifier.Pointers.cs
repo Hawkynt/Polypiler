@@ -12,7 +12,7 @@ public static partial class IrVerifier {
   private static void Pointers(IrModule module, List<Diagnostic> diagnostics) {
     var places = module.Constants.Select(constant => (constant.Name, constant.Type))
       .Concat(module.Globals.Select(global => (global.Name, global.Type)))
-      .Concat(module.Types.Where(type => type is IrStructType or IrClassType).SelectMany(type => type.Fields.Select(field => ($"{type.Name}.{field.Name}", field.Type))));
+      .Concat(module.Types.Where(type => type is IrStructType or IrClassType && type.IsDefined).SelectMany(type => type.Fields.Select(field => ($"{type.Name}.{field.Name}", field.Type))));
     foreach (var (name, type) in places.Where(place => place.Type.IsPointer))
       diagnostics.Add(Error(name, PointerStored));
   }

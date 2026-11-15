@@ -130,7 +130,7 @@ public static class IrPointers {
 
       var captured = IrTree.Nodes(function.Body).OfType<IrLambda>().SelectMany(lambda => lambda.Captures).ToHashSet();
       foreach (var lambda in IrTree.Nodes(function.Body).OfType<IrLambda>())
-        this.Require(!lambda.Captures.Concat(lambda.Parameters).Concat(lambda.Locals).Any(local => local.Type.IsPointer) && !lambda.ReturnType.IsPointer
+        this.Require(!lambda.Captures.Concat(lambda.Parameters).Concat(lambda.Locals).Any(local => local.Type.IsPointer) && lambda.Type.Signature?.Result.IsPointer != true
           && !IrTree.Nodes(lambda.Body).Any(node => node.Type.IsPointer), "a lambda holds a pointer");
 
       this.Pointers(function.Body, 1, captured);
