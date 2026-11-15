@@ -103,8 +103,8 @@ public sealed class ScalarLoweringTests {
   public void ParameterWithoutHintAndCall_IsRefused()
     => Assert.That(PythonSnippet.Refusals("def f(a, b): return a + b\n"), Is.EqualTo(new[] {
       "snippet.py(1,1): error PLY1801: the result type of 'f' is not known: it has no return type hint and no return value of a known type",
-      "snippet.py(1,7): error PLY1801: the type of 'a' in 'f' is not known: it has no type hint and no call of the module passes it a value",
-      "snippet.py(1,10): error PLY1801: the type of 'b' in 'f' is not known: it has no type hint and no call of the module passes it a value"
+      "snippet.py(1,7): error PLY1801: the type of 'a' in 'f' is not known: it has no type hint and nothing in the import calls 'f'; add a type hint such as 'a: int'",
+      "snippet.py(1,10): error PLY1801: the type of 'b' in 'f' is not known: it has no type hint and nothing in the import calls 'f'; add a type hint such as 'b: int'"
     }));
 
   /// <summary>Scenario: an unsupported numeric type is refused.</summary>
@@ -367,22 +367,20 @@ public sealed class ScalarLoweringTests {
   /// <summary>Test design 17: the unsupported constructs, each with the diagnostic of its family.</summary>
   [TestCase("a: float", "a + 2j", "error PLY1802: '2j' is not supported by the Python frontend")]
   [TestCase("a: int, b: int", "pow(a, b, 7)", "error PLY1802: 'pow(a, b, 7)' is not supported by the Python frontend")]
-  [TestCase("a: int, b: int", "a is b", "error PLY1802: 'is' is not supported by the Python frontend")]
+  [TestCase("a: int, b: int", "a is b", "error PLY1802: 'is between values of the types int and int, whose identity CPython does not define' is not supported by the Python frontend")]
   [TestCase("a: int, b: int", "a @ b", "error PLY1802: '@' is not supported by the Python frontend")]
   [TestCase("a: int", "round(a, 2)", "error PLY1802: 'round(a, 2)' is not supported by the Python frontend")]
-  [TestCase("a: int", "divmod(a, 2)", "error PLY1802: 'divmod(a, 2)' is not supported by the Python frontend")]
   [TestCase("a: int", "Decimal(a)", "error PLY1833: 'Decimal' is neither part of this import nor in the Python call map")]
-  [TestCase("a: int", "'text'", "error PLY1802: ''text'' is not supported by the Python frontend")]
-  [TestCase("a: int", "[a]", "error PLY1802: '[a]' is not supported by the Python frontend")]
-  [TestCase("a: int", "(b := a)", "error PLY1802: 'b := a' is not supported by the Python frontend")]
+  [TestCase("a: int", "{a: 1}", "error PLY1842: dict or set operation '{a: 1}' is not supported by the Python frontend")]
   [TestCase("a: float", "a << 1", "error PLY1802: '<< with a float operand, which raises TypeError,' is not supported by the Python frontend")]
   [TestCase("a: float", "a & 1", "error PLY1802: '& with a float operand, which raises TypeError,' is not supported by the Python frontend")]
   [TestCase("a: float", "~a", "error PLY1802: '~ with a float operand, which raises TypeError,' is not supported by the Python frontend")]
   [TestCase("a: int", "f", "error PLY1832: the function value 'f' escapes")]
   [TestCase("a: int", "int", "error PLY1832: the function value 'int' escapes")]
   [TestCase("a: int", "(lambda: 1)()", "error PLY1833: 'lambda: 1' is neither part of this import nor in the Python call map")]
-  [TestCase("a: int", "f(a=1)", "error PLY1830: 'keyword or unpacked arguments in f(a=1)' is not supported for functions by the Python frontend")]
-  [TestCase("a: int", "f(1, 2)", "error PLY1830: 'a call of f with 2 of its 1 arguments' is not supported for functions by the Python frontend")]
+  [TestCase("a: int", "f(b=1)", "error PLY1830: 'the keyword argument b, which f has no parameter for in f(b=1), which raises TypeError,' is not supported for functions by the Python frontend")]
+  [TestCase("a: int", "f(1, 2)", "error PLY1830: 'more positional arguments than f takes in f(1, 2), which raises TypeError,' is not supported for functions by the Python frontend")]
+  [TestCase("a: int", "f(*[a])", "error PLY1830: '*args and **kwargs in f(*[a])' is not supported for functions by the Python frontend")]
   [TestCase("a: int", "a(1)", "error PLY1832: the function value 'a' escapes")]
   public void UnsupportedConstruct_IsRefused(string parameters, string expression, string diagnostic)
     => Assert.That(PythonSnippet.Refusals(F(parameters, "int", expression)), Has.Some.Contains(diagnostic));
@@ -401,7 +399,7 @@ public sealed class ScalarLoweringTests {
     Assert.That(PythonSnippet.Run(F("a: int, b: float", "float", "a or b"), "f", 0L, 2.5), Is.EqualTo("float 2.5"));
     Assert.That(PythonSnippet.Run(F("a: int, b: float", "float", "a if a else b"), "f", 3L, 2.5), Is.EqualTo("float 3.0"));
     const string none = "def g() -> None:\n    pass\n\ndef f(a: int) -> int:\n    return a or g()\n";
-    Assert.That(PythonSnippet.Refusals(none), Is.EqualTo(new[] { "snippet.py(5,12): error PLY1803: 'a or g()' gives values of types no type of the import holds both of" }));
+    Assert.That(PythonSnippet.Refusals(none), Is.EqualTo(new[] { "snippet.py(5,17): error PLY1802: 'the value None of g()' is not supported by the Python frontend" }));
     const string used = "def g() -> None:\n    pass\n\ndef f(a: int) -> int:\n    return g() + a\n";
     Assert.That(PythonSnippet.Refusals(used), Is.EqualTo(new[] { "snippet.py(5,12): error PLY1802: 'the value None of g()' is not supported by the Python frontend" }));
   }

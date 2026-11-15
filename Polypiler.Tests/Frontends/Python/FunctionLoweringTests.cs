@@ -53,8 +53,8 @@ public sealed class FunctionLoweringTests {
     Assert.That(PythonOutcome.Interpreted(result.Module!, new PythonCall("f", [3L])), Is.EqualTo("float 1.5"));
   }
 
-  [TestCase("x: list", "error PLY1801: the type hint 'list' of 'x' is not supported; supported are int, float and bool")]
-  [TestCase("x: None", "error PLY1801: the type hint 'None' of 'x' is not supported; supported are int, float and bool")]
+  [TestCase("x: list", "error PLY1801: the type hint 'list' of 'x' is not supported; supported are int, float, bool, str, bytes, bytearray, list[T], tuple[…], T | None and the classes of the module")]
+  [TestCase("x: None", "error PLY1801: the type hint 'None' of 'x' is not supported; supported are int, float, bool, str, bytes, bytearray, list[T], tuple[…], T | None and the classes of the module")]
   [TestCase("x: 'float'", null)]
   public void ParameterHints_AreTheSupportedTypes(string parameter, string? diagnostic) {
     var source = $"def f({parameter}) -> float:\n    return x + 1\n";
@@ -66,8 +66,8 @@ public sealed class FunctionLoweringTests {
 
   [Test]
   public void UnsupportedReturnHint_IsRefused()
-    => Assert.That(PythonSnippet.Refusals("def f(x: int) -> list[int]:\n    return x\n"),
-      Has.Some.Contains("error PLY1801: the return type hint 'list[int]' of 'f' is not supported; supported are int, float, bool and None"));
+    => Assert.That(PythonSnippet.Refusals("def f(x: int) -> dict[str, int]:\n    return x\n"),
+      Has.Some.Contains("error PLY1801: the return type hint 'dict[str, int]' of 'f' is not supported; supported are int, float, bool, str, bytes, bytearray, list[T], tuple[…], T | None and the classes of the module and None"));
 
   [Test]
   public void ParameterOfTwoKindsOfCalls_IsTheWiderOne() {
@@ -77,9 +77,17 @@ public sealed class FunctionLoweringTests {
   }
 
   [Test]
-  public void LocalOfNoneAndANumber_IsRefused()
-    => Assert.That(PythonSnippet.Refusals("def g() -> None:\n    pass\n\ndef f(n: int) -> int:\n    x = n\n    x = g()\n    return 0\n"),
-      Has.Some.Contains("error PLY1803: 'f.x' holds values of the types int and None"));
+  public void LocalOfAStrAndANumber_IsRefused()
+    => Assert.That(PythonSnippet.Refusals("def f(n: int) -> int:\n    x = n\n    x = 'a'\n    return 0\n"),
+      Has.Some.Contains("error PLY1803: 'f.x' holds values of the types int and str"));
+
+  /// <summary>A local of None and a number is an optional; the call whose None is stored still runs.</summary>
+  [Test]
+  public void LocalOfNoneAndANumber_IsAnOptional() {
+    const string source = "def g(n: int) -> None:\n    assert n != 3\n\ndef f(n: int) -> int:\n    x = n\n    x = g(n)\n    return 0 if x is None else 1\n";
+    Assert.That(PythonSnippet.Run(source, "f", 1L), Is.EqualTo("int 0"));
+    Assert.That(PythonSnippet.Run(source, "f", 3L), Is.EqualTo("raise AssertionError"));
+  }
 
   [Test]
   public void LocalWithoutAKnownValue_IsRefused()
@@ -91,11 +99,10 @@ public sealed class FunctionLoweringTests {
   public void ModuleLevelStatements_AreLeftOutOrRefused() {
     const string accepted = "\"\"\"A module.\"\"\"\nfrom __future__ import annotations\n\ndef f() -> int:\n    return 1\n\nif __name__ == \"__main__\":\n    print(f())\n";
     Assert.That(PythonSnippet.Module(accepted).Functions.Select(function => function.Name), Is.EqualTo(new[] { "f" }));
-    Assert.That(PythonSnippet.Refusals("import math\nfrom os import path\nX = 1\nasync def g():\n    pass\n\ndef f() -> int:\n    return 1\n"), Is.EqualTo(new[] {
-      "snippet.py(1,1): error PLY1833: 'math' is neither part of this import nor in the Python call map",
+    Assert.That(PythonSnippet.Refusals("import math\nfrom os import path\nX = 1\nasync def g():\n    pass\n\ndef f() -> int:\n    return 1\nprint(X)\n"), Is.EqualTo(new[] {
       "snippet.py(2,1): error PLY1833: 'os' is neither part of this import nor in the Python call map",
-      "snippet.py(3,1): error PLY1810: statement 'module-level X = 1' is not supported by the Python frontend",
-      "snippet.py(4,1): error PLY1832: the function value 'g' escapes, or 'g' is a generator or coroutine; only direct calls of the module's functions are imported"
+      "snippet.py(4,1): error PLY1832: the function value 'g' escapes, or 'g' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported (coroutines: #752)",
+      "snippet.py(9,1): error PLY1810: statement 'module-level print(X)' is not supported by the Python frontend"
     }));
     Assert.That(PythonSnippet.Refusals("\"\"\"Only a docstring.\"\"\"\n"), Is.EqualTo(new[] {
       "snippet.py(1,1): error PLY1810: statement 'a module without a function' is not supported by the Python frontend"
@@ -103,9 +110,6 @@ public sealed class FunctionLoweringTests {
   }
 
   [TestCase("@staticmethod\ndef f(x: int) -> int:\n    return x\n", "'a decorator of f'")]
-  [TestCase("def f(x: int = 1) -> int:\n    return x\n", "'a default value of a parameter of f'")]
-  [TestCase("def f(x: int, /) -> int:\n    return x\n", "'a positional-only parameter of f'")]
-  [TestCase("def f(*, x: int) -> int:\n    return x\n", "'a keyword-only parameter of f'")]
   [TestCase("def f(*x) -> int:\n    return 1\n", "'*x of f'")]
   [TestCase("def f(**x) -> int:\n    return 1\n", "'**x of f'")]
   [TestCase("def f[T](x: int) -> int:\n    return x\n", "'a type parameter of f'")]
@@ -114,10 +118,9 @@ public sealed class FunctionLoweringTests {
     => Assert.That(PythonSnippet.Refusals(source), Has.Some.Contains($"error PLY1830: {feature} is not supported for functions by the Python frontend"));
 
   [Test]
-  public void GeneratorsAndLambdas_AreRefused() {
-    Assert.That(PythonSnippet.Refusals("def f() -> int:\n    yield 1\n"), Has.Some.Contains("error PLY1832: the function value 'f' escapes, or 'f' is a generator or coroutine"));
+  public void EscapingLambdasAndUnboundNames_AreRefused() {
     Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return (lambda: 1)\n"), Has.Some.Contains("error PLY1832: the function value 'lambda: 1' escapes"));
-    Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return math.floor(1.5)\n"), Has.Some.Contains("error PLY1833: 'math.floor' is neither part of this import nor in the Python call map"));
+    Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return math.floor(1.5)\n"), Has.Some.Contains("error PLY1833: 'math' is neither part of this import nor in the Python call map"));
     Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return undefined_name\n"), Has.Some.Contains("error PLY1833: 'undefined_name' is neither part of this import nor in the Python call map"));
   }
 

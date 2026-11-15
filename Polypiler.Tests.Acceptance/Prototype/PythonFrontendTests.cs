@@ -57,7 +57,8 @@ public sealed class PythonFrontendTests {
   /// <summary>Every fixture imports through the interpreter exactly as from its recorded tree.</summary>
   [TestCaseSource(nameof(Fixtures)), RequiresToolchain("python")]
   public void Fixture_ImportsThroughCPythonAsFromItsRecordedTree(string fixture) {
-    var live = PythonFrontend.Import(fixture + ".py", PythonFixture.SourceOf(fixture));
+    // From the fixture's own path, as polypiler translate imports it: the modules it imports are found beside it.
+    var live = PythonFrontend.Import(PythonFixture.PathOf(fixture), PythonFixture.SourceOf(fixture));
     Assert.That(live.Diagnostics, Is.Empty);
     Assert.That(live.Python, Does.Match(@"^3\.\d+\.\d+$"));
     Assert.That(Core.IR.IrModuleFormat.Write(live.Module!), Is.EqualTo(Core.IR.IrModuleFormat.Write(PythonFixture.Import(fixture))));

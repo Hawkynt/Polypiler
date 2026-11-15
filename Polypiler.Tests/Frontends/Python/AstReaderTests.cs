@@ -110,9 +110,17 @@ public sealed class AstReaderTests {
     Assert.That(PyTypes.Join(PyType.Float, PyType.Unknown), Is.EqualTo(PyType.Float));
     Assert.That(PyTypes.Join(PyType.Bool, PyType.Float), Is.EqualTo(PyType.Float));
     Assert.That(PyTypes.Join(PyType.Int, PyType.Bool), Is.EqualTo(PyType.Int));
-    Assert.That(PyTypes.Join(PyType.None, PyType.Int), Is.Null);
-    Assert.That(new[] { PyType.Unknown, PyType.Bool, PyType.Int, PyType.Float, PyType.None }.Select(PyTypes.Name), Is.EqualTo(new[] { "unknown", "bool", "int", "float", "None" }));
-    Assert.That(new[] { "int", "float", "bool", "None", "str" }.Select(PyTypes.OfHint), Is.EqualTo(new PyType?[] { PyType.Int, PyType.Float, PyType.Bool, PyType.None, null }));
+    Assert.That(PyTypes.Join(PyType.None, PyType.Int), Is.EqualTo(PyType.Optional(PyType.Int)));
+    Assert.That(PyTypes.Join(PyType.Optional(PyType.Int), PyType.Float), Is.EqualTo(PyType.Optional(PyType.Float)));
+    Assert.That(PyTypes.Join(PyType.None, PyType.Str), Is.Null);
+    Assert.That(PyTypes.Join(PyType.Str, PyType.Int), Is.Null);
+    Assert.That(PyTypes.Join(PyType.List(PyType.Unknown), PyType.List(PyType.Int)), Is.EqualTo(PyType.List(PyType.Int)));
+    Assert.That(PyTypes.Join(PyType.List(PyType.Int), PyType.List(PyType.Float)), Is.Null);
+    Assert.That(PyTypes.Join(PyType.Tuple([PyType.Int]), PyType.Tuple([PyType.Int, PyType.Int])), Is.Null);
+    Assert.That(new[] { PyType.Unknown, PyType.Bool, PyType.Int, PyType.Float, PyType.None, PyType.Str, PyType.Bytes, PyType.ByteArray }.Select(PyTypes.Name),
+      Is.EqualTo(new[] { "unknown", "bool", "int", "float", "None", "str", "bytes", "bytearray" }));
+    Assert.That(new[] { PyType.List(PyType.Int), PyType.Tuple([PyType.Int, PyType.Float]), PyType.Optional(PyType.Int), PyType.Iterator(PyType.Str), PyType.Table(PyType.Int) }.Select(PyTypes.Name),
+      Is.EqualTo(new[] { "list[int]", "tuple[int, float]", "int | None", "Iterator[str]", "tuple[int, ...]" }));
     Assert.That(() => PyTypes.Ir(PyType.Unknown), Throws.TypeOf<ArgumentOutOfRangeException>());
   }
 
