@@ -175,6 +175,7 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase("parseFloat", 5, null)]
   [TestCase("parseInt", 5, null)]
   [TestCase("Object.freeze", 5, null)]
+  [TestCase("*p, a pointer", int.MaxValue, "view and index")]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
     Assert.That((entry.Name, entry.Since, entry.Replacement), Is.EqualTo((name, since, replacement)));
@@ -206,7 +207,7 @@ public sealed class JavaScriptCapabilitiesTests {
   [Test]
   public void Standard_NamesWhatIsNeverEmitted()
     => Assert.That(_table.Entries.Where(entry => !entry.Emitted).Select(entry => entry.Name),
-      Is.EquivalentTo(new[] { "**", "numeric separators", "Number.isNaN", "globalThis", "Math.asin", "Math.acos", "Math.atan", "Math.asinh", "Math.acosh", "Math.atanh", "Math.expm1", "Math.log1p" }));
+      Is.EquivalentTo(new[] { "**", "numeric separators", "Number.isNaN", "globalThis", "Math.asin", "Math.acos", "Math.atan", "Math.asinh", "Math.acosh", "Math.atanh", "Math.expm1", "Math.log1p", "*p, a pointer" }));
 
   /// <summary>Everything above ECMAScript 5 that the emitter writes has a replacement, so no module is refused today.</summary>
   [Test]

@@ -215,7 +215,10 @@ public sealed class JavaScriptCapabilities {
     new("parseInt", 5),
 
     // Enums (#1318): a frozen object of named numbers (Object itself is listed with the classes), ECMA-262 5.1 §15.2.3.9.
-    new("Object.freeze", 5)
+    new("Object.freeze", 5),
+
+    // The bounded pointers of #1331: no level of ECMAScript has pointers; a pointer is a region and a byte offset in it.
+    new("*p, a pointer", int.MaxValue, "view and index", Emitted: false)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>
