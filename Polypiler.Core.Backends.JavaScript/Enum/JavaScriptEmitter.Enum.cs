@@ -131,7 +131,8 @@ public static partial class JavaScriptEmitter {
         case IrIntrinsicOp.EnumValues:
           return this.Write(new IrIntrinsic(IrIntrinsicOp.ArrayOf, intrinsic.Type, [.. type.Ordered.Select(member => new IrConst(type.Type, member.Value))]));
         default:
-          return this.Expression(HasFlag(arguments[0], arguments[1]));
+          // Of 64 bits below ECMAScript 2020 it is the library's, which legalization put in (O0075).
+          return type.Underlying.IsLong && this.Halves ? this.Unlegalized("HasFlag") : this.Expression(HasFlag(arguments[0], arguments[1]));
       }
     }
 

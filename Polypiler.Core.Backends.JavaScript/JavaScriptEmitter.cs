@@ -20,8 +20,8 @@ namespace Polypiler.Core.Backends.JavaScript;
 /// <c>&gt;&gt;&gt; 0</c> for <c>u32</c>, masks and sign-extending shifts for the 8- and 16-bit types.
 /// Integers of 64 bits are <c>BigInt</c>s cut to size with <c>BigInt.asIntN</c> and
 /// <c>BigInt.asUintN</c>; below ECMAScript 2020 they are objects <c>{ hi, lo }</c> of two unsigned
-/// 32-bit halves, computed by helper functions that never leave the integers a number holds
-/// exactly. A <c>double</c> is a number as it is; every <c>float</c> operation is rounded to binary32
+/// 32-bit halves, computed by the library's helpers on the limbs (O0075), which never leave the
+/// integers a number holds exactly. A <c>double</c> is a number as it is; every <c>float</c> operation is rounded to binary32
 /// with <c>Math.fround</c> or its replacement, which is exact because a double holds the sum,
 /// difference, product and quotient of two binary32 numbers precisely enough to round once. Arrays
 /// are typed arrays where the profile has them and plain arrays where it has not, and the constants
@@ -243,8 +243,6 @@ public static partial class JavaScriptEmitter {
     private const string Previous = "$p";
 
     private static JsObject Zero64 => Halves(Number("0"), Number("0"));
-
-    private static JsObject One64 => Halves(Number("0"), Number("1"));
 
     private readonly JavaScriptProfile _profile;
     private readonly JavaScriptCapabilities _capabilities;

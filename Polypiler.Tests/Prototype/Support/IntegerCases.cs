@@ -88,6 +88,9 @@ internal static class IntegerCases {
     foreach (var op in new[] { IrIntrinsicOp.StoreLittle, IrIntrinsicOp.StoreBig })
       Each(op, Multibyte, _ => IrType.Void, type => [_bytes, IrType.I32, type]);
 
+    // The limbs of a 64-bit integer (#1358): taken apart and joined.
+    Each(IrIntrinsicOp.HighWord, [IrType.I64], _ => IrType.U32, type => [type]);
+    Each(IrIntrinsicOp.JoinWords, [IrType.U32], _ => IrType.I64, type => [type, type]);
     return cases;
   }
 

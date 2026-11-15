@@ -70,13 +70,13 @@ public sealed class IntegerJavaScriptTests {
   [TestCase("RotateLeft_u16", "es2022", new[] { "RotateLeftNarrow" })]
   [TestCase("RotateLeft_u32", "es2022", new[] { "RotateLeft32" })]
   [TestCase("RotateLeft_i64", "es2022", new[] { "RotateLeft64" })]
-  [TestCase("RotateLeft_i64", "es5", new[] { "$or64", "$shl64", "$shr64", "RotateLeft64" })]
+  [TestCase("RotateLeft_i64", "es5", new[] { "Or64", "RotateLeft64", "ShiftLeft64", "ShiftRightLogical64" })]
   [TestCase("ByteSwap_u32", "es5", new[] { "ByteSwap32" })]
   [TestCase("LeadingZeroCount_u8", "es5", new[] { "LeadingZeroCount32", "LeadingZeroCountNarrow" })]
   [TestCase("LeadingZeroCount_u8", "es2015", new string[0])]
   [TestCase("MulHigh_i64", "es2022", new string[0])]
   [TestCase("Abs_u32", "es2022", new string[0])]
-  [TestCase("Sign_u64", "es5", new[] { "$eq64", "SignUnsigned64" })]
+  [TestCase("Sign_u64", "es5", new[] { "Equal64", "SignUnsigned64" })]
   [TestCase("StoreBig_u16", "es2022", new[] { "$set", "CheckBytes", "IndexOutOfRangeError", "Store32" })]
   public void Module_CarriesTheHelpersItCalls(string function, string level, string[] helpers)
     => Assert.That(Helpers(File(function, JavaScriptProfile.Parse(level))), Is.EqualTo(helpers));

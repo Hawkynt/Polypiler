@@ -15,12 +15,13 @@ public static partial class JavaScriptEmitter {
     /// How each integer and bit operation is written, one family per file. An integer of up to 32
     /// bits is a number and most operations go through a helper told the width, whose result is cut
     /// back to the type; one of 64 bits is a <c>BigInt</c> from ECMAScript 2020 on, cut back with
-    /// <c>BigInt.asIntN</c> or <c>BigInt.asUintN</c>, and below that the pair of halves its helpers
-    /// compute on. Where ECMAScript has the operation - <c>Math.clz32</c>, <c>Math.abs</c>,
+    /// <c>BigInt.asIntN</c> or <c>BigInt.asUintN</c>, and below that the pair of halves the library's
+    /// helpers compute on, whose limbs <c>HighWord</c> and <c>JoinWords</c> take apart and put together.
+    /// Where ECMAScript has the operation - <c>Math.clz32</c>, <c>Math.abs</c>,
     /// <c>Math.min</c>, the arithmetic of <c>BigInt</c> - it is written as it is.
     /// </summary>
     private static readonly Dictionary<IrIntrinsicOp, Func<Writer, IrIntrinsic, (JsExpression Node, bool Atomic)>> _integerForms = Register(
-      CountForms, WideMultiplyForms, BoundForms, CarryForms);
+      CountForms, WideMultiplyForms, BoundForms, CarryForms, LimbForms);
 
     private static Dictionary<IrIntrinsicOp, Func<Writer, IrIntrinsic, (JsExpression Node, bool Atomic)>> Register(
       params IEnumerable<(IrIntrinsicOp Op, Func<Writer, IrIntrinsic, (JsExpression Node, bool Atomic)> Form)>[] families)

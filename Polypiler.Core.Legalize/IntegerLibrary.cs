@@ -19,7 +19,11 @@ public static class IntegerLibrary {
   /// </summary>
   /// <param name="node">The node, an <see cref="IrIntrinsic"/> whose operands are legalized.</param>
   /// <param name="calls">Makes the calls.</param>
-  /// <returns>An expression of the type of the node that evaluates its arguments once, in their order.</returns>
+  /// <returns>
+  /// An expression of the type of the node that evaluates its arguments once, in their order; other
+  /// operations of the IR it is made of are legalized in turn, so that one on 64 bits becomes the call
+  /// of its helper where the profile lacks those.
+  /// </returns>
   public static IrExpr? Call(IrExpr node, LibraryCalls calls) {
     ArgumentNullException.ThrowIfNull(calls);
     if (node is not IrIntrinsic intrinsic || intrinsic.Arguments.Count == 0)
@@ -56,11 +60,11 @@ public static class IntegerLibrary {
       case IrIntrinsicOp.RoundUpPow2:
         return wide ? Helper("RoundUpPow2Of64", arguments) : Helper("RoundUpPow2Of32", [.. arguments, Int(bits)]);
       case IrIntrinsicOp.BigMul:
-        return new IrBinary(IrBinaryOp.Multiply, new IrConvert(intrinsic.Type, arguments[0]), new IrConvert(intrinsic.Type, arguments[1]));
+        return calls.Legalize(new IrBinary(IrBinaryOp.Multiply, new IrConvert(intrinsic.Type, arguments[0]), new IrConvert(intrinsic.Type, arguments[1])));
       case IrIntrinsicOp.MulHigh:
         return bits >= 32 ? Signedness(name) : NarrowHigh(intrinsic, type);
       case IrIntrinsicOp.DivFloor or IrIntrinsicOp.ModFloor or IrIntrinsicOp.DivEuclid or IrIntrinsicOp.ModEuclid:
-        return Divided(intrinsic, type, Helper);
+        return Divided(intrinsic, type, Helper, calls);
       case IrIntrinsicOp.Clamp:
         return Signedness(name);
       case IrIntrinsicOp.Abs:
@@ -79,11 +83,11 @@ public static class IntegerLibrary {
       case IrIntrinsicOp.AddSaturate or IrIntrinsicOp.SubSaturate or IrIntrinsicOp.MulSaturate:
         return Bounded(intrinsic, type, name, Helper);
       case IrIntrinsicOp.AddOverflows or IrIntrinsicOp.SubOverflows or IrIntrinsicOp.MulOverflows:
-        return Overflows(intrinsic, type, name, Helper);
+        return Overflows(intrinsic, type, name, Helper, calls);
       case IrIntrinsicOp.AddCarry or IrIntrinsicOp.SubBorrow:
         var op = intrinsic.Op == IrIntrinsicOp.AddCarry ? IrBinaryOp.Add : IrBinaryOp.Subtract;
         var (left, right) = (Widened(arguments[0]), Widened(arguments[1]));
-        return Narrowed(new IrBinary(op, new IrBinary(op, left, right), new IrConditional(arguments[2], One(left.Type), Zero(left.Type))), type);
+        return calls.Legalize(Narrowed(new IrBinary(op, new IrBinary(op, left, right), new IrConditional(arguments[2], One(left.Type), Zero(left.Type))), type));
       case IrIntrinsicOp.CarryOut or IrIntrinsicOp.BorrowOut:
         return wide ? Helper(name + "64", arguments) : null;
       case IrIntrinsicOp.ExtractBits or IrIntrinsicOp.InsertBits or IrIntrinsicOp.TestBit or IrIntrinsicOp.SetBit or IrIntrinsicOp.ClearBit or IrIntrinsicOp.ToggleBit:
@@ -130,10 +134,10 @@ public static class IntegerLibrary {
   }
 
   /// <summary>A division that rounds otherwise: its helper for a signed type, the truncating division for an unsigned one, where both agree.</summary>
-  private static IrExpr Divided(IrIntrinsic intrinsic, IrType type, Func<string, IReadOnlyList<IrExpr>, IrExpr> helper) {
+  private static IrExpr Divided(IrIntrinsic intrinsic, IrType type, Func<string, IReadOnlyList<IrExpr>, IrExpr> helper, LibraryCalls calls) {
     var arguments = intrinsic.Arguments;
     if (!type.IsSigned)
-      return Narrowed(new IrBinary(intrinsic.Op is IrIntrinsicOp.DivFloor or IrIntrinsicOp.DivEuclid ? IrBinaryOp.Divide : IrBinaryOp.Remainder, Widened(arguments[0]), Widened(arguments[1])), type);
+      return calls.Legalize(Narrowed(new IrBinary(intrinsic.Op is IrIntrinsicOp.DivFloor or IrIntrinsicOp.DivEuclid ? IrBinaryOp.Divide : IrBinaryOp.Remainder, Widened(arguments[0]), Widened(arguments[1])), type));
 
     var name = intrinsic.Op switch {
       IrIntrinsicOp.DivFloor => "FloorDivide",
@@ -158,10 +162,10 @@ public static class IntegerLibrary {
   }
 
   /// <summary>An overflow test: the helper of the width, told the bounds of a type of up to 32 bits; an unsigned difference is a comparison.</summary>
-  private static IrExpr Overflows(IrIntrinsic intrinsic, IrType type, string name, Func<string, IReadOnlyList<IrExpr>, IrExpr> helper) {
+  private static IrExpr Overflows(IrIntrinsic intrinsic, IrType type, string name, Func<string, IReadOnlyList<IrExpr>, IrExpr> helper, LibraryCalls calls) {
     var arguments = intrinsic.Arguments;
     if (!type.IsSigned && intrinsic.Op == IrIntrinsicOp.SubOverflows)
-      return new IrBinary(IrBinaryOp.Less, Widened(arguments[0]), Widened(arguments[1]));
+      return calls.Legalize(new IrBinary(IrBinaryOp.Less, Widened(arguments[0]), Widened(arguments[1])));
 
     var helperName = name + (type.IsSigned ? "Signed" : "Unsigned") + (type.Bits == 64 ? "64" : "32");
     if (type.Bits == 64)

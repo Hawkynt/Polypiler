@@ -148,21 +148,17 @@ public static partial class JavaScriptEmitter {
     }
 
     /// <summary>
-    /// The order of a generic definition: the difference of two integers narrower than 32 bits, the
-    /// comparison of two pairs of halves, and for the other numbers and truth values the helper
-    /// <c>$compare</c>, which puts a NaN below every number.
+    /// The order of a generic definition: the difference of two integers narrower than 32 bits, and
+    /// for the other numbers and truth values the helper <c>$compare</c>, which puts a NaN below every
+    /// number. Of two pairs of halves it is the library's comparison, which legalization put in (O0075).
     /// </summary>
     private (JsExpression Node, bool Atomic) GenericCompare(IrGenericCompare order) {
       var (left, right) = (order.Left, order.Right);
       if (left.Type.IsInteger && left.Type.Bits < 32)
         return this.Write(new IrBinary(IrBinaryOp.Subtract, new IrConvert(IrType.I32, left), new IrConvert(IrType.I32, right)));
 
-      if (left.Type.IsLong && this.Halves && Simple(left) && Simple(right))
-        return this.Write(new IrConditional(new IrBinary(IrBinaryOp.Less, left, right), new IrConst(IrType.I32, -1),
-          new IrConditional(new IrBinary(IrBinaryOp.Equal, left, right), new IrConst(IrType.I32, 0), new IrConst(IrType.I32, 1))));
-
-      if (left.Type.IsLong && this.Halves && this._refused.Add("the order of a 64-bit value that is no variable"))
-        this._problems.Add(InexpressibleDescriptor.At($"'the order of a 64-bit value that is no variable' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
+      if (left.Type.IsLong && this.Halves)
+        return this.Unlegalized("order");
 
       return (this.Helper("$compare", left, right), true);
     }

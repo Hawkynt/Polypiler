@@ -52,7 +52,7 @@ internal static class HelperHarness {
   }
 
   /// <summary>An argument as a new object: an array is written by a store, which must not reach the next run.</summary>
-  private static object Copy(object argument) => argument is byte[] bytes ? bytes.Clone() : argument;
+  private static object Copy(object argument) => argument is Array array ? array.Clone() : argument;
 
   /// <summary>A value of a type as the interpreter takes it across its boundary.</summary>
   public static object Host(IrType type, long value) => type.Kind switch {

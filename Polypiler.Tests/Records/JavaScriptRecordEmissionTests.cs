@@ -139,7 +139,7 @@ public sealed class JavaScriptRecordEmissionTests {
     Assert.That(es2020, Does.Contain("function $equals_Outer(a, b) {\n  return $equals_Inner(a.In, b.In) && (a.F === b.F || (a.F !== a.F && b.F !== b.F)) && (a.D === b.D || (a.D !== a.D && b.D !== b.D)) && a.U === b.U;\n}"));
     Assert.That(es2020, Does.Contain("array[index] = { In: { A: 0n, B: false }, F: 0, D: 0, U: 0n };"));
     var es5 = Emit(RecordModules.Everything(), _es5);
-    Assert.That(es5, Does.Contain("return $eq64(a.A, b.A) && a.B === b.B;").And.Contain("function $eq64(").And.Contain("var array = [];").And.Contain("for (var index = 0;"));
+    Assert.That(es5, Does.Contain("return (a.A.hi === b.A.hi && a.A.lo === b.A.lo) && a.B === b.B;").And.Not.Contain("$eq64").And.Contain("var array = [];").And.Contain("for (var index = 0;"));
     Assert.That(es5, Does.Contain("{ In: { A: { hi: 0, lo: 0 }, B: false }, F: 0, D: 0, U: { hi: 0, lo: 0 } }"));
     var empty = new IrStructType("Empty", []);
     var module = new IrModule("M", [new IrFunction("F", true, IrType.Bool, [], [], new IrBlock([
