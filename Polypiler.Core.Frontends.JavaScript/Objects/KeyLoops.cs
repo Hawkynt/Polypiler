@@ -21,9 +21,12 @@ internal sealed record KeyLoop(Identifier Key, Expression Object, Node Body) {
 
   /// <summary>The loop a statement is, or <see langword="null"/>.</summary>
   public static KeyLoop? Of(Statement statement) => statement switch {
-    ExpressionStatement { Expression: CallExpression {
-      Callee: MemberExpression { Computed: false, Object: CallExpression keys, Property: Identifier { Name: "forEach" } },
-      Arguments: [ArrowFunctionExpression { Params: [Identifier key], Async: false } arrow] } } when Keys(keys) is { } target
+    ExpressionStatement {
+      Expression: CallExpression {
+        Callee: MemberExpression { Computed: false, Object: CallExpression keys, Property: Identifier { Name: "forEach" } },
+        Arguments: [ArrowFunctionExpression { Params: [Identifier key], Async: false } arrow]
+      }
+    } when Keys(keys) is { } target
       => new KeyLoop(key, target, arrow.Body),
     ForOfStatement { Await: false, Left: VariableDeclaration { Declarations: [{ Id: Identifier key }] }, Right: CallExpression keys } loop when Keys(keys) is { } target
       => new KeyLoop(key, target, loop.Body),
