@@ -199,7 +199,7 @@ public static partial class RustEmitter {
       }
     }
 
-    private static RsExpression NullReference(RsExpression optional) => Expect(optional, IrTrap.NullReference);
+    private RsExpression NullReference(RsExpression optional) => this.Checked(optional, IrTrap.NullReference);
 
     private RsExpression Cloned(RsExpression shared) {
       this._uses.Add("std::rc::Rc");
@@ -217,7 +217,7 @@ public static partial class RustEmitter {
       if (optional)
         return this.Method(this.ObjectValue(value, true), "and_then", target, new RsPath($"{ObjectTrait}::{this.Conversion("into_", target)}"));
 
-      return Expect(this.Method(this.ObjectValue(value, false), this.Conversion("into_", target), target), IrTrap.InvalidCast);
+      return this.Checked(this.Method(this.ObjectValue(value, false), this.Conversion("into_", target), target), IrTrap.InvalidCast);
     }
 
     /// <summary>A value of a class type as a place owns it: <c>Rc&lt;T&gt;</c>, or <c>Option&lt;Rc&lt;T&gt;&gt;</c> where it may be null.</summary>
@@ -228,9 +228,9 @@ public static partial class RustEmitter {
         Held.Value => Some(expression),
         Held.Place => Some(this.Cloned(new RsReference(false, expression))),
         Held.Reference => Some(this.Cloned(expression)),
-        Held.OptionalValue => optional ? expression : NullReference(expression),
-        Held.OptionalPlace => optional ? new RsMethodCall(expression, "clone", []) { Type = value.Type } : NullReference(new RsMethodCall(expression, "clone", [])),
-        Held.Null => optional ? expression : Panic(IrTrap.NullReference),
+        Held.OptionalValue => optional ? expression : this.NullReference(expression),
+        Held.OptionalPlace => optional ? new RsMethodCall(expression, "clone", []) { Type = value.Type } : this.NullReference(new RsMethodCall(expression, "clone", [])),
+        Held.Null => optional ? expression : this.Trap(IrTrap.NullReference),
         _ => this.Refuse("the object of a method that is no Rc")
       };
     }
@@ -242,9 +242,9 @@ public static partial class RustEmitter {
         Held.Value => new RsReference(false, expression) { Type = value.Type },
         Held.Place => new RsReference(false, expression) { Type = value.Type },
         Held.Reference => expression,
-        Held.OptionalValue => new RsReference(false, NullReference(expression)) { Type = value.Type },
+        Held.OptionalValue => new RsReference(false, this.NullReference(expression)) { Type = value.Type },
         Held.OptionalPlace => this.NonNull(expression),
-        Held.Null => Panic(IrTrap.NullReference),
+        Held.Null => this.Trap(IrTrap.NullReference),
         _ => this.Refuse("the object of a method that is no Rc")
       };
     }
@@ -254,16 +254,17 @@ public static partial class RustEmitter {
     /// a function rather than <c>x.as_ref().expect(..)</c> in place, which clippy's
     /// <c>unnecessary_unwrap</c> flags after a test of the variable it cannot see the reason for.
     /// </summary>
-    private RsExpression NonNull(RsExpression optional)
-      => new RsCall(new RsPath(this.StringHelper("ply_non_null")), [new RsReference(false, optional)]) { Type = optional.Type };
+    private RsExpression NonNull(RsExpression optional) => this.Results
+      ? this.Checked(new RsMethodCall(this.Operand(optional, 15), "as_ref", []) { Type = optional.Type }, IrTrap.NullReference)
+      : new RsCall(new RsPath(this.StringHelper("ply_non_null")), [new RsReference(false, optional)]) { Type = optional.Type };
 
     /// <summary>A value of a class type as the receiver of a method or a field: the object, a null one trapping.</summary>
     private RsExpression ObjectReceiver(IrExpr value) {
       var (expression, held) = this.Object(value);
       return held switch {
-        Held.OptionalValue => NullReference(expression),
+        Held.OptionalValue => this.NullReference(expression),
         Held.OptionalPlace => this.NonNull(expression),
-        Held.Null => Panic(IrTrap.NullReference),
+        Held.Null => this.Trap(IrTrap.NullReference),
         _ => this.Receiver(expression)
       };
     }
@@ -539,7 +540,7 @@ public static partial class RustEmitter {
       }
 
       var load = new RsLet("old", false, null, new RsMethodCall(name, "load", [relaxed]));
-      var value = new RsLet("new", false, null, Expect(this.Method(new RsPath("old") { Type = global.Type }, step.Increment ? "checked_add" : "checked_sub", global.Type, one), IrTrap.IntegerOverflow));
+      var value = new RsLet("new", false, null, this.Checked(this.Method(new RsPath("old") { Type = global.Type }, step.Increment ? "checked_add" : "checked_sub", global.Type, one), IrTrap.IntegerOverflow));
       var store = new RsExpressionStatement(new RsMethodCall(name, "store", [new RsPath("new"), relaxed]));
       return new RsBlockExpression(new RsBlock([load, value, store], new RsPath(step.Postfix ? "old" : "new"))) { Type = global.Type };
     }

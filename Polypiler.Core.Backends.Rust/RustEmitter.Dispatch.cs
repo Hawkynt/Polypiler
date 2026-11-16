@@ -102,9 +102,9 @@ public static partial class RustEmitter {
         Held.Borrowed or Held.Self => expression,
         Held.Value or Held.Place => Deref(this.Operand(expression, 13)),
         Held.Reference => generic ? new RsReference(false, new RsUnary("*", new RsUnary("*", expression))) { Type = value.Type } : expression,
-        Held.OptionalValue => Deref(NullReference(expression)),
+        Held.OptionalValue => Deref(this.NullReference(expression)),
         Held.OptionalPlace => generic ? new RsReference(false, new RsUnary("*", new RsUnary("*", this.NonNull(expression)))) { Type = value.Type } : this.NonNull(expression),
-        _ => Panic(IrTrap.NullReference)
+        _ => this.Trap(IrTrap.NullReference)
       };
     }
 
@@ -168,7 +168,7 @@ public static partial class RustEmitter {
       }
 
       var converted = this.Method(this.ObjectValue(value, false), method, target);
-      return trap ? (Expect(converted, IrTrap.InvalidCast), Held.Value) : (converted, Held.OptionalValue);
+      return trap ? (this.Checked(converted, IrTrap.InvalidCast), Held.Value) : (converted, Held.OptionalValue);
     }
 
     /// <summary>The name of the method of <see cref="ObjectTrait"/> that tests for or converts to a type.</summary>

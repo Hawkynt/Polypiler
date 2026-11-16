@@ -270,7 +270,18 @@ public static class RustSyntaxReader {
         while (!this.Is(";"))
           path.Append(this.Next().Text);
         this.Expect(";");
-        item = new RsUse(path.ToString());
+        item = new RsUse(path.ToString()) { Visibility = visibility };
+      } else if (this.Accept("enum")) {
+        var name = this.Identifier();
+        this.Expect("{");
+        var variants = new List<RsVariant>();
+        while (!this.Accept("}")) {
+          var variant = this.Identifier();
+          variants.Add(new RsVariant(variant, this.Accept("=") ? this.Next().Text : null));
+          this.Accept(",");
+        }
+
+        item = new RsEnum(name, visibility, variants);
       } else {
         throw new FormatException($"Expected an item, found '{this.Peek().Text}'.");
       }

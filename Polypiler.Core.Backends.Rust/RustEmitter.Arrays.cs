@@ -268,7 +268,7 @@ public static partial class RustEmitter {
       if (!length.Type.IsSigned)
         return this.Cast(value, IrType.U64) with { Target = "usize" };
 
-      return Expect(new RsCall(new RsPath("usize::try_from"), [Suffixed(value)]), IrTrap.IntegerOverflow);
+      return this.Checked(new RsCall(new RsPath("usize::try_from"), [Suffixed(value)]), IrTrap.IntegerOverflow);
     }
 
     /// <summary>The number of elements of an array, as the IR's <c>i32</c>.</summary>
@@ -304,11 +304,11 @@ public static partial class RustEmitter {
       if (IsFieldArray(store.Array) && store.Value is not (IrLocalRef or IrConst or IrConstRef)) {
         var name = this.Temporary("value");
         into.Add(new RsLet(name, false, null, this.ElementValue(store.Value)));
-        into.Add(new RsExpressionStatement(new RsAssign(new RsIndex(target, index) { Type = store.Value.Type }, "=", new RsPath(name))));
+        into.Add(new RsExpressionStatement(new RsAssign(this.Element(target, index, store.Value.Type, true), "=", new RsPath(name))));
         return;
       }
 
-      var element = new RsIndex(target, index) { Type = store.Value.Type };
+      var element = this.Element(target, index, store.Value.Type, true);
       if (store.Value is IrBinary { Left: IrArrayLoad self } binary && Same(self.Array, store.Array) && Same(self.Index, store.Index) && store.Index is IrLocalRef or IrConst
         && Compound(binary) is { } op) {
         into.Add(new RsExpressionStatement(new RsAssign(element, op + "=", this.Operand(this.Expression(binary.Right), 2))));
@@ -331,7 +331,7 @@ public static partial class RustEmitter {
         index = new RsPath(name);
       }
 
-      var element = new RsIndex(this.ArrayTarget(load.Array, true), index) { Type = load.Type };
+      var element = this.Element(this.ArrayTarget(load.Array, true), index, load.Type, true);
       if (statement && load.Type.IsFloat) {
         statements.Add(new RsExpressionStatement(new RsAssign(element, step.Increment ? "+=" : "-=", Literal(new IrConst(load.Type, IrOperators.Bits(load.Type, 1.0))))));
         return new RsBlockExpression(new RsBlock(statements, null));
@@ -385,17 +385,17 @@ public static partial class RustEmitter {
     private RsExpression ArrayCopy(IrIntrinsic copy) {
       var (source, sourceIndex, target, targetIndex, count) = (copy.Arguments[0], copy.Arguments[1], copy.Arguments[2], copy.Arguments[3], copy.Arguments[4]);
       if (source is IrLocalRef { Local: var a } && target is IrLocalRef { Local: var b } && a == b)
-        return new RsCall(new RsPath(this.CopyHelper(true)), [this.Borrow(target, true), this.Expression(sourceIndex), this.Expression(targetIndex), this.Expression(count)]);
+        return this.Spelled(new RsCall(new RsPath(this.CopyHelper(true)), [this.Borrow(target, true), this.Expression(sourceIndex), this.Expression(targetIndex), this.Expression(count)]));
 
-      return new RsCall(new RsPath(this.CopyHelper(false)), [this.Borrow(source, false), this.Expression(sourceIndex), this.Borrow(target, true), this.Expression(targetIndex), this.Expression(count)]);
+      return this.Spelled(new RsCall(new RsPath(this.CopyHelper(false)), [this.Borrow(source, false), this.Expression(sourceIndex), this.Borrow(target, true), this.Expression(targetIndex), this.Expression(count)]));
     }
 
     /// <summary>The spelling function of a copy between two arrays, or within one.</summary>
     private string CopyHelper(bool within) {
       var name = within ? "ply_copy_within" : "ply_copy";
       var range = this.RangeHelper();
-      this.Spell(name, () => {
-        RsExpression Range(string start, string array) => new RsCall(new RsPath(range), [new RsPath(start), new RsPath("length"), new RsMethodCall(new RsPath(array), "len", [])]);
+      this.Spell(name, () => this.SpelledFallible(() => {
+        RsExpression Range(string start, string array) => this.Spelled(new RsCall(new RsPath(range), [new RsPath(start), new RsPath("length"), new RsMethodCall(new RsPath(array), "len", [])]));
         if (within)
           return new RsFunction(name, "", [new RsParameter("data", "&mut [T]"), new RsParameter("from", "i32"), new RsParameter("to", "i32"), new RsParameter("length", "i32")], null, new RsBlock([
             new RsLet("source", false, null, Range("from", "data")),
@@ -408,23 +408,23 @@ public static partial class RustEmitter {
           new RsLet("to", false, null, Range("to", "target")),
           new RsExpressionStatement(new RsMethodCall(new RsIndex(new RsPath("target"), new RsPath("to")), "copy_from_slice", [new RsReference(false, new RsIndex(new RsPath("source"), new RsPath("from")))]))
         ], null)) { Generics = "<T: Copy>" };
-      });
+      }));
       return name;
     }
 
     /// <summary>The spelling function <c>ply_range</c>: the range of <c>length</c> elements from <c>start</c> in a sequence of <c>size</c>, which panics with <c>IndexOutOfRange</c> unless it lies inside.</summary>
     private string RangeHelper() {
       const string name = "ply_range";
-      this.Spell(name, () => {
-        RsExpression Converted(string value) => Expect(new RsCall(new RsPath("usize::try_from"), [new RsPath(value)]), IrTrap.IndexOutOfRange);
+      this.Spell(name, () => this.SpelledFallible(() => {
+        RsExpression Converted(string value) => this.Checked(new RsCall(new RsPath("usize::try_from"), [new RsPath(value)]), IrTrap.IndexOutOfRange);
         var (start, length, size) = (new RsPath("start"), new RsPath("length"), new RsPath("size"));
         var outside = new RsBinary(new RsBinary(length, ">", size), "||", new RsBinary(start, ">", new RsBinary(size, "-", length)));
         return new RsFunction(name, "", [new RsParameter("start", "i32"), new RsParameter("length", "i32"), new RsParameter("size", "usize")], "std::ops::Range<usize>", new RsBlock([
           new RsLet("start", false, null, Converted("start")),
           new RsLet("length", false, null, Converted("length")),
-          new RsExpressionStatement(new RsIf(outside, new RsBlock([new RsExpressionStatement(Panic(IrTrap.IndexOutOfRange))], null), null))
+          new RsExpressionStatement(new RsIf(outside, new RsBlock([new RsExpressionStatement(this.Trap(IrTrap.IndexOutOfRange))], null), null))
         ], new RsRange(start, new RsBinary(start, "+", length), false)));
-      });
+      }));
       return name;
     }
 
@@ -456,7 +456,7 @@ public static partial class RustEmitter {
     private RsExpression EndianLoad(IrIntrinsic load) {
       var width = Width(load.Type);
       var array = this.ArrayTarget(load.Arguments[0]);
-      var range = new RsCall(new RsPath(this.RangeHelper()), [this.Expression(load.Arguments[1]), new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])]);
+      var range = this.Spelled(new RsCall(new RsPath(this.RangeHelper()), [this.Expression(load.Arguments[1]), new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])]));
       var bytes = new RsMethodCall(new RsMethodCall(new RsIndex(array, range), "try_into", []), "expect", [new RsString($"{width} bytes")]);
       return new RsCall(new RsPath($"{TypeName(load.Type)}::{(load.Op == IrIntrinsicOp.LoadLittle ? "from_le_bytes" : "from_be_bytes")}"), [bytes]) { Type = load.Type };
     }
@@ -479,7 +479,7 @@ public static partial class RustEmitter {
       }
 
       var at = this.Temporary("at");
-      statements.Add(new RsLet(at, false, null, new RsCall(new RsPath(this.RangeHelper()), [index, new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])])));
+      statements.Add(new RsLet(at, false, null, this.Spelled(new RsCall(new RsPath(this.RangeHelper()), [index, new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])]))));
       var bytes = new RsMethodCall(this.Receiver(value), store.Op == IrIntrinsicOp.StoreLittle ? "to_le_bytes" : "to_be_bytes", []);
       statements.Add(new RsExpressionStatement(new RsMethodCall(new RsIndex(array, new RsPath(at)), "copy_from_slice", [new RsReference(false, bytes)])));
       return new RsBlockExpression(new RsBlock(statements, null));

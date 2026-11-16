@@ -50,7 +50,12 @@ public sealed record RustEmitOptions {
 /// <param name="Root">The crate root.</param>
 /// <param name="ModuleName">The name of the module, which is also its file's name.</param>
 /// <param name="Module">The module.</param>
-public sealed record RustCrate(string PackageName, string Manifest, RsFile Root, string ModuleName, RsFile Module);
+public sealed record RustCrate(string PackageName, string Manifest, RsFile Root, string ModuleName, RsFile Module) {
+
+  /// <summary><c>src/error.rs</c>, the crate's <c>Error</c> enum under the trap policy <c>result</c>, or <see langword="null"/> where the crate has none.</summary>
+  public RsFile? Errors { get; init; }
+
+}
 
 /// <summary>
 /// Emits an IR module as a Cargo package of safe Rust for a <see cref="RustProfile"/>: <c>Cargo.toml</c>
@@ -130,13 +135,12 @@ public static partial class RustEmitter {
     ArgumentNullException.ThrowIfNull(profile);
     ArgumentNullException.ThrowIfNull(passes);
     var problems = IrVerifier.Verify(module);
-    var writer = new Writer(profile, capabilities ?? RustCapabilities.Default, options ?? RustEmitOptions.Default);
-    var crate = problems.Count > 0 ? null : writer.Crate(module);
-    if (problems.Concat(writer.Problems).FirstOrDefault() is { } problem)
+    var (writer, crate) = problems.Count > 0 ? (null, null) : Written(module, profile, capabilities ?? RustCapabilities.Default, options ?? RustEmitOptions.Default);
+    if (problems.Concat(writer?.Problems ?? []).FirstOrDefault() is { } problem)
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problem.Message}.", nameof(module));
 
     var result = RustTargetPasses.Pipeline.Run(crate!, profile, passes);
-    return (result with { Tree = Lints.Allowed(result.Tree) }, writer.Helpers);
+    return (result with { Tree = Lints.Allowed(result.Tree) }, writer!.Helpers);
   }
 
   /// <summary>Says why a module cannot be emitted for a profile; empty when it can.</summary>
@@ -151,9 +155,7 @@ public static partial class RustEmitter {
     if (problems.Count > 0)
       return problems;
 
-    var writer = new Writer(profile, capabilities ?? RustCapabilities.Default, options ?? RustEmitOptions.Default);
-    writer.Crate(module);
-    return writer.Problems;
+    return Written(module, profile, capabilities ?? RustCapabilities.Default, options ?? RustEmitOptions.Default).Writer.Problems;
   }
 
   /// <summary>The files of a crate: <c>Cargo.toml</c>, <c>src/lib.rs</c>, <c>src/&lt;module&gt;.rs</c>.</summary>
@@ -163,11 +165,12 @@ public static partial class RustEmitter {
   public static IReadOnlyList<GeneratedFile> Files(RustCrate crate, IReadOnlyList<HelperText>? helpers = null) {
     ArgumentNullException.ThrowIfNull(crate);
     var module = RustPrinter.Print(crate.Module);
-    return [
+    GeneratedFile[] files = [
       new GeneratedFile("Cargo.toml", crate.Manifest),
       new GeneratedFile("src/lib.rs", RustPrinter.Print(crate.Root)),
       new GeneratedFile($"src/{crate.ModuleName}.rs", module) { Helpers = Measured(crate.Module, helpers ?? []) }
     ];
+    return crate.Errors is { } errors ? [.. files, new GeneratedFile("src/error.rs", RustPrinter.Print(errors))] : files;
   }
 
   /// <summary>The helpers of a module's file, measured in it, each printed on its own; one inlined everywhere and removed is listed with no text.</summary>

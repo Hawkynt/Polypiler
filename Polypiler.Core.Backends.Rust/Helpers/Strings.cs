@@ -725,6 +725,20 @@ internal static class Strings {
   /// <summary>The names of the helpers.</summary>
   public static IReadOnlyCollection<string> Names => _helpers.Keys;
 
+  /// <summary>
+  /// Whether a helper, or one it calls, can panic: it holds <c>panic!</c>, <c>expect</c> or
+  /// <c>unwrap()</c>, which the trap policy <c>result</c> leaves no panic to. A name that is no helper
+  /// cannot.
+  /// </summary>
+  /// <param name="name">The helper.</param>
+  /// <returns><see langword="true"/> when a call of it may panic.</returns>
+  public static bool Panics(string name)
+    => _helpers.ContainsKey(name) && _panics.GetOrAdd(name, helper => With(helper).Any(function => RustSyntaxRewriter.DescendantsAndSelf(function).Any(node =>
+      node is RsMacro { Name: "panic" } || node is RsMethodCall { Name: "expect" or "unwrap" })));
+
+  /// <summary>Whether a helper panics, by name, as <see cref="Panics"/> found it.</summary>
+  private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _panics = new(StringComparer.Ordinal);
+
   /// <summary>A helper as its function, and every helper it calls, each once, the helper first.</summary>
   /// <param name="name">The helper.</param>
   /// <returns>The functions.</returns>

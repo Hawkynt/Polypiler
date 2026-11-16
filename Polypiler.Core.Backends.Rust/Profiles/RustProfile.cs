@@ -5,6 +5,20 @@ using System.Linq;
 
 namespace Polypiler.Core.Backends.Rust;
 
+/// <summary>What a trap of the IR is in generated Rust (ADR 0008).</summary>
+public enum RustTrapPolicy {
+
+  /// <summary>A <c>panic!</c> named after the IR trap; a function keeps its plain result type.</summary>
+  Panic,
+
+  /// <summary>
+  /// An error value: every function a trap can leave returns a <c>Result</c>, every trapping operation
+  /// is an explicit check that hands the trap's error on, and nothing panics.
+  /// </summary>
+  Result
+
+}
+
 /// <summary>
 /// What generated Rust is written for: an edition and the oldest compiler that has to build it, its
 /// minimum supported Rust version (MSRV). Each edition comes with the release that stabilized it as
@@ -29,12 +43,24 @@ public sealed class RustProfile {
   /// <summary>The profile that is used when none is named.</summary>
   public static RustProfile Default => Rust2024;
 
-  private RustProfile(string name, int edition, Version minimum, Version? version = null) {
+  private RustProfile(string name, int edition, Version minimum, Version? version = null, RustTrapPolicy trapPolicy = RustTrapPolicy.Panic) {
     this.Name = name;
     this.Edition = edition;
     this.MinimumRustVersion = minimum;
     this.RustVersion = version ?? minimum;
+    this.TrapPolicy = trapPolicy;
   }
+
+  /// <summary>The names <c>--trap-policy</c> takes, in the order of <see cref="RustTrapPolicy"/>.</summary>
+  public static IReadOnlyList<string> TrapPolicies { get; } = ["panic", "result"];
+
+  /// <summary>What a trap is in the generated code: a panic, the default, or an error value.</summary>
+  public RustTrapPolicy TrapPolicy { get; }
+
+  /// <summary>The same profile with another trap policy.</summary>
+  /// <param name="policy">The trap policy.</param>
+  /// <returns>The profile.</returns>
+  public RustProfile WithTrapPolicy(RustTrapPolicy policy) => new(this.Name, this.Edition, this.MinimumRustVersion, this.RustVersion, policy);
 
   /// <summary>The name <c>--profile</c> takes: <c>rust2018</c>, <c>rust2021</c> or <c>rust2024</c>.</summary>
   public string Name { get; }
@@ -64,7 +90,7 @@ public sealed class RustProfile {
     if (version < this.MinimumRustVersion)
       throw new ArgumentException($"Rust {version.Major}.{version.Minor} is older than the {this.Edition} edition, which Rust {this.RustVersionName} brought.", nameof(version));
 
-    return new(this.Name, this.Edition, this.MinimumRustVersion, new Version(version.Major, version.Minor));
+    return new(this.Name, this.Edition, this.MinimumRustVersion, new Version(version.Major, version.Minor), this.TrapPolicy);
   }
 
   /// <summary>Reads a profile name and an MSRV as the command line gives them.</summary>
@@ -100,6 +126,27 @@ public sealed class RustProfile {
     return true;
   }
 
+  /// <summary>Reads a profile name, an MSRV and a trap policy as the command line gives them.</summary>
+  /// <param name="name">The profile, <see langword="null"/> for <see cref="Default"/>.</param>
+  /// <param name="rustVersion">The MSRV, <see langword="null"/> for the one of the edition.</param>
+  /// <param name="trapPolicy">The trap policy, <c>panic</c> or <c>result</c>; <see langword="null"/> for <c>panic</c>.</param>
+  /// <param name="profile">The profile, when the names are valid.</param>
+  /// <param name="error">Why they are not, otherwise.</param>
+  /// <returns>Whether the names are valid.</returns>
+  public static bool TryParse(string? name, string? rustVersion, string? trapPolicy, out RustProfile? profile, out string? error) {
+    if (!TryParse(name, rustVersion, out profile, out error))
+      return false;
+
+    var index = trapPolicy is null ? 0 : TrapPolicies.ToList().IndexOf(trapPolicy);
+    if (index < 0) {
+      (profile, error) = (null, $"unknown trap policy '{trapPolicy}'; the trap policies are {string.Join(" and ", TrapPolicies)}");
+      return false;
+    }
+
+    profile = profile!.WithTrapPolicy((RustTrapPolicy)index);
+    return true;
+  }
+
   /// <summary>A version of the form <c>1.77</c>; a patch number is accepted and dropped.</summary>
   private static bool TryVersion(string text, out Version version) {
     version = new Version(0, 0);
@@ -113,7 +160,7 @@ public sealed class RustProfile {
     return true;
   }
 
-  /// <summary>The profile as the header of a generated file states it: <c>rust2024 (Rust 1.85)</c>.</summary>
-  public override string ToString() => $"{this.Name} (Rust {this.RustVersionName})";
+  /// <summary>The profile as the header of a generated file states it: <c>rust2024 (Rust 1.85)</c>; under the result trap policy <c>rust2024 (Rust 1.85, trap policy result)</c>.</summary>
+  public override string ToString() => $"{this.Name} (Rust {this.RustVersionName}{(this.TrapPolicy == RustTrapPolicy.Result ? ", trap policy result" : "")})";
 
 }

@@ -39,7 +39,8 @@ flowchart LR
 ## Profiles
 
 `--profile` names the edition, `--rust-version` raises the minimum supported Rust version (MSRV)
-above the release that stabilized it:
+above the release that stabilized it, and `--trap-policy panic|result` says what a trap is
+([the trap policy](#the-trap-policy-result)):
 
 | Profile | Edition | MSRV by default |
 | --- | --- | --- |
@@ -277,8 +278,8 @@ enumerated twice, and an iterator that lets an exception of the module out.
 A trap - an overflow, a division by zero, an index outside an array - is a panic, as it is wherever
 no handler stands; no exception object is made for it. An exception of a class of the module, thrown
 with `throw`, is a value instead, which the functions between the throw and the handler hand back as a
-`Result`, so a catch clause sees it in safe Rust. The two never meet: a catch clause of a class a trap
-belongs to (`Exception`, `InvalidOperationException`, …) stands only around a body that cannot trap,
+`Result`, so a catch clause sees it in safe Rust. Under the default trap policy `panic` the two never
+meet: a catch clause of a class a trap belongs to (`Exception`, `InvalidOperationException`, …) stands only around a body that cannot trap,
 which the backend proves of every statement and call in it, and a throw of a class of the library
 remains a trap.
 
@@ -293,6 +294,33 @@ with `PLY1560`, which names why.
 A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, `DivideByZero`,
 `ArgumentOutOfRange`, … - in every build mode; the verification reads it back with `RustTraps`
 ([exceptions](../reference/exceptions.md#rust)).
+
+### The trap policy `result`
+
+`--trap-policy result` ([ADR 0008](../adr/0008-rust-trap-policy.md); `panic` is the default and writes
+what the paragraphs above say) makes a trap an error value instead. Every function a trap, a throw or a
+call can leave returns `Result<T, E>`, found as a fixed point: the crate is built again with the
+functions that let an error out declared fallible until no new one does, so a function nothing can
+leave keeps its plain type, exports included. Every trap is an explicit check: `checked_add(b).ok_or(Error::IntegerOverflow)?`,
+`T::try_from(x).map_err(|_| Error::IntegerOverflow)?`, `*a.get(i).ok_or(Error::IndexOutOfRange)?` (and
+`get_mut` for a store), `x.as_ref().ok_or(Error::NullReference)?`; the spelling functions of the
+division and the checked conversions return a `Result` themselves (`if b == 0 { return Err(Error::DivideByZero); }`).
+Inside a `try` body the check is a `match` whose empty arm leaves the body, `None => break 't0 ply_trap(4)`.
+
+A module without exception classes and catch clauses gets `src/error.rs`, `pub use error::Error;` in
+`src/lib.rs`: `#[repr(u16)] pub enum Error` with a variant per trap the crate produces, named after the
+IR trap, with the stable codes `DivideByZero = 1`, `IntegerOverflow = 2`, `IndexOutOfRange = 3` and the
+other traps from 4, `Display` printing the name, `std::error::Error` implemented. A module with
+exceptions keeps `Rc<PlyError>`: a trap is the exception of its class with the default message
+(`ply_trap(class)`), so a `catch (OverflowException)` or `catch (ArithmeticException)` sees it - which lifts
+the `PLY1560` refusal of catching a trap - and a throw of a library exception is an exception too.
+`Display` of an exception prints its trap's name, or its class's name. A generated test of a fallible
+function asserts `assert_eq!(f(1, 0), Err(Error::DivideByZero));`.
+
+What would still panic is refused with `PLY1552`, naming it: a call of a string or collection helper
+that panics (`ply_list_index`, `ply_parse_i32`, …), a trap inside a closure, a step of an element of
+module state behind a lock, and a type of the module named `Error`. The exception regions of `PLY1560`
+other than catching a trap stay refused under both policies.
 
 ## Refused
 
