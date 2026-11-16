@@ -415,7 +415,8 @@ public static partial class RustEmitter {
       if (!step.Postfix)
         return new RsBlockExpression(new RsBlock([assign], place)) { Type = target.Type };
 
-      var old = this._locals[target.Local].TrimStart('_') + "_old";
+      // A field of an iterator's struct, self.taken, is held in a variable of its name, taken_old.
+      var old = this._locals[target.Local].Replace("self.", "", StringComparison.Ordinal).TrimStart('_') + "_old";
       return new RsBlockExpression(new RsBlock([new RsLet(old, false, null, place), assign], new RsPath(old))) { Type = target.Type };
     }
 

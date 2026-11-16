@@ -246,6 +246,7 @@ public static class RustSyntaxReader {
           items.Add(this.Item());
         item = new RsTrait(name, visibility, supertraits, items);
       } else if (this.Accept("impl")) {
+        var generics = this.Is("<") ? this.TypeText() : "";
         var first = this.TypeText(true);
         string? trait = null;
         if (this.Accept("for")) {
@@ -257,7 +258,13 @@ public static class RustSyntaxReader {
         var items = new List<RsItem>();
         while (!this.Accept("}"))
           items.Add(this.Item());
-        item = new RsImpl(trait, first, items);
+        item = new RsImpl(trait, first, items) { Generics = generics };
+      } else if (this.Accept("type")) {
+        var name = this.Identifier();
+        this.Expect("=");
+        var type = this.TypeText();
+        this.Expect(";");
+        item = new RsTypeAlias(name, type);
       } else if (this.Accept("use")) {
         var path = new StringBuilder();
         while (!this.Is(";"))
@@ -274,6 +281,7 @@ public static class RustSyntaxReader {
     /// <summary><c>struct Name { fields }</c>, <c>struct Name(fields);</c> or <c>struct Name;</c>.</summary>
     private RsStruct Struct(string visibility) {
       var name = this.Identifier();
+      var generics = this.Is("<") ? this.TypeText() : "";
       var fields = new List<RsFieldDeclaration>();
       if (this.Accept(";"))
         return new RsStruct(name, visibility, fields);
@@ -296,7 +304,7 @@ public static class RustSyntaxReader {
 
       if (tuple)
         this.Expect(";");
-      return new RsStruct(name, visibility, fields);
+      return new RsStruct(name, visibility, fields) { Generics = generics };
     }
 
     private RsFunction Function(string visibility) {
@@ -364,7 +372,7 @@ public static class RustSyntaxReader {
         else if (token.Text == "->")
           text.Append(" -> ");
         else
-          text.Append(token.Text == "+" ? " + " : token.Text).Append(token.Text is ";" or "," or ":" or "mut" or "dyn" or "impl" ? " " : "");
+          text.Append(token.Text is "+" or "=" ? $" {token.Text} " : token.Text).Append(token.Text is ";" or "," or ":" or "mut" or "dyn" or "impl" ? " " : "");
 
         if (generics && depth == 0)
           return text.ToString();

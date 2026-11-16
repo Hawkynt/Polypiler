@@ -54,6 +54,7 @@ public static partial class RustEmitter {
       this.NameItems(module);
       this.NameInstances();
       this.NameTypes(module);
+      this.NameIterators(module);
       this.NameGlobals(module);
       this.Classes(module);
       this.Signatures(module);
@@ -89,6 +90,7 @@ public static partial class RustEmitter {
       items.AddRange(this._enumTableItems);
       items.AddRange(this._whitespace.Values);
       items.AddRange(this._spellings.Values);
+      items.AddRange(this._iteratorItems);
       items.AddRange(functions);
       if (this._options.Tests.Count > 0)
         items.Add(this.Tests(module));
@@ -182,7 +184,6 @@ public static partial class RustEmitter {
         : type.IsObject ? this.ObjectType(type, false)
         : type.IsFunction ? this.FunctionType(type)
         : IsOptionalValue(type) ? $"Option<{this.Type(type.Underlying!)}>"
-        : type.IsLazySequence ? ((RsPath)this.Refuse(LazySequence)).Name
         : ((RsPath)this.Refuse($"the type {type}")).Name);
 
     /// <summary>What kind of type a declaration is, as a refusal names it.</summary>

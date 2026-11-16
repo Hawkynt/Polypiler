@@ -112,7 +112,7 @@ public static class RustPrinter {
           .Append(string.Join(", ", tuple.Fields.Select(field => Visibility(field.Visibility) + field.TypeName))).Append(");\n");
         break;
       case RsStruct record:
-        text.Append(pad).Append(Visibility(record.Visibility)).Append("struct ").Append(record.Name).Append(" {\n");
+        text.Append(pad).Append(Visibility(record.Visibility)).Append("struct ").Append(record.Name).Append(record.Generics).Append(" {\n");
         foreach (var field in record.Fields)
           text.Append(pad).Append(' ', Indent).Append(Visibility(field.Visibility)).Append(field.Name).Append(": ").Append(field.TypeName).Append(",\n");
         text.Append(pad).Append("}\n");
@@ -128,13 +128,16 @@ public static class RustPrinter {
 
         break;
       case RsImpl implementation:
-        text.Append(pad).Append("impl ").Append(implementation.Trait is null ? "" : implementation.Trait + " for ").Append(implementation.TypeName)
+        text.Append(pad).Append("impl").Append(implementation.Generics).Append(' ').Append(implementation.Trait is null ? "" : implementation.Trait + " for ").Append(implementation.TypeName)
           .Append(implementation.Items.Count == 0 ? " {}\n" : " {\n");
         if (implementation.Items.Count > 0) {
           Items(text, implementation.Items, indent + Indent, false);
           text.Append(pad).Append("}\n");
         }
 
+        break;
+      case RsTypeAlias alias:
+        text.Append(pad).Append("type ").Append(alias.Name).Append(" = ").Append(alias.TypeName).Append(";\n");
         break;
       default:
         throw new ArgumentException($"There is no Rust item '{item.GetType().Name}'.", nameof(item));

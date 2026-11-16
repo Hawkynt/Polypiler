@@ -113,6 +113,10 @@ public static partial class RustEmitter {
 
     /// <summary>Whether a member uses its object otherwise than through a field or a member that needs no <c>Rc</c>.</summary>
     private bool PassesOn(IrFunction function) {
+      // An iterator method keeps its object in its struct: an Rc of its own.
+      if (IrSequences.IsIterator(function))
+        return true;
+
       var self = function.Parameters[0];
       var nodes = ArrayOwnership.Statements(function.Body).SelectMany(statement => IrTree.Expressions(statement)).SelectMany(IrTree.Nodes).ToList();
       var uses = nodes.Count(node => node is IrLocalRef reference && reference.Local == self);
@@ -170,7 +174,7 @@ public static partial class RustEmitter {
       switch (value) {
         case IrNull:
           return (new RsPath("None") { Type = value.Type }, Held.Null);
-        case IrLocalRef reference when this.CurrentMember is { Kind: MemberKind.Instance } && this._function.Parameters[0] == reference.Local:
+        case IrLocalRef reference when this.CurrentMember is { Kind: MemberKind.Instance } && this._function.Parameters[0] == reference.Local && !this.IsKept(reference.Local):
           return (new RsPath("self") { Type = value.Type }, this._sharedSelf.Contains(this._function.Name) ? Held.Reference : Held.Self);
         case IrLocalRef reference when this._free.ContainsKey(this._function.Name) && this._function.Parameters[0] == reference.Local:
           return (new RsPath(this._locals[reference.Local]) { Type = value.Type }, Held.Borrowed);
@@ -405,9 +409,12 @@ public static partial class RustEmitter {
       if (member.Kind != MemberKind.Instance)
         return new RsCall(new RsPath($"{this.StructName(member.Class)}::{member.Name}"), arguments) { Type = call.Type };
 
-      var receiver = this._sharedSelf.Contains(call.Function) ? this.Receiver(this.ObjectBorrow(call.Arguments[0])) : this.ObjectReceiver(call.Arguments[0]);
+      var receiver = this._sharedSelf.Contains(call.Function) ? this.Receiver(SelfBorrowed(this.ObjectBorrow(call.Arguments[0]))) : this.ObjectReceiver(call.Arguments[0]);
       return new RsMethodCall(receiver, member.Name, [.. arguments.Skip(1)]) { Type = call.Type };
     }
+
+    /// <summary>The receiver of a method that takes <c>self: &amp;Rc&lt;Self&gt;</c>, which the call borrows itself: <c>counter.f()</c> for <c>(&amp;counter).f()</c> (clippy's <c>needless_borrow</c>).</summary>
+    private static RsExpression SelfBorrowed(RsExpression borrowed) => borrowed is RsReference { Mutable: false } reference ? reference.Operand : borrowed;
 
     /// <summary>
     /// The items of a class: <c>pub struct Name</c> with a <c>Cell</c> or <c>RefCell</c> per field and

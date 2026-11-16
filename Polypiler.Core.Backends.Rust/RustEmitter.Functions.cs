@@ -70,6 +70,8 @@ public static partial class RustEmitter {
 
       if (this._bodiless.Contains(function.Name))
         return new RsFunction(name, "", [], null, RsBlock.Empty);
+      if (IrSequences.IsIterator(function))
+        return this.Iterator(function, name);
 
       var parameters = function.Parameters.Select((parameter, index) => new RsParameter(this._locals[parameter], this.ParameterType(function, index))).ToList();
       var generics = "";
@@ -279,6 +281,17 @@ public static partial class RustEmitter {
             this.Count(final.Statements, bindings, depth);
           break;
         }
+        case IrForEachSequence loop:
+          this.CountIn(loop.Sequence, bindings, depth);
+          bindings[loop.Element] = new Binding(null, depth + 1) { Count = 1 };
+          this.Count(loop.Body.Statements, bindings, depth + 1);
+          break;
+        case IrYield produced:
+          this.CountIn(produced.Value, bindings, depth);
+          break;
+        case IrYieldFrom delegated:
+          this.CountIn(delegated.Sequence, bindings, depth);
+          break;
         case IrForEachCollection loop:
           this.CountIn(loop.Collection, bindings, depth);
           if (loop.Element is { } loopElement)

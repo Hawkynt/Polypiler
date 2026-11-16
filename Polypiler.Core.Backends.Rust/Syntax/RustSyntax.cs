@@ -275,13 +275,28 @@ public sealed record RsFieldDeclaration(string Name, string Visibility, string T
 /// <param name="Name">The name.</param>
 /// <param name="Visibility">The visibility as written, or empty.</param>
 /// <param name="Fields">The fields, in declaration order.</param>
-public sealed record RsStruct(string Name, string Visibility, IReadOnlyList<RsFieldDeclaration> Fields) : RsItem;
+public sealed record RsStruct(string Name, string Visibility, IReadOnlyList<RsFieldDeclaration> Fields) : RsItem {
+
+  /// <summary>The generic parameters as they are written after the name, <c>&lt;S&gt;</c>, or empty.</summary>
+  public string Generics { get; init; } = "";
+
+}
 
 /// <summary><c>impl Type { items }</c>, or <c>impl Trait for Type { items }</c>.</summary>
 /// <param name="Trait">The trait implemented, or <see langword="null"/> for an inherent implementation.</param>
 /// <param name="TypeName">The type the items belong to.</param>
 /// <param name="Items">The items: functions and constants.</param>
-public sealed record RsImpl(string? Trait, string TypeName, IReadOnlyList<RsItem> Items) : RsItem;
+public sealed record RsImpl(string? Trait, string TypeName, IReadOnlyList<RsItem> Items) : RsItem {
+
+  /// <summary>The generic parameters as they are written after <c>impl</c>, <c>&lt;S: Iterator&lt;Item = i32&gt; + Clone&gt;</c>, or empty.</summary>
+  public string Generics { get; init; } = "";
+
+}
+
+/// <summary><c>type Name = T;</c>, the associated type of a trait implementation, such as the <c>Item</c> of an <c>Iterator</c>.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="TypeName">The type it stands for.</param>
+public sealed record RsTypeAlias(string Name, string TypeName) : RsItem;
 
 /// <summary><c>pub trait Name: Super + Other { items }</c>.</summary>
 /// <param name="Name">The name.</param>

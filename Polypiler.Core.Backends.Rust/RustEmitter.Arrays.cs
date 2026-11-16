@@ -42,6 +42,8 @@ public static partial class RustEmitter {
     /// <summary>The type of a parameter: an array borrowed shared or exclusive, with the result's lifetime where it borrows from it.</summary>
     private string ParameterType(IrFunction function, int index) {
       var parameter = function.Parameters[index];
+      if (parameter.Type.IsLazySequence)
+        return this.SequenceParameterType(parameter.Type);
       if (parameter.Type.IsString)
         return BorrowedString;
       if (IsError(parameter.Type))
@@ -493,13 +495,19 @@ public static partial class RustEmitter {
     /// <summary>The arguments of a call: an array borrowed as the callee's parameter takes it, refused where one array is passed twice and written.</summary>
     private IReadOnlyList<RsExpression> Arguments(IrCall call) {
       if (!this._arrays.TryGetValue(call.Function, out var callee))
-        return [.. call.Arguments.Select((argument, index) => argument.Type.IsObject ? this.ObjectArgument(call.Function, index, argument)
+        return [.. call.Arguments.Select((argument, index) => argument.Type.IsLazySequence ? this.SequenceArgument(call, argument)
+          : argument.Type.IsObject ? this.ObjectArgument(call.Function, index, argument)
           : argument.Type.IsCollection ? this.CollectionPassed(argument, this._changedCollections.GetValueOrDefault(call.Function)?.Contains(index) == true)
           : this.Argument(argument))];
 
       var arguments = new List<RsExpression>();
       for (var index = 0; index < call.Arguments.Count; ++index) {
         var argument = call.Arguments[index];
+        if (argument.Type.IsLazySequence) {
+          arguments.Add(this.SequenceArgument(call, argument));
+          continue;
+        }
+
         if (argument.Type.IsObject) {
           arguments.Add(this.ObjectArgument(call.Function, index, argument));
           continue;

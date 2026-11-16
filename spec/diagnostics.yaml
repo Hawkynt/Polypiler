@@ -1236,6 +1236,15 @@ codes:
     area: rust
     owner: "#461"
     surfaces: standard error of polypiler translate --to rust, one line per refused construct
+  - code: PLY1558
+    severity: error
+    exit: UnsupportedConstruct
+    title: lazy sequence the Rust backend does not write as an iterator
+    message: "'<construct>' cannot be written as a Rust iterator (in <place>)"
+    rule: rust.backend.iterators
+    area: rust
+    owner: "#1391"
+    surfaces: standard error of polypiler translate --to rust, one line per refused construct
   - code: PLY1560
     severity: error
     exit: UnsupportedConstruct
