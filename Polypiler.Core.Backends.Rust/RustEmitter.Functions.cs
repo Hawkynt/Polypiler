@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.Backends.Rust.Emit;
 using Polypiler.Core.Backends.Rust.Naming;
 using Polypiler.Core.Backends.Rust.Syntax;
 using Polypiler.Core.IR;
@@ -154,7 +155,9 @@ public static partial class RustEmitter {
       foreach (var parameter in function.Parameters.Where(this._fieldWritten.Contains))
         this._reassigned.Add(parameter);
 
-      var taken = new HashSet<string>(StringComparer.Ordinal);
+      // A variable named as a function the body calls would hide the function: rustc then calls the variable (E0618).
+      var taken = ArrayOwnership.Statements(function.Body).SelectMany(IrTree.Nodes).OfType<IrCall>()
+        .Select(call => this._functions.GetValueOrDefault(call.Function)).OfType<string>().ToHashSet(StringComparer.Ordinal);
       this._locals = [];
       var declared = function.Parameters.Concat(function.Locals).Concat(Lambdas(function.Body).SelectMany(lambda => lambda.Parameters.Concat(lambda.Locals))).Distinct().ToList();
       foreach (var local in declared)

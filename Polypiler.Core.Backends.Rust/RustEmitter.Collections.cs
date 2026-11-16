@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.Backends.Rust.Emit;
 using Polypiler.Core.Backends.Rust.Syntax;
 using Polypiler.Core.IR;
 
@@ -97,10 +98,31 @@ public static partial class RustEmitter {
     /// <summary>A collection where a variable or a result takes it: a new one, the result of a call, or a variable moved for good.</summary>
     private RsExpression CollectionValue(IrExpr value) => value switch {
       IrCollection or IrCall => this.Expression(value),
-      IrLocalRef { Local: var local } when !this._function.Parameters.Contains(local)
-        && IrTree.Nodes(this._function.Body).Count(node => node is IrLocalRef reference && reference.Local == local) == 1 => new RsPath(this._locals[local]) { Type = value.Type },
+      IrLocalRef { Local: var local } reference when !this._function.Parameters.Contains(local) && this.IsLastUse(reference) => new RsPath(this._locals[local]) { Type = value.Type },
       _ => this.Refuse("a collection held by two variables")
     };
+
+    /// <summary>
+    /// Whether a variable is read for the last time here, so that the collection it holds can be moved:
+    /// it is what a function returns outside every <c>try</c>, or no reference to it follows and no loop
+    /// around the reference that the variable outlives reads it again on its next round.
+    /// </summary>
+    private bool IsLastUse(IrLocalRef reference) {
+      var local = reference.Local;
+      bool Refers(IrExpr node) => node is IrLocalRef other && other.Local == local;
+      var statements = ArrayOwnership.Statements(this._function.Body).ToList();
+      if (!statements.Any(statement => statement is IrTry) && statements.Any(statement => statement is IrReturn { Value: var returned } && ReferenceEquals(returned, reference)))
+        return true;
+
+      if (!ReferenceEquals(IrTree.Nodes(this._function.Body).LastOrDefault(Refers), reference))
+        return false;
+
+      return !statements
+        .Where(statement => statement is IrWhile or IrDoWhile or IrFor or IrForEachCollection or IrForEachSequence)
+        .Where(loop => !ArrayOwnership.Statements(new IrBlock([loop])).Any(statement => statement is IrDeclare declaration && declaration.Local == local))
+        .Select(loop => IrTree.Nodes(loop).Where(Refers).ToList())
+        .Any(inside => inside.Any(node => ReferenceEquals(node, reference)) && inside.Count > 1);
+    }
 
     /// <summary>An element, key or value where a collection takes it: a string as a vector of its own, any other value as it is.</summary>
     private RsExpression Entry(IrExpr value) => value.Type.IsString ? this.StringValue(value) : this.Expression(value);
