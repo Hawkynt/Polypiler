@@ -285,7 +285,8 @@ internal sealed partial class TypeInference {
       // A view of a typed array or of a view, and the copy of a part of one (#1325).
       case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "subarray" or "slice" } method } member
         && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: false } source:
-        return method.Name == "subarray" ? JsType.ViewOf(source.Element!) : JsType.ArrayOf(source.Element!, false);
+        // The copy of a stated T[] nothing has decided yet is as undecided as it is (#1374).
+        return method.Name == "subarray" ? JsType.ViewOf(source.Element!) : source.IsStated ? JsType.ArrayOf(source.Element!, false).AsStated() : JsType.ArrayOf(source.Element!, false);
       // fill yields the array it fills: an Array whose length never changes holds the value as well.
       case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "fill" } } member
         && this.Of(member.Object) is { Kind: JsKind.Array, IsGrowable: false, IsView: false } filled && call.Arguments.Count > 0:

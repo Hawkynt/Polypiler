@@ -110,7 +110,8 @@ internal sealed record JsType {
   /// is one - or a typed array, of the stated elements, decided; <see langword="null"/> for an argument that is no array.
   /// </summary>
   public JsType? ShapedAs(JsType argument)
-    => argument.Kind != JsKind.Array || argument.IsView ? null
+    // An argument that is a stated array nothing has decided either decides nothing.
+    => argument.Kind != JsKind.Array || argument.IsView || argument.IsStated ? null
       : argument.IsGrowable ? ListOf(this.Element!)
       : argument.IsPlain ? ArrayOf(this.Element!, true) : this with { IsStated = false };
 

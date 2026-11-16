@@ -72,6 +72,31 @@ public sealed class JavaScriptStatedArrayTests {
     Assert.That(GeneratedJavaScript.Problems(script, JavaScriptProfile.Default), Is.Empty, script);
   }
 
+  /// <summary>
+  /// Equivalence: a stated T[] of a base setter and of its override, a field stated by @type, and the
+  /// copy an override stores - what the program passes decides them together, the overrides passing
+  /// each other nothing that decides.
+  /// </summary>
+  [Test]
+  public void OverridesOfAStatedArray_AreDecidedTogether() {
+    var module = Import("""
+      class B {
+        constructor() { /** @type {byte[]} */ this._key = null; }
+        /** @param {byte[]} k */
+        set key(k) { this._key = k; }
+        get key() { return this._key; }
+      }
+      class D extends B {
+        constructor() { super(); this.key = null; }
+        /** @param {uint8[]|null} k */
+        set key(k) { this._key = k ? k.slice() : null; }
+        get key() { return this._key; }
+      }
+      export function f() { const d = new D(); d.key = [1, 2]; return d.key.length; }
+      """);
+    Assert.That(IrInterpreter.Call(module, "f", []), Is.EqualTo(2));
+  }
+
   /// <summary>Test design 4: calls passing an Array and a typed array to one stated parameter are refused; an explicit Uint8Array stays a typed array.</summary>
   [Test]
   public void CallersOfBothKinds_AreRefused() {
