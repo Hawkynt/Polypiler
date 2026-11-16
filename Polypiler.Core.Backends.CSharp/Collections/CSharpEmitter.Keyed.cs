@@ -97,7 +97,7 @@ public static partial class CSharpEmitter {
     private string Nested(string name) {
       this._classes.Add(name);
       var spelled = this._nested[name];
-      return this._inClass ? $"{this._class}.{spelled}" : spelled;
+      return this._inClass ? $"{this._outer}.{spelled}" : spelled;
     }
 
     /// <summary>A text with the names of the nested classes as this class spells them.</summary>

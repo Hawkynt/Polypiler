@@ -29,7 +29,7 @@ public static partial class CSharpEmitter {
     private IrLocal? _value;
 
     /// <summary>A member of the static class by its name: through the static class where a class of the module names it.</summary>
-    private CsExpression Qualified(string member) => this._inClass ? new CsMemberAccess(new CsName(this._class), member) : new CsName(member);
+    private CsExpression Qualified(string member) => this._inClass ? new CsMemberAccess(new CsName(this._outer), member) : new CsName(member);
 
     /// <summary>A member of the static class that the classes of the module may reach: internal where it was private.</summary>
     private static CsMember Exposed(CsMember member) => member switch {
