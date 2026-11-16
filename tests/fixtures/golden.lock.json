@@ -292,6 +292,16 @@
       "bytes": 49124
     },
     {
+      "path": "tests/fixtures/backend/golden/classes/Rc4.cs.csharp.golden",
+      "sha256": "165ab65fd9777f2fe6b24ef1436c5d76183488135f62f50e7db579ef8081f029",
+      "bytes": 58314
+    },
+    {
+      "path": "tests/fixtures/backend/golden/classes/Rc4.cs.javascript.golden",
+      "sha256": "75a38de2e0272b697a68b1635efbc51ada1a5d3414a9bd30325181fa2c941400",
+      "bytes": 106710
+    },
+    {
       "path": "tests/fixtures/backend/golden/classes/accumulator.js.csharp.golden",
       "sha256": "264b4804fb99a4fe72910f14b5f525890cb0f90e824d4337c306679ff6503ae8",
       "bytes": 37150
@@ -353,8 +363,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/collections/collections.js.csharp.golden",
-      "sha256": "b4c4908c6ce214532ea4081430bcd14cf546e4564492909b22f14347b6f43fb8",
-      "bytes": 474446
+      "sha256": "99dffde4accbf753c33c2fc4bb2c29d19cf1f97e96bf689cca59002a79b086cd",
+      "bytes": 475850
     },
     {
       "path": "tests/fixtures/backend/golden/collections/collections.js.javascript.golden",
@@ -363,8 +373,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.csharp.golden",
-      "sha256": "8de6ba3f55b953ca9fa86b473f8eef8bcac0d2e106472e15d29e9087cc1bea37",
-      "bytes": 253918
+      "sha256": "04d9f6c52e891b5df8e4b142ee979e179902847fcc5763143f1ee2b38749795e",
+      "bytes": 254494
     },
     {
       "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.javascript.golden",
