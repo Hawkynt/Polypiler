@@ -47,13 +47,16 @@ public sealed class PythonFixtureTests {
       return;
     }
 
-    // The original is the oracle of every call: where the import differs from it, ImportDifferentialTests
-    // fails, and no call is left out here for it. A call the interpreter runs on and on for would run on in
-    // CPython as well; that test fails for it too, and it is not started here.
+    // The original is the oracle of every call but those where the import differs from it on purpose,
+    // named in ImportDifferences with an announced caveat or a documented oracle difference: there the
+    // backend computes what the IR does. Any other difference fails ImportDifferentialTests, and is
+    // compared with the original here. A call the interpreter runs on and on for would run on in CPython
+    // as well; that test fails for it too, and it is not started here.
+    var expected = ImportDifferences.Expected(run);
     var compared = Enumerable.Range(0, run.Calls.Count).Where(index => run.Interpreted[index] is not null).ToList();
     var outcomes = await PythonDriver.OutcomesAsync(translated.Source, [.. compared.Select(index => run.Calls[index] with { Method = translated.Names![run.Calls[index].Method] })]);
-    var mismatches = compared.Select((index, at) => (index, at)).Where(entry => !FixtureCalls.Same(run.Expected[entry.index], outcomes[entry.at]))
-      .Select(entry => $"{run.Calls[entry.index]}: expected {run.Expected[entry.index]}, python {outcomes[entry.at]}").ToList();
+    var mismatches = compared.Select((index, at) => (index, at)).Where(entry => !FixtureCalls.Same(expected[entry.index], outcomes[entry.at]))
+      .Select(entry => $"{run.Calls[entry.index]}: expected {expected[entry.index]}, python {outcomes[entry.at]}").ToList();
     TestContext.Out.WriteLine($"{source}: {compared.Count} calls compared, {mismatches.Count} mismatches");
     Assert.That(mismatches.Take(20), Is.Empty, $"{mismatches.Count} of {compared.Count} calls differ\n{translated.Source}");
   }
