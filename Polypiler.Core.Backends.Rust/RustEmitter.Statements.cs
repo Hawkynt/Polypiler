@@ -42,6 +42,13 @@ public static partial class RustEmitter {
           this.Statements(block.Statements, into);
           return into.Count > before && Diverges(into[^1]);
         }
+        case IrExprStmt { Expression: IrCollection { Op: IrCollectionOp.ListSet } set }:
+          this.ListSet(set, into);
+          return false;
+        case IrExprStmt { Expression: IrCollection operation } when this.Expression(operation) is RsBlockExpression { Block: { Tail: { } change } settled }:
+          into.AddRange(settled.Statements);
+          into.Add(new RsExpressionStatement(change));
+          return false;
         case IrDeclare declare when this._nested.ContainsKey(declare.Local):
           return false;
         case IrAssign assign when this._nested.ContainsKey(assign.Local):
@@ -59,7 +66,7 @@ public static partial class RustEmitter {
           into.Add(new RsExpressionStatement(new RsReturn(result.Value is null ? null : this.Argument(result.Value))));
           return true;
         case IrDeclare declare:
-          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local), this.LocalType(declare.Local),
+          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local) || this.IsChangedCollection(declare.Local), this.LocalType(declare.Local),
             declare.Initializer switch {
               null => null,
               var value when declare.Local.Type.IsArray => this.ArrayInitial(declare.Local, value),
@@ -67,6 +74,7 @@ public static partial class RustEmitter {
               var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
               var value when declare.Local.Type.IsView => this.ViewSource(value, this.WritesView(declare.Local)),
               var value when declare.Local.Type.IsFunction => this.FunctionValue(value),
+              var value when declare.Local.Type.IsCollection => this.CollectionValue(value),
               var value => this.Expression(value)
             }));
           return false;
@@ -114,6 +122,14 @@ public static partial class RustEmitter {
         case IrIf choice:
           into.Add(new RsExpressionStatement(this.If(choice)));
           return false;
+        case IrForEachCollection loop:
+          this.ForEachCollection(loop, into);
+          return false;
+        case IrWhile loop when loop.Body.Statements.Count > 0 && loop.Body.Statements[^1] is IrReturn or IrThrow
+          && !ContinuesLoop(loop.Body.Statements) && !BreaksLoop(loop.Body.Statements):
+          // A loop whose first pass always leaves the function is an if (clippy's never_loop).
+          into.Add(new RsExpressionStatement(this.If(new IrIf(loop.Condition, loop.Body, null))));
+          return false;
         case IrWhile loop:
           into.Add(new RsExpressionStatement(this.Loop(loop.Condition, loop.Body.Statements, null)));
           return false;
@@ -139,12 +155,16 @@ public static partial class RustEmitter {
             { Type.IsString: true } value => this.StringValue(value, true),
             { Type.IsObject: true } value => this.ObjectValue(value, this._nullness.ReturnsNull(this._function.Name)),
             { Type.IsFunction: true } value => this.FunctionValue(value),
+            { Type.IsCollection: true } value => this.CollectionValue(value),
             var value => this.Expression(value)
           })));
           return true;
         case IrThrow thrown:
           into.Add(new RsExpressionStatement(this.Throw(thrown.Exception)));
           return true;
+        case IrYield or IrYieldBreak or IrYieldFrom or IrForEachSequence:
+          into.Add(new RsExpressionStatement(this.Refuse(LazySequence)));
+          return false;
         case IrTry:
           if (this._refused.Add("exception handling"))
             this._problems.Add(ExceptionRegionDescriptor.At($"exception region in {this._construct} cannot be emitted under the trap policy 'panic': 'exception handling' is not supported by the Rust backend"));
@@ -176,6 +196,8 @@ public static partial class RustEmitter {
         return new RsAssign(place, "=", this.ObjectValue(value, this.MayBeNull(local)));
       if (local.Type.IsFunction)
         return new RsAssign(place, "=", this.FunctionValue(value));
+      if (local.Type.IsCollection)
+        return new RsAssign(place, "=", this.CollectionValue(value));
       if (value is IrBinary { Left: IrLocalRef self } binary && self.Local == local && Compound(binary) is { } op)
         return new RsAssign(place, op + "=", this.Operand(this.Expression(binary.Right), 2));
       if (value is IrBinary { Right: IrLocalRef other } swapped && other.Local == local && Compound(swapped) is { } bitwise && bitwise is "&" or "|" or "^")
@@ -524,6 +546,14 @@ public static partial class RustEmitter {
       IrBlock block => ContinuesLoop(block.Statements),
       IrIf choice => ContinuesLoop(choice.Then.Statements) || (choice.Else is not null && ContinuesLoop(choice.Else.Statements)),
       IrSwitch choice => choice.Sections.Any(section => ContinuesLoop(section.Body.Statements)),
+      _ => false
+    });
+
+    /// <summary>Whether statements have a <c>break</c> of the loop they are the body of, not of a loop or a switch inside them.</summary>
+    private static bool BreaksLoop(IEnumerable<IrStmt> statements) => statements.Any(statement => statement switch {
+      IrBreak => true,
+      IrBlock block => BreaksLoop(block.Statements),
+      IrIf choice => BreaksLoop(choice.Then.Statements) || (choice.Else is not null && BreaksLoop(choice.Else.Statements)),
       _ => false
     });
 

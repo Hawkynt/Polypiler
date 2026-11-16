@@ -23,7 +23,7 @@ public static partial class RustEmitter {
   /// </summary>
   public static int Precedence(RsExpression expression) => expression switch {
     RsLiteral literal when literal.Text.StartsWith('-') => 13,
-    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField or RsStructLiteral => 15,
+    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField or RsStructLiteral or RsTuple => 15,
     RsUnary or RsReference => 13,
     RsCast => 12,
     RsBinary binary => RustPrinter.Precedence(binary.Operator),
@@ -104,6 +104,7 @@ public static partial class RustEmitter {
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
       IrLambda lambda => this.Closure(lambda),
       IrSome or IrNone or IrIsNone or IrUnwrap or IrCoalesce or IrBind => this.Optional(expression),
+      IrCollection operation => this.Settled(operation, this.Collection),
       IrInvoke invoke => this.Invoke(invoke),
       IrFunctionRef reference => this.FunctionReference(reference),
       IrBoundMethod bound => this.BoundMethod(bound),

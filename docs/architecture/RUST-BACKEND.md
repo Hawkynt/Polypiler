@@ -4,8 +4,8 @@
 [#458](https://github.com/Hawkynt/Polypiler/issues/458), [#459](https://github.com/Hawkynt/Polypiler/issues/459));
 arrays and slices, structs, enums, classes, interfaces and module state since
 [#460](https://github.com/Hawkynt/Polypiler/issues/460) and [#462](https://github.com/Hawkynt/Polypiler/issues/462);
-closures, function values, optional values and module state behind a `Mutex` since phase 2;
-collections, sequences and `Result` follow. The runner that builds
+closures, function values, optional values, module state behind a `Mutex`, lists, maps and sets since
+phase 2; lazy sequences and `Result` follow. The runner that builds
 and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/468).
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
@@ -124,6 +124,11 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `a ?? b` | `a.unwrap_or(b)` of a variable or a constant, `a.unwrap_or_else(\|\| f(c))` of a fallback that does something, evaluated only when needed; `or`, `or_else` where the result stays optional |
 | an assignment inside an expression (`IrBind`: an operand evaluated once, `x ??= v`) | an assignment before the statement where everything evaluated before it has no effect, `let t0: Option<i32> = next(c);`, also when both branches of a choice begin with it; otherwise a block `{ q = Some(4); q.unwrap_or_default() }` in place |
 | an array the module tests for null or gives null | `Option<&[T]>` as a parameter (read only), `Option<Vec<T>>` as a local or a result; `None`, `Some(&v)`, `v.as_deref()`, `a.map(<[T]>::to_vec)` where a place takes it; used as an array `ply_non_null(&a).len()`, `*ply_non_null(&a)` |
+| a list | `Vec<T>` of values and strings: `push`, `insert`, `remove`, `pop`, `clear`, `contains`, `len() as i32`; an index checked by `ply_list_index` (`ply_list_insert_index` for an insertion), which panics with `ArgumentOutOfRange` as .NET throws; `IndexOf` `iter().position(…).map_or(-1, …)`, a NaN found by `ply_same_value`; `ToArray` and `new List<T>(array)` copies |
+| a map, a set (.NET's `Dictionary`, `HashSet`) | a vector of slots, `Vec<Result<(K, V), u32>>`, `Vec<Result<T, u32>>`: an entry `Ok`, a slot a removal freed `Err(n)`, the n-th freed, which the next new key takes - so that a loop meets the keys in the order of .NET's slots (`ply_slot_insert`, `ply_slot_stamp`); `ply_map_put`, `ply_map_add` (`DuplicateKey`), `ply_map_try_add`, `ply_map_get` (`KeyNotFound` where it is no `TryGetValue`), `ply_map_find`, `ply_map_remove`, `ply_set_add`, `ply_set_find`, `ply_set_remove`; a key of an integer, a truth value, an enum or a string compared by `==` - linear, which keeps the order exact |
+| a loop over a list, a map or a set | `for entry in list.iter()`, `map.iter().flatten()` (which skips the freed slots), the element, key or value copied into the loop's variable |
+| a list, a map or a set passed on | `&[T]` where the callee only reads it, `&mut Vec<T>` where it changes it (a fixed point over the calls); a new one is moved where a variable or a result takes it |
+| a loop whose first pass always returns | an `if` (clippy's `never_loop`) |
 | `c ? true : x`, `c ? false : x`, `c ? x : true`, `c ? x : false` of truth values | `c \|\| x`, `!c && x`, `!c \|\| x`, `c && x`, which evaluate the same way; `!(a && b)` as `!a \|\| !b` |
 
 ## Objects
@@ -186,7 +191,11 @@ A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, 
 What the backend does not write yet is refused with `PLY1550`, naming the construct: pointers,
 memory, a view cast to another element type or made on the stack, an optional value of a type that
 is no value, an array that may be null and is written (`an array that may be null and is written`) or
-is a borrowed result, a function value that takes or gives more than values and other function values, two function values
+is a borrowed result, a collection in the order of insertion (JavaScript's `Map` and `Set`), one of
+objects or with floating-point keys, a collection changed in a loop over it, held by two variables or
+passed on where no variable holds it, a lazy sequence (`yield`: Rust has no stable generators, and the
+backend writes no state machine of an iterator function yet; making the sequence all at once would
+change its effects and could not end on an infinite one), a function value that takes or gives more than values and other function values, two function values
 compared with each other, a closure that captures the object of a method, an array it captures that is
 written, or a variable other than a value that is assigned, collections and sequences (`Collection`, `Yield`), `using`, a global
 array without a first value of a known length or used as a whole (passed on, iterated as a slice),
@@ -218,7 +227,7 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
+- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
@@ -226,7 +235,9 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustFamilyDifferentialTests` (layer `rust`): the fixtures of the families the backend writes - bits,
   records, strings, enums, numbers as text, classes, dispatch, generics, function values and closures,
   optional values, module state (each sequence of calls in one process, as one load of the class in
-  .NET), the floating-point view of bytes - against .NET in both overflow modes.
+  .NET), collections and the LINQ shapes legalization writes as loops (collections/WordFrequency,
+  sequences/ByteMedian, and the functions of collections/Collections the backend writes, which a test
+  lists), the floating-point view of bytes - against .NET in both overflow modes.
 - `RustRoundTripTests` (layer `rust`): every Rust fixture, imported by the Rust frontend in each
   overflow mode, comes back as a crate that is built with overflow checks on and off; every outcome is
   what rustc recorded for the original in the mode of the import.

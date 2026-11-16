@@ -48,6 +48,8 @@ public static partial class RustEmitter {
         return this.ObjectParameterType(parameter);
       if (parameter.Type.IsView)
         return this.ViewType(parameter.Type, this.WritesView(parameter));
+      if (parameter.Type.IsCollection)
+        return this.CollectionParameterType(function, index);
       if (!parameter.Type.IsArray)
         return this.Type(parameter.Type);
       if (this.IsNullableArray(parameter))
@@ -63,6 +65,8 @@ public static partial class RustEmitter {
         return null;
       if (function.ReturnType.IsObject)
         return this.ObjectType(function.ReturnType, this._nullness.ReturnsNull(function.Name));
+      if (function.ReturnType.IsCollection)
+        return this.CollectionType(function.ReturnType);
       if (!function.ReturnType.IsArray)
         return this.Type(function.ReturnType);
       if (this._arrayNulls.ReturnsNull(function.Name))
@@ -80,6 +84,8 @@ public static partial class RustEmitter {
         return this.ObjectType(local.Type, this.MayBeNull(local));
       if (local.Type.IsView)
         return this.ViewType(local.Type, this.WritesView(local));
+      if (local.Type.IsCollection)
+        return this.CollectionType(local.Type);
       if (!local.Type.IsArray)
         return this.Type(local.Type);
       if (this.IsNullableArray(local))
@@ -119,6 +125,8 @@ public static partial class RustEmitter {
       switch (array) {
         case IrGlobalRef:
           return this.Refuse("a global array used as a whole");
+        case IrCollection { Op: IrCollectionOp.ListCopyToArray }:
+          return this.Expression(array);
         case IrLocalRef or IrBind or IrCall when this.IsNullableArray(array):
           return new RsMethodCall(this.Receiver(this.NonNullArray(array, false)), "to_vec", []) { Type = array.Type };
         case IrNewArray creation:
@@ -470,7 +478,9 @@ public static partial class RustEmitter {
     /// <summary>The arguments of a call: an array borrowed as the callee's parameter takes it, refused where one array is passed twice and written.</summary>
     private IReadOnlyList<RsExpression> Arguments(IrCall call) {
       if (!this._arrays.TryGetValue(call.Function, out var callee))
-        return [.. call.Arguments.Select((argument, index) => argument.Type.IsObject ? this.ObjectArgument(call.Function, index, argument) : this.Argument(argument))];
+        return [.. call.Arguments.Select((argument, index) => argument.Type.IsObject ? this.ObjectArgument(call.Function, index, argument)
+          : argument.Type.IsCollection ? this.CollectionPassed(argument, this._changedCollections.GetValueOrDefault(call.Function)?.Contains(index) == true)
+          : this.Argument(argument))];
 
       var arguments = new List<RsExpression>();
       for (var index = 0; index < call.Arguments.Count; ++index) {
@@ -482,6 +492,11 @@ public static partial class RustEmitter {
 
         if (argument.Type.IsView) {
           arguments.Add(this.ViewSource(argument, this.ViewParameterWritten(call.Function, index)));
+          continue;
+        }
+
+        if (argument.Type.IsCollection) {
+          arguments.Add(this.CollectionPassed(argument, this._changedCollections.GetValueOrDefault(call.Function)?.Contains(index) == true));
           continue;
         }
 

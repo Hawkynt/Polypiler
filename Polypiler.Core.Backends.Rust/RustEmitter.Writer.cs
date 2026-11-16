@@ -55,6 +55,7 @@ public static partial class RustEmitter {
       this.NameGlobals(module);
       this.Classes(module);
       this.Signatures(module);
+      this.CollectionParameters(module);
       this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       this._arrayNulls = Polypiler.Core.Backends.Rust.Emit.ArrayNullness.Of(module);
       var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
@@ -174,6 +175,7 @@ public static partial class RustEmitter {
         : type.IsObject ? this.ObjectType(type, false)
         : type.IsFunction ? this.FunctionType(type)
         : IsOptionalValue(type) ? $"Option<{this.Type(type.Underlying!)}>"
+        : type.IsLazySequence ? ((RsPath)this.Refuse(LazySequence)).Name
         : ((RsPath)this.Refuse($"the type {type}")).Name);
 
     /// <summary>What kind of type a declaration is, as a refusal names it.</summary>

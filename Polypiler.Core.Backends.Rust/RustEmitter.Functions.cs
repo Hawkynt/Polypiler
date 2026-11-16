@@ -252,6 +252,14 @@ public static partial class RustEmitter {
         case IrGlobalAssign assign:
           this.CountIn(assign.Value, bindings, depth);
           break;
+        case IrForEachCollection loop:
+          this.CountIn(loop.Collection, bindings, depth);
+          if (loop.Element is { } loopElement)
+            bindings[loopElement] = new Binding(null, depth + 1) { Count = 1 };
+          if (loop.Value is { } loopValue)
+            bindings[loopValue] = new Binding(null, depth + 1) { Count = 1 };
+          this.Count(loop.Body.Statements, bindings, depth + 1);
+          break;
       }
     }
 

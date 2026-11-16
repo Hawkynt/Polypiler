@@ -138,6 +138,9 @@ internal static class ArrayOwnership {
           Link(node, choice.WhenTrue);
           Link(node, choice.WhenFalse);
           break;
+        case IrCollection { Op: IrCollectionOp.ListCopyToArray }:
+          created.Add(node);
+          break;
         case IrNull:
           // Null holds no array: the variable is an Option, which ArrayNullness finds.
           break;

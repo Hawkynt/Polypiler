@@ -250,6 +250,126 @@ internal static class Strings {
           true
       }
       """, ["ply_utf16", "ply_upper"]),
+    ["ply_list_index"] = ("""
+      fn ply_list_index(index: i32, count: usize) -> usize {
+          if index < 0 || index as usize >= count {
+              panic!("ArgumentOutOfRange");
+          }
+          index as usize
+      }
+      """, []),
+    ["ply_list_insert_index"] = ("""
+      fn ply_list_insert_index(index: i32, count: usize) -> usize {
+          if index < 0 || index as usize > count {
+              panic!("ArgumentOutOfRange");
+          }
+          index as usize
+      }
+      """, []),
+    ["ply_slot_freed"] = ("""
+      fn ply_slot_freed<T>(slots: &[Result<T, u32>]) -> Option<usize> {
+          let newest = slots.iter().filter_map(|slot| slot.as_ref().err()).max();
+          slots
+              .iter()
+              .position(|slot| newest.is_some() && slot.as_ref().err() == newest)
+      }
+      """, []),
+    ["ply_slot_insert"] = ("""
+      fn ply_slot_insert<T>(slots: &mut Vec<Result<T, u32>>, entry: T) {
+          match ply_slot_freed(slots) {
+              Some(at) => slots[at] = Ok(entry),
+              None => slots.push(Ok(entry)),
+          }
+      }
+      """, ["ply_slot_freed"]),
+    ["ply_slot_stamp"] = ("""
+      fn ply_slot_stamp<T>(slots: &[Result<T, u32>]) -> u32 {
+          slots
+              .iter()
+              .filter_map(|slot| slot.as_ref().err())
+              .max()
+              .map_or(0, |stamp| stamp + 1)
+      }
+      """, []),
+    ["ply_map_find"] = ("""
+      fn ply_map_find<K: PartialEq, V>(map: &[Result<(K, V), u32>], key: &K) -> Option<usize> {
+          map.iter()
+              .position(|slot| slot.as_ref().ok().map(|entry| &entry.0) == Some(key))
+      }
+      """, []),
+    ["ply_map_get"] = ("""
+      fn ply_map_get<K: PartialEq, V: Clone>(map: &[Result<(K, V), u32>], key: &K) -> Option<V> {
+          ply_map_find(map, key)
+              .and_then(|at| map[at].as_ref().ok())
+              .map(|entry| entry.1.clone())
+      }
+      """, ["ply_map_find"]),
+    ["ply_map_put"] = ("""
+      fn ply_map_put<K: PartialEq, V>(map: &mut Vec<Result<(K, V), u32>>, key: K, value: V) {
+          let found = ply_map_find(map, &key);
+          match found {
+              Some(at) => map[at] = Ok((key, value)),
+              None => ply_slot_insert(map, (key, value)),
+          }
+      }
+      """, ["ply_map_find", "ply_slot_insert"]),
+    ["ply_map_add"] = ("""
+      fn ply_map_add<K: PartialEq, V>(map: &mut Vec<Result<(K, V), u32>>, key: K, value: V) {
+          if ply_map_find(map, &key).is_some() {
+              panic!("DuplicateKey");
+          }
+          ply_slot_insert(map, (key, value));
+      }
+      """, ["ply_map_find", "ply_slot_insert"]),
+    ["ply_map_try_add"] = ("""
+      fn ply_map_try_add<K: PartialEq, V>(map: &mut Vec<Result<(K, V), u32>>, key: K, value: V) -> bool {
+          if ply_map_find(map, &key).is_some() {
+              return false;
+          }
+          ply_slot_insert(map, (key, value));
+          true
+      }
+      """, ["ply_map_find", "ply_slot_insert"]),
+    ["ply_map_remove"] = ("""
+      fn ply_map_remove<K: PartialEq, V>(map: &mut [Result<(K, V), u32>], key: &K) -> bool {
+          let found = ply_map_find(map, key);
+          match found {
+              Some(at) => {
+                  let stamp = ply_slot_stamp(map);
+                  map[at] = Err(stamp);
+                  true
+              }
+              None => false,
+          }
+      }
+      """, ["ply_map_find", "ply_slot_stamp"]),
+    ["ply_set_find"] = ("""
+      fn ply_set_find<T: PartialEq>(set: &[Result<T, u32>], element: &T) -> Option<usize> {
+          set.iter().position(|slot| slot.as_ref().ok() == Some(element))
+      }
+      """, []),
+    ["ply_set_add"] = ("""
+      fn ply_set_add<T: PartialEq>(set: &mut Vec<Result<T, u32>>, element: T) -> bool {
+          if ply_set_find(set, &element).is_some() {
+              return false;
+          }
+          ply_slot_insert(set, element);
+          true
+      }
+      """, ["ply_set_find", "ply_slot_insert"]),
+    ["ply_set_remove"] = ("""
+      fn ply_set_remove<T: PartialEq>(set: &mut [Result<T, u32>], element: &T) -> bool {
+          let found = ply_set_find(set, element);
+          match found {
+              Some(at) => {
+                  let stamp = ply_slot_stamp(set);
+                  set[at] = Err(stamp);
+                  true
+              }
+              None => false,
+          }
+      }
+      """, ["ply_set_find", "ply_slot_stamp"]),
     ["ply_with"] = ("""
       fn ply_with<T, R>(cell: &Mutex<T>, access: impl FnOnce(&mut T) -> R) -> R {
           let mut guard = cell.lock().unwrap_or_else(PoisonError::into_inner);

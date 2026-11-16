@@ -13,6 +13,10 @@ namespace Polypiler.Core.Backends.Rust.Syntax;
 /// <param name="Body">The body.</param>
 public sealed record RsClosure(bool Move, IReadOnlyList<RsParameter> Parameters, RsExpression Body) : RsExpression;
 
+/// <summary><c>(a, b)</c>: a tuple, such as the key and the value of an entry of a map.</summary>
+/// <param name="Elements">The elements, two or more.</param>
+public sealed record RsTuple(IReadOnlyList<RsExpression> Elements) : RsExpression;
+
 /// <summary>An item declared among the statements of a block, such as a function that captures nothing: <c>fn f(m: i32) -&gt; i32 { … }</c>.</summary>
 /// <param name="Item">The item.</param>
 public sealed record RsItemStatement(RsItem Item) : RsStatement;

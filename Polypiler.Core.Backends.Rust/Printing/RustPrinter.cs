@@ -353,6 +353,8 @@ public static class RustPrinter {
       }
       case RsBlockExpression { Block: { Statements.Count: 0, Tail: null } }:
         return "{}";
+      case RsTuple tuple:
+        return Arguments(tuple.Elements) is { } items ? $"({items})" : null;
       case RsClosure { Body: not RsBlockExpression } closure:
         return Flat(closure.Body) is { } closureBody ? ClosureHead(closure) + closureBody : null;
       case RsLoop { Body: { Statements.Count: 0, Tail: null } } loop:
@@ -596,6 +598,8 @@ public static class RustPrinter {
         return If(choice, indent, column);
       case RsClosure closure:
         return Closure(closure, indent, column, trailing);
+      case RsTuple tuple:
+        return "(" + VerticalArguments(tuple.Elements, indent) + ")";
       case RsWhile loop:
         return $"{Label(loop.Label)}while {Condition(loop.Condition, indent, column + Label(loop.Label).Length + 6)}{Block(loop.Body, indent)}";
       case RsLoop loop:
@@ -607,7 +611,7 @@ public static class RustPrinter {
       case RsBlockExpression block:
         return Block(block.Block, indent);
       case RsMatch choice: {
-        var text = new StringBuilder("match ").Append(Expression(choice.Scrutinee, indent, column + 6, 2)).Append(" {\n");
+        var text = new StringBuilder("match ").Append(Condition(choice.Scrutinee, indent, column + 6)).Append("{\n");
         foreach (var arm in choice.Arms) {
           var head = string.Join(" | ", arm.Patterns) + " => ";
           text.Append(inner).Append(head);

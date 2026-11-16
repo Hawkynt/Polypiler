@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
 /// The fixtures of the prototype's families through the Rust backend (#460, #462): bit operations,
-/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, module state, views,
+/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, module state, collections, views,
 /// floating-point views of bytes. Every fixture of a family that the backend writes is
 /// built by the pinned toolchain and called on the family's cases with overflow checks on and off;
 /// every outcome, the arrays a call was given included, must be what .NET computes of the original
@@ -91,6 +91,17 @@ public sealed class RustFamilyDifferentialTests {
         Sequenced = calls => StateFixtures.Compiled(StateFixtures.SourceOf(file + ".cs"), calls)
       };
 
+    yield return new("collections/WordFrequency", () => CollectionFixtures.Imported("WordFrequency"),
+      () => [.. CollectionFixtures.Calls().Where(call => call.File == "WordFrequency").Select(call => call.Call)],
+      call => PrototypeFixture.InvokedOutcome(CollectionFixtures.Compiled("WordFrequencyDemo", call.Method), call));
+
+    yield return new("sequences/ByteMedian", () => LinqFixtures.Imported("ByteMedian"), () => [.. LinqFixtures.Calls("ByteMedian")],
+      call => PrototypeFixture.InvokedOutcome(LinqFixtures.Compiled("ByteMedian", call.Method), call));
+
+    yield return new("collections/Collections (written part)", () => Written(CollectionFixtures.Imported("Collections"), WrittenCollections),
+      () => [.. CollectionFixtures.Calls().Where(call => call.File == "Collections" && WrittenCollections.Contains(call.Call.Method)).Select(call => call.Call)],
+      call => PrototypeFixture.InvokedOutcome(CollectionFixtures.Compiled("CollectionsDemo", call.Method), call));
+
     yield return new("optional/Find", OptionalFixtures.Imported, () => [.. OptionalFixtures.Calls()],
       call => PrototypeFixture.InvokedOutcome(OptionalFixtures.Compiled(call.Method), call));
 
@@ -103,6 +114,31 @@ public sealed class RustFamilyDifferentialTests {
       () => [.. FloatViewCases.FixtureMethods.SelectMany(method => FloatViewCases.FixtureCalls(method, new Random(2026), 20))],
       call => PrototypeFixture.CompiledOutcome("float/FloatView", call),
       (call, expected, actual) => FloatViewCases.FixtureMatches(call.Method, call, expected, actual));
+  }
+
+  /// <summary>The functions of collections/Collections the backend writes; the others catch traps, hold objects or floating-point keys, or change a collection in a loop over it.</summary>
+  private static readonly string[] WrittenCollections = ["ListOps", "Grow", "Write", "RemoveLastOfEmpty", "Search", "Copies", "Words", "Pairs", "Widened", "DictionaryOrder", "SetOrder", "Count", "ClearThenInsert", "MissingKey", "Values"];
+
+  /// <summary>A module with only the public functions named and every function they call.</summary>
+  internal static IrModule Written(IrModule module, IReadOnlyCollection<string> names) {
+    var byName = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
+    var kept = new HashSet<string>(names, StringComparer.Ordinal);
+    var pending = new Stack<string>(names);
+    while (pending.Count > 0)
+      foreach (var node in IrTree.Nodes(byName[pending.Pop()].Body)) {
+        var callee = node switch { IrCall call => call.Function, IrFunctionRef reference => reference.Function, _ => null };
+        if (callee is not null && byName.ContainsKey(callee) && kept.Add(callee))
+          pending.Push(callee);
+      }
+
+    return module with { Functions = [.. module.Functions.Where(function => kept.Contains(function.Name) || !function.IsPublic && function.Name.Contains('.'))] };
+  }
+
+  [Test]
+  public void WrittenPart_IsEveryFunctionTheBackendWrites() {
+    var module = CollectionFixtures.Imported("Collections");
+    var written = module.Functions.Where(function => function.IsPublic && RustCrates.Check(Written(module, [function.Name])).Count == 0).Select(function => function.Name);
+    Assert.That(written, Is.EquivalentTo(WrittenCollections));
   }
 
   /// <summary>The fixtures of the families the backend refuses still, each with the construct its refusal names.</summary>

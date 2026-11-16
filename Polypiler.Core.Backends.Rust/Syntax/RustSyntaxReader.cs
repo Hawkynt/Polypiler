@@ -538,6 +538,14 @@ public static class RustSyntaxReader {
 
       if (this.Accept("(")) {
         var inner = this.Expression();
+        if (this.Is(",")) {
+          var elements = new List<RsExpression> { inner };
+          while (this.Accept(",") && !this.Is(")"))
+            elements.Add(this.Expression());
+          this.Expect(")");
+          return new RsTuple(elements);
+        }
+
         this.Expect(")");
         return new RsParenthesized(inner);
       }
