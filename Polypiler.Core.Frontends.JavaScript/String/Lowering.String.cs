@@ -40,7 +40,8 @@ internal sealed partial class Lowering {
         throw this.Unsupported(expression, "a regular expression");
       case MemberExpression member when types.Of(member.Object).Kind == JsKind.String:
         var text = this.Expression(member.Object);
-        // s[i] is undefined outside the string, which no value of the IR is: the read traps there, as reading an array does.
+        // s[i] is undefined outside the string, which no value of the IR is: the read traps there, as reading an array does (caveat js-oob-read).
+        this.AccessesElements |= member.Computed;
         return member.Computed
           ? Str(IrIntrinsicOp.StrFromCodeUnit, _str, Str(IrIntrinsicOp.StrCodeUnitAt, IrType.U16, text, this.Index(member.Property)))
           : member.Property is Identifier { Name: "length" } ? Str(IrIntrinsicOp.StrLength, IrType.I32, text) : throw this.Unsupported(member, types.Text(member));
@@ -212,11 +213,14 @@ internal sealed partial class Lowering {
         Takes(1, 1);
         text = this.Twice(text, call, method);
         var from = this.Twice(this.Index(arguments[0]), call, method);
-        // A negative index counts from the end; outside the string at() is undefined, and the read traps there.
+        // A negative index counts from the end; outside the string at() is undefined, and the read traps there (caveat js-oob-read).
+        this.AccessesElements = true;
         var counted = new IrConditional(new IrBinary(IrBinaryOp.Less, from, I32(0)), new IrBinary(IrBinaryOp.Add, Length(), from), from);
         return Str(IrIntrinsicOp.StrFromCodeUnit, _str, Str(IrIntrinsicOp.StrCodeUnitAt, IrType.U16, text, counted));
       case "codePointAt":
         Takes(1, 1);
+        // Outside the string codePointAt is undefined, and the read traps there (caveat js-oob-read, #1367).
+        this.AccessesElements = true;
         return Str(IrIntrinsicOp.StrCodePointAt, IrType.I32, text, this.Index(arguments[0]));
       case "substring":
         Takes(1, 2);

@@ -370,11 +370,22 @@ public sealed class JavaScriptFrontendTests {
     yield return Case("Math.imul(a, u)", "i32", new IrBinary(IrBinaryOp.Multiply, A, new IrConvert(IrType.I32, U)));
     yield return Case("Math.imul(a + 1, 3)", "i32", new IrBinary(IrBinaryOp.Multiply, new IrBinary(IrBinaryOp.Add, A, Int(1)), Int(3)));
 
-    // A division of integers of one signedness under a coercion is the division of the IR.
+    // A division of integers of one signedness under a coercion is the division of the IR; a divisor
+    // that is no constant is tested for 0 first and, signed, for -1, as JavaScript's double gives 0
+    // and the negated dividend modulo 2^32 there (#1367).
     yield return Case("(a / 2) | 0", "i32", new IrBinary(IrBinaryOp.Divide, A, Int(2)));
-    yield return Case("(a % c) | 0", "i32", new IrBinary(IrBinaryOp.Remainder, A, new IrConvert(IrType.I32, C)));
+    // A uint8 divisor is never -1: only 0 is tested.
+    var signedDivisor = new IrConvert(IrType.I32, C);
+    yield return Case("(a % c) | 0", "i32", new IrConditional(new IrBinary(IrBinaryOp.Equal, signedDivisor, Int(0)), Int(0), new IrBinary(IrBinaryOp.Remainder, A, signedDivisor)));
+    yield return Case("(a / a) | 0", "i32", new IrConditional(new IrBinary(IrBinaryOp.Equal, A, Int(0)), Int(0),
+      new IrConditional(new IrBinary(IrBinaryOp.Equal, A, Int(-1)), new IrBinary(IrBinaryOp.Subtract, Int(0), A), new IrBinary(IrBinaryOp.Divide, A, A))));
+    yield return Case("((a & 7) / a) | 0", "i32", new IrConditional(new IrBinary(IrBinaryOp.Equal, A, Int(0)), Int(0),
+      new IrBinary(IrBinaryOp.Divide, new IrBinary(IrBinaryOp.And, A, Int(7)), A)));
     yield return Case("(u / 3) >>> 0", "u32", new IrBinary(IrBinaryOp.Divide, U, new IrConst(IrType.U32, 3)));
-    yield return Case("(u / c) | 0", "i32", new IrConvert(IrType.I32, new IrBinary(IrBinaryOp.Divide, U, new IrConvert(IrType.U32, C))));
+    var unsignedDivisor = new IrConvert(IrType.U32, C);
+    var unsignedZero = new IrConst(IrType.U32, 0);
+    yield return Case("(u / c) | 0", "i32", new IrConvert(IrType.I32, new IrConditional(new IrBinary(IrBinaryOp.Equal, unsignedDivisor, unsignedZero), unsignedZero,
+      new IrBinary(IrBinaryOp.Divide, U, unsignedDivisor))));
     yield return Case("(a / u) | 0", "i32", ToInt32(new IrBinary(IrBinaryOp.Divide, AsDouble(A), AsDouble(U))));
     yield return Case("(a / 2 + 1) | 0", "i32", ToInt32(new IrBinary(IrBinaryOp.Add, new IrBinary(IrBinaryOp.Divide, AsDouble(A), Double(2)), one)));
 
@@ -930,15 +941,18 @@ public sealed class JavaScriptFrontendTests {
 
   /// <summary>The caveats name the differences a module can show, each once, and only the ones it can show.</summary>
   [TestCase("return a;", new string[0])]
-  [TestCase("return d[0] | d[1];", new[] { "js-oob-read" })]
+  [TestCase("return d[0] | d[1];", new string[0])]
+  [TestCase("return d[0];", new[] { "js-oob-read" })]
   [TestCase("d[0] = 1; d[1] = 2; return a;", new[] { "js-oob-read" })]
   [TestCase("d[0]++; return a;", new[] { "js-oob-read" })]
-  [TestCase("return ((a / a) | 0) + ((a % a) | 0);", new[] { "js-div-zero" })]
+  [TestCase("return ((a / a) | 0) + ((a % a) | 0);", new string[0])]
+  [TestCase("return u % u;", new[] { "js-div-zero" })]
   [TestCase("return a / a + a % a;", new string[0])]
   [TestCase("return BigInt.asUintN(64, 1n / 1n);", new[] { "js-div-zero" })]
   [TestCase("return BigInt.asUintN(64, 1n >> 1n);", new string[0])]
   [TestCase("a++; u--; return a;", new string[0])]
-  [TestCase("for (let i = 0; i < d.length; ++i) d[i] = (d[i] / 2) | 0; return a;", new[] { "js-oob-read", "js-div-zero" })]
+  [TestCase("for (let i = 0; i < d.length; ++i) d[i] = (d[i] / 2) | 0; return a;", new string[0])]
+  [TestCase("for (let i = 0; i <= d.length; ++i) d[i] = (d[i] / u) | 0; return a;", new[] { "js-oob-read" })]
   public void Caveats_NameTheDifferencesOfTheModule(string body, string[] expected) {
     var result = JavaScriptFrontend.Import("snippet.js", WithBody(body, ""));
     Assert.That(result.Caveats.Select(caveat => caveat.Id), Is.EqualTo(expected));

@@ -26,8 +26,10 @@ internal sealed partial class Lowering(TypeInference types) {
   private FunctionModel _model = null!;
   private IrType _returnType = IrType.Void;
 
-  /// <summary>Whether a lowered function reads or writes an array element.</summary>
-  public bool AccessesElements { get; private set; }
+  /// <summary>Whether a lowered function reads or writes an array element where the imported code traps and JavaScript does not.</summary>
+  public bool AccessesElements { get => this._accessesElements || this._trappingReads.Count > 0; private set => this._accessesElements = value; }
+
+  private bool _accessesElements;
 
   /// <summary>Whether a lowered function divides integers, which traps where JavaScript does not.</summary>
   public bool Divides { get; private set; }
@@ -307,7 +309,14 @@ internal sealed partial class Lowering(TypeInference types) {
 
     var before = this._assigned;
     var condition = loop.Test is null ? new IrConst(IrType.Bool, 1) : this.Condition(loop.Test);
+    var bounding = this.Bounding(loop);
+    if (bounding is { } bound)
+      this._inRange.Add(bound);
+
     var body = this.Body(loop.Body);
+    if (bounding is not null)
+      this._inRange.RemoveAt(this._inRange.Count - 1);
+
     this._assigned = before;
     var step = new List<IrStmt>();
     if (loop.Update is not null)
@@ -514,6 +523,8 @@ internal sealed partial class Lowering(TypeInference types) {
         var index = this.Index(element.Property);
         var elementType = array.Type.Element!;
         var coercion = holder.IsPlain || !elementType.IsInteger || elementType.IsLong ? Coercion.None : Coercion.Int32;
+        // A typed array ignores a store outside it; an Array grows, and a stated T[] may be either (#1374).
+        var typed = !holder.IsPlain && !holder.IsStated;
         Typed stored;
         if (compound is { } combining) {
           // What a compound assignment reads and writes is evaluated once, as JavaScript evaluates it once.
@@ -523,11 +534,19 @@ internal sealed partial class Lowering(TypeInference types) {
           stored = this.Binary(combining, element, assignment.Right, coercion, assignment);
           this._substitutes.Remove(element);
         } else {
-          stored = this.Evaluate(assignment.Right, coercion);
+          // A typed array stores what ToNumber makes of the element read outside an array (#1367).
+          stored = (typed ? this.Element(assignment.Right, coercion) : null) ?? this.Evaluate(assignment.Right, coercion);
         }
 
-        this.AccessesElements = true;
-        into.Add(new IrStore(array, index, this.Stored(stored, elementType, holder.IsPlain, assignment.Right)));
+        var storedValue = this.Stored(stored, elementType, holder.IsPlain, assignment.Right);
+        if (this.Inside(element, new IrArrayLoad(array, index))) {
+          into.Add(new IrStore(array, index, storedValue));
+        } else if (!typed || compound is not null) {
+          this.AccessesElements = true;
+          into.Add(new IrStore(array, index, storedValue));
+        } else {
+          this.TypedStore(array, index, storedValue, into);
+        }
         break;
       default:
         throw this.Unsupported(assignment.Left, types.Text(assignment.Left));
