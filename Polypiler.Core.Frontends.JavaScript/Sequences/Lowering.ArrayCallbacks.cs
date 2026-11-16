@@ -74,7 +74,7 @@ internal sealed partial class Lowering {
 
     var result = method == "forEach" ? IrType.Void : this.Storable(types.Of(call), call);
     // find yields undefined where nothing matches, which the IR has for a number and a reference only.
-    if (method == "find" && !result.IsOptional && !result.IsNullable)
+    if (method == "find" && !result.IsOptional && !(result.IsNullable && !result.IsString))
       throw this.Unsupported(call, $"find of {receiver.Describe()}, whose undefined the IR has no value for");
 
     this.CheckCallback(method, given, source.Type, signature, result);

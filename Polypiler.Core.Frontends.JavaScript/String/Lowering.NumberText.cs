@@ -23,10 +23,24 @@ internal sealed partial class Lowering {
   /// <summary>
   /// A value as the text JavaScript makes of it: a string as it is, a number or a <c>BigInt</c> by
   /// <c>Number::toString</c> - an integer the program proves as that integer - and a truth value as
-  /// <c>true</c> or <c>false</c>.
+  /// <c>true</c> or <c>false</c>, and an absent value as <c>null</c> or <c>undefined</c> (#1370).
   /// </summary>
-  private IrExpr Written(Node node, string role) {
-    var value = this.Evaluate(node);
+  private IrExpr Written(Node node, string role) => this.Written(this.Evaluate(node), node, role);
+
+  private IrExpr Written(Typed value, Node node, string role) {
+    if (value.Type.IsAbsent) {
+      if (value.Type.MayBeNull && value.Type.MayBeUndefined)
+        throw this.Unsupported(node, $"{value.Type.Describe()} as {role}, which JavaScript writes as either");
+
+      var absent = new IrStrConst(value.Type.MayBeNull ? "null" : "undefined");
+      if (value.Type.Kind == JsKind.Null)
+        return absent;
+
+      var (first, again) = this.Bound(value.Expr);
+      var held = new Typed(again.Type.IsOptional ? new IrUnwrap(again) { IsTested = true } : again, value.Type.Present);
+      return new IrConditional(again.Type.IsOptional ? new IrIsNone(first) : new IrIsNull(first), absent, this.Written(held, node, role));
+    }
+
     switch (value.Type.Kind) {
       case JsKind.String:
         return value.Expr;

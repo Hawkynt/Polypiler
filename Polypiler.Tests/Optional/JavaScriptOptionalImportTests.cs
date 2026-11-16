@@ -104,13 +104,13 @@ public sealed class JavaScriptOptionalImportTests {
   [TestCase("/** @param {Int32Array} o */ export function f(o) { return o?.[1] ?? 0; }", "obj?.[key]")]
   [TestCase("/** @param {Int32Array} a */ export function f(a) { return a?.length?.x; }", "?. on number")]
   [TestCase("export function f(x) { const y = x == null ? 1 : 2; return x + y; }", "which may be null or undefined")]
-  [TestCase("export function f(n) { const s = n > 0 ? \"a\" : null; return 1; }", "a string that may be null")]
+  [TestCase("export function f(n) { const s = n > 0 ? \"a\" : null; return 1; }", "")]
   [TestCase("export function f(n) { let x = n; x ??= 1; return 1; }", "")]
   [TestCase("export function f(n) { const o = { a: n }; o.a ??= 1; return 1; }", "??= of anything but a variable")]
   [TestCase("export function f(n) { return n === undefined ? 1 : n === null ? 2 : 3; }", "holds both null and undefined")]
   [TestCase("function g() { return 1; } export function f(n) { return g() === null ? 1 : 2; }", "which is never either")]
   [TestCase("export function f(n) { const x = n > 0 ? n : null; return x ?? \"s\"; }", "?? on number or null and string")]
-  [TestCase("export function f(n) { const s = \"ab\"; return s?.length ?? 0; }", "?. on string")]
+  [TestCase("export function f(n) { const s = \"ab\"; return s?.length ?? 0; }", "")]
   public void Construct_IsRefusedOrImported(string source, string named) {
     var problems = Problems(source);
     if (named.Length == 0)

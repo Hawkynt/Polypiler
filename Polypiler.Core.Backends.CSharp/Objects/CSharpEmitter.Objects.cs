@@ -182,7 +182,8 @@ public static partial class CSharpEmitter {
     /// </summary>
     private CsProperty Property(IrClassType type, IrProperty property, Dictionary<string, IrFunction> functions) {
       var names = this.MemberNames(type);
-      var modifiers = new[] { Visibility(property.Visibility) };
+      // A computed property is as virtual as its accessors, which are both of one dispatch (#1368).
+      var modifiers = property.BackingField is null && (property.Getter ?? property.Setter) is { } accessor ? [.. this.MethodModifiers(accessor)] : new[] { Visibility(property.Visibility) };
       var propertyType = new CsType(this.TypeName(property.Type));
       if (property.BackingField is { } field) {
         if (this.AutoProperties) {

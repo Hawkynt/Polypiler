@@ -107,6 +107,14 @@ A spelled-out idiom such as `(x << n) | (x >>> (32 - n))` is no member; recognis
 | `DataView` `getFloat32`, `getFloat64` | `LoadLittle`, `LoadBig` of `f32`, `f64` | as above; the binary32 number read is a double exactly (ECMA-262 `RawBytesToNumeric`) |
 | `DataView` `setFloat32`, `setFloat64` | `Convert` to `f32` and `StoreLittle`, `StoreBig`; `StoreLittle`, `StoreBig` of `f64` | as above; the value a number, which `setFloat32` rounds to binary32, to the nearest with ties to even (`NumericToRawBytes`) |
 
+The types the frontend proves around these operations (#1365):
+
+| Construct | Type | Edges |
+| --- | --- | --- |
+| `a % b` of two integers that are never negative (#1375) | the integer type that holds both, `Remainder` of it | a divisor 0, a NaN in JavaScript, traps: caveat `js-div-zero`; a dividend that may be negative stays a remainder of doubles |
+| a parameter JSDoc states as an integer of up to 32 bits that the function reads only under `ToInt32` or `ToUint32` (#1384) | the stated type; a narrower one of a function only the file calls the 32-bit integer of its signedness | an argument of the other 32-bit integer is wrapped into it, which leaves the low 32 bits the coercions see; a parameter read without a coercion keeps its contract |
+| JSDoc `T[]` of numbers (#1374) | an `Array`, a list or a typed array of `T`, as the calls of the file pass it; an `Array` where the function tests `Array.isArray` of it | calls of both kinds are `PLY1105`; `Uint8Array` and the other typed arrays stay typed arrays |
+
 `new DataView(bytes.buffer)` is read as the view of the bytes of `bytes`, which it is unless the array is
 part of a larger buffer. A form outside the table - a byte order that is no literal, a view that is not
 `const`, `getFloat16` and `setFloat16` - is refused with `PLY1102`.

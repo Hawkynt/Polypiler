@@ -50,7 +50,7 @@ public sealed class JavaScriptModuleGraphTests {
         Add: function(a, b) { return (a + b) | 0; },
         /** @param {int32} a @returns {int32} */
         Twice: function(a) { return Ops.Add(a, a); },
-        Unused: function(a) { return typeof a; }
+        Unused: function(a) { return void a; }
       };
       global.Ops = Ops;
       if (typeof module !== 'undefined' && module.exports) {
@@ -62,7 +62,7 @@ public sealed class JavaScriptModuleGraphTests {
   private static readonly string Library = """
       /** @param {int32} a @returns {int32} */
       function square(a) { return Math.imul(a, a); }
-      function broken(a) { return typeof a; }
+      function broken(a) { return void a; }
       return { square, broken };
     """.ReplaceLineEndings("\n");
 
@@ -125,6 +125,23 @@ public sealed class JavaScriptModuleGraphTests {
     Assert.That(IrInterpreter.Call(module, "f", [4]), Is.EqualTo(8));
   }
 
+  /// <summary>
+  /// A function a required file declares - of its own or of an object it exports - is a helper of the
+  /// translation, which nothing outside calls: its parameters take what the entry passes, a truth value
+  /// here, where a function the file is called from outside with is a double without JSDoc.
+  /// </summary>
+  [Test]
+  public void FunctionOfARequiredFile_TakesWhatTheEntryPasses() {
+    var module = Imported("a.js",
+      ("a.js", Factory("Lib", "require('./lib')", "  function f() { return Lib.pick(true) + Lib.Ops.flip(false); }\n  return { f };")),
+      ("lib.js", Factory("", "", "  function pick(flag) { return flag ? 1 : 2; }\n  const Ops = { flip: function (flag) { return flag ? 10 : 20; } };\n  return { pick, Ops };")));
+    Assert.That(IrInterpreter.Call(module, "f", []), Is.EqualTo(21));
+    Assert.That(module.Functions.Where(function => function.Name != "f").Select(function => function.IsPublic), Is.All.False);
+    Assert.That(module.Functions.Single(function => function.Name == "pick").Parameters.Single().Type, Is.EqualTo(IrType.Bool));
+    var alone = JavaScriptFrontend.Import("lib.js", "function pick(flag) { return flag ? 1 : 2; } function g() { return pick(true); }");
+    Assert.That(alone.Diagnostics, Is.Not.Empty, "a function of a script imported alone is called from outside");
+  }
+
   [Test]
   public void NamespaceUsedAsAValue_IsReachedWhole() {
     var result = Import("main.js",
@@ -153,7 +170,7 @@ public sealed class JavaScriptModuleGraphTests {
   [Test]
   public void Diagnostic_PointsIntoTheFileItIsAbout() {
     var refusal = Refusal("a.js",
-      ("a.js", Factory("Lib", "require('./lib')", "  /** @param {int32} x @returns {int32} */\n  function f(x) { return Lib.square(x) + typeof x; }\n  return { f };")),
+      ("a.js", Factory("Lib", "require('./lib')", "  /** @param {int32} x @returns {int32} */\n  function f(x) { return Lib.square(x) + void x; }\n  return { f };")),
       ("lib.js", Factory("", "", Library)));
     Assert.That((refusal.File, refusal.Line), Is.EqualTo((At("a.js"), 15)));
     var inLibrary = Refusal("a.js",
@@ -212,7 +229,7 @@ public sealed class JavaScriptModuleGraphTests {
 
   [Test]
   public void NamespaceOfTheEntry_IsImportedWhole() {
-    var module = Imported("ops.js", ("ops.js", Helpers.Replace("    Unused: function(a) { return typeof a; }\n", "")));
+    var module = Imported("ops.js", ("ops.js", Helpers.Replace("    Unused: function(a) { return void a; }\n", "")));
     Assert.That(module.Functions.Select(function => function.Name), Is.EquivalentTo(new[] { "Add", "Twice" }));
   }
 
@@ -279,6 +296,24 @@ public sealed class JavaScriptModuleGraphTests {
     Assert.That(IrInterpreter.Call(module, "f", []), Is.EqualTo(9));
   }
 
+  /// <summary>
+  /// Names two files declare that one of them does not export (#1376): renamed apart in that file, a
+  /// shorthand property keeping its key - a function and a constant, read, called and in a shorthand.
+  /// </summary>
+  [Test]
+  public void NameTwoFilesDeclare_IsRenamedInTheOneThatDoesNotExportIt() {
+    var module = Imported("a.js",
+      ("a.js", Factory("Lib", "require('./lib')", "  const scale = 5;\n  function helper(x) { return x + scale; }\n  function f() { return Lib.twice(3) + helper(1); }\n  return { f };")),
+      ("lib.js", Factory("", "", "  const scale = 2;\n  function helper(x) { const o = { scale }; return x * o.scale; }\n  function twice(x) { return helper(x); }\n  return { twice };")));
+    Assert.That(IrInterpreter.Call(module, "f", []), Is.EqualTo(12));
+    Assert.That(module.Functions.Select(function => function.Name), Is.SupersetOf(new[] { "helper", "helper_2" }));
+    var three = Imported("a.js",
+      ("a.js", Factory("Lib, Other", "require('./lib'), require('./other')", "  function helper(x) { return x + 100; }\n  function f() { return Lib.twice(3) + Other.half(8) + helper(1); }\n  return { f };")),
+      ("lib.js", Factory("", "", "  function helper(x) { return x * 2; }\n  function twice(x) { return helper(x); }\n  return { twice };")),
+      ("other.js", Factory("", "", "  function helper(x) { return x / 2; }\n  function half(x) { return helper(x); }\n  return { half };")));
+    Assert.That(IrInterpreter.Call(three, "f", []), Is.EqualTo(111));
+  }
+
   [Test]
   public void ClassThatTwoFilesDeclare_IsRefused() {
     var refusal = Refusal("main.js",
@@ -290,15 +325,15 @@ public sealed class JavaScriptModuleGraphTests {
   [Test]
   public void WrapperAfterADirective_WithCarriageReturns_AndCommentsInItsNamespace_IsLinked() {
     var helpers = "'use strict';\n;\n" + Helpers.Replace(
-      "    Unused: function(a) { return typeof a; }\n",
-      "    \"Quoted\": function(a) { return typeof a; } // not reached\n    /* nor this */ ,\n    Unused: function(a) { return typeof a; }\n").Replace("\n", "\r\n");
+      "    Unused: function(a) { return void a; }\n",
+      "    \"Quoted\": function(a) { return void a; } // not reached\n    /* nor this */ ,\n    Unused: function(a) { return void a; }\n").Replace("\n", "\r\n");
     Assert.That(helpers, Does.Contain("Quoted"));
     var module = Imported("main.js",
       ("main.js", "const Ops = require('./ops');\n/** @param {int32} x @returns {int32} */\nfunction f(x) { return Ops.Twice(x); }\nmodule.exports = { f };"),
       ("ops.js", helpers));
     Assert.That(IrInterpreter.Call(module, "f", [5]), Is.EqualTo(10));
     var refusal = Refusal("main.js",
-      ("main.js", "const Ops = require('./ops');\nfunction f(x) { return Ops.Twice(x) + typeof x; }\nmodule.exports = { f };"),
+      ("main.js", "const Ops = require('./ops');\nfunction f(x) { return Ops.Twice(x) + void x; }\nmodule.exports = { f };"),
       ("ops.js", helpers));
     Assert.That((refusal.File, refusal.Line), Is.EqualTo((At("main.js"), 2)), "the lines of a file with carriage returns stay");
   }

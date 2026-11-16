@@ -36,9 +36,8 @@ RotL64	imported
 RotR64	imported
 RotL128n	OpCodes.js(447,24): error PLY1101: parameter 'value' of 'RotL128n' has no supported JSDoc type
 RotR128n	OpCodes.js(462,24): error PLY1101: parameter 'value' of 'RotR128n' has no supported JSDoc type
-RotL128	OpCodes.js(499,14): error PLY1105: 'RotL128' holds both uint8[] and uint8[]
-RotR128	OpCodes.js(499,14): error PLY1105: 'RotL128' holds both uint8[] and uint8[]
-RotR128	OpCodes.js(511,14): error PLY1105: 'RotR128' holds both uint8[] and uint8[]
+RotL128	imported
+RotR128	OpCodes.js(511,37): error PLY1102: 'float64 where int32 is expected' is not supported yet
 Pack16BE	imported
 Unpack16BE	imported
 Pack16LE	imported
@@ -65,18 +64,18 @@ AsciiToBytes	imported
 BytesToChars	OpCodes.js(2293,16): error PLY1102: 'a call of String.fromCharCode.apply' is not supported yet
 DoubleToBytes	imported
 BytesToDouble	imported
-Hex4ToBytes	OpCodes.js(2343,11): error PLY1102: 'typeof' is not supported yet
+Hex4ToBytes	OpCodes.js(2347,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
 HexCharCodeToValue	imported
-Hex8ToBytes	OpCodes.js(2380,11): error PLY1102: 'typeof' is not supported yet
-Hex16ToWords	OpCodes.js(2405,11): error PLY1102: 'typeof' is not supported yet
-Hex32ToDWords	OpCodes.js(2430,11): error PLY1102: 'typeof' is not supported yet
+Hex8ToBytes	OpCodes.js(2384,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
+Hex16ToWords	OpCodes.js(2409,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
+Hex32ToDWords	OpCodes.js(2434,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
 XorArrays	imported
-CopyArray	OpCodes.js(2481,14): error PLY1105: 'CopyArray' holds both uint8[] and uint8[]
+CopyArray	imported
 ClearArray	OpCodes.js(2489,26): error PLY1101: parameter 'arr' of 'ClearArray' has no supported JSDoc type
 CopyBytes	imported
 CompareArrays	imported
 SecureCompare	imported
-SecureRandomBytes	OpCodes.js(2549,11): error PLY1102: 'typeof' is not supported yet
+SecureRandomBytes	OpCodes.js(2550,15): error PLY1102: 'new RangeError' is not supported yet
 AddMod	imported
 SubMod	imported
 MulMod	imported
@@ -121,7 +120,7 @@ LFSRStepGeneric	OpCodes.js(3170,36): error PLY1102: 'uint32 where int32 is expec
 XorArrayWithByte	imported
 GFMulGeneric	imported
 CreateUint32ArrayFromHex	OpCodes.js(3236,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
-CreateByteArrayFromHex	OpCodes.js(2380,11): error PLY1102: 'typeof' is not supported yet
+CreateByteArrayFromHex	OpCodes.js(2384,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
 CreateByteArrayFromHex	OpCodes.js(3259,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
 CreateUint64ArrayFromHex	OpCodes.js(3278,22): error PLY1102: 'float64[] where uint32[] list is expected' is not supported yet
 Mul32	imported
@@ -130,7 +129,7 @@ Add32	imported
 Sub32	imported
 CreateBitStream	OpCodes.js(3387,14): error PLY1102: 'new OpCodes._BitStream' is not supported yet
 _BitStream	OpCodes.js(3399,7): error PLY1102: 'this.buffer' is not supported yet
-GHashMul	OpCodes.js(3822,40): error PLY1102: 'fill on a plain Array' is not supported yet
+GHashMul	OpCodes.js(3824,40): error PLY1102: 'an array literal with a hole or a spread element' is not supported yet
 GCMIncrement	imported
 Add64_HL	imported
 Add3L64	imported

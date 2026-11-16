@@ -135,6 +135,13 @@ array)` - the accumulator first for `reduce` - as far as its parameters reach, a
 call the type it yields; the new array of `map`, `filter` and `flatMap` is a list where the variable it
 goes to grows.
 
+An `Array` whose length never changes is an array of the IR as a typed array is (#1385): `slice`
+copies a part of it and `fill` stores into it, as of a [view](views.md); `fill(v)` as a value yields
+the array - `new Array(n).fill(0)` is an array of the type of the place it goes to - and
+`a.concat(b, …)` of such Arrays is a new Array of all their elements in order, through a function of
+the module per element type. A list, a typed array or a single value given to `concat`, `subarray` and
+`set` of an Array and `fill` of a part as a value are refused by name.
+
 Refused with `PLY1102`: `sort()` without a comparator (it orders by the text of the elements), a
 comparator with effects - one that writes anything but its own locals, or calls a function, whose call
 order ECMA-262 leaves to the engine - and one that is no function expression, `findLast`,

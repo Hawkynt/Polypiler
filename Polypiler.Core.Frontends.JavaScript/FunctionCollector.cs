@@ -164,7 +164,7 @@ internal sealed partial class FunctionCollector(string source, List<Comment> com
 
       switch (statement) {
         case FunctionDeclaration declaration:
-          this.Add(new Candidate(declaration.Id!.Name, declaration, declaration) { IsPublic = isScript, Documentation = this.Documentation(declaration) });
+          this.Add(new Candidate(declaration.Id!.Name, declaration, declaration) { IsPublic = isScript && declaration.Location.Start.Line >= this.EntryLine, Documentation = this.Documentation(declaration) });
           break;
         case ExportNamedDeclaration { Declaration: FunctionDeclaration declaration }:
           // The comment stands before the export or, less usually, between the export and the function.
@@ -396,7 +396,8 @@ internal sealed partial class FunctionCollector(string source, List<Comment> com
       this.Add(new Candidate(named ? ((Identifier)property.Key).Name : source[property.Key.Start..property.Key.End], property, function) {
         IsProperty = true,
         Owner = owner,
-        IsPublic = true,
+        // A function of an object a required file declares is a helper of that file, as a function it declares is.
+        IsPublic = property.Location.Start.Line >= this.EntryLine,
         Documentation = this.Documentation(property),
         Problem = problem
       });

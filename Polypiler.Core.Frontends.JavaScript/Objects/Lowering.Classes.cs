@@ -57,7 +57,7 @@ internal sealed partial class Lowering {
       case MemberExpression { Object: Super } read:
         var ancestor = this._model.Candidate.Class?.Base ?? throw this.Unsupported(read, "super outside a derived class");
         return Binder.KeyOf(read) is { } name && ancestor.Member(MemberKind.Getter, name) is { } getter
-          ? new IrMethodCall(types.ModelOf(getter).ReturnType, ClassModel.MethodOf(getter), new IrLocalRef(this._receiver!), [])
+          ? new IrMethodCall(types.ModelOf(getter).ReturnType, ClassModel.MethodOf(getter), new IrLocalRef(this._receiver!), []) { Kind = ClassModel.MethodOf(getter).IsVirtual ? IrMethodCallKind.Base : IrMethodCallKind.Direct }
           : throw this.Unsupported(read, $"{types.Text(read)}, which reads no getter of the base class");
       case ThisExpression:
         // Outside a method or a constructor this is no object of a class.
@@ -66,7 +66,7 @@ internal sealed partial class Lowering {
         // null takes the type of the place it goes to (see To) or of what it is compared with.
         return new IrNull(IrType.Void);
       case NewExpression creation when types.Names.ClassNamed(creation.Callee) is { } created:
-        return new IrNew(IrType.Object(created.Ir), created.Creator!, this.Arguments(creation, creation.Arguments, created.Constructor));
+        return new IrNew(IrType.Object(created.Ir), created.Creator!, this.Arguments(creation, creation.Arguments, created.Initial));
       case MemberExpression { Object: ThisExpression self } when this._receiver is null:
         throw this.Unsupported(self, "this");
       case CallExpression { Callee: CallExpression called }:
@@ -112,7 +112,7 @@ internal sealed partial class Lowering {
     if (arguments.Count > parameters.Count || parameters.Skip(arguments.Count).Any(parameter => parameter.Default is null))
       throw this.Unsupported(call, $"a call with {arguments.Count} arguments for {parameters.Count} parameters");
 
-    return [.. arguments.Select((argument, index) => this.Value(argument, parameters[index].Parameter?.Type ?? this.Storable(parameters[index].Entry, argument))),
+    return [.. arguments.Select((argument, index) => this.Argument(argument, parameters[index])),
       .. callee is null ? [] : this.Missing(call, types.ModelOf(callee), arguments.Count)];
   }
 
@@ -123,7 +123,7 @@ internal sealed partial class Lowering {
       return Read(new IrFieldLoad(this.Expression(member.Object), field.Ir!));
 
     if (owner.Member(MemberKind.Getter, key) is { } getter)
-      return new IrMethodCall(types.ModelOf(getter).ReturnType, ClassModel.MethodOf(getter), this.Expression(member.Object), []);
+      return this.Site(new IrMethodCall(types.ModelOf(getter).ReturnType, ClassModel.MethodOf(getter), this.Expression(member.Object), []) { Kind = Dispatch(ClassModel.MethodOf(getter)) }, member);
 
     throw this.Unsupported(member, owner.Member(MemberKind.Method, key) is not null
       ? "a method taken from its object"
@@ -151,13 +151,17 @@ internal sealed partial class Lowering {
       return false;
 
     var key = Binder.KeyOf(member) ?? throw this.Unsupported(member, "a computed member name");
+    if (owner.Frozen is not null)
+      throw this.Unsupported(assignment, $"a write into a member of the frozen object {owner.Name}");
+
     var field = owner.Field(key);
     var setter = owner.Member(MemberKind.Setter, key);
     if (field is null && setter is null)
       throw this.Unsupported(assignment, owner.HasInstanceMember(key) ? $"an assignment to the method or getter {key}" : "a property added outside the constructor");
 
     var target = this.Expression(member.Object);
-    var type = field?.Ir!.Type ?? types.ModelOf(setter!).Parameters[0].Parameter!.Type;
+    // A setter lowered after the function that calls it has no parameter in the IR yet: its type is the one it will have (#1377).
+    var type = field?.Ir!.Type ?? (types.ModelOf(setter!).Parameters[0] is var parameter && parameter.Parameter is { } lowered ? lowered.Type : this.Storable(parameter.Entry, assignment));
     IrExpr value;
     if (compound is { } combining) {
       target = this.Once(target, into);
@@ -168,7 +172,7 @@ internal sealed partial class Lowering {
       value = this.Value(assignment.Right, type);
     }
 
-    into.Add(field is not null ? new IrFieldStore(target, field.Ir!, value) : new IrExprStmt(new IrMethodCall(IrType.Void, ClassModel.MethodOf(setter!), target, [value])));
+    into.Add(field is not null ? new IrFieldStore(target, field.Ir!, value) : new IrExprStmt(this.Site(new IrMethodCall(IrType.Void, ClassModel.MethodOf(setter!), target, [value]) { Kind = Dispatch(ClassModel.MethodOf(setter!)) }, assignment)));
     return true;
   }
 
@@ -222,6 +226,10 @@ internal sealed partial class Lowering {
 
   /// <summary><c>===</c> and <c>!==</c> of references: identity; <c>null</c> takes the type of the other side.</summary>
   private IrExpr Identity(Operator op, Node left, Node right, Node whole) {
+    // A member of a frozen object is made anew where it is read: its identity is not kept (#1371).
+    if (new[] { left, right }.Select(node => types.Of(node)).FirstOrDefault(type => type.Class?.Frozen is not null) is { } frozen)
+      throw this.Unsupported(whole, $"a comparison of members of the frozen object {frozen.Class!.Name} by identity");
+
     var first = this.Expression(left);
     var second = this.Expression(right);
     // The inference compares a reference only with a reference or null, never null with null.

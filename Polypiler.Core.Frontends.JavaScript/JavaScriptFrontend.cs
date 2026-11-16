@@ -179,19 +179,19 @@ public static partial class JavaScriptFrontend {
   /// <returns>The module, or the diagnostics that explain why there is none.</returns>
   public static ImportResult Import(string path, string source, IReadOnlyCollection<string>? exports = null, System.Func<string, string?>? read = null) {
     if (read is null)
-      return Import(path, source, exports);
+      return Imported(path, source, exports, 0);
 
     var linked = Modules.ModuleGraph.Link(path, source, read, out var problems);
     if (problems.Count > 0)
       return Refused(problems);
     if (linked is null)
-      return Import(path, source, exports);
+      return Imported(path, source, exports, 0);
 
-    var result = Import(path, linked.Text, exports);
+    var result = Imported(path, linked.Text, exports, linked.Files[^1].FirstLine);
     return result with { Diagnostics = [.. result.Diagnostics.Select(linked.Locate)] };
   }
 
-  private static ImportResult Import(string path, string source, IReadOnlyCollection<string>? exports) {
+  private static ImportResult Imported(string path, string source, IReadOnlyCollection<string>? exports, int entryLine) {
     var comments = new List<Comment>();
     if (Parse(source, comments, out var failure) is not { } program)
       return Refused([SyntaxErrorDescriptor.At(failure!.Description, path, failure.LineNumber, failure.Column + 1)]);
@@ -200,8 +200,8 @@ public static partial class JavaScriptFrontend {
       exports = null;
 
     // A function the file does not export that its calls pass values of two kinds is imported once more with a copy per kind.
-    var result = Imported(path, source, program, comments, exports, [], out var copies);
-    return copies.Count == 0 ? result : Imported(path, source, program, comments, exports, copies, out _);
+    var result = Imported(path, source, program, comments, exports, entryLine, [], out var copies);
+    return copies.Count == 0 ? result : Imported(path, source, program, comments, exports, entryLine, copies, out _);
   }
 
   /// <summary>
@@ -210,11 +210,11 @@ public static partial class JavaScriptFrontend {
   /// does not export pass values of other kinds than its other calls - each kind then gets a copy,
   /// and the file has to be imported again.
   /// </summary>
-  private static ImportResult Imported(string path, string source, Program program, List<Comment> comments, IReadOnlyCollection<string>? exports,
+  private static ImportResult Imported(string path, string source, Program program, List<Comment> comments, IReadOnlyCollection<string>? exports, int entryLine,
       Dictionary<Node, (IFunction Function, int Copy)> copies, out Dictionary<Node, (IFunction Function, int Copy)> wanted) {
     wanted = [];
     var errors = new ErrorLibrary(program);
-    var collector = new FunctionCollector(source, comments) { Errors = errors };
+    var collector = new FunctionCollector(source, comments) { Errors = errors, EntryLine = entryLine };
     var candidates = collector.Collect(program);
     var redirects = Copies(candidates, copies);
     var constants = collector.Constants;
@@ -263,6 +263,8 @@ public static partial class JavaScriptFrontend {
         inference.Shapes.Prefer(variable.Type, variable.Name, elements);
 
     inference.Shapes.Seal();
+    // The signatures of the function values name the structs of their records, which exist from here on (#1377).
+    inference.Sign(models);
     Classes.Declare(classes, inference, diagnostics);
     var lowering = new Lowering(inference);
     // What the module does when it is loaded runs only where its functions have state it could change; otherwise it is not looked at.

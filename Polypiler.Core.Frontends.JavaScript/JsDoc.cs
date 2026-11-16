@@ -15,6 +15,13 @@ internal static class JsDoc {
 
   private static readonly Regex _parameter = new(@"@param\s*\{(?<type>(?:[^{}]|\{[^{}]*\})*)\}\s*(?<name>[^\s*]+)", RegexOptions.CultureInvariant);
   private static readonly Regex _result = new(@"@returns?\s*\{(?<type>[^{}]*)\}", RegexOptions.CultureInvariant);
+  private static readonly Regex _type = new(@"@type\s*\{(?<type>[^{}]*)\}", RegexOptions.CultureInvariant);
+
+  /// <summary>The spelling of the type a <c>@type</c> tag of the comment states, or <see langword="null"/>.</summary>
+  public static string? TypeSpelling(string? comment) => _type.Match(comment ?? "") is { Success: true } tag ? tag.Groups["type"].Value : null;
+
+  /// <summary>The type a spelling states, as a parameter's: <see langword="null"/> for one that is no type.</summary>
+  public static JsType? Stated(string spelling, System.Func<string, ClassModel?> classes) => Declared(spelling, classes);
 
   /// <summary>
   /// The type the comment states for a parameter: whether it states one at all, and the type, which
@@ -47,8 +54,9 @@ internal static class JsDoc {
     if (spelling.EndsWith("|null", System.StringComparison.Ordinal) && Declared(spelling[..^5], classes) is { } present)
       return JsType.Join(present, JsType.Null);
 
+    // T[] of numbers is an Array or a typed array, which the calls decide (#1374).
     if (spelling.EndsWith("[]", System.StringComparison.Ordinal) && !spelling[..^2].EndsWith("[]", System.StringComparison.Ordinal) && TypeOf(spelling) is { } array)
-      return JsType.Of(array);
+      return array.Element!.IsNumeric ? JsType.Of(array).AsStated() : JsType.Of(array);
 
     if (spelling.EndsWith("[]", System.StringComparison.Ordinal))
       return Declared(spelling[..^2], classes) is { } element && element.Kind is JsKind.Object or JsKind.Array ? JsType.ArrayOf(element, true) : null;

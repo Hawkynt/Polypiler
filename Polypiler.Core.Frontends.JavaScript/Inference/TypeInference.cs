@@ -127,6 +127,13 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// <param name="isPublic">Whether a function is visible outside the module.</param>
   /// <returns>The functions, the called ones after their callers.</returns>
   public List<FunctionModel> Solve(IEnumerable<Candidate> roots, System.Func<Candidate, bool> isPublic) {
+    // A field JSDoc states the type of holds values of it, whatever else reaches it: null alone is then that reference absent.
+    foreach (var field in this.Classes.Values.Distinct().SelectMany(owner => owner.Fields).Where(field => field.Stated is not null))
+      if (JsDoc.Stated(field.Stated!, key => this.Classes.GetValueOrDefault(key) is { IsLibrary: false } owner ? owner : null) is { } stated && stated.Ir is not null) {
+        field.Variable.Type = JsType.Join(field.Variable.Type, stated);
+        field.Variable.Reason ??= $"@type {{{field.Stated}}}";
+      }
+
     var models = new List<FunctionModel>();
     // A function an initializer calls is imported as well.
     var pending = new Queue<Candidate>(roots.Concat(this.Initializers.Callees));
@@ -159,8 +166,6 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         changed |= this.Unify();
       }
     } while (this.Promote([.. this.Flowing(models)]));
-
-    this.Sign(models);
 
     // Nothing in the file says what array a parameter is that no call passes one to; calls that pass arrays of two kinds say two.
     foreach (var model in models)
@@ -197,8 +202,19 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     }
 
     if (parameter.Declared is { } declared) {
-      parameter.Type = parameter.Entry = declared;
+      // A stated T[] that the function tests with Array.isArray is an Array, unless a call of the file passes another (#1374).
+      parameter.Type = parameter.Entry = declared is { IsStated: true } && parameter.TestedAsArray is not null ? declared.ShapedAs(JsType.ArrayOf(declared.Element!, true))! : declared;
       parameter.Reason = $"@param {{{JsType.Spell(declared.Ir!)}}}";
+      // An integer the function only coerces to 32 bits sees the low 32 bits of any integer. A 32-bit one takes the other
+      // 32-bit integer wrapped; a narrower one of a function only the file calls is widened to the 32 bits the coercion sees,
+      // while one called from outside keeps the contract it states.
+      if (declared is { IsInteger: true, IsAbsent: false, Enum: null } && declared.Ir is { IsInteger: true, IsLong: false } stated
+          && (parameter.Prologue is { Coercion: Coercion.Int32 or Coercion.Uint32 } || parameter.Prologue is null && parameter.Uses.Count > 0 && parameter.Uses.TrueForAll(use => use.Coercion is Coercion.Int32 or Coercion.Uint32))) {
+        parameter.IsCoercedOnly = true;
+        if (!external)
+          parameter.Type = parameter.Entry = stated.IsSigned ? JsType.I32 : JsType.U32;
+      }
+
       return;
     }
 
@@ -283,8 +299,35 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       default:
         var called = this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index);
         return (called is { Declared: null } parameter && this.Pass(parameter, flow.Missing ? JsType.UndefinedValue : this.Of(flow.Node), flow.Node))
+          | (called is { Declared.IsStated: true } stated && !flow.Missing && this.Shape(stated, this.Of(flow.Node), flow.Node))
           | (called is not null && !flow.Missing && this.Alias(model, flow.Node, called.Type));
     }
+  }
+
+  /// <summary>
+  /// Lets an argument decide which array a parameter JSDoc states as <c>T[]</c> is (#1374): an
+  /// <c>Array</c>, a list or a typed array of the stated elements, as the calls of the file pass it;
+  /// calls of two kinds make a conflict, which the lowering refuses. The elements stay the stated ones.
+  /// </summary>
+  private bool Shape(Variable parameter, JsType argument, Node node) {
+    if (parameter.Declared!.ShapedAs(argument) is not { } shaped)
+      return false;
+
+    // A list passed is the list the parameter is: where its elements fit the stated ones, it holds the stated elements.
+    var stated = parameter.Declared.Element!;
+    if (argument.IsGrowable && node is Identifier name && this._scope?.Bindings.GetValueOrDefault(name) is Variable { Type.IsGrowable: true } list
+        && JsType.Join(argument.Element!, stated) is var element && element.Ir == stated.Ir && element != argument.Element
+        && this.Reach(list, JsType.ListOf(element), node))
+      return true;
+
+    var entry = parameter.IsShaped ? JsType.Join(parameter.Entry, shaped) : shaped;
+    parameter.IsShaped = true;
+    if (entry == parameter.Entry)
+      return false;
+
+    parameter.Type = parameter.Entry = entry;
+    this._known.Clear();
+    return true;
   }
 
   /// <summary>

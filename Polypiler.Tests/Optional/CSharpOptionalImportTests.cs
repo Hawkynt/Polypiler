@@ -58,14 +58,23 @@ internal sealed class CSharpOptionalImportTests {
     return [.. result.Diagnostics.Select(diagnostic => diagnostic.Message)];
   }
 
+  /// <summary>A string is a reference of the IR that may be null (#1370): ?? and ?. of strings are what C# computes.</summary>
+  [TestCase(null, "x")]
+  [TestCase("a", "a")]
+  public void NullableString_CoalescesAsCSharpDoes(string? given, string expected) {
+    var result = CSharpFrontend.Import("R.cs", "#nullable enable\npublic static class R {\n public static string? F(string? s) => s ?? \"x\";\n public static string G(string[]? a) => a?[0] ?? \"none\";\n}\n");
+    Assert.That(result.Diagnostics, Is.Empty, string.Join("; ", result.Diagnostics));
+    Assert.That(IrInterpreter.Call(result.Module!, "F", [given!]), Is.EqualTo(expected));
+    Assert.That(IrInterpreter.Call(result.Module!, "G", [null!]), Is.EqualTo("none"));
+    Assert.That(IrInterpreter.Call(result.Module!, "G", [new[] { "first" }]), Is.EqualTo("first"));
+  }
+
   /// <summary>Test design 10: what stays outside the subset is refused with PLY1002, naming it.</summary>
   [TestCase("public static int F(int? o) => o is int i ? i : 0;", "is int i")]
   [TestCase("public static bool? F(bool? a, bool? b) => a & b;", "BitwiseAndExpression")]
-  [TestCase("public static string? F(string? s) => s ?? \"x\";", "?? on the type str")]
   [TestCase("public static int? F(int? a) { a++; return a; }", "a step of i32?")]
   [TestCase("public static int F(int[]? a) => a?.GetHashCode() ?? 0;", "null-conditional access")]
   [TestCase("public static int F(int? a) => a?.GetHashCode() ?? 0;", "?. on the type i32?")]
-  [TestCase("public static string F(string[]? a) => a?[0] ?? \"\";", "?. of the type str")]
   [TestCase("private static int? s; public static int F() => s ??= 1;", "??= of anything but a variable as a value")]
   public void OutOfSubset_IsRefused(string body, string named)
     => Assert.That(Refusals(body), Has.Some.Contains(named), string.Join("\n", Refusals(body)));

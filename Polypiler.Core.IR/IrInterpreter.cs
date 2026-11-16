@@ -250,7 +250,8 @@ public static partial class IrInterpreter {
     if (type.IsOptional)
       return AcceptedOptional(type, value);
 
-    if (type.IsArray && value is null)
+    // A string is a reference that may be null as an array is (#1370).
+    if ((type.IsArray || type.IsString) && value is null)
       return NullReference.Value;
 
     if (type.IsObject)
@@ -623,7 +624,11 @@ public static partial class IrInterpreter {
 
     private object? Intrinsic(IrIntrinsic intrinsic, Frame frame) {
       var arguments = intrinsic.Arguments.Select(argument => this.Evaluate(argument, frame)).ToArray();
-      // Only an array field of an object that holds no array yet is null here; an element of a new array of function values may be null.
+      // Equality of strings is null-safe, as string.Equals and === are: two nulls are equal, null and a string are not (#1370).
+      if (intrinsic.Op == IrIntrinsicOp.StrEquals && (arguments[0] is NullReference || arguments[1] is NullReference))
+        return arguments[0] is NullReference && arguments[1] is NullReference;
+
+      // A null array or string traps; an element of a new array of function values may be null.
       if (intrinsic.Op != IrIntrinsicOp.ArrayOf)
         Array.ForEach(arguments, argument => NotNull(argument));
       if (IsView(intrinsic))

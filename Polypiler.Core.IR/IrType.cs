@@ -56,7 +56,7 @@ public enum IrTypeKind {
   /// <summary>A view like <see cref="Span"/> whose elements are only read.</summary>
   ReadOnlySpan,
 
-  /// <summary>An immutable sequence of UTF-16 code units, never null; compared and searched by code unit.</summary>
+  /// <summary>An immutable sequence of UTF-16 code units, compared and searched by code unit; a reference that may be null (#1370).</summary>
   String,
 
   /// <summary>
@@ -208,7 +208,7 @@ public sealed record IrType {
   /// <summary>Whether the type is the arbitrary-precision integer.</summary>
   public bool IsBigInt => this.Kind == IrTypeKind.BigInt;
 
-  /// <summary>An immutable, non-null sequence of UTF-16 code units, written <c>str</c>.</summary>
+  /// <summary>An immutable sequence of UTF-16 code units, written <c>str</c>: a reference, which may be <c>null</c> (#1370).</summary>
   public static IrType String { get; } = new(IrTypeKind.String, null);
 
   /// <summary>The array type with the given element type.</summary>
@@ -374,8 +374,8 @@ public sealed record IrType {
   /// <summary>Whether the type is a list.</summary>
   public bool IsList => this.Kind == IrTypeKind.List;
 
-  /// <summary>Whether a value of the type is a reference that may be <c>null</c>: an object, an array or a function value.</summary>
-  public bool IsNullable => this.IsObject || this.IsArray || this.IsFunction;
+  /// <summary>Whether a value of the type is a reference that may be <c>null</c>: an object, an array, a string (#1370) or a function value.</summary>
+  public bool IsNullable => this.IsObject || this.IsArray || this.IsString || this.IsFunction;
 
   /// <summary>The type of the function values of a signature.</summary>
   /// <param name="signature">The parameters and the result.</param>

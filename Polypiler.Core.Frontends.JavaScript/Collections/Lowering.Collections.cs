@@ -62,6 +62,16 @@ internal sealed partial class Lowering {
 
         var op = method == "indexOf" ? IrCollectionOp.ListIndexOfStrict : IrCollectionOp.ListIncludesSameValueZero;
         return ListOp(op, list, this.Expression(member.Object), this.Value(call.Arguments[0], element));
+      case "slice" when call.Arguments.Count <= 2:
+        // ECMA-262 §23.1.3.28: both positions ToIntegerOrInfinity - a NaN 0, a fraction cut off, saturated - then clamped into the list, a negative one counted from its end.
+        IrExpr Position(int index, int missing) {
+          if (index >= call.Arguments.Count)
+            return I32(missing);
+
+          var position = this.Evaluate(call.Arguments[index]);
+          return position.Type.IsWord && position.Type.Within(IrType.I32) ? Convert(position.Expr, IrType.I32) : new IrConvert(IrType.I32, this.Float(position, call.Arguments[index]), IrConversion.Saturate);
+        }
+        return new IrCall(this.ListSlice(list), list, [this.Expression(member.Object), Position(0, 0), Position(1, int.MaxValue)]);
       default:
         throw this.Unsupported(call, method is "push" or "pop" or "splice" ? $"the value of {types.Text(call)}" : $"{types.Text(call.Callee)} of a list");
     }

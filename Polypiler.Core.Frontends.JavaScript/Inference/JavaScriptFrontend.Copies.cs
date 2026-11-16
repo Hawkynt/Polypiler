@@ -25,7 +25,8 @@ public static partial class JavaScriptFrontend {
     var wanted = new Dictionary<Node, (IFunction Function, int Copy)>();
     var initialized = inference.Initializers.Flows.Where(flow => flow.Kind == FlowKind.Argument).Select(flow => flow.Callee).ToHashSet();
     foreach (var model in models.Where(model => !model.IsPublic && model.Candidate is { Class: null, IsProperty: false, IsNested: false } && !initialized.Contains(model.Candidate)
-        && model.Parameters.Exists(parameter => parameter.Entry.Kind == JsKind.Conflict))) {
+        // A parameter JSDoc states keeps one type: calls that pass an Array and a typed array to its T[] are refused, not copied (#1374).
+        && model.Parameters.Exists(parameter => parameter.Entry.Kind == JsKind.Conflict && parameter.Declared is null))) {
       var calls = models
         .SelectMany(caller => caller.Flows.Where(flow => flow.Kind == FlowKind.Argument && flow.Callee == model.Candidate && flow.Source is CallExpression).Select(flow => (Caller: caller, Call: (CallExpression)flow.Source!)))
         .DistinctBy(entry => entry.Call)

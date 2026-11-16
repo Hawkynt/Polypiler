@@ -373,13 +373,13 @@
     },
     {
       "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.csharp.golden",
-      "sha256": "04d9f6c52e891b5df8e4b142ee979e179902847fcc5763143f1ee2b38749795e",
-      "bytes": 254494
+      "sha256": "699bc520e3f4b36019fc6c94f02927a4d32f98c2230b2a8c1ee0cab37726baa3",
+      "bytes": 253018
     },
     {
       "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.javascript.golden",
-      "sha256": "54724d10dae77332c7e62e019ee3be109bcd045877cf46d6b358bc5466313661",
-      "bytes": 104036
+      "sha256": "82ee0d0d30a9611996174740411d1969bef7eca9a195c241f81fc916783383c5",
+      "bytes": 116596
     },
     {
       "path": "tests/fixtures/backend/golden/dispatch/Animals.cs.csharp.golden",
@@ -893,13 +893,13 @@
     },
     {
       "path": "tests/fixtures/backend/golden/js/operators.mjs.csharp.golden",
-      "sha256": "f79bbeb3758f801568765c5f82433b880bb3f1f5be14e027d13176a1b70ab1ef",
-      "bytes": 225622
+      "sha256": "3b3e049a84a02c65a315c1719d153232867ae141ee9ec158627e1a8b5f4ca8fd",
+      "bytes": 224974
     },
     {
       "path": "tests/fixtures/backend/golden/js/operators.mjs.javascript.golden",
-      "sha256": "6450891562fe4896af5f55caffbd3449c3be731342816f68712d5bb3386f7302",
-      "bytes": 385616
+      "sha256": "6c6a58ce9cd6b0157ace2a5cb58d1eeadbe221fb41e303fa05b269eb05b25043",
+      "bytes": 393912
     },
     {
       "path": "tests/fixtures/backend/golden/js/rotate.mjs.csharp.golden",

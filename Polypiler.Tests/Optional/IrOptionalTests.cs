@@ -35,7 +35,8 @@ public sealed class IrOptionalTests {
     Assert.That(IrType.Optional(IrType.Array(IrType.I32)).IsStorable, Is.False);
     Assert.That(IrType.Optional(Int).IsStorable, Is.False);
     Assert.That(IrType.I32.Underlying, Is.Null);
-    Assert.That(IrType.Array(IrType.I32).IsNullable && !IrType.I32.IsNullable && !IrType.String.IsNullable, Is.True);
+    // A string is a reference that may be null, as an array is (#1370); it has no optional type.
+    Assert.That(IrType.Array(IrType.I32).IsNullable && !IrType.I32.IsNullable && IrType.String.IsNullable && !IrType.String.IsOptionalValue, Is.True);
   }
 
   /// <summary>Test design 2: optional values over every scalar type hold their value and none, and compare as the lifting written out says.</summary>

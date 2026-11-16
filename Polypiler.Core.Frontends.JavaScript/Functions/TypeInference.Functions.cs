@@ -74,7 +74,11 @@ internal sealed partial class TypeInference {
   /// Gives every shape the function type of its functions, once their types are final: the
   /// parameters as they are called, the result as it is returned - a shape a signature names first.
   /// </summary>
-  private void Sign(List<FunctionModel> models) {
+  /// <remarks>
+  /// A signature is an IR type, which a record among its parameters or its result makes a struct: it is
+  /// made once the shapes are named, after <see cref="Solve"/> (#1377).
+  /// </remarks>
+  public void Sign(List<FunctionModel> models) {
     var visiting = new HashSet<FunctionShape>(ReferenceEqualityComparer.Instance);
     foreach (var candidate in this.Valued().ToList())
       this.Sign(candidate.Shape.Root, visiting);

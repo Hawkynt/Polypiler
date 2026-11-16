@@ -77,6 +77,8 @@ internal sealed partial class TypeInference {
       "pop" => JsType.Join(element.Float == 32 ? JsType.F64 : element, JsType.UndefinedValue),
       "push" or "indexOf" => JsType.I32,
       "includes" => JsType.Boolean,
+      // A copy of a list is a new Array of its elements, which may grow as the list does (#1385).
+      "slice" when this.Of(member.Object).IsGrowable => JsType.ListOf(element),
       _ => null
     };
   }
