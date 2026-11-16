@@ -47,9 +47,7 @@ public static partial class RustEmitter {
       this._module = module;
       var moduleName = ModuleName(module.Name, this._profile);
       var package = this._options.PackageName ?? moduleName;
-      foreach (var type in module.Types.Where(type => type is not (IrStructType or IrEnumType or IrClassType or IrInterfaceType)))
-        this.Refuse($"declared types ({Kind(type)})");
-
+      // The verifier admits structs, enums, classes and interfaces only: each has its form below.
       this.NameItems(module);
       this.NameTypes(module);
       this.NameGlobals(module);
@@ -180,14 +178,6 @@ public static partial class RustEmitter {
         : IsOptionalValue(type) ? $"Option<{this.Type(type.Underlying!)}>"
         : type.IsLazySequence ? ((RsPath)this.Refuse(LazySequence)).Name
         : ((RsPath)this.Refuse($"the type {type}")).Name);
-
-    /// <summary>What kind of type a declaration is, as a refusal names it.</summary>
-    private static string Kind(IrTypeDeclaration type) => type switch {
-      IrClassType => "classes",
-      IrInterfaceType => "interfaces",
-      IrEnumType => "enums",
-      _ => type.GetType().Name
-    };
 
     /// <summary>A spelling function the crate carries once: an operation of the IR Rust has no method for.</summary>
     private void Spell(string name, Func<RsFunction> build) {
