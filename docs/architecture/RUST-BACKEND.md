@@ -320,3 +320,25 @@ exports through a generated driver (`RustDriverGenerator`) on input images - sca
 (`OverflowChecks`, `DebugAssertions`, `OptLevel`) that have no defaults. Diagnostics: `PLY1591` the
 compiler rejected the input, `PLY1592` the driver died, `PLY1595` a protocol error such as a signature
 that does not fit the declaration.
+
+## Cipher known-answer tests
+
+`polypiler-tooling cipher kat --targets rust` ([#1365](https://github.com/Hawkynt/Polypiler/issues/1365))
+translates a Cipher algorithm file with `--to rust` into `crate/`, writes a test crate beside it
+(`Cargo.toml` depending on the translation, `tests/kat.rs` with one `#[test]` per checkable vector)
+and runs `cargo test --offline`. Rust has no reflection, so `KatRustCrate` reads the translated files
+back with `RustSyntaxReader` and writes every call and every input as a literal of the type the
+translation declares, through the syntax tree and `RustPrinter`. A translation is reached through:
+
+| What the vector does | What the crate must have |
+| --- | --- |
+| look the algorithm up by name | a `pub fn algorithms()` without parameters giving `Vec<Rc<dyn Algorithm>>` (or `Vec<Rc<Struct>>`), each with an accessor `field_name` giving `&RefCell<Vec<u16>>`, `Vec<u16>` or `&[u16]` |
+| `CreateInstance(isInverse)` | a method `create_instance` of the algorithm's type or of a trait it has, giving `Rc<dyn Instance>`, also in an `Option` or a `Result` |
+| call a method, `Feed`, `Result` | a method of the instance's type or of a trait it has, named in `snake_case`, with as many parameters; `result` giving a vector, slice or array of numbers |
+| set a property | an accessor `field_<name>` giving `&Cell<T>` or `&RefCell<T>` |
+
+Where the crate lacks the registry or the name, the file counts as translated and nothing runs; where
+it lacks what one vector needs, that vector's test fails with the reason. A failing comparison names
+the first differing byte, a panic of the translation its message, a crate that does not compile the
+compiler's first error. Today every Cipher file is still refused before that (the registry is a
+global list of objects, `PLY1550`).

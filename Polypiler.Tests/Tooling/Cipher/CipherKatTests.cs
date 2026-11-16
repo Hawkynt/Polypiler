@@ -205,8 +205,8 @@ public sealed class CipherKatTests {
 
   [Test]
   public void TargetWithoutATestProject_IsTranslatedAndNotRun() {
-    var result = this.Harness(new FakeRunner(), ("a.js", Golden("a.js", Algorithm("A", Vector())))).Check("a.js", [KatTarget.Rust]).Targets[0];
-    Assert.That((result.Stage, result.Reason), Is.EqualTo((KatStage.Translated, "no test project for rust yet")));
+    var result = this.Harness(new FakeRunner(), ("a.js", Golden("a.js", Algorithm("A", Vector())))).Check("a.js", [new KatTarget("python", "python", null)]).Targets[0];
+    Assert.That((result.Stage, result.Reason), Is.EqualTo((KatStage.Translated, "no test project for python yet")));
   }
 
   /// <summary>Test design 3 and 4: one vector passes, an altered one fails with its first differing byte, one that never ran fails too.</summary>
@@ -395,7 +395,7 @@ public sealed class CipherKatTests {
     var runner = new FakeRunner { Translate = argv => argv.Any(argument => argument.EndsWith("b.js", StringComparison.Ordinal)) ? new(4, "", "b.js(1,1): error PLY1102: no\n", false) : new(0, "", "", false), Trx = _ => Trx(("A #1", "Passed", "")) };
     var (exitCode, output, error) = this.Run(runner, "kat", "--all", "--require", "csharp", "--jobs", "2");
     Assert.That(exitCode, Is.EqualTo(Program.Failure));
-    Assert.That(output, Does.Contain("checksum/a.js: 1 / 1 KATs checkable; csharp 1 / 1 pass; rust translated; no test project for rust yet").And.Contain("hash/b.js: 1 / 1 KATs checkable; csharp refused: PLY1102: no"));
+    Assert.That(output, Does.Contain("checksum/a.js: 1 / 1 KATs checkable; csharp 1 / 1 pass; rust translated; the tests cannot reach the translation: ").And.Contain("hash/b.js: 1 / 1 KATs checkable; csharp refused: PLY1102: no"));
     Assert.That(error.Trim(), Is.EqualTo($"{Program.Name}: hash/b.js does not pass every checked KAT on csharp"));
     Assert.That(runner.Calls[0].Take(2), Is.EqualTo(new[] { "dotnet", Path.Combine(this._root, "Polypiler.Cli", "bin", "Release", "net10.0", "polypiler.dll") }));
   }

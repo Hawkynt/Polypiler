@@ -80,7 +80,7 @@ public sealed record KatTarget(string Name, string Language, string? Profile) {
 /// <param name="corpus">The Cipher folder of the pinned corpus.</param>
 /// <param name="goldens">The folder of the golden files.</param>
 /// <param name="work">The folder the translations and the test projects go to.</param>
-public sealed class KatHarness(IProcessRunner runner, IReadOnlyList<string> polypiler, string corpus, string goldens, string work) {
+public sealed partial class KatHarness(IProcessRunner runner, IReadOnlyList<string> polypiler, string corpus, string goldens, string work) {
 
   /// <summary>How long one translation may take.</summary>
   public static readonly TimeSpan TranslateTimeout = TimeSpan.FromMinutes(5);
@@ -109,7 +109,7 @@ public sealed class KatHarness(IProcessRunner runner, IReadOnlyList<string> poly
     var folder = Path.Combine(work, Path.ChangeExtension(relative, null).Replace('/', Path.DirectorySeparatorChar), target.Name);
     if (Directory.Exists(folder))
       Directory.Delete(folder, true);
-    var sources = Path.Combine(folder, "src");
+    var sources = Path.Combine(folder, target.Language == "rust" ? KatRustCrate.Translation : "src");
     var argv = new List<string>(polypiler) {
       "translate", Path.Combine(corpus, "algorithms", relative.Replace('/', Path.DirectorySeparatorChar)),
       "--from", "javascript", "--to", target.Language, "--output", sources
@@ -126,6 +126,7 @@ public sealed class KatHarness(IProcessRunner runner, IReadOnlyList<string> poly
 
     return target.Language switch {
       "csharp" => this.RunCSharp(folder, target, checkable),
+      "rust" => this.RunRust(folder, target, checkable),
       _ => new(target.Name, KatStage.Translated, $"no test project for {target.Name} yet", 0, [])
     };
   }
