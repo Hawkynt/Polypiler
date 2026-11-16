@@ -158,6 +158,7 @@ internal sealed partial class FunctionCollector(string source, List<Comment> com
 
   public List<Candidate> Collect(Program program) {
     this.Escapes(program, null, null);
+    this.ReadInFunctions(program, null, false);
     // A file that exports nothing is a script, whose declarations are all visible to whoever loads it.
     var isScript = !program.Body.Any(statement => statement is ExportNamedDeclaration or ExportDefaultDeclaration or ExportAllDeclaration);
     var constructors = ConstructorFunctions(program);
@@ -291,7 +292,7 @@ internal sealed partial class FunctionCollector(string source, List<Comment> com
         continue;
 
       var constant = declaration.Kind == VariableDeclarationKind.Const;
-      if (constant && !IsArray(declarator.Init))
+      if (constant && !IsArray(declarator.Init) && !this.IsComputed(name, declarator))
         continue;
 
       this._globals.Add(new Variable(name, id, false) {
@@ -303,6 +304,34 @@ internal sealed partial class FunctionCollector(string source, List<Comment> com
       });
     }
   }
+
+  /// <summary>The names a function of the file reads, which a top-level <c>const</c> of them has to be state of the module for.</summary>
+  private readonly HashSet<string> _readInFunctions = [];
+
+  /// <summary>Notes every name read inside a function: not a key of a member or of a property, which names no variable.</summary>
+  private void ReadInFunctions(Node node, Node? parent, bool inside) {
+    if (inside && node is Identifier { Name: var name }
+        && !(parent is MemberExpression { Computed: false } member && member.Property == node)
+        && !(parent is Property { Computed: false } property && property.Key == node && !property.Shorthand))
+      this._readInFunctions.Add(name);
+
+    foreach (var child in node.ChildNodes)
+      this.ReadInFunctions(child, node, inside || node is IFunction);
+  }
+
+  /// <summary>
+  /// Whether a top-level <c>const</c> is a value the module computes when it is loaded (#1410): a call,
+  /// an operation, a template or a key of another value - no literal or table, which are constants, no
+  /// enum object, object, function, class or <c>require</c> - that a function of the file reads. It is then
+  /// a read-only variable of the module, which its initializer gives its value once, in source order; one
+  /// that only the top level reads stays a local of the module's initializer.
+  /// </summary>
+  private bool IsComputed(string name, VariableDeclarator declarator)
+    => declarator.Init is CallExpression or BinaryExpression or LogicalExpression or ConditionalExpression or MemberExpression or TemplateLiteral or UnaryExpression
+      && declarator.Init is not CallExpression { Callee: Identifier { Name: "require" } }
+      && ConstantOf(name, declarator.Init) is null
+      && EnumObject.Of(name, declarator, declarator.Init, false) is null
+      && this._readInFunctions.Contains(name);
 
   /// <summary>Whether an initializer is an array: a list, or a new typed array.</summary>
   private static bool IsArray(Node? value)

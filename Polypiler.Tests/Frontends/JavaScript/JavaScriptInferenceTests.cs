@@ -351,8 +351,7 @@ public sealed class JavaScriptInferenceTests {
     Assert.That((IrInterpreter.Call(wrapped, "f", [4]), IrInterpreter.Call(wrapped, "g", [0.5])), Is.EqualTo((7.0, 0.5)));
   }
 
-  /// <summary>What is no number and no table of numbers is no constant: its name is unknown to the functions.</summary>
-  [TestCase("const C = 1 + 1;")]
+  /// <summary>What is no number and no table of numbers is no constant: its name is unknown to the functions; an operation is a computed variable of the module (#1410).</summary>
   [TestCase("const C = null;")]
   [TestCase("const C = new Map([1]);")]
   [TestCase("const C = 36893488147419103232n;")]
