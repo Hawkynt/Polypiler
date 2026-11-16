@@ -659,6 +659,8 @@ public static partial class IrInterpreter {
             return ArrayOf(intrinsic.Type.Element!, [.. EnumOperations.Values(EnumOperations.Of(intrinsic)).Select(value => (object)value)]);
           if (EnumOperations.IsEnum(intrinsic.Op))
             return EnumOperations.Evaluate(intrinsic, arguments);
+          if (RegexOperations.IsRegex(intrinsic.Op))
+            return RegexOperations.Evaluate(arguments);
           if (IntegerOperations.Evaluates(intrinsic))
             return IntegerOperations.Evaluate(intrinsic, arguments);
           if (FloatOperationTable.TryEvaluate(intrinsic.Op, arguments, out var computed))

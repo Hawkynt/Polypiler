@@ -90,8 +90,9 @@ internal sealed class GeneratedCSharp {
     var compilation = CSharpCompilation.Create(
       "Generated" + Guid.NewGuid().ToString("N"),
       [tree],
-      // The base library, and the arbitrary-precision integer with the facade its signatures name.
+      // The base library, the arbitrary-precision integer with the facade its signatures name, and the regular expressions (#1399).
       [MetadataReference.CreateFromFile(typeof(object).Assembly.Location), MetadataReference.CreateFromFile(typeof(System.Numerics.BigInteger).Assembly.Location),
+        MetadataReference.CreateFromFile(typeof(System.Text.RegularExpressions.Regex).Assembly.Location),
         MetadataReference.CreateFromFile(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(typeof(object).Assembly.Location)!, "System.Runtime.dll")), .. libraries ?? []],
       new CSharpCompilationOptions(
         OutputKind.DynamicallyLinkedLibrary,

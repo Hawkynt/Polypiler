@@ -231,7 +231,9 @@ public sealed class JavaScriptCapabilities {
     new("Promise.all", 2015),
     new(".then", 2015),
     new("async function", 2017, "$async"),
-    new("Promise.allSettled", 2020, "Promise.all")
+    new("Promise.allSettled", 2020, "Promise.all"),
+    // The test of a regular-expression literal (#1399), which ECMAScript 5 has with every construct of the subset.
+    new(".test", 5)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

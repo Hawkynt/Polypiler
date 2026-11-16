@@ -463,6 +463,8 @@ public static partial class IrVerifier {
             this.Require(false, unformatted);
           if (EnumOperations.Problem(intrinsic) is { } unnamed)
             this.Require(false, unnamed);
+          if (RegexOperations.Problem(intrinsic) is { } unmatched)
+            this.Require(false, unmatched);
 
           this.Declared(intrinsic.Type);
 
