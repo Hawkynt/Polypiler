@@ -688,6 +688,7 @@ public static partial class CSharpEmitter {
       var taken = this._members.Values.Select(member => member.TrimStart('@')).Append(this.ClassName).ToList();
       this._helpers = Names(helpers.Select(helper => helper.Name), taken);
       this._taken = [.. taken, .. this._helpers.Values];
+      this.NameRegexes(module);
       // The nested classes of the collections give way to every name of the module and its helpers.
       this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName, CSharpCollectionClasses.AssertionExceptionName, CSharpCollectionClasses.UninitializedName],
         [.. this._taken, .. this._typeNames.Values]);
@@ -769,6 +770,8 @@ public static partial class CSharpEmitter {
 
       foreach (var global in this._module.Globals.Where(global => !this.IsOwned(global)))
         members.Add(this.Global(global));
+
+      members.AddRange(this.RegexFields());
 
       // The classes are written first: the names of their variables are settled before those of the static class.
       var classes = this.Classes();
@@ -1406,6 +1409,9 @@ public static partial class CSharpEmitter {
 
       if (intrinsic.Op == IrIntrinsicOp.ArrayOf)
         return (new CsArrayCreation(new CsType(this.TypeName(intrinsic.Type.Element!)), null, new CsArrayInitializer([.. intrinsic.Arguments.Select(this.Stored)])), Unary);
+
+      if (RegexOperations.IsRegex(intrinsic.Op))
+        return this.RegexTest(intrinsic);
 
       if (this.Rewritten(intrinsic) is { } rewritten)
         return this.Expression(rewritten);

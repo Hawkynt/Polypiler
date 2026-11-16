@@ -1,0 +1,30 @@
+id: INTRINSICS.RegexTest
+title: Whether a regular expression matches a string
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1399"
+tests: [Polypiler.Tests/String/RegularExpressionTestTests.cs]
+introducedIn: P2
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: RegexTest
+  group: String
+  typeParameters: []
+  parameters: [{name: subject, type: TYPES.str}, {name: pattern, type: TYPES.str}, {name: flags, type: TYPES.str}]
+  returns: [{name: result, type: TYPES.bool}]
+  legality:
+    - {id: pattern-constant, text: "pattern and flags are string constants within the subset of RegexOperations: no flag but i, no backreference, lookaround, named group, word boundary or property escape", fact: none}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "RegExp.prototype.test of a regular expression without the flags g and y: whether the pattern matches at any position of the subject, by UTF-16 code unit"
+    source: "ECMA-262 2022 §22.2 (RegExp objects), §22.2.5.13 (RegExp.prototype.test), §22.2.2.7.3 (Canonicalize without u)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {}, inputs: [[48, 97, 70, 57], [94, 91, 48, 45, 57, 65, 45, 70, 97, 45, 102, 93, 42, 36], []], outputs: [1]}
+    - {types: {}, inputs: [[], [94, 91, 48, 45, 57, 65, 45, 70, 97, 45, 102, 93, 42, 36], []], outputs: [1]}
+    - {types: {}, inputs: [[97, 98, 10], [94, 91, 48, 45, 57, 65, 45, 70, 97, 45, 102, 93, 42, 36], []], outputs: [0]}
+    - {types: {}, inputs: [[48, 49], [91, 65, 45, 90, 97, 45, 122, 93], []], outputs: [0]}
