@@ -292,6 +292,16 @@
       "bytes": 49124
     },
     {
+      "path": "tests/fixtures/backend/golden/classes/Rc4.cs.csharp.golden",
+      "sha256": "165ab65fd9777f2fe6b24ef1436c5d76183488135f62f50e7db579ef8081f029",
+      "bytes": 58314
+    },
+    {
+      "path": "tests/fixtures/backend/golden/classes/Rc4.cs.javascript.golden",
+      "sha256": "75a38de2e0272b697a68b1635efbc51ada1a5d3414a9bd30325181fa2c941400",
+      "bytes": 106710
+    },
+    {
       "path": "tests/fixtures/backend/golden/classes/accumulator.js.csharp.golden",
       "sha256": "264b4804fb99a4fe72910f14b5f525890cb0f90e824d4337c306679ff6503ae8",
       "bytes": 37150
@@ -353,8 +363,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/collections/collections.js.csharp.golden",
-      "sha256": "b4c4908c6ce214532ea4081430bcd14cf546e4564492909b22f14347b6f43fb8",
-      "bytes": 474446
+      "sha256": "99dffde4accbf753c33c2fc4bb2c29d19cf1f97e96bf689cca59002a79b086cd",
+      "bytes": 475850
     },
     {
       "path": "tests/fixtures/backend/golden/collections/collections.js.javascript.golden",
@@ -363,8 +373,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.csharp.golden",
-      "sha256": "699bc520e3f4b36019fc6c94f02927a4d32f98c2230b2a8c1ee0cab37726baa3",
-      "bytes": 253018
+      "sha256": "44b1f4ae5924ad71132023794ddd683d1b4ddb53af92b73992f78e81281a93ba",
+      "bytes": 253594
     },
     {
       "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.javascript.golden",
@@ -6960,6 +6970,161 @@
       "path": "tests/fixtures/prototype/python/recorded/types.txt",
       "sha256": "9b8b1751ba6561fe36a486d0246f1abdb45816959f535ab6ea792562ca063d3e",
       "bytes": 2579
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/closures.panic.txt",
+      "sha256": "59d880e7ba4270b55c54941e15c4fb662ab645ec8524f96cd5f8f16d46aa9bcd",
+      "bytes": 1963
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/closures.wrap.txt",
+      "sha256": "89b47bd2bc655dd1295b9c336e1e7ed4ba1f49ad9d3b342fd46f873e31679e98",
+      "bytes": 1890
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/collect.panic.txt",
+      "sha256": "43766ff28a561a13d1af7dab1106a4d28652b74c97bbb993ecadf525aeca3259",
+      "bytes": 664
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/collect.wrap.txt",
+      "sha256": "e39e31fc1cce1ba9ee1375c75aae81455d93c1b998f7cadfb174a6160be0d47d",
+      "bytes": 623
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/collections.panic.txt",
+      "sha256": "c88e88fba0577c138b7c68c505254ef2e4c6c558b64089295800aa4bf5bf1a3f",
+      "bytes": 682
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/collections.wrap.txt",
+      "sha256": "4da024d36605b87b63e734d22db17cd32c8be423f9df7241b67dbb6af80f34a2",
+      "bytes": 668
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/control.panic.txt",
+      "sha256": "149784801982af7ed24a089609da5953310e0ac45fbb371dde0fa0b85e0b5432",
+      "bytes": 144241
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/control.wrap.txt",
+      "sha256": "bf0c3c0712f0b8e8d4c29701ca1e6f43d4636c366ca43c91e8fea75dda0ffcc8",
+      "bytes": 144194
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/edges.panic.txt",
+      "sha256": "8e6cd92e25b9851b776e0e2ce802e463e52cfae0019a667db411a91375bd0e70",
+      "bytes": 1625
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/edges.wrap.txt",
+      "sha256": "a4fb62b84ef14cee7f8dd2dff5051799b61a17fbad3d557d1255b834491489fd",
+      "bytes": 1569
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/functions.panic.txt",
+      "sha256": "55762fa4d0d85d6365d6c266e86dbcd42cd0df31de433f0238b0e381db34e9d3",
+      "bytes": 1161
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/functions.wrap.txt",
+      "sha256": "c65d8c5651147d2e6f54e23ce79eddb2b2b8e542da035ed99f6783d5b382c934",
+      "bytes": 1138
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/generics.panic.txt",
+      "sha256": "e249ddd95f028165330e9c2e1676e4dcdec36d65ed2812ad6db80a22cad1324d",
+      "bytes": 1370
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/generics.wrap.txt",
+      "sha256": "177fef49d6a37a73b75ac0e48902dc16daee09007c1915ae1faa98d483ca9b49",
+      "bytes": 1261
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/golden.provenance.json",
+      "sha256": "283ebdab97bfaf6cc390369699f2eff24b7201c18307e2cc88a41885bbf0f5cf",
+      "bytes": 415
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/memory.panic.txt",
+      "sha256": "2920c684886e448bde4b5d917364739e063ccd2e346bd217e943f7830eefc0bf",
+      "bytes": 12467
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/memory.wrap.txt",
+      "sha256": "4815ed19505e9f8a16646419f71235be331f29122b3c517f55659293b3960644",
+      "bytes": 12437
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/objects.panic.txt",
+      "sha256": "8972ee3492ae02c81c2e2f06ee4d181e07fde741c9ab24ec100d6f180979aa66",
+      "bytes": 1125
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/objects.wrap.txt",
+      "sha256": "3ef5184b68e5a0fc97e78fcd6c50990de771de1ca4029311621a5bb0289395e4",
+      "bytes": 1004
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/outputs.panic.txt",
+      "sha256": "c7c34ca0002d56f84f26d6c259f5953d5cc42e495e697802a1ce37e2f97d35e7",
+      "bytes": 427
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/outputs.wrap.txt",
+      "sha256": "1e71d7c360a9cc8920bc7e23e107c29e437ced7f0b17d320eacf9496ce339651",
+      "bytes": 392
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/reassign.panic.txt",
+      "sha256": "6db247667fe3b7267ff40e43ebc33023ec1a86636a16016f5e1620930adf3939",
+      "bytes": 783
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/reassign.wrap.txt",
+      "sha256": "dacc9eb005ada5ee79491feeea093a8383dc575ec060751b14f1d459342694da",
+      "bytes": 711
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/scalars.panic.txt",
+      "sha256": "103cf28817e576a1394bcb708587e876bcd0ddb2395afd8e9233038d2183a007",
+      "bytes": 2497185
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/scalars.wrap.txt",
+      "sha256": "496f29054d5894898fe4b85fca592b8d50a1843a4bbcedcacd046fdb66acd548",
+      "bytes": 2478752
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/strings.panic.txt",
+      "sha256": "2ec7dd430bcd7a2124d9484daae6568357788ed12cbf1675021f939a62f640d1",
+      "bytes": 4125
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/strings.wrap.txt",
+      "sha256": "3aa277f15920ecdf4a3fa140614fd71871dd1aa0c47e77e8454a8dc18448d609",
+      "bytes": 4111
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/traits.panic.txt",
+      "sha256": "2874065d10dc65b8518f218110a7091e8b0aa9ce5e0b751185b0f916cf464044",
+      "bytes": 1442
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/traits.wrap.txt",
+      "sha256": "4b9b3cbe066dfd92ae0a44c5dadd7267911637ca3b8a4860d1d46c6a89fa8ba9",
+      "bytes": 1328
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/types.panic.txt",
+      "sha256": "e6e668dbada15054710a200b811f6ac7a6eafbdb467e1348633fbe5492143d73",
+      "bytes": 1749
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/types.wrap.txt",
+      "sha256": "59e2d1a9a9b9311ebcbdc7533f9a8d2e52ab811a9b853fb3159db8f6640b9da6",
+      "bytes": 1746
     },
     {
       "path": "tests/fixtures/verify/adler32.vectors.json",

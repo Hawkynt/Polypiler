@@ -1,0 +1,2 @@
+# The rustc recordings are golden files: the golden lock hashes their bytes, which must be the same on every platform.
+recorded/** -text

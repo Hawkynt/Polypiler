@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -8,13 +9,17 @@ using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Backends.Python;
+using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.Frontends.Python;
+using Polypiler.Core.Frontends.Rust;
+using Polypiler.Core.Frontends.Rust.Cargo;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
 using Polypiler.Core.Backends.Python.Passes;
+using Polypiler.Core.Backends.Rust.Passes;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Optimize.Passes;
 using Polypiler.Core.Optimize.Specialize;
@@ -26,12 +31,13 @@ namespace Polypiler.Cli;
 
 /// <summary>
 /// The <c>translate</c> command of the prototype:
-/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript|python&gt; --to &lt;javascript|csharp|python&gt; --output &lt;directory&gt;</c>.
+/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript|python|rust&gt; --to &lt;javascript|csharp|python|rust&gt; --output &lt;directory&gt;</c>.
 /// A target language may take a profile. <c>--profile</c> is one option that every target reads its
 /// own way: for C# it names the target framework, and <c>--langversion</c> raises the version of the
 /// language above the one the profile brings; for JavaScript it names the language level, and
 /// <c>--module</c>, <c>--global</c> and <c>--typed-arrays</c> say how the file is packaged and what
-/// an ECMAScript 5 engine has. The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
+/// an ECMAScript 5 engine has; for Rust it names the edition, and <c>--rust-version</c> raises the
+/// minimum supported Rust version above the one the edition brings. The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
 /// <c>--explain-opt</c> (ADR 0004) apply to every pair: the optimizer runs between the frontend and
 /// the backend, and the target passes between the backend's syntax tree and its printer (#1336),
 /// unless <c>--opt none</c> says otherwise; the rules of the one and the passes of the other share
@@ -74,6 +80,13 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string ExplainOpt = "--explain-opt";
   private const string Instantiate = "--instantiate";
   private const string Bind = "--bind";
+  private const string RustVersion = "--rust-version";
+  private const string OverflowChecksOption = "--overflow-checks";
+  private const string CargoProfileOption = "--cargo-profile";
+  private const string DebugAssertionsOption = "--debug-assertions";
+
+  /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
+  public const string RustOverflowCaveat = "rs-overflow-checks";
 
   private static readonly string[] _required = [From, To, Output];
 
@@ -90,14 +103,18 @@ public sealed partial class TranslateCommand : ICliCommand {
     [ExplainOpt] = "write every optimization applied to standard error",
     [Export] = "JavaScript: the functions to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
     [Float] = "the floating-point mode",
     [Namespace] = "C#: the namespace of the generated code",
     [Instantiate] = "C#: an instantiation of a public generic method that the class itself does not use",
+    [OverflowChecksOption] = "Rust: what an overflowing operator does, as rustc -C overflow-checks: panic (debug) or wrap (release); by default what the Cargo profile gives",
+    [CargoProfileOption] = "Rust: the Cargo profile whose overflow-checks apply when --overflow-checks is not given (default: dev)",
+    [DebugAssertionsOption] = "Rust: whether debug_assert! asserts, as rustc -C debug-assertions: on (debug) or off (release); a source with one needs it",
     [LangVersion] = "C#: the language version, above the one of the profile",
+    [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition",
     [Bind] = "JavaScript: the binding module or global object of a native library, repeatable"
   };
 
@@ -122,14 +139,16 @@ public sealed partial class TranslateCommand : ICliCommand {
   private static readonly Frontend[] _frontends = [
     new("csharp", [new(Instantiate, "<method[type,...]>")], InstantiateMisuse, ImportCSharp),
     new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript),
-    new("python", [], _ => null, ImportPython)
+    new("python", [], _ => null, ImportPython),
+    new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>"), new(DebugAssertionsOption, "<on|off>")], OverflowChecksMisuse, ImportRust)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
   private static readonly Backend[] _backends = [
     JavaScript(JavaScriptCapabilities.Standard, Implementations),
     CSharp(CSharpCapabilities.Default, Implementations),
-    Python(PythonCapabilities.Standard, Implementations)
+    Python(PythonCapabilities.Standard, Implementations),
+    Rust(RustCapabilities.Default, Implementations)
   ];
 
   /// <summary>
@@ -180,7 +199,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -192,7 +211,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -262,7 +281,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// of their numbers.
   /// </summary>
   private static readonly string[] _optimizations = [
-    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Append(PyIntSpecialization.Id).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(PythonTargetPasses.Pipeline.Ids)
+    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Append(PyIntSpecialization.Id).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(PythonTargetPasses.Pipeline.Ids).Concat(RustTargetPasses.Pipeline.Ids)
       .Distinct().Order(StringComparer.Ordinal)
   ];
 
@@ -389,6 +408,8 @@ public sealed partial class TranslateCommand : ICliCommand {
       foreach (var generated in emission.Files) {
         helpers.AddRange(generated.Helpers);
         var bytes = _utf8.GetBytes(generated.Content);
+        // A crate's sources lie in a folder of the output (src/lib.rs).
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(full, generated.Path))!);
         File.WriteAllBytes(Path.Combine(full, generated.Path), bytes);
         outputs.Add(new(ManifestWriter.PortablePath(generated.Path), ManifestWriter.Sha256(bytes), ManifestOutputRole.Source));
         context.Output.WriteLine(Path.Combine(directory, generated.Path));
@@ -472,6 +493,49 @@ public sealed partial class TranslateCommand : ICliCommand {
   private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;
 
   private static string[] Names(string list) => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+  /// <summary>
+  /// Imports Rust with the overflow mode of <c>--overflow-checks</c>, else with the one Cargo builds
+  /// the source with: the <c>overflow-checks</c> of the profile <c>--cargo-profile</c> names
+  /// (<c>dev</c> by default) in the <c>Cargo.toml</c> that applies, the profile's default without
+  /// one. A profile the manifest does not define, or a manifest that is no TOML, is <c>PLY1503</c>.
+  /// The mode and its origin are a note and a caveat of the manifest.
+  /// </summary>
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportRust(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    OverflowModeChoice choice;
+    if (options.TryGetValue(OverflowChecksOption, out var value))
+      choice = new(value == "panic" ? OverflowChecks.Panic : OverflowChecks.Wrap, OverflowChecksOption);
+    else
+      try {
+        choice = CargoOverflowMode.ForSource(context.Resolve(file), options.GetValueOrDefault(CargoProfileOption, CargoOverflowMode.DefaultProfile));
+      } catch (CargoProfileException unreadable) {
+        context.Report(RustFrontend.UnreadableOverflowModeDescriptor.At(string.Format(CultureInfo.InvariantCulture, RustFrontend.UnreadableOverflowModeDescriptor.MessageFormat, unreadable.Message), file, 1, 1));
+        return (null, (int)ExitCode.UsageError, []);
+      }
+
+    var description = choice.Mode == OverflowChecks.Panic
+      ? $"overflow checks on, an overflowing operator panics ({choice.Origin})"
+      : $"overflow checks off, an overflowing operator wraps ({choice.Origin})";
+    context.Note($"{file}: note {RustOverflowCaveat}: {description}");
+    // A file module is read from beside the file that declares it.
+    var imported = RustFrontend.Import(file, source, new RustImportOptions(choice.Mode) {
+      DebugAssertions = options.TryGetValue(DebugAssertionsOption, out var debug) ? debug == "on" : null,
+      ReadFile = path => File.Exists(context.Resolve(path)) ? File.ReadAllText(context.Resolve(path)) : null
+    });
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, [new ManifestMessage(RustOverflowCaveat, description)]);
+  }
+
+  /// <summary>What is wrong with <c>--overflow-checks</c>: a value other than <c>panic</c> or <c>wrap</c>.</summary>
+  private static string? OverflowChecksMisuse(IReadOnlyDictionary<string, string> options)
+    => options.TryGetValue(OverflowChecksOption, out var mode) && mode is not ("panic" or "wrap")
+      ? $"unknown overflow mode '{mode}'; the modes are panic and wrap"
+      : options.TryGetValue(DebugAssertionsOption, out var debug) && debug is not ("on" or "off")
+      ? $"unknown debug-assertions setting '{debug}'; the settings are on and off"
+      : null;
 
   /// <summary>
   /// The instantiations of <c>--instantiate</c>, whose values the command line gives joined by commas:
@@ -562,6 +626,23 @@ public sealed partial class TranslateCommand : ICliCommand {
     return (profile, error);
   }
 
+  /// <summary>The Rust backend with a capability table; <c>--profile</c> names the edition, <c>--rust-version</c> the MSRV.</summary>
+  private static Backend Rust(RustCapabilities capabilities, Func<IrModule> implementations) => new("rust",
+    "rust",
+    options => RustProfileOf(options).Profile!.ToString(),
+    new RuleTarget(false),
+    [new(Profile, "<name>"), new(RustVersion, "<version>"), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? RustProfileOf(options).Error,
+    (module, options) => RustEmitter.Legalize(module, implementations, RustProfileOf(options).Profile!, capabilities),
+    (module, options) => RustEmitter.Check(module, RustProfileOf(options).Profile!, capabilities),
+    (module, options, passes) => RustEmitter.Emit(module, RustProfileOf(options).Profile!, capabilities, passes, new RustEmitOptions { Mode = FloatModeOf(options) }));
+
+  /// <summary>The Rust profile the options of a command line name, or what is wrong with them.</summary>
+  private static (RustProfile? Profile, string? Error) RustProfileOf(IReadOnlyDictionary<string, string> options) {
+    RustProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(RustVersion), out var profile, out var error);
+    return (profile, error);
+  }
+
   /// <summary>The values <c>--float</c> takes.</summary>
   private static string FloatChoice => Choice(["strict", "accurate"]);
 
@@ -595,6 +676,7 @@ public sealed partial class TranslateCommand : ICliCommand {
 
   private static string Choice(IEnumerable<string> names) => $"<{string.Join('|', names)}>";
 
+  /// <summary>Names in quotes, the last joined by "and", the others by commas: 'a', 'b' and 'c'.</summary>
   private static string Listed(IEnumerable<string> names) {
     var quoted = names.Select(name => $"'{name}'").ToList();
     return quoted.Count < 2 ? string.Concat(quoted) : $"{string.Join(", ", quoted[..^1])} and {quoted[^1]}";

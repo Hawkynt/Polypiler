@@ -216,6 +216,8 @@ The interpreter tests the clauses in a .NET exception filter, which gives the CL
 - **Python:** see [Python](#python) under Traps: the exceptions of the frontend and of the backend are
   one table each there.
 
+- **Rust:** see [Rust](#rust), which covers both directions.
+
 ## Forms per profile
 
 | Construct | C# below 6 (`net2.0`, `net3.5`) | C# 6 (`net4.6`) | C# 7 and later |
@@ -287,6 +289,47 @@ No JavaScript level a profile targets has Explicit Resource Management, so `try`
 - **JavaScript frontend:** a `try … finally` that disposes is an `IrTry` and stays one, also in C#
   (recovering `using` from it is O0257). A `using` or `await using` declaration is the parser's syntax
   error (`PLY1100`), a `[Symbol.dispose]` or `[Symbol.asyncDispose]` method of a class `PLY1102`.
+
+## Rust
+
+**Frontend.** A Rust panic has no type and no handler in the imported subset; it becomes the throw of the class of
+its kind: an arithmetic overflow, a shift amount out of range, `MIN / -1` and `MIN % -1`
+`OverflowException`; a zero divisor `DivideByZeroException`; an index or a range outside a slice, an
+array or a `Vec` `IndexOutOfRangeException`; `unwrap()` of a `None` or an `Err`, `expect("msg")`,
+`step_by(0)`, `assert!` and its relatives, `panic!`, `todo!`, `unimplemented!`, `unreachable!` and
+unequal lengths of `copy_from_slice`, a byte range of text off a char boundary, past its end or reversed
+and `to_digit` with a radix above 36 `InvalidOperationException` with Rust's message; indexing a map by
+an absent key the IR's `KeyNotFound` trap; `clamp` with `min > max` the `Clamp` trap (`ArithmeticException`). The class is compared with rustc's panic, the message is not
+([the Rust frontend](../architecture/RUST-FRONTEND.md)).
+
+**Backend.** A trap is a panic whose message is the name of the IR trap, in every build mode, and a
+crate has no handler for it. The verification classifies the panic by its first line (`RustTraps`),
+which also reads the messages of Rust's own panics. An exception of a class of the module is an
+object, `Rc<PlyError>` (its class as a number, its message, its inner exception), handed back as the
+`Err` of a `Result` by every function between the throw and the handler; see
+[the Rust backend](../architecture/RUST-BACKEND.md#exceptions).
+
+| IR trap | Rust | Message |
+| --- | --- | --- |
+| `IntegerOverflow` | `checked_add(…).expect(…)`, `checked_neg`, `checked_abs`, `T::try_from(…).expect(…)`, `ply_f2i_trap_<t>`, `checked_div`/`checked_rem` of `MIN / -1` | `IntegerOverflow` (a `try_from` adds `: TryFromIntError(())`) |
+| `DivideByZero` | `ply_div_<t>`, `ply_rem_<t>` | `DivideByZero` |
+| any trap a library helper throws | `panic!("<trap>")` for the throw of a library exception | the trap's name; for a class several traps share, the first of them (`InvalidOperationException` is `MissingValue`, `ArgumentException` `DuplicateKey`) |
+
+| IR | Rust |
+| --- | --- |
+| `throw new X(…)` of a class of the module | `break 't0 e` inside a `try` body, `return Err(e)` from a function that propagates, `ply_unhandled(&e)` - a panic with the class's name - from a public one |
+| `catch (X e) when (f)` | `if ply_is(error.class, <X>) && f { … }`, the next clause in the `else`, the exception going on after the last |
+| `throw;` | the caught exception going on, `Rc::clone(&error)` |
+| `e.Message`, `e.InnerException` | `e.message.clone()`, `e.inner.clone()` |
+| `finally` around a body that always returns and throws nothing | the body a labelled block its `return` leaves, then the `finally`, then the return |
+
+A catch clause of a class a trap belongs to stands only around code that cannot trap, since a trap is a
+panic no clause sees; catching a trap (`exceptions/Traps`) is refused with `PLY1560`, as are a filter with
+a `finally` between it and the throw (.NET runs the filter first, `exceptions/order`), a `try` with both
+catch clauses and a `finally`, any other `finally`, and a jump out of a `try`, each naming why. Catching a
+trap would need every operation that may trap to return a `Result`. Rust's own messages (`attempt to divide by zero`,
+`index out of bounds`, `called Option::unwrap() on a None value`, …) map to the traps their class
+stands for.
 
 ## Known differences
 

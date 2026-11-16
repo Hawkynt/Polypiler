@@ -1,0 +1,14 @@
+sums(100, 5) => 506
+sums(127, 0) => 582
+sums(128, -1) => panic: overflow
+sums(255, 9223372036854775807) => panic: overflow
+sums(0, -9223372036854775808) => -9223372036854775607
+literal(3) => 5
+literal(2147483645) => 2147483647
+literal(2147483646) => panic: overflow
+literal(-2147483648) => -2147483646
+doubled(7) => 28
+doubled(0) => 0
+doubled(32767) => 66044
+doubled(32768) => panic: overflow
+doubled(65535) => panic: overflow
