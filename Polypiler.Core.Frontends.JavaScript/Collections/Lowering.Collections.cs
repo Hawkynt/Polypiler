@@ -173,8 +173,9 @@ internal sealed partial class Lowering {
   }
 
   /// <summary>
-  /// A write of an element of a list: at <c>a.length</c> an append, anywhere else a write that traps
-  /// outside the list - JavaScript would leave holes - read once for a compound assignment.
+  /// A write of an element of a list: at <c>a.length</c> an append - spelled so, or an index equal to the
+  /// length when it runs - anywhere else a write that traps outside the list - JavaScript would leave
+  /// holes - read once for a compound assignment.
   /// </summary>
   private void ListStore(AssignmentExpression assignment, MemberExpression element, IrType list, List<IrStmt> into) {
     var target = this.Expression(element.Object);
@@ -201,7 +202,13 @@ internal sealed partial class Lowering {
       return;
     }
 
-    into.Add(new IrExprStmt(ListOp(IrCollectionOp.ListSet, list, target, index, this.Value(assignment.Right, type))));
+    // At the length of the list a write appends, as JavaScript grows the Array (#1365); anywhere else it is a write that traps outside.
+    target = this.Once(target, into);
+    index = this.Once(index, into);
+    var stored = this.Once(this.Value(assignment.Right, type), into);
+    into.Add(new IrIf(new IrBinary(IrBinaryOp.Equal, index, ListOp(IrCollectionOp.ListCount, list, target)),
+      new IrBlock([new IrExprStmt(ListOp(IrCollectionOp.ListAdd, list, target, stored))]),
+      new IrBlock([new IrExprStmt(ListOp(IrCollectionOp.ListSet, list, target, index, stored))])));
   }
 
   /// <summary>

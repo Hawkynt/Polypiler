@@ -74,9 +74,11 @@ public sealed class JavaScriptListImportTests {
   public void Construct_ComputesWhatNodeComputes(string source, string outcome)
     => Assert.That(PrototypeFixture.InterpretedOutcome(Imported(source), new PrototypeCall("f", [])), Is.EqualTo(outcome));
 
-  /// <summary>Test design 7: a write at the length appends, one beyond it traps, a read beyond it traps under the caveat of the reads of arrays.</summary>
+  /// <summary>Test design 7: a write at the length appends - spelled a.length or an index equal to it when it runs - one beyond it traps, a read beyond it traps under the caveat of the reads of arrays.</summary>
   [TestCase("a[a.length] = 4; return a.length;", "3")]
   [TestCase("a[1] = 4; return a[1];", "4")]
+  [TestCase("let i = 2; a[i] = 4; return a.length * 10 + a[2];", "34")]
+  [TestCase("for (let i = 2; i < 4; i++) a[i] = i; return a.length * 10 + a[3];", "43")]
   [TestCase("a[3] = 4; return a.length;", "trap: argument out of range")]
   [TestCase("return a[2];", "trap: argument out of range")]
   [TestCase("a[-1] = 4; return 0;", "trap: argument out of range")]
