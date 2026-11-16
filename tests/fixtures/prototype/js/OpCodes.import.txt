@@ -36,9 +36,8 @@ RotL64	imported
 RotR64	imported
 RotL128n	OpCodes.js(447,24): error PLY1101: parameter 'value' of 'RotL128n' has no supported JSDoc type
 RotR128n	OpCodes.js(462,24): error PLY1101: parameter 'value' of 'RotR128n' has no supported JSDoc type
-RotL128	OpCodes.js(499,14): error PLY1105: 'RotL128' holds both uint8[] and uint8[]
-RotR128	OpCodes.js(499,14): error PLY1105: 'RotL128' holds both uint8[] and uint8[]
-RotR128	OpCodes.js(511,14): error PLY1105: 'RotR128' holds both uint8[] and uint8[]
+RotL128	imported
+RotR128	OpCodes.js(511,37): error PLY1102: 'float64 where int32 is expected' is not supported yet
 Pack16BE	imported
 Unpack16BE	imported
 Pack16LE	imported
@@ -71,7 +70,7 @@ Hex8ToBytes	OpCodes.js(2384,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test
 Hex16ToWords	OpCodes.js(2409,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
 Hex32ToDWords	OpCodes.js(2434,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
 XorArrays	imported
-CopyArray	OpCodes.js(2481,14): error PLY1105: 'CopyArray' holds both uint8[] and uint8[]
+CopyArray	imported
 ClearArray	OpCodes.js(2489,26): error PLY1101: parameter 'arr' of 'ClearArray' has no supported JSDoc type
 CopyBytes	imported
 CompareArrays	imported

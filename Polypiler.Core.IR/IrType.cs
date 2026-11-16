@@ -56,7 +56,7 @@ public enum IrTypeKind {
   /// <summary>A view like <see cref="Span"/> whose elements are only read.</summary>
   ReadOnlySpan,
 
-  /// <summary>An immutable sequence of UTF-16 code units, never null; compared and searched by code unit.</summary>
+  /// <summary>An immutable sequence of UTF-16 code units, compared and searched by code unit; a reference that may be null (#1370).</summary>
   String,
 
   /// <summary>
@@ -208,7 +208,7 @@ public sealed record IrType {
   /// <summary>Whether the type is the arbitrary-precision integer.</summary>
   public bool IsBigInt => this.Kind == IrTypeKind.BigInt;
 
-  /// <summary>An immutable, non-null sequence of UTF-16 code units, written <c>str</c>.</summary>
+  /// <summary>An immutable sequence of UTF-16 code units, written <c>str</c>: a reference, which may be <c>null</c> (#1370).</summary>
   public static IrType String { get; } = new(IrTypeKind.String, null);
 
   /// <summary>The array type with the given element type.</summary>
