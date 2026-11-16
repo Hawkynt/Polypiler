@@ -116,8 +116,11 @@ public sealed class RustPackageEmitTests {
 
   /// <summary>Test design 16: emitting twice gives the same files.</summary>
   [Test]
-  public void PlacedFunctions_AreReproducible()
-    => Assert.That(Placed(Layered, _layout).Select(file => (file.Path, file.Content)), Is.EqualTo(Placed(Layered, _layout).Select(file => (file.Path, file.Content))));
+  public void PlacedFunctions_AreReproducible() {
+    var first = Placed(Layered, _layout).Select(file => (file.Path, file.Content)).ToList();
+    var second = Placed(Layered, _layout).Select(file => (file.Path, file.Content)).ToList();
+    Assert.That(second, Is.EqualTo(first));
+  }
 
   /// <summary>
   /// What stays in the module of the IR module - a function placed nowhere, a table, the tests - is
