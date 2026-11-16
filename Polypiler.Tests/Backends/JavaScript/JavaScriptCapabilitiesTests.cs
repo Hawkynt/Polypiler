@@ -187,6 +187,7 @@ public sealed class JavaScriptCapabilitiesTests {
   [TestCase(".then", 2015, null)]
   [TestCase("async function", 2017, "$async")]
   [TestCase("Promise.allSettled", 2020, "Promise.all")]
+  [TestCase(".test", 5, null)]
   public void Standard_ListsTheEntry(string name, int since, string? replacement) {
     var entry = _table[name];
     Assert.That((entry.Name, entry.Since, entry.Replacement), Is.EqualTo((name, since, replacement)));

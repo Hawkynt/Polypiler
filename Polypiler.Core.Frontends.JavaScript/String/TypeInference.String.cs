@@ -22,6 +22,9 @@ internal sealed partial class TypeInference {
           : iterated is { Kind: JsKind.Array, Element: { } element } ? (element.Float == 32 ? JsType.F64 : element)
           : iterated is { Kind: JsKind.Sequence, Element: { } produced } ? produced
           : this.Iterated(loop.Right) ?? JsType.Unknown;
+      case CallExpression { Callee: MemberExpression { Computed: false, Object: RegExpLiteral, Property: Identifier { Name: "test" } } }:
+        // The test of a regular-expression literal (#1399).
+        return JsType.Boolean;
       case MemberExpression member when this.Of(member.Object).Kind == JsKind.String:
         return member.Computed ? JsType.String : member.Property is Identifier { Name: "length" } ? JsType.I32 : JsType.Unknown;
       case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } callee }:

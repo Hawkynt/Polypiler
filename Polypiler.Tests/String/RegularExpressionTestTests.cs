@@ -1,0 +1,378 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using Polypiler.Backends.Testing;
+using Polypiler.Core.Backends.CSharp;
+using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.Backends.JavaScript.Printing;
+using Polypiler.Core.Frontends.JavaScript;
+using Polypiler.Core.IR;
+using Polypiler.Prototype.Testing;
+
+namespace Polypiler.Tests.String;
+
+/// <summary>
+/// <c>RegExp.prototype.test</c> of a regular-expression literal (#1399): the conversion of an ECMAScript
+/// pattern to .NET's syntax that the interpreter and the C# backend share, checked on a table of
+/// patterns and subjects against what node answered; the IR node, its verifier and its text format;
+/// the frontend, which lowers the test of a literal and refuses what is outside the subset by name; and
+/// the backends, C# compiled in every profile and run on the table, JavaScript as the literal again.
+/// </summary>
+[TestFixture]
+public sealed class RegularExpressionTestTests {
+
+  /// <summary>The subjects of the table: empty, line terminators, white space of ECMAScript and of .NET only, non-ASCII digits and letters, the Kelvin sign and the long s, a pair of surrogates.</summary>
+  private static readonly string[] _subjects = ["", "0aF9", "0g", "ab\n", "a", "abc", "a\nc", "a\u2028c", "a\rc", " \t", "\u00A0\uFEFF", "\u0085", "\u0663", "\u00E9", "\u212A", "k", "K", "abcd", "abab", "aa", "aaa", "ababc", "x/y", "A", "\b", "\n", "_", "-", "\u017F", "\uD83D\uDE00"];
+
+  /// <summary>
+  /// Each pattern with its flags and, per subject of <see cref="_subjects"/>, whether it matches: the
+  /// answers node 22.23.3 printed for <c>new RegExp(pattern, flags).test(subject)</c>, 1 for true.
+  /// </summary>
+  private static readonly (string Pattern, string Flags, string Matches)[] _table = [
+    (@"^[0-9A-Fa-f]*$", "", "110011000000000001111101000000"),
+    (@"^[0-9A-Fa-f]+$", "", "010011000000000001111101000000"),
+    (@"[A-Za-z]", "", "011111111000000111111111000000"),
+    (@"^a.c$", "", "000001000000000000000000000000"),
+    (@"^\s+$", "", "000000000110000000000000010000"),
+    (@"^\d+$", "", "000000000000000000000000000000"),
+    (@"^\w+$", "", "011011000000000111111101001000"),
+    (@"[^a-c]", "", "011100111111111111000011111111"),
+    (@"^(?:ab|cd){2}$", "", "000000000000000001100000000000"),
+    (@"^a{2,3}?$", "", "000000000000000000011000000000"),
+    (@"^(a|b)*c$", "", "000001000000000000000100000000"),
+    (@"^K$", "i", "000000000000000110000000000000"),
+    (@"^[a-c]+$", "i", "000011000000000000111101000000"),
+    (@"^\W$", "i", "000000000001111000000000110110"),
+    (@"a$", "", "000010000000000000011000000000"),
+    (@"^\S\D$", "", "001000000000000000010000000001"),
+    (@"x*", "", "111111111111111111111111111111"),
+    (@"[]", "", "000000000000000000000000000000"),
+    (@"[^]", "", "011111111111111111111111111111"),
+    (@"\u00e9|\x41", "", "000000000000010000000001000000"),
+    (@"^[\b]$", "", "000000000000000000000000100000"),
+    (@"^\cJ$", "", "000000000000000000000000010000"),
+    (@"\/", "", "000000000000000000000010000000"),
+    (@"a{2,}", "", "000000000000000000011000000000"),
+    (@"^[\d-]$", "", "000000000000000000000000000100"),
+    (@"^[^\s]$", "", "000010000001111110000001101110"),
+    (@"^.$", "", "000010000001111110000001101110"),
+    (@"^[^k]$", "i", "000010000001111000000001111110"),
+    (@"^\uD83D", "", "000000000000000000000000000001"),
+    (@"^$", "", "100000000000000000000000000000"),
+    (@"b+?", "", "000101000000000001100100000000"),
+    (@"^(?:a|)$", "", "100010000000000000000000000000"),
+    (@"^[-a]$", "", "000010000000000000000000000100"),
+    (@"^[\-_]$", "", "000000000000000000000000001100"),
+    (@"\.", "", "000000000000000000000000000000"),
+    (@"^a?b??$", "", "100010000000000000000000000000")
+  ];
+
+  private static readonly IrLocal _s = new("s", IrType.String);
+
+  /// <summary>One public function <c>T&lt;row&gt;(s)</c> per row of the table, each the test of its pattern.</summary>
+  private static IrModule TableModule() => new("Table", [.. _table.Select((row, index) => new IrFunction($"T{index}", true, IrType.Bool, [_s], [],
+    new IrBlock([new IrReturn(RegexOperations.Test(new IrLocalRef(_s), row.Pattern, row.Flags))])))]);
+
+  private static IEnumerable<TestCaseData> Rows() => _table.Select(row => new TestCaseData(row.Pattern, row.Flags, row.Matches).SetName($"Matches as node: /{row.Pattern}/{row.Flags}"));
+
+  /// <summary>Test design 1 to 4: the shared conversion matches what node matches, for every pattern and subject.</summary>
+  [TestCaseSource(nameof(Rows))]
+  public void Conversion_MatchesWhatNodeMatches(string pattern, string flags, string matches) {
+    var actual = string.Concat(_subjects.Select(subject => RegexOperations.Test(subject, pattern, flags) ? '1' : '0'));
+    Assert.That(actual, Is.EqualTo(matches), RegexOperations.ToDotNet(pattern, flags));
+  }
+
+  [Test]
+  public void Interpreter_TestsWithTheSharedConversion() {
+    var module = TableModule();
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    for (var row = 0; row < _table.Length; ++row)
+      for (var subject = 0; subject < _subjects.Length; ++subject)
+        Assert.That(IrInterpreter.Call(module, $"T{row}", [_subjects[subject]]), Is.EqualTo(_table[row].Matches[subject] == '1'), $"/{_table[row].Pattern}/ on subject {subject}");
+  }
+
+  [Test]
+  public void Interpreter_TrapsForANullSubject() {
+    var module = new IrModule("M", [new IrFunction("F", true, IrType.Bool, [], [], new IrBlock([new IrReturn(RegexOperations.Test(new IrNull(IrType.String), "a", ""))]))]);
+    Assert.That(() => IrInterpreter.Call(module, "F", []), Throws.InstanceOf<IrTrapException>());
+  }
+
+  [TestCase(@"^[0-9A-Fa-f]*$", "", @"^[0-9A-Fa-f]*\z")]
+  [TestCase("a.b", "", @"a[\u0000-\u0009\u000B\u000C\u000E-\u2027\u202A-\uFFFF]b")]
+  [TestCase(@"\d\w", "", @"[0-9][0-9A-Z_a-z]")]
+  [TestCase("k", "i", "[Kk]")]
+  [TestCase("[^x]", "i", @"[\u0000-WY-wy-\uFFFF]")]
+  [TestCase("(a)(?:b)c{2,3}?|d+", "", "(a)(?:b)c{2,3}?|d+")]
+  [TestCase("[]", "", @"[^\u0000-\uFFFF]")]
+  [TestCase("[ab]", "", "[ab]")]
+  [TestCase(@"\0\t", "", @"\u0000\u0009")]
+  public void Conversion_WritesEverySetOut(string pattern, string flags, string expected)
+    => Assert.That(RegexOperations.ToDotNet(pattern, flags), Is.EqualTo(expected));
+
+  /// <summary>Test design 5: every flag but i, every construct outside the subset, and every pattern that is no pattern, named.</summary>
+  [TestCase("a", "g", "the flag g")]
+  [TestCase("a", "y", "the flag y")]
+  [TestCase("a", "m", "the flag m")]
+  [TestCase("a", "s", "the flag s")]
+  [TestCase("a", "u", "the flag u")]
+  [TestCase("a", "v", "the flag v")]
+  [TestCase("a", "d", "the flag d")]
+  [TestCase("a", "ii", "the flag i")]
+  [TestCase(@"(a)\1", "", "a backreference")]
+  [TestCase(@"\00", "", "an octal escape")]
+  [TestCase(@"[\1]", "", "an octal escape")]
+  [TestCase("(?<=a)b", "", "a lookbehind")]
+  [TestCase("(?<!a)b", "", "a lookbehind")]
+  [TestCase("a(?=b)", "", "a lookahead")]
+  [TestCase("a(?!b)", "", "a lookahead")]
+  [TestCase("(?<n>a)", "", "a named group")]
+  [TestCase("(?i)a", "", "a group (?i")]
+  [TestCase("(?", "", "an unclosed (")]
+  [TestCase(@"\b", "", @"a word boundary \b")]
+  [TestCase(@"\B", "", @"a word boundary \B")]
+  [TestCase(@"\k<n>", "", "a named backreference")]
+  [TestCase(@"\p{L}", "", @"a property escape \p")]
+  [TestCase(@"\P{L}", "", @"a property escape \P")]
+  [TestCase(@"\q", "", @"the escape \q")]
+  [TestCase(@"\c1", "", @"the escape \c")]
+  [TestCase(@"\x4", "", @"an escape \x without 2 hexadecimal digits")]
+  [TestCase(@"\u12g4", "", @"an escape \u without 4 hexadecimal digits")]
+  [TestCase("\\", "", @"a \ at the end")]
+  [TestCase("a{", "", "a { that starts no quantifier")]
+  [TestCase("a{2,1}", "", "a { that starts no quantifier")]
+  [TestCase("a{1,2,3}", "", "a { that starts no quantifier")]
+  [TestCase("a{,2}", "", "a { that starts no quantifier")]
+  [TestCase("a{1,x}", "", "a { that starts no quantifier")]
+  [TestCase("a{99999999999}", "", "a { that starts no quantifier")]
+  [TestCase("*a", "", "a quantifier * without anything to repeat")]
+  [TestCase("^*", "", "a quantifier * without anything to repeat")]
+  [TestCase("{1}", "", "a quantifier { without anything to repeat")]
+  [TestCase("(a", "", "an unclosed (")]
+  [TestCase("a)", "", "an unmatched )")]
+  [TestCase("[a", "", "an unclosed [")]
+  [TestCase("[z-a]", "", "a range out of order")]
+  [TestCase(@"[\d-z]", "", "a range of a class escape")]
+  [TestCase(@"[a-\d]", "", "a range of a class escape")]
+  [TestCase("\u00E9", "i", "the flag i and the character U+00E9 outside ASCII")]
+  [TestCase("[a-\u00E9]", "i", "the flag i and the character U+00E9 outside ASCII")]
+  public void Refusal_NamesWhatIsOutsideTheSubset(string pattern, string flags, string what) {
+    Assert.That(RegexOperations.Refusal(pattern, flags), Is.EqualTo(what));
+    Assert.That(() => RegexOperations.ToDotNet(pattern, flags), Throws.ArgumentException.With.Message.EqualTo(what));
+  }
+
+  [TestCase("a", "")]
+  [TestCase("\u00E9", "")]
+  [TestCase("[\u00E9]", "")]
+  [TestCase("a", "i")]
+  [TestCase("", "")]
+  public void Refusal_IsNullWithinTheSubset(string pattern, string flags) => Assert.That(RegexOperations.Refusal(pattern, flags), Is.Null);
+
+  [Test]
+  public void Operations_AreTheOneTest() {
+    Assert.That(RegexOperations.Operations, Is.EqualTo(new[] { IrIntrinsicOp.RegexTest }));
+    Assert.That(RegexOperations.IsRegex(IrIntrinsicOp.RegexTest), Is.True);
+    Assert.That(RegexOperations.IsRegex(IrIntrinsicOp.StrContains), Is.False);
+    Assert.That(StringOperations.IsString(IrIntrinsicOp.RegexTest), Is.False);
+  }
+
+  [Test]
+  public void Typing_IsThreeStringsToBool() {
+    IrType[] strings = [IrType.String, IrType.String, IrType.String];
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.RegexTest, IrType.Bool, strings), Is.True);
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.RegexTest, IrType.I32, strings), Is.False);
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.RegexTest, IrType.Bool, [IrType.String, IrType.String]), Is.False);
+    Assert.That(IrOperators.Accepts(IrIntrinsicOp.RegexTest, IrType.Bool, [IrType.I32, IrType.String, IrType.String]), Is.False);
+  }
+
+  private static IReadOnlyList<string> Verified(IrExpr pattern, IrExpr flags)
+    => IrVerifier.Verify(new IrModule("M", [new IrFunction("F", true, IrType.Bool, [_s], [], new IrBlock([
+      new IrReturn(new IrIntrinsic(IrIntrinsicOp.RegexTest, IrType.Bool, [new IrLocalRef(_s), pattern, flags]))]))])).Select(problem => problem.Message).ToList();
+
+  [Test]
+  public void Verifier_RequiresConstantsWithinTheSubset() {
+    Assert.That(Verified(new IrStrConst("a"), new IrStrConst("i")), Is.Empty);
+    Assert.That(Verified(new IrLocalRef(_s), new IrStrConst("")), Has.Some.Contains("the pattern and the flags of RegexTest are not string constants"));
+    Assert.That(Verified(new IrStrConst("a"), new IrLocalRef(_s)), Has.Some.Contains("the pattern and the flags of RegexTest are not string constants"));
+    Assert.That(Verified(new IrStrConst("a"), new IrStrConst("g")), Has.Some.Contains("RegexTest of a regular expression with the flag g"));
+    Assert.That(RegexOperations.Problem(new IrIntrinsic(IrIntrinsicOp.StrLength, IrType.I32, [new IrLocalRef(_s)])), Is.Null);
+    Assert.That(RegexOperations.Problem(new IrIntrinsic(IrIntrinsicOp.RegexTest, IrType.Bool, [new IrLocalRef(_s)])), Is.Null);
+  }
+
+  [Test]
+  public void Verifier_AcceptsATestInTheInitializerOfAGlobal() {
+    var global = new IrGlobal("G", IrType.Bool, RegexOperations.Test(new IrStrConst("ab"), "b", ""));
+    var module = new IrModule("M", [new IrFunction("F", true, IrType.Bool, [], [], new IrBlock([new IrReturn(new IrGlobalRef(global))]))]) { Globals = [global] };
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    Assert.That(IrInterpreter.Call(module, "F", []), Is.True);
+  }
+
+  [Test]
+  public void TextFormat_KeepsPatternAndFlags() {
+    var module = TableModule();
+    var read = IrModuleFormat.Read(IrModuleFormat.Write(module));
+    var tests = read.Functions.SelectMany(function => IrTree.Nodes(function.Body)).OfType<IrIntrinsic>().Select(RegexOperations.Of);
+    Assert.That(tests, Is.EqualTo(_table.Select(row => (row.Pattern, row.Flags))));
+    Assert.That(IrModuleFormat.Write(read), Is.EqualTo(IrModuleFormat.Write(module)));
+  }
+
+  /// <summary>Test design 3: the C# backend writes a static field per pattern that compiles in every profile and matches what node matches.</summary>
+  [TestCaseSource(typeof(CSharpProfile), nameof(CSharpProfile.All))]
+  public void CSharp_CompilesInEveryProfile(CSharpProfile profile) {
+    var module = TableModule();
+    Assert.That(LegalizedCSharp.Check(module, profile), Is.Empty);
+    var text = LegalizedCSharp.Emit(module, profile)[0].Content;
+    Assert.That(GeneratedCSharp.ComplaintsFor(text, profile.Name, profile.LanguageVersionName), Is.Empty, text);
+    Assert.That(text, Does.Contain("private static readonly global::System.Text.RegularExpressions.Regex Pattern1 = new global::System.Text.RegularExpressions.Regex(\"^[0-9A-Fa-f]*\\\\z\", global::System.Text.RegularExpressions.RegexOptions.CultureInvariant);"));
+    Assert.That(text, Does.Contain("Pattern1.IsMatch(s)"));
+  }
+
+  [Test]
+  public void CSharp_RunsTheTableAsNodeDoes() {
+    var build = GeneratedCSharp.Compile(LegalizedCSharp.Emit(TableModule())[0].Content, true);
+    for (var row = 0; row < _table.Length; ++row) {
+      var method = build.Method($"T{row}");
+      var actual = string.Concat(_subjects.Select(subject => (bool)method.Invoke(null, [subject])! ? '1' : '0'));
+      Assert.That(actual, Is.EqualTo(_table[row].Matches), $"/{_table[row].Pattern}/{_table[row].Flags}");
+    }
+  }
+
+  [Test]
+  public void CSharp_SharesTheFieldOfAPatternAndKeepsItsNameFromOthers() {
+    var pattern1 = new IrLocal("Pattern1", IrType.Bool);
+    IrExpr Test(string pattern) => RegexOperations.Test(new IrLocalRef(_s), pattern, "");
+    var module = new IrModule("M", [
+      new IrFunction("F", true, IrType.Bool, [_s], [pattern1], new IrBlock([
+        new IrDeclare(pattern1, Test("a")),
+        new IrReturn(new IrBinary(IrBinaryOp.LogicalAnd, new IrLocalRef(pattern1), new IrBinary(IrBinaryOp.LogicalAnd, Test("b"), Test("a"))))])),
+      new IrFunction("Pattern2", true, IrType.Bool, [], [], new IrBlock([new IrReturn(new IrConst(IrType.Bool, 1))]))
+    ]);
+    var text = LegalizedCSharp.Emit(module)[0].Content;
+    var build = GeneratedCSharp.Compile(text, true);
+    Assert.That(text.Split("new global::System.Text.RegularExpressions.Regex(").Length - 1, Is.EqualTo(2), text);
+    Assert.That(build.Method("F").Invoke(null, ["ab"]), Is.True);
+    Assert.That(build.Method("F").Invoke(null, ["a"]), Is.False);
+  }
+
+  [Test]
+  public void CSharp_ReachesTheFieldFromAClassOfTheModule() {
+    const string source = """
+      export class Checker {
+        /** @param {string} s @returns {boolean} */
+        hex(s) { return /^[0-9a-f]+$/.test(s); }
+      }
+      /** @param {string} s @returns {boolean} */
+      export function f(s) { return new Checker().hex(s); }
+      """;
+    var text = LegalizedCSharp.Emit(Imported(source))[0].Content;
+    var build = GeneratedCSharp.Compile(text, true);
+    Assert.That(build.Method("f").Invoke(null, ["0a"]), Is.True, text);
+    Assert.That(build.Method("f").Invoke(null, ["0g"]), Is.False, text);
+  }
+
+  [TestCase("es5")]
+  [TestCase("es2022")]
+  public void JavaScript_WritesTheLiteralBack(string level) {
+    var profile = JavaScriptProfile.Parse(level);
+    var text = LegalizedJavaScript.Emit(TableModule(), profile).Single().Content;
+    Assert.That(GeneratedJavaScript.Problems(text, profile), Is.Empty, text);
+    Assert.That(text, Does.Contain("return /^[0-9A-Fa-f]*$/.test(s);"));
+    Assert.That(text, Does.Contain("return /^K$/i.test(s);"));
+    Assert.That(text, Does.Contain("return /\\//.test(s);"));
+  }
+
+  [TestCase("", "(?:)")]
+  [TestCase("a/b", @"a\/b")]
+  [TestCase(@"a\/b", @"a\/b")]
+  [TestCase("[/]/", @"[/]\/")]
+  [TestCase(@"[\]/]/", @"[\]/]\/")]
+  [TestCase("a\nb\u2028", @"a\u000Ab\u2028")]
+  [TestCase("\\\u00E9", @"\u00E9")]
+  [TestCase("\u00E9", @"\u00E9")]
+  public void JavaScript_EscapesWhatALiteralCannotHold(string pattern, string body)
+    => Assert.That(JavaScriptLiterals.RegExpBody(pattern), Is.EqualTo(body));
+
+  /// <summary>The literal the JavaScript backend writes for each row computes in node what the table says.</summary>
+  [Test]
+  [Category("EndToEnd")]
+  public void JavaScript_RunsTheTableAsNodeDoes() {
+    var directory = Directory.CreateTempSubdirectory("regex-test-");
+    try {
+      File.WriteAllText(Path.Combine(directory.FullName, "Table.mjs"), LegalizedJavaScript.Emit(TableModule()).Single().Content);
+      var subjects = "[" + string.Join(", ", _subjects.Select(subject => "\"" + JavaScriptLiterals.Escape(subject) + "\"")) + "]";
+      var calls = string.Join("\n", _table.Select((_, row) => $"console.log({subjects}.map(s => t.T{row}(s) ? 1 : 0).join(\"\"));"));
+      File.WriteAllText(Path.Combine(directory.FullName, "run.mjs"), $"import * as t from \"./Table.mjs\";\n{calls}\n");
+      using var node = Process.Start(new ProcessStartInfo("node", [Path.Combine(directory.FullName, "run.mjs")]) { RedirectStandardOutput = true, RedirectStandardError = true })!;
+      var output = node.StandardOutput.ReadToEnd();
+      node.WaitForExit();
+      Assert.That(output.Split('\n', StringSplitOptions.RemoveEmptyEntries), Is.EqualTo(_table.Select(row => row.Matches)), node.StandardError.ReadToEnd());
+    } finally {
+      directory.Delete(true);
+    }
+  }
+
+  private static IrModule Imported(string source) {
+    var result = JavaScriptFrontend.Import("snippet.js", source);
+    Assert.That(result.Module, Is.Not.Null, string.Join("; ", result.Diagnostics));
+    Assert.That(IrVerifier.Verify(result.Module!), Is.Empty);
+    return result.Module!;
+  }
+
+  private static string Refused(string source) {
+    var result = JavaScriptFrontend.Import("snippet.js", source);
+    Assert.That(result.Module, Is.Null);
+    return string.Join("; ", result.Diagnostics);
+  }
+
+  /// <summary>Scenario: hex validation agrees with node.</summary>
+  [TestCase("0aF9", true)]
+  [TestCase("", true)]
+  [TestCase("0g", false)]
+  [TestCase("ab\n", false)]
+  public void HexValidation_TranslatedToCSharp_AgreesWithNode(string s, bool r) {
+    var module = Imported("function f(s) { return /^[0-9A-Fa-f]*$/.test(s); }\n/** @param {string} s */ export function g(s) { return f(s); }");
+    var build = GeneratedCSharp.Compile(LegalizedCSharp.Emit(module)[0].Content, true);
+    Assert.That(build.Method("g").Invoke(null, [s]), Is.EqualTo(r));
+    Assert.That(IrInterpreter.Call(module, "g", [s]), Is.EqualTo(r));
+  }
+
+  /// <summary>Scenario: a global regular expression is refused.</summary>
+  [Test]
+  public void GlobalRegularExpression_IsRefusedNamingTheFlag()
+    => Assert.That(Refused("/** @param {string} s */ export function f(s) { return /a/g.test(s); }"), Does.Contain("PLY1102: 'a regular expression with the flag g' is not supported yet"));
+
+  [TestCase("return /(a)\\1/.test(s);", "a regular expression with a backreference")]
+  [TestCase("return /(?<=a)b/.test(s);", "a regular expression with a lookbehind")]
+  [TestCase("return /a/y.test(s);", "a regular expression with the flag y")]
+  [TestCase("return /a/.test(s, s);", "test with 2 arguments")]
+  [TestCase("return /a/.test();", "test with 0 arguments")]
+  [TestCase("return /a/.exec(s) !== null;", "a call of /a/.exec")]
+  [TestCase("const r = /a/; return r.test(s);", "a regular expression")]
+  public void Frontend_RefusesByName(string body, string what)
+    => Assert.That(Refused($"/** @param {{string}} s */ export function f(s) {{ {body} }}"), Does.Contain($"'{what}'"));
+
+  /// <summary>test converts its argument to text as JavaScript does: a number by Number::toString, null as "null".</summary>
+  [Test]
+  public void Frontend_TestsTheSubjectAsText() {
+    var module = Imported("""
+      /** @param {number} n @returns {boolean} */
+      export function f(n) { return /^1\.5$/.test(n); }
+      /** @param {string|null} s @returns {boolean} */
+      export function g(s) { return /^nul/.test(s); }
+      """);
+    Assert.That(IrInterpreter.Call(module, "f", [1.5]), Is.True);
+    Assert.That(IrInterpreter.Call(module, "f", [2.0]), Is.False);
+    Assert.That(IrInterpreter.Call(module, "g", [null!]), Is.True);
+    Assert.That(IrInterpreter.Call(module, "g", ["x"]), Is.False);
+  }
+
+  [Test]
+  public void Python_RefusesTheTestByName() {
+    var translation = PythonFixtures.Translate(TableModule());
+    Assert.That(translation.Problems, Has.Some.Contains("RegexTest"));
+  }
+
+}
