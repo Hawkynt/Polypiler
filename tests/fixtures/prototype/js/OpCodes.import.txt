@@ -129,7 +129,7 @@ Add32	imported
 Sub32	imported
 CreateBitStream	OpCodes.js(3387,14): error PLY1102: 'new OpCodes._BitStream' is not supported yet
 _BitStream	OpCodes.js(3399,7): error PLY1102: 'this.buffer' is not supported yet
-GHashMul	OpCodes.js(3824,40): error PLY1102: 'an array literal with a hole or a spread element' is not supported yet
+GHashMul	imported
 GCMIncrement	imported
 Add64_HL	imported
 Add3L64	imported

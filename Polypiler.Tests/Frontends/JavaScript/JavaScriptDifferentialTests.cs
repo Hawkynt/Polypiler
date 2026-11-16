@@ -171,10 +171,10 @@ public sealed class JavaScriptDifferentialTests {
       Is.SupersetOf(expected.Select(line => line.Status).Where(status => status != JavaScriptFixture.Imported).Distinct()));
     Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Line, diagnostic.Column)), Is.Ordered.And.Unique);
 
-    // The functions that import one by one also import together, and are all there is beside the refused ones.
+    // The functions that import one by one also import together, and are all there is beside the refused ones and the functions the lowering adds ($fill0).
     var imported = expected.Where(line => line.Status == JavaScriptFixture.Imported).Select(line => line.Function).ToList();
     var together = JavaScriptFrontend.Import("OpCodes.js", _opCodes, imported);
-    Assert.That(together.Module!.Functions.Select(function => function.Name), Is.EquivalentTo(imported));
+    Assert.That(together.Module!.Functions.Select(function => function.Name).Where(name => !name.StartsWith('$')), Is.EquivalentTo(imported));
     Assert.That(IrVerifier.Verify(together.Module), Is.Empty);
   }
 
