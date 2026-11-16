@@ -24,7 +24,8 @@ public sealed class ObjectEmitTests {
   [Test]
   public void Class_IsAnRcOfCells() {
     var text = Emitted(Node + "public static class S { public static int F(int v) { var n = new Node(v); n.Value = v + 1; return n.Twice() + n.Items.Length; } }");
-    Assert.That(text, Does.Contain("#[derive(Default)]\npub struct Node {\n    value: Cell<i32>,\n    next: RefCell<Option<Rc<Node>>>,\n    items: RefCell<Vec<i32>>,\n}"));
+    // Next, which nothing here reads or writes, is left out.
+    Assert.That(text, Does.Contain("#[derive(Default)]\npub struct Node {\n    value: Cell<i32>,\n    items: RefCell<Vec<i32>>,\n}"));
     Assert.That(text, Does.Contain("pub fn new(value: i32) -> Rc<Self> {\n        let this = Rc::new(Self::default());\n        this.init(value);\n        this\n    }"));
     Assert.That(text, Does.Contain("pub fn twice(&self) -> i32"));
     Assert.That(text, Does.Contain("pub fn self_(self: &Rc<Self>) -> Rc<Node>").Or.Contain("self: &Rc<Self>"));
@@ -138,6 +139,14 @@ public sealed class ObjectEmitTests {
     Assert.That(text, Does.Contain("ply_view(d, a, n)"));
     Assert.That(text, Does.Contain("ply_view_from_mut(d, a.wrapping_add(n))"));
     Assert.That(text, Does.Contain("ply_view_from(d, 1).to_vec()"));
+  }
+
+  [Test]
+  public void FieldNothingTouches_IsLeftOut_AndOneOnlyWritten_Stays() {
+    var text = Emitted("public sealed class T { private int _count; private int _last; private int _never; public int Pub; public int Add(int v) { _count++; _last = v; return _count; } } "
+      + "public sealed class E { private int _unused; } public static class S { public static int F(int v) { var e = new E(); return new T().Add(v); } }");
+    Assert.That(text, Does.Contain("pub struct T {\n    count: Cell<i32>,\n    last: Cell<i32>,\n}"));
+    Assert.That(text, Does.Contain("self.last.set(v);"));
   }
 
   [Test]

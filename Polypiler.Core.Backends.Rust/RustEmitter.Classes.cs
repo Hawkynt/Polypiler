@@ -123,6 +123,20 @@ public static partial class RustEmitter {
       return uses > plain;
     }
 
+    /// <summary>The fields some function of the module reads or writes.</summary>
+    private HashSet<IrField>? _touchedFields;
+
+    /// <summary>
+    /// The fields of a class the struct keeps: those some function of the module reads or writes. A field
+    /// nothing touches keeps its default for good, which no one can tell apart from no field at all, and
+    /// Rust would warn about it as dead code; the equality of a record compares it to the same default.
+    /// </summary>
+    private IReadOnlyList<IrField> KeptFields(IrClassType type) {
+      this._touchedFields ??= [.. this._module.Functions.SelectMany(function => IrTree.Nodes(function.Body)).OfType<IrFieldLoad>().Select(load => load.Field)
+        .Concat(this._module.Functions.SelectMany(function => IrClosures.Within(function.Body)).OfType<IrFieldStore>().Select(store => store.Field))];
+      return [.. type.AllFields.Where(this._touchedFields.Contains)];
+    }
+
     /// <summary>Whether a variable of the function being written may hold null.</summary>
     private bool MayBeNull(IrLocal local) => this._nullness.MayBeNull(this._function.Name, local);
 
@@ -406,9 +420,9 @@ public static partial class RustEmitter {
       this._construct = $"the class '{type.Name}'";
       var name = this._types[type];
 
-      var fields = type.AllFields.Select(field => new RsFieldDeclaration(this.FieldName(field), "", this.ClassFieldType(field))).ToList();
+      var fields = this.KeptFields(type).Select(field => new RsFieldDeclaration(this.FieldName(field), "", this.ClassFieldType(field))).ToList();
       var derives = new List<string> { "Default" };
-      var floats = type.AllFields.Any(field => field.Type.IsFloat || field.Type.StructType is { } nested && HasFloat(nested));
+      var floats = this.KeptFields(type).Any(field => field.Type.IsFloat || field.Type.StructType is { } nested && HasFloat(nested));
       if (type.IsRecord && !floats)
         derives.Add("PartialEq");
       if (type.IsRecord && floats)
@@ -430,7 +444,7 @@ public static partial class RustEmitter {
     private RsFunction Maker(RsFunction written, Member member) {
       var self = new RsPath("this");
       // A class without fields is a unit struct, which is its own value (clippy's default_constructed_unit_structs).
-      RsExpression empty = member.Class.AllFields.Count == 0 ? new RsPath("Self") : new RsCall(new RsPath("Self::default"), []);
+      RsExpression empty = this.KeptFields(member.Class).Count == 0 ? new RsPath("Self") : new RsCall(new RsPath("Self::default"), []);
       var make = new RsLet("this", false, null, new RsCall(new RsPath("Rc::new"), [empty]));
       var arguments = written.Parameters.Select(parameter => (RsExpression)new RsPath(parameter.Name)).ToList();
       RsStatement run;
