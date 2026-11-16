@@ -152,6 +152,14 @@ source of other elements is widened by a function of the module per pair of elem
 generator or a number as 'a spread of X', a spread into the elements of a typed array, a `Map` or a
 `Set`, and into a literal of a list of objects, arrays or collections, by name.
 
+`new Array(n)` is an Array of elements no value has reached yet, which take the element type of the
+place it is stored into (#1406): a field JSDoc states `T[]` of (`/** @type {uint32[]} */ this.state =
+new Array(16)`) is an array of `T` - a list where it grows - and a local the join of what the program
+stores into it (`const W = new Array(64); W[t] = …` of 32-bit words is a `uint32[64]`). An element
+never stored reads 0 where JavaScript reads undefined, which the `js-oob-read` caveat states. A local
+the program stores values of two kinds into is refused with `PLY1105` ('the elements of 'a' hold both
+string and number').
+
 Refused with `PLY1102`: `sort()` without a comparator (it orders by the text of the elements), a
 comparator with effects - one that writes anything but its own locals, or calls a function, whose call
 order ECMA-262 leaves to the engine - and one that is no function expression, `findLast`,
