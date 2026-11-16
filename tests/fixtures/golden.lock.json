@@ -1763,23 +1763,23 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/views.mjs.csharp.golden",
-      "sha256": "6116c0645dc6afabcafdcdabe7ac8cf46dc484e64b68d3933d2b6f7fe41b39b4",
-      "bytes": 213622
+      "sha256": "6ec848384a7fa575f5e7be51e23292bc042b91cd966a5171b0db4063ba4e149c",
+      "bytes": 212830
     },
     {
       "path": "tests/fixtures/backend/golden/spans/views.mjs.javascript.golden",
-      "sha256": "9c6ef26312d72bbb37ce4f4a3d73ea3da8e2cdb80c0767cf69969660dbc63726",
-      "bytes": 189160
+      "sha256": "30ab474cd779ba90c5a213335e45cd885c94b409b919ee5729e585e79dc04f5d",
+      "bytes": 186216
     },
     {
       "path": "tests/fixtures/backend/golden/spans/window.mjs.csharp.golden",
-      "sha256": "f5759e03f7a1fd6af35fde7c09530ea8dc327ef1c3a78a09e5184a6b358d7a08",
-      "bytes": 201258
+      "sha256": "453bb486a201c2473888f60843ef43a957f00c55c150e2e104100ab86cae6d6c",
+      "bytes": 198738
     },
     {
       "path": "tests/fixtures/backend/golden/spans/window.mjs.javascript.golden",
-      "sha256": "debe502c00affb1f63e2a87f83d916a19262af03c9d6399b3d07753fa17e7f31",
-      "bytes": 171676
+      "sha256": "73c1211923f204c97593964a648ab86dc08254e5fb85b6b9b8b706f4e4d2810f",
+      "bytes": 165788
     },
     {
       "path": "tests/fixtures/backend/golden/state/Histogram.cs.csharp.golden",
