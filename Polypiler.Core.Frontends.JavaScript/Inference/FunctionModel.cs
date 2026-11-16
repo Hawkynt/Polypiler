@@ -302,10 +302,8 @@ internal sealed class FunctionModel(Candidate candidate) {
   public IrType ReturnType {
     get {
       var inferred = this.Result.Ir ?? IrType.Void;
-      // An exact integer is the integer JSDoc states, checked where it is returned (#1416). Any other double
-      // stays the double it is, as a contradicted result always has.
-      return this.DeclaredResult is { } declared && (Holds(declared, inferred)
-        || (this.Result is { IsWhole: true, IsExactInteger: true } && declared.IsInteger && !declared.IsLong && !declared.IsEnum)) ? declared : inferred;
+      // A result keeps its own type whatever @returns states: an uncoerced sum is the double node returns (#1416).
+      return this.DeclaredResult is { } declared && Holds(declared, inferred) ? declared : inferred;
     }
   }
 

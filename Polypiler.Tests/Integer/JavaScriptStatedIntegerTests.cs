@@ -12,13 +12,14 @@ using Polypiler.Prototype.Testing;
 namespace Polypiler.Tests.Integer;
 
 /// <summary>
-/// Exact integers stored, passed or returned where JSDoc states an integer type (#1416), as the Cipher
+/// Exact integers stored or passed where JSDoc states an integer type (#1416), as the Cipher
 /// framework's <c>BlockAbsorber</c> keeps <c>/** @type {int} */ this._pending</c> and adds
 /// <c>Math.min(blockSize - this._pending, total - offset)</c> to it: a sum, a difference and a product of
 /// integers, and <c>Math.min</c>, <c>max</c> and <c>abs</c> of them, are integers a double computes as
 /// JavaScript does; the stated place converts them, exactly where they fit and trapping with 'integer
-/// overflow' where they do not (<c>js-stated-integer</c>). A value that may have a fraction is refused
-/// where it is returned or passed. The expected values are node's on the same source.
+/// overflow' where they do not (<c>js-stated-integer</c>). A result keeps its own type whatever
+/// <c>@returns</c> states: the uncoerced sum is the double node returns. A value that may have a fraction
+/// is refused where it is passed. The expected values are node's on the same source.
 /// </summary>
 [TestFixture]
 public sealed class JavaScriptStatedIntegerTests {
@@ -45,7 +46,7 @@ public sealed class JavaScriptStatedIntegerTests {
      * @param {int} d
      * @returns {int}
      */
-    function shift(a, d) { return a + d; }
+    function shift(a, d) { return id(a + d); }
     /**
      * @param {int} v
      * @returns {int}
@@ -113,7 +114,7 @@ public sealed class JavaScriptStatedIntegerTests {
 
   /// <summary>
   /// Scenario: a pending count (64). Operations: <c>+</c>, <c>-</c>, <c>*</c>, <c>Math.min</c>, <c>max</c>,
-  /// <c>abs</c>, the rounding of a quotient; places: a field, a result, an argument, a local, the elements of
+  /// <c>abs</c>, the rounding of a quotient; places: a field, an argument, a local, the elements of
   /// a stated <c>uint8[]</c>; a product past 2^53 is still the integer JavaScript computes. Boundaries:
   /// 2147483647 is the value, 2147483648 and -2147483649 trap.
   /// </summary>
@@ -132,7 +133,7 @@ public sealed class JavaScriptStatedIntegerTests {
     Assert.That(Convert.ToDouble(Run(text, function)), Is.EqualTo(expected), text);
   }
 
-  /// <summary>Scenario: leaving the stated range traps, past the largest and below the smallest <c>int</c>, where node keeps 2147483648 and -2147483649.</summary>
+  /// <summary>Scenario: leaving the stated range of a parameter traps, past the largest and below the smallest <c>int</c>, where node keeps 2147483648 and -2147483649.</summary>
   [TestCase("past")]
   [TestCase("below")]
   public void LeavingTheStatedRange_Traps(string function) {
@@ -147,7 +148,7 @@ public sealed class JavaScriptStatedIntegerTests {
     var result = JavaScriptFrontend.Import("m.mjs", Source);
     Assert.That(result.Caveats.Select(caveat => caveat.Id), Has.Member(JavaScriptFrontend.StatedInteger));
     var text = LegalizedCSharp.Emit(result.Module!, CSharpProfile.Default)[0].Content;
-    Assert.That(text, Does.Contain("public int p;").And.Contain("static int twice(int a) => checked((int)").And.Contain("List<byte> counts(int n)"));
+    Assert.That(text, Does.Contain("public int p;").And.Contain("static double twice(int a)").And.Contain("id(checked((int)").And.Contain("List<byte> counts(int n)"));
     var script = LegalizedJavaScript.Emit(result.Module!, JavaScriptProfile.Default).Single().Content;
     Assert.That(GeneratedJavaScript.Problems(script, JavaScriptProfile.Default), Is.Empty, script);
   }

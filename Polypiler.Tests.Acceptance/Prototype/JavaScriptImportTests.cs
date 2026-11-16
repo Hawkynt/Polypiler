@@ -118,7 +118,8 @@ public sealed class JavaScriptImportTests {
     var imported = JavaScriptFixture.OpCodesExpectation().Where(line => line.Status == JavaScriptFixture.Imported).Select(line => line.Function).ToList();
     var module = JavaScriptFixture.Import("OpCodes.js", File.ReadAllText(JavaScriptFixture.OpCodesPath), imported);
     // A function that grows a list (#1328) - GetPooledArray(size) - is no scalar function: a drawn size allocates without bound.
-    var scalar = module.Functions.Where(function => function.Parameters.Count > 0 && function.Parameters.All(parameter => !parameter.Type.IsArray)
+    // Nor is one that takes a list - ConcatArrays(arrays), a list of byte arrays (#1416) - for which no number is drawn.
+    var scalar = module.Functions.Where(function => function.Parameters.Count > 0 && function.Parameters.All(parameter => !parameter.Type.IsArray && !parameter.Type.IsCollection)
       && !Core.IR.IrTree.Nodes(function.Body).Any(node => node is Core.IR.IrCollection { Op: Core.IR.IrCollectionOp.ListAdd })).ToList();
     // A function that allocates an array of a length it is given - CreateArray(length, value) - makes
     // the original exhaust node's heap at the boundary of its parameter (new Array(4294967295) filled
