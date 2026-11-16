@@ -143,7 +143,6 @@ public sealed class ObjectEmitTests {
   [Test]
   public void UnsupportedForms_AreRefusedByName() {
     Assert.That(Problems("using System; " + PrototypeFixture.Wrap("public static bool F(double[] a, double[] b) => a.AsSpan().SequenceEqual(b);")), Has.Some.Contain("'ViewEqual'"));
-    Assert.That(Problems(PrototypeFixture.Wrap("static string text = \"\"; public static int F() => text.Length;")), Has.Some.Contain("'a global of the type str'"));
   }
 
 }

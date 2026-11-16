@@ -4,7 +4,8 @@
 [#458](https://github.com/Hawkynt/Polypiler/issues/458), [#459](https://github.com/Hawkynt/Polypiler/issues/459));
 arrays and slices, structs, enums, classes, interfaces and module state since
 [#460](https://github.com/Hawkynt/Polypiler/issues/460) and [#462](https://github.com/Hawkynt/Polypiler/issues/462);
-closures, function values and optional values since phase 2; collections, sequences and `Result` follow. The runner that builds
+closures, function values, optional values and module state behind a `Mutex` since phase 2;
+collections, sequences and `Result` follow. The runner that builds
 and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/468).
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
@@ -57,8 +58,10 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `reverse_bits` | 1.37 | the helper of the library |
 | `is_subnormal` | 1.53 | the portable implementation |
 | `rust-version` key of `Cargo.toml` | 1.56 | left out |
+| `Mutex::new` in a `static` (`const_mutex_new`) | 1.63 | a global that has no atomic form is refused (`PLY1550`) |
 | labelled blocks (`label_break_value`) | 1.65 | a `continue` in a `do`-`while` and a `break` inside a switch section are refused (`PLY1550`) |
 | `round_ties_even` | 1.77 | the helper `RoundEven` of the library |
+| `LazyLock` | 1.80 | a global whose first value Rust cannot make in a constant (a string that is not empty) is refused |
 
 ## Lowering
 
@@ -108,6 +111,7 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `is T`, `as T`, `(T)` | `o.is_t()`, `Rc::clone(&o).into_t()`, `….into_t().expect("InvalidCast")` of the trait `PlyObject`; `ply_cast` keeps a null |
 | a generic method or class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
 | a global (static field) | `static NAME: AtomicI32 = AtomicI32::new(0);` read and written with `Ordering::Relaxed`, `++` as `fetch_add` - process-wide as .NET's static fields are |
+| a global that has no atomic form: an array, a string, a floating-point number | a static behind a `Mutex`: `static BUCKETS: Mutex<[u32; 4]> = Mutex::new([0; 4]);` (an array is the fixed array it always is), `static TEXT: Mutex<Vec<u16>> = Mutex::new(Vec::new());`, a first value made at run time in a `LazyLock`; accessed through `ply_with(&BUCKETS, \|buckets\| buckets[i])`, which holds the lock for that one access and takes a poisoned one over, every operand that may take a lock (a call, another such global) evaluated into a binding first; the length of an array is its constant. Not `thread_local!`, which would give each thread a global of its own |
 | a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it; `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32` |
 | a function type `fn(A, B) -> R` | `Rc<dyn Fn(A, B) -> R>`; `Option<Rc<dyn Fn(A, B) -> R>>` for a signature the module writes `null` of or makes an array of; see [Function values](#function-values) |
 | a lambda | `Rc::new(move \|a: A, b: B\| body)`, what it captures bound first in a block around it (`{ let f = Rc::clone(&f); move \|v: i32\| f(v) }`), `move` only where it captures |
@@ -185,7 +189,8 @@ is no value, an array that may be null and is written (`an array that may be nul
 is a borrowed result, a function value that takes or gives more than values and other function values, two function values
 compared with each other, a closure that captures the object of a method, an array it captures that is
 written, or a variable other than a value that is assigned, collections and sequences (`Collection`, `Yield`), `using`, a global
-that is no integer or truth value (`a global of the type u32[]`), a record with a floating-point field,
+array without a first value of a known length or used as a whole (passed on, iterated as a slice),
+a global of another type, a record with a floating-point field,
 a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
 array in one written variable), a struct with a field that is no value. One array passed to a call
 twice where it is written and the callee swaps its parameters is `PLY1566`. Two exported functions
@@ -213,14 +218,15 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
+- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
   interpreter's.
 - `RustFamilyDifferentialTests` (layer `rust`): the fixtures of the families the backend writes - bits,
   records, strings, enums, numbers as text, classes, dispatch, generics, function values and closures,
-  optional values, the floating-point view of bytes - against .NET in both overflow modes.
+  optional values, module state (each sequence of calls in one process, as one load of the class in
+  .NET), the floating-point view of bytes - against .NET in both overflow modes.
 - `RustRoundTripTests` (layer `rust`): every Rust fixture, imported by the Rust frontend in each
   overflow mode, comes back as a crate that is built with overflow checks on and off; every outcome is
   what rustc recorded for the original in the mode of the import.

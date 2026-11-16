@@ -707,6 +707,9 @@ public static class RustPrinter {
 
     var head = string.Concat(others.Select(other => other + ", "));
     var last = Called(arguments[^1]) && Flat(arguments[^1]) is { Length: > CallWidth } ? Opened(arguments[^1], indent, column + head.Length) : Expression(arguments[^1], indent, column + head.Length, 1);
+    // A closure that stays on the line yet makes the arguments wider than a call's may be takes a block body.
+    if (arguments[^1] is RsClosure closure && !last.Contains('\n') && head.Length + last.Length > CallWidth)
+      last = ClosureHead(closure) + (closure.Body is RsBlockExpression { Block: var body } ? Block(body, indent) : Block(new RsBlock([], closure.Body), indent));
     var first = last.Split('\n')[0];
     // A control-flow expression overflows only with its condition on its first line (rustfmt's try_overflow_last_item).
     if (arguments[^1] is RsIf or RsWhile or RsMatch or RsFor && last.Contains('\n') && !first.EndsWith('{'))

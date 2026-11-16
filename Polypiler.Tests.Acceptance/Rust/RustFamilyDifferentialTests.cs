@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
 /// The fixtures of the prototype's families through the Rust backend (#460, #462): bit operations,
-/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, views,
+/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, module state, views,
 /// floating-point views of bytes. Every fixture of a family that the backend writes is
 /// built by the pinned toolchain and called on the family's cases with overflow checks on and off;
 /// every outcome, the arrays a call was given included, must be what .NET computes of the original
@@ -34,6 +34,9 @@ public sealed class RustFamilyDifferentialTests {
   /// <param name="Expected">What .NET computes of a call.</param>
   /// <param name="Matches">Whether an outcome is the expected one, where the family compares otherwise than by text.</param>
   internal sealed record Family(string Name, Func<IrModule> Module, Func<IReadOnlyList<PrototypeCall>> Calls, Func<PrototypeCall, string> Expected, Func<PrototypeCall, string, string, bool>? Matches = null) {
+
+    /// <summary>What .NET computes of the calls run one after the other in one instance, where they share state; <see langword="null"/> where each call stands alone.</summary>
+    public Func<IReadOnlyList<PrototypeCall>, IReadOnlyList<string>>? Sequenced { get; init; }
 
     /// <inheritdoc />
     public override string ToString() => this.Name;
@@ -83,6 +86,11 @@ public sealed class RustFamilyDifferentialTests {
       yield return new($"functions/{file}", () => FunctionsFixtures.Imported(file), () => [.. FunctionsFixtures.Calls().Where(call => call.File == file).Select(call => call.Call)],
         call => PrototypeFixture.InvokedOutcome(FunctionsFixtures.Compiled(className, call.Method), call));
 
+    foreach (var (file, _, _) in StateFixtures.All)
+      yield return new($"state/{file}", () => StateFixtures.ImportedCSharp(file), () => StateFixtures.Sequence(file), _ => "") {
+        Sequenced = calls => StateFixtures.Compiled(StateFixtures.SourceOf(file + ".cs"), calls)
+      };
+
     yield return new("optional/Find", OptionalFixtures.Imported, () => [.. OptionalFixtures.Calls()],
       call => PrototypeFixture.InvokedOutcome(OptionalFixtures.Compiled(call.Method), call));
 
@@ -118,7 +126,7 @@ public sealed class RustFamilyDifferentialTests {
     var module = family.Module();
     Assert.That(RustCrates.Check(module), Is.Empty, "the fixture is written as Rust");
     var calls = family.Calls();
-    var expected = calls.Select(family.Expected).ToList();
+    var expected = family.Sequenced?.Invoke(calls) ?? [.. calls.Select(family.Expected)];
     var matches = family.Matches ?? ((_, wanted, actual) => wanted == actual);
     foreach (var checks in new[] { OverflowChecks.Panic, OverflowChecks.Wrap }) {
       var actual = await RustRun.OutcomesAsync(module, calls, checks);

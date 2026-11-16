@@ -117,6 +117,8 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Vector(IrExpr array, bool move = true) {
       switch (array) {
+        case IrGlobalRef:
+          return this.Refuse("a global array used as a whole");
         case IrLocalRef or IrBind or IrCall when this.IsNullableArray(array):
           return new RsMethodCall(this.Receiver(this.NonNullArray(array, false)), "to_vec", []) { Type = array.Type };
         case IrNewArray creation:
@@ -152,6 +154,8 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Borrow(IrExpr array, bool mutable) {
       switch (array) {
+        case IrGlobalRef:
+          return this.Refuse("a global array used as a whole");
         case IrLocalRef or IrBind or IrCall when this.IsNullableArray(array):
           return mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, true);
         case IrFieldLoad { Target.Type.IsObject: true } load:

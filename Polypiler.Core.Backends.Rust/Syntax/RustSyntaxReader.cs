@@ -638,8 +638,7 @@ public static class RustSyntaxReader {
         this.Expect("|");
         while (!this.Accept("|")) {
           var name = this.Identifier();
-          this.Expect(":");
-          parameters.Add(new RsParameter(name, this.TypeText()));
+          parameters.Add(new RsParameter(name, this.Accept(":") ? this.TypeText() : ""));
           this.Accept(",");
         }
       }

@@ -249,6 +249,9 @@ public static partial class RustEmitter {
         case IrThrow thrown:
           this.CountIn(thrown.Exception, bindings, depth);
           break;
+        case IrGlobalAssign assign:
+          this.CountIn(assign.Value, bindings, depth);
+          break;
       }
     }
 

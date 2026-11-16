@@ -250,6 +250,12 @@ internal static class Strings {
           true
       }
       """, ["ply_utf16", "ply_upper"]),
+    ["ply_with"] = ("""
+      fn ply_with<T, R>(cell: &Mutex<T>, access: impl FnOnce(&mut T) -> R) -> R {
+          let mut guard = cell.lock().unwrap_or_else(PoisonError::into_inner);
+          access(&mut guard)
+      }
+      """, []),
     ["ply_value"] = ("""
       fn ply_value<T: Copy>(value: &Option<T>) -> T {
           value.expect("MissingValue")

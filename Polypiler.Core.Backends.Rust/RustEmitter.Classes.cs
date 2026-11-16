@@ -465,7 +465,8 @@ public static partial class RustEmitter {
       foreach (var global in module.Globals) {
         this._construct = $"the global '{global.Name}'";
         if (Atomic(global.Type) is not { } atomic) {
-          this.Refuse($"a global of the type {global.Type}");
+          if (this.LockedGlobal(global) is { } locked)
+            yield return locked;
           continue;
         }
 

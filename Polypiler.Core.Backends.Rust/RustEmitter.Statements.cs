@@ -70,8 +70,17 @@ public static partial class RustEmitter {
               var value => this.Expression(value)
             }));
           return false;
+        case IrStore { Array: IrGlobalRef { Global: var locked } } store when IsLocked(locked):
+          this.LockedStore(store, locked, into);
+          return false;
         case IrStore store:
           this.Store(store, into);
+          return false;
+        case IrGlobalAssign assign when IsLocked(assign.Global):
+          this.LockedAssign(assign, into);
+          return false;
+        case IrExprStmt { Expression: IrStep { Target: IrArrayLoad { Array: IrGlobalRef { Global: var steppedGlobal } } load } step } when IsLocked(steppedGlobal):
+          into.Add(new RsExpressionStatement(this.LockedStep(step, load, steppedGlobal, true, into)));
           return false;
         case IrFieldStore store when store.Target.Type.IsStruct:
           this.FieldStore(store, into);

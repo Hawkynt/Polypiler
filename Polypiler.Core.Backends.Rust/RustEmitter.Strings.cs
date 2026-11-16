@@ -64,6 +64,7 @@ public static partial class RustEmitter {
       IrStrConst constant => this.Utf16(constant.Value),
       IrConstRef constant => this.ConstantText(constant),
       IrArrayLoad { Array: IrConstRef table } load => this.TableText(table, load.Index),
+      IrArrayLoad { Array: IrGlobalRef { Global: var locked } } when IsLocked(locked) => this.Expression(text),
       IrLocalRef reference when this.IsBorrowedString(reference) => new RsMethodCall(new RsPath(this._locals[reference.Local]), "to_vec", []) { Type = IrType.String },
       IrLocalRef reference => move ? new RsPath(this._locals[reference.Local]) { Type = IrType.String } : new RsMethodCall(new RsPath(this._locals[reference.Local]), "clone", []) { Type = IrType.String },
       IrArrayLoad load => new RsMethodCall(this.Expression(load), "clone", []) { Type = IrType.String },
@@ -75,6 +76,7 @@ public static partial class RustEmitter {
     private RsExpression StringArgument(IrExpr text) => text switch {
       IrLocalRef reference when this.IsBorrowedString(reference) => new RsPath(this._locals[reference.Local]) { Type = IrType.String },
       IrIntrinsic { Op: IrIntrinsicOp.StrFromCodeUnit } unit => new RsReference(false, new RsArray([this.Expression(unit.Arguments[0])])) { Type = IrType.String },
+      IrArrayLoad { Array: IrGlobalRef { Global: var locked } } when IsLocked(locked) => new RsReference(false, this.Operand(this.StringValue(text), 15)) { Type = IrType.String },
       IrLocalRef or IrArrayLoad => new RsReference(false, this.StringPlace(text)) { Type = IrType.String },
       _ => new RsReference(false, this.Operand(this.StringValue(text), 15)) { Type = IrType.String }
     };
@@ -82,6 +84,7 @@ public static partial class RustEmitter {
     /// <summary>A string as a slice of exactly the type <c>&amp;[u16]</c>, as the elements of an array of slices must be.</summary>
     private RsExpression StringSlice(IrExpr text) => text switch {
       IrLocalRef reference when this.IsBorrowedString(reference) => new RsPath(this._locals[reference.Local]) { Type = IrType.String },
+      IrArrayLoad { Array: IrGlobalRef { Global: var locked } } when IsLocked(locked) => new RsReference(false, new RsIndex(this.Operand(this.StringValue(text), 15), new RsRange(null, null, false))) { Type = IrType.String },
       IrLocalRef or IrArrayLoad => new RsReference(false, new RsIndex(this.StringPlace(text), new RsRange(null, null, false))) { Type = IrType.String },
       _ => new RsReference(false, new RsIndex(this.Operand(this.StringValue(text), 15), new RsRange(null, null, false))) { Type = IrType.String }
     };
@@ -89,7 +92,7 @@ public static partial class RustEmitter {
     /// <summary>A string as it stands for a comparison, a length or an index: a variable or an element in place, anything else as its value.</summary>
     private RsExpression StringPlace(IrExpr text) => text switch {
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = IrType.String },
-      IrArrayLoad { Array: not IrConstRef } load => new RsIndex(this.ArrayTarget(load.Array), this.Index(load.Index)) { Type = IrType.String },
+      IrArrayLoad { Array: not (IrConstRef or IrGlobalRef) } load => new RsIndex(this.ArrayTarget(load.Array), this.Index(load.Index)) { Type = IrType.String },
       _ => this.Operand(this.StringValue(text), 15)
     };
 

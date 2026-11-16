@@ -144,9 +144,10 @@ public sealed class RustProfileTests {
   }
 
   [Test]
-  public void ModuleState_OfAnotherType_IsRefusedByName() {
-    var problems = RustCrates.Check(RustCrates.Import("static double scale; public static double F(double x) { scale = x; return scale; }"));
-    Assert.That(problems.Select(problem => problem.Message), Has.Some.Contain("'a global of the type f64'"));
+  public void ModuleState_OfAnotherType_NeedsAConstMutex() {
+    var module = RustCrates.Import("static double scale; public static double F(double x) { scale = x; return scale; }");
+    Assert.That(RustCrates.Check(module, RustProfile.Rust2021).Select(problem => problem.Message), Has.Some.Contain("'a global of the type f64 (a Mutex in a static, Rust 1.63)'"));
+    Assert.That(RustCrates.Check(module), Is.Empty);
   }
 
   [Test]
