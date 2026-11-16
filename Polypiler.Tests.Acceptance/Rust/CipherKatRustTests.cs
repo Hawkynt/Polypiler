@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using NUnit.Framework;
 using Polypiler.Core.Verification.Runners;
 using Polypiler.Prototype.Testing;
@@ -30,6 +31,9 @@ public sealed class CipherKatRustTests {
   private static readonly string _mini = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "infra", "cipher-mini");
 
   private string _work = "";
+
+  /// <summary>Held while the Cipher corpus is imported, which the scenario cases share.</summary>
+  private static readonly Lock _import = new();
 
   [SetUp]
   public void CreateWork() => this._work = Directory.CreateTempSubdirectory("polypiler-cipher-kat-rust-").FullName;
@@ -106,11 +110,13 @@ public sealed class CipherKatRustTests {
     var fixture = manifest.Fixture(CipherCommand.Fixture)!;
     var pin = fixture.PinOf(manifest.Repository(fixture.Repository)!);
     var corpus = Path.GetDirectoryName(CorpusImporter.FilePath(root, pin.Name, pin.Commit, fixture.Path))!;
-    if (!Directory.Exists(Path.Combine(corpus, "algorithms"))) {
-      using var output = new StringWriter();
-      using var error = new StringWriter();
-      Assert.That(new CorpusCommand(new GitProcess(), root).Run(["import", "--fixture", CipherCommand.Fixture], output, error), Is.EqualTo(0), error.ToString());
-    }
+    // The cases run in parallel and share one checkout: one imports it, the others wait for it.
+    lock (_import)
+      if (!Directory.Exists(Path.Combine(corpus, "algorithms"))) {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        Assert.That(new CorpusCommand(new GitProcess(), root).Run(["import", "--fixture", CipherCommand.Fixture], output, error), Is.EqualTo(0), error.ToString());
+      }
 
     var configuration = new DirectoryInfo(Path.GetDirectoryName(typeof(CipherKatRustTests).Assembly.Location)!).Parent!.Name;
     var polypiler = CipherCommand.Command(Path.Combine(root, "Polypiler.Cli", "bin", configuration, "net10.0", "polypiler.dll"));
