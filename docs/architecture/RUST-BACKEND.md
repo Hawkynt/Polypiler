@@ -104,13 +104,17 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `LoadLittle`/`LoadBig`, `StoreLittle`/`StoreBig` | `u32::from_le_bytes(d[ply_range(i, 4, d.len())].try_into().expect("4 bytes"))`; `let at = ply_range(…); d[at].copy_from_slice(&v.to_le_bytes());` |
 | one array passed twice to a call that writes one of them | a copy of the callee with the two parameters merged, `<callee>_aliased<i><j>`, where the callee assigns neither; otherwise `PLY1566` |
 | a struct of numbers | `#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)] pub struct Name { pub field: T }`; with a floating-point field `impl PartialEq` of the IR's equality (a NaN equals a NaN) instead of the derived one (#462) |
+| a struct with a `[StructLayout]` | `#[repr(C)]` for a sequential layout; explicit field offsets (overlapping ones an untagged union), a packing or a size of its own refused with `PLY1584`, naming the struct and the layout (#462) |
+| a struct holding an array (#1393) | `#[derive(Clone, Debug)] pub struct Grid { pub cells: Vec<u8> }`, no `Copy`, no `Default`; moved where its variable is read for the last time, `let r = &mut g.cells;` for a variable naming the field's array; copied while the variable lives on, or given an array a variable still holds, refused (`a struct holding an array copied while its variable lives on`, `an array a struct field shares with a variable`) |
 | `StructNew`, `StructDefault`, a field read or written | `Name { a, b: x }`, `Name::default()`, `p.x`, `p.x = v;` (`let mut` for the variable, a parameter rebound) |
 | a string | its UTF-16 code units: `Vec<u16>` owned, `&[u16]` as a parameter; a literal `ply_utf16("text")`, a constant `static NAME: &str` |
 | string operations | `len`, indexing, `==`, `starts_with`, `ends_with`, `repeat`, `cmp`, `[a, b].concat()`, `parts.join(sep)`, `push`/`extend_from_slice` for `s += …`; the helpers of `Helpers/Strings.cs` for searching, replacing, splitting, trimming and padding |
 | an enum | a newtype over its underlying integer, `#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)] pub struct Color(pub u8);` with a constant per member and `From` both ways - open as a C# enum is, so any value of the integer is one of it; the bitwise operators on `.0`; its text and parse through `ply_enum_text`/`ply_enum_parse` over the statics `COLOR_VALUES`/`COLOR_NAMES` |
+| an enum the module only ever gives a member's value (#462) | `#[repr(u8)] #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)] pub enum Op { #[default] Add = 1, Sub = 5, Mul = 6 }` with `impl TryFrom<u8> for Op` (a `match` over the declared values, `Err(value)` for any other) and `impl From<Op> for u8`; a member `Op::Sub`, its integer `op as u8`, a switch a `match` over the variants without `_` where every variant has an arm. Closed are an enum without flags whose members are distinct and ascending, that no integer is converted to, no bitwise operator or parse makes, no public function takes or gives, no constant names but by a member, and - without a member of value zero, which is the `#[default]`, else the first - no new array, default struct or class field holds by default. No `transmute`, no `unsafe` |
 | numbers as text | integers by `to_string`; floating-point numbers by the shortest digits of `{:e}` laid out as .NET or ECMA-262 does (`ply_layout`); `F<n>` by `{:.n}`; radix digits by `{:x}`, `{:o}`, `{:b}`; .NET's `Parse` by `ply_parse_integer`, `ply_parse_f64` |
 | a field of a class nothing reads or writes | left out of the struct: it keeps its default for good, which no one can tell from no field, and Rust would warn about it as dead code (a field only written goes through its cell, which Rust counts as a use) |
 | a class (#462) | `#[derive(Default)] pub struct Name { count: Cell<i32>, name: RefCell<Vec<u16>>, items: RefCell<Vec<T>>, next: RefCell<Option<Rc<Other>>> }` - a value in a `Cell`, anything else in a `RefCell` - and its objects `Rc<Name>`; see [Objects](#objects) |
+| a single-owner class (#1393) | `#[derive(Default)] pub struct Xorshift32 { state: u32 }` - a value as itself, an array a `Vec<T>`, a field nothing reads left out - `pub fn new(seed: u32) -> Self { let mut this = Self::default(); this.init(seed); this }`, methods with `&self`, or `&mut self` where they write the object; parameters `&Name`/`&mut Name`, arguments `&x`/`&mut x`, a result the local moved out; see [Objects](#objects) |
 | `new T(..)`, a constructor | `Name::new(..) -> Rc<Self>`: `Rc::new(Self::default())` (`Rc::new(Self)` without fields), then the constructor's body, `init`, on it |
 | a method, a property accessor | a method of the `impl`: `&self`, or `self: &Rc<Self>` where it passes the object on; called `o.next()` |
 | a field of an object | `o.count.get()`, `o.count.set(v)`; `o.name.borrow().clone()`; `*o.next.borrow_mut() = v` after the value is bound; an array field `o.items.borrow()[i]`, `o.items.borrow_mut()[i] = v` (index and value bound first) |
@@ -240,14 +244,36 @@ A class instance has an identity: every variable that holds it reads and writes 
 has two forms for that, and the backend picks by what the module does with the class:
 
 - **One owner at a time** - an object created, passed on by move or borrowed, never stored twice -
-  is a plain struct with an `impl` block. (The ownership analysis that proves this for a class is the
-  next step; until it lands every class takes the shared form, which is correct for one owner too.)
+  is a plain struct with an `impl` block (#1393): `pub struct Xorshift32 { state: u32 }`,
+  `pub fn new(seed: u32) -> Self`, `pub fn next(&mut self) -> u32`.
 - **Shared** - an object two variables may hold, or that may be null - is an `Rc<Name>`, its fields
   each in a `Cell` (a value) or a `RefCell` (a string, an array, another object). A cell per field
   rather than one `RefCell<Name>` around the whole object: a `RefCell` borrow lives to the end of the
   statement that takes it, so a method that writes the object while an expression of its caller still
   holds a borrow would panic where .NET runs on; a `Cell` is never borrowed, and a `RefCell` field is
   borrowed for one access, the value of a store bound first. No `unsafe`.
+
+The ownership analysis (`Emit/ObjectOwnership.cs`, on the module as `ObjectLowering` leaves it) finds
+the single-owner classes. A class of the module is single-owner when it is no library or exception
+class, not abstract, no record, in no hierarchy and implements no interface; every field it keeps is a
+value or an array of values; no field, global or compound type (an array, a list, an optional, a
+function) names it; every variable of it is declared with and only assigned a fresh object - `new` or
+the result of a function of the module - and is read only as the object of a field read or write, as
+an argument of a call of the module (once per call), or returned (a local, moved out); the nullness
+analysis finds none of its variables or results null; and no iterator keeps one in its state. A
+mutation analysis, a fixed point over the calls, marks the variables and parameters whose object a
+function writes - a field stored, an array of a field written (directly, through a variable naming it,
+or by a callee), or passed where the callee writes its parameter: those take `&mut`, the others `&`.
+In the prototype's `classes` family Adler32 and Rc4 are plain, Counter (aliased and compared), Range (a
+record) and `null` keep the shared form.
+
+A struct of the IR that holds an array owns a `Vec` and is moved, never copied: where its variable is
+read for the last time (`Emit/Moves.cs`: no path from the read reads the variable again before it is
+given a new value; a loop it outlives, a `try` or a lambda counts as a later read) the value moves,
+elsewhere it is refused, since the IR shares the array between the copies and a clone would not. A
+second variable declared with an array or a list (`var r = v;`) borrows it, `let r = &mut v;`, where
+nothing names the source from that declaration to the second variable's last read and the source is
+read again afterwards; otherwise it is a move, or refused where both live.
 
 A hierarchy is flattened into traits. Every interface and every class something derives from is a
 trait; a value of it is an `Rc<dyn Trait>`. A class with objects of its own is a struct with every field
@@ -446,8 +472,10 @@ compared with each other, a closure that captures the object of a method, an arr
 written, or a variable other than a value that is assigned, collections (`Collection`), `using`, a global
 array without a first value of a known length or used as a whole (passed on, iterated as a slice),
 a global of another type, a record with a floating-point field,
-a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
-array in one written variable), a struct with a field that is no value. One array passed to a call
+a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables while both live, or a parameter and a new
+array in one written variable), a struct with a field that is neither a value nor an array of values, a struct holding an array copied while its
+variable lives on or given an array a variable still holds. A struct layout without a safe form - explicit field offsets, a packing, a size of
+its own - is `PLY1584`. One array passed to a call
 twice where it is written and the callee swaps its parameters is `PLY1566`; a written overlay view without
 `allowUnsafe` `PLY1567`. A lazy sequence outside the form of
 [Lazy sequences](#lazy-sequences) is `PLY1558`, naming the construct. Two exported functions
@@ -468,9 +496,12 @@ and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `c
 `clippy::type_complexity` (a function value that takes or gives another one, a type the source named in one word),
 `clippy::manual_find` (a search the source wrote as a loop that returns `Some(i)`, then `None`),
 `clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it),
-`clippy::manual_swap` (two variables swapped through a third, as `std::mem::swap` lowers),
-`clippy::reversed_empty_ranges` (a loop over a range of constants the source wrote empty, `5..=3u8`).
-No group is ever allowed. Every other lint is avoided by the shape the backend writes.
+`clippy::manual_swap` (two variables, or elements of two arrays, swapped through a third, as `std::mem::swap` lowers),
+`clippy::reversed_empty_ranges` (a loop over a range of constants the source wrote empty, `5..=3u8`),
+`clippy::should_implement_trait` (a public method named as a standard trait's, `next`, `add`: the name is the source's).
+No group is ever allowed. Every other lint is avoided by the shape the backend writes: a loop whose
+first pass always leaves it is a block (labelled where a `break` leaves it early, `never_loop`), an empty
+option handed on is `?` (`question_mark`), a struct literal in a condition is parenthesized.
 
 ## Verification
 
@@ -508,10 +539,17 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustUnsafeAuditTests` (layer `rust`): the crate of a written overlay under `allowUnsafe` builds, passes
   clippy and `cargo fmt --check`, its test gives the value the bytes say, and it passes Miri on the `rust-miri`
   nightly (ignored, naming the toolchain, where it is not installed); no crate without `allowUnsafe` needs Miri.
-- `RustRoundTripTests` (layer `rust`): every Rust fixture the backend writes (eleven of fifteen; the
-  others are listed in `RustFixture.BackendPending` and refused by name), imported by the Rust frontend
+- `RustRoundTripTests` (layer `rust`): every Rust fixture the backend writes (fourteen of fifteen; the
+  other, `objects`, is listed in `RustFixture.BackendPending` and refused by name), imported by the Rust frontend
   in each overflow mode, comes back as a crate that is built with overflow checks on and off; every
   outcome is what rustc recorded for the original in the mode of the import.
+- `RustSingleOwnerTests` and `be-rs-single-owner.feature` (layer `rust`, #1393): Xorshift32 as a plain struct
+  gives Marsaglia's 723471715 and 2497366906 for the seed 2463534242 as .NET does with overflow checks on and
+  off, an object two variables hold stays an `Rc` and computes the same, the uses that keep a class shared,
+  and the crates of `types`, `edges` and `reassign` clean under clippy and rustfmt in both import modes.
+- `RustClosedEnumTests` (layer `rust`, #462): a closed enum computes what .NET computes in both overflow
+  modes, and an integration test of the crate holds `Op::try_from` to the declared values and to `Err` for
+  one between, below and above them.
 - `RustBackendScenarioTests` (layer `rust`): the scenarios of the issues with their hand-checked
   values, clippy with `-D warnings` and `cargo fmt --check` on the crates, the generated tests passing
   and a mutated one failing; the loops with a value, the inclusive counted loops and the reductions

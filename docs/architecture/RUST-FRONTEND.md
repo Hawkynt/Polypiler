@@ -362,10 +362,10 @@ mode, for the calls of `RustCases`; `RustDifferentialTests` in `Polypiler.Tests`
 interpreter to the recordings, `RustFrontendDifferentialTests` in `Polypiler.Tests.Acceptance`
 (layer `rust`) holds the recordings to rustc and the emitted C# and JavaScript to the recordings, and
 `RustRoundTripTests` there holds the Rust the Rust backend writes back from the IR to them, its crate
-built with overflow checks on and off. Eleven of the fifteen fixtures make the round trip (`memory` since
-#460); the four the backend cannot write yet - `types`, `edges`, `objects` and `reassign`, for arrays as
-struct fields, one array held by two variables and lists of classes - are
-listed in `RustFixture.BackendPending`, and a unit test holds that the backend refuses each of them
+built with overflow checks on and off. Fourteen of the fifteen fixtures make the round trip (`memory` since
+#460; `types`, `edges` and `reassign` since #1393, with arrays as struct fields and a second variable
+borrowing an array or a list); the one the backend cannot write yet - `objects`, for lists of classes - is
+listed in `RustFixture.BackendPending`, and a unit test holds that the backend refuses it
 with `PLY1550`, naming the construct. The unit tests under `Polypiler.Tests/Frontends/Rust/` hold every
 refusal and every rustc error the frontend reports to its code. `RustPackageTests` (layer `rust`)
 builds `modgraph` with rustc in both overflow modes against the import's exports, and runs the package
