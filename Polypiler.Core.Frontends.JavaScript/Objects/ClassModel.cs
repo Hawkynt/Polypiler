@@ -100,6 +100,26 @@ internal sealed class ClassModel(string name, Node declaration, IrClassType? lib
   /// </summary>
   public IReadOnlyDictionary<string, IReadOnlyList<Expression>>? Frozen { get; init; }
 
+  /// <summary>
+  /// For a class synthesized for the object literals of one record shape that meet objects of a class
+  /// (#1388), the keys of the shape in source order - the order <c>Object.keys</c> gives them;
+  /// <see langword="null"/> for any other class. Its constructor runs none of its lineage, as a literal
+  /// runs none, and <c>instanceof</c> of a class it derives from is false for its objects.
+  /// </summary>
+  public IReadOnlyList<string>? RecordKeys { get; init; }
+
+  /// <summary>
+  /// Whether the class is synthesized for the object one <c>new C(…)</c> makes and that properties the
+  /// class lacks are then added to (#1388): a genuine <c>C</c> with those properties as fields of its own.
+  /// </summary>
+  public bool IsExtension { get; init; }
+
+  /// <summary>Whether the file declares no such class: it is synthesized for a record or an extension.</summary>
+  public bool IsSynthesized => this.RecordKeys is not null || this.IsExtension;
+
+  /// <summary>The keys of an object of the class in the order <c>Object.keys</c> gives them: a record's in its order, otherwise the fields that are no private ones, the base class first.</summary>
+  public IReadOnlyList<string> Keys => this.RecordKeys ?? [.. this.Lineage.Reverse().SelectMany(ancestor => ancestor.Fields).Where(item => !item.IsPrivate).Select(item => item.Key)];
+
   /// <summary>Why the class cannot be imported whatever its members are, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }
 

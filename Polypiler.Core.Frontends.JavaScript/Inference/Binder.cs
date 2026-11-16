@@ -320,6 +320,10 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
       switch (declarator.Id) {
         case Identifier id when this.Declare(id, declaration, declarator.Init) is { } variable && declarator.Init is not null:
           model.Flows.Add(new Flow(FlowKind.Assign, declarator.Init, variable));
+          // The one object a const made by new holds is what properties copied into it extend (#1388).
+          if (variable.IsConstant && declarator.Init is NewExpression creation)
+            variable.Creation = creation;
+
           break;
         case ObjectPattern pattern when declarator.Init is not null:
           // const { x, y } = p declares x and y, each with the value of its key; anything else in the pattern the lowering refuses.
@@ -571,6 +575,10 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
         // A store at the key of a key loop is the store into the field of that name, which the lowering checks (#1373).
         this.Expression(keyed);
         this.Expression(assignment.Right);
+        if (keyed.Object is Identifier { Name: var stored } && this.Lookup(stored, out var copiedInto) && ((Identifier)keyed.Property).Name is var name
+            && this._scope.TryGetValue(name, out var key) && key.KeysOf is { } source)
+          model.Flows.Add(new Flow(FlowKind.KeyedStore, assignment, copiedInto, Source: source));
+
         break;
       case MemberExpression element:
         this.Expression(element);

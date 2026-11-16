@@ -263,6 +263,8 @@ public static partial class JavaScriptFrontend {
         inference.Shapes.Prefer(variable.Type, variable.Name, elements);
 
     inference.Shapes.Seal();
+    // The classes synthesized for literals and extended objects are classes of the module (#1388).
+    classes = [.. classes, .. inference.Shapes.Classes.Made];
     // The signatures of the function values name the structs of their records, which exist from here on (#1377).
     inference.Sign(models);
     Classes.Declare(classes, inference, diagnostics);

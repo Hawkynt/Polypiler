@@ -61,6 +61,9 @@ internal sealed class Shapes {
   private readonly HashSet<string> _taken = [];
   private readonly Dictionary<string, IrStructType> _declared = [];
 
+  /// <summary>The classes synthesized where literals of a shape meet objects of a class (#1388).</summary>
+  public RecordClasses Classes { get; } = new();
+
   /// <summary>Whether the names are given, so that structs can be made.</summary>
   public bool IsNamed { get; private set; }
 

@@ -330,7 +330,8 @@ internal sealed record JsType {
     JsKind.Record => this.Shape!.ToString(),
     JsKind.Map => $"a Map of {this.Key!.Describe()} to {this.Element!.Describe()}",
     JsKind.Set => $"a Set of {this.Element!.Describe()}",
-    JsKind.Object => this.Class!.Name,
+    // An object of the class made for a literal is named as the literal is (#1388).
+    JsKind.Object => this.Class!.RecordKeys is { } keys ? $"{{ {string.Join(", ", keys)} }}" : this.Class.Name,
     JsKind.Null => Absence(this),
     JsKind.Function => "a function",
     JsKind.Sequence => $"a generator of {this.Element!.Describe()}",
@@ -387,7 +388,9 @@ internal sealed record JsType {
     }
 
     if (first.Kind != second.Kind)
-      return Conflict(first, second);
+      return first.Kind == JsKind.Record && second.Kind == JsKind.Object ? Meet(first, second)
+        : second.Kind == JsKind.Record && first.Kind == JsKind.Object ? Meet(second, first)
+        : Conflict(first, second);
 
     switch (first.Kind) {
       case JsKind.Number when (first.Enum ?? second.Enum) is { } named:
@@ -456,6 +459,15 @@ internal sealed record JsType {
     var widened = isUndefined && present.Kind == JsKind.Number && present.Float == 0 ? F64 : present;
     return widened with { MayBeNull = isNull, MayBeUndefined = isUndefined };
   }
+
+  /// <summary>
+  /// A record where objects of a class are kept (#1388): the literals of its shape are objects of the
+  /// class synthesized for it, and the place holds objects of the nearest class both derive from.
+  /// </summary>
+  private static JsType Meet(JsType record, JsType instance)
+    => record.Shape!.Registry.Classes.Meet(record.Shape, instance.Class!) is { } made && made.Lineage.FirstOrDefault(instance.Class!.Lineage.Contains) is { } common
+      ? Object(common)
+      : Conflict(instance, record);
 
   private static JsType Conflict(JsType first, JsType second)
     => new(JsKind.Conflict) { Kinds = (first.Describe(), second.Describe()) };

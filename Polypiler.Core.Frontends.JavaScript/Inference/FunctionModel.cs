@@ -101,6 +101,9 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// </summary>
   public bool IsCoercedOnly { get; set; }
 
+  /// <summary>For a <c>const</c> declared with <c>new C(…)</c>, that expression: the one object the variable holds (#1388); <see langword="null"/> for any other variable.</summary>
+  public NewExpression? Creation { get; set; }
+
   /// <summary>For the key of a loop over <c>Object.keys(o)</c>, the object <c>o</c> (#1373); <see langword="null"/> for any other variable.</summary>
   public Node? KeysOf { get; set; }
 
@@ -198,7 +201,14 @@ internal enum FlowKind {
   Invoke,
 
   /// <summary>The node is the value a generator yields - with <see cref="Flow.Index"/> 1 the iterable of a <c>yield*</c>, whose values it yields (#1327).</summary>
-  Yield
+  Yield,
+
+  /// <summary>
+  /// The node is <c>r[key] = v</c> of the key of a loop over <c>Object.keys(o)</c>, <see cref="Flow.Source"/>
+  /// the object <c>o</c>, <see cref="Flow.Target"/> the variable <c>r</c>: a key the class of <c>r</c> lacks
+  /// becomes a field of the class synthesized for the object <c>r</c> holds (#1388).
+  /// </summary>
+  KeyedStore
 
 }
 

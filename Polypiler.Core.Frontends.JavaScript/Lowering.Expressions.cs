@@ -81,6 +81,8 @@ internal sealed partial class Lowering {
         return this.ArrayLiteral(literal, types.Of(literal).Ir!.Element!);
       case ArrowFunctionExpression or FunctionExpression when this._model.Nested.TryGetValue(node, out var nested):
         return this.Lambda(nested);
+      case ObjectExpression literal when types.Of(literal) is { Kind: JsKind.Object, Class.RecordKeys: not null } made:
+        return this.RecordObject(literal, made.Class!);
       case ObjectExpression literal when types.Of(literal).Kind == JsKind.Record:
         return this.ObjectLiteral(literal, types.Of(literal).Ir!);
       case ObjectExpression literal:

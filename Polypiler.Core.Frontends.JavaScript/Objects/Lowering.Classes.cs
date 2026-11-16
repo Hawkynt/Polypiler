@@ -53,7 +53,16 @@ internal sealed partial class Lowering {
     switch (node) {
       case BinaryExpression { Operator: Operator.InstanceOf } test when types.Names.ClassNamed(test.Right) is { } tested:
         var value = this.Expression(test.Left);
-        return value.Type.IsObject ? new IrTypeTest(value, IrType.Object(tested.Ir)) : throw this.Unsupported(test, $"instanceof of {types.Text(test.Left)}, which is no object of a class");
+        if (!value.Type.IsObject)
+          throw this.Unsupported(test, $"instanceof of {types.Text(test.Left)}, which is no object of a class");
+
+        // An object of a class made for literals is none of the classes it derives from (#1388).
+        var records = types.Shapes.Classes.RecordsBelow(tested).ToList();
+        if (records.Count > 0 && value is not IrLocalRef)
+          throw this.Unsupported(test, $"instanceof of {types.Text(test.Left)}, which may be an object literal and is no variable");
+
+        return records.Aggregate((IrExpr)new IrTypeTest(value, IrType.Object(tested.Ir)),
+          (both, record) => new IrBinary(IrBinaryOp.LogicalAnd, both, new IrUnary(IrUnaryOp.LogicalNot, new IrTypeTest(value, IrType.Object(record.Ir)))));
       case MemberExpression { Object: Super } read:
         var ancestor = this._model.Candidate.Class?.Base ?? throw this.Unsupported(read, "super outside a derived class");
         return Binder.KeyOf(read) is { } name && ancestor.Member(MemberKind.Getter, name) is { } getter
@@ -66,7 +75,9 @@ internal sealed partial class Lowering {
         // null takes the type of the place it goes to (see To) or of what it is compared with.
         return new IrNull(IrType.Void);
       case NewExpression creation when types.Names.ClassNamed(creation.Callee) is { } created:
-        return new IrNew(IrType.Object(created.Ir), created.Creator!, this.Arguments(creation, creation.Arguments, created.Initial));
+        return types.Shapes.Classes.ExtensionsOf(creation) is { } extension
+          ? this.Extended(extension)
+          : new IrNew(IrType.Object(created.Ir), created.Creator!, this.Arguments(creation, creation.Arguments, created.Initial));
       case MemberExpression { Object: ThisExpression self } when this._receiver is null:
         throw this.Unsupported(self, "this");
       case CallExpression { Callee: CallExpression called }:
@@ -97,6 +108,29 @@ internal sealed partial class Lowering {
       default:
         return null;
     }
+  }
+
+  /// <summary>
+  /// A <c>new C(…)</c> that the keys of an object are copied into (#1388): an object of the class made
+  /// for the keys of the class that object is of, chosen by its class, or a <c>C</c> where it copies
+  /// none. The object is a variable that nothing assigns again, so it is the one whose keys are copied.
+  /// </summary>
+  private IrExpr Extended(RecordClasses.Extension extension) {
+    var created = extension.Created;
+    if (extension.Source is not Identifier || this._model.Bindings.GetValueOrDefault(extension.Source) is not Variable source
+        || !(source.IsConstant || source.IsParameter && !this._model.Flows.Exists(flow => flow.Target == source && flow.Kind is FlowKind.Assign or FlowKind.Compound or FlowKind.Step))
+        || types.Of(extension.Source) is not { Kind: JsKind.Object, Class: { } holder })
+      throw this.Unsupported(extension.Creation, $"keys copied into new {created.Name} from {types.Text(extension.Source)}, which is no variable that keeps its object");
+
+    var target = this.Expression(extension.Source);
+    IrExpr Made(ClassModel type) {
+      var made = new IrNew(IrType.Object(type.Ir), type.Creator!, this.Arguments(extension.Creation, extension.Creation.Arguments, type.Initial));
+      return type == created ? made : new IrCast(IrType.Object(created.Ir), made);
+    }
+
+    return types.Shapes.Classes.Below(holder).Reverse().Aggregate(Made(created), (rest, from) => extension.Made.TryGetValue(from, out var type)
+      ? new IrConditional(new IrTypeTest(target, IrType.Object(from.Ir)), Made(type), rest)
+      : rest);
   }
 
   /// <summary>The arguments of a call of a member, each in the type of its parameter.</summary>
