@@ -54,6 +54,8 @@ public static partial class RustEmitter {
       this._labels = 0;
       this._breakables.Clear();
       this._function = function;
+      this._definition = this._definitions.GetValueOrDefault(function.Name);
+      this._standIns = this._definition?.Parameters.ToDictionary(parameter => parameter.StandIn, parameter => parameter.Name) ?? [];
       this._arrayFacts = this._arrays.GetValueOrDefault(function.Name) ?? new();
       this._arrayParameters = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsArray).ToDictionary(pair => pair.parameter, pair => pair.index);
       if (this._arrayFacts.Problem is { } problem)
@@ -105,7 +107,11 @@ public static partial class RustEmitter {
       if (this._throwing.Contains(function.Name) && function.ReturnType == IrType.Void && !(statements.Count > 0 && Diverges(statements[^1])))
         statements.Add(new RsExpressionStatement(this.Returned(null)));
       var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void && !this._throwing.Contains(function.Name));
-      return new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) { Generics = generics.Length > 0 ? generics : Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
+      var lifetime = Lifetime(function, this._arrayFacts).Length > 0 ? "'a" : "";
+      return new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) {
+        Generics = generics.Length > 0 ? generics : this._definition?.Generics(lifetime) ?? (lifetime.Length > 0 ? $"<{lifetime}>" : ""),
+        Where = this._definition?.Where ?? []
+      };
     }
 
     /// <summary>The function being written.</summary>

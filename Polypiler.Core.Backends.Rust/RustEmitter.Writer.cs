@@ -43,6 +43,7 @@ public static partial class RustEmitter {
 
     /// <summary>The crate: manifest, root and module.</summary>
     public RustCrate Crate(IrModule module) {
+      module = this.Generalized(module);
       module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module)));
       this._module = module;
       var moduleName = ModuleName(module.Name, this._profile);
@@ -51,6 +52,7 @@ public static partial class RustEmitter {
         this.Refuse($"declared types ({Kind(type)})");
 
       this.NameItems(module);
+      this.NameInstances();
       this.NameTypes(module);
       this.NameGlobals(module);
       this.Classes(module);
@@ -65,11 +67,13 @@ public static partial class RustEmitter {
         items.Add(this.Constant(constant));
       items.AddRange(this.Globals(module));
       items.AddRange(this.ErrorItems());
-      var written = module.Functions.Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
+      var written = module.Functions.Where(function => !this._generalized.ContainsKey(function.Name)).Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
       var members = written.Where(pair => this._members.ContainsKey(pair.Source.Name))
         .ToDictionary(pair => pair.Source.Name, pair => this.AsMember(pair.Written, pair.Source, this._members[pair.Source.Name]), StringComparer.Ordinal);
       var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name) && !this._bodiless.Contains(pair.Source.Name)).Select(pair => pair.Written).ToList();
       this._written = members;
+      this._definition = null;
+      this._standIns = [];
       foreach (var type in module.Types)
         items.AddRange(type switch {
           IrStructType structType => this.Struct(structType),
@@ -172,7 +176,7 @@ public static partial class RustEmitter {
 
     /// <summary>The Rust type of an IR type a parameter, a local or a result has: a scalar or a struct; refused for any other.</summary>
     private string Type(IrType type)
-      => TypeName(type) ?? (type.IsString ? OwnedString
+      => this._standIns.GetValueOrDefault(type) ?? TypeName(type) ?? (type.IsString ? OwnedString
         : type.Declaration is IrStructType or IrEnumType && this._types.TryGetValue(type.Declaration, out var name) ? name
         : IsError(type) ? ErrorType
         : type.IsObject ? this.ObjectType(type, false)
