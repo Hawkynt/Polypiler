@@ -304,7 +304,7 @@ internal sealed record JsType {
       JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
       JsKind.String => IrType.String,
       JsKind.Array when this.IsView => this.IsMemory ? IrType.Memory(this.ViewedElement) : IrType.Span(this.ViewedElement),
-      JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection || listed.IsArray) ? listed : IrType.F64),
+      JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection || listed.IsArray || listed.IsFunction) ? listed : IrType.F64),
       JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString || element.IsFunction) ? element : IrType.F64),
       JsKind.Function => this.Callable!.Signature,
       JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),

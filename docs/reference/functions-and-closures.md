@@ -76,6 +76,7 @@ binds to (`PLY1000`); `Delegate`, `DynamicInvoke` and events are refused by thei
 | arrow function (expression and block body), function expression | `IrLambda` | supported |
 | function declaration inside a function | hoisted (ECMA-262 §10.2.11): a variable declared where its block starts, assigned its `IrLambda` once every variable of the block it captures is declared | supported |
 | a closure returned from a function, a function value in a `const`/`let`, a parameter or an array | the function type the calls through it give it | supported |
+| function values in an Array that grows (`fs.push(() => i)`, then `for (const f of fs) f()`) | a list of the function type (#1396) | supported |
 | a function of the file named as a value | `IrFunctionRef` | supported |
 | `f(x)`, `fs[0]()`, `compose(f, g)(x)` | `IrInvoke` | supported |
 | `for (let …)`, `for (const …)` whose variables a closure captures / `for (var …)` | `IrFor` with `PerIteration` / one variable | supported |
