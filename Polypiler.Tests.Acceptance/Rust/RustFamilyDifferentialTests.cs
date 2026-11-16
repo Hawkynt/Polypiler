@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
 /// The fixtures of the prototype's families through the Rust backend (#460, #462): bit operations,
-/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, views,
+/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, views,
 /// floating-point views of bytes. Every fixture of a family that the backend writes is
 /// built by the pinned toolchain and called on the family's cases with overflow checks on and off;
 /// every outcome, the arrays a call was given included, must be what .NET computes of the original
@@ -83,6 +83,9 @@ public sealed class RustFamilyDifferentialTests {
       yield return new($"functions/{file}", () => FunctionsFixtures.Imported(file), () => [.. FunctionsFixtures.Calls().Where(call => call.File == file).Select(call => call.Call)],
         call => PrototypeFixture.InvokedOutcome(FunctionsFixtures.Compiled(className, call.Method), call));
 
+    yield return new("optional/Find", OptionalFixtures.Imported, () => [.. OptionalFixtures.Calls()],
+      call => PrototypeFixture.InvokedOutcome(OptionalFixtures.Compiled(call.Method), call));
+
     yield return new("spans/Adler32Span", () => SpanFixtures.Imported("Adler32Span"),
       () => [.. new (int Offset, int Length)[] { (5, 9), (0, 20), (20, 0), (19, 2), (-1, 3), (3, -1) }
         .Select(range => new PrototypeCall("Compute", [SpanFixtures.Wikipedia, range.Offset, range.Length]) { Returns = typeof(uint) })],
@@ -96,17 +99,13 @@ public sealed class RustFamilyDifferentialTests {
 
   /// <summary>The fixtures of the families the backend refuses still, each with the construct its refusal names.</summary>
   private static IEnumerable<TestCaseData> Refusals() {
-    yield return new TestCaseData("optional/Find", "'the type i32?'");
     yield return new TestCaseData("exceptions/Traps", "'exception handling'");
     yield return new TestCaseData("exceptions/Classes", "'exception handling'");
   }
 
   [TestCaseSource(nameof(Refusals))]
   public void Fixture_IsRefusedByName(string name, string construct) {
-    var module = name switch {
-      "optional/Find" => OptionalFixtures.Imported(),
-      _ => ExceptionFixtures.Imported(name["exceptions/".Length..])
-    };
+    var module = ExceptionFixtures.Imported(name["exceptions/".Length..]);
     Assert.That(RustCrates.Check(module).Select(problem => problem.Message), Has.Some.Contain(construct));
   }
 

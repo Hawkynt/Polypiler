@@ -250,6 +250,11 @@ internal static class Strings {
           true
       }
       """, ["ply_utf16", "ply_upper"]),
+    ["ply_value"] = ("""
+      fn ply_value<T: Copy>(value: &Option<T>) -> T {
+          value.expect("MissingValue")
+      }
+      """, []),
     ["ply_non_null"] = ("""
       fn ply_non_null<T>(value: &Option<T>) -> &T {
           value.as_ref().expect("NullReference")

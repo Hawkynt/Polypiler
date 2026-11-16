@@ -372,6 +372,21 @@ public static partial class RustEmitter {
     return exports;
   }
 
+  /// <summary>
+  /// Whether a parameter of a function takes null, which makes it an <c>Option</c>: an array the module
+  /// tests for null or gives null (<c>Option&lt;&amp;[T]&gt;</c>), an optional value (<c>Option&lt;T&gt;</c>).
+  /// </summary>
+  /// <param name="module">The module, legalized for the profile.</param>
+  /// <param name="function">The IR name of the function.</param>
+  /// <param name="parameter">The position of the parameter.</param>
+  /// <returns><see langword="true"/> when the parameter is an <c>Option</c>.</returns>
+  public static bool TakesNull(IrModule module, string function, int parameter) {
+    ArgumentNullException.ThrowIfNull(module);
+    var lowered = Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module));
+    var local = lowered.Functions.First(candidate => candidate.Name == function).Parameters[parameter];
+    return local.Type.IsOptional || local.Type.IsArray && Polypiler.Core.Backends.Rust.Emit.ArrayNullness.Of(lowered).MayBeNull(function, local);
+  }
+
   /// <summary>The name of a package or module of an IR module's name, as Cargo and the guidelines want it.</summary>
   /// <param name="name">The IR name.</param>
   /// <param name="profile">The profile, whose keywords are avoided.</param>

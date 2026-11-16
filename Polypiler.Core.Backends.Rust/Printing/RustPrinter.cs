@@ -711,6 +711,13 @@ public static class RustPrinter {
     // A control-flow expression overflows only with its condition on its first line (rustfmt's try_overflow_last_item).
     if (arguments[^1] is RsIf or RsWhile or RsMatch or RsFor && last.Contains('\n') && !first.EndsWith('{'))
       return null;
+    // Nor where the condition itself takes several lines, an if in the condition of an if.
+    var leading = arguments[^1] switch { RsIf choice => choice.Condition, RsWhile loop => loop.Condition, RsMatch match => match.Scrutinee, _ => null };
+    if (leading is not null && Flat(leading) is null)
+      return null;
+    // A control-flow expression overflows with its first line within the width of a call's arguments.
+    if (leading is not null && last.Contains('\n') && first.Length > CallWidth)
+      return null;
 
     return column + head.Length + first.Length <= MaxWidth ? head + last : null;
   }

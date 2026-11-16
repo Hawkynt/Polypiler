@@ -4,7 +4,7 @@
 [#458](https://github.com/Hawkynt/Polypiler/issues/458), [#459](https://github.com/Hawkynt/Polypiler/issues/459));
 arrays and slices, structs, enums, classes, interfaces and module state since
 [#460](https://github.com/Hawkynt/Polypiler/issues/460) and [#462](https://github.com/Hawkynt/Polypiler/issues/462);
-closures and function values since phase 2; collections, sequences and `Result` follow. The runner that builds
+closures, function values and optional values since phase 2; collections, sequences and `Result` follow. The runner that builds
 and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/468).
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
@@ -116,6 +116,11 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `f(a, b)` of a function value | `f(a, b)`; `ply_non_null(&f)(a, b)` of a nullable one, the arguments bound first where they are more than variables and constants |
 | a method group, a bound method | `Rc::new(square)`, `Rc::new(Name::twice)`; `{ let receiver = s.clone().expect("NullReference"); Rc::new(move \|v1: i32\| receiver.apply(v1)) }`, the object evaluated when the value is made |
 | `f == null`, `f != null` | `f.is_none()`, `f.is_some()`; `false`, `true` of a type that never holds null |
+| an optional value `T?` of a value type | `Option<T>`: `Some(v)`, `None`, `x.is_none()`/`x.is_some()`; the value a lifted operator has tested `x.unwrap_or_default()`, which cannot differ from it, an untested `.Value` `ply_value(&x)`, which panics with `MissingValue` (a function, which clippy's `unnecessary_unwrap` does not flag after a test) |
+| `a ?? b` | `a.unwrap_or(b)` of a variable or a constant, `a.unwrap_or_else(\|\| f(c))` of a fallback that does something, evaluated only when needed; `or`, `or_else` where the result stays optional |
+| an assignment inside an expression (`IrBind`: an operand evaluated once, `x ??= v`) | an assignment before the statement where everything evaluated before it has no effect, `let t0: Option<i32> = next(c);`, also when both branches of a choice begin with it; otherwise a block `{ q = Some(4); q.unwrap_or_default() }` in place |
+| an array the module tests for null or gives null | `Option<&[T]>` as a parameter (read only), `Option<Vec<T>>` as a local or a result; `None`, `Some(&v)`, `v.as_deref()`, `a.map(<[T]>::to_vec)` where a place takes it; used as an array `ply_non_null(&a).len()`, `*ply_non_null(&a)` |
+| `c ? true : x`, `c ? false : x`, `c ? x : true`, `c ? x : false` of truth values | `c \|\| x`, `!c && x`, `!c \|\| x`, `c && x`, which evaluate the same way; `!(a && b)` as `!a \|\| !b` |
 
 ## Objects
 
@@ -175,8 +180,9 @@ A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, 
 ## Refused
 
 What the backend does not write yet is refused with `PLY1550`, naming the construct: pointers,
-memory, a view cast to another element type or made on the stack, optional values (`the type i32?`),
-a function value that takes or gives more than values and other function values, two function values
+memory, a view cast to another element type or made on the stack, an optional value of a type that
+is no value, an array that may be null and is written (`an array that may be null and is written`) or
+is a borrowed result, a function value that takes or gives more than values and other function values, two function values
 compared with each other, a closure that captures the object of a method, an array it captures that is
 written, or a variable other than a value that is assigned, collections and sequences (`Collection`, `Yield`), `using`, a global
 that is no integer or truth value (`a global of the type u32[]`), a record with a floating-point field,
@@ -194,7 +200,9 @@ whose Rust names are the same are `PLY1574`; an exception handler `PLY1560`.
 `clippy::manual_clamp` and `clippy::min_max` (a minimum and a maximum whose bounds may be out of
 order, where `clamp` would panic), `clippy::manual_range_contains`, `clippy::neg_cmp_op_on_partial_ord`
 and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `clippy::too_many_arguments`,
-`clippy::type_complexity` (a function value that takes or gives another one, a type the source named in one word).
+`clippy::type_complexity` (a function value that takes or gives another one, a type the source named in one word),
+`clippy::manual_find` (a search the source wrote as a loop that returns `Some(i)`, then `None`),
+`clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it).
 No group is ever allowed. Every other lint is avoided by the shape the backend writes.
 
 ## Verification
@@ -205,14 +213,14 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state and function values, their forms and refusals.
+- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
   interpreter's.
 - `RustFamilyDifferentialTests` (layer `rust`): the fixtures of the families the backend writes - bits,
   records, strings, enums, numbers as text, classes, dispatch, generics, function values and closures,
-  the floating-point view of bytes - against .NET in both overflow modes.
+  optional values, the floating-point view of bytes - against .NET in both overflow modes.
 - `RustRoundTripTests` (layer `rust`): every Rust fixture, imported by the Rust frontend in each
   overflow mode, comes back as a crate that is built with overflow checks on and off; every outcome is
   what rustc recorded for the original in the mode of the import.
@@ -223,7 +231,8 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 The runner (`Polypiler.Core.Verification/Runners`): `RustRunner` builds (`cargo build`), tests
 (`cargo test`), format-checks (`cargo fmt --check`), lints (`cargo clippy -- -D warnings`) and calls
 exports through a generated driver (`RustDriverGenerator`) on input images - scalars, and `seq<T>` and
-`utf16` as vectors borrowed by the call, an `inout` one exclusively and written back after the result - with `RustBuildOptions`
+`utf16` as vectors borrowed by the call, an `inout` one exclusively and written back after the result,
+`opt<T>` as an `Option` after its presence byte (`opt<seq<T>>` passed as `a.as_deref()`) - with `RustBuildOptions`
 (`OverflowChecks`, `DebugAssertions`, `OptLevel`) that have no defaults. Diagnostics: `PLY1591` the
 compiler rejected the input, `PLY1592` the driver died, `PLY1595` a protocol error such as a signature
 that does not fit the declaration.

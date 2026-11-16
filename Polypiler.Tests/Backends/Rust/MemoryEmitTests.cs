@@ -102,8 +102,9 @@ public sealed class MemoryEmitTests {
   [Test]
   public void ArrayOfAnUnknownForm_IsRefused() {
     var local = new IrLocal("x", _ints);
-    var other = Function("Other", IrType.Void, [], [local], new IrDeclare(local, new IrNull(_ints)));
-    Assert.That(ProblemsIr(Module(other)), Has.Some.Contain("an array of the form Null"));
+    var maker = new IrLocal("make", IrType.Function(_ints));
+    var other = Function("Other", IrType.Void, [maker], [local], new IrDeclare(local, new IrInvoke(_ints, new IrLocalRef(maker), [])));
+    Assert.That(ProblemsIr(Module(other)), Has.Some.Contain("an array of the form Invoke"));
   }
 
   [Test]

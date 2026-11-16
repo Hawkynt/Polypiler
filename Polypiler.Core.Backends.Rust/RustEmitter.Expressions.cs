@@ -103,12 +103,14 @@ public static partial class RustEmitter {
       IrLocalRef { Type.IsFunction: true } reference when this._nested.ContainsKey(reference.Local) => this.FunctionValue(reference),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
       IrLambda lambda => this.Closure(lambda),
+      IrSome or IrNone or IrIsNone or IrUnwrap or IrCoalesce or IrBind => this.Optional(expression),
       IrInvoke invoke => this.Invoke(invoke),
       IrFunctionRef reference => this.FunctionReference(reference),
       IrBoundMethod bound => this.BoundMethod(bound),
       IrNull { Type.IsFunction: true } => new RsPath("None") { Type = expression.Type },
       IrReferenceEquals equality when equality.Left.Type.IsFunction || equality.Right.Type.IsFunction => this.FunctionEquals(equality.Left, equality.Right),
       IrIsNull test when test.Value.Type.IsFunction => this.FunctionIsNull(test.Value),
+      IrIsNull test when test.Value.Type.IsArray => this.ArrayIsNull(test.Value, false),
       IrConstRef constant when !constant.Type.IsArray && this._constants.TryGetValue(constant.Constant.Name, out var name) => new RsPath(name) { Type = constant.Type },
       IrUnary unary => this.Unary(unary),
       IrBinary binary => this.Binary(binary),
@@ -224,12 +226,22 @@ public static partial class RustEmitter {
       switch (condition) {
         case IrUnary { Op: IrUnaryOp.LogicalNot } inner:
           return this.Expression(inner.Operand);
+        case IrIsNone test:
+          return this.Bound(test.Value, value => new RsMethodCall(this.Receiver(value), "is_some", []) { Type = IrType.Bool });
+        case IrIsNull { Value.Type.IsArray: true } test:
+          return this.ArrayIsNull(test.Value, true);
         case IrConst { Type.Kind: IrTypeKind.Bool } constant:
           return Literal(new IrConst(IrType.Bool, constant.Value == 0 ? 1 : 0));
         case IrTypeTest test when test.Value.Type.IsAssignableTo(test.Target) && this.MayBeNull(test.Value):
           return this.IsNull(test.Value);
         case IrReferenceEquals equality when (equality.Left is IrNull || equality.Right is IrNull) && (equality.Left.Type.IsFunction || equality.Right.Type.IsFunction):
           return this.FunctionIsSome(equality.Left is IrNull ? equality.Right : equality.Left);
+        case IrConditional choice when Lazy(choice) is { } lazy && !(KnownTruth(choice.WhenTrue) is { } a && KnownTruth(choice.WhenFalse) is { } b && a != b):
+          return this.Not(lazy);
+        case IrBinary { Op: IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr } logical:
+          // De Morgan: the negation moves onto the operands, where a comparison or a test turns around.
+          return this.Binary(new IrBinary(logical.Op == IrBinaryOp.LogicalAnd ? IrBinaryOp.LogicalOr : IrBinaryOp.LogicalAnd,
+            new IrUnary(IrUnaryOp.LogicalNot, logical.Left), new IrUnary(IrUnaryOp.LogicalNot, logical.Right)));
         case IrBinary { Op: IrBinaryOp.Equal or IrBinaryOp.NotEqual } equality:
           return this.Binary(equality with { Op = equality.Op == IrBinaryOp.Equal ? IrBinaryOp.NotEqual : IrBinaryOp.Equal });
         case IrBinary { Op: >= IrBinaryOp.Less and <= IrBinaryOp.GreaterOrEqual } order when !order.Left.Type.IsFloat:
@@ -264,6 +276,15 @@ public static partial class RustEmitter {
       // The bitwise operators of an enum work on its integer; equality is the newtype's own.
       if (operandType.IsEnum && binary.Op is IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor)
         return this.Wrapped(type, this.Binary(this.Inner(binary.Left), binary.Op switch { IrBinaryOp.And => "&", IrBinaryOp.Or => "|", _ => "^" }, this.Inner(binary.Right), operandType.EnumType!.Underlying));
+
+      // An operand that decides a lazy operator alone: false && x and true || x are the constant; so are
+      // x && false and x || true where x has no effect (clippy's overly_complex_bool_expr).
+      if (binary.Op is IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr) {
+        var absorbing = binary.Op == IrBinaryOp.LogicalOr ? 1 : 0;
+        if (binary.Left is IrConst { Type.Kind: IrTypeKind.Bool } leading && (leading.Value != 0 ? 1 : 0) == absorbing
+          || binary.Right is IrConst { Type.Kind: IrTypeKind.Bool } trailing && (trailing.Value != 0 ? 1 : 0) == absorbing && Polypiler.Core.Backends.Rust.Emit.BindHoisting.Pure(binary.Left))
+          return new RsLiteral(absorbing == 1 ? "true" : "false") { Type = IrType.Bool };
+      }
 
       var a = this.Expression(binary.Left);
       var b = this.Expression(binary.Right);
@@ -326,10 +347,47 @@ public static partial class RustEmitter {
       return this.Method(value, "wrapping_shr", type, amount);
     }
 
+    /// <summary>
+    /// The value a truth value always has where it has no effect: a constant, or a lazy operator with
+    /// the operand that decides it alone and another without an effect; <see langword="null"/> otherwise.
+    /// </summary>
+    private static bool? KnownTruth(IrExpr value) => value switch {
+      IrConst { Type.Kind: IrTypeKind.Bool } constant => constant.Value != 0,
+      IrBinary { Op: IrBinaryOp.LogicalOr } or IrBinary { Op: IrBinaryOp.LogicalAnd } when value is IrBinary lazy
+        && (KnownTruth(lazy.Left) == (lazy.Op == IrBinaryOp.LogicalOr)
+          || KnownTruth(lazy.Right) == (lazy.Op == IrBinaryOp.LogicalOr) && Polypiler.Core.Backends.Rust.Emit.BindHoisting.Pure(lazy.Left))
+        => lazy.Op == IrBinaryOp.LogicalOr,
+      _ => null
+    };
+
+    /// <summary>
+    /// A choice of a truth value with one constant branch as the lazy operator that is evaluated the same
+    /// way: <c>c ? true : x</c> is <c>c || x</c>, <c>c ? false : x</c> <c>!c &amp;&amp; x</c>, <c>c ? x : true</c>
+    /// <c>!c || x</c>, <c>c ? x : false</c> <c>c &amp;&amp; x</c>; <see langword="null"/> for any other choice.
+    /// </summary>
+    private static IrBinary? Lazy(IrConditional choice) {
+      if (choice.Type != IrType.Bool)
+        return null;
+
+      var negated = new IrUnary(IrUnaryOp.LogicalNot, choice.Condition);
+      return (KnownTruth(choice.WhenTrue), KnownTruth(choice.WhenFalse)) switch {
+        (true, _) => new IrBinary(IrBinaryOp.LogicalOr, choice.Condition, choice.WhenFalse),
+        (false, _) => new IrBinary(IrBinaryOp.LogicalAnd, negated, choice.WhenFalse),
+        (_, true) => new IrBinary(IrBinaryOp.LogicalOr, negated, choice.WhenTrue),
+        (_, false) => new IrBinary(IrBinaryOp.LogicalAnd, choice.Condition, choice.WhenTrue),
+        _ => null
+      };
+    }
+
     /// <summary><c>if c { a } else { b }</c>; with constant truth values the condition itself or its negation.</summary>
     private RsExpression Conditional(IrConditional choice) {
-      if (choice is { WhenTrue: IrConst { Type.Kind: IrTypeKind.Bool } yes, WhenFalse: IrConst { Type.Kind: IrTypeKind.Bool } no } && yes.Value != no.Value)
-        return yes.Value != 0 ? this.Expression(choice.Condition) : this.Not(choice.Condition);
+      var yes = KnownTruth(choice.WhenTrue);
+      var no = KnownTruth(choice.WhenFalse);
+      if (yes is { } always && no is { } never && always != never)
+        return always ? this.Expression(choice.Condition) : this.Not(choice.Condition);
+
+      if (Lazy(choice) is { } lazy)
+        return this.Binary(lazy);
 
       // A choice in the second branch is an else if (clippy's collapsible_else_if).
       var otherwise = this.Expression(choice.WhenFalse);

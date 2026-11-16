@@ -125,6 +125,22 @@ public sealed class RustRunnerUnitTests {
     Assert.That(RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([], ImageType.Seq(ImageType.U8)))]), Does.Contain("let mut at = 0;\n            if at != input.len() {"));
   }
 
+  /// <summary>An optional value is an Option read after its presence byte: of a scalar the value, of a sequence a vector passed as a slice, written back with the byte.</summary>
+  [Test]
+  public void Driver_PassesOptionalValuesWithTheirPresence() {
+    var signature = new CallSignature([
+      new CallParameter("a", ImageType.Opt(ImageType.I32), ParameterMode.In), new CallParameter("b", ImageType.Opt(ImageType.Seq(ImageType.U8)), ParameterMode.InOut)
+    ], ImageType.Opt(ImageType.F64));
+    var driver = RustDriverGenerator.Generate("k", [new RustExport("m::f", signature)]);
+    Assert.That(driver, Does.Contain("let a0: Option<i32> = if take(input, &mut at, 1)[0] != 0 {\n                Some(i32::from_le_bytes(take(input, &mut at, 4).try_into().unwrap()))\n            } else {\n                None\n            };"));
+    Assert.That(driver, Does.Contain("let a1: Option<Vec<u8>> = if take(input, &mut at, 1)[0] != 0 {"));
+    Assert.That(driver, Does.Contain("(0..count).map(|_| u8::from_le_bytes(take(input, &mut at, 1).try_into().unwrap())).collect()"));
+    Assert.That(driver, Does.Contain("let result = k::m::f(a0, a1.as_deref());"));
+    Assert.That(driver, Does.Contain("match &result {\n                Some(present12) => {\n                    image.push(1);\n                    image.extend_from_slice(&(*present12).to_bits().to_le_bytes());\n                }\n                None => image.push(0),\n            }"));
+    Assert.That(driver, Does.Contain("match &a1 {\n                Some(present12) => {\n                    image.push(1);\n                    let values: &[u8] = &present12;"));
+    Assert.That(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([new CallParameter("a", ImageType.Opt(ImageType.U8), ParameterMode.Out)], null))]), Throws.ArgumentException);
+  }
+
   [Test]
   public void Driver_RefusesWhatItCannotPass() {
     Assert.Throws<ArgumentException>(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([new CallParameter("a", ImageType.Bytes, ParameterMode.In)], null))]));

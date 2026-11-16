@@ -138,6 +138,13 @@ internal static class ArrayOwnership {
           Link(node, choice.WhenTrue);
           Link(node, choice.WhenFalse);
           break;
+        case IrNull:
+          // Null holds no array: the variable is an Option, which ArrayNullness finds.
+          break;
+        case IrBind bind:
+          Link(bind.Local, bind.Value);
+          groups.Union(node, bind.Local);
+          break;
         default:
           problems.Add($"an array of the form {value.GetType().Name[2..]}");
           break;
@@ -187,6 +194,9 @@ internal static class ArrayOwnership {
         switch (node) {
           case IrStep { Target: IrArrayLoad load }:
             Write(load.Array);
+            break;
+          case IrBind { Local.Type.IsArray: true } bind:
+            Link(bind.Local, bind.Value);
             break;
           case IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy:
             Write(copy.Arguments[2]);

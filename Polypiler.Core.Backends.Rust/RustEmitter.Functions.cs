@@ -84,10 +84,12 @@ public static partial class RustEmitter {
       foreach (var parameter in function.Parameters.Where(this._reassigned.Contains)) {
         // A parameter given a string or a new array of its own holds a copy it owns from the start.
         var copied = parameter.Type.IsString || parameter.Type.IsArray && !this.IsReference(parameter);
-        var type = parameter.Type.IsString ? OwnedString : parameter.Type.IsArray && copied ? $"Vec<{this.ElementType(parameter.Type)}>" : null;
+        var nullable = copied && this.IsNullableArray(parameter);
+        var type = parameter.Type.IsString ? OwnedString : nullable ? this.NullableArrayType(parameter.Type, false) : parameter.Type.IsArray && copied ? $"Vec<{this.ElementType(parameter.Type)}>" : null;
         var own = parameter.Type.IsObject && !this.MayBeNull(parameter);
         statements.Add(new RsLet(this._locals[parameter], true, type,
-          copied ? new RsMethodCall(new RsPath(this._locals[parameter]), "to_vec", [])
+          nullable ? new RsMethodCall(new RsPath(this._locals[parameter]), "map", [new RsPath($"<[{this.ElementType(parameter.Type)}]>::to_vec")])
+          : copied ? new RsMethodCall(new RsPath(this._locals[parameter]), "to_vec", [])
           : own ? this.Cloned(new RsPath(this._locals[parameter]))
           : new RsPath(this._locals[parameter])));
       }
@@ -295,6 +297,8 @@ public static partial class RustEmitter {
           this._read.Add(reference.Local);
         if (node is IrStep { Target: IrLocalRef target })
           this.Assigned(target.Local, bindings, depth);
+        if (node is IrBind bind)
+          this.Assigned(bind.Local, bindings, depth);
       }
     }
 

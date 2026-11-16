@@ -50,6 +50,8 @@ public static partial class RustEmitter {
         return this.ViewType(parameter.Type, this.WritesView(parameter));
       if (!parameter.Type.IsArray)
         return this.Type(parameter.Type);
+      if (this.IsNullableArray(parameter))
+        return this._arrayFacts.MutableParameters.Contains(index) ? ((RsPath)this.Refuse("an array that may be null and is written")).Name : this.NullableArrayType(parameter.Type, true);
 
       var lifetime = this._arrayFacts.ResultParameters.Contains(index) ? Lifetime(function, this._arrayFacts) : "";
       return $"&{lifetime}{(this._arrayFacts.MutableParameters.Contains(index) ? "mut " : "")}[{this.ElementType(parameter.Type)}]";
@@ -63,6 +65,8 @@ public static partial class RustEmitter {
         return this.ObjectType(function.ReturnType, this._nullness.ReturnsNull(function.Name));
       if (!function.ReturnType.IsArray)
         return this.Type(function.ReturnType);
+      if (this._arrayNulls.ReturnsNull(function.Name))
+        return this._arrayFacts.Result == ArrayHolder.Owned ? this.NullableArrayType(function.ReturnType, false) : ((RsPath)this.Refuse("a borrowed array result that may be null")).Name;
 
       var element = this.ElementType(function.ReturnType);
       return this._arrayFacts.Result == ArrayHolder.Borrowed
@@ -78,6 +82,8 @@ public static partial class RustEmitter {
         return this.ViewType(local.Type, this.WritesView(local));
       if (!local.Type.IsArray)
         return this.Type(local.Type);
+      if (this.IsNullableArray(local))
+        return this.NullableArrayType(local.Type, this.IsReference(local));
 
       var element = this.ElementType(local.Type);
       return this._arrayFacts.Locals.GetValueOrDefault(local) == ArrayHolder.Borrowed
@@ -96,11 +102,13 @@ public static partial class RustEmitter {
 
     /// <summary>The value a local of an array type is given: the vector itself, or a borrow.</summary>
     private RsExpression ArrayInitial(IrLocal local, IrExpr value)
-      => !this.IsReference(local) ? this.Vector(value, false) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
+      => this.IsNullableArray(local) ? this.NullableArray(value, this.IsReference(local))
+        : !this.IsReference(local) ? this.Vector(value, false) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
 
     /// <summary>The array a function returns: a vector it owns, or the borrow of a parameter.</summary>
     private RsExpression ArrayResult(IrFunction function, IrExpr value)
-      => this._arrayFacts.Result == ArrayHolder.Owned ? this.Vector(value, true) : this.Borrow(value, ResultIsMutable(function, this._arrayFacts));
+      => this._arrayNulls.ReturnsNull(function.Name) ? this.NullableArray(value, false)
+        : this._arrayFacts.Result == ArrayHolder.Owned ? this.Vector(value, true) : this.Borrow(value, ResultIsMutable(function, this._arrayFacts));
 
     /// <summary>
     /// An array as a vector the receiving place owns: a new one, the result of a call that makes one,
@@ -109,6 +117,8 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Vector(IrExpr array, bool move = true) {
       switch (array) {
+        case IrLocalRef or IrBind or IrCall when this.IsNullableArray(array):
+          return new RsMethodCall(this.Receiver(this.NonNullArray(array, false)), "to_vec", []) { Type = array.Type };
         case IrNewArray creation:
           return new RsMacro("vec", [new RsArray([this.Zero(creation.Type.Element!)]) { Count = this.Length(creation.Length) }]) { Bracketed = true, Type = array.Type };
         case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf, Arguments.Count: 0 }:
@@ -142,6 +152,8 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Borrow(IrExpr array, bool mutable) {
       switch (array) {
+        case IrLocalRef or IrBind or IrCall when this.IsNullableArray(array):
+          return mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, true);
         case IrFieldLoad { Target.Type.IsObject: true } load:
           return new RsReference(mutable, this.FieldArray(load, mutable)) { Type = array.Type };
         case IrLocalRef { Local: var local } when this.IsReference(local):
@@ -168,6 +180,7 @@ public static partial class RustEmitter {
 
     /// <summary>An array as the target of an index or a method: a variable or a table as it is, a literal as an array, anything else borrowed.</summary>
     private RsExpression ArrayTarget(IrExpr array, bool mutable = false) => array switch {
+      IrLocalRef or IrBind or IrCall when this.IsNullableArray(array) => mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, false),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = array.Type },
       IrFieldLoad { Target.Type.IsObject: true } load => this.FieldArray(load, mutable),
       IrConstRef table when this._constants.TryGetValue(table.Constant.Name, out var name) => new RsPath(name) { Type = array.Type },
@@ -202,8 +215,9 @@ public static partial class RustEmitter {
     /// <summary><c>if c { a } else { b }</c> of two arrays written the same way.</summary>
     private RsIf Choice(IrConditional choice, Func<IrExpr, RsExpression> branch) {
       var otherwise = branch(choice.WhenFalse);
-      return new RsIf(this.Expression(choice.Condition), new RsBlock([], branch(choice.WhenTrue)),
-        otherwise is RsIf nested ? nested : new RsBlockExpression(new RsBlock([], otherwise))) { Type = choice.Type };
+      static RsBlock Of(RsExpression value) => value is RsBlockExpression { Block: var block } ? block : new RsBlock([], value);
+      return new RsIf(this.Expression(choice.Condition), Of(branch(choice.WhenTrue)),
+        otherwise is RsIf nested ? nested : new RsBlockExpression(Of(otherwise))) { Type = choice.Type };
     }
 
     /// <summary>The zero of an element type: <c>0</c>, <c>0.0</c>, <c>false</c>.</summary>
@@ -474,6 +488,12 @@ public static partial class RustEmitter {
 
         if (argument.Type.IsString) {
           arguments.Add(this.StringArgument(argument));
+          continue;
+        }
+
+        if (this._module.Functions.FirstOrDefault(function => function.Name == call.Function) is { } target && index < target.Parameters.Count
+          && this._arrayNulls.MayBeNull(call.Function, target.Parameters[index])) {
+          arguments.Add(this.NullableArray(argument, true));
           continue;
         }
 

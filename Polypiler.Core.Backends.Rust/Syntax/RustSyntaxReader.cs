@@ -544,6 +544,13 @@ public static class RustSyntaxReader {
 
       if (this.Is("move") || this.Is("|") || this.Is("||"))
         return this.Closure();
+      if (this.Is("<")) {
+        // A qualified path, <[i32]>::to_vec.
+        var qualified = new StringBuilder(this.TypeText());
+        while (this.Accept("::"))
+          qualified.Append("::").Append(this.Identifier());
+        return new RsPath(qualified.ToString());
+      }
       if (this.Is("["))
         return this.Array();
       if (this.Is("{"))
