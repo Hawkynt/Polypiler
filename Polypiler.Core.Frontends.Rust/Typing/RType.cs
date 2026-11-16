@@ -78,7 +78,13 @@ internal enum RKind {
   Map,
 
   /// <summary><c>HashSet&lt;T&gt;</c> or <c>BTreeSet&lt;T&gt;</c>: an IR set of <see cref="RType.Element"/>.</summary>
-  Set
+  Set,
+
+  /// <summary><c>dyn Trait</c>, only ever behind a pointer: an object of the IR interface of the trait.</summary>
+  Dyn,
+
+  /// <summary><c>Box&lt;dyn Trait&gt;</c> or <c>Rc&lt;dyn Trait&gt;</c> (<see cref="RType.Name"/>), the trait object <see cref="RType.Element"/> owned or shared.</summary>
+  Pointer
 
 }
 
@@ -191,6 +197,18 @@ internal sealed class RType {
 
   /// <summary>The key type of a map.</summary>
   public RType Key => this.Resolved.Elements[0];
+
+  /// <summary>The trait object of a trait of the crate: <c>dyn Trait</c>.</summary>
+  public static RType DynOf(TraitInfo trait) => new(RKind.Dyn, trait.Name) { Declaration = trait };
+
+  /// <summary>A smart pointer to a trait object: <c>Box</c> owns it, <c>Rc</c> shares it.</summary>
+  public static RType PointerTo(string name, RType target) => new(RKind.Pointer, name) { Element = target };
+
+  /// <summary>The trait of a trait object, behind any number of references and pointers.</summary>
+  public TraitInfo? Trait => this.Dereferenced.Declaration as TraitInfo;
+
+  /// <summary>Whether a type is a pointer to a trait object: <c>&amp;dyn T</c>, <c>Box&lt;dyn T&gt;</c>, <c>Rc&lt;dyn T&gt;</c>.</summary>
+  public bool IsTraitObject => this.Resolved.Kind is RKind.Reference or RKind.Pointer && this.Resolved.Element!.Resolved.Kind == RKind.Dyn;
 
   /// <summary>A type parameter of a template.</summary>
   public static RType Param(string name) => new(RKind.Param, name);
@@ -309,7 +327,7 @@ internal sealed class RType {
   public RType Dereferenced {
     get {
       var type = this.Resolved;
-      while (type.Kind == RKind.Reference)
+      while (type.Kind is RKind.Reference or RKind.Pointer)
         type = type.Element!.Resolved;
 
       return type;
@@ -353,6 +371,8 @@ internal sealed class RType {
       RKind.Function => $"fn({string.Join(", ", type.Elements)}) -> {type.Element}",
       RKind.Closure => "{closure}",
       RKind.Iterator => $"impl Iterator<Item = {type.Element}>",
+      RKind.Dyn => $"dyn {type.Name}",
+      RKind.Pointer => $"{type.Name}<{type.Element}>",
       _ => type.Name
     };
   }

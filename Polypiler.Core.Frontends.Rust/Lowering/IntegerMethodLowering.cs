@@ -32,6 +32,9 @@ internal sealed partial class FunctionLowering {
     if (this._typed.Callees.TryGetValue(call, out var method))
       return this.Invoke(method, call.Arguments, method.Parameters, (call.Receiver, method.Item.Receiver));
 
+    if (this._typed.DynamicCalls.TryGetValue(call, out var dynamic))
+      return this.DynamicCall(call, dynamic);
+
     var name = this._typed.Methods[call];
     var receiver = this._typed.TypeOf(call.Receiver).Dereferenced;
     if (name.StartsWith("str::", StringComparison.Ordinal))

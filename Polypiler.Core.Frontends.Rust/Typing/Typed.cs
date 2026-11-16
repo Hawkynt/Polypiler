@@ -177,6 +177,15 @@ internal sealed class Typed {
   /// <summary>The pieces of each <c>format!</c>.</summary>
   public Dictionary<MacroExpr, IReadOnlyList<FormatPiece>> Formats { get; } = new(ReferenceEqualityComparer.Instance);
 
+  /// <summary>The methods each trait of a trait object dispatches, its supertraits' included, in the order of the IR interface.</summary>
+  public Dictionary<TraitInfo, IReadOnlyList<DynMethod>> TraitObjects { get; } = new(ReferenceEqualityComparer.Instance);
+
+  /// <summary>The expressions whose value becomes a trait object: <c>&amp;x</c>, <c>Box::new(x)</c> and <c>Rc::new(x)</c> where a <c>dyn Trait</c> is expected.</summary>
+  public Dictionary<Expr, Unsizing> Unsized { get; } = new(ReferenceEqualityComparer.Instance);
+
+  /// <summary>The method of a trait every method call on a trait object dispatches to.</summary>
+  public Dictionary<MethodCallExpr, DynMethod> DynamicCalls { get; } = new(ReferenceEqualityComparer.Instance);
+
   /// <summary>The type of an expression, resolved.</summary>
   public RType TypeOf(Expr expression) => this.Types[expression].Resolved;
 
@@ -282,3 +291,16 @@ internal sealed record FormatPiece(string? Text, Expr? Argument) {
   public char Kind { get; init; }
 
 }
+
+/// <summary>A method of a trait that a trait object dispatches: one with <c>&amp;self</c> or <c>&amp;mut self</c>, its types free of <c>Self</c>.</summary>
+/// <param name="Owner">The trait that declares it: the object's trait or one of its supertraits.</param>
+/// <param name="Item">The method's declaration in the trait.</param>
+/// <param name="Parameters">The types of the parameters after the receiver.</param>
+/// <param name="Result">The result type.</param>
+internal sealed record DynMethod(TraitInfo Owner, FunctionItem Item, IReadOnlyList<RType> Parameters, RType Result);
+
+/// <summary>A value of a type made a trait object: the trait, the type, and the impl's method for each of <see cref="Typed.TraitObjects"/>.</summary>
+/// <param name="Trait">The trait of the object.</param>
+/// <param name="Concrete">The type of the value.</param>
+/// <param name="Impls">The method of the type's impl for each method the trait object dispatches, in the same order.</param>
+internal sealed record Unsizing(TraitInfo Trait, RType Concrete, IReadOnlyList<FunctionSignature> Impls);

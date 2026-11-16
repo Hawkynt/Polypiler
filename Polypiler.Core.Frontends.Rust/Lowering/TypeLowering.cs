@@ -80,6 +80,9 @@ internal sealed partial class FunctionLowering {
         this.Write(second, saved);
         return null;
       }
+      case "pointer::new" or "pointer::clone":
+        // The object the box or the Rc holds is a reference already: Rc::clone shares it.
+        return this.Value(call.Arguments[0]);
       case "Vec::new" or "Vec::with_capacity":
         return this.NewVec(type, call.Arguments);
       case "collection::new" or "collection::with_capacity":
@@ -261,6 +264,20 @@ internal sealed partial class FunctionLowering {
       default:
         return result;
     }
+  }
+
+  // ---------------------------------------------------------------- trait objects
+
+  /// <summary>A method call on a trait object: an interface call, the receiver the object, then the arguments.</summary>
+  private IrExpr? DynamicCall(MethodCallExpr call, DynMethod method) {
+    var values = this.Operands([call.Receiver, .. call.Arguments], [null, .. method.Parameters]);
+    var result = method.Result.Resolved.Kind is RKind.Unit or RKind.Never ? IrType.Void : this.Ir(method.Result);
+    var dispatched = new IrMethodCall(result, this._module.InterfaceMethod(method), values[0], [.. values.Skip(1)]) { Kind = IrMethodCallKind.Interface };
+    if (result != IrType.Void)
+      return dispatched;
+
+    this.Emit(new IrExprStmt(dispatched));
+    return null;
   }
 
   // ---------------------------------------------------------------- ?

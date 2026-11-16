@@ -128,6 +128,9 @@ internal sealed partial class TypeChecker {
     if (a.Kind != b.Kind || a.Kind is RKind.Variable or RKind.Integer or RKind.Float or RKind.Bool)
       return false;
 
+    if (a.Kind == RKind.Pointer && a.Name != b.Name)
+      return false;
+
     if (a.Length != b.Length || a.Mutable != b.Mutable || !ReferenceEquals(a.Declaration, b.Declaration) && a.Kind != RKind.Closure && a.Kind != RKind.Iterator)
       return false;
 
@@ -314,7 +317,7 @@ internal sealed partial class TypeChecker {
       for (var index = 0; index < item.Parameters.Count; ++index)
         this.Irrefutable(item.Parameters[index].Pattern, signature.Parameters[index], true, "parameter");
 
-      var body = this.Block(item.Body);
+      var body = this.Block(item.Body, signature.Result);
       this.Coerce(signature.Result, body, item.Body.Tail?.At ?? item.Body.At);
     } finally {
       this._scopes.Clear();
@@ -454,7 +457,7 @@ internal sealed partial class TypeChecker {
 
   // ---------------------------------------------------------------- blocks and statements
 
-  private RType Block(Block block) {
+  private RType Block(Block block, RType? expected = null) {
     this._scopes.Add([]);
     var functions = new Dictionary<string, FunctionSignature>();
     this._localFunctions.Add(functions);
@@ -471,7 +474,7 @@ internal sealed partial class TypeChecker {
       foreach (var statement in block.Statements)
         diverges |= this.Statement(statement);
 
-      var type = block.Tail is null ? diverges ? RType.Never : RType.Unit : this.Value(block.Tail);
+      var type = block.Tail is null ? diverges ? RType.Never : RType.Unit : this.Value(block.Tail, Carried(expected));
       return diverges && type.Resolved.Kind == RKind.Unit && block.Tail is null ? RType.Never : type;
     } finally {
       this._scopes.RemoveAt(this._scopes.Count - 1);
@@ -574,7 +577,7 @@ internal sealed partial class TypeChecker {
     var type = this.ExpressionUnrecorded(expression, expected);
     this._typed.Types[expression] = type;
     this._expressions.Add((expression, type));
-    return type;
+    return expected is not null && this.Unsize(expression, type, expected) is { } coerced ? coerced : type;
   }
 
   private RType ExpressionUnrecorded(Expr expression, RType? expected) => expression switch {
@@ -600,9 +603,9 @@ internal sealed partial class TypeChecker {
     ArrayRepeatExpr array => this.ArrayRepeat(array, expected),
     StructExpr structure => this.StructExpression(structure),
     RangeExpr range => this.Refused(RustFrontend.Unsupported, "range expression outside a for loop, an iterator or an index", range.At),
-    BlockExpr block => this.BlockExpression(block),
-    IfExpr conditional => this.If(conditional),
-    MatchExpr match => this.Match(match),
+    BlockExpr block => this.BlockExpression(block, expected),
+    IfExpr conditional => this.If(conditional, expected),
+    MatchExpr match => this.Match(match, expected),
     WhileExpr loop => this.While(loop),
     LoopExpr loop => this.Loop(loop),
     ForExpr loop => this.For(loop),
@@ -786,11 +789,16 @@ internal sealed partial class TypeChecker {
     });
 
   private RType Assign(AssignExpr assign) {
-    // The value is checked first: it is evaluated first, and its type may decide the place's.
-    var value = this.Value(assign.Value);
+    // The value is checked first: it is evaluated first, and its type may decide the place's; a
+    // variable holding a trait object is a coercion site of the value all the same.
+    var holder = assign is { Op: "=", Target: PathExpr { Segments: [var name] } } && this.Lookup(name)?.Type is { IsTraitObject: true } held ? held : null;
+    var value = this.Value(assign.Value, holder);
     var place = this.Place(assign.Target, assign.Op == "=");
     if (place is null)
       return RType.Unit;
+
+    if (assign is { Op: "=", Target: DerefExpr deref } && this._typed.TypeOf(deref.Operand) is { Kind: RKind.Reference, Mutable: true } through && through.Element!.Resolved.Kind == RKind.Pointer)
+      return this.Refused(RustFrontend.UnsupportedTrait, $"assignment of a new trait object through {through}", assign.At);
 
     if (assign.Op is "<<" or ">>") {
       this.Operands(assign.Op, place, assign.At, type => type.Kind == RKind.Integer);
@@ -923,9 +931,9 @@ internal sealed partial class TypeChecker {
 
   // ---------------------------------------------------------------- control flow
 
-  private RType BlockExpression(BlockExpr block) {
+  private RType BlockExpression(BlockExpr block, RType? expected) {
     if (block.Label is null)
-      return this.Block(block.Block);
+      return this.Block(block.Block, expected);
 
     var context = new Context(block, block.Label, false, true) { ClosureDepth = this._closures.Count };
     this._contexts.Add(context);
@@ -934,17 +942,17 @@ internal sealed partial class TypeChecker {
     return context.BreakType is null ? type : this.Join(type, context.BreakType, block.At);
   }
 
-  private RType If(IfExpr conditional) {
+  private RType If(IfExpr conditional, RType? expected) {
     RType then;
     if (conditional.Pattern is { } pattern) {
       var scrutinee = this.Value(conditional.Condition);
       this._scopes.Add([]);
       this.Pattern(pattern, scrutinee, false);
-      then = this.Block(conditional.Then);
+      then = this.Block(conditional.Then, expected);
       this._scopes.RemoveAt(this._scopes.Count - 1);
     } else {
       this.Unify(RType.Bool, this.Value(conditional.Condition), conditional.Condition.At);
-      then = this.Block(conditional.Then);
+      then = this.Block(conditional.Then, expected);
     }
 
     if (conditional.Else is null) {
@@ -954,7 +962,7 @@ internal sealed partial class TypeChecker {
       return RType.Unit;
     }
 
-    var otherwise = this.Expression(conditional.Else);
+    var otherwise = this.Expression(conditional.Else, Carried(expected));
     return this.Join(then, otherwise, conditional.Else.At);
   }
 

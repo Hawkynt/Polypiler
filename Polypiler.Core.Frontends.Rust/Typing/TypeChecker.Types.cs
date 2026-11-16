@@ -83,10 +83,17 @@ internal sealed partial class TypeChecker {
           return element is null ? null : RType.Reference(RType.Slice(element), type.Mutable);
         }
 
+        if (type.Element.Shape == TypeShape.Trait && type.Element.Name.StartsWith("dyn ", System.StringComparison.Ordinal)) {
+          // The IR's object holds a copy of the value it is made from, which a write through it would not reach.
+          if (type.Mutable)
+            return this.Unsupported(RustFrontend.UnsupportedTrait, $"{type.Text}, a trait object that writes through to a borrowed value", type.At);
+
+          var dyn = this.TraitObject(type.Element);
+          return dyn is null ? null : RType.Reference(dyn, false);
+        }
+
         if (type.Element.Shape == TypeShape.Trait)
-          return type.Element.Name.StartsWith("dyn ", System.StringComparison.Ordinal)
-            ? this.Unsupported(RustFrontend.UnsupportedTrait, type.Element.Text, type.Element.At)
-            : this.ResolveShape(type.Element, false);
+          return this.ResolveShape(type.Element, false);
 
         var target = this.ResolveShape(type.Element, false);
         return target is null ? null : RType.Reference(target, type.Mutable);
@@ -144,6 +151,16 @@ internal sealed partial class TypeChecker {
     var library = segments is ["std" or "core" or "alloc", .., var name] ? name : segments.Length == 1 ? last : null;
     if (this.CollectionType(type, segments, symbol) is { } collection)
       return collection;
+
+    // Box<dyn Trait> and Rc<dyn Trait>: a trait object owned or shared; a box of any other type stays refused.
+    var pointer = symbol?.Target is LibraryType { Name: "Box" or "Rc" } used ? used.Name : symbol is null && library is "Box" or "Rc" && (segments.Length == 1 || segments is [_, "boxed" or "rc", _]) ? library : null;
+    if (pointer is not null && type.Arguments is [{ Shape: TypeShape.Trait } pointee] && pointee.Name.StartsWith("dyn ", System.StringComparison.Ordinal)) {
+      var dyn = this.TraitObject(pointee);
+      return dyn is null ? null : RType.PointerTo(pointer, dyn);
+    }
+
+    if (pointer is not null)
+      return this.Unsupported(RustFrontend.SmartPointer, type.Text, type.At);
 
     if (library is not null && _refusedTypes.TryGetValue(library, out var code))
       return this.Unsupported(code, type.Text, type.At);
@@ -217,7 +234,7 @@ internal sealed partial class TypeChecker {
         return this.Representable(resolved.Element, at);
       case RKind.Vec: {
         var element = resolved.Element!.Resolved;
-        if (!(element.IsNumber || element.IsText || element.Kind is RKind.Struct or RKind.Enum or RKind.Bool or RKind.Char))
+        if (!(element.IsNumber || element.IsText || element.IsTraitObject || element.Kind is RKind.Struct or RKind.Enum or RKind.Bool or RKind.Char))
           return this.Unsupported(RustFrontend.UnsupportedElement, $"Vec of {element}", at.At) is not null;
 
         return this.Representable(element, at);

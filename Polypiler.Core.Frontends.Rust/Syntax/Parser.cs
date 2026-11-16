@@ -922,11 +922,19 @@ internal sealed class Parser {
 
     if (token.Is("dyn") || token.Is("impl")) {
       this.Next();
-      var bounds = new List<string> { this.Type().Text };
-      while (this.Accept("+"))
-        bounds.Add(this.Current.Kind == TokenKind.Lifetime ? "'" + this.Next().Text : this.Type().Text);
+      var traits = new List<TypeRef> { this.Type() };
+      var bounds = new List<string> { traits[0].Text };
+      while (this.Accept("+")) {
+        if (this.Current.Kind == TokenKind.Lifetime) {
+          bounds.Add("'" + this.Next().Text);
+          continue;
+        }
 
-      return new TypeRef(token.Text + " " + string.Join(" + ", bounds), at) { Shape = TypeShape.Trait };
+        traits.Add(this.Type());
+        bounds.Add(traits[^1].Text);
+      }
+
+      return new TypeRef(token.Text + " " + string.Join(" + ", bounds), at) { Shape = TypeShape.Trait, Arguments = traits };
     }
 
     if (token.Is("_"))

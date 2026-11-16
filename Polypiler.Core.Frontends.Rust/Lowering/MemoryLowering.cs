@@ -263,7 +263,15 @@ internal sealed partial class FunctionLowering {
         return new IrCollection(IrCollectionOp.ListNew, type, []);
 
       var values = this.Operands([.. macro.Arguments]);
-      return new IrCollection(IrCollectionOp.ListFromArray, type, [new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(type.Element!), values)]);
+      if (!type.Element!.IsObject)
+        return new IrCollection(IrCollectionOp.ListFromArray, type, [new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(type.Element!), values)]);
+
+      // The IR's arrays hold no objects: a list of trait objects is filled one by one.
+      var list = this.Temporary(new IrCollection(IrCollectionOp.ListNew, type, []), "list");
+      foreach (var value in values)
+        this.Emit(new IrExprStmt(new IrCollection(IrCollectionOp.ListAdd, IrType.Void, [list, value])));
+
+      return list;
     }
 
     var operands = this.Operands(macro.Arguments[0], macro.Arguments[1]);

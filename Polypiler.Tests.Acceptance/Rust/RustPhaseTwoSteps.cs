@@ -23,6 +23,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 [Scope(Feature = "Rust frontend: String, &str and char")]
 [Scope(Feature = "Rust frontend: traits and generics")]
 [Scope(Feature = "Rust frontend: maps and sets")]
+[Scope(Feature = "Rust frontend: trait objects")]
 public sealed class RustPhaseTwoSteps {
 
   private string _source = "";

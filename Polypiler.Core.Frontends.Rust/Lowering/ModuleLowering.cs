@@ -17,7 +17,7 @@ internal sealed record LoweredCrate(IReadOnlyList<IrFunction> Functions, IReadOn
 /// of the module graph: a module after every module whose items it uses and after its children,
 /// ties by crate path. A crate whose functions do not all check imports nothing.
 /// </summary>
-internal sealed class ModuleLowering {
+internal sealed partial class ModuleLowering {
 
   private readonly OverflowChecks _mode;
   private readonly Typed _typed = new();
@@ -80,7 +80,7 @@ internal sealed class ModuleLowering {
       return null;
 
     var tests = all.Where(signature => signature.Item.IsTest).Select(signature => signature.IrName).ToList();
-    return new LoweredCrate([.. functions, .. helpers], lowering._types, lowering._tables, tests, [.. order.Select(module => module.CratePath)]);
+    return new LoweredCrate([.. functions, .. lowering._objectFunctions, .. helpers], lowering._types, lowering._tables, tests, [.. order.Select(module => module.CratePath)]);
   }
 
   /// <summary>Gives every function its IR name - its crate path, unique in the module - and marks the exported ones.</summary>
@@ -247,6 +247,10 @@ internal sealed class ModuleLowering {
       }
       case RKind.Function:
         return IrType.Function(new IrFunctionType([.. resolved.Elements.Select(this.Ir)], this.Ir(resolved.Element!)));
+      case RKind.Dyn:
+        return IrType.Object(this.Interface((TraitInfo)resolved.Declaration!));
+      case RKind.Pointer:
+        return this.Ir(resolved.Element!);
       default:
         return IrType.Void;
     }

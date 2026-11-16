@@ -46,7 +46,18 @@ internal sealed partial class TypeChecker {
       throw this.Invalid($"E0689: can't call method `{call.Name}` on ambiguous numeric type `{target}`", call.At);
     }
 
+    if (call.Name == "clone" && StripReferences(resolved) is { Kind: RKind.Pointer } pointer) {
+      this.Count(call, 0);
+      if (pointer.Name == "Box")
+        throw this.Invalid($"E0599: the method `clone` exists for struct `{pointer}`, but its trait bounds were not satisfied", call.At);
+
+      this._typed.Methods[call] = "clone";
+      return pointer;
+    }
+
     switch (target.Kind) {
+      case RKind.Dyn:
+        return this.DynMethodCall(call, receiver, target);
       case RKind.Iterator:
         return this.IteratorMethod(call, target.IteratorInfo!, expected);
       case RKind.Struct or RKind.Enum:
@@ -376,6 +387,9 @@ internal sealed partial class TypeChecker {
         if (container.Kind == RKind.Slice)
           throw this.Invalid("E0599: the method `clone` exists for `[T]`, but its trait bounds were not satisfied", call.At);
 
+        if (element.Resolved is { Kind: RKind.Pointer, Name: "Box" })
+          throw this.Invalid($"E0599: the method `clone` exists for struct `{container}`, but its trait bounds were not satisfied", call.At);
+
         this.CopyElements(call, element);
         return container;
       case "get": {
@@ -400,7 +414,7 @@ internal sealed partial class TypeChecker {
   private void CopyElements(MethodCallExpr call, RType element) {
     this._deferred.Add(() => {
       var resolved = element.Resolved;
-      if (resolved.Kind == RKind.Struct && !resolved.Struct!.Derives.Contains("Clone"))
+      if (resolved.Kind == RKind.Struct && !resolved.Struct!.Derives.Contains("Clone") || resolved is { Kind: RKind.Pointer, Name: "Box" })
         throw this.Invalid($"E0277: the trait bound `{resolved}: Clone` is not satisfied", call.At);
     });
   }

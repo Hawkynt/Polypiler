@@ -65,7 +65,7 @@ Feature: Rust frontend: structs, enums, Option, Result and the ? operator
       | le       | []   | 99       |
 
   Scenario: A trait object is rejected with a stable code and a pointer to the object model
-    Given the Rust source "trait T { fn m(&self) -> u8; } pub fn f(x: &dyn T) -> u8 { x.m() }"
+    Given the Rust source "trait T { fn m(&self) -> u8; } pub fn f(x: &mut dyn T) -> u8 { x.m() }"
     When it is imported with overflowChecks panic
     Then the import fails with diagnostic PLY1540 at line 1
     And the message names "#473"

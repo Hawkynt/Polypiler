@@ -224,6 +224,12 @@ internal sealed partial class TypeChecker {
       }
 
       var resolved = type.Resolved;
+      if (resolved.IsTraitObject) {
+        this._report(RustFrontend.UnsupportedTrait, $"field '{field.Name}' holding the trait object '{field.Type.Text}'", field.Type.At);
+        ok = false;
+        continue;
+      }
+
       if (resolved.Kind is RKind.Vec or RKind.Function or RKind.Map or RKind.Set || resolved.IsText || resolved.Kind == RKind.Array && !resolved.Element!.IsNumber) {
         this._report(RustFrontend.UnsupportedElement, $"field '{field.Name}' of type '{field.Type.Text}'", field.Type.At);
         ok = false;

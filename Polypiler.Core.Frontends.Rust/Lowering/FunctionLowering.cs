@@ -63,7 +63,7 @@ internal sealed partial class FunctionLowering {
   /// <summary>Whether a type is a <c>&amp;mut</c> to a value the IR copies, which the lowering tracks as a place.</summary>
   private static bool IsExclusiveValue(RType type) {
     var resolved = type.Resolved;
-    return resolved is { Kind: RKind.Reference, Mutable: true } && resolved.Element!.Resolved.Kind is not (RKind.Slice or RKind.Array or RKind.Vec or RKind.Map or RKind.Set);
+    return resolved is { Kind: RKind.Reference, Mutable: true } && resolved.Element!.Resolved.Kind is not (RKind.Slice or RKind.Array or RKind.Vec or RKind.Map or RKind.Set or RKind.Pointer);
   }
 
   /// <summary>The struct a function with <c>&amp;mut</c> value parameters returns: its result and the final values of those parameters.</summary>
@@ -198,6 +198,9 @@ internal sealed partial class FunctionLowering {
 
     if (type.IsOptional)
       return new IrNone(type);
+
+    if (type.IsObject)
+      return new IrNull(type);
 
     if (type.IsString)
       return new IrStrConst("");
@@ -487,6 +490,16 @@ internal sealed partial class FunctionLowering {
     };
     if (this._typed.TypeOf(expression).Kind == RKind.Never)
       this._diverged = true;
+
+    // A value that becomes a trait object: the object of the class for its type, holding it, in a
+    // local of the interface's type, which every object of the trait converts to.
+    if (!this._diverged && this._typed.Unsized.TryGetValue(expression, out var unsizing)) {
+      var constructor = this._module.ObjectConstructor(unsizing, out var type);
+      var made = new IrNew(type, constructor, [value ?? this.Zero(this.Ir(unsizing.Concrete))]);
+      var local = this.NewLocal("object", IrType.Object(this._module.Interface(unsizing.Trait)));
+      this.Emit(new IrDeclare(local, made));
+      return new IrLocalRef(local);
+    }
 
     return value;
   }

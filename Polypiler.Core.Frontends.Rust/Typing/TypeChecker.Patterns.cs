@@ -79,7 +79,7 @@ internal sealed partial class TypeChecker {
 
   // ---------------------------------------------------------------- match
 
-  private RType Match(MatchExpr match) {
+  private RType Match(MatchExpr match, RType? expected) {
     var scrutinee = this.Value(match.Scrutinee);
     RType? result = null;
     foreach (var arm in match.Arms) {
@@ -88,7 +88,7 @@ internal sealed partial class TypeChecker {
       if (arm.Guard is not null)
         this.Unify(RType.Bool, this.Value(arm.Guard), arm.Guard.At);
 
-      var body = this.Value(arm.Body);
+      var body = this.Value(arm.Body, Carried(expected));
       this._scopes.RemoveAt(this._scopes.Count - 1);
       result = result is null ? body : this.Join(result, body, arm.Body.At);
     }

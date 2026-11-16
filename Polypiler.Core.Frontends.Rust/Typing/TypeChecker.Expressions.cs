@@ -220,7 +220,7 @@ internal sealed partial class TypeChecker {
 
   private RType Deref(DerefExpr deref) {
     var operand = this.Value(deref.Operand).Resolved;
-    if (operand.Kind == RKind.Reference)
+    if (operand.Kind is RKind.Reference or RKind.Pointer)
       return operand.Element!;
 
     if (this.IsError(operand))
@@ -254,6 +254,9 @@ internal sealed partial class TypeChecker {
 
     if (path.Segments.Count == 1 && this.Intrinsic(call, path.Segments[0]) is { } intrinsic)
       return intrinsic;
+
+    if (path.Segments.Count >= 2 && this.SmartPointerCall(call, path, expected) is { } pointer)
+      return pointer;
 
     // A variable: a closure or a function pointer.
     if (path.Segments.Count == 1 && this.Lookup(path.Segments[0]) is { } variable) {

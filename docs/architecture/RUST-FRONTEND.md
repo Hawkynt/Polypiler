@@ -3,9 +3,9 @@
 **Status:** implemented for the scalar subset (#466, #463), functions, modules, closures and
 `#[test]` (#464), arrays, slices, `Vec`, references and slice iterators (#465), structs, inherent
 methods, field-less enums and `Option`/`Result` with `?` (#467), and of epic #456 text (`String`,
-`&str`, `char`, `format!`), traits of the crate's types with static dispatch, generic functions,
-the operator traits and `HashMap`/`BTreeMap`/`HashSet`/`BTreeSet`. Trait objects, generic structs,
-enums with data and the smart pointers are next.
+`&str`, `char`, `format!`), traits of the crate's types with static dispatch, trait objects,
+generic functions, the operator traits and `HashMap`/`BTreeMap`/`HashSet`/`BTreeSet`. Generic
+structs, enums with data and the smart pointers but `Box<dyn T>` and `Rc<dyn T>` are next.
 
 ```mermaid
 flowchart LR
@@ -205,6 +205,30 @@ body checked like any function. Its IR name is the function's name followed by i
 `PartialOrd`, `Ord`, `Default`, `Display`, `Debug`, the operator traits with their `Output` and
 the compound assignment traits; `where` clauses on type parameters join them.
 
+## Trait objects
+
+`&dyn Trait`, `Box<dyn Trait>` and `Rc<dyn Trait>` of a trait of the crate dispatch at run time
+(`Typing/TypeChecker.TraitObjects.cs`, `Lowering/TraitObjectLowering.cs`). The trait is an IR
+interface whose methods are those with `&self` or `&mut self`, its supertraits its base
+interfaces. A value of a type that implements the trait becomes a trait object at a coercion site of
+The Rust Reference - a `let` with a type, an argument, a return value and the tail of a body, the
+arms of an `if` and a `match` that yield one, an element of `vec!` or of `push`, an assignment to a
+variable holding one - as `&x`, `Box::new(x)` or `Rc::new(x)`; the object is a sealed class of one
+field, `value`, a copy of `x`, that implements the interface by calling the impl of `x`'s type with
+the field. A `&mut self` method writes the field back from the copy-out of the impl. A call through
+the object is an interface call of the IR.
+
+The copy is never told apart from the original: a `Box` owns its value and a move moves the
+reference, an `Rc` gives no `&mut` access and its `clone` shares the reference, and a `&dyn` borrows
+the value shared, so nothing changes it while the object lives. A `&mut dyn Trait` would write
+through to the value it borrows, which the copy cannot, so it is refused; so is assigning a new box
+through a `&mut Box<dyn Trait>`. A trait is dyn compatible as rustc says (`E0038`): no associated
+function without `self`, no generic method, no `Self` in a signature; a method that takes `self` by
+value is part of the trait but no method of the object (`E0161`). `&Box<dyn T>` is unsized like any
+other reference, as rustc does it (`E0277`), and `&*b` reaches the object. A trait object is no
+field of a struct, no element of an array or a slice (the IR's arrays hold no objects) and no
+`Option` payload; a `Vec` holds it, and `vec!` fills such a list one element at a time.
+
 ## Maps and sets
 
 `HashMap`, `BTreeMap`, `HashSet` and `BTreeSet`, named through `use std::collections::...` or their
@@ -261,7 +285,7 @@ assignment before its place.
 | `PLY1520` | nested arrays, a slice or a `Vec` of anything but numbers, `bool`, tuples and structs of them, a slice pattern, an array length no constant gives |
 | `PLY1521` | `&mut str`, `&mut String` parameters |
 | `PLY1522` | `unsafe` blocks, `unsafe trait`, `unsafe impl`, raw pointers and borrows, `static mut`, `union`, `ManuallyDrop` |
-| `PLY1523` | `Box`, `Rc`, `Arc`, `Cell`, `RefCell`, `Mutex` |
+| `PLY1523` | `Box` and `Rc` of anything but a trait object, `Arc`, `Cell`, `RefCell`, `Mutex` |
 | `PLY1524` | slice methods outside the subset (`sort`, `binary_search`, `get` with a range, ...) |
 | `PLY1525` | `VecDeque`, `BinaryHeap`, `LinkedList`; iterating a map or a set; map keys and values the IR cannot hold |
 | `PLY1530` | generic, `unsafe`, `extern` and variadic functions, `where`, `impl Trait`, a typed `self`, a function without a body, nested items |
@@ -271,7 +295,7 @@ assignment before its place.
 | `PLY1534` | a path to another crate or outside the supported standard-library subset |
 | `PLY1535` | iterator methods outside the subset, an adapter in an order the lowering does not stream, a chain stored as a value |
 | `PLY1536` | `debug_assert!` without `--debug-assertions` |
-| `PLY1540` | trait objects (`dyn Trait`), impls of library traits outside the operator traits, `PartialEq`, `Default` and `Clone`, bounds on other library traits |
+| `PLY1540` | `&mut dyn Trait`, a trait object of a library trait, of a trait with associated types or whose traits share a method name, with a `&mut` parameter, in a struct field; a new box assigned through `&mut Box<dyn Trait>`; impls of library traits outside the operator traits, `PartialEq`, `Default` and `Clone`, bounds on other library traits |
 | `PLY1541` | generic structs, enums, impls, methods and traits, public generic functions, const generics |
 | `PLY1542` | lifetime parameters, reference fields, reference results |
 | `PLY1543` | enums with data |
@@ -283,6 +307,7 @@ assignment before its place.
 
 `tests/fixtures/prototype/rust/` holds `scalars.rs` (every operator, method and cast for every type),
 `control.rs` (the control forms and all twelve range forms over bound pairs and steps),
+`objects.rs` (trait objects),
 `functions.rs` (calls, recursion, `pub`), `memory.rs` (arrays, slices, `Vec`, references,
 copy-in/copy-out), `types.rs` (structs, methods, enums, `Option`, `Result`, `?`), `closures.rs`
 (closures and iterator chains), `edges.rs` (the rarer forms), `strings.rs` (text), `traits.rs`
