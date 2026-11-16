@@ -100,6 +100,8 @@ public static partial class RustEmitter {
       IrArrayLoad { Array: IrConstRef table, Type.IsString: true } load => this.TableText(table, load.Index),
       IrIntrinsic operation when StringOperations.IsString(operation.Op) => this.StringOperation(operation),
       IrLocalRef reference when this._shared.Contains(reference.Local) => this.SharedRead(reference.Local),
+      IrLocalRef { Type.IsBigInt: true } reference => this.BigValue(reference),
+      IrBigConst constant => this.BigLiteral(constant.Value),
       IrLocalRef { Type.IsFunction: true } reference when this._nested.ContainsKey(reference.Local) => this.FunctionValue(reference),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
       IrLambda lambda => this.Closure(lambda),
@@ -207,6 +209,9 @@ public static partial class RustEmitter {
 
     private RsExpression Unary(IrUnary unary) {
       var type = unary.Type;
+      if (type.IsBigInt)
+        return this.BigUnary(unary);
+
       switch (unary.Op) {
         case IrUnaryOp.LogicalNot:
           return this.Not(unary.Operand);
@@ -275,6 +280,9 @@ public static partial class RustEmitter {
     private RsExpression Binary(IrBinary binary) {
       var type = binary.Type;
       var operandType = binary.Left.Type;
+      if (operandType.IsBigInt)
+        return this.BigBinary(binary);
+
       // A comparison with a truth value constant is the value itself or its negation (clippy's bool_comparison).
       if (binary.Op is IrBinaryOp.Equal or IrBinaryOp.NotEqual && operandType == IrType.Bool) {
         if (binary.Right is IrConst right)
@@ -429,6 +437,8 @@ public static partial class RustEmitter {
     private RsExpression Convert(IrConvert convert) {
       var source = convert.Operand.Type;
       var target = convert.Type;
+      if (source.IsBigInt || target.IsBigInt)
+        return this.BigConvert(convert);
       if (source.IsEnum)
         return this.Inner(convert.Operand);
       if (target.IsEnum)

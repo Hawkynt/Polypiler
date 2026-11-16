@@ -161,6 +161,7 @@ public static partial class RustEmitter {
             null => null,
             { Type.IsArray: true } value => this.ArrayResult(this._function, value),
             { Type.IsString: true } value => this.StringValue(value, true),
+            IrLocalRef { Type.IsBigInt: true } value when !this._shared.Contains(value.Local) => new RsPath(this._locals[value.Local]) { Type = IrType.BigInt },
             { Type.IsObject: true } value => this.ObjectValue(value, this._nullness.ReturnsNull(this._function.Name)),
             { Type.IsFunction: true } value => this.FunctionValue(value),
             { Type.IsCollection: true } value => this.CollectionValue(value),
@@ -199,7 +200,7 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Assignment(IrLocal local, IrExpr value) {
       var place = new RsPath(this._locals[local]) { Type = local.Type };
-      if (local.Type.IsEnum)
+      if (local.Type.IsEnum || local.Type.IsBigInt)
         return new RsAssign(place, "=", this.Expression(value));
       if (local.Type.IsArray)
         return new RsAssign(place, "=", this.ArrayInitial(local, value));
