@@ -544,11 +544,7 @@ internal sealed class Parser {
     this.Expect("trait");
     var name = this.Identifier();
     Refusal? refused = Refused(attributes, _ => false);
-    if (this.At("<")) {
-      refused ??= new Refusal(RustFrontend.UnsupportedGeneric, $"trait {name}<...>", this.Current.At);
-      this.SkipAngles();
-    }
-
+    var generics = this.Generics($"trait {name}", ref refused);
     var supertraits = this.Accept(":") ? this.Bounds(ref refused) : [];
     if (this.At("where")) {
       refused ??= new Refusal(RustFrontend.UnsupportedGeneric, "where clause of a trait", this.Current.At);
@@ -581,7 +577,7 @@ internal sealed class Parser {
     }
 
     this.Expect("}");
-    return new TraitItem(at, name, items) { Supertraits = supertraits, IsPublic = isPublic, IsVisible = isVisible };
+    return new TraitItem(at, name, items) { Supertraits = supertraits, Generics = generics, IsPublic = isPublic, IsVisible = isVisible };
   }
 
   /// <summary>Whether the parameter list starts with a receiver.</summary>

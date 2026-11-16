@@ -73,10 +73,11 @@ internal static class RustOracle {
   /// <param name="module">The source imported, whose parameter types say how the arguments are written.</param>
   /// <param name="calls">The calls, in the order of the outcomes.</param>
   /// <param name="mode">Whether overflow checks are on.</param>
-  public static IReadOnlyList<string> Outcomes(string directory, string source, IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks mode) {
+  /// <param name="instances">The Rust paths of the exported instances of generic functions, by IR name (<see cref="ImportResult.Instances"/>).</param>
+  public static IReadOnlyList<string> Outcomes(string directory, string source, IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks mode, IReadOnlyDictionary<string, string>? instances = null) {
     Directory.CreateDirectory(directory);
     var driver = Path.Combine(directory, "main.rs");
-    File.WriteAllText(driver, Driver(source, module, calls));
+    File.WriteAllText(driver, Driver(source, module, calls, instances ?? new Dictionary<string, string>()));
     var executable = Path.Combine(directory, OperatingSystem.IsWindows() ? "driver.exe" : "driver");
     var (compiled, _, diagnostics) = Run("rustc", directory, "--edition", "2024", "-C", $"overflow-checks={(mode == OverflowChecks.Panic ? "on" : "off")}", "-C", "opt-level=0", "-o", executable, driver);
     Assert.That(compiled, Is.Zero, diagnostics);
@@ -88,7 +89,7 @@ internal static class RustOracle {
   }
 
   /// <summary>The driver: the source as a module, then one loop over the argument tuples of each run of calls to one function.</summary>
-  private static string Driver(string source, IrModule module, IReadOnlyList<PrototypeCall> calls) {
+  private static string Driver(string source, IrModule module, IReadOnlyList<PrototypeCall> calls, IReadOnlyDictionary<string, string> instances) {
     var text = new StringBuilder(Prelude);
     text.Append(CultureInfo.InvariantCulture, $"#[path = \"{Path.GetFullPath(source).Replace('\\', '/')}\"]\nmod fixture;\nuse fixture::*;\n\nfn main() {{\n");
     text.Append("  std::panic::set_hook(Box::new(|_| {}));\n  let mut o = String::new();\n");
@@ -99,6 +100,10 @@ internal static class RustOracle {
         ++end;
 
       var function = functions[calls[start].Method];
+      // An exported instance of a generic function is called as Rust names it: largest::<u8>.
+      if (instances.TryGetValue(function.Name, out var path))
+        function = function with { Name = path };
+
       var types = function.Parameters.Select(parameter => RustType(parameter.Type)).ToList();
       if (function.Parameters.Any(parameter => parameter.Type.IsView)) {
         Views(text, function, calls, start, end);

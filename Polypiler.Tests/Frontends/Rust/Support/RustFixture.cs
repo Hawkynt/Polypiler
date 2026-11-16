@@ -23,13 +23,13 @@ namespace Polypiler.Prototype.Testing;
 internal static class RustFixture {
 
   /// <summary>The fixtures, which are also the names of their modules.</summary>
-  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "closures", "edges", "strings", "traits", "collections", "objects"];
+  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics"];
 
   /// <summary>
   /// The fixtures whose constructs the Rust backend does not write yet - arrays, slices, structs,
   /// enums, Option and Result - which the round trip through the Rust backend leaves out until it does.
   /// </summary>
-  public static readonly string[] BackendPending = ["memory", "types", "closures", "edges", "strings", "traits", "collections", "objects"];
+  public static readonly string[] BackendPending = ["memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics"];
 
   /// <summary>Both overflow modes.</summary>
   public static readonly OverflowChecks[] Modes = [OverflowChecks.Panic, OverflowChecks.Wrap];
@@ -63,6 +63,10 @@ internal static class RustFixture {
     var result = RustFrontend.Import(path, source, mode);
     return result.Module ?? throw new InvalidOperationException(string.Join(Environment.NewLine, result.Diagnostics));
   }
+
+  /// <summary>The Rust paths of the exported instances of the generic functions of a fixture, by IR name.</summary>
+  public static IReadOnlyDictionary<string, string> InstancesOf(string fixture, OverflowChecks mode)
+    => RustFrontend.Import(fixture + ".rs", SourceOf(fixture), mode).Instances;
 
   /// <summary>Imports a fixture in a mode.</summary>
   public static IrModule Import(string fixture, OverflowChecks mode) => Import(fixture + ".rs", SourceOf(fixture), mode);

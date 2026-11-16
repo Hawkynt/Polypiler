@@ -139,10 +139,15 @@ internal sealed partial class TypeChecker {
     // The crate's own types first: a struct named Option shadows the prelude's.
     var symbol = segments[0] is "std" or "core" or "alloc" ? null : this._crate.Resolve(this._module, segments, type.At, true);
     if (symbol?.Target is StructItem structure) {
-      if (type.Arguments.Count > 0)
-        return this.Unsupported(RustFrontend.UnsupportedGeneric, type.Text, type.At);
+      var info = this._structs[structure];
+      if (type.Arguments.Count != info.Parameters.Count)
+        return this.Unsupported(RustFrontend.InvalidSource, $"E0107: struct takes {info.Parameters.Count} generic argument{(info.Parameters.Count == 1 ? "" : "s")} but {type.Arguments.Count} generic argument{(type.Arguments.Count == 1 ? " was" : "s were")} supplied: `{type.Text}`", type.At);
 
-      return RType.StructOf(this._structs[structure]);
+      if (info.Parameters.Count == 0)
+        return RType.StructOf(info);
+
+      var arguments = type.Arguments.Select(argument => this.ResolveShape(argument, false)).ToList();
+      return arguments.Any(argument => argument is null) ? null : RType.StructOf(info, arguments!);
     }
 
     if (symbol?.Target is EnumItem enumeration)
@@ -282,7 +287,7 @@ internal sealed partial class TypeChecker {
     var resolved = type.Resolved;
     return resolved.Kind switch {
       RKind.Integer or RKind.Float or RKind.Bool or RKind.Enum or RKind.Unit => true,
-      RKind.Struct => resolved.Struct!.Fields.All(field => this.HasDefault(field.Type)),
+      RKind.Struct => resolved.StructFields.All(field => this.HasDefault(field.Type)),
       RKind.Tuple => resolved.Elements.All(this.HasDefault),
       _ => false
     };

@@ -33,6 +33,7 @@ internal static partial class RustCases {
     "traits" => Traits(),
     "collections" => Collections(),
     "objects" => Objects(),
+    "generics" => Generics(),
     _ => Functions()
   };
 

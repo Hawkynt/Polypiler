@@ -41,6 +41,14 @@ public sealed record ImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Di
   /// <summary>The crate paths of the modules in the order of the module graph, the order the functions of the module follow.</summary>
   public IReadOnlyList<string> ModuleOrder { get; init; } = [];
 
+  /// <summary>
+  /// The exported functions that are instances of a public generic function, by their IR names
+  /// (<c>largest_u8</c>): the function's path in the crate with the type arguments, as Rust calls it
+  /// (<c>largest::&lt;u8&gt;</c>). The IR has no generic functions, so the crate's exported surface is
+  /// the instances it makes.
+  /// </summary>
+  public IReadOnlyDictionary<string, string> Instances { get; init; } = new Dictionary<string, string>();
+
 }
 
 /// <summary>How a Rust source is imported: the build settings the source does not state, and where the other files of its crate are.</summary>
@@ -330,7 +338,7 @@ public static class RustFrontend {
       return new(null, diagnostics);
 
     var module = new IrModule(Path.GetFileNameWithoutExtension(path), lowered.Functions, lowered.Constants) { Types = lowered.Types };
-    return new(module, []) { Tests = lowered.Tests, ModuleOrder = lowered.ModuleOrder };
+    return new(module, []) { Tests = lowered.Tests, ModuleOrder = lowered.ModuleOrder, Instances = lowered.Instances };
   }
 
 }

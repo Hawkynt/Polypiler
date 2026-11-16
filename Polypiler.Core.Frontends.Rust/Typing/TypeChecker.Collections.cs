@@ -31,10 +31,11 @@ internal sealed partial class TypeChecker {
     if (key is null || (map && value is null))
       return null;
 
-    if (!KeyType(key))
+    // A template's key or value may be a type parameter: each instance resolves its own.
+    if (!KeyType(key) && !HoldsParameter(key))
       return this.Unsupported(RustFrontend.UnsupportedCollection, $"{name} keyed by '{key}'", type.At);
 
-    if (map && !ValueType(value!))
+    if (map && !ValueType(value!) && !HoldsParameter(value!))
       return this.Unsupported(RustFrontend.UnsupportedCollection, $"{name} of '{value}' values", type.At);
 
     return map ? RType.Map(name, key, value!) : RType.Set(name, key);

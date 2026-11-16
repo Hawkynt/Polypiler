@@ -35,7 +35,7 @@ internal sealed partial class FunctionLowering {
     var declaration = ir.StructType!;
     var written = structure.Fields.Select(field => info.Fields.FindIndex(candidate => candidate.Name == field.Name)).ToList();
     var inOrder = structure.Base is null && written.SequenceEqual(Enumerable.Range(0, info.Fields.Count));
-    var values = this.Operands([.. structure.Fields.Select(field => field.Value)], [.. written.Select(index => info.Fields[index].Type)]);
+    var values = this.Operands([.. structure.Fields.Select(field => field.Value)], [.. written.Select(index => type.StructFields[index].Type)]);
     if (inOrder)
       return new IrStructNew(ir, values);
 
@@ -56,8 +56,8 @@ internal sealed partial class FunctionLowering {
         return new IrSome(this.Value(call.Arguments[0]));
       case "Ok" or "Err":
         return this.Result(type, (string)resolution == "Ok", this.Converted(this.Value(call.Arguments[0]), (string)resolution == "Ok" ? type.Element! : type.Error, null));
-      case StructInfo structure: {
-        var values = this.Operands([.. call.Arguments], [.. structure.Fields.Select(field => field.Type)]);
+      case StructInfo: {
+        var values = this.Operands([.. call.Arguments], [.. type.StructFields.Select(field => field.Type)]);
         return new IrStructNew(this.Ir(type), values);
       }
       case "cmp::min" or "cmp::max": {
@@ -113,7 +113,7 @@ internal sealed partial class FunctionLowering {
         if (ir.StructType!.HasDefault)
           return new IrStructDefault(ir);
 
-        return new IrStructNew(ir, [.. resolved.Struct!.Fields.Select(field => this.Default(field.Type))]);
+        return new IrStructNew(ir, [.. resolved.StructFields.Select(field => this.Default(field.Type))]);
       }
       case RKind.Enum: {
         var info = resolved.Enum!;
@@ -174,7 +174,7 @@ internal sealed partial class FunctionLowering {
       case RKind.Unit:
         return Truth(true);
       case RKind.Struct or RKind.Tuple: {
-        var parts = resolved.Kind == RKind.Struct ? resolved.Struct!.Fields.Select(field => field.Type).ToList() : resolved.Elements.ToList();
+        var parts = resolved.Kind == RKind.Struct ? resolved.StructFields.Select(field => field.Type).ToList() : resolved.Elements.ToList();
         var fields = left.Type.StructType!.Fields;
         IrExpr? all = null;
         for (var index = 0; index < fields.Count; ++index) {

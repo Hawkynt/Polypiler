@@ -4,8 +4,9 @@
 `#[test]` (#464), arrays, slices, `Vec`, references and slice iterators (#465), structs, inherent
 methods, field-less enums and `Option`/`Result` with `?` (#467), and of epic #456 text (`String`,
 `&str`, `char`, `format!`), traits of the crate's types with static dispatch, trait objects,
-generic functions, the operator traits and `HashMap`/`BTreeMap`/`HashSet`/`BTreeSet`. Generic
-structs, enums with data and the smart pointers but `Box<dyn T>` and `Rc<dyn T>` are next.
+generic functions, structs, impls, methods and traits, the operator traits and
+`HashMap`/`BTreeMap`/`HashSet`/`BTreeSet`. Enums with data and the smart pointers but
+`Box<dyn T>` and `Rc<dyn T>` are next.
 
 ```mermaid
 flowchart LR
@@ -205,6 +206,24 @@ body checked like any function. Its IR name is the function's name followed by i
 `PartialOrd`, `Ord`, `Default`, `Display`, `Debug`, the operator traits with their `Output` and
 the compound assignment traits; `where` clauses on type parameters join them.
 
+Generic structs are monomorphised the same way. A struct type carries its type arguments, which are
+inference variables until its uses decide them (`Pair { a: 1, b: x }`, `Pair::<u8>::new`), and its
+fields' types are the declaration's with the arguments in place; the IR has a struct for each list of
+arguments the code uses (`Pair_u8`), and each one's fields must be what an IR struct holds and its
+parameters' bounds must hold (`E0277`). A generic impl is one for all instances of a generic struct,
+`impl<T> S<T>` with the struct's parameters in order: its methods, its trait impls' methods and
+provided methods, and methods with type parameters of their own are templates, specialised where a
+call or an operator names them - the impl's arguments those of the receiver's type, the method's
+the turbofish's or inferred - and made once their types are decided; a bound of the impl that does
+not hold is rustc's `E0599`. A trait impl may also be for one instance (`impl Area for Pair<u8>`),
+and an associated type of a generic impl (`type Output = V<T>`) is that of each instance. A generic
+trait (`trait Conv<T>`) is implemented once per list of arguments, which a bound may name
+(`X: Conv<u32>`); a method of a generic trait that a type implements with several arguments is
+refused, as only rustc's inference over the expected type would choose. A public generic function is
+exported as the instances the crate makes of it, `largest_u8` for `largest::<u8>`
+(`ImportResult.Instances` maps each to the path Rust calls it by); one the crate never instantiates,
+or instantiates with a type that is not `pub`, has no exported surface to give.
+
 ## Trait objects
 
 `&dyn Trait`, `Box<dyn Trait>` and `Rc<dyn Trait>` of a trait of the crate dispatch at run time
@@ -288,7 +307,7 @@ assignment before its place.
 | `PLY1523` | `Box` and `Rc` of anything but a trait object, `Arc`, `Cell`, `RefCell`, `Mutex` |
 | `PLY1524` | slice methods outside the subset (`sort`, `binary_search`, `get` with a range, ...) |
 | `PLY1525` | `VecDeque`, `BinaryHeap`, `LinkedList`; iterating a map or a set; map keys and values the IR cannot hold |
-| `PLY1530` | generic, `unsafe`, `extern` and variadic functions, `where`, `impl Trait`, a typed `self`, a function without a body, nested items |
+| `PLY1530` | `unsafe`, `extern` and variadic functions, `where`, `impl Trait`, a typed `self`, a function without a body, nested items |
 | `PLY1531` | macros but `assert!`, `assert_eq!`, `assert_ne!`, their `debug_` forms, `panic!`, `todo!`, `unimplemented!`, `unreachable!`, `vec!` and `format!`; format arguments of the panicking macros, float formatting, Debug of text, precision and width arguments |
 | `PLY1532` | a closure that escapes, a move of a captured non-`Copy` value, a `move` closure assigning its capture |
 | `PLY1533` | attributes but the lint levels, `inline`, `must_use`, `cold`, `track_caller`, `derive`, `repr`, `test`, `cfg(test)` and documentation |
@@ -296,7 +315,7 @@ assignment before its place.
 | `PLY1535` | iterator methods outside the subset, an adapter in an order the lowering does not stream, a chain stored as a value |
 | `PLY1536` | `debug_assert!` without `--debug-assertions` |
 | `PLY1540` | `&mut dyn Trait`, a trait object of a library trait, of a trait with associated types or whose traits share a method name, with a `&mut` parameter, in a struct field; a new box assigned through `&mut Box<dyn Trait>`; impls of library traits outside the operator traits, `PartialEq`, `Default` and `Clone`, bounds on other library traits |
-| `PLY1541` | generic structs, enums, impls, methods and traits, public generic functions, const generics |
+| `PLY1541` | generic enums, const generics, an inherent impl of one instance of a generic struct, a generic impl of anything but a generic struct of the crate for its parameters in order, a supertrait of a generic trait, a method of a generic trait a type implements with several arguments, a public generic function the crate does not instantiate or instantiates with a type that is not `pub` |
 | `PLY1542` | lifetime parameters, reference fields, reference results |
 | `PLY1543` | enums with data |
 | `PLY1544` | derives and `repr` forms outside the list above |
@@ -307,7 +326,7 @@ assignment before its place.
 
 `tests/fixtures/prototype/rust/` holds `scalars.rs` (every operator, method and cast for every type),
 `control.rs` (the control forms and all twelve range forms over bound pairs and steps),
-`objects.rs` (trait objects),
+`objects.rs` (trait objects), `generics.rs` (generic structs, impls, methods and traits),
 `functions.rs` (calls, recursion, `pub`), `memory.rs` (arrays, slices, `Vec`, references,
 copy-in/copy-out), `types.rs` (structs, methods, enums, `Option`, `Result`, `?`), `closures.rs`
 (closures and iterator chains), `edges.rs` (the rarer forms), `strings.rs` (text), `traits.rs`

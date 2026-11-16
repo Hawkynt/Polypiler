@@ -258,6 +258,42 @@ internal sealed class RType {
   /// <summary>A struct of the crate.</summary>
   public static RType StructOf(StructInfo declaration) => new(RKind.Struct, declaration.Name) { Declaration = declaration };
 
+  /// <summary>A generic struct of the crate with its type arguments, which are its <see cref="Elements"/>.</summary>
+  public static RType StructOf(StructInfo declaration, IReadOnlyList<RType> arguments) => new(RKind.Struct, declaration.Name) { Declaration = declaration, Elements = [.. arguments] };
+
+  /// <summary>The fields of a struct type, their types those of the declaration with the type arguments in place of its parameters.</summary>
+  public List<(string Name, RType Type, bool IsVisible)> StructFields {
+    get {
+      var type = this.Resolved;
+      var info = type.Struct!;
+      if (info.Parameters.Count == 0)
+        return info.Fields;
+
+      var substitution = info.Parameters.Select((parameter, index) => (parameter, type.Elements[index])).ToDictionary(pair => pair.parameter, pair => pair.Item2);
+      return [.. info.Fields.Select(declared => (declared.Name, declared.Type.Substituted(substitution), declared.IsVisible))];
+    }
+  }
+
+  /// <summary>The type with the type parameters replaced by the types they stand for.</summary>
+  public RType Substituted(IReadOnlyDictionary<string, RType> substitution) {
+    var resolved = this.Resolved;
+    return resolved.Kind switch {
+      RKind.Param => substitution.TryGetValue(resolved.Name, out var argument) ? argument : resolved,
+      RKind.Reference => Reference(resolved.Element!.Substituted(substitution), resolved.Mutable),
+      RKind.Option => Option(resolved.Element!.Substituted(substitution)),
+      RKind.Vec => Vec(resolved.Element!.Substituted(substitution)),
+      RKind.Array => Array(resolved.Element!.Substituted(substitution), resolved.Length),
+      RKind.Slice => Slice(resolved.Element!.Substituted(substitution)),
+      RKind.Tuple => Tuple([.. resolved.Elements.Select(element => element.Substituted(substitution))]),
+      RKind.Result => Result(resolved.Element!.Substituted(substitution), resolved.Error.Substituted(substitution)),
+      RKind.Function => Function([.. resolved.Elements.Select(element => element.Substituted(substitution))], resolved.Element!.Substituted(substitution)),
+      RKind.Map => Map(resolved.Name, resolved.Key.Substituted(substitution), resolved.Element!.Substituted(substitution)),
+      RKind.Set => Set(resolved.Name, resolved.Element!.Substituted(substitution)),
+      RKind.Struct when resolved.Elements.Count > 0 => StructOf(resolved.Struct!, [.. resolved.Elements.Select(element => element.Substituted(substitution))]),
+      _ => resolved
+    };
+  }
+
   /// <summary>A field-less enum of the crate.</summary>
   public static RType EnumOf(EnumInfo declaration) => new(RKind.Enum, declaration.Name) { Declaration = declaration };
 
@@ -347,7 +383,7 @@ internal sealed class RType {
         RKind.Array or RKind.Option => type.Element!.IsCopy,
         RKind.Tuple => type.Elements.All(element => element.IsCopy),
         RKind.Result => type.Element!.IsCopy && type.Error.IsCopy,
-        RKind.Struct => type.Struct!.Derives.Contains("Copy"),
+        RKind.Struct => type.Struct!.Derives.Contains("Copy") && type.Elements.All(argument => argument.IsCopy),
         RKind.Enum => type.Enum!.Derives.Contains("Copy"),
         _ => false
       };
@@ -373,6 +409,7 @@ internal sealed class RType {
       RKind.Iterator => $"impl Iterator<Item = {type.Element}>",
       RKind.Dyn => $"dyn {type.Name}",
       RKind.Pointer => $"{type.Name}<{type.Element}>",
+      RKind.Struct when type.Elements.Count > 0 => $"{type.Name}<{string.Join(", ", type.Elements)}>",
       _ => type.Name
     };
   }
@@ -397,6 +434,9 @@ internal sealed class StructInfo(string name, string path, Syntax.StructItem ite
 
   /// <summary>The traits the struct derives.</summary>
   public HashSet<string> Derives { get; } = [];
+
+  /// <summary>The names of the type parameters of a generic struct, in order; none for any other.</summary>
+  public IReadOnlyList<string> Parameters { get; } = [.. item.Generics.Select(parameter => parameter.Name)];
 
   /// <summary>Whether the struct is <c>#[repr(C)]</c>, whose layout is observable.</summary>
   public bool ReprC { get; set; }

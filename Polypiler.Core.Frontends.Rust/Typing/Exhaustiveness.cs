@@ -77,7 +77,7 @@ internal static class Exhaustiveness {
 
   private static List<RType> Fields(RType type) => type.Kind switch {
     RKind.Tuple => [.. type.Elements],
-    RKind.Struct => [.. type.Struct!.Fields.Select(field => field.Type)],
+    RKind.Struct => [.. type.StructFields.Select(field => field.Type)],
     _ => []
   };
 

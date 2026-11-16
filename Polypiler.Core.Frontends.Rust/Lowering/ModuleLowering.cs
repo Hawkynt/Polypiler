@@ -8,7 +8,12 @@ using Polypiler.Core.IR;
 namespace Polypiler.Core.Frontends.Rust.Lowering;
 
 /// <summary>What lowering a crate produced: the functions, the types, the constant tables and the tests.</summary>
-internal sealed record LoweredCrate(IReadOnlyList<IrFunction> Functions, IReadOnlyList<IrTypeDeclaration> Types, IReadOnlyList<IrModuleConst> Constants, IReadOnlyList<string> Tests, IReadOnlyList<string> ModuleOrder);
+internal sealed record LoweredCrate(IReadOnlyList<IrFunction> Functions, IReadOnlyList<IrTypeDeclaration> Types, IReadOnlyList<IrModuleConst> Constants, IReadOnlyList<string> Tests, IReadOnlyList<string> ModuleOrder) {
+
+  /// <summary>The exported instances of public generic functions, by IR name: the Rust path with the type arguments.</summary>
+  public IReadOnlyDictionary<string, string> Instances { get; init; } = new Dictionary<string, string>();
+
+}
 
 /// <summary>
 /// Checks and lowers a crate: its module tree, the declarations of its types, the constants, every
@@ -63,6 +68,10 @@ internal sealed partial class ModuleLowering {
     if (failed)
       return null;
 
+    checker.CheckExportedGenerics(new HashSet<FunctionItem>(Exports(crate).Keys, ReferenceEqualityComparer.Instance));
+    if (failed)
+      return null;
+
     lowering.Name(crate);
     lowering.Declare();
     var all = lowering._typed.Functions.ToList();
@@ -80,7 +89,9 @@ internal sealed partial class ModuleLowering {
       return null;
 
     var tests = all.Where(signature => signature.Item.IsTest).Select(signature => signature.IrName).ToList();
-    return new LoweredCrate([.. functions, .. lowering._objectFunctions, .. helpers], lowering._types, lowering._tables, tests, [.. order.Select(module => module.CratePath)]);
+    var instances = all.Where(signature => signature.IsExported && signature.Template is not null)
+      .ToDictionary(signature => signature.IrName, signature => $"{signature.Template!.CratePath["crate::".Length..]}::<{string.Join(", ", signature.Template.Generics.Select(parameter => signature.Substitution![parameter.Name]))}>");
+    return new LoweredCrate([.. functions, .. lowering._objectFunctions, .. helpers], lowering._types, lowering._tables, tests, [.. order.Select(module => module.CratePath)]) { Instances = instances };
   }
 
   /// <summary>Gives every function its IR name - its crate path, unique in the module - and marks the exported ones.</summary>
@@ -89,6 +100,12 @@ internal sealed partial class ModuleLowering {
     foreach (var signature in this._typed.Functions) {
       var wanted = exported.TryGetValue(signature.Item, out var export) ? export : signature.IrName;
       signature.IsExported = exported.ContainsKey(signature.Item);
+      // An instance of an exported generic function is exported by its public path and its type arguments: larger_u8.
+      if (signature.Template is { } template && exported.TryGetValue(template.Item, out var generic)) {
+        wanted = generic + signature.IrName[template.IrName.Length..];
+        signature.IsExported = true;
+      }
+
       var name = wanted;
       for (var suffix = 2; !this._names.Add(name); ++suffix)
         name = wanted + suffix;
@@ -169,13 +186,14 @@ internal sealed partial class ModuleLowering {
       this._types.Add(declaration);
     }
 
-    foreach (var info in this._typed.Structs) {
+    // A generic struct is a struct of the IR for each list of type arguments the code uses, made where it is first used.
+    foreach (var info in this._typed.Structs.Where(info => info.Parameters.Count == 0)) {
       var declaration = new IrStructType(this.TypeName(info.Path));
       this._structs[info] = declaration;
       this._types.Add(declaration);
     }
 
-    foreach (var info in this._typed.Structs)
+    foreach (var info in this._typed.Structs.Where(info => info.Parameters.Count == 0))
       this._structs[info].Define([.. info.Fields.Select(field => new IrField(FieldName(field.Name), this.Ir(field.Type), false))]);
   }
 
@@ -229,6 +247,8 @@ internal sealed partial class ModuleLowering {
         return IrType.Set(this.Ir(resolved.Element!), MapOrder.SlotReuse);
       case RKind.Option:
         return IrType.Optional(this.Ir(resolved.Element!));
+      case RKind.Struct when resolved.Elements.Count > 0:
+        return IrType.Struct(this.Instance(resolved));
       case RKind.Struct:
         return IrType.Struct(this._structs[resolved.Struct!]);
       case RKind.Enum:
@@ -254,6 +274,21 @@ internal sealed partial class ModuleLowering {
       default:
         return IrType.Void;
     }
+  }
+
+  private readonly Dictionary<string, IrStructType> _instances = new(StringComparer.Ordinal);
+
+  /// <summary>The IR struct of an instance of a generic struct, made once for its type arguments: <c>Pair_u8</c>.</summary>
+  private IrStructType Instance(RType type) {
+    var key = type.Struct!.Path + "<" + string.Join(", ", type.Elements) + ">";
+    if (this._instances.TryGetValue(key, out var known))
+      return known;
+
+    var declaration = new IrStructType(this.TypeName(type.Struct!.Path + "_" + string.Join("_", type.Elements.Select(element => Word(this.Ir(element))))));
+    this._instances[key] = declaration;
+    this._types.Add(declaration);
+    declaration.Define([.. type.StructFields.Select(field => new IrField(FieldName(field.Name), this.Ir(field.Type), false))]);
+    return declaration;
   }
 
   /// <summary>The struct of a tuple or a result of the given parts, one per distinct shape.</summary>

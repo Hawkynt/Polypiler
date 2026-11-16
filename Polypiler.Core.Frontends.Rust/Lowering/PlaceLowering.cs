@@ -199,7 +199,7 @@ internal sealed partial class FunctionLowering {
         // A struct or a tuple: field by field, the arrays in it copied.
         var source = this.Stable(value, "source");
         var declaration = source.Type.StructType!;
-        var parts = resolved.Kind == RKind.Struct ? resolved.Struct!.Fields.Select(field => field.Type).ToList() : resolved.Elements.ToList();
+        var parts = resolved.Kind == RKind.Struct ? resolved.StructFields.Select(field => field.Type).ToList() : resolved.Elements.ToList();
         var fields = declaration.Fields.Select((field, index) => {
           IrExpr load = new IrFieldLoad(source, field);
           return HoldsArray(parts[index]) ? this.Duplicate(load, parts[index]) : load;
@@ -300,19 +300,19 @@ internal sealed partial class FunctionLowering {
         return;
       }
       case TupleStructPattern tupleStruct: {
-        var info = resolved.Struct!;
-        var parts = this.Parts(item, resolved, info.Fields.Count);
-        foreach (var (element, index) in Spread(tupleStruct.Elements, info.Fields.Count))
-          this.Bind(element, parts[index], info.Fields[index].Type);
+        var fields = resolved.StructFields;
+        var parts = this.Parts(item, resolved, fields.Count);
+        foreach (var (element, index) in Spread(tupleStruct.Elements, fields.Count))
+          this.Bind(element, parts[index], fields[index].Type);
 
         return;
       }
       case StructPattern structure: {
-        var info = resolved.Struct!;
-        var parts = this.Parts(item, resolved, info.Fields.Count);
+        var fields = resolved.StructFields;
+        var parts = this.Parts(item, resolved, fields.Count);
         foreach (var (name, field) in structure.Fields) {
-          var index = info.Fields.FindIndex(candidate => candidate.Name == name);
-          this.Bind(field, parts[index], info.Fields[index].Type);
+          var index = fields.FindIndex(candidate => candidate.Name == name);
+          this.Bind(field, parts[index], fields[index].Type);
         }
 
         return;

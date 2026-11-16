@@ -53,6 +53,12 @@ internal sealed record FunctionSignature(FunctionItem Item, IReadOnlyList<RType>
   /// <summary>The types an instance's type parameters stand for; <see langword="null"/> for any other function.</summary>
   public IReadOnlyDictionary<string, RType>? Substitution { get; set; }
 
+  /// <summary>How many of <see cref="Generics"/> are those of the generic impl a method is in, which come first.</summary>
+  public int ImplGenerics { get; set; }
+
+  /// <summary>The template an instance was made of; <see langword="null"/> for any other function.</summary>
+  public FunctionSignature? Template { get; set; }
+
 }
 
 /// <summary>
@@ -303,4 +309,4 @@ internal sealed record DynMethod(TraitInfo Owner, FunctionItem Item, IReadOnlyLi
 /// <param name="Trait">The trait of the object.</param>
 /// <param name="Concrete">The type of the value.</param>
 /// <param name="Impls">The method of the type's impl for each method the trait object dispatches, in the same order.</param>
-internal sealed record Unsizing(TraitInfo Trait, RType Concrete, IReadOnlyList<FunctionSignature> Impls);
+internal sealed record Unsizing(TraitInfo Trait, RType Concrete, List<FunctionSignature> Impls);

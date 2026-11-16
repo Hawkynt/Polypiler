@@ -233,6 +233,9 @@ internal sealed class TraitItem(Span at, string name, IReadOnlyList<Item> items)
   /// <summary>The traits every implementer implements too, <c>trait A: B</c>.</summary>
   public IReadOnlyList<TypeRef> Supertraits { get; init; } = [];
 
+  /// <summary>The type parameters of a generic trait, <c>trait Into&lt;T&gt;</c>, which each impl gives its own arguments.</summary>
+  public IReadOnlyList<GenericParameter> Generics { get; init; } = [];
+
 }
 
 /// <summary><c>type Output = T;</c> of an impl, or <c>type Output;</c> of a trait.</summary>

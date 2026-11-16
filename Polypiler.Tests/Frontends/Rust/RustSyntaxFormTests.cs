@@ -36,7 +36,7 @@ public sealed class RustSyntaxFormTests {
   [TestCase("struct S; impl S { fn g(self: Self) {} } pub fn f() -> u8 { 1 }", "typed self")]
   [TestCase("fn g(...) {} pub fn f() -> u8 { 1 }", "variadic fn")]
   [TestCase("fn g(); pub fn f() -> u8 { 1 }", "fn without a body")]
-  [TestCase("struct S<T> where T: Copy { a: T } pub fn f() -> u8 { 1 }", RustFrontend.UnsupportedGeneric)]
+  [TestCase("struct S<T> where T: Copy { a: T } pub fn f() -> f32 { let s = S { a: vec![1u8] }; 1.0 }", "E0277: the trait bound `Vec<u8>: Copy` is not satisfied")]
   [TestCase("struct S where u8: Copy { a: u8 } pub fn f() -> u8 { 1 }", "where clause")]
   [TestCase("enum E<T> { A } pub fn f() -> u8 { 1 }", RustFrontend.UnsupportedGeneric)]
   [TestCase("struct S; impl S where S: Copy { } pub fn f() -> u8 { 1 }", "where clause")]

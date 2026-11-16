@@ -217,7 +217,7 @@ public sealed class RustTypeTests {
   [TestCase("trait T {} pub fn f(x: &mut dyn T) -> u32 { 1 }", RustFrontend.UnsupportedTrait)]
   [TestCase("struct P; impl std::fmt::Display for P { } pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedTrait)]
   [TestCase("pub fn f(t: &dyn Copy) -> u32 { 1 }", RustFrontend.UnsupportedTrait)]
-  [TestCase("struct W<T>(T); pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedGeneric)]
+  [TestCase("struct W<const N: usize>; pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedGeneric)]
   [TestCase("struct S; impl<const N: usize> S { } pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedGeneric)]
   [TestCase("struct R<'a> { d: &'a [u8] } pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedLifetime)]
   [TestCase("struct R { d: &'static [u8] } pub fn f() -> u32 { 1 }", RustFrontend.UnsupportedLifetime)]

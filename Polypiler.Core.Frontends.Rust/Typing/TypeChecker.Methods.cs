@@ -247,10 +247,11 @@ internal sealed partial class TypeChecker {
     if (method.Receiver is null)
       throw this.Invalid($"E0599: no method named `{call.Name}` found: `{target}::{call.Name}` is an associated function, not a method", call.At);
 
-    if (method.Generics.Count > 0)
-      return this.Refused(RustFrontend.UnsupportedGeneric, $"generic method '{call.Name}'", call.At);
-
     this._typed.Callees[call] = method;
+    // A method of a generic impl or with type parameters of its own: its instance for the receiver's type arguments.
+    if (method.Generics.Count > 0)
+      method = this.Specialized(call, method, target, call.Generics.Count > 0 ? call.Generics : null, false);
+
     this.Uses(method.Module);
     var kind = method.Item.Receiver;
     this._deferred.Add(() => {

@@ -20,6 +20,9 @@ internal sealed class TraitInfo(string name, TraitItem item, ModuleScope module)
   /// <summary>The supertraits, resolved after every trait is known.</summary>
   public List<TraitInfo> Supertraits { get; } = [];
 
+  /// <summary>The names of the type parameters of a generic trait; none for any other.</summary>
+  public IReadOnlyList<string> Parameters { get; } = [.. item.Generics.Select(parameter => parameter.Name)];
+
 }
 
 /// <summary>
@@ -60,13 +63,20 @@ internal sealed partial class TypeChecker {
   /// <summary>The type parameters in scope and the types they stand for: a template's parameters, an instance's arguments.</summary>
   private IReadOnlyDictionary<string, RType>? _typeParameters;
 
-  /// <summary>The calls of generic functions of the function being checked, instantiated when its types are decided.</summary>
-  private readonly List<(CallExpr Call, FunctionSignature Template, IReadOnlyList<RType> Arguments)> _instantiations = [];
+  /// <summary>
+  /// The calls of generic functions and methods of the function being checked, instantiated when its
+  /// types are decided; an operator's instance is the operator's method, any other the call's callee.
+  /// </summary>
+  private readonly List<(Expr Call, FunctionSignature Template, IReadOnlyList<RType> Arguments, bool IsOperator)> _instantiations = [];
 
-  /// <summary>The key of a type for the tables of trait impls: the crate path of a struct or an enum, the name of any other type.</summary>
+  /// <summary>
+  /// The key of a type for the tables of trait impls: the crate path of a struct or an enum, with the
+  /// type arguments of a generic struct's instance or <c>&lt;*&gt;</c> for its generic impls; the name of any other type.
+  /// </summary>
   private static string TypeKey(RType type) {
     var resolved = type.Resolved;
     return resolved.Kind switch {
+      RKind.Struct when resolved.Elements.Count > 0 => "struct " + resolved.Struct!.Path + (resolved.Elements.Any(HoldsParameter) ? "<*>" : "<" + string.Join(", ", resolved.Elements) + ">"),
       RKind.Struct => "struct " + resolved.Struct!.Path,
       RKind.Enum => "enum " + resolved.Enum!.Path,
       RKind.Str => "str",
@@ -84,7 +94,10 @@ internal sealed partial class TypeChecker {
     var ok = true;
     foreach (var info in this._traits.Values)
       foreach (var supertrait in info.Item.Supertraits) {
-        if (this.TraitNamed(supertrait, info.Module) is { } known) {
+        if (this.TraitNamed(supertrait, info.Module) is { Parameters.Count: > 0 } generic) {
+          this._report(RustFrontend.UnsupportedGeneric, $"supertrait '{supertrait.Text}' of the generic trait {generic.Name}", supertrait.At);
+          ok = false;
+        } else if (this.TraitNamed(supertrait, info.Module) is { } known) {
           info.Supertraits.Add(known);
         } else if (!IsMarker(supertrait.Name)) {
           this._report(RustFrontend.UnsupportedTrait, $"supertrait '{supertrait.Text}'", supertrait.At);
@@ -118,7 +131,12 @@ internal sealed partial class TypeChecker {
       return false;
     }
 
-    if (impl.Trait.Arguments.Count > 0 && !(traitName is "Add" or "Sub" or "Mul" or "Div" or "Rem" or "PartialEq" && impl.Trait.Arguments.Count == 1)) {
+    if (trait is { Parameters.Count: > 0 } && impl.Trait.Arguments.Count != trait.Parameters.Count) {
+      this._report(RustFrontend.InvalidSource, $"E0107: trait takes {trait.Parameters.Count} generic argument{(trait.Parameters.Count == 1 ? "" : "s")} but {impl.Trait.Arguments.Count} generic argument{(impl.Trait.Arguments.Count == 1 ? " was" : "s were")} supplied: `{impl.Trait.Text}`", impl.Trait.At);
+      return false;
+    }
+
+    if (impl.Trait.Arguments.Count > 0 && trait is not { Parameters.Count: > 0 } && !(traitName is "Add" or "Sub" or "Mul" or "Div" or "Rem" or "PartialEq" && impl.Trait.Arguments.Count == 1)) {
       this._report(RustFrontend.UnsupportedGeneric, $"impl {impl.Trait.Text}", impl.Trait.At);
       return false;
     }
@@ -127,10 +145,20 @@ internal sealed partial class TypeChecker {
     if (!this._implemented.TryGetValue(key, out var implemented))
       this._implemented[key] = implemented = new(System.StringComparer.Ordinal);
 
-    if (!implemented.Add(name)) {
-      this._report(RustFrontend.InvalidSource, $"E0119: conflicting implementations of trait `{name}` for type `{self}`", impl.At);
+    // A generic trait is implemented once for each list of its type arguments: Conv<u8> and Conv<u16>.
+    var arguments = trait is { Parameters.Count: > 0 } ? this.TraitArguments(impl.Trait, module, self) : null;
+    if (trait is { Parameters.Count: > 0 } && arguments is null)
+      return false;
+
+    var full = arguments is null ? name : $"{name}<{string.Join(", ", arguments)}>";
+    if (!implemented.Add(full)) {
+      this._report(RustFrontend.InvalidSource, $"E0119: conflicting implementations of trait `{full}` for type `{self}`", impl.At);
       return false;
     }
+
+    implemented.Add(name);
+    if (arguments is not null)
+      this._implArguments[impl] = arguments;
 
     foreach (var associated in impl.Items.OfType<AssociatedTypeItem>()) {
       if (associated.Type is null || this.Resolve(associated.Type, true, module, self) is not { } type) {
@@ -141,7 +169,10 @@ internal sealed partial class TypeChecker {
       if (!this._associatedTypes.TryGetValue(key, out var types))
         this._associatedTypes[key] = types = new(System.StringComparer.Ordinal);
 
-      types[associated.Name] = type;
+      // A generic impl's associated type is kept over the struct's own parameters, which an instance's arguments replace.
+      types[associated.Name] = self.Resolved is { Kind: RKind.Struct, Elements.Count: > 0 } generic && HoldsParameter(generic)
+        ? Substitute(type, generic.Elements.Select((parameter, index) => (parameter.Resolved.Name, RType.Param(generic.Struct!.Parameters[index]))).ToDictionary(pair => pair.Name, pair => pair.Item2))
+        : type;
     }
 
     var ok = true;
@@ -159,6 +190,15 @@ internal sealed partial class TypeChecker {
       }
 
     return ok;
+  }
+
+  /// <summary>The type arguments of the generic trait each impl implements.</summary>
+  private readonly Dictionary<ImplItem, IReadOnlyList<RType>> _implArguments = new(ReferenceEqualityComparer.Instance);
+
+  /// <summary>The type arguments an impl gives a generic trait, resolved in the impl's scope; <see langword="null"/>, reported, when one is refused.</summary>
+  private IReadOnlyList<RType>? TraitArguments(TypeRef trait, ModuleScope module, RType self) {
+    var arguments = trait.Arguments.Select(argument => this.Resolve(argument, false, module, self)).ToList();
+    return arguments.Any(argument => argument is null) ? null : [.. arguments.Select(argument => argument!)];
   }
 
   /// <summary>Records a method of a trait impl in the type's table.</summary>
@@ -179,9 +219,27 @@ internal sealed partial class TypeChecker {
       return true;
 
     var ok = true;
+    var saved = this._typeParameters;
+    if (this._implArguments.TryGetValue(impl, out var arguments))
+      this._typeParameters = trait.Parameters.Select((parameter, index) => (parameter, arguments[index])).ToDictionary(pair => pair.parameter, pair => pair.Item2);
+
+    try {
+      ok = this.ProvidedMethods(impl, trait, self);
+    } finally {
+      this._typeParameters = saved;
+    }
+
+    return ok;
+  }
+
+  private bool ProvidedMethods(ImplItem impl, TraitInfo trait, RType self) {
+    var ok = true;
     foreach (var provided in trait.Methods.Values.Where(method => !method.IsRequired && impl.Items.OfType<FunctionItem>().All(own => own.Name != method.Name))) {
+      // In a generic impl, or with type parameters of its own, the provided method is a template as well.
       var fresh = this._crate.Fresh(provided, trait.Module);
-      var signature = this.Signature(fresh, trait.Module, self);
+      var signature = provided.Generics.Count + impl.Generics.Count > 0
+        ? this.Template(fresh, trait.Module, self, [.. impl.Generics, .. provided.Generics], impl.Generics.Count)
+        : this.Signature(fresh, trait.Module, self);
       if (signature is null) {
         ok = false;
         continue;
@@ -196,15 +254,28 @@ internal sealed partial class TypeChecker {
 
   /// <summary>The name of a type as a word of a generated name: <c>Point</c>, <c>u32</c>, <c>str</c>.</summary>
   private static string OwnerName(RType type) => Regex.Replace(type.Resolved.Kind switch {
+    RKind.Struct when type.Resolved.Elements.Count > 0 && !type.Resolved.Elements.Any(HoldsParameter) => type.ToString(),
     RKind.Struct => type.Resolved.Struct!.Name,
     RKind.Enum => type.Resolved.Enum!.Name,
     _ => type.ToString()
   }, "[^A-Za-z0-9]+", "_").Trim('_');
 
+  /// <summary>The methods of a name the trait impls of a type give it: those for the type itself, else those of the generic impls of its struct.</summary>
+  private IReadOnlyList<(string Trait, FunctionSignature Method)> TraitMethods(RType type, string name)
+    => this._traitMethods.TryGetValue(TypeKey(type), out var methods) && methods.TryGetValue(name, out var candidates) ? candidates
+      : GenericKey(type) is { } generic && this._traitMethods.TryGetValue(generic, out methods) && methods.TryGetValue(name, out candidates) ? candidates
+      : [];
+
   /// <summary>A trait method of a type by name; <see langword="null"/> when no impl gives one, <c>E0034</c> when two do.</summary>
   private FunctionSignature? TraitMethodOf(RType type, string name, Span at) {
-    if (!this._traitMethods.TryGetValue(TypeKey(type), out var methods) || !methods.TryGetValue(name, out var candidates))
+    var candidates = this.TraitMethods(type, name);
+    if (candidates.Count == 0)
       return null;
+
+    if (candidates.Count > 1 && candidates.All(candidate => candidate.Trait == candidates[0].Trait)) {
+      this.Refuse(new Refusal(RustFrontend.UnsupportedGeneric, $"method '{name}' of the generic trait {candidates[0].Trait}, which '{type}' implements with several type arguments", at));
+      throw new CheckAbort();
+    }
 
     if (candidates.Count > 1)
       throw this.Invalid($"E0034: multiple applicable items in scope: `{name}` of traits {string.Join(" and ", candidates.Select(candidate => $"`{candidate.Trait}`"))}", at);
@@ -230,7 +301,12 @@ internal sealed partial class TypeChecker {
   };
 
   /// <summary>Whether a type implements a trait of the crate or one of the standard library through an impl of the crate.</summary>
-  private bool Implements(RType type, string trait) => this._implemented.TryGetValue(TypeKey(type), out var traits) && traits.Contains(trait);
+  private bool Implements(RType type, string trait)
+    => this._implemented.TryGetValue(TypeKey(type), out var traits) && traits.Contains(trait)
+      || GenericKey(type) is { } generic && this._implemented.TryGetValue(generic, out traits) && traits.Contains(trait);
+
+  /// <summary>The key of the generic impls of a generic struct's instance; <see langword="null"/> for any other type.</summary>
+  private static string? GenericKey(RType type) => type.Resolved is { Kind: RKind.Struct, Elements.Count: > 0 } instance ? "struct " + instance.Struct!.Path + "<*>" : null;
 
   // ---------------------------------------------------------------- operators
 
@@ -252,8 +328,7 @@ internal sealed partial class TypeChecker {
       return null;
     }
 
-    var signature = this.TraitMethodOf(type, method, binary.At)!;
-    this._typed.Operators[binary] = signature;
+    var signature = this.OperatorMethod(binary, type, method);
     // `a == b` is PartialEq::eq(&a, &b): both sides are borrowed.
     if (method == "eq")
       this.Unify(signature.Parameters[0].Dereferenced, StripShared(right), binary.Right.At);
@@ -269,8 +344,7 @@ internal sealed partial class TypeChecker {
     if (type.Kind is not (RKind.Struct or RKind.Enum) || !this.Implements(type, trait))
       return null;
 
-    var signature = this.TraitMethodOf(type, method, unary.At)!;
-    this._typed.Operators[unary] = signature;
+    var signature = this.OperatorMethod(unary, type, method);
     return signature.Result;
   }
 
@@ -283,22 +357,30 @@ internal sealed partial class TypeChecker {
     if (!this.Implements(type, trait.Trait + "Assign"))
       throw this.Invalid($"E0368: binary assignment operation `{assign.Op}=` cannot be applied to type `{type}`", assign.At);
 
-    var signature = this.TraitMethodOf(type, trait.Method + "_assign", assign.At)!;
-    this._typed.Operators[assign] = signature;
+    var signature = this.OperatorMethod(assign, type, trait.Method + "_assign");
     this.Coerce(signature.Parameters[0], value, assign.Value.At);
     return true;
+  }
+
+  /// <summary>The method of a trait impl an operator calls: of a generic impl, its instance for the operand's type, bound once that is decided.</summary>
+  private FunctionSignature OperatorMethod(Expr site, RType type, string name) {
+    var signature = this.TraitMethodOf(type, name, site.At)!;
+    this._typed.Operators[site] = signature;
+    return signature.Generics.Count > 0 ? this.Specialized(site, signature, type, null, true) : signature;
   }
 
   // ---------------------------------------------------------------- generics
 
   /// <summary>The template of a generic function: its signature over the type parameters, which no body is checked against; its instances are.</summary>
-  private FunctionSignature? Template(FunctionItem item, ModuleScope module, RType? self) {
+  private FunctionSignature? Template(FunctionItem item, ModuleScope module, RType? self, IReadOnlyList<GenericParameter> generics, int implGenerics) {
     var saved = this._typeParameters;
-    this._typeParameters = item.Generics.ToDictionary(parameter => parameter.Name, parameter => RType.Param(parameter.Name));
+    this._typeParameters = generics.ToDictionary(parameter => parameter.Name, parameter => RType.Param(parameter.Name));
     try {
       var template = this.Signature(item, module, self, false);
-      if (template is not null)
-        template.Generics = item.Generics;
+      if (template is not null) {
+        template.Generics = generics;
+        template.ImplGenerics = implGenerics;
+      }
 
       return template;
     } finally {
@@ -308,24 +390,64 @@ internal sealed partial class TypeChecker {
 
   /// <summary>A call of a generic function: the type parameters are new inference variables, or the turbofish's types; the instance is made when the caller's types are decided.</summary>
   private RType GenericCall(CallExpr call, PathExpr path, FunctionSignature template) {
-    var generics = template.Generics;
+    // S::<A>::f::<B>(..): the impl's type arguments follow the type, the method's the method.
+    var owner = template.ImplGenerics > 0 && path.Segments.Count >= 2 ? path.Generics.GetValueOrDefault(path.Segments.Count - 2) : null;
     var explicitTypes = path.Generics.TryGetValue(path.Segments.Count - 1, out var given) ? given : null;
-    if (explicitTypes is not null && explicitTypes.Count != generics.Count)
-      throw this.Invalid($"E0107: function takes {generics.Count} generic argument{(generics.Count == 1 ? "" : "s")} but {explicitTypes.Count} were supplied", path.At);
+    var arguments = this.TypeArguments(template, owner, explicitTypes, path.At);
+    // Self::f(..) in an instance names the instance's type arguments.
+    if (template.ImplGenerics > 0 && owner is null && this.TypeOfPath([.. path.Segments.Take(path.Segments.Count - 1)], path.At)?.Resolved is { Kind: RKind.Struct } type && type.Elements.Count == template.ImplGenerics)
+      for (var index = 0; index < template.ImplGenerics; ++index)
+        this.Unify(arguments[index], type.Elements[index], path.At);
 
-    var arguments = generics.Select((parameter, index) => explicitTypes is null ? this.Fresh(VariableKind.Any) : this.Resolve(explicitTypes[index], false) ?? this.ErrorType()).ToList();
-    var substitution = generics.Select((parameter, index) => (parameter.Name, arguments[index])).ToDictionary(pair => pair.Name, pair => pair.Item2);
+    var substitution = template.Generics.Select((parameter, index) => (parameter.Name, arguments[index])).ToDictionary(pair => pair.Name, pair => pair.Item2);
     IReadOnlyList<RType> parameters = template.Receiver is null ? template.Parameters : [template.Receiver, .. template.Parameters];
     this.Arguments(call, [.. parameters.Select(parameter => Substitute(parameter, substitution))], "function");
-    this._instantiations.Add((call, template, arguments));
+    this._instantiations.Add((call, template, arguments, false));
     return Substitute(template.Result, substitution);
+  }
+
+  /// <summary>
+  /// The type arguments of a call of a template: the impl's from the given types or new variables, the
+  /// function's own from the turbofish or new variables.
+  /// </summary>
+  private List<RType> TypeArguments(FunctionSignature template, IReadOnlyList<TypeRef>? implTypes, IReadOnlyList<TypeRef>? ownTypes, Span at) {
+    var own = template.Generics.Count - template.ImplGenerics;
+    if (ownTypes is not null && ownTypes.Count != own)
+      throw this.Invalid($"E0107: {(template.Receiver is null ? "function" : "method")} takes {own} generic argument{(own == 1 ? "" : "s")} but {ownTypes.Count} were supplied", at);
+
+    if (implTypes is not null && implTypes.Count != template.ImplGenerics)
+      throw this.Invalid($"E0107: struct takes {template.ImplGenerics} generic argument{(template.ImplGenerics == 1 ? "" : "s")} but {implTypes.Count} were supplied", at);
+
+    RType Argument(IReadOnlyList<TypeRef>? given, int index) => given is null ? this.Fresh(VariableKind.Any) : this.Resolve(given[index], false) ?? this.ErrorType();
+    return [.. Enumerable.Range(0, template.ImplGenerics).Select(index => Argument(implTypes, index)), .. Enumerable.Range(0, own).Select(index => Argument(ownTypes, index))];
+  }
+
+  /// <summary>
+  /// A method of a generic impl or a generic method, called on a type: the impl's type arguments are
+  /// those of the type, the method's own the turbofish's or new variables. The call is checked against
+  /// the signature with them in place and bound to the instance once they are decided.
+  /// </summary>
+  private FunctionSignature Specialized(Expr site, FunctionSignature template, RType self, IReadOnlyList<TypeRef>? ownTypes, bool isOperator) {
+    var arguments = this.TypeArguments(template, null, ownTypes, site.At);
+    var instance = self.Resolved;
+    for (var index = 0; index < template.ImplGenerics; ++index)
+      this.Unify(arguments[index], instance.Elements[index], site.At);
+
+    var substitution = template.Generics.Select((parameter, index) => (parameter.Name, arguments[index])).ToDictionary(pair => pair.Name, pair => pair.Item2);
+    this._instantiations.Add((site, template, arguments, isOperator));
+    return template with {
+      Parameters = [.. template.Parameters.Select(parameter => Substitute(parameter, substitution))],
+      Result = Substitute(template.Result, substitution),
+      Receiver = template.Receiver is null ? null : Substitute(template.Receiver, substitution),
+      Generics = []
+    };
   }
 
   /// <summary>Makes the instances the calls of the function just checked need and binds each call to its instance.</summary>
   private void Instantiate() {
     var pending = this._instantiations.ToList();
     this._instantiations.Clear();
-    foreach (var (call, template, arguments) in pending) {
+    foreach (var (call, template, arguments, isOperator) in pending) {
       if (arguments.Any(argument => this.IsError(argument)))
         continue;
 
@@ -333,7 +455,11 @@ internal sealed partial class TypeChecker {
       if (undecided is not null)
         throw this.Invalid($"E0282: type annotations needed: cannot infer the type of the type parameter of `{template.Item.Name}`", call.At);
 
-      this._typed.Callees[call] = this.Instance(template, [.. arguments.Select(argument => argument.Resolved)], call.At);
+      var instance = this.Instance(template, [.. arguments.Select(Decided)], call.At);
+      if (isOperator)
+        this._typed.Operators[call] = instance;
+      else
+        this._typed.Callees[call] = instance;
     }
   }
 
@@ -341,9 +467,15 @@ internal sealed partial class TypeChecker {
   private FunctionSignature Instance(FunctionSignature template, IReadOnlyList<RType> arguments, Span at) {
     var key = string.Join(", ", arguments.Select(argument => argument.ToString()));
     var substitution = template.Generics.Select((parameter, index) => (parameter.Name, arguments[index])).ToDictionary(pair => pair.Name, pair => pair.Item2);
-    foreach (var parameter in template.Generics)
-      foreach (var bound in parameter.Bounds)
+    // A bound of the impl a method is in makes the method exist for the instances that satisfy it (E0599).
+    var owner = template.ImplGenerics > 0 && (template.Receiver?.Dereferenced ?? this.SelfOf(template)) is { } implType ? Substitute(implType, substitution) : null;
+    foreach (var (parameter, index) in template.Generics.Select((parameter, index) => (parameter, index)))
+      foreach (var bound in parameter.Bounds) {
+        if (index < template.ImplGenerics && !this.Satisfies(substitution[parameter.Name], bound, template.Module!, substitution))
+          throw this.Invalid($"E0599: the method `{template.Item.Name}` exists for struct `{owner}`, but its trait bounds were not satisfied", at);
+
         this.RequireBound(substitution[parameter.Name], bound, template.Module!, substitution, at);
+      }
 
     if (template.Instances.TryGetValue(key, out var known))
       return known;
@@ -352,10 +484,11 @@ internal sealed partial class TypeChecker {
     var saved = this._typeParameters;
     this._typeParameters = substitution;
     try {
-      var self = template.Receiver?.Dereferenced ?? this.SelfOf(template);
+      var self = (template.Receiver?.Dereferenced ?? this.SelfOf(template)) is { } declared ? Substitute(declared, substitution) : null;
       var instance = this.Signature(fresh, template.Module!, self) ?? throw new CheckAbort();
       instance.IrName = template.IrName + "_" + string.Join("_", arguments.Select(OwnerName));
       instance.Substitution = substitution;
+      instance.Template = template;
       template.Instances[key] = instance;
       return instance;
     } finally {
@@ -365,12 +498,28 @@ internal sealed partial class TypeChecker {
 
   /// <summary>Requires a type to satisfy a bound: the standard traits by what the subset knows of the type, the crate's traits by its impls.</summary>
   private void RequireBound(RType type, TypeRef bound, ModuleScope module, IReadOnlyDictionary<string, RType> substitution, Span at) {
+    if (!this.Satisfies(type, bound, module, substitution))
+      throw this.Invalid($"E0277: the trait bound `{type}: {bound.Text}` is not satisfied", at);
+  }
+
+  /// <summary>Whether a type satisfies a bound; a bound on a library trait the subset does not know is refused and taken as satisfied.</summary>
+  private bool Satisfies(RType type, TypeRef bound, ModuleScope module, IReadOnlyDictionary<string, RType> substitution) {
     var name = bound.Name.Split("::")[^1];
     if (IsMarker(bound.Name))
-      return;
+      return true;
 
     bool satisfied;
-    if (this.TraitNamed(bound, module) is { } trait) {
+    if (this.TraitNamed(bound, module) is { Parameters.Count: > 0 } generic && bound.Arguments.Count > 0) {
+      // A bound on a generic trait names its arguments, which may name the other parameters.
+      var saved = this._typeParameters;
+      this._typeParameters = substitution;
+      try {
+        var arguments = bound.Arguments.Select(argument => this.Resolve(argument, false) ?? this.ErrorType()).ToList();
+        satisfied = this.Implements(type, $"{generic.Name}<{string.Join(", ", arguments)}>");
+      } finally {
+        this._typeParameters = saved;
+      }
+    } else if (this.TraitNamed(bound, module) is { } trait) {
       satisfied = this.Implements(type, trait.Name);
     } else {
       var resolved = type.Resolved;
@@ -392,8 +541,7 @@ internal sealed partial class TypeChecker {
       };
     }
 
-    if (!satisfied)
-      throw this.Invalid($"E0277: the trait bound `{type}: {bound.Text}` is not satisfied", at);
+    return satisfied;
   }
 
   /// <summary>A bound on a trait of the standard library the subset does not know: refused, and taken as satisfied.</summary>
@@ -418,20 +566,12 @@ internal sealed partial class TypeChecker {
   }
 
   /// <summary>A type with the type parameters replaced by the types they stand for.</summary>
-  private static RType Substitute(RType type, IReadOnlyDictionary<string, RType> substitution) {
+  private static RType Substitute(RType type, IReadOnlyDictionary<string, RType> substitution) => type.Substituted(substitution);
+
+  /// <summary>A decided type with every variable in it replaced by what it is bound to: the key of an instance.</summary>
+  private static RType Decided(RType type) {
     var resolved = type.Resolved;
-    return resolved.Kind switch {
-      RKind.Param => substitution[resolved.Name],
-      RKind.Reference => RType.Reference(Substitute(resolved.Element!, substitution), resolved.Mutable),
-      RKind.Option => RType.Option(Substitute(resolved.Element!, substitution)),
-      RKind.Vec => RType.Vec(Substitute(resolved.Element!, substitution)),
-      RKind.Array => RType.Array(Substitute(resolved.Element!, substitution), resolved.Length),
-      RKind.Slice => RType.Slice(Substitute(resolved.Element!, substitution)),
-      RKind.Tuple => RType.Tuple([.. resolved.Elements.Select(element => Substitute(element, substitution))]),
-      RKind.Result => RType.Result(Substitute(resolved.Element!, substitution), Substitute(resolved.Error, substitution)),
-      RKind.Function => RType.Function([.. resolved.Elements.Select(element => Substitute(element, substitution))], Substitute(resolved.Element!, substitution)),
-      _ => resolved
-    };
+    return resolved.Kind is RKind.Struct && resolved.Elements.Count > 0 ? RType.StructOf(resolved.Struct!, [.. resolved.Elements.Select(Decided)]) : resolved;
   }
 
   /// <summary>
@@ -443,6 +583,9 @@ internal sealed partial class TypeChecker {
     var function = resolved.Kind is RKind.Struct or RKind.Enum ? this.Member(resolved, name, call.At) as FunctionSignature : this.TraitMethodOf(resolved, name, call.At);
     if (function is not null) {
       this._typed.Callees[call] = function;
+      if (function.Generics.Count > 0)
+        function = this.Specialized(call, function, resolved, null, false);
+
       IReadOnlyList<RType> parameters = function.Receiver is null ? function.Parameters : [function.Receiver, .. function.Parameters];
       this.Arguments(call, parameters, "function");
       return function.Result;
@@ -474,8 +617,14 @@ internal sealed partial class TypeChecker {
     if (owner.Resolved.Kind == RKind.Param)
       return this.Unsupported(RustFrontend.UnsupportedTrait, $"associated type {string.Join("::", segments)} of a type parameter", at) ?? this.ErrorType();
 
-    if (this._associatedTypes.TryGetValue(TypeKey(owner), out var types) && types.TryGetValue(segments[1], out var associated))
-      return associated;
+    if ((this._associatedTypes.TryGetValue(TypeKey(owner), out var types) || GenericKey(owner) is { } generic && this._associatedTypes.TryGetValue(generic, out types))
+        && types.TryGetValue(segments[1], out var associated)) {
+      // A generic impl's is over the struct's parameters: the owner's type arguments replace them.
+      var instance = owner.Resolved;
+      return instance is { Kind: RKind.Struct, Elements.Count: > 0 }
+        ? Substitute(associated, instance.Struct!.Parameters.Select((name, index) => (name, instance.Elements[index])).ToDictionary(pair => pair.name, pair => pair.Item2))
+        : associated;
+    }
 
     // The operators of the primitives yield their own type.
     return owner.IsNumber && segments[1] == "Output" ? owner.Resolved : null;

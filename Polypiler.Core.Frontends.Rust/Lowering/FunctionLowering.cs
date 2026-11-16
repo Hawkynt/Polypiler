@@ -444,7 +444,7 @@ internal sealed partial class FunctionLowering {
     var resolved = type.Resolved;
     return resolved.Kind switch {
       RKind.Array => true,
-      RKind.Struct => resolved.Struct!.Fields.Any(field => HoldsArray(field.Type)),
+      RKind.Struct => resolved.StructFields.Any(field => HoldsArray(field.Type)),
       RKind.Tuple => resolved.Elements.Any(HoldsArray),
       _ => false
     };

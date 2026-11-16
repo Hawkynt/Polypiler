@@ -353,6 +353,9 @@ internal sealed partial class TypeChecker {
       if (Undecided(type) && !this.HoldsError(type))
         throw this.Unresolved(Describe(expression), expression.At);
 
+    foreach (var (expression, type) in this._expressions)
+      this.CheckInstances(type, expression.At);
+
     // The IR holds a string in a list or an array, never in an optional value or a struct.
     if (this._expressions.FirstOrDefault(pair => HoldsText(pair.Type)) is ({ } held, { } holder))
       this.Refuse(new Refusal(RustFrontend.Unsupported, $"'{holder}', a value holding text", held.At));

@@ -342,8 +342,9 @@ internal sealed partial class TypeChecker {
     var target = this.PathTarget(path);
     if (target is StructInfo { Item.Form: StructForm.Tuple } structure) {
       this._typed.Resolutions[pattern] = structure;
-      this.Unify(type, RType.StructOf(structure), pattern.At);
-      foreach (var (element, elementType) in this.Elements(pattern.Elements, [.. structure.Fields.Select(field => field.Type)], pattern.At, "tuple struct"))
+      var owner = this.Instantiated(structure, null);
+      this.Unify(type, owner, pattern.At);
+      foreach (var (element, elementType) in this.Elements(pattern.Elements, [.. owner.StructFields.Select(field => field.Type)], pattern.At, "tuple struct"))
         this.Pattern(element, elementType, inAlternative, byReference);
 
       return;
@@ -373,7 +374,7 @@ internal sealed partial class TypeChecker {
         throw this.Invalid($"E0026: struct `{info.Name}` does not have a field named `{name}`", field.At);
 
       named.Add(name);
-      this.Pattern(field, info.Fields[index].Type, inAlternative, byReference);
+      this.Pattern(field, owner.StructFields[index].Type, inAlternative, byReference);
     }
 
     if (!pattern.Rest && named.Count != info.Fields.Count)

@@ -149,10 +149,21 @@ internal sealed partial class TypeChecker {
 
     var symbol = this._crate.Resolve(this._module, segments, at, false);
     return symbol?.Target switch {
-      StructItem structure => RType.StructOf(this._structs[structure]),
+      StructItem structure => this.Instantiated(this._structs[structure], null),
       EnumItem enumeration => RType.EnumOf(this._enums[enumeration]),
       _ => null
     };
+  }
+
+  /// <summary>A struct type: of a generic struct, with the turbofish's type arguments or new inference variables, which its uses decide.</summary>
+  private RType Instantiated(StructInfo info, IReadOnlyList<TypeRef>? arguments) {
+    if (info.Parameters.Count == 0)
+      return arguments is { Count: > 0 } ? throw this.Invalid($"E0107: struct takes 0 generic arguments but {arguments.Count} generic arguments were supplied", arguments[0].At) : RType.StructOf(info);
+
+    if (arguments is not null && arguments.Count != info.Parameters.Count)
+      throw this.Invalid($"E0107: struct takes {info.Parameters.Count} generic argument{(info.Parameters.Count == 1 ? "" : "s")} but {arguments.Count} generic argument{(arguments.Count == 1 ? " was" : "s were")} supplied", arguments.Count > 0 ? arguments[0].At : info.Item.At);
+
+    return RType.StructOf(info, [.. info.Parameters.Select((_, index) => arguments is null ? this.Fresh(VariableKind.Any) : this.Resolve(arguments[index], false) ?? this.ErrorType())]);
   }
 
   /// <summary>A member of a struct or an enum: an associated function or constant, a variant.</summary>
@@ -291,9 +302,10 @@ internal sealed partial class TypeChecker {
       }
       case StructInfo { Item.Form: StructForm.Tuple } structure: {
         this._typed.Resolutions[call] = structure;
-        this.Arguments(call, [.. structure.Fields.Select(field => field.Type)], "struct");
+        var made = this.Instantiated(structure, path.Generics.GetValueOrDefault(path.Segments.Count - 1));
+        this.Arguments(call, [.. made.StructFields.Select(field => field.Type)], "struct");
         this.Uses(structure.Module);
-        return RType.StructOf(structure);
+        return made;
       }
       case string library:
         return this.LibraryCall(call, library);
@@ -441,6 +453,7 @@ internal sealed partial class TypeChecker {
 
     if (target.Kind == RKind.Struct) {
       var info = target.Struct!;
+      var fields = target.StructFields;
       var index = info.Fields.FindIndex(candidate => candidate.Name == field.Name);
       if (index < 0)
         throw this.Invalid($"E0609: no field `{field.Name}` on type `{target}`", field.At);
@@ -448,7 +461,7 @@ internal sealed partial class TypeChecker {
       if (!info.Fields[index].IsVisible && !this._module.IsWithin(info.Module!))
         throw this.Invalid($"E0616: field `{field.Name}` of struct `{info.Name}` is private", field.At);
 
-      return info.Fields[index].Type;
+      return fields[index].Type;
     }
 
     if (this.IsError(target))
@@ -559,6 +572,7 @@ internal sealed partial class TypeChecker {
     }
 
     var info = type.Struct!;
+    var fields = type.StructFields;
     this.Uses(info.Module);
     var named = new HashSet<string>();
     foreach (var (name, value, at) in structure.Fields) {
@@ -576,7 +590,7 @@ internal sealed partial class TypeChecker {
         // `S { a }` names the variable `a`.
       }
 
-      this.Coerce(info.Fields[index].Type, this.Value(value, info.Fields[index].Type), value.At);
+      this.Coerce(fields[index].Type, this.Value(value, fields[index].Type), value.At);
     }
 
     if (structure.Base is { } @base) {

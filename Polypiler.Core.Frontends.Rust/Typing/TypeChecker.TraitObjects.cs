@@ -29,6 +29,9 @@ internal sealed partial class TypeChecker {
     if (this.TraitNamed(traits[0], this._module) is not { } trait)
       return this.Unsupported(RustFrontend.UnsupportedTrait, $"{type.Text}, a trait object of a trait outside the crate", type.At);
 
+    if (trait.Parameters.Count > 0)
+      return this.Unsupported(RustFrontend.UnsupportedTrait, $"{type.Text}, a trait object of a generic trait", type.At);
+
     return this.DynMethods(trait, type.At) is null ? null : RType.DynOf(trait);
   }
 
@@ -134,9 +137,23 @@ internal sealed partial class TypeChecker {
       if (!this.Implements(resolved, required.Name))
         throw this.Invalid($"E0277: the trait bound `{resolved}: {required.Name}` is not satisfied", at);
 
-    var methods = this._typed.TraitObjects[trait];
-    var impls = methods.Select(method => this._traitMethods[TypeKey(resolved)][method.Item.Name].First(candidate => candidate.Trait == method.Owner.Name).Method).ToList();
-    return new Unsizing(trait, resolved, impls);
+    // A generic struct's type arguments may be decided only once the function is (W(5) is a W<i32>):
+    // the impl's methods, of the instance for them, are found then.
+    var unsizing = new Unsizing(trait, resolved, []);
+    void Find() {
+      var decided = Decided(resolved);
+      foreach (var method in this._typed.TraitObjects[trait]) {
+        var impl = this.TraitMethods(decided, method.Item.Name).First(candidate => candidate.Trait == method.Owner.Name).Method;
+        unsizing.Impls.Add(impl.Generics.Count > 0 ? this.Instance(impl, decided.Elements, at) : impl);
+      }
+    }
+
+    if (Undecided(resolved))
+      this._deferred.Add(Find);
+    else
+      Find();
+
+    return unsizing;
   }
 
   /// <summary>

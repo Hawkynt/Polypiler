@@ -41,7 +41,7 @@ public sealed class RustFrontendDifferentialTests {
   public void Recording_IsWhatRustcDoes(string fixture, OverflowChecks mode) {
     var module = RustFixture.Import(fixture, mode);
     var calls = RustCases.For(fixture, module);
-    var outcomes = RustOracle.Outcomes(this._directory, RustFixture.PathOf(fixture), module, calls, mode);
+    var outcomes = RustOracle.Outcomes(this._directory, RustFixture.PathOf(fixture), module, calls, mode, RustFixture.InstancesOf(fixture, mode));
     var lines = calls.Select((call, index) => RustFixture.Line(call, outcomes[index])).ToArray();
     if (Environment.GetEnvironmentVariable("POLYPILER_RECORD") == "1")
       RustFixture.Record(RustFixture.RecordingOf(fixture, mode), lines);

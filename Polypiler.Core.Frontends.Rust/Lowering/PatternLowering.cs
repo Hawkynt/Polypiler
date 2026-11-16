@@ -88,12 +88,12 @@ internal sealed partial class FunctionLowering {
       case TupleStructPattern tupleStruct when this._typed.Resolutions[tupleStruct] is string variant:
         return this.VariantTest(variant, tupleStruct.Elements[0], item, resolved);
       case TupleStructPattern tupleStruct: {
-        var fields = resolved.Struct!.Fields;
+        var fields = resolved.StructFields;
         var parts = this.TestParts(item, resolved, fields.Count);
         return All(Spread(tupleStruct.Elements, fields.Count).Select(pair => this.Test(pair.Pattern, parts[pair.Index], fields[pair.Index].Type)));
       }
       case StructPattern structure: {
-        var fields = resolved.Struct!.Fields;
+        var fields = resolved.StructFields;
         var parts = this.TestParts(item, resolved, fields.Count);
         return All(structure.Fields.Select(field => {
           var index = fields.FindIndex(candidate => candidate.Name == field.Name);
@@ -192,12 +192,12 @@ internal sealed partial class FunctionLowering {
         return payload is null ? [] : this.Bindings(tupleStruct.Elements[0], new ValueItem(payload), payloadType);
       }
       case TupleStructPattern tupleStruct: {
-        var fields = resolved.Struct!.Fields;
+        var fields = resolved.StructFields;
         var parts = this.TestParts(item, resolved, fields.Count);
         return Spread(tupleStruct.Elements, fields.Count).SelectMany(pair => this.Bindings(pair.Pattern, parts[pair.Index], fields[pair.Index].Type)).ToList();
       }
       case StructPattern structure: {
-        var fields = resolved.Struct!.Fields;
+        var fields = resolved.StructFields;
         var parts = this.TestParts(item, resolved, fields.Count);
         return structure.Fields.SelectMany(field => {
           var index = fields.FindIndex(candidate => candidate.Name == field.Name);

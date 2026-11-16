@@ -101,7 +101,7 @@ public sealed class RustRareFormTests {
   [TestCase("fn g(x: &mut u32) -> &mut u32 { x } pub fn f() -> u8 { 1 }", RustFrontend.UnsupportedLifetime)]
   [TestCase("pub fn f(x: &'a u8) -> u8 { 1 }", RustFrontend.UnsupportedLifetime)]
   [TestCase("pub fn f(x: Option<'a>) -> u8 { 1 }", RustFrontend.UnsupportedLifetime)]
-  [TestCase("struct S; pub fn f(x: S<u8>) -> u8 { 1 }", RustFrontend.UnsupportedGeneric)]
+  [TestCase("struct S; pub fn f(x: S<u8>) -> u8 { 1 }", "E0107: struct takes 0 generic arguments but 1 generic argument was supplied")]
   [TestCase("enum E { A } pub fn f(x: E<u8>) -> u8 { 1 }", RustFrontend.UnsupportedGeneric)]
   [TestCase("pub fn f(x: [Vec<u8>; 2]) -> u8 { 1 }", RustFrontend.UnsupportedElement)]
   [TestCase("struct S { v: [[u8; 2]; 2] } pub fn f() -> u8 { 1 }", RustFrontend.UnsupportedElement)]
