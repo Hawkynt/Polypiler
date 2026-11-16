@@ -677,7 +677,7 @@ public static class RustSyntaxReader {
       if (!this.Accept("||")) {
         this.Expect("|");
         while (!this.Accept("|")) {
-          var name = this.Identifier();
+          var name = (this.Accept("&") ? "&" : "") + this.Identifier();
           parameters.Add(new RsParameter(name, this.Accept(":") ? this.TypeText() : ""));
           this.Accept(",");
         }
@@ -750,10 +750,16 @@ public static class RustSyntaxReader {
       }
 
       this.Expect("for");
-      var pattern = (this.Accept("&") ? "&" : "") + this.Identifier();
+      var pattern = new StringBuilder();
+      while (!this.Is("in")) {
+        // A pattern of names, references and tuples: (place, &digit), with rustfmt's space after a comma and a mut.
+        var part = this.Next().Text;
+        pattern.Append(part).Append(part is "," or "mut" ? " " : "");
+      }
+
       this.Expect("in");
       var iterator = this.Header();
-      return new RsFor(label, pattern, iterator, this.Block());
+      return new RsFor(label, pattern.ToString(), iterator, this.Block());
     }
 
   }

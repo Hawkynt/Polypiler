@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.Backends.Rust.Helpers;
 using Polypiler.Core.Backends.Rust.Naming;
 using Polypiler.Core.Backends.Rust.Syntax;
 using Polypiler.Core.IR;
@@ -99,6 +100,7 @@ public static partial class RustEmitter {
       items.InsertRange(0, this._uses.Select(path => new RsUse(path)));
       items.AddRange(this._enumTableItems);
       items.AddRange(this._whitespace.Values);
+      items.AddRange(this.BigItems());
       items.AddRange(this._spellings.Values);
       items.AddRange(this._iteratorItems);
       items.AddRange(functions);
@@ -106,7 +108,7 @@ public static partial class RustEmitter {
         items.Add(tests);
 
       var helpers = module.Implementations.Select(pair => ImplementationSources.Helper(this._functions[pair.Function], pair.Implementation, "")).ToList();
-      helpers.AddRange(this._spellings.Keys.Select(name => new HelperText(name, name, EmittedHelper.OwnLicence, EmittedHelper.OriginOf(Folder), "")));
+      helpers.AddRange(this._spellings.Keys.Select(name => new HelperText(name, name, EmittedHelper.OwnLicence, EmittedHelper.OriginOf(BigInts.Names.Contains(name) ? BigInts.Origin : Folder), "")));
       this.Helpers = helpers;
 
       var header = new List<string> {
@@ -115,6 +117,8 @@ public static partial class RustEmitter {
       };
       if (EmittedHelper.HeaderLine(helpers.Select(helper => helper.Licence)) is { } licences)
         header.Add(licences);
+      if (this._bigInts)
+        header.Add(BigInts.Notice);
 
       header.AddRange(FloatManifest.Lines(module, this._options.Mode, "rust"));
       header.AddRange(module.Caveats.Select(caveat => $"Caveat: {caveat}."));
@@ -196,6 +200,7 @@ public static partial class RustEmitter {
         : type.IsObject ? this.ObjectType(type, false)
         : type.IsFunction ? this.FunctionType(type)
         : IsOptionalValue(type) ? $"Option<{this.Type(type.Underlying!)}>"
+        : type.IsBigInt ? this.BigType()
         : ((RsPath)this.Refuse($"the type {type}")).Name);
 
     /// <summary>What kind of type a declaration is, as a refusal names it.</summary>
