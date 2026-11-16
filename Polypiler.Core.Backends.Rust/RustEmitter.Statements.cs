@@ -471,7 +471,7 @@ public static partial class RustEmitter {
     /// an element loop (<see cref="ElementLoop"/>). <see langword="null"/> for any other pair of statements.
     /// </summary>
     private RsStatement? CountedLoop(IReadOnlyList<IrStmt> statements, int index) {
-      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare || this.Counted(declare, statements[index + 1]) is not ({ } bound, { } rest))
+      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare || this.Counted(declare, statements[index + 1]) is not ( { } bound, { } rest))
         return null;
 
       var invariant = bound is IrConst || bound is IrConstRef || (bound is IrLocalRef limit && limit.Local != declare.Local && !Assigns(rest, limit.Local))

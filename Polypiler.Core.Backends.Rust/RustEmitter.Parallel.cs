@@ -43,7 +43,7 @@ public static partial class RustEmitter {
       }
 
       if (position + 1 >= statements.Count || statements[position] is not IrDeclare { Initializer: IrConst { Value: 0 } } counter
-          || Counted(counter, statements[position + 1]) is not ({ } bound, { } body))
+          || Counted(counter, statements[position + 1]) is not ( { } bound, { } body))
         return null;
 
       // The bound: Min(length of a, length of b), or a variable of the run that holds it.
