@@ -225,7 +225,8 @@ public static partial class JavaScriptFrontend {
       Classes = classes.GroupBy(owner => owner.Name).Select(group => group.First())
         .Concat(errors.ByName.Values.Where(error => classes.All(owner => owner.Name != error.Name))).ToDictionary(owner => owner.Name),
       Redirects = redirects,
-      Enums = enums.ToDictionary(named => named.Name)
+      Enums = enums.ToDictionary(named => named.Name),
+      Typedefs = Typedefs.Read(program, source, comments)
     };
     var globals = collector.Globals;
     inference.DeclareGlobals(globals, program);
@@ -265,6 +266,8 @@ public static partial class JavaScriptFrontend {
     inference.Shapes.Seal();
     // The signatures of the function values name the structs of their records, which exist from here on (#1377).
     inference.Sign(models);
+    // The class of every typedef JSDoc names is a class of the module (#1409).
+    classes = [.. classes, .. inference.Typedefs.Used];
     Classes.Declare(classes, inference, diagnostics);
     var lowering = new Lowering(inference);
     // What the module does when it is loaded runs only where its functions have state it could change; otherwise it is not looked at.

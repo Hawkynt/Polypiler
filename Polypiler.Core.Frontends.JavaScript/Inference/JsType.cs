@@ -141,6 +141,13 @@ internal sealed record JsType {
   /// <summary>The type without its absent values: what ToNumber or a test leaves of a value that is present.</summary>
   public JsType Present => this with { MayBeNull = false, MayBeUndefined = false };
 
+  /// <summary>
+  /// The type of an optional key of a typedef (#1409): its stated type, or <c>undefined</c> where a value
+  /// leaves the key out. An integer stays one: an operator that computes with it unchecked sees a NaN
+  /// where it is undefined, a test that proves it present the integer.
+  /// </summary>
+  public JsType OrUndefined() => this with { MayBeUndefined = true };
+
   /// <summary>The type with the absent values that reach another place.</summary>
   public JsType AbsentAs(JsType other) => this with { MayBeNull = other.MayBeNull, MayBeUndefined = other.MayBeUndefined };
 

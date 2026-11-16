@@ -135,7 +135,7 @@ internal sealed partial class Lowering {
       return false;
 
     var holder = types.Of(member.Object);
-    if (holder is not { Kind: JsKind.Object, Class: { } owner } || owner.Frozen is not null)
+    if (holder is not { Kind: JsKind.Object, Class: { } owner } || owner.IsValue)
       throw this.Unsupported(assignment, $"a store of the key {key} into {holder.Describe()}");
 
     if (owner.Field(key) is not { } field)

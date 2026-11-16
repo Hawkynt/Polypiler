@@ -191,6 +191,10 @@ internal sealed partial class Lowering {
     if (left.Kind == JsKind.Boolean && right.Kind == JsKind.Boolean)
       return new IrBinary(or ? IrBinaryOp.LogicalOr : IrBinaryOp.LogicalAnd, this.Expression(logical.Left), this.Expression(logical.Right));
 
+    // An object that is never absent counts as true: a || b is a, and b is never evaluated (#1409).
+    if (!left.IsAbsent && types.Leftmost(logical) is not null)
+      return this.Expression(logical.Left);
+
     if (types.Of(logical).Ir is not { IsStorable: true } type) {
       this.Expression(logical.Left);
       this.Expression(logical.Right);
@@ -259,7 +263,7 @@ internal sealed partial class Lowering {
         expression = new IrIntrinsic(IrIntrinsicOp.PowEcma, IrType.F64, [this.Float(left), this.Float(right)]);
         break;
       case Plan.Compare:
-        expression = new IrBinary(Operation(op), this.To(this.Evaluate(left), operand, left), this.To(this.Evaluate(right), operand, right));
+        expression = this.AbsentOperandEquality(op, left, right, operand) ?? new IrBinary(Operation(op), this.To(this.Evaluate(left), operand, left), this.To(this.Evaluate(right), operand, right));
         break;
       case Plan.Big:
         expression = new IrBinary(Operation(op), this.Big(left, coercion, operand), op == Operator.LeftShift ? Count(right) : this.Big(right, coercion, operand));
@@ -317,8 +321,18 @@ internal sealed partial class Lowering {
     }
 
     var (whenTrue, whenFalse) = this.Narrowed(choice.Test);
-    var consequent = this.Within(whenTrue, choice.Consequent, () => this.Value(choice.Consequent, type));
-    var alternate = this.Within(whenFalse, choice.Alternate, () => this.Value(choice.Alternate, type));
+    // The branch that reads what the test proves present reads it present (#1409).
+    var proven = types.PresentBranch(choice);
+    IrExpr Branch(Node branch) {
+      if (branch != proven)
+        return this.Value(branch, type);
+
+      var read = this.Evaluate(branch);
+      return read.Expr.Type.IsOptional ? this.To(new Typed(new IrUnwrap(read.Expr) { IsTested = true }, read.Type.Present), type, branch) : this.To(read, type, branch);
+    }
+
+    var consequent = this.Within(whenTrue, choice.Consequent, () => Branch(choice.Consequent));
+    var alternate = this.Within(whenFalse, choice.Alternate, () => Branch(choice.Alternate));
     return consequent.Type == alternate.Type ? new IrConditional(condition, consequent, alternate)
       : throw this.Unsupported(choice, "a conditional expression whose branches are objects of two classes");
   }
@@ -683,6 +697,10 @@ internal sealed partial class Lowering {
 
     if (type.IsStruct && node is ObjectExpression record && types.Of(record).Kind == JsKind.Record)
       return this.ObjectLiteral(record, type);
+
+    // An object literal where a typedef is stated is a new object of its class (#1409).
+    if (node is ObjectExpression typed && types.Typedefs.Of(type.ClassType) is { } typedef)
+      return this.TypedefLiteral(typed, typedef);
 
     // A new empty Map or Set takes the key and value types of the place it goes to (#1328).
     if (type.Kind is IrTypeKind.Map or IrTypeKind.Set && node is NewExpression { Callee: Identifier { Name: "Map" or "Set" } keyed, Arguments.Count: 0 } && !this._model.Bindings.ContainsKey(keyed))

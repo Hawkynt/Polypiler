@@ -100,6 +100,15 @@ internal sealed class ClassModel(string name, Node declaration, IrClassType? lib
   /// </summary>
   public IReadOnlyDictionary<string, IReadOnlyList<Expression>>? Frozen { get; init; }
 
+  /// <summary>
+  /// Whether the class is that of a <c>@typedef {Object}</c> (#1409): its fields are read-only, its
+  /// constructor takes one parameter per field, and an object literal where it is stated is a new object of it.
+  /// </summary>
+  public bool IsTypedef { get; init; }
+
+  /// <summary>Whether the fields are read-only and the constructor takes one value per field: the class of a frozen object's members or of a typedef.</summary>
+  public bool IsValue => this.Frozen is not null || this.IsTypedef;
+
   /// <summary>Why the class cannot be imported whatever its members are, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }
 

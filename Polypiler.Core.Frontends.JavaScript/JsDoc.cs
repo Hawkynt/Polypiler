@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using Polypiler.Core.Frontends.JavaScript.Inference;
 using Polypiler.Core.IR;
@@ -16,6 +17,28 @@ internal static class JsDoc {
   private static readonly Regex _parameter = new(@"@param\s*\{(?<type>(?:[^{}]|\{[^{}]*\})*)\}\s*(?<name>[^\s*]+)", RegexOptions.CultureInvariant);
   private static readonly Regex _result = new(@"@returns?\s*\{(?<type>[^{}]*)\}", RegexOptions.CultureInvariant);
   private static readonly Regex _type = new(@"@type\s*\{(?<type>[^{}]*)\}", RegexOptions.CultureInvariant);
+  private static readonly Regex _typedef = new(@"@typedef\s*\{(?<form>[^{}]*)\}\s*(?<name>[A-Za-z_$][\w$]*)", RegexOptions.CultureInvariant);
+  private static readonly Regex _property = new(@"@(?:property|prop)\s*\{(?<type>[^{}]*)\}\s*(?:\[\s*(?<optional>[A-Za-z_$][\w$]*)\s*(?:=[^\]]*)?\]|(?<name>[A-Za-z_$][\w$]*))", RegexOptions.CultureInvariant);
+
+  /// <summary>
+  /// The <c>@typedef</c> a comment declares, with the <c>@property</c> tags that follow it: its name, whether
+  /// it is of the form <c>@typedef {Object}</c> - the only one the subset takes (#1409) - and every
+  /// property in source order, as its key, the spelling of its type and whether it is optional,
+  /// <c>[key]</c> or <c>[key=default]</c>. A comment without a typedef declares none.
+  /// </summary>
+  public static JsDocTypedef? Typedef(string comment) {
+    var tag = _typedef.Match(comment);
+    if (!tag.Success)
+      return null;
+
+    var properties = new List<JsDocProperty>();
+    foreach (Match property in _property.Matches(comment, tag.Index + tag.Length)) {
+      var optional = property.Groups["optional"].Success;
+      properties.Add(new(optional ? property.Groups["optional"].Value : property.Groups["name"].Value, property.Groups["type"].Value.Trim(), optional));
+    }
+
+    return new(tag.Groups["name"].Value, tag.Groups["form"].Value.Trim() is "Object" or "object", properties);
+  }
 
   /// <summary>The spelling of the type a <c>@type</c> tag of the comment states, or <see langword="null"/>.</summary>
   public static string? TypeSpelling(string? comment) => _type.Match(comment ?? "") is { Success: true } tag ? tag.Groups["type"].Value : null;
@@ -90,3 +113,15 @@ internal static class JsDoc {
   };
 
 }
+
+/// <summary>A property of a <c>@typedef</c>: its key, the spelling of its type and whether a value may leave it out.</summary>
+/// <param name="Key">The key.</param>
+/// <param name="Spelling">The type as JSDoc spells it.</param>
+/// <param name="IsOptional">Whether the key is optional, <c>[key]</c> or <c>[key=default]</c>: a value that leaves it out holds <c>undefined</c> there.</param>
+internal sealed record JsDocProperty(string Key, string Spelling, bool IsOptional);
+
+/// <summary>A <c>@typedef</c> of a comment.</summary>
+/// <param name="Name">The name it declares.</param>
+/// <param name="IsObject">Whether it is of the form <c>@typedef {Object}</c>, the only one the subset takes.</param>
+/// <param name="Properties">Its properties, in source order.</param>
+internal sealed record JsDocTypedef(string Name, bool IsObject, IReadOnlyList<JsDocProperty> Properties);

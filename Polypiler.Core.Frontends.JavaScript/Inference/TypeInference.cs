@@ -106,7 +106,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       if (model.Parameters.Exists(earlier => earlier.Name == name))
         return Unsupported(parameter, $"a second parameter named {name}");
 
-      var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name, key => this.Classes.GetValueOrDefault(key) is { IsLibrary: false } owner ? owner : null);
+      var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name, this.Named);
       if (stated && type is null)
         return this.Diagnose(parameter, JavaScriptFrontend.MissingTypeDescriptor, $"parameter '{name}' of '{candidate.Name}' has no supported JSDoc type");
 
@@ -134,7 +134,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     // A field JSDoc states the type of holds values of it, whatever else reaches it: null alone is then that reference absent.
     // A stated 64-bit integer is left to the values that reach it, and a BigInt only where none does (#1401).
     foreach (var field in this.Classes.Values.Distinct().SelectMany(owner => owner.Fields).Where(field => field.Stated is not null))
-      if (JsDoc.Stated(field.Stated!, key => this.Classes.GetValueOrDefault(key) is { IsLibrary: false } owner ? owner : null) is { } stated && stated.Ir is not null) {
+      if (JsDoc.Stated(field.Stated!, this.Named) is { } stated && stated.Ir is not null) {
         if (IsStatedLong(stated))
           this._statedLongs.Add((field.Variable, stated, false));
         else
