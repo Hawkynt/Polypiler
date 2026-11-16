@@ -65,9 +65,9 @@ public sealed class SingleOwnerEmitTests {
 
   [Test]
   public void Factory_MovesTheObjectOut() {
-    var text = Single("public static int F(int v) { var c = Make(v); return c.Get(); } static C Make(int v) { var c = new C(); c.Set(v); return c; } static C Fresh() => new C();");
+    var text = Single("public static int F(int v) { var c = Make(v); return c.Get(); } static C Make(int v) { var c = new C(); c.Set(v); return c; } public static C Fresh() => new C();");
     Assert.That(text, Does.Contain("fn make(v: i32) -> C {\n    let mut c: C = C::new();\n    c.set(v);\n    c\n}"));
-    Assert.That(text, Does.Contain("fn fresh() -> C {\n    C::new()\n}"));
+    Assert.That(text, Does.Contain("pub fn fresh() -> C {\n    C::new()\n}"));
   }
 
   [Test]

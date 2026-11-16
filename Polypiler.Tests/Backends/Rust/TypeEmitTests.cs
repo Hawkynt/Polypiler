@@ -61,8 +61,11 @@ public sealed class TypeEmitTests {
   }
 
   [Test]
-  public void StructWithAnArrayField_IsRefusedByName()
-    => Assert.That(Problems("public struct Buffer { public int[] Data; } public static class S { public static int F(Buffer b) => b.Data[0]; }"), Has.Some.Contain("a struct field of the type i32[]"));
+  public void StructWithAnArrayField_OwnsAVector_AndIsMovedNotCopied() {
+    var text = Emitted("public struct Buffer { public int[] Data; } public static class S { public static int F(Buffer b) => b.Data[0]; }");
+    Assert.That(text, Does.Contain("#[derive(Clone, Debug)]\npub struct Buffer {\n    pub data: Vec<i32>,\n}"));
+    Assert.That(text, Does.Contain("pub fn f(b: Buffer) -> i32 {\n    b.data[0]\n}"));
+  }
 
   [Test]
   public void ElementLoopOverStructs_CopiesEachElement_ButNotWhereTheBodyWritesOne() {

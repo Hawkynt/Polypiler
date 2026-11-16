@@ -23,8 +23,8 @@ public sealed class FieldAliasEmitTests {
 
   private static string Emitted(string members, string user = Shared) => RustCrates.ModuleText(RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", Holder + members + user)));
 
-  private static string[] Problems(string members)
-    => [.. RustCrates.Check(PrototypeFixture.Import("Snippet.cs", Holder + members + " } public static class S { public static int F() => new H().G(); }")).Select(problem => problem.Message)];
+  private static string[] Problems(string members, string user = Shared)
+    => [.. RustCrates.Check(PrototypeFixture.Import("Snippet.cs", Holder + members + user)).Select(problem => problem.Message)];
 
   [Test]
   public void AliasThatIsWritten_BorrowsTheCellExclusively() {
@@ -60,7 +60,7 @@ public sealed class FieldAliasEmitTests {
 
   [Test]
   public void AliasOfAPlainStruct_WhileItsObjectIsPassedOn_IsRefused()
-    => Assert.That(Problems("public int G() { var s = this._s; s[0] = 1; return Other(this) + s[0]; } static int Other(H h) => h._k;"),
+    => Assert.That(Problems("public int G() { var s = this._s; s[0] = 1; return Other(this) + s[0]; } static int Other(H h) => h._k;", Single),
       Has.Some.Contain("'a variable that names a field's array where the function touches the field otherwise while it lives'"));
 
   [TestCase("public int G() { var s = this._s; s[0] = 1; return _s[0]; }")]
@@ -69,5 +69,13 @@ public sealed class FieldAliasEmitTests {
   [TestCase("public int G() => Give()[0]; int[] Give() { var s = this._s; return s; }", "'a variable that names a field's array given away as a whole'")]
   public void FieldTouchedWhileTheAliasLives_IsRefused(string members, string construct = "'a variable that names a field's array where the function touches the field otherwise while it lives'")
     => Assert.That(Problems(members), Has.Some.Contain(construct));
+
+  /// <summary>The borrow of a plain struct's field ends at the alias's last read: the field touched after it is no conflict.</summary>
+  [TestCase("public int G() { var s = this._s; s[0] = 1; return _s[0]; }", "let s = &mut self.s;")]
+  [TestCase("public int G() { var s = this._s; s[0] = 1; return Read(); } int Read() => _s[0];", "self.read()")]
+  public void FieldTouchedAfterThePlainAliasEnds_IsWritten(string members, string expected) {
+    Assert.That(Problems(members, Single), Is.Empty);
+    Assert.That(Emitted(members, Single), Does.Contain(expected));
+  }
 
 }

@@ -150,6 +150,10 @@ internal sealed class ObjectOwnership {
         Expression(expression);
     }
 
+    // An iterator keeps its parameters and variables in the struct of its state, a second holder of each object.
+    if (ArrayOwnership.Statements(function.Body).Any(statement => statement is IrYield or IrYieldFrom))
+      problems.AddRange(function.Parameters.Concat(function.Locals).SelectMany(local => Mentioned(local.Type)));
+
     // Every object the function names must be named where the rules allow it; a lambda's body never is.
     foreach (var node in IrTree.Nodes(function.Body).Where(node => node.Type.IsObject && !allowed.Contains(node)))
       problems.Add(node.Type.ClassType!);
