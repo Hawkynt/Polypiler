@@ -124,7 +124,10 @@ A shared reference to a value is the value: nothing can change it while the refe
 every use reads or writes that place. A function with `&mut` parameters of values (not slices)
 takes them by copy-in/copy-out: it returns a struct `<name>_out` of its result and the final value
 of each such parameter, and the caller writes them back into the places it passed. A method with
-`&mut self` is a function with such a first parameter.
+`&mut self` is a function with such a first parameter. A `&mut` to a `Vec`, an array, a map or a
+set is the container itself, which the IR shares, so a whole value assigned through it (`*v = vec![..]`)
+replaces the container's contents where it is - element by element, entry by entry - and the place
+it borrows, the caller's included, sees the new value.
 
 The borrow checker is rustc's: a source the frontend imports compiles. Within the subset the
 frontend checks what lowering relies on - a use after a move of a non-`Copy` value is `E0382`

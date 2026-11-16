@@ -36,6 +36,7 @@ internal static partial class RustCases {
     "generics" => Generics(),
     "collect" => Collected(),
     "outputs" => Outputs(),
+    "reassign" => Reassigned(),
     _ => Functions()
   };
 

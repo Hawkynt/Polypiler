@@ -23,7 +23,7 @@ namespace Polypiler.Prototype.Testing;
 internal static class RustFixture {
 
   /// <summary>The fixtures, which are also the names of their modules.</summary>
-  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics", "collect", "outputs"];
+  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics", "collect", "outputs", "reassign"];
 
   /// <summary>
   /// The fixtures whose constructs the Rust backend does not write yet - arrays, slices, structs,
@@ -31,7 +31,7 @@ internal static class RustFixture {
   /// its parse-back sweep leave out until it does. The C# and the JavaScript backends write every
   /// fixture: their differential tests leave none out.
   /// </summary>
-  public static readonly string[] BackendPending = ["memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics", "collect", "outputs"];
+  public static readonly string[] BackendPending = ["memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics", "collect", "outputs", "reassign"];
 
   /// <summary>Both overflow modes.</summary>
   public static readonly OverflowChecks[] Modes = [OverflowChecks.Panic, OverflowChecks.Wrap];

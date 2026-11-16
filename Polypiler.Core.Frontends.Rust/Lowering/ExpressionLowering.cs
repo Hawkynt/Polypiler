@@ -235,6 +235,16 @@ internal sealed partial class FunctionLowering {
       return null;
     }
 
+    // `*v = ...` through a `&mut` to a Vec, an array, a map or a set: the reference is the container
+    // itself, which the caller holds too, so its contents are replaced where it is.
+    if (assign is { Op: "=", Target: DerefExpr deref } && this._typed.TypeOf(deref.Operand) is { Kind: RKind.Reference, Mutable: true } through
+        && through.Element!.Resolved.Kind is RKind.Vec or RKind.Array or RKind.Map or RKind.Set) {
+      value = this.Stable(value, "assigned");
+      var container = this.Stable(this.Lower(deref.Operand) ?? this.Zero(this.Ir(through)), "target");
+      this.Replace(container, value);
+      return null;
+    }
+
     value = this.Stable(value, "assigned");
     var place = this.PlaceOf(assign.Target);
     if (place is null)

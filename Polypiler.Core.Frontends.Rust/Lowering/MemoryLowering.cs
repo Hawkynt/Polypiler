@@ -57,6 +57,35 @@ internal sealed partial class FunctionLowering {
 
   private static IrAssign Next(IrLocal counter) => new(counter, Binary(IrBinaryOp.Add, new IrLocalRef(counter), new IrConst(IrType.I32, 1)));
 
+  /// <summary>
+  /// Replaces the contents of a container the caller holds with those of a new one of its type: a list
+  /// cleared and filled element by element, an array overwritten element by element (both have the
+  /// length Rust's type gives them), a map or a set cleared and filled entry by entry. Rust's borrow
+  /// rules keep the new value from being the container itself.
+  /// </summary>
+  private void Replace(IrExpr target, IrExpr value) {
+    if (target.Type.Kind is IrTypeKind.Map or IrTypeKind.Set) {
+      var map = target.Type.Kind == IrTypeKind.Map;
+      this.Emit(new IrExprStmt(new IrCollection(map ? IrCollectionOp.MapClear : IrCollectionOp.SetClear, IrType.Void, [target])));
+      var key = this.NewLocal("key", map ? target.Type.Key! : target.Type.Element!);
+      var entry = map ? this.NewLocal("entry", target.Type.Element!) : null;
+      IrExpr add = map
+        ? new IrCollection(IrCollectionOp.MapPut, IrType.Void, [target, new IrLocalRef(key), new IrLocalRef(entry!)])
+        : new IrCollection(IrCollectionOp.SetAdd, IrType.Bool, [target, new IrLocalRef(key)]);
+      this.Emit(new IrForEachCollection(value, EnumerationMode.Checked, key, entry, new IrBlock([new IrExprStmt(add)])));
+      return;
+    }
+
+    if (target.Type.IsList)
+      this.Emit(new IrExprStmt(new IrCollection(IrCollectionOp.ListClear, IrType.Void, [target])));
+
+    var index = this.Counter("i");
+    IrStmt copy = target.Type.IsList
+      ? new IrExprStmt(new IrCollection(IrCollectionOp.ListAdd, IrType.Void, [target, Load(value, new IrLocalRef(index))]))
+      : Store(target, new IrLocalRef(index), Load(value, new IrLocalRef(index)));
+    this.Emit(new IrFor(Binary(IrBinaryOp.Less, new IrLocalRef(index), Count(value)), new IrBlock([copy]), new IrBlock([Next(index)])));
+  }
+
   // ---------------------------------------------------------------- lengths and views
 
   /// <summary>The number of elements of an array, a view or a list, as the <c>i32</c> the IR counts in.</summary>

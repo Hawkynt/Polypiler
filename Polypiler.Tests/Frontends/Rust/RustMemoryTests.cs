@@ -298,4 +298,32 @@ public sealed class RustMemoryTests {
   public void CompilerError_IsRejected(string source, string text)
     => Assert.That(Import(source).Diagnostics.Select(diagnostic => diagnostic.Message), Has.Some.Contains(text));
 
+  // ---------------------------------------------------------------- whole values through &mut
+
+  /// <summary>`*v = ...` through a `&amp;mut` reaches the caller's value: the container the reference is has its contents replaced, a value's place is written.</summary>
+  [TestCase("fn g(v: &mut Vec<u8>) { *v = vec![1, 2, 3]; } pub fn f() -> usize { let mut v = vec![9u8]; g(&mut v); v.len() * 10 + v[0] as usize }", "31")]
+  [TestCase("fn g(a: &mut [u8; 4]) { *a = [7; 4]; } pub fn f() -> u8 { let mut a = [1u8; 4]; g(&mut a); a[0] + a[3] }", "14")]
+  [TestCase("use std::collections::HashMap; fn g(m: &mut HashMap<u8, u8>) { *m = HashMap::new(); } pub fn f() -> usize { let mut m = HashMap::new(); m.insert(1u8, 2u8); g(&mut m); m.len() }", "0")]
+  [TestCase("use std::collections::BTreeSet; fn g(s: &mut BTreeSet<u8>) { let mut t = BTreeSet::new(); t.insert(5); *s = t; } pub fn f() -> bool { let mut s = BTreeSet::new(); s.insert(1u8); g(&mut s); s.contains(&5) && !s.contains(&1) }", "true")]
+  [TestCase("pub fn f() -> usize { let mut v = vec![9u8]; let r = &mut v; let q = &mut *r; *q = vec![4, 5]; v.len() * 10 + v[0] as usize }", "24")]
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8; 4]; let b = [3u8; 4]; let r = &mut a; *r = b; a[0] + b[1] }", "6")]
+  [TestCase("struct G { c: [u8; 2] } pub fn f() -> u8 { let mut g = G { c: [1, 2] }; let r = &mut g.c; *r = [5, 6]; g.c[0] + g.c[1] }", "11")]
+  [TestCase("#[derive(Clone, Copy)] struct P { x: i32 } fn g(p: &mut P) { *p = P { x: 5 }; } fn h(p: &mut P) { g(p); p.x += 1; } pub fn f() -> i32 { let mut p = P { x: 1 }; h(&mut p); p.x }", "6")]
+  [TestCase("pub fn f() -> usize { let mut s = String::from(\"abc\"); let r = &mut s; *r = String::from(\"hello\"); s.len() }", "5")]
+  public void WholeValue_AssignedThroughMutableReference_ReachesTheCaller(string source, string expected) {
+    var result = Import(source);
+    Assert.That(result.Diagnostics, Is.Empty);
+    Assert.That(IrVerifier.Verify(result.Module!), Is.Empty);
+    Assert.That(RustFixture.Interpreted(result.Module!, new PrototypeCall("f", [])), Is.EqualTo(expected));
+  }
+
+  /// <summary>The forms that would write through a reference the IR cannot hold are refused by name.</summary>
+  [TestCase("fn sw(a: &mut Vec<u8>, b: &mut Vec<u8>) { std::mem::swap(a, b); } pub fn f() -> u8 { 1 }", "mem::swap of references that are not '&mut place'")]
+  [TestCase("fn g(s: &mut String) { *s = String::new(); } pub fn f() -> u8 { 1 }", "&mut String")]
+  public void WholeValue_ThroughAReferenceTheIrCannotHold_IsRefused(string source, string expected) {
+    var result = Import(source);
+    Assert.That(result.Module, Is.Null);
+    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code + " " + diagnostic.Message), Has.Some.Contains(expected));
+  }
+
 }
