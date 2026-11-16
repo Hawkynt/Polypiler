@@ -343,11 +343,14 @@ public static partial class RustEmitter {
       return this.MadeClosure(lambda, bindings, [.. this._owned, receiver], true);
     }
 
-    /// <summary>A test of a function value for <c>null</c>: <c>f.is_none()</c>, <c>false</c> of a variable whose type never holds <c>null</c>.</summary>
+    /// <summary>
+    /// A test of a function value for <c>null</c>: <c>f.is_none()</c>, <c>false</c> of a variable whose
+    /// type never holds <c>null</c> or that is a local function, a <c>fn</c> item that is never <c>null</c>.
+    /// </summary>
     private RsExpression FunctionIsNull(IrExpr value) {
       if (value is IrNull)
         return new RsLiteral("true") { Type = IrType.Bool };
-      if (!this.IsNullable(value.Type))
+      if (!this.IsNullable(value.Type) || value is IrLocalRef { Local: var local } && this._nested.ContainsKey(local))
         return value is IrLocalRef ? new RsLiteral("false") { Type = IrType.Bool } : this.Refuse("a test for null of a function value that is made");
 
       return new RsMethodCall(this.Receiver(this.Callee(value)), "is_none", []) { Type = IrType.Bool };
