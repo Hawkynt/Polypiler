@@ -19,8 +19,8 @@ public static partial class RustEmitter {
     /// Finds the closed enums of a module: an enum of the IR is open - any value of its underlying type is
     /// one of it - and is closed here where the module can make no value but a member's. It is no flags
     /// enum, its members have distinct values in ascending order (the order a derived <c>Ord</c> compares
-    /// by), and no value of it comes from anywhere else: no integer converted to it, no bitwise operator on
-    /// it, no parse of a text, no constant that is no member, no public function that takes or gives it
+    /// by), and no value of it comes from anywhere else: no integer converted to it (a bitwise operator on it
+    /// is one on its integer, converted back), no parse of a text, no constant that is no member, no public function that takes or gives it
     /// (a caller outside passes any integer), and - where no member is zero - no value it holds by
     /// default, in a new array, a default struct or a field of a class.
     /// </summary>
@@ -47,8 +47,6 @@ public static partial class RustEmitter {
           Open(parameter.Type);
       }
 
-      foreach (var constant in module.Constants.Where(constant => constant.Type.EnumType is { } named && constant.Values.Any(value => named.MemberOf(value) is null)))
-        Open(constant.Type);
       foreach (var field in module.Types.OfType<IrClassType>().SelectMany(type => type.AllFields))
         OpenDefaulted(field.Type);
 
@@ -57,12 +55,6 @@ public static partial class RustEmitter {
         switch (node) {
           case IrConvert { Type.EnumType: { } } convert:
             Open(convert.Type);
-            break;
-          case IrUnary { Op: IrUnaryOp.BitNot, Type.EnumType: { } } unary:
-            Open(unary.Type);
-            break;
-          case IrBinary { Op: IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor, Type.EnumType: { } } binary:
-            Open(binary.Type);
             break;
           case IrIntrinsic { Op: IrIntrinsicOp.EnumParse } parse:
             Open(parse.Type);

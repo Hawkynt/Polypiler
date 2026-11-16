@@ -4,6 +4,7 @@ using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.Rust.Printing;
 using Polypiler.Core.Backends.Rust.Syntax;
 using Polypiler.Core.Frontends.Rust;
+using Polypiler.Core.IR;
 using Polypiler.Core.Optimize;
 using Polypiler.Prototype.Testing;
 
@@ -118,5 +119,28 @@ public sealed class ClosedEnumEmitTests {
   [Test]
   public void DefaultVariant_PrintsItsAttribute()
     => Assert.That(RustPrinter.Print(new RsEnum("E", "", [new RsVariant("A", "1"), new RsVariant("B", "2") { IsDefault = true }])), Is.EqualTo("enum E {\n    A = 1,\n    #[default]\n    B = 2,\n}\n"));
+
+  /// <summary>A module of IR with the enum E { A = 1, B = 2 } over u8, a private G giving a value of it and a public F giving its integer.</summary>
+  private static string FromIr(System.Func<IrType, IrExpr> value) {
+    var e = new IrEnumType("E", IrType.U8, [new IrEnumMember("A", 1), new IrEnumMember("B", 2)]);
+    var g = new IrFunction("G", false, e.Type, [], [], new IrBlock([new IrReturn(value(e.Type))]));
+    var f = new IrFunction("F", true, IrType.U8, [], [], new IrBlock([new IrReturn(new IrConvert(IrType.U8, new IrCall("G", e.Type, []), IrConversion.Wrap))]));
+    var module = new IrModule("m", [g, f], []) { Types = [e] };
+    return RustCrates.ModuleText(RustCrates.Emit(module, level: OptimizationLevel.None));
+  }
+
+  [Test]
+  public void IrOfOnlyMembers_IsClosed()
+    => Assert.That(FromIr(type => new IrConst(type, 2)), Does.Contain("pub enum E {"));
+
+  [TestCase(true, TestName = "OptionalOfTheEnumTakenByAPublicFunction_IsOpen")]
+  [TestCase(false, TestName = "ArrayOfTheEnumTakenByAPublicFunction_IsOpen")]
+  public void CompoundOfTheEnumInAPublicSignature_IsOpen(bool optional) {
+    var e = new IrEnumType("E", IrType.U8, [new IrEnumMember("A", 1), new IrEnumMember("B", 2)]);
+    var parameter = new IrLocal("p", optional ? IrType.Optional(e.Type) : IrType.Array(e.Type));
+    var h = new IrFunction("H", true, IrType.I32, [parameter], [], new IrBlock([new IrReturn(new IrConst(IrType.I32, 0))]));
+    var module = new IrModule("m", [h], []) { Types = [e] };
+    Assert.That(RustCrates.ModuleText(RustCrates.Emit(module, level: OptimizationLevel.None)), Does.Contain("pub struct E(pub u8);"));
+  }
 
 }
