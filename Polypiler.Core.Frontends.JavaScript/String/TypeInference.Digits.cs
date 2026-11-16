@@ -64,8 +64,9 @@ internal sealed partial class TypeInference {
 
     foreach (var statement in body.Body.TakeWhile(statement => statement.End <= text.Start))
       if (statement is IfStatement {
-            Test: UnaryExpression { Operator: Operator.LogicalNot, Argument: CallExpression { Callee: MemberExpression { Computed: false, Object: RegExpLiteral pattern, Property: Identifier { Name: "test" } }, Arguments: [Identifier tested] } },
-            Alternate: null, Consequent: var failed }
+        Test: UnaryExpression { Operator: Operator.LogicalNot, Argument: CallExpression { Callee: MemberExpression { Computed: false, Object: RegExpLiteral pattern, Property: Identifier { Name: "test" } }, Arguments: [Identifier tested] } },
+        Alternate: null, Consequent: var failed
+      }
           && scope.Bindings.GetValueOrDefault(tested) == variable && !Completes.MayComplete([failed]) && Alphabets.Of(pattern.RegExp.Pattern, pattern.RegExp.Flags) is { } alphabet)
         return alphabet;
 

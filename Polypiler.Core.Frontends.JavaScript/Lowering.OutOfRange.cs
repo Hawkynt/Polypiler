@@ -86,8 +86,10 @@ internal sealed partial class Lowering {
     IrLocalRef or IrConst => true,
     IrConvert { Contract: IrConversion.Wrap, Operand: var operand } => operand.Type.IsInteger && Total(operand),
     IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply } binary when binary.Type == IrType.F64 => Total(binary.Left) && Total(binary.Right),
-    IrBinary { Op: IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor or IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical
-      or IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply } binary => binary.Type.IsInteger && Total(binary.Left) && Total(binary.Right),
+    IrBinary {
+      Op: IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor or IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical
+      or IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply
+    } binary => binary.Type.IsInteger && Total(binary.Left) && Total(binary.Right),
     _ => false
   };
 
