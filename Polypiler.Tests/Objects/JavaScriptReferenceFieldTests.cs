@@ -115,8 +115,8 @@ public sealed class JavaScriptReferenceFieldTests {
     Assert.That(IrInterpreter.Call(Import("function make() { return [1]; } export function f() { return Array.isArray(make()) ? 1 : 0; }"), "f", []), Is.EqualTo(1));
     Assert.That(JavaScriptFrontend.Import("m.mjs", "function make() { const a = []; a.push(1); return a; } export function f() { return Array.isArray(make()) ? 1 : 0; }").Diagnostics.Single().Message,
       Is.EqualTo("'Array.isArray of an operand with an effect' is not supported yet"));
-    Assert.That(JavaScriptFrontend.Import("m.mjs", "/** @param {uint8[]} d */ export function f(d) { return Array.isArray(d) ? 1 : 0; }").Diagnostics.Single().Message,
-      Is.EqualTo("'Array.isArray of uint8[], which JSDoc may have meant as an Array' is not supported yet"));
+    // A stated uint8[] the function tests with Array.isArray is an Array (#1374).
+    Assert.That(IrInterpreter.Call(Import("/** @param {uint8[]} d */ export function f(d) { return Array.isArray(d) ? 1 : 0; }"), "f", [new byte[] { 1 }]), Is.EqualTo(1));
     Assert.That(JavaScriptFrontend.Import("m.mjs", "export function f() { return Array.isArray(1, 2) ? 1 : 0; }").Diagnostics.Single().Message,
       Is.EqualTo("'Array.isArray with 2 arguments' is not supported yet"));
   }

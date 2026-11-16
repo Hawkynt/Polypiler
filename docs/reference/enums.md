@@ -86,6 +86,7 @@ an enum over `i32`, public where the file exports it (`export const`, `export { 
 | an enum object; `X.A` | `IrEnumType` over `i32`; a read is the member | supported |
 | a variable, parameter or result that only members of one enum reach, and literals equal to a member | typed as the enum, so that `===`, `!==` and `switch` compare members | supported |
 | any other use of a member: arithmetic, `X.A \| X.B`, `x < X.A` | the member's `i32` value, `(int)X.A` in C# | supported |
+| a frozen object whose members are object literals of one shape of strings, numbers and truth values (#1371) | no enum: a class of read-only fields, `X.A` a new object of its values ([classes](classes.md#javascript-frontend)) | supported |
 | a plain object of numbers, a string member, two members of one value, a member that is no 32-bit integer, a computed key or a method in the literal, `X[k]`, the object as a value (`Object.keys(X)`, `f(X)`), a name that is no member | — | `PLY1102`, naming the object |
 
 ```js

@@ -256,7 +256,7 @@ public sealed class IrDispatchTests {
       new IrMethod("St", "S.St", true) { Dispatch = IrDispatch.Instance },
       new IrMethod("Ov", "S.Ov", false) { Overrides = new IrMethod("Ov", "S.Ov", false), IsSealedOverride = true },
       new IrMethod("Im", "S.Im", false) { Implements = [new IrMethod("Q", "L.V", false)] },
-      new IrMethod("Ge", "S.Ge", false) { Kind = IrMethodKind.Getter, Dispatch = IrDispatch.Virtual }
+      new IrMethod("Ge", "S.Ge", false) { Kind = IrMethodKind.Getter, Dispatch = IrDispatch.Abstract }
     ], [], []);
     var problems = Problems(new IrModule("M", [new IrFunction("L.V", false, IrType.I32, [new IrLocal("this", IrType.I32)], [], new IrBlock([new IrReturn(new IrConst(IrType.I32, 1))]))]) {
       Types = [lone, stray]
@@ -269,7 +269,8 @@ public sealed class IrDispatchTests {
     Assert.That(problems, Has.Some.Contains("the method 'St' has a receiver and the dispatch Instance"));
     Assert.That(problems, Has.Some.Contains("the method 'Ov' names an overridden method without being an override"));
     Assert.That(problems, Has.Some.Contains("the method 'Im' implements no method of an interface of S with its signature"));
-    Assert.That(problems, Has.Some.Contains("the accessor 'Ge' has the dispatch Virtual"));
+    // An accessor may be virtual or an override (#1368), never abstract.
+    Assert.That(problems, Has.Some.Contains("the accessor 'Ge' has the dispatch Abstract"));
   }
 
   /// <summary>Test design 11: the verifier's rules about calls, new and conversions in a hierarchy.</summary>
@@ -301,7 +302,22 @@ public sealed class IrDispatchTests {
   /// <summary>Test design 8 and 11: a virtual call on the object being constructed, directly, through a callee, a local, a cast or an argument, is refused; one on another object is not.</summary>
   [Test]
   public void ConstructionRule_FollowsTheObjectThroughItsCallees() {
-    // The constructor of B calls A.ctor and then, in each case, reaches a virtual call on its object.
+    // The constructor of B calls A.ctor and then, in each case, reaches a virtual call on its object, which C, derived from B, overrides.
+    static (IrClassType Type, IrFunction[] Functions) Below(Built built) {
+      var below = new IrClassType("C");
+      below.Define([]);
+      below.Inherit(built.B, []);
+      var (cm, cn) = (new IrMethod("M", "C.M", false) { Dispatch = IrDispatch.Override, Overrides = built.BM }, new IrMethod("N", "C.N", false) { Dispatch = IrDispatch.Override, Overrides = built.BN });
+      below.DefineMembers([new IrConstructor("C.ctor")], [cm, cn], [], []);
+      IrLocal Self() => new("this", IrType.Object(below));
+      var self = Self();
+      return (below, [
+        new IrFunction("C.ctor", false, IrType.Void, [self], [], new IrBlock([new IrExprStmt(new IrCall("B.ctor", IrType.Void, [new IrLocalRef(self)]))])),
+        new IrFunction("C.M", false, IrType.I32, [Self()], [], new IrBlock([new IrReturn(new IrConst(IrType.I32, 40))])),
+        new IrFunction("C.N", false, IrType.I32, [Self()], [], new IrBlock([new IrReturn(new IrConst(IrType.I32, 50))]))
+      ]);
+    }
+
     var cases = new Dictionary<string, Func<Built, IrLocal, IrStmt[]>> {
       ["direct"] = (built, self) => [new IrExprStmt(new IrMethodCall(IrType.I32, built.AM, new IrLocalRef(self), []) { Kind = IrMethodCallKind.Virtual })],
       ["through a cast in a nested block"] = (built, self) => [new IrIf(new IrConst(IrType.Bool, 1), new IrBlock([new IrExprStmt(new IrMethodCall(IrType.I32, built.IN, new IrCast(built.OfI, new IrLocalRef(self)), []) {
@@ -319,12 +335,17 @@ public sealed class IrDispatchTests {
         new IrAssign(held, new IrLocalRef(helperSelf)),
         new IrReturn(new IrMethodCall(IrType.I32, built.AM, new IrLocalRef(held), []) { Kind = IrMethodCallKind.Virtual })
       ]));
-      var module = new IrModule("M", [.. built.Functions.Where(function => function.Name != "B.ctor"), helper,
+      var (below, extra) = Below(built);
+      var module = new IrModule("M", [.. built.Functions.Where(function => function.Name != "B.ctor"), helper, .. extra,
         new IrFunction("B.ctor", false, IrType.Void, [self], [], new IrBlock([new IrExprStmt(new IrCall("A.ctor", IrType.Void, [new IrLocalRef(self)])), .. body(built, self)]))]) {
-        Types = [built.I, built.A, built.B]
+        Types = [built.I, built.A, built.B, below]
       };
       Assert.That(IrConstruction.VirtualCalls(module).Select(found => found.Constructor), Is.EqualTo(new[] { "B.ctor" }), name);
       Refused(module, "on 'this' during construction");
+
+      // Where no class derived from B implements the method, the call selects one of B or of A, whose fields have their values in both languages (#1368).
+      var leaf = new IrModule("M", [.. module.Functions.Where(function => !function.Name.StartsWith("C.", System.StringComparison.Ordinal))]) { Types = [built.I, built.A, built.B] };
+      Assert.That(IrConstruction.VirtualCalls(leaf), Is.Empty, name);
     }
 
     var clean = new Built();

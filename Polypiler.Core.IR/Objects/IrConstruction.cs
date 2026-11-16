@@ -5,9 +5,11 @@ namespace Polypiler.Core.IR;
 
 /// <summary>
 /// What a constructor reaches while it runs: the calls made on the object being constructed, by the
-/// constructor itself and by everything it calls. A virtual or an interface call among them is what
-/// the IR forbids (see <see cref="IrMethodCallKind"/>), since C# and JavaScript run the initializers
-/// of a derived class at different times relative to it.
+/// constructor itself and by everything it calls. A virtual or an interface call among them that a
+/// class derived from the constructor's own class implements is what the IR forbids (see
+/// <see cref="IrMethodCallKind"/>), since C# and JavaScript run the initializers of a derived class
+/// at different times relative to it. A call no class below implements selects a method of the
+/// class or of a base class, whose fields have their values in both languages by then (#1368).
 /// </summary>
 public static class IrConstruction {
 
@@ -23,7 +25,8 @@ public static class IrConstruction {
     var classes = module.Types.OfType<IrClassType>().Where(type => type.HasMembers).ToList();
     var found = new List<(string, IrMethodCall)>();
     var reported = new HashSet<IrMethodCall>(ReferenceEqualityComparer.Instance);
-    foreach (var constructor in classes.SelectMany(type => type.Constructors)) {
+    foreach (var (owner, constructor) in classes.SelectMany(type => type.Constructors.Select(constructor => (type, constructor)))) {
+      var below = classes.Where(type => !ReferenceEquals(type, owner) && type.DerivesFrom(owner)).ToList();
       var visited = new HashSet<(string, int)>();
       var pending = new Stack<(string Function, int Parameter)>([(constructor.Function, 0)]);
       while (pending.TryPop(out var next)) {
@@ -31,8 +34,13 @@ public static class IrConstruction {
           continue;
 
         foreach (var (callee, parameter, call) in Reached(function, function.Parameters[next.Parameter], classes)) {
-          if (call is not null && reported.Add(call))
-            found.Add((constructor.Function, call));
+          if (call is not null && Overridden(call, below)) {
+            if (reported.Add(call))
+              found.Add((constructor.Function, call));
+          } else if (call is not null && (call.Kind == IrMethodCallKind.Interface ? owner.Implementation(call.Method) : owner.Select(call.Method)) is { } selected) {
+            // The method that runs is the class's own or a base class's: what it does to the object is reached as well.
+            pending.Push((selected.Function, 0));
+          }
 
           if (callee is not null)
             pending.Push((callee, parameter));
@@ -92,6 +100,11 @@ public static class IrConstruction {
   }
 
   /// <summary>The functions a call of a method may run: the method's own, and for a virtual or an interface call every override and implementation of it.</summary>
+  /// <summary>Whether a class derived from the class being constructed implements the method a virtual or an interface call reaches.</summary>
+  private static bool Overridden(IrMethodCall call, List<IrClassType> below)
+    => below.SelectMany(type => type.Methods).Any(method => ReferenceEquals(method.Root, call.Method.Root) || method.Implements.Contains(call.Method)
+      || method.Overrides is not null && method.Root.Implements.Contains(call.Method));
+
   private static IEnumerable<string> Implementations(IrMethodCall call, List<IrClassType> classes)
     => call.Kind is IrMethodCallKind.Virtual or IrMethodCallKind.Interface
       ? classes.SelectMany(type => type.Methods).Where(method => method.Root == call.Method.Root || method.Implements.Contains(call.Method)

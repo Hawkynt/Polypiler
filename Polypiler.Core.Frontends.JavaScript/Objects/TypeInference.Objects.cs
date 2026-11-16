@@ -28,8 +28,8 @@ internal sealed partial class TypeInference {
           return this.Reach(field.Variable, value.Stored(), store.Right) | origin;
         }
 
-        return owner.Member(MemberKind.Setter, key) is { } setter && this.ModelOf(setter).Parameters.ElementAtOrDefault(0) is { Declared: null } parameter
-          && this.Pass(parameter, value, store.Right);
+        return owner.Member(MemberKind.Setter, key) is { } setter && this.ModelOf(setter).Parameters.ElementAtOrDefault(0) is { } parameter
+          && (parameter.Declared is null ? this.Pass(parameter, value, store.Right) : parameter.Declared.IsStated && this.Shape(parameter, value, store.Right));
       case FlowKind.FieldStep:
         var step = (UpdateExpression)flow.Node;
         var stepped = (MemberExpression)step.Argument;
@@ -41,7 +41,8 @@ internal sealed partial class TypeInference {
           return this.Callback(call, flow.Index);
 
         return this.Of(callee.Object).Class is { } type && Binder.KeyOf(callee) is { } name && type.Member(MemberKind.Method, name) is { } method
-          && this.ModelOf(method).Parameters.ElementAtOrDefault(flow.Index) is { Declared: null } argument && this.Pass(argument, this.Of(flow.Node), flow.Node);
+          && this.ModelOf(method).Parameters.ElementAtOrDefault(flow.Index) is { } argument
+          && (argument.Declared is null ? this.Pass(argument, this.Of(flow.Node), flow.Node) : argument.Declared.IsStated && this.Shape(argument, this.Of(flow.Node), flow.Node));
     }
   }
 
@@ -98,8 +99,10 @@ internal sealed partial class TypeInference {
       for (var index = 0; index < models.Min(model => model.Parameters.Count); ++index) {
         var parameters = models.Select(model => model.Parameters[index]).ToList();
         var entry = parameters.Select(parameter => parameter.Entry).Aggregate(JsType.Join);
-        foreach (var parameter in parameters.Where(parameter => parameter.Declared is null && parameter.Entry != entry))
-          changed |= this.Pass(parameter, entry, parameter.Declaration);
+        foreach (var parameter in parameters.Where(parameter => parameter.Entry != entry))
+          // A stated T[] takes the kind of array the overrides are passed, its elements staying the stated ones (#1374).
+          changed |= parameter.Declared is null ? this.Pass(parameter, entry, parameter.Declaration)
+            : parameter.Declared.IsStated && this.Shape(parameter, entry, parameter.Declaration);
       }
     }
 

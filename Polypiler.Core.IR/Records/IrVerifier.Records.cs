@@ -75,7 +75,7 @@ public static partial class IrVerifier {
       var element = field.Type.Element;
       require(!field.Type.IsView && !OnHeap(field.Type), Stored);
       require(field.Type.IsStruct || (references && field.Type.IsObject) || field.Type == IrType.Bool || field.Type.IsNumeric || (element is { IsNumeric: true } && !field.Type.IsMemory)
-        || (plain && (field.Type.IsMemory || field.Type.IsString || field.Type.IsCollection || field.Type.IsArray) && field.Type.IsStorable),
+        || (plain && (field.Type.IsMemory || field.Type.IsString || field.Type.IsCollection || field.Type.IsArray || field.Type.IsOptional) && field.Type.IsStorable),
         $"the field '{field.Name}' has the type {field.Type}");
     }
   }

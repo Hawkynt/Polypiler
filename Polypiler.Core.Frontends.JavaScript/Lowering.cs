@@ -108,8 +108,13 @@ internal sealed partial class Lowering(TypeInference types) {
     if (type.Kind == JsKind.BigInt && type.Ir is null)
       throw this.Unbounded(evidence);
 
-    // A string or an object literal that may be absent has no type of the IR: neither is ever null there.
-    if (type.IsAbsent && type.Kind is JsKind.String or JsKind.Record)
+    // A string is a reference that may be null (#1370); a place both null and undefined reach could not tell them apart.
+    if (type is { Kind: JsKind.String, MayBeNull: true, MayBeUndefined: true })
+      throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"'{name}' holds both null and undefined");
+
+    // An object literal that may be absent has no type of the IR: a struct is never null. Undefined alone, which pop,
+    // get and a missing argument give a string, is no value the IR has for one.
+    if (type.IsAbsent && (type.Kind == JsKind.Record || type.Kind == JsKind.String && type.MayBeUndefined))
       throw this.Unsupported(evidence, $"'{name}', a {type.Present.Describe()} that may be {(type.MayBeNull && type.MayBeUndefined ? "null or undefined" : type.MayBeNull ? "null" : "undefined")}");
   }
 
@@ -166,6 +171,8 @@ internal sealed partial class Lowering(TypeInference types) {
 
   private void Statement(Statement statement, List<IrStmt> into) {
     switch (statement) {
+      case ExpressionStatement or ForOfStatement when this.KeyLoop(statement, into):
+        break;
       case BlockStatement block:
         into.Add(this.Block(block.Body));
         break;
@@ -233,8 +240,11 @@ internal sealed partial class Lowering(TypeInference types) {
   /// An <c>if</c>. A variable declared without a value is assigned behind it when both branches
   /// assign it, or when the branch that does not leaves the function or the loop.
   /// </summary>
-  private IrIf If(IfStatement conditional) {
+  private IrStmt If(IfStatement conditional) {
     var condition = this.Condition(conditional.Test);
+    // A test of the key of a key loop is decided as the loop is written out (#1373): only the branch taken is lowered.
+    if (this._keys.Count > 0 && Decided(condition) is { } taken)
+      return (taken ? conditional.Consequent : conditional.Alternate) is { } branch ? this.Body(branch) : new IrBlock([]);
     var (whenTrue, whenFalse) = this.Narrowed(conditional.Test);
     var before = this._assigned;
     var then = this.Within(whenTrue, conditional.Consequent, () => this.Body(conditional.Consequent));
@@ -262,7 +272,7 @@ internal sealed partial class Lowering(TypeInference types) {
   };
 
   /// <summary>Whether a node or anything inside it, other than a function, matches.</summary>
-  private static bool Contains(Node node, Func<Node, bool> matches)
+  internal static bool Contains(Node node, Func<Node, bool> matches)
     => matches(node) || (node is not IFunction && node.ChildNodes.Any(child => Contains(child, matches)));
 
   private IrReturn Return(ReturnStatement result) {
@@ -454,6 +464,7 @@ internal sealed partial class Lowering(TypeInference types) {
         into.Add(store);
         break;
       case CallExpression or AwaitExpression:
+        this._statement = expression;
         into.Add(new IrExprStmt(this.Expression(expression)));
         break;
       case SequenceExpression sequence:
@@ -467,7 +478,7 @@ internal sealed partial class Lowering(TypeInference types) {
   }
 
   private void Assignment(AssignmentExpression assignment, List<IrStmt> into) {
-    if (this.CoalescingAssignment(assignment, into))
+    if (this.CoalescingAssignment(assignment, into) || this.KeyedStore(assignment, into))
       return;
 
     var compound = Binder.Compound(assignment.Operator);

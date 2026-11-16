@@ -117,8 +117,23 @@ internal sealed class Reachability {
   }
 
   private void Run() {
-    while (this._pending.TryDequeue(out var node))
+    while (this._pending.TryDequeue(out var node)) {
       this.Scan(node, null);
+      this.Stated(node);
+    }
+  }
+
+  private static readonly System.Text.RegularExpressions.Regex _stated = new(@"@(?:type|param|returns?)\s*\{(?<type>[^{}]*)\}", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+  /// <summary>
+  /// Reaches what the JSDoc types inside reached code name - <c>/** @type {CountryCode} */</c> of a
+  /// field only <c>null</c> reaches (#1365): the type states what the field holds, which has to be there.
+  /// </summary>
+  private void Stated(Node node) {
+    foreach (System.Text.RegularExpressions.Match tag in _stated.Matches(this._text[node.Start..node.End]))
+      foreach (var name in tag.Groups["type"].Value.Split(['|', '[', ']', ' ', '<', '>', ',', '(', ')', '?', '!', '.'], System.StringSplitOptions.RemoveEmptyEntries))
+        if (this._declarations.TryGetValue(name, out var declaration) && !this._namespaces.ContainsKey(name))
+          this.Reach(declaration);
   }
 
   private void Scan(Node node, Node? parent) {

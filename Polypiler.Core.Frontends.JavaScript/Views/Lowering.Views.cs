@@ -26,8 +26,13 @@ internal sealed partial class Lowering {
     if (receiver.Kind != JsKind.Array)
       return null;
 
-    if (receiver.IsPlain)
+    // An Array whose length never changes is an array of the IR as a typed array is: slice copies, fill stores, without a conversion either way.
+    if (receiver.IsPlain && (receiver.IsGrowable || method is "subarray" or "set"))
       throw this.Unsupported(call, $"{method} on a plain Array");
+
+    // fill yields the array it fills, of the type the value makes it, which a call that stands as a statement drops.
+    if (method == "fill" && call != this._statement)
+      return this.FillValue(call, types.Of(call).Ir);
 
     var source = this.Expression(member.Object);
     var element = source.Type.Element!;
@@ -58,6 +63,18 @@ internal sealed partial class Lowering {
         var part = arguments.Count == 0 ? view : this.Clamped(call, view, arguments[0], arguments.Count == 2 ? arguments[1] : null);
         return method == "subarray" ? part : new IrIntrinsic(IrIntrinsicOp.ViewToArray, IrType.Array(element), [part]);
     }
+  }
+
+  /// <summary>
+  /// <c>a.fill(v)</c> as a value, an array of the type of the place it goes to - the type the value
+  /// makes it where the place has none: the array, filled whole, which a function of the module yields.
+  /// </summary>
+  private IrExpr FillValue(CallExpression call, IrType? type) {
+    if (call.Arguments.Count != 1 || type is not { IsArray: true })
+      throw this.Unsupported(call, "fill of a part of an array as a value");
+
+    var array = this.Value(((MemberExpression)call.Callee).Object, type);
+    return new IrCall(this.Filled(type), type, [array, this.Value(call.Arguments[0], type.Element!)]);
   }
 
   /// <summary>

@@ -32,12 +32,12 @@ internal static class Inheritance {
 
     switch (call.Callee) {
       case Super:
-        return new(@base, @base.Constructor, true, "constructor", call.Arguments);
+        return new(@base, @base.Initial, true, "constructor", call.Arguments);
       case MemberExpression { Object: Super, Computed: false } method when Binder.KeyOf(method) is { } key:
         return new(@base, @base.Member(MemberKind.Method, key), false, key, call.Arguments);
       case MemberExpression { Computed: false, Property: Identifier { Name: "call" }, Object: var named } when call.Arguments is [ThisExpression, ..]:
         if (classNamed(named) == @base)
-          return new(@base, @base.Constructor, true, "constructor", [.. call.Arguments.Skip(1)]);
+          return new(@base, @base.Initial, true, "constructor", [.. call.Arguments.Skip(1)]);
 
         if (named is MemberExpression { Computed: false, Object: MemberExpression { Object: var owner, Property: Identifier { Name: "prototype" } } } prototyped
             && classNamed(owner) is { } ancestor && @base.Lineage.Contains(ancestor) && Binder.KeyOf(prototyped) is { } inherited)

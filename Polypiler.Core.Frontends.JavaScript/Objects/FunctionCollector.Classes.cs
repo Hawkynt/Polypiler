@@ -19,10 +19,17 @@ internal sealed partial class FunctionCollector {
   private readonly List<ClassModel> _classes = [];
 
   /// <summary>The classes of the file, in source order.</summary>
-  public IReadOnlyList<ClassModel> Classes => this._classes;
+  public IReadOnlyList<ClassModel> Classes => [.. this._classes, .. this.EnumObjects.Select(named => named.Record).OfType<ClassModel>()];
 
   /// <summary>The native errors, which a class of the file may extend: <c>Error</c> only.</summary>
   public ErrorLibrary? Errors { get; init; }
+
+  /// <summary>
+  /// The first line of the entry file in a linked module graph (#1365); 0 for a file imported alone.
+  /// A function the files it requires declare above that line is a helper of theirs: nothing outside
+  /// the translation calls it, so its parameters take what the calls of the graph pass.
+  /// </summary>
+  public int EntryLine { get; init; }
 
   /// <summary>The statements of the top level that declare a class or give it a member, which are declarations to the check of module state.</summary>
   public HashSet<Node> ClassStatements { get; } = [];
@@ -159,7 +166,7 @@ internal sealed partial class FunctionCollector {
     }
 
     if (owner.Constructor is { } constructor)
-      Assigned(owner, constructor.Function.Body);
+      this.Assigned(owner, constructor.Function.Body);
   }
 
   /// <summary>A constructor function of ECMAScript 5; its methods follow at the top level of the file.</summary>
@@ -168,21 +175,24 @@ internal sealed partial class FunctionCollector {
     this._classes.Add(owner);
     this.ClassStatements.Add(statement);
     this.Member(owner, MemberKind.Constructor, "constructor", false, statement, declaration);
-    Assigned(owner, declaration.Body);
+    this.Assigned(owner, declaration.Body);
   }
 
   /// <summary>
   /// The fields a constructor assigns through <c>this</c>, at any depth of its body but inside another
   /// function, in source order. <c>this.name = '…'</c> of a derived class is the name an error gives
-  /// itself (<see cref="Lowering"/> drops it), no field.
+  /// itself (<see cref="Lowering"/> drops it), no field. A JSDoc <c>@type</c> in front of the statement
+  /// that assigns a field first states its type.
   /// </summary>
-  private static void Assigned(ClassModel owner, Node node) {
+  private void Assigned(ClassModel owner, Node node, Node? statement = null) {
     if (node is AssignmentExpression { Left: MemberExpression { Object: ThisExpression, Computed: false } member } assignment
         && KeyOf(member.Property) is { } key && owner.Field(key) is null && !(key == "name" && assignment.Right is StringLiteral && owner.BaseName is not null))
-      owner.Fields.Add(new ClassField(key, new Variable(ClassModel.IrName(key), member.Property, false), null));
+      owner.Fields.Add(new ClassField(key, new Variable(ClassModel.IrName(key), member.Property, false), null) {
+        Stated = statement is null ? null : JsDoc.TypeSpelling(this.Documentation(statement))
+      });
 
     foreach (var child in node.ChildNodes.Where(child => child is not (FunctionExpression or FunctionDeclaration or ArrowFunctionExpression)))
-      Assigned(owner, child);
+      this.Assigned(owner, child, node is ExpressionStatement ? node : null);
   }
 
   /// <summary>
@@ -274,6 +284,10 @@ internal sealed partial class FunctionCollector {
         (owner.Problem, owner.Base) = (owner.Problem ?? "a class that extends itself", null);
     }
 
+    // this.key = … of a key the class itself has a setter of is the setter, no field (#1368).
+    foreach (var owner in this._classes)
+      owner.Fields.RemoveAll(field => field.Initializer is null && !field.IsPrivate && owner.OwnMember(MemberKind.Setter, field.Key) is not null);
+
     foreach (var owner in this._classes.Where(owner => owner.Base is not null)) {
       var ancestors = owner.Base!.Lineage.ToList();
       // Below ES2022 a private #x is the property _x, which one of a base class would share.
@@ -284,6 +298,13 @@ internal sealed partial class FunctionCollector {
       foreach (var field in owner.Fields.ToList()) {
         if (field.IsPrivate || !ancestors.Any(ancestor => ancestor.OwnField(field.Key) is not null || ancestor.Members.Any(member => member.Key == field.Key && !member.IsStatic)))
           continue;
+
+        // this.key = … of a key a base class has a setter of, and no field, calls the setter (#1368).
+        if (field.Initializer is null && ancestors.All(ancestor => ancestor.OwnField(field.Key) is null)
+            && ancestors.Any(ancestor => ancestor.OwnMember(MemberKind.Setter, field.Key) is not null)) {
+          owner.Fields.Remove(field);
+          continue;
+        }
 
         if (field.Initializer is not null || ancestors.All(ancestor => ancestor.OwnField(field.Key) is null))
           owner.Problem ??= $"the member {field.Key} of a base class declared again";
@@ -298,12 +319,25 @@ internal sealed partial class FunctionCollector {
           inherited.IsOverridden = true;
           if (member.Function.Params.Count != inherited.Function.Params.Count)
             owner.Problem ??= "an override with another number of parameters";
+        } else if (member.Member is MemberKind.Getter or MemberKind.Setter && inherited is not null && ancestors.All(ancestor => ancestor.OwnField(member.Key) is null)
+            && ancestors.SelectMany(ancestor => ancestor.Members).FirstOrDefault(other => other.Key == member.Key && other.Member == member.Member && !other.IsStatic) is { } replaced) {
+          // A getter or a setter replaces the one of its key and kind of the nearest base class that has one (#1368); a pair stays a pair.
+          member.Overrides = replaced;
+          replaced.IsOverridden = true;
+          if (Kinds(owner, member.Key) != Kinds(replaced.Class!, member.Key))
+            owner.Problem ??= $"a getter or setter of {member.Key} that hides the other accessor of its base class";
         } else if (inherited is not null || ancestors.Any(ancestor => ancestor.OwnField(member.Key) is not null)) {
-          owner.Problem ??= $"the member {member.Key} of a base class declared again";
+          owner.Problem ??= member.Member is MemberKind.Getter or MemberKind.Setter && inherited is { Member: MemberKind.Getter or MemberKind.Setter }
+            ? $"a getter or setter of {member.Key} that hides the other accessor of its base class"
+            : $"the member {member.Key} of a base class declared again";
         }
       }
     }
   }
+
+  /// <summary>The accessors of a key a class declares itself: 1 for a getter, 2 for a setter, 3 for both.</summary>
+  private static int Kinds(ClassModel owner, string key)
+    => (owner.OwnMember(MemberKind.Getter, key) is null ? 0 : 1) | (owner.OwnMember(MemberKind.Setter, key) is null ? 0 : 2);
 
   private ClassModel? ClassNamed(string name) => this._classes.FirstOrDefault(owner => owner.Name == name);
 

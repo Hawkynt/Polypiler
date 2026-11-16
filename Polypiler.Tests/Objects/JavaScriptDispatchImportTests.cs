@@ -121,8 +121,6 @@ public sealed class JavaScriptDispatchImportTests {
     "the member #v of a base class declared again")]
   [TestCase("export class A { constructor() { this.a = 1; } } export class B extends A { constructor() { super(); this.a = 2; } a() { return 1; } } export function f() { return 1; }",
     "the member a of a base class declared again")]
-  [TestCase("export class A { constructor(x) { this.x = x; } } export class B extends A { } export function f() { return 1; }",
-    "a derived class without a constructor whose base class constructor takes parameters")]
   [TestCase("export class A { } export class B extends A { constructor() { this.b = 1; super(); } } export function f() { return new B().b; }",
     "a constructor of a derived class that does not begin with the call of the constructor of its base class")]
   [TestCase("export class A { } export class B extends A { m() { return super.n(); } } export function f() { return 1; }", "the method n of A, which it does not have")]

@@ -139,13 +139,19 @@ public sealed class CSharpDispatchImportTests {
     AgreesWithDotNet(classes + $" public static class C {{ public static int F() => {calls}; }}");
   }
 
-  /// <summary>Test design 8: a virtual call on 'this' during construction is refused; a direct call, a call on another object and one after construction are not.</summary>
+  /// <summary>
+  /// Test design 8: a virtual call on 'this' during construction that a class derived from the one being
+  /// constructed implements is refused; a direct call, a call on another object, one after construction
+  /// and one that only the class itself or a base class implements (#1368) are not.
+  /// </summary>
   [TestCase("public class A { public A() { Init(); } public virtual void Init() { } } public sealed class B : A { public override void Init() { } }", true)]
-  [TestCase("public class A { public virtual void Init() { } } public sealed class B : A { public B() { Init(); } public override void Init() { } }", true)]
-  [TestCase("public interface I { void Init(); } public sealed class B : I { public B() { Help(this); } private static void Help(I i) => i.Init(); public void Init() { } }", true)]
+  [TestCase("public class A { public virtual void Init() { } } public sealed class B : A { public B() { Init(); } public override void Init() { } }", false)]
+  [TestCase("public class A { public virtual void Init() { } } public class B : A { public B() { Init(); } public override void Init() { } } public sealed class D : B { public override void Init() { } }", true)]
+  [TestCase("public interface I { void Init(); } public sealed class B : I { public B() { Help(this); } private static void Help(I i) => i.Init(); public void Init() { } }", false)]
+  [TestCase("public interface I { void Init(); } public class B : I { public B() { Help(this); } private static void Help(I i) => i.Init(); public virtual void Init() { } } public sealed class D : B { public override void Init() { } }", true)]
   [TestCase("public class A { public virtual void Init() { } } public class H { public virtual void Take(A a) { } } public sealed class G : H { public override void Take(A a) { a.Init(); } } "
-    + "public sealed class B : A { public B() { H h = new G(); h.Take(this); } public override void Init() { } }", true)]
-  [TestCase("public class A { public virtual void Init() { } } public sealed class H { public H(A a) { a.Init(); } } public sealed class B : A { public B() { new H(this); } public override void Init() { } }", true)]
+    + "public sealed class B : A { public B() { H h = new G(); h.Take(this); } public override void Init() { } }", false)]
+  [TestCase("public class A { public virtual void Init() { } } public sealed class H { public H(A a) { a.Init(); } } public sealed class B : A { public B() { new H(this); } public override void Init() { } }", false)]
   [TestCase("public class A { public A() { Init(); } public void Init() { } } public sealed class B : A { }", false)]
   [TestCase("public class A { public virtual int M() => 1; } public sealed class B : A { public int V; public B() { V = new A().M(); } public override int M() => 2; }", false)]
   [TestCase("public class A { public virtual int M() => 1; public int Call() => M(); } public sealed class B : A { public override int M() => 2; }", false)]

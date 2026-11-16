@@ -67,6 +67,9 @@ internal sealed class ModuleGraph {
   private readonly List<Module> _order = [];
   private readonly List<Diagnostic> _diagnostics = [];
 
+  /// <summary>The names the link has renamed declarations to, which no later renaming may take again.</summary>
+  private readonly HashSet<string> _renamed = new(StringComparer.Ordinal);
+
   private ModuleGraph(Func<string, string?> read) => this._read = read;
 
   /// <summary>
@@ -203,17 +206,66 @@ internal sealed class ModuleGraph {
       this.Rewrite(module, child, node);
   }
 
-  /// <summary>Refuses a name that two modules declare at their top level: in the one script they would be one.</summary>
+  /// <summary>
+  /// A name that two modules declare at their top level, which in the one script would be one: renamed
+  /// apart in a module that does not export it (#1376) - every reference to it there, a shorthand
+  /// property keeping its key - and refused where both export it.
+  /// </summary>
   private void Collisions() {
     var owners = new Dictionary<string, Module>(StringComparer.Ordinal);
     foreach (var module in this._order) {
-      foreach (var (name, node) in module.Declarations) {
-        if (owners.TryGetValue(name, out var first))
-          this._diagnostics.Add(module.Refuse(node, $"the name '{name}', which '{Path.GetFileName(first.Path)}' declares as well"));
-        else
+      foreach (var (name, node) in module.Declarations.ToList()) {
+        if (!owners.TryGetValue(name, out var first)) {
           owners[name] = module;
+          continue;
+        }
+
+        if (!first.Exposes(name)) {
+          this.Rename(first, name);
+          owners[name] = module;
+        } else if (!module.Exposes(name)) {
+          this.Rename(module, name);
+        } else {
+          this._diagnostics.Add(module.Refuse(node, $"the name '{name}', which '{Path.GetFileName(first.Path)}' declares as well"));
+        }
       }
     }
+  }
+
+  /// <summary>Renames every reference to a name in a module - no member name, no key of a property, a shorthand property keeping its key - to a name no file of the graph uses.</summary>
+  private void Rename(Module module, string name) {
+    var fresh = name;
+    for (var suffix = 2; this._renamed.Contains(fresh) || this._order.Any(other => System.Text.RegularExpressions.Regex.IsMatch(other.Source, $@"(?<![\w$]){System.Text.RegularExpressions.Regex.Escape(fresh)}(?![\w$])")); ++suffix)
+      fresh = $"{name}_{suffix}";
+
+    this._renamed.Add(fresh);
+
+    void Visit(Node node, Node? parent) {
+      if (node is Identifier { Name: var used } identifier && used == name && !module.Covers(identifier.Start, identifier.End)) {
+        switch (parent) {
+          case MemberExpression { Computed: false } member when member.Property == identifier:
+          case MethodDefinition { Computed: false } method when method.Key == identifier:
+          case PropertyDefinition { Computed: false } field when field.Key == identifier:
+            return;
+          case Property { Shorthand: true } shorthand:
+            // { x } of a renamed x keeps the key x; key and value are one identifier, written once.
+            if (shorthand.Key == identifier)
+              module.Replace(identifier.Start, identifier.End, $"{name}: {fresh}");
+            return;
+          case Property { Computed: false } property when property.Key == identifier:
+            return;
+          default:
+            module.Replace(identifier.Start, identifier.End, fresh);
+            return;
+        }
+      }
+
+      foreach (var child in node.ChildNodes)
+        Visit(child, node);
+    }
+
+    foreach (var statement in module.Kept)
+      Visit(statement, null);
   }
 
   /// <summary>The script: every module's text with what it folds away blanked, then what the entry does not reach blanked as well.</summary>
@@ -301,6 +353,12 @@ internal sealed class ModuleGraph {
     /// <summary>A diagnostic of a construct the link does not take, at a node of this file.</summary>
     public Diagnostic Refuse(Node node, string what)
       => JavaScriptFrontend.UnsupportedDescriptor.At($"'{what}' is not supported yet", this.Path, node.Location.Start.Line, node.Location.Start.Column + 1);
+
+    /// <summary>Whether the module exports a name, by name or as its one object, so that another module may refer to it.</summary>
+    public bool Exposes(string name) => this.Exports.ContainsValue(name) || this.Object == name;
+
+    /// <summary>Whether an edit already covers a part of a range.</summary>
+    public bool Covers(int start, int end) => this._edits.Exists(edit => edit.Start < end && start < edit.End);
 
     /// <summary>Replaces a range of the file by a name, padded with blanks to the length of the range so that every later column stays.</summary>
     public void Replace(int start, int end, string name) => this._edits.Add((start, end, name.PadRight(end - start)));
