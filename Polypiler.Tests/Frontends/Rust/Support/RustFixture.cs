@@ -27,7 +27,9 @@ internal static class RustFixture {
 
   /// <summary>
   /// The fixtures whose constructs the Rust backend does not write yet - arrays, slices, structs,
-  /// enums, Option and Result - which the round trip through the Rust backend leaves out until it does.
+  /// classes, enums, Option, Result, lists and maps - which the round trip through the Rust backend and
+  /// its parse-back sweep leave out until it does. The C# and the JavaScript backends write every
+  /// fixture: their differential tests leave none out.
   /// </summary>
   public static readonly string[] BackendPending = ["memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics", "collect", "outputs"];
 

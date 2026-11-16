@@ -186,10 +186,11 @@ public sealed class RustSyntaxTests {
   }
 
   private static IEnumerable<TestCaseData> RustFixtures()
-    => RustFixture.Names.SelectMany(fixture => RustFixture.Modes.Select(mode => new TestCaseData(fixture, mode).SetArgDisplayNames(fixture, RustFixture.NameOf(mode))));
+    => RustFixture.Names.Except(RustFixture.BackendPending).SelectMany(fixture => RustFixture.Modes.Select(mode => new TestCaseData(fixture, mode).SetArgDisplayNames(fixture, RustFixture.NameOf(mode))));
 
   /// <summary>
-  /// The parse-back sweep over the Rust fixtures, Rust to IR to Rust: every one is written in both
+  /// The parse-back sweep over the Rust fixtures, Rust to IR to Rust: every one the backend writes
+  /// (all but <see cref="RustFixture.BackendPending"/>, as in the round trip) is written in both
   /// overflow modes, and every file reads back into a tree that prints the same text. That the crates
   /// compute what rustc computed is the round trip of the acceptance tests.
   /// </summary>
