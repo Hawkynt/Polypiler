@@ -88,6 +88,10 @@ public static partial class JavaScriptEmitter {
           return typed ? (this.Fill(first, all[1]), true) : (this.Helper("$vfillo", all), true);
         case IrIntrinsicOp.ViewEqual:
           return (this.Helper(typed ? "$vequal" : "$vequalo", all), true);
+        case IrIntrinsicOp.ViewToArray when typed && first is IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice, Arguments.Count: 3 } cut && !cut.Arguments[0].Type.IsView && !cut.Arguments[0].Type.IsMemory:
+          // The copy of a range of an array is the slice of it, which a typed array and an Array both have: an
+          // array a caller passes for an undecided T[] may be either (#1404), and only a typed array has subarray.
+          return (this.Helper("$slicecopy", [.. cut.Arguments.Select(this.Text)]), true);
         case IrIntrinsicOp.ViewToArray:
           return (this.Helper(typed ? "$vtoarray" : "$vtoarrayo", all), true);
         default:

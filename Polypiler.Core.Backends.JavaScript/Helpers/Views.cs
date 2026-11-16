@@ -25,6 +25,11 @@ internal static partial class JavaScriptHelpers {
       "  if (start < 0 || length < 0 || start > view.length || length > view.length - start) " + ArgumentOutOfRange,
       "  return view.subarray(start, start + length);",
       "}")),
+    Same("$slicecopy", Lines(
+      "function $slicecopy(array, start, length) {",
+      "  if (start < 0 || length < 0 || start > array.length || length > array.length - start) " + ArgumentOutOfRange,
+      "  return array.slice(start, start + length);",
+      "}")),
     Same("$vobj", Lines(
       "function $vobj(array, start, length) {",
       "  if (start === void 0) start = 0;",

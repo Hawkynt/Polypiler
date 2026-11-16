@@ -35,6 +35,11 @@ public sealed class JavaScriptStatedArrayRoundTripTests {
      * @returns {int32}
      */
     export function total(data) { const c = data.slice(); let s = 0; for (let i = 0; i < c.length; i++) s += c[i]; return s; }
+    /**
+     * @param {uint8[]} data
+     * @returns {int32}
+     */
+    export function part(data) { const c = data.slice(1, 3); return (c[0] * 10 + c[1] + c.length * 100) | 0; }
     """;
 
   /// <summary>Calls both functions with an Array and a Uint8Array and prints what they return, with the kind of array.</summary>
@@ -43,7 +48,7 @@ public sealed class JavaScriptStatedArrayRoundTripTests {
     for (const make of [a => a, a => new Uint8Array(a)]) {
       for (const v of [255, 256, 300]) {
         const r = m.copy(make([1, 2, 3]), v);
-        console.log(make([]).constructor.name, v, r.constructor.name, JSON.stringify(Array.from(r)), m.total(make([1, 2, 3])));
+        console.log(make([]).constructor.name, v, r.constructor.name, JSON.stringify(Array.from(r)), m.total(make([1, 2, 3])), m.part(make([1, 2, 3])));
       }
     }
     """;
@@ -104,7 +109,7 @@ public sealed class JavaScriptStatedArrayRoundTripTests {
     return result.StandardOutput.ReplaceLineEndings("\n");
   }
 
-  /// <summary>Test design 2 and 3: the translation copies an Array as an Array and a typed array as a typed array, and stores 255 as the original does, with either.</summary>
+  /// <summary>Test design 2 and 3: the translation copies an Array as an Array and a typed array as a typed array, a range of either too (slice, which both have), and stores 255 as the original does, with either.</summary>
   [Test]
   [Category("EndToEnd")]
   public void Copy_IsTheKindOfArrayTheCallerPassed() {
@@ -113,7 +118,7 @@ public sealed class JavaScriptStatedArrayRoundTripTests {
     var translated = Path.Combine(this._work, "translated.mjs");
     File.WriteAllText(translated, LegalizedJavaScript.Emit(Import(Copy), JavaScriptProfile.Default).Single().Content);
     var expected = this.Node(Probe, new Uri(original).AbsoluteUri);
-    Assert.That(expected, Does.Contain("Array 256 Array [0,255,3] 6").And.Contain("Uint8Array 300 Uint8Array [44,255,3] 6"), "node's own values");
+    Assert.That(expected, Does.Contain("Array 256 Array [0,255,3] 6 223").And.Contain("Uint8Array 300 Uint8Array [44,255,3] 6 223"), "node's own values");
     Assert.That(this.Node(Probe, new Uri(translated).AbsoluteUri), Is.EqualTo(expected));
   }
 
