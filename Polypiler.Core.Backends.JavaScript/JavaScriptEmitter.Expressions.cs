@@ -152,6 +152,12 @@ public static partial class JavaScriptEmitter {
         return this.NumberText(intrinsic);
       if (EnumOperations.IsEnum(intrinsic.Op))
         return this.EnumOperation(intrinsic);
+      if (RegexOperations.IsRegex(intrinsic.Op)) {
+        // The literal as the source wrote it, which every level of ECMAScript reads alike (#1399).
+        var (pattern, flags) = RegexOperations.Of(intrinsic);
+        this.Native(".test");
+        return (new JsCall(new JsMember(new JsRegExp(pattern, flags), "test"), [this.Text(arguments[0])]), true);
+      }
 
       // An operation the profile has only as a helper of the library reaches the writer only where the module was not legalized.
       if (JavaScriptLibrary.Covers(intrinsic, this._profile, this._capabilities)) {

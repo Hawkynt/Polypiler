@@ -60,6 +60,11 @@ public sealed record JsBigInt(BigInteger Value) : JsExpression {
 /// <param name="Value">The characters.</param>
 public sealed record JsString(string Value) : JsExpression;
 
+/// <summary>A regular-expression literal, <c>/pattern/flags</c> (#1399).</summary>
+/// <param name="Pattern">The pattern as ECMAScript reads it between the slashes.</param>
+/// <param name="Flags">The flags.</param>
+public sealed record JsRegExp(string Pattern, string Flags) : JsExpression;
+
 /// <summary><c>true</c> or <c>false</c>.</summary>
 /// <param name="Value">The value.</param>
 public sealed record JsBoolean(bool Value) : JsExpression;

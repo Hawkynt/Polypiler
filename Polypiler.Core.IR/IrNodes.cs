@@ -955,7 +955,15 @@ public enum IrIntrinsicOp {
   HighWord,
 
   /// <summary><c>(u32 high, u32 low) → i64</c>: the 64-bit integer of two limbs, the inverse of <see cref="HighWord"/> and the conversion to <c>u32</c>.</summary>
-  JoinWords
+  JoinWords,
+
+  /// <summary>
+  /// <c>(str subject, str pattern, str flags) → bool</c>: ECMA-262's <c>RegExp.prototype.test</c> of a
+  /// regular expression without the flags <c>g</c> and <c>y</c> (#1399) - whether the pattern matches
+  /// anywhere in the subject. Pattern and flags are string constants as ECMAScript writes them, within
+  /// the subset <see cref="RegexOperations"/> converts.
+  /// </summary>
+  RegexTest
 
 }
 

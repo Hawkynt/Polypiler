@@ -34,6 +34,8 @@ internal sealed partial class Lowering {
     if (this.KeysValue(node) is { } keys)
       return keys;
 
+    if (this.RegexExpression(node) is { } matched)
+      return matched;
     if (this.StringExpression(node) is { } text)
       return text;
     if (this.NumberTextExpression(node) is { } converted)

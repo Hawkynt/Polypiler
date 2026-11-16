@@ -55,6 +55,8 @@ public sealed class JavaScriptStringImportTests {
     ("s.padEnd(n[, f])", "/** @param {string} s */ export function f(s) { return s.padEnd(4) + \"|\"; }", [(new object[] { "x" }, "x   |")]),
     ("s.repeat(n)", "/** @param {string} s @param {int32} i */ export function f(s, i) { return s.repeat(i); }", [(new object[] { "ab", 3 }, "ababab"), (new object[] { "ab", 0 }, "")]),
     ("String.fromCharCode(...)", "/** @param {int32} c */ export function f(c) { return String.fromCharCode(c, c + 1); }", [(new object[] { 65 }, "AB"), (new object[] { 65601 }, "AB")]),
+    ("/pattern/flags.test(s)", "/** @param {string} s */ export function f(s) { return /^[0-9A-Fa-f]*$/.test(s) + \"|\" + /b+a?/i.test(s); }",
+      [(new object[] { "0aF9" }, "true|false"), (new object[] { "" }, "true|false"), (new object[] { "ab\n" }, "false|true"), (new object[] { "xBBy" }, "false|true")]),
     ("s.codePointAt(i)", "/** @param {string} s @param {int32} i */ export function f(s, i) { return s.codePointAt(i); }", [(new object[] { "a\U0001F600", 1 }, "128512"), (new object[] { "a\U0001F600", 2 }, "56832")]),
     ("for (const ch of s)", "export function f(s) { let n = 0; for (const ch of s) { if (ch === \"b\") continue; n++; } return n; }", [(new object[] { "a\U0001F600b" }, "2"), (new object[] { "" }, "0")]),
     ("switch on a string", "/** @param {string} s */ export function f(s) { switch (s) { case \"a\": case \"b\": return 1; case \"c\": return 2; case \"a\": return 9; default: return 0; } }", [(new object[] { "a" }, "1"), (new object[] { "b" }, "1"), (new object[] { "c" }, "2"), (new object[] { "z" }, "0")])

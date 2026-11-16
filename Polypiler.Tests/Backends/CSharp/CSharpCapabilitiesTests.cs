@@ -375,7 +375,7 @@ public sealed class CSharpCapabilitiesTests {
     => row.Operation is { } op && FloatOperationTable.Of(op) is { DoubleName: not null } && row.Operands.All(kind => kind is IrTypeKind.F32 or IrTypeKind.F64);
 
   /// <summary>Whether a row writes a string operation, a conversion between numbers and text or an operation on enums, which their own emission tests test.</summary>
-  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && (StringOperations.IsString(op) || NumberTextOperations.IsNumberText(op) || EnumOperations.IsEnum(op));
+  internal static bool IsStringRow(CSharpCapability row) => row.Operation is { } op && (StringOperations.IsString(op) || NumberTextOperations.IsNumberText(op) || EnumOperations.IsEnum(op) || RegexOperations.IsRegex(op));
 
   /// <summary>The table names every API and every feature of the language the issue lists, each with the first profile or version that has it.</summary>
   [Test]

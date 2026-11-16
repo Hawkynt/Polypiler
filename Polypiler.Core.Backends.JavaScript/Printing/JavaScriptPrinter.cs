@@ -412,6 +412,9 @@ public static class JavaScriptPrinter {
         case JsString text:
           this._text.Append('"').Append(JavaScriptLiterals.Escape(text.Value)).Append('"');
           break;
+        case JsRegExp regExp:
+          this._text.Append('/').Append(JavaScriptLiterals.RegExpBody(regExp.Pattern)).Append('/').Append(regExp.Flags);
+          break;
         case JsBoolean truth:
           this._text.Append(truth.Value ? "true" : "false");
           break;
@@ -656,6 +659,44 @@ public static class JavaScriptLiterals {
         text.Append("\\u").Append(((int)unit).ToString("X4", System.Globalization.CultureInfo.InvariantCulture));
       else
         text.Append(unit);
+
+    return text.ToString();
+  }
+
+  /// <summary>
+  /// The text of a regular-expression literal between its slashes for a pattern as ECMAScript reads it
+  /// (#1399): a slash outside a class escaped, every code unit outside printable ASCII - a line
+  /// terminator among them, which no literal may hold - as its <c>\uXXXX</c> escape, which a pattern
+  /// without the flag <c>u</c> reads as that code unit, and the empty pattern as <c>(?:)</c>, since
+  /// <c>//</c> starts a comment.
+  /// </summary>
+  /// <param name="pattern">The pattern.</param>
+  /// <returns>The escaped text.</returns>
+  public static string RegExpBody(string pattern) {
+    if (pattern.Length == 0)
+      return "(?:)";
+
+    var text = new System.Text.StringBuilder(pattern.Length);
+    var inClass = false;
+    for (var index = 0; index < pattern.Length; ++index) {
+      var unit = pattern[index];
+      if (unit == '\\' && index + 1 < pattern.Length && pattern[index + 1] is >= ' ' and <= '~') {
+        text.Append(unit).Append(pattern[++index]);
+        continue;
+      }
+
+      // An escape of a code unit outside printable ASCII is that code unit, which its \u escape is as well.
+      if (unit == '\\')
+        continue;
+
+      inClass = unit == '[' || (inClass && unit != ']');
+      if (unit == '/' && !inClass)
+        text.Append("\\/");
+      else if (unit is < ' ' or > '~')
+        text.Append("\\u").Append(((int)unit).ToString("X4", CultureInfo.InvariantCulture));
+      else
+        text.Append(unit);
+    }
 
     return text.ToString();
   }
