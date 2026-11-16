@@ -1693,13 +1693,13 @@
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/pipes.mjs.csharp.golden",
-      "sha256": "e2cc0f3f10c9e50c8ef3cdbb08ad2178d78b137f4cfde2cd03352379b12c7551",
-      "bytes": 588962
+      "sha256": "e786c7e699283073bda58f614bc6642f9266ae898221d846addd45b764d55771",
+      "bytes": 588746
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/pipes.mjs.javascript.golden",
-      "sha256": "bcea7cba6d63c70ec934e42789486f97cad6d00e7757a44078b2dd3b00ba7de2",
-      "bytes": 521402
+      "sha256": "2425b705197c55d41ea98cf7532f5deaf60e3bc3206928391d9bfd42db9dd641",
+      "bytes": 518578
     },
     {
       "path": "tests/fixtures/backend/golden/sequences/runLength.mjs.csharp.golden",
