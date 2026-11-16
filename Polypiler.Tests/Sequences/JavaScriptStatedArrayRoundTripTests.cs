@@ -8,8 +8,6 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
-using Polypiler.Tests.Tooling.Corpus;
-using Polypiler.Tooling.Corpus;
 using Polypiler.Tooling.Toolchains;
 
 namespace Polypiler.Tests.Sequences;
@@ -18,7 +16,9 @@ namespace Polypiler.Tests.Sequences;
 /// The JavaScript round trip of a JSDoc <c>T[]</c> that nothing in the file decides (#1404): the IR
 /// holds it as a typed array (#1374), and the callers the code was written for pass Arrays. The copy
 /// <c>data.slice()</c> is the kind of array the caller passed - <c>new data.constructor(data)</c> of an
-/// Array is an Array of one element. The expected values are node's, of the original.
+/// Array is an Array of one element. The expected values are node's, of the original. The vectors of
+/// checksum/isbn.js on its JavaScript translation, with the Arrays node passes, are checked where the
+/// corpus is imported: the job 'cipher kat sample' runs tooling/cipher/run-js-kats.mjs on them.
 /// </summary>
 [TestFixture]
 public sealed class JavaScriptStatedArrayRoundTripTests {
@@ -51,37 +51,6 @@ public sealed class JavaScriptStatedArrayRoundTripTests {
         console.log(make([]).constructor.name, v, r.constructor.name, JSON.stringify(Array.from(r)), m.total(make([1, 2, 3])), m.part(make([1, 2, 3])));
       }
     }
-    """;
-
-  /// <summary>Runs the recorded vectors of one Cipher file on its translation, with Arrays or, given a third argument 'typed', typed arrays.</summary>
-  private const string Kat = """
-    import fs from 'node:fs';
-    import path from 'node:path';
-    import { pathToFileURL } from 'node:url';
-    const [translated, golden, kind] = process.argv.slice(2);
-    const copy = path.join(path.dirname(translated), 'kat-entry.mjs');
-    fs.writeFileSync(copy, fs.readFileSync(translated, 'utf8') + '\nexport { Algorithms as $Algorithms };\n');
-    const module = await import(pathToFileURL(copy).href);
-    const kats = JSON.parse(fs.readFileSync(golden, 'utf8'));
-    const value = v => v.t === 'bytes' ? (kind === 'typed' ? new Uint8Array(Buffer.from(v.v, 'hex')) : [...Buffer.from(v.v, 'hex')]) : v.t === 'number' ? Number(v.v) : v.t === 'string' ? v.v : v.t === 'bool' ? v.v : v.t === 'null' ? null : v.t === 'array' ? v.v.map(value) : v.v.map(Number);
-    let passed = 0, failed = 0;
-    for (const algorithm of kats.algorithms) {
-      const registered = module.$Algorithms.find(a => a.name === algorithm.name);
-      for (const vector of algorithm.vectors) {
-        if (vector.node?.outcome !== 'passed' || !vector.expected) continue;
-        try {
-          const instance = registered.CreateInstance(vector.inverse);
-          for (const step of vector.steps) {
-            if (step.call) instance[step.name](...step.values.map(value)); else instance[step.name] = value(step.values[0]);
-          }
-          instance.Feed(value(vector.input));
-          if (Buffer.from(instance.Result()).toString('hex') === vector.expected.v) ++passed; else ++failed;
-        } catch (error) {
-          ++failed;
-        }
-      }
-    }
-    console.log(`${passed} passed, ${failed} failed`);
     """;
 
   private string _work = "";
@@ -120,40 +89,6 @@ public sealed class JavaScriptStatedArrayRoundTripTests {
     var expected = this.Node(Probe, new Uri(original).AbsoluteUri);
     Assert.That(expected, Does.Contain("Array 256 Array [0,255,3] 6 223").And.Contain("Uint8Array 300 Uint8Array [44,255,3] 6 223"), "node's own values");
     Assert.That(this.Node(Probe, new Uri(translated).AbsoluteUri), Is.EqualTo(expected));
-  }
-
-  /// <summary>
-  /// <c>checksum/isbn.js</c> of the fixture <c>cipher.algorithms</c>, at the commit the fixture pins and
-  /// checked against the lock; the fixture's own pattern of files is no single file to open.
-  /// </summary>
-  private static string Isbn() {
-    var root = PrototypeFixture.RepositoryRoot;
-    var manifest = CorpusManifest.Load(Path.Combine(root, CorpusManifest.RepositoryPath));
-    var fixture = manifest.Fixture("cipher.algorithms")!;
-    var repository = fixture.PinOf(manifest.Repository(fixture.Repository)!);
-    const string file = "Cipher/algorithms/checksum/isbn.js";
-    var entry = CorpusLock.Load(Path.Combine(root, CorpusLock.RepositoryPath)).Find(repository.Name, repository.Commit, file);
-    Assert.That(entry, Is.Not.Null, $"{file} is not in the corpus lock");
-    Assert.That(CorpusVerifier.VerifyFile(root, entry!), Is.Null, "run 'polypiler-tooling corpus import --fixture cipher.algorithms'");
-    return CorpusImporter.FilePath(root, repository.Name, repository.Commit, file);
-  }
-
-  /// <summary>Scenario: checksum/isbn.js translated to JavaScript passes its 6 recorded vectors with the Arrays node passes, and with typed arrays.</summary>
-  [TestCase(false)]
-  [TestCase(true)]
-  [Category("EndToEnd")]
-  public void Isbn_PassesItsVectorsWithArrays(bool typed) {
-    var source = Isbn();
-    var configuration = new DirectoryInfo(Path.GetDirectoryName(typeof(JavaScriptStatedArrayRoundTripTests).Assembly.Location)!).Parent!.Name;
-    var cli = Path.Combine(PrototypeFixture.RepositoryRoot, "Polypiler.Cli", "bin", configuration, "net10.0", "polypiler.dll");
-    var output = Path.Combine(this._work, "out");
-    var translation = Run(["dotnet", cli, "translate", source, "--from", "javascript", "--to", "javascript", "--output", output]);
-    Assert.That(translation.ExitCode, Is.Zero, translation.StandardError);
-    var golden = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "corpus", "cipher", "checksum", "isbn.kat.json");
-    var script = Path.Combine(this._work, "kat.mjs");
-    File.WriteAllText(script, Kat);
-    var result = Run(["node", script, Path.Combine(output, "isbn.mjs"), golden, typed ? "typed" : "array"]);
-    Assert.That(result.StandardOutput.Trim(), Is.EqualTo("6 passed, 0 failed"), result.StandardError);
   }
 
   /// <summary>Boundary: 255, 0, a byte of the array and a value masked to 8 bits are bytes for an Array and a typed array alike, and are stored as they are.</summary>
