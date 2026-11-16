@@ -168,7 +168,7 @@ public static partial class RustEmitter {
 
     var result = RustTargetPasses.Pipeline.Run(crate!, profile, passes);
     // The modules are made after the passes, which see one module; Check refused what cannot be placed.
-    var placed = Modules.Split(Lints.Allowed(result.Tree), writer.Placement, writer.InRoot);
+    var placed = Modules.Split(Lints.Allowed(result.Tree), writer!.Placement, writer.InRoot);
     return (result with { Tree = placed }, writer.Helpers);
   }
 
