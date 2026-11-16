@@ -23,7 +23,7 @@ public static class RustSyntaxReader {
     return new Parser(Tokenize(text)).File();
   }
 
-  private enum Kind { Identifier, Number, String, Lifetime, Punctuation, InnerDoc, OuterDoc, InnerAttribute, OuterAttribute, End }
+  private enum Kind { Identifier, Number, String, Lifetime, Punctuation, InnerDoc, OuterDoc, InnerAttribute, OuterAttribute, Comment, End }
 
   private sealed record Token(Kind Kind, string Text);
 
@@ -50,6 +50,8 @@ public static class RustSyntaxReader {
           tokens.Add(new(Kind.InnerDoc, line[3..].TrimStart(' ')));
         else if (line.StartsWith("///", StringComparison.Ordinal))
           tokens.Add(new(Kind.OuterDoc, line[3..].TrimStart(' ')));
+        else
+          tokens.Add(new(Kind.Comment, line[2..].TrimStart(' ')));
         index = end;
         continue;
       }
@@ -402,6 +404,11 @@ public static class RustSyntaxReader {
           continue;
         }
 
+        if (this.Peek().Kind == Kind.Comment) {
+          statements.Add(new RsComment(this.Next().Text));
+          continue;
+        }
+
         // An expression statement that starts with a block ends with it (The Rust Reference, "Expression statements").
         var expression = this.StartsBlock() ? this.Primary() : this.Expression();
         if (this.StartsBlock(expression) && !this.Is("}") && !this.Is(";") && !this.Is("."))
@@ -511,6 +518,12 @@ public static class RustSyntaxReader {
       while (true) {
         if (this.Accept(".")) {
           var name = this.Peek().Kind == Kind.Number ? this.Next().Text : this.Identifier();
+          // A method with its type arguments, `cast::<u8>`, keeps them in its name.
+          if (this.Is("::") && this.Is("<", 1)) {
+            this.Expect("::");
+            name += "::" + this.TypeText();
+          }
+
           expression = this.Is("(") ? new RsMethodCall(expression, name, this.Arguments(")")) : new RsField(expression, name);
         } else if (this.Accept("?")) {
           expression = new RsTry(expression);
@@ -567,6 +580,9 @@ public static class RustSyntaxReader {
         this.Expect(")");
         return new RsParenthesized(inner);
       }
+
+      if (this.Accept("unsafe"))
+        return new RsUnsafe(this.Block());
 
       if (this.Is("move") || this.Is("|") || this.Is("||"))
         return this.Closure();

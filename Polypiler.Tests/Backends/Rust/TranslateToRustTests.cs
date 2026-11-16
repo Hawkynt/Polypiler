@@ -72,8 +72,24 @@ public sealed class TranslateToRustTests {
   public void UnsupportedConstruct_IsNamed() {
     var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("pointers/Pointers"), "--from", "csharp", "--to", "rust", "--output", this._out);
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.UnsupportedConstruct));
-    Assert.That(error, Does.Contain("PLY1550").And.Contain("'the type u8*'"));
+    Assert.That(error, Does.Contain("PLY1550").And.Contain("'a pointer comparison across two regions'"));
     Assert.That(Directory.Exists(this._out), Is.False);
+  }
+
+  [Test]
+  public void AllowUnsafe_IsPartOfTheProfile_AndOfTheRecordedCommand() {
+    var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "rust", "--output", this._out, "--allow-unsafe");
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
+    Assert.That(File.ReadAllText(Path.Combine(this._out, "src", "lib.rs")), Does.Contain("//! Rust profile: rust2024 (Rust 1.85, unsafe code allowed)."));
+    // Numbers needs no unsafe code: the crate still forbids it.
+    Assert.That(File.ReadAllText(Path.Combine(this._out, "src", "lib.rs")), Does.Contain("#![forbid(unsafe_code)]"));
+    Assert.That(File.ReadAllText(Path.Combine(this._out, Manifest.FileName)), Does.Contain("\"--allow-unsafe\""));
+  }
+
+  [Test]
+  public void AllowUnsafe_DoesNotApplyToCSharp() {
+    var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "csharp", "--output", this._out, "--allow-unsafe");
+    Assert.That((exitCode, error.Contains("the option '--allow-unsafe' does not apply to the target language 'csharp'", StringComparison.Ordinal)), Is.EqualTo(((int)ExitCode.UsageError, true)));
   }
 
 }

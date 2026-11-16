@@ -187,4 +187,34 @@ public sealed class ZipAndViewEmitTests {
     Assert.That(text, Does.Not.Contain("(&a)"));
   }
 
+  [Test]
+  public void ParallelLoopWithABreak_KeepsItsLabelOnlyWhereNamed() {
+    var text = Emitted("public static int X(int[] a, int[] b) { int s = 0; for (int i = 0; i < System.Math.Min(a.Length, b.Length); i++) { if (a[i] == 0) break; s += b[i]; } return s; }");
+    Assert.That(text, Does.Contain("for (&element, &element1) in a.iter().zip(b.iter()) {").Or.Contain("in a.iter().zip(b.iter()) {"));
+    Assert.That(text, Does.Contain("break;"));
+  }
+
+  [TestCase("public static int X(int[] a, int[] b) { int s = 0; int n = System.Math.Min(a.Length, b.Length); for (int i = 0; i < n; i++) s += a[i] + b[i] + n; return s; }", TestName = "BoundReadInTheBody_StaysAnIndexLoop")]
+  [TestCase("public static int X(string[] a, string[] b) { int s = 0; for (int i = 0; i < System.Math.Min(a.Length, b.Length); i++) s += a[i].Length + b[i].Length; return s; }", TestName = "ElementsThatAreNoValues_StayAnIndexLoop")]
+  public void MoreLoopsThatAreNoParallelLoops_AreNoZip(string methods) => Assert.That(Emitted(methods), Does.Not.Contain(".zip("));
+
+  [Test]
+  public void ViewStepped_MakesTheParameterExclusive() {
+    var text = Emitted("public static void X(int[] a) { System.Span<int> s = a; s[0]++; }");
+    Assert.That(text, Does.Contain("pub fn x(a: &mut [i32]) {"));
+  }
+
+  [Test]
+  public void CopyIntoAWholeViewParameter_MeasuresTheParameter() {
+    var text = Emitted("public static void X(System.Span<int> a) { a.Slice(1, 2).CopyTo(a); }");
+    Assert.That(text, Does.Contain("let target = a.len();"));
+    Assert.That(text, Does.Contain("a.copy_within(1..1 + source, 0);"));
+  }
+
+  [Test]
+  public void SplitOfAVector_SplitsTheVectorItself() {
+    var text = Emitted("public static int X(int m) { var a = new int[4]; System.Span<int> l = new System.Span<int>(a, 0, m); System.Span<int> r = new System.Span<int>(a).Slice(m); l[0] = 1; r[0] = 2; return a[0] + a[m]; }");
+    Assert.That(text, Does.Contain("let (l, r) = a.split_at_mut(ply_view(&a, 0, m).len());"));
+  }
+
 }

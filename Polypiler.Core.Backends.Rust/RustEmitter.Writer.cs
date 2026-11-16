@@ -103,7 +103,10 @@ public static partial class RustEmitter {
       header.AddRange(FloatManifest.Lines(module, this._options.Mode, "rust"));
       header.AddRange(module.Caveats.Select(caveat => $"Caveat: {caveat}."));
       header.AddRange(ImplementationSources.Notices(module.Implementations.Select(pair => pair.Implementation).Concat(module.Inlined)));
-      var root = new RsFile(header, ["forbid(unsafe_code)"], [new RsModuleDeclaration(moduleName, "pub")]);
+      // The unsafe ledger: each use of unsafe code, the function that needed it and why; the crate then denies
+      // unsafe code instead of forbidding it, so that the one spelling function may allow it.
+      header.AddRange(this._unsafe.Select(use => $"Unsafe code: {use.Helper}, for the {use.Construct} in the function '{use.Function}'; the crate passes Miri."));
+      var root = new RsFile(header, [this._unsafe.Count > 0 ? "deny(unsafe_code)" : "forbid(unsafe_code)"], [new RsModuleDeclaration(moduleName, "pub")]);
       var file = new RsFile([], [], items);
       return new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file);
     }

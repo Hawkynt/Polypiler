@@ -29,12 +29,26 @@ public sealed class RustProfile {
   /// <summary>The profile that is used when none is named.</summary>
   public static RustProfile Default => Rust2024;
 
-  private RustProfile(string name, int edition, Version minimum, Version? version = null) {
+  private RustProfile(string name, int edition, Version minimum, Version? version = null, bool allowUnsafe = false) {
     this.Name = name;
     this.Edition = edition;
     this.MinimumRustVersion = minimum;
     this.RustVersion = version ?? minimum;
+    this.AllowUnsafe = allowUnsafe;
   }
+
+  /// <summary>
+  /// Whether the crate may hold unsafe code (<c>allowUnsafe</c>, #460): off by default, which keeps
+  /// <c>#![forbid(unsafe_code)]</c> and refuses a mutable overlay view with <c>PLY1567</c>; on, the overlay's
+  /// spelling function is the one unsafe block, the crate root says <c>#![deny(unsafe_code)]</c> instead and
+  /// the crate has to pass Miri.
+  /// </summary>
+  public bool AllowUnsafe { get; }
+
+  /// <summary>The same profile with unsafe code allowed or not.</summary>
+  /// <param name="allow">Whether unsafe code is allowed.</param>
+  /// <returns>The profile.</returns>
+  public RustProfile WithUnsafe(bool allow) => new(this.Name, this.Edition, this.MinimumRustVersion, this.RustVersion, allow);
 
   /// <summary>The name <c>--profile</c> takes: <c>rust2018</c>, <c>rust2021</c> or <c>rust2024</c>.</summary>
   public string Name { get; }
@@ -64,7 +78,7 @@ public sealed class RustProfile {
     if (version < this.MinimumRustVersion)
       throw new ArgumentException($"Rust {version.Major}.{version.Minor} is older than the {this.Edition} edition, which Rust {this.RustVersionName} brought.", nameof(version));
 
-    return new(this.Name, this.Edition, this.MinimumRustVersion, new Version(version.Major, version.Minor));
+    return new(this.Name, this.Edition, this.MinimumRustVersion, new Version(version.Major, version.Minor), this.AllowUnsafe);
   }
 
   /// <summary>Reads a profile name and an MSRV as the command line gives them.</summary>
@@ -114,6 +128,6 @@ public sealed class RustProfile {
   }
 
   /// <summary>The profile as the header of a generated file states it: <c>rust2024 (Rust 1.85)</c>.</summary>
-  public override string ToString() => $"{this.Name} (Rust {this.RustVersionName})";
+  public override string ToString() => $"{this.Name} (Rust {this.RustVersionName}{(this.AllowUnsafe ? ", unsafe code allowed" : "")})";
 
 }

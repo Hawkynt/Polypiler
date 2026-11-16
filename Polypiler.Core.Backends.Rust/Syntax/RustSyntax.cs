@@ -103,6 +103,17 @@ public sealed record RsAssign(RsExpression Target, string Operator, RsExpression
 /// <param name="Block">The block.</param>
 public sealed record RsBlockExpression(RsBlock Block) : RsExpression;
 
+/// <summary>
+/// <c>unsafe { … }</c>: the one block of unsafe code the backend writes, inside the spelling function of a
+/// mutable overlay view, where the profile allows unsafe code (#460).
+/// </summary>
+/// <param name="Block">The body.</param>
+public sealed record RsUnsafe(RsBlock Block) : RsExpression;
+
+/// <summary>A line comment among the statements of a block, <c>// text</c>: the <c>SAFETY:</c> reason above an unsafe block.</summary>
+/// <param name="Text">The text after <c>// </c>.</param>
+public sealed record RsComment(string Text) : RsStatement;
+
 /// <summary><c>if condition { … } else …</c>, a statement or an expression.</summary>
 /// <param name="Condition">The truth value.</param>
 /// <param name="Then">The block when it holds.</param>

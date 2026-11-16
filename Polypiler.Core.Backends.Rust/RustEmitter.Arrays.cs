@@ -84,8 +84,6 @@ public static partial class RustEmitter {
 
     /// <summary>The type of a local: an array owned as a vector or borrowed.</summary>
     private string? LocalType(IrLocal local) {
-      if (local.Type.IsPointer)
-        return "i64";
       if (local.Type.IsArray && this.IsFieldAlias(local))
         return null;
 
@@ -125,11 +123,7 @@ public static partial class RustEmitter {
 
     /// <summary>Whether a variable takes the vector of another that never names it again: a move, not a clone.</summary>
     private bool IsMove(IrLocal local, IrExpr value)
-      => value is IrLocalRef { Local: var source } && this._arrayFacts.Moves.Any(statement => statement switch {
-        IrDeclare { Initializer: IrLocalRef from } declare => declare.Local == local && from.Local == source,
-        IrAssign { Value: IrLocalRef from } assign => assign.Local == local && from.Local == source,
-        _ => false
-      });
+      => value is IrLocalRef { Local: var source } && this._arrayFacts.Moves.Any(statement => ArrayOwnership.MoveOf(statement) == (local, source));
 
     /// <summary>The array a function returns: a vector it owns, or the borrow of a parameter.</summary>
     private RsExpression ArrayResult(IrFunction function, IrExpr value)

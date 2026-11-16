@@ -61,10 +61,9 @@ public static partial class RustEmitter {
       _ => null
     };
 
-    /// <summary>The constant length of the new array the declaration of a pointer pins, or <see langword="null"/>.</summary>
+    /// <summary>The constant length of the new array the declaration of a pointer pins, or <see langword="null"/> where it is known at run time only.</summary>
     private long? MadeLength(IrLocal pointer)
-      => ArrayOwnership.Statements(this._function.Body).OfType<IrDeclare>().FirstOrDefault(declare => declare.Local == pointer)?.Initializer is IrIntrinsic { Op: IrIntrinsicOp.Pin, Arguments: [var made] }
-        ? KnownLength(made) : null;
+      => KnownLength(((IrIntrinsic)ArrayOwnership.Statements(this._function.Body).OfType<IrDeclare>().First(declare => declare.Local == pointer).Initializer!).Arguments[0]);
 
     /// <summary>An array of a constant number of zeros of a type, <c>[0i64; 2]</c>: memory that lives where the function does.</summary>
     private RsExpression Zeros(IrType element, long count)
@@ -78,7 +77,12 @@ public static partial class RustEmitter {
 
     /// <summary>The Rust parameters of a pointer parameter: the slice of its region, <c>&amp;mut</c> where the function writes through it, and its position.</summary>
     private IEnumerable<RsParameter> PointerParameters(IrLocal parameter) {
-      var region = this._pointers.Regions[parameter];
+      if (!this._pointers.Regions.TryGetValue(parameter, out var region)) {
+        // A pointer parameter with no region is refused; its stand-in keeps the signature whole.
+        yield return new RsParameter(this._locals[parameter], "i64");
+        yield break;
+      }
+
       var written = this._pointers.Written.Any(candidate => PointerRegions.Same(candidate, region)) || this._arrayFacts.MutablePointers.Contains(this._function.Parameters.ToList().IndexOf(parameter));
       yield return new RsParameter(this._regionNames[parameter], $"&{(written ? "mut " : "")}[{this.ElementType(IrType.Array(region.Element))}]");
       yield return new RsParameter(this._locals[parameter], "i64");
@@ -145,8 +149,6 @@ public static partial class RustEmitter {
           return this.PointerRead(arguments[0], operation.Type);
         case IrIntrinsicOp.PointerStore:
           return this.PointerWrite(arguments[0], arguments[1]);
-        case IrIntrinsicOp.PointerAdd or IrIntrinsicOp.PointerCast:
-          return this.PointerIndex(operation);
         case IrIntrinsicOp.PointerDifference: {
           var scale = this.Scale(arguments[0]);
           this.SameRegion(arguments[0], arguments[1], "difference");
@@ -156,7 +158,8 @@ public static partial class RustEmitter {
         case var comparison when IrPointers.IsComparison(comparison):
           return this.PointerComparison(operation);
         default:
-          return this.Refuse(operation.Op.ToString());
+          // PointerAdd, PointerCast; any other operation as a value, which PointerIndex refuses by its form.
+          return this.PointerIndex(operation);
       }
     }
 
@@ -177,15 +180,14 @@ public static partial class RustEmitter {
       };
       if (left is IrNull || right is IrNull) {
         var other = left is IrNull ? right : left;
-        if (other is IrNull)
-          return new RsLiteral(op is "==" or "<=" or ">=" ? "true" : "false") { Type = IrType.Bool };
         if (op is not ("==" or "!="))
           return this.Refuse("an ordering of a pointer and the null pointer");
 
         if (this._pointers.Of(other) is not { } region)
           return this.Refuse($"a comparison of a pointer of the form {other.GetType().Name[2..]} with the null pointer");
         // A region known to be empty is the null pointer, one known to have elements never is.
-        var known = region.Kind == RegionKind.Stack ? this.MadeLength(region.Owner) : null;
+        // A Stack region that may be null is a pin of a new array.
+        var known = region is { Kind: RegionKind.Stack, Nullable: true } ? this.MadeLength(region.Owner) : null;
         if (!region.Nullable || known is not null)
           return new RsLiteral((op == "==") == (region.Nullable && known == 0) ? "true" : "false") { Type = IrType.Bool };
 

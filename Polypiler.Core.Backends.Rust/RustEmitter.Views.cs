@@ -108,7 +108,8 @@ public static partial class RustEmitter {
       RsExpression Measured((IrLocal Root, IrExpr? Start, IrExpr? Length) part, string stem, out RsExpression start) {
         start = part.Start is null ? new RsLiteral("0") { Type = IrType.I32 } : Bound(part.Start, stem + "_start");
         var whole = this.ViewSource(root, false);
-        var view = part.Start is null ? whole
+        // A method borrows its receiver itself: `a.len()`, never `&a.len()`.
+        var view = part.Start is null ? (whole is RsReference { Operand: var owner } ? owner : whole)
           : part.Length is null ? new RsCall(new RsPath(this.StringHelper("ply_view_from")), [whole, start]) { Type = root.Type }
           : new RsCall(new RsPath(this.StringHelper("ply_view")), [whole, start, Bound(part.Length, stem + "_length")]) { Type = root.Type };
         var name = this.Temporary(stem);
@@ -192,6 +193,9 @@ public static partial class RustEmitter {
     private RsExpression ViewSource(IrExpr view, bool mutable) => view switch {
       IrLocalRef { Type.IsView: true } reference => new RsPath(this._locals[reference.Local]) { Type = view.Type },
       IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice } operation => this.View(operation, mutable),
+      IrIntrinsic { Op: IrIntrinsicOp.Reinterpret } overlay => this.Overlay(overlay, mutable),
+      // A view of a new array of a known length borrows an array, not a vector (clippy's useless_vec).
+      IrNewArray { Length: IrConst { Value: >= 0 and < 4096 } count } made => new RsReference(mutable, this.Zeros(made.Type.Element!, count.Value)) { Type = view.Type },
       { Type.IsArray: true } => this.Borrow(view, mutable),
       _ => this.Refuse("a view of " + view.GetType().Name[2..])
     };

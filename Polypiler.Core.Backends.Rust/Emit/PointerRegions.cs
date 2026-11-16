@@ -65,8 +65,13 @@ internal sealed class PointerRegions {
   public static PointerRegions Of(IrFunction function) {
     ArgumentNullException.ThrowIfNull(function);
     var found = new PointerRegions();
-    foreach (var parameter in function.Parameters.Where(parameter => parameter.Type.IsPointer))
-      found._regions[parameter] = new PointerRegion(RegionKind.Parameter, parameter, Element(parameter.Type), true);
+    foreach (var parameter in function.Parameters.Where(parameter => parameter.Type.IsPointer)) {
+      // A void* parameter has no element its region's slice could be of.
+      if (parameter.Type.Element is not { IsNumeric: true } element)
+        found.Problem($"the void* parameter '{parameter.Name}'");
+      else
+        found._regions[parameter] = new PointerRegion(RegionKind.Parameter, parameter, element, true);
+    }
 
     foreach (var statement in ArrayOwnership.Statements(function.Body)) {
       switch (statement) {
@@ -116,9 +121,6 @@ internal sealed class PointerRegions {
   /// <summary>Whether one of some values is a pointer to the address of a local.</summary>
   private bool AtAddress(IReadOnlyList<IrExpr> values) => values.Any(value => value.Type.IsPointer && this.Of(value, false) is { Kind: RegionKind.Address });
 
-  /// <summary>The element a pointer type reads; a byte for <c>void*</c>, which nothing reads through.</summary>
-  private static IrType Element(IrType pointer) => pointer.Element is { IsNumeric: true } element ? element : IrType.U8;
-
   /// <summary>Whether two regions are one.</summary>
   public static bool Same(PointerRegion first, PointerRegion second) => first.Kind == second.Kind && first.Owner == second.Owner;
 
@@ -134,13 +136,13 @@ internal sealed class PointerRegions {
         break;
       case IrIntrinsic { Op: IrIntrinsicOp.Pin, Arguments: [IrNewArray or IrIntrinsic { Op: IrIntrinsicOp.ArrayOf }] }:
         // A pin of a new array: memory of its own, as a stackalloc's, that is null when it is empty.
-        this._regions[local] = new PointerRegion(RegionKind.Stack, local, Element(local.Type), true);
+        this._regions[local] = new PointerRegion(RegionKind.Stack, local, local.Type.Element!, true);
         break;
       case IrIntrinsic { Op: IrIntrinsicOp.Pin }:
         this.Problem("a pin of something that is no variable or new array");
         break;
       case IrIntrinsic { Op: IrIntrinsicOp.StackAlloc }:
-        this._regions[local] = new PointerRegion(RegionKind.Stack, local, Element(local.Type), false);
+        this._regions[local] = new PointerRegion(RegionKind.Stack, local, local.Type.Element!, false);
         break;
       case null:
         this.Problem($"the pointer '{local.Name}' declared without a value");

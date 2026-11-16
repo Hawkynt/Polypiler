@@ -77,7 +77,7 @@ internal static class ArrayOwnership {
 
   /// <summary>The array a view of it is made of, through views of views, or <see langword="null"/>.</summary>
   private static IrExpr? ViewRoot(IrExpr view) => view switch {
-    IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice } operation => operation.Arguments[0].Type.IsArray ? operation.Arguments[0] : ViewRoot(operation.Arguments[0]),
+    IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.Reinterpret } operation => operation.Arguments[0].Type.IsArray ? operation.Arguments[0] : ViewRoot(operation.Arguments[0]),
     _ => null
   };
 
@@ -95,7 +95,7 @@ internal static class ArrayOwnership {
       return true;
 
     bool Reaches(IrExpr view) => view is IrLocalRef reference && reference.Local == local
-      || view is IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice } operation && Reaches(operation.Arguments[0]);
+      || view is IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.Reinterpret } operation && Reaches(operation.Arguments[0]);
     return Statements(function.Body).Any(statement => statement switch {
       IrStore { Array: var target } => Reaches(target),
       IrExprStmt { Expression: IrStep { Target: IrArrayLoad { Array: var target } } } => Reaches(target),
@@ -174,11 +174,7 @@ internal static class ArrayOwnership {
     var ordered = Ordered(function.Body, false).ToList();
     for (var index = 0; index < ordered.Count; ++index) {
       var (statement, inLoop) = ordered[index];
-      var (target, source) = statement switch {
-        IrDeclare { Local.Type.IsArray: true, Initializer: IrLocalRef { Local: var from } } declare => (declare.Local, from),
-        IrAssign { Local.Type.IsArray: true, Value: IrLocalRef { Local: var from } } assign => (assign.Local, from),
-        _ => (null, null)
-      };
+      var (target, source) = MoveOf(statement);
       if (target is null || source is null || inLoop || target == source || function.Parameters.Contains(target) || function.Parameters.Contains(source)
           || result.FieldAliases.ContainsKey(source) || result.FieldAliases.ContainsKey(target)
           || !owned.Contains(find(source)) || function.Parameters.Any(parameter => find(parameter) == find(source))
@@ -188,6 +184,13 @@ internal static class ArrayOwnership {
       result.Moves.Add(statement);
     }
   }
+
+  /// <summary>The variables of a statement that gives one array variable another's array, <c>x = y</c>; nulls for any other statement.</summary>
+  internal static (IrLocal? Target, IrLocal? Source) MoveOf(IrStmt statement) => statement switch {
+    IrDeclare { Local.Type.IsArray: true, Initializer: IrLocalRef { Local: var from } } declare => (declare.Local, from),
+    IrAssign { Local.Type.IsArray: true, Value: IrLocalRef { Local: var from } } assign => (assign.Local, from),
+    _ => (null, null)
+  };
 
   private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName, HashSet<IrStmt>? moves) {
     var result = new FunctionArrays();
@@ -258,7 +261,7 @@ internal static class ArrayOwnership {
       groups.Add(local);
 
     // A store through a pointer writes its region: the pinned array, or the region of a pointer parameter.
-    var pointers = function.Parameters.Concat(function.Locals).Any(local => local.Type.IsPointer) ? PointerRegions.Of(function) : null;
+    var pointers = PointerRegions.Of(function);
     void WriteRegion(PointerRegion? region) {
       if (region is { Kind: RegionKind.Variable, Owner.Type.IsArray: true })
         Write(new IrLocalRef(region.Owner));
@@ -266,7 +269,7 @@ internal static class ArrayOwnership {
         result.MutablePointers.Add(function.Parameters.ToList().IndexOf(region.Owner));
     }
 
-    foreach (var region in pointers?.Written ?? [])
+    foreach (var region in pointers.Written)
       WriteRegion(region);
 
     foreach (var statement in Statements(function.Body)) {
@@ -309,7 +312,7 @@ internal static class ArrayOwnership {
             foreach (var index in callee.MutableParameters)
               Write(call.Arguments[index]);
             foreach (var index in callee.MutablePointers)
-              WriteRegion(pointers?.Of(call.Arguments[index], false));
+              WriteRegion(pointers.Of(call.Arguments[index], false));
             // A writable view of an array the callee writes through writes the array.
             if (byName.TryGetValue(call.Function, out var target))
               for (var index = 0; index < call.Arguments.Count && index < target.Parameters.Count; ++index)

@@ -208,6 +208,7 @@ public static class RustPrinter {
     RsExpressionStatement { Expression: RsReturn { Value: RsBinary } expression } => Expression(expression, indent, indent, 2) + ";",
     RsExpressionStatement { Expression: var expression } => Expression(expression, indent, indent, 1) + ";",
     RsItemStatement { Item: var item } => NestedItem(item, indent),
+    RsComment comment => "// " + comment.Text,
     _ => throw new ArgumentException($"There is no Rust statement '{statement.GetType().Name}'.", nameof(statement))
   };
 
@@ -618,6 +619,8 @@ public static class RustPrinter {
         return $"{Label(loop.Label)}for {loop.Pattern} in {Expression(loop.Iterator, indent, column + 8 + loop.Pattern.Length, 2)} {Block(loop.Body, indent)}";
       case RsLabeledBlock labeled:
         return $"{Label(labeled.Label)}{Block(labeled.Body, indent)}";
+      case RsUnsafe block:
+        return "unsafe " + Block(block.Block, indent);
       case RsBlockExpression block:
         return Block(block.Block, indent);
       case RsMatch choice: {

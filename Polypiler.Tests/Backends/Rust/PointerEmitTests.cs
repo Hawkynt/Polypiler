@@ -182,4 +182,36 @@ public sealed class PointerEmitTests {
       Assert.That(RustPrinter.Print(RustSyntaxReader.Read(file.Content)), Is.EqualTo(file.Content), file.Path);
   }
 
+  [Test]
+  public void NumberOfTheSameWidth_IsItsBitsBothWays() {
+    var text = Emitted("public static unsafe void F(int[] a) { fixed (int* p = a) { *(float*)p = 1.5f; } } public static unsafe ulong U(double d) => *(ulong*)&d;"
+      + " public static unsafe double L(long l) => *(double*)&l; public static unsafe byte B(sbyte s) => *(byte*)&s;");
+    Assert.That(text, Does.Contain("= 1.5f32.to_bits() as i32;").Or.Contain("= (1.5f32).to_bits() as i32;").Or.Contain("= 1.5.to_bits() as i32;"));
+    Assert.That(text, Does.Contain("d.to_bits()\n"));
+    Assert.That(text, Does.Contain("f64::from_bits(l as u64)"));
+    Assert.That(text, Does.Contain("s as u8"));
+  }
+
+  [Test]
+  public void OffsetOfAnotherIntegerType_IsWidened() {
+    var text = Emitted("public static unsafe int O(int[] a, long i, uint j) { fixed (int* p = a) { return *(p + i) + *(p + j); } }");
+    Assert.That(text, Does.Contain("pub fn o(a: &[i32], i: i64, j: u32) -> i32 {"));
+  }
+
+  [Test]
+  public void PinOfAnArrayLiteral_IsNeverNull() {
+    var text = Emitted("public static unsafe bool N() { fixed (int* p = new int[] { 1 }) { return p == null; } }");
+    Assert.That(text, Does.Contain("    false\n"));
+  }
+
+  [TestCase("public static unsafe int A(short[] a) { fixed (short* p = a) { *(int*)p = 1; return a[0]; } }", "'a pointer of i32 into the memory of i16'", TestName = "WiderStoreIntoNoBytes_IsRefused")]
+  [TestCase("public static unsafe long A(short[] a) { fixed (short* p = a) { int* q = (int*)p; return (q + 1) - q; } }", "'a pointer of i32 into the memory of i16'", TestName = "WiderArithmeticIntoNoBytes_IsRefused")]
+  [TestCase("public static unsafe int A() { int* p = null; *p = 1; return 0; }", "'a store through the null pointer'", TestName = "StoreThroughNull_IsRefused")]
+  [TestCase("public static unsafe int A() { int* p = null; return *p; }", "'a load through the null pointer'", TestName = "LoadThroughNull_IsRefused")]
+  [TestCase("public static unsafe int A(int[] a) { fixed (int* q = a) { int* p; p = q; return *p; } }", "'the pointer 'p' declared without a value'", TestName = "PointerDeclaredWithoutAValue_IsRefused")]
+  [TestCase("public static unsafe int A(int[] a) { fixed (int* q = a) { return G(q); } } private static unsafe int G(void* v) => *(int*)v;", "'the void* parameter 'v''", TestName = "VoidPointerParameter_IsRefused")]
+  [TestCase("public static unsafe int A(int[] a) { fixed (int* q = a) { int* r = q; r = null; return r == null ? 1 : 0; } }", "'a pointer of the form Null'", TestName = "PointerAssignedNull_IsRefused")]
+  public void MorePointersWithNoSafeForm_AreRefusedByName(string methods, string construct)
+    => Assert.That(Problems(methods), Has.Some.Contain(construct));
+
 }

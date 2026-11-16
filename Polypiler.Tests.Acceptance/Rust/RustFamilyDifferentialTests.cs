@@ -119,6 +119,10 @@ public sealed class RustFamilyDifferentialTests {
         .Select(range => new PrototypeCall("Compute", [SpanFixtures.Wikipedia, range.Offset, range.Length]) { Returns = typeof(uint) })],
       call => SpanFixtures.DotNet("Adler32Span", call));
 
+    yield return new("spans/Spans (written part)", () => Written(SpanFixtures.Imported("Spans"), WrittenSpans),
+      () => [.. SpanFixtures.Calls().Where(call => WrittenSpans.Contains(call.Method))],
+      call => SpanFixtures.DotNet("Spans", call));
+
     // FNV-1a's published vectors: "" is 0x811C9DC5, "a" is 0xE40C292C; and the bytes 0 to 15.
     yield return new("pointers/Fnv1aPointer", () => PointerFixtures.Imported("Fnv1aPointer"),
       () => [.. new[] { Array.Empty<byte>(), System.Text.Encoding.ASCII.GetBytes("a"), System.Text.Encoding.ASCII.GetBytes("foobar"), PointerFixtures.D }.Select(bytes => new PrototypeCall("Hash", [bytes]) { Returns = typeof(uint) })],
@@ -136,6 +140,21 @@ public sealed class RustFamilyDifferentialTests {
 
   /// <summary>The functions of collections/Collections the backend writes; the others catch traps, hold objects or floating-point keys, or change a collection in a loop over it.</summary>
   private static readonly string[] WrittenCollections = ["ListOps", "Grow", "Write", "RemoveLastOfEmpty", "Search", "Copies", "Words", "Pairs", "Widened", "DictionaryOrder", "SetOrder", "Count", "ClearThenInsert", "MissingKey", "Values"];
+
+  /// <summary>
+  /// The functions of spans/Spans the backend writes - copies between views and within one, overlays of bytes read
+  /// as numbers; the others copy with TryCopyTo, compare views (of floating-point numbers too), read or write a
+  /// temporary through a view or make one on the stack.
+  /// </summary>
+  private static readonly string[] WrittenSpans = [.. SpanFixtures.Imported("Spans").Functions
+    .Where(function => function.IsPublic && function.Name is not ("TryInto" or "NaNEqual" or "ReadFrom" or "Zeroed" or "Same" or "WriteAt" or "Fixed" or "Origins" or "Singles" or "Doubles")).Select(function => function.Name)];
+
+  [Test]
+  public void WrittenSpanPart_IsEveryFunctionTheBackendWrites() {
+    var module = SpanFixtures.Imported("Spans");
+    var written = module.Functions.Where(function => function.IsPublic && RustCrates.Check(Written(module, [function.Name])).Count == 0).Select(function => function.Name);
+    Assert.That(written, Is.EquivalentTo(WrittenSpans));
+  }
 
   /// <summary>The functions of pointers/Pointers the backend writes; Apart and Before compare pointers into two arrays, which safe Rust has no address for.</summary>
   private static readonly string[] WrittenPointers = ["Checksum", "Word", "Distance", "Stack", "Local", "EmptyIsNull", "Bits", "At", "Origins", "Shorts", "UShorts", "Ints", "Longs", "ULongs", "Floats", "Doubles", "Store", "Wide", "Inside", "Through", "Passed"];
