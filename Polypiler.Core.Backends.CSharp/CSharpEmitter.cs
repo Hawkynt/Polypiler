@@ -87,7 +87,8 @@ public static partial class CSharpEmitter {
     [IrTypeKind.U64] = "ulong",
     [IrTypeKind.F32] = "float",
     [IrTypeKind.F64] = "double",
-    [IrTypeKind.String] = "string"
+    [IrTypeKind.String] = "string",
+    [IrTypeKind.BigInt] = BigIntegerType
   };
 
   private static readonly Dictionary<IrUnaryOp, string> _unary = new() {
@@ -196,6 +197,7 @@ public static partial class CSharpEmitter {
     problems.AddRange(FilterProblems(module, profile, table));
     problems.AddRange(PointerProblems(module, profile, table));
     problems.AddRange(AsyncProblems(module, profile, table));
+    problems.AddRange(BigIntProblems(module, profile, table));
     return problems.Distinct().ToList();
   }
 
@@ -467,7 +469,7 @@ public static partial class CSharpEmitter {
 
   /// <summary>The operands of an expression, or <see langword="null"/> for a kind this backend does not know.</summary>
   private static IReadOnlyList<IrExpr>? Operands(IrExpr expression) => expression switch {
-    IrConst or IrLocalRef or IrConstRef or IrGlobalRef or IrStrConst => [],
+    IrConst or IrLocalRef or IrConstRef or IrGlobalRef or IrStrConst or IrBigConst => [],
     IrUnary unary => [unary.Operand],
     IrBinary binary => [binary.Left, binary.Right],
     IrConvert conversion => [conversion.Operand],
@@ -533,7 +535,7 @@ public static partial class CSharpEmitter {
   /// floating-point type, or to an integer type that holds every value of the source.
   /// </summary>
   private static bool Keeps(IrConvert conversion)
-    => conversion.Type.IsFloat || (conversion.Operand.Type.IsInteger && IrOperators.Contains(conversion.Type, conversion.Operand.Type));
+    => conversion.Type.IsFloat || conversion.Type.IsBigInt || (conversion.Operand.Type.IsInteger && IrOperators.Contains(conversion.Type, conversion.Operand.Type));
 
   /// <summary>Whether a conversion takes a floating-point number to the nearest value of an integer type.</summary>
   private static bool Saturates(IrConvert conversion) => conversion.Contract == IrConversion.Saturate && conversion.Type.IsInteger;
@@ -687,7 +689,7 @@ public static partial class CSharpEmitter {
       this._helpers = Names(helpers.Select(helper => helper.Name), taken);
       this._taken = [.. taken, .. this._helpers.Values];
       // The nested classes of the collections give way to every name of the module and its helpers.
-      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName],
+      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName, CSharpCollectionClasses.AssertionExceptionName],
         [.. this._taken, .. this._typeNames.Values]);
     }
 
@@ -1255,6 +1257,8 @@ public static partial class CSharpEmitter {
           return (this.Qualified(this._members[reference.Constant.Name]), Primary);
         case IrStrConst text:
           return (new CsStringLiteral(text.Value), Primary);
+        case IrBigConst big:
+          return BigLiteral(big);
         case IrLocalRef reference when reference.Local == this._receiver:
           return (new CsName("this") { Type = reference.Type }, Primary);
         case IrLocalRef reference when reference.Local == this._value:
@@ -1384,6 +1388,9 @@ public static partial class CSharpEmitter {
       var to = conversion.Type;
       if (from == to)
         return this.Expression(conversion.Operand);
+
+      if (from.IsBigInt || to.IsBigInt)
+        return this.BigConvert(conversion);
 
       if (!this.Casts(conversion))
         return this.Call(Row(conversion, this._table)!, [conversion.Operand]);

@@ -569,8 +569,15 @@ public sealed class CSharpCapabilities {
     .. CSharpAsyncRows.All,
 
     // The native calls of #1332.
-    .. CSharpInteropRows.All
+    .. CSharpInteropRows.All,
+
+    // The arbitrary-precision integer of #494, which .NET Framework 4.0 brought, and its conversion to double that rounds.
+    CSharpCapability.OfApi(BigIntegerApi, CSharpProfile.Net46),
+    CSharpCapability.OfApi("BigInteger to double, rounded to nearest", CSharpProfile.Net46, CSharpBigIntegerHelpers.BigToDouble)
   ]) { RemainderFromQuotient = true };
+
+  /// <summary>The name of the row of the arbitrary-precision integer.</summary>
+  public const string BigIntegerApi = "System.Numerics.BigInteger";
 
   /// <summary>Makes a table of rows.</summary>
   /// <param name="rows">The rows; of two that answer one question the earlier one wins.</param>

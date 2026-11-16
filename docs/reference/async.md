@@ -97,11 +97,28 @@ JavaScript (`JavaScriptAsyncApi`), refused with **PLY1102**:
 | `Completed` / `FromResult(v)` | — | `Task.CompletedTask` / `Task.FromResult<T>(v)` | same | — | `Promise.resolve()` / `Promise.resolve(v)` | `void 0` / `v` |
 | `WhenAll` | — | `Task.WhenAll` | `Task.WhenAll` | — | `$whenAll` over `Promise.all` | `$whenAll` over `Promise.all` at es2017, `Promise.allSettled` from es2020 |
 
+| IR | Python py3.8 … py3.14 |
+| --- | --- |
+| async function | `async def f(…) -> T:` |
+| `IrAwait` | `await` |
+| `Completed` / `FromResult(v)` | left out (`None` as a value) / `v` |
+| `WhenAll` | `await asyncio.gather(…)`, a `list` |
+
 - **C#.** `async`/`await` needs C# 5 and the builders of .NET Framework 4.5. net2.0 and net3.5 are
   refused: a task type of the class's own would be no API a .NET caller recognises. A function
   declared as a `ValueTask` is written as `Task` below netstandard2.1, and the header of the file
   names it. An async function that awaits nothing awaits `Task.CompletedTask` first, which changes
   nothing and keeps C# from warning (CS1998).
+- **Python.** Every profile, `py3.8` to `py3.14`, writes the subset with `asyncio`: an async function is
+  an `async def` typed with the result its returns give (`-> None` for `async<void>`; a `ValueTask` is
+  no different), `IrAwait` of a call is `await f(…)`, of `FromResult(v)` just `v`, of `Completed`
+  nothing (`None` where a value would stand), and `WhenAll` is `await asyncio.gather(c1, c2, …)`, whose
+  list is the IR's array; the module then imports `asyncio`. A caller runs the module's coroutine with
+  `asyncio.run`. No coroutine of the subset ever suspends on anything but another coroutine, so Python
+  runs them in exactly the interpreter's order: `gather` starts the calls in argument order and each runs
+  to its end before the next starts, so the first fault in time is the first in argument order, as
+  `Task.WhenAll`'s. The acceptance tests run the C# fixture under CPython and compare every call with
+  .NET.
 - **JavaScript.** ECMAScript 5 has neither `Promise` nor a queue of jobs: a helper would have to
   schedule with `setTimeout`, a host API outside the profile, or synchronously, the order of .NET. No
   faithful form exists, so it is refused. `$async` (ECMA-262 §27.7.5, AsyncFunctionStart and Await)

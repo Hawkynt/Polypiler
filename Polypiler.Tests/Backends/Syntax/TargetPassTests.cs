@@ -299,7 +299,7 @@ public sealed class TargetPassTests {
     return (exitCode, error.ToString(), text);
   }
 
-  [TestCase("O9998", "unknown optimization 'O9998'; the pipeline has O0001, O0002, O0003, O0005, O0006, O0023, O0100")]
+  [TestCase("O9998", "unknown optimization 'O9998'; the pipeline has O0001, O0002, O0003, O0005, O0006, O0023, O0062, O0100")]
   [TestCase("O0500x", "'O0500x' is not an optimization number of the form O####")]
   public void UnknownTargetPass_IsAUsageError(string id, string message) {
     var (exitCode, error, _) = this.Translate("--disable-opt", id);

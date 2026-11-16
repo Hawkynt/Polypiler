@@ -7,9 +7,11 @@
   <Project Path="Polypiler.Core.Analysis/Polypiler.Core.Analysis.csproj" />
   <Project Path="Polypiler.Core.Backends.CSharp/Polypiler.Core.Backends.CSharp.csproj" />
   <Project Path="Polypiler.Core.Backends.JavaScript/Polypiler.Core.Backends.JavaScript.csproj" />
+  <Project Path="Polypiler.Core.Backends.Python/Polypiler.Core.Backends.Python.csproj" />
   <Project Path="Polypiler.Core.BinaryFormats/Polypiler.Core.BinaryFormats.csproj" />
   <Project Path="Polypiler.Core.Frontends.CSharp/Polypiler.Core.Frontends.CSharp.csproj" />
   <Project Path="Polypiler.Core.Frontends.JavaScript/Polypiler.Core.Frontends.JavaScript.csproj" />
+  <Project Path="Polypiler.Core.Frontends.Python/Polypiler.Core.Frontends.Python.csproj" />
   <Project Path="Polypiler.Core.IR/Polypiler.Core.IR.csproj" />
   <Project Path="Polypiler.Core.Legalize/Polypiler.Core.Legalize.csproj" />
   <Project Path="Polypiler.Core.MachineSemantics/Polypiler.Core.MachineSemantics.csproj" />

@@ -6927,6 +6927,41 @@
       "bytes": 319
     },
     {
+      "path": "tests/fixtures/prototype/python/recorded/control.txt",
+      "sha256": "2a9bd6e167b6926b2bc0f9a216fa01bf8a511ec5d7aeeca2b3a4b3725414bbd4",
+      "bytes": 8158
+    },
+    {
+      "path": "tests/fixtures/prototype/python/recorded/functions.txt",
+      "sha256": "d0e242af93bb1be729169fdfc861c736c05155be3ef367d7986cf94366e3e610",
+      "bytes": 1895
+    },
+    {
+      "path": "tests/fixtures/prototype/python/recorded/golden.provenance.json",
+      "sha256": "7bd33dd88548a6491cf08157c16e55be19248c4d2ddeaf0c27b8bcd43ff5c1f8",
+      "bytes": 389
+    },
+    {
+      "path": "tests/fixtures/prototype/python/recorded/memory.txt",
+      "sha256": "858591ec5a8793664035859b8f7fe1eb5380e6ef44147ea5341e5893117d8da3",
+      "bytes": 6066
+    },
+    {
+      "path": "tests/fixtures/prototype/python/recorded/modules.txt",
+      "sha256": "b21f49c1dfba9f4ef2d1d1951e27dbea6cfe89b378e62afea1485830714fd902",
+      "bytes": 2257
+    },
+    {
+      "path": "tests/fixtures/prototype/python/recorded/scalars.txt",
+      "sha256": "e84a6b648df44a70952ae1e649be3e6f9e82ddd560cc270531db68287c61b474",
+      "bytes": 1254349
+    },
+    {
+      "path": "tests/fixtures/prototype/python/recorded/types.txt",
+      "sha256": "9b8b1751ba6561fe36a486d0246f1abdb45816959f535ab6ea792562ca063d3e",
+      "bytes": 2579
+    },
+    {
       "path": "tests/fixtures/verify/adler32.vectors.json",
       "sha256": "f0bb9ef0d19281add39928d0953daf2b93bb9496957ee5b97d7e59af07548640",
       "bytes": 625

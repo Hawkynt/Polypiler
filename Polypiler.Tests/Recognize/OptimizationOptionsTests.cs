@@ -102,7 +102,7 @@ public sealed class OptimizationOptionsTests {
   [TestCase("--opt", "None", "unknown optimization level 'None'")]
   [TestCase("--disable-opt", "O9999x", "'O9999x' is not an optimization number of the form O####")]
   [TestCase("--disable-opt", "o0100", "'o0100' is not an optimization number")]
-  [TestCase("--disable-opt", "O9999", "unknown optimization 'O9999'; the pipeline has O0001, O0002, O0003, O0005, O0006, O0023, O0100, O0101")]
+  [TestCase("--disable-opt", "O9999", "unknown optimization 'O9999'; the pipeline has O0001, O0002, O0003, O0005, O0006, O0023, O0062, O0100, O0101")]
   [TestCase("--disable-opt", "", "option '--disable-opt' has an empty list element")]
   [TestCase("--disable-opt", "O0100,,O0106", "option '--disable-opt' has an empty list element")]
   [TestCase("--disable-opt", "O0100,", "option '--disable-opt' has an empty list element")]

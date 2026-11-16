@@ -141,6 +141,7 @@ internal static class PrototypeFixture {
     char unit => ((int)unit).ToString(CultureInfo.InvariantCulture),
     float single => Show((double)single),
     double number => Show(number),
+    System.Numerics.BigInteger big => big.ToString(CultureInfo.InvariantCulture),
     // A struct: the interpreter hands one over as the array of its fields, .NET as a value of a struct type.
     object?[] fields => $"{{{string.Join(",", fields.Select(Show))}}}",
     Array array when Elements(array) is { } shown => shown,

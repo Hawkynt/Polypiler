@@ -230,6 +230,7 @@ public static partial class CSharpEmitter {
     private IEnumerable<CsMember> CollectionClasses() => this._classes.Select(name => CSharpFragments.Member(this.Renamed(name switch {
       CSharpCollectionClasses.KeyedSlotsName => CSharpCollectionClasses.KeyedSlots,
       CSharpCollectionClasses.FloatKeysName => CSharpCollectionClasses.FloatKeys,
+      CSharpCollectionClasses.AssertionExceptionName => CSharpCollectionClasses.AssertionException,
       _ => CSharpCollectionClasses.SingleKeys
     })) with { Leading = CsTrivia.Blank });
 

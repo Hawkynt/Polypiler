@@ -16,6 +16,28 @@ public static class CSharpCollectionClasses {
   /// <summary>The name of <see cref="FloatKeys"/>.</summary>
   public const string FloatKeysName = "FloatKeys";
 
+  /// <summary>The name of <see cref="AssertionException"/>.</summary>
+  public const string AssertionExceptionName = "AssertionException";
+
+  /// <summary>
+  /// The exception class of the IR's library .NET has no class of its own for: a failed assertion of
+  /// the source, Python's <c>AssertionError</c>, with the three constructors every library class has.
+  /// </summary>
+  public const string AssertionException = """
+    public sealed class AssertionException : global::System.Exception {
+
+      public AssertionException() : base("Assertion failed.") {
+      }
+
+      public AssertionException(string message) : base(message) {
+      }
+
+      public AssertionException(string message, global::System.Exception innerException) : base(message, innerException) {
+      }
+
+    }
+    """;
+
   /// <summary>The name of <see cref="SingleKeys"/>.</summary>
   public const string SingleKeysName = "SingleKeys";
 
