@@ -215,6 +215,9 @@ internal sealed partial class Lowering {
 
   /// <summary>Applies a binary operator the way <see cref="TypeInference.Decide"/> says it is computed; a compound assignment comes here as well.</summary>
   private Typed Binary(Operator op, Node left, Node right, Coercion coercion, Node whole) {
+    if (new[] { left, right }.FirstOrDefault(this.Diverges) is { } nothing)
+      throw this.NoValue(nothing);
+
     if (this.AbsentTest(op, left, right) is { } absent)
       return new Typed(absent, JsType.Boolean);
 
@@ -303,6 +306,9 @@ internal sealed partial class Lowering {
   private static IrConst Count(Node count) => new(IrType.I32, (long)((BigIntLiteral)count).Value);
 
   private IrExpr Conditional(ConditionalExpression choice) {
+    if (this.Diverges(choice.Consequent) || this.Diverges(choice.Alternate))
+      throw this.NoValue(choice);
+
     var condition = this.Condition(choice.Test);
     if (types.Of(choice).Ir is not { IsStorable: true } type) {
       this.Expression(choice.Consequent);
@@ -659,6 +665,9 @@ internal sealed partial class Lowering {
   }
 
   private IrExpr Value(Node node, IrType type) {
+    if (this.Diverges(node))
+      throw this.NoValue(node);
+
     // new Array(n).fill(v) where an array of a type is expected is an array of that type (#1385).
     if (type.IsArray && node is CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: "fill" }, Object: var filled } } fill
         && types.Of(filled) is { Kind: JsKind.Array, IsGrowable: false, IsView: false } && !this._substitutes.ContainsKey(node))
