@@ -15,10 +15,16 @@ public sealed class FieldAliasEmitTests {
 
   private const string Holder = "public sealed class H { private readonly int[] _s = new int[4]; private int _k; ";
 
-  private static string Emitted(string members) => RustCrates.ModuleText(RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", Holder + members + " } public static class S { public static int F() => new H().G(); }")));
+  /// <summary>The holder shared: a second variable holds the object, so the class is an <c>Rc</c> of cells.</summary>
+  private const string Shared = " } public static class S { public static int F() { var h = new H(); var g = h; return g.G(); } }";
 
-  private static string[] Problems(string members)
-    => [.. RustCrates.Check(PrototypeFixture.Import("Snippet.cs", Holder + members + " } public static class S { public static int F() => new H().G(); }")).Select(problem => problem.Message)];
+  /// <summary>The holder single-owner (#1393): a plain struct whose array the variable borrows directly.</summary>
+  private const string Single = " } public static class S { public static int F() => new H().G(); }";
+
+  private static string Emitted(string members, string user = Shared) => RustCrates.ModuleText(RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", Holder + members + user)));
+
+  private static string[] Problems(string members, string user = Shared)
+    => [.. RustCrates.Check(PrototypeFixture.Import("Snippet.cs", Holder + members + user)).Select(problem => problem.Message)];
 
   [Test]
   public void AliasThatIsWritten_BorrowsTheCellExclusively() {
@@ -43,11 +49,33 @@ public sealed class FieldAliasEmitTests {
     Assert.That(text, Does.Contain("let s = self.s.borrow();"));
   }
 
+  [Test]
+  public void AliasOfAPlainStruct_BorrowsTheFieldItself() {
+    var written = Emitted("public int G() { var s = this._s; s[1] = 5; s[2] = s[1] + _k; Fill(s); return s.Length; } static void Fill(int[] a) => a[0] = 1;", Single);
+    Assert.That(written, Does.Contain("pub fn g(&mut self) -> i32 {\n        let s = &mut self.s;"));
+    Assert.That(written, Does.Contain("fill(&mut s[..]);"));
+    var read = Emitted("public int G() { var s = this._s; var sum = 0; foreach (var v in s) sum += v; return sum + _k; }", Single);
+    Assert.That(read, Does.Contain("pub fn g(&self) -> i32 {\n        let s = &self.s;"));
+  }
+
+  [Test]
+  public void AliasOfAPlainStruct_WhileItsObjectIsPassedOn_IsRefused()
+    => Assert.That(Problems("public int G() { var s = this._s; s[0] = 1; return Other(this) + s[0]; } static int Other(H h) => h._k;", Single),
+      Has.Some.Contain("'a variable that names a field's array where the function touches the field otherwise while it lives'"));
+
   [TestCase("public int G() { var s = this._s; s[0] = 1; return _s[0]; }")]
   [TestCase("public int G() { var s = this._s; s[0] = 1; return Read(); } int Read() => _s[0];")]
   [TestCase("public int G() { var s = this._s; s = new int[2]; return s[0]; }")]
   [TestCase("public int G() => Give()[0]; int[] Give() { var s = this._s; return s; }", "'a variable that names a field's array given away as a whole'")]
   public void FieldTouchedWhileTheAliasLives_IsRefused(string members, string construct = "'a variable that names a field's array where the function touches the field otherwise while it lives'")
     => Assert.That(Problems(members), Has.Some.Contain(construct));
+
+  /// <summary>The borrow of a plain struct's field ends at the alias's last read: the field touched after it is no conflict.</summary>
+  [TestCase("public int G() { var s = this._s; s[0] = 1; return _s[0]; }", "let s = &mut self.s;")]
+  [TestCase("public int G() { var s = this._s; s[0] = 1; return Read(); } int Read() => _s[0];", "self.read()")]
+  public void FieldTouchedAfterThePlainAliasEnds_IsWritten(string members, string expected) {
+    Assert.That(Problems(members, Single), Is.Empty);
+    Assert.That(Emitted(members, Single), Does.Contain(expected));
+  }
 
 }

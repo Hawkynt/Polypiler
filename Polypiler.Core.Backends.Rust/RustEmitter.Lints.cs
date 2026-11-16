@@ -20,8 +20,10 @@ public static partial class RustEmitter {
   /// <c>unused_comparisons</c> of rustc), a range test written out (<c>manual_range_contains</c>), an
   /// ordering of floating-point numbers negated (<c>neg_cmp_op_on_partial_ord</c>, <c>nonminimal_bool</c>),
   /// a constant close to π or e (<c>approx_constant</c>), a loop that never ends (<c>empty_loop</c>), a
-  /// value copied to a variable and straight back (<c>almost_swapped</c>) and
-  /// a signature of the source with more than seven parameters (<c>too_many_arguments</c>). The list is
+  /// value copied to a variable and straight back (<c>almost_swapped</c>), two variables swapped through a
+  /// third, or two elements of two arrays, as <c>std::mem::swap</c> lowers (<c>manual_swap</c>) and
+  /// a signature of the source with more than seven parameters (<c>too_many_arguments</c>), a public method
+  /// whose name is one of a standard trait's (<c>should_implement_trait</c>: the name is the source's). The list is
   /// closed; no group and no <c>clippy::all</c> is ever allowed.
   /// </summary>
   public static class Lints {
@@ -31,8 +33,21 @@ public static partial class RustEmitter {
       "unused_assignments", "unused_comparisons", "clippy::absurd_extreme_comparisons", "clippy::almost_swapped", "clippy::approx_constant", "clippy::empty_loop",
       "clippy::eq_op", "clippy::erasing_op", "clippy::identity_op", "clippy::manual_clamp", "clippy::manual_range_contains", "clippy::min_max",
       "clippy::neg_cmp_op_on_partial_ord", "clippy::nonminimal_bool", "clippy::too_many_arguments", "clippy::type_complexity",
-      "clippy::manual_find", "clippy::unnecessary_literal_unwrap"
+      "clippy::manual_find", "clippy::unnecessary_literal_unwrap", "clippy::manual_swap", "clippy::reversed_empty_ranges",
+      "clippy::should_implement_trait"
     ];
+
+    /// <summary>The value of the decimal integer literal of a range's bound without its type's suffix, <c>255u8</c> as 255.</summary>
+    private static Int128 Number(string text) {
+      var suffix = text.IndexOfAny(['i', 'u']);
+      return Int128.Parse(suffix > 0 ? text[..suffix] : text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>The method names of the standard traits clippy's <c>should_implement_trait</c> knows, which a method of the source may have.</summary>
+    private static readonly HashSet<string> _traitMethods = new(StringComparer.Ordinal) {
+      "add", "as_mut", "as_ref", "bitand", "bitor", "bitxor", "borrow", "borrow_mut", "clone", "cmp", "default", "deref", "deref_mut", "div", "drop",
+      "eq", "from_iter", "from_str", "hash", "index", "index_mut", "into_iter", "mul", "neg", "next", "not", "rem", "shl", "shr", "sub"
+    };
 
     /// <summary>The well-known constants of <c>std::f64::consts</c> clippy compares literals with.</summary>
     private static readonly double[] _constants = [
@@ -62,12 +77,25 @@ public static partial class RustEmitter {
           case RsLoop { Body: { Statements.Count: 0, Tail: null } }:
             needed.Add("clippy::empty_loop");
             break;
+          case RsRange { Start: RsLiteral start, End: RsLiteral end } range when range.Inclusive ? Number(start.Text) > Number(end.Text) : Number(start.Text) >= Number(end.Text):
+            // A loop over a range of constants the source wrote empty, 5..=3u8.
+            needed.Add("clippy::reversed_empty_ranges");
+            break;
           case RsBlock block when IsManualFind(block):
             needed.Add("clippy::manual_find");
             break;
           case RsBlock block when block.Statements.Zip(block.Statements.Skip(1)).Any(pair => pair is (RsLet { Initializer: RsPath source } binding, RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath target, Value: RsPath value } })
             && target.Name == source.Name && value.Name == binding.Name):
             needed.Add("clippy::almost_swapped");
+            break;
+          case RsImpl { Trait: null } impl when impl.Items.OfType<RsFunction>().Any(method => method.Visibility == "pub" && _traitMethods.Contains(method.Name)):
+            needed.Add("clippy::should_implement_trait");
+            break;
+          case RsBlock block when block.Statements.Zip(block.Statements.Skip(1), block.Statements.Skip(2)).Any(triple => triple is (RsLet { Initializer: RsPath or RsIndex } held,
+              RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath or RsIndex, Value: RsPath or RsIndex } into },
+              RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath or RsIndex, Value: RsPath saved } back })
+            && RustPrinter.Print(into.Target) == RustPrinter.Print(held.Initializer!) && RustPrinter.Print(back.Target) == RustPrinter.Print(into.Value) && saved.Name == held.Name):
+            needed.Add("clippy::manual_swap");
             break;
           case RsLet { TypeName: { } type } when IsComplex(type):
             needed.Add("clippy::type_complexity");
@@ -111,7 +139,9 @@ public static partial class RustEmitter {
         needed.Add("clippy::erasing_op");
       if (binary.Operator is "==" or "!=" or "<" or ">" or "<=" or ">=" or "-" or "/" or "%" or "^" or "&" or "|" or "&&" or "||" && left == right)
         needed.Add("clippy::eq_op");
-      if (binary.Operator is "<" or ">" or "<=" or ">=" && ((binary.Left.Type is { IsInteger: true, IsSigned: false } && Is(right, "0")) || (binary.Right.Type is { IsInteger: true, IsSigned: false } && Is(left, "0")))) {
+      // Zero as the literal of an unsigned type, 0 or 0u64.
+      static bool Zero(string text) => text == "0" || text.Length > 2 && text[0] == '0' && text[1] == 'u';
+      if (binary.Operator is "<" or ">" or "<=" or ">=" && ((binary.Left.Type is { IsInteger: true, IsSigned: false } && Zero(right)) || (binary.Right.Type is { IsInteger: true, IsSigned: false } && Zero(left)))) {
         needed.Add("unused_comparisons");
         needed.Add("clippy::absurd_extreme_comparisons");
       }

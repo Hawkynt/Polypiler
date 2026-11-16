@@ -28,6 +28,9 @@ internal sealed class FunctionArrays {
   /// <summary>The indices of the array parameters the function assigns a new array to: never written, they are copied into a vector of their own.</summary>
   public SortedSet<int> CopiedParameters { get; } = [];
 
+  /// <summary>The indices of the pointer parameters the function writes through, directly or through a callee: a <c>&amp;mut [T]</c> region.</summary>
+  public SortedSet<int> MutablePointers { get; } = [];
+
   /// <summary>Who holds the array the function returns.</summary>
   public ArrayHolder Result { get; set; }
 
@@ -43,11 +46,21 @@ internal sealed class FunctionArrays {
   /// <summary>The array locals that name the array a field of an object holds, each with the load it is declared with.</summary>
   public Dictionary<IrLocal, IrFieldLoad> FieldAliases { get; } = [];
 
+  /// <summary>The variables whose fields' arrays the function writes in place (<c>o.items[i] = v</c>), directly or through a callee.</summary>
+  public HashSet<IrLocal> WrittenFieldTargets { get; } = [];
+
+  /// <summary>
+  /// The declarations and assignments that move an array from one variable into another: an array the
+  /// function made, which the source variable never names again, so the vector changes owner instead of
+  /// being shared or cloned.
+  /// </summary>
+  public HashSet<IrStmt> Moves { get; } = new(ReferenceEqualityComparer.Instance);
+
   /// <summary>Why the arrays of the function have no safe Rust form, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }
 
   /// <summary>The same facts, for the fixed point to compare.</summary>
-  public string Key => $"{string.Join(",", this.MutableParameters)}|{this.Result}|{string.Join(",", this.ResultParameters)}";
+  public string Key => $"{string.Join(",", this.MutableParameters)}|{this.Result}|{string.Join(",", this.ResultParameters)}|{string.Join(",", this.MutablePointers)}";
 
 }
 
@@ -67,17 +80,34 @@ internal static class ArrayOwnership {
 
   /// <summary>The array a view of it is made of, through views of views, or <see langword="null"/>.</summary>
   private static IrExpr? ViewRoot(IrExpr view) => view switch {
-    IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice } operation => operation.Arguments[0].Type.IsArray ? operation.Arguments[0] : ViewRoot(operation.Arguments[0]),
+    IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.Reinterpret } operation => operation.Arguments[0].Type.IsArray ? operation.Arguments[0] : ViewRoot(operation.Arguments[0]),
     _ => null
   };
 
-  /// <summary>Whether a function writes the elements of a writable view variable: a store, a step, a copy into it or a fill of it.</summary>
-  internal static bool WritesView(IrFunction function, IrLocal local) => local.Type.Kind == IrTypeKind.Span && Statements(function.Body).Any(statement => statement switch {
-    IrStore { Array: IrLocalRef target } => target.Local == local,
-    IrExprStmt { Expression: IrStep { Target: IrArrayLoad { Array: IrLocalRef target } } } => target.Local == local,
-    _ => false
-  } || IrTree.Expressions(statement).SelectMany(IrTree.Nodes).Any(node => node is IrIntrinsic { Op: IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy or IrIntrinsicOp.ViewFill } operation
-    && operation.Arguments[operation.Op == IrIntrinsicOp.ViewFill ? 0 : 1] is IrLocalRef target && target.Local == local));
+  /// <summary>
+  /// Whether a function writes the elements of a writable view variable: a store, a step, a copy into it or a
+  /// fill of it, through the variable or a view made of it - directly, or held by another view variable the
+  /// function writes.
+  /// </summary>
+  internal static bool WritesView(IrFunction function, IrLocal local) => WritesView(function, local, []);
+
+  private static bool WritesView(IrFunction function, IrLocal local, HashSet<IrLocal> seen) {
+    if (local.Type.Kind != IrTypeKind.Span || !seen.Add(local))
+      return false;
+    if (function.Locals.Any(variable => variable.Type.IsPointer) && PointerRegions.Of(function).Written.Any(region => region.Kind == RegionKind.Variable && region.Owner == local))
+      return true;
+
+    bool Reaches(IrExpr view) => view is IrLocalRef reference && reference.Local == local
+      || view is IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.Reinterpret } operation && Reaches(operation.Arguments[0]);
+    return Statements(function.Body).Any(statement => statement switch {
+      IrStore { Array: var target } => Reaches(target),
+      IrExprStmt { Expression: IrStep { Target: IrArrayLoad { Array: var target } } } => Reaches(target),
+      IrDeclare { Local: var derived, Initializer: { } view } when derived != local && Reaches(view) => WritesView(function, derived, seen),
+      IrAssign { Local: var derived, Value: var view } when derived != local && Reaches(view) => WritesView(function, derived, seen),
+      _ => false
+    } || IrTree.Expressions(statement).SelectMany(IrTree.Nodes).Any(node => node is IrIntrinsic { Op: IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy or IrIntrinsicOp.ViewFill } operation
+      && Reaches(operation.Arguments[operation.Op == IrIntrinsicOp.ViewFill ? 0 : 1])));
+  }
 
   private static readonly object _result = new();
 
@@ -115,8 +145,62 @@ internal static class ArrayOwnership {
   }
 
   private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName) {
+    var first = Analyse(function, facts, writtenResults, byName, null);
+    var moves = first.Moves.Count == 0 ? null : first.Moves;
+    return moves is null ? first : Analyse(function, facts, writtenResults, byName, moves);
+  }
+
+  /// <summary>
+  /// The statements, in the order of the function, outer ones first, each with whether a loop holds it.
+  /// </summary>
+  private static IEnumerable<(IrStmt Statement, bool InLoop)> Ordered(IrBlock block, bool inLoop) {
+    foreach (var statement in block.Statements) {
+      yield return (statement, inLoop);
+      var loop = inLoop || statement is IrWhile or IrDoWhile or IrFor;
+      foreach (var inner in IrTree.Blocks(statement))
+        foreach (var nested in Ordered(inner, loop))
+          yield return nested;
+    }
+  }
+
+  /// <summary>Whether a statement names a variable in its own expressions, declares or assigns it.</summary>
+  private static bool Names(IrStmt statement, IrLocal local)
+    => statement is IrDeclare declare && declare.Local == local || statement is IrAssign assign && assign.Local == local
+      || IrTree.Expressions(statement).SelectMany(IrTree.Nodes).Any(node => node is IrLocalRef reference && reference.Local == local);
+
+  /// <summary>
+  /// The moves of a function among the links of its first pass: <c>x = y</c> of two array locals, outside every
+  /// loop, where <c>y</c> holds an array the function made with no parameter in its group, and nothing after the
+  /// statement names <c>y</c>.
+  /// </summary>
+  private static void FindMoves(IrFunction function, FunctionArrays result, Func<object, object> find, HashSet<object> owned) {
+    var ordered = Ordered(function.Body, false).ToList();
+    for (var index = 0; index < ordered.Count; ++index) {
+      var (statement, inLoop) = ordered[index];
+      var (target, source) = MoveOf(statement);
+      if (target is null || source is null || inLoop || target == source || function.Parameters.Contains(target) || function.Parameters.Contains(source)
+          || result.FieldAliases.ContainsKey(source) || result.FieldAliases.ContainsKey(target)
+          || !owned.Contains(find(source)) || function.Parameters.Any(parameter => find(parameter) == find(source))
+          || ordered.Skip(index + 1).Any(after => Names(after.Statement, source)))
+        continue;
+
+      result.Moves.Add(statement);
+    }
+  }
+
+  /// <summary>The variables of a statement that gives one array variable another's array, <c>x = y</c>; nulls for any other statement.</summary>
+  internal static (IrLocal? Target, IrLocal? Source) MoveOf(IrStmt statement) => statement switch {
+    IrDeclare { Local.Type.IsArray: true, Initializer: IrLocalRef { Local: var from } } declare => (declare.Local, from),
+    IrAssign { Local.Type.IsArray: true, Value: IrLocalRef { Local: var from } } assign => (assign.Local, from),
+    _ => (null, null)
+  };
+
+  private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName, HashSet<IrStmt>? moves) {
     var result = new FunctionArrays();
     var groups = new Groups();
+    // The same unions but for the moves, a variable given the array of one read for the last time: one owner after the other, never two at once.
+    var shared = new Groups();
+    IrStmt? current = null;
     var written = new List<object>();
     var created = new List<object>();
     var problems = new List<string>();
@@ -125,6 +209,8 @@ internal static class ArrayOwnership {
       switch (value) {
         case IrLocalRef reference:
           groups.Union(node, reference.Local);
+          if (!(node is IrLocal && current is IrDeclare or IrAssign && Moves.IsLast(function.Body, current, reference.Local)))
+            shared.Union(node, reference.Local);
           break;
         case IrNewArray:
         case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.StrSplit or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues }:
@@ -144,7 +230,7 @@ internal static class ArrayOwnership {
         case IrCollection { Op: IrCollectionOp.ListCopyToArray }:
           created.Add(node);
           break;
-        case IrFieldLoad { Target.Type.IsObject: true } load when node is IrLocal alias:
+        case IrFieldLoad { Target: { Type.IsObject: true } or IrLocalRef { Type.IsStruct: true } } load when node is IrLocal alias:
           // A variable that names a field's array, as `var s = this._s;`: it borrows the field's cell.
           if (!result.FieldAliases.TryAdd(alias, load))
             problems.Add($"the variable '{alias.Name}' given the arrays of two fields");
@@ -155,6 +241,7 @@ internal static class ArrayOwnership {
         case IrBind bind:
           Link(bind.Local, bind.Value);
           groups.Union(node, bind.Local);
+          shared.Union(node, bind.Local);
           break;
         default:
           problems.Add($"an array of the form {value.GetType().Name[2..]}");
@@ -166,6 +253,9 @@ internal static class ArrayOwnership {
       switch (array) {
         case IrLocalRef reference:
           written.Add(reference.Local);
+          break;
+        case IrFieldLoad { Target: IrLocalRef target }:
+          result.WrittenFieldTargets.Add(target.Local);
           break;
         case IrCall call when facts.TryGetValue(call.Function, out var callee) && callee.Result == ArrayHolder.Borrowed:
           writtenResults.Add(call.Function);
@@ -182,8 +272,24 @@ internal static class ArrayOwnership {
     foreach (var local in function.Parameters.Concat(function.Locals).Where(local => local.Type.IsArray))
       groups.Add(local);
 
+    // A store through a pointer writes its region: the pinned array, or the region of a pointer parameter.
+    var pointers = PointerRegions.Of(function);
+    void WriteRegion(PointerRegion? region) {
+      if (region is { Kind: RegionKind.Variable, Owner.Type.IsArray: true })
+        Write(new IrLocalRef(region.Owner));
+      else if (region is { Kind: RegionKind.Parameter })
+        result.MutablePointers.Add(function.Parameters.ToList().IndexOf(region.Owner));
+    }
+
+    foreach (var region in pointers.Written)
+      WriteRegion(region);
+
     foreach (var statement in Statements(function.Body)) {
+      current = statement;
       switch (statement) {
+        case IrDeclare or IrAssign when moves is not null && moves.Contains(statement):
+          // The array changes owner: the two variables never hold it at once.
+          break;
         case IrDeclare { Local.Type.IsArray: true, Initializer: { } initializer } declare:
           Link(declare.Local, initializer);
           break;
@@ -207,6 +313,7 @@ internal static class ArrayOwnership {
             Write(load.Array);
             break;
           case IrBind { Local.Type.IsArray: true } bind:
+            current = null;
             Link(bind.Local, bind.Value);
             break;
           case IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy:
@@ -218,6 +325,8 @@ internal static class ArrayOwnership {
           case IrCall call when facts.TryGetValue(call.Function, out var callee):
             foreach (var index in callee.MutableParameters)
               Write(call.Arguments[index]);
+            foreach (var index in callee.MutablePointers)
+              WriteRegion(pointers.Of(call.Arguments[index], false));
             // A writable view of an array the callee writes through writes the array.
             if (byName.TryGetValue(call.Function, out var target))
               for (var index = 0; index < call.Arguments.Count && index < target.Parameters.Count; ++index)
@@ -260,14 +369,20 @@ internal static class ArrayOwnership {
     foreach (var local in function.Locals.Where(local => local.Type.IsArray)) {
       var root = groups.Find(local);
       var holder = !owned.Contains(root) && function.Parameters.Any(parameter => groups.Find(parameter) == root) ? ArrayHolder.Borrowed : ArrayHolder.Owned;
-      result.Locals[local] = result.FieldAliases.ContainsKey(local) ? ArrayHolder.Borrowed : holder;
+      result.Locals[local] = result.FieldAliases.ContainsKey(local) || holder == ArrayHolder.Owned && writtenRoots.Contains(root) && BorrowsLocal(function, local) ? ArrayHolder.Borrowed : holder;
       if (writtenRoots.Contains(root))
         result.MutableLocals.Add(local);
     }
 
-    // Two owners of one array: Rust moves a vector, where the IR shares it.
+    if (moves is null)
+      FindMoves(function, result, groups.Find, owned);
+    else
+      result.Moves.UnionWith(moves);
+
+    // Two owners of one array at once: Rust moves a vector, where the IR shares it. A move hands it from one to the next.
     var owners = function.Locals.Where(local => result.Locals.GetValueOrDefault(local) == ArrayHolder.Owned).GroupBy(groups.Find)
-      .FirstOrDefault(group => group.Count() > 1 && writtenRoots.Contains(group.Key));
+      .Where(group => writtenRoots.Contains(group.Key)).SelectMany(group => group.GroupBy(shared.Find))
+      .FirstOrDefault(group => group.Count() > 1);
     if (owners is not null)
       problems.Add($"one array shared by the variables {string.Join(" and ", owners.Select(local => $"'{local.Name}'"))}");
 
@@ -282,6 +397,47 @@ internal static class ArrayOwnership {
 
     result.Problem = problems.FirstOrDefault();
     return result;
+  }
+
+  /// <summary>
+  /// Whether a variable can borrow the array or collection of the variable it is declared with, <c>let r = &amp;mut a;</c>
+  /// (#1393): it is declared with another local that is read again later and never given another value, and from its declaration to its
+  /// last read in the block that declares it nothing names the other variable, returns it or captures it in a
+  /// lambda - the borrow ends before the owner is used again.
+  /// </summary>
+  internal static bool BorrowsLocal(IrFunction function, IrLocal local) {
+    if (Statements(function.Body).Any(statement => statement is IrAssign assign && assign.Local == local))
+      return false;
+
+    foreach (var block in Blocks(function.Body)) {
+      var at = block.Statements.ToList().FindIndex(statement => statement is IrDeclare { Initializer: IrLocalRef } declare && declare.Local == local);
+      if (at < 0)
+        continue;
+
+      var owner = ((IrLocalRef)((IrDeclare)block.Statements[at]).Initializer!).Local;
+      // Where the declaration reads the other variable for the last time, the value moves instead.
+      if (function.Parameters.Contains(owner) || Moves.IsLast(function.Body, block.Statements[at], owner))
+        return false;
+
+      bool Refers(IrStmt statement, IrLocal variable) => IrTree.Nodes(statement).Any(node => node is IrLocalRef reference && reference.Local == variable);
+      var following = block.Statements.Skip(at + 1).ToList();
+      var last = following.FindLastIndex(statement => Refers(statement, local));
+      var living = following.Take(last + 1).ToList();
+      return !living.Any(statement => Refers(statement, owner))
+        && !living.SelectMany(IrTree.Nodes).OfType<IrLambda>().Any(lambda => IrTree.Nodes(lambda.Body).Any(node => node is IrLocalRef reference && reference.Local == local))
+        && !Statements(new IrBlock(living)).Any(statement => statement is IrReturn { Value: IrLocalRef reference } && reference.Local == local);
+    }
+
+    return false;
+  }
+
+  /// <summary>Every block of a body, the body first.</summary>
+  private static IEnumerable<IrBlock> Blocks(IrBlock block) {
+    yield return block;
+    foreach (var statement in block.Statements)
+      foreach (var inner in statement is IrBlock nested ? [nested] : IrTree.Blocks(statement))
+        foreach (var deeper in Blocks(inner))
+          yield return deeper;
   }
 
   /// <summary>Unions of the variables of a function and of the sentinel of its result.</summary>

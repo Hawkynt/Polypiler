@@ -53,7 +53,7 @@ public static partial class RustEmitter {
     /// <summary>Records that an exception region cannot be written (<c>PLY1560</c>), naming why, and returns a stand-in.</summary>
     private RsExpression RefuseException(string what) {
       if (this._refused.Add(what))
-        this._problems.Add(ExceptionRegionDescriptor.At($"exception region in {this._construct} cannot be emitted under the trap policy 'panic': '{what}' is not supported by the Rust backend"));
+        this._problems.Add(ExceptionRegionDescriptor.At($"exception region in {this._construct} cannot be emitted under the trap policy '{(this.Results ? "result" : "panic")}': '{what}' is not supported by the Rust backend"));
 
       return new RsPath("_refused");
     }
@@ -70,8 +70,10 @@ public static partial class RustEmitter {
     /// the functions that let an exception out, a fixed point over the calls.
     /// </summary>
     private void Exceptions(IrModule module) {
+      this._throwing.UnionWith(this._declared);
       var own = module.Types.OfType<IrClassType>().Where(type => !type.IsLibrary && IrExceptionClass.IsException(type)).ToList();
-      if (own.Count == 0 && !module.Functions.Any(function => IrTree.Nodes(function.Body).Any(node => node is IrFieldLoad load && IsError(load.Target.Type))))
+      if (own.Count == 0 && !module.Functions.Any(function => IrTree.Nodes(function.Body).Any(node => node is IrFieldLoad load && IsError(load.Target.Type)))
+        && !(this.Results && module.Functions.Any(function => IrClosures.Within(function.Body).Any(statement => statement is IrTry { Catches.Count: > 0 }))))
         return;
 
       this._errorClasses = [.. IrExceptionClass.All, .. own];
@@ -85,7 +87,7 @@ public static partial class RustEmitter {
       var byName = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
       for (var changed = true; changed;) {
         changed = false;
-        foreach (var function in module.Functions.Where(function => !function.IsPublic && !this._bodiless.Contains(function.Name) && !this._throwing.Contains(function.Name)))
+        foreach (var function in module.Functions.Where(function => (this.Results || !function.IsPublic) && !this._bodiless.Contains(function.Name) && !this._throwing.Contains(function.Name)))
           if (this.Escapes(function.Body.Statements, [], null))
             changed |= this._throwing.Add(function.Name);
       }
@@ -95,7 +97,7 @@ public static partial class RustEmitter {
         if (Lambdas(function.Body).Any(lambda => IrTree.Nodes(lambda.Body).Any(node => node is IrThrowExpression thrown && IsCatchable(thrown.Exception.Type) || node is IrCall call && this._throwing.Contains(call.Function))
           || IrClosures.Within(lambda.Body).Any(statement => statement is IrThrow thrown && IsCatchable(thrown.Exception.Type) || statement is IrTry)))
           this.RefuseException("an exception thrown inside a closure");
-        if (function.IsPublic && this.Escapes(function.Body.Statements, [], null)
+        if (!this.Results && function.IsPublic && this.Escapes(function.Body.Statements, [], null)
           && module.Functions.Any(caller => IrTree.Nodes(caller.Body).Any(node => node is IrCall call && call.Function == function.Name)))
           this.RefuseException("a public function that lets an exception out, called inside the module");
       }
@@ -220,7 +222,7 @@ public static partial class RustEmitter {
     private RsExpression ErrorField(IrFieldLoad load) {
       RsExpression target = load.Target switch {
         IrFieldLoad { Field: var field } inner when field == IrExceptionClass.InnerException
-          => new RsCall(new RsPath(this.StringHelper("ply_non_null")), [new RsReference(false, new RsField(this.ErrorPlace(inner.Target), "inner"))]),
+          => this.NonNull(new RsField(this.ErrorPlace(inner.Target), "inner")),
         var other => this.ErrorPlace(other)
       };
       var name = load.Field == IrExceptionClass.Message ? "message" : load.Field == IrExceptionClass.InnerException ? "inner" : ((RsPath)this.RefuseException($"the field {load.Field.Name} of an exception")).Name;
@@ -246,7 +248,9 @@ public static partial class RustEmitter {
 
       if (this._tries.Count > 0)
         return this.RefuseException("an exception thrown inside a finally's body");
-      if (this._throwing.Contains(this._function.Name))
+      if (this.Results)
+        this._escaping.Add(this._function.Name);
+      if (this._throwing.Contains(this._function.Name) || this.Results)
         return new RsReturn(new RsCall(new RsPath("Err"), [error]));
 
       return new RsCall(new RsPath(this.StringHelper("ply_unhandled")), [new RsReference(false, error)]);
@@ -254,6 +258,10 @@ public static partial class RustEmitter {
 
     /// <summary>The call of a function that propagates: inside a <c>try</c> body a <c>match</c> that leaves the body with the error, else <c>f(x)?</c>, from a public function the panic of an unhandled one.</summary>
     private RsExpression Propagated(RsExpression call) {
+      if (this._spelling)
+        return new RsTry(this.Operand(call, 15)) { Type = call.Type };
+      if (this.Results && this._closureResults.Count > 0)
+        return this.LimitResult("a call that may trap inside a closure");
       if (this._tries.Count > 0) {
         var frame = this._tries[^1];
         if (frame.Returns)
@@ -266,14 +274,16 @@ public static partial class RustEmitter {
         ]) { Type = call.Type };
       }
 
-      if (this._throwing.Contains(this._function.Name))
+      if (this.Results)
+        this._escaping.Add(this._function.Name);
+      if (this._throwing.Contains(this._function.Name) || this.Results)
         return new RsTry(this.Operand(call, 15)) { Type = call.Type };
 
       return new RsMethodCall(this.Operand(call, 15), "unwrap_or_else", [new RsClosure(false, [new RsParameter("error", "")], new RsCall(new RsPath(this.StringHelper("ply_unhandled")), [new RsReference(false, new RsPath("error"))]))]) { Type = call.Type };
     }
 
     /// <summary>The result type of a function that propagates: <c>Result&lt;T, Rc&lt;PlyError&gt;&gt;</c>.</summary>
-    private static string Fallible(string? result) => $"Result<{result ?? "()"}, {ErrorType}>";
+    private static string Fallible(string? result, string error = ErrorType) => $"Result<{result ?? "()"}, {error}>";
 
     /// <summary>Whether a block can complete normally, conservatively: one whose last statement throws or returns, on every path, cannot.</summary>
     private static bool CanComplete(IrBlock block) => block.Statements.Count == 0 || block.Statements[^1] switch {
@@ -303,7 +313,7 @@ public static partial class RustEmitter {
 
       var trapped = Enum.GetValues<IrTrap>().Select(IrExceptionClass.Of).Distinct().ToList();
       foreach (var clause in attempt.Catches) {
-        if (trapped.Any(type => type == clause.Class || type.DerivesFrom(clause.Class)) && !this.TrapFree(attempt.Body))
+        if (!this.Results && trapped.Any(type => type == clause.Class || type.DerivesFrom(clause.Class)) && !this.TrapFree(attempt.Body))
           this.RefuseException("a catch of a class a trap belongs to, around code that may trap");
         if (clause.Filter is { } filter && (!this.TrapFree(filter) || IrClosures.Within(attempt.Body).Any(statement => statement is IrTry { Finally: not null })
             || IrTree.Nodes(attempt.Body).Any(node => node is IrCall call && this._throwing.Contains(call.Function))))
@@ -332,15 +342,17 @@ public static partial class RustEmitter {
         : body.Statements.Count == 0 && body.Tail is { } only ? only
         : new RsBlockExpression(body);
       var dispatch = this.Dispatch(attempt.Catches, error);
+      // A clause that takes every exception and reads none leaves the exception unnamed (rustc's unused_variables).
+      var bound = RustSyntaxRewriter.DescendantsAndSelf(dispatch).Any(node => node is RsPath path && path.Name == error) ? error : "_" + error;
       if (!completes) {
-        into.Add(new RsLet(error, false, ErrorType, outcome));
+        into.Add(new RsLet(bound, false, ErrorType, outcome));
         into.AddRange(dispatch.Statements);
         return;
       }
 
       var result = this.Temporary("outcome");
       into.Add(new RsLet(result, false, Fallible(null), outcome));
-      into.Add(new RsExpressionStatement(new RsIf(new RsLetCondition($"Err({error})", new RsPath(result)), dispatch, null)));
+      into.Add(new RsExpressionStatement(new RsIf(new RsLetCondition($"Err({bound})", new RsPath(result)), dispatch, null)));
     }
 
     /// <summary>The catch clauses over an exception bound to a name: an <c>if</c> chain, the exception going on where no clause takes it.</summary>
@@ -401,7 +413,8 @@ public static partial class RustEmitter {
       if (!this._throwing.Contains(this._function.Name) || this._closureResults.Count > 0)
         return new RsReturn(value);
 
-      return new RsReturn(new RsCall(new RsPath("Ok"), [value ?? new RsTuple([])]));
+      // A value whose error is handed on is the result itself: return f(x), not return Ok(f(x)?) (clippy's needless_question_mark).
+      return new RsReturn(value is RsTry handed ? handed.Operand : new RsCall(new RsPath("Ok"), [value ?? new RsTuple([])]));
     }
 
     /// <summary>A <c>return</c> inside the body of a <c>finally</c>: <c>break 'f0 value</c>, so that the <c>finally</c> runs first.</summary>

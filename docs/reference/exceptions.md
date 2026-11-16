@@ -323,13 +323,31 @@ object, `Rc<PlyError>` (its class as a number, its message, its inner exception)
 | `e.Message`, `e.InnerException` | `e.message.clone()`, `e.inner.clone()` |
 | `finally` around a body that always returns and throws nothing | the body a labelled block its `return` leaves, then the `finally`, then the return |
 
-A catch clause of a class a trap belongs to stands only around code that cannot trap, since a trap is a
-panic no clause sees; catching a trap (`exceptions/Traps`) is refused with `PLY1560`, as are a filter with
-a `finally` between it and the throw (.NET runs the filter first, `exceptions/order`), a `try` with both
-catch clauses and a `finally`, any other `finally`, and a jump out of a `try`, each naming why. Catching a
-trap would need every operation that may trap to return a `Result`. Rust's own messages (`attempt to divide by zero`,
+Under the default trap policy `panic` a catch clause of a class a trap belongs to stands only around
+code that cannot trap, since a trap is a panic no clause sees; catching a trap (`exceptions/Traps`) is
+refused with `PLY1560`. Under both policies so are a filter with a `finally` between it and the throw
+(.NET runs the filter first, `exceptions/order`), a `try` with both catch clauses and a `finally`, any
+other `finally`, and a jump out of a `try`, each naming why. Rust's own messages (`attempt to divide by zero`,
 `index out of bounds`, `called Option::unwrap() on a None value`, …) map to the traps their class
 stands for.
+
+**The trap policy `result`** (`--trap-policy result`, [ADR 0008](../adr/0008-rust-trap-policy.md)) makes
+every trap an error value, so that nothing panics and a catch clause sees a trap. Every function a trap
+can leave returns a `Result`; a function nothing can leave keeps its type.
+
+| IR trap | Rust under `result`, module without exceptions | Rust under `result`, module with exceptions |
+| --- | --- | --- |
+| `IntegerOverflow` | `a.checked_add(b).ok_or(Error::IntegerOverflow)?`, `T::try_from(x).map_err(\|_\| Error::IntegerOverflow)?` | the same with `ok_or_else(\|\| ply_trap(3))?`, an `OverflowException` |
+| `DivideByZero` | `if b == 0 { return Err(Error::DivideByZero); }` in `ply_div_<t>`, called with `?` | `ply_trap(2)`, a `DivideByZeroException` |
+| `IndexOutOfRange` | `*a.get(i).ok_or(Error::IndexOutOfRange)?`, `get_mut` for a store | `ply_trap(4)`, an `IndexOutOfRangeException` |
+| `NullReference`, `MissingValue`, `InvalidCast` | `x.as_ref().ok_or(Error::NullReference)?`, `o.ok_or(Error::MissingValue)?` | the exception of the trap's class |
+| inside a `try` body | - | `match x { Some(value) => value, None => break 't0 ply_trap(4) }` |
+| throw of a library exception | `return Err(Error::<its trap>)` | the exception with its message, as a throw of the module's own |
+
+`Error` is `#[repr(u16)] pub enum Error` in `src/error.rs`, re-exported from `src/lib.rs`, with the codes
+`DivideByZero = 1`, `IntegerOverflow = 2`, `IndexOutOfRange = 3` and the other traps from 4, and
+`Display` printing the trap's name. A call of a helper that panics, a trap inside a closure, a step of
+locked module state and a type named `Error` are refused with `PLY1552`.
 
 ## Known differences
 

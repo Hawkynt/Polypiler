@@ -92,13 +92,13 @@ public static partial class RustEmitter {
     /// <summary>A string as it stands for a comparison, a length or an index: a variable or an element in place, anything else as its value.</summary>
     private RsExpression StringPlace(IrExpr text) => text switch {
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = IrType.String },
-      IrArrayLoad { Array: not (IrConstRef or IrGlobalRef) } load => new RsIndex(this.ArrayTarget(load.Array), this.Index(load.Index)) { Type = IrType.String },
+      IrArrayLoad { Array: not (IrConstRef or IrGlobalRef) } load => this.Element(this.ArrayTarget(load.Array), this.Index(load.Index), IrType.String),
       _ => this.Operand(this.StringValue(text), 15)
     };
 
     /// <summary>An element of a table of strings: the code units of the <c>&amp;str</c> the table holds.</summary>
     private RsExpression TableText(IrConstRef table, IrExpr index)
-      => new RsCall(new RsPath(this.StringHelper("ply_utf16")), [new RsIndex(new RsPath(this._constants[table.Constant.Name]), this.Index(index))]) { Type = IrType.String };
+      => new RsCall(new RsPath(this.StringHelper("ply_utf16")), [this.Element(new RsPath(this._constants[table.Constant.Name]), this.Index(index), null)]) { Type = IrType.String };
 
     /// <summary>A code unit or a string where a slice of code units is taken: a unit as the array of itself.</summary>
     private RsExpression Needle(IrExpr needle)
@@ -118,7 +118,7 @@ public static partial class RustEmitter {
         case IrIntrinsicOp.StrLength:
           return I32(Length(arguments[0]));
         case IrIntrinsicOp.StrCodeUnitAt:
-          return new RsIndex(this.StringPlace(arguments[0]), this.Index(arguments[1])) { Type = IrType.U16 };
+          return this.Element(this.StringPlace(arguments[0]), this.Index(arguments[1]), IrType.U16);
         case IrIntrinsicOp.StrConcat:
           return new RsMethodCall(new RsArray([.. arguments.Select(this.StringSlice)]), "concat", []) { Type = IrType.String };
         case IrIntrinsicOp.StrFromCodeUnit:
@@ -127,12 +127,12 @@ public static partial class RustEmitter {
           return new RsMethodCall(this.ArrayTarget(arguments[0]), "to_vec", []) { Type = IrType.String };
         case IrIntrinsicOp.StrFromCodeUnits: {
           var array = this.ArrayTarget(arguments[0]);
-          return new RsMethodCall(new RsIndex(array, new RsCall(new RsPath(this.RangeHelper()), [this.Expression(arguments[1]), this.Expression(arguments[2]), new RsMethodCall(array, "len", [])])), "to_vec", []) { Type = IrType.String };
+          return new RsMethodCall(new RsIndex(array, this.Spelled(new RsCall(new RsPath(this.RangeHelper()), [this.Expression(arguments[1]), this.Expression(arguments[2]), new RsMethodCall(array, "len", [])]))), "to_vec", []) { Type = IrType.String };
         }
         case IrIntrinsicOp.StrToCodeUnits:
           return new RsMethodCall(this.StringPlace(arguments[0]), "to_vec", []) { Type = operation.Type };
         case IrIntrinsicOp.StrRepeat: {
-          var count = Expect(new RsCall(new RsPath("usize::try_from"), [Suffixed(this.Expression(arguments[1]))]), IrTrap.IntegerOverflow);
+          var count = this.Checked(new RsCall(new RsPath("usize::try_from"), [Suffixed(this.Expression(arguments[1]))]), IrTrap.IntegerOverflow);
           return arguments[0].Type.IsString
             ? new RsMethodCall(this.StringPlace(arguments[0]), "repeat", [count]) { Type = IrType.String }
             : new RsMacro("vec", [new RsArray([this.Expression(arguments[0])]) { Count = count }]) { Bracketed = true, Type = IrType.String };
@@ -140,7 +140,7 @@ public static partial class RustEmitter {
         case IrIntrinsicOp.StrSubstring: {
           var text = this.StringPlace(arguments[0]);
           var length = arguments.Count > 2 ? this.Expression(arguments[2]) : this.Method(I32(Length(arguments[0])), "wrapping_sub", IrType.I32, this.Expression(arguments[1]));
-          var range = new RsCall(new RsPath(this.RangeHelper()), [this.Expression(arguments[1]), length, new RsMethodCall(text, "len", [])]);
+          var range = this.Spelled(new RsCall(new RsPath(this.RangeHelper()), [this.Expression(arguments[1]), length, new RsMethodCall(text, "len", [])]));
           return new RsMethodCall(new RsIndex(text, range), "to_vec", []) { Type = IrType.String };
         }
         case IrIntrinsicOp.StrEquals:

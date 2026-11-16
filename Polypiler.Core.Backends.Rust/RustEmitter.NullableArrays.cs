@@ -63,14 +63,14 @@ public static partial class RustEmitter {
         case IrBind bind:
           return this.Bound(bind, _ => this.NonNullArray(new IrLocalRef(bind.Local), slice));
         case IrLocalRef { Local: var local }: {
-          var nonNull = new RsCall(new RsPath(this.StringHelper("ply_non_null")), [new RsReference(false, new RsPath(this._locals[local]) { Type = value.Type })]) { Type = value.Type };
+          var nonNull = this.NonNull(new RsPath(this._locals[local]) { Type = value.Type });
           if (!slice)
             return nonNull;
 
           return this.IsReference(local) ? new RsUnary("*", nonNull) { Type = value.Type } : new RsMethodCall(nonNull, "as_slice", []) { Type = value.Type };
         }
         case IrCall: {
-          var made = Expect(this.Expression(value), IrTrap.NullReference);
+          var made = this.Checked(this.Expression(value), IrTrap.NullReference);
           return slice ? new RsReference(false, made) { Type = value.Type } : made;
         }
         default:

@@ -100,7 +100,35 @@ public sealed class RustMemoryTests {
     const string Source = "pub fn f(dst: &mut [u8], src: &[u8]) { dst.copy_from_slice(src); }";
     Assert.That(Run(Source, "f", new byte[3], new byte[] { 1, 2 }), Is.EqualTo(RustFixture.Panic));
     Assert.That(Run(Source, "f", new byte[2], new byte[] { 1, 2 }), Is.EqualTo("void | [1,2] | [1,2]"));
+    // dst is unchanged: the lengths are compared before a single element is copied.
+    byte[] destination = [7, 8, 9];
+    Assert.That(TrapClass(Source, destination, new byte[] { 1, 2 }), Is.EqualTo("InvalidOperationException"));
+    Assert.That(destination, Is.EqualTo(new byte[] { 7, 8, 9 }));
   }
+
+  /// <summary>The IR class a call throws; the arguments are the caller's own, so what the call wrote to them stays visible.</summary>
+  private static string TrapClass(string source, params object[] arguments) {
+    var exception = Assert.Throws(Is.InstanceOf<IrException>(), () => IrInterpreter.Call(Module(source), "f", arguments));
+    return ((IrException)exception!).Class.Name;
+  }
+
+  /// <summary>
+  /// Test designs 8, 9, 12 and 14: each panic of the subset throws the IR class its kind maps to
+  /// (<c>docs/reference/exceptions.md</c>, Rust): an index or a range outside the slice
+  /// <c>IndexOutOfRangeException</c>; unequal lengths of <c>copy_from_slice</c>, <c>step_by(0)</c>
+  /// and <c>chunks_exact(0)</c> <c>InvalidOperationException</c>, the class of Rust's explicit panics.
+  /// </summary>
+  [TestCase("pub fn f(a: &[u8]) -> u8 { a[3] }", "IndexOutOfRangeException")]
+  [TestCase("pub fn f(a: &[u8]) -> usize { a[1..5].len() }", "IndexOutOfRangeException")]
+  [TestCase("pub fn f(a: &[u8]) -> usize { let (i, j) = (2, 1); a[i..j].len() }", "IndexOutOfRangeException")]
+  [TestCase("pub fn f(a: &[u8]) -> usize { a[4..].len() }", "IndexOutOfRangeException")]
+  [TestCase("pub fn f(a: &mut [u8]) { a.swap(0, 3); }", "IndexOutOfRangeException")]
+  [TestCase("pub fn f(a: &[u8]) -> usize { let (l, _) = a.split_at(4); l.len() }", "IndexOutOfRangeException")]
+  [TestCase("pub fn f(a: &mut [u8]) { let b = [1u8, 2]; a.copy_from_slice(&b); }", "InvalidOperationException")]
+  [TestCase("pub fn f(a: &[u8]) -> u32 { let mut s = 0u32; for &x in a.iter().step_by(0) { s += x as u32; } s }", "InvalidOperationException")]
+  [TestCase("pub fn f(a: &[u8]) -> u32 { let mut s = 0u32; for c in a.chunks_exact(0) { s += c[0] as u32; } s }", "InvalidOperationException")]
+  public void Panic_ThrowsTheClassOfItsKind(string source, string expected)
+    => Assert.That(TrapClass(source, new byte[] { 1, 2, 3 }), Is.EqualTo(expected));
 
   /// <summary>Scenarios: unsafe memory access and text types are rejected with a stable code.</summary>
   [Test]
@@ -285,6 +313,7 @@ public sealed class RustMemoryTests {
   [TestCase("pub fn f(a: [[u8; 2]; 2]) -> u32 { 1 }", RustFrontend.UnsupportedElement)]
   [TestCase("pub fn f(a: &[u8]) -> u32 { match a { [x] => 1, _ => 0 } }", RustFrontend.UnsupportedElement)]
   [TestCase("pub fn f(a: &[u8]) -> u32 { let it = a.iter(); 1 }", RustFrontend.UnsupportedIteratorMethod)]
+  [TestCase("pub fn f(a: u32) -> f32 { unsafe { std::mem::transmute::<u32, f32>(a) } }", RustFrontend.UnsafeConstruct)]
   public void Construct_IsRefusedWithItsCode(string source, string code)
     => Assert.That(Codes(source), Does.Contain(code));
 
@@ -295,8 +324,30 @@ public sealed class RustMemoryTests {
   [TestCase("pub fn f(a: u32) -> u8 { a[0] }", "E0608")]
   [TestCase("pub fn f() -> u32 { let x = 1u32; let r = &mut x; *r }", "E0596")]
   [TestCase("pub fn f(a: &[u8]) -> u8 { a.iter_mut().count() as u8 }", "E0596")]
+  [TestCase("pub fn f() -> usize { let mut v = Vec::new(); v.push(1u8); let w = v; w.len() + v.len() }", "E0382")]
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; let r = &mut a; let s = &mut a; s[0] = 3; r[0] }", "E0499: cannot borrow `a` as mutable")]
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; let r = &mut a[..]; let s = &mut a[..]; s[0] = 3; r[0] }", "E0499")]
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; let r = &mut a[0]; let s = &mut a[1]; *s = 3; *r }", "E0499")]
+  [TestCase("pub fn f(c: bool) -> u8 { let mut a = [1u8, 2]; let r = &mut a; if c { let s = &mut a; s[0] = 3; } r[0] }", "E0499")]
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; let r = &mut a; let s = &mut a; return s[0] + r[0]; }", "E0499")]
+  [TestCase("struct S { a: u8, b: u8 } pub fn f() -> u8 { let mut s = S { a: 1, b: 2 }; let r = &mut s.a; let q = &mut s; q.b = 5; *r }", "E0499: cannot borrow `s` as mutable")]
+  [TestCase("struct S { a: u8, b: u8 } pub fn f() -> u8 { let mut s = S { a: 1, b: 2 }; let r = &mut s; let q = &mut s.a; *q = 5; r.b }", "E0499: cannot borrow `s.a` as mutable")]
   public void CompilerError_IsRejected(string source, string text)
     => Assert.That(Import(source).Diagnostics.Select(diagnostic => diagnostic.Message), Has.Some.Contains(text));
+
+  /// <summary>
+  /// Test design 19, the other side: two mutable borrows that are never alive at once, or that hold
+  /// places apart, are what rustc accepts - the first one's last use before the second, disjoint
+  /// fields, the first one moved to another place, a reborrow through it, a use the code never reaches.
+  /// </summary>
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; let r = &mut a; r[0] = 5; let s = &mut a; s[1] = 6; a[0] + a[1] }", "11")]
+  [TestCase("struct S { a: u8, b: u8 } pub fn f() -> u8 { let mut s = S { a: 1, b: 2 }; let r = &mut s.a; let q = &mut s.b; *q = 5; *r += 1; s.a + s.b }", "7")]
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; let mut b = [3u8, 4]; let mut r = &mut a; r[0] = 7; r = &mut b; let s = &mut a; s[1] = 9; r[0] + a[0] + a[1] }", "19")]
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; let r = &mut a; let s = &mut *r; s[0] = 4; r[0] }", "4")]
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; let mut n = 0u8; loop { let r = &mut a; r[0] += 1; n += r[0]; break; } let s = &mut a; s[1] += n; a[1] }", "4")]
+  [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; for _ in 0..2 { let r = &mut a; r[0] += 1; let s = &mut a; s[1] += 1; continue; } a[0] + a[1] }", "7")]
+  public void MutableBorrows_NeverAliveAtOnce_AreAccepted(string source, string expected)
+    => Assert.That(Run(source, "f"), Is.EqualTo(expected));
 
   // ---------------------------------------------------------------- whole values through &mut
 

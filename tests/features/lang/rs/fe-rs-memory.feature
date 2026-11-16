@@ -33,6 +33,7 @@ Feature: Rust frontend: arrays, slices, Vec, borrows and slice iterators
     When it is imported with overflowChecks panic
     And "f" is called with [1 2 3], 3
     Then the interpreter reports the panic panic
+    And the interpreter throws IndexOutOfRangeException and the slices after the call are [1 2 3]
     And rustc does the same
 
   Scenario Outline: Range indexing accepts start == len and rejects start > end
@@ -50,8 +51,9 @@ Feature: Rust frontend: arrays, slices, Vec, borrows and slice iterators
   Scenario: copy_from_slice refuses unequal lengths
     Given the Rust source "pub fn f(dst: &mut [u8], src: &[u8]) { dst.copy_from_slice(src); }"
     When it is imported with overflowChecks panic
-    And "f" is called with [0 0 0], [1 2]
+    And "f" is called with [7 8 9], [1 2]
     Then the interpreter reports the panic panic
+    And the interpreter throws InvalidOperationException and the slices after the call are [7 8 9] and [1 2]
     And rustc does the same
 
   Scenario: Unsafe memory access is rejected with a stable code

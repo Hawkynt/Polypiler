@@ -103,6 +103,17 @@ public sealed record RsAssign(RsExpression Target, string Operator, RsExpression
 /// <param name="Block">The block.</param>
 public sealed record RsBlockExpression(RsBlock Block) : RsExpression;
 
+/// <summary>
+/// <c>unsafe { … }</c>: the one block of unsafe code the backend writes, inside the spelling function of a
+/// mutable overlay view, where the profile allows unsafe code (#460).
+/// </summary>
+/// <param name="Block">The body.</param>
+public sealed record RsUnsafe(RsBlock Block) : RsExpression;
+
+/// <summary>A line comment among the statements of a block, <c>// text</c>: the <c>SAFETY:</c> reason above an unsafe block.</summary>
+/// <param name="Text">The text after <c>// </c>.</param>
+public sealed record RsComment(string Text) : RsStatement;
+
 /// <summary><c>if condition { … } else …</c>, a statement or an expression.</summary>
 /// <param name="Condition">The truth value.</param>
 /// <param name="Then">The block when it holds.</param>
@@ -223,6 +234,9 @@ public sealed record RsFunction(string Name, string Visibility, IReadOnlyList<Rs
   /// <summary>The generic parameters as they are written after the name, <c>&lt;'a&gt;</c>, or empty.</summary>
   public string Generics { get; init; } = "";
 
+  /// <summary>The clauses of its <c>where</c>, <c>T: Ord + Default + Copy</c>, each without its comma; empty for none.</summary>
+  public IReadOnlyList<string> Where { get; init; } = [];
+
   /// <summary>Whether the function is a helper the backend put in, which the target passes may inline or remove.</summary>
   public bool IsHelper { get; init; }
 
@@ -272,13 +286,28 @@ public sealed record RsFieldDeclaration(string Name, string Visibility, string T
 /// <param name="Name">The name.</param>
 /// <param name="Visibility">The visibility as written, or empty.</param>
 /// <param name="Fields">The fields, in declaration order.</param>
-public sealed record RsStruct(string Name, string Visibility, IReadOnlyList<RsFieldDeclaration> Fields) : RsItem;
+public sealed record RsStruct(string Name, string Visibility, IReadOnlyList<RsFieldDeclaration> Fields) : RsItem {
+
+  /// <summary>The generic parameters as they are written after the name, <c>&lt;S&gt;</c>, or empty.</summary>
+  public string Generics { get; init; } = "";
+
+}
 
 /// <summary><c>impl Type { items }</c>, or <c>impl Trait for Type { items }</c>.</summary>
 /// <param name="Trait">The trait implemented, or <see langword="null"/> for an inherent implementation.</param>
 /// <param name="TypeName">The type the items belong to.</param>
 /// <param name="Items">The items: functions and constants.</param>
-public sealed record RsImpl(string? Trait, string TypeName, IReadOnlyList<RsItem> Items) : RsItem;
+public sealed record RsImpl(string? Trait, string TypeName, IReadOnlyList<RsItem> Items) : RsItem {
+
+  /// <summary>The generic parameters as they are written after <c>impl</c>, <c>&lt;S: Iterator&lt;Item = i32&gt; + Clone&gt;</c>, or empty.</summary>
+  public string Generics { get; init; } = "";
+
+}
+
+/// <summary><c>type Name = T;</c>, the associated type of a trait implementation, such as the <c>Item</c> of an <c>Iterator</c>.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="TypeName">The type it stands for.</param>
+public sealed record RsTypeAlias(string Name, string TypeName) : RsItem;
 
 /// <summary><c>pub trait Name: Super + Other { items }</c>.</summary>
 /// <param name="Name">The name.</param>
@@ -292,9 +321,30 @@ public sealed record RsTrait(string Name, string Visibility, IReadOnlyList<strin
 /// <param name="Visibility">The visibility as written, or empty.</param>
 public sealed record RsModuleDeclaration(string Name, string Visibility) : RsItem;
 
-/// <summary><c>use path;</c>.</summary>
+/// <summary><c>use path;</c>, a re-export <c>pub use path;</c>.</summary>
 /// <param name="Path">The path.</param>
-public sealed record RsUse(string Path) : RsItem;
+public sealed record RsUse(string Path) : RsItem {
+
+  /// <summary>The visibility as written, <c>pub</c> for a re-export, or empty.</summary>
+  public string Visibility { get; init; } = "";
+
+}
+
+/// <summary>A variant of a field-less enum: <c>Name</c>, or <c>Name = 2</c> with its discriminant.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Discriminant">The discriminant as written, or <see langword="null"/>.</param>
+public sealed record RsVariant(string Name, string? Discriminant) : RsNode {
+
+  /// <summary>Whether the variant is the one a derived <c>Default</c> gives, <c>#[default]</c>.</summary>
+  public bool IsDefault { get; init; }
+
+}
+
+/// <summary><c>pub enum Name { A = 1, B = 2 }</c>, an enum without fields.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Visibility">The visibility as written, or empty.</param>
+/// <param name="Variants">The variants, in declaration order.</param>
+public sealed record RsEnum(string Name, string Visibility, IReadOnlyList<RsVariant> Variants) : RsItem;
 
 /// <summary><c>mod name { items }</c>, a module written in place, such as the <c>#[cfg(test)]</c> module of the tests.</summary>
 /// <param name="Name">The module.</param>

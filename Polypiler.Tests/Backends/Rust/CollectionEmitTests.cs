@@ -8,7 +8,7 @@ namespace Polypiler.Tests.Backends.Rust;
 /// <summary>
 /// Lists, maps and sets as Rust writes them: a list a <c>Vec</c>, a map or a set of .NET a vector of
 /// slots in the order its keys are enumerated, the helpers that keep the order of freed slots, loops
-/// over them, collections passed borrowed, and the forms that stay refused - lazy sequences among them.
+/// over them, collections passed borrowed, and the forms that stay refused.
 /// </summary>
 [TestFixture]
 public sealed class CollectionEmitTests {
@@ -122,7 +122,6 @@ public sealed class CollectionEmitTests {
   [TestCase("public static class S { public static int F(bool c) { var a = new List<int>(); var d = new List<int>(); var b = c ? a : d; b.Add(1); return a.Count; } }", "'a collection held by two variables'")]
   [TestCase("public static class S { static int Size(List<int> l) => l.Count; public static int F() { var a = new List<int>(); List<int> b; b = a; b.Add(1); return Size(a) + b.Count; } }", "'a collection held by two variables'")]
   [TestCase("public static class S { static List<int> Make() => new List<int>(); static int Size(List<int> l) => l.Count; public static int F() => Size(Make()); }", "'a collection passed on that no variable holds'")]
-  [TestCase("public static class S { static IEnumerable<int> Up() { yield return 1; } public static int F() { var s = 0; foreach (var v in Up()) s += v; return s; } }", "'a lazy sequence (yield), which needs a state machine the Rust backend does not write'")]
   public void CollectionOutsideTheForm_IsRefused(string source, string construct)
     => Assert.That(Problems(source), Has.Some.Contain(construct));
 

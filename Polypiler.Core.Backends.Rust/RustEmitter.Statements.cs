@@ -17,8 +17,31 @@ public static partial class RustEmitter {
     /// </summary>
     private void Statements(IReadOnlyList<IrStmt> statements, List<RsStatement> into) {
       for (var index = 0; index < statements.Count; ++index) {
+        if (this.ValueLoop(statements, index) is { } valued) {
+          into.Add(valued);
+          return;
+        }
+
+        if (this.InclusiveLoop(statements, index) is { } inclusive) {
+          into.Add(inclusive);
+          index += 2;
+          continue;
+        }
+
         if (this.CountedLoop(statements, index) is { } counted) {
           into.Add(counted);
+          ++index;
+          continue;
+        }
+
+        if (this.ParallelLoop(statements, index, out var consumed) is { } parallel) {
+          into.Add(parallel);
+          index += consumed - 1;
+          continue;
+        }
+
+        if (this.SplitViews(statements, index) is { } split) {
+          into.Add(split);
           ++index;
           continue;
         }
@@ -36,6 +59,19 @@ public static partial class RustEmitter {
 
     /// <summary>Writes one statement; <see langword="true"/> when control never goes on after it.</summary>
     private bool Statement(IrStmt statement, List<RsStatement> into) {
+      var outer = this._statement;
+      this._statement = statement;
+      try {
+        return this.StatementOf(statement, into);
+      } finally {
+        this._statement = outer;
+      }
+    }
+
+    /// <summary>The statement of the IR being written, the innermost one, for the analyses that ask where in the function a read stands.</summary>
+    private IrStmt? _statement;
+
+    private bool StatementOf(IrStmt statement, List<RsStatement> into) {
       switch (statement) {
         case IrBlock block: {
           var before = into.Count;
@@ -51,6 +87,12 @@ public static partial class RustEmitter {
           return false;
         case IrDeclare declare when this._nested.ContainsKey(declare.Local):
           return false;
+        case IrDeclare { Local.Type.IsPointer: true } pointer:
+          this.PointerDeclaration(pointer, into);
+          return false;
+        case IrAssign { Local.Type.IsPointer: true } pointer:
+          into.Add(new RsExpressionStatement(new RsAssign(new RsPath(this._locals[pointer.Local]) { Type = IrType.I64 }, "=", this.PointerIndex(pointer.Value))));
+          return false;
         case IrAssign assign when this._nested.ContainsKey(assign.Local):
           return false;
         case IrDeclare declare when this._shared.Contains(declare.Local):
@@ -65,9 +107,13 @@ public static partial class RustEmitter {
         case IrReturn result when this._closureResults.Count > 0:
           into.Add(new RsExpressionStatement(new RsReturn(result.Value is null ? null : this.Argument(result.Value))));
           return true;
+        case IrDeclare { Local.Type.IsLazySequence: true } declare:
+          this.SequenceDeclaration(declare, into);
+          return false;
         case IrDeclare declare:
-          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local) || this.IsChangedCollection(declare.Local)
-            || this.IsFieldAlias(declare.Local) && this._arrayFacts.MutableLocals.Contains(declare.Local), this.LocalType(declare.Local),
+          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local) || this.IsChangedCollection(declare.Local) && !this.IsBorrowedCollection(declare.Local)
+            || this.IsFieldAlias(declare.Local) && this._arrayFacts.MutableLocals.Contains(declare.Local) && this._arrayFacts.FieldAliases[declare.Local].Target.Type is { IsObject: true } owner && !this.IsPlain(owner)
+            || this.IsMutatedObject(declare.Local), this.LocalType(declare.Local),
             declare.Initializer switch {
               null => null,
               var value when declare.Local.Type.IsArray => this.ArrayInitial(declare.Local, value),
@@ -76,6 +122,7 @@ public static partial class RustEmitter {
               var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
               var value when declare.Local.Type.IsView => this.ViewSource(value, this.WritesView(declare.Local)),
               var value when declare.Local.Type.IsFunction => this.FunctionValue(value),
+              var value when declare.Local.Type.IsCollection && this.IsBorrowedCollection(declare.Local) => this.BorrowedCollection(declare.Local, value),
               var value when declare.Local.Type.IsCollection => this.CollectionValue(value),
               var value => this.Expression(value)
             }));
@@ -118,6 +165,9 @@ public static partial class RustEmitter {
           return false;
         case IrExprStmt expression: {
           var written = this.Expression(expression.Expression);
+          // A call that propagates inside a try body, its value unused: the error alone, if let Err(error) = f(x) { break 't0 error; }.
+          if (written is RsMatch { Arms: [{ Patterns: ["Ok(value)"] }, { Patterns: ["Err(error)"] } failure] } propagated && expression.Expression.Type != IrType.Void)
+            written = new RsIf(new RsLetCondition("Err(error)", propagated.Scrutinee), new RsBlock([new RsExpressionStatement(failure.Body)], null), null);
           into.Add(new RsExpressionStatement(written));
           return Diverges(into[^1]);
         }
@@ -132,6 +182,11 @@ public static partial class RustEmitter {
           // A loop whose first pass always leaves the function is an if (clippy's never_loop).
           into.Add(new RsExpressionStatement(this.If(new IrIf(loop.Condition, loop.Body, null))));
           return false;
+        case IrWhile { Condition: IrConst { Value: not 0 } } loop when loop.Body.Statements.Count > 0 && loop.Body.Statements[^1] is IrBreak
+          && !ContinuesLoop(loop.Body.Statements) && this.Has(RustCapabilities.LabeledBlock):
+          // A loop whose first pass always leaves it is a block, left by its breaks (clippy's never_loop).
+          into.Add(new RsExpressionStatement(this.OncePass(loop.Body.Statements.Take(loop.Body.Statements.Count - 1).ToList())));
+          return false;
         case IrWhile loop:
           into.Add(new RsExpressionStatement(this.Loop(loop.Condition, loop.Body.Statements, null)));
           return false;
@@ -143,7 +198,9 @@ public static partial class RustEmitter {
           return false;
         case IrSwitch choice:
           into.AddRange(this.Switch(choice));
-          return false;
+          // A match every arm of which leaves - over every variant of a closed enum - is never left at its end.
+          return into.Count > 0 && into[^1] is RsExpressionStatement { Expression: RsMatch match }
+            && match.Arms.All(arm => arm.Body is RsBlockExpression { Block: { Tail: null, Statements: [.., var last] } } && Diverges(last));
         case IrBreak:
           into.Add(new RsExpressionStatement(this.Break()));
           return true;
@@ -161,6 +218,7 @@ public static partial class RustEmitter {
             null => null,
             { Type.IsArray: true } value => this.ArrayResult(this._function, value),
             { Type.IsString: true } value => this.StringValue(value, true),
+            IrLocalRef { Type.IsBigInt: true } value when !this._shared.Contains(value.Local) => new RsPath(this._locals[value.Local]) { Type = IrType.BigInt },
             { Type.IsObject: true } value => this.ObjectValue(value, this._nullness.ReturnsNull(this._function.Name)),
             { Type.IsFunction: true } value => this.FunctionValue(value),
             { Type.IsCollection: true } value => this.CollectionValue(value),
@@ -173,8 +231,8 @@ public static partial class RustEmitter {
         case IrThrow thrown:
           into.Add(new RsExpressionStatement(this.Throw(thrown.Exception)));
           return true;
-        case IrYield or IrYieldBreak or IrYieldFrom or IrForEachSequence:
-          into.Add(new RsExpressionStatement(this.Refuse(LazySequence)));
+        case IrForEachSequence loop:
+          this.ForEachSequence(loop, into);
           return false;
         case IrTry attempt:
           this.Try(attempt, into);
@@ -199,7 +257,7 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Assignment(IrLocal local, IrExpr value) {
       var place = new RsPath(this._locals[local]) { Type = local.Type };
-      if (local.Type.IsEnum)
+      if (local.Type.IsEnum || local.Type.IsBigInt)
         return new RsAssign(place, "=", this.Expression(value));
       if (local.Type.IsArray)
         return new RsAssign(place, "=", this.ArrayInitial(local, value));
@@ -250,7 +308,7 @@ public static partial class RustEmitter {
       if (!step.Trap)
         return new RsMethodCall(place, step.Increment ? "wrapping_add" : "wrapping_sub", [one]) { Type = place.Type };
 
-      return Expect(new RsMethodCall(place, step.Increment ? "checked_add" : "checked_sub", [one]) { Type = place.Type }, IrTrap.IntegerOverflow);
+      return this.Checked(new RsMethodCall(place, step.Increment ? "checked_add" : "checked_sub", [one]) { Type = place.Type }, IrTrap.IntegerOverflow);
     }
 
     /// <summary><c>if</c>; an <c>else</c> that is one <c>if</c> becomes <c>else if</c>; an empty branch is turned around.</summary>
@@ -274,11 +332,11 @@ public static partial class RustEmitter {
     /// condition is the constant <c>true</c>. The step of a <c>for</c> follows the body, and every
     /// <c>continue</c> of the loop runs it before it goes on.
     /// </summary>
-    private RsExpression Loop(IrExpr condition, IReadOnlyList<IrStmt> body, IReadOnlyList<IrStmt>? step) {
+    private RsExpression Loop(IrExpr condition, IReadOnlyList<IrStmt> body, IReadOnlyList<IrStmt>? step, IrExpr? value = null) {
       var label = this.NewLabel("l");
       var test = condition is IrConst { Value: not 0 } ? null : this.Expression(condition);
       var stepped = step is null ? null : this.Block(step).Statements;
-      var loop = new Breakable(BreakableKind.Loop, label, stepped);
+      var loop = new Breakable(BreakableKind.Loop, label, stepped) { Value = value };
       this._breakables.Add(loop);
       var block = this.Block(body);
       this._breakables.RemoveAt(this._breakables.Count - 1);
@@ -313,6 +371,18 @@ public static partial class RustEmitter {
       return new RsLoop(label, new RsBlock([labelled, exit with { Expression = new RsIf(this.Not(loop.Condition), new RsBlock([new RsExpressionStatement(new RsBreak(label, null))], null), null) }], null));
     }
 
+    /// <summary>
+    /// The body of a loop that runs once, its last <c>break</c> left out: <c>'b: { …; break 'b; … }</c> where a
+    /// <c>break</c> leaves it early, a plain block where none does.
+    /// </summary>
+    private RsExpression OncePass(IReadOnlyList<IrStmt> body) {
+      var block = new Breakable(BreakableKind.Switch, this.NewLabel("b"));
+      this._breakables.Add(block);
+      var written = this.Block(body);
+      this._breakables.RemoveAt(this._breakables.Count - 1);
+      return block.Used ? new RsLabeledBlock(block.Label, written) : new RsBlockExpression(written);
+    }
+
     /// <summary><c>break</c> of the innermost loop or switch, labelled where a labelled block stands between.</summary>
     private RsExpression Break() {
       var target = this._breakables.LastOrDefault(breakable => breakable.Kind != BreakableKind.ContinueBlock);
@@ -325,11 +395,146 @@ public static partial class RustEmitter {
         return this.Refuse("a break out of a try");
 
       var crossed = this._breakables.Count - 1 > this._breakables.IndexOf(target);
+      var value = target.Value is null ? null : this.Expression(target.Value);
       if (target.Kind == BreakableKind.Loop && !crossed)
-        return new RsBreak(null, null);
+        return new RsBreak(null, value);
 
       target.Used = true;
-      return new RsBreak(target.Label, null);
+      return new RsBreak(target.Label, value);
+    }
+
+    /// <summary>
+    /// A loop without a condition whose exits are <c>break</c>s of it, followed by the <c>return</c>
+    /// of a scalar, as the value of that return: <c>loop { …; break p; … }</c>. Nothing runs between a
+    /// <c>break</c> and the return, so each <c>break</c> gives what the return would read. Not inside a
+    /// <c>try</c> or a closure, nor in a function that propagates an exception, whose returns are
+    /// written otherwise; <see langword="null"/> for any other pair of statements.
+    /// </summary>
+    private RsStatement? ValueLoop(IReadOnlyList<IrStmt> statements, int index) {
+      if (index + 1 >= statements.Count || statements[index] is not IrWhile { Condition: IrConst { Value: not 0 } } loop
+        || statements[index + 1] is not IrReturn { Value: { } value } || TypeName(value.Type) is null || !BreaksLoop(loop.Body.Statements)
+        || this._tries.Count > 0 || this._closureResults.Count > 0 || this._throwing.Contains(this._function.Name))
+        return null;
+
+      return new RsExpressionStatement(new RsReturn(this.Loop(loop.Condition, loop.Body.Statements, null, value)));
+    }
+
+    /// <summary>
+    /// A loop over an inclusive range as the Rust frontend imports it, written back as
+    /// <c>for i in a..=b</c>: a flag that the range is done, true at once where the start is above the
+    /// end; a counter at the start; and a loop while the flag is false whose step first sets the flag
+    /// where the counter has reached the end, <c>(end as u64 - i as u64) &lt; 1</c>, then moves the
+    /// counter on modulo its width - so that the counter never overflows at the end of its type, which
+    /// Rust's <c>RangeInclusive</c> does not either. The bounds are constants or variables the body
+    /// does not assign; the body assigns neither the flag nor the counter, has no <c>continue</c> where
+    /// the loop is a <c>while</c>, and nothing after the loop names either. <see langword="null"/> for
+    /// any other three statements.
+    /// </summary>
+    private RsStatement? InclusiveLoop(IReadOnlyList<IrStmt> statements, int index) {
+      if (index + 2 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } empty } flag || flag.Local.Type != IrType.Bool
+        || statements[index + 1] is not IrDeclare { Initializer: { } start, Local: { Type.IsInteger: true } local })
+        return null;
+
+      List<IrStmt> rest;
+      IReadOnlyList<IrStmt> step;
+      switch (statements[index + 2]) {
+        case IrWhile { Condition: IrUnary { Op: IrUnaryOp.LogicalNot, Operand: IrLocalRef tested }, Body.Statements: [.., _, _] } loop when tested.Local == flag.Local && !ContinuesLoop(loop.Body.Statements):
+          (rest, step) = ([.. loop.Body.Statements.Take(loop.Body.Statements.Count - 2)], [.. loop.Body.Statements.Skip(loop.Body.Statements.Count - 2)]);
+          break;
+        case IrFor { Condition: IrUnary { Op: IrUnaryOp.LogicalNot, Operand: IrLocalRef tested }, Step.Statements: [_, _] } loop when tested.Local == flag.Local:
+          (rest, step) = ([.. loop.Body.Statements], loop.Step.Statements);
+          break;
+        default:
+          return null;
+      }
+
+      if (step[0] is not IrAssign { Value: IrBinary { Op: IrBinaryOp.Less, Left: IrBinary { Op: IrBinaryOp.Subtract, Left: var reached, Right: var current }, Right: IrConst { Value: 1 } } } last
+        || last.Local != flag.Local || !IsCounter(current, local)
+        || step[1] is not IrAssign advance || Moved(advance.Value) is not { } moved
+        || advance.Local != local || !IsCounter(moved, local) || Bound(Extended(reached), local.Type) is not { } end || Bound(start, local.Type) is not { } first)
+        return null;
+
+      if (!EmptyWhen(empty, first, end) || this._shared.Contains(local) || this._shared.Contains(flag.Local) || Assigns(rest, local) || Assigns(rest, flag.Local)
+        || new[] { first, end }.Any(bound => bound is IrLocalRef { Local: var variable } && (Assigns(rest, variable) || this._shared.Contains(variable)))
+        || rest.Any(statement => Mentions(statement, flag.Local)) || statements.Skip(index + 3).Any(after => Mentions(after, local) || Mentions(after, flag.Local)))
+        return null;
+
+      // A first statement that only copies the counter into a variable of its own names the range's element.
+      var pattern = rest.Any(statement => Mentions(statement, local)) ? this._locals[local] : "_";
+      if (rest is [IrDeclare { Initializer: IrLocalRef { Local: var copied } } named, ..] && copied == local && named.Local.Type == local.Type
+        && !Assigns(rest, named.Local) && !this._shared.Contains(named.Local) && !rest.Skip(1).Any(statement => Mentions(statement, local))) {
+        pattern = this._locals[named.Local];
+        rest = [.. rest.Skip(1)];
+      }
+
+      var label = this.NewLabel("l");
+      var breakable = new Breakable(BreakableKind.Loop, label);
+      this._breakables.Add(breakable);
+      var block = this.Block(rest);
+      this._breakables.RemoveAt(this._breakables.Count - 1);
+      var from = this.Expression(first);
+      var to = this.Expression(end);
+      // A range of two literals is typed by its end, 0..=255u8.
+      if (from is RsLiteral && to is RsLiteral)
+        to = Suffixed(to);
+
+      return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, pattern, new RsRange(this.Operand(from, 3), this.Operand(to, 3), true), block));
+    }
+
+    /// <summary>
+    /// What a range loop's step adds one to modulo 2^64 and wraps back into the counter's type,
+    /// <c>(i as u64 + 1) as u8</c>, or adds one to in a 64-bit counter's own type; <see langword="null"/> for any other value.
+    /// </summary>
+    private static IrExpr? Moved(IrExpr value) => value switch {
+      IrConvert { Contract: IrConversion.Wrap, Operand: IrBinary { Op: IrBinaryOp.Add, Left: var moved, Right: IrConst { Value: 1 } } } => moved,
+      IrBinary { Op: IrBinaryOp.Add, Left: var moved, Right: IrConst { Value: 1 } } => moved,
+      _ => null
+    };
+
+    /// <summary>Whether an operand of a range loop's step is its counter, maybe extended to a wider type.</summary>
+    private static bool IsCounter(IrExpr operand, IrLocal counter) => Extended(operand) is IrLocalRef { Local: var local } && local == counter;
+
+    /// <summary>
+    /// An operand without the conversions that extend it to a type at least as wide, which a step that
+    /// subtracts or adds modulo 2^64 sees the same value through: <c>end as u64</c> as <c>end</c>.
+    /// </summary>
+    private static IrExpr Extended(IrExpr operand) {
+      while (operand is IrConvert { Operand: { Type.IsInteger: true } inner } convert && convert.Type.IsInteger && convert.Type.Bits >= inner.Type.Bits)
+        operand = inner;
+
+      return operand;
+    }
+
+    /// <summary>A bound of a range of the counter's type: a variable of it, or a constant that is one of its values, as a constant of it.</summary>
+    private static IrExpr? Bound(IrExpr bound, IrType type) => bound switch {
+      IrLocalRef reference when reference.Type == type => reference,
+      IrConst constant when constant.Type.IsInteger && IrOperators.Number(constant.Type, constant.Value) is var number
+        && number >= IrOperators.Minimum(type) && number <= IrOperators.Maximum(type) => new IrConst(type, (long)number),
+      _ => null
+    };
+
+    /// <summary>
+    /// Whether the first value of a range's flag is that the range is empty, its start above its end:
+    /// <c>start &gt; end</c> of the bounds or of their values in a type that holds both, <c>!(start &lt;= end)</c>,
+    /// or the constant of two constant bounds.
+    /// </summary>
+    private static bool EmptyWhen(IrExpr flag, IrExpr start, IrExpr end) => flag switch {
+      IrBinary { Op: IrBinaryOp.Greater } above => SameValue(above.Left, start) && SameValue(above.Right, end),
+      IrUnary { Op: IrUnaryOp.LogicalNot, Operand: IrBinary { Op: IrBinaryOp.LessOrEqual } within } => SameValue(within.Left, start) && SameValue(within.Right, end),
+      IrConst { Value: var value } when start is IrConst low && end is IrConst high => value != 0 == IrOperators.Number(low.Type, low.Value) > IrOperators.Number(high.Type, high.Value),
+      _ => false
+    };
+
+    /// <summary>Whether an operand is a bound, maybe converted to a type that holds every value of it.</summary>
+    private static bool SameValue(IrExpr operand, IrExpr bound) {
+      while (operand is IrConvert { Operand: { Type.IsInteger: true } inner } convert && convert.Type.IsInteger && IrOperators.Contains(convert.Type, inner.Type))
+        operand = inner;
+
+      return (operand, bound) switch {
+        (IrConst a, IrConst b) => IrOperators.Number(a.Type, a.Value) == IrOperators.Number(b.Type, b.Value),
+        (IrLocalRef a, IrLocalRef b) => a.Local == b.Local,
+        _ => false
+      };
     }
 
     /// <summary>
@@ -365,8 +570,9 @@ public static partial class RustEmitter {
     /// the <c>match</c>. One section without a default is an <c>if</c>, only a default its body alone.
     /// </summary>
     private IEnumerable<RsStatement> Switch(IrSwitch choice) {
-      // A switch on an enum is one on its integer, whose labels are the members' values.
-      var value = choice.Value.Type.IsEnum ? this.Inner(choice.Value) : this.Expression(choice.Value);
+      // A switch on an enum is one on its integer, whose labels are the members' values; on a closed enum one on its variants.
+      var closed = this.IsClosedEnum(choice.Value.Type) ? choice.Value.Type.EnumType : null;
+      var value = closed is not null ? this.Expression(choice.Value) : choice.Value.Type.IsEnum ? this.Inner(choice.Value) : this.Expression(choice.Value);
       var type = choice.Value.Type.IsEnum ? choice.Value.Type.EnumType!.Underlying : choice.Value.Type;
       var label = this.NewLabel("s");
       var breakable = new Breakable(BreakableKind.Switch, label);
@@ -382,11 +588,13 @@ public static partial class RustEmitter {
         if (section.IsDefault)
           fallback = body;
         else
-          arms.Add(new RsMatchArm(Patterns(section.Labels, type), new RsBlockExpression(body)));
+          arms.Add(new RsMatchArm(closed is not null ? this.VariantPatterns(closed, section.Labels) : Patterns(section.Labels, type), new RsBlockExpression(body)));
       }
 
       this._breakables.RemoveAt(this._breakables.Count - 1);
-      var exhaustive = type.Bits == 8 && choice.Sections.Where(section => !section.IsDefault).Sum(section => section.Labels.Count) == 256;
+      var labelled = choice.Sections.Where(section => !section.IsDefault).Sum(section => section.Labels.Count);
+      // A match over every variant of a closed enum has no _ arm; its default section is never reached.
+      var exhaustive = closed is not null ? labelled == closed.Members.Count : type.Bits == 8 && labelled == 256;
       if (!exhaustive)
         arms.Add(new RsMatchArm(["_"], new RsBlockExpression(fallback ?? RsBlock.Empty)));
 
@@ -453,40 +661,19 @@ public static partial class RustEmitter {
     /// an element loop (<see cref="ElementLoop"/>). <see langword="null"/> for any other pair of statements.
     /// </summary>
     private RsStatement? CountedLoop(IReadOnlyList<IrStmt> statements, int index) {
-      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare)
+      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare || this.Counted(declare, statements[index + 1], true) is not ( { } bound, { } rest, var inclusive))
         return null;
 
-      IrExpr condition;
-      List<IrStmt> rest;
-      IrStmt step;
-      switch (statements[index + 1]) {
-        case IrWhile { Body.Statements.Count: > 0 } loop when !ContinuesLoop(loop.Body.Statements.Take(loop.Body.Statements.Count - 1)):
-          (condition, rest, step) = (loop.Condition, [.. loop.Body.Statements.Take(loop.Body.Statements.Count - 1)], loop.Body.Statements[^1]);
-          break;
-        case IrFor { Step.Statements: [var only] } loop:
-          (condition, rest, step) = (loop.Condition, [.. loop.Body.Statements], only);
-          break;
-        default:
-          return null;
-      }
-
-      if (condition is not IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } || counter.Local != declare.Local || !counter.Type.IsInteger || this._shared.Contains(counter.Local))
-        return null;
-
-      var stepsByOne = step switch {
-        IrAssign { Value: IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.AddChecked, Left: IrLocalRef self, Right: IrConst { Value: 1 } } } assign => assign.Local == declare.Local && self.Local == declare.Local,
-        IrExprStmt { Expression: IrStep { Target: IrLocalRef self, Increment: true } } => self.Local == declare.Local,
-        _ => false
-      };
-      if (!stepsByOne)
+      // i <= b is a range a..=b only where b is a constant below the largest value: at the largest one the source's loop never ends.
+      if (inclusive && (bound is not IrConst { Value: var last } || IrOperators.Number(bound.Type, last) >= IrOperators.Maximum(bound.Type)))
         return null;
 
       var invariant = bound is IrConst || bound is IrConstRef || (bound is IrLocalRef limit && limit.Local != declare.Local && !Assigns(rest, limit.Local))
         || (bound is IrArrayLength { Array: IrConstRef or IrLocalRef } length && (length.Array is not IrLocalRef array || !Assigns(rest, array.Local)));
-      if (!invariant || Assigns(rest, declare.Local) || statements.Skip(index + 2).Any(after => Mentions(after, declare.Local)))
+      if (!invariant || statements.Skip(index + 2).Any(after => Mentions(after, declare.Local)))
         return null;
 
-      if (start is IrConst { Value: 0 } && bound is IrArrayLength { Array: var iterated } && this.ElementLoop(declare.Local, iterated, rest) is { } elements)
+      if (!inclusive && start is IrConst { Value: 0 } && bound is IrArrayLength { Array: var iterated } && this.ElementLoop(declare.Local, iterated, rest) is { } elements)
         return elements;
 
       var label = this.NewLabel("l");
@@ -496,11 +683,14 @@ public static partial class RustEmitter {
       this._breakables.RemoveAt(this._breakables.Count - 1);
       var from = this.Expression(start);
       var to = this.Expression(bound);
-      if (from is RsLiteral && to is RsLiteral)
+      // A range of two literals is typed by its start, 0u32..10, an inclusive one by its end, 0..=100i32.
+      if (from is RsLiteral && to is RsLiteral && inclusive)
+        to = Suffixed(to);
+      else if (from is RsLiteral && to is RsLiteral)
         from = Suffixed(from);
 
       var pattern = rest.Any(statement => Mentions(statement, declare.Local)) ? this._locals[declare.Local] : "_";
-      return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, pattern, new RsRange(this.Operand(from, 3), this.Operand(to, 3), false), block));
+      return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, pattern, new RsRange(this.Operand(from, 3), this.Operand(to, 3), inclusive), block));
     }
 
     /// <summary>The element of an array an element loop reads in place of <c>a[i]</c>, by the loop's counter.</summary>
@@ -597,14 +787,16 @@ public static partial class RustEmitter {
     private static IEnumerable<IrExpr> ExpressionsOf(IrStmt statement) => IrTree.Expressions(statement);
 
     /// <summary>
-    /// A throw of a new exception of the IR's library as the panic of its trap; a panic carries no
-    /// object, so a throw of anything else, and a handler, cannot be written.
+    /// A throw: of an exception of the module, the exception leaving; of a new exception of the IR's
+    /// library, the panic of its trap - under the trap policy <c>result</c> the trap's error, or, where
+    /// the module has exceptions, the exception itself. A panic carries no object, so a throw of
+    /// anything else cannot be written.
     /// </summary>
     private RsExpression Throw(IrExpr exception) {
-      if (IsCatchable(exception.Type))
-        return this.Escape(this.ErrorValue(exception));
+      if (IsCatchable(exception.Type) || this.Results && this.PlyErrors && exception is IrNew && IsError(exception.Type))
+        return this.Fail(this.ErrorValue(exception));
       if (exception is IrNew { Type.Declaration: IrClassType type } && TrapOf(type) is { } trap)
-        return Panic(trap);
+        return this.Trap(trap);
 
       return this.Refuse("the throw of an exception that is no new object");
     }

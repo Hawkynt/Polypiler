@@ -3,6 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.Rust;
+using Polypiler.Core.IR;
 using Polypiler.Core.Optimize;
 
 namespace Polypiler.Tests.Backends.Rust;
@@ -219,11 +220,65 @@ public sealed class RustScalarEmitTests {
   [TestCase("public static double F() => 3.141592653589793;", "clippy::approx_constant")]
   [TestCase("public static bool F(double a, double b) => !(a < b);", "clippy::neg_cmp_op_on_partial_ord")]
   [TestCase("public static int F(int a, int b, int c, int d, int e, int f, int g, int h) => a;", "clippy::too_many_arguments")]
+  [TestCase("public static int F() { int s = 0; for (int i = 3; i < 3; i++) s += i; return s; }", "clippy::reversed_empty_ranges")]
+  [TestCase("public static int F() { int s = 0; for (int i = 5; i <= 3; i++) s += i; return s; }", "clippy::reversed_empty_ranges")]
   public void LintTriggeringShape_AllowsItsLint(string method, string lint)
     => Assert.That(RustCrates.Text(RustCrates.Emit(RustCrates.Import(method), level: OptimizationLevel.None), "src/lib.rs"), Does.Contain(lint).And.Contain("#![allow("));
+
+  /// <summary>A range of constants that holds a value - one value inclusively, several exclusively - needs no lint.</summary>
+  [TestCase("public static int F() { int s = 0; for (int i = 3; i <= 3; i++) s += i; return s; }")]
+  [TestCase("public static int F() { int s = 0; for (int i = 3; i < 4; i++) s += i; return s; }")]
+  public void RangeOfConstantsThatHoldsAValue_AllowsNoLint(string method)
+    => Assert.That(RustCrates.Text(RustCrates.Emit(RustCrates.Import(method), level: OptimizationLevel.None), "src/lib.rs"), Does.Not.Contain("reversed_empty_ranges"));
 
   [Test]
   public void CleanCode_AllowsNoLint()
     => Assert.That(RustCrates.Text(RustCrates.Emit(RustCrates.Import("public static int F(int a) => a + 1;")), "src/lib.rs"), Does.Not.Contain("allow"));
+
+  private static readonly IrLocal _x = new("x", IrType.F64);
+  private static readonly IrLocal _a = new("a", IrType.U8);
+  private static readonly IrLocal _b = new("b", IrType.U8);
+
+  /// <summary>One public function <c>f</c> returning a value of its parameters, as the crate's files.</summary>
+  private static System.Collections.Generic.IReadOnlyList<Polypiler.Core.GeneratedFile> Returning(IrExpr value, params IrLocal[] parameters)
+    => RustCrates.Emit(new IrModule("edge", [new IrFunction("F", true, value.Type, parameters, [], new IrBlock([new IrReturn(value)]))]), level: OptimizationLevel.None);
+
+  /// <summary>Scenario: only the helpers that are used are emitted; the wrapping conversion from floating point is its spelling function, once.</summary>
+  [Test]
+  public void WrappingFloatToInteger_IsItsSpellingFunctionOnce() {
+    var files = Returning(new IrBinary(IrBinaryOp.Add, new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [new IrLocalRef(_x)]), new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [new IrLocalRef(_x)])), _x);
+    var text = RustCrates.ModuleText(files);
+    Assert.That(text, Does.Contain("fn ply_rs_f2i_wrap_i32(x: f64) -> i32 {\n    (x.trunc() % 4294967296.0) as i64 as i32\n}"));
+    Assert.That(text.Split("fn ply_rs_f2i_wrap_i32").Length, Is.EqualTo(2));
+    Assert.That(text, Does.Contain("ply_rs_f2i_wrap_i32(x).wrapping_add(ply_rs_f2i_wrap_i32(x))").And.Not.Contain("ply_f2i_trap"));
+    Assert.That(RustCrates.Text(files, "src/lib.rs"), Does.StartWith("//!").And.Contain("\n#![forbid(unsafe_code)]\n"));
+  }
+
+  [Test]
+  public void WrappingFloatToUnsigned_IsItsSpellingFunction()
+    => Assert.That(RustCrates.ModuleText(Returning(new IrIntrinsic(IrIntrinsicOp.ToUint32, IrType.U32, [new IrLocalRef(_x)]), _x)),
+      Does.Contain("fn ply_rs_f2i_wrap_u32(x: f64) -> u32 {\n    (x.trunc() % 4294967296.0) as i64 as u32\n}").And.Contain("ply_rs_f2i_wrap_u32(x)\n"));
+
+  /// <summary>The scenario's saturating addition: Rust's own method, which saturates in every build mode.</summary>
+  [Test]
+  public void SaturatingAddition_IsItsMethod()
+    => Assert.That(RustCrates.ModuleText(Returning(new IrIntrinsic(IrIntrinsicOp.AddSaturate, IrType.U8, [new IrLocalRef(_a), new IrLocalRef(_b)]), _a, _b)),
+      Does.Contain("pub fn f(a: u8, b: u8) -> u8 {\n    a.saturating_add(b)\n}"));
+
+  /// <summary>
+  /// Scenario: an operation the profile's table writes without the emitter having a spelling for it in
+  /// the profile emitted for is refused with PLY1550 naming it, and no file is written. The IR has no
+  /// <c>u24</c>; the override here is a table that legalization took as writing <c>reverse_bits</c>
+  /// and the profile emitted for has no row of it.
+  /// </summary>
+  [Test]
+  public void OperationTheTableOverrides_IsRefused() {
+    var bitReverse = new IrModule("edge", [new IrFunction("F", true, IrType.U32, [new("a", IrType.U32)], [], new IrBlock([new IrReturn(new IrIntrinsic(IrIntrinsicOp.BitReverse, IrType.U32, [new IrLocalRef(new("a", IrType.U32))]))]))]);
+    var without = RustCapabilities.Default.With(RustCapabilities.ReverseBits, null);
+    var problems = RustEmitter.Check(bitReverse, RustProfile.Default, without);
+    Assert.That(problems.Select(problem => problem.Code), Is.EqualTo(new[] { RustEmitter.Inexpressible }));
+    Assert.That(problems[0].Message, Does.Contain("'BitReverse'"));
+    Assert.That(() => RustEmitter.Emit(bitReverse, RustProfile.Default, without, Polypiler.Core.Optimize.Target.TargetPassOptions.None, null), Throws.ArgumentException.With.Message.Contains("BitReverse"));
+  }
 
 }

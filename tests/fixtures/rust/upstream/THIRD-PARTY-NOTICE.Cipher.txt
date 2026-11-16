@@ -1,0 +1,18 @@
+Cipher validation harness
+
+  What:     the Rust vector harness Cipher appends to a transpiled algorithm, one file, unchanged;
+            LICENSE.txt is Cipher/LICENSE of the same commit.
+  From:     https://github.com/Hawkynt/Hawkynt.github.io
+  Commit:   b3a8a8e92cbca83475986391c3cac56f0b185d29
+  Author:   (c)2006-2025 Hawkynt
+  Licence:  LGPL-3.0-or-later, the licence of that repository and of this one (ADR 0030).
+
+  File                                  Upstream path                                        SHA-256
+  harness.rs                            Cipher/tests/validation-harness/harness.rs           5af2f6eab069408cc6e8f235b3d1968f31a7fc607a5c2cafe7a7c0d41f6ea712
+  LICENSE.txt                           Cipher/LICENSE                                       e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118
+
+The file is the negative corpus of the Rust frontend's types (#467): a real Rust fragment with trait
+implementations, `&dyn Any`, `impl FnOnce` parameters and names its generator fills in later, which
+the frontend must refuse with a diagnostic and without a crash. It is kept byte for byte as the commit
+has it - do not reformat it, and replace it only as a whole with the file of a newer commit, updating
+commit and hash here.

@@ -44,7 +44,7 @@ internal static class RustCrates {
       level == OptimizationLevel.None ? TargetPassOptions.None : TargetPassOptions.Default, options).Files;
 
   /// <summary>The text of the module's file of a crate.</summary>
-  public static string ModuleText(IReadOnlyList<GeneratedFile> files) => files.Single(file => file.Path.StartsWith("src/", StringComparison.Ordinal) && file.Path != "src/lib.rs").Content;
+  public static string ModuleText(IReadOnlyList<GeneratedFile> files) => files.Single(file => file.Path.StartsWith("src/", StringComparison.Ordinal) && file.Path is not ("src/lib.rs" or "src/error.rs")).Content;
 
   /// <summary>The text of a file of a crate.</summary>
   public static string Text(IReadOnlyList<GeneratedFile> files, string path) => files.Single(file => file.Path == path).Content;

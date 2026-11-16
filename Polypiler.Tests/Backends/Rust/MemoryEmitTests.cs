@@ -39,7 +39,7 @@ public sealed class MemoryEmitTests {
   public void ReadOnlyParameter_IsASharedSlice_AndItsLoopAnElementLoop() {
     var text = Emitted("public static uint Sum(byte[] data) { uint s = 0; for (int i = 0; i < data.Length; i++) s += data[i]; return s; }");
     Assert.That(text, Does.Contain("pub fn sum(data: &[u8]) -> u32 {"));
-    Assert.That(text, Does.Contain("for &element in data {\n        s = s.wrapping_add(u32::from(element));\n    }"));
+    Assert.That(text, Does.Contain("data.iter()\n        .map(|&element| u32::from(element))\n        .fold(0u32, |acc, x| acc.wrapping_add(x))"));
   }
 
   [Test]
@@ -151,7 +151,17 @@ public sealed class MemoryEmitTests {
   [Test]
   public void ArraysWithoutASafeOwner_AreRefusedByName() {
     Assert.That(Problems("public static int F(int[] a) { a = new int[1]; a[0] = 2; return a[0]; }"), Has.Some.Contain("the parameter 'a' and a new array in one variable"));
-    Assert.That(Problems("public static int F() { var a = new int[1]; var b = a; b[0] = 1; return a[0]; }"), Has.Some.Contain("one array shared by the variables 'a' and 'b'"));
+    // The source read while the second variable still writes the array: no borrow ends before it.
+    Assert.That(Problems("public static int F() { var a = new int[2]; var b = a; b[0] = 1; a[1] = 2; return b[0]; }"), Has.Some.Contain("one array shared by the variables 'a' and 'b'"));
+  }
+
+  /// <summary>A second variable of one array whose last use comes before the source is read again borrows it (#1393).</summary>
+  [Test]
+  public void SecondVariableUsedUpBeforeTheSource_BorrowsTheArray() {
+    var text = Emitted("public static int F() { var a = new int[1]; var b = a; b[0] = 1; return a[0]; }");
+    Assert.That(text, Does.Contain("let mut a: Vec<i32> = vec![0; 1];\n    let b: &mut [i32] = &mut a;"));
+    // The array is written, so its group is mutable: the borrow is exclusive, which ends before a is read.
+    Assert.That(Emitted("public static int F() { var a = new int[2]; a[1] = 3; var b = a; var s = b[1]; return a[0] + s; }"), Does.Contain("let b: &mut [i32] = &mut a;\n    let s: i32 = b[1];"));
   }
 
   [Test]
@@ -213,9 +223,9 @@ public sealed class MemoryEmitTests {
 
   [Test]
   public void ElementLoops_OverVectorsTablesAndExclusiveSlices() {
-    Assert.That(Emitted("static readonly int[] T = { 1, 2 }; public static int F() { int s = 0; foreach (var x in T) s += x; return s; }"), Does.Contain("for &x in &T {"));
-    Assert.That(Emitted("public static int F(int n) { var a = new int[n]; int s = 0; foreach (var x in a) s += x; return s; }"), Does.Contain("for &x in &a {"));
-    Assert.That(Emitted("public static int F(int[] a) { a[0] = 1; int s = 0; foreach (var x in a) s += x; return s; }"), Does.Contain("for &x in a.iter() {"));
+    Assert.That(Emitted("static readonly int[] T = { 1, 2 }; public static int F() { int s = 0; foreach (var x in T) s += x; return s; }"), Does.Contain("T.iter().fold(0i32, |acc, &x| acc.wrapping_add(x))"));
+    Assert.That(Emitted("public static int F(int n) { var a = new int[n]; int s = 0; foreach (var x in a) s += x; return s; }"), Does.Contain("a.iter().fold(0i32, |acc, &x| acc.wrapping_add(x))").And.Contain("let a: Vec<i32>"));
+    Assert.That(Emitted("public static int F(int[] a) { a[0] = 1; int s = 0; foreach (var x in a) s += x; return s; }"), Does.Contain("a.iter().fold(0i32, |acc, &x| acc.wrapping_add(x))"));
   }
 
   [Test]

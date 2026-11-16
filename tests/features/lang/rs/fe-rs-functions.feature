@@ -2,8 +2,8 @@
 Feature: Rust frontend: functions, modules, closures and iterator closures
   Functions call each other and through pointers, closures that do not escape are inlined with
   their captures, and the closure-taking iterator methods run element by element as Rust's lazy
-  iterators do. The expected values are rustc's (#464); the module graph, the export set and the
-  crate's tests are held to rustc by RustPackageTests.
+  iterators do. The expected values are rustc's (#464); RustPackageTests holds the module graph and
+  the export set of the package modgraph to rustc, and its imported tests to cargo test.
 
   Scenario Outline: Imported functions and iterator chains compute what rustc computes
     Given the Rust source "<source>"

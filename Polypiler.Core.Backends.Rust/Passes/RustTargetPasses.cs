@@ -167,8 +167,9 @@ public sealed class RustHelperInlining : ITargetPass<RustCrate, RustProfile> {
 }
 
 /// <summary>
-/// O0501, unused declaration removal in Rust: a helper or a constant of the module that nothing in the
-/// crate names any more is removed, again and again until every one left is named. Rust warns about
+/// O0501, unused declaration removal in Rust: a private function - a helper, or a function whose every
+/// call the optimizer inlined - or a private constant of the module that nothing in the crate names any
+/// more is removed, again and again until every one left is named. Rust warns about
 /// an unused private item as dead code.
 /// </summary>
 public sealed class RustUnusedDeclarations : ITargetPass<RustCrate, RustProfile> {
@@ -196,9 +197,9 @@ public sealed class RustUnusedDeclarations : ITargetPass<RustCrate, RustProfile>
     }
   }
 
-  /// <summary>The name of an item this pass may remove: a helper's or a private constant's; <see langword="null"/> for any other item.</summary>
+  /// <summary>The name of an item this pass may remove: a private function's - a helper, or a function every call of which was inlined - or a private constant's; <see langword="null"/> for any other item.</summary>
   private static string? Removable(RsItem item) => item switch {
-    RsFunction { IsHelper: true } helper => helper.Name,
+    RsFunction { Visibility: "" } function => function.Name,
     RsConst { Visibility: "" } constant => constant.Name,
     _ => null
   };

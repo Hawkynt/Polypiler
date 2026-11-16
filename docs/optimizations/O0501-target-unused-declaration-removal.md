@@ -54,9 +54,15 @@ function F(x) {
   declaration refers to. Its initializer computes a value without an effect: a literal, a table, a
   `DataView` of a new buffer.
 
+- Rust: besides the helpers and private constants, a private function of the program that nothing
+  names any more because the optimizer inlined every call of it (`fn prime() -> u32 { 16777619 }`
+  after `h * Prime()` became `h.wrapping_mul(16777619)`): Rust would warn about it as dead code, and
+  nothing outside the crate can call a private function.
+
 ## When it must not fire
 
-- A function of the program, public or private, and a struct: only helpers and constants are removed.
+- A public function of the program, a struct, and in C#, JavaScript and Python a private function of
+  the program: only helpers and constants are removed there.
 - A declaration whose name stands anywhere else, also as a local of another function that happens to
   share it: names are compared, not bindings, so a doubt keeps the declaration.
 - Anything exported, and the `exports` assignments of a CommonJS module.

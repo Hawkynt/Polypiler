@@ -99,6 +99,19 @@ Rows: `function*` (2015, "state machine"), `for-of` (2015, "next loop"), `Symbol
 `Symbol.iterator` (2015, `$iterator`), `yield*` (2015, "nested resume point"); the helpers
 `$generator`, `$closeAll`, `$iterate`, `$arrayIterator`.
 
+## Rust backend
+
+An iterator function is a struct implementing `Iterator`, a state machine cut the way the ES5 one
+above is: its state number, its parameters and the variables named in more than one state are fields,
+`next` loops over a `match self.state` until a `yield` returns `Some(v)` or the end returns `None`. A
+loop over a sequence that suspends and a `yield from` keep a cursor field `Option<S>`. A `finally`
+around a `yield` runs where the body leaves the `try`, and from the struct's `impl Drop` when the
+consumer drops it while suspended there, innermost first. The struct in its first state is the
+sequence: a variable is enumerated through a clone (restartable), a single-pass one named once is
+moved. A sequence parameter is `impl Iterator<Item = T> + Clone`, or a generic of the iterator's
+struct; an array or a string an iterator takes is borrowed for the struct's lifetime. Other forms are
+refused with `PLY1558` naming them ([the Rust backend](../architecture/RUST-BACKEND.md#lazy-sequences)).
+
 ## Known differences
 
 - An exception a `finally` block of the iterator throws while the cursor is closed by an exception of

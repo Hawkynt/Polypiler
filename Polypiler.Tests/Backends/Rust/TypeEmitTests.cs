@@ -61,12 +61,15 @@ public sealed class TypeEmitTests {
   }
 
   [Test]
-  public void StructWithAnArrayField_IsRefusedByName()
-    => Assert.That(Problems("public struct Buffer { public int[] Data; } public static class S { public static int F(Buffer b) => b.Data[0]; }"), Has.Some.Contain("a struct field of the type i32[]"));
+  public void StructWithAnArrayField_OwnsAVector_AndIsMovedNotCopied() {
+    var text = Emitted("public struct Buffer { public int[] Data; } public static class S { public static int F(Buffer b) => b.Data[0]; }");
+    Assert.That(text, Does.Contain("#[derive(Clone, Debug)]\npub struct Buffer {\n    pub data: Vec<i32>,\n}"));
+    Assert.That(text, Does.Contain("pub fn f(b: Buffer) -> i32 {\n    b.data[0]\n}"));
+  }
 
   [Test]
   public void ElementLoopOverStructs_CopiesEachElement_ButNotWhereTheBodyWritesOne() {
-    Assert.That(Emitted(Point + "public static class S { public static int F(Point[] a) { int s = 0; foreach (var p in a) s += p.X; return s; } }"), Does.Contain("for &p in a {"));
+    Assert.That(Emitted(Point + "public static class S { public static int F(Point[] a) { int s = 0; foreach (var p in a) s += p.X; return s; } }"), Does.Contain("a.iter()\n        .map(|&p| p.x)\n        .fold(0i32, |acc, x| acc.wrapping_add(x))"));
     Assert.That(Emitted(Point + "public static class S { public static void F(Point[] a) { for (int i = 0; i < a.Length; i++) a[i].X = a[i].Y; } }"), Does.Not.Contain("for &"));
   }
 
@@ -89,5 +92,21 @@ public sealed class TypeEmitTests {
     Assert.That(text, Does.Contain("let p = Pair { a, b: 1.0 };\n    if p.a > 0 {}\n    Pair {\n        a: long_name_of_a_value,\n        b: 2.0,\n    }\n"));
     Assert.That(RustPrinter.Print(RustSyntaxReader.Read(text)), Is.EqualTo(text));
   }
+
+  private const string UseOfU = "public static class S { public static int F(int a) { var u = new U(a); return u.A; } }";
+
+  [Test]
+  public void SequentialLayout_IsReprC() {
+    var text = Emitted("[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)] public struct U { public int A; public byte B; public U(int a) { A = a; B = 1; } } " + UseOfU);
+    Assert.That(text, Does.Contain("#[repr(C)]\n#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]\npub struct U {"));
+    Assert.That(Emitted(Point + "public static class S { public static int F() => new Point(1, 2).X; }"), Does.Not.Contain("repr(C)"));
+  }
+
+  [TestCase("[StructLayout(LayoutKind.Explicit)] public struct U { [FieldOffset(0)] public int A; [FieldOffset(0)] public float B; public U(int a) { B = 0; A = a; } }", "overlapping fields, an untagged union", TestName = "OverlappingFields_AreRefused")]
+  [TestCase("[StructLayout(LayoutKind.Explicit)] public struct U { [FieldOffset(0)] public int A; [FieldOffset(8)] public byte B; public U(int a) { A = a; B = 1; } }", "explicit field offsets", TestName = "ExplicitOffsets_AreRefused")]
+  [TestCase("[StructLayout(LayoutKind.Sequential, Pack = 1)] public struct U { public int A; public byte B; public U(int a) { A = a; B = 1; } }", "packed to 1 bytes", TestName = "PackedLayout_IsRefused")]
+  [TestCase("[StructLayout(LayoutKind.Sequential, Size = 16)] public struct U { public int A; public byte B; public U(int a) { A = a; B = 1; } }", "a size of 16 bytes", TestName = "LayoutOfItsOwnSize_IsRefused")]
+  public void LayoutWithoutASafeForm_IsRefusedByName(string type, string problem)
+    => Assert.That(Problems("using System.Runtime.InteropServices; " + type + " " + UseOfU), Has.Some.EqualTo($"PLY1584 layout of 'U' ({problem}) has no safe Rust representation"));
 
 }

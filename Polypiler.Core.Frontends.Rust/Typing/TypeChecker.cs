@@ -285,10 +285,13 @@ internal sealed partial class TypeChecker {
 
   private RType? SelfOf(FunctionSignature signature) => this._selfTypes.GetValueOrDefault(signature);
 
-  /// <summary>Rejects the use of a moved value in a function, as <c>rustc</c>'s borrow checker does (<c>E0382</c>).</summary>
+  /// <summary>Rejects the use of a moved value in a function (<c>E0382</c>) and a second mutable borrow of a place a live one holds (<c>E0499</c>), as <c>rustc</c>'s borrow checker does.</summary>
   private void Moves(FunctionItem function) {
     if (MoveCheck.Run(function, this._typed) is { } error)
       throw this.Invalid($"E0382: use of moved value: `{error.Binding.Name}`", error.At);
+
+    if (BorrowCheck.Run(function, this._typed) is { } conflict)
+      throw this.Invalid($"E0499: cannot borrow `{conflict.Place}` as mutable more than once at a time", conflict.At);
   }
 
   /// <summary>The <c>Self</c> type of the associated functions of an impl, which have no receiver.</summary>

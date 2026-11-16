@@ -1,3 +1,4 @@
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Frontends.Rust;
@@ -74,6 +75,18 @@ public sealed class RustTypeTests {
     Assert.That(Run(Source, "third", new byte[] { 1, 2, 3 }), Is.EqualTo("3 | [1,2,3]"));
     Assert.That(Run(Source, "third", new byte[] { 1, 2 }), Is.EqualTo("255 | [1,2]"));
     Assert.That(Run(Source, "must", new byte[] { 1, 2 }), Is.EqualTo(RustFixture.Panic));
+  }
+
+  /// <summary>
+  /// Test design 12: <c>unwrap</c> of a <c>None</c> or an <c>Err</c> and <c>expect</c> throw the class
+  /// of Rust's explicit panics, <c>InvalidOperationException</c> (<c>docs/reference/exceptions.md</c>, Rust).
+  /// </summary>
+  [TestCase("pub fn f(x: u8) -> u8 { let o: Option<u8> = if x > 9 { Some(x) } else { None }; o.unwrap() }")]
+  [TestCase("pub fn f(x: u8) -> u8 { let r: Result<u8, u8> = if x > 9 { Ok(x) } else { Err(3) }; r.unwrap() }")]
+  [TestCase("pub fn f(x: u8) -> u8 { let r: Result<u8, u8> = if x > 9 { Ok(x) } else { Err(3) }; r.expect(\"boom\") }")]
+  public void FailedUnwrap_ThrowsTheClassOfExplicitPanics(string source) {
+    var thrown = Assert.Throws(Is.InstanceOf<IrException>(), () => IrInterpreter.Call(Module(source), "f", [(byte)1]));
+    Assert.That(((IrException)thrown!).Class.Name, Is.EqualTo("InvalidOperationException"));
   }
 
   /// <summary>Scenario: while let and let-else over Option are imported.</summary>
@@ -267,6 +280,24 @@ public sealed class RustTypeTests {
     var result = Import(source);
     Assert.That(result.Module, Is.Null);
     Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code + " " + diagnostic.Message), Has.Some.Contains(expected));
+  }
+
+  // ---------------------------------------------------------------- upstream negative corpus
+
+  /// <summary>
+  /// Scenario and test design 18: a real-world fragment outside the subset, Cipher's validation
+  /// harness at its pin (<c>tests/fixtures/rust/upstream</c>), imported as a single-file crate, is
+  /// refused without a crash: <c>PLY1500</c> among the refusals of the Rust frontend, each with its
+  /// position, and no IR.
+  /// </summary>
+  [Test]
+  public void UpstreamHarness_IsRefusedWithoutACrash() {
+    var path = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "rust", "upstream", "harness.rs");
+    ImportResult? result = null;
+    Assert.That(() => result = RustFrontend.Import(path, File.ReadAllText(path), OverflowChecks.Panic), Throws.Nothing);
+    Assert.That(result!.Module, Is.Null);
+    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code), Does.Contain(RustFrontend.InvalidSource));
+    Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Code[..5], diagnostic.Line > 0)), Has.All.EqualTo(("PLY15", true)));
   }
 
 }

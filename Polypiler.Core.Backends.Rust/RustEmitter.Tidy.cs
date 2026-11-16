@@ -26,7 +26,70 @@ public static partial class RustEmitter {
     }
 
     /// <summary>Every block of a block tidied: late initializations joined, bottom-up.</summary>
-    private static RsBlock Bodies(RsBlock block) => RustSyntaxRewriter.Rewrite(block, node => node is RsBlock inner ? Swapped(LateInitialized(inner)) : node);
+    private static RsBlock Bodies(RsBlock block) => RustSyntaxRewriter.Rewrite(block, node => node is RsBlock inner ? Questioned(Swapped(LateInitialized(Folded(inner)))) : node);
+
+    /// <summary>
+    /// A reduction over the elements of a slice as an iterator fold: a binding made just before an
+    /// element loop, <c>let mut s = init; for &amp;x in data { s = s.wrapping_add(e); }</c>, whose
+    /// body only combines the binding with a value of the element by a wrapping addition or
+    /// multiplication or a bitwise operator, as
+    /// <c>let s = data.iter().map(|&amp;x| e).fold(init, |acc, x| acc.wrapping_add(x));</c> - the map
+    /// left out where the value is the element itself. The fold combines the elements in their order
+    /// with the same operation, the map runs element by element before it, as the loop did, and the
+    /// value nothing reads but the binding is the closure's: so the value is not a mention of the
+    /// binding, nor of the names the closures take, and leaves nothing, by a <c>return</c>, a
+    /// <c>break</c>, a <c>continue</c> or a <c>?</c>. The start is a literal (typed, which the
+    /// closure's method needs) or a variable, so that evaluating it after the slice changes nothing.
+    /// Never <c>sum</c> or <c>product</c>, whose overflow follows the build mode. The binding stays
+    /// <c>mut</c> only where a statement after assigns it.
+    /// </summary>
+    private static RsBlock Folded(RsBlock block) {
+      var statements = block.Statements.ToList();
+      for (var index = 0; index + 1 < statements.Count; ++index) {
+        if (statements[index] is not RsLet { Mutable: true, Initializer: RsLiteral or RsPath } binding
+          || statements[index + 1] is not RsExpressionStatement { Expression: RsFor { Label: null, Pattern: ['&', .. var element], Iterator: var iterated, Body: { Tail: null, Statements: [RsExpressionStatement { Expression: RsAssign { Target: RsPath target } assign }] } } }
+          || target.Name != binding.Name || Combined(assign) is not { } combined || Elements(iterated) is not { } elements)
+          continue;
+
+        var (method, value) = combined;
+        const string Accumulator = "acc";
+        const string Item = "x";
+        if (Names(value, binding.Name) || Names(value, Accumulator) || element == Accumulator
+          || RustSyntaxRewriter.DescendantsAndSelf(value).Any(node => node is RsReturn or RsBreak or RsContinue or RsTry))
+          continue;
+
+        // The element itself is folded directly, |acc, &x|; any other value of it is mapped first.
+        var direct = value is RsPath { Name: var name } && name == element;
+        var mapped = direct ? elements : new RsMethodCall(elements, "map", [new RsClosure(false, [new RsParameter("&" + element, "")], value)]);
+        var step = method(new RsPath(Accumulator), new RsPath(direct ? element : Item));
+        var fold = new RsMethodCall(mapped, "fold", [Suffixed(binding.Initializer!), new RsClosure(false, [new RsParameter(Accumulator, ""), new RsParameter(direct ? "&" + element : Item, "")], step)]);
+        var reassigned = statements.Skip(index + 2).Concat<RsNode>(block.Tail is null ? [] : [block.Tail])
+          .SelectMany(RustSyntaxRewriter.DescendantsAndSelf).Any(node => node is RsAssign { Target: RsPath place } && place.Name == binding.Name);
+        statements[index] = binding with { Mutable = reassigned, Initializer = fold };
+        statements.RemoveAt(index + 1);
+      }
+
+      return statements.Count == block.Statements.Count ? block : block with { Statements = statements };
+    }
+
+    /// <summary>
+    /// What an assignment of a reduction combines its binding with, and how: <c>s = s.wrapping_add(e)</c>,
+    /// <c>wrapping_mul</c>; <c>s ^= e</c>, <c>|=</c>, <c>&amp;=</c>. <see langword="null"/> for any other assignment.
+    /// </summary>
+    private static (System.Func<RsExpression, RsExpression, RsExpression> Method, RsExpression Value)? Combined(RsAssign assign) => assign switch {
+      { Operator: "=", Value: RsMethodCall { Name: "wrapping_add" or "wrapping_mul", Receiver: RsPath self, Arguments: [var value] } call } when self.Name == ((RsPath)assign.Target).Name
+        => ((left, right) => new RsMethodCall(left, call.Name, [right]), value),
+      { Operator: "^=" or "|=" or "&=" } => ((left, right) => new RsBinary(left, assign.Operator[..1], right), assign.Value),
+      _ => null
+    };
+
+    /// <summary>The iterator over the elements an element loop walks: <c>data.iter()</c> of a slice, of a borrowed vector or table; <see langword="null"/> for any other.</summary>
+    private static RsExpression? Elements(RsExpression iterated) => iterated switch {
+      RsPath path => new RsMethodCall(path, "iter", []),
+      RsReference { Mutable: false, Operand: RsPath borrowed } => new RsMethodCall(borrowed, "iter", []),
+      RsMethodCall { Name: "iter", Arguments: [] } walk => walk,
+      _ => null
+    };
 
     /// <summary>
     /// Three statements that exchange two elements of one array through a binding,
@@ -47,6 +110,25 @@ public static partial class RustEmitter {
 
         statements[index] = new RsExpressionStatement(new RsMethodCall(array, "swap", [first, second]));
         statements.RemoveRange(index + 1, 2);
+      }
+
+      return statements.Count == block.Statements.Count ? block : block with { Statements = statements };
+    }
+
+    /// <summary>
+    /// An empty option handed on and the value taken out of it, <c>if o.is_none() { return None; } let v = o.unwrap_or_default();</c>,
+    /// as <c>let v = o?;</c> (clippy's <c>question_mark</c>): where nothing after them names the option, which <c>?</c> may move.
+    /// </summary>
+    private static RsBlock Questioned(RsBlock block) {
+      var statements = block.Statements.ToList();
+      for (var index = 0; index + 1 < statements.Count; ++index) {
+        if (statements[index] is not RsExpressionStatement { Expression: RsIf { Else: null, Condition: RsMethodCall { Name: "is_none", Arguments.Count: 0, Receiver: RsPath tested }, Then: { Tail: null, Statements: [RsExpressionStatement { Expression: RsReturn { Value: RsPath { Name: "None" } } }] } } }
+          || statements[index + 1] is not RsLet { Initializer: RsMethodCall { Name: "unwrap_or_default", Arguments.Count: 0, Receiver: RsPath taken } unwrapped } binding
+          || taken.Name != tested.Name || Names(new RsBlock([.. statements.Skip(index + 2)], block.Tail), tested.Name))
+          continue;
+
+        statements[index] = binding with { Initializer = new RsTry(unwrapped.Receiver) { Type = unwrapped.Type } };
+        statements.RemoveAt(index + 1);
       }
 
       return statements.Count == block.Statements.Count ? block : block with { Statements = statements };
