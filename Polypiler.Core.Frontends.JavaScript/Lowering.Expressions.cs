@@ -238,10 +238,12 @@ internal sealed partial class Lowering {
         expression = new IrBinary(Operation(op), this.Word(left, coercion, operand), this.Word(right, coercion, operand));
         break;
       case Plan.IntegerDivide or Plan.BigDivide or Plan.BigShiftRight:
-        this.Divides |= operation.Plan != Plan.BigShiftRight;
         var dividend = this.To(this.Evaluate(left), operand, left);
         var divisor = operation.Plan == Plan.BigShiftRight ? Count(right) : this.To(this.Evaluate(right), operand, right);
-        expression = Convert(new IrBinary(Operation(op), dividend, divisor), operation.Result.Ir!);
+        // Under a coercion a quotient of integers is what JavaScript's quotient of doubles becomes (#1367).
+        var quotient = operation.Plan == Plan.IntegerDivide && coercion is Coercion.Int32 or Coercion.Uint32 ? this.Quotient(op, dividend, divisor, left, right) : null;
+        this.Divides |= operation.Plan != Plan.BigShiftRight && quotient is null;
+        expression = Convert(quotient ?? new IrBinary(Operation(op), dividend, divisor), operation.Result.Ir!);
         break;
       case Plan.Float or Plan.CompareFloat:
         expression = new IrBinary(Operation(op), this.Float(left), this.Float(right));
