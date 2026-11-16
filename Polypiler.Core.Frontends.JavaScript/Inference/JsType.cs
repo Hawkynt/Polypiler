@@ -98,22 +98,30 @@ internal sealed record JsType {
   /// <summary>
   /// Whether JSDoc states the array as <c>T[]</c> of numbers, which says what its elements are but not
   /// whether it is an <c>Array</c> or a typed array (#1374): the calls of the file say that, and where
-  /// none passes one, whether the function itself requires an <c>Array</c>.
+  /// none passes one, whether the function itself requires an <c>Array</c>. Of a <c>BigInt</c>, whether
+  /// JSDoc states <c>int64</c> or <c>uint64</c>, which says the range but not whether the place holds
+  /// Numbers or BigInts (#1401): the values that reach it say that, and where none does, it is a <c>BigInt</c>.
   /// </summary>
   public bool IsStated { get; private init; }
 
-  /// <summary>The array of the elements JSDoc states, of no kind decided yet: a typed array until something decides.</summary>
+  /// <summary>The array of the elements JSDoc states, of no kind decided yet: a typed array until something decides; the 64-bit integer JSDoc states, a <c>BigInt</c> until something decides.</summary>
   public JsType AsStated() => this with { IsStated = true };
+
+  /// <summary>The stated type as the one it is where nothing else decides: a typed array, a <c>BigInt</c> of the stated range.</summary>
+  public JsType Decided => this with { IsStated = false };
 
   /// <summary>
   /// The stated array as the kind of array an argument is: an <c>Array</c> - a list where the argument
   /// is one - or a typed array, of the stated elements, decided; <see langword="null"/> for an argument that is no array.
+  /// The stated 64-bit integer as the kind of integer an argument is: the Number it is, or the stated <c>BigInt</c>.
   /// </summary>
   public JsType? ShapedAs(JsType argument)
+    // A stated 64-bit integer is a Number where a Number is passed, the stated BigInt where a BigInt is (#1401), which the call then keeps or is refused for.
+    => this.Kind == JsKind.BigInt ? (argument.Kind == JsKind.Number ? argument : argument.Kind == JsKind.BigInt ? this.Decided : null)
     // An argument that is a stated array nothing has decided either decides nothing.
-    => argument.Kind != JsKind.Array || argument.IsView || argument.IsStated ? null
+    : argument.Kind != JsKind.Array || argument.IsView || argument.IsStated ? null
       : argument.IsGrowable ? ListOf(this.Element!)
-      : argument.IsPlain ? ArrayOf(this.Element!, true) : this with { IsStated = false };
+      : argument.IsPlain ? ArrayOf(this.Element!, true) : this.Decided;
 
   /// <summary>The keys and value types of a record.</summary>
   public RecordShape? Shape { get; private init; }
