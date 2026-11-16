@@ -29,7 +29,49 @@ public enum OverflowChecks {
 /// <summary>What importing a Rust source file produced: a module, or the reasons there is none.</summary>
 /// <param name="Module">The imported module, or <see langword="null"/> when there are diagnostics.</param>
 /// <param name="Diagnostics">Why the source was refused; empty when <paramref name="Module"/> is set.</param>
-public sealed record ImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Diagnostics);
+public sealed record ImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Diagnostics) {
+
+  /// <summary>
+  /// The functions of the module that are the crate's <c>#[test]</c> functions, by their IR names: a
+  /// test passes when the function returns and fails when it panics. The IR has no role for a test, so
+  /// the import names them here.
+  /// </summary>
+  public IReadOnlyList<string> Tests { get; init; } = [];
+
+  /// <summary>The crate paths of the modules in the order of the module graph, the order the functions of the module follow.</summary>
+  public IReadOnlyList<string> ModuleOrder { get; init; } = [];
+
+  /// <summary>
+  /// The exported functions that are instances of a public generic function, by their IR names
+  /// (<c>largest_u8</c>): the function's path in the crate with the type arguments, as Rust calls it
+  /// (<c>largest::&lt;u8&gt;</c>). The IR has no generic functions, so the crate's exported surface is
+  /// the instances it makes.
+  /// </summary>
+  public IReadOnlyDictionary<string, string> Instances { get; init; } = new Dictionary<string, string>();
+
+}
+
+/// <summary>How a Rust source is imported: the build settings the source does not state, and where the other files of its crate are.</summary>
+/// <param name="OverflowChecks">What an overflowing operator does: <c>rustc</c>'s <c>-C overflow-checks</c>.</param>
+public sealed record RustImportOptions(OverflowChecks OverflowChecks) {
+
+  /// <summary>
+  /// Whether <c>debug_assert*!</c> asserts, <c>rustc</c>'s <c>-C debug-assertions</c>: on in a debug build,
+  /// off in a release build. <see langword="null"/> when the profile does not say, which refuses a
+  /// source that uses one (<c>PLY1536</c>).
+  /// </summary>
+  public bool? DebugAssertions { get; init; }
+
+  /// <summary>
+  /// Reads another file of the crate by its path, for <c>mod m;</c>; <see langword="null"/> when the file
+  /// does not exist. Without a reader, a file module is not found.
+  /// </summary>
+  public Func<string, string?>? ReadFile { get; init; }
+
+  /// <summary>Whether the source is one of the frontend's own helpers, which may name the IR's string operations.</summary>
+  internal bool Internal { get; init; }
+
+}
 
 /// <summary>
 /// Imports the scalar subset of Rust (2024 edition): free functions over the integer types of 8 to
@@ -131,10 +173,133 @@ public static class RustFrontend {
   [Diagnostic]
   public static readonly DiagnosticDescriptor UnsupportedAttributeDescriptor = new(UnsupportedAttribute, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "attribute '{0}' is not supported", "rust.attributes");
 
+  /// <summary>The code for an element type or a form of array, slice or <c>Vec</c> outside the subset: a nested array, a slice of structs, a slice pattern.</summary>
+  public const string UnsupportedElement = "PLY1520";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedElement"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedElementDescriptor = new(UnsupportedElement, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "'{0}' is not supported by the Rust frontend", "rust.memory");
+
+  /// <summary>The code for <c>str</c>, <c>String</c> and <c>char</c>.</summary>
+  public const string TextType = "PLY1521";
+
+  /// <summary>The registered diagnostic of <see cref="TextType"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor TextTypeDescriptor = new(TextType, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "text type '{0}' is not supported", "rust.text");
+
+  /// <summary>The code for <c>unsafe</c> blocks, raw pointers, <c>transmute</c>, <c>union</c>, <c>static mut</c> and <c>MaybeUninit</c>.</summary>
+  public const string UnsafeConstruct = "PLY1522";
+
+  /// <summary>The registered diagnostic of <see cref="UnsafeConstruct"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsafeConstructDescriptor = new(UnsafeConstruct, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "unsafe construct '{0}' is not supported", "rust.unsafe");
+
+  /// <summary>The code for <c>Box</c>, <c>Rc</c>, <c>Arc</c>, <c>Cell</c>, <c>RefCell</c> and <c>Cow</c>.</summary>
+  public const string SmartPointer = "PLY1523";
+
+  /// <summary>The registered diagnostic of <see cref="SmartPointer"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor SmartPointerDescriptor = new(SmartPointer, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "smart pointer or interior-mutability type '{0}' is not supported", "rust.ownership");
+
+  /// <summary>The code for a method of slices, arrays or <c>Vec</c> outside the subset.</summary>
+  public const string UnsupportedSliceMethod = "PLY1524";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedSliceMethod"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedSliceMethodDescriptor = new(UnsupportedSliceMethod, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "method '{0}' is not supported on slices, arrays or Vec", "rust.slice-methods");
+
+  /// <summary>The code for the collections other than <c>Vec</c>.</summary>
+  public const string UnsupportedCollection = "PLY1525";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedCollection"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedCollectionDescriptor = new(UnsupportedCollection, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "collection type '{0}' is not supported", "rust.collections");
+
+  /// <summary>The code for a closure that escapes the function that defines it, or moves a value that is not <c>Copy</c>.</summary>
+  public const string EscapingClosure = "PLY1532";
+
+  /// <summary>The registered diagnostic of <see cref="EscapingClosure"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor EscapingClosureDescriptor = new(EscapingClosure, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "closure escapes its defining function: {0}", "rust.closures");
+
+  /// <summary>The code for a path into another crate or to a standard-library item outside the subset.</summary>
+  public const string ForeignPath = "PLY1534";
+
+  /// <summary>The registered diagnostic of <see cref="ForeignPath"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor ForeignPathDescriptor = new(ForeignPath, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "'{0}' refers to an item outside the supported standard-library subset or to another crate", "rust.paths");
+
+  /// <summary>The code for an iterator method outside the subset.</summary>
+  public const string UnsupportedIteratorMethod = "PLY1535";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedIteratorMethod"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedIteratorMethodDescriptor = new(UnsupportedIteratorMethod, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "iterator method '{0}' is not supported", "rust.iterators");
+
+  /// <summary>The code for a <c>debug_assert*!</c> imported without the <c>debugAssertions</c> setting.</summary>
+  public const string MissingDebugAssertions = "PLY1536";
+
+  /// <summary>The registered diagnostic of <see cref="MissingDebugAssertions"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor MissingDebugAssertionsDescriptor = new(MissingDebugAssertions, DiagnosticSeverity.Error, ExitCode.UsageError, "the source profile does not set 'debugAssertions': {0}", "rust.debug-assertions");
+
+  /// <summary>The code for traits, trait implementations and trait objects.</summary>
+  public const string UnsupportedTrait = "PLY1540";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedTrait"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedTraitDescriptor = new(UnsupportedTrait, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "traits are not supported by the Rust frontend: '{0}' (the object-model contract of #473 and #474)", "rust.traits");
+
+  /// <summary>The code for generic parameters of structs, enums and impls.</summary>
+  public const string UnsupportedGeneric = "PLY1541";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedGeneric"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedGenericDescriptor = new(UnsupportedGeneric, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "generic parameters are not supported: '{0}'", "rust.generics");
+
+  /// <summary>The code for named lifetime parameters and fields of reference type.</summary>
+  public const string UnsupportedLifetime = "PLY1542";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedLifetime"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedLifetimeDescriptor = new(UnsupportedLifetime, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "lifetime parameters and reference fields are not supported: '{0}'", "rust.lifetimes");
+
+  /// <summary>The code for an enum whose variants carry data.</summary>
+  public const string DataEnum = "PLY1543";
+
+  /// <summary>The registered diagnostic of <see cref="DataEnum"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor DataEnumDescriptor = new(DataEnum, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "enum '{0}' has variants with data", "rust.enums");
+
+  /// <summary>The code for a derive or an attribute of a type outside the subset.</summary>
+  public const string UnsupportedDerive = "PLY1544";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedDerive"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedDeriveDescriptor = new(UnsupportedDerive, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "attribute or derive '{0}' is not supported", "rust.derives");
+
+  /// <summary>The code for a method of <c>Option</c> or <c>Result</c> outside the subset, and a <c>Result</c> of an unsupported error type.</summary>
+  public const string UnsupportedOptionMethod = "PLY1545";
+
+  /// <summary>The registered diagnostic of <see cref="UnsupportedOptionMethod"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsupportedOptionMethodDescriptor = new(UnsupportedOptionMethod, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "'{0}' is not supported on Option or Result", "rust.option-result");
+
+  /// <summary>The code for <c>impl Drop</c>.</summary>
+  public const string Destructor = "PLY1546";
+
+  /// <summary>The registered diagnostic of <see cref="Destructor"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor DestructorDescriptor = new(Destructor, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "destructors are not supported: 'impl Drop for {0}'", "rust.drop");
+
   private static readonly Dictionary<string, DiagnosticDescriptor> _descriptors = new[] {
     InvalidSourceDescriptor, UnsupportedTypeDescriptor, UnsupportedDescriptor, UnresolvedTypeDescriptor,
     ConditionalBindingDescriptor, UnsupportedPatternDescriptor, UnsupportedIterableDescriptor, CoroutineDescriptor,
-    UnsupportedFunctionDescriptor, UnsupportedMacroDescriptor, UnsupportedAttributeDescriptor
+    UnsupportedFunctionDescriptor, UnsupportedMacroDescriptor, UnsupportedAttributeDescriptor,
+    UnsupportedElementDescriptor, TextTypeDescriptor, UnsafeConstructDescriptor, SmartPointerDescriptor, UnsupportedSliceMethodDescriptor,
+    UnsupportedCollectionDescriptor, EscapingClosureDescriptor, ForeignPathDescriptor, UnsupportedIteratorMethodDescriptor,
+    MissingDebugAssertionsDescriptor, UnsupportedTraitDescriptor, UnsupportedGenericDescriptor, UnsupportedLifetimeDescriptor,
+    DataEnumDescriptor, UnsupportedDeriveDescriptor, UnsupportedOptionMethodDescriptor, DestructorDescriptor
   }.ToDictionary(descriptor => descriptor.Code);
 
   /// <summary>Imports one Rust source file.</summary>
@@ -142,9 +307,17 @@ public static class RustFrontend {
   /// <param name="source">The text of the file.</param>
   /// <param name="overflowChecks">What an overflowing operator does: <c>rustc</c>'s <c>-C overflow-checks</c>.</param>
   /// <returns>The module, or the diagnostics that explain why there is none.</returns>
-  public static ImportResult Import(string path, string source, OverflowChecks overflowChecks) {
+  public static ImportResult Import(string path, string source, OverflowChecks overflowChecks) => Import(path, source, new RustImportOptions(overflowChecks));
+
+  /// <summary>Imports a crate from its root file: the file and every module it declares.</summary>
+  /// <param name="path">The path of the root file, from which file modules are found; the module is named after it.</param>
+  /// <param name="source">The text of the root file.</param>
+  /// <param name="options">The build settings and the reader of the crate's other files.</param>
+  /// <returns>The module, or the diagnostics that explain why there is none.</returns>
+  public static ImportResult Import(string path, string source, RustImportOptions options) {
     ArgumentNullException.ThrowIfNull(path);
     ArgumentNullException.ThrowIfNull(source);
+    ArgumentNullException.ThrowIfNull(options);
 
     SourceFile file;
     try {
@@ -160,11 +333,12 @@ public static class RustFrontend {
       diagnostics.Add(descriptor.At(message, path, at.Line, at.Column));
     }
 
-    var lowered = ModuleLowering.Run(file, overflowChecks, Report);
+    var lowered = ModuleLowering.Run(file, path, source, options, Report);
     if (diagnostics.Count > 0 || lowered is null)
       return new(null, diagnostics);
 
-    return new(new IrModule(Path.GetFileNameWithoutExtension(path), lowered), []);
+    var module = new IrModule(Path.GetFileNameWithoutExtension(path), lowered.Functions, lowered.Constants) { Types = lowered.Types };
+    return new(module, []) { Tests = lowered.Tests, ModuleOrder = lowered.ModuleOrder, Instances = lowered.Instances };
   }
 
 }

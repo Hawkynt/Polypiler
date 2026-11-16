@@ -53,8 +53,22 @@ internal sealed partial class FunctionLowering {
   private IrExpr? If(IfExpr conditional) {
     var type = this._typed.TypeOf(conditional);
     var wanted = type.Kind is not (RKind.Unit or RKind.Never);
-    var condition = this.Value(conditional.Condition);
-    var then = this.Capture(() => this.Block(conditional.Then));
+    IrExpr condition;
+    List<(IdentifierPattern Pattern, Item Item)> bindings = [];
+    if (conditional.Pattern is { } pattern) {
+      // if let: the scrutinee once, the pattern's test, its bindings in the then branch only.
+      var scrutinee = this.Scrutinee(conditional.Condition, pattern);
+      var scrutineeType = this._typed.TypeOf(conditional.Condition);
+      condition = this.Test(pattern, scrutinee, scrutineeType) ?? Truth(true);
+      bindings = [.. this.Bindings(pattern, scrutinee, scrutineeType)];
+    } else {
+      condition = this.Value(conditional.Condition);
+    }
+
+    var then = this.Capture(() => {
+      this.Declare(bindings);
+      return this.Block(conditional.Then);
+    });
     var otherwise = conditional.Else is null ? (Statements: new List<IrStmt>(), Value: (IrExpr?)null, Diverged: false) : this.Capture(() => this.Lower(conditional.Else));
     if (!wanted) {
       this.Emit(new IrIf(condition, new IrBlock(then.Statements), conditional.Else is null ? null : new IrBlock(otherwise.Statements)));
@@ -78,7 +92,7 @@ internal sealed partial class FunctionLowering {
       return then.Value;
     }
 
-    var slot = this.Slot(type.Ir, "result");
+    var slot = this.Slot(this.Ir(type), "result");
     then.Statements.Add(new IrAssign(slot, then.Value!));
     otherwise.Statements.Add(new IrAssign(slot, otherwise.Value!));
     this.Emit(new IrIf(condition, new IrBlock(then.Statements), new IrBlock(otherwise.Statements)));
@@ -93,7 +107,12 @@ internal sealed partial class FunctionLowering {
   /// </summary>
   private IrExpr? Breakable(Expr node, System.Action<Frame> body, System.Func<List<IrStmt>, IrStmt> loop) {
     var type = this._typed.TypeOf(node);
-    var value = type.Kind is RKind.Unit or RKind.Never ? null : this.Slot(type.Ir, "result");
+    return this.Breakable(node, body, loop, type.Kind is RKind.Unit or RKind.Never ? null : this.Ir(type));
+  }
+
+  /// <summary>A loop or a block that runs once whose value, if it has one, is of the given type.</summary>
+  private IrExpr? Breakable(Expr node, System.Action<Frame> body, System.Func<List<IrStmt>, IrStmt> loop, IrType? valueType) {
+    var value = valueType is null ? null : this.Slot(valueType, "result");
     var frame = new Frame(node, value);
     this._frames.Add(frame);
     var lowered = this.Capture(() => {
@@ -136,6 +155,19 @@ internal sealed partial class FunctionLowering {
 
   private IrExpr? While(WhileExpr loop) {
     IrExpr? simple = null;
+    if (loop.Pattern is { } pattern) {
+      // while let: every pass evaluates the scrutinee, tests the pattern, and binds it for the body.
+      return this.Breakable(loop, _ => {
+        var scrutinee = this.Scrutinee(loop.Condition, pattern);
+        var type = this._typed.TypeOf(loop.Condition);
+        if (this.Test(pattern, scrutinee, type) is { } matches)
+          this.Emit(new IrIf(Not(matches), new IrBlock([new IrBreak()]), null));
+
+        this.Declare([.. this.Bindings(pattern, scrutinee, type)]);
+        this.Block(loop.Body);
+      }, statements => new IrWhile(Truth(true), new IrBlock(statements)));
+    }
+
     return this.Breakable(loop, _ => {
       var mark = this._statements.Count;
       var test = this.Value(loop.Condition);
@@ -189,14 +221,20 @@ internal sealed partial class FunctionLowering {
       LoopExpr loop => loop.Label,
       WhileExpr loop => loop.Label,
       BlockExpr block => block.Label,
-      _ => ((ForExpr)frame.Node).Label
+      ForExpr loop => loop.Label,
+      _ => "closure"
     };
     return label is null ? "" : char.ToUpperInvariant(label[0]) + label[1..];
   }
 
   private IrExpr? Return(ReturnExpr jump) {
     var value = jump.Value is null ? null : this.Lower(jump.Value);
-    this.Emit(new IrReturn(value));
+    if (value is not null && jump.Value is not null)
+      value = this.Converted(value, this.CurrentResult, this._typed.TypeOf(jump.Value));
+
+    if (!this._diverged)
+      this.EmitReturn(value);
+
     this._diverged = true;
     return null;
   }

@@ -11,6 +11,8 @@ namespace Polypiler.Core.Frontends.Rust.Lowering;
 ///   <item><term>arithmetic overflow, a shift amount out of range, <c>MIN / -1</c>, <c>MIN % -1</c></term><description><c>OverflowException</c> (<c>IntegerOverflow</c>)</description></item>
 ///   <item><term>division or remainder by zero</term><description><c>DivideByZeroException</c> (<c>DivideByZero</c>)</description></item>
 ///   <item><term><c>unwrap()</c> of a <c>None</c>, <c>expect("msg")</c>, <c>step_by(0)</c></term><description><c>InvalidOperationException</c></description></item>
+///   <item><term>a range or an index outside a slice, an array or a <c>Vec</c></term><description><c>IndexOutOfRangeException</c> (<c>IndexOutOfRange</c>)</description></item>
+///   <item><term><c>assert!</c> and its relatives, <c>panic!</c>, <c>todo!</c>, <c>unimplemented!</c>, <c>unreachable!</c>, unequal lengths of <c>copy_from_slice</c></term><description><c>InvalidOperationException</c></description></item>
 ///   <item><term><c>clamp</c> with <c>min &gt; max</c></term><description><c>ArithmeticException</c> (<c>InvalidOperation</c>, the IR's <c>Clamp</c>)</description></item>
 /// </list>
 /// The message of a throw is Rust's own panic message; messages are no part of the cross-language
@@ -26,6 +28,9 @@ internal static class RustTraps {
 
   /// <summary>The panic statement of <see cref="Panic(IrType, string)"/>.</summary>
   public static IrStmt PanicStatement(string message) => new IrThrow(New(IrExceptionClass.InvalidOperationException, message));
+
+  /// <summary>The panic of an index or a range outside a slice, an array or a <c>Vec</c>, as a statement.</summary>
+  public static IrStmt OutOfBounds(string message) => new IrThrow(New(IrExceptionClass.IndexOutOfRangeException, message));
 
   private static IrExpr Throw(IrType type, IrClassType exception, string message) => new IrThrowExpression(type, New(exception, message));
 

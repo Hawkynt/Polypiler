@@ -26,7 +26,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 public sealed class RustRoundTripTests {
 
   private static IEnumerable<TestCaseData> Cases()
-    => RustFixture.Names.SelectMany(fixture => RustFixture.Modes.Select(mode => new TestCaseData(fixture, mode).SetArgDisplayNames(fixture, RustFixture.NameOf(mode))));
+    => RustFixture.Names.Except(RustFixture.BackendPending).SelectMany(fixture => RustFixture.Modes.Select(mode => new TestCaseData(fixture, mode).SetArgDisplayNames(fixture, RustFixture.NameOf(mode))));
 
   [TestCaseSource(nameof(Cases))]
   [RequiresToolchain(RustRunner.Toolchain)]

@@ -13,25 +13,33 @@ internal sealed class CheckAbort : Exception;
 /// The type checker of the subset: infers the type of every expression the way <c>rustc</c> does for
 /// it - inference variables for unsuffixed literals and untyped locals, unified by every use, an
 /// integer variable nothing decides becoming <c>i32</c> and a float one <c>f64</c> - resolves every
-/// name, method, <c>break</c> and <c>continue</c>, and rejects what <c>rustc</c> rejects with the
-/// compiler's error code (<c>E0308</c> mismatched types, <c>E0689</c> a method on an ambiguous
-/// number, <c>E0600</c> negation of an unsigned value, the <c>overflowing_literals</c> lint, ...).
-/// A construct outside the subset is reported with the diagnostic its <see cref="Refusal"/> names.
+/// name, path, method, field, <c>break</c> and <c>continue</c>, and rejects what <c>rustc</c> rejects
+/// with the compiler's error code (<c>E0308</c> mismatched types, <c>E0689</c> a method on an
+/// ambiguous number, <c>E0600</c> negation of an unsigned value, the <c>overflowing_literals</c> lint,
+/// ...). A construct outside the subset is reported with the diagnostic its <see cref="Refusal"/> names.
 /// </summary>
-internal sealed class TypeChecker {
+internal sealed partial class TypeChecker {
 
   private readonly Typed _typed;
   private readonly Action<string, string, Span> _report;
+  private readonly CrateScope _crate;
   private readonly List<Dictionary<string, Binding>> _scopes = [];
+  private readonly List<Dictionary<string, FunctionSignature>> _localFunctions = [];
   private readonly List<Context> _contexts = [];
   private readonly List<RType> _variables = [];
   private readonly List<(RType Type, Binding Binding, Span At)> _undecided = [];
+
+  /// <summary>The expressions checked, whose types must be decided once the function is: an expression nothing types is <c>E0282</c>.</summary>
+  private readonly List<(Expr Expression, RType Type)> _expressions = [];
   private readonly List<Action> _deferred = [];
+  private readonly List<ClosureInfo> _closures = [];
 
   /// <summary>The variables that stand for a refused expression: nothing is reported about them again.</summary>
   private readonly HashSet<RType> _errors = new(ReferenceEqualityComparer.Instance);
-  private readonly Dictionary<string, Binding> _constants = [];
+  private readonly Dictionary<ConstItem, Binding> _constants = new(ReferenceEqualityComparer.Instance);
   private RType _result = RType.Unit;
+  private ModuleScope _module;
+  private RType? _self;
 
   /// <summary>A loop or a labelled block that a <c>break</c> may leave.</summary>
   private sealed class Context(Expr node, string? label, bool isLoop, bool takesValue) {
@@ -49,11 +57,16 @@ internal sealed class TypeChecker {
     /// <summary>The type of the values breaks carry, or <see langword="null"/> when nothing breaks out.</summary>
     public RType? BreakType { get; set; }
 
+    /// <summary>The closure the loop is in: a <c>break</c> never leaves a closure.</summary>
+    public int ClosureDepth { get; init; }
+
   }
 
-  public TypeChecker(Typed typed, Action<string, string, Span> report) {
+  public TypeChecker(Typed typed, CrateScope crate, Action<string, string, Span> report) {
     this._typed = typed;
     this._report = report;
+    this._crate = crate;
+    this._module = crate.Root;
   }
 
   // ---------------------------------------------------------------- reporting
@@ -70,6 +83,8 @@ internal sealed class TypeChecker {
     return this.ErrorType();
   }
 
+  private RType Refused(string code, string construct, Span at) => this.Refused(new Refusal(code, construct, at));
+
   /// <summary>The type of a refused expression: anything, and never reported again.</summary>
   private RType ErrorType() {
     var error = this.Fresh(VariableKind.Any);
@@ -77,45 +92,62 @@ internal sealed class TypeChecker {
     return error;
   }
 
+  private bool IsError(RType type) => this._errors.Contains(type.Resolved);
+
   private RType Fresh(VariableKind kind) {
     var variable = RType.Variable(kind);
     this._variables.Add(variable);
     return variable;
   }
 
-  // ---------------------------------------------------------------- types
-
-  /// <summary>The type a type of the source names, or a refusal when the subset has no such type.</summary>
-  public RType? Resolve(TypeRef? type, bool allowUnit) {
-    if (type is null)
-      return RType.Unit;
-
-    if (type.Name is "()" && allowUnit)
-      return RType.Unit;
-
-    if (type.Name is "!" && allowUnit)
-      return RType.Never;
-
-    if (RType.Named(type.Name) is { } primitive)
-      return primitive;
-
-    this._report(RustFrontend.UnsupportedType, type.Name, type.At);
-    return null;
+  private CheckAbort Unresolved(string name, Span at) {
+    this._report(RustFrontend.UnresolvedType, name, at);
+    return new CheckAbort();
   }
 
+  // ---------------------------------------------------------------- unification
+
   private void Unify(RType expected, RType found, Span at) {
+    if (!this.TryUnify(expected, found))
+      throw this.Invalid($"E0308: mismatched types: expected `{expected}`, found `{found}`", at);
+  }
+
+  /// <summary>Makes two types one, binding variables; <see langword="false"/> when they differ.</summary>
+  private bool TryUnify(RType expected, RType found) {
     var a = expected.Resolved;
     var b = found.Resolved;
-    if (ReferenceEquals(a, b) || a.Kind == RKind.Never || b.Kind == RKind.Never)
-      return;
+    if (ReferenceEquals(a, b) || a.Kind == RKind.Never || b.Kind == RKind.Never || this.IsError(a) || this.IsError(b))
+      return true;
 
     if (a.Kind == RKind.Variable && Bind(a, b))
-      return;
+      return true;
 
     if (b.Kind == RKind.Variable && Bind(b, a))
-      return;
+      return true;
 
-    throw this.Invalid($"E0308: mismatched types: expected `{a}`, found `{b}`", at);
+    if (a.Kind != b.Kind || a.Kind is RKind.Variable or RKind.Integer or RKind.Float or RKind.Bool)
+      return false;
+
+    if (a.Kind == RKind.Pointer && a.Name != b.Name)
+      return false;
+
+    if (a.Length != b.Length || a.Mutable != b.Mutable || !ReferenceEquals(a.Declaration, b.Declaration) && a.Kind != RKind.Closure && a.Kind != RKind.Iterator)
+      return false;
+
+    if (a.Kind is RKind.Closure or RKind.Iterator)
+      return ReferenceEquals(a.Declaration, b.Declaration);
+
+    if (a.Element is not null && !this.TryUnify(a.Element, b.Element!))
+      return false;
+
+    if (a.Elements.Count != b.Elements.Count)
+      return false;
+
+    for (var index = 0; index < a.Elements.Count; ++index)
+      if (!this.TryUnify(a.Elements[index], b.Elements[index]))
+        return false;
+
+    return true;
   }
 
   /// <summary>Binds a variable to a type it may stand for; <see langword="false"/> when it may not.</summary>
@@ -134,15 +166,67 @@ internal sealed class TypeChecker {
       return false;
     }
 
+    if (Occurs(variable, type))
+      return false;
+
     var fits = variable.VariableKind switch {
       VariableKind.Integer => type.Kind == RKind.Integer,
       VariableKind.Float => type.Kind == RKind.Float,
-      _ => type.Kind is not (RKind.Tuple or RKind.Option)
+      _ => true
     };
     if (fits)
       variable.Bound = type;
 
     return fits;
+  }
+
+  /// <summary>Whether a variable occurs in a type, which would make binding it to the type infinite.</summary>
+  private static bool Occurs(RType variable, RType type) {
+    var resolved = type.Resolved;
+    if (ReferenceEquals(resolved, variable))
+      return true;
+
+    return (resolved.Element is { } element && resolved.Kind is not (RKind.Closure or RKind.Iterator) && Occurs(variable, element))
+      || resolved.Kind is not (RKind.Closure or RKind.Iterator) && resolved.Elements.Any(part => Occurs(variable, part));
+  }
+
+  /// <summary>
+  /// A value of one type where another is expected, at a coercion site of The Rust Reference ("Type
+  /// coercions"): <c>&amp;mut T</c> to <c>&amp;T</c>, <c>&amp;[T; N]</c> and <c>&amp;Vec&lt;T&gt;</c> to
+  /// <c>&amp;[T]</c> (unsizing and deref coercion), a function item or a non-capturing closure to a
+  /// function pointer; otherwise the types must unify.
+  /// </summary>
+  private void Coerce(RType expected, RType found, Span at) {
+    var a = expected.Resolved;
+    var b = found.Resolved;
+    if (a.Kind == RKind.Reference && b.Kind == RKind.Reference && (!a.Mutable || b.Mutable)) {
+      var target = a.Element!.Resolved;
+      var source = b.Element!.Resolved;
+      if (target.Kind == RKind.Slice && source.Kind is RKind.Array or RKind.Vec) {
+        this.Unify(target.Element!, source.Element!, at);
+        return;
+      }
+
+      // Deref coercion: &String is a &str, &&str too.
+      if (target.Kind == RKind.Str && (source.Kind == RKind.String || source.IsText))
+        return;
+
+      if (a.Mutable != b.Mutable) {
+        this.Unify(a.Element!, b.Element!, at);
+        return;
+      }
+    }
+
+    // A closure that captures nothing coerces to a function pointer, which the subset has no value of a closure for.
+    if (a.Kind == RKind.Function && b.Kind == RKind.Closure && b.Declaration is ClosureInfo closure) {
+      if (closure.Captures.Count > 0)
+        throw this.Invalid("E0308: mismatched types: closures can only be coerced to `fn` types if they do not capture any variables", at);
+
+      this.Refuse(new Refusal(RustFrontend.EscapingClosure, "closure coerced to a function pointer", at));
+      return;
+    }
+
+    this.Unify(expected, found, at);
   }
 
   /// <summary>The type of two branches that meet: the one that yields a value where the other never does.</summary>
@@ -159,36 +243,93 @@ internal sealed class TypeChecker {
 
   // ---------------------------------------------------------------- functions
 
-  /// <summary>Checks a function; <see langword="false"/> when it does not compile or uses a construct outside the subset (already reported).</summary>
-  public bool Function(FunctionSignature signature) {
+  private void Reset(ModuleScope module, RType? self) {
     this._scopes.Clear();
+    this._localFunctions.Clear();
     this._contexts.Clear();
     this._variables.Clear();
     this._undecided.Clear();
+    this._expressions.Clear();
     this._deferred.Clear();
     this._errors.Clear();
+    this._closures.Clear();
+    this._module = module;
+    this._self = self;
+  }
+
+  /// <summary>Checks a function; <see langword="false"/> when it does not compile or uses a construct outside the subset (already reported).</summary>
+  public bool Function(FunctionSignature signature) {
+    if (this._nestedChecked.Contains(signature))
+      return true;
+
+    this.Reset(signature.Module ?? this._crate.Root, signature.Receiver is { } receiver ? receiver.Dereferenced : this.SelfOf(signature));
+    this._enclosing = signature;
+    this._typeParameters = signature.Substitution;
+    this._instantiations.Clear();
+    try {
+      this.Body(signature);
+      this.Finish();
+      foreach (var check in this._deferred)
+        check();
+
+      this.Moves(signature.Item);
+      this.Instantiate();
+    } catch (CheckAbort) {
+      return false;
+    } finally {
+      this._typeParameters = null;
+    }
+
+    return true;
+  }
+
+  private RType? SelfOf(FunctionSignature signature) => this._selfTypes.GetValueOrDefault(signature);
+
+  /// <summary>Rejects the use of a moved value in a function, as <c>rustc</c>'s borrow checker does (<c>E0382</c>).</summary>
+  private void Moves(FunctionItem function) {
+    if (MoveCheck.Run(function, this._typed) is { } error)
+      throw this.Invalid($"E0382: use of moved value: `{error.Binding.Name}`", error.At);
+  }
+
+  /// <summary>The <c>Self</c> type of the associated functions of an impl, which have no receiver.</summary>
+  private readonly Dictionary<FunctionSignature, RType> _selfTypes = new(ReferenceEqualityComparer.Instance);
+
+  /// <summary>Checks the parameters and the body of a function, in a new set of scopes; a nested function is checked the same way.</summary>
+  private void Body(FunctionSignature signature) {
+    var (scopes, locals, contexts, result, closures) = (this._scopes.ToList(), this._localFunctions.ToList(), this._contexts.ToList(), this._result, this._closures.ToList());
+    this._scopes.Clear();
+    this._contexts.Clear();
+    this._closures.Clear();
+    // A nested function sees the items of the blocks around it, never their variables.
+    this._localFunctions.Clear();
+    this._localFunctions.AddRange(locals);
     this._result = signature.Result;
     var scope = new Dictionary<string, Binding>();
     this._scopes.Add(scope);
     var item = signature.Item;
-    for (var index = 0; index < item.Parameters.Count; ++index) {
-      var parameter = item.Parameters[index];
-      var binding = new Binding(parameter.Name, signature.Parameters[index], parameter.Mutable) { Initialized = true };
-      scope[parameter.Name] = binding;
-      this._typed.Bindings[parameter] = binding;
-    }
-
     try {
-      var body = this.Block(item.Body);
-      this.Unify(signature.Result, body, item.Body.Tail?.At ?? item.Body.At);
-      this.Finish();
-      foreach (var check in this._deferred)
-        check();
-    } catch (CheckAbort) {
-      return false;
-    }
+      if (signature.Receiver is { } receiver) {
+        var self = new Binding("self", receiver, item.MutableReceiver) { Initialized = true };
+        scope["self"] = self;
+        this._typed.Bindings[item] = self;
+      }
 
-    return true;
+      for (var index = 0; index < item.Parameters.Count; ++index)
+        this.Irrefutable(item.Parameters[index].Pattern, signature.Parameters[index], true, "parameter");
+
+      var body = this.Block(item.Body, signature.Result);
+      this.Coerce(signature.Result, body, item.Body.Tail?.At ?? item.Body.At);
+    } finally {
+      this._scopes.Clear();
+      this._scopes.AddRange(scopes);
+      this._localFunctions.Clear();
+      this._localFunctions.AddRange(locals);
+      this._contexts.Clear();
+      this._contexts.AddRange(contexts);
+      this._closures.Clear();
+      this._closures.AddRange(closures);
+      this._result = result;
+    }
   }
 
   /// <summary>Decides every variable nothing decided: an integer is <c>i32</c>, a float <c>f64</c>, anything else needs an annotation.</summary>
@@ -205,22 +346,63 @@ internal sealed class TypeChecker {
     }
 
     foreach (var (type, binding, at) in this._undecided)
-      if (type.Resolved.Kind == RKind.Variable && !this._errors.Contains(type.Resolved))
+      if (Undecided(type) && !this.IsError(type))
         throw this.Unresolved(binding.Name, at);
+
+    foreach (var (expression, type) in this._expressions)
+      if (Undecided(type) && !this.HoldsError(type))
+        throw this.Unresolved(Describe(expression), expression.At);
+
+    foreach (var (expression, type) in this._expressions)
+      this.CheckInstances(type, expression.At);
+
+    // The IR holds a string in a list or an array, never in an optional value or a struct.
+    if (this._expressions.FirstOrDefault(pair => HoldsText(pair.Type)) is ({ } held, { } holder))
+      this.Refuse(new Refusal(RustFrontend.Unsupported, $"'{holder}', a value holding text", held.At));
   }
 
-  private CheckAbort Unresolved(string name, Span at) {
-    this._report(RustFrontend.UnresolvedType, name, at);
-    return new CheckAbort();
+  /// <summary>Whether an option, a result or a tuple holds text, which no IR optional and no IR struct can.</summary>
+  private static bool HoldsText(RType type) {
+    var resolved = type.Resolved;
+    return resolved.Kind switch {
+      RKind.Option => resolved.Element!.IsText || HoldsText(resolved.Element),
+      RKind.Result => resolved.Element!.IsText || resolved.Error.IsText || HoldsText(resolved.Element) || HoldsText(resolved.Error),
+      RKind.Tuple => resolved.Elements.Any(element => element.IsText || HoldsText(element)),
+      _ => false
+    };
+  }
+
+  /// <summary>Whether a type has a refused part, about which everything has been said.</summary>
+  private bool HoldsError(RType type) {
+    var resolved = type.Resolved;
+    if (this.IsError(resolved))
+      return true;
+
+    if (resolved.Kind is RKind.Closure or RKind.Iterator)
+      return false;
+
+    return (resolved.Element is { } element && this.HoldsError(element)) || resolved.Elements.Any(this.HoldsError);
+  }
+
+  /// <summary>Whether a type still has a variable in it.</summary>
+  private static bool Undecided(RType type) {
+    var resolved = type.Resolved;
+    if (resolved.Kind == RKind.Variable)
+      return true;
+
+    if (resolved.Kind is RKind.Closure or RKind.Iterator)
+      return false;
+
+    return (resolved.Element is { } element && Undecided(element)) || resolved.Elements.Any(Undecided);
   }
 
   // ---------------------------------------------------------------- scopes
 
   private Binding Declare(string name, RType type, bool mutable, object node, Span at, bool initialized) {
-    var binding = new Binding(name, type, mutable) { Initialized = initialized };
+    var binding = new Binding(name, type, mutable) { Initialized = initialized, Depth = this._closures.Count };
     this._scopes[^1][name] = binding;
     this._typed.Bindings[node] = binding;
-    if (type.Resolved.Kind == RKind.Variable && type.Resolved.VariableKind == VariableKind.Any)
+    if (Undecided(type))
       this._undecided.Add((type, binding, at));
 
     return binding;
@@ -228,29 +410,47 @@ internal sealed class TypeChecker {
 
   private Binding? Lookup(string name) {
     for (var index = this._scopes.Count - 1; index >= 0; --index)
-      if (this._scopes[index].TryGetValue(name, out var binding))
+      if (this._scopes[index].TryGetValue(name, out var binding)) {
+        this.Captured(binding);
         return binding;
+      }
 
-    return this._constants.GetValueOrDefault(name);
+    return null;
   }
 
-  /// <summary>Checks a constant of the file against its declared type; once it passes, every function may name it.</summary>
-  public bool Constant(ConstItem constant) {
-    this._scopes.Clear();
-    this._contexts.Clear();
-    this._variables.Clear();
-    this._undecided.Clear();
-    this._deferred.Clear();
-    this._errors.Clear();
+  /// <summary>Records a variable a closure names from outside it as captured by every closure it is named from.</summary>
+  private void Captured(Binding binding) {
+    if (binding.Constant is not null)
+      return;
+
+    for (var depth = binding.Depth; depth < this._closures.Count; ++depth)
+      if (!this._closures[depth].Captures.Contains(binding))
+        this._closures[depth].Captures.Add(binding);
+  }
+
+  /// <summary>A function declared in a block around the current point, by name.</summary>
+  private FunctionSignature? LocalFunction(string name) {
+    for (var index = this._localFunctions.Count - 1; index >= 0; --index)
+      if (this._localFunctions[index].TryGetValue(name, out var function))
+        return function;
+
+    return null;
+  }
+
+  /// <summary>Checks a constant or a static against its declared type; once it passes, every function may name it.</summary>
+  public bool Constant(ConstItem constant, ModuleScope module, RType? self = null) {
+    this.Reset(module, self);
     this._scopes.Add([]);
     try {
       var type = this.Resolve(constant.Type, false) ?? throw new CheckAbort();
-      this.Unify(type, this.Value(constant.Value), constant.Value.At);
+      this.Coerce(type, this.Value(constant.Value), constant.Value.At);
       this.Finish();
       foreach (var check in this._deferred)
         check();
 
-      this._constants[constant.Name] = new Binding(constant.Name, type, false, constant) { Initialized = true };
+      this._constants[constant] = new Binding(constant.Name, type, false, constant) { Initialized = true };
+      if (constant.IsStatic)
+        this._typed.Statics.Add(this._constants[constant]);
     } catch (CheckAbort) {
       return false;
     }
@@ -260,15 +460,46 @@ internal sealed class TypeChecker {
 
   // ---------------------------------------------------------------- blocks and statements
 
-  private RType Block(Block block) {
+  private RType Block(Block block, RType? expected = null) {
     this._scopes.Add([]);
-    var diverges = false;
-    foreach (var statement in block.Statements)
-      diverges |= this.Statement(statement);
+    var functions = new Dictionary<string, FunctionSignature>();
+    this._localFunctions.Add(functions);
+    try {
+      // The items of a block are visible in all of it, before and after their declaration.
+      foreach (var statement in block.Statements) {
+        if (statement is FunctionStatement nested)
+          functions[nested.Item.Name] = this.Nested(nested.Item);
+        else if (statement is ConstStatement constant)
+          this.LocalConstant(constant.Item);
+      }
 
-    var type = block.Tail is null ? diverges ? RType.Never : RType.Unit : this.Value(block.Tail);
-    this._scopes.RemoveAt(this._scopes.Count - 1);
-    return diverges && type.Resolved.Kind == RKind.Unit && block.Tail is null ? RType.Never : type;
+      var diverges = false;
+      foreach (var statement in block.Statements)
+        diverges |= this.Statement(statement);
+
+      var type = block.Tail is null ? diverges ? RType.Never : RType.Unit : this.Value(block.Tail, Carried(expected));
+      return diverges && type.Resolved.Kind == RKind.Unit && block.Tail is null ? RType.Never : type;
+    } finally {
+      this._scopes.RemoveAt(this._scopes.Count - 1);
+      this._localFunctions.RemoveAt(this._localFunctions.Count - 1);
+    }
+  }
+
+  private void LocalConstant(ConstItem constant) {
+    var type = this.Resolve(constant.Type, false) ?? throw new CheckAbort();
+    var saved = this._closures.ToList();
+    this._closures.Clear();
+    try {
+      this.Coerce(type, this.Value(constant.Value), constant.Value.At);
+    } finally {
+      this._closures.AddRange(saved);
+    }
+
+    var binding = new Binding(constant.Name, type, false, constant) { Initialized = true };
+    this._scopes[^1][constant.Name] = binding;
+    this._constants[constant] = binding;
+    if (constant.IsStatic)
+      this._typed.Statics.Add(binding);
   }
 
   /// <summary>Checks a statement; <see langword="true"/> when control never goes on after it.</summary>
@@ -278,13 +509,8 @@ internal sealed class TypeChecker {
         return this.Let(let);
       case ExpressionStatement expression:
         return this.Value(expression.Expression).Resolved.Kind == RKind.Never;
-      case ConstStatement constant: {
-        var type = this.Resolve(constant.Item.Type, false) ?? throw new CheckAbort();
-        this.Unify(type, this.Value(constant.Item.Value), constant.Item.Value.At);
-        var binding = new Binding(constant.Item.Name, type, false, constant.Item) { Initialized = true };
-        this._scopes[^1][constant.Item.Name] = binding;
+      case ConstStatement or FunctionStatement:
         return false;
-      }
       default:
         this.Refuse(((RefusedStatement)statement).Refusal);
         return false;
@@ -292,97 +518,106 @@ internal sealed class TypeChecker {
   }
 
   private bool Let(LetStatement let) {
-    var annotated = let.Type is null ? null : this.Resolve(let.Type, false) ?? this.ErrorType();
-    if (let.Pattern is TuplePattern tuple) {
-      if (let.Initializer is not MethodCallExpr { Name: var name } call || !name.StartsWith("overflowing_", StringComparison.Ordinal) || tuple.Elements.Count != 2
-          || tuple.Elements.Any(element => element is not (IdentifierPattern or WildcardPattern))) {
-        this.Refuse(new Refusal(RustFrontend.UnsupportedPattern, "tuple pattern", tuple.At));
-        return false;
-      }
-
-      var pair = this.Method(call, true);
-      this._typed.Types[call] = pair;
-      if (annotated is not null)
-        this.Unify(annotated, pair, let.Type!.At);
-
-      RType[] parts = [pair.Resolved.Element!, RType.Bool];
-      for (var index = 0; index < 2; ++index)
-        if (tuple.Elements[index] is IdentifierPattern part)
-          this.Declare(part.Name, parts[index], part.Mutable, part, part.At, true);
-
-      return false;
-    }
-
+    var annotated = let.Type is null ? null : this.Inferred(let.Type, true) ?? this.ErrorType();
     var type = annotated;
     var diverges = false;
     if (let.Initializer is not null) {
-      var initializer = this.Value(let.Initializer);
+      if (let is { Pattern: TuplePattern { Elements.Count: 2 }, Initializer: MethodCallExpr { Name: "split_at" or "split_at_mut" } split })
+        this._splitInitializer = split;
+
+      var initializer = this.Value(let.Initializer, annotated);
+      this._splitInitializer = null;
       diverges = initializer.Resolved.Kind == RKind.Never;
       if (type is null)
-        type = initializer.Resolved.Kind == RKind.Never ? this.Fresh(VariableKind.Any) : initializer;
+        type = initializer;
       else
-        this.Unify(type, initializer, let.Initializer.At);
+        this.Coerce(type, initializer, let.Initializer.At);
     }
 
     type ??= this.Fresh(VariableKind.Any);
-    switch (let.Pattern) {
-      case IdentifierPattern identifier:
-        if (type.Resolved.Kind == RKind.Unit)
-          this.Refuse(new Refusal(RustFrontend.Unsupported, "unit value '()'", identifier.At));
+    if (let.Else is not null) {
+      if (let.Initializer is null)
+        throw this.Invalid("let ... else needs an initializer", let.At);
 
-        this.Declare(identifier.Name, type, identifier.Mutable, identifier, identifier.At, let.Initializer is not null);
-        break;
-      case WildcardPattern:
-        break;
-      case RefusedPattern refused:
-        this.Refuse(refused.Refusal);
-        break;
-      default:
-        this.Refuse(new Refusal(RustFrontend.UnsupportedPattern, "refutable pattern in let", let.Pattern.At));
-        break;
+      var otherwise = this.Block(let.Else);
+      if (otherwise.Resolved.Kind != RKind.Never)
+        throw this.Invalid("E0308: `else` clause of `let...else` does not diverge", let.Else.At);
+
+      this.Pattern(let.Pattern, type, false);
+      return diverges;
     }
 
+    this.Irrefutable(let.Pattern, type, let.Initializer is not null, "let");
     return diverges;
+  }
+
+  /// <summary>
+  /// Binds an irrefutable pattern of a <c>let</c> or a parameter: a name, <c>_</c>, a tuple, a struct
+  /// or a reference pattern made of them. A refutable pattern there is <c>E0005</c>.
+  /// </summary>
+  private void Irrefutable(Pattern pattern, RType type, bool initialized, string where) {
+    if (pattern is IdentifierPattern identifier && this.PatternConstant(identifier) is null) {
+      if (type.Resolved.Kind == RKind.Unit && where == "let")
+        this.Refuse(new Refusal(RustFrontend.Unsupported, "unit value '()'", identifier.At));
+
+      this.Declare(identifier.Name, type, identifier.Mutable, identifier, identifier.At, initialized);
+      return;
+    }
+
+    this.Pattern(pattern, type, false);
+    this._deferred.Add(() => {
+      if (!Exhaustiveness.Irrefutable(pattern, type, this._typed))
+        throw this.Invalid($"E0005: refutable pattern in {(where == "let" ? "local binding" : "function argument")}", pattern.At);
+    });
   }
 
   // ---------------------------------------------------------------- expressions
 
-  /// <summary>Checks an expression whose value is used as a value: an optional value or a pair of a method may not be.</summary>
-  private RType Value(Expr expression) {
-    // An optional value or a pair never gets here: a method returning one refuses being used as a value itself.
-    return this.Expression(expression);
-  }
+  /// <summary>Checks an expression whose value is used.</summary>
+  private RType Value(Expr expression, RType? expected = null) => this.Expression(expression, expected);
 
-  private RType Expression(Expr expression) {
-    var type = this.ExpressionUnrecorded(expression);
+  private RType Expression(Expr expression, RType? expected = null) {
+    var type = this.ExpressionUnrecorded(expression, expected);
     this._typed.Types[expression] = type;
-    return type;
+    this._expressions.Add((expression, type));
+    return expected is not null && this.Unsize(expression, type, expected) is { } coerced ? coerced : type;
   }
 
-  private RType ExpressionUnrecorded(Expr expression) => expression switch {
+  private RType ExpressionUnrecorded(Expr expression, RType? expected) => expression switch {
     IntegerLiteral literal => this.Integer(literal, false),
     FloatLiteral literal => literal.Suffix is null ? this.Fresh(VariableKind.Float) : RType.Named(literal.Suffix)!,
     BoolLiteral => RType.Bool,
-    StringLiteral literal => this.Refused(new Refusal(RustFrontend.UnsupportedType, "&str", literal.At)),
-    PathExpr path => this.Path(path),
+    StringLiteral => RType.StrRef,
+    CharLiteral => RType.Char,
+    ByteStringLiteral literal => RType.Reference(RType.Array(RType.U8, literal.Bytes.Count), false),
+    PathExpr path => this.Path(path, expected),
     UnaryExpr unary => this.Unary(unary),
+    ReferenceExpr reference => this.Reference(reference, expected),
+    DerefExpr deref => this.Deref(deref),
     BinaryExpr binary => this.Binary(binary),
     AssignExpr assign => this.Assign(assign),
     CastExpr cast => this.Cast(cast),
-    MethodCallExpr call => this.Method(call, false),
-    CallExpr call => this.Call(call),
+    MethodCallExpr call => this.Method(call, expected),
+    CallExpr call => this.Call(call, expected),
     FieldExpr field => this.Field(field),
-    TupleExpr tuple => this.Refused(new Refusal(RustFrontend.Unsupported, "tuple expression", tuple.At)),
-    RangeExpr range => this.Refused(new Refusal(RustFrontend.Unsupported, "range expression outside a for loop", range.At)),
-    BlockExpr block => this.BlockExpression(block),
-    IfExpr conditional => this.If(conditional),
-    MatchExpr match => this.Match(match),
+    IndexExpr index => this.Index(index),
+    TupleExpr tuple => this.Tuple(tuple, expected),
+    ArrayExpr array => this.Array(array, expected),
+    ArrayRepeatExpr array => this.ArrayRepeat(array, expected),
+    StructExpr structure => this.StructExpression(structure),
+    RangeExpr range => this.Refused(RustFrontend.Unsupported, "range expression outside a for loop, an iterator or an index", range.At),
+    BlockExpr block => this.BlockExpression(block, expected),
+    IfExpr conditional => this.If(conditional, expected),
+    MatchExpr match => this.Match(match, expected),
     WhileExpr loop => this.While(loop),
     LoopExpr loop => this.Loop(loop),
     ForExpr loop => this.For(loop),
     BreakExpr jump => this.Break(jump),
     ContinueExpr jump => this.Continue(jump),
     ReturnExpr jump => this.Return(jump),
+    TryExpr attempt => this.Try(attempt),
+    ClosureExpr closure => this.Closure(closure, expected),
+    MacroExpr macro => this.Macro(macro, expected),
     _ => this.Refused(((RefusedExpr)expression).Refusal)
   };
 
@@ -405,49 +640,32 @@ internal sealed class TypeChecker {
     return type;
   }
 
-  private RType Path(PathExpr path) {
-    if (path.Segments.Count == 1) {
-      var binding = this.Lookup(path.Segments[0]);
-      if (binding is null) {
-        if (this._typed.Functions.ContainsKey(path.Segments[0]))
-          return this.Refused(new Refusal(RustFrontend.Unsupported, $"function '{path.Segments[0]}' as a value", path.At));
-
-        throw this.Invalid($"E0425: cannot find value `{path.Segments[0]}` in this scope", path.At);
-      }
-
-      this._typed.Bindings[path] = binding;
-      return binding.Type;
-    }
-
-    if (path.Segments.Count == 2 && RType.Named(path.Segments[0]) is { } owner) {
-      if (owner.Kind == RKind.Integer && path.Segments[1] is "MIN" or "MAX")
-        return owner;
-
-      if (owner.Kind == RKind.Integer && path.Segments[1] == "BITS")
-        return RType.U32;
-
-      if (owner.Kind == RKind.Float && path.Segments[1] is "MIN" or "MAX" or "NAN" or "INFINITY" or "NEG_INFINITY" or "EPSILON" or "MIN_POSITIVE")
-        return owner;
-    }
-
-    if (path.Segments.Count == 2 && RType.Unsupported.Contains(path.Segments[0]))
-      return this.Refused(new Refusal(RustFrontend.UnsupportedType, path.Segments[0], path.At));
-
-    return this.Refused(new Refusal(RustFrontend.Unsupported, path.Text, path.At));
-  }
-
   private RType Unary(UnaryExpr unary) {
-    var type = unary is { Op: "-", Operand: IntegerLiteral literal } ? this.Literal(literal, true) : this.Value(unary.Operand);
+    var operand = unary is { Op: "-", Operand: IntegerLiteral literal } ? this.Literal(literal, true) : this.Value(unary.Operand);
+    if (this.TraitUnary(unary, operand) is { } overloaded)
+      return overloaded;
+
+    // The operators of the primitive types are implemented for references to them too.
+    var type = this.Fresh(VariableKind.Any);
     this._deferred.Add(() => {
-      var resolved = type.Resolved;
+      var resolved = Primitive(operand);
       var valid = unary.Op == "-" ? resolved.Kind == RKind.Float || (resolved.Kind == RKind.Integer && resolved.IsSigned) : resolved.Kind is RKind.Integer or RKind.Bool;
-      if (!valid)
-        throw this.Invalid($"E0600: cannot apply unary operator `{unary.Op}` to type `{resolved}`", unary.At);
+      if (!valid && !this.IsError(resolved))
+        throw this.Invalid($"E0600: cannot apply unary operator `{unary.Op}` to type `{operand}`", unary.At);
 
       if (unary.Op == "-" && resolved.Kind == RKind.Integer && unary.Operand is not IntegerLiteral && -Constants.Evaluate(unary.Operand, this._typed) > resolved.Maximum)
         throw this.Invalid("this arithmetic operation will overflow (arithmetic_overflow)", unary.At);
     });
+    this.Unify(type, StripShared(operand), unary.At);
     return type;
+  }
+
+  /// <summary>The type an operator of a primitive type works on: a shared reference to a primitive is the primitive.</summary>
+  private static RType Primitive(RType type) => StripShared(type).Resolved;
+
+  private static RType StripShared(RType type) {
+    var resolved = type.Resolved;
+    return resolved.Kind == RKind.Reference && !resolved.Mutable && resolved.Element!.Resolved.Kind is RKind.Integer or RKind.Float or RKind.Bool ? resolved.Element : type;
   }
 
   /// <summary>An integer literal under a unary minus: recorded as the operand, its range checked with the sign.</summary>
@@ -457,7 +675,6 @@ internal sealed class TypeChecker {
     return type;
   }
 
-  private static readonly HashSet<string> _arithmetic = ["+", "-", "*", "/", "%"];
   private static readonly HashSet<string> _bitwise = ["&", "|", "^"];
   private static readonly HashSet<string> _comparisons = ["==", "!=", "<", ">", "<=", ">="];
 
@@ -470,23 +687,61 @@ internal sealed class TypeChecker {
       return RType.Bool;
     }
 
-    this._deferred.Add(() => this.KnownOverflow(binary, left));
-    if (binary.Op is "<<" or ">>") {
-      this.Operands(binary.Op, left, binary.At, type => type.Kind == RKind.Integer);
-      this.Operands(binary.Op, right, binary.At, type => type.Kind == RKind.Integer);
-      return left;
-    }
+    if (this.TextOperator(binary, left, right) is { } text)
+      return text;
 
-    this.Unify(left, right, binary.At);
+    if (this.TraitOperator(binary, StripShared(left), right) is { } overloaded)
+      return overloaded;
+
+    if (StripShared(left).Resolved.Kind == RKind.Char && !_comparisons.Contains(binary.Op))
+      throw this.Invalid($"E0369: cannot apply `{binary.Op}` to `char`", binary.At);
+
+    this._deferred.Add(() => this.KnownOverflow(binary, StripShared(left)));
     if (_comparisons.Contains(binary.Op)) {
-      this.Operands(binary.Op, left, binary.At, type => type.Kind is RKind.Integer or RKind.Float or RKind.Bool);
+      this.Unify(left, right, binary.At);
+      this._deferred.Add(() => this.Comparable(binary, left));
       return RType.Bool;
     }
 
-    this.Operands(binary.Op, left, binary.At, _bitwise.Contains(binary.Op)
+    if (binary.Op is "<<" or ">>") {
+      this.Operands(binary.Op, left, binary.At, type => type.Kind == RKind.Integer);
+      this.Operands(binary.Op, right, binary.At, type => type.Kind == RKind.Integer);
+      return StripShared(left);
+    }
+
+    // `&a op b`, `a op &b` and `&a op &b` of the primitives: the result is the primitive.
+    var leftValue = StripShared(left);
+    this.Unify(leftValue, StripShared(right), binary.At);
+    this.Operands(binary.Op, leftValue, binary.At, _bitwise.Contains(binary.Op)
       ? type => type.Kind is RKind.Integer or RKind.Bool
       : type => type.Kind is RKind.Integer or RKind.Float);
-    return left;
+    return leftValue;
+  }
+
+  /// <summary>Whether the operands of a comparison may be compared: primitives, and for <c>==</c> and <c>!=</c> the types that derive <c>PartialEq</c>.</summary>
+  private void Comparable(BinaryExpr binary, RType type) {
+    var resolved = type.Dereferenced;
+    if (this.IsError(resolved) || resolved.Kind is RKind.Integer or RKind.Float or RKind.Bool or RKind.Never or RKind.Char or RKind.String or RKind.Str)
+      return;
+
+    if (binary.Op is "==" or "!=" && Equatable(resolved))
+      return;
+
+    throw this.Invalid($"E0369: binary operation `{binary.Op}` cannot be applied to type `{type}`", binary.At);
+  }
+
+  /// <summary>Whether <c>==</c> is defined on a type: primitives, and tuples, options, results, arrays and the structs and enums deriving <c>PartialEq</c> of them.</summary>
+  private static bool Equatable(RType type) {
+    var resolved = type.Dereferenced;
+    return resolved.Kind switch {
+      RKind.Integer or RKind.Float or RKind.Bool or RKind.Unit or RKind.Char or RKind.String or RKind.Str => true,
+      RKind.Tuple => resolved.Elements.All(Equatable),
+      RKind.Option or RKind.Array => Equatable(resolved.Element!),
+      RKind.Result => Equatable(resolved.Element!) && Equatable(resolved.Error),
+      RKind.Struct => resolved.Struct!.Derives.Contains("PartialEq"),
+      RKind.Enum => resolved.Enum!.Derives.Contains("PartialEq"),
+      _ => false
+    };
   }
 
   /// <summary>
@@ -518,9 +773,9 @@ internal sealed class TypeChecker {
       return;
 
     BigInteger? result = binary.Op switch {
-      "+" => left + right,
-      "-" => left - right,
-      "*" => left * right,
+      "+" => left.Value + right.Value,
+      "-" => left.Value - right.Value,
+      "*" => left.Value * right.Value,
       "/" or "%" => BigInteger.Divide(left.Value, right.Value),
       _ => null
     };
@@ -531,39 +786,127 @@ internal sealed class TypeChecker {
   /// <summary>Requires, once the types are decided, that an operand of an operator is of a type the operator is defined on.</summary>
   private void Operands(string op, RType type, Span at, Func<RType, bool> valid)
     => this._deferred.Add(() => {
-      if (!valid(type.Resolved) && type.Resolved.Kind != RKind.Never)
+      var resolved = Primitive(type);
+      if (!valid(resolved) && resolved.Kind != RKind.Never && !this.IsError(resolved))
         throw this.Invalid($"E0369: no implementation for `{type} {op} {type}`", at);
     });
 
   private RType Assign(AssignExpr assign) {
-    var value = this.Value(assign.Value);
-    if (assign.Target is not PathExpr { Segments.Count: 1 } path || this.Lookup(path.Segments[0]) is not { Constant: null } binding) {
-      if (assign.Target is PathExpr { Segments.Count: 1 } named && this.Lookup(named.Segments[0]) is null)
-        throw this.Invalid($"E0425: cannot find value `{named.Segments[0]}` in this scope", named.At);
+    // The value is checked first: it is evaluated first, and its type may decide the place's; a
+    // variable holding a trait object is a coercion site of the value all the same.
+    var holder = assign is { Op: "=", Target: PathExpr { Segments: [var name] } } && this.Lookup(name)?.Type is { IsTraitObject: true } held ? held : null;
+    var value = this.Value(assign.Value, holder);
+    var place = this.Place(assign.Target, assign.Op == "=");
+    if (place is null)
+      return RType.Unit;
 
-      return this.Refused(new Refusal(RustFrontend.Unsupported, "assignment to anything but a local variable", assign.Target.At));
-    }
+    if (assign is { Op: "=", Target: DerefExpr deref } && this._typed.TypeOf(deref.Operand) is { Kind: RKind.Reference, Mutable: true } through && through.Element!.Resolved.Kind == RKind.Pointer)
+      return this.Refused(RustFrontend.UnsupportedTrait, $"assignment of a new trait object through {through}", assign.At);
 
-    this._typed.Bindings[path] = binding;
-    this._typed.Types[path] = binding.Type;
-    if (!binding.Mutable && (binding.Initialized || assign.Op != "="))
-      throw this.Invalid($"E0384: cannot assign twice to immutable variable `{binding.Name}`", assign.At);
-
-    binding.Initialized = true;
     if (assign.Op is "<<" or ">>") {
-      this.Operands(assign.Op, binding.Type, assign.At, type => type.Kind == RKind.Integer);
+      this.Operands(assign.Op, place, assign.At, type => type.Kind == RKind.Integer);
       this.Operands(assign.Op, value, assign.At, type => type.Kind == RKind.Integer);
       return RType.Unit;
     }
 
-    this.Unify(binding.Type, value, assign.Value.At);
-    if (assign.Op != "=")
-      this.Operands(assign.Op + "=", binding.Type, assign.At, _bitwise.Contains(assign.Op)
-        ? type => type.Kind is RKind.Integer or RKind.Bool
-        : type => type.Kind is RKind.Integer or RKind.Float);
+    if (assign.Op == "=") {
+      this.Coerce(place, value, assign.Value.At);
+      return RType.Unit;
+    }
 
+    if (this.TraitAssign(assign, place, value))
+      return RType.Unit;
+
+    if (assign.Op == "+" && place.Resolved.Kind == RKind.String) {
+      this.Coerce(RType.StrRef, value, assign.Value.At);
+      return RType.Unit;
+    }
+
+    this.Unify(place, StripShared(value), assign.Value.At);
+    this.Operands(assign.Op + "=", place, assign.At, _bitwise.Contains(assign.Op)
+      ? type => type.Kind is RKind.Integer or RKind.Bool
+      : type => type.Kind is RKind.Integer or RKind.Float);
     return RType.Unit;
   }
+
+  /// <summary>
+  /// Checks the target of an assignment: a variable, <c>*r</c>, a field or an element of a place
+  /// that may be written. The type of the place, or <see langword="null"/> when it was refused.
+  /// </summary>
+  private RType? Place(Expr target, bool plain) {
+    switch (target) {
+      case PathExpr { Segments.Count: 1 } path: {
+        var binding = this.Lookup(path.Segments[0]);
+        if (binding is null) {
+          if (this.LocalFunction(path.Segments[0]) is null && this._crate.Lookup(this._module, path.Segments[0], new(ReferenceEqualityComparer.Instance)) is null)
+            throw this.Invalid($"E0425: cannot find value `{path.Segments[0]}` in this scope", path.At);
+
+          throw this.Invalid("E0070: invalid left-hand side of assignment", path.At);
+        }
+
+        if (binding.Constant is not null)
+          throw this.Invalid("E0070: invalid left-hand side of assignment", path.At);
+
+        this._typed.Bindings[path] = binding;
+        this._typed.Types[path] = binding.Type;
+        if (!binding.Mutable && (binding.Initialized || !plain))
+          throw this.Invalid($"E0384: cannot assign twice to immutable variable `{binding.Name}`", target.At);
+
+        if (binding.Depth < this._closures.Count && this._closures[^1].Expression.Move)
+          this.Refuse(new Refusal(RustFrontend.EscapingClosure, $"move closure assigns the captured variable `{binding.Name}`", target.At));
+
+        binding.Initialized = true;
+        return binding.Type;
+      }
+      case FieldExpr or IndexExpr or DerefExpr: {
+        var type = this.Value(target);
+        if (!this.Writable(target))
+          throw this.Invalid($"E0594: cannot assign to `{Describe(target)}`, which is behind a `&` reference or not declared as mutable", target.At);
+
+        return type;
+      }
+      default:
+        this.Value(target);
+        if (target is RefusedExpr)
+          return null;
+
+        throw this.Invalid("E0070: invalid left-hand side of assignment", target.At);
+    }
+  }
+
+  /// <summary>Whether a place expression may be written: a mutable variable, a field or element of one, or what a <c>&amp;mut</c> points to.</summary>
+  private bool Writable(Expr place) {
+    switch (place) {
+      case PathExpr path when this._typed.Bindings.TryGetValue(path, out var binding):
+        return binding.Mutable || binding.Type.Resolved is { Kind: RKind.Reference, Mutable: true };
+      case FieldExpr field:
+        return this.ThroughMutable(field.Target);
+      case IndexExpr index:
+        return this.ThroughMutable(index.Target);
+      case DerefExpr deref:
+        return this._typed.TypeOf(deref.Operand) is { Kind: RKind.Reference, Mutable: true };
+      default:
+        return false;
+    }
+  }
+
+  /// <summary>Whether a field or an element of a value may be written: the value is a mutable place, or a <c>&amp;mut</c> reaches it.</summary>
+  private bool ThroughMutable(Expr target) {
+    var type = this._typed.TypeOf(target);
+    if (type.Kind == RKind.Reference)
+      return type.Mutable;
+
+    return this.Writable(target);
+  }
+
+  private static string Describe(Expr expression) => expression switch {
+    PathExpr path => path.Text,
+    FieldExpr field => $"{Describe(field.Target)}.{field.Name}",
+    IndexExpr index => $"{Describe(index.Target)}[..]",
+    DerefExpr deref => "*" + Describe(deref.Operand),
+    MethodCallExpr call => $"{Describe(call.Receiver)}.{call.Name}()",
+    _ => "expression"
+  };
 
   private RType Cast(CastExpr cast) {
     var operand = this.Value(cast.Operand);
@@ -579,132 +922,42 @@ internal sealed class TypeChecker {
 
     this._deferred.Add(() => {
       var from = operand.Resolved;
-      var valid = target.Kind == RKind.Bool ? from.Kind == RKind.Bool : from.Kind is RKind.Integer or RKind.Float or RKind.Bool;
-      if (!valid)
+      // A char casts to every integer type and only u8 to char (The Rust Reference, "Type cast expressions").
+      var valid = target.Kind == RKind.Bool ? from.Kind == RKind.Bool
+        : target.Kind == RKind.Char ? from.Kind == RKind.Char || from == RType.U8
+        : target.Kind is RKind.Integer or RKind.Float && (from.Kind is RKind.Integer or RKind.Float or RKind.Bool || (from.Kind is RKind.Enum or RKind.Char && target.Kind == RKind.Integer));
+      if (!valid && !this.IsError(from))
         throw this.Invalid($"E0054: cannot cast `{from}` as `{target}`", cast.At);
     });
     return target;
   }
 
-  /// <summary>Checks a method call; an optional value or a pair is allowed only where it is consumed on the spot.</summary>
-  private RType Method(MethodCallExpr call, bool allowCompound) {
-    RType receiver;
-    if (Methods.Consumers.Contains(call.Name) && call.Receiver is MethodCallExpr { Name: var inner } checkedCall && inner.StartsWith("checked_", StringComparison.Ordinal)) {
-      receiver = this.Method(checkedCall, true);
-      this._typed.Types[checkedCall] = receiver;
-    } else {
-      receiver = this.Value(call.Receiver);
-    }
-
-    var resolved = receiver.Resolved;
-    if (resolved.Kind == RKind.Variable) {
-      if (this._errors.Contains(resolved))
-        return this.ErrorType();
-
-      if (resolved.VariableKind == VariableKind.Any)
-        throw this.Unresolved(call.Receiver is PathExpr path ? path.Text : call.Name, call.Receiver.At);
-
-      throw this.Invalid($"E0689: can't call method `{call.Name}` on ambiguous numeric type `{resolved}`", call.At);
-    }
-
-    RType result;
-    if (resolved.Kind == RKind.Option) {
-      result = this.Consumer(call, resolved.Element!);
-    } else if (Methods.Of(resolved, call.Name) is { } method) {
-      if (call.Arguments.Count != method.Arguments.Count)
-        throw this.Invalid($"E0061: this method takes {method.Arguments.Count} argument{(method.Arguments.Count == 1 ? "" : "s")} but {call.Arguments.Count} were supplied", call.At);
-
-      for (var index = 0; index < method.Arguments.Count; ++index)
-        this.Unify(Methods.ArgumentOf(method.Arguments[index], resolved), this.Value(call.Arguments[index]), call.Arguments[index].At);
-
-      result = Methods.ResultOf(method, resolved);
-    } else {
-      foreach (var argument in call.Arguments)
-        this.Expression(argument);
-
-      return this.Refused(new Refusal(RustFrontend.Unsupported, $"{resolved}::{call.Name}", call.At));
-    }
-
-    if (!allowCompound && result.Kind is RKind.Option or RKind.Tuple) {
-      this.Refuse(new Refusal(RustFrontend.Unsupported, $"the result of '{call.Name}' used other than by {(result.Kind == RKind.Option ? "unwrap, expect, unwrap_or, is_some or is_none" : ".0, .1 or a tuple let")}", call.At));
-      return this.ErrorType();
-    }
-
-    return result;
-  }
-
-  private RType Consumer(MethodCallExpr call, RType value) {
-    var (arguments, result) = call.Name switch {
-      "unwrap" => (0, value),
-      "expect" => (1, value),
-      "unwrap_or" => (1, value),
-      _ => (0, RType.Bool)
-    };
-    if (call.Arguments.Count != arguments)
-      throw this.Invalid($"E0061: this method takes {arguments} argument{(arguments == 1 ? "" : "s")} but {call.Arguments.Count} were supplied", call.At);
-
-    if (call.Name == "expect") {
-      if (call.Arguments[0] is not StringLiteral)
-        return this.Refused(new Refusal(RustFrontend.Unsupported, "expect with a message that is not a string literal", call.Arguments[0].At));
-    } else if (call.Name == "unwrap_or") {
-      this.Unify(value, this.Value(call.Arguments[0]), call.Arguments[0].At);
-    }
-
-    return result;
-  }
-
-  private RType Call(CallExpr call) {
-    if (call.Callee is PathExpr { Segments.Count: 1 } name && this.Lookup(name.Segments[0]) is null && this._typed.Functions.TryGetValue(name.Segments[0], out var function)) {
-      if (call.Arguments.Count != function.Parameters.Count)
-        throw this.Invalid($"E0061: this function takes {function.Parameters.Count} argument{(function.Parameters.Count == 1 ? "" : "s")} but {call.Arguments.Count} were supplied", call.At);
-
-      for (var index = 0; index < call.Arguments.Count; ++index)
-        this.Unify(function.Parameters[index], this.Value(call.Arguments[index]), call.Arguments[index].At);
-
-      return function.Result;
-    }
-
-    if (call.Callee is PathExpr { Segments: [var owner, "from_bits"] } && RType.Named(owner) is { Kind: RKind.Float } floating && call.Arguments.Count == 1) {
-      this.Unify(floating.Bits == 32 ? RType.U32 : RType.U64, this.Value(call.Arguments[0]), call.Arguments[0].At);
-      return floating;
-    }
-
-    foreach (var argument in call.Arguments)
-      this.Expression(argument);
-
-    if (call.Callee is PathExpr { Segments.Count: 1 } unknown && this.Lookup(unknown.Segments[0]) is null)
-      throw this.Invalid($"E0425: cannot find function `{unknown.Segments[0]}` in this scope", unknown.At);
-
-    return this.Refused(call.Callee is RefusedExpr refused ? refused.Refusal : new Refusal(RustFrontend.Unsupported, call.Callee is PathExpr path ? path.Text : "call of a value", call.Callee.At));
-  }
-
-  private RType Field(FieldExpr field) {
-    if (field.Name is "0" or "1" && field.Target is MethodCallExpr { Name: var name } call && name.StartsWith("overflowing_", StringComparison.Ordinal)) {
-      var pair = this.Method(call, true);
-      this._typed.Types[call] = pair;
-      return field.Name == "0" ? pair.Resolved.Element! : RType.Bool;
-    }
-
-    this.Expression(field.Target);
-    return this.Refused(new Refusal(RustFrontend.Unsupported, $"field access '.{field.Name}'", field.At));
-  }
-
   // ---------------------------------------------------------------- control flow
 
-  private RType BlockExpression(BlockExpr block) {
+  private RType BlockExpression(BlockExpr block, RType? expected) {
     if (block.Label is null)
-      return this.Block(block.Block);
+      return this.Block(block.Block, expected);
 
-    var context = new Context(block, block.Label, false, true);
+    var context = new Context(block, block.Label, false, true) { ClosureDepth = this._closures.Count };
     this._contexts.Add(context);
     var type = this.Block(block.Block);
     this._contexts.RemoveAt(this._contexts.Count - 1);
     return context.BreakType is null ? type : this.Join(type, context.BreakType, block.At);
   }
 
-  private RType If(IfExpr conditional) {
-    this.Unify(RType.Bool, this.Value(conditional.Condition), conditional.Condition.At);
-    var then = this.Block(conditional.Then);
+  private RType If(IfExpr conditional, RType? expected) {
+    RType then;
+    if (conditional.Pattern is { } pattern) {
+      var scrutinee = this.Value(conditional.Condition);
+      this._scopes.Add([]);
+      this.Pattern(pattern, scrutinee, false);
+      then = this.Block(conditional.Then, expected);
+      this._scopes.RemoveAt(this._scopes.Count - 1);
+    } else {
+      this.Unify(RType.Bool, this.Value(conditional.Condition), conditional.Condition.At);
+      then = this.Block(conditional.Then, expected);
+    }
+
     if (conditional.Else is null) {
       if (then.Resolved.Kind != RKind.Never)
         this.Unify(RType.Unit, then, conditional.Then.Tail?.At ?? conditional.At);
@@ -712,83 +965,20 @@ internal sealed class TypeChecker {
       return RType.Unit;
     }
 
-    var otherwise = this.Expression(conditional.Else);
+    var otherwise = this.Expression(conditional.Else, Carried(expected));
     return this.Join(then, otherwise, conditional.Else.At);
   }
 
   private RType While(WhileExpr loop) {
-    this.Unify(RType.Bool, this.Value(loop.Condition), loop.Condition.At);
-    this._contexts.Add(new Context(loop, loop.Label, true, false));
-    var body = this.Block(loop.Body);
-    this._contexts.RemoveAt(this._contexts.Count - 1);
-    this.Unify(RType.Unit, body, loop.Body.Tail?.At ?? loop.At);
-    return RType.Unit;
-  }
-
-  private RType Loop(LoopExpr loop) {
-    var context = new Context(loop, loop.Label, true, true);
-    this._contexts.Add(context);
-    var body = this.Block(loop.Body);
-    this._contexts.RemoveAt(this._contexts.Count - 1);
-    this.Unify(RType.Unit, body, loop.Body.Tail?.At ?? loop.At);
-    return context.BreakType ?? RType.Never;
-  }
-
-  private RType For(ForExpr loop) {
-    // The adapters, outermost last in the source; the base is a range with both bounds.
-    var adapters = new List<MethodCallExpr>();
-    var iterable = loop.Iterable;
-    while (iterable is MethodCallExpr { Name: "rev" or "step_by" } adapter) {
-      adapters.Insert(0, adapter);
-      iterable = adapter.Receiver;
-    }
-
-    if (iterable is not RangeExpr { Start: not null, End: not null } range
-        || adapters.Count(adapter => adapter.Name == "rev") > 1 || adapters.Count(adapter => adapter.Name == "step_by") > 1
-        || adapters.Any(adapter => adapter.Arguments.Count != (adapter.Name == "rev" ? 0 : 1))) {
-      this.Refuse(new Refusal(RustFrontend.UnsupportedIterable, Describe(loop.Iterable), loop.Iterable.At));
-      return RType.Unit;
-    }
-
-    var element = this.Value(range.Start);
-    this.Unify(element, this.Value(range.End), range.End.At);
-    this._deferred.Add(() => {
-      if (element.Resolved.Kind != RKind.Integer)
-        throw this.Invalid($"E0277: the trait bound `{element}: Step` is not satisfied", range.At);
-    });
-    var step = adapters.FirstOrDefault(adapter => adapter.Name == "step_by");
-    if (step is not null)
-      this.Unify(RType.Usize, this.Value(step.Arguments[0]), step.Arguments[0].At);
-
-    var reversed = adapters.Any(adapter => adapter.Name == "rev");
-    var stepFirst = step is not null && reversed && adapters[0] == step;
-    if (stepFirst) {
-      // Reversing a StepBy needs an ExactSizeIterator: Range of the types up to 32 bits and pointer width, RangeInclusive of 8 and 16 bits.
-      this._deferred.Add(() => {
-        var type = element.Resolved;
-        var exact = range.Inclusive ? type.Bits <= 16 && type.Name is not ("isize" or "usize") : type.Bits <= 32 || type.Name is "isize" or "usize";
-        if (!exact)
-          throw this.Invalid($"E0277: the trait bound `{(range.Inclusive ? "RangeInclusive" : "Range")}<{type}>: ExactSizeIterator` is not satisfied", loop.Iterable.At);
-      });
-    }
-
-    this._typed.Ranges[loop] = new RangeLoop(range.Start, range.End, range.Inclusive, reversed, step?.Arguments[0], stepFirst);
     this._scopes.Add([]);
-    switch (loop.Pattern) {
-      case IdentifierPattern identifier:
-        this.Declare(identifier.Name, element, identifier.Mutable, identifier, identifier.At, true);
-        break;
-      case WildcardPattern:
-        break;
-      case RefusedPattern refused:
-        this.Refuse(refused.Refusal);
-        break;
-      default:
-        this.Refuse(new Refusal(RustFrontend.UnsupportedPattern, "pattern of a for over a range", loop.Pattern.At));
-        break;
+    if (loop.Pattern is { } pattern) {
+      var scrutinee = this.Value(loop.Condition);
+      this.Pattern(pattern, scrutinee, false);
+    } else {
+      this.Unify(RType.Bool, this.Value(loop.Condition), loop.Condition.At);
     }
 
-    this._contexts.Add(new Context(loop, loop.Label, true, false));
+    this._contexts.Add(new Context(loop, loop.Label, true, false) { ClosureDepth = this._closures.Count });
     var body = this.Block(loop.Body);
     this._contexts.RemoveAt(this._contexts.Count - 1);
     this._scopes.RemoveAt(this._scopes.Count - 1);
@@ -796,17 +986,21 @@ internal sealed class TypeChecker {
     return RType.Unit;
   }
 
-  /// <summary>How a diagnostic names what a <c>for</c> iterates over.</summary>
-  private static string Describe(Expr iterable) => iterable switch {
-    MethodCallExpr call => $"{Describe(call.Receiver)}.{call.Name}()",
-    PathExpr path => path.Text,
-    RangeExpr range => range.Start is null ? ".." : range.End is null ? "a.." : "range",
-    _ => "expression"
-  };
+  private RType Loop(LoopExpr loop) {
+    var context = new Context(loop, loop.Label, true, true) { ClosureDepth = this._closures.Count };
+    this._contexts.Add(context);
+    var body = this.Block(loop.Body);
+    this._contexts.RemoveAt(this._contexts.Count - 1);
+    this.Unify(RType.Unit, body, loop.Body.Tail?.At ?? loop.At);
+    return context.BreakType ?? RType.Never;
+  }
 
   private Context Target(string? label, bool forContinue, Span at) {
     for (var index = this._contexts.Count - 1; index >= 0; --index) {
       var context = this._contexts[index];
+      if (context.ClosureDepth < this._closures.Count)
+        break;
+
       if (label is null ? context.IsLoop : context.Label == label) {
         if (forContinue && !context.IsLoop)
           throw this.Invalid($"E0696: `continue` pointing to a labeled block", at);
@@ -838,122 +1032,10 @@ internal sealed class TypeChecker {
   }
 
   private RType Return(ReturnExpr jump) {
-    var value = jump.Value is null ? RType.Unit : this.Value(jump.Value);
-    this.Unify(this._result, value, jump.Value?.At ?? jump.At);
+    var result = this._closures.Count > 0 ? this._closures[^1].Result : this._result;
+    var value = jump.Value is null ? RType.Unit : this.Value(jump.Value, result);
+    this.Coerce(result, value, jump.Value?.At ?? jump.At);
     return RType.Never;
-  }
-
-  // ---------------------------------------------------------------- match
-
-  private RType Match(MatchExpr match) {
-    IReadOnlyList<RType> columns = match.Scrutinee is TupleExpr tuple
-      ? [.. tuple.Elements.Select(this.Value)]
-      : [this.Value(match.Scrutinee)];
-    if (match.Scrutinee is TupleExpr whole)
-      this._typed.Types[whole] = RType.Unit;
-
-    RType? result = null;
-    foreach (var arm in match.Arms) {
-      this._scopes.Add([]);
-      this.ArmPattern(arm.Pattern, columns);
-      if (arm.Guard is not null)
-        this.Unify(RType.Bool, this.Value(arm.Guard), arm.Guard.At);
-
-      var body = this.Value(arm.Body);
-      this._scopes.RemoveAt(this._scopes.Count - 1);
-      result = result is null ? body : this.Join(result, body, arm.Body.At);
-    }
-
-    this._deferred.Add(() => {
-      foreach (var column in columns)
-        if (column.Resolved.Kind is not (RKind.Integer or RKind.Bool))
-          throw this.Refusal(new Refusal(RustFrontend.UnsupportedPattern, $"match on {column}", match.Scrutinee.At));
-
-      if (!Exhaustiveness.Covers(match, columns, this._typed))
-        throw this.Invalid("E0004: non-exhaustive patterns", match.Scrutinee.At);
-    });
-    return result ?? RType.Never;
-  }
-
-  private CheckAbort Refusal(Refusal refusal) {
-    this.Refuse(refusal);
-    return new CheckAbort();
-  }
-
-  private void ArmPattern(Pattern pattern, IReadOnlyList<RType> columns) {
-    if (columns.Count == 1) {
-      this.Pattern(pattern, columns[0], false);
-      return;
-    }
-
-    var alternatives = pattern is OrPattern or ? or.Alternatives : [pattern];
-    foreach (var alternative in alternatives) {
-      if (alternative is RefusedPattern refused) {
-        this.Refuse(refused.Refusal);
-        continue;
-      }
-
-      if (alternative is WildcardPattern)
-        continue;
-
-      if (alternative is not TuplePattern tuple || tuple.Elements.Count != columns.Count)
-        throw this.Invalid($"E0308: mismatched types: expected a tuple of {columns.Count} elements", alternative.At);
-
-      for (var index = 0; index < columns.Count; ++index)
-        this.Pattern(tuple.Elements[index], columns[index], alternatives.Count > 1);
-    }
-  }
-
-  private void Pattern(Pattern pattern, RType type, bool inAlternative) {
-    switch (pattern) {
-      case WildcardPattern:
-        return;
-      case IdentifierPattern identifier:
-        if (!identifier.Mutable && this.Lookup(identifier.Name) is { Constant: not null } constant) {
-          this._typed.Bindings[identifier] = constant;
-          this.Unify(type, constant.Type, identifier.At);
-          return;
-        }
-
-        if (inAlternative) {
-          this.Refuse(new Refusal(RustFrontend.UnsupportedPattern, $"binding '{identifier.Name}' in an or-pattern", identifier.At));
-          return;
-        }
-
-        this.Declare(identifier.Name, type, identifier.Mutable, identifier, identifier.At, true);
-        return;
-      case LiteralPattern literal:
-        this.Unify(type, this.PatternValue(literal.Value), literal.At);
-        return;
-      case RangePattern range:
-        if (range.Low is not null)
-          this.Unify(type, this.PatternValue(range.Low), range.Low.At);
-
-        if (range.High is not null)
-          this.Unify(type, this.PatternValue(range.High), range.High.At);
-
-        return;
-      case OrPattern alternatives:
-        foreach (var alternative in alternatives.Alternatives)
-          this.Pattern(alternative, type, true);
-
-        return;
-      case TuplePattern tuple:
-        throw this.Invalid("E0308: mismatched types: a tuple pattern for a value that is no tuple", tuple.At);
-      default:
-        this.Refuse(((RefusedPattern)pattern).Refusal);
-        return;
-    }
-  }
-
-  /// <summary>A literal, a negated literal or a path to a constant in a pattern.</summary>
-  private RType PatternValue(Expr value) {
-    if (value is PathExpr { Segments.Count: 1 } path && this.Lookup(path.Segments[0]) is { Constant: null }) {
-      this.Refuse(new Refusal(RustFrontend.UnsupportedPattern, $"variable '{path.Text}' in a range pattern", path.At));
-      return this.ErrorType();
-    }
-
-    return this.Expression(value);
   }
 
 }

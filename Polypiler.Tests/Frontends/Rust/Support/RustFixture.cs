@@ -23,7 +23,15 @@ namespace Polypiler.Prototype.Testing;
 internal static class RustFixture {
 
   /// <summary>The fixtures, which are also the names of their modules.</summary>
-  public static readonly string[] Names = ["scalars", "control", "functions"];
+  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics", "collect", "outputs", "reassign"];
+
+  /// <summary>
+  /// The fixtures whose constructs the Rust backend does not write yet - arrays, slices, structs,
+  /// classes, enums, Option, Result, lists and maps - which the round trip through the Rust backend and
+  /// its parse-back sweep leave out until it does. The C# and the JavaScript backends write every
+  /// fixture: their differential tests leave none out.
+  /// </summary>
+  public static readonly string[] BackendPending = ["memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics", "collect", "outputs", "reassign"];
 
   /// <summary>Both overflow modes.</summary>
   public static readonly OverflowChecks[] Modes = [OverflowChecks.Panic, OverflowChecks.Wrap];
@@ -58,11 +66,18 @@ internal static class RustFixture {
     return result.Module ?? throw new InvalidOperationException(string.Join(Environment.NewLine, result.Diagnostics));
   }
 
+  /// <summary>The Rust paths of the exported instances of the generic functions of a fixture, by IR name.</summary>
+  public static IReadOnlyDictionary<string, string> InstancesOf(string fixture, OverflowChecks mode)
+    => RustFrontend.Import(fixture + ".rs", SourceOf(fixture), mode).Instances;
+
   /// <summary>Imports a fixture in a mode.</summary>
   public static IrModule Import(string fixture, OverflowChecks mode) => Import(fixture + ".rs", SourceOf(fixture), mode);
 
   /// <summary>One line of a recording: the call and its outcome.</summary>
-  public static string Line(PrototypeCall call, string outcome) => $"{call} => {outcome}";
+  public static string Line(PrototypeCall call, string outcome)
+    => string.Concat($"{call} => {outcome}".Select(character => char.IsControl(character) || character is '\u2028' or '\u2029'
+      ? $"\\u{{{(int)character:x}}}"
+      : character.ToString()));
 
   /// <summary>The lines of a recording, whatever line ending the checkout gave the file.</summary>
   public static string[] RecordedLines(string fixture, OverflowChecks mode)

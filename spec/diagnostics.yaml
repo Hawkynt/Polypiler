@@ -1019,7 +1019,7 @@ codes:
     rule: rust.conditional-binding
     area: rust
     owner: "#463"
-    surfaces: standard error of polypiler translate --from rust, for if let, while let and let ... else
+    surfaces: standard error of polypiler translate --from rust, for let chains (if let ... && ...)
   - code: PLY1511
     severity: error
     exit: UnsupportedConstruct
@@ -1028,7 +1028,7 @@ codes:
     rule: rust.patterns
     area: rust
     owner: "#463"
-    surfaces: standard error of polypiler translate --from rust, for @ bindings, slice, struct, enum, reference and const block patterns and a match on a float
+    surfaces: standard error of polypiler translate --from rust, for @ and ref bindings, const block patterns, a binding in an or-pattern, a variable in a range pattern, a &mut binding into an Option or a Result and a match on a float
   - code: PLY1512
     severity: error
     exit: UnsupportedConstruct
@@ -1047,6 +1047,60 @@ codes:
     area: rust
     owner: "#463"
     surfaces: standard error of polypiler translate --from rust, for async fn, async, gen and try blocks, .await and yield
+  - code: PLY1520
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust array, slice or Vec form not supported
+    message: "'<construct>' is not supported by the Rust frontend"
+    rule: rust.memory
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust, for a nested array, a slice of anything but numbers, a slice pattern
+  - code: PLY1521
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust text form not supported
+    message: "text type '<type>' is not supported"
+    rule: rust.text
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1522
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust unsafe construct not supported
+    message: "unsafe construct '<construct>' is not supported"
+    rule: rust.unsafe
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1523
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust smart pointer not supported
+    message: "smart pointer or interior-mutability type '<type>' is not supported"
+    rule: rust.ownership
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1524
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust slice method not supported
+    message: "method '<name>' is not supported on slices, arrays or Vec"
+    rule: rust.slice-methods
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1525
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust collection not supported
+    message: "collection type '<type>' is not supported"
+    rule: rust.collections
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
   - code: PLY1530
     severity: error
     exit: UnsupportedConstruct
@@ -1055,7 +1109,7 @@ codes:
     rule: rust.functions
     area: rust
     owner: "#464"
-    surfaces: standard error of polypiler translate --from rust, for generic, unsafe and extern functions, where clauses, parameter patterns and nested items
+    surfaces: standard error of polypiler translate --from rust, for generic, unsafe, extern and variadic functions, where clauses, impl Trait, a typed self, a function without a body and nested items
   - code: PLY1531
     severity: error
     exit: UnsupportedConstruct
@@ -1065,6 +1119,15 @@ codes:
     area: rust
     owner: "#464"
     surfaces: standard error of polypiler translate --from rust
+  - code: PLY1532
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust closure escapes
+    message: "closure escapes its defining function: <how>"
+    rule: rust.closures
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust, for a closure used other than called or passed to an iterator method, and a move of a value that is not Copy
   - code: PLY1533
     severity: error
     exit: UnsupportedConstruct
@@ -1074,6 +1137,96 @@ codes:
     area: rust
     owner: "#464"
     surfaces: standard error of polypiler translate --from rust, for every attribute but the lint levels, inline, must_use, cold, track_caller and documentation
+  - code: PLY1534
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust path outside the subset
+    message: "'<path>' refers to an item outside the supported standard-library subset or to another crate"
+    rule: rust.paths
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1535
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust iterator method not supported
+    message: "iterator method '<name>' is not supported"
+    rule: rust.iterators
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1536
+    severity: error
+    exit: UsageError
+    title: Rust debug assertions not set
+    message: "the source profile does not set 'debugAssertions': <macro>"
+    rule: rust.debug-assertions
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust without --debug-assertions on a source with debug_assert!
+  - code: PLY1540
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust trait not supported
+    message: "traits are not supported by the Rust frontend: '<construct>' (the object-model contract of #473 and #474)"
+    rule: rust.traits
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1541
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust generic parameters not supported
+    message: "generic parameters are not supported: '<construct>'"
+    rule: rust.generics
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1542
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust lifetime parameters not supported
+    message: "lifetime parameters and reference fields are not supported: '<construct>'"
+    rule: rust.lifetimes
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1543
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust enum with data not supported
+    message: "enum '<name>' has variants with data"
+    rule: rust.enums
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1544
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust derive or type attribute not supported
+    message: "attribute or derive '<name>' is not supported"
+    rule: rust.derives
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1545
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust Option or Result method not supported
+    message: "'<method or type>' is not supported on Option or Result"
+    rule: rust.option-result
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1546
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust destructor not supported
+    message: "destructors are not supported: 'impl Drop for <type>'"
+    rule: rust.drop
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
   - code: PLY1550
     severity: error
     exit: UnsupportedConstruct
