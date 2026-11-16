@@ -143,7 +143,7 @@ non-negative: .NET 10 ends the process on `stackalloc int[-1]` instead of throwi
 | `ViewCopy`, `ViewTryCopy` | `$vcopyo`, `$vtrycopyo`: the direction chosen for an overlap | `$vcopy`, `$vtrycopy`: `target.set(source)`, which clones an overlapping source |
 | `ViewFill` | `$vfillo` | `.fill`, or `$fill` |
 | `ViewEqual` | `$vequalo`, also on `{ hi, lo }` | `$vequal`: `x === y \|\| (x !== x && y !== y)` |
-| `ViewToArray` | `$vtoarrayo` | `$vtoarray` |
+| `ViewToArray` | `$vtoarrayo` | `$vtoarray`: `slice()` of an `Array` a caller passed for a JSDoc `T[]` nothing in the file decides (#1404), `new a.constructor(a)` of a typed array |
 | `Reinterpret` | `$vcasto` between integers of up to 32 bits; anything else is `PLY1152` | `$vcast`, through a `DataView` with little-endian `get`/`set`: never `new Uint32Array(buffer, offset)` |
 | endian loads and stores on a view | the byte helpers of the arrays at the place `$vat` checked | `$vdv(v, i, size).getUint32(0, little)`, `$vstore(…, "setUint32")` |
 

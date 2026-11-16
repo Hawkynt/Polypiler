@@ -1738,8 +1738,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/MemoryHolder.cs.javascript.golden",
-      "sha256": "c8b0f576300ad0c0d61d146ec2932cc210a30d565f5db883f80a6bac6a42ffd0",
-      "bytes": 153780
+      "sha256": "1437aa86ceca1a78f210b4b9bb6a1354dfac3c883dd2f65ee9b58bf946cd9445",
+      "bytes": 154816
     },
     {
       "path": "tests/fixtures/backend/golden/spans/Spans.cs.csharp.golden",
@@ -1748,8 +1748,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/Spans.cs.javascript.golden",
-      "sha256": "3dfe057bba1b5057901c095c0d3e5420160ca754634f8677cd93179222a49820",
-      "bytes": 383592
+      "sha256": "1d9812dc9fe9451c6a38efeb57224c4d61bfee0827c3896850c211cd149f4ee1",
+      "bytes": 384628
     },
     {
       "path": "tests/fixtures/backend/golden/spans/adler32-view.mjs.csharp.golden",
@@ -1768,8 +1768,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/views.mjs.javascript.golden",
-      "sha256": "04b27849cb62133fe9b05d722aa31516cfbad7e68cf6dd9fdc76280604441659",
-      "bytes": 169232
+      "sha256": "9b3664893eb170093a344593a26a99e1bec3398ee946d63b0e8c2642e7e6ec12",
+      "bytes": 170268
     },
     {
       "path": "tests/fixtures/backend/golden/spans/window.mjs.csharp.golden",
