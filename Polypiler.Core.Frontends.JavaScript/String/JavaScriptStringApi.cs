@@ -35,6 +35,7 @@ public static class JavaScriptStringApi {
     new("<, <=, >, >=", "StrCompareOrdinal"),
     new("s.substring(a[, b])", "StrSubstring, Min, Max"),
     new("s.slice(a[, b])", "StrSubstring, Min, Max"),
+    new("s.substr(a[, n])", "StrSubstring, Min, Max"),
     new("s.indexOf(n[, from])", "StrIndexOf"),
     new("s.lastIndexOf(n[, from])", "StrLastIndexOf"),
     new("s.includes(n)", "StrContains"),

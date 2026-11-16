@@ -85,7 +85,8 @@ string, and for a parameter without JSDoc a method only strings have (`charCodeA
 `charCodeAt` (`NaN` outside, written out); `s[i]` and `at` (which trap outside, the `js-oob-read`
 caveat); `charAt` (`""` outside); `+`, `+=`, `concat`; `===`, `!==`, `==`, `!=` and `<`, `<=`, `>`,
 `>=` between two strings; `substring` and `slice` with their clamping and swapping spelled out with
-`Min` and `Max`; `indexOf` and `lastIndexOf` with a clamped position; `includes`, `startsWith`,
+`Min` and `Max`, and the `substr(start, length)` of Annex B (B.2.2.1): a negative start counts from the
+end, the length is cut to `[0, what is left]`; `indexOf` and `lastIndexOf` with a clamped position; `includes`, `startsWith`,
 `endsWith`; `replace` and `replaceAll` with a constant replacement, whose `$$` and `$&` are
 expanded; `split` with a limit through `ToUint32`; `join` of an array of strings; `trim`,
 `trimStart`, `trimEnd` (the `Ecma` set); `padStart`, `padEnd`; `repeat`; `String.fromCharCode`;
