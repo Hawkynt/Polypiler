@@ -418,7 +418,7 @@ internal sealed partial class TypeChecker {
     if (implTypes is not null && implTypes.Count != template.ImplGenerics)
       throw this.Invalid($"E0107: struct takes {template.ImplGenerics} generic argument{(template.ImplGenerics == 1 ? "" : "s")} but {implTypes.Count} were supplied", at);
 
-    RType Argument(IReadOnlyList<TypeRef>? given, int index) => given is null ? this.Fresh(VariableKind.Any) : this.Resolve(given[index], false) ?? this.ErrorType();
+    RType Argument(IReadOnlyList<TypeRef>? given, int index) => given is null ? this.Fresh(VariableKind.Any) : this.Inferred(given[index], false) ?? this.ErrorType();
     return [.. Enumerable.Range(0, template.ImplGenerics).Select(index => Argument(implTypes, index)), .. Enumerable.Range(0, own).Select(index => Argument(ownTypes, index))];
   }
 

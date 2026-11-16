@@ -50,4 +50,31 @@ public sealed class RustCollectionTests {
     Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code + " " + diagnostic.Message), Has.Some.Contains(expected));
   }
 
+  [TestCase("pub fn f() -> usize { let v: Vec<_> = [1u8, 2].iter().map(|x| x * 2).collect(); let w = [3u8].iter().copied().collect::<Vec<u8>>(); v.len() + w[0] as usize }", "5")]
+  [TestCase("pub fn f() -> usize { let v: (u8, _) = (1, 2u16); v.1 as usize }", "2")]
+  [TestCase("fn id<T>(x: T) -> T { x } pub fn f() -> u8 { id::<_>(4u8) }", "4")]
+  [TestCase("use std::collections::BTreeSet; pub fn f() -> bool { let s: BTreeSet<_> = (1..4u64).map(|x| x * x).collect(); s.contains(&9) && !s.contains(&3) }", "true")]
+  public void Collect_HasTheValueRustGives(string source, string expected) {
+    var result = Import(source);
+    Assert.That(result.Diagnostics, Is.Empty);
+    Assert.That(IrVerifier.Verify(result.Module!), Is.Empty);
+    Assert.That(RustFixture.Interpreted(result.Module!, new PrototypeCall("f", [])), Is.EqualTo(expected));
+  }
+
+  [TestCase("pub fn f() -> usize { let v = (0..3u8).collect(); 1 }", "E0283: type annotations needed: cannot infer the collection `collect` makes")]
+  [TestCase("pub fn f() -> usize { (0..3u8).collect::<_>(); 1 }", "E0283: type annotations needed: cannot infer the collection `collect` makes")]
+  [TestCase("pub fn f() -> usize { let s: String = \"ab\".chars().collect(); s.len() }", "collect into String")]
+  [TestCase("pub fn f() -> usize { let mut a = [1u8, 2]; let v: Vec<&mut u8> = a.iter_mut().collect(); v.len() }", "Vec of &mut u8")]
+  [TestCase("pub fn f() -> usize { let mut a = [1u8, 2]; let v = a.iter_mut().collect::<Vec<_>>(); v.len() }", "collect of the &mut items of '&mut u8'")]
+  [TestCase("pub fn f() -> usize { let v: Vec<u8> = (0..3u16).collect(); v.len() }", "E0277: a value of type `Vec<u8>` cannot be built from an iterator over elements of type `u16`")]
+  [TestCase("use std::collections::HashMap; pub fn f() -> usize { let m: HashMap<u8, u8> = (0..3u8).collect(); m.len() }", "E0277: a value of type `HashMap<u8, u8>` cannot be built from an iterator over elements of type `u8`")]
+  [TestCase("use std::collections::HashMap; pub fn f() -> usize { let m: HashMap<_, u8> = [(1.5f64, 2u8)].iter().copied().collect(); m.len() }", "HashMap keyed by 'f64'")]
+  [TestCase("fn g(v: Vec<_>) -> usize { v.len() } pub fn f() -> usize { 1 }", "E0121: the placeholder `_` is not allowed within types on item signatures")]
+  [TestCase("pub fn f() -> usize { let v: Vec<u8> = (0..3u8).collect::<Unknown>(); 1 }", "E0412")]
+  public void Collect_IsRefused(string source, string expected) {
+    var result = Import(source);
+    Assert.That(result.Module, Is.Null);
+    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code + " " + diagnostic.Message), Has.Some.Contains(expected));
+  }
+
 }

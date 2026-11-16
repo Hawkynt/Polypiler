@@ -518,7 +518,7 @@ internal sealed partial class TypeChecker {
   }
 
   private bool Let(LetStatement let) {
-    var annotated = let.Type is null ? null : this.Resolve(let.Type, true) ?? this.ErrorType();
+    var annotated = let.Type is null ? null : this.Inferred(let.Type, true) ?? this.ErrorType();
     var type = annotated;
     var diverges = false;
     if (let.Initializer is not null) {

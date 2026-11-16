@@ -31,14 +31,19 @@ internal sealed partial class TypeChecker {
     if (key is null || (map && value is null))
       return null;
 
-    // A template's key or value may be a type parameter: each instance resolves its own.
-    if (!KeyType(key) && !HoldsParameter(key))
+    // A template's key or value may be a type parameter: each instance resolves its own. A `_` is
+    // checked once the code decides it.
+    if (!KeyType(key) && !HoldsParameter(key) && !Undecided(key))
       return this.Unsupported(RustFrontend.UnsupportedCollection, $"{name} keyed by '{key}'", type.At);
 
-    if (map && !ValueType(value!) && !HoldsParameter(value!))
+    if (map && !ValueType(value!) && !HoldsParameter(value!) && !Undecided(value!))
       return this.Unsupported(RustFrontend.UnsupportedCollection, $"{name} of '{value}' values", type.At);
 
-    return map ? RType.Map(name, key, value!) : RType.Set(name, key);
+    var collection = map ? RType.Map(name, key, value!) : RType.Set(name, key);
+    if (Undecided(key) || map && Undecided(value!))
+      this.CollectionParts(collection, type.At);
+
+    return collection;
   }
 
   /// <summary>Whether a type can be a key of an IR map or an element of an IR set as Rust hashes or orders it: an integer, <c>bool</c>, <c>char</c> or text.</summary>

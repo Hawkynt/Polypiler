@@ -114,9 +114,26 @@ internal sealed partial class TypeChecker {
     return this.PathType(type, allowUnit);
   }
 
+  /// <summary>Whether <c>_</c> stands for a type to infer: in a <c>let</c>'s type and a turbofish, never in a signature (<c>E0121</c>).</summary>
+  private bool _holes;
+
+  /// <summary>A type of a function body, where <c>_</c> is a new inference variable: <c>Vec&lt;_&gt;</c>.</summary>
+  private RType? Inferred(TypeRef type, bool allowUnit) {
+    var saved = this._holes;
+    this._holes = true;
+    try {
+      return this.Resolve(type, allowUnit);
+    } finally {
+      this._holes = saved;
+    }
+  }
+
   private RType? PathType(TypeRef type, bool allowUnit) {
     var segments = type.Name.Split("::");
     var last = segments[^1];
+    if (segments is ["_"] && type.Arguments.Count == 0)
+      return this._holes ? this.Fresh(VariableKind.Any) : this.Unsupported(RustFrontend.InvalidSource, "E0121: the placeholder `_` is not allowed within types on item signatures", type.At);
+
     if (type.Arguments.Count == 0 && this.ParameterType(segments, type.At) is { } parameter)
       return parameter;
 
@@ -207,7 +224,8 @@ internal sealed partial class TypeChecker {
   private bool Representable(RType type, TypeRef at) {
     var resolved = type.Resolved;
     // A template's types hold its parameters; each instance's types are checked with the arguments.
-    if (HoldsParameter(resolved))
+    // A `_` is decided by the code.
+    if (HoldsParameter(resolved) || Undecided(resolved))
       return true;
 
     switch (resolved.Kind) {
@@ -238,7 +256,8 @@ internal sealed partial class TypeChecker {
 
         return this.Representable(resolved.Element, at);
       case RKind.Vec: {
-        var element = resolved.Element!.Resolved;
+        // A shared reference to a value is the value: Vec<&u8> is a list of the values it borrows.
+        var element = resolved.Element!.Resolved is { Kind: RKind.Reference, Mutable: false } borrowed && !borrowed.IsTraitObject ? borrowed.Element!.Resolved : resolved.Element!.Resolved;
         if (!(element.IsNumber || element.IsText || element.IsTraitObject || element.Kind is RKind.Struct or RKind.Enum or RKind.Bool or RKind.Char))
           return this.Unsupported(RustFrontend.UnsupportedElement, $"Vec of {element}", at.At) is not null;
 

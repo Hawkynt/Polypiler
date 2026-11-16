@@ -21,7 +21,7 @@ internal sealed partial class TypeChecker {
   /// <summary>The iterator adapters and consuming methods the subset imports.</summary>
   private static readonly HashSet<string> _iteratorMethods = [
     "rev", "step_by", "zip", "enumerate", "copied", "cloned", "map", "filter",
-    "sum", "product", "count", "fold", "any", "all", "for_each"
+    "sum", "product", "count", "fold", "any", "all", "for_each", "collect"
   ];
 
   private RType Method(MethodCallExpr call, RType? expected) {
@@ -270,6 +270,48 @@ internal sealed partial class TypeChecker {
   }
 
   private static bool IsTemporary(Expr expression) => expression is CallExpr or MethodCallExpr or StructExpr or MacroExpr;
+
+  /// <summary>
+  /// The collection <c>collect</c> makes, named by its turbofish or by the type the caller expects:
+  /// a <c>Vec</c> of the items, a map of the pairs they are - a later key replacing the value of an
+  /// earlier one - or a set of them. Nothing is iterated in an unspecified order, so a <c>HashMap</c>
+  /// and a <c>BTreeMap</c> are made alike. A <c>&amp;mut</c> item is refused: the IR's list would copy it.
+  /// </summary>
+  private RType Collected(MethodCallExpr call, RType item, RType? expected) {
+    var target = call.Generics.Count == 1 ? this.Inferred(call.Generics[0], false) ?? this.ErrorType() : expected;
+    if (target is null || this.IsError(target))
+      return target ?? throw this.Invalid("E0283: type annotations needed: cannot infer the collection `collect` makes", call.At);
+
+    var resolved = target.Resolved;
+    void Items(RType wanted) {
+      if (!this.TryUnify(wanted, item))
+        throw this.Invalid($"E0277: a value of type `{resolved}` cannot be built from an iterator over elements of type `{item}`", call.At);
+    }
+
+    switch (resolved.Kind) {
+      case RKind.Vec:
+        Items(resolved.Element!);
+        break;
+      case RKind.Map:
+        Items(RType.Tuple([resolved.Key, resolved.Element!]));
+        this.CollectionParts(resolved, call.At);
+        break;
+      case RKind.Set:
+        Items(resolved.Element!);
+        this.CollectionParts(resolved, call.At);
+        break;
+      case RKind.Variable:
+        throw this.Invalid("E0283: type annotations needed: cannot infer the collection `collect` makes", call.At);
+      default:
+        return this.Refused(RustFrontend.UnsupportedIteratorMethod, $"collect into {resolved}", call.At);
+    }
+
+    this._deferred.Add(() => {
+      if (item.Resolved is { Kind: RKind.Reference, Mutable: true } || item.Resolved.Kind == RKind.Tuple && item.Resolved.Elements.Any(part => part.Resolved is { Kind: RKind.Reference, Mutable: true }))
+        this.Refuse(new Refusal(RustFrontend.UnsupportedIteratorMethod, $"collect of the &mut items of '{item}'", call.At));
+    });
+    return target;
+  }
 
   // ---------------------------------------------------------------- arrays, slices and Vec
 
@@ -569,6 +611,10 @@ internal sealed partial class TypeChecker {
         this.Count(call, 1);
         type = RType.Bool;
         this.FunctionArgument(call.Arguments[0], [item], RType.Bool);
+        break;
+      case "collect":
+        this.Count(call, 0);
+        type = this.Collected(call, item, expected);
         break;
       default:
         this.Count(call, 1);

@@ -158,7 +158,15 @@ than called or passed to an iterator method - is `PLY1532`.
 Iterator chains over `iter()`, `iter_mut()`, `into_iter()`, `chunks_exact`, ranges and `zip` are
 loops: the positional adapters `rev`, `step_by`, `zip`, `enumerate`, `copied` and `cloned` move the
 position, `map` and `filter` stream the item through, and the chain ends in a `for` or in `sum`,
-`product`, `count`, `fold`, `any`, `all` or `for_each`. A chain stored as a value is `PLY1535`.
+`product`, `count`, `fold`, `any`, `all`, `for_each` or `collect`. A chain stored as a value is `PLY1535`.
+
+`collect` makes the collection its turbofish names or the caller expects - a `let` with a type, an
+argument, a return value - and fills it item by item as the loop runs: a `Vec` pushes them, a map
+puts each pair (a later key replacing the value of an earlier one, as `FromIterator` for `HashMap`
+and `BTreeMap` does), a set adds them; no other target, `String` included, and no `&mut` items.
+A `_` in a `let`'s type or a turbofish is a type the code decides (`Vec<_>`), in a signature
+`E0121`. A `Vec` of shared references holds the values they borrow, which nothing can change while
+they live.
 
 `#[test]` functions and the items under `#[cfg(test)]` are imported as tests: `ImportResult.Tests`
 names them and they are no part of the exported surface; `assert!`, `assert_eq!`, `assert_ne!` and
@@ -256,8 +264,10 @@ a reference, holds it exactly, and a `&mut` to one is passed as the reference. `
 the value it replaces, `get`, `contains_key` and `remove` look the key up by reference, `map[&k]`
 panics on an absent key, and `entry(k).or_insert(v)` is a place the caller writes through. A
 `HashMap` enumerates in an order Rust leaves unspecified and that differs between runs, so iterating
-one is refused; so is a `BTreeMap`'s sorted iteration until the IR has a sorted map. Keys are
-integers, `bool`, `char` and text; values are what an IR optional holds.
+one is refused; so is a `BTreeMap`'s and a `BTreeSet`'s sorted iteration, as the IR's maps and sets
+enumerate in insertion or slot order and have no sorted one. Keys are integers, `bool`, `char` and
+text; values are what an IR optional holds. `collect` makes any of the four from pairs or items,
+which needs no iteration of them.
 
 ## Panics
 
@@ -312,7 +322,7 @@ assignment before its place.
 | `PLY1532` | a closure that escapes, a move of a captured non-`Copy` value, a `move` closure assigning its capture |
 | `PLY1533` | attributes but the lint levels, `inline`, `must_use`, `cold`, `track_caller`, `derive`, `repr`, `test`, `cfg(test)` and documentation |
 | `PLY1534` | a path to another crate or outside the supported standard-library subset |
-| `PLY1535` | iterator methods outside the subset, an adapter in an order the lowering does not stream, a chain stored as a value |
+| `PLY1535` | iterator methods outside the subset, an adapter in an order the lowering does not stream, a chain stored as a value, `collect` into anything but `Vec`, the four maps and sets, or of `&mut` items |
 | `PLY1536` | `debug_assert!` without `--debug-assertions` |
 | `PLY1540` | `&mut dyn Trait`, a trait object of a library trait, of a trait with associated types or whose traits share a method name, with a `&mut` parameter, in a struct field; a new box assigned through `&mut Box<dyn Trait>`; impls of library traits outside the operator traits, `PartialEq`, `Default` and `Clone`, bounds on other library traits |
 | `PLY1541` | generic enums, const generics, an inherent impl of one instance of a generic struct, a generic impl of anything but a generic struct of the crate for its parameters in order, a supertrait of a generic trait, a method of a generic trait a type implements with several arguments, a public generic function the crate does not instantiate or instantiates with a type that is not `pub` |
@@ -327,6 +337,7 @@ assignment before its place.
 `tests/fixtures/prototype/rust/` holds `scalars.rs` (every operator, method and cast for every type),
 `control.rs` (the control forms and all twelve range forms over bound pairs and steps),
 `objects.rs` (trait objects), `generics.rs` (generic structs, impls, methods and traits),
+`collect.rs` (`collect` into vectors, maps and sets),
 `functions.rs` (calls, recursion, `pub`), `memory.rs` (arrays, slices, `Vec`, references,
 copy-in/copy-out), `types.rs` (structs, methods, enums, `Option`, `Result`, `?`), `closures.rs`
 (closures and iterator chains), `edges.rs` (the rarer forms), `strings.rs` (text), `traits.rs`

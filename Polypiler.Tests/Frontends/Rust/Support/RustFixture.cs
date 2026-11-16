@@ -23,13 +23,13 @@ namespace Polypiler.Prototype.Testing;
 internal static class RustFixture {
 
   /// <summary>The fixtures, which are also the names of their modules.</summary>
-  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics"];
+  public static readonly string[] Names = ["scalars", "control", "functions", "memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics", "collect"];
 
   /// <summary>
   /// The fixtures whose constructs the Rust backend does not write yet - arrays, slices, structs,
   /// enums, Option and Result - which the round trip through the Rust backend leaves out until it does.
   /// </summary>
-  public static readonly string[] BackendPending = ["memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics"];
+  public static readonly string[] BackendPending = ["memory", "types", "closures", "edges", "strings", "traits", "collections", "objects", "generics", "collect"];
 
   /// <summary>Both overflow modes.</summary>
   public static readonly OverflowChecks[] Modes = [OverflowChecks.Panic, OverflowChecks.Wrap];

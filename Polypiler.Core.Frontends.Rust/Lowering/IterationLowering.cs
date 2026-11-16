@@ -236,6 +236,10 @@ internal sealed partial class FunctionLowering {
         accumulator = this.NewLocal(name, IrType.Bool);
         this.Emit(new IrDeclare(accumulator, Truth(name == "all")));
         break;
+      case "collect":
+        accumulator = this.NewLocal("collected", this.Ir(result));
+        this.Emit(new IrDeclare(accumulator, this.Zero(accumulator.Type)));
+        break;
     }
 
     var counters = this.StreamCounters(iteration, shape);
@@ -266,6 +270,9 @@ internal sealed partial class FunctionLowering {
 
           break;
         }
+        case "collect":
+          this.Collect(new IrLocalRef(accumulator!), item, iteration.Item, result);
+          break;
         default:
           // for_each: the function returns nothing.
           this.ApplyFunction(iteration.TerminalFunction!, [item]);
@@ -276,6 +283,29 @@ internal sealed partial class FunctionLowering {
     });
     this.Emit(new IrFor(shape.Condition, new IrBlock(body.Statements), shape.Step));
     return accumulator is null ? null : new IrLocalRef(accumulator);
+  }
+
+  /// <summary>One item into what <c>collect</c> makes: pushed onto the list, its pair put into the map (replacing the value of a key already there), added to the set.</summary>
+  private void Collect(IrExpr collection, Item item, RType itemType, RType result) {
+    var type = itemType.Resolved;
+    switch (result.Resolved.Kind) {
+      case RKind.Map: {
+        var parts = item is TupleItem tuple ? tuple.Parts.Select((part, index) => this.ValueOf(part, type.Elements[index])).ToList() : null;
+        if (parts is null) {
+          var pair = this.Stable(this.ValueOf(item, type), "pair");
+          parts = [.. pair.Type.StructType!.Fields.Select(field => (IrExpr)new IrFieldLoad(pair, field))];
+        }
+
+        this.Emit(new IrExprStmt(new IrCollection(IrCollectionOp.MapPut, IrType.Void, [collection, parts[0], parts[1]])));
+        break;
+      }
+      case RKind.Set:
+        this.Emit(new IrExprStmt(new IrCollection(IrCollectionOp.SetAdd, IrType.Bool, [collection, this.ValueOf(item, type)])));
+        break;
+      default:
+        this.Emit(new IrExprStmt(new IrCollection(IrCollectionOp.ListAdd, IrType.Void, [collection, this.ValueOf(item, type)])));
+        break;
+    }
   }
 
   // ---------------------------------------------------------------- closures
