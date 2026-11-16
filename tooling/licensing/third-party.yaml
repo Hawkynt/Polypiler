@@ -85,6 +85,9 @@ notices:
   - path: tests/fixtures/prototype/js/THIRD-PARTY-NOTICE.OpCodes.txt
     components:
       - { name: 'Cipher OpCodes.js (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
+  - path: tests/fixtures/rust/upstream/THIRD-PARTY-NOTICE.Cipher.txt
+    components:
+      - { name: 'Cipher validation harness (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
   - path: tests/vectors/float/THIRD-PARTY-NOTICE.CORE-MATH.txt
     components:
       - { name: 'CORE-MATH worst-case inputs 018fa97cbdacf59924b899a9dfa422d532cb2bb7', licence: MIT }
