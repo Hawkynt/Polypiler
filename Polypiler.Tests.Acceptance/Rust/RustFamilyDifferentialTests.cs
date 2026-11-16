@@ -127,6 +127,19 @@ public sealed class RustFamilyDifferentialTests {
         .Select(range => new PrototypeCall("Compute", [SpanFixtures.Wikipedia, range.Offset, range.Length]) { Returns = typeof(uint) })],
       call => SpanFixtures.DotNet("Adler32Span", call));
 
+    yield return new("spans/Spans (written part)", () => Written(SpanFixtures.Imported("Spans"), WrittenSpans),
+      () => [.. SpanFixtures.Calls().Where(call => WrittenSpans.Contains(call.Method))],
+      call => SpanFixtures.DotNet("Spans", call));
+
+    // FNV-1a's published vectors: "" is 0x811C9DC5, "a" is 0xE40C292C; and the bytes 0 to 15.
+    yield return new("pointers/Fnv1aPointer", () => PointerFixtures.Imported("Fnv1aPointer"),
+      () => [.. new[] { Array.Empty<byte>(), System.Text.Encoding.ASCII.GetBytes("a"), System.Text.Encoding.ASCII.GetBytes("foobar"), PointerFixtures.D }.Select(bytes => new PrototypeCall("Hash", [bytes]) { Returns = typeof(uint) })],
+      call => PointerFixtures.DotNet("Fnv1aPointer", call));
+
+    yield return new("pointers/Pointers (written part)", () => Written(PointerFixtures.Imported("Pointers"), WrittenPointers),
+      () => [.. PointerFixtures.Calls().Where(call => WrittenPointers.Contains(call.Method))],
+      call => PointerFixtures.DotNet("Pointers", call));
+
     yield return new("float/FloatView", () => PrototypeFixture.Imported("float/FloatView"),
       () => [.. FloatViewCases.FixtureMethods.SelectMany(method => FloatViewCases.FixtureCalls(method, new Random(2026), 20))],
       call => PrototypeFixture.CompiledOutcome("float/FloatView", call),
@@ -156,6 +169,47 @@ public sealed class RustFamilyDifferentialTests {
     var module = fixture == "Iterators" ? SequenceFixtures.Imported() : LinqFixtures.Imported(fixture);
     var written = module.Functions.Where(function => function.IsPublic && !function.Name.Contains('.') && RustCrates.Check(Written(module, [function.Name])).Count == 0).Select(function => function.Name).ToList();
     Assert.That(written, Is.EquivalentTo(fixture == "Iterators" ? WrittenIterators : WrittenPipelines), string.Join(", ", written));
+  }
+
+  /// <summary>
+  /// The functions of spans/Spans the backend writes - copies between views and within one, overlays of bytes read
+  /// as numbers; the others copy with TryCopyTo, compare views (of floating-point numbers too), read or write a
+  /// temporary through a view or make one on the stack.
+  /// </summary>
+  private static readonly string[] WrittenSpans = [.. SpanFixtures.Imported("Spans").Functions
+    .Where(function => function.IsPublic && function.Name is not ("TryInto" or "NaNEqual" or "ReadFrom" or "Zeroed" or "Same" or "WriteAt" or "Fixed" or "Origins" or "Singles" or "Doubles")).Select(function => function.Name)];
+
+  [Test]
+  public void WrittenSpanPart_IsEveryFunctionTheBackendWrites() {
+    var module = SpanFixtures.Imported("Spans");
+    var written = module.Functions.Where(function => function.IsPublic && RustCrates.Check(Written(module, [function.Name])).Count == 0).Select(function => function.Name);
+    Assert.That(written, Is.EquivalentTo(WrittenSpans));
+  }
+
+  /// <summary>The functions of pointers/Pointers the backend writes; Apart and Before compare pointers into two arrays, which safe Rust has no address for.</summary>
+  private static readonly string[] WrittenPointers = ["Checksum", "Word", "Distance", "Stack", "Local", "EmptyIsNull", "Bits", "At", "Origins", "Shorts", "UShorts", "Ints", "Longs", "ULongs", "Floats", "Doubles", "Store", "Wide", "Inside", "Through", "Passed"];
+
+  [Test]
+  public void WrittenPointerPart_IsEveryFunctionTheBackendWrites() {
+    var module = PointerFixtures.Imported("Pointers");
+    var written = module.Functions.Where(function => function.IsPublic && RustCrates.Check(Written(module, [function.Name])).Count == 0).Select(function => function.Name);
+    Assert.That(written, Is.EquivalentTo(WrittenPointers));
+    Assert.That(RustCrates.Check(Written(module, ["Before"])).Select(problem => problem.Message), Has.Some.Contain("'a pointer comparison across two regions'"));
+  }
+
+  /// <summary>
+  /// The traps of the pointers - a read past either end, one that straddles the end, the null pointer of an empty
+  /// array - which .NET leaves undefined: the crate's outcome is the interpreter's, with overflow checks on and off.
+  /// </summary>
+  [Test]
+  [RequiresToolchain(RustRunner.Toolchain)]
+  public async Task PointerTraps_AreTheInterpreters() {
+    var module = Written(PointerFixtures.Imported("Pointers"), WrittenPointers);
+    var calls = PointerFixtures.Traps().Where(trap => WrittenPointers.Contains(trap.Call.Method))
+      .Select(trap => trap.Call with { Returns = PointerFixtures.Compiled("Pointers", trap.Call.Method).ReturnType }).ToList();
+    var expected = calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call)).ToList();
+    foreach (var checks in new[] { OverflowChecks.Panic, OverflowChecks.Wrap })
+      Assert.That(await RustRun.OutcomesAsync(module, calls, checks), Is.EqualTo(expected), $"overflow checks {checks}");
   }
 
   /// <summary>A module with only the public functions named and every function they call.</summary>

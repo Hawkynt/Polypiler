@@ -86,6 +86,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string CargoProfileOption = "--cargo-profile";
   private const string DebugAssertionsOption = "--debug-assertions";
   private const string TrapPolicyOption = "--trap-policy";
+  private const string AllowUnsafe = "--allow-unsafe";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -118,6 +119,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [LangVersion] = "C#: the language version, above the one of the profile",
     [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition",
     [TrapPolicyOption] = "Rust: what a trap is: a panic (the default) or an error value, every function a trap can leave returning a Result (ADR 0008)",
+    [AllowUnsafe] = "Rust: allow the one unsafe lowering, a mutable overlay view, which the crate then has to pass Miri with; refused with PLY1567 otherwise",
     [Bind] = "JavaScript: the binding module or global object of a native library, repeatable"
   };
 
@@ -634,16 +636,16 @@ public sealed partial class TranslateCommand : ICliCommand {
     "rust",
     options => RustProfileOf(options).Profile!.ToString(),
     new RuleTarget(false),
-    [new(Profile, "<name>"), new(RustVersion, "<version>"), new(TrapPolicyOption, Choice(RustProfile.TrapPolicies)), new(Float, FloatChoice)],
+    [new(Profile, "<name>"), new(RustVersion, "<version>"), new(TrapPolicyOption, Choice(RustProfile.TrapPolicies)), new(AllowUnsafe, null), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? RustProfileOf(options).Error,
     (module, options) => RustEmitter.Legalize(module, implementations, RustProfileOf(options).Profile!, capabilities),
     (module, options) => RustEmitter.Check(module, RustProfileOf(options).Profile!, capabilities),
     (module, options, passes) => RustEmitter.Emit(module, RustProfileOf(options).Profile!, capabilities, passes, new RustEmitOptions { Mode = FloatModeOf(options) }));
 
-  /// <summary>The Rust profile the options of a command line name, or what is wrong with them.</summary>
+  /// <summary>The Rust profile the options of a command line name, unsafe code allowed by <c>--allow-unsafe</c>, or what is wrong with them.</summary>
   private static (RustProfile? Profile, string? Error) RustProfileOf(IReadOnlyDictionary<string, string> options) {
     RustProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(RustVersion), options.GetValueOrDefault(TrapPolicyOption), out var profile, out var error);
-    return (profile, error);
+    return (profile?.WithUnsafe(options.ContainsKey(AllowUnsafe)), error);
   }
 
   /// <summary>The values <c>--float</c> takes.</summary>
@@ -714,7 +716,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     var input = InputPath(output, context.Resolve(record.File));
     List<string> command = ["translate", input, From, options[From], To, options[To], Output, "."];
     foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key)))
-      command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays ? [name] : [name, value]);
+      command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays or AllowUnsafe ? [name] : [name, value]);
 
     var mode = FloatModeOf(options);
     return new Manifest {

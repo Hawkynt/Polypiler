@@ -23,7 +23,7 @@ public static class RustSyntaxReader {
     return new Parser(Tokenize(text)).File();
   }
 
-  private enum Kind { Identifier, Number, String, Lifetime, Punctuation, InnerDoc, OuterDoc, InnerAttribute, OuterAttribute, End }
+  private enum Kind { Identifier, Number, String, Lifetime, Punctuation, InnerDoc, OuterDoc, InnerAttribute, OuterAttribute, Comment, End }
 
   private sealed record Token(Kind Kind, string Text);
 
@@ -50,6 +50,8 @@ public static class RustSyntaxReader {
           tokens.Add(new(Kind.InnerDoc, line[3..].TrimStart(' ')));
         else if (line.StartsWith("///", StringComparison.Ordinal))
           tokens.Add(new(Kind.OuterDoc, line[3..].TrimStart(' ')));
+        else
+          tokens.Add(new(Kind.Comment, line[2..].TrimStart(' ')));
         index = end;
         continue;
       }
@@ -172,6 +174,22 @@ public static class RustSyntaxReader {
       var token = this.Next();
       return token.Kind == Kind.Identifier || token.Text == "_" ? token.Text : throw new FormatException($"Expected a name, found '{token.Text}'.");
     }
+
+    /// <summary>
+    /// A pattern of names in parentheses, <c>(l, r)</c>, as a <c>let</c> that takes a pair apart has it, or
+    /// <c>(&amp;s, d)</c> as a loop over two zipped slices.
+    /// </summary>
+    private string TuplePattern() {
+      this.Expect("(");
+      var names = new List<string> { this.Bound() };
+      while (this.Accept(","))
+        names.Add(this.Bound());
+      this.Expect(")");
+      return $"({string.Join(", ", names)})";
+    }
+
+    /// <summary>A name a pattern binds, <c>&amp;x</c> where it copies the element a reference points to.</summary>
+    private string Bound() => (this.Accept("&") ? "&" : "") + this.Identifier();
 
     public RsFile File() {
       var docs = new List<string>();
@@ -397,7 +415,7 @@ public static class RustSyntaxReader {
       while (!this.Accept("}")) {
         if (this.Accept("let")) {
           var mutable = this.Accept("mut");
-          var name = this.Identifier();
+          var name = this.Is("(") ? this.TuplePattern() : this.Identifier();
           string? type = null;
           if (this.Accept(":"))
             type = this.TypeText();
@@ -412,6 +430,11 @@ public static class RustSyntaxReader {
 
         if (this.Accept("fn")) {
           statements.Add(new RsItemStatement(this.Function("")));
+          continue;
+        }
+
+        if (this.Peek().Kind == Kind.Comment) {
+          statements.Add(new RsComment(this.Next().Text));
           continue;
         }
 
@@ -524,6 +547,12 @@ public static class RustSyntaxReader {
       while (true) {
         if (this.Accept(".")) {
           var name = this.Peek().Kind == Kind.Number ? this.Next().Text : this.Identifier();
+          // A method with its type arguments, `cast::<u8>`, keeps them in its name.
+          if (this.Is("::") && this.Is("<", 1)) {
+            this.Expect("::");
+            name += "::" + this.TypeText();
+          }
+
           expression = this.Is("(") ? new RsMethodCall(expression, name, this.Arguments(")")) : new RsField(expression, name);
         } else if (this.Accept("?")) {
           expression = new RsTry(expression);
@@ -580,6 +609,9 @@ public static class RustSyntaxReader {
         this.Expect(")");
         return new RsParenthesized(inner);
       }
+
+      if (this.Accept("unsafe"))
+        return new RsUnsafe(this.Block());
 
       if (this.Is("move") || this.Is("|") || this.Is("||"))
         return this.Closure();

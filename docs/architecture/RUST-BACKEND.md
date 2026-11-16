@@ -16,7 +16,7 @@ Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../r
 | File | What it holds |
 | --- | --- |
 | `Cargo.toml` | `[package]` with `name` (the module's name in `snake_case`), `version = "0.1.0"`, the `edition` and, from Rust 1.56, `rust-version`; no dependencies |
-| `src/lib.rs` | the header (`//!`: profile, helper licences, floating-point record, caveats, notices), `#![forbid(unsafe_code)]`, the lints the code needs allowed, `pub mod <module>;` |
+| `src/lib.rs` | the header (`//!`: profile, helper licences, floating-point record, caveats, notices, the unsafe ledger), `#![forbid(unsafe_code)]` (`#![deny(unsafe_code)]` where the one unsafe lowering is used, see [Unsafe code](#unsafe-code)), the lints the code needs allowed, `pub mod <module>;` |
 | `src/<module>.rs` | the constants, the spelling functions and helpers, the functions; a `#[cfg(test)] mod tests` when tests are asked for |
 
 The backend builds a Rust syntax tree from the IR (`Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`),
@@ -47,6 +47,9 @@ above the release that stabilized it, and `--trap-policy panic|result` says what
 | `rust2018` | 2018 | 1.31 |
 | `rust2021` | 2021 | 1.56 |
 | `rust2024` (default) | 2024 | 1.85 |
+
+`--allow-unsafe` sets the profile's `allowUnsafe` (off by default), which admits the one lowering that needs
+unsafe code, a written overlay view ([Unsafe code](#unsafe-code)); the header's profile line says so.
 
 The edition decides the keywords (`async`, `await`, `dyn`, `try` from 2018, `gen` from 2024), which a
 name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCapabilities`:
@@ -120,7 +123,16 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | an instantiation the generic function does not take, a generic class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
 | a global (static field) | `static NAME: AtomicI32 = AtomicI32::new(0);` read and written with `Ordering::Relaxed`, `++` as `fetch_add` - process-wide as .NET's static fields are |
 | a global that has no atomic form: an array, a string, a floating-point number | a static behind a `Mutex`: `static BUCKETS: Mutex<[u32; 4]> = Mutex::new([0; 4]);` (an array is the fixed array it always is), `static TEXT: Mutex<Vec<u16>> = Mutex::new(Vec::new());`, a first value made at run time in a `LazyLock`; accessed through `ply_with(&BUCKETS, \|buckets\| buckets[i])`, which holds the lock for that one access and takes a poisoned one over, every operand that may take a lock (a call, another such global) evaluated into a binding first; the length of an array is its constant. Not `thread_local!`, which would give each thread a global of its own |
-| a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it; `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32` |
+| a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it (also through a view made of it); `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32`; a view of a new array of a known length borrows an array, `&mut [0u8; 3]` |
+| a counted loop from 0 to the shorter of two arrays, `Min(a.Length, b.Length)` directly or in the variables Rust's `zip` lowers to, that uses the counter only to read and write the two arrays' elements (#460) | `for (&s, d) in src.iter().zip(dst.iter_mut()) { *d = …; }`: `iter()` for an array only read, `iter_mut()` for one written, `_` for one not touched; `zip` stops at the shorter side as the bound does, the bound's variables are left out; any other loop keeps its index, `data[i as usize]`, which clippy's `needless_range_loop` does not flag |
+| `x = y` of two array variables outside every loop, where `y` holds a vector the function made and nothing after names `y` | a move, `let mut b = a;` - one owner after the other, not two owners of one shared array |
+| `ViewCopy` (`CopyTo`) | `ply_view_mut(target, 0, source.len() as i32).copy_from_slice(source)`, `ArgumentOutOfRange` for a shorter target before anything is copied, a source that is made bound first; between two parts of one variable both parts checked by `ply_view`, then `a.copy_within(s..s + n, d)`, as the IR's `memmove` |
+| two views that split one variable at a position, `l = a[0..m]` and `r = a[m..]`, one of them written | `let (l, r) = a.split_at_mut(ply_view(a, 0, m).len());` |
+| a pointer (#1331): `Pin` of an array or view variable, `StackAlloc`, `AddressOf`, a pointer parameter | its position in a region known statically, an `i64`: a pin indexes the variable (`let mut p: i64 = 0;`, a pin of one element checked by `ply_pointer`), a `stackalloc` or a pin of a new array an array of its own (`let mut s_memory = [0i64; 2];`, a vector for a length known at run time), the address of a local the local itself, a pointer parameter its slice and its position (`fn sum_of(p_region: &[i32], p: i64, n: i32)`, `&mut` where it or a callee writes through it) |
+| `PointerAdd`, `PointerDifference`, the comparisons | `p.wrapping_add(i64::from(n))`, scaled from the pointer's elements to the region's (`.wrapping_mul(4)` for a `u32*` over bytes); `q.wrapping_sub(p)` (divided by the width); `q < p` of positions in one region; `== null` the emptiness of a whole pin (`data.is_empty()`), a constant of any other region |
+| `PointerLoad`, `PointerStore` | `data[p as usize]`, or `data[ply_pointer(p, 1, data.len(), true).start]` where an empty region is the null pointer (`NullReference`); a wider number over bytes `u32::from_le_bytes(d[ply_pointer(p, 4, d.len(), true)].try_into().expect("4 bytes"))`, stored by `copy_from_slice(&value.to_le_bytes())` after the place is bound - the lowest byte first on every host, as the IR has it; an element of the same width `to_bits`, `from_bits`, `as`; through the address of a local the local, `d = f64::from_bits(…)` |
+| `Reinterpret` (`MemoryMarshal.Cast`, `AsBytes`) only read | a copy taken where it is made, as the IR allows: `&ply_overlay_u8_u32(source)`, built from `chunks_exact` and `from_le_bytes`, or `to_le_bytes` per element; only of memory the function never writes |
+| `Reinterpret` written | `PLY1567` unless `allowUnsafe`; then, as bytes only, `ply_rs_overlay_bytes_mut_<t>(&mut a)`, the one unsafe block ([Unsafe code](#unsafe-code)) |
 | a function type `fn(A, B) -> R` | `Rc<dyn Fn(A, B) -> R>`; `Option<Rc<dyn Fn(A, B) -> R>>` for a signature the module writes `null` of or makes an array of; see [Function values](#function-values) |
 | a lambda | `Rc::new(move \|a: A, b: B\| body)`, what it captures bound first in a block around it (`{ let f = Rc::clone(&f); move \|v: i32\| f(v) }`), `move` only where it captures |
 | a local function that captures nothing but such functions | a `fn` at the start of the function's body, called by its name, recursion included; `Rc::new(f)` where it is a value |
@@ -362,10 +374,39 @@ that panics (`ply_list_index`, `ply_parse_i32`, …), a trap inside a closure, a
 module state behind a lock, and a type of the module named `Error`. The exception regions of `PLY1560`
 other than catching a trap stay refused under both policies.
 
+## Unsafe code
+
+A crate holds no `unsafe` and forbids it, with one exception (#460): a written overlay view - a view of the
+bytes of another view, written through - must share its source's memory, which safe Rust cannot borrow at two
+element types. Without `allowUnsafe` it is refused with `PLY1567`. With it, the overlay is the spelling function
+
+```rust
+#[allow(unsafe_code)]
+#[cfg(target_endian = "little")]
+fn ply_rs_overlay_bytes_mut_u32(p: &mut [u32]) -> &mut [u8] {
+    // SAFETY: the bytes of `p` are u32 elements, which have no padding and no invalid bit pattern, and
+    // u8 has alignment 1; the result borrows `p` exclusively for its lifetime and covers exactly its bytes.
+    unsafe {
+        core::slice::from_raw_parts_mut(p.as_mut_ptr().cast::<u8>(), core::mem::size_of_val(p))
+    }
+}
+```
+
+the root says `#![deny(unsafe_code)]` instead of `forbid`, and the header lists the use - the helper, the
+function and the lowering row - as `RustEmitter.UnsafeLedger` does. Only bytes are written so: a view of wider
+numbers over bytes would be misaligned. The native byte order is the IR's only on a little-endian target, so
+the function exists only there and a big-endian build fails instead of computing something else. A crate with
+unsafe code passes Miri (`cargo +<rust-miri> miri test`) in the Rust layer of CI. The audit: no crate written
+without `allowUnsafe` holds the token `unsafe`, and every unsafe block has its `SAFETY:` comment.
+
 ## Refused
 
-What the backend does not write yet is refused with `PLY1550`, naming the construct: pointers,
-memory, a view cast to another element type or made on the stack, an optional value of a type that
+What the backend does not write yet is refused with `PLY1550`, naming the construct: pointers compared or
+subtracted across two regions (their order is no value, and safe Rust has no address), arithmetic on the
+address of a local or the address passed on, a pointer given pointers into two regions, a pin of a view that
+is made or of an array that may be null, a wider pointer into memory that is not bytes, an overlay view of
+memory the function writes, a written overlay of other numbers than bytes, a copy between a view variable
+and its own array, a view made on the stack, an optional value of a type that
 is no value, an array that may be null and is written (`an array that may be null and is written`) or
 is a borrowed result, a collection in the order of insertion (JavaScript's `Map` and `Set`), one of
 objects or with floating-point keys, a collection changed in a loop over it, held by two variables or
@@ -377,7 +418,8 @@ array without a first value of a known length or used as a whole (passed on, ite
 a global of another type, a record with a floating-point field,
 a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
 array in one written variable), a struct with a field that is no value. One array passed to a call
-twice where it is written and the callee swaps its parameters is `PLY1566`. A lazy sequence outside the form of
+twice where it is written and the callee swaps its parameters is `PLY1566`; a written overlay view without
+`allowUnsafe` `PLY1567`. A lazy sequence outside the form of
 [Lazy sequences](#lazy-sequences) is `PLY1558`, naming the construct. Two exported functions
 whose Rust names are the same are `PLY1574`; a `bigint` anywhere but a parameter, a result, a variable or
 an operand - an element of a list, a map or a set, a field, a global, a variable a closure captures - is
@@ -395,7 +437,8 @@ order, where `clamp` would panic), `clippy::manual_range_contains`, `clippy::neg
 and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `clippy::too_many_arguments`,
 `clippy::type_complexity` (a function value that takes or gives another one, a type the source named in one word),
 `clippy::manual_find` (a search the source wrote as a loop that returns `Some(i)`, then `None`),
-`clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it).
+`clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it),
+`clippy::manual_swap` (two variables swapped through a third, as `std::mem::swap` lowers).
 No group is ever allowed. Every other lint is avoided by the shape the backend writes.
 
 ## Verification
@@ -406,6 +449,8 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
+- `ZipAndViewEmitTests`, `PointerEmitTests`, `OverlayEmitTests`: parallel loops, moves, view copies, `split_at_mut`,
+  pointers and overlay views, their forms, refusals and the unsafe audit over every prototype fixture.
 - `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`, `ExceptionEmitTests`, `IteratorEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, lazy sequences, their forms and refusals.
 - `BigIntEmitTests`: the form of every operation and conversion of `bigint`, the boundaries of a
   constant's `i128` literal, the helpers a crate carries and their origin, the refusals.
@@ -425,9 +470,14 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
   .NET), collections and the LINQ shapes legalization writes as loops (collections/WordFrequency,
   sequences/ByteMedian, and the functions of collections/Collections the backend writes, which a test
   lists), the iterator functions and LINQ chains of sequences/Iterators and sequences/Pipelines the
-  backend writes (a test lists them), exceptions of the module's classes (exceptions/Classes), the floating-point view of bytes -
-  against .NET in both overflow modes.
-- `RustRoundTripTests` (layer `rust`): every Rust fixture the backend writes (ten of fifteen; the
+  backend writes (a test lists them), exceptions of the module's classes (exceptions/Classes), the floating-point view of bytes, the
+  pointers (pointers/Fnv1aPointer and every function of pointers/Pointers but the two that compare pointers
+  into two arrays, their traps against the interpreter) and the views (the functions of spans/Spans the
+  backend writes) - against .NET in both overflow modes.
+- `RustUnsafeAuditTests` (layer `rust`): the crate of a written overlay under `allowUnsafe` builds, passes
+  clippy and `cargo fmt --check`, its test gives the value the bytes say, and it passes Miri on the `rust-miri`
+  nightly (ignored, naming the toolchain, where it is not installed); no crate without `allowUnsafe` needs Miri.
+- `RustRoundTripTests` (layer `rust`): every Rust fixture the backend writes (eleven of fifteen; the
   others are listed in `RustFixture.BackendPending` and refused by name), imported by the Rust frontend
   in each overflow mode, comes back as a crate that is built with overflow checks on and off; every
   outcome is what rustc recorded for the original in the mode of the import.

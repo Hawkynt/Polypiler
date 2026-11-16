@@ -121,7 +121,11 @@ public static partial class RustEmitter {
     private RsExpression ArrayInitial(IrLocal local, IrExpr value)
       => this.IsFieldAlias(local) ? this.FieldAlias(local)
         : this.IsNullableArray(local) ? this.NullableArray(value, this.IsReference(local))
-        : !this.IsReference(local) ? this.Vector(value, false) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
+        : !this.IsReference(local) ? this.Vector(value, this.IsMove(local, value)) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
+
+    /// <summary>Whether a variable takes the vector of another that never names it again: a move, not a clone.</summary>
+    private bool IsMove(IrLocal local, IrExpr value)
+      => value is IrLocalRef { Local: var source } && this._arrayFacts.Moves.Any(statement => ArrayOwnership.MoveOf(statement) == (local, source));
 
     /// <summary>The array a function returns: a vector it owns, or the borrow of a parameter.</summary>
     private RsExpression ArrayResult(IrFunction function, IrExpr value)
@@ -281,6 +285,11 @@ public static partial class RustEmitter {
     /// that is no variable or constant, beside a value that is none either, is bound before.
     /// </summary>
     private void Store(IrStore store, List<RsStatement> into) {
+      if (this.ZippedElement(store.Array, store.Index) is { } zipped) {
+        into.Add(new RsExpressionStatement(new RsAssign(zipped, "=", this.ElementValue(store.Value))));
+        return;
+      }
+
       var target = this.ArrayTarget(store.Array, true);
       RsExpression index;
       if (store.Index is IrStep { Target: IrLocalRef counter } step) {
@@ -515,6 +524,11 @@ public static partial class RustEmitter {
 
         if (argument.Type.IsView) {
           arguments.Add(this.ViewSource(argument, this.ViewParameterWritten(call.Function, index)));
+          continue;
+        }
+
+        if (argument.Type.IsPointer) {
+          arguments.AddRange(this.PointerArgument(argument, callee.MutablePointers.Contains(index)));
           continue;
         }
 

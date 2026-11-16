@@ -220,6 +220,7 @@ public static class RustPrinter {
     RsExpressionStatement { Expression: RsReturn { Value: RsBinary } expression } => Expression(expression, indent, indent, 2) + ";",
     RsExpressionStatement { Expression: var expression } => Expression(expression, indent, indent, 1) + ";",
     RsItemStatement { Item: var item } => NestedItem(item, indent),
+    RsComment comment => "// " + comment.Text,
     _ => throw new ArgumentException($"There is no Rust statement '{statement.GetType().Name}'.", nameof(statement))
   };
 
@@ -541,7 +542,8 @@ public static class RustPrinter {
             return $"{target}\n{inner}[{at}]";
         }
 
-        return target + "[" + Expression(index.Index, indent, column) + "]";
+        var opened = (target.Contains('\n') ? 0 : column) + target[(target.LastIndexOf('\n') + 1)..].Length + 1;
+        return target + "[" + Expression(index.Index, indent, opened, trailing + 1) + "]";
       }
       case RsBinary binary: {
         var operands = new List<(string? Operator, RsExpression Operand)>();
@@ -570,7 +572,8 @@ public static class RustPrinter {
       case RsCast cast: {
         var operand = Expression(cast.Operand, indent, column);
         var last = operand[(operand.LastIndexOf('\n') + 1)..];
-        var end = (operand.Contains('\n') ? last.Length : column + last.Length) + 4 + cast.Target.Length + trailing;
+        // rustfmt's rewrite_pair measures the last line of an operand of several lines against the width left at the cast's own column.
+        var end = column + last.Length + 4 + cast.Target.Length + trailing;
         return end <= MaxWidth ? operand + " as " + cast.Target : operand + "\n" + inner + "as " + cast.Target;
       }
       case RsParenthesized parenthesized:
@@ -632,6 +635,8 @@ public static class RustPrinter {
         return $"{Label(loop.Label)}for {loop.Pattern} in {Expression(loop.Iterator, indent, column + 8 + loop.Pattern.Length, 2)} {Block(loop.Body, indent)}";
       case RsLabeledBlock labeled:
         return $"{Label(labeled.Label)}{Block(labeled.Body, indent)}";
+      case RsUnsafe block:
+        return "unsafe " + Block(block.Block, indent);
       case RsBlockExpression block:
         return Block(block.Block, indent);
       case RsMatch choice: {

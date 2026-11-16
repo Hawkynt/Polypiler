@@ -171,7 +171,9 @@ public static partial class RustEmitter {
 
       if (operation.Op == IrCollectionOp.ListFromArray) {
         this.CollectionType(type);
-        return new RsMethodCall(this.Receiver(this.Borrow(arguments[0], false)), "to_vec", []) { Type = type };
+        // A method borrows its receiver itself: `array.to_vec()`, never `(&array).to_vec()` (clippy's needless_borrow).
+        var borrowed = this.Borrow(arguments[0], false);
+        return new RsMethodCall(this.Receiver(borrowed is RsReference { Mutable: false, Operand: var owner } ? owner : borrowed), "to_vec", []) { Type = type };
       }
 
       var collection = arguments[0];

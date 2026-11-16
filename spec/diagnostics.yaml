@@ -1272,6 +1272,15 @@ codes:
     area: rust
     owner: "#460"
     surfaces: standard error of polypiler translate --to rust, for one array passed to a call twice where it is written
+  - code: PLY1567
+    severity: error
+    exit: UnsupportedConstruct
+    title: mutable overlay view without unsafe Rust
+    message: "mutable overlay view in '<function>' requires unsafe Rust; the target profile sets allowUnsafe to false"
+    rule: rust.backend.unsafe
+    area: rust
+    owner: "#460"
+    surfaces: standard error of polypiler translate --to rust, for a Reinterpret view that is written while the profile allows no unsafe code
   - code: PLY1574
     severity: error
     exit: UnsupportedConstruct
