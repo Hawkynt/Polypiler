@@ -373,8 +373,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.csharp.golden",
-      "sha256": "699bc520e3f4b36019fc6c94f02927a4d32f98c2230b2a8c1ee0cab37726baa3",
-      "bytes": 253018
+      "sha256": "44b1f4ae5924ad71132023794ddd683d1b4ddb53af92b73992f78e81281a93ba",
+      "bytes": 253594
     },
     {
       "path": "tests/fixtures/backend/golden/collections/wordFrequency.js.javascript.golden",
