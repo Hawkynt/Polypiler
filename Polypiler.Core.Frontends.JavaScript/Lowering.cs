@@ -262,7 +262,7 @@ internal sealed partial class Lowering(TypeInference types) {
         into.Add(new IrContinue());
         break;
       case ReturnStatement result:
-        into.Add(this.Return(result));
+        this.Return(result, into);
         break;
       default:
         if (this.ExceptionStatement(statement, into))
@@ -312,18 +312,25 @@ internal sealed partial class Lowering(TypeInference types) {
   internal static bool Contains(Node node, Func<Node, bool> matches)
     => matches(node) || (node is not IFunction && node.ChildNodes.Any(child => Contains(child, matches)));
 
-  private IrReturn Return(ReturnStatement result) {
-    if (result.Argument is null || (this._returnType == IrType.Void && types.Names.IsAbsentLiteral(result.Argument) && result.Argument is not NullLiteral))
-      return new IrReturn(this._returnType.IsOptional ? new IrNone(this._returnType) : this._returnType.IsNullable ? new IrNull(this._returnType) : null);
+  private void Return(ReturnStatement result, List<IrStmt> into) {
+    if (result.Argument is null || (this._returnType == IrType.Void && types.Names.IsAbsentLiteral(result.Argument) && result.Argument is not NullLiteral)) {
+      into.Add(new IrReturn(this._returnType.IsOptional ? new IrNone(this._returnType) : this._returnType.IsNullable ? new IrNull(this._returnType) : null));
+      return;
+    }
 
-    if (this._returnType != IrType.Void)
-      return new IrReturn(this.Value(result.Argument, this._returnType));
+    if (this._returnType != IrType.Void) {
+      into.Add(new IrReturn(this.Value(result.Argument, this._returnType)));
+      return;
+    }
 
-    // The value has no type: the expression is refused for what it is, or it is a call that returns nothing.
-    if (this.Expression(result.Argument) is IrNull)
+    // The value has no type: the expression is refused for what it is, or it is a call that returns nothing, which
+    // runs before the function returns nothing itself (#1408: return finalize(…) of a finalizer that returns nothing).
+    var value = this.Expression(result.Argument);
+    if (value is IrNull)
       throw this.Unsupported(result.Argument, "null");
 
-    throw this.Unsupported(result.Argument, "void as the value returned");
+    into.Add(new IrExprStmt(value));
+    into.Add(new IrReturn(null));
   }
 
   /// <summary>

@@ -64,8 +64,8 @@ public static partial class IrVerifier {
   /// <summary>
   /// The fields of a declaration, each named once and of a type a field can have: a truth value, a
   /// number, a struct, an array of numbers, and in a class also a reference to an object, and in a class
-  /// that is no record a memory, a string, an array of anything an array holds and a collection (#1365),
-  /// which a record could not compare as both languages do.
+  /// that is no record a memory, a string, an array of anything an array holds, a collection (#1365) and
+  /// a function value (#1408), which a record could not compare as both languages do.
   /// </summary>
   private static void Fields(IrTypeDeclaration type, bool references, System.Action<bool, string> require) {
     var fields = new HashSet<string>();
@@ -75,7 +75,7 @@ public static partial class IrVerifier {
       var element = field.Type.Element;
       require(!field.Type.IsView && !OnHeap(field.Type), Stored);
       require(field.Type.IsStruct || (references && field.Type.IsObject) || field.Type == IrType.Bool || field.Type.IsNumeric || (element is { IsNumeric: true } && !field.Type.IsMemory)
-        || (plain && (field.Type.IsMemory || field.Type.IsString || field.Type.IsCollection || field.Type.IsArray || field.Type.IsOptional) && field.Type.IsStorable),
+        || (plain && (field.Type.IsMemory || field.Type.IsString || field.Type.IsCollection || field.Type.IsArray || field.Type.IsOptional || field.Type.IsFunction) && field.Type.IsStorable),
         $"the field '{field.Name}' has the type {field.Type}");
     }
   }

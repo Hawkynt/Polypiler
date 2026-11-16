@@ -30,6 +30,31 @@ internal sealed class FunctionShape {
 
   private IrType? _signature;
 
+  private readonly List<JsType> _arguments = [];
+
+  /// <summary>
+  /// What the calls through the values pass, the join at each position: a call may pass more arguments
+  /// than a function of the shape has parameters, which JavaScript evaluates and the function ignores
+  /// (#1408), and the signature then has a parameter for each of them.
+  /// </summary>
+  public IReadOnlyList<JsType> Arguments => this.Root._arguments;
+
+  /// <summary>Lets the argument of a call through a value of the shape reach its position; says whether the join changed.</summary>
+  /// <param name="index">The position of the argument.</param>
+  /// <param name="type">The type of the argument.</param>
+  public bool Pass(int index, JsType type) {
+    var arguments = this.Root._arguments;
+    while (arguments.Count <= index)
+      arguments.Add(JsType.Unknown);
+
+    var joined = JsType.Join(arguments[index], type);
+    if (joined == arguments[index])
+      return false;
+
+    arguments[index] = joined;
+    return true;
+  }
+
   /// <summary>Merges two shapes into one; says which one is the root.</summary>
   public static FunctionShape Merge(FunctionShape first, FunctionShape second) {
     var (a, b) = (first.Root, second.Root);
@@ -42,6 +67,10 @@ internal sealed class FunctionShape {
         a._members.Add(member);
 
     b._members.Clear();
+    for (var index = 0; index < b._arguments.Count; ++index)
+      a.Pass(index, b._arguments[index]);
+
+    b._arguments.Clear();
     return a;
   }
 

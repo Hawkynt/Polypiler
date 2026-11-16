@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Polypiler.Core.Frontends.JavaScript.Inference;
 using Polypiler.Core.IR;
@@ -39,6 +40,8 @@ internal static class JsDoc {
 
     return new(tag.Groups["name"].Value, tag.Groups["form"].Value.Trim() is "Object" or "object", properties);
   }
+  private static readonly Regex _function = new(@"^function\s*\((?<parameters>[^()]*)\)\s*(?::\s*(?<result>\S.*))?$", RegexOptions.CultureInvariant);
+  private static readonly Regex _template = new(@"@template\s+(?<names>[A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)", RegexOptions.CultureInvariant);
 
   /// <summary>The spelling of the type a <c>@type</c> tag of the comment states, or <see langword="null"/>.</summary>
   public static string? TypeSpelling(string? comment) => _type.Match(comment ?? "") is { Success: true } tag ? tag.Groups["type"].Value : null;
@@ -59,6 +62,35 @@ internal static class JsDoc {
         return (true, Declared(tag.Groups["type"].Value, classes));
 
     return (false, null);
+  }
+
+  /// <summary>
+  /// Whether the comment states a parameter as a function, <c>function(byte[], int):T</c> (#1408): a
+  /// function type whose parameters and result are each a supported spelling, a name of a
+  /// <c>@template</c> of the comment, or <c>void</c> for the result. Such a parameter takes the
+  /// function values the calls of the file pass, as one without JSDoc does.
+  /// </summary>
+  /// <param name="comment">The comment, or <see langword="null"/>.</param>
+  /// <param name="name">The parameter.</param>
+  /// <param name="classes">The class of the file a name names, or <see langword="null"/> when none does.</param>
+  public static bool StatesFunction(string? comment, string name, System.Func<string, ClassModel?> classes) {
+    foreach (Match tag in _parameter.Matches(comment ?? ""))
+      if (tag.Groups["name"].Value == name)
+        return IsFunction(tag.Groups["type"].Value, comment, classes);
+
+    return false;
+  }
+
+  /// <summary>Whether a spelling is a function type of supported spellings and the templates of the comment.</summary>
+  private static bool IsFunction(string spelling, string? comment, System.Func<string, ClassModel?> classes) {
+    if (_function.Match(spelling.Trim()) is not { Success: true } function)
+      return false;
+
+    var templates = _template.Matches(comment ?? "").SelectMany(tag => tag.Groups["names"].Value.Split(',')).Select(template => template.Trim()).ToHashSet();
+    bool Known(string part) => templates.Contains(part.Trim()) || Declared(part, classes) is not null;
+    var parameters = function.Groups["parameters"].Value;
+    return (parameters.Trim().Length == 0 || parameters.Split(',').All(Known))
+      && (function.Groups["result"] is not { Success: true } result || result.Value.Trim() == "void" || Known(result.Value));
   }
 
   /// <summary>The type the comment states for the result, or <see langword="null"/> when it states none or one that is no type of the IR on its own.</summary>
