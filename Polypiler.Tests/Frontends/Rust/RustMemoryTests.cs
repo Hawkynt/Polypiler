@@ -331,6 +331,7 @@ public sealed class RustMemoryTests {
   [TestCase("pub fn f(c: bool) -> u8 { let mut a = [1u8, 2]; let r = &mut a; if c { let s = &mut a; s[0] = 3; } r[0] }", "E0499")]
   [TestCase("pub fn f() -> u8 { let mut a = [1u8, 2]; let r = &mut a; let s = &mut a; return s[0] + r[0]; }", "E0499")]
   [TestCase("struct S { a: u8, b: u8 } pub fn f() -> u8 { let mut s = S { a: 1, b: 2 }; let r = &mut s.a; let q = &mut s; q.b = 5; *r }", "E0499: cannot borrow `s` as mutable")]
+  [TestCase("struct S { a: u8, b: u8 } pub fn f() -> u8 { let mut s = S { a: 1, b: 2 }; let r = &mut s; let q = &mut s.a; *q = 5; r.b }", "E0499: cannot borrow `s.a` as mutable")]
   public void CompilerError_IsRejected(string source, string text)
     => Assert.That(Import(source).Diagnostics.Select(diagnostic => diagnostic.Message), Has.Some.Contains(text));
 
