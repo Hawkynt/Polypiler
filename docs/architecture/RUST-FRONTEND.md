@@ -49,7 +49,7 @@ on rust-analyzer's crates instead. The frontend does not use it:
 
 What the frontend accepts is a subset of what rustc accepts. It reports the compiler's errors the
 subset can produce with rustc's code (`PLY1500`, for example `E0308`, `E0004`, `E0268`, `E0382`,
-`E0384`, `E0594`, `E0599`) and the
+`E0384`, `E0499`, `E0594`, `E0599`) and the
 deny-by-default lints `overflowing_literals`, `arithmetic_overflow` and `unconditional_panic` for
 constant operands; rustc also finds overflows its constant propagation sees through locals
 (`let x: u8 = 255; x + 1`), which the frontend does not.
@@ -131,7 +131,10 @@ it borrows, the caller's included, sees the new value.
 
 The borrow checker is rustc's: a source the frontend imports compiles. Within the subset the
 frontend checks what lowering relies on - a use after a move of a non-`Copy` value is `E0382`
-(`Typing/MoveCheck.cs`), an assignment through `&` or to an immutable binding `E0594`/`E0384` - and
+(`Typing/MoveCheck.cs`), a second `&mut` of a place a `let`-bound `&mut` still holds - the first used
+after the second is taken, in a later statement of the same block; disjoint fields are apart, the
+elements of an index are not - `E0499` (`Typing/BorrowCheck.cs`), an assignment through `&` or to an
+immutable binding `E0594`/`E0384` - and
 refuses the forms whose aliasing the IR cannot express: a `&mut` held in a tuple or a struct, a
 reference result, a `&mut` binding into an `Option` or a `Result`.
 
@@ -310,7 +313,7 @@ assignment before its place.
 
 | Code | Refused |
 | --- | --- |
-| `PLY1500` | source rustc rejects: a syntax error, a type error with its code, a borrow error the subset sees (`E0382`, `E0384`, `E0594`), a denied lint |
+| `PLY1500` | source rustc rejects: a syntax error, a type error with its code, a borrow error the subset sees (`E0382`, `E0384`, `E0499`, `E0594`), a denied lint |
 | `PLY1501` | `i128`, `u128`, `f16`, `f128`, `!` as a parameter, and every type outside the subset |
 | `PLY1502` | any other construct: a range as a value, `()` as a value, a type alias, a constructor or a library function as a value, a `&mut` to a value held other than as an argument, a tuple made as a value or named as a type that holds an `Option`, a `Vec`, a map, a set, a reference, text or a trait object, which no IR struct holds, other methods (`floor`, `to_be`, ...) |
 | `PLY1503` | an overflow mode the Cargo profile cannot give: an undefined profile, no `inherits`, a circle, a manifest that is no TOML |
@@ -360,5 +363,10 @@ the backend cannot write yet - `memory`, `types`, `edges`, `objects` and `reassi
 struct fields, one array held by two variables, a view copied onto another and lists of classes - are
 listed in `RustFixture.BackendPending`, and a unit test holds that the backend refuses each of them
 with `PLY1550`, naming the construct. The unit tests under `Polypiler.Tests/Frontends/Rust/` hold every
-refusal and every rustc error the frontend reports to its code. Run the acceptance test
+refusal and every rustc error the frontend reports to its code. `RustPackageTests` (layer `rust`)
+builds `modgraph` with rustc in both overflow modes against the import's exports, and runs the package
+through `cargo test` of the pinned toolchain (`RustRunner`): each imported test, interpreted, passes
+or fails as cargo reports it by name. `tests/fixtures/rust/upstream/harness.rs` is a real-world file
+outside the subset, Cipher's validation harness pinned to a commit with its licence and notice; the
+import refuses it with `PLY1500` and no IR, never with an exception. Run the acceptance test
 `Recording_IsWhatRustcDoes` with `POLYPILER_RECORD=1` after a fixture or its calls changed.
