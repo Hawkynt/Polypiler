@@ -108,8 +108,8 @@ public sealed class JavaScriptAccessorOverrideTests {
       """), Is.EqualTo("'a getter or setter of key that hides the other accessor of its base class' is not supported yet"));
   }
 
-  /// <summary>An accessor of the key of a field of a base class, and a method of the key of an accessor, stay what they were.</summary>
-  [TestCase("class B { constructor() { this.key = 0; } } class D extends B { get key() { return 1; } }", "'the member key of a base class declared again' is not supported yet")]
+  /// <summary>A getter alone over a field of a base class is refused by name (#1402); a method of the key of an accessor stays what it was.</summary>
+  [TestCase("class B { constructor() { this.key = 0; } } class D extends B { get key() { return 1; } }", "'a getter of key without a setter over a field of its base class' is not supported yet")]
   [TestCase("class B { get key() { return 0; } } class D extends B { key() { return 1; } }", "'the member key of a base class declared again' is not supported yet")]
   [TestCase("class B { key() { return 0; } } class D extends B { get key() { return 1; } }", "'the member key of a base class declared again' is not supported yet")]
   public void AccessorOverAnotherKind_IsRefused(string classes, string message)

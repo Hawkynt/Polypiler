@@ -34,8 +34,13 @@ internal static class Classes {
         // A view stored into a field is a memory (Stored), so every type a field reaches is one the IR lets a field of a class have.
         var ir = type.Kind == JsKind.Conflict ? IrType.F64 : type.Ir ?? IrType.F64;
 
-        field.Ir = new IrField(ClassModel.IrName(field.Key), ir, owner.Frozen is not null) { Visibility = field.IsPrivate ? IrVisibility.Private : IrVisibility.Public };
+        // A field derived classes declare accessors over is a virtual property, backed by a private field of a name no key spells (#1402).
+        field.Ir = new IrField(ClassModel.IrName(field.Key) + (field.IsVirtual ? "$" : ""), ir, owner.Frozen is not null) { Visibility = field.IsPrivate || field.IsVirtual ? IrVisibility.Private : IrVisibility.Public };
         fields.Add(field.Ir);
+        if (field.IsVirtual) {
+          field.Getter = new IrMethod(ClassModel.IrName(field.Key), $"{owner.Name}.get_{ClassModel.IrName(field.Key)}", false) { Kind = IrMethodKind.Getter, Dispatch = IrDispatch.Virtual };
+          field.Setter = new IrMethod(ClassModel.IrName(field.Key), $"{owner.Name}.set_{ClassModel.IrName(field.Key)}", false) { Kind = IrMethodKind.Setter, Dispatch = IrDispatch.Virtual };
+        }
       }
 
       owner.Ir.Define(fields);
@@ -44,13 +49,25 @@ internal static class Classes {
         owner.Methods[member] = new IrMethod(ClassModel.IrName(member.Key), member.Name, member.IsStatic) {
           Kind = member.Member switch { MemberKind.Getter => IrMethodKind.Getter, MemberKind.Setter => IrMethodKind.Setter, _ => IrMethodKind.Method },
           Visibility = member.Key.StartsWith('#') ? IrVisibility.Private : IrVisibility.Public,
-          Dispatch = member.IsStatic ? IrDispatch.Static : member.Overrides is not null ? IrDispatch.Override : member.IsOverridden ? IrDispatch.Virtual : IrDispatch.Instance,
-          Overrides = member.Overrides is { } replaced ? ClassModel.MethodOf(replaced) : null
+          Dispatch = member.IsStatic ? IrDispatch.Static : member.Overrides is not null || member.OverridesField is not null ? IrDispatch.Override : member.IsOverridden ? IrDispatch.Virtual : IrDispatch.Instance,
+          Overrides = member.Overrides is { } replaced ? ClassModel.MethodOf(replaced) : member.OverridesField is { } field ? Accessor(field, member.Member) : null
         };
+
+      // An accessor over a field of a base class has the type of the property the field is (#1402).
+      foreach (var member in owner.Members.Where(member => member.OverridesField is not null)) {
+        var field = member.OverridesField!;
+        var model = inference.ModelOf(member);
+        var type = member.Member == MemberKind.Getter ? model.ReturnType : model.Parameters[0].Entry.Ir;
+        if (type != field.Ir!.Type)
+          diagnostics.Add(Unsupported(member.Anchor, $"the accessor {member.Key} of the type {(type is null ? "nothing" : JsType.Spell(type))} over a field of the type {JsType.Spell(field.Ir.Type)}"));
+      }
 
       owner.Creator = new IrConstructor(owner.Constructor?.Name ?? $"{owner.Name}.ctor");
     }
   }
+
+  /// <summary>The accessor of the virtual property of a field that a getter or a setter of a derived class overrides.</summary>
+  private static IrMethod Accessor(ClassField field, MemberKind kind) => kind == MemberKind.Getter ? field.Getter! : field.Setter!;
 
   /// <summary>
   /// Gives every class its members once they are lowered: the constructor - one that does nothing for
@@ -85,7 +102,18 @@ internal static class Classes {
         });
       }
 
-      owner.Ir.DefineMembers([owner.Creator!], [.. owner.Members.Select(member => owner.Methods[member])], properties, [.. owner.Statics.Values.Select(field => field.Global!)]);
+      // The virtual property of a field derived classes declare accessors over reads and writes the field (#1402).
+      var virtuals = owner.Fields.Where(field => field.IsVirtual).ToList();
+      foreach (var field in virtuals) {
+        var self = new IrLocal("this", IrType.Object(owner.Ir));
+        var value = new IrLocal("value", field.Ir!.Type);
+        made.Add(new IrFunction(field.Getter!.Function, false, field.Ir.Type, [self], [], new IrBlock([new IrReturn(new IrFieldLoad(new IrLocalRef(self), field.Ir))])));
+        made.Add(new IrFunction(field.Setter!.Function, false, IrType.Void, [self, value], [], new IrBlock([new IrFieldStore(new IrLocalRef(self), field.Ir, new IrLocalRef(value))])));
+        properties.Add(new IrProperty(ClassModel.IrName(field.Key), field.Ir.Type) { Getter = field.Getter, Setter = field.Setter });
+      }
+
+      owner.Ir.DefineMembers([owner.Creator!], [.. owner.Members.Select(member => owner.Methods[member]), .. virtuals.SelectMany(field => (IrMethod[])[field.Getter!, field.Setter!])], properties,
+        [.. owner.Statics.Values.Select(field => field.Global!)]);
     }
 
     return made;

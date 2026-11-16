@@ -150,7 +150,7 @@ internal sealed partial class FunctionCollector {
           this.Static(owner, key, field.Key, field.Value);
           break;
         case PropertyDefinition { Computed: false } field when KeyOf(field.Key) is { } key:
-          owner.Fields.Add(new ClassField(key, new Variable(ClassModel.IrName(key), field.Key, false), field.Value));
+          owner.Fields.Add(new ClassField(key, new Variable(ClassModel.IrName(key), field.Key, false), field.Value) { IsDeclared = true });
           break;
         case StaticBlock:
           owner.Problem ??= "a static block";
@@ -314,19 +314,31 @@ internal sealed partial class FunctionCollector {
 
       foreach (var member in owner.Members.Where(member => !member.IsStatic && !member.Key.StartsWith('#'))) {
         var inherited = ancestors.SelectMany(ancestor => ancestor.Members).FirstOrDefault(other => other.Key == member.Key && !other.IsStatic);
+        var field = ancestors.Select(ancestor => ancestor.OwnField(member.Key)).FirstOrDefault(found => found is not null);
         if (inherited is not null && member.Member == MemberKind.Method && inherited.Member == MemberKind.Method) {
           member.Overrides = inherited;
           inherited.IsOverridden = true;
           if (member.Function.Params.Count != inherited.Function.Params.Count)
             owner.Problem ??= "an override with another number of parameters";
-        } else if (member.Member is MemberKind.Getter or MemberKind.Setter && inherited is not null && ancestors.All(ancestor => ancestor.OwnField(member.Key) is null)
+        } else if (member.Member is MemberKind.Getter or MemberKind.Setter && inherited is not null && Nearer(inherited, field)
             && ancestors.SelectMany(ancestor => ancestor.Members).FirstOrDefault(other => other.Key == member.Key && other.Member == member.Member && !other.IsStatic) is { } replaced) {
           // A getter or a setter replaces the one of its key and kind of the nearest base class that has one (#1368); a pair stays a pair.
           member.Overrides = replaced;
           replaced.IsOverridden = true;
           if (Kinds(owner, member.Key) != Kinds(replaced.Class!, member.Key))
             owner.Problem ??= $"a getter or setter of {member.Key} that hides the other accessor of its base class";
-        } else if (inherited is not null || ancestors.Any(ancestor => ancestor.OwnField(member.Key) is not null)) {
+        } else if (member.Member is MemberKind.Getter or MemberKind.Setter && inherited is null && field is not null) {
+          // A getter and a setter over a field of a base class make the field a virtual property (#1402).
+          var kinds = Kinds(owner, member.Key);
+          if (field.IsDeclared)
+            owner.Problem ??= $"an accessor of {member.Key} over a class field of its base class";
+          else if (kinds != 3)
+            owner.Problem ??= kinds == 1 ? $"a getter of {member.Key} without a setter over a field of its base class" : $"a setter of {member.Key} without a getter over a field of its base class";
+          else {
+            member.OverridesField = field;
+            field.Accessors.Add(member);
+          }
+        } else if (inherited is not null || field is not null) {
           owner.Problem ??= member.Member is MemberKind.Getter or MemberKind.Setter && inherited is { Member: MemberKind.Getter or MemberKind.Setter }
             ? $"a getter or setter of {member.Key} that hides the other accessor of its base class"
             : $"the member {member.Key} of a base class declared again";
@@ -334,6 +346,10 @@ internal sealed partial class FunctionCollector {
       }
     }
   }
+
+  /// <summary>Whether an inherited member is nearer to the class than a field of its key, which a class between declares accessors over (#1402); true without a field.</summary>
+  private static bool Nearer(Candidate inherited, ClassField? field)
+    => field is null || inherited.Class!.Base?.Lineage.Any(ancestor => ancestor.OwnField(field.Key) == field) == true;
 
   /// <summary>The accessors of a key a class declares itself: 1 for a getter, 2 for a setter, 3 for both.</summary>
   private static int Kinds(ClassModel owner, string key)
