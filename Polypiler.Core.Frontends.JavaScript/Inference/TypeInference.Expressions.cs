@@ -97,8 +97,9 @@ internal sealed partial class TypeInference {
   /// </summary>
   public JsType Of(Node node, Coercion coercion = Coercion.None) {
     // A copy of a function shares its nodes with the function, so a type is known per function.
+    // A value read from a place of stated integers is the integer it is: only the place takes whole doubles (#1416).
     if (!this._known.TryGetValue((this._scope, node, coercion), out var type))
-      this._known[(this._scope, node, coercion)] = type = this.Compute(node, coercion);
+      this._known[(this._scope, node, coercion)] = type = this.Compute(node, coercion).Read;
 
     return type;
   }
@@ -282,9 +283,12 @@ internal sealed partial class TypeInference {
         return JsType.Boolean;
       case "Math.fround":
         return JsType.F32;
+      // Math.min, max and abs of whole doubles and integers are whole doubles (#1416).
+      case "Math.min" or "Math.max" or "Math.abs" when this.WholeCall(builtin, call) is { } whole:
+        return whole;
       // A number rounded to an integer is a whole double of no bound, which % of a literal bounds (#1413).
       case "Math.trunc" or "Math.floor" or "Math.ceil" or "Math.round" when call.Arguments is [var rounded] && this.Of(rounded).Kind == JsKind.Number:
-        return JsType.Whole(System.Int128.MinValue, System.Int128.MaxValue);
+        return this.Quotient(rounded) ?? JsType.Whole(System.Int128.MinValue, System.Int128.MaxValue);
       case "Math.trunc" or "Math.floor" or "Math.ceil" or "Math.round" or "Math.abs" or "Math.sign" or "Math.sqrt" or "Math.min" or "Math.max":
         return JsType.F64;
       case "BigInt.asUintN":

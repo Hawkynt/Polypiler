@@ -51,6 +51,12 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// <summary>Whether the variable is declared without a value, so that an assignment must precede every read.</summary>
   public bool IsUninitialized { get; init; }
 
+  /// <summary>The spelling of the type a <c>@type</c> tag states before the declaration of a local, or <see langword="null"/> (#1416).</summary>
+  public string? Spelling { get; set; }
+
+  /// <summary>The integer or the array of integers JSDoc states for a local, which takes exact integers, checked; <see langword="null"/> for any other local (#1416).</summary>
+  public JsType? Stated { get; set; }
+
   /// <summary>The type JSDoc states for a parameter, or <see langword="null"/>.</summary>
   public JsType? Declared { get; set; }
 
@@ -296,7 +302,10 @@ internal sealed class FunctionModel(Candidate candidate) {
   public IrType ReturnType {
     get {
       var inferred = this.Result.Ir ?? IrType.Void;
-      return this.DeclaredResult is { } declared && Holds(declared, inferred) ? declared : inferred;
+      // An exact integer is the integer JSDoc states, checked where it is returned (#1416). Any other double
+      // stays the double it is, as a contradicted result always has.
+      return this.DeclaredResult is { } declared && (Holds(declared, inferred)
+        || (this.Result is { IsWhole: true, IsExactInteger: true } && declared.IsInteger && !declared.IsLong && !declared.IsEnum)) ? declared : inferred;
     }
   }
 

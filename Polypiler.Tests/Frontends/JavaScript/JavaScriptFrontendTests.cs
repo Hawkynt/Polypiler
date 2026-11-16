@@ -89,10 +89,10 @@ public sealed class JavaScriptFrontendTests {
     Assert.That(IrVerifier.Verify(result.Module), Is.Empty);
   }
 
-  /// <summary>Scenario: An uncoerced sum is a double.</summary>
+  /// <summary>Scenario: An uncoerced sum is a double; where JSDoc states an integer result it is that integer, checked (#1416).</summary>
   [Test]
   public void UncoercedSum_IsADouble() {
-    var module = Import(Ints + "function f(a, b) { return a + b; }");
+    var module = Import("/** @param {int32} a @param {int32} b @returns {number} */ function f(a, b) { return a + b; }");
     Assert.That(module.Functions[0].ReturnType, Is.EqualTo(IrType.F64));
     Assert.That(IrInterpreter.Call(module, "f", [2147483647, 1]), Is.EqualTo(2147483648.0));
   }

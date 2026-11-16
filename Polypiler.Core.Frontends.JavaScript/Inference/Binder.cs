@@ -337,8 +337,22 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
   }
 
   /// <summary>Declares a local, or records that the scoping rules refuse a second declaration of its name.</summary>
-  private Variable? Declare(Identifier id, VariableDeclaration declaration, Node? initializer)
-    => this.Declare(id, declaration.Kind == VariableDeclarationKind.Const, initializer is null);
+  private Variable? Declare(Identifier id, VariableDeclaration declaration, Node? initializer) {
+    var variable = this.Declare(id, declaration.Kind == VariableDeclarationKind.Const, initializer is null);
+    // The type a /** @type {T} */ before a declaration of one name states (#1416).
+    if (variable is not null && declaration.Declarations.Count == 1 && this.Documentation(declaration) is { } comment)
+      variable.Spelling = JsDoc.TypeSpelling(comment);
+
+    return variable;
+  }
+
+  /// <summary>The <c>/** … */</c> comment that ends right before a node, with nothing but white space between the two, or <see langword="null"/>.</summary>
+  private string? Documentation(Node node) {
+    var before = source[..node.Start].TrimEnd();
+    var open = before.LastIndexOf("/**", System.StringComparison.Ordinal);
+    return before.EndsWith("*/", System.StringComparison.Ordinal) && open >= 0 && before.IndexOf("*/", open + 3, System.StringComparison.Ordinal) == before.Length - 2
+      ? before[open..] : null;
+  }
 
   /// <summary>
   /// Declares a local, or records that the scoping rules refuse a second declaration of its name. A

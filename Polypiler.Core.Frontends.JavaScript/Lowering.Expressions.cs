@@ -758,8 +758,10 @@ internal sealed partial class Lowering {
       return reshaped;
 
     // A whole double where JSDoc states an integer that holds its range is that integer; a NaN traps (#1413).
-    if (value.Type is { IsWhole: true, IsAbsent: false } whole && type.IsInteger && !type.IsLong && !type.IsEnum && whole.Within(type)) {
-      this.TrapsNaN = true;
+    // An exact integer of a wider range is that integer where it fits and traps where it does not (#1416).
+    if (value.Type is { IsWhole: true, IsAbsent: false } whole && type.IsInteger && !type.IsLong && !type.IsEnum && (whole.Within(type) || whole.IsExactInteger)) {
+      this.TrapsNaN |= whole.MayBeNaN;
+      this.TrapsRange |= !whole.Within(type);
       return new IrConvert(type, value.Expr, IrConversion.Trap);
     }
 

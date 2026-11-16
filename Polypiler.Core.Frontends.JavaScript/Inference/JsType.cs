@@ -102,7 +102,23 @@ internal sealed record JsType {
   /// <param name="low">The smallest integer.</param>
   /// <param name="high">The largest integer.</param>
   /// <returns>The type.</returns>
-  public static JsType Whole(Int128 low, Int128 high) => new(JsKind.Number) { Float = 64, Low = low, High = high, IsWhole = true };
+  /// <param name="mayBeNaN">Whether a NaN is among the values; an exact integer by construction - a sum, a difference, a product of integers below 2^53 (#1416) - is never one.</param>
+  public static JsType Whole(Int128 low, Int128 high, bool mayBeNaN = true) => new(JsKind.Number) { Float = 64, Low = low, High = high, IsWhole = true, MayBeNaN = mayBeNaN };
+
+  /// <summary>Whether a whole double may be a NaN; one that is never a NaN is an integer a double holds exactly (#1416).</summary>
+  public bool MayBeNaN { get; private init; }
+
+  /// <summary>The type of a value read from a place: an integer that takes no whole double of its own (#1416).</summary>
+  public JsType Read => this.AdmitsWhole ? this with { AdmitsWhole = false } : this;
+
+  /// <summary>
+  /// Whether the values are integers and no NaN (#1416): an integer, or a whole double that is never a NaN -
+  /// a sum, a difference, a product of integers, which a double computes as JavaScript does, past 2^53 too.
+  /// </summary>
+  public bool IsExactInteger => this.IsInteger || (this.IsWhole && !this.MayBeNaN && !this.IsAbsent);
+
+  /// <summary>A stated integer as one that takes an exact integer of any range and a whole double of its own, converted with a check (#1416); any other type as it is.</summary>
+  public JsType Admitting() => this is { IsInteger: true, IsAbsent: false, Enum: null } ? this with { AdmitsWhole = true } : this;
 
   /// <summary>The stated array as one whose integer elements take whole doubles of their range (#1413); any other type as it is.</summary>
   public JsType AdmittingWhole()
@@ -440,14 +456,15 @@ internal sealed record JsType {
         // An integer element JSDoc states holds a whole double or an integer of its range as it is (#1413).
         if (first.AdmitsWhole || second.AdmitsWhole) {
           var (admitting, other) = first.AdmitsWhole ? (first, second) : (second, first);
-          return (other.IsWhole || other.IsInteger) && other.Enum is null && admitting.Within(admitting.Ir!) && other.Within(admitting.Ir!)
+          // An exact integer of a wider range as well: the store checks it (#1416).
+          return (other.IsWhole || other.IsInteger) && other.Enum is null && (other.Within(admitting.Ir!) || (other.IsWhole && other.IsExactInteger))
             ? admitting : Join(admitting with { AdmitsWhole = false }, other with { AdmitsWhole = false });
         }
 
         if (first.Float != 0 || second.Float != 0) {
           // Whole doubles and integers join to the whole doubles of both ranges.
           if ((first.IsWhole || second.IsWhole) && (first.IsWhole || first.IsInteger) && (second.IsWhole || second.IsInteger))
-            return Whole(Int128.Min(first.Low, second.Low), Int128.Max(first.High, second.High));
+            return Whole(Int128.Min(first.Low, second.Low), Int128.Max(first.High, second.High), first.MayBeNaN || second.MayBeNaN);
 
           return first.Float == 32 && second.Float == 32 ? F32 : F64;
         }
