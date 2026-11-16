@@ -328,9 +328,19 @@ public static class RustSyntaxReader {
       if (this.Accept("->"))
         returns = this.TypeText();
 
+      // The bounds of the generic parameters after the signature, T: Ord + Copy, each ended by its comma.
+      var clauses = new List<string>();
+      if (this.Accept("where"))
+        while (!this.Is("{")) {
+          var parameter = this.Identifier();
+          this.Expect(":");
+          clauses.Add($"{parameter}: {this.TypeText()}");
+          this.Expect(",");
+        }
+
       // A required method of a trait has no body: a declaration block.
       var body = this.Accept(";") ? new RsBlock([], null) { IsDeclaration = true } : this.Block();
-      return new RsFunction(name, visibility, parameters, returns, body) { Generics = generics };
+      return new RsFunction(name, visibility, parameters, returns, body) { Generics = generics, Where = clauses };
     }
 
     /// <summary>
@@ -344,7 +354,7 @@ public static class RustSyntaxReader {
       var generics = this.Is("<");
       while (true) {
         var token = this.Peek();
-        if (depth == 0 && (token.Text is "," or ")" or "=" or "{" or ";" or ">" or "|" && token.Kind == Kind.Punctuation || beforeFor && token.Text == "for"))
+        if (depth == 0 && (token.Text is "," or ")" or "=" or "{" or ";" or ">" or "|" && token.Kind == Kind.Punctuation || beforeFor && token.Text == "for" || token.Text == "where"))
           return text.ToString();
 
         depth += token.Text switch { "[" or "(" or "<" => 1, "]" or ")" or ">" => -1, ">>" => -2, _ => 0 };
@@ -610,8 +620,9 @@ public static class RustSyntaxReader {
 
       if (token.Kind == Kind.Identifier) {
         var path = new StringBuilder(this.Next().Text);
+        // A segment is a name or the type arguments of a call, def::<i32>.
         while (this.Accept("::"))
-          path.Append("::").Append(this.Identifier());
+          path.Append("::").Append(this.Is("<") ? this.TypeText() : this.Identifier());
         if (this.Is("{") && !this._noStruct) {
           this.Expect("{");
           var fields = new List<RsFieldValue>();
