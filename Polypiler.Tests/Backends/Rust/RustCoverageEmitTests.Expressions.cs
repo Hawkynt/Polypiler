@@ -46,7 +46,7 @@ public sealed partial class RustCoverageEmitTests {
     Assert.That(text, Does.Contain("fn cmp_f32(a: f32, b: f32) -> i32 {\n    ply_compare_f32(a, b)\n}"));
     Assert.That(text, Does.Contain("fn cmp_bool(a: bool, b: bool) -> i32 {\n    a.cmp(&b) as i32\n}"));
     Assert.That(text, Does.Contain("fn cmp_u64(a: u64, b: u64) -> i32 {\n    a.cmp(&b) as i32\n}"));
-    Assert.That(text, Does.Contain("fn eq_bool(a: bool, b: bool) -> bool {\n    a == b\n}"));
+    Assert.That(text, Does.Contain("fn eq<T: Eq + Copy>(a: T, b: T) -> bool {\n    a == b\n}"));
   }
 
   [Test]
