@@ -24,7 +24,7 @@ public static partial class JavaScriptFrontend {
   private static Dictionary<Node, (IFunction Function, int Copy)> Wanted(TypeInference inference, List<FunctionModel> models) {
     var wanted = new Dictionary<Node, (IFunction Function, int Copy)>();
     var initialized = inference.Initializers.Flows.Where(flow => flow.Kind == FlowKind.Argument).Select(flow => flow.Callee).ToHashSet();
-    foreach (var model in models.Where(model => !model.IsPublic && model.Candidate is { Class: null, IsProperty: false, IsNested: false } && !initialized.Contains(model.Candidate)
+    foreach (var model in models.Where(model => !model.IsPublic && model.Candidate is { Class: null, IsNested: false } && !initialized.Contains(model.Candidate)
         // A parameter JSDoc states keeps one type: calls that pass an Array and a typed array to its T[] are refused, not copied (#1374).
         && model.Parameters.Exists(parameter => parameter.Entry.Kind == JsKind.Conflict && parameter.Declared is null))) {
       var calls = models
@@ -55,7 +55,8 @@ public static partial class JavaScriptFrontend {
     foreach (var group in copies.GroupBy(entry => entry.Value.Function)) {
       var original = candidates.First(candidate => candidate.Function == group.Key);
       var made = group.Select(entry => entry.Value.Copy).Distinct().Order().ToDictionary(copy => copy, copy => new Candidate($"{original.Name}<{copy}>", original.Anchor, original.Function) {
-        Documentation = original.Documentation, Problem = original.Problem
+        // A function of an object of functions stays one: its calls name it through the object (#1411).
+        Documentation = original.Documentation, Problem = original.Problem, IsProperty = original.IsProperty, Owner = original.Owner
       });
       candidates.InsertRange(candidates.IndexOf(original), made.Values);
       candidates.Remove(original);

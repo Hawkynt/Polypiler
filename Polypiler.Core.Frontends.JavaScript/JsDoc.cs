@@ -59,7 +59,8 @@ internal static class JsDoc {
   public static (bool Stated, JsType? Type) ParameterType(string? comment, string name, System.Func<string, ClassModel?> classes) {
     foreach (Match tag in _parameter.Matches(comment ?? ""))
       if (tag.Groups["name"].Value == name)
-        return (true, Declared(tag.Groups["type"].Value, classes));
+        // T[] of a @template T says no more than that the parameter is an array: it takes what the calls pass, as one without JSDoc (#1411).
+        return IsTemplateArray(tag.Groups["type"].Value, comment!) ? (false, null) : (true, Declared(tag.Groups["type"].Value, classes));
 
     return (false, null);
   }
@@ -77,6 +78,21 @@ internal static class JsDoc {
     foreach (Match tag in _parameter.Matches(comment ?? ""))
       if (tag.Groups["name"].Value == name)
         return IsFunction(tag.Groups["type"].Value, comment, classes);
+
+    return false;
+  }
+
+  /// <summary>Whether a spelling is <c>T[]</c> of a name a <c>@template</c> tag of the comment declares.</summary>
+  private static bool IsTemplateArray(string spelling, string comment) {
+    spelling = spelling.Trim();
+    if (!spelling.EndsWith("[]", System.StringComparison.Ordinal))
+      return false;
+
+    var element = spelling[..^2].Trim();
+    foreach (Match tag in _template.Matches(comment))
+      foreach (var template in tag.Groups["names"].Value.Split(','))
+        if (template.Trim() == element)
+          return true;
 
     return false;
   }
