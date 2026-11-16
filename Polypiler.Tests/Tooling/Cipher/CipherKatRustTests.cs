@@ -415,7 +415,7 @@ public sealed class CipherKatRustTests {
 
   [Test]
   public void CargoTest_IsReadAsAPassAFailureAPanicAndAFailureWithoutAMessage() {
-    var outcomes = KatRustCrate.ReadTests(Report.Replace("\n", "\r\n", StringComparison.Ordinal));
+    var outcomes = KatRustCrate.ReadTests(Report.ReplaceLineEndings("\r\n"));
     Assert.That(outcomes, Is.EqualTo(new Dictionary<string, KatRustOutcome> {
       ["kat_1"] = new(true, ""),
       ["kat_2"] = new(false, "the translation panicked: boom"),

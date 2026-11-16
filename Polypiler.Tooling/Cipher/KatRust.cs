@@ -224,7 +224,7 @@ public static partial class KatRustCrate {
     return [.. checkable.Select(entry => Id(entry.Algorithm, entry.Vector))];
   }
 
-  /// <summary>The manifest of the test crate: a package of its own, its own workspace, the translation its one dependency.</summary>
+  /// <summary>The manifest of the test crate: a package of its own, its own workspace, the translation its one dependency; with LF line ends on every system.</summary>
   public static string Manifest(string crate) => $$"""
     [package]
     name = "kat-tests"
@@ -237,7 +237,7 @@ public static partial class KatRustCrate {
 
     [workspace]
 
-    """;
+    """.ReplaceLineEndings("\n");
 
   /// <summary>The text of <c>tests/kat.rs</c>: the fixed helpers, then the imports, the lookup of the registry and a test per vector.</summary>
   public static string Source(KatRustApi api, IReadOnlyList<(KatAlgorithm Algorithm, KatVector Vector)> checkable) {
@@ -528,7 +528,7 @@ public static partial class KatRustCrate {
   /// test itself panicked, after <c>the translation panicked: </c> where the translation did.
   /// </summary>
   public static IReadOnlyDictionary<string, KatRustOutcome> ReadTests(string output) {
-    var text = output.Replace("\r\n", "\n", StringComparison.Ordinal);
+    var text = output.ReplaceLineEndings("\n");
     var panics = new Dictionary<string, string>(StringComparer.Ordinal);
     foreach (Match panic in PanicLine().Matches(text)) {
       var message = panic.Groups["message"].Value.Trim();
