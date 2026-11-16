@@ -51,6 +51,7 @@ public static class JavaScriptStringApi {
     new("s.padEnd(n[, f])", "StrPadEnd"),
     new("s.repeat(n)", "StrRepeat"),
     new("String.fromCharCode(...)", "StrFromCodeUnit, StrConcat"),
+    new("String.fromCharCode.apply(null, a), String.fromCharCode(...a)", "StrFromCodeUnits"),
     new("s.codePointAt(i)", "StrCodePointAt"),
     new("for (const ch of s)", "StrLength, StrNextCodePoint, StrSubstring"),
     new("switch on a string", "StrEquals"),

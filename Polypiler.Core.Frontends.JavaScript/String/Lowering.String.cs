@@ -52,6 +52,9 @@ internal sealed partial class Lowering {
         if (receiver.Kind == JsKind.String)
           return this.Method(call, callee, method);
 
+        if (method == "apply" && callee.Object is MemberExpression applied && types.Names.Library(applied) is "String.fromCharCode")
+          return this.FromCharCodeApply(call);
+
         return types.Names.Library(callee) is "String.fromCharCode" ? this.FromCharCode(call) : null;
       default:
         return null;
@@ -368,9 +371,11 @@ internal sealed partial class Lowering {
     return Str(IrIntrinsicOp.StrJoin, _str, separator, parts);
   }
 
-  /// <summary><c>String.fromCharCode</c>: each argument through ToUint16, the code units joined.</summary>
+  /// <summary><c>String.fromCharCode</c>: each argument through ToUint16, a spread one each of its elements (#1400), the code units joined.</summary>
   private IrExpr FromCharCode(CallExpression call) {
-    var units = call.Arguments.Select(argument => (IrExpr)Str(IrIntrinsicOp.StrFromCodeUnit, _str, new IrConvert(IrType.U16, this.Uint32(argument)))).ToList();
+    var units = call.Arguments.Select(argument => argument is SpreadElement spread
+      ? this.CharCodes(spread.Argument)
+      : (IrExpr)Str(IrIntrinsicOp.StrFromCodeUnit, _str, new IrConvert(IrType.U16, this.Uint32(argument)))).ToList();
     return units.Count switch {
       0 => new IrStrConst(""),
       1 => units[0],
