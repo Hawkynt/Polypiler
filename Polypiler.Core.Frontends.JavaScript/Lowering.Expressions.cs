@@ -72,7 +72,7 @@ internal sealed partial class Lowering {
       case ConditionalExpression choice:
         return this.Conditional(choice);
       case MemberExpression member:
-        return this.Member(member);
+        return this.FunctionValue(member) ?? this.Member(member);
       case CallExpression call:
         return this.Call(call);
       case AwaitExpression awaited:
@@ -252,10 +252,12 @@ internal sealed partial class Lowering {
         expression = new IrBinary(Operation(op), this.Word(left, coercion, operand), this.Word(right, coercion, operand));
         break;
       case Plan.IntegerDivide or Plan.BigDivide or Plan.BigShiftRight:
-        this.Divides |= operation.Plan != Plan.BigShiftRight;
         var dividend = this.To(this.Evaluate(left), operand, left);
         var divisor = operation.Plan == Plan.BigShiftRight ? Count(right) : this.To(this.Evaluate(right), operand, right);
-        expression = Convert(new IrBinary(Operation(op), dividend, divisor), operation.Result.Ir!);
+        // Under a coercion a quotient of integers is what JavaScript's quotient of doubles becomes (#1367).
+        var quotient = operation.Plan == Plan.IntegerDivide && coercion is Coercion.Int32 or Coercion.Uint32 ? this.Quotient(op, dividend, divisor, left, right) : null;
+        this.Divides |= operation.Plan != Plan.BigShiftRight && quotient is null;
+        expression = Convert(quotient ?? new IrBinary(Operation(op), dividend, divisor), operation.Result.Ir!);
         break;
       case Plan.Float or Plan.CompareFloat:
         expression = new IrBinary(Operation(op), this.Float(left), this.Float(right));
@@ -354,8 +356,11 @@ internal sealed partial class Lowering {
     if (member.Computed) {
       var array = this.Array(member.Object);
       var index = this.Index(member.Property);
-      this.AccessesElements = true;
-      return Read(new IrArrayLoad(array, index));
+      var load = new IrArrayLoad(array, index);
+      if (!this.Inside(member, load))
+        this._trappingReads.Add(load);
+
+      return Read(load);
     }
 
     if (types.Names.Library(member) is { } library)
@@ -650,7 +655,7 @@ internal sealed partial class Lowering {
     return Convert(value.Expr, IrType.F64);
   }
 
-  private IrExpr Float(Node node) => this.Float(this.Evaluate(node), node);
+  private IrExpr Float(Node node) => this.Float(this.Element(node, Coercion.None) ?? this.Evaluate(node), node);
 
   /// <summary><c>ToInt32</c> of a number: of a proven integer its value modulo 2^32, of a double the operation ECMA-262 defines.</summary>
   private IrExpr Int32(Typed value, Node node) {
@@ -658,11 +663,11 @@ internal sealed partial class Lowering {
     return value.Type.IsInteger ? Convert(value.Expr, IrType.I32) : new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [this.Float(value, node)]);
   }
 
-  private IrExpr Int32(Node node) => this.Int32(this.Evaluate(node, Coercion.Int32), node);
+  private IrExpr Int32(Node node) => this.Int32(this.Element(node, Coercion.Int32) ?? this.Evaluate(node, Coercion.Int32), node);
 
   /// <summary><c>ToUint32</c> of a number.</summary>
   private IrExpr Uint32(Node node) {
-    var value = this.Present(this.Evaluate(node, Coercion.Uint32), node);
+    var value = this.Present(this.Element(node, Coercion.Uint32) ?? this.Evaluate(node, Coercion.Uint32), node);
     return value.Type.IsInteger ? Convert(value.Expr, IrType.U32) : new IrIntrinsic(IrIntrinsicOp.ToUint32, IrType.U32, [this.Float(value, node)]);
   }
 

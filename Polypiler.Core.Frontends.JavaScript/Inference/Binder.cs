@@ -459,6 +459,13 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
         this.Expression(binary.Left, left, binary);
         this.Expression(binary.Right, right, binary);
         break;
+      case MemberExpression { Computed: false } held when !ReferenceEquals(held, this._callee) && this.Callee(held) is { IsProperty: true } property:
+        // A function of an object of functions named where no call is: the function as a value (#1408).
+        model.FunctionValues[held] = property;
+        if (!model.Callees.Contains(property))
+          model.Callees.Add(property);
+
+        break;
       case MemberExpression member:
         this.Expression(member.Object);
         // An element or the length is taken; the name of the property is read from the source, whatever kind of name it is.
@@ -701,8 +708,9 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
       for (var index = 0; index < call.Arguments.Count; ++index)
         model.Flows.Add(new Flow(FlowKind.MethodArgument, call.Arguments[index], null, null, index, call));
 
-    // A call of anything else that is no method is a call of a function value, whose functions the types say.
-    if (builtin is null && this.Callee(call.Callee) is null && call.Callee is not MemberExpression { Computed: false })
+    // A call of anything else that is no method is a call of a function value, whose functions the types say;
+    // so is a call of a field that holds one, this._f(x), which only the types tell from a method (#1408).
+    if (builtin is null && this.Callee(call.Callee) is null)
       model.Flows.Add(new Flow(FlowKind.Invoke, call));
 
     if (builtin is not null || this.Callee(call.Callee) is not { } callee)
@@ -755,7 +763,7 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
       case Identifier { Name: var name } identifier when !model.Bindings.ContainsKey(identifier):
         return this.Redirects.GetValueOrDefault(identifier) ?? candidates.Find(candidate => !candidate.IsProperty && candidate.Name == name);
       case MemberExpression { Computed: false, Property: Identifier { Name: var property } } member when Path(member.Object) is { } path && !model.Bindings.ContainsKey(path.Root):
-        return candidates.Find(candidate => candidate.IsProperty && candidate.Owner == path.Text && candidate.Name == property);
+        return this.Redirects.GetValueOrDefault(member) ?? candidates.Find(candidate => candidate.IsProperty && candidate.Owner == path.Text && candidate.Name == property);
       default:
         return null;
     }

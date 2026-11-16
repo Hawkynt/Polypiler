@@ -75,6 +75,16 @@ there - is **copied** once per combination of kinds; each copy is typed on its o
 the copy of its kind, so evaluation order and the number of calls do not change. A copy is named like
 an instantiation, `middle<i32[]>`, without an origin. An exported function keeps one type per
 parameter: a parameter that arrays of two kinds reach is `PLY1105` ("'a' holds both int32[] and float64[]").
+A function of an object of functions of a required file - `OpCodes.ClearArray` - is copied in the same
+way, its calls naming the copy through the object (#1411).
+
+JSDoc `@template T` with `@param {T[]} arr` states no more than that `arr` is an array (#1411): the
+parameter takes what the calls of the file pass, as a parameter without JSDoc does, so calls passing a
+`Uint32Array`, a `Uint8Array` and an `Array` of doubles to a function that is not exported each call a
+copy of their kind. Where no call decides `T` - the function is exported and nothing in the file calls
+it - the parameter is `PLY1101` ("parameter 'arr' of 'ClearArray' is used as an array and needs a JSDoc
+type"); `T[]` without a `@template T`, and `@param {T}` of a template that is no array, are `PLY1101`
+as before.
 
 ## C# backend
 

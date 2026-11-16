@@ -71,7 +71,7 @@ Hex16ToWords	OpCodes.js(2409,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.tes
 Hex32ToDWords	OpCodes.js(2434,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
 XorArrays	imported
 CopyArray	imported
-ClearArray	OpCodes.js(2489,26): error PLY1101: parameter 'arr' of 'ClearArray' has no supported JSDoc type
+ClearArray	OpCodes.js(2489,26): error PLY1101: parameter 'arr' of 'ClearArray' is used as an array and needs a JSDoc type
 CopyBytes	imported
 CompareArrays	imported
 SecureCompare	imported

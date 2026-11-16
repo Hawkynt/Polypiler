@@ -42,7 +42,10 @@ public sealed class JavaScriptTranslateCommandTests {
     return Invoke(["translate", path, "--from", "javascript", "--to", "javascript", "--output", this._out, .. further]);
   }
 
-  /// <summary>A JavaScript module goes through the IR and comes out as a module; the caveats of the import are noted.</summary>
+  /// <summary>
+  /// A JavaScript module goes through the IR and comes out as a module; the caveats of the import are
+  /// noted. Adler's loops index inside their arrays, which the import proves: it has none (#1367).
+  /// </summary>
   [Test]
   public void Translate_WritesTheModuleAndNotesTheCaveats() {
     var source = JavaScriptFixture.PathOf("adler32");
@@ -50,12 +53,10 @@ public sealed class JavaScriptTranslateCommandTests {
     var (exitCode, output, error) = Invoke("translate", source, "--from", "javascript", "--to", "javascript", "--output", this._out);
     Assert.That((exitCode, output.Trim()), Is.EqualTo(((int)ExitCode.Success, path)));
     Assert.That(File.ReadAllText(path), Does.Contain("export function compute(data) {"));
-    Assert.That(error.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => line[..line.IndexOf(':', source.Length + 1)]), Is.EqualTo(new[] {
-      source + ": note js-oob-read"
-    }));
+    Assert.That(error.Split('\n', StringSplitOptions.RemoveEmptyEntries), Is.Empty);
 
     // Every caveat a module can have is noted the same way.
-    var all = this.Translate("function g(d, a) { return ((d[a | 0] / (a | 0)) | 0) + (a << 1); } function f() { return g(new Uint8Array(1), 1); }").Error;
+    var all = this.Translate("function g(d, a) { return (d[a | 0] % (a >>> 0)) + (a << 1); } function f() { return g(new Uint8Array(1), 1); }").Error;
     Assert.That(System.Text.RegularExpressions.Regex.Matches(all, @"snippet\.js: note ([\w-]+): \S").Select(match => match.Groups[1].Value),
       Is.EqualTo(new[] { "js-oob-read", "js-div-zero", "js-param-integer-inferred", "js-param-array-inferred" }));
   }

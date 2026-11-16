@@ -111,15 +111,19 @@ public static partial class JavaScriptFrontend {
   public static readonly DiagnosticDescriptor NonErrorThrowDescriptor = new(NonErrorThrow, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.non-error-throw");
 
   /// <summary>
-  /// The caveat of a module that accesses array elements: at anything but the index of an element
-  /// JavaScript reads <c>undefined</c>, the imported code traps or drops the fraction.
+  /// The caveat of a module that accesses array elements where the imported code does not do what
+  /// JavaScript does outside the array: at anything but the index of an element JavaScript reads
+  /// <c>undefined</c>, the imported code traps or drops the fraction. A read whose value meets
+  /// <c>ToInt32</c>, <c>ToUint32</c> or <c>ToNumber</c> directly and a store into a typed array do what
+  /// JavaScript does and need no caveat (#1367).
   /// </summary>
   public const string OutOfRangeAccess = "js-oob-read";
 
   /// <summary>
-  /// The caveat of a module that divides integers: by zero JavaScript yields infinity or <c>NaN</c>,
-  /// which a coercion turns into 0, and the one quotient that does not fit wraps; the imported code
-  /// traps. A division of doubles has no such difference.
+  /// The caveat of a module that divides integers where the imported code traps: by zero JavaScript
+  /// yields infinity or <c>NaN</c>, and the one quotient that does not fit wraps. A division of doubles
+  /// has no such difference, and nor has a quotient or remainder of 32-bit integers under a coercion
+  /// whose divisor is evaluated after an operand without an effect (#1367): it is 0 for a divisor of 0.
   /// </summary>
   public const string DivisionByZero = "js-div-zero";
 
@@ -138,9 +142,11 @@ public static partial class JavaScriptFrontend {
 
   private static readonly ImportCaveat _outOfRangeAccess = new(
     OutOfRangeAccess,
-    "at an index that is not the integer of an element JavaScript reads undefined (0 once coerced), ignores a write into a typed "
-    + "array and lets an Array grow, and an element of new Array(n) that was never stored is undefined; the imported code traps "
-    + "with 'index out of range' or 'integer overflow', takes an index that is a double without its fraction and reads 0");
+    "at an index that is not the integer of an element JavaScript reads undefined, lets an Array grow, and an element of new Array(n) "
+    + "that was never stored is undefined; where such a value is returned, stored into an Array or computed with before a coercion, "
+    + "and where an element is stepped or compounded, the imported code traps with 'index out of range' or 'integer overflow', takes "
+    + "an index that is a double without its fraction and reads 0 (a read directly under ToInt32, ToUint32 or ToNumber and a store "
+    + "into a typed array behave as in JavaScript)");
 
   /// <summary>The caveat of a module whose sort comparator returns a double, which a NaN makes inconsistent.</summary>
   public const string SortOrder = "js-sort-order";
@@ -169,8 +175,9 @@ public static partial class JavaScriptFrontend {
 
   private static readonly ImportCaveat _divisionByZero = new(
     DivisionByZero,
-    "an integer division or remainder under a coercion by zero is Infinity or NaN in JavaScript (0 once coerced), -2147483648 / -1 "
-    + "wraps and a BigInt division by zero throws; the imported code traps with 'divide by zero' and 'integer overflow'");
+    "an integer division or remainder by zero is Infinity or NaN in JavaScript, -2147483648 / -1 wraps and a BigInt division by zero "
+    + "throws a RangeError; where the remainder of two non-negative integers is no operand of a coercion, where the dividend under a "
+    + "coercion has an effect, and for BigInts, the imported code traps with 'divide by zero' and 'integer overflow'");
 
   /// <summary>Imports one JavaScript source file, a script or a module.</summary>
   /// <param name="path">The name of the file, used in diagnostics; its stem names the module.</param>

@@ -178,6 +178,8 @@ internal sealed partial class TypeInference {
         return JsType.Object(created);
       case MemberExpression member when this._scope!.Bindings.GetValueOrDefault(member) is Variable field:
         return field.Type;
+      case MemberExpression held when this._scope!.FunctionValues.TryGetValue(held, out var property):
+        return JsType.Function(property.Shape);
       case MemberExpression { Computed: false } member when this.Of(member.Object).Class is { } holder:
         return this.MemberType(holder, member);
       case MemberExpression member when this.Names.Library(member) is { } library:
@@ -308,7 +310,8 @@ internal sealed partial class TypeInference {
         && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: true, IsGrowable: false, IsView: false } first:
         return call.Arguments.Select(argument => this.Of(argument)).Aggregate(first, (joined, next) => joined.Kind == JsKind.Array && next is { Kind: JsKind.Array, IsPlain: true, IsGrowable: false, IsView: false }
           ? JsType.ArrayOf(JsType.Join(joined.Element!, next.Element!), true) : JsType.Unknown);
-      case null when call.Callee is MemberExpression { Computed: false } invoked && this.Of(invoked.Object).Class is { } owner:
+      // A field of the object is the function value it holds, which hides a method of the same key (#1408).
+      case null when call.Callee is MemberExpression { Computed: false } invoked && this.Of(invoked.Object).Class is { } owner && (Binder.KeyOf(invoked) is not { } field || owner.Field(field) is null):
         return Binder.KeyOf(invoked) is { } key && owner.Member(MemberKind.Method, key) is { } called ? this.ResultOf(this.ModelOf(called)) : JsType.Unknown;
       case null when this.Names.Callee(call.Callee) is { } callee:
         var model = this.ModelOf(callee);

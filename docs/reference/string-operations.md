@@ -82,8 +82,8 @@ negative width throws in .NET; the translation returns the string, as ECMA-262 d
 parameter or result that only strings reach is `str`: `@param {string}`, a literal, a method of a
 string, and for a parameter without JSDoc a method only strings have (`charCodeAt`, `substring`,
 `trim`, `split`, …) or a `for…of` over it. String literals and templates with string holes; `length`;
-`charCodeAt` (`NaN` outside, written out); `s[i]` and `at` (which trap outside, the `js-oob-read`
-caveat); `charAt` (`""` outside); `+`, `+=`, `concat`; `===`, `!==`, `==`, `!=` and `<`, `<=`, `>`,
+`charCodeAt` (`NaN` outside, written out); `s[i]`, `at` and `codePointAt` (which trap outside, the
+`js-oob-read` caveat); `charAt` (`""` outside); `+`, `+=`, `concat`; `===`, `!==`, `==`, `!=` and `<`, `<=`, `>`,
 `>=` between two strings; `substring` and `slice` with their clamping and swapping spelled out with
 `Min` and `Max`, and the `substr(start, length)` of Annex B (B.2.2.1): a negative start counts from the
 end, the length is cut to `[0, what is left]`; `indexOf` and `lastIndexOf` with a clamped position; `includes`, `startsWith`,

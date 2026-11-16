@@ -111,6 +111,7 @@ The types the frontend proves around these operations (#1365):
 
 | Construct | Type | Edges |
 | --- | --- | --- |
+| `(a / b) \| 0`, `(a % b) \| 0`, `>>> 0` of two 32-bit integers (#1367) | the operand type, `Divide` or `Remainder` | a divisor that is no constant other than 0 and -1 is tested first: 0 for 0, the negated dividend modulo 2^32 (or 0) for a signed -1, as JavaScript's double gives; see [import differences](import-differences.md) |
 | `a % b` of two integers that are never negative (#1375) | the integer type that holds both, `Remainder` of it | a divisor 0, a NaN in JavaScript, traps: caveat `js-div-zero`; a dividend that may be negative stays a remainder of doubles |
 | a parameter JSDoc states as an integer of up to 32 bits that the function reads only under `ToInt32` or `ToUint32` (#1384) | the stated type; a narrower one of a function only the file calls the 32-bit integer of its signedness | an argument of the other 32-bit integer is wrapped into it, which leaves the low 32 bits the coercions see; a parameter read without a coercion keeps its contract |
 | JSDoc `T[]` of numbers (#1374) | an `Array`, a list or a typed array of `T`, as the calls of the file pass it; an `Array` where the function tests `Array.isArray` of it | calls of both kinds are `PLY1105`; `Uint8Array` and the other typed arrays stay typed arrays |
