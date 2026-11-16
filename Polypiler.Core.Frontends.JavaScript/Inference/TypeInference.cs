@@ -107,10 +107,11 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         return Unsupported(parameter, $"a second parameter named {name}");
 
       var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name, this.Named);
-      if (stated && type is null)
+      var isFunction = stated && type is null && JsDoc.StatesFunction(candidate.Documentation, name, this.Named);
+      if (stated && type is null && !isFunction)
         return this.Diagnose(parameter, JavaScriptFrontend.MissingTypeDescriptor, $"parameter '{name}' of '{candidate.Name}' has no supported JSDoc type");
 
-      var variable = new Variable(name, parameter, true) { Declared = type, Default = defaultValue };
+      var variable = new Variable(name, parameter, true) { Declared = type, Default = defaultValue, StatesFunction = isFunction };
       model.Parameters.Add(variable);
       model.Bindings[parameter] = variable;
     }
@@ -188,6 +189,15 @@ internal sealed partial class TypeInference(string path, string source, List<Can
           : this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingTypeDescriptor,
             $"parameter '{parameter.Name}' of '{model.Candidate.Name}' is used as an array and needs a JSDoc type");
 
+    // A parameter JSDoc states as a function holds the functions the calls of the file pass, and nothing else: where none
+    // passes one, nothing makes a value of its type (#1408).
+    foreach (var model in models)
+      foreach (var parameter in model.Parameters.Where(parameter => parameter.StatesFunction && parameter.Entry.Kind != JsKind.Function))
+        model.Problem ??= parameter.Entry.Kind == JsKind.Unknown
+          ? this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingTypeDescriptor, $"parameter '{parameter.Name}' of '{model.Candidate.Name}' is a function that no call of the file passes")
+          : this.Diagnose(parameter.EntryEvidence ?? parameter.Declaration, JavaScriptFrontend.MixedKindsDescriptor,
+            parameter.Entry.Kind == JsKind.Conflict ? $"'{parameter.Name}' holds both {parameter.Entry.Kinds.First} and {parameter.Entry.Kinds.Second}" : $"'{parameter.Name}' holds {parameter.Entry.Describe()} where JSDoc states a function");
+
     return models;
   }
 
@@ -238,6 +248,10 @@ internal sealed partial class TypeInference(string path, string source, List<Can
 
       return;
     }
+
+    // A function JSDoc states is one of the values the calls of the file pass, those of a method as well (#1408).
+    if (parameter.StatesFunction)
+      return;
 
     // A parameter only a string can be is one: it calls a method only strings have, or a for...of goes over it.
     if (external && parameter.UsedAsString is { } text) {

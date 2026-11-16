@@ -72,7 +72,7 @@ internal sealed partial class Lowering {
       case ConditionalExpression choice:
         return this.Conditional(choice);
       case MemberExpression member:
-        return this.Member(member);
+        return this.FunctionValue(member) ?? this.Member(member);
       case CallExpression call:
         return this.Call(call);
       case AwaitExpression awaited:

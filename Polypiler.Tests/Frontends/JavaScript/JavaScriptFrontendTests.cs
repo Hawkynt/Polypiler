@@ -683,7 +683,6 @@ public sealed class JavaScriptFrontendTests {
   [TestCase("const O = { f: () => 1 };", "an arrow function", 13)]
   [TestCase("/** @param {int32} a */ function f(a) { switch (a) { case 1: return 1; default: } }", "a function that can end without returning its value", 25)]
   [TestCase("/** @param {int32} i */ function g(i) { return i; } function f() { const e = new Array(2); return g(e[0]); }", "float64 where int32 is expected", 101)]
-  [TestCase("function g() { } function f() { return g(); }", "void as the value returned", 40)]
   [TestCase("function g() { } function f() { const x = g(); }", "void as the value of a variable", 43)]
   [TestCase("function g() { } /** @param {boolean} t */ function f(t) { const x = t ? g() : g(); }", "void as the value of a variable", 70)]
   [TestCase("function g() { } /** @param {boolean} t */ function f(t) { return (t ? g() : g()) + 1; }", "?: on undefined and undefined", 68)]

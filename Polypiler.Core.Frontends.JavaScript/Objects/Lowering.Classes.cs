@@ -84,6 +84,10 @@ internal sealed partial class Lowering {
       case CallExpression { Callee: MemberExpression callee } call when types.Names.Callee(callee) is { Class: { } owner, IsStatic: true } method:
         return new IrMethodCall(types.ModelOf(method).ReturnType, owner.Methods[method], null, this.Arguments(call, call.Arguments, method));
       case CallExpression { Callee: MemberExpression { Computed: false } callee } call when types.Of(callee.Object).Class is { } owner:
+        // A field holds a function value, which the call calls; it hides a method of the same key (#1408).
+        if (Binder.KeyOf(callee) is { } held && owner.Field(held) is not null)
+          return this.Invocation(call);
+
         if (Binder.KeyOf(callee) is not { } key || owner.Member(MemberKind.Method, key) is not { } invoked)
           throw this.Unsupported(callee, $"the method {types.Text(callee.Property)} of {owner.Name}, which it does not have");
 

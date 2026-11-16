@@ -116,6 +116,13 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// </summary>
   public bool IsArrayByCall { get; set; }
 
+  /// <summary>
+  /// Whether JSDoc states a parameter as a function, <c>function(byte[]):void</c> (#1408): it takes the
+  /// function values the calls of the file pass, and a function whose callers are not all known cannot
+  /// be imported, since nothing makes a value of the type.
+  /// </summary>
+  public bool StatesFunction { get; init; }
+
   /// <summary>Whether the function compares the variable with <c>null</c>, or reads it through <c>??</c>: a parameter is then one null may reach.</summary>
   public bool ComparedWithNull { get; set; }
 
@@ -253,7 +260,7 @@ internal sealed class FunctionModel(Candidate candidate) {
   /// <summary>The functions nested in the body - arrows, function expressions, function declarations - by their node.</summary>
   public Dictionary<Node, Candidate> Nested { get; } = [];
 
-  /// <summary>The names of functions of the file the body uses as values, by the identifier.</summary>
+  /// <summary>The names of functions of the file the body uses as values, by the identifier or the member expression of an object of functions.</summary>
   public Dictionary<Node, Candidate> FunctionValues { get; } = [];
 
   /// <summary>The type JSDoc states for the result, or <see langword="null"/>.</summary>
