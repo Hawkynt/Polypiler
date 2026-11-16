@@ -135,6 +135,9 @@ internal sealed partial class Lowering {
   /// array stores, which is not what JavaScript's prefix form yields, so that form is refused.
   /// </summary>
   private IrExpr StepValue(UpdateExpression step) {
+    if (step.Argument is MemberExpression member && this.FieldStepValue(step, member) is { } field)
+      return field;
+
     if (step.Argument is not Identifier target)
       return step.Prefix ? throw this.Unsupported(step, "a prefix ++ or -- on an array element inside an expression") : Read(this.StepElement(step));
 
