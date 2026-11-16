@@ -111,7 +111,7 @@ public static partial class RustEmitter {
           this.SequenceDeclaration(declare, into);
           return false;
         case IrDeclare declare:
-          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local) || this.IsChangedCollection(declare.Local)
+          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local) || this.IsChangedCollection(declare.Local) && !this.IsBorrowedCollection(declare.Local)
             || this.IsFieldAlias(declare.Local) && this._arrayFacts.MutableLocals.Contains(declare.Local) && this._arrayFacts.FieldAliases[declare.Local].Target.Type is { IsObject: true } owner && !this.IsPlain(owner)
             || this.IsMutatedObject(declare.Local), this.LocalType(declare.Local),
             declare.Initializer switch {
@@ -122,6 +122,7 @@ public static partial class RustEmitter {
               var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
               var value when declare.Local.Type.IsView => this.ViewSource(value, this.WritesView(declare.Local)),
               var value when declare.Local.Type.IsFunction => this.FunctionValue(value),
+              var value when declare.Local.Type.IsCollection && this.IsBorrowedCollection(declare.Local) => this.BorrowedCollection(declare.Local, value),
               var value when declare.Local.Type.IsCollection => this.CollectionValue(value),
               var value => this.Expression(value)
             }));
@@ -180,6 +181,11 @@ public static partial class RustEmitter {
           && !ContinuesLoop(loop.Body.Statements) && !BreaksLoop(loop.Body.Statements):
           // A loop whose first pass always leaves the function is an if (clippy's never_loop).
           into.Add(new RsExpressionStatement(this.If(new IrIf(loop.Condition, loop.Body, null))));
+          return false;
+        case IrWhile { Condition: IrConst { Value: not 0 } } loop when loop.Body.Statements.Count > 0 && loop.Body.Statements[^1] is IrBreak
+          && !ContinuesLoop(loop.Body.Statements) && this.Has(RustCapabilities.LabeledBlock):
+          // A loop whose first pass always leaves it is a block, left by its breaks (clippy's never_loop).
+          into.Add(new RsExpressionStatement(this.OncePass(loop.Body.Statements.Take(loop.Body.Statements.Count - 1).ToList())));
           return false;
         case IrWhile loop:
           into.Add(new RsExpressionStatement(this.Loop(loop.Condition, loop.Body.Statements, null)));
@@ -361,6 +367,18 @@ public static partial class RustEmitter {
       // Inside a labelled block every break and continue of the loop names it.
       var labelled = new RsExpressionStatement(new RsLabeledBlock(inner.Label, body));
       return new RsLoop(label, new RsBlock([labelled, exit with { Expression = new RsIf(this.Not(loop.Condition), new RsBlock([new RsExpressionStatement(new RsBreak(label, null))], null), null) }], null));
+    }
+
+    /// <summary>
+    /// The body of a loop that runs once, its last <c>break</c> left out: <c>'b: { …; break 'b; … }</c> where a
+    /// <c>break</c> leaves it early, a plain block where none does.
+    /// </summary>
+    private RsExpression OncePass(IReadOnlyList<IrStmt> body) {
+      var block = new Breakable(BreakableKind.Switch, this.NewLabel("b"));
+      this._breakables.Add(block);
+      var written = this.Block(body);
+      this._breakables.RemoveAt(this._breakables.Count - 1);
+      return block.Used ? new RsLabeledBlock(block.Label, written) : new RsBlockExpression(written);
     }
 
     /// <summary><c>break</c> of the innermost loop or switch, labelled where a labelled block stands between.</summary>

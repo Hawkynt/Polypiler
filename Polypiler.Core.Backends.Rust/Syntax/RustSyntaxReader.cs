@@ -597,17 +597,24 @@ public static class RustSyntaxReader {
       }
 
       if (this.Accept("(")) {
-        var inner = this.Expression();
-        if (this.Is(",")) {
-          var elements = new List<RsExpression> { inner };
-          while (this.Accept(",") && !this.Is(")"))
-            elements.Add(this.Expression());
-          this.Expect(")");
-          return new RsTuple(elements);
-        }
+        // Inside parentheses a struct literal stands again, also in a header: (P { x: 0 }).x.
+        var outer = this._noStruct;
+        this._noStruct = false;
+        try {
+          var inner = this.Expression();
+          if (this.Is(",")) {
+            var elements = new List<RsExpression> { inner };
+            while (this.Accept(",") && !this.Is(")"))
+              elements.Add(this.Expression());
+            this.Expect(")");
+            return new RsTuple(elements);
+          }
 
-        this.Expect(")");
-        return new RsParenthesized(inner);
+          this.Expect(")");
+          return new RsParenthesized(inner);
+        } finally {
+          this._noStruct = outer;
+        }
       }
 
       if (this.Accept("unsafe"))

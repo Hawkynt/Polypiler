@@ -61,6 +61,9 @@ internal static class Moves {
     return true;
   }
 
+  /// <summary>Whether a statement is one of a body's, outside every lambda: one whose reads <see cref="IsLast"/> follows.</summary>
+  public static bool Holds(IrBlock body, IrStmt statement) => Path(body, statement) is not null;
+
   /// <summary>The blocks and statement positions from the body down to a statement, or <see langword="null"/>.</summary>
   private static List<(IrBlock Block, int Index)>? Path(IrBlock block, IrStmt target) {
     for (var index = 0; index < block.Statements.Count; ++index) {

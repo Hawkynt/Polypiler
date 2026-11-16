@@ -87,7 +87,7 @@ public sealed class ZipAndViewEmitTests {
     Assert.That(Emitted("public static int X(bool c) { var a = new int[3]; var b = new int[1]; if (c) b = a; b[0] = 1; return b[0]; }"), Does.Contain("b = a;"));
   }
 
-  [TestCase("public static int X() { var a = new int[3]; var b = a; b[0] = 1; return a[0]; }", TestName = "SourceReadAfterwards_IsStillShared")]
+  [TestCase("public static int X() { var a = new int[3]; var b = a; b[0] = 1; a[1] = 2; return b[0]; }", TestName = "SourceReadAfterwards_IsStillShared")]
   [TestCase("public static int X() { var a = new int[3]; int[] b = null; for (int i = 0; i < 2; i++) { b = a; } b[0] = 1; return b[0]; }", TestName = "MoveInALoop_IsStillShared")]
   public void ArrayTheSourceStillNeeds_IsRefused(string methods)
     => Assert.That(Problems(methods), Has.Some.Contain("one array shared by the variables").Or.Some.Contain("PLY1550"));

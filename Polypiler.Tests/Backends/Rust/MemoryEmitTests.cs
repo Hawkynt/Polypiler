@@ -151,7 +151,17 @@ public sealed class MemoryEmitTests {
   [Test]
   public void ArraysWithoutASafeOwner_AreRefusedByName() {
     Assert.That(Problems("public static int F(int[] a) { a = new int[1]; a[0] = 2; return a[0]; }"), Has.Some.Contain("the parameter 'a' and a new array in one variable"));
-    Assert.That(Problems("public static int F() { var a = new int[1]; var b = a; b[0] = 1; return a[0]; }"), Has.Some.Contain("one array shared by the variables 'a' and 'b'"));
+    // The source read while the second variable still writes the array: no borrow ends before it.
+    Assert.That(Problems("public static int F() { var a = new int[2]; var b = a; b[0] = 1; a[1] = 2; return b[0]; }"), Has.Some.Contain("one array shared by the variables 'a' and 'b'"));
+  }
+
+  /// <summary>A second variable of one array whose last use comes before the source is read again borrows it (#1393).</summary>
+  [Test]
+  public void SecondVariableUsedUpBeforeTheSource_BorrowsTheArray() {
+    var text = Emitted("public static int F() { var a = new int[1]; var b = a; b[0] = 1; return a[0]; }");
+    Assert.That(text, Does.Contain("let mut a: Vec<i32> = vec![0; 1];\n    let b: &mut [i32] = &mut a;"));
+    // The array is written, so its group is mutable: the borrow is exclusive, which ends before a is read.
+    Assert.That(Emitted("public static int F() { var a = new int[2]; a[1] = 3; var b = a; var s = b[1]; return a[0] + s; }"), Does.Contain("let b: &mut [i32] = &mut a;\n    let s: i32 = b[1];"));
   }
 
   [Test]

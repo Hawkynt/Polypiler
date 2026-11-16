@@ -369,7 +369,7 @@ internal static class ArrayOwnership {
     foreach (var local in function.Locals.Where(local => local.Type.IsArray)) {
       var root = groups.Find(local);
       var holder = !owned.Contains(root) && function.Parameters.Any(parameter => groups.Find(parameter) == root) ? ArrayHolder.Borrowed : ArrayHolder.Owned;
-      result.Locals[local] = result.FieldAliases.ContainsKey(local) ? ArrayHolder.Borrowed : holder;
+      result.Locals[local] = result.FieldAliases.ContainsKey(local) || holder == ArrayHolder.Owned && writtenRoots.Contains(root) && BorrowsLocal(function, local) ? ArrayHolder.Borrowed : holder;
       if (writtenRoots.Contains(root))
         result.MutableLocals.Add(local);
     }
@@ -397,6 +397,47 @@ internal static class ArrayOwnership {
 
     result.Problem = problems.FirstOrDefault();
     return result;
+  }
+
+  /// <summary>
+  /// Whether a variable can borrow the array or collection of the variable it is declared with, <c>let r = &amp;mut a;</c>
+  /// (#1393): it is declared with another local that is read again later and never given another value, and from its declaration to its
+  /// last read in the block that declares it nothing names the other variable, returns it or captures it in a
+  /// lambda - the borrow ends before the owner is used again.
+  /// </summary>
+  internal static bool BorrowsLocal(IrFunction function, IrLocal local) {
+    if (Statements(function.Body).Any(statement => statement is IrAssign assign && assign.Local == local))
+      return false;
+
+    foreach (var block in Blocks(function.Body)) {
+      var at = block.Statements.ToList().FindIndex(statement => statement is IrDeclare { Initializer: IrLocalRef } declare && declare.Local == local);
+      if (at < 0)
+        continue;
+
+      var owner = ((IrLocalRef)((IrDeclare)block.Statements[at]).Initializer!).Local;
+      // Where the declaration reads the other variable for the last time, the value moves instead.
+      if (function.Parameters.Contains(owner) || Moves.IsLast(function.Body, block.Statements[at], owner))
+        return false;
+
+      bool Refers(IrStmt statement, IrLocal variable) => IrTree.Nodes(statement).Any(node => node is IrLocalRef reference && reference.Local == variable);
+      var following = block.Statements.Skip(at + 1).ToList();
+      var last = following.FindLastIndex(statement => Refers(statement, local));
+      var living = following.Take(last + 1).ToList();
+      return !living.Any(statement => Refers(statement, owner))
+        && !living.SelectMany(IrTree.Nodes).OfType<IrLambda>().Any(lambda => IrTree.Nodes(lambda.Body).Any(node => node is IrLocalRef reference && reference.Local == local))
+        && !Statements(new IrBlock(living)).Any(statement => statement is IrReturn { Value: IrLocalRef reference } && reference.Local == local);
+    }
+
+    return false;
+  }
+
+  /// <summary>Every block of a body, the body first.</summary>
+  private static IEnumerable<IrBlock> Blocks(IrBlock block) {
+    yield return block;
+    foreach (var statement in block.Statements)
+      foreach (var inner in statement is IrBlock nested ? [nested] : IrTree.Blocks(statement))
+        foreach (var deeper in Blocks(inner))
+          yield return deeper;
   }
 
   /// <summary>Unions of the variables of a function and of the sentinel of its result.</summary>

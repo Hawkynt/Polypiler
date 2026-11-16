@@ -98,7 +98,7 @@ public static partial class RustEmitter {
       if (local.Type.IsView)
         return this.ViewType(local.Type, this.WritesView(local));
       if (local.Type.IsCollection)
-        return this.CollectionType(local.Type);
+        return this.IsBorrowedCollection(local) ? this.BorrowedCollectionType(local) : this.CollectionType(local.Type);
       if (!local.Type.IsArray)
         return this.Type(local.Type);
       if (this.IsNullableArray(local))

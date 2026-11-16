@@ -26,7 +26,7 @@ public static partial class RustEmitter {
     }
 
     /// <summary>Every block of a block tidied: late initializations joined, bottom-up.</summary>
-    private static RsBlock Bodies(RsBlock block) => RustSyntaxRewriter.Rewrite(block, node => node is RsBlock inner ? Swapped(LateInitialized(Folded(inner))) : node);
+    private static RsBlock Bodies(RsBlock block) => RustSyntaxRewriter.Rewrite(block, node => node is RsBlock inner ? Questioned(Swapped(LateInitialized(Folded(inner)))) : node);
 
     /// <summary>
     /// A reduction over the elements of a slice as an iterator fold: a binding made just before an
@@ -110,6 +110,25 @@ public static partial class RustEmitter {
 
         statements[index] = new RsExpressionStatement(new RsMethodCall(array, "swap", [first, second]));
         statements.RemoveRange(index + 1, 2);
+      }
+
+      return statements.Count == block.Statements.Count ? block : block with { Statements = statements };
+    }
+
+    /// <summary>
+    /// An empty option handed on and the value taken out of it, <c>if o.is_none() { return None; } let v = o.unwrap_or_default();</c>,
+    /// as <c>let v = o?;</c> (clippy's <c>question_mark</c>): where nothing after them names the option, which <c>?</c> may move.
+    /// </summary>
+    private static RsBlock Questioned(RsBlock block) {
+      var statements = block.Statements.ToList();
+      for (var index = 0; index + 1 < statements.Count; ++index) {
+        if (statements[index] is not RsExpressionStatement { Expression: RsIf { Else: null, Condition: RsMethodCall { Name: "is_none", Arguments.Count: 0, Receiver: RsPath tested }, Then: { Tail: null, Statements: [RsExpressionStatement { Expression: RsReturn { Value: RsPath { Name: "None" } } }] } } }
+          || statements[index + 1] is not RsLet { Initializer: RsMethodCall { Name: "unwrap_or_default", Arguments.Count: 0, Receiver: RsPath taken } unwrapped } binding
+          || taken.Name != tested.Name || Names(new RsBlock([.. statements.Skip(index + 2)], block.Tail), tested.Name))
+          continue;
+
+        statements[index] = binding with { Initializer = new RsTry(unwrapped.Receiver) { Type = unwrapped.Type } };
+        statements.RemoveAt(index + 1);
       }
 
       return statements.Count == block.Statements.Count ? block : block with { Statements = statements };

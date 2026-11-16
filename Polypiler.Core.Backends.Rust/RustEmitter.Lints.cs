@@ -21,7 +21,7 @@ public static partial class RustEmitter {
   /// ordering of floating-point numbers negated (<c>neg_cmp_op_on_partial_ord</c>, <c>nonminimal_bool</c>),
   /// a constant close to π or e (<c>approx_constant</c>), a loop that never ends (<c>empty_loop</c>), a
   /// value copied to a variable and straight back (<c>almost_swapped</c>), two variables swapped through a
-  /// third, as <c>std::mem::swap</c> lowers (<c>manual_swap</c>) and
+  /// third, or two elements of two arrays, as <c>std::mem::swap</c> lowers (<c>manual_swap</c>) and
   /// a signature of the source with more than seven parameters (<c>too_many_arguments</c>), a public method
   /// whose name is one of a standard trait's (<c>should_implement_trait</c>: the name is the source's). The list is
   /// closed; no group and no <c>clippy::all</c> is ever allowed.
@@ -91,10 +91,10 @@ public static partial class RustEmitter {
           case RsImpl { Trait: null } impl when impl.Items.OfType<RsFunction>().Any(method => method.Visibility == "pub" && _traitMethods.Contains(method.Name)):
             needed.Add("clippy::should_implement_trait");
             break;
-          case RsBlock block when block.Statements.Zip(block.Statements.Skip(1), block.Statements.Skip(2)).Any(triple => triple is (RsLet { Initializer: RsPath first } held,
-              RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath into, Value: RsPath second } },
-              RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath back, Value: RsPath saved } })
-            && into.Name == first.Name && back.Name == second.Name && saved.Name == held.Name):
+          case RsBlock block when block.Statements.Zip(block.Statements.Skip(1), block.Statements.Skip(2)).Any(triple => triple is (RsLet { Initializer: RsPath or RsIndex } held,
+              RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath or RsIndex, Value: RsPath or RsIndex } into },
+              RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath or RsIndex, Value: RsPath saved } back })
+            && RustPrinter.Print(into.Target) == RustPrinter.Print(held.Initializer!) && RustPrinter.Print(back.Target) == RustPrinter.Print(into.Value) && saved.Name == held.Name):
             needed.Add("clippy::manual_swap");
             break;
           case RsLet { TypeName: { } type } when IsComplex(type):
@@ -139,7 +139,9 @@ public static partial class RustEmitter {
         needed.Add("clippy::erasing_op");
       if (binary.Operator is "==" or "!=" or "<" or ">" or "<=" or ">=" or "-" or "/" or "%" or "^" or "&" or "|" or "&&" or "||" && left == right)
         needed.Add("clippy::eq_op");
-      if (binary.Operator is "<" or ">" or "<=" or ">=" && ((binary.Left.Type is { IsInteger: true, IsSigned: false } && Is(right, "0")) || (binary.Right.Type is { IsInteger: true, IsSigned: false } && Is(left, "0")))) {
+      // Zero as the literal of an unsigned type, 0 or 0u64.
+      static bool Zero(string text) => text == "0" || text.Length > 2 && text[0] == '0' && text[1] == 'u';
+      if (binary.Operator is "<" or ">" or "<=" or ">=" && ((binary.Left.Type is { IsInteger: true, IsSigned: false } && Zero(right)) || (binary.Right.Type is { IsInteger: true, IsSigned: false } && Zero(left)))) {
         needed.Add("unused_comparisons");
         needed.Add("clippy::absurd_extreme_comparisons");
       }

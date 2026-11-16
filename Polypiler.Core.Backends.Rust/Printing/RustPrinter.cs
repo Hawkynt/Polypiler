@@ -358,7 +358,7 @@ public static class RustPrinter {
         return joined.Length > ArrayWidth ? null : $"[{joined}]";
       }
       case RsIf { Then: { Statements.Count: 0, Tail: { } whenTrue }, Else: RsBlockExpression { Block: { Statements.Count: 0, Tail: { } whenFalse } } } choice: {
-        if (Flat(choice.Condition) is not { } condition || Flat(whenTrue) is not { } yes || Flat(whenFalse) is not { } no)
+        if (Flat(Guarded(choice.Condition)) is not { } condition || Flat(whenTrue) is not { } yes || Flat(whenFalse) is not { } no)
           return null;
 
         var flat = $"if {condition} {{ {yes} }} else {{ {no} }}";
@@ -628,7 +628,7 @@ public static class RustPrinter {
       case RsLetCondition condition:
         return $"let {condition.Pattern} = " + Expression(condition.Value, indent, column + condition.Pattern.Length + 7, trailing);
       case RsWhile loop:
-        return $"{Label(loop.Label)}while {Condition(loop.Condition, indent, column + Label(loop.Label).Length + 6)}{Block(loop.Body, indent)}";
+        return $"{Label(loop.Label)}while {Condition(loop.Condition, indent, column + Label(loop.Label).Length + 6, column)}{Block(loop.Body, indent)}";
       case RsLoop loop:
         return $"{Label(loop.Label)}loop {Block(loop.Body, indent)}";
       case RsFor loop:
@@ -640,7 +640,7 @@ public static class RustPrinter {
       case RsBlockExpression block:
         return Block(block.Block, indent);
       case RsMatch choice: {
-        var text = new StringBuilder("match ").Append(Condition(choice.Scrutinee, indent, column + 6)).Append("{\n");
+        var text = new StringBuilder("match ").Append(Condition(choice.Scrutinee, indent, column + 6, column)).Append("{\n");
         foreach (var arm in choice.Arms) {
           var head = string.Join(" | ", arm.Patterns) + " => ";
           text.Append(inner).Append(head);
@@ -689,7 +689,7 @@ public static class RustPrinter {
 
   /// <summary>An <c>if</c> over several lines; an <c>else</c> that is another <c>if</c> follows as <c>else if</c>.</summary>
   private static string If(RsIf choice, int indent, int column) {
-    var text = new StringBuilder("if ").Append(Condition(choice.Condition, indent, column + 3)).Append(Block(choice.Then, indent));
+    var text = new StringBuilder("if ").Append(Condition(choice.Condition, indent, column + 3, column)).Append(Block(choice.Then, indent));
     switch (choice.Else) {
       case RsIf next:
         text.Append(" else ").Append(If(next, indent, column));
@@ -705,15 +705,35 @@ public static class RustPrinter {
   /// <summary>
   /// The condition of an <c>if</c> or a <c>while</c> and what separates it from the block: a space,
   /// or, where the condition takes several lines and its last one is more than closing brackets, a
-  /// line break, the block's brace standing alone at the indentation (rustfmt's <c>last_line_extendable</c>).
+  /// line break, the block's brace standing alone at the indentation (rustfmt's <c>last_line_extendable</c>),
+  /// as also where that last line is indented past the column the keyword starts at (<c>last_line_offsetted</c>).
   /// </summary>
-  private static string Condition(RsExpression condition, int indent, int column) {
-    var text = Expression(condition, indent, column, 2);
-    var last = text[(text.LastIndexOf('\n') + 1)..].Trim();
-    return text.Contains('\n') && last.Any(c => c is not (')' or ']' or '}' or '?' or '>'))
+  private static string Condition(RsExpression condition, int indent, int column, int start) {
+    var text = Expression(Guarded(condition), indent, column, 2);
+    var line = text[(text.LastIndexOf('\n') + 1)..];
+    var last = line.Trim();
+    // rustfmt's last_line_extendable and last_line_offsetted: the brace follows a last line of closing
+    // delimiters only, and only where that line is not indented past the keyword.
+    return text.Contains('\n') && (last.Any(c => c is not (')' or ']' or '}' or '?' or '>')) || line.Length - line.TrimStart().Length > start)
       ? text + "\n" + new string(' ', indent)
       : text + " ";
   }
+
+  /// <summary>
+  /// A condition of an <c>if</c> or a <c>while</c>, or a scrutinee, with every struct literal it holds outside
+  /// parentheses, brackets and arguments parenthesized: <c>p.x == (P { x: 0, y: 0 }).x</c>. Rust reads the brace
+  /// of a struct literal there as the opening of the block.
+  /// </summary>
+  private static RsExpression Guarded(RsExpression condition) => condition switch {
+    RsStructLiteral literal => new RsParenthesized(literal) { Type = literal.Type },
+    RsBinary binary => binary with { Left = Guarded(binary.Left), Right = Guarded(binary.Right) },
+    RsUnary unary => unary with { Operand = Guarded(unary.Operand) },
+    RsField field => field with { Target = Guarded(field.Target) },
+    RsMethodCall call => call with { Receiver = Guarded(call.Receiver) },
+    RsCast cast => cast with { Operand = Guarded(cast.Operand) },
+    RsIndex index => index with { Target = Guarded(index.Target) },
+    _ => condition
+  };
 
   /// <summary>A block whose braces stand at an indentation: <c>{}</c> when empty.</summary>
   private static string Block(RsBlock block, int indent) {

@@ -43,8 +43,36 @@ public static partial class RustEmitter {
         || node is IrCall call && this._changedCollections.TryGetValue(call.Function, out var changed) && changed.Any(position => position < call.Arguments.Count && Names(call.Arguments[position])));
     }
 
-    /// <summary>Whether the function being written changes a collection variable of its own.</summary>
-    private bool IsChangedCollection(IrLocal local) => local.Type.IsCollection && this.ChangesCollection(this._function.Body, local);
+    /// <summary>Whether the function being written changes a collection variable of its own, itself or through a variable that borrows it.</summary>
+    private bool IsChangedCollection(IrLocal local) => local.Type.IsCollection && this.ChangedThrough(local);
+
+    /// <summary>Whether a collection variable is changed, by an operation or a call on it or on a variable that borrows it.</summary>
+    private bool ChangedThrough(IrLocal local) => this.ChangesCollection(this._function.Body, local)
+      || ArrayOwnership.Statements(this._function.Body).Any(statement => statement is IrDeclare { Initializer: IrLocalRef { Local: var owner } } declare
+        && owner == local && declare.Local != local && this.IsBorrowedCollection(declare.Local) && this.ChangedThrough(declare.Local));
+
+    /// <summary>
+    /// Whether a collection variable borrows the collection of the variable it is declared with, <c>let r = &amp;mut v;</c>
+    /// (#1393): the other variable is read again only after the borrow's last use, or is itself such a borrow, handed on.
+    /// </summary>
+    private bool IsBorrowedCollection(IrLocal local)
+      => local.Type.IsCollection && !this._function.Parameters.Contains(local)
+        && (ArrayOwnership.BorrowsLocal(this._function, local) || this.BorrowedOwner(local) is { } owner && this.IsBorrowedCollection(owner));
+
+    /// <summary>The variable a local is declared with, <c>let r = v;</c>, where it is no parameter; <see langword="null"/> for any other declaration.</summary>
+    private IrLocal? BorrowedOwner(IrLocal local)
+      => ArrayOwnership.Statements(this._function.Body).OfType<IrDeclare>().FirstOrDefault(declare => declare.Local == local)?.Initializer is IrLocalRef { Local: var owner }
+        && owner != local && !this._function.Parameters.Contains(owner) ? owner : null;
+
+    /// <summary>The Rust type of a collection variable that borrows another's: <c>&amp;mut Vec&lt;T&gt;</c> where it is changed through, else <c>&amp;Vec&lt;T&gt;</c>.</summary>
+    private string BorrowedCollectionType(IrLocal local)
+      => (this.ChangedThrough(local) ? "&mut " : "&") + this.CollectionType(local.Type);
+
+    /// <summary>The value of a collection variable that borrows another's: <c>&amp;mut v</c> or <c>&amp;v</c>, or the borrow another variable hands on.</summary>
+    private RsExpression BorrowedCollection(IrLocal local, IrExpr owner)
+      => owner is IrLocalRef { Local: var held } && this.IsBorrowedCollection(held) ? this.CollectionPlace(owner)
+        : new RsReference(this.ChangedThrough(local), this.CollectionPlace(owner)) { Type = owner.Type };
+
 
     /// <summary>
     /// The Rust type of a collection: a list a <c>Vec&lt;T&gt;</c>; a map or a set in .NET's order of
@@ -83,7 +111,7 @@ public static partial class RustEmitter {
     /// <summary>A collection where a helper takes it: a slice of it or the vector, borrowed as such unless the variable is the borrow itself.</summary>
     private RsExpression CollectionArgument(IrExpr collection, bool mutable) {
       var place = this.CollectionPlace(collection);
-      return collection is IrLocalRef { Local: var local } && this._function.Parameters.Contains(local) ? place : new RsReference(mutable, place);
+      return collection is IrLocalRef { Local: var local } && (this._function.Parameters.Contains(local) || this.IsBorrowedCollection(local)) ? place : new RsReference(mutable, place);
     }
 
     /// <summary>A collection where a function takes it: the borrow its parameter is.</summary>
@@ -94,12 +122,17 @@ public static partial class RustEmitter {
       return this.CollectionArgument(collection, mutable);
     }
 
-    /// <summary>A collection where a variable or a result takes it: a new one, the result of a call, or a variable moved for good.</summary>
+    /// <summary>A collection where a variable or a result takes it: a new one, the result of a call, a choice of two new ones, or a variable moved for good.</summary>
     private RsExpression CollectionValue(IrExpr value) => value switch {
       IrCollection or IrCall => this.Expression(value),
+      IrConditional conditional when IsNewCollection(conditional) => this.Expression(value),
       IrLocalRef { Local: var local } reference when !this._function.Parameters.Contains(local) && this.IsLastUse(reference) => new RsPath(this._locals[local]) { Type = value.Type },
       _ => this.Refuse("a collection held by two variables")
     };
+
+    /// <summary>Whether a collection is one no variable holds yet: made, returned by a call, or chosen among such.</summary>
+    private static bool IsNewCollection(IrExpr value)
+      => value is IrCollection or IrCall || value is IrConditional conditional && IsNewCollection(conditional.WhenTrue) && IsNewCollection(conditional.WhenFalse);
 
     /// <summary>
     /// Whether a variable is read for the last time here, so that the collection it holds can be moved:
@@ -109,6 +142,10 @@ public static partial class RustEmitter {
     private bool IsLastUse(IrLocalRef reference) {
       var local = reference.Local;
       bool Refers(IrExpr node) => node is IrLocalRef other && other.Local == local;
+      // A frontend may hand one reference node to several reads; where the statement is known, its path decides.
+      if (this._statement is { } statement && Moves.Holds(this._function.Body, statement) && !this.IsLastRead(local))
+        return false;
+
       var statements = ArrayOwnership.Statements(this._function.Body).ToList();
       if (!statements.Any(statement => statement is IrTry) && statements.Any(statement => statement is IrReturn { Value: var returned } && ReferenceEquals(returned, reference)))
         return true;
