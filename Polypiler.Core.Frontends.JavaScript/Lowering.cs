@@ -35,6 +35,15 @@ internal sealed partial class Lowering(TypeInference types) {
   /// <summary>Whether a lowered function throws a string out to its caller, which receives an Error of that message instead (#1365).</summary>
   public bool ThrowsText { get; private set; }
 
+  /// <summary>How many blocks the lowering is inside of.</summary>
+  private int _depth;
+
+  /// <summary>The function of the statements the module runs when it is loaded, or <see langword="null"/>.</summary>
+  public Candidate? ModuleInitializer { get; init; }
+
+  /// <summary>Every statement of the body of <see cref="ModuleInitializer"/> as lowered, with the statement of the source it comes from.</summary>
+  public Dictionary<IrStmt, Node> ModuleSites { get; } = new(ReferenceEqualityComparer.Instance);
+
   /// <summary>The constants of the enclosing scope that the lowered functions use.</summary>
   public HashSet<ModuleConstant> Constants { get; } = [];
 
@@ -44,13 +53,14 @@ internal sealed partial class Lowering(TypeInference types) {
     this._locals.Clear();
     this._assigned = [];
     this._receiver = null;
+    this._diverged = false;
     types.Enter(model);
     try {
       if (model.Problem is { } problem)
         throw new Refusal(problem);
 
       foreach (var variable in model.Parameters.Concat(model.Locals))
-        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration);
+        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration, true);
 
       this.CheckType(model.Result, model.Candidate.Name, model.ResultEvidence ?? model.Candidate.Anchor);
       // A parameter has the type it is called with. Where the body assigns it something else, the body
@@ -99,11 +109,18 @@ internal sealed partial class Lowering(TypeInference types) {
     }
   }
 
-  /// <summary>Refuses a place that values of two kinds reach, and a <c>BigInt</c> that nothing bounds.</summary>
-  private void CheckType(JsType type, string name, Node evidence) {
+  /// <summary>
+  /// Refuses a place that values of two kinds reach, and a <c>BigInt</c> that nothing bounds; for a
+  /// variable also an Array the program stores values of two kinds into.
+  /// </summary>
+  private void CheckType(JsType type, string name, Node evidence, bool variable = false) {
 
     if (type.Kind == JsKind.Conflict)
       throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"'{name}' holds both {type.Kinds.First} and {type.Kinds.Second}");
+
+    // An Array the program stores values of two kinds into - new Array(n), then a string and a number (#1406).
+    if (variable && type is { Kind: JsKind.Array, Element.Kind: JsKind.Conflict })
+      throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"the elements of '{name}' hold both {type.Element.Kinds.First} and {type.Element.Kinds.Second}");
 
     if (type.Kind == JsKind.BigInt && type.Ir is null)
       throw this.Unbounded(evidence);
@@ -159,8 +176,26 @@ internal sealed partial class Lowering(TypeInference types) {
     var list = statements.ToList();
     var hoisted = this.Hoisted(list, into);
     var start = into.Count;
-    foreach (var statement in list.Where(statement => statement is not FunctionDeclaration))
-      this.Statement(statement, into);
+    // The statements of the module's initializer are noted with the statement of the source each comes from (#1410).
+    var sites = this._model.Candidate == this.ModuleInitializer && this._depth == 0 ? this.ModuleSites : null;
+    ++this._depth;
+    try {
+      foreach (var statement in list.Where(statement => statement is not FunctionDeclaration)) {
+        var before = into.Count;
+        this.Statement(statement, into);
+        if (sites is not null)
+          foreach (var lowered in into.Skip(before))
+            sites[lowered] = statement;
+
+        // What follows a call of no value is never run (#1389).
+        if (this._diverged) {
+          this._diverged = false;
+          break;
+        }
+      }
+    } finally {
+      --this._depth;
+    }
 
     this.Assign(hoisted, into, start);
     return new IrBlock(into);
@@ -171,6 +206,8 @@ internal sealed partial class Lowering(TypeInference types) {
 
   private void Statement(Statement statement, List<IrStmt> into) {
     switch (statement) {
+      case Acornima.Ast.Statement when this.Diverging(statement, into):
+        break;
       case ExpressionStatement or ForOfStatement when this.KeyLoop(statement, into):
         break;
       case BlockStatement block:
@@ -317,7 +354,8 @@ internal sealed partial class Lowering(TypeInference types) {
     var renewed = PerIteration(perPass, condition, body, step);
     statements.Add(renewed.Count > 0 ? new IrFor(condition, body, new IrBlock(step)) { PerIteration = renewed }
       : Contains(loop.Body, node => node is ContinueStatement) ? new IrFor(condition, body, new IrBlock(step))
-      : new IrWhile(condition, new IrBlock([.. body.Statements, .. step])));
+      // A body that never reaches its end - it returns or throws on every path - never reaches the update either.
+      : new IrWhile(condition, AlwaysReturns(body) ? body : new IrBlock([.. body.Statements, .. step])));
     return new IrBlock(statements);
   }
 

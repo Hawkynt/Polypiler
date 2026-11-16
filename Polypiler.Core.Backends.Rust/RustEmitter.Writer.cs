@@ -1,0 +1,200 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Polypiler.Core.Backends.Rust.Naming;
+using Polypiler.Core.Backends.Rust.Syntax;
+using Polypiler.Core.IR;
+
+namespace Polypiler.Core.Backends.Rust;
+
+public static partial class RustEmitter {
+
+  /// <summary>Builds the crate of one module; collects every construct it cannot write as a diagnostic.</summary>
+  private sealed partial class Writer(RustProfile profile, RustCapabilities capabilities, RustEmitOptions options) {
+
+    private readonly RustProfile _profile = profile;
+    private readonly RustCapabilities _capabilities = capabilities;
+    private readonly RustEmitOptions _options = options;
+    private readonly List<Diagnostic> _problems = [];
+    private readonly HashSet<string> _refused = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _functions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _constants = new(StringComparer.Ordinal);
+    private readonly SortedDictionary<string, RsFunction> _spellings = new(StringComparer.Ordinal);
+    private IrModule _module = new("module", []);
+    private string _construct = "the module";
+
+    /// <summary>Every construct the module has that the profile cannot write.</summary>
+    public IReadOnlyList<Diagnostic> Problems => this._problems;
+
+    /// <summary>The helpers and spelling functions the crate carries, their texts still empty.</summary>
+    public IReadOnlyList<HelperText> Helpers { get; private set; } = [];
+
+    private int Edition => this._profile.Edition;
+
+    private bool Has(string capability) => this._capabilities.Has(capability, this._profile);
+
+    /// <summary>Records that a construct cannot be written, once per construct, and returns a stand-in.</summary>
+    private RsExpression Refuse(string what) {
+      if (this._refused.Add(what))
+        this._problems.Add(InexpressibleDescriptor.At($"'{what}' cannot be expressed in Rust profile '{this._profile.Name}' (in {this._construct})"));
+
+      return new RsPath("_refused");
+    }
+
+    /// <summary>The crate: manifest, root and module.</summary>
+    public RustCrate Crate(IrModule module) {
+      module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module)));
+      this._module = module;
+      var moduleName = ModuleName(module.Name, this._profile);
+      var package = this._options.PackageName ?? moduleName;
+      foreach (var type in module.Types.Where(type => type is not (IrStructType or IrEnumType or IrClassType or IrInterfaceType)))
+        this.Refuse($"declared types ({Kind(type)})");
+
+      this.NameItems(module);
+      this.NameTypes(module);
+      this.NameGlobals(module);
+      this.Classes(module);
+      this.Signatures(module);
+      this.Exceptions(module);
+      this.CollectionParameters(module);
+      this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
+      this._arrayNulls = Polypiler.Core.Backends.Rust.Emit.ArrayNullness.Of(module);
+      var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
+      var items = new List<RsItem>();
+      foreach (var constant in module.Constants)
+        items.Add(this.Constant(constant));
+      items.AddRange(this.Globals(module));
+      items.AddRange(this.ErrorItems());
+      var written = module.Functions.Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
+      var members = written.Where(pair => this._members.ContainsKey(pair.Source.Name))
+        .ToDictionary(pair => pair.Source.Name, pair => this.AsMember(pair.Written, pair.Source, this._members[pair.Source.Name]), StringComparer.Ordinal);
+      var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name) && !this._bodiless.Contains(pair.Source.Name)).Select(pair => pair.Written).ToList();
+      this._written = members;
+      foreach (var type in module.Types)
+        items.AddRange(type switch {
+          IrStructType structType => this.Struct(structType),
+          IrEnumType enumType => this.EnumItems(enumType),
+          IrClassType classType when !classType.IsLibrary && !this._hierarchy.Contains(classType) && !IrExceptionClass.IsException(classType) => this.Class(classType, members),
+          _ => []
+        });
+
+      items.AddRange(this.HierarchyItems());
+
+      this._construct = "the module";
+      items.InsertRange(0, this._uses.Select(path => new RsUse(path)));
+      items.AddRange(this._enumTableItems);
+      items.AddRange(this._whitespace.Values);
+      items.AddRange(this._spellings.Values);
+      items.AddRange(functions);
+      if (this._options.Tests.Count > 0)
+        items.Add(this.Tests(module));
+
+      var helpers = module.Implementations.Select(pair => ImplementationSources.Helper(this._functions[pair.Function], pair.Implementation, "")).ToList();
+      helpers.AddRange(this._spellings.Keys.Select(name => new HelperText(name, name, EmittedHelper.OwnLicence, EmittedHelper.OriginOf(Folder), "")));
+      this.Helpers = helpers;
+
+      var header = new List<string> {
+        $"{package}: generated by polypiler. Change the source, not this file.",
+        $"Rust profile: {this._profile}."
+      };
+      if (EmittedHelper.HeaderLine(helpers.Select(helper => helper.Licence)) is { } licences)
+        header.Add(licences);
+
+      header.AddRange(FloatManifest.Lines(module, this._options.Mode, "rust"));
+      header.AddRange(module.Caveats.Select(caveat => $"Caveat: {caveat}."));
+      header.AddRange(ImplementationSources.Notices(module.Implementations.Select(pair => pair.Implementation).Concat(module.Inlined)));
+      var root = new RsFile(header, ["forbid(unsafe_code)"], [new RsModuleDeclaration(moduleName, "pub")]);
+      var file = new RsFile([], [], items);
+      return new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file);
+    }
+
+    /// <summary>
+    /// Names the functions and constants of the module. Exported functions keep the name the
+    /// conversion gives them: two that collide are refused. Private ones and the constants take a
+    /// suffix where they would collide.
+    /// </summary>
+    private void NameItems(IrModule module) {
+      var taken = new HashSet<string>(StringComparer.Ordinal);
+      var exported = new Dictionary<string, string>(StringComparer.Ordinal);
+      foreach (var function in module.Functions.Where(function => function.IsPublic && !IrGenerics.IsInstance(function.Name))) {
+        var name = RustNames.Snake(function.Name, this.Edition);
+        if (exported.TryGetValue(name, out var other)) {
+          this._problems.Add(ExportCollisionDescriptor.At($"exported names '{other}' and '{function.Name}' both map to '{name}'"));
+          continue;
+        }
+
+        exported[name] = function.Name;
+        taken.Add(name);
+        this._functions[function.Name] = name;
+      }
+
+      // A colliding export, refused above, is named like a private function so that the rest can still be checked.
+      var others = module.Functions.Where(function => !this._functions.ContainsKey(function.Name)).ToList();
+      foreach (var (function, rust) in others.Zip(RustNames.Unique([.. others.Select(function => function.Name)], name => this.FunctionName(others.First(other => other.Name == name)), taken)))
+        this._functions[function.Name] = rust;
+
+      var constants = module.Constants.Select(constant => constant.Name).ToList();
+      foreach (var (name, rust) in constants.Zip(RustNames.Unique(constants, name => RustNames.Screaming(name, this.Edition), new HashSet<string>(StringComparer.Ordinal))))
+        this._constants[name] = rust;
+    }
+
+    /// <summary>
+    /// The name of a function that is no export: its own in snake case; an instantiation of a generic
+    /// method, <c>Max&lt;f64&gt;</c>, the method's with its type arguments after it, <c>max_f64</c>.
+    /// </summary>
+    private string FunctionName(IrFunction function) {
+      if (function.Origin is not { } origin || !IrGenerics.IsInstance(function.Name))
+        return RustNames.Snake(function.Name, this.Edition);
+
+      var arguments = origin.TypeArguments.Select(type => TypeName(type) ?? RustNames.Snake(type.Declaration?.Name[(type.Declaration.Name.LastIndexOf('.') + 1)..] ?? type.ToString(), this.Edition).Replace("r#", "", StringComparison.Ordinal));
+      return RustNames.Snake(IrGenerics.SourceName(function.Name), this.Edition) + "_" + string.Join("_", arguments);
+    }
+
+    /// <summary>A constant of the module: a scalar, or a table as an array constant.</summary>
+    private RsConst Constant(IrModuleConst constant) {
+      this._construct = $"the constant '{constant.Name}'";
+      var name = this._constants[constant.Name];
+      if (constant.Type.IsArray && constant.Type.Element is { } element && TypeName(element) is { } elementName && constant.Strings.Count == 0)
+        return new RsConst(name, "", $"[{elementName}; {constant.Values.Count}]", new RsArray([.. constant.Values.Select(value => Literal(new IrConst(element, value)))])) { IsStatic = true };
+
+      if (TypeName(constant.Type) is { } typeName && constant.Strings.Count == 0 && constant.Values.Count == 1)
+        return new RsConst(name, "", typeName, Literal(new IrConst(constant.Type, constant.Values[0])));
+
+      // Text the crate keeps as Rust's own: its code units are taken where it is read.
+      if (constant.Type.IsString && constant.Strings.Count == 1 && !HasLoneSurrogate(constant.Strings[0]))
+        return new RsConst(name, "", "&str", new RsString(constant.Strings[0])) { IsStatic = true };
+      if (constant.Type is { IsArray: true, Element.IsString: true } && !constant.Strings.Any(HasLoneSurrogate))
+        return new RsConst(name, "", $"[&str; {constant.Strings.Count}]", new RsArray([.. constant.Strings.Select(text => (RsExpression)new RsString(text))])) { IsStatic = true };
+
+      this.Refuse($"constant of type {constant.Type}");
+      return new RsConst(name, "", "()", new RsPath("()"));
+    }
+
+    /// <summary>The Rust type of an IR type a parameter, a local or a result has: a scalar or a struct; refused for any other.</summary>
+    private string Type(IrType type)
+      => TypeName(type) ?? (type.IsString ? OwnedString
+        : type.Declaration is IrStructType or IrEnumType && this._types.TryGetValue(type.Declaration, out var name) ? name
+        : IsError(type) ? ErrorType
+        : type.IsObject ? this.ObjectType(type, false)
+        : type.IsFunction ? this.FunctionType(type)
+        : IsOptionalValue(type) ? $"Option<{this.Type(type.Underlying!)}>"
+        : type.IsLazySequence ? ((RsPath)this.Refuse(LazySequence)).Name
+        : ((RsPath)this.Refuse($"the type {type}")).Name);
+
+    /// <summary>What kind of type a declaration is, as a refusal names it.</summary>
+    private static string Kind(IrTypeDeclaration type) => type switch {
+      IrClassType => "classes",
+      IrInterfaceType => "interfaces",
+      IrEnumType => "enums",
+      _ => type.GetType().Name
+    };
+
+    /// <summary>A spelling function the crate carries once: an operation of the IR Rust has no method for.</summary>
+    private void Spell(string name, Func<RsFunction> build) {
+      if (!this._spellings.ContainsKey(name))
+        this._spellings[name] = build() with { IsHelper = true };
+    }
+
+  }
+
+}

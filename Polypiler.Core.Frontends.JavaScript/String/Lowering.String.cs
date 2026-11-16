@@ -240,6 +240,16 @@ internal sealed partial class Lowering {
         var first = this.Twice(Relative(arguments[0]), call, method);
         var last = arguments.Count == 1 ? Length() : Relative(arguments[1]);
         return Str(IrIntrinsicOp.StrSubstring, _str, text, first, Max(new IrBinary(IrBinaryOp.Subtract, last, first), I32(0)));
+      case "substr":
+        // Annex B (B.2.2.1): the start counts from the end where it is negative, the length is cut to what the string has left.
+        Takes(1, 2);
+        text = this.Twice(text, call, method);
+        var begin = this.StringPosition(arguments[0]);
+        begin = this.Twice(new IrConditional(new IrBinary(IrBinaryOp.Less, this.Twice(begin, call, method), I32(0)),
+          Max(new IrBinary(IrBinaryOp.Add, Length(), begin), I32(0)), Min(begin, Length())), call, method);
+        var left = new IrBinary(IrBinaryOp.Subtract, Length(), begin);
+        var taken = arguments.Count == 1 ? left : Min(Max(this.StringPosition(arguments[1]), I32(0)), left);
+        return Str(IrIntrinsicOp.StrSubstring, _str, text, begin, taken);
       case "indexOf":
         Takes(1, 2);
         var needle = Needle(0);

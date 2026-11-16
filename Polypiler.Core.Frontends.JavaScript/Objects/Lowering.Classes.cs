@@ -153,6 +153,10 @@ internal sealed partial class Lowering {
   /// <summary>A property read of an object: a field, or the call of a getter.</summary>
   private IrExpr Property(MemberExpression member, ClassModel owner) {
     var key = Binder.KeyOf(member) ?? throw this.Unsupported(member, "a computed member name");
+    // A field derived classes declare accessors over is read through the getter of the object's class (#1402).
+    if (owner.Field(key) is { Getter: { } virtualGetter } read)
+      return this.Site(new IrMethodCall(read.Ir!.Type, virtualGetter, this.Expression(member.Object), []) { Kind = IrMethodCallKind.Virtual }, member);
+
     if (owner.Field(key) is { } field)
       return Read(new IrFieldLoad(this.Expression(member.Object), field.Ir!));
 
@@ -188,8 +192,13 @@ internal sealed partial class Lowering {
     if (owner.Frozen is not null)
       throw this.Unsupported(assignment, $"a write into a member of the frozen object {owner.Name}");
 
+    if (owner.IsTypedef)
+      throw this.Unsupported(assignment, $"a write into the field {key} of the @typedef {owner.Name}");
+
     var field = owner.Field(key);
     var setter = owner.Member(MemberKind.Setter, key);
+    // A field derived classes declare accessors over is stored through the setter of the object's class (#1402).
+    var property = field?.Setter;
     if (field is null && setter is null)
       throw this.Unsupported(assignment, owner.HasInstanceMember(key) ? $"an assignment to the method or getter {key}" : "a property added outside the constructor");
 
@@ -199,14 +208,16 @@ internal sealed partial class Lowering {
     IrExpr value;
     if (compound is { } combining) {
       target = this.Once(target, into);
-      this._substitutes[member] = field is not null ? Read(new IrFieldLoad(target, field.Ir!)) : this.Property(member, owner);
+      this._substitutes[member] = field is not null && property is null ? Read(new IrFieldLoad(target, field.Ir!)) : this.Property(member, owner);
       value = this.To(this.Binary(combining, member, assignment.Right, Coercion.None, assignment), type, assignment);
       this._substitutes.Remove(member);
     } else {
       value = this.Value(assignment.Right, type);
     }
 
-    into.Add(field is not null ? new IrFieldStore(target, field.Ir!, value) : new IrExprStmt(this.Site(new IrMethodCall(IrType.Void, ClassModel.MethodOf(setter!), target, [value]) { Kind = Dispatch(ClassModel.MethodOf(setter!)) }, assignment)));
+    into.Add(property is not null ? new IrExprStmt(this.Site(new IrMethodCall(IrType.Void, property, target, [value]) { Kind = IrMethodCallKind.Virtual }, assignment))
+      : field is not null ? new IrFieldStore(target, field.Ir!, value)
+      : new IrExprStmt(this.Site(new IrMethodCall(IrType.Void, ClassModel.MethodOf(setter!), target, [value]) { Kind = Dispatch(ClassModel.MethodOf(setter!)) }, assignment)));
     return true;
   }
 
@@ -249,7 +260,7 @@ internal sealed partial class Lowering {
     if (types.Of(member.Object).Class is not { } owner)
       return false;
 
-    if (Binder.KeyOf(member) is not { } key || owner.Field(key) is not { } field)
+    if (Binder.KeyOf(member) is not { } key || owner.Field(key) is not { IsVirtual: false } field)
       throw this.Unsupported(step, $"{(step.Operator == Operator.Increment ? "++" : "--")} of {types.Text(member)}, which is no field");
 
     var target = this.Once(this.Expression(member.Object), into);

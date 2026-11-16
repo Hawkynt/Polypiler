@@ -81,7 +81,7 @@ public static partial class IrInterpreter {
         case IrSequenceOp.FromArray:
           return ArraySequence((Array)NotNull(arguments[0]));
         case IrSequenceOp.FromList:
-          var list = (ListValue)arguments[0];
+          var list = (ListValue)NotNull(arguments[0]);
           return Computed(true, () => ListElements(list));
         case IrSequenceOp.Range:
           var (start, count) = ((long)arguments[0], (long)arguments[1]);

@@ -148,9 +148,13 @@ public static partial class CSharpEmitter {
           return (slotted ? Call("Get", operands) : new CsElementAccess(target, operands[0]), Primary);
         case IrCollectionOp.MapPut:
           return slotted ? (Call("Put", operands), Primary) : (new CsAssignment(new CsElementAccess(target, operands[0]) { Type = type.Element }, "=", operands[1]), Loose);
-        case IrCollectionOp.MapTryGet:
+        case IrCollectionOp.MapTryGet: {
+          // The type arguments are written out: a constant key is a literal of another C# type, from which the compiler infers no TKey.
           var references = type.Element!.IsObject;
-          return (Helper(slotted ? references ? FindSlotReference : FindSlotValue : references ? FindReference : FindValue), Primary);
+          var helper = slotted ? references ? FindSlotReference : FindSlotValue : references ? FindReference : FindValue;
+          var name = $"{this.Helper(helper)}<{this.TypeName(type.Key!)}, {this.TypeName(type.Element!)}>";
+          return (new CsInvocation(CSharpFragments.Name(name), [this.Stored(arguments[0]), .. operands]), Primary);
+        }
         case IrCollectionOp.MapTryAdd when !slotted && !this.HasApi("Dictionary<TKey,TValue>.TryAdd"):
           return (Helper(TryAdd), Primary);
         case IrCollectionOp.SetAdd when slotted:

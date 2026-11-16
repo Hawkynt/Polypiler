@@ -966,6 +966,330 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY1500
+    severity: error
+    exit: InvalidSource
+    title: Rust source the compiler rejects
+    message: "<E####: the error, or the denied lint and its name>"
+    rule: rust.compiler
+    area: rust
+    owner: "#466"
+    surfaces: standard error of polypiler translate --from rust, for a syntax error, a type error rustc reports with that code, or a deny-by-default lint (overflowing_literals, arithmetic_overflow, unconditional_panic)
+  - code: PLY1501
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust type not supported
+    message: "type '<type>' is not supported by the Rust frontend"
+    rule: rust.types
+    area: rust
+    owner: "#466"
+    surfaces: standard error of polypiler translate --from rust, for i128, u128, f16, f128, char, str and every type but the integers, f32, f64, bool, () and !
+  - code: PLY1502
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust construct not supported
+    message: "'<construct>' is not supported by the Rust frontend"
+    rule: rust.subset
+    area: rust
+    owner: "#466"
+    surfaces: standard error of polypiler translate --from rust, one line per refused construct
+  - code: PLY1503
+    severity: error
+    exit: UsageError
+    title: Rust overflow mode not readable from Cargo
+    message: "the overflow mode cannot be read from Cargo: <the profile and the reason>"
+    rule: rust.overflow-checks
+    area: rust
+    owner: "#466"
+    surfaces: "standard error of polypiler translate --from rust without --overflow-checks, when the Cargo profile that applies (--cargo-profile, default dev) is not defined, has no inherits or inherits in a circle, sets overflow-checks to no boolean, or the Cargo.toml is no TOML"
+  - code: PLY1504
+    severity: error
+    exit: InvalidSource
+    title: Rust type not inferable
+    message: "the type of '<name>' could not be resolved"
+    rule: rust.inference
+    area: rust
+    owner: "#466"
+    surfaces: standard error of polypiler translate --from rust, for a local whose type nothing decides (rustc's E0282)
+  - code: PLY1510
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust conditional binding not supported
+    message: "'<construct>' is not supported by the Rust frontend"
+    rule: rust.conditional-binding
+    area: rust
+    owner: "#463"
+    surfaces: standard error of polypiler translate --from rust, for let chains (if let ... && ...)
+  - code: PLY1511
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust pattern not supported
+    message: "pattern '<pattern>' is not supported"
+    rule: rust.patterns
+    area: rust
+    owner: "#463"
+    surfaces: standard error of polypiler translate --from rust, for @ and ref bindings, const block patterns, a binding in an or-pattern, a variable in a range pattern, a &mut binding into an Option or a Result and a match on a float
+  - code: PLY1512
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust iterable not supported
+    message: "iterating over '<iterable>' is not supported; only integer ranges with rev() and step_by() are"
+    rule: rust.iterables
+    area: rust
+    owner: "#463"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1513
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust coroutine not supported
+    message: "'<construct>' requires coroutine lowering, which the Rust frontend does not provide"
+    rule: rust.coroutines
+    area: rust
+    owner: "#463"
+    surfaces: standard error of polypiler translate --from rust, for async fn, async, gen and try blocks, .await and yield
+  - code: PLY1520
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust array, slice or Vec form not supported
+    message: "'<construct>' is not supported by the Rust frontend"
+    rule: rust.memory
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust, for a nested array, a slice of anything but numbers, a slice pattern
+  - code: PLY1521
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust text form not supported
+    message: "text type '<type>' is not supported"
+    rule: rust.text
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1522
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust unsafe construct not supported
+    message: "unsafe construct '<construct>' is not supported"
+    rule: rust.unsafe
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1523
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust smart pointer not supported
+    message: "smart pointer or interior-mutability type '<type>' is not supported"
+    rule: rust.ownership
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1524
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust slice method not supported
+    message: "method '<name>' is not supported on slices, arrays or Vec"
+    rule: rust.slice-methods
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1525
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust collection not supported
+    message: "collection type '<type>' is not supported"
+    rule: rust.collections
+    area: rust
+    owner: "#465"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1530
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust function form not supported
+    message: "function form '<form>' is not supported"
+    rule: rust.functions
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust, for generic, unsafe, extern and variadic functions, where clauses, impl Trait, a typed self, a function without a body and nested items
+  - code: PLY1531
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust macro not supported
+    message: "macro '<name>!' is not supported"
+    rule: rust.macros
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1532
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust closure escapes
+    message: "closure escapes its defining function: <how>"
+    rule: rust.closures
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust, for a closure used other than called or passed to an iterator method, and a move of a value that is not Copy
+  - code: PLY1533
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust attribute not supported
+    message: "attribute '<name>' is not supported"
+    rule: rust.attributes
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust, for every attribute but the lint levels, inline, must_use, cold, track_caller and documentation
+  - code: PLY1534
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust path outside the subset
+    message: "'<path>' refers to an item outside the supported standard-library subset or to another crate"
+    rule: rust.paths
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1535
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust iterator method not supported
+    message: "iterator method '<name>' is not supported"
+    rule: rust.iterators
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1536
+    severity: error
+    exit: UsageError
+    title: Rust debug assertions not set
+    message: "the source profile does not set 'debugAssertions': <macro>"
+    rule: rust.debug-assertions
+    area: rust
+    owner: "#464"
+    surfaces: standard error of polypiler translate --from rust without --debug-assertions on a source with debug_assert!
+  - code: PLY1540
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust trait not supported
+    message: "traits are not supported by the Rust frontend: '<construct>' (the object-model contract of #473 and #474)"
+    rule: rust.traits
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1541
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust generic parameters not supported
+    message: "generic parameters are not supported: '<construct>'"
+    rule: rust.generics
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1542
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust lifetime parameters not supported
+    message: "lifetime parameters and reference fields are not supported: '<construct>'"
+    rule: rust.lifetimes
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1543
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust enum with data not supported
+    message: "enum '<name>' has variants with data"
+    rule: rust.enums
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1544
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust derive or type attribute not supported
+    message: "attribute or derive '<name>' is not supported"
+    rule: rust.derives
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1545
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust Option or Result method not supported
+    message: "'<method or type>' is not supported on Option or Result"
+    rule: rust.option-result
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1546
+    severity: error
+    exit: UnsupportedConstruct
+    title: Rust destructor not supported
+    message: "destructors are not supported: 'impl Drop for <type>'"
+    rule: rust.drop
+    area: rust
+    owner: "#467"
+    surfaces: standard error of polypiler translate --from rust
+  - code: PLY1550
+    severity: error
+    exit: UnsupportedConstruct
+    title: IR construct inexpressible in the Rust profile
+    message: "'<construct>' cannot be expressed in Rust profile '<profile>' (in <place>)"
+    rule: rust.backend.profile
+    area: rust
+    owner: "#461"
+    surfaces: standard error of polypiler translate --to rust, one line per refused construct
+  - code: PLY1560
+    severity: error
+    exit: UnsupportedConstruct
+    title: exception region under the panic trap policy
+    message: "exception region in <function> cannot be emitted under the trap policy 'panic': '<construct>' is not supported by the Rust backend"
+    rule: rust.backend.exceptions
+    area: rust
+    owner: "#458"
+    surfaces: standard error of polypiler translate --to rust
+  - code: PLY1566
+    severity: error
+    exit: UnsupportedConstruct
+    title: aliasing views in safe Rust
+    message: "views '<first>' and '<second>' may alias and '<second>' is written in <place>; safe Rust cannot express this - provide a no-alias fact or select a copying target profile"
+    rule: rust.backend.aliasing
+    area: rust
+    owner: "#460"
+    surfaces: standard error of polypiler translate --to rust, for one array passed to a call twice where it is written
+  - code: PLY1574
+    severity: error
+    exit: UnsupportedConstruct
+    title: exported Rust names collide
+    message: "exported names '<first>' and '<second>' both map to '<rust name>'"
+    rule: rust.backend.names
+    area: rust
+    owner: "#459"
+    surfaces: standard error of polypiler translate --to rust
+  - code: PLY1591
+    severity: error
+    exit: TargetBuildFailure
+    title: Rust compiler rejected the input
+    message: "the Rust compiler rejected the input: <every error with its code, text and location>"
+    rule: rust.runner.compile
+    area: rust
+    owner: "#468"
+    surfaces: the diagnostics of RustRunner, after PLY0030
+  - code: PLY1592
+    severity: error
+    exit: OracleFailure
+    title: Rust driver died
+    message: "the Rust driver died with exit code <code>: <standard error>"
+    rule: rust.runner.crash
+    area: rust
+    owner: "#468"
+    surfaces: the diagnostics of RustRunner.ExecuteAsync for a driver that aborted, overflowed its stack or was killed by a signal
+  - code: PLY1595
+    severity: error
+    exit: OracleFailure
+    title: Rust driver protocol error
+    message: "<reason>"
+    rule: rust.runner.protocol
+    area: rust
+    owner: "#468"
+    surfaces: "the diagnostics of RustRunner.ExecuteAsync: a signature that does not fit the declaration or has no pairing, an unknown export, an answer that is no output image"
   - code: PLY1800
     severity: error
     exit: InvalidSource

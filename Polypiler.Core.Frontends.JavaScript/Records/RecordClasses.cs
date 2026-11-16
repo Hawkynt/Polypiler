@@ -64,7 +64,7 @@ internal sealed class RecordClasses {
   /// <param name="met">The class of the objects.</param>
   /// <returns>The class.</returns>
   public ClassModel? Meet(RecordShape shape, ClassModel met) {
-    if (met.Lineage.Any(type => type.IsLibrary || type.Frozen is not null))
+    if (met.Lineage.Any(type => type.IsLibrary || type.IsValue))
       return null;
 
     var root = met.Lineage.First(type => !type.IsSynthesized);

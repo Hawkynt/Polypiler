@@ -106,6 +106,31 @@ internal sealed partial class TypeInference {
       }
     }
 
+    return changed | this.UnifyFields();
+  }
+
+  /// <summary>
+  /// Gives a field that derived classes declare accessors over one type with them (#1402): the field
+  /// is the base implementation of a property whose getters return and whose setters take what any
+  /// read or store of the key reaches. Says whether a type changed.
+  /// </summary>
+  private bool UnifyFields() {
+    var changed = false;
+    foreach (var field in this.Classes.Values.Distinct().SelectMany(owner => owner.Fields).Where(field => field.IsVirtual)) {
+      var getters = field.Accessors.Where(member => member.Member == MemberKind.Getter).Select(this.ModelOf).ToList();
+      var setters = field.Accessors.Where(member => member.Member == MemberKind.Setter).Select(member => this.ModelOf(member).Parameters.ElementAtOrDefault(0)).OfType<Variable>().ToList();
+      var type = getters.Select(model => model.Result).Concat(setters.Select(parameter => parameter.Entry)).Aggregate(field.Variable.Type, JsType.Join);
+      changed |= this.Reach(field.Variable, type, field.Variable.Declaration);
+      foreach (var model in getters.Where(model => model.Result != type)) {
+        model.Result = type;
+        this._known.Clear();
+        changed = true;
+      }
+
+      foreach (var parameter in setters.Where(parameter => parameter.Entry != type))
+        changed |= parameter.Declared is null ? this.Pass(parameter, type, parameter.Declaration) : parameter.Declared.IsStated && this.Shape(parameter, type, parameter.Declaration);
+    }
+
     return changed;
   }
 

@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "provenance": {
+    "kind": "reference-run",
+    "source": "rust",
+    "detail": "POLYPILER_RECORD=1 dotnet test Polypiler.Tests.Acceptance --filter Name~Recording_IsWhatRustcDoes: rustc 1.99 compiles every fixture of tests/fixtures/prototype/rust with -C overflow-checks=on (panic) and off (wrap), runs the calls of RustCases and the outcomes are written here",
+    "generatedBy": "rustc"
+  }
+}

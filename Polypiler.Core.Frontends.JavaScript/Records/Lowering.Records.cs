@@ -50,6 +50,49 @@ internal sealed partial class Lowering {
       : this.To(undefined, field.Ir!.Type, literal))]);
   }
 
+  /// <summary>
+  /// An object literal where a typedef is stated (#1409): a new object of its class, each field the
+  /// value of its key converted to the field's type, and none - <c>undefined</c> - for an optional key the
+  /// literal leaves out. The values are evaluated in the order of the literal, as JavaScript does, before
+  /// the object is made. A key the typedef requires that the literal leaves out, and a key it does not
+  /// have, are refused by name, as are keys in another order than the fields whose values have an effect.
+  /// </summary>
+  private IrExpr TypedefLiteral(ObjectExpression literal, ClassModel typedef) {
+    var given = new Dictionary<string, Node>();
+    foreach (var property in literal.Properties) {
+      if (TypeInference.Plain(property) is not { } entry)
+        throw this.Unsupported(property, Describe(property, "an object literal"));
+
+      if (!given.TryAdd(entry.Key, entry.Value))
+        throw this.Unsupported(property, $"the key {entry.Key} twice in an object literal");
+
+      if (typedef.OwnField(entry.Key) is null)
+        throw this.Refuse(property, JavaScriptFrontend.MixedKindsDescriptor, $"'{types.Text(literal)}' is no {typedef.Name}: it has the key {entry.Key}, which {typedef.Name} does not");
+    }
+
+    // The object is made of its values in the order of the fields: of keys in another order, values with an effect would run in another order.
+    var ordered = typedef.Fields.Select(field => field.Key).Where(given.ContainsKey);
+    if (!ordered.SequenceEqual(given.Keys) && given.Values.Any(value => Contains(value, node => node is CallExpression or NewExpression or UpdateExpression or AssignmentExpression)))
+      throw this.Unsupported(literal, $"an object literal of {typedef.Name} whose keys are in another order than its @property tags and whose values have an effect");
+
+    var values = new Dictionary<string, IrExpr>();
+    foreach (var (key, value) in given)
+      values[key] = this.Value(value, typedef.OwnField(key)!.Ir!.Type);
+
+    var arguments = new List<IrExpr>();
+    foreach (var field in typedef.Fields) {
+      var type = field.Ir!.Type;
+      if (values.TryGetValue(field.Key, out var value))
+        arguments.Add(value);
+      else if (field.Variable.Type.IsAbsent)
+        arguments.Add(type.IsOptional ? new IrNone(type) : new IrNull(type));
+      else
+        throw this.Refuse(literal, JavaScriptFrontend.MixedKindsDescriptor, $"'{types.Text(literal)}' is no {typedef.Name}: it leaves out {field.Key}, which {typedef.Name} requires");
+    }
+
+    return new IrNew(IrType.Object(typedef.Ir), typedef.Creator!, arguments);
+  }
+
   /// <summary>What a property of an object literal or of a pattern is that the subset does not take.</summary>
   private static string Describe(Node property, string where) => property switch {
     SpreadElement or RestElement => $"a spread in {where} (...)",

@@ -109,6 +109,28 @@ class both reach is no record: the literals of that shape are objects of a class
 | a literal meeting a class of the library (`Error`) or of a frozen object | — | `PLY1105` |
 | `instanceof` or `Object.keys` of an expression that may be such a literal and is no variable; keys copied from a variable assigned again, or only under a condition | — | `PLY1102` naming it |
 
+### JSDoc typedef records (#1409)
+
+A `@typedef {Object} Name` with `@property {T} key` tags, as the Cipher framework's
+`MerkleDamgardOptions`, is a type JSDoc can name wherever it names a class: `@param {Name} options`.
+It is a class of read-only fields, one per `@property` in source order, not a struct: an optional key,
+`[key]` or `[key=default]`, may be missing, and a struct has no field that may be absent. An optional
+key is its stated type or `undefined` (`int?` in C#, `null` in the JavaScript written back); the
+default JSDoc writes down documents what the function does, it is not stored. An integer stays one: an
+operator that reads it unchecked sees a NaN where it is undefined.
+
+| Construct | IR | Status |
+| --- | --- | --- |
+| `f({ blockSize: 64, lengthBytes: 8 })` where `@param {Name}` | `IrNew` of the typedef's class, none for each optional key left out | supported |
+| `options \|\| {}` of an object that is never absent | `options`: an object counts as true, `{}` is never evaluated | supported |
+| `options \|\| {}` of `@param {Name\|null}` | the object, or one of every key `undefined` | supported |
+| `s.key === undefined ? d : s.key`, `!==`, `==`, `!=`, `null` | the branch reads the value present (`IrUnwrap`) | supported |
+| `s.flag === true`, `s.flag !== false` | `undefined` equals no truth value | supported |
+| a literal that leaves out a required key, or has a key the typedef lacks | — | `PLY1105` naming the key |
+| keys in another order than the `@property` tags with values that have an effect | — | `PLY1102` |
+| `s.key = v` | — | `PLY1102`: a write into the field of the typedef |
+| `@typedef {Array}`, unions, a property of no supported type or of the typedef itself | — | `PLY1101`: no supported JSDoc type |
+
 ## C# backend
 
 Struct declarations are written in front of the static class, in the namespace.

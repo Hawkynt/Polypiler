@@ -44,7 +44,7 @@ internal sealed partial class TypeInference {
     "codePointAt" or "indexOf" or "lastIndexOf" => JsType.I32,
     "includes" or "startsWith" or "endsWith" => JsType.Boolean,
     "split" => JsType.ArrayOf(JsType.String, true),
-    "charAt" or "at" or "substring" or "slice" or "concat" or "replace" or "replaceAll" or "trim" or "trimStart" or "trimEnd"
+    "charAt" or "at" or "substring" or "substr" or "slice" or "concat" or "replace" or "replaceAll" or "trim" or "trimStart" or "trimEnd"
       or "padStart" or "padEnd" or "repeat" => JsType.String,
     _ => JsType.Unknown
   };

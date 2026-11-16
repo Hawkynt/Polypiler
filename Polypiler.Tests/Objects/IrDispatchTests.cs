@@ -303,18 +303,25 @@ public sealed class IrDispatchTests {
   [Test]
   public void ConstructionRule_FollowsTheObjectThroughItsCallees() {
     // The constructor of B calls A.ctor and then, in each case, reaches a virtual call on its object, which C, derived from B, overrides.
+    // The overrides read a field of C, which the two orders give different values (#1402).
     static (IrClassType Type, IrFunction[] Functions) Below(Built built) {
       var below = new IrClassType("C");
-      below.Define([]);
+      var field = new IrField("f", IrType.I32, false);
+      below.Define([field]);
       below.Inherit(built.B, []);
       var (cm, cn) = (new IrMethod("M", "C.M", false) { Dispatch = IrDispatch.Override, Overrides = built.BM }, new IrMethod("N", "C.N", false) { Dispatch = IrDispatch.Override, Overrides = built.BN });
       below.DefineMembers([new IrConstructor("C.ctor")], [cm, cn], [], []);
       IrLocal Self() => new("this", IrType.Object(below));
+      IrFunction Reading(string name) {
+        var reader = Self();
+        return new IrFunction(name, false, IrType.I32, [reader], [], new IrBlock([new IrReturn(new IrFieldLoad(new IrLocalRef(reader), field))]));
+      }
+
       var self = Self();
       return (below, [
         new IrFunction("C.ctor", false, IrType.Void, [self], [], new IrBlock([new IrExprStmt(new IrCall("B.ctor", IrType.Void, [new IrLocalRef(self)]))])),
-        new IrFunction("C.M", false, IrType.I32, [Self()], [], new IrBlock([new IrReturn(new IrConst(IrType.I32, 40))])),
-        new IrFunction("C.N", false, IrType.I32, [Self()], [], new IrBlock([new IrReturn(new IrConst(IrType.I32, 50))]))
+        Reading("C.M"),
+        Reading("C.N")
       ]);
     }
 
@@ -359,6 +366,57 @@ public sealed class IrDispatchTests {
       ]))]) { Types = [clean.I, clean.A, clean.B] };
     Assert.That(IrConstruction.VirtualCalls(accepted), Is.Empty);
     Assert.That(Problems(accepted), Is.Empty);
+  }
+
+  /// <summary>
+  /// A virtual call during construction whose override below cannot tell the orders apart is admitted
+  /// (#1402): it reads no field of the class below and writes only fields that class's constructor
+  /// writes again before anything else reaches the object. Writing one the constructor does not renew,
+  /// or renews after another use of the object, is refused, and so is every such call where the rule is strict.
+  /// </summary>
+  [TestCase(true, false, true)]
+  [TestCase(false, false, false)]
+  [TestCase(true, true, false)]
+  public void ConstructionRule_AdmitsAnOverrideThatCannotTellTheOrdersApart(bool renewed, bool usedBefore, bool admitted) {
+    var built = new Built();
+    var below = new IrClassType("C");
+    var field = new IrField("f", IrType.I32, false);
+    var other = new IrField("g", IrType.I32, false);
+    below.Define([field, other]);
+    below.Inherit(built.B, []);
+    below.DefineMembers([new IrConstructor("C.ctor")], [new IrMethod("M", "C.M", false) { Dispatch = IrDispatch.Override, Overrides = built.BM }], [], []);
+    var (self, writer, entry) = (new IrLocal("this", IrType.Object(below)), new IrLocal("this", IrType.Object(below)), new IrLocal("n", IrType.I32));
+    var (held, alias) = (new IrLocal("h", IrType.Object(below)), new IrLocal("a", IrType.Object(below)));
+    var constructor = new List<IrStmt> {
+      new IrDeclare(entry, new IrConst(IrType.I32, 3)),
+      new IrExprStmt(new IrCall("B.ctor", IrType.Void, [new IrLocalRef(self)])),
+      new IrFieldStore(new IrLocalRef(self), other, new IrLocalRef(entry)),
+      new IrDeclare(new IrLocal("k", IrType.I32), new IrConst(IrType.I32, 1))
+    };
+    if (usedBefore)
+      constructor.Add(new IrFieldStore(new IrLocalRef(self), other, new IrFieldLoad(new IrLocalRef(self), field)));
+
+    if (renewed)
+      constructor.Add(new IrFieldStore(new IrLocalRef(self), field, new IrConst(IrType.I32, 0)));
+
+    var baseSelf = new IrLocal("this", built.OfB);
+    var module = new IrModule("M", [.. built.Functions.Where(function => function.Name != "B.ctor"),
+      new IrFunction("B.ctor", false, IrType.Void, [baseSelf], [], new IrBlock([
+        new IrExprStmt(new IrCall("A.ctor", IrType.Void, [new IrLocalRef(baseSelf)])),
+        new IrExprStmt(new IrMethodCall(IrType.I32, built.AM, new IrLocalRef(baseSelf), []) { Kind = IrMethodCallKind.Virtual })
+      ])),
+      new IrFunction("C.ctor", false, IrType.Void, [self], [entry, new IrLocal("k", IrType.I32)], new IrBlock(constructor)),
+      // The override writes through a local that holds the object and through a cast of it.
+      new IrFunction("C.M", false, IrType.I32, [writer], [held, alias], new IrBlock([
+        new IrDeclare(held, new IrLocalRef(writer)),
+        new IrDeclare(alias, new IrNull(IrType.Object(below))),
+        new IrAssign(alias, new IrLocalRef(held)),
+        new IrFieldStore(new IrCast(IrType.Object(below), new IrLocalRef(alias)), field, new IrConst(IrType.I32, 40)),
+        new IrFieldStore(new IrAsCast(IrType.Object(below), new IrLocalRef(held)), field, new IrConst(IrType.I32, 41)),
+        new IrReturn(new IrConst(IrType.I32, 40))]))
+    ]) { Types = [built.I, built.A, built.B, below] };
+    Assert.That(IrConstruction.VirtualCalls(module), admitted ? Is.Empty : Has.Count.EqualTo(1));
+    Assert.That(IrConstruction.VirtualCalls(module, strict: true), Has.Count.EqualTo(1));
   }
 
   /// <summary>The walkers of the IR see the operand of every conversion.</summary>

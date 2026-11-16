@@ -114,6 +114,7 @@ The types the frontend proves around these operations (#1365):
 | `a % b` of two integers that are never negative (#1375) | the integer type that holds both, `Remainder` of it | a divisor 0, a NaN in JavaScript, traps: caveat `js-div-zero`; a dividend that may be negative stays a remainder of doubles |
 | a parameter JSDoc states as an integer of up to 32 bits that the function reads only under `ToInt32` or `ToUint32` (#1384) | the stated type; a narrower one of a function only the file calls the 32-bit integer of its signedness | an argument of the other 32-bit integer is wrapped into it, which leaves the low 32 bits the coercions see; a parameter read without a coercion keeps its contract |
 | JSDoc `T[]` of numbers (#1374) | an `Array`, a list or a typed array of `T`, as the calls of the file pass it; an `Array` where the function tests `Array.isArray` of it | calls of both kinds are `PLY1105`; `Uint8Array` and the other typed arrays stay typed arrays |
+| JSDoc `int64` or `uint64` of a field or a parameter (#1401) | a Number of the type the values that reach it give - a double unless they are proven 32-bit integers - where only Numbers reach it; a `BigInt` of the stated type where only BigInts do or nothing decides (an exported parameter no call of the file passes) | Numbers and BigInts both reaching it are `PLY1105`; `>>>` of the `BigInt` stays refused, as node throws a `TypeError`; a Number above 2^53 keeps the precision of node's doubles |
 
 `new DataView(bytes.buffer)` is read as the view of the bytes of `bytes`, which it is unless the array is
 part of a larger buffer. A form outside the table - a byte order that is no literal, a view that is not
@@ -206,6 +207,23 @@ A stored NaN is compared by class, not by its bytes ([ADR 0005](../adr/0005-floa
 `double.NaN` is `fff8000000000000` in .NET and `NaN` is `7ff8000000000000` in V8, a binary32 signalling
 NaN read by `getFloat32` comes back quieted (`7fa00000` → `7fe00000`), and the bit casts of plain ES5 write
 the canonical quiet NaN. Every other value, the zeros and the subnormals among them, is compared bit for bit.
+
+### Rust
+
+Every integer type is the Rust type of its width and signedness. The operations Rust has a method of
+the IR's meaning for are written as that method, in every profile; every other one is the helper of
+the library, copied into the module (see [the Rust backend](../architecture/RUST-BACKEND.md)):
+
+| Operation | Form | Profiles |
+| --- | --- | --- |
+| `RotateLeft`, `RotateRight` | `a.rotate_left(n as u32)` - Rust takes the count modulo the width, which a negative count as `u32` keeps | all |
+| `PopCount`, `LeadingZeroCount`, `TrailingZeroCount` | `count_ones`, `leading_zeros`, `trailing_zeros`, cast to `i32` | all |
+| `ByteSwap`, `BitReverse` | `swap_bytes`, `reverse_bits` | all (`reverse_bits` from Rust 1.37) |
+| `IsPow2` of an unsigned type | `is_power_of_two` | all |
+| `Min`, `Max` | `Ord::min`, `Ord::max` | all |
+| `AddSaturate`, `SubSaturate`, `MulSaturate` | `saturating_add`, `saturating_sub`, `saturating_mul` | all |
+| `Abs`, `AbsWrap` of a signed type | `checked_abs().expect("IntegerOverflow")`, `wrapping_abs` | all |
+| every other operation | the helper of `IntegerLibrary` | all |
 
 ## How it is tested
 

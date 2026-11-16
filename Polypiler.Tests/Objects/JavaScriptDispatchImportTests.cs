@@ -78,9 +78,12 @@ public sealed class JavaScriptDispatchImportTests {
   public void BaseCalls_SelectTheMethodOfTheBaseClass(string source, double expected)
     => Assert.That(IrInterpreter.Call(Import(source), "f", []), Is.EqualTo(expected));
 
-  /// <summary>Test design 8: a call on 'this' during construction is refused only where an override could run.</summary>
-  [TestCase("export class A { constructor() { this.v = 0; this.init(); } init() { } } export class B extends A { init() { this.v = 1; } } export function f() { return new B().v; }", true)]
-  [TestCase("export class A { init() { } } export class B extends A { constructor() { super(); this.init(); } init() { } } export class C extends B { init() { } } export function f() { const c = new C(); return 1; }", true)]
+  /// <summary>Test design 8: a call on 'this' during construction is refused only where an override could run that tells the orders apart.</summary>
+  [TestCase("export class A { constructor() { this.v = 0; this.init(); } init() { } } export class B extends A { constructor() { super(); this.w = 2; } init() { this.v = this.w; } } export function f() { return new B().v; }", true)]
+  [TestCase("export class A { init() { } } export class B extends A { constructor() { super(); this.init(); } init() { } } export class C extends B { constructor() { super(); this.z = 1; } init() { this.z = this.z + 1; } } export function f() { return new C().z; }", true)]
+  // An override that reads no field of its class, and writes none its constructor does not write again first, cannot tell the orders apart (#1402).
+  [TestCase("export class A { constructor() { this.v = 0; this.init(); } init() { } } export class B extends A { init() { this.v = 1; } } export function f() { return new B().v; }", false)]
+  [TestCase("export class A { init() { } } export class B extends A { constructor() { super(); this.init(); } init() { } } export class C extends B { init() { } } export function f() { const c = new C(); return 1; }", false)]
   [TestCase("export class A { constructor() { this.v = 0; this.init(); } init() { this.v = 1; } } export class B extends A { } export function f() { return new B().v; }", false)]
   [TestCase("export class A { m() { return 1; } } export class B extends A { m() { return 2; } } "
     + "export class C { constructor() { this.v = new B().m(); } } export function f() { return new C().v; }", false)]

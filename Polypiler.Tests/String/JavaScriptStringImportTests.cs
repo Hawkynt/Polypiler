@@ -38,6 +38,7 @@ public sealed class JavaScriptStringImportTests {
     ("===, !==, ==, !=", "/** @param {string} a @param {string} b */ export function f(a, b) { return a === b && !(a !== b) && a == b && !(a != b); }", [(new object[] { "x", "x" }, "true"), (new object[] { "x", "X" }, "false")]),
     ("<, <=, >, >=", "/** @param {string} a @param {string} b */ export function f(a, b) { return a < b ? 1 : a > b ? 2 : a <= b && a >= b ? 3 : 4; }", [(new object[] { "a", "B" }, "2"), (new object[] { "B", "a" }, "1"), (new object[] { "a", "a" }, "3"), (new object[] { "a", "ab" }, "1")]),
     ("s.substring(a[, b])", "/** @param {string} s @param {int32} a @param {int32} b */ export function f(s, a, b) { return s.substring(a, b) + \"|\" + s.substring(a); }", [(new object[] { "abcdef", 4, 1 }, "bcd|ef"), (new object[] { "abc", 2, 7 }, "c|c"), (new object[] { "abc", -3, 2 }, "ab|abc")]),
+    ("s.substr(a[, n])", "/** @param {string} s @param {int32} a @param {int32} b */ export function f(s, a, b) { return s.substr(a, b) + \"|\" + s.substr(a); }", [(new object[] { "abcdef", 1, 3 }, "bcd|bcdef"), (new object[] { "abcdef", -2, 6 }, "ef|ef"), (new object[] { "abcdef", 4, 10 }, "ef|ef"), (new object[] { "abcdef", 2, -1 }, "|cdef"), (new object[] { "abcdef", -10, 2 }, "ab|abcdef"), (new object[] { "abcdef", 6, 1 }, "|"), (new object[] { "abcdef", 7, 1 }, "|")]),
     ("s.slice(a[, b])", "/** @param {string} s @param {int32} a @param {int32} b */ export function f(s, a, b) { return s.slice(a, b) + \"|\" + s.slice(a); }", [(new object[] { "abcdef", -2, 6 }, "ef|ef"), (new object[] { "abcdef", 4, 1 }, "|ef"), (new object[] { "abcdef", 1, -1 }, "bcde|bcdef")]),
     ("s.indexOf(n[, from])", "/** @param {string} s @param {string} n @param {int32} i */ export function f(s, n, i) { return s.indexOf(n) * 100 + s.indexOf(n, i); }", [(new object[] { "abcabc", "bc", 2 }, "104"), (new object[] { "abc", "", 9 }, "3"), (new object[] { "abc", "x", 0 }, "-101")]),
     ("s.lastIndexOf(n[, from])", "/** @param {string} s @param {string} n @param {int32} i */ export function f(s, n, i) { return s.lastIndexOf(n) * 100 + s.lastIndexOf(n, i); }", [(new object[] { "abcabc", "bc", 3 }, "401"), (new object[] { "abc", "", 1 }, "301"), (new object[] { "abc", "x", -5 }, "-101")]),
@@ -112,6 +113,8 @@ public sealed class JavaScriptStringImportTests {
   [TestCase("/** @param {string} s */ export function f(s) { return s.match(\"a\"); }", "match")]
   [TestCase("/** @param {string} s */ export function f(s) { return s.lastIndexOf(\"a\", 0.5); }", "lastIndexOf from number, which is no proven integer")]
   [TestCase("/** @param {string} s */ export function f(s) { return s.includes(\"a\", 1); }", "includes with 2 arguments")]
+  [TestCase("let n = 0; function g() { ++n; return \"abc\"; } export function f() { return g().substr(1, 2); }", "substr of an operand with an effect, which its translation reads twice")]
+  [TestCase("/** @param {string} s */ export function f(s) { return s.substr(1, 2, 3); }", "substr with 3 arguments")]
   public void Construct_IsRefusedByName(string source, string what) {
     var result = JavaScriptFrontend.Import("snippet.js", source);
     Assert.That(result.Module, Is.Null);

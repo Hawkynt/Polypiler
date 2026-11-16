@@ -40,7 +40,10 @@ public enum IrDispatch {
 /// constructor, is lowered so only where the initializers have no effect a base constructor could
 /// observe. While any constructor of an object runs, no virtual or interface call is made on it,
 /// directly or through a callee: that is where C# and JavaScript differ, since an override would see
-/// the fields of its class before or after their initializers. The verifier refuses such a call.
+/// the fields of its class before or after their initializers. The verifier refuses such a call,
+/// unless no override of it below the class being constructed can tell the orders apart: it reads no
+/// field of a class below, and each field of one it writes, the constructor of that class writes again
+/// before anything else reaches the object (<see cref="IrConstruction"/>).
 /// </para>
 /// </summary>
 public enum IrMethodCallKind {
