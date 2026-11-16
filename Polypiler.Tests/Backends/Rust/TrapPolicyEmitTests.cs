@@ -77,6 +77,17 @@ public sealed class TrapPolicyEmitTests {
     Assert.That(fallible, Does.Contain("F").And.Contain("Even").And.Not.Contain("Leaf"));
   }
 
+  /// <summary>#462 "Error results propagate with the question mark operator": safe_div and calc.</summary>
+  [Test]
+  public void SafeDivAndCalc_PropagateWithTheQuestionMark() {
+    var text = Emitted(SafeDiv);
+    Assert.That(text, Does.Contain("fn div(a: i32, b: i32) -> Result<i32, Error> {"));
+    Assert.That(text, Does.Contain("pub fn calc(a: i32, b: i32, c: i32) -> Result<i32, Error> {\n    let q: i32 = div(a, b)?;\n    div(q, c)\n}"));
+  }
+
+  /// <summary>The safe_div and calc pair of #462: calc divides twice, the first error handed on.</summary>
+  internal const string SafeDiv = "static int Div(int a, int b) => a / b; public static int Calc(int a, int b, int c) { var q = Div(a, b); return Div(q, c); }";
+
   [Test]
   public void ResultOfACall_IsHandedOnAsItIs()
     => Assert.That(Emitted("static int Risky(int a) => checked(a * 3); public static int F(int a) { if (a > 2) return Risky(a); return 0; }"),

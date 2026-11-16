@@ -49,6 +49,13 @@ public sealed class RustTrapPolicyTests {
     await Expect(CheckedSum, calls, RustProfile.Default);
   }
 
+  /// <summary>#462 "Error results propagate with the question mark operator": calc(100, 5, 2) is Ok(10), calc(1, 0, 2) the Err of DivideByZero.</summary>
+  [Test]
+  [RequiresToolchain(RustRunner.Toolchain)]
+  public Task SafeDivAndCalc_PropagateTheFirstError()
+    => Expect("static int Div(int a, int b) => a / b; public static int Calc(int a, int b, int c) { var q = Div(a, b); return Div(q, c); }",
+      [new("Calc", [100, 5, 2]) { Returns = typeof(int) }, new("Calc", [1, 0, 2]) { Returns = typeof(int) }, new("Calc", [1, 2, 0]) { Returns = typeof(int) }], Result);
+
   /// <summary>#1392: a catch of OverflowException around checked(a + b) returns the handler's value.</summary>
   [Test]
   [RequiresToolchain(RustRunner.Toolchain)]
