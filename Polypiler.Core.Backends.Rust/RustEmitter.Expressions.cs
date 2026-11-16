@@ -93,6 +93,7 @@ public static partial class RustEmitter {
       IrConst constant when TypeName(constant.Type) is not null => Literal(constant),
       IrConst { Type.IsEnum: true } constant => this.EnumConstant(constant),
       IrIntrinsic operation when EnumOperations.IsEnum(operation.Op) => this.EnumOperation(operation),
+      IrIntrinsic operation when IrPointers.IsPointerNode(operation) => this.PointerOperation(operation),
       IrIntrinsic operation when NumberTextOperations.IsNumberText(operation.Op) => this.NumberText(operation),
       IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewFill or IrIntrinsicOp.ViewCopy } operation
         => this.ViewOperation(operation),

@@ -28,6 +28,9 @@ internal sealed class FunctionArrays {
   /// <summary>The indices of the array parameters the function assigns a new array to: never written, they are copied into a vector of their own.</summary>
   public SortedSet<int> CopiedParameters { get; } = [];
 
+  /// <summary>The indices of the pointer parameters the function writes through, directly or through a callee: a <c>&amp;mut [T]</c> region.</summary>
+  public SortedSet<int> MutablePointers { get; } = [];
+
   /// <summary>Who holds the array the function returns.</summary>
   public ArrayHolder Result { get; set; }
 
@@ -54,7 +57,7 @@ internal sealed class FunctionArrays {
   public string? Problem { get; set; }
 
   /// <summary>The same facts, for the fixed point to compare.</summary>
-  public string Key => $"{string.Join(",", this.MutableParameters)}|{this.Result}|{string.Join(",", this.ResultParameters)}";
+  public string Key => $"{string.Join(",", this.MutableParameters)}|{this.Result}|{string.Join(",", this.ResultParameters)}|{string.Join(",", this.MutablePointers)}";
 
 }
 
@@ -88,6 +91,8 @@ internal static class ArrayOwnership {
   private static bool WritesView(IrFunction function, IrLocal local, HashSet<IrLocal> seen) {
     if (local.Type.Kind != IrTypeKind.Span || !seen.Add(local))
       return false;
+    if (function.Locals.Any(variable => variable.Type.IsPointer) && PointerRegions.Of(function).Written.Any(region => region.Kind == RegionKind.Variable && region.Owner == local))
+      return true;
 
     bool Reaches(IrExpr view) => view is IrLocalRef reference && reference.Local == local
       || view is IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice } operation && Reaches(operation.Arguments[0]);
@@ -252,6 +257,18 @@ internal static class ArrayOwnership {
     foreach (var local in function.Parameters.Concat(function.Locals).Where(local => local.Type.IsArray))
       groups.Add(local);
 
+    // A store through a pointer writes its region: the pinned array, or the region of a pointer parameter.
+    var pointers = function.Parameters.Concat(function.Locals).Any(local => local.Type.IsPointer) ? PointerRegions.Of(function) : null;
+    void WriteRegion(PointerRegion? region) {
+      if (region is { Kind: RegionKind.Variable, Owner.Type.IsArray: true })
+        Write(new IrLocalRef(region.Owner));
+      else if (region is { Kind: RegionKind.Parameter })
+        result.MutablePointers.Add(function.Parameters.ToList().IndexOf(region.Owner));
+    }
+
+    foreach (var region in pointers?.Written ?? [])
+      WriteRegion(region);
+
     foreach (var statement in Statements(function.Body)) {
       switch (statement) {
         case IrDeclare or IrAssign when moves is not null && moves.Contains(statement):
@@ -291,6 +308,8 @@ internal static class ArrayOwnership {
           case IrCall call when facts.TryGetValue(call.Function, out var callee):
             foreach (var index in callee.MutableParameters)
               Write(call.Arguments[index]);
+            foreach (var index in callee.MutablePointers)
+              WriteRegion(pointers?.Of(call.Arguments[index], false));
             // A writable view of an array the callee writes through writes the array.
             if (byName.TryGetValue(call.Function, out var target))
               for (var index = 0; index < call.Arguments.Count && index < target.Parameters.Count; ++index)

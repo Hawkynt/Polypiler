@@ -63,6 +63,12 @@ public static partial class RustEmitter {
           return false;
         case IrDeclare declare when this._nested.ContainsKey(declare.Local):
           return false;
+        case IrDeclare { Local.Type.IsPointer: true } pointer:
+          this.PointerDeclaration(pointer, into);
+          return false;
+        case IrAssign { Local.Type.IsPointer: true } pointer:
+          into.Add(new RsExpressionStatement(new RsAssign(new RsPath(this._locals[pointer.Local]) { Type = IrType.I64 }, "=", this.PointerIndex(pointer.Value))));
+          return false;
         case IrAssign assign when this._nested.ContainsKey(assign.Local):
           return false;
         case IrDeclare declare when this._shared.Contains(declare.Local):

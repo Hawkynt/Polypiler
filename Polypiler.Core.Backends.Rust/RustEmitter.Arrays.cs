@@ -84,6 +84,8 @@ public static partial class RustEmitter {
 
     /// <summary>The type of a local: an array owned as a vector or borrowed.</summary>
     private string? LocalType(IrLocal local) {
+      if (local.Type.IsPointer)
+        return "i64";
       if (local.Type.IsArray && this.IsFieldAlias(local))
         return null;
 
@@ -520,6 +522,11 @@ public static partial class RustEmitter {
 
         if (argument.Type.IsView) {
           arguments.Add(this.ViewSource(argument, this.ViewParameterWritten(call.Function, index)));
+          continue;
+        }
+
+        if (argument.Type.IsPointer) {
+          arguments.AddRange(this.PointerArgument(argument, callee.MutablePointers.Contains(index)));
           continue;
         }
 

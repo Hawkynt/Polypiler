@@ -60,6 +60,7 @@ public static partial class RustEmitter {
         this.Refuse(problem);
 
       this.Analyse(function);
+      this.PointerFacts(function);
       this.FieldAliases(function);
       var name = this._functions[function.Name];
       var member = this._members.GetValueOrDefault(function.Name);
@@ -69,7 +70,7 @@ public static partial class RustEmitter {
       if (this._bodiless.Contains(function.Name))
         return new RsFunction(name, "", [], null, RsBlock.Empty);
 
-      var parameters = function.Parameters.Select((parameter, index) => new RsParameter(this._locals[parameter], this.ParameterType(function, index))).ToList();
+      var parameters = function.Parameters.SelectMany((parameter, index) => parameter.Type.IsPointer ? this.PointerParameters(parameter) : [new RsParameter(this._locals[parameter], this.ParameterType(function, index))]).ToList();
       var generics = "";
       if (this._free.TryGetValue(function.Name, out var owner)) {
         // The object of a method of a hierarchy: a reference to its struct, or to any type of its class's trait.
