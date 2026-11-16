@@ -39,6 +39,7 @@ public static partial class IrInterpreter {
     => type.StructType is { } nested ? Default(nested)
       : type.IsMemory ? EmptyView(type.Element!)
       : type.IsNullable || type.IsArray || type.IsString ? NullReference.Value
+      : type.IsOptional ? Absent.Value
       : Constant(type, 0);
 
   /// <summary>

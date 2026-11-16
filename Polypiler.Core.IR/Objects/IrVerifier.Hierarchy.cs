@@ -62,7 +62,8 @@ public static partial class IrVerifier {
       var interfaces = type.AllInterfaces.ToList();
       foreach (var method in type.Methods) {
         Require(method.IsStatic == (method.Dispatch == IrDispatch.Static), $"the method '{method.Name}' has a receiver and the dispatch {method.Dispatch}");
-        Require(method.Kind == IrMethodKind.Method || method.Dispatch == IrDispatch.Instance, $"the accessor '{method.Name}' has the dispatch {method.Dispatch}");
+        // An accessor may be virtual and overridden (#1368), never abstract or static.
+        Require(method.Kind == IrMethodKind.Method || method.Dispatch is IrDispatch.Instance or IrDispatch.Virtual or IrDispatch.Override, $"the accessor '{method.Name}' has the dispatch {method.Dispatch}");
         Require(method.Overrides is null == (method.Dispatch != IrDispatch.Override) && (!method.IsSealedOverride || method.Dispatch == IrDispatch.Override),
           $"the method '{method.Name}' names an overridden method without being an override, or the other way round");
         if (method.Dispatch == IrDispatch.Abstract) {
