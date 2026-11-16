@@ -61,6 +61,10 @@ internal static class JsDoc {
     return (false, null);
   }
 
+  /// <summary>The type the comment states for the result as the values it admits, or <see langword="null"/> when it states none or no type (#1413).</summary>
+  public static JsType? StatedResult(string? comment, System.Func<string, ClassModel?> classes)
+    => _result.Match(comment ?? "") is { Success: true } tag ? Declared(tag.Groups["type"].Value, classes) : null;
+
   /// <summary>The type the comment states for the result, or <see langword="null"/> when it states none or one that is no type of the IR on its own.</summary>
   public static IrType? ResultType(string? comment) {
     var tag = _result.Match(comment ?? "");
@@ -79,7 +83,7 @@ internal static class JsDoc {
 
     // T[] of numbers is an Array or a typed array, which the calls decide (#1374).
     if (spelling.EndsWith("[]", System.StringComparison.Ordinal) && !spelling[..^2].EndsWith("[]", System.StringComparison.Ordinal) && TypeOf(spelling) is { } array)
-      return array.Element!.IsNumeric ? JsType.Of(array).AsStated() : JsType.Of(array);
+      return array.Element!.IsNumeric ? JsType.Of(array).AsStated().AdmittingWhole() : JsType.Of(array);
 
     if (spelling.EndsWith("[]", System.StringComparison.Ordinal))
       return Declared(spelling[..^2], classes) is { } element && element.Kind is JsKind.Object or JsKind.Array ? JsType.ArrayOf(element, true) : null;

@@ -752,6 +752,12 @@ internal sealed partial class Lowering {
     if (type.IsStruct && this.Reshaped(value, type, node) is { } reshaped)
       return reshaped;
 
+    // A whole double where JSDoc states an integer that holds its range is that integer; a NaN traps (#1413).
+    if (value.Type is { IsWhole: true, IsAbsent: false } whole && type.IsInteger && !type.IsLong && !type.IsEnum && whole.Within(type)) {
+      this.TrapsNaN = true;
+      return new IrConvert(type, value.Expr, IrConversion.Trap);
+    }
+
     var exact = value.Type.Kind is JsKind.Number or JsKind.BigInt && type.IsNumeric && (type.IsInteger
       ? value.Type.Float == 0 && !value.Type.IsUnbounded && value.Type.Within(type) && from.IsLong == type.IsLong
       : type == IrType.F64 && value.Type.Kind == JsKind.Number);

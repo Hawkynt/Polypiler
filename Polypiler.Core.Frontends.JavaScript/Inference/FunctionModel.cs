@@ -269,6 +269,13 @@ internal sealed class FunctionModel(Candidate candidate) {
   /// <summary>The type JSDoc states for the result, or <see langword="null"/>.</summary>
   public IrType? DeclaredResult { get; set; }
 
+  /// <summary>
+  /// The type JSDoc states for the result as the values it admits, or that of the method it overrides or
+  /// that overrides it, or <see langword="null"/>: a list returned where it states integer elements takes
+  /// them where its whole doubles fit (#1413).
+  /// </summary>
+  public JsType? StatedResult { get; set; }
+
   /// <summary>The type of every value the function returns; undefined when it returns none.</summary>
   public JsType Result { get; set; } = JsType.Unknown;
 

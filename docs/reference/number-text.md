@@ -72,6 +72,8 @@ an alignment.
 proven integer or a `BigInt` is `FormatRadix` with a sign. `n.toFixed(d)` with a literal `d` is
 `FixedEcma`. `Number(s)`, `+s`, `parseFloat(s)` and `parseInt(s[, r])` with a literal radix are the
 parsers; a parameter without JSDoc that `Number`, `parseFloat` or `parseInt` parses is a string.
+`parseInt` of a short text the program proves of digits only is a NaN or an integer of a known range,
+which an array of stated integers holds ([sequence operations](sequence-operations.md#javascript-frontend), #1413).
 
 Refused (`PLY1102`), by name: `toString(r)` of a number with a fraction and with a computed radix,
 `toFixed` with computed digits, `parseInt` with a computed radix, `toPrecision`, `toExponential`,

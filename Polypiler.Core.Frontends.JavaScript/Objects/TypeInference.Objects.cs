@@ -25,7 +25,7 @@ internal sealed partial class TypeInference {
         if (owner.Field(key) is { } field) {
           var origin = value.IsView && Origin(store.Right) is Identifier read && model.Bindings.GetValueOrDefault(read) is Variable { Type.IsView: true } source
             && this.Reach(source, value.Stored(), store.Right);
-          return this.Reach(field.Variable, value.Stored(), store.Right) | origin;
+          return this.Reach(field.Variable, value.Stored(), store.Right) | origin | this.Fit(model, store.Right, field.Variable.Type);
         }
 
         return owner.Member(MemberKind.Setter, key) is { } setter && this.ModelOf(setter).Parameters.ElementAtOrDefault(0) is { } parameter
@@ -88,6 +88,13 @@ internal sealed partial class TypeInference {
     var changed = this.UnifyShapes();
     foreach (var slot in this._slots ??= Inheritance.Slots(this.Classes.Values)) {
       var models = slot.Select(this.ModelOf).ToList();
+      // A method that states no result returns what the one it overrides, or one that overrides it, states (#1413).
+      if (models.Select(model => model.StatedResult).FirstOrDefault(stated => stated is not null) is { } statedResult)
+        foreach (var model in models.Where(model => model.StatedResult is null)) {
+          model.StatedResult = statedResult;
+          changed = true;
+        }
+
       var result = models.Select(model => model.Result).Aggregate(JsType.Join);
       foreach (var model in models.Where(model => model.Result != result)) {
         model.ResultEvidence ??= models.Select(other => other.ResultEvidence).FirstOrDefault(evidence => evidence is not null);

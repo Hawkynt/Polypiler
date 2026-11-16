@@ -152,6 +152,17 @@ public static partial class JavaScriptFrontend {
     ThrowsTextCaveat,
     "a string thrown out of a function reaches its caller as the string itself in JavaScript; the imported code throws an Error, whose message is the string");
 
+  /// <summary>
+  /// The caveat of a module that stores a whole double - <c>parseInt</c> of a short text of proven
+  /// digits - where JSDoc states integers (#1413): a NaN, which an Array keeps, traps instead.
+  /// </summary>
+  public const string NaNStore = "js-nan-store";
+
+  private static readonly ImportCaveat _nanStore = new(
+    NaNStore,
+    "a value proven a NaN or an integer, such as parseInt of an empty text of digits, is stored where JSDoc states integers: JavaScript "
+    + "keeps the NaN, the imported code traps with 'integer overflow'");
+
   private static readonly ImportCaveat _sortOrder = new(
     SortOrder,
     "a sort comparator returns a double: for inputs that make it inconsistent, such as a NaN, ECMA-262 leaves the order to the engine, the translation fixes the one of its stable merge sort");
@@ -337,6 +348,9 @@ public static partial class JavaScriptFrontend {
 
     if (lowering.ThrowsText)
       caveats.Add(_throwsText);
+
+    if (lowering.TrapsNaN)
+      caveats.Add(_nanStore);
 
     var ordered = models.Where(model => !model.Candidate.IsNested).OrderBy(model => model.Candidate.Anchor.Start).ToList();
     var integers = Signatures(ordered, parameter => parameter.IsIntegerByUse && parameter.Parameter!.Type.IsWord);

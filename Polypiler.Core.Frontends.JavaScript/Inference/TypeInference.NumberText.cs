@@ -21,6 +21,9 @@ internal sealed partial class TypeInference {
         return JsType.F64;
       case CallExpression call when this.IsGlobal(call, "String"):
         return JsType.String;
+      // parseInt of a short text of proven digits is a whole double (#1413).
+      case CallExpression call when this.IsGlobal(call, "parseInt") && this.ParsedRange(call) is { } range:
+        return range;
       case CallExpression call when this.IsGlobal(call, "Number") || this.IsGlobal(call, "parseFloat") || this.IsGlobal(call, "parseInt"):
         return call.Arguments.Count > 0 && this.Of(call.Arguments[0]).Kind == JsKind.String ? JsType.F64 : null;
       case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: "toString" or "toFixed" or "toPrecision" or "toExponential" or "toLocaleString" } } callee }
