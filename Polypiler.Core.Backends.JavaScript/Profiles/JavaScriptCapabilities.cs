@@ -187,6 +187,7 @@ public sealed class JavaScriptCapabilities {
     // The lists of #1328, which are arrays.
     new("Array", 5),
     new("Array.prototype", 5),
+    new("Array.isArray", 5),
     new(".slice", 5),
     new(".map", 5),
     new(".push", 5),

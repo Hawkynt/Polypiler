@@ -111,7 +111,9 @@ internal static partial class JavaScriptHelpers {
       "  }",
       "  return true;",
       "}")),
-    Same("$vtoarray", Lines("function $vtoarray(view) {", "  return new view.constructor(view);", "}")),
+    // The array of a view of a whole array is that array, which a caller may have passed as an Array, where
+    // new Array(a) would make an Array of one element: its copy is the kind of array it is (#1404).
+    Same("$vtoarray", Lines("function $vtoarray(view) {", "  return Array.isArray(view) ? view.slice() : new view.constructor(view);", "}")),
     Same("$vtoarrayo", Lines(
       "function $vtoarrayo(view) {",
       "  @const copy = [];",
