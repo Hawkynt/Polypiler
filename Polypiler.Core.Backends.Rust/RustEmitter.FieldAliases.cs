@@ -66,16 +66,32 @@ public static partial class RustEmitter {
     private void FieldAliases(IrFunction function) {
       foreach (var (alias, load) in this._arrayFacts.FieldAliases) {
         // The borrow lives from the declaration to the end of its block: only what follows it there matters.
+        // A plain borrow, of no cell, ends where the variable is read for the last time.
+        var direct = !load.Target.Type.IsObject || this.IsPlain(load.Target.Type);
         var following = Following(function.Body, alias);
+        if (direct && following is not null) {
+          var last = following.Select((statement, index) => (statement, index)).LastOrDefault(pair => IrTree.Nodes(pair.statement).Any(node => node is IrLocalRef reference && reference.Local == alias));
+          following = [.. following.Take(last.statement is null ? 0 : last.index + 1)];
+        }
+
         var block = new IrBlock(following ?? []);
         var touches = IrTree.Nodes(block).Any(node => node is IrFieldLoad other && other.Field == load.Field || node is IrMethodCall or IrInvoke
             || node is IrCall call && (this.FieldsTouched(call.Function) is not { } fields || fields.Contains(load.Field)))
           || ArrayOwnership.Statements(block).Any(statement => statement is IrFieldStore store && store.Field == load.Field);
         var assigned = ArrayOwnership.Statements(function.Body).Any(statement => statement is IrAssign assign && assign.Local == alias);
+        // The borrow of a plain struct's field holds the struct: nothing may take the struct as a whole while it lives.
+        touches |= direct && load.Target is IrLocalRef { Local: var owner }
+          && IrTree.Nodes(block).Any(node => node is IrLocalRef reference && reference.Local == owner)
+          && !IrTree.Nodes(block).All(node => node is not IrLocalRef reference || reference.Local != owner || IsFieldTarget(block, node));
         if (following is null || touches || assigned || load.Target is not IrLocalRef)
           this.Refuse("a variable that names a field's array where the function touches the field otherwise while it lives");
       }
     }
+
+    /// <summary>Whether a node is the object or struct of a field read or written in a block, not a value of its own.</summary>
+    private static bool IsFieldTarget(IrBlock block, IrExpr node)
+      => IrTree.Nodes(block).Any(other => other is IrFieldLoad load && ReferenceEquals(load.Target, node))
+        || ArrayOwnership.Statements(block).Any(statement => statement is IrFieldStore store && ReferenceEquals(store.Target, node));
 
     /// <summary>The statements after the declaration of a variable with its value, in the block that declares it; <see langword="null"/> where there is no such declaration.</summary>
     private static IReadOnlyList<IrStmt>? Following(IrBlock block, IrLocal local) {
@@ -94,7 +110,14 @@ public static partial class RustEmitter {
     }
 
     /// <summary>The value an alias of a field array is declared with: the field's cell borrowed, <c>self.s.borrow_mut()</c> where the function writes through it.</summary>
-    private RsExpression FieldAlias(IrLocal alias) => this.FieldArray(this._arrayFacts.FieldAliases[alias], this._arrayFacts.MutableLocals.Contains(alias));
+    private RsExpression FieldAlias(IrLocal alias) {
+      var load = this._arrayFacts.FieldAliases[alias];
+      var mutable = this._arrayFacts.MutableLocals.Contains(alias);
+      // The array of a plain struct or of a struct value is borrowed from the struct itself, no cell between them.
+      return load.Target.Type.IsStruct ? new RsReference(mutable, this.Place(load, mutable)) { Type = alias.Type }
+        : this.IsPlain(load.Target.Type) ? new RsReference(mutable, this.FieldArray(load, mutable)) { Type = alias.Type }
+        : this.FieldArray(load, mutable);
+    }
 
     /// <summary>An alias of a field array as a slice, <c>&amp;s[..]</c> or <c>&amp;mut s[..]</c>, which its guard derefs to.</summary>
     private RsExpression FieldAliasSlice(IrLocal alias, bool mutable)

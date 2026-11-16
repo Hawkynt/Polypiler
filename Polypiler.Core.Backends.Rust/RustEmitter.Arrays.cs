@@ -33,7 +33,7 @@ public static partial class RustEmitter {
       => facts.Result == ArrayHolder.Borrowed && facts.ResultParameters.All(facts.MutableParameters.Contains);
 
     /// <summary>The Rust type of the elements of an array type; refused for any but a scalar.</summary>
-    private string ElementType(IrType array) => array.Element is { } element && (TypeName(element) is not null || element.IsStruct || element.IsEnum || element.IsString || element.IsFunction) ? this.Type(element) : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
+    private string ElementType(IrType array) => array.Element is { } element && (TypeName(element) is not null || element.IsStruct && !IsBuffer(element) || element.IsEnum || element.IsString || element.IsFunction) ? this.Type(element) : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
 
     /// <summary>The lifetime the result of a function borrows with, where Rust cannot elide it: <c>'a</c>, or empty.</summary>
     private static string Lifetime(IrFunction function, FunctionArrays facts)
@@ -46,6 +46,8 @@ public static partial class RustEmitter {
         return BorrowedString;
       if (IsError(parameter.Type))
         return ((RsPath)this.Refuse("an exception passed as a value")).Name;
+      if (this.IsPlain(parameter.Type))
+        return this.PlainParameterType(function, index);
       if (parameter.Type.IsObject)
         return this.ObjectParameterType(parameter);
       if (parameter.Type.IsView)
@@ -157,6 +159,8 @@ public static partial class RustEmitter {
           return this.Expression(call);
         case IrFieldLoad { Target.Type.IsObject: true } load:
           return new RsMethodCall(this.FieldArray(load, false), "clone", []) { Type = array.Type };
+        case IrFieldLoad { Target.Type.IsStruct: true }:
+          return this.Refuse("the array of a struct field held by a second owner");
         case IrIntrinsic { Op: IrIntrinsicOp.StrSplit or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues or IrIntrinsicOp.ViewToArray }:
           return this.Expression(array);
         case IrCall call:
@@ -183,6 +187,8 @@ public static partial class RustEmitter {
           return mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, true);
         case IrFieldLoad { Target.Type.IsObject: true } load:
           return new RsReference(mutable, this.FieldArray(load, mutable)) { Type = array.Type };
+        case IrFieldLoad { Target.Type.IsStruct: true } load:
+          return new RsReference(mutable, this.Place(load, mutable)) { Type = array.Type };
         case IrLocalRef { Local: var local } when this.IsReference(local):
           return new RsPath(this._locals[local]) { Type = array.Type };
         case IrLocalRef reference:
@@ -210,6 +216,7 @@ public static partial class RustEmitter {
       IrLocalRef or IrBind or IrCall when this.IsNullableArray(array) => mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, false),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = array.Type },
       IrFieldLoad { Target.Type.IsObject: true } load => this.FieldArray(load, mutable),
+      IrFieldLoad { Target.Type.IsStruct: true } load => this.Place(load, mutable),
       IrConstRef table when this._constants.TryGetValue(table.Constant.Name, out var name) => new RsPath(name) { Type = array.Type },
       IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal when !mutable => new RsArray([.. literal.Arguments.Select(argument => Suffixed(this.Expression(argument)))]) { Type = array.Type },
       IrCall => this.Expression(array),

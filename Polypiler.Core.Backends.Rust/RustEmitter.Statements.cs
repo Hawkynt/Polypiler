@@ -36,6 +36,19 @@ public static partial class RustEmitter {
 
     /// <summary>Writes one statement; <see langword="true"/> when control never goes on after it.</summary>
     private bool Statement(IrStmt statement, List<RsStatement> into) {
+      var outer = this._statement;
+      this._statement = statement;
+      try {
+        return this.StatementOf(statement, into);
+      } finally {
+        this._statement = outer;
+      }
+    }
+
+    /// <summary>The statement of the IR being written, the innermost one, for the analyses that ask where in the function a read stands.</summary>
+    private IrStmt? _statement;
+
+    private bool StatementOf(IrStmt statement, List<RsStatement> into) {
       switch (statement) {
         case IrBlock block: {
           var before = into.Count;
@@ -67,7 +80,8 @@ public static partial class RustEmitter {
           return true;
         case IrDeclare declare:
           into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local) || this.IsChangedCollection(declare.Local)
-            || this.IsFieldAlias(declare.Local) && this._arrayFacts.MutableLocals.Contains(declare.Local), this.LocalType(declare.Local),
+            || this.IsFieldAlias(declare.Local) && this._arrayFacts.MutableLocals.Contains(declare.Local) && this._arrayFacts.FieldAliases[declare.Local].Target.Type is { IsObject: true } owner && !this.IsPlain(owner)
+            || this.IsMutatedObject(declare.Local), this.LocalType(declare.Local),
             declare.Initializer switch {
               null => null,
               var value when declare.Local.Type.IsArray => this.ArrayInitial(declare.Local, value),

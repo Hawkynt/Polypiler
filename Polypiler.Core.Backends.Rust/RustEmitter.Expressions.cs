@@ -101,6 +101,7 @@ public static partial class RustEmitter {
       IrIntrinsic operation when StringOperations.IsString(operation.Op) => this.StringOperation(operation),
       IrLocalRef reference when this._shared.Contains(reference.Local) => this.SharedRead(reference.Local),
       IrLocalRef { Type.IsFunction: true } reference when this._nested.ContainsKey(reference.Local) => this.FunctionValue(reference),
+      IrLocalRef reference when IsBuffer(reference.Type) => this.BufferValue(reference),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
       IrLambda lambda => this.Closure(lambda),
       IrSome or IrNone or IrIsNone or IrUnwrap or IrCoalesce or IrBind => this.Optional(expression),
@@ -156,6 +157,7 @@ public static partial class RustEmitter {
       IrNull { Type.IsObject: true } => new RsPath("None") { Type = expression.Type },
       IrGlobalRef global when !global.Type.IsArray && IsLocked(global.Global) => this.LockedValue(global.Global),
       IrGlobalRef global when !global.Type.IsArray => this.GlobalValue(global),
+      IrStructEquals equality when IsBuffer(equality.Left.Type) => this.Refuse("the equality of a struct holding an array"),
       IrStructEquals equality when equality.Left.Type.IsStruct => this.Binary(this.Expression(equality.Left), "==", this.Expression(equality.Right), IrType.Bool),
       IrThrowExpression thrown => this.Throw(thrown.Exception),
       _ => this.Refuse(expression.GetType().Name[2..])

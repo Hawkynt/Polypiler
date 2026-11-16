@@ -152,6 +152,11 @@ public static partial class RustEmitter {
 
       this._ownedStringParameters = [.. this._reassigned.Where(parameter => parameter.Type.IsString)];
       this._fieldWritten = FieldWrites(function);
+      // A struct whose array is written in place, directly or through a variable that borrows it, is a mutable binding.
+      this._fieldWritten.UnionWith(this._arrayFacts.WrittenFieldTargets.Where(local => local.Type.IsStruct));
+      foreach (var (alias, load) in this._arrayFacts.FieldAliases)
+        if (load.Target is IrLocalRef { Local: { Type.IsStruct: true } owner } && this._arrayFacts.MutableLocals.Contains(alias))
+          this._fieldWritten.Add(owner);
       foreach (var parameter in function.Parameters.Where(this._fieldWritten.Contains))
         this._reassigned.Add(parameter);
 

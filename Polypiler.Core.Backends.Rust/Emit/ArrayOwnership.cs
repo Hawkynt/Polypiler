@@ -43,6 +43,9 @@ internal sealed class FunctionArrays {
   /// <summary>The array locals that name the array a field of an object holds, each with the load it is declared with.</summary>
   public Dictionary<IrLocal, IrFieldLoad> FieldAliases { get; } = [];
 
+  /// <summary>The variables whose fields' arrays the function writes in place (<c>o.items[i] = v</c>), directly or through a callee.</summary>
+  public HashSet<IrLocal> WrittenFieldTargets { get; } = [];
+
   /// <summary>Why the arrays of the function have no safe Rust form, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }
 
@@ -117,6 +120,9 @@ internal static class ArrayOwnership {
   private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName) {
     var result = new FunctionArrays();
     var groups = new Groups();
+    // The same unions but for the moves, a variable given the array of one read for the last time: one owner after the other, never two at once.
+    var shared = new Groups();
+    IrStmt? current = null;
     var written = new List<object>();
     var created = new List<object>();
     var problems = new List<string>();
@@ -125,6 +131,8 @@ internal static class ArrayOwnership {
       switch (value) {
         case IrLocalRef reference:
           groups.Union(node, reference.Local);
+          if (!(node is IrLocal && current is IrDeclare or IrAssign && Moves.IsLast(function.Body, current, reference.Local)))
+            shared.Union(node, reference.Local);
           break;
         case IrNewArray:
         case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.StrSplit or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues }:
@@ -144,7 +152,7 @@ internal static class ArrayOwnership {
         case IrCollection { Op: IrCollectionOp.ListCopyToArray }:
           created.Add(node);
           break;
-        case IrFieldLoad { Target.Type.IsObject: true } load when node is IrLocal alias:
+        case IrFieldLoad { Target: { Type.IsObject: true } or IrLocalRef { Type.IsStruct: true } } load when node is IrLocal alias:
           // A variable that names a field's array, as `var s = this._s;`: it borrows the field's cell.
           if (!result.FieldAliases.TryAdd(alias, load))
             problems.Add($"the variable '{alias.Name}' given the arrays of two fields");
@@ -155,6 +163,7 @@ internal static class ArrayOwnership {
         case IrBind bind:
           Link(bind.Local, bind.Value);
           groups.Union(node, bind.Local);
+          shared.Union(node, bind.Local);
           break;
         default:
           problems.Add($"an array of the form {value.GetType().Name[2..]}");
@@ -166,6 +175,9 @@ internal static class ArrayOwnership {
       switch (array) {
         case IrLocalRef reference:
           written.Add(reference.Local);
+          break;
+        case IrFieldLoad { Target: IrLocalRef target }:
+          result.WrittenFieldTargets.Add(target.Local);
           break;
         case IrCall call when facts.TryGetValue(call.Function, out var callee) && callee.Result == ArrayHolder.Borrowed:
           writtenResults.Add(call.Function);
@@ -183,6 +195,7 @@ internal static class ArrayOwnership {
       groups.Add(local);
 
     foreach (var statement in Statements(function.Body)) {
+      current = statement;
       switch (statement) {
         case IrDeclare { Local.Type.IsArray: true, Initializer: { } initializer } declare:
           Link(declare.Local, initializer);
@@ -207,6 +220,7 @@ internal static class ArrayOwnership {
             Write(load.Array);
             break;
           case IrBind { Local.Type.IsArray: true } bind:
+            current = null;
             Link(bind.Local, bind.Value);
             break;
           case IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy:
@@ -265,9 +279,10 @@ internal static class ArrayOwnership {
         result.MutableLocals.Add(local);
     }
 
-    // Two owners of one array: Rust moves a vector, where the IR shares it.
+    // Two owners of one array at once: Rust moves a vector, where the IR shares it. A move hands it from one to the next.
     var owners = function.Locals.Where(local => result.Locals.GetValueOrDefault(local) == ArrayHolder.Owned).GroupBy(groups.Find)
-      .FirstOrDefault(group => group.Count() > 1 && writtenRoots.Contains(group.Key));
+      .Where(group => writtenRoots.Contains(group.Key)).SelectMany(group => group.GroupBy(shared.Find))
+      .FirstOrDefault(group => group.Count() > 1);
     if (owners is not null)
       problems.Add($"one array shared by the variables {string.Join(" and ", owners.Select(local => $"'{local.Name}'"))}");
 

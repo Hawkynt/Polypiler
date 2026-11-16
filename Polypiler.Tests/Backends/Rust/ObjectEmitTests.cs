@@ -144,9 +144,11 @@ public sealed class ObjectEmitTests {
   [Test]
   public void FieldNothingTouches_IsLeftOut_AndOneOnlyWritten_Stays() {
     var text = Emitted("public sealed class T { private int _count; private int _last; private int _never; public int Pub; public int Add(int v) { _count++; _last = v; return _count; } } "
-      + "public sealed class E { private int _unused; } public static class S { public static int F(int v) { var e = new E(); return new T().Add(v); } }");
+      + "public sealed class E { private int _unused; } public static class S { public static int F(int v) { var e = new E(); var t = new T(); var u = t; return u.Add(v); } }");
     Assert.That(text, Does.Contain("pub struct T {\n    count: Cell<i32>,\n    last: Cell<i32>,\n}"));
     Assert.That(text, Does.Contain("self.last.set(v);"));
+    // A single-owner E (#1393) keeps no field nothing reads: a unit struct.
+    Assert.That(text, Does.Contain("pub struct E;"));
   }
 
   [Test]

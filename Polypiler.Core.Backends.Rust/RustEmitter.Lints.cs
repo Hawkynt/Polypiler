@@ -21,7 +21,8 @@ public static partial class RustEmitter {
   /// ordering of floating-point numbers negated (<c>neg_cmp_op_on_partial_ord</c>, <c>nonminimal_bool</c>),
   /// a constant close to π or e (<c>approx_constant</c>), a loop that never ends (<c>empty_loop</c>), a
   /// value copied to a variable and straight back (<c>almost_swapped</c>) and
-  /// a signature of the source with more than seven parameters (<c>too_many_arguments</c>). The list is
+  /// a signature of the source with more than seven parameters (<c>too_many_arguments</c>), a public method
+  /// whose name is one of a standard trait's (<c>should_implement_trait</c>: the name is the source's). The list is
   /// closed; no group and no <c>clippy::all</c> is ever allowed.
   /// </summary>
   public static class Lints {
@@ -31,8 +32,14 @@ public static partial class RustEmitter {
       "unused_assignments", "unused_comparisons", "clippy::absurd_extreme_comparisons", "clippy::almost_swapped", "clippy::approx_constant", "clippy::empty_loop",
       "clippy::eq_op", "clippy::erasing_op", "clippy::identity_op", "clippy::manual_clamp", "clippy::manual_range_contains", "clippy::min_max",
       "clippy::neg_cmp_op_on_partial_ord", "clippy::nonminimal_bool", "clippy::too_many_arguments", "clippy::type_complexity",
-      "clippy::manual_find", "clippy::unnecessary_literal_unwrap"
+      "clippy::manual_find", "clippy::unnecessary_literal_unwrap", "clippy::should_implement_trait"
     ];
+
+    /// <summary>The method names of the standard traits clippy's <c>should_implement_trait</c> knows, which a method of the source may have.</summary>
+    private static readonly HashSet<string> _traitMethods = new(StringComparer.Ordinal) {
+      "add", "as_mut", "as_ref", "bitand", "bitor", "bitxor", "borrow", "borrow_mut", "clone", "cmp", "default", "deref", "deref_mut", "div", "drop",
+      "eq", "from_iter", "from_str", "hash", "index", "index_mut", "into_iter", "mul", "neg", "next", "not", "rem", "shl", "shr", "sub"
+    };
 
     /// <summary>The well-known constants of <c>std::f64::consts</c> clippy compares literals with.</summary>
     private static readonly double[] _constants = [
@@ -68,6 +75,9 @@ public static partial class RustEmitter {
           case RsBlock block when block.Statements.Zip(block.Statements.Skip(1)).Any(pair => pair is (RsLet { Initializer: RsPath source } binding, RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath target, Value: RsPath value } })
             && target.Name == source.Name && value.Name == binding.Name):
             needed.Add("clippy::almost_swapped");
+            break;
+          case RsImpl { Trait: null } impl when impl.Items.OfType<RsFunction>().Any(method => method.Visibility == "pub" && _traitMethods.Contains(method.Name)):
+            needed.Add("clippy::should_implement_trait");
             break;
           case RsLet { TypeName: { } type } when IsComplex(type):
             needed.Add("clippy::type_complexity");

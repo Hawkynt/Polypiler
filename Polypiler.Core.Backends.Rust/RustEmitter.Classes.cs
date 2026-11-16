@@ -42,7 +42,9 @@ public static partial class RustEmitter {
       /// <summary>A variable of type <c>Option&lt;Rc&gt;</c>.</summary>
       OptionalPlace,
       /// <summary><c>None</c>, the null of the source.</summary>
-      Null
+      Null,
+      /// <summary>An object of a single-owner class: <c>self</c>, a variable, a parameter or a new object, never null.</summary>
+      Plain
     }
 
     private Nullness _nullness = Nullness.Of(new IrModule("module", []), new HashSet<string>());
@@ -150,6 +152,9 @@ public static partial class RustEmitter {
 
     /// <summary><c>Rc&lt;Name&gt;</c>, or <c>Option&lt;Rc&lt;Name&gt;&gt;</c> for a reference that may be null.</summary>
     private string ObjectType(IrType type, bool optional) {
+      if (this.IsPlain(type) && !optional)
+        return this.ClassName(type);
+
       this._uses.Add("std::rc::Rc");
       var shared = $"Rc<{this.ClassName(type)}>";
       return optional ? $"Option<{shared}>" : shared;
@@ -167,6 +172,9 @@ public static partial class RustEmitter {
 
     /// <summary>A value of a class type and how it is held.</summary>
     private (RsExpression Expression, Held Held) Object(IrExpr value) {
+      if (this.IsPlain(value.Type))
+        return (this.PlainObject(value), Held.Plain);
+
       switch (value) {
         case IrNull:
           return (new RsPath("None") { Type = value.Type }, Held.Null);
@@ -221,7 +229,7 @@ public static partial class RustEmitter {
       var (expression, held) = this.Object(value);
       RsExpression Some(RsExpression shared) => optional ? new RsCall(new RsPath("Some"), [shared]) { Type = value.Type } : shared;
       return held switch {
-        Held.Value => Some(expression),
+        Held.Value or Held.Plain => Some(expression),
         Held.Place => Some(this.Cloned(new RsReference(false, expression))),
         Held.Reference => Some(this.Cloned(expression)),
         Held.OptionalValue => optional ? expression : NullReference(expression),
@@ -270,6 +278,8 @@ public static partial class RustEmitter {
         return new RsPath("self");
       if (index == 0 && this._free.TryGetValue(callee, out var owner))
         return this.ObjectRef(value, this._traits.Contains(owner));
+      if (this.IsPlain(value.Type))
+        return this.PlainArgument(callee, index, value);
 
       var function = this._module.Functions.FirstOrDefault(function => function.Name == callee);
       if (function is null || index >= function.Parameters.Count)
@@ -363,6 +373,9 @@ public static partial class RustEmitter {
 
     /// <summary>A field of an object read: <c>o.f.get()</c> of a value, a copy of anything else.</summary>
     private RsExpression ObjectField(IrFieldLoad load) {
+      if (this.IsPlain(load.Target.Type))
+        return this.PlainField(load);
+
       var field = this.FieldCell(load.Target, load.Field);
       return IsCellField(load.Field)
         ? new RsMethodCall(field, "get", []) { Type = load.Type }
@@ -374,6 +387,11 @@ public static partial class RustEmitter {
     /// then <c>*o.f.borrow_mut() = v</c>, so that no borrow the value takes is still held.
     /// </summary>
     private void ObjectFieldStore(IrFieldStore store, List<RsStatement> into) {
+      if (this.IsPlain(store.Target.Type)) {
+        this.PlainFieldStore(store, into);
+        return;
+      }
+
       var field = this.FieldCell(store.Target, store.Field);
       if (IsCellField(store.Field)) {
         into.Add(new RsExpressionStatement(new RsMethodCall(field, "set", [this.Expression(store.Value)])));
@@ -394,7 +412,8 @@ public static partial class RustEmitter {
 
     /// <summary>An array a field of an object holds, borrowed from its <c>RefCell</c>: <c>o.f.borrow()</c>, <c>o.f.borrow_mut()</c>.</summary>
     private RsExpression FieldArray(IrFieldLoad load, bool mutable)
-      => new RsMethodCall(this.FieldCell(load.Target, load.Field), mutable ? "borrow_mut" : "borrow", []) { Type = load.Type };
+      => this.IsPlain(load.Target.Type) ? new RsField(this.Receiver(this.PlainObject(load.Target)), this.FieldName(load.Field)) { Type = load.Type }
+        : new RsMethodCall(this.FieldCell(load.Target, load.Field), mutable ? "borrow_mut" : "borrow", []) { Type = load.Type };
 
     /// <summary>Whether an array is the one a field of an object holds.</summary>
     private static bool IsFieldArray(IrExpr array) => array is IrFieldLoad { Target.Type.IsObject: true };
@@ -418,6 +437,12 @@ public static partial class RustEmitter {
     /// </summary>
     private IEnumerable<RsItem> Class(IrClassType type, IReadOnlyDictionary<string, RsFunction> written) {
       this._construct = $"the class '{type.Name}'";
+      if (this._ownership.Single.Contains(type)) {
+        foreach (var item in this.PlainClass(type, written))
+          yield return item;
+        yield break;
+      }
+
       var name = this._types[type];
 
       var fields = this.KeptFields(type).Select(field => new RsFieldDeclaration(this.FieldName(field), "", this.ClassFieldType(field))).ToList();
@@ -464,7 +489,8 @@ public static partial class RustEmitter {
     private RsFunction AsMember(RsFunction function, IrFunction source, Member member) {
       var parameters = function.Parameters.ToList();
       if (member.Kind == MemberKind.Instance)
-        parameters[0] = this._sharedSelf.Contains(source.Name) ? new RsParameter("self", "&Rc<Self>") : new RsParameter("&self", "");
+        parameters[0] = this._sharedSelf.Contains(source.Name) ? new RsParameter("self", "&Rc<Self>")
+          : new RsParameter(this._ownership.Single.Contains(member.Class) && this._ownership.MutatesParameter(source, 0) ? "&mut self" : "&self", "");
 
       var visible = member.Kind == MemberKind.Instance && member.Constructor is not null ? "" : "pub";
       return function with { Name = member.Name, Visibility = visible, Parameters = parameters };

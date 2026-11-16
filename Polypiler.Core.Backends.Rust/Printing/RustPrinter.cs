@@ -529,7 +529,8 @@ public static class RustPrinter {
             return $"{target}\n{inner}[{at}]";
         }
 
-        return target + "[" + Expression(index.Index, indent, column) + "]";
+        var opened = (target.Contains('\n') ? target.Length - target.LastIndexOf('\n') - 1 : column + target.Length) + 1;
+        return target + "[" + Expression(index.Index, indent, opened, trailing + 1) + "]";
       }
       case RsBinary binary: {
         var operands = new List<(string? Operator, RsExpression Operand)>();

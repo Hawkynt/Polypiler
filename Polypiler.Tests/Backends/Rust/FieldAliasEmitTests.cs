@@ -15,7 +15,13 @@ public sealed class FieldAliasEmitTests {
 
   private const string Holder = "public sealed class H { private readonly int[] _s = new int[4]; private int _k; ";
 
-  private static string Emitted(string members) => RustCrates.ModuleText(RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", Holder + members + " } public static class S { public static int F() => new H().G(); }")));
+  /// <summary>The holder shared: a second variable holds the object, so the class is an <c>Rc</c> of cells.</summary>
+  private const string Shared = " } public static class S { public static int F() { var h = new H(); var g = h; return g.G(); } }";
+
+  /// <summary>The holder single-owner (#1393): a plain struct whose array the variable borrows directly.</summary>
+  private const string Single = " } public static class S { public static int F() => new H().G(); }";
+
+  private static string Emitted(string members, string user = Shared) => RustCrates.ModuleText(RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", Holder + members + user)));
 
   private static string[] Problems(string members)
     => [.. RustCrates.Check(PrototypeFixture.Import("Snippet.cs", Holder + members + " } public static class S { public static int F() => new H().G(); }")).Select(problem => problem.Message)];
@@ -42,6 +48,20 @@ public sealed class FieldAliasEmitTests {
     var text = Emitted("public int G() { this._k = 2; var s = this._s; return s[0] + _k; }");
     Assert.That(text, Does.Contain("let s = self.s.borrow();"));
   }
+
+  [Test]
+  public void AliasOfAPlainStruct_BorrowsTheFieldItself() {
+    var written = Emitted("public int G() { var s = this._s; s[1] = 5; s[2] = s[1] + _k; Fill(s); return s.Length; } static void Fill(int[] a) => a[0] = 1;", Single);
+    Assert.That(written, Does.Contain("pub fn g(&mut self) -> i32 {\n        let s = &mut self.s;"));
+    Assert.That(written, Does.Contain("fill(&mut s[..]);"));
+    var read = Emitted("public int G() { var s = this._s; var sum = 0; foreach (var v in s) sum += v; return sum + _k; }", Single);
+    Assert.That(read, Does.Contain("pub fn g(&self) -> i32 {\n        let s = &self.s;"));
+  }
+
+  [Test]
+  public void AliasOfAPlainStruct_WhileItsObjectIsPassedOn_IsRefused()
+    => Assert.That(Problems("public int G() { var s = this._s; s[0] = 1; return Other(this) + s[0]; } static int Other(H h) => h._k;"),
+      Has.Some.Contain("'a variable that names a field's array where the function touches the field otherwise while it lives'"));
 
   [TestCase("public int G() { var s = this._s; s[0] = 1; return _s[0]; }")]
   [TestCase("public int G() { var s = this._s; s[0] = 1; return Read(); } int Read() => _s[0];")]
