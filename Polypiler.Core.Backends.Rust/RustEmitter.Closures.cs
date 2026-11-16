@@ -163,7 +163,9 @@ public static partial class RustEmitter {
         else if (capture.Type.IsObject)
           value = this.ObjectValue(place, this.MayBeNull(capture));
         else if (capture.Type.IsArray)
-          value = this.WritesArray(capture) ? this.Refuse("a closure that captures an array that is written") : this.Vector(place, false);
+          value = this.WritesArray(capture) ? this.Refuse("a closure that captures an array that is written")
+            : !this.StaysInCall(lambda) ? this.Refuse("a closure that captures an array and may outlive the call it is made for")
+            : this.Vector(place, false);
         else if (capture.Type.IsString)
           value = this.StringValue(place);
         else if (!IsValue(capture.Type))
@@ -196,6 +198,22 @@ public static partial class RustEmitter {
       this._uses.Add("std::rc::Rc");
       RsExpression shared = new RsCall(new RsPath("Rc::new"), [function]) { Type = type };
       return this.IsNullable(type) ? new RsCall(new RsPath("Some"), [shared]) { Type = type } : shared;
+    }
+
+    /// <summary>
+    /// Whether a lambda is only the argument of a call whose callee does nothing with it but call it: the
+    /// closure, which holds a copy of an array it captures, ends with the call, before anyone could
+    /// write the array the source's closure shares.
+    /// </summary>
+    private bool StaysInCall(IrLambda lambda) {
+      var call = IrTree.Nodes(this._function.Body).OfType<IrCall>().FirstOrDefault(candidate => candidate.Arguments.Any(argument => ReferenceEquals(argument, lambda)));
+      if (call is null || this._module.Functions.FirstOrDefault(function => function.Name == call.Function) is not { } callee)
+        return false;
+
+      var parameter = callee.Parameters[call.Arguments.ToList().FindIndex(argument => ReferenceEquals(argument, lambda))];
+      var uses = IrTree.Nodes(callee.Body).Count(node => node is IrLocalRef reference && reference.Local == parameter);
+      var called = IrTree.Nodes(callee.Body).Count(node => node is IrInvoke { Callee: IrLocalRef reference } && reference.Local == parameter);
+      return uses == called && !IrClosures.Captured(callee.Body).Contains(parameter);
     }
 
     /// <summary>Whether the function being written, or a closure of it, writes an array variable or passes it on to be written.</summary>
@@ -280,6 +298,8 @@ public static partial class RustEmitter {
     private RsExpression FunctionReference(IrFunctionRef reference) {
       if (!this._functions.TryGetValue(reference.Function, out var name))
         return this.Refuse($"a reference to the function '{reference.Function}'");
+      if (this._throwing.Contains(reference.Function))
+        return this.Refuse("a function that lets an exception out as a function value");
 
       if (this._members.TryGetValue(reference.Function, out var member)) {
         if (member.Kind != MemberKind.Static || this._hierarchy.Contains(member.Class))

@@ -179,9 +179,11 @@ a function capture:
   value (a number, a truth value, an enum, a struct of numbers) is shared so; another type assigned
   and captured is refused;
 - every other variable has one value from its declaration on, which the closure copies: a value by
-  `move`, a function value or an object by cloning its `Rc`, an array or a string nothing writes by a
-  copy of its own (an array that is written and captured is refused). A variable declared in a loop's
-  body is a new one each pass, as `let` in Rust is;
+  `move`, a function value or an object by cloning its `Rc`, a string by a copy, an array nothing
+  writes by a copy of its own - only where the closure is the argument of a call whose callee does
+  nothing with it but call it, so that no one can write the array while the copy lives (any other
+  captured array is refused). A variable declared in a loop's body is a new one each pass, as `let`
+  in Rust is;
 - a local function that captures nothing but such functions is a `fn` item at the start of the body.
 
 A closure is `'static`: it borrows nothing, so it may be stored and returned. The object of a method

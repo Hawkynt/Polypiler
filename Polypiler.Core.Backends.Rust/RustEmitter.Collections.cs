@@ -97,7 +97,8 @@ public static partial class RustEmitter {
     /// <summary>A collection where a variable or a result takes it: a new one, the result of a call, or a variable moved for good.</summary>
     private RsExpression CollectionValue(IrExpr value) => value switch {
       IrCollection or IrCall => this.Expression(value),
-      IrLocalRef { Local: var local } when !this._function.Parameters.Contains(local) => new RsPath(this._locals[local]) { Type = value.Type },
+      IrLocalRef { Local: var local } when !this._function.Parameters.Contains(local)
+        && IrTree.Nodes(this._function.Body).Count(node => node is IrLocalRef reference && reference.Local == local) == 1 => new RsPath(this._locals[local]) { Type = value.Type },
       _ => this.Refuse("a collection held by two variables")
     };
 

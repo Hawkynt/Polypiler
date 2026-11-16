@@ -120,6 +120,7 @@ public sealed class CollectionEmitTests {
   [TestCase("public static class S { public static int F() { var map = new Dictionary<double, int>(); return map.Count; } }", "'the collection map<f64, i32, slotreuse>'")]
   [TestCase("public static class S { public static int F() { var list = new List<int> { 1 }; foreach (var v in list) list.Add(v); return list.Count; } }", "'a collection changed in a loop over it'")]
   [TestCase("public static class S { public static int F(bool c) { var a = new List<int>(); var d = new List<int>(); var b = c ? a : d; b.Add(1); return a.Count; } }", "'a collection held by two variables'")]
+  [TestCase("public static class S { static int Size(List<int> l) => l.Count; public static int F() { var a = new List<int>(); List<int> b; b = a; b.Add(1); return Size(a) + b.Count; } }", "'a collection held by two variables'")]
   [TestCase("public static class S { static List<int> Make() => new List<int>(); static int Size(List<int> l) => l.Count; public static int F() => Size(Make()); }", "'a collection passed on that no variable holds'")]
   [TestCase("public static class S { static IEnumerable<int> Up() { yield return 1; } public static int F() { var s = 0; foreach (var v in Up()) s += v; return s; } }", "'a lazy sequence (yield), which needs a state machine the Rust backend does not write'")]
   public void CollectionOutsideTheForm_IsRefused(string source, string construct)

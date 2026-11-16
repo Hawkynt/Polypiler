@@ -130,7 +130,7 @@ public sealed class ClosureEmitTests {
 
   [Test]
   public void CapturedArrayOrStringNothingWrites_IsCopied() {
-    var text = Methods("public static int F(int[] a, string s) { Func<int, int> f = i => a[i] + s.Length; return f(0); }");
+    var text = Methods("static int Apply(Func<int, int> f) => f(0); public static int F(int[] a, string s) => Apply(i => a[i] + s.Length);");
     Assert.That(text, Does.Contain("let a = a.to_vec();"));
     Assert.That(text, Does.Contain("let s = s.to_vec();"));
   }
@@ -143,6 +143,8 @@ public sealed class ClosureEmitTests {
   }
 
   [TestCase("public static int F() { var a = new int[2]; Func<int> f = () => a[0]; a[0] = 1; return f(); }", "'a closure that captures an array that is written'")]
+  [TestCase("static Func<int> Make(int[] a) => () => a[0]; public static int F(int[] b) { var f = Make(b); return f(); }", "'a closure that captures an array and may outlive the call it is made for'")]
+  [TestCase("static int Keep(int[] a, Func<int, int> f) { Func<int, int> g = f; return g(a[0]); } public static int F(int[] b) => Keep(b, v => v + b[1]);", "'a closure that captures an array and may outlive the call it is made for'")]
   [TestCase("public static int F() { Func<int[], int> f = a => a.Length; return f(new int[3]); }", "'a function value that takes or gives i32[]'")]
   [TestCase("public static int F() { var t = \"\"; Func<int> f = () => t.Length; t = \"x\"; return f(); }", "'a captured variable of the type str that is assigned'")]
   public void FunctionValueOutsideTheForm_IsRefused(string methods, string construct)
