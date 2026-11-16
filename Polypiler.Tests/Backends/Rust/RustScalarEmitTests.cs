@@ -220,8 +220,16 @@ public sealed class RustScalarEmitTests {
   [TestCase("public static double F() => 3.141592653589793;", "clippy::approx_constant")]
   [TestCase("public static bool F(double a, double b) => !(a < b);", "clippy::neg_cmp_op_on_partial_ord")]
   [TestCase("public static int F(int a, int b, int c, int d, int e, int f, int g, int h) => a;", "clippy::too_many_arguments")]
+  [TestCase("public static int F() { int s = 0; for (int i = 3; i < 3; i++) s += i; return s; }", "clippy::reversed_empty_ranges")]
+  [TestCase("public static int F() { int s = 0; for (int i = 5; i <= 3; i++) s += i; return s; }", "clippy::reversed_empty_ranges")]
   public void LintTriggeringShape_AllowsItsLint(string method, string lint)
     => Assert.That(RustCrates.Text(RustCrates.Emit(RustCrates.Import(method), level: OptimizationLevel.None), "src/lib.rs"), Does.Contain(lint).And.Contain("#![allow("));
+
+  /// <summary>A range of constants that holds a value - one value inclusively, several exclusively - needs no lint.</summary>
+  [TestCase("public static int F() { int s = 0; for (int i = 3; i <= 3; i++) s += i; return s; }")]
+  [TestCase("public static int F() { int s = 0; for (int i = 3; i < 4; i++) s += i; return s; }")]
+  public void RangeOfConstantsThatHoldsAValue_AllowsNoLint(string method)
+    => Assert.That(RustCrates.Text(RustCrates.Emit(RustCrates.Import(method), level: OptimizationLevel.None), "src/lib.rs"), Does.Not.Contain("reversed_empty_ranges"));
 
   [Test]
   public void CleanCode_AllowsNoLint()

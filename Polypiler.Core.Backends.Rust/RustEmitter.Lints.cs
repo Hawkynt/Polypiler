@@ -31,8 +31,14 @@ public static partial class RustEmitter {
       "unused_assignments", "unused_comparisons", "clippy::absurd_extreme_comparisons", "clippy::almost_swapped", "clippy::approx_constant", "clippy::empty_loop",
       "clippy::eq_op", "clippy::erasing_op", "clippy::identity_op", "clippy::manual_clamp", "clippy::manual_range_contains", "clippy::min_max",
       "clippy::neg_cmp_op_on_partial_ord", "clippy::nonminimal_bool", "clippy::too_many_arguments", "clippy::type_complexity",
-      "clippy::manual_find", "clippy::unnecessary_literal_unwrap"
+      "clippy::manual_find", "clippy::unnecessary_literal_unwrap", "clippy::reversed_empty_ranges"
     ];
+
+    /// <summary>The value of the decimal integer literal of a range's bound without its type's suffix, <c>255u8</c> as 255.</summary>
+    private static Int128 Number(string text) {
+      var suffix = text.IndexOfAny(['i', 'u']);
+      return Int128.Parse(suffix > 0 ? text[..suffix] : text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+    }
 
     /// <summary>The well-known constants of <c>std::f64::consts</c> clippy compares literals with.</summary>
     private static readonly double[] _constants = [
@@ -61,6 +67,10 @@ public static partial class RustEmitter {
             break;
           case RsLoop { Body: { Statements.Count: 0, Tail: null } }:
             needed.Add("clippy::empty_loop");
+            break;
+          case RsRange { Start: RsLiteral start, End: RsLiteral end } range when range.Inclusive ? Number(start.Text) > Number(end.Text) : Number(start.Text) >= Number(end.Text):
+            // A loop over a range of constants the source wrote empty, 5..=3u8.
+            needed.Add("clippy::reversed_empty_ranges");
             break;
           case RsBlock block when IsManualFind(block):
             needed.Add("clippy::manual_find");
