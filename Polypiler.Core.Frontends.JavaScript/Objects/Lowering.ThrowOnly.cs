@@ -25,10 +25,15 @@ internal sealed partial class Lowering {
 
   /// <summary>Whether an expression has no value: a call whose every implementation only throws, or a conditional of two such.</summary>
   private bool HasNoValue(Node node) => node switch {
-    CallExpression => types.Of(node).Kind == JsKind.Unknown,
+    CallExpression call => types.Of(node).Kind == JsKind.Unknown && this.CallsCode(call),
     ConditionalExpression choice => this.HasNoValue(choice.Consequent) && this.HasNoValue(choice.Alternate),
     _ => false
   };
+
+  /// <summary>Whether a call reaches a method or a function of the file, which may be one that only throws; a call of anything else is refused for what it calls.</summary>
+  private bool CallsCode(CallExpression call) => call.Callee is MemberExpression { Computed: false } member && types.Of(member.Object).Class is { } owner
+    ? Binder.KeyOf(member) is { } key && owner.Member(MemberKind.Method, key) is not null
+    : types.Names.Callee(call.Callee) is not null;
 
   /// <summary>Whether evaluating an expression reaches a call of no value: it is one, or a call one of whose arguments does.</summary>
   private bool Diverges(Node node)
