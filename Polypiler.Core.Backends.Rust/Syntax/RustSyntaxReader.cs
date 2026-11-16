@@ -294,8 +294,13 @@ public static class RustSyntaxReader {
         this.Expect("{");
         var variants = new List<RsVariant>();
         while (!this.Accept("}")) {
+          // #[default], the variant a derived Default gives.
+          var isDefault = this.Peek() is { Kind: Kind.OuterAttribute, Text: "default" };
+          if (isDefault)
+            this.Next();
+
           var variant = this.Identifier();
-          variants.Add(new RsVariant(variant, this.Accept("=") ? this.Next().Text : null));
+          variants.Add(new RsVariant(variant, this.Accept("=") ? (this.Accept("-") ? "-" : "") + this.Next().Text : null) { IsDefault = isDefault });
           this.Accept(",");
         }
 

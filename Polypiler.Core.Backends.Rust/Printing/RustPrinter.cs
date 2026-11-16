@@ -102,7 +102,7 @@ public static class RustPrinter {
       case RsEnum enumeration:
         text.Append(pad).Append(Visibility(enumeration.Visibility)).Append("enum ").Append(enumeration.Name).Append(enumeration.Variants.Count == 0 ? " {}\n" : " {\n");
         foreach (var variant in enumeration.Variants)
-          text.Append(pad).Append(' ', Indent).Append(variant.Name).Append(variant.Discriminant is { } value ? " = " + value : "").Append(",\n");
+          text.Append(pad).Append(' ', Indent).Append(variant.IsDefault ? "#[default]\n" + pad + new string(' ', Indent) : "").Append(variant.Name).Append(variant.Discriminant is { } value ? " = " + value : "").Append(",\n");
         if (enumeration.Variants.Count > 0)
           text.Append(pad).Append("}\n");
         break;

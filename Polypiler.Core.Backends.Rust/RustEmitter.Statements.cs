@@ -198,7 +198,9 @@ public static partial class RustEmitter {
           return false;
         case IrSwitch choice:
           into.AddRange(this.Switch(choice));
-          return false;
+          // A match every arm of which leaves - over every variant of a closed enum - is never left at its end.
+          return into.Count > 0 && into[^1] is RsExpressionStatement { Expression: RsMatch match }
+            && match.Arms.All(arm => arm.Body is RsBlockExpression { Block: { Tail: null, Statements: [.., var last] } } && Diverges(last));
         case IrBreak:
           into.Add(new RsExpressionStatement(this.Break()));
           return true;
@@ -568,8 +570,9 @@ public static partial class RustEmitter {
     /// the <c>match</c>. One section without a default is an <c>if</c>, only a default its body alone.
     /// </summary>
     private IEnumerable<RsStatement> Switch(IrSwitch choice) {
-      // A switch on an enum is one on its integer, whose labels are the members' values.
-      var value = choice.Value.Type.IsEnum ? this.Inner(choice.Value) : this.Expression(choice.Value);
+      // A switch on an enum is one on its integer, whose labels are the members' values; on a closed enum one on its variants.
+      var closed = this.IsClosedEnum(choice.Value.Type) ? choice.Value.Type.EnumType : null;
+      var value = closed is not null ? this.Expression(choice.Value) : choice.Value.Type.IsEnum ? this.Inner(choice.Value) : this.Expression(choice.Value);
       var type = choice.Value.Type.IsEnum ? choice.Value.Type.EnumType!.Underlying : choice.Value.Type;
       var label = this.NewLabel("s");
       var breakable = new Breakable(BreakableKind.Switch, label);
@@ -585,11 +588,13 @@ public static partial class RustEmitter {
         if (section.IsDefault)
           fallback = body;
         else
-          arms.Add(new RsMatchArm(Patterns(section.Labels, type), new RsBlockExpression(body)));
+          arms.Add(new RsMatchArm(closed is not null ? this.VariantPatterns(closed, section.Labels) : Patterns(section.Labels, type), new RsBlockExpression(body)));
       }
 
       this._breakables.RemoveAt(this._breakables.Count - 1);
-      var exhaustive = type.Bits == 8 && choice.Sections.Where(section => !section.IsDefault).Sum(section => section.Labels.Count) == 256;
+      var labelled = choice.Sections.Where(section => !section.IsDefault).Sum(section => section.Labels.Count);
+      // A match over every variant of a closed enum has no _ arm; its default section is never reached.
+      var exhaustive = closed is not null ? labelled == closed.Members.Count : type.Bits == 8 && labelled == 256;
       if (!exhaustive)
         arms.Add(new RsMatchArm(["_"], new RsBlockExpression(fallback ?? RsBlock.Empty)));
 

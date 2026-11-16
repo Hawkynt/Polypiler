@@ -62,6 +62,7 @@ public static partial class RustEmitter {
       this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       this._arrayNulls = Polypiler.Core.Backends.Rust.Emit.ArrayNullness.Of(module);
       this.Ownership(module);
+      this.ClosedEnums(module);
       var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
       var items = new List<RsItem>();
       foreach (var constant in module.Constants)
@@ -82,6 +83,7 @@ public static partial class RustEmitter {
       foreach (var type in module.Types)
         items.AddRange(type switch {
           IrStructType structType => this.Struct(structType),
+          IrEnumType enumType when this._closedEnums.Contains(enumType) => this.ClosedEnumItems(enumType),
           IrEnumType enumType => this.EnumItems(enumType),
           IrClassType classType when !classType.IsLibrary && !this._hierarchy.Contains(classType) && !IrExceptionClass.IsException(classType) => this.Class(classType, members),
           _ => []

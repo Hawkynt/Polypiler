@@ -333,7 +333,12 @@ public sealed record RsUse(string Path) : RsItem {
 /// <summary>A variant of a field-less enum: <c>Name</c>, or <c>Name = 2</c> with its discriminant.</summary>
 /// <param name="Name">The name.</param>
 /// <param name="Discriminant">The discriminant as written, or <see langword="null"/>.</param>
-public sealed record RsVariant(string Name, string? Discriminant) : RsNode;
+public sealed record RsVariant(string Name, string? Discriminant) : RsNode {
+
+  /// <summary>Whether the variant is the one a derived <c>Default</c> gives, <c>#[default]</c>.</summary>
+  public bool IsDefault { get; init; }
+
+}
 
 /// <summary><c>pub enum Name { A = 1, B = 2 }</c>, an enum without fields.</summary>
 /// <param name="Name">The name.</param>

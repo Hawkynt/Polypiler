@@ -48,6 +48,9 @@ public static partial class RustEmitter {
     /// <summary>A constant of an enum: its member's constant where one has the value, the first in declaration order, else the value wrapped.</summary>
     private RsExpression EnumConstant(IrConst constant) {
       var type = constant.Type.EnumType!;
+      if (this._closedEnums.Contains(type))
+        return this.Variant(type, constant.Value);
+
       var name = this._types[type];
       var member = this.MemberNames(type).FirstOrDefault(pair => pair.Member.Value == constant.Value);
       return member.Rust is { } rust
@@ -60,8 +63,11 @@ public static partial class RustEmitter {
       if (value is IrConvert { Type.IsEnum: true } wrapped)
         return this.Expression(wrapped.Operand);
 
-      // A value the emitter has just wrapped, Color(x), holds x.
+      // A value the emitter has just wrapped, Color(x), holds x; a variant of a closed enum is cast, Op::Sub as u8.
       var written = this.Expression(value);
+      if (this.IsClosedEnum(value.Type))
+        return this.Cast(written, value.Type.EnumType!.Underlying);
+
       return written is RsCall { Callee: RsPath callee, Arguments: [var inner] } && callee.Name == this._types[value.Type.EnumType!]
         ? inner
         : new RsField(this.Operand(written, 15), "0") { Type = value.Type.EnumType!.Underlying };
