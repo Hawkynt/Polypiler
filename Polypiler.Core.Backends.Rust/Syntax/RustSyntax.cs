@@ -223,6 +223,9 @@ public sealed record RsFunction(string Name, string Visibility, IReadOnlyList<Rs
   /// <summary>The generic parameters as they are written after the name, <c>&lt;'a&gt;</c>, or empty.</summary>
   public string Generics { get; init; } = "";
 
+  /// <summary>The clauses of its <c>where</c>, <c>T: Ord + Default + Copy</c>, each without its comma; empty for none.</summary>
+  public IReadOnlyList<string> Where { get; init; } = [];
+
   /// <summary>Whether the function is a helper the backend put in, which the target passes may inline or remove.</summary>
   public bool IsHelper { get; init; }
 

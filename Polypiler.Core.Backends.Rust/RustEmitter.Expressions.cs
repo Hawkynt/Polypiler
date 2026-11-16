@@ -90,6 +90,7 @@ public static partial class RustEmitter {
 
     /// <summary>An IR expression.</summary>
     private RsExpression Expression(IrExpr expression) => expression switch {
+      IrConst constant when this._standIns.TryGetValue(constant.Type, out var parameter) => new RsCall(new RsPath(parameter + "::default"), []) { Type = constant.Type },
       IrConst constant when TypeName(constant.Type) is not null => Literal(constant),
       IrConst { Type.IsEnum: true } constant => this.EnumConstant(constant),
       IrIntrinsic operation when EnumOperations.IsEnum(operation.Op) => this.EnumOperation(operation),

@@ -363,7 +363,13 @@ public static partial class RustEmitter {
     var moduleName = ModuleName(module.Name, profile);
     var exports = new Dictionary<string, string>(StringComparer.Ordinal);
     var taken = new HashSet<string>(StringComparer.Ordinal);
+    var generalized = GeneralizedExports(module, profile.Edition);
     foreach (var function in module.Functions.Where(function => function.IsPublic)) {
+      if (generalized.TryGetValue(function.Name, out var path)) {
+        exports[function.Name] = $"{moduleName}::{path}";
+        continue;
+      }
+
       var name = RustNames.Snake(function.Name, profile.Edition);
       if (taken.Add(name))
         exports[function.Name] = $"{moduleName}::{name}";

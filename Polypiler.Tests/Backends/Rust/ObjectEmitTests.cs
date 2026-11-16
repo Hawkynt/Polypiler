@@ -107,12 +107,13 @@ public sealed class ObjectEmitTests {
   }
 
   [Test]
-  public void GenericMethod_IsWrittenPerInstantiation() {
-    var text = Emitted("public static class S { static T Max<T>(T a, T b) where T : System.IComparable<T> => a.CompareTo(b) >= 0 ? a : b; "
-      + "static bool Eq<T>(T a, T b) where T : System.IEquatable<T> => a.Equals(b); "
-      + "public static double F(double a, double b) => Max(a, b); public static int G(short a, short b) => Max(a, b); public static long H(long a, long b) => Max(a, b); "
-      + "public static bool E(double a, double b) => Eq(a, b); public static bool I(int a, int b) => Eq(a, b); }");
-    Assert.That(text, Does.Contain("fn max_f64(a: f64, b: f64) -> f64"));
+  public void GenericMethod_WhoseValueOfCompareToIsUsed_IsWrittenPerInstantiation() {
+    // The value of CompareTo, not only its sign: the difference of two shorts, -1, 0 or 1 of longs. GenericEmitTests has the definitions written generic.
+    var text = Emitted("public static class S { static int Cmp<T>(T a, T b) where T : System.IComparable<T> => a.CompareTo(b); "
+      + "static bool Eq<T>(T a, T b, int c) where T : System.IEquatable<T> => a.Equals(b) && Cmp(c, 0) == 0; "
+      + "public static int F(double a, double b) => Cmp(a, b); public static int G(short a, short b) => Cmp(a, b); public static int H(long a, long b) => Cmp(a, b); "
+      + "public static bool E(double a, double b) => Eq(a, b, 0); public static bool I(int a, int b) => Eq(a, b, 0); }");
+    Assert.That(text, Does.Contain("fn cmp_f64(a: f64, b: f64) -> i32"));
     Assert.That(text, Does.Contain("ply_compare_f64(a, b)"));
     Assert.That(text, Does.Contain("i32::from(a) - i32::from(b)").Or.Contain("i32::from(a).wrapping_sub(i32::from(b))"));
     Assert.That(text, Does.Contain("a.cmp(&b) as i32"));

@@ -114,7 +114,8 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | an interface, a class something derives from | a trait, its values `Rc<dyn Trait>`; see [Objects](#objects) |
 | a virtual or interface call | `Trait::method(&*o, ..)` of the trait of the method's slot |
 | `is T`, `as T`, `(T)` | `o.is_t()`, `Rc::clone(&o).into_t()`, `….into_t().expect("InvalidCast")` of the trait `PlyObject`; `ply_cast` keeps a null |
-| a generic method or class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
+| a generic method (#1394) | one Rust generic function, `pub fn max<T: Ord + Copy>(a: T, b: T) -> T`, where its template does nothing with a value of a parameter but hold, pass, store and load it in an array of it (`Copy`), make its default (`T::default()`, `Default`), compare it with `Equals` (`a == b`, `Eq`) and test the sign of `CompareTo` (`a >= b`, `Ord`); bounds inline for one parameter with at most two, else a `where` clause; a call names the type arguments where Rust cannot infer them, `def::<i32>()`. See [Generic methods](#generic-methods) |
+| an instantiation the generic function does not take, a generic class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
 | a global (static field) | `static NAME: AtomicI32 = AtomicI32::new(0);` read and written with `Ordering::Relaxed`, `++` as `fetch_add` - process-wide as .NET's static fields are |
 | a global that has no atomic form: an array, a string, a floating-point number | a static behind a `Mutex`: `static BUCKETS: Mutex<[u32; 4]> = Mutex::new([0; 4]);` (an array is the fixed array it always is), `static TEXT: Mutex<Vec<u16>> = Mutex::new(Vec::new());`, a first value made at run time in a `LazyLock`; accessed through `ply_with(&BUCKETS, \|buckets\| buckets[i])`, which holds the lock for that one access and takes a poisoned one over, every operand that may take a lock (a call, another such global) evaluated into a binding first; the length of an array is its constant. Not `thread_local!`, which would give each thread a global of its own |
 | a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it; `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32` |
@@ -135,6 +136,43 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | a list, a map or a set passed on | `&[T]` where the callee only reads it, `&mut Vec<T>` where it changes it (a fixed point over the calls); a new one is moved where a variable or a result takes it |
 | a loop whose first pass always returns | an `if` (clippy's `never_loop`) |
 | `c ? true : x`, `c ? false : x`, `c ? x : true`, `c ? x : false` of truth values | `c \|\| x`, `!c && x`, `!c \|\| x`, `c && x`, which evaluate the same way; `!(a && b)` as `!a \|\| !b` |
+
+## Generic methods
+
+The IR holds no type parameter: a generic method is one function per list of type arguments the
+module uses, and, from the C# frontend, a template - the body with the parameters standing as types
+of their own (`IrGenericTemplate`). The backend writes a template as one generic function where every
+operation on a value of a parameter has a Rust bound of the meaning .NET gives it, and lets that
+function take the place of every instantiation whose type arguments the bounds admit
+(`Emit/GenericDefinitions.cs`):
+
+| Operation on a value of `T` | Rust | Bound | Admitted type arguments |
+| --- | --- | --- | --- |
+| held, passed, returned, stored in or loaded from `T[]` | `a: T`, `&[T]`, `&mut [T]` | `Copy` | every scalar |
+| `default(T)`, `new T()` | `T::default()` | `Default` | every scalar |
+| `a.Equals(b)` | `a == b` | `Eq` | integers, `bool` |
+| `a.CompareTo(b)` against `0` | `a >= b`; `0 < a.CompareTo(b)` as `a > b` | `Ord` | integers, `bool` |
+
+`Ord` and `Eq` rather than `PartialOrd` and `PartialEq` keep a float out of the generic function, also
+for a caller of the crate: .NET orders a NaN below every number and lets `Equals` find a NaN, which
+`<` and `==` of `f64` do not. An instantiation stays a function of its own, written as before, where:
+
+- a type argument is not admitted: a floating-point number under `Ord`/`Eq` (`max_f64` beside `max`),
+  a class, a struct, a string;
+- the template does anything else with a value of a parameter: uses the value of `CompareTo` itself
+  (the difference of two narrow integers in .NET), compares it with another number than zero, calls
+  another generic method with it, captures it in a lambda, holds a string or a collection - and also
+  fixed-width arithmetic on `T`, which the C# frontend does not import (generic math);
+- an array that may be null is passed to it (`Option<&[i32]>`).
+
+The template is written through the ordinary emitter, instantiated with one integer type per
+parameter that no value of the body has (`u64`, `i64`, … the first free ones), so that the analyses of
+arrays, mutability and names run on it unchanged; the stand-in is spelled as the parameter, its
+constant - a default - as `T::default()`. A template whose body uses all eight integer types stays per
+instantiation. An instantiation is replaced only where it is the template instantiated with its own
+arguments, as the C# backend checks before it writes a definition back. Generic classes have no
+template in the IR and stay one struct per instantiation (`RingI64`); the Rust frontend records no
+template of the generics it monomorphises, so a Rust source round-trips per instantiation too.
 
 ## Objects
 

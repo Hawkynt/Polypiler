@@ -168,14 +168,16 @@ public static class RustPrinter {
     var parameters = string.Join(", ", function.Parameters.Select(Parameter));
     var empty = function.Body.Statements.Count == 0 && function.Body.Tail is null;
     var close = function.Body.IsDeclaration ? ";" : empty ? " {}" : " {";
-    var line = head + parameters + ")" + result + close;
-    if (line.Length <= MaxWidth || function.Parameters.Count == 0)
-      text.Append(line);
+    // rustfmt's where clause: the keyword on a line of its own, a clause on each line after it, the body's brace on the next.
+    var clauses = function.Where.Count == 0 ? close : $"\n{pad}where\n{string.Concat(function.Where.Select(clause => $"{pad}{new string(' ', Indent)}{clause},\n"))}{pad}{(empty ? $"{{\n{pad}}}" : close.TrimStart())}";
+    var line = head + parameters + ")" + result;
+    if (line.Length + (function.Where.Count == 0 ? close.Length : 0) <= MaxWidth || function.Parameters.Count == 0)
+      text.Append(line).Append(clauses);
     else {
       text.Append(head).Append('\n');
       foreach (var parameter in function.Parameters)
         text.Append(pad).Append(' ', Indent).Append(Parameter(parameter)).Append(",\n");
-      text.Append(pad).Append(')').Append(result).Append(close);
+      text.Append(pad).Append(')').Append(result).Append(clauses);
     }
 
     if (empty) {
