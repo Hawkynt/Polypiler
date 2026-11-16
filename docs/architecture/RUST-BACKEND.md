@@ -135,6 +135,14 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | a list, a map or a set passed on | `&[T]` where the callee only reads it, `&mut Vec<T>` where it changes it (a fixed point over the calls); a new one is moved where a variable or a result takes it |
 | a loop whose first pass always returns | an `if` (clippy's `never_loop`) |
 | `c ? true : x`, `c ? false : x`, `c ? x : true`, `c ? x : false` of truth values | `c \|\| x`, `!c && x`, `!c \|\| x`, `c && x`, which evaluate the same way; `!(a && b)` as `!a \|\| !b` |
+| the arbitrary-precision integer `bigint` (#1390) | `PlyBigInt`, a struct of the crate (see [Arbitrary-precision integers](#arbitrary-precision-integers)); a parameter or a result by value, a variable whose value a place takes `x.clone()`, a returned one moved |
+| a `bigint` constant | `ply_big(5)`, an `i128` literal, up to 2^127 - 1 either side; beyond, its digits `ply_big_parse("…")` |
+| `Add`, `Subtract`, `Multiply`, `Divide`, `Remainder`, `And`, `Or`, `Xor` of `bigint` | `ply_big_add(&a, &b)`, `ply_big_sub`, `ply_big_mul`, `ply_big_div`, `ply_big_rem` (truncating, `panic!("DivideByZero")` on 0), `ply_big_and`, `ply_big_or`, `ply_big_xor` (on the infinite two's complement); an operand that is no variable borrowed in place, `&ply_big_add(&a, &b)` |
+| `Negate`, `BitNot` of `bigint` | `ply_big_neg(&a)`, `ply_big_not(&a)` (`-a - 1`) |
+| `ShiftLeft`, `ShiftRight` of `bigint` by an `i32` | `ply_big_shift(&a, i64::from(n))`, `ply_big_shift(&a, -i64::from(n))`, a constant count its literal: never masked, a right shift rounding down, a negative count shifting the other way |
+| comparisons of `bigint` | `a < b`, `a == b`: the derived `PartialEq` and the `Ord` of the struct, on the variables in place |
+| a conversion to `bigint` | `ply_big(i128::from(x))` of an integer, a constant its literal; `ply_big_of_f64(x)` of `f64` (`f64::from(x)` of `f32`), truncating, `IntegerOverflow` on a NaN or an infinity |
+| a conversion of `bigint` to a fixed width, to `f64` | wrapping `ply_big_low(&a) as i32` (the low 64 bits of the two's complement), trapping `ply_big_fit(&a, -2147483648, 2147483647) as i32`; `ply_big_to_f64(&a)`, the nearest number, an infinity beyond the largest |
 
 ## Objects
 
@@ -189,6 +197,38 @@ a function capture:
 A closure is `'static`: it borrows nothing, so it may be stored and returned. The object of a method
 (`self`), which a closure would borrow, is refused as a capture.
 
+## Arbitrary-precision integers
+
+The IR's `bigint` (`IrBigInts`: Python's `int` where no fixed width is proven) has no type in Rust's
+standard library. The representation follows rung 1 of the code-integration ladder of
+[AGENTS.md](../../AGENTS.md#sourcing-an-implementation), **convert**: `PlyBigInt`, a sign and the
+magnitude's 32-bit digits, least significant first, in safe Rust, its algorithms converted from
+[num-bigint](https://github.com/rust-num/num-bigint) 0.5.1 (MIT OR Apache-2.0, used under MIT;
+`Helpers/THIRD-PARTY-NOTICE.num-bigint.txt`): the addition and subtraction with carry and borrow, the
+schoolbook multiplication, Knuth's algorithm D for the division, the shifts, the two's complement of
+the bitwise operators digit by digit, the decimal digits of a constant. `Helpers/BigInts.cs` holds each
+function as Rust source, read into the syntax tree when a crate calls it, with the functions it calls -
+a crate carries only those - and `src/lib.rs` names num-bigint, its authors and its licence in its header.
+
+num-bigint is not a dependency of the crate, nor vendored as a crate:
+
+- the runner and CI build offline (`CARGO_NET_OFFLINE`, `cargo --offline`) with no registry cache, and a
+  generated crate has no dependencies, so that it builds wherever its toolchain is;
+- num-bigint 0.5 needs Rust 1.60 and its dependencies more; `rust2018` promises Rust 1.31 and `rust2021`
+  1.56. The converted helpers name nothing of the standard library newer than 1.31 (`i128`, `to_bits`,
+  `trim_start_matches`, `then_with`), which `RustBigIntTests` checks with clippy's `incompatible_msrv` at
+  `msrv = "1.31.0"`, so no profile needs a capability row for them;
+- the IR needs a fraction of the crate: no radix conversion but decimal digits, no Karatsuba or
+  Burnikel-Ziegler, no `num-traits`. The conversion reads as Rust of the crate's own and passes
+  `cargo fmt --check` and clippy with `-D warnings`.
+
+Each operation is a function that borrows its operands and gives a new value, so a variable is never
+moved by an operation; a value a place takes - an argument, a binding, an assignment - is the
+variable's clone, a returned variable is moved. A comparison is the operator of the struct's order. The
+traps are the IR's: a division or remainder by zero panics with `DivideByZero`, a trapping narrowing and
+a NaN or an infinity made an integer with `IntegerOverflow`, in every build mode, since no helper uses
+an operator whose meaning depends on `overflow-checks`.
+
 ## Exceptions
 
 A trap - an overflow, a division by zero, an index outside an array - is a panic, as it is wherever
@@ -229,7 +269,9 @@ a global of another type, a record with a floating-point field,
 a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
 array in one written variable), a struct with a field that is no value. One array passed to a call
 twice where it is written and the callee swaps its parameters is `PLY1566`. Two exported functions
-whose Rust names are the same are `PLY1574`; an exception region outside the form of
+whose Rust names are the same are `PLY1574`; a `bigint` anywhere but a parameter, a result, a variable or
+an operand - an element of a list, a map or a set, a field, a global, a variable a closure captures - is
+refused by that place's own rule (`a list of bigint`, `a closure that captures a variable of the type bigint`); an exception region outside the form of
 [Exceptions](#exceptions) `PLY1560`, naming why.
 
 ## Lints
@@ -255,6 +297,14 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
 - `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`, `ExceptionEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
+- `BigIntEmitTests`: the form of every operation and conversion of `bigint`, the boundaries of a
+  constant's `i128` literal, the helpers a crate carries and their origin, the refusals.
+- `RustBigIntTests` (layer `rust`): every operation and conversion of `BigIntCases` - zero, the signs,
+  2^63 and 2^64 on both sides, 2^1100 + 1, every shift count from -64 to 200 - against .NET's
+  `BigInteger`, every public function of the Python fixtures the backend writes against CPython's
+  recording, Python's `2**100 + 1`, each with overflow checks on and off through a driver that builds a
+  `PlyBigInt` from its fields; the crate formatted and clippy-clean in `rust2018` and `rust2024`, and at
+  `msrv = "1.31.0"`.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
