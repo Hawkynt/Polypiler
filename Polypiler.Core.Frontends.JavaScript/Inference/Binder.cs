@@ -755,7 +755,7 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
       case Identifier { Name: var name } identifier when !model.Bindings.ContainsKey(identifier):
         return this.Redirects.GetValueOrDefault(identifier) ?? candidates.Find(candidate => !candidate.IsProperty && candidate.Name == name);
       case MemberExpression { Computed: false, Property: Identifier { Name: var property } } member when Path(member.Object) is { } path && !model.Bindings.ContainsKey(path.Root):
-        return candidates.Find(candidate => candidate.IsProperty && candidate.Owner == path.Text && candidate.Name == property);
+        return this.Redirects.GetValueOrDefault(member) ?? candidates.Find(candidate => candidate.IsProperty && candidate.Owner == path.Text && candidate.Name == property);
       default:
         return null;
     }
