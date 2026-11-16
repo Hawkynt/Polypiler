@@ -299,7 +299,8 @@ internal sealed partial class Lowering {
 
   /// <summary>Refuses every virtual or interface call on the object a constructor is making, which the module would reach (see <see cref="IrConstruction"/>).</summary>
   private void Constructed(IrModule module) {
-    foreach (var (_, call) in IrConstruction.VirtualCalls(module)) {
+    // A field initializer of C# runs before the base constructor: no call an override implements is the same in its order (#1402).
+    foreach (var (_, call) in IrConstruction.VirtualCalls(module, strict: true)) {
       var (file, node) = this._sites[call];
       path = file;
       this.Report(new UnsupportedException(node, "a virtual call on 'this' during construction"));

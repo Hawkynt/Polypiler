@@ -101,13 +101,14 @@ holds an object.
 | a variable reached by objects of several classes with a common base class | that base class | supported |
 | `get k()` / `set k(v)` of a derived class over the accessors of `k` of its base class (#1368) | getter and setter methods that override, a `virtual` / `override` property | supported |
 | `this.k = v` where `k` is a setter of the class or of a base class and no field (#1368) | a call of the setter, no field | supported |
+| `get k()` and `set k(v)` of a derived class over a field `k` its base class assigns (`this.k = …`) (#1402) | the field a private one of the base class (`k$`) behind a virtual property `k` that the accessors override; every read and store of `k`, the base constructor's among them, a virtual call | supported |
 | `class D extends B { … }` without a constructor (#1369) | a constructor of the parameters of the nearest one up the lineage, calling it with them | supported |
 | `const C = Object.freeze({ K: { name: '…', level: 1 }, … })` of members of one shape of strings, numbers and truth values (#1371) | a class `C` of read-only fields, `C.K` a new object of its values | supported |
 | `Object.keys(o)` of an object of a class or a record, `Object.keys(o).forEach(key => …)`, `for (const key of Object.keys(o))` with `o[key]` and `r[key] = v` (#1373) | the Array of its keys; the body once per key, `o[key]` the field | supported |
 | a local, a `return`, an assignment to a variable or an argument that takes a call of a method whose every implementation only throws, or a conditional of two such calls (#1389) | the call as a statement, then a throw of `InvalidOperationException` that is never reached; the rest of the block is dead | supported |
 | the value of such a call where the method could return: an operand, an element, a branch of a conditional whose other branch has a value | - | `PLY1102`: "the value of …, a call that only throws" |
 | a call of an overridden method on `this` reachable from a constructor, which a class derived from the one constructed implements | - | `PLY1102`: "a call of an overridden method on 'this' during construction" |
-| a getter or a setter alone over a pair of its base class, an accessor over a field or a method, members of a frozen object of two shapes, a comparison of them by identity, a write into one, `r[key] = v` of a key `r` lacks, a `return`, `break` or `continue` in a loop over `Object.keys` | - | `PLY1102` naming it |
+| a getter or a setter alone over a pair of its base class or over a field of it, an accessor over a field its base class declares in the class body or over a method, `Object.keys` of an object whose class has a field accessors override, members of a frozen object of two shapes, a comparison of them by identity, a write into one, `r[key] = v` of a key `r` lacks, a `return`, `break` or `continue` in a loop over `Object.keys` | - | `PLY1102` naming it |
 | `extends` of anything but a class of the file (`Array`, `Error`, a call), `Object.setPrototypeOf`, a hierarchy that loops, a member of a base class declared again in another kind, an override with another number of parameters, a derived class without a constructor whose base constructor takes a rest parameter, a derived constructor that does not begin with the base call | - | `PLY1102` naming it |
 | a computed member name, a static block, prototype mutation, a property added outside the constructor (`__proto__` among them), `delete`, a method taken from its object, `call`/`apply`/`bind` of a method, `this` outside a method, the class used as a value, a field with a value in a class without a constructor | - | `PLY1102` naming it |
 | a field or a variable that values of two kinds reach, objects of two unrelated classes among them | - | `PLY1105` |
@@ -218,7 +219,12 @@ effect (`IrType.IsAssignableTo`). The semantics are stated once, at `IrMethodCal
   the two languages differ: with .NET 10 and node 22, `Base() { Init(); }` with a `Derived.Init` that
   reads a field initialized to 42 gives 42 in C# and `undefined` in JavaScript (and a class field
   `seen = -1` overwrites what `Init` wrote). No emitted form reproduces the other order, so the
-  verifier refuses such a call and both frontends report it at the call.
+  verifier refuses such a call and both frontends report it at the call. A call whose overrides
+  below cannot tell the orders apart is admitted (#1402): they read no field of a class below, and
+  every such field they write, each constructor of its class writes again right after the call of
+  the base constructor, before anything else reaches the object - the setter of a derived class that
+  the store of the base constructor runs, as JavaScript runs it, whose copy the derived constructor
+  replaces. A C# source, whose field initializers run before the base constructor, keeps the strict rule.
 - **Type tests.** `IrTypeTest` is false for `null`; `IrCast` lets `null` and objects of the type pass
   and traps with `IrTrap.InvalidCast` before anything later is evaluated; `IrAsCast` yields `null`
   instead.

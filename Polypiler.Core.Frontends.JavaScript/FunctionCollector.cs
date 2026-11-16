@@ -52,6 +52,9 @@ internal sealed class Candidate(string name, Node anchor, IFunction function) {
   /// <summary>Whether a method of a class derived from this one's replaces it.</summary>
   public bool IsOverridden { get; set; }
 
+  /// <summary>The field of a base class a getter or a setter replaces (#1402), or <see langword="null"/>.</summary>
+  public ClassField? OverridesField { get; set; }
+
   /// <summary>The key of a member as the source spells it, with <c>#</c> when it is private.</summary>
   public string Key { get; init; } = "";
 

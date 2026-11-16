@@ -40,9 +40,13 @@ internal sealed record KeyLoop(Identifier Key, Expression Object, Node Body) {
   /// <summary>Whether the body leaves the loop or the function - a <c>return</c> of the callback, a <c>break</c> or a <c>continue</c> of its own - which a body written out once per key cannot.</summary>
   public bool Jumps => Lowering.Contains(this.Body, node => node is ReturnStatement or BreakStatement or ContinueStatement or YieldExpression or AwaitExpression);
 
-  /// <summary>The keys of an object of a type, in the order <c>Object.keys</c> gives them; <see langword="null"/> for a type of no known shape.</summary>
+  /// <summary>
+  /// The keys of an object of a type, in the order <c>Object.keys</c> gives them; <see langword="null"/>
+  /// for a type of no known shape, and for a class with a field derived classes declare accessors over,
+  /// which is an own key of an object of its class only (#1402).
+  /// </summary>
   public static IReadOnlyList<string>? KeysOf(JsType type) => type switch {
-    { Kind: JsKind.Object, IsAbsent: false, Class: { } owner } => [.. owner.Lineage.Reverse().SelectMany(ancestor => ancestor.Fields).Where(field => !field.IsPrivate).Select(field => field.Key)],
+    { Kind: JsKind.Object, IsAbsent: false, Class: { } owner } when !owner.Lineage.SelectMany(ancestor => ancestor.Fields).Any(field => field.IsVirtual) => [.. owner.Lineage.Reverse().SelectMany(ancestor => ancestor.Fields).Where(field => !field.IsPrivate).Select(field => field.Key)],
     { Kind: JsKind.Record, IsAbsent: false, Shape: { } shape } => [.. shape.Keys],
     _ => null
   };
