@@ -62,12 +62,20 @@ internal static class Classes {
           diagnostics.Add(Unsupported(member.Anchor, $"the accessor {member.Key} of the type {(type is null ? "nothing" : JsType.Spell(type))} over a field of the type {JsType.Spell(field.Ir.Type)}"));
       }
 
-      owner.Creator = new IrConstructor(owner.Constructor?.Name ?? $"{owner.Name}.ctor");
+      // The class of a record runs no constructor of its lineage, as a literal runs none (#1388).
+      owner.Creator = new IrConstructor(owner.Constructor?.Name ?? $"{owner.Name}.ctor") { SkipsBase = owner.RecordKeys is not null };
     }
   }
 
   /// <summary>The accessor of the virtual property of a field that a getter or a setter of a derived class overrides.</summary>
   private static IrMethod Accessor(ClassField field, MemberKind kind) => kind == MemberKind.Getter ? field.Getter! : field.Setter!;
+
+  /// <summary>
+  /// The fields the constructor of the class of a record stores (#1388): the field of each key of the
+  /// record, in its order, then every field of the lineage that is no private one and that it lacks.
+  /// </summary>
+  public static List<ClassField> RecordFields(ClassModel owner)
+    => [.. owner.RecordKeys!.Select(key => owner.Field(key)!), .. owner.Base!.Lineage.Reverse().SelectMany(type => type.Fields).Where(field => !field.IsPrivate && !owner.RecordKeys!.Contains(field.Key))];
 
   /// <summary>
   /// Gives every class its members once they are lowered: the constructor - one that does nothing for
@@ -82,6 +90,13 @@ internal static class Classes {
         var receiver = new IrLocal("this", IrType.Object(owner.Ir));
         List<IrLocal> parameters = owner.Initial is { } initial ? [.. inference.ModelOf(initial).Parameters.Select(parameter => new IrLocal(parameter.Name, parameter.Parameter!.Type))] : [];
         List<IrStmt> inherited = owner.Base is { } @base ? [new IrExprStmt(new IrCall(@base.Creator!.Function, IrType.Void, [new IrLocalRef(receiver), .. parameters.Select(parameter => new IrLocalRef(parameter))]))] : [];
+        // The class of a record takes the value of each key in the record's order, then of each field it lacks, and stores them (#1388).
+        if (owner.RecordKeys is not null) {
+          var stored = RecordFields(owner);
+          parameters = [.. stored.Select(field => new IrLocal(field.Ir!.Name, field.Ir.Type))];
+          inherited = [.. stored.Select((field, index) => (IrStmt)new IrFieldStore(new IrLocalRef(receiver), field.Ir!, new IrLocalRef(parameters[index])))];
+        }
+
         // The class of the members of a frozen object takes the value of every field (#1371), as does that of a typedef (#1409).
         if (owner.IsValue) {
           parameters = [.. owner.Fields.Select(field => new IrLocal(field.Ir!.Name, field.Ir.Type))];

@@ -89,7 +89,10 @@ caveat); `charAt` (`""` outside); `+`, `+=`, `concat`; `===`, `!==`, `==`, `!=` 
 end, the length is cut to `[0, what is left]`; `indexOf` and `lastIndexOf` with a clamped position; `includes`, `startsWith`,
 `endsWith`; `replace` and `replaceAll` with a constant replacement, whose `$$` and `$&` are
 expanded; `split` with a limit through `ToUint32`; `join` of an array of strings; `trim`,
-`trimStart`, `trimEnd` (the `Ecma` set); `padStart`, `padEnd`; `repeat`; `String.fromCharCode`;
+`trimStart`, `trimEnd` (the `Ecma` set); `padStart`, `padEnd`; `repeat`; `String.fromCharCode`, and of
+the elements of an Array, a list or a typed array `String.fromCharCode.apply(null, a)` (or
+`undefined` as the receiver) and `String.fromCharCode(...a)` (#1400): each element through
+`ToUint16` into a `u16[]` by a function of the module per type of the codes, then `StrFromCodeUnits`;
 `codePointAt` (which traps outside); `for (const ch of s)` over the code points; a `switch` on a
 string, the first of two equal labels winning. An operand that the translation reads twice has to
 be free of effects.

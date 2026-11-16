@@ -59,6 +59,8 @@ public sealed class JavaScriptStringImportTests {
     ("/pattern/flags.test(s)", "/** @param {string} s */ export function f(s) { return /^[0-9A-Fa-f]*$/.test(s) + \"|\" + /b+a?/i.test(s); }",
       [(new object[] { "0aF9" }, "true|false"), (new object[] { "" }, "true|false"), (new object[] { "ab\n" }, "false|true"), (new object[] { "xBBy" }, "false|true")]),
     ("s.codePointAt(i)", "/** @param {string} s @param {int32} i */ export function f(s, i) { return s.codePointAt(i); }", [(new object[] { "a\U0001F600", 1 }, "128512"), (new object[] { "a\U0001F600", 2 }, "56832")]),
+    ("String.fromCharCode.apply(null, a), String.fromCharCode(...a)", "/** @param {number[]} a */ export function f(a) { return String.fromCharCode.apply(null, a) + String.fromCharCode(...a); }",
+      [(new object[] { new double[] { 72, 105, 65601 } }, "HiAHiA"), (new object[] { new double[0] }, "")]),
     ("for (const ch of s)", "export function f(s) { let n = 0; for (const ch of s) { if (ch === \"b\") continue; n++; } return n; }", [(new object[] { "a\U0001F600b" }, "2"), (new object[] { "" }, "0")]),
     ("switch on a string", "/** @param {string} s */ export function f(s) { switch (s) { case \"a\": case \"b\": return 1; case \"c\": return 2; case \"a\": return 9; default: return 0; } }", [(new object[] { "a" }, "1"), (new object[] { "b" }, "1"), (new object[] { "c" }, "2"), (new object[] { "z" }, "0")])
   ];

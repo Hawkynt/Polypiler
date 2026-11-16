@@ -131,6 +131,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// <param name="isPublic">Whether a function is visible outside the module.</param>
   /// <returns>The functions, the called ones after their callers.</returns>
   public List<FunctionModel> Solve(IEnumerable<Candidate> roots, System.Func<Candidate, bool> isPublic) {
+    this.Shapes.Classes.IsTaken = this.Classes.ContainsKey;
     // A field JSDoc states the type of holds values of it, whatever else reaches it: null alone is then that reference absent.
     // A stated 64-bit integer is left to the values that reach it, and a BigInt only where none does (#1401).
     foreach (var field in this.Classes.Values.Distinct().SelectMany(owner => owner.Fields).Where(field => field.Stated is not null))
@@ -176,6 +177,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         }
 
         changed |= this.Unify();
+        changed |= this.RecordFields();
       }
     } while (this.Promote([.. this.Flowing(models)]));
 
@@ -317,6 +319,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         return this.Invoke((CallExpression)flow.Node);
       case FlowKind.Yield:
         return this.Yielded(model, flow);
+      case FlowKind.KeyedStore:
+        return this.KeyedStore(flow);
       default:
         var called = this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index);
         return (called is { Declared: null } parameter && this.Pass(parameter, flow.Missing ? JsType.UndefinedValue : this.Of(flow.Node), flow.Node))
