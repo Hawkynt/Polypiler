@@ -33,14 +33,14 @@ Feature: Rust backend: single-owner classes as plain structs
     Then the class C is <form>
 
     Examples:
-      | types                                       | function                                                                                                               | form   |
-      |                                             | public static int F(int v) { var c = new C(); c.Set(v); return c.Get(); }                                              | plain  |
-      |                                             | public static int F(int v) { var c = new C(); Write(c, v); return c.Get(); } static void Write(C c, int v) => c.Set(v); | plain  |
-      |                                             | public static bool F() { var a = new C(); var b = new C(); return ReferenceEquals(a, b); }                             | shared |
-      |                                             | public static int F(bool b) { C c = null; if (b) c = new C(); return c == null ? 0 : c.Get(); }                        | shared |
-      | public sealed class H { public C Kept; }    | public static int F() { var h = new H(); h.Kept = new C(); return h.Kept.Get(); }                                      | shared |
-      |                                             | public static int F() => Getter()(); static System.Func<int> Getter() { var c = new C(); return () => c.Get(); }       | shared |
-      |                                             | public static int F() => Same(new C()).Get(); static C Same(C c) => c;                                                 | shared |
+      | types                                    | function                                                                                                                                          | form   |
+      |                                          | public static int F(int v) { var c = new C(); c.Set(v); return c.Get(); }                                                                         | plain  |
+      |                                          | public static int F(int v) { var c = new C(); Write(c, v); return c.Get(); } static void Write(C c, int v) => c.Set(v);                           | plain  |
+      |                                          | public static bool F() { var a = new C(); var b = new C(); return ReferenceEquals(a, b); }                                                        | shared |
+      |                                          | public static int F(bool b) { C c = null; if (b) c = new C(); return c == null ? 0 : c.Get(); }                                                   | shared |
+      | public sealed class H { public C Kept; } | public static int F() { var h = new H(); h.Kept = new C(); return h.Kept.Get(); }                                                                 | shared |
+      |                                          | public static int F() => Getter()(); static System.Func<int> Getter() { var c = new C(); return () => Read(c); } static int Read(C c) => c.Get(); | shared |
+      |                                          | public static int F() => Same(new C()).Get(); static C Same(C c) => c;                                                                            | shared |
 
   Scenario: The Rust fixtures with arrays as struct fields make the round trip
     Given the Rust fixtures types, edges and reassign
