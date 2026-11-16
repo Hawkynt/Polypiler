@@ -11,9 +11,12 @@ Related: [repository README](../../README.md) · [classes](classes.md) · [value
 ## The model
 
 - **Type.** `IrType.Optional(T)`, written `T?`, holds a value of `T` or none. `T` is a truth value,
-  a number or a struct; a string, an array or an object is never optional - an array or an object is
-  `null` instead (`IrNull`, `IrIsNull`), and a string is never absent. An optional value is no field
-  of a struct or a class and no element of an array or a [collection](collections.md) yet.
+  a number or a struct; a string, an array or an object is never optional - it is `null` instead
+  (`IrNull`, `IrIsNull`). A string is such a reference (#1370): every operation of strings but
+  equality traps with `IrTrap.NullReference` on `null`, and equality is null-safe, as `string.Equals`
+  and `===` are. An optional value may be a field of a class that is no record (#1386); it is no field
+  of a struct or a record and no element of an array or a [collection](collections.md) yet, and a new
+  object holds none in it before its constructor runs.
 - **Operations.** `IrNone(T?)`, `IrSome(v)`, `IrIsNone(x)`, `IrUnwrap(x)` - which traps with
   `IrTrap.MissingValue` when `x` holds none - and `IrCoalesce(x, fallback)`, which evaluates `x` once
   and the fallback only when `x` holds none; the fallback is of `T` (the result is a `T`) or of `T?`.
@@ -32,8 +35,8 @@ Related: [repository README](../../README.md) · [classes](classes.md) · [value
 | `IrIsNone(x)` | whether `x` holds none | `x` is optional |
 | `IrUnwrap(x)` | the value, a `MissingValue` trap for none | `x` is optional |
 | `IrCoalesce(x, f)` | `x`'s value, or `f` for none | `x` is optional, `f` of its type or of the type it holds |
-| `IrIsNull(r)` | whether a reference is `null` | `r` is an object or an array |
-| `IrNull(T)` | `null` | `T` is a class of the module or an array |
+| `IrIsNull(r)` | whether a reference is `null` | `r` is an object, an array, a string or a function value |
+| `IrNull(T)` | `null` | `T` is a class of the module, an array or a string |
 | `IrBind(l, v)` | `l = v` as a value | `l` in scope, not the receiver, `v` of its type |
 
 ## C# frontend
@@ -66,7 +69,10 @@ says; the test for none follows. `double? n = NaN; n == n` is `false`, as .NET c
 | `+`, `-`, `<`, a condition, an index … of a value that may be absent | ToNumber written out: `null` is 0, `undefined` a NaN, through `IrCoalesce` | supported |
 | a place both absent values reach that `===` tells apart | - | `PLY1105` |
 | arithmetic on a value both may be | - | `PLY1102` |
-| `obj?.[key]`, `f?.()`, a string or an object literal that may be absent | - | `PLY1102` naming it |
+| a string that `null` reaches (#1370): a field set to `null` and later to a string | `str` that holds `null`; `!s` tests `null` and `""`, `s + 'x'` writes `null`, `s \|\| 'x'` is a string | supported |
+| `typeof x` of a value of a known kind (#1372) | the constant; of a value an absent value reaches, a test of absence | supported |
+| a string that `undefined` alone reaches (`pop`, `get`, a missing argument), `obj?.[key]`, `f?.()`, an object literal that may be absent | - | `PLY1102` naming it |
+| a string, or `typeof` of a value, that both absent values reach | - | `PLY1105` |
 
 A parameter the function compares with `null` or `undefined` is one a caller may pass them as. A
 test proves a variable present in its branch, its `else`, and behind `&&` and `||`, unless the

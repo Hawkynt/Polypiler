@@ -47,3 +47,10 @@ object literal held by a `const` - a namespace such as `OpCodes` - that reached 
 (the whole namespace where it is used as a value). The rest of the required files is left out, so a
 construct the subset does not take in an unused helper never refuses the entry. Names are matched
 without regard to scopes, which only ever keeps more.
+
+A function a required file declares - of its own or of an object it exports - is a helper of the
+translation (#1387): in the original it is local to its factory or its wrapper, and nothing but the
+graph calls it, so its parameters take what the calls of the graph pass, as those of a function the
+file does not export do. What the entry file declares stays as visible as a file imported alone; the
+classes of every file keep their contracts, since their methods are called through the objects the
+entry exports.

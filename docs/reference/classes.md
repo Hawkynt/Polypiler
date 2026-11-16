@@ -99,8 +99,14 @@ holds an object.
 | `B.prototype = Object.create(A.prototype)`, `B.prototype.constructor = B`, `A.call(this, …)` first, `A.prototype.m.call(this, …)` | hierarchy, `Base` calls | supported |
 | `x instanceof C` with a class of the file | `IrTypeTest` | supported |
 | a variable reached by objects of several classes with a common base class | that base class | supported |
-| a call of an overridden method on `this` reachable from a constructor | - | `PLY1102`: "a call of an overridden method on 'this' during construction" |
-| `extends` of anything but a class of the file (`Array`, `Error`, a call), `Object.setPrototypeOf`, a hierarchy that loops, a member of a base class declared again in another kind, an override with another number of parameters, a derived class without a constructor whose base constructor takes parameters, a derived constructor that does not begin with the base call | - | `PLY1102` naming it |
+| `get k()` / `set k(v)` of a derived class over the accessors of `k` of its base class (#1368) | getter and setter methods that override, a `virtual` / `override` property | supported |
+| `this.k = v` where `k` is a setter of the class or of a base class and no field (#1368) | a call of the setter, no field | supported |
+| `class D extends B { … }` without a constructor (#1369) | a constructor of the parameters of the nearest one up the lineage, calling it with them | supported |
+| `const C = Object.freeze({ K: { name: '…', level: 1 }, … })` of members of one shape of strings, numbers and truth values (#1371) | a class `C` of read-only fields, `C.K` a new object of its values | supported |
+| `Object.keys(o)` of an object of a class or a record, `Object.keys(o).forEach(key => …)`, `for (const key of Object.keys(o))` with `o[key]` and `r[key] = v` (#1373) | the Array of its keys; the body once per key, `o[key]` the field | supported |
+| a call of an overridden method on `this` reachable from a constructor, which a class derived from the one constructed implements | - | `PLY1102`: "a call of an overridden method on 'this' during construction" |
+| a getter or a setter alone over a pair of its base class, an accessor over a field or a method, members of a frozen object of two shapes, a comparison of them by identity, a write into one, `r[key] = v` of a key `r` lacks, a `return`, `break` or `continue` in a loop over `Object.keys` | - | `PLY1102` naming it |
+| `extends` of anything but a class of the file (`Array`, `Error`, a call), `Object.setPrototypeOf`, a hierarchy that loops, a member of a base class declared again in another kind, an override with another number of parameters, a derived class without a constructor whose base constructor takes a rest parameter, a derived constructor that does not begin with the base call | - | `PLY1102` naming it |
 | a computed member name, a static block, prototype mutation, a property added outside the constructor (`__proto__` among them), `delete`, a method taken from its object, `call`/`apply`/`bind` of a method, `this` outside a method, the class used as a value, a field with a value in a class without a constructor | - | `PLY1102` naming it |
 | a field or a variable that values of two kinds reach, objects of two unrelated classes among them | - | `PLY1105` |
 
@@ -195,13 +201,18 @@ effect (`IrType.IsAssignableTo`). The semantics are stated once, at `IrMethodCal
   have one signature. A `Direct` call runs the method named, a `Virtual` one the nearest override of
   the receiver's class (`IrClassType.Select`), an `Interface` one the implementation the receiver's
   class or a base class gives (`IrMethod.Implements`, `IrClassType.Implementation`), and a `Base`
-  call the method of the base class named, on `this`. Accessors are never virtual.
+  call the method of the base class named, on `this`. An accessor is `Virtual` or an `Override`
+  where a derived class declares the getter or setter of its key again (#1368), never `Abstract`;
+  the C# property is as `virtual` or `override` as its accessors.
 - **Construction.** An object is made base first: a constructor of a derived class begins with the
   call of a constructor of its base class (or of another of its own), then writes the field
   initializers of its class. C# runs those initializers before the base constructor, JavaScript after
   `super()`: an initializer of a derived C# class is therefore admitted only when it is a constant.
 - **The constructor rule.** While any constructor of an object runs, no virtual or interface call is
-  made on it, directly or through a callee, a local or an argument (`IrConstruction`). That is where
+  made on it, directly or through a callee, a local or an argument (`IrConstruction`), that a class
+  derived from the constructor's own class implements. A call that only the class itself or a base
+  class implements selects a method whose fields have their values in both languages by then (#1368):
+  `D() { super(); this.key = k; }` of a class that nothing derives from calls its own setter. That is where
   the two languages differ: with .NET 10 and node 22, `Base() { Init(); }` with a `Derived.Init` that
   reads a field initialized to 42 gives 42 in C# and `undefined` in JavaScript (and a class field
   `seen = -1` overwrites what `Init` wrote). No emitted form reproduces the other order, so the
