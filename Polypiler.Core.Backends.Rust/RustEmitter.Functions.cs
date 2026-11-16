@@ -59,6 +59,7 @@ public static partial class RustEmitter {
         this.Refuse(problem);
 
       this.Analyse(function);
+      this.FieldAliases(function);
       var name = this._functions[function.Name];
       var member = this._members.GetValueOrDefault(function.Name);
       if (member is { Kind: MemberKind.Instance })

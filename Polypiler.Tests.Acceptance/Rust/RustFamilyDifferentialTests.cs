@@ -102,6 +102,12 @@ public sealed class RustFamilyDifferentialTests {
       () => [.. CollectionFixtures.Calls().Where(call => call.File == "Collections" && WrittenCollections.Contains(call.Call.Method)).Select(call => call.Call)],
       call => PrototypeFixture.InvokedOutcome(CollectionFixtures.Compiled("CollectionsDemo", call.Method), call));
 
+    // The keys of RC4's published examples, and one of a single byte, each with buffers of 0, 1 and 10 bytes.
+    yield return new("classes/Rc4", () => ClassFixtures.Imported("Rc4"),
+      () => [.. new[] { "Key", "Wiki", "Secret", "!" }.SelectMany(key => new[] { 0, 1, 10 }.Select(length =>
+        new PrototypeCall("Fill", [System.Text.Encoding.ASCII.GetBytes(key), new byte[length]]) { Returns = typeof(int) }))],
+      call => PrototypeFixture.InvokedOutcome(ClassFixtures.Compiled("Rc4Demo", call.Method), call));
+
     yield return new("optional/Find", OptionalFixtures.Imported, () => [.. OptionalFixtures.Calls()],
       call => PrototypeFixture.InvokedOutcome(OptionalFixtures.Compiled(call.Method), call));
 

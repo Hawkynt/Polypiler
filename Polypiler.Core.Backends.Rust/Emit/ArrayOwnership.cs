@@ -40,6 +40,9 @@ internal sealed class FunctionArrays {
   /// <summary>The array locals that are written: a <c>let mut</c> vector or a <c>&amp;mut</c> borrow.</summary>
   public HashSet<IrLocal> MutableLocals { get; } = [];
 
+  /// <summary>The array locals that name the array a field of an object holds, each with the load it is declared with.</summary>
+  public Dictionary<IrLocal, IrFieldLoad> FieldAliases { get; } = [];
+
   /// <summary>Why the arrays of the function have no safe Rust form, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }
 
@@ -140,6 +143,11 @@ internal static class ArrayOwnership {
           break;
         case IrCollection { Op: IrCollectionOp.ListCopyToArray }:
           created.Add(node);
+          break;
+        case IrFieldLoad { Target.Type.IsObject: true } load when node is IrLocal alias:
+          // A variable that names a field's array, as `var s = this._s;`: it borrows the field's cell.
+          if (!result.FieldAliases.TryAdd(alias, load))
+            problems.Add($"the variable '{alias.Name}' given the arrays of two fields");
           break;
         case IrNull:
           // Null holds no array: the variable is an Option, which ArrayNullness finds.
@@ -252,7 +260,7 @@ internal static class ArrayOwnership {
     foreach (var local in function.Locals.Where(local => local.Type.IsArray)) {
       var root = groups.Find(local);
       var holder = !owned.Contains(root) && function.Parameters.Any(parameter => groups.Find(parameter) == root) ? ArrayHolder.Borrowed : ArrayHolder.Owned;
-      result.Locals[local] = holder;
+      result.Locals[local] = result.FieldAliases.ContainsKey(local) ? ArrayHolder.Borrowed : holder;
       if (writtenRoots.Contains(root))
         result.MutableLocals.Add(local);
     }

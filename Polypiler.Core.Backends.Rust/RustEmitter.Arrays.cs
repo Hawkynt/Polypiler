@@ -79,7 +79,10 @@ public static partial class RustEmitter {
     }
 
     /// <summary>The type of a local: an array owned as a vector or borrowed.</summary>
-    private string LocalType(IrLocal local) {
+    private string? LocalType(IrLocal local) {
+      if (local.Type.IsArray && this.IsFieldAlias(local))
+        return null;
+
       if (local.Type.IsObject)
         return this.ObjectType(local.Type, this.MayBeNull(local));
       if (local.Type.IsView)
@@ -108,7 +111,8 @@ public static partial class RustEmitter {
 
     /// <summary>The value a local of an array type is given: the vector itself, or a borrow.</summary>
     private RsExpression ArrayInitial(IrLocal local, IrExpr value)
-      => this.IsNullableArray(local) ? this.NullableArray(value, this.IsReference(local))
+      => this.IsFieldAlias(local) ? this.FieldAlias(local)
+        : this.IsNullableArray(local) ? this.NullableArray(value, this.IsReference(local))
         : !this.IsReference(local) ? this.Vector(value, false) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
 
     /// <summary>The array a function returns: a vector it owns, or the borrow of a parameter.</summary>
@@ -127,6 +131,9 @@ public static partial class RustEmitter {
           return this.Refuse("a global array used as a whole");
         case IrCollection { Op: IrCollectionOp.ListCopyToArray }:
           return this.Expression(array);
+        case IrLocalRef { Local: var alias } when this.IsFieldAlias(alias):
+          // A copy would part the variable from the field, which .NET shares with whoever takes it.
+          return this.Refuse("a variable that names a field's array given away as a whole");
         case IrLocalRef or IrBind or IrCall when this.IsNullableArray(array):
           return new RsMethodCall(this.Receiver(this.NonNullArray(array, false)), "to_vec", []) { Type = array.Type };
         case IrNewArray creation:
@@ -164,6 +171,8 @@ public static partial class RustEmitter {
       switch (array) {
         case IrGlobalRef:
           return this.Refuse("a global array used as a whole");
+        case IrLocalRef { Local: var alias } when this.IsFieldAlias(alias):
+          return this.FieldAliasSlice(alias, mutable);
         case IrLocalRef or IrBind or IrCall when this.IsNullableArray(array):
           return mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, true);
         case IrFieldLoad { Target.Type.IsObject: true } load:

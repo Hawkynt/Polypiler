@@ -104,6 +104,7 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `new T(..)`, a constructor | `Name::new(..) -> Rc<Self>`: `Rc::new(Self::default())` (`Rc::new(Self)` without fields), then the constructor's body, `init`, on it |
 | a method, a property accessor | a method of the `impl`: `&self`, or `self: &Rc<Self>` where it passes the object on; called `o.next()` |
 | a field of an object | `o.count.get()`, `o.count.set(v)`; `o.name.borrow().clone()`; `*o.next.borrow_mut() = v` after the value is bound; an array field `o.items.borrow()[i]`, `o.items.borrow_mut()[i] = v` (index and value bound first) |
+| a variable that names a field's array, `var s = this._s;` | the field's cell borrowed for as long as the variable lives, `let mut s = self.s.borrow_mut();` where the function writes through it, `self.s.borrow()` where it only reads; indexed, measured and iterated through the guard, passed on as `&mut s[..]`; only where nothing in the function touches the field after it - no other read or write, no call that may reach the field (a fixed point over the calls), no other array given to the variable - since a second borrow would panic where .NET runs on |
 | a reference that may be null | `Option<Rc<Name>>` where the nullness analysis cannot rule null out; a member through it `ply_non_null(&o)`, which panics with `NullReference` |
 | `ReferenceEquals`, `==` of a record, `is null` | `Rc::ptr_eq(&a, &b)` (the addresses `a.as_ref().map(Rc::as_ptr)` where one may be null); `a == b` of the derived `PartialEq`; `o.is_none()`, `false` of a reference that never is null |
 | an interface, a class something derives from | a trait, its values `Rc<dyn Trait>`; see [Objects](#objects) |
@@ -195,7 +196,8 @@ is a borrowed result, a collection in the order of insertion (JavaScript's `Map`
 objects or with floating-point keys, a collection changed in a loop over it, held by two variables or
 passed on where no variable holds it, a lazy sequence (`yield`: Rust has no stable generators, and the
 backend writes no state machine of an iterator function yet; making the sequence all at once would
-change its effects and could not end on an infinite one), a function value that takes or gives more than values and other function values, two function values
+change its effects and could not end on an infinite one), a variable that names a field's array where the function touches the field otherwise while it
+lives or gives the array away whole, a function value that takes or gives more than values and other function values, two function values
 compared with each other, a closure that captures the object of a method, an array it captures that is
 written, or a variable other than a value that is assigned, collections and sequences (`Collection`, `Yield`), `using`, a global
 array without a first value of a known length or used as a whole (passed on, iterated as a slice),
@@ -227,14 +229,14 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
+- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
   interpreter's.
 - `RustFamilyDifferentialTests` (layer `rust`): the fixtures of the families the backend writes - bits,
   records, strings, enums, numbers as text, classes, dispatch, generics, function values and closures,
-  optional values, module state (each sequence of calls in one process, as one load of the class in
+  optional values, a field's array named by a local (classes/Rc4), module state (each sequence of calls in one process, as one load of the class in
   .NET), collections and the LINQ shapes legalization writes as loops (collections/WordFrequency,
   sequences/ByteMedian, and the functions of collections/Collections the backend writes, which a test
   lists), the floating-point view of bytes - against .NET in both overflow modes.
