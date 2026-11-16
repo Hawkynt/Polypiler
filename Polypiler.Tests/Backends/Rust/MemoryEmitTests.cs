@@ -39,7 +39,7 @@ public sealed class MemoryEmitTests {
   public void ReadOnlyParameter_IsASharedSlice_AndItsLoopAnElementLoop() {
     var text = Emitted("public static uint Sum(byte[] data) { uint s = 0; for (int i = 0; i < data.Length; i++) s += data[i]; return s; }");
     Assert.That(text, Does.Contain("pub fn sum(data: &[u8]) -> u32 {"));
-    Assert.That(text, Does.Contain("for &element in data {\n        s = s.wrapping_add(u32::from(element));\n    }"));
+    Assert.That(text, Does.Contain("data.iter()\n        .map(|&element| u32::from(element))\n        .fold(0u32, |acc, x| acc.wrapping_add(x))"));
   }
 
   [Test]
@@ -213,9 +213,9 @@ public sealed class MemoryEmitTests {
 
   [Test]
   public void ElementLoops_OverVectorsTablesAndExclusiveSlices() {
-    Assert.That(Emitted("static readonly int[] T = { 1, 2 }; public static int F() { int s = 0; foreach (var x in T) s += x; return s; }"), Does.Contain("for &x in &T {"));
-    Assert.That(Emitted("public static int F(int n) { var a = new int[n]; int s = 0; foreach (var x in a) s += x; return s; }"), Does.Contain("for &x in &a {"));
-    Assert.That(Emitted("public static int F(int[] a) { a[0] = 1; int s = 0; foreach (var x in a) s += x; return s; }"), Does.Contain("for &x in a.iter() {"));
+    Assert.That(Emitted("static readonly int[] T = { 1, 2 }; public static int F() { int s = 0; foreach (var x in T) s += x; return s; }"), Does.Contain("T.iter().fold(0i32, |acc, &x| acc.wrapping_add(x))"));
+    Assert.That(Emitted("public static int F(int n) { var a = new int[n]; int s = 0; foreach (var x in a) s += x; return s; }"), Does.Contain("a.iter().fold(0i32, |acc, &x| acc.wrapping_add(x))").And.Contain("let a: Vec<i32>"));
+    Assert.That(Emitted("public static int F(int[] a) { a[0] = 1; int s = 0; foreach (var x in a) s += x; return s; }"), Does.Contain("a.iter().fold(0i32, |acc, &x| acc.wrapping_add(x))"));
   }
 
   [Test]

@@ -66,7 +66,7 @@ public sealed class TypeEmitTests {
 
   [Test]
   public void ElementLoopOverStructs_CopiesEachElement_ButNotWhereTheBodyWritesOne() {
-    Assert.That(Emitted(Point + "public static class S { public static int F(Point[] a) { int s = 0; foreach (var p in a) s += p.X; return s; } }"), Does.Contain("for &p in a {"));
+    Assert.That(Emitted(Point + "public static class S { public static int F(Point[] a) { int s = 0; foreach (var p in a) s += p.X; return s; } }"), Does.Contain("a.iter()\n        .map(|&p| p.x)\n        .fold(0i32, |acc, x| acc.wrapping_add(x))"));
     Assert.That(Emitted(Point + "public static class S { public static void F(Point[] a) { for (int i = 0; i < a.Length; i++) a[i].X = a[i].Y; } }"), Does.Not.Contain("for &"));
   }
 
