@@ -239,6 +239,11 @@ public sealed class TrapPolicyEmitTests {
     => Assert.That(Problems(methods), Has.Some.EqualTo($"PLY1552 trap policy 'result' is not available for '{construct}'").Or.Some.StartsWith($"PLY1552 trap policy 'result' is not available for '{construct}' (in "));
 
   [Test]
+  public void ExceptionRegionTheAdrLeavesOut_StaysRefusedUnderResult()
+    => Assert.That(Problems("static int s; public static int F(int k) { try { s = checked(k * 2); } catch (System.OverflowException) { s = -1; } finally { s++; } return s; }"),
+      Has.Some.StartsWith("PLY1560 exception region in the function 'F' cannot be emitted under the trap policy 'result': 'a try with both catch clauses and a finally block'"));
+
+  [Test]
   public void WhatWouldStillPanic_IsWrittenUnderPanic()
     => Assert.That(Problems("public static int F(System.Collections.Generic.List<int> l, int i) => l[i];", RustProfile.Default), Is.Empty);
 
