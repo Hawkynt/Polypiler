@@ -52,8 +52,8 @@ public sealed partial class RustCoverageEmitTests {
 
   [Test]
   public void ElementLoop_OverATable_IsAForOverItsBorrow()
-    => Assert.That(Emitted("static readonly int[] T = { 1, 2, 3 }; public static int F() { int r = 0; for (int i = 0; i < T.Length; i++) { r += T[i]; } return r; }"),
-      Does.Contain("    for &element in &T {\n        r = r.wrapping_add(element);\n    }\n"));
+    => Assert.That(Emitted("static readonly int[] T = { 1, 2, 3 }; public static int F() { int r = 0; for (int i = 0; i < T.Length; i++) { r += T[i]; r ^= 1; } return r; }"),
+      Does.Contain("    for &element in &T {\n        r = r.wrapping_add(element);\n        r ^= 1;\n    }\n"));
 
   [TestCase("public static int F(int[] a) { int r = 0; for (int i = 0; i < a.Length; i++) { a[i]++; r += a[i]; } return r; }",
     "    for i in 0..a.len() as i32 {\n        a[i as usize] = a[i as usize].wrapping_add(1);\n", TestName = "CountedLoop_ThatStepsAnElement_KeepsTheIndex")]
